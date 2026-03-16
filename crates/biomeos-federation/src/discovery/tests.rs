@@ -1,0 +1,354 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! Discovery tests - extracted to keep discovery/mod.rs under 1000 lines
+
+use std::net::SocketAddr;
+use std::path::PathBuf;
+
+use super::*;
+
+#[test]
+fn test_endpoint_parsing_unix() {
+    let ep = PrimalDiscovery::parse_endpoint("unix:///tmp/test.sock");
+    match ep {
+        Some(PrimalEndpoint::UnixSocket { path }) => {
+            assert_eq!(path, PathBuf::from("/tmp/test.sock"));
+        }
+        other => panic!("expected UnixSocket, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_endpoint_parsing_udp() {
+    let ep = PrimalDiscovery::parse_endpoint("udp://127.0.0.1:8080");
+    match ep {
+        Some(PrimalEndpoint::Udp { addr }) => {
+            assert_eq!(addr.port(), 8080);
+            assert_eq!(addr.ip().to_string(), "127.0.0.1");
+        }
+        other => panic!("expected Udp, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_endpoint_parsing_http() {
+    let ep = PrimalDiscovery::parse_endpoint("http://localhost:3000");
+    match ep {
+        Some(PrimalEndpoint::Http { url }) => {
+            assert_eq!(url, "http://localhost:3000");
+        }
+        other => panic!("expected Http, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_endpoint_parsing_https() {
+    let ep = PrimalDiscovery::parse_endpoint("https://example.com/api");
+    match ep {
+        Some(PrimalEndpoint::Http { url }) => {
+            assert_eq!(url, "https://example.com/api");
+        }
+        other => panic!("expected Http, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_endpoint_parsing_invalid() {
+    assert!(PrimalDiscovery::parse_endpoint("ftp://host").is_none());
+    assert!(PrimalDiscovery::parse_endpoint("random-string").is_none());
+    assert!(PrimalDiscovery::parse_endpoint("").is_none());
+}
+
+#[test]
+fn test_endpoint_parsing_invalid_udp_addr() {
+    assert!(PrimalDiscovery::parse_endpoint("udp://not-an-addr").is_none());
+}
+
+#[test]
+fn test_primal_endpoint_serde_unix() {
+    let ep = PrimalEndpoint::UnixSocket {
+        path: PathBuf::from("/tmp/test.sock"),
+    };
+    let json = serde_json::to_string(&ep).expect("serialize");
+    assert!(json.contains("unix_socket"));
+    let restored: PrimalEndpoint = serde_json::from_str(&json).expect("deserialize");
+    assert!(matches!(restored, PrimalEndpoint::UnixSocket { .. }));
+}
+
+#[test]
+fn test_primal_endpoint_serde_http() {
+    let ep = PrimalEndpoint::Http {
+        url: "http://example.com".into(),
+    };
+    let json = serde_json::to_string(&ep).expect("serialize");
+    assert!(json.contains("http"));
+    let restored: PrimalEndpoint = serde_json::from_str(&json).expect("deserialize");
+    match restored {
+        PrimalEndpoint::Http { url } => assert_eq!(url, "http://example.com"),
+        other => panic!("expected Http, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_primal_endpoint_serde_udp() {
+    let addr: SocketAddr = "127.0.0.1:9000".parse().expect("valid addr");
+    let ep = PrimalEndpoint::Udp { addr };
+    let json = serde_json::to_string(&ep).expect("serialize");
+    assert!(json.contains("udp"));
+    let restored: PrimalEndpoint = serde_json::from_str(&json).expect("deserialize");
+    match restored {
+        PrimalEndpoint::Udp { addr: a } => assert_eq!(a.port(), 9000),
+        other => panic!("expected Udp, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_primal_endpoint_debug() {
+    let ep = PrimalEndpoint::UnixSocket {
+        path: PathBuf::from("/a"),
+    };
+    assert!(format!("{ep:?}").contains("UnixSocket"));
+}
+
+#[test]
+fn test_primal_endpoint_clone() {
+    let ep = PrimalEndpoint::Http {
+        url: "http://x".into(),
+    };
+    let cloned = ep.clone();
+    assert!(matches!(cloned, PrimalEndpoint::Http { .. }));
+}
+
+#[test]
+fn test_discovered_primal_serde_roundtrip() {
+    let dp = DiscoveredPrimal {
+        name: "beardog".into(),
+        primal_type: "security".into(),
+        capabilities: CapabilitySet::from_vec(vec![Capability::Storage]),
+        endpoints: vec![PrimalEndpoint::UnixSocket {
+            path: PathBuf::from("/tmp/beardog.sock"),
+        }],
+        metadata: HashMap::from([("key".into(), "val".into())]),
+    };
+    let json = serde_json::to_string(&dp).expect("serialize");
+    let restored: DiscoveredPrimal = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(restored.name, "beardog");
+    assert_eq!(restored.primal_type, "security");
+    assert!(restored.capabilities.has(&Capability::Storage));
+    assert_eq!(restored.endpoints.len(), 1);
+    assert_eq!(restored.metadata["key"], "val");
+}
+
+#[test]
+fn test_discovered_primal_clone() {
+    let dp = DiscoveredPrimal {
+        name: "x".into(),
+        primal_type: "y".into(),
+        capabilities: CapabilitySet::new(),
+        endpoints: vec![],
+        metadata: HashMap::new(),
+    };
+    let cloned = dp.clone();
+    assert_eq!(cloned.name, "x");
+}
+
+#[test]
+fn test_discovered_primal_debug() {
+    let dp = DiscoveredPrimal {
+        name: "test".into(),
+        primal_type: "t".into(),
+        capabilities: CapabilitySet::new(),
+        endpoints: vec![],
+        metadata: HashMap::new(),
+    };
+    let dbg = format!("{dp:?}");
+    assert!(dbg.contains("test"));
+    assert!(dbg.contains("DiscoveredPrimal"));
+}
+
+#[test]
+fn test_primal_discovery_new() {
+    let pd = PrimalDiscovery::new();
+    assert!(pd.all().is_empty());
+}
+
+#[test]
+fn test_primal_discovery_default() {
+    let pd = PrimalDiscovery::default();
+    assert!(pd.all().is_empty());
+}
+
+#[test]
+fn test_primal_discovery_get_none() {
+    let pd = PrimalDiscovery::new();
+    assert!(pd.get("unknown").is_none());
+}
+
+#[test]
+fn test_primal_discovery_with_registered() {
+    let mut pd = PrimalDiscovery::new();
+    pd.discovered_primals.insert(
+        "beardog".into(),
+        DiscoveredPrimal {
+            name: "beardog".into(),
+            primal_type: "security".into(),
+            capabilities: CapabilitySet::from_vec(vec![Capability::Storage]),
+            endpoints: vec![],
+            metadata: HashMap::new(),
+        },
+    );
+
+    assert!(pd.get("beardog").is_some());
+    assert_eq!(pd.get("beardog").expect("should exist").name, "beardog");
+    assert_eq!(pd.all().len(), 1);
+}
+
+#[test]
+fn test_primal_discovery_with_capability() {
+    let mut pd = PrimalDiscovery::new();
+    pd.discovered_primals.insert(
+        "store".into(),
+        DiscoveredPrimal {
+            name: "store".into(),
+            primal_type: "storage".into(),
+            capabilities: CapabilitySet::from_vec(vec![Capability::Storage]),
+            endpoints: vec![],
+            metadata: HashMap::new(),
+        },
+    );
+    pd.discovered_primals.insert(
+        "compute".into(),
+        DiscoveredPrimal {
+            name: "compute".into(),
+            primal_type: "compute".into(),
+            capabilities: CapabilitySet::from_vec(vec![Capability::Compute]),
+            endpoints: vec![],
+            metadata: HashMap::new(),
+        },
+    );
+
+    assert_eq!(pd.with_capability(&Capability::Storage).len(), 1);
+    assert_eq!(pd.with_capability(&Capability::Compute).len(), 1);
+    assert_eq!(pd.with_capability(&Capability::Voice).len(), 0);
+}
+
+#[test]
+fn test_register_songbird_peer_full() {
+    let mut pd = PrimalDiscovery::new();
+    let peer = serde_json::json!({
+        "node_id": "beardog:fam1:direct:abc123",
+        "family_id": "fam1",
+        "capabilities": ["security", "crypto"],
+        "endpoints": {
+            "unix_socket": "/tmp/beardog.sock",
+            "udp": "192.168.1.10:9000"
+        }
+    });
+    pd.register_songbird_peer(&peer);
+
+    assert_eq!(pd.discovered_primals.len(), 1);
+    let dp = pd.get("beardog").expect("should exist");
+    assert_eq!(dp.primal_type, "remote");
+    assert_eq!(dp.endpoints.len(), 2);
+    assert_eq!(dp.metadata["family_id"], "fam1");
+    assert_eq!(dp.metadata["discovered_via"], "songbird_udp");
+}
+
+#[test]
+fn test_register_songbird_peer_minimal() {
+    let mut pd = PrimalDiscovery::new();
+    let peer = serde_json::json!({
+        "node_id": "songbird"
+    });
+    pd.register_songbird_peer(&peer);
+
+    let dp = pd.get("songbird").expect("should exist");
+    assert_eq!(dp.name, "songbird");
+    assert!(dp.endpoints.is_empty());
+    assert_eq!(dp.metadata["family_id"], "unknown");
+}
+
+#[test]
+fn test_register_songbird_peer_no_node_id() {
+    let mut pd = PrimalDiscovery::new();
+    let peer = serde_json::json!({"family_id": "x"});
+    pd.register_songbird_peer(&peer);
+    assert!(pd.discovered_primals.is_empty());
+}
+
+#[test]
+fn test_register_songbird_peer_with_unix_only() {
+    let mut pd = PrimalDiscovery::new();
+    let peer = serde_json::json!({
+        "node_id": "nestgate:fam:direct:hash",
+        "endpoints": {
+            "unix_socket": "/run/biomeos/nestgate.sock"
+        }
+    });
+    pd.register_songbird_peer(&peer);
+
+    let dp = pd.get("nestgate").expect("should exist");
+    assert_eq!(dp.endpoints.len(), 1);
+    assert!(matches!(
+        &dp.endpoints[0],
+        PrimalEndpoint::UnixSocket { .. }
+    ));
+}
+
+#[test]
+fn test_register_songbird_peer_with_udp_only() {
+    let mut pd = PrimalDiscovery::new();
+    let peer = serde_json::json!({
+        "node_id": "svc",
+        "endpoints": {
+            "udp": "10.0.0.1:5000"
+        }
+    });
+    pd.register_songbird_peer(&peer);
+
+    let dp = pd.get("svc").expect("should exist");
+    assert_eq!(dp.endpoints.len(), 1);
+    assert!(matches!(&dp.endpoints[0], PrimalEndpoint::Udp { .. }));
+}
+
+#[test]
+fn test_register_songbird_peer_invalid_udp() {
+    let mut pd = PrimalDiscovery::new();
+    let peer = serde_json::json!({
+        "node_id": "svc",
+        "endpoints": {
+            "udp": "not-valid-addr"
+        }
+    });
+    pd.register_songbird_peer(&peer);
+
+    let dp = pd.get("svc").expect("should exist");
+    assert!(
+        dp.endpoints.is_empty(),
+        "invalid UDP addr should be skipped"
+    );
+}
+
+#[test]
+fn test_primal_info_debug_and_clone() {
+    let info = PrimalInfo {
+        name: "test".into(),
+        primal_type: "storage".into(),
+        capabilities: CapabilitySet::new(),
+    };
+    let cloned = info.clone();
+    assert_eq!(cloned.name, "test");
+    let dbg = format!("{info:?}");
+    assert!(dbg.contains("PrimalInfo"));
+}
+
+#[test]
+fn test_discover_songbird_socket_not_found() {
+    let pd = PrimalDiscovery::new();
+    let result = pd.discover_songbird_socket();
+    if let Err(e) = result {
+        let err_msg = format!("{e}");
+        assert!(err_msg.contains("not found") || err_msg.contains("Songbird"));
+    }
+}

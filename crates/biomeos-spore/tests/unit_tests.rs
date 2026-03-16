@@ -3,7 +3,7 @@
 
 //! Unit tests for spore system components
 
-use biomeos_spore::{setup_test_binaries, FamilySeed, Spore, SporeConfig, SporeType};
+use biomeos_spore::{FamilySeed, Spore, SporeConfig, SporeType, setup_test_binaries};
 use tempfile::TempDir;
 
 #[test]

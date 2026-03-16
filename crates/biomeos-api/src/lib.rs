@@ -156,7 +156,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                 match msg {
                     Some(Ok(Message::Text(text))) => {
                         let response = match serde_json::from_str::<JsonRpcRequest>(&text) {
-                            Ok(req) => match req.method.as_str() {
+                            Ok(req) => match req.method.as_ref() {
                                 "events.subscribe" => {
                                     let params = req.params.clone().unwrap_or(serde_json::json!({}));
                                     let filter: SubscriptionFilter =
@@ -587,7 +587,7 @@ mod tests {
             "id": 1
         }"#;
         let req: JsonRpcRequest = serde_json::from_str(json).expect("deserialize");
-        assert_eq!(req.method, "events.subscribe");
+        assert_eq!(req.method.as_ref(), "events.subscribe");
         assert_eq!(
             req.params
                 .as_ref()

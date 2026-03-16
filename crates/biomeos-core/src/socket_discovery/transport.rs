@@ -39,14 +39,14 @@ pub enum TransportEndpoint {
     /// HTTP JSON-RPC gateway (Tier 2 - Inter-gate covalent bond transport)
     ///
     /// Sends JSON-RPC requests as HTTP POST to `/jsonrpc` on a remote
-    /// Songbird instance. This is the preferred transport for inter-NUCLEUS
+    /// discovery/mesh primal. This is the preferred transport for inter-NUCLEUS
     /// communication over LAN (covalent bonding) and internet (ionic bonding).
     ///
     /// The port is runtime-discoverable via beacon exchange, NOT hardcoded.
     HttpJsonRpc {
         /// Host address
         host: Arc<str>,
-        /// HTTP port (Songbird default: 8080, runtime-discovered via beacon)
+        /// HTTP port (default: 8080, runtime-discovered via beacon)
         port: u16,
     },
 }

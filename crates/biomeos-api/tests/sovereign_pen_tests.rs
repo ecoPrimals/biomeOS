@@ -26,6 +26,7 @@ use axum::{
     Router,
 };
 use biomeos_api::{AppState, Config};
+use biomeos_test_utils::{remove_test_env, set_test_env};
 use http_body_util::BodyExt;
 use std::time::Instant;
 use tower::ServiceExt;
@@ -41,9 +42,9 @@ use tower::ServiceExt;
 /// exist in test, ALL token verification will fail — which is what we want.
 fn sovereign_app() -> Router {
     // Ensure sovereign mode is ON
-    std::env::set_var("BIOMEOS_SOVEREIGN", "true");
+    set_test_env("BIOMEOS_SOVEREIGN", "true");
     // Point to nonexistent socket so all verification fails
-    std::env::set_var("BEARDOG_SOCKET", "/tmp/nonexistent-beardog-pentest.sock");
+    set_test_env("BEARDOG_SOCKET", "/tmp/nonexistent-beardog-pentest.sock");
 
     let state = AppState::builder()
         .config(Config {

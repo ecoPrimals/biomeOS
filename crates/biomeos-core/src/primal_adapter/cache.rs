@@ -16,7 +16,7 @@ impl AdapterCache {
     /// Create new cache
     pub fn new() -> Result<Self> {
         // Use etcetera (Pure Rust!) for home directory
-        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
+        use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         let strategy = choose_base_strategy().context("Could not determine base strategy")?;
         let cache_dir = strategy.home_dir().join(".biomeos").join("primal_adapters");
 
@@ -72,10 +72,10 @@ impl AdapterCache {
 
         for entry in std::fs::read_dir(&self.cache_dir)? {
             let entry = entry?;
-            if let Some(name) = entry.path().file_stem() {
-                if let Some(name_str) = name.to_str() {
-                    names.push(name_str.to_string());
-                }
+            if let Some(name) = entry.path().file_stem()
+                && let Some(name_str) = name.to_str()
+            {
+                names.push(name_str.to_string());
             }
         }
 

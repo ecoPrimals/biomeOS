@@ -294,12 +294,11 @@ pub async fn list_local_nodes() -> SporeResult<Vec<NodeConfig>> {
     while let Some(entry) = entries.next_entry().await? {
         let node_config_path = entry.path().join("node.toml");
 
-        if node_config_path.exists() {
-            if let Ok(content) = fs::read_to_string(&node_config_path).await {
-                if let Ok(config) = toml::from_str::<NodeConfig>(&content) {
-                    nodes.push(config);
-                }
-            }
+        if node_config_path.exists()
+            && let Ok(content) = fs::read_to_string(&node_config_path).await
+            && let Ok(config) = toml::from_str::<NodeConfig>(&content)
+        {
+            nodes.push(config);
         }
     }
 

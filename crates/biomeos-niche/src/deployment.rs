@@ -176,7 +176,10 @@ impl NicheDeployment {
                     }
                 }
             } else {
-                debug!("Binary for organism {} not found in PATH, marking as running (graph deployment will handle)", name);
+                debug!(
+                    "Binary for organism {} not found in PATH, marking as running (graph deployment will handle)",
+                    name
+                );
                 handle.status = OrganismStatus::Running;
             }
         }

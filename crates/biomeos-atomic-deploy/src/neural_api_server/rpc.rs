@@ -48,7 +48,7 @@ mod tests {
     fn test_jsonrpc_request_parse_valid() {
         let json = r#"{"jsonrpc":"2.0","method":"test.method","params":{"a":1},"id":42}"#;
         let req = JsonRpcRequest::parse(json).expect("parse should succeed");
-        assert_eq!(req.method, "test.method");
+        assert_eq!(req.method.as_ref(), "test.method");
         assert_eq!(req.id.as_ref().and_then(|v| v.as_u64()).unwrap(), 42);
         assert_eq!(req.params.as_ref().unwrap()["a"], 1);
     }
@@ -57,7 +57,7 @@ mod tests {
     fn test_jsonrpc_request_parse_with_whitespace() {
         let json = "  \n  {\"jsonrpc\":\"2.0\",\"method\":\"foo\",\"id\":1}  ";
         let req = JsonRpcRequest::parse(json).expect("parse should succeed");
-        assert_eq!(req.method, "foo");
+        assert_eq!(req.method.as_ref(), "foo");
         assert_eq!(req.id.as_ref().and_then(|v| v.as_u64()).unwrap(), 1);
         assert!(req.params.is_none());
     }
@@ -66,7 +66,7 @@ mod tests {
     fn test_jsonrpc_request_parse_null_params() {
         let json = r#"{"jsonrpc":"2.0","method":"bar","params":null,"id":0}"#;
         let req = JsonRpcRequest::parse(json).expect("parse should succeed");
-        assert_eq!(req.method, "bar");
+        assert_eq!(req.method.as_ref(), "bar");
         assert_eq!(req.id.as_ref().and_then(|v| v.as_u64()).unwrap(), 0);
     }
 

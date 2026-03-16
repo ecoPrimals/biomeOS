@@ -272,31 +272,39 @@ async fn test_unregister_multiple_capabilities() {
     registry.register(primal_id.clone(), params).await.unwrap();
 
     // Verify both capabilities are registered
-    assert!(registry
-        .get_provider(&Capability::Security)
-        .await
-        .unwrap()
-        .is_some());
-    assert!(registry
-        .get_provider(&Capability::Compute)
-        .await
-        .unwrap()
-        .is_some());
+    assert!(
+        registry
+            .get_provider(&Capability::Security)
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert!(
+        registry
+            .get_provider(&Capability::Compute)
+            .await
+            .unwrap()
+            .is_some()
+    );
 
     // Unregister
     registry.unregister(&primal_id).await.unwrap();
 
     // Both capabilities should be removed
-    assert!(registry
-        .get_provider(&Capability::Security)
-        .await
-        .unwrap()
-        .is_none());
-    assert!(registry
-        .get_provider(&Capability::Compute)
-        .await
-        .unwrap()
-        .is_none());
+    assert!(
+        registry
+            .get_provider(&Capability::Security)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        registry
+            .get_provider(&Capability::Compute)
+            .await
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[tokio::test]

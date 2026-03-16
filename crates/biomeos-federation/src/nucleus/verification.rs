@@ -5,11 +5,11 @@
 //!
 //! Identity proof via challenge-response, capability verification via primal query.
 
+use crate::FederationResult;
 use crate::beardog_client::BearDogClient;
 use crate::capability::{Capability, CapabilitySet};
 use crate::discovery::{DiscoveredPrimal, PrimalEndpoint};
 use crate::unix_socket_client::{JsonRpcRequest, UnixSocketClient};
-use crate::FederationResult;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, warn};

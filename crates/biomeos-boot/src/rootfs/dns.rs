@@ -3,6 +3,19 @@
 
 //! DNS configuration utilities
 
+/// Sample IPv6 resolver address for tests (RFC 3849 documentation prefix).
+/// Uses 2001:db8::/32 to avoid hardcoding corporate DNS (Google, Cloudflare) in tests.
+/// Sovereignty: Production DNS is always from RootFsConfig.dns_servers or system resolv.conf.
+pub const TEST_IPV6_RESOLVER_SAMPLE: &str = "2001:db8::1";
+
+/// Fallback IPv6 resolver (RFC 3849 documentation prefix).
+///
+/// Used only when no DNS servers are configured — e.g. in minimal container/initrd
+/// environments. Sovereignty: Production should use RootFsConfig.dns_servers or
+/// BIOMEOS_DNS_SERVERS env var. This constant avoids hardcoding corporate DNS
+/// (Google 2001:4860:4860::8888, Cloudflare) in production code.
+pub const FALLBACK_RESOLVER_IPV6: &str = "2001:db8::1";
+
 /// Parse nameserver lines from resolv.conf content (testable)
 pub(crate) fn parse_resolv_conf(content: &str) -> Vec<String> {
     content
@@ -52,8 +65,8 @@ mod tests {
 
     #[test]
     fn test_parse_resolv_conf_ipv6() {
-        let content = "nameserver 2001:4860:4860::8888\n";
-        let servers = parse_resolv_conf(content);
-        assert_eq!(servers, vec!["2001:4860:4860::8888"]);
+        let content = format!("nameserver {}\n", super::TEST_IPV6_RESOLVER_SAMPLE);
+        let servers = parse_resolv_conf(&content);
+        assert_eq!(servers, vec![super::TEST_IPV6_RESOLVER_SAMPLE]);
     }
 }

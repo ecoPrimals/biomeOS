@@ -60,8 +60,8 @@ pub const CAPABILITY_ROUTING: &str = "routing";
 
 /// Trait for any primal that can provide security capabilities
 ///
-/// This trait is **agnostic** - it works with BearDog, but also with any other
-/// security primal that implements these operations.
+/// This trait is **agnostic** - it works with any primal providing crypto/security
+/// capability (discovered at runtime).
 #[async_trait]
 pub trait SecurityProvider: Send + Sync {
     /// Request a secure tunnel between two nodes
@@ -84,8 +84,8 @@ pub trait SecurityProvider: Send + Sync {
 
 /// Trait for any primal that can provide discovery capabilities
 ///
-/// This trait is **agnostic** - it works with Songbird, but also with any other
-/// discovery primal that implements these operations.
+/// This trait is **agnostic** - it works with any primal providing discovery
+/// capability (discovered at runtime).
 #[async_trait]
 pub trait DiscoveryProvider: Send + Sync {
     /// Register a secure transport endpoint
@@ -142,11 +142,11 @@ impl P2PCoordinator {
     pub async fn new_from_discovery() -> Result<Self> {
         tracing::info!("🔍 Discovering P2P coordination capabilities...");
 
-        // Discover security provider (e.g., BearDog)
+        // Discover security provider (capability: crypto/security)
         let security = Self::discover_security_provider().await?;
         tracing::info!("✅ Security provider discovered");
 
-        // Discover discovery provider (e.g., Songbird)
+        // Discover discovery provider (capability: discovery)
         let discovery = Self::discover_discovery_provider().await?;
         tracing::info!("✅ Discovery provider discovered");
 
@@ -173,8 +173,13 @@ impl P2PCoordinator {
         let family_id = crate::family_discovery::get_family_id();
         let discovery = SocketDiscovery::new(&family_id);
 
-        // Try capability strings from taxonomy (security, encryption)
-        for cap in ["security", "encryption", "crypto"] {
+        // Try capability strings from taxonomy (security, encryption, crypto)
+        use biomeos_types::constants::capability;
+        for cap in [
+            biomeos_types::constants::capabilities::SECURITY,
+            "encryption",
+            capability::CRYPTO,
+        ] {
             if let Some(primal) = discovery.discover_capability(cap).await {
                 tracing::info!(
                     "✅ Found security provider: {:?} at {}",
@@ -222,8 +227,14 @@ impl P2PCoordinator {
         let family_id = crate::family_discovery::get_family_id();
         let discovery = SocketDiscovery::new(&family_id);
 
-        // Try capability strings from taxonomy (discovery, registry, http)
-        for cap in ["discovery", "registry", "http"] {
+        // Try capability strings from taxonomy (discovery, mesh, registry)
+        use biomeos_types::constants::capability;
+        for cap in [
+            biomeos_types::constants::capabilities::DISCOVERY,
+            capability::MESH_NETWORKING,
+            "registry",
+            "http",
+        ] {
             if let Some(primal) = discovery.discover_capability(cap).await {
                 tracing::info!(
                     "✅ Found discovery provider: {:?} at {}",
@@ -269,7 +280,12 @@ impl P2PCoordinator {
 
         let discovery = SocketDiscovery::new(&family_id);
 
-        if let Some(primal) = discovery.discover_capability("routing").await {
+        use biomeos_types::constants::capability;
+        if let Some(primal) = discovery
+            .discover_capability(capability::GATEWAY)
+            .await
+            .or(discovery.discover_capability(CAPABILITY_ROUTING).await)
+        {
             tracing::info!(
                 "✅ Found routing provider: {:?} at {}",
                 primal.primal_name,

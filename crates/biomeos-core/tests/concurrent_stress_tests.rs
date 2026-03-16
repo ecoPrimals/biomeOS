@@ -12,10 +12,10 @@
 //! **Philosophy**: Test issues = Production issues
 //! If tests can't handle concurrency, production won't either!
 
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
-use tokio::sync::{mpsc, oneshot, Barrier};
+use tokio::sync::{Barrier, mpsc, oneshot};
 use tokio::task::JoinSet;
 
 // ============================================================================

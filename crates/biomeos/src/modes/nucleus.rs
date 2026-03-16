@@ -136,6 +136,19 @@ fn socket_path_for_capability(
     socket_dir.join(format!("{primal_name}-{family_id}.sock"))
 }
 
+/// Configuration for building a primal process command.
+#[derive(Debug, Clone)]
+pub(crate) struct PrimalCommandConfig<'a> {
+    pub name: &'a str,
+    pub binary: &'a std::path::Path,
+    pub socket_dir: &'a std::path::Path,
+    pub family_id: &'a str,
+    pub node_id: &'a str,
+    pub anthropic_api_key: Option<&'a str>,
+    pub openai_api_key: Option<&'a str>,
+    pub ai_http_providers: Option<&'a str>,
+}
+
 /// Build a primal process command (testable, no spawn).
 /// Returns std::process::Command for inspection and testing.
 /// Socket paths use capability-based resolution via taxonomy.
@@ -151,38 +164,34 @@ pub(crate) fn build_primal_command(
     let ai_providers = has_ai.then(|| {
         std::env::var("AI_HTTP_PROVIDERS").unwrap_or_else(|_| "anthropic,openai".to_string())
     });
-    build_primal_command_with(
+    let anthropic = std::env::var("ANTHROPIC_API_KEY").ok();
+    let openai = std::env::var("OPENAI_API_KEY").ok();
+    let config = PrimalCommandConfig {
         name,
         binary,
         socket_dir,
         family_id,
         node_id,
-        std::env::var("ANTHROPIC_API_KEY").ok().as_deref(),
-        std::env::var("OPENAI_API_KEY").ok().as_deref(),
-        ai_providers.as_deref(),
-    )
+        anthropic_api_key: anthropic.as_deref(),
+        openai_api_key: openai.as_deref(),
+        ai_http_providers: ai_providers.as_deref(),
+    };
+    build_primal_command_with(config)
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn build_primal_command_with(
-    name: &str,
-    binary: &std::path::Path,
-    socket_dir: &std::path::Path,
-    family_id: &str,
-    node_id: &str,
-    anthropic_api_key: Option<&str>,
-    openai_api_key: Option<&str>,
-    ai_http_providers: Option<&str>,
-) -> std::process::Command {
-    let socket_path = socket_dir.join(format!("{name}-{family_id}.sock"));
-    let mut cmd = std::process::Command::new(binary);
+pub(crate) fn build_primal_command_with(config: PrimalCommandConfig<'_>) -> std::process::Command {
+    let socket_path = config
+        .socket_dir
+        .join(format!("{}-{}.sock", config.name, config.family_id));
+    let mut cmd = std::process::Command::new(config.binary);
 
-    match name {
+    match config.name {
         BEARDOG => {
             cmd.arg("server").arg("--socket").arg(&socket_path);
         }
         SONGBIRD => {
-            let security_socket = socket_path_for_capability(socket_dir, family_id, "security");
+            let security_socket =
+                socket_path_for_capability(config.socket_dir, config.family_id, "security");
             cmd.arg("server")
                 .arg("--socket")
                 .arg(&socket_path)
@@ -194,7 +203,7 @@ pub(crate) fn build_primal_command_with(
             cmd.arg("daemon")
                 .arg("--socket-only")
                 .arg("--family-id")
-                .arg(family_id)
+                .arg(config.family_id)
                 .env("NESTGATE_JWT_SECRET", generate_jwt_secret());
         }
         TOADSTOOL => {
@@ -202,20 +211,21 @@ pub(crate) fn build_primal_command_with(
                 .arg("--socket")
                 .arg(socket_path.as_os_str())
                 .env("TOADSTOOL_SOCKET", socket_path.as_os_str())
-                .env("TOADSTOOL_FAMILY_ID", family_id);
+                .env("TOADSTOOL_FAMILY_ID", config.family_id);
         }
         SQUIRREL => {
-            let discovery_socket = socket_path_for_capability(socket_dir, family_id, "discovery");
+            let discovery_socket =
+                socket_path_for_capability(config.socket_dir, config.family_id, "discovery");
             cmd.arg("server")
                 .arg("--socket")
                 .arg(socket_path.as_os_str())
                 .env("SQUIRREL_SOCKET", socket_path.as_os_str())
                 .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket)
                 .env("HTTP_REQUEST_PROVIDER_SOCKET", discovery_socket.as_os_str());
-            if anthropic_api_key.is_some() || openai_api_key.is_some() {
+            if config.anthropic_api_key.is_some() || config.openai_api_key.is_some() {
                 cmd.env(
                     "AI_HTTP_PROVIDERS",
-                    ai_http_providers.unwrap_or("anthropic,openai"),
+                    config.ai_http_providers.unwrap_or("anthropic,openai"),
                 );
             }
         }
@@ -224,9 +234,9 @@ pub(crate) fn build_primal_command_with(
         }
     }
 
-    cmd.env("FAMILY_ID", family_id)
-        .env("NODE_ID", node_id)
-        .env("BEARDOG_NODE_ID", node_id);
+    cmd.env("FAMILY_ID", config.family_id)
+        .env("NODE_ID", config.node_id)
+        .env("BEARDOG_NODE_ID", config.node_id);
     cmd
 }
 

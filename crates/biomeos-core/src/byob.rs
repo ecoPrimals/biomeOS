@@ -318,10 +318,12 @@ mod tests {
         let result = manager.configure_team(String::new(), team_config).await;
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("team_id must not be empty"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("team_id must not be empty")
+        );
     }
 
     #[tokio::test]
@@ -336,10 +338,12 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("max_cpu_percent must be positive"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("max_cpu_percent must be positive")
+        );
     }
 
     #[tokio::test]
@@ -354,10 +358,12 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("must not exceed 100"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("must not exceed 100")
+        );
     }
 
     #[tokio::test]
@@ -372,10 +378,12 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("max_memory_mb must be positive"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("max_memory_mb must be positive")
+        );
     }
 
     #[tokio::test]
@@ -390,9 +398,11 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("max_disk_mb must be positive"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("max_disk_mb must be positive")
+        );
     }
 }

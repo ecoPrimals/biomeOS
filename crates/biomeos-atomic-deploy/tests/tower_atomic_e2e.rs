@@ -13,13 +13,15 @@
 //! cargo test --test tower_atomic_e2e -- --test-threads=1
 //! ```
 
+use biomeos_test_utils::{remove_test_env, set_test_env};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
-/// Test fixture for Tower Atomic deployment
+/// Test fixture for Tower Atomic deployment.
+/// Fields family_id and socket_dir are kept for debugging and future test assertions.
 #[allow(dead_code)]
 struct TowerAtomicFixture {
     family_id: String,
@@ -146,7 +148,7 @@ async fn test_nucleation_xdg_paths() {
     use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
 
     // Set XDG_RUNTIME_DIR for test
-    std::env::set_var("XDG_RUNTIME_DIR", "/run/user/1000");
+    set_test_env("XDG_RUNTIME_DIR", "/run/user/1000");
 
     let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
 
@@ -208,7 +210,7 @@ async fn test_execution_context_socket_paths() {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    std::env::set_var("XDG_RUNTIME_DIR", "/run/user/1000");
+    set_test_env("XDG_RUNTIME_DIR", "/run/user/1000");
 
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "context-test".to_string());

@@ -41,6 +41,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
+use crate::error::GraphError;
 use crate::events::{GraphEvent, GraphEventBroadcaster};
 use crate::graph::DeploymentGraph;
 use crate::node::GraphNode;
@@ -172,7 +173,7 @@ impl PipelineExecutor {
     /// `StreamItem::Data(Value::Null)` as its initial trigger. It should
     /// produce the actual stream items by returning them one at a time.
     /// When the source is exhausted, it returns `StreamItem::End`.
-    pub async fn run<F, Fut>(self, node_executor: F) -> PipelineResult
+    pub async fn run<F, Fut>(self, node_executor: F) -> Result<PipelineResult, GraphError>
     where
         F: Fn(String, GraphNode, StreamItem) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = StreamItem> + Send,
@@ -197,7 +198,7 @@ impl PipelineExecutor {
             .await;
 
         if self.node_order.is_empty() {
-            return PipelineResult {
+            return Ok(PipelineResult {
                 graph_id,
                 items_in: 0,
                 items_out: 0,
@@ -207,7 +208,7 @@ impl PipelineExecutor {
                 duration_ms: start.elapsed().as_millis() as u64,
                 success: true,
                 error: None,
-            };
+            });
         }
 
         // Build the channel chain: node[0]→node[1]→...→collector
@@ -246,9 +247,10 @@ impl PipelineExecutor {
         // Transforms read from their input channel and write to their output channel.
         for i in 0..n {
             let node_id = node_ids[i].clone();
-            let node = self.find_node(&node_id).cloned().unwrap_or_else(|| {
-                panic!("Pipeline node not found in graph: {node_id}");
-            });
+            let node = self
+                .find_node(&node_id)
+                .cloned()
+                .ok_or_else(|| GraphError::NodeNotFound(node_id.clone()))?;
 
             let mut rx = receivers.remove(0);
             let tx = senders[i + 1].clone();
@@ -411,7 +413,7 @@ impl PipelineExecutor {
             graph_id,
         );
 
-        PipelineResult {
+        Ok(PipelineResult {
             graph_id,
             items_in,
             items_out,
@@ -421,7 +423,7 @@ impl PipelineExecutor {
             duration_ms,
             success: true,
             error: None,
-        }
+        })
     }
 
     /// Compute linear execution order from the dependency graph.
@@ -592,7 +594,8 @@ mod tests {
                     }
                 }
             })
-            .await;
+            .await
+            .expect("pipeline run");
 
         assert!(result.success);
         assert_eq!(result.items_out, 1);
@@ -640,7 +643,8 @@ mod tests {
                     }
                 }
             })
-            .await;
+            .await
+            .expect("pipeline run");
 
         assert!(result.success);
         assert_eq!(result.items_out, 5);
@@ -687,7 +691,8 @@ mod tests {
                     }
                 }
             })
-            .await;
+            .await
+            .expect("pipeline run");
 
         assert!(result.success);
         assert_eq!(result.items_dropped, 1);

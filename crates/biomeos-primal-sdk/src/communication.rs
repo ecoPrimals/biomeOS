@@ -32,17 +32,17 @@
 //! # }
 //! ```
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use serde_json::Value;
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 
-use crate::discovery::{DiscoveredPrimal, PrimalDiscovery};
 use crate::PrimalCapability;
+use crate::discovery::{DiscoveredPrimal, PrimalDiscovery};
 
 /// Client for communicating with other primals
 pub struct PrimalClient {
@@ -98,7 +98,7 @@ impl PrimalClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn request(&self, method: impl Into<String>, params: Value) -> Result<Value> {
+    pub async fn request(&self, method: impl AsRef<str>, params: Value) -> Result<Value> {
         let request = JsonRpcRequest::new(method, params);
 
         let response = timeout(self.timeout, self.send_request(request))

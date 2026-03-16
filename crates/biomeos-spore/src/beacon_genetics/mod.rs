@@ -57,10 +57,10 @@ mod types;
 // Re-export public types
 pub use capability::{CapabilityCaller, DirectBeardogCaller, NeuralApiCapabilityCaller};
 pub use derivation::{
-    generate_device_entropy, DerivationParams, DeviceLineage, EnrollmentResult, LineageDeriver,
+    DerivationParams, DeviceLineage, EnrollmentResult, LineageDeriver, generate_device_entropy,
 };
 pub use manager::BeaconGeneticsManager;
 pub use types::{
-    current_timestamp, BeaconGeneticsManifest, BeaconId, ClusterMembership, ClusterRole,
-    MeetingRecord, MeetingRelationship, MeetingVisibility, SyncResult, Timestamp,
+    BeaconGeneticsManifest, BeaconId, ClusterMembership, ClusterRole, MeetingRecord,
+    MeetingRelationship, MeetingVisibility, SyncResult, Timestamp, current_timestamp,
 };

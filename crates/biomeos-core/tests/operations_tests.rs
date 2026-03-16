@@ -11,8 +11,8 @@ use biomeos_types::{BiomeOSConfig, Health, PrimalType};
 use std::collections::HashMap;
 use std::sync::Arc;
 use wiremock::{
-    matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
+    matchers::{method, path},
 };
 
 /// Helper to create a test manager with registered primals

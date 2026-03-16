@@ -123,12 +123,12 @@ async fn try_get_version(binary: &Path) -> Option<String> {
     )
     .await;
 
-    if let Ok(Ok(output)) = output {
-        if output.status.success() {
-            return String::from_utf8(output.stdout)
-                .ok()
-                .map(|s| s.trim().to_string());
-        }
+    if let Ok(Ok(output)) = output
+        && output.status.success()
+    {
+        return String::from_utf8(output.stdout)
+            .ok()
+            .map(|s| s.trim().to_string());
     }
 
     None
@@ -172,22 +172,22 @@ async fn detect_port_config(binary: &Path) -> PortConfigMethod {
     )
     .await;
 
-    if let Ok(Ok(output)) = output {
-        if let Ok(help_text) = String::from_utf8(output.stdout) {
-            // Look for port-related flags
-            if help_text.contains("--port") {
-                return PortConfigMethod::CliFlag("--port".to_string());
-            }
-            if help_text.contains("-p, --port") {
-                return PortConfigMethod::CliFlag("--port".to_string());
-            }
-            // Check for env var mentions
-            if help_text.contains("PORT") || help_text.contains("port") {
-                return PortConfigMethod::Multiple(vec![
-                    PortConfigMethod::EnvVar("PORT".to_string()),
-                    PortConfigMethod::CliFlag("--port".to_string()),
-                ]);
-            }
+    if let Ok(Ok(output)) = output
+        && let Ok(help_text) = String::from_utf8(output.stdout)
+    {
+        // Look for port-related flags
+        if help_text.contains("--port") {
+            return PortConfigMethod::CliFlag("--port".to_string());
+        }
+        if help_text.contains("-p, --port") {
+            return PortConfigMethod::CliFlag("--port".to_string());
+        }
+        // Check for env var mentions
+        if help_text.contains("PORT") || help_text.contains("port") {
+            return PortConfigMethod::Multiple(vec![
+                PortConfigMethod::EnvVar("PORT".to_string()),
+                PortConfigMethod::CliFlag("--port".to_string()),
+            ]);
         }
     }
 
@@ -209,15 +209,15 @@ pub(crate) async fn discover_stop_command(binary: &Path) -> Option<String> {
         )
         .await;
 
-        if let Ok(Ok(output)) = result {
-            if output.status.success() {
-                debug!(
-                    "Discovered stop command '{}' for {}",
-                    stop_cmd,
-                    binary.display()
-                );
-                return Some(stop_cmd.to_string());
-            }
+        if let Ok(Ok(output)) = result
+            && output.status.success()
+        {
+            debug!(
+                "Discovered stop command '{}' for {}",
+                stop_cmd,
+                binary.display()
+            );
+            return Some(stop_cmd.to_string());
         }
     }
 

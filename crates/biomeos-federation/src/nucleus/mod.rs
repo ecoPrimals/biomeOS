@@ -534,9 +534,10 @@ mod tests {
     #[test]
     fn test_get_by_capability_none_when_missing() {
         let disc = SecureNucleusDiscovery::new();
-        assert!(disc
-            .get(SelectionCriteria::ByCapability(Capability::Compute))
-            .is_none());
+        assert!(
+            disc.get(SelectionCriteria::ByCapability(Capability::Compute))
+                .is_none()
+        );
     }
 
     #[test]
@@ -552,9 +553,10 @@ mod tests {
     #[test]
     fn test_get_by_node_id_not_found() {
         let disc = SecureNucleusDiscovery::new();
-        assert!(disc
-            .get(SelectionCriteria::ByNodeId("nope".into()))
-            .is_none());
+        assert!(
+            disc.get(SelectionCriteria::ByNodeId("nope".into()))
+                .is_none()
+        );
     }
 
     #[test]
@@ -578,9 +580,10 @@ mod tests {
         let vp = make_verified("svc", "n1", Some("west"), TrustLevel::Basic, vec![], vec![]);
         let disc = SecureNucleusDiscovery::new().inject_primal_for_testing(vp);
 
-        assert!(disc
-            .get(SelectionCriteria::ByFamily("east".into()))
-            .is_none());
+        assert!(
+            disc.get(SelectionCriteria::ByFamily("east".into()))
+                .is_none()
+        );
     }
 
     #[test]
@@ -606,9 +609,10 @@ mod tests {
     #[test]
     fn test_get_by_socket_no_match() {
         let disc = SecureNucleusDiscovery::new();
-        assert!(disc
-            .get(SelectionCriteria::BySocket(PathBuf::from("/nope")))
-            .is_none());
+        assert!(
+            disc.get(SelectionCriteria::BySocket(PathBuf::from("/nope")))
+                .is_none()
+        );
     }
 
     #[test]
@@ -629,9 +633,10 @@ mod tests {
         let low = make_verified("a", "a1", None, TrustLevel::Basic, vec![], vec![]);
         let disc = SecureNucleusDiscovery::new().inject_primal_for_testing(low);
 
-        assert!(disc
-            .get(SelectionCriteria::MinTrustLevel(TrustLevel::High))
-            .is_none());
+        assert!(
+            disc.get(SelectionCriteria::MinTrustLevel(TrustLevel::High))
+                .is_none()
+        );
     }
 
     #[test]

@@ -230,18 +230,20 @@ impl FamilySeed {
         &self.file_path
     }
 
-    /// Configure environment for BearDog to use this seed
+    /// Build environment variables for a crypto provider to use this seed.
     ///
-    /// Sets the `BEARDOG_FAMILY_SEED_FILE` environment variable so BearDog
-    /// knows where to find the seed file. BearDog will then read and process
-    /// the file using its cryptographic functions.
-    pub fn configure_beardog_env(&self) -> SporeResult<()> {
-        let path_str = self.file_path.to_str().ok_or(SporeError::InvalidPath)?;
+    /// Returns a `(key, value)` pair suitable for `Command::env()`.
+    /// The caller should pass this to the discovered crypto-capable primal
+    /// via the process spawning API rather than mutating global env state.
+    pub fn crypto_provider_env(&self) -> SporeResult<(String, String)> {
+        let path_str = self
+            .file_path
+            .to_str()
+            .ok_or(SporeError::InvalidPath)?
+            .to_string();
 
-        std::env::set_var("BEARDOG_FAMILY_SEED_FILE", path_str);
-        debug!("Set BEARDOG_FAMILY_SEED_FILE={}", path_str);
-
-        Ok(())
+        debug!("Prepared seed file env for crypto provider: {}", path_str);
+        Ok(("FAMILY_SEED_FILE".to_string(), path_str))
     }
 
     /// Set secure permissions on the seed file (Unix only)
@@ -329,15 +331,15 @@ mod tests {
     }
 
     #[test]
-    fn test_configure_beardog_env() {
+    fn test_crypto_provider_env() {
         let temp_dir = TempDir::new().unwrap();
         let seed_path = temp_dir.path().join(".family.seed");
 
         let seed = FamilySeed::generate_and_write(&seed_path).unwrap();
-        seed.configure_beardog_env().unwrap();
+        let (key, value) = seed.crypto_provider_env().unwrap();
 
-        let env_value = std::env::var("BEARDOG_FAMILY_SEED_FILE").unwrap();
-        assert_eq!(env_value, seed_path.to_str().unwrap());
+        assert_eq!(key, "FAMILY_SEED_FILE");
+        assert_eq!(value, seed_path.to_str().unwrap());
     }
 
     // ========== Sibling Derivation Tests ==========

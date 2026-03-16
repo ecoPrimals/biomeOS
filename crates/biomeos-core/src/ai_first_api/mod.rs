@@ -18,8 +18,8 @@ mod tests;
 
 // Re-export unified AI-first types from biomeos-types
 pub use biomeos_types::{
-    error::AIErrorCategory, error::ErrorSeverity, BiomeError, BiomeOSConfig, BiomeResult,
-    Environment,
+    BiomeError, BiomeOSConfig, BiomeResult, Environment, error::AIErrorCategory,
+    error::ErrorSeverity,
 };
 
 // Re-export our types

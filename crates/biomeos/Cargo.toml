@@ -57,5 +57,6 @@ base64 = { workspace = true }
 etcetera = "0.8"  # Pure Rust replacement
 
 [dev-dependencies]
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tempfile = "3.8"
 

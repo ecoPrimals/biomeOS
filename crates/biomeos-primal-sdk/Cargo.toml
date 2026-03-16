@@ -24,6 +24,7 @@ tokio = { workspace = true }
 
 # tarpc for high-performance binary RPC (protocol escalation)
 tarpc = { workspace = true }
+tokio-serde = { workspace = true }
 
 # Error handling
 thiserror = "1.0"

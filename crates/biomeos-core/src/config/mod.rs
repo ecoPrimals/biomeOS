@@ -9,7 +9,7 @@
 use biomeos_types::config::features::EnvironmentLimits;
 use biomeos_types::config::resources::RegistryConfig;
 use biomeos_types::{
-    config::resources::DiscoveryMethod, BiomeOSConfig, BiomeResult, Environment, OrganizationScale,
+    BiomeOSConfig, BiomeResult, Environment, OrganizationScale, config::resources::DiscoveryMethod,
 };
 
 // All configuration types are now properly unified in biomeos-types
@@ -242,11 +242,10 @@ pub mod validation {
 
         // Check for development settings in production
         if config.system.environment == Environment::Production {
-            if let Some(ref registry) = config.discovery.registry {
-                if registry.url.contains("localhost") {
-                    warnings
-                        .push("Production environment contains localhost endpoints".to_string());
-                }
+            if let Some(ref registry) = config.discovery.registry
+                && registry.url.contains("localhost")
+            {
+                warnings.push("Production environment contains localhost endpoints".to_string());
             }
 
             // Check worker thread count

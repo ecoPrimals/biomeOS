@@ -5,10 +5,10 @@
 //!
 //! Node/primal discovery via Songbird or socket scanning fallback.
 
+use crate::FederationResult;
 use crate::capability::CapabilitySet;
 use crate::discovery::{DiscoveredPrimal, PrimalDiscovery, PrimalEndpoint};
 use crate::unix_socket_client::{JsonRpcRequest, UnixSocketClient};
-use crate::FederationResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;

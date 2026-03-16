@@ -324,8 +324,8 @@ async fn send_jsonrpc_uds(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     struct MockProvider {
         available: AtomicBool,

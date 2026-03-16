@@ -340,6 +340,7 @@ impl std::fmt::Debug for FamilyCredentials {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_secret_seed_validation() {
@@ -399,10 +400,10 @@ mod tests {
         // Run with: cargo test test_from_env_missing -- --ignored
 
         // Clear environment
-        std::env::remove_var("FAMILY_ID");
-        std::env::remove_var("BEARDOG_FAMILY_ID");
-        std::env::remove_var("FAMILY_SEED");
-        std::env::remove_var("BEARDOG_FAMILY_SEED");
+        remove_test_env("FAMILY_ID");
+        remove_test_env("BEARDOG_FAMILY_ID");
+        remove_test_env("FAMILY_SEED");
+        remove_test_env("BEARDOG_FAMILY_SEED");
 
         assert!(FamilyCredentials::from_env().is_err());
     }
@@ -413,8 +414,8 @@ mod tests {
         // NOTE: This test modifies global environment, skip in parallel test runs
         // Run with: cargo test test_from_env_success -- --ignored
 
-        std::env::set_var("FAMILY_ID", "test-family");
-        std::env::set_var(
+        set_test_env("FAMILY_ID", "test-family");
+        set_test_env(
             "FAMILY_SEED",
             "iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=",
         );
@@ -423,8 +424,8 @@ mod tests {
         assert_eq!(creds.family_id().as_str(), "test-family");
 
         // Cleanup
-        std::env::remove_var("FAMILY_ID");
-        std::env::remove_var("FAMILY_SEED");
+        remove_test_env("FAMILY_ID");
+        remove_test_env("FAMILY_SEED");
     }
 
     #[test]
@@ -481,9 +482,11 @@ mod tests {
 
         let result = FamilyCredentials::from_encrypted_file(temp.path(), b"");
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("integrity check failed"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("integrity check failed")
+        );
     }
 }

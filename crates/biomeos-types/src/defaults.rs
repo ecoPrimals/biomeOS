@@ -42,6 +42,7 @@
 //! let neural_socket = config.neural_api_socket();
 //! ```
 
+use crate::constants::ports;
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -248,7 +249,7 @@ impl RuntimeConfig {
     pub fn http_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("HTTP_PORT")
             .and_then(|v| v.parse().ok())
-            .unwrap_or(8080)
+            .unwrap_or(ports::HTTP_BRIDGE)
     }
 
     /// Get HTTPS port from environment or fallback to default
@@ -260,7 +261,7 @@ impl RuntimeConfig {
     pub fn https_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("HTTPS_PORT")
             .and_then(|v| v.parse().ok())
-            .unwrap_or(8443)
+            .unwrap_or(ports::HTTPS_DEFAULT)
     }
 
     /// Get WebSocket port from environment or fallback to default
@@ -272,7 +273,7 @@ impl RuntimeConfig {
     pub fn websocket_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("WEBSOCKET_PORT")
             .and_then(|v| v.parse().ok())
-            .unwrap_or(8081)
+            .unwrap_or(ports::WS_DEFAULT)
     }
 
     /// Get MCP port from environment or fallback to default
@@ -285,7 +286,7 @@ impl RuntimeConfig {
         env.get("MCP_WEBSOCKET_PORT")
             .or_else(|| env.get("MCP_PORT"))
             .and_then(|v| v.parse().ok())
-            .unwrap_or(3000)
+            .unwrap_or(ports::API_DEFAULT)
     }
 
     /// Get discovery port from environment or fallback to default
@@ -297,7 +298,7 @@ impl RuntimeConfig {
     pub fn discovery_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("DISCOVERY_PORT")
             .and_then(|v| v.parse().ok())
-            .unwrap_or(8001)
+            .unwrap_or(ports::WEBSOCKET)
     }
 
     /// Get bind address from environment or fallback to default

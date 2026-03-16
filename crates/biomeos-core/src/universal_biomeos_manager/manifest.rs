@@ -91,10 +91,10 @@ impl UniversalBiomeOSManager {
 mod tests {
     use crate::universal_biomeos_manager::UniversalBiomeOSManager;
     use biomeos_manifest::{BiomeManifestProcessor, BiomeManifestTemplates};
+    use biomeos_types::BiomeOSConfig;
     use biomeos_types::manifest::service::{
         ImagePullPolicy, ImageSpec, RestartPolicy, ServiceMetadata, ServiceSpec,
     };
-    use biomeos_types::BiomeOSConfig;
     use std::collections::HashMap;
 
     async fn test_manager() -> UniversalBiomeOSManager {

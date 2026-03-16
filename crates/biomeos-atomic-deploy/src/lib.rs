@@ -59,12 +59,15 @@ pub mod neural_executor;
 #[cfg(test)]
 mod neural_executor_tests;
 pub mod neural_graph;
+#[cfg(test)]
+mod neural_graph_tests;
 pub mod neural_router;
 #[cfg(test)]
 mod neural_router_tests;
 pub mod nucleation; // NEW: Capability-based routing layer
 mod proc_metrics;
-pub mod protocol_escalation; // NEW: JSON-RPC → tarpc escalation // Pure Rust /proc metrics (ecoBin v3)
+pub mod protocol_escalation;
+mod tarpc_client; // NEW: JSON-RPC → tarpc escalation // Pure Rust /proc metrics (ecoBin v3)
 
 pub use deployment_graph::{AtomicDeploymentGraph, DeploymentResult};
 pub use health_check::{HealthChecker, HealthStatus};

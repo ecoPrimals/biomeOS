@@ -469,16 +469,17 @@ fn test_build_primal_command_nestgate_has_jwt_secret() {
 
 #[test]
 fn test_build_primal_command_squirrel_with_ai_providers() {
-    let cmd = build_primal_command_with(
-        "squirrel",
-        std::path::Path::new("/usr/bin/squirrel"),
-        std::path::Path::new("/tmp/sock"),
-        "fam1",
-        "node1",
-        Some("test-key"),
-        None,
-        None,
-    );
+    let config = PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: Some("test-key"),
+        openai_api_key: None,
+        ai_http_providers: None,
+    };
+    let cmd = build_primal_command_with(config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let ai_providers = envs
         .iter()
@@ -491,16 +492,17 @@ fn test_build_primal_command_squirrel_with_ai_providers() {
 
 #[test]
 fn test_build_primal_command_squirrel_with_openai_key() {
-    let cmd = build_primal_command_with(
-        "squirrel",
-        std::path::Path::new("/usr/bin/squirrel"),
-        std::path::Path::new("/tmp/sock"),
-        "fam1",
-        "node1",
-        None,
-        Some("sk-test"),
-        None,
-    );
+    let config = PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: None,
+        openai_api_key: Some("sk-test"),
+        ai_http_providers: None,
+    };
+    let cmd = build_primal_command_with(config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let ai_providers = envs
         .iter()

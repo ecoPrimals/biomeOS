@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.44] - 2026-03-16 (Deep Audit Evolution: Modern Idiomatic Rust)
+
+Edition 2024 migration, sovereignty bug fix, capability-based discovery, tarpc binary protocol, zero-copy Arc<str>, lint hardening, large file smart refactoring.
+
+| Category | Change |
+|----------|--------|
+| **Edition 2024** | Upgraded workspace from Rust 2021 to 2024; safe `env_helpers` module in biomeos-test-utils; ~130 `set_var`/`remove_var` calls migrated |
+| **Sovereignty fix** | Fixed operator precedence bug in `enforce_economic_sovereignty()` |
+| **Lint hardening** | `unwrap_used`/`expect_used` promoted from `warn` to `deny` |
+| **Production panics** | Only production `panic!()` replaced with `GraphError::NodeNotFound` + `?` propagation |
+| **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |
+| **Discovery evolution** | `discover_by_capability()`, `discover_endpoint_by_capability()`, agnostic `crypto_provider_env()` |
+| **Port constants** | `ports` module with named constants; Google DNS sovereignty fix (RFC 3849) |
+| **Zero-copy** | `JsonRpcRequest.method`, neural router types → `Arc<str>` |
+| **tarpc binary** | Real tarpc binary protocol in `forward_via_tarpc()`; `serve_tarpc_health()` server helper |
+| **Allow cleanup** | 77 `#[allow]` reviewed; `too_many_arguments` → config struct; safety comments on `await_holding_lock` |
+| **Smart refactoring** | `neural_router.rs` → 4 modules; test extraction from 3 large files |
+| **Production env safety** | `config/mod.rs` stores env vars in metadata; `seed.rs` returns tuples instead of mutating global state |
+| **Tests** | 5,108 → 5,168 (+60), 0 failures, 77.92% line coverage |
+
+---
+
 ## [v2.43] - 2026-03-16 (Streaming Pipeline Coordination)
 
 ### PipelineExecutor — Streaming Graph Execution

@@ -21,18 +21,10 @@
 //!
 //! ```rust,ignore
 //! use biomeos_primal_sdk::tarpc_transport;
-//! use futures::StreamExt;
-//! use tarpc::server::{self, Channel};
+//! use biomeos_types::tarpc_types::HealthRpc;
 //!
-//! let sock = tarpc_transport::prepare_socket("/tmp/primal.tarpc.sock").await?;
-//! let mut incoming = tarpc::serde_transport::unix::listen(
-//!     &sock,
-//!     tokio_serde::formats::Bincode::default,
-//! ).await?;
-//! while let Some(Ok(transport)) = incoming.next().await {
-//!     let channel = server::BaseChannel::with_defaults(transport);
-//!     tokio::spawn(channel.execute(my_server.serve()));
-//! }
+//! let service = MyHealthServiceImpl;
+//! tarpc_transport::serve_tarpc_health("/tmp/primal.tarpc.sock", service).await?;
 //! ```
 //!
 //! # Client Example
@@ -50,6 +42,11 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use biomeos_types::tarpc_types::HealthRpc;
+use futures::StreamExt;
+use tarpc::serde_transport::unix;
+use tarpc::server::{BaseChannel, Channel};
+use tokio_serde::formats::Bincode;
 
 /// Prepare a socket path for tarpc listening.
 ///
@@ -91,6 +88,62 @@ pub fn tarpc_socket_name(jsonrpc_socket: &str) -> String {
 pub fn tarpc_socket_path(jsonrpc_socket: &Path) -> std::path::PathBuf {
     let name = jsonrpc_socket.to_string_lossy();
     std::path::PathBuf::from(tarpc_socket_name(&name))
+}
+
+/// Spawn a tarpc HealthRpc server on a Unix socket.
+///
+/// Listens on the given socket path using the tarpc binary protocol (Bincode).
+/// Each incoming connection is served sequentially until the client disconnects.
+/// Runs until the process exits or the listener is dropped.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use biomeos_primal_sdk::tarpc_transport;
+/// use biomeos_types::tarpc_types::{HealthRpc, HealthStatus, HealthMetrics, VersionInfo};
+///
+/// #[derive(Clone)]
+/// struct MyHealthService;
+/// impl HealthRpc for MyHealthService {
+///     async fn health_check(self, _: tarpc::context::Context) -> HealthStatus { ... }
+///     async fn health_metrics(self, _: tarpc::context::Context) -> HealthMetrics { ... }
+///     async fn version(self, _: tarpc::context::Context) -> VersionInfo { ... }
+/// }
+///
+/// tarpc_transport::serve_tarpc_health("/tmp/primal.tarpc.sock", MyHealthService).await?;
+/// ```
+pub async fn serve_tarpc_health(
+    socket_path: impl AsRef<Path>,
+    service: impl HealthRpc + Clone + Send + 'static,
+) -> Result<()> {
+    let path = socket_path.as_ref();
+    let prepared = prepare_socket(path).await?;
+
+    let mut incoming = unix::listen(&prepared, Bincode::default)
+        .await
+        .with_context(|| format!("Failed to listen on tarpc socket: {}", path.display()))?;
+
+    tracing::info!(socket = %path.display(), "tarpc HealthRpc server listening");
+
+    while let Some(transport_result) = incoming.next().await {
+        match transport_result {
+            Ok(transport) => {
+                let service = service.clone();
+                let channel = BaseChannel::with_defaults(transport);
+                let requests = channel.execute(service.serve());
+                // Box::pin makes the stream Unpin so we can use StreamExt::next
+                let mut requests = Box::pin(requests);
+                while let Some(fut) = futures::StreamExt::next(&mut requests).await {
+                    fut.await;
+                }
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "tarpc accept error");
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -11,8 +11,8 @@ use biomeos_core::universal_biomeos_manager::*;
 use biomeos_types::BiomeOSConfig;
 use serde_json::json;
 use wiremock::{
-    matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
+    matchers::{method, path},
 };
 
 /// Test the registry discovery with a mock server

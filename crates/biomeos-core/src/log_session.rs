@@ -145,19 +145,19 @@ impl LogSessionTracker {
             }
 
             // Copy log file to fossil directory if it exists
-            if let Some(log_file) = &session.log_file {
-                if log_file.exists() {
-                    let dest = fossil_dir.join(format!(
-                        "{}_{}.log",
-                        session.started_at.format("%Y%m%d_%H%M%S"),
-                        session.primal_id.as_str().replace('/', "_")
-                    ));
+            if let Some(log_file) = &session.log_file
+                && log_file.exists()
+            {
+                let dest = fossil_dir.join(format!(
+                    "{}_{}.log",
+                    session.started_at.format("%Y%m%d_%H%M%S"),
+                    session.primal_id.as_str().replace('/', "_")
+                ));
 
-                    if let Err(e) = tokio::fs::copy(log_file, &dest).await {
-                        warn!("Failed to copy log file to fossil: {}", e);
-                    } else {
-                        debug!("Log archived: {} → {}", log_file.display(), dest.display());
-                    }
+                if let Err(e) = tokio::fs::copy(log_file, &dest).await {
+                    warn!("Failed to copy log file to fossil: {}", e);
+                } else {
+                    debug!("Log archived: {} → {}", log_file.display(), dest.display());
                 }
             }
         }

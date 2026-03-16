@@ -425,8 +425,8 @@ mod tests {
             "Should have ecosystem.coordination registered"
         );
         let providers = providers.unwrap();
-        assert_eq!(providers[0].primal_name, "biomeos-coord-family");
-        assert_eq!(providers[0].source, "coordinated");
+        assert_eq!(providers[0].primal_name.as_ref(), "biomeos-coord-family");
+        assert_eq!(providers[0].source.as_ref(), "coordinated");
     }
 
     #[test]

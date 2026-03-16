@@ -15,7 +15,7 @@ use biomeos_types::{BiomeOSConfig, Health};
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::time::{sleep, Instant};
+use tokio::time::{Instant, sleep};
 use tracing::{error, info, warn};
 use tracing_test::traced_test;
 

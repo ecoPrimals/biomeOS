@@ -297,19 +297,26 @@ impl BiomeOSConfig {
     }
 
     /// Get environment-specific configuration
+    ///
+    /// Returns the resolved config. Environment variables from the config are
+    /// stored in `metadata.custom` under `env.{KEY}` keys rather than mutating
+    /// the global process environment (which is not thread-safe). Callers that
+    /// spawn child processes should pass these via `Command::env()`.
     pub fn for_environment(&self, env: &str) -> BiomeResult<Self> {
         let mut config = self.clone();
 
         if let Some(env_config) = self.environments.get(env) {
-            // Apply environment-specific overrides
             config.features = env_config.features.clone();
 
-            // Apply environment variables
+            // Store env variables in config metadata for callers to propagate
+            // via Command::env() rather than mutating global process state.
             for (key, value) in &env_config.variables {
-                std::env::set_var(key, value);
+                config.metadata.custom.insert(
+                    format!("env.{key}"),
+                    serde_json::Value::String(value.clone()),
+                );
             }
 
-            // Apply environment-specific endpoints
             for (service, endpoint) in &env_config.endpoints {
                 config.metadata.custom.insert(
                     format!("{service}_endpoint"),

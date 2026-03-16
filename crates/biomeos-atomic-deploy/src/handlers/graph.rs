@@ -28,7 +28,7 @@ use biomeos_graph::continuous::{ContinuousExecutor, SessionCommand, SessionState
 use biomeos_graph::events::GraphEventBroadcaster;
 use biomeos_graph::graph::{CoordinationPattern, DeploymentGraph};
 use biomeos_graph::pipeline::{PipelineExecutor, StreamItem};
-use biomeos_types::SystemPaths;
+use biomeos_types::{constants::files, defaults::DEFAULT_SOCKET_DIR, SystemPaths};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -272,8 +272,10 @@ impl GraphHandler {
 
             // Wire PathwayLearner metrics: record per-node and per-graph execution data
             let metrics_db_path = SystemPaths::new()
-                .map(|p| p.data_dir().join("neural_api_metrics.redb"))
-                .unwrap_or_else(|_| std::path::PathBuf::from("/tmp/neural_api_metrics.redb"));
+                .map(|p| p.data_dir().join(files::DEFAULT_NEURAL_METRICS_DB))
+                .unwrap_or_else(|_| {
+                    PathBuf::from(DEFAULT_SOCKET_DIR).join(files::DEFAULT_NEURAL_METRICS_DB)
+                });
             let metrics = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path).await;
 
             let mut executor = GraphExecutor::new(graph.clone(), env);
@@ -660,7 +662,8 @@ impl GraphHandler {
                     }
                 }
             })
-            .await;
+            .await
+            .context("Pipeline execution failed")?;
 
         Ok(serde_json::to_value(result)?)
     }
@@ -750,8 +753,10 @@ impl GraphHandler {
             .with_context(|| format!("Failed to parse DeploymentGraph: {graph_id}"))?;
 
         let metrics_db_path = SystemPaths::new()
-            .map(|p| p.data_dir().join("neural_api_metrics.redb"))
-            .unwrap_or_else(|_| std::path::PathBuf::from("/tmp/neural_api_metrics.redb"));
+            .map(|p| p.data_dir().join(files::DEFAULT_NEURAL_METRICS_DB))
+            .unwrap_or_else(|_| {
+                PathBuf::from(DEFAULT_SOCKET_DIR).join(files::DEFAULT_NEURAL_METRICS_DB)
+            });
 
         let collector = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path)
             .await

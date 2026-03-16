@@ -6,6 +6,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::{JsonRpcNotification, *};
+use biomeos_test_utils::{remove_test_env, set_test_env};
 use std::sync::Arc;
 
 #[tokio::test]
@@ -572,30 +573,30 @@ async fn test_subscribe_sse_with_websocket_upgrades_to_websocket() {
 
 #[tokio::test]
 async fn test_discover_endpoints_with_ws_env() {
-    std::env::set_var("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
+    set_test_env("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
     let result = subscriber.discover_endpoints().await;
-    std::env::remove_var("BIOMEOS_WS_ENDPOINT");
+    remove_test_env("BIOMEOS_WS_ENDPOINT");
     assert!(result.is_ok());
     assert!(subscriber.subscribe_websocket().await.is_err());
 }
 
 #[tokio::test]
 async fn test_discover_endpoints_with_sse_env() {
-    std::env::set_var("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
+    set_test_env("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
     let result = subscriber.discover_endpoints().await;
-    std::env::remove_var("BIOMEOS_SSE_ENDPOINT");
+    remove_test_env("BIOMEOS_SSE_ENDPOINT");
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_discover_endpoints_with_both_env_vars() {
-    std::env::set_var("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
-    std::env::set_var("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
+    set_test_env("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
+    set_test_env("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
     let result = subscriber.discover_endpoints().await;
-    std::env::remove_var("BIOMEOS_WS_ENDPOINT");
-    std::env::remove_var("BIOMEOS_SSE_ENDPOINT");
+    remove_test_env("BIOMEOS_WS_ENDPOINT");
+    remove_test_env("BIOMEOS_SSE_ENDPOINT");
     assert!(result.is_ok());
 }

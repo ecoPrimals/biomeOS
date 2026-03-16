@@ -3,6 +3,8 @@
 
 //! Beacon Genetics Manager tests
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use super::super::capability::CapabilityCaller;
 use super::super::*;
 use std::collections::HashMap;
@@ -108,10 +110,12 @@ async fn test_sync_with_different_lineage_fails() {
     let remote_manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("remote456"), "lineage_b");
     let result = manager.sync_with_lineage_peer(&remote_manifest).await;
     assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("different lineage"));
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("different lineage")
+    );
 }
 
 #[test]
@@ -238,4 +242,107 @@ fn test_with_capability_caller() {
     let manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock);
     assert!(manager.our_beacon_id().is_none());
     assert_eq!(manager.root_path, temp_dir.path());
+}
+
+#[test]
+fn test_list_meetings_with_data() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    let mut manager = BeaconGeneticsManager::with_capability_caller(
+        temp_dir.path(),
+        Box::new(MockCapabilityCaller::new()),
+    );
+    let mut manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("our123"), "lineage");
+    manifest.add_meeting(
+        BeaconId::from_hex("peer1"),
+        MeetingRecord {
+            node_name: "peer-1".to_string(),
+            first_met: 1000,
+            last_seen: 1000,
+            endpoints: vec!["192.168.1.1:9900".to_string()],
+            capabilities_hint: vec![],
+            notes: "Test".to_string(),
+            relationship: MeetingRelationship::Direct,
+            visibility: MeetingVisibility::Mutual,
+            seed_file: "peer1.seed".to_string(),
+        },
+    );
+    manager.set_manifest(manifest);
+
+    let meetings = manager.list_meetings();
+    assert_eq!(meetings.len(), 1);
+    assert_eq!(meetings[0].0.0, "peer1");
+    assert_eq!(meetings[0].1.node_name, "peer-1");
+}
+
+#[test]
+fn test_get_lineage_hint_short_seed() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    let seed_data = b"short";
+    std::fs::write(temp_dir.path().join(".family.seed"), seed_data).expect("write seed");
+    let manager = BeaconGeneticsManager::with_capability_caller(
+        temp_dir.path(),
+        Box::new(MockCapabilityCaller::new()),
+    );
+    let result = manager.get_lineage_hint();
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_try_decrypt_with_met_seeds_not_initialized() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    let manager = BeaconGeneticsManager::with_capability_caller(
+        temp_dir.path(),
+        Box::new(MockCapabilityCaller::new()),
+    );
+
+    let result = manager.try_decrypt_with_met_seeds(b"encrypted_data").await;
+
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("not initialized"));
+}
+
+#[tokio::test]
+async fn test_try_decrypt_with_met_seeds_no_match() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+    let mut manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("our123"), "lineage");
+    manifest.add_meeting(
+        BeaconId::from_hex("peer1"),
+        MeetingRecord {
+            node_name: "peer-1".to_string(),
+            first_met: 1000,
+            last_seen: 1000,
+            endpoints: vec![],
+            capabilities_hint: vec![],
+            notes: "".to_string(),
+            relationship: MeetingRelationship::Direct,
+            visibility: MeetingVisibility::Mutual,
+            seed_file: "peer1.seed".to_string(),
+        },
+    );
+    manager.set_manifest(manifest);
+
+    let result = manager
+        .try_decrypt_with_met_seeds(b"invalid_encrypted_data")
+        .await
+        .expect("should not error");
+
+    assert!(result.is_none());
+}
+
+#[test]
+fn test_save_manifest_with_manifest() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    let mut manager = BeaconGeneticsManager::with_capability_caller(
+        temp_dir.path(),
+        Box::new(MockCapabilityCaller::new()),
+    );
+    manager.set_manifest(BeaconGeneticsManifest::new(
+        BeaconId::from_hex("save-test"),
+        "lineage",
+    ));
+
+    manager.save_manifest().expect("save should succeed");
+    assert!(temp_dir.path().join(".beacon.genetics.json").exists());
 }

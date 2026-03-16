@@ -10,14 +10,14 @@
 
 // Import unified types from biomeos-types
 use biomeos_types::{
+    BiomeOSConfig, Environment, OrganizationScale,
     config::{
+        TlsVersion,
         features::UITheme,
         network::TlsConfig,
         resources::{DiscoveryMethod, DnsConfig, RegistryAuth, RegistryConfig},
         security::{AuthMethod, DataAtRestConfig, DataInTransitConfig, EncryptionAlgorithm},
-        TlsVersion,
     },
-    BiomeOSConfig, Environment, OrganizationScale,
 };
 use std::time::Duration;
 use tracing::warn;
@@ -398,10 +398,12 @@ mod tests {
             .build();
 
         assert_eq!(config.discovery.methods.len(), 2);
-        assert!(config
-            .discovery
-            .methods
-            .contains(&DiscoveryMethod::Registry));
+        assert!(
+            config
+                .discovery
+                .methods
+                .contains(&DiscoveryMethod::Registry)
+        );
         assert!(config.discovery.methods.contains(&DiscoveryMethod::Dns));
     }
 
@@ -442,10 +444,12 @@ mod tests {
             config.system.organization_scale,
             OrganizationScale::Enterprise
         );
-        assert!(config
-            .discovery
-            .methods
-            .contains(&DiscoveryMethod::Registry));
+        assert!(
+            config
+                .discovery
+                .methods
+                .contains(&DiscoveryMethod::Registry)
+        );
     }
 
     #[test]
@@ -453,10 +457,12 @@ mod tests {
         let config =
             BiomeOSConfigBuilder::for_registry_discovery("http://registry.example.com").build();
 
-        assert!(config
-            .discovery
-            .methods
-            .contains(&DiscoveryMethod::Registry));
+        assert!(
+            config
+                .discovery
+                .methods
+                .contains(&DiscoveryMethod::Registry)
+        );
         assert!(config.discovery.registry.is_some());
         assert_eq!(
             config.discovery.registry.as_ref().unwrap().url,
@@ -622,10 +628,12 @@ mod tests {
             OrganizationScale::Enterprise
         );
         assert!(config.discovery.methods.contains(&DiscoveryMethod::Consul));
-        assert!(config
-            .discovery
-            .methods
-            .contains(&DiscoveryMethod::Kubernetes));
+        assert!(
+            config
+                .discovery
+                .methods
+                .contains(&DiscoveryMethod::Kubernetes)
+        );
         assert!(config.security.encryption.at_rest.enabled);
     }
 
@@ -634,11 +642,13 @@ mod tests {
         let config = BiomeOSConfigBuilder::development_full().build();
         assert_eq!(config.system.environment, Environment::Development);
         assert!(config.ui.enabled);
-        assert!(config
-            .security
-            .authentication
-            .methods
-            .contains(&AuthMethod::ApiKey));
+        assert!(
+            config
+                .security
+                .authentication
+                .methods
+                .contains(&AuthMethod::ApiKey)
+        );
         assert_eq!(config.ui.language, "en");
     }
 

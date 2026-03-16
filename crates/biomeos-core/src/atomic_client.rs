@@ -26,8 +26,12 @@
 //!
 //! ```ignore
 //! use biomeos_core::atomic_client::AtomicClient;
+//! use biomeos_types::constants::capability;
 //!
-//! // Auto-discovery with fallback
+//! // Prefer capability-based discovery (WateringHole standard)
+//! let client = AtomicClient::discover_by_capability(capability::CRYPTO).await?;
+//!
+//! // Or by primal name (when known)
 //! let client = AtomicClient::discover("beardog").await?;
 //!
 //! // Explicit transport
@@ -82,8 +86,12 @@ pub use biomeos_graph::StreamItem;
 ///
 /// ```ignore
 /// use biomeos_core::atomic_client::AtomicClient;
+/// use biomeos_types::constants::capability;
 ///
-/// // Auto-discover with fallback
+/// // Capability-based discovery (preferred)
+/// let client = AtomicClient::discover_by_capability(capability::CRYPTO).await?;
+///
+/// // Or by primal name when known
 /// let client = AtomicClient::discover("beardog").await?;
 ///
 /// // Or explicit transport
@@ -110,7 +118,7 @@ impl AtomicClient {
     /// 2. Fall back to Tier 2 (TCP) if Tier 1 unavailable
     ///
     /// # Arguments
-    /// * `primal_name` - Name of the primal (e.g., "beardog", "songbird")
+    /// * `primal_name` - Name of the primal (prefer `discover_by_capability` for capability-based discovery)
     ///
     /// # Returns
     /// Ready-to-use atomic client with best available transport
@@ -157,6 +165,56 @@ impl AtomicClient {
                 )
             }
         }
+    }
+
+    /// Discover a primal by capability and create an atomic client
+    ///
+    /// **WateringHole standard**: No hardcoded primal names. Use capability constants
+    /// from `biomeos_types::constants::capability` (e.g., `capability::CRYPTO`).
+    ///
+    /// # Arguments
+    /// * `capability` - Capability to discover (e.g., `capability::CRYPTO`, `capability::STORAGE`)
+    ///
+    /// # Returns
+    /// Ready-to-use atomic client for any primal providing the capability
+    pub async fn discover_by_capability(capability: &str) -> Result<Self> {
+        debug!("Discovering primal by capability: {}", capability);
+
+        let family_id = std::env::var("FAMILY_ID")
+            .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+            .unwrap_or_else(|_| {
+                trace!("No FAMILY_ID set, using 'default' for discovery");
+                "default".to_string()
+            });
+
+        let discovery = SocketDiscovery::new(&family_id);
+
+        // 1. Try capability registry first
+        if let Some(socket) = discovery.discover_capability(capability).await {
+            debug!(
+                "Discovered capability {} via registry: {}",
+                capability,
+                socket.endpoint.display_string()
+            );
+            return Ok(Self::from_endpoint(socket.endpoint));
+        }
+
+        // 2. Taxonomy bootstrap: resolve capability → primal name, then discover
+        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err()
+            && let Some(primal_name) =
+                biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
+        {
+            trace!(
+                "Capability '{}' resolved to primal '{}' via taxonomy bootstrap",
+                capability, primal_name
+            );
+            return Self::discover(primal_name).await;
+        }
+
+        anyhow::bail!(
+            "No primal found for capability '{}'. Ensure a primal with this capability is running.",
+            capability
+        )
     }
 
     /// Create an atomic client from a transport endpoint

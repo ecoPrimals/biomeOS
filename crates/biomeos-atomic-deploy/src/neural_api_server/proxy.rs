@@ -9,6 +9,7 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde_json::{json, Value};
+use std::sync::Arc;
 use tracing::{debug, info};
 
 use super::NeuralApiServer;
@@ -64,9 +65,9 @@ impl NeuralApiServer {
         let latency = start.elapsed().as_millis() as u64;
         self.router
             .log_metric(RoutingMetrics {
-                request_id: request_id.clone(),
-                capability: "secure_http".to_string(),
-                method: format!("http.{method}"),
+                request_id: Arc::from(request_id.as_str()),
+                capability: Arc::from("secure_http"),
+                method: Arc::from(format!("http.{method}").as_str()),
                 routed_through: atomic.primals.iter().map(|p| p.name.clone()).collect(),
                 latency_ms: latency,
                 success: true,

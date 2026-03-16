@@ -7,9 +7,9 @@
 //! work together, focusing on API contracts, data flow, and system behavior.
 
 use anyhow::Result;
+use biomeos_core::UniversalBiomeOSManager;
 use biomeos_core::integration::live_service::LiveService;
 use biomeos_core::universal_biomeos_manager::PrimalInfo;
-use biomeos_core::UniversalBiomeOSManager;
 use biomeos_primal_sdk::{PrimalCapability, PrimalType};
 use biomeos_types::Health;
 use std::collections::HashMap;

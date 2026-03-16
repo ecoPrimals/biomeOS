@@ -52,7 +52,9 @@ async fn main() -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
     println!("📝 Would execute:");
-    println!("   benchscale/scripts/deploy-to-lab.sh --lab biomeos-experiment-01 --manifest templates/p2p-secure-mesh.biome.yaml");
+    println!(
+        "   benchscale/scripts/deploy-to-lab.sh --lab biomeos-experiment-01 --manifest templates/p2p-secure-mesh.biome.yaml"
+    );
     println!();
     println!("   Deploying to node-1:");
     println!("     • Songbird (port 3000)");

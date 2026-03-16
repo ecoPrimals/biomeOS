@@ -28,14 +28,12 @@ use tracing::{debug, info, warn};
 /// Parses lines like "ipv4         192.168.122.34/24" and extracts the first 192.168.x.x IP.
 pub(crate) fn parse_ip_from_domifaddr_output(ip_text: &str) -> Option<String> {
     for ip_line in ip_text.lines() {
-        if ip_line.contains("ipv4") || ip_line.contains("192.168") {
-            if let Some(ip_part) = ip_line.split_whitespace().last() {
-                if let Some(ip) = ip_part.split('/').next() {
-                    if ip.starts_with("192.168") {
-                        return Some(ip.to_string());
-                    }
-                }
-            }
+        if (ip_line.contains("ipv4") || ip_line.contains("192.168"))
+            && let Some(ip_part) = ip_line.split_whitespace().last()
+            && let Some(ip) = ip_part.split('/').next()
+            && ip.starts_with("192.168")
+        {
+            return Some(ip.to_string());
         }
     }
     None
@@ -277,11 +275,11 @@ impl VmFederationManager {
                     ])
                     .output();
 
-                if let Ok(output) = ssh_test {
-                    if output.status.success() {
-                        info!("✅ VM {} is SSH-accessible", ip);
-                        break;
-                    }
+                if let Ok(output) = ssh_test
+                    && output.status.success()
+                {
+                    info!("✅ VM {} is SSH-accessible", ip);
+                    break;
                 }
 
                 if attempt >= self.validation_config.ssh_max_retries {
@@ -427,6 +425,8 @@ impl VmFederationManager {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -543,6 +543,50 @@ mod tests {
         let list = " 1     my-fed-node1    running\n";
         let names = super::parse_vm_names_from_list(list, "my-fed");
         assert_eq!(names, vec!["my-fed-node1"]);
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_192_168_prefix_only() {
+        let output = " Name       MAC address          Protocol     Address\n\nvnet0      xx:xx    ipv4         192.168.1.50/24\n";
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output(output),
+            Some("192.168.1.50".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_multiple_ipv4_takes_first() {
+        let output = " vnet0  xx  ipv4  192.168.122.10/24\n vnet1  yy  ipv4  192.168.122.20/24\n";
+        let ip = super::parse_ip_from_domifaddr_output(output);
+        assert_eq!(ip, Some("192.168.122.10".to_string()));
+    }
+
+    #[test]
+    fn test_parse_vm_names_from_list_no_match() {
+        let list = " 1     other-vm-1    running\n 2     other-vm-2    running\n";
+        let names = super::parse_vm_names_from_list(list, "my-fed");
+        assert!(names.is_empty());
+    }
+
+    #[test]
+    fn test_parse_vm_names_from_list_single_column() {
+        let list = " 1     fed-node1\n";
+        let names = super::parse_vm_names_from_list(list, "fed");
+        assert_eq!(names, vec!["fed-node1"]);
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_whitespace_variations() {
+        let output = "  ipv4    192.168.100.1/24  ";
+        let ip = super::parse_ip_from_domifaddr_output(output);
+        assert_eq!(ip, Some("192.168.100.1".to_string()));
+    }
+
+    #[test]
+    fn test_validation_config_debug() {
+        let config = ValidationConfig::default();
+        let debug_str = format!("{:?}", config);
+        assert!(debug_str.contains("ValidationConfig"));
     }
 
     #[tokio::test]

@@ -5,12 +5,12 @@
 
 #[cfg(test)]
 mod derivation_tests {
-    use super::super::{generate_device_entropy, DerivationParams, DeviceLineage, LineageDeriver};
+    use super::super::{DerivationParams, DeviceLineage, LineageDeriver, generate_device_entropy};
     use std::collections::HashMap;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
-    use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 
     use crate::beacon_genetics::capability::CapabilityCaller;
 

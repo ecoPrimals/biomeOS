@@ -15,7 +15,7 @@
 
 #[cfg(test)]
 mod multi_family_tests {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
     use biomeos_core::family_credentials::{FamilyCredentials, SecretSeed};
     use biomeos_types::identifiers::FamilyId;
     use std::collections::HashMap;

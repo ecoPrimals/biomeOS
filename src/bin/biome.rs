@@ -147,15 +147,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(kind) = parsed.get("kind") {
                                 println!("   Kind: {}", kind.as_str().unwrap_or("unknown"));
                             }
-                            if let Some(metadata) = parsed.get("metadata") {
-                                if let Some(name) = metadata.get("name") {
-                                    println!("   Name: {}", name.as_str().unwrap_or("unknown"));
-                                }
+                            if let Some(metadata) = parsed.get("metadata")
+                                && let Some(name) = metadata.get("name")
+                            {
+                                println!("   Name: {}", name.as_str().unwrap_or("unknown"));
                             }
-                            if let Some(services) = parsed.get("services") {
-                                if let Some(services_map) = services.as_mapping() {
-                                    println!("   Services: {} defined", services_map.len());
-                                }
+                            if let Some(services) = parsed.get("services")
+                                && let Some(services_map) = services.as_mapping()
+                            {
+                                println!("   Services: {} defined", services_map.len());
                             }
                         }
                         Err(e) => {

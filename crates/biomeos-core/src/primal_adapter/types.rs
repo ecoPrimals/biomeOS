@@ -392,30 +392,40 @@ mod tests {
     #[test]
     fn test_primal_interface_is_known() {
         assert!(PrimalInterface::Direct { args: vec![] }.is_known());
-        assert!(PrimalInterface::Subcommand {
-            start_cmd: "serve".to_string(),
-            stop_cmd: None,
-        }
-        .is_known());
-        assert!(PrimalInterface::Service {
-            service_name: "biomeos".to_string(),
-        }
-        .is_known());
-        assert!(PrimalInterface::Docker {
-            image: "img".to_string(),
-            container: "cnt".to_string(),
-        }
-        .is_known());
-        assert!(PrimalInterface::Api {
-            endpoint: "http://localhost".to_string(),
-            start_path: "/start".to_string(),
-            stop_path: None,
-        }
-        .is_known());
-        assert!(!PrimalInterface::Unknown {
-            attempted_patterns: vec![],
-        }
-        .is_known());
+        assert!(
+            PrimalInterface::Subcommand {
+                start_cmd: "serve".to_string(),
+                stop_cmd: None,
+            }
+            .is_known()
+        );
+        assert!(
+            PrimalInterface::Service {
+                service_name: "biomeos".to_string(),
+            }
+            .is_known()
+        );
+        assert!(
+            PrimalInterface::Docker {
+                image: "img".to_string(),
+                container: "cnt".to_string(),
+            }
+            .is_known()
+        );
+        assert!(
+            PrimalInterface::Api {
+                endpoint: "http://localhost".to_string(),
+                start_path: "/start".to_string(),
+                stop_path: None,
+            }
+            .is_known()
+        );
+        assert!(
+            !PrimalInterface::Unknown {
+                attempted_patterns: vec![],
+            }
+            .is_known()
+        );
     }
 
     #[test]

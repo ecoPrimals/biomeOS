@@ -151,13 +151,13 @@ impl UniversalBiomeOSManager {
             .values()
             .filter(|primal| {
                 // Check if this primal has the required capabilities
-                let has_capability = primal.capabilities.iter().any(|primal_cap| {
+
+                primal.capabilities.iter().any(|primal_cap| {
                     capabilities.iter().any(|required_cap| {
                         primal_cap.category == required_cap.category
                             && primal_cap.name == required_cap.name
                     })
-                });
-                has_capability
+                })
             })
             .cloned()
             .collect()

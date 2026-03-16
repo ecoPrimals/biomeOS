@@ -9,6 +9,7 @@
 use anyhow::Result;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use serde_json::json;
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tracing::{error, info};
@@ -25,7 +26,7 @@ async fn call_toadstool_rpc(method: &str, params: serde_json::Value) -> Result<s
 
     let request = JsonRpcRequest {
         jsonrpc: "2.0".to_string(),
-        method: method.to_string(),
+        method: Arc::from(method),
         params: Some(params),
         id: Some(json!(1)),
     };

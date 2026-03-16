@@ -262,13 +262,13 @@ impl CapabilityRegistry {
 
         let index = self.capability_index.read().await;
 
-        if let Some(providers) = index.get(capability) {
-            if let Some(primal_id) = providers.first() {
-                let primals = self.primals.read().await;
-                if let Some(info) = primals.get(primal_id) {
-                    info!("✅ Found provider: {:?} for {:?}", primal_id, capability);
-                    return Ok(Some(info.clone()));
-                }
+        if let Some(providers) = index.get(capability)
+            && let Some(primal_id) = providers.first()
+        {
+            let primals = self.primals.read().await;
+            if let Some(info) = primals.get(primal_id) {
+                info!("✅ Found provider: {:?} for {:?}", primal_id, capability);
+                return Ok(Some(info.clone()));
             }
         }
 

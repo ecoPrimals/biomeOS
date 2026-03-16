@@ -8,8 +8,8 @@
 //! capability-based routing, and system monitoring.
 
 use anyhow::Result;
-use biomeos_core::integration::live_service::LiveService;
 use biomeos_core::UniversalBiomeOSManager;
+use biomeos_core::integration::live_service::LiveService;
 use biomeos_primal_sdk::PrimalCapability;
 use biomeos_types::Health;
 use std::time::Duration;

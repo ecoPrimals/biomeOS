@@ -7,9 +7,11 @@
 //! Tests cover JSON-RPC requests/responses, client constructors, configuration,
 //! transport endpoints, and edge cases.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use super::atomic_client::*;
 use crate::TransportEndpoint;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,7 +24,7 @@ use std::time::Duration;
 fn test_jsonrpc_request_creation() {
     let request = JsonRpcRequest::new("test_method", serde_json::json!({"key": "value"}));
     assert_eq!(request.jsonrpc, "2.0");
-    assert_eq!(request.method, "test_method");
+    assert_eq!(request.method.as_ref(), "test_method");
     assert_eq!(request.params.as_ref().unwrap()["key"], "value");
     assert!(request.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0) > 0);
 }
@@ -354,8 +356,8 @@ fn test_jsonrpc_request_different_methods() {
     let req1 = JsonRpcRequest::new("method_a", Value::Null);
     let req2 = JsonRpcRequest::new("method_b", json!({"param": 123}));
 
-    assert_eq!(req1.method, "method_a");
-    assert_eq!(req2.method, "method_b");
+    assert_eq!(req1.method.as_ref(), "method_a");
+    assert_eq!(req2.method.as_ref(), "method_b");
     assert_eq!(req2.params.as_ref().unwrap()["param"], 123);
 }
 
@@ -474,4 +476,95 @@ fn test_atomic_client_tcp_with_different_ports() {
     if let TransportEndpoint::TcpSocket { port: p3, .. } = client3.endpoint() {
         assert_eq!(*p3, 65535);
     }
+}
+
+// ========================================================================
+// AtomicClient HTTP and discovery tests
+// ========================================================================
+
+#[test]
+fn test_atomic_client_http_constructor() {
+    let client = AtomicClient::http("192.168.1.100", 8080);
+    assert!(matches!(
+        client.endpoint(),
+        TransportEndpoint::HttpJsonRpc { .. }
+    ));
+    if let TransportEndpoint::HttpJsonRpc { host, port } = client.endpoint() {
+        assert_eq!(host.as_ref(), "192.168.1.100");
+        assert_eq!(*port, 8080);
+    }
+    assert!(client.is_available());
+}
+
+#[test]
+fn test_atomic_client_from_endpoint_http() {
+    let endpoint = TransportEndpoint::HttpJsonRpc {
+        host: Arc::from("api.example.com"),
+        port: 443,
+    };
+    let client = AtomicClient::from_endpoint(endpoint);
+    assert!(matches!(
+        client.endpoint(),
+        TransportEndpoint::HttpJsonRpc { .. }
+    ));
+    assert!(client.socket_path().as_os_str().is_empty());
+}
+
+#[test]
+fn test_atomic_client_is_available_http() {
+    let client = AtomicClient::http("127.0.0.1", 8080);
+    assert!(client.is_available());
+}
+
+#[tokio::test]
+async fn test_discover_primal_endpoint_failure() {
+    let result = discover_primal_endpoint("nonexistent_primal_xyz_123").await;
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("not found") || err.contains("Primal"));
+}
+
+#[tokio::test]
+async fn test_atomic_client_discover_failure() {
+    let result = AtomicClient::discover("nonexistent_primal_xyz_456").await;
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("not found") || err.contains("Primal"));
+}
+
+#[tokio::test]
+async fn test_atomic_client_discover_by_capability_failure() {
+    let result = AtomicClient::discover_by_capability("nonexistent.capability.xyz.123").await;
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("No primal found") || err.contains("capability"));
+}
+
+#[test]
+fn test_atomic_primal_client_http_constructor() {
+    let client = AtomicPrimalClient::tcp("beardog", "192.168.1.100", 9100);
+    assert_eq!(client.primal_name(), "beardog");
+    assert!(client.endpoint().display_string().contains("192.168.1.100"));
+}
+
+#[test]
+fn test_execution_result_construction() {
+    let result = ExecutionResult {
+        stdout: "output".to_string(),
+        stderr: "errors".to_string(),
+        exit_code: Some(0),
+    };
+    assert_eq!(result.stdout, "output");
+    assert_eq!(result.stderr, "errors");
+    assert_eq!(result.exit_code, Some(0));
+}
+
+#[test]
+fn test_execution_result_without_exit_code() {
+    let result = ExecutionResult {
+        stdout: "".to_string(),
+        stderr: "".to_string(),
+        exit_code: None,
+    };
+    assert!(result.exit_code.is_none());
 }

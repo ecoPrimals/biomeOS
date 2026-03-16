@@ -38,6 +38,10 @@ pub enum GraphError {
     /// Capability not found
     #[error("Capability not found: {0}")]
     CapabilityNotFound(String),
+
+    /// Node not found in graph
+    #[error("Node not found: {0}")]
+    NodeNotFound(String),
 }
 
 #[cfg(test)]
@@ -84,6 +88,12 @@ mod tests {
     fn test_capability_not_found_display() {
         let err = GraphError::CapabilityNotFound("crypto.encrypt".to_string());
         assert_eq!(err.to_string(), "Capability not found: crypto.encrypt");
+    }
+
+    #[test]
+    fn test_node_not_found_display() {
+        let err = GraphError::NodeNotFound("missing-node".to_string());
+        assert_eq!(err.to_string(), "Node not found: missing-node");
     }
 
     #[test]

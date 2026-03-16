@@ -235,32 +235,9 @@ pub(crate) async fn run_controlled(
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
     use std::sync::Arc;
     use tokio::sync::Mutex;
-
-    /// Restore env var on drop (avoids test pollution when tests run in parallel).
-    struct EnvGuard {
-        key: &'static str,
-        original: Option<String>,
-    }
-    impl EnvGuard {
-        fn new(key: &'static str, value: Option<&str>) -> Self {
-            let original = std::env::var(key).ok();
-            match value {
-                Some(v) => std::env::set_var(key, v),
-                None => std::env::remove_var(key),
-            }
-            Self { key, original }
-        }
-    }
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            match &self.original {
-                Some(v) => std::env::set_var(self.key, v),
-                None => std::env::remove_var(self.key),
-            }
-        }
-    }
 
     #[test]
     fn test_resolve_primal_socket_default() {
@@ -537,7 +514,7 @@ mod tests {
         )
         .expect("write graph");
 
-        let _env = EnvGuard::new("BIOMEOS_SOCKET_DIR", dir.path().to_str());
+        let _env = TestEnvGuard::new("BIOMEOS_SOCKET_DIR", dir.path().to_str());
 
         let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
         let cmd_tx_stop = cmd_tx.clone();
@@ -599,7 +576,7 @@ mod tests {
         )
         .expect("write graph");
 
-        let _env = EnvGuard::new("BIOMEOS_SOCKET_DIR", dir.path().to_str());
+        let _env = TestEnvGuard::new("BIOMEOS_SOCKET_DIR", dir.path().to_str());
 
         let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
         let cmd_tx_stop = cmd_tx.clone();

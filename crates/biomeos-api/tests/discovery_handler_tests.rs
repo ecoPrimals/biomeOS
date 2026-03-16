@@ -12,6 +12,7 @@ use axum::{
 };
 use biomeos_api::{AppState, Config};
 use biomeos_core::CompositeDiscovery;
+use biomeos_test_utils::{remove_test_env, set_test_env};
 use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt; // Required for .oneshot() method on Router
@@ -22,7 +23,7 @@ use tower::ServiceExt; // Required for .oneshot() method on Router
 /// not the Dark Forest security gate (which has its own tests).
 async fn test_app_with_standalone_discovery() -> Router {
     // Disable sovereign gate for API logic tests
-    std::env::set_var("BIOMEOS_SOVEREIGN", "false");
+    set_test_env("BIOMEOS_SOVEREIGN", "false");
 
     let discovery = CompositeDiscovery::new();
 
@@ -44,8 +45,8 @@ async fn test_app_with_standalone_discovery() -> Router {
 /// not the Dark Forest security gate (which has its own tests).
 async fn test_app_standalone() -> Router {
     // Disable sovereign gate for API logic tests
-    std::env::set_var("BIOMEOS_SOVEREIGN", "false");
-    std::env::set_var("BIOMEOS_STANDALONE_MODE", "true");
+    set_test_env("BIOMEOS_SOVEREIGN", "false");
+    set_test_env("BIOMEOS_STANDALONE_MODE", "true");
 
     let state = AppState::builder()
         .config_from_env()

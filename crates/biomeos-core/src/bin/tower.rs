@@ -12,9 +12,9 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use biomeos_core::{
-    create_discovery_orchestrator, create_security_provider, discover_primals, start_in_waves,
     Capability, LogSessionTracker, PrimalBuilder, PrimalHealthMonitor, PrimalMetadata,
-    PrimalOrchestrator, RetryPolicy, TowerConfig, TowerPrimalConfig,
+    PrimalOrchestrator, RetryPolicy, TowerConfig, TowerPrimalConfig, create_discovery_orchestrator,
+    create_security_provider, discover_primals, start_in_waves,
 };
 use clap::{Parser, Subcommand};
 use tracing::{error, info, warn};
@@ -134,10 +134,10 @@ fn write_pid_file() -> Result<()> {
 /// Clean up the PID file on shutdown
 fn cleanup_pid_file() {
     let pid_file = get_tower_pid_file();
-    if pid_file.exists() {
-        if let Err(e) = std::fs::remove_file(&pid_file) {
-            warn!("Failed to remove PID file: {}", e);
-        }
+    if pid_file.exists()
+        && let Err(e) = std::fs::remove_file(&pid_file)
+    {
+        warn!("Failed to remove PID file: {}", e);
     }
 }
 

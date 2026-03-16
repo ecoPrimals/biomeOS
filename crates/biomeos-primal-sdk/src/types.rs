@@ -13,7 +13,6 @@ use std::collections::HashMap;
 
 // Direct re-export of unified types - no compatibility layers
 pub use biomeos_types::{
-    health::HealthMetrics,
     // Core error and result types
     BiomeError,
     // Configuration
@@ -36,6 +35,7 @@ pub use biomeos_types::{
     // Resource and metrics
     ResourceMetrics,
     SystemConfig,
+    health::HealthMetrics,
 };
 
 /// Extended Request type with primal-specific features

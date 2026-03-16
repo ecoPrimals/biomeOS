@@ -46,9 +46,7 @@ pub enum SporeError {
     DeviceNotFound(PathBuf),
 
     /// Insufficient space
-    #[error(
-        "Insufficient space on device: required {required} bytes, available {available} bytes"
-    )]
+    #[error("Insufficient space on device: required {required} bytes, available {available} bytes")]
     InsufficientSpace {
         /// Bytes required for the operation
         required: u64,

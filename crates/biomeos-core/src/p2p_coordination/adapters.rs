@@ -3,25 +3,26 @@
 
 //! Real Primal Adapters for P2P Coordination
 //!
-//! These adapters connect BiomeOS's P2P coordination logic to real primals.
+//! These adapters connect BiomeOS's P2P coordination logic to primals discovered
+//! by capability. No hardcoded primal names — capability-based discovery.
 //!
 //! # Architecture
 //!
 //! ```text
 //! BiomeOS P2P Coordinator
 //!         │
-//!         ├─► SecurityProvider trait
-//!         │   └─► BeardogAdapter (this file)
-//!         │       └─► Real BearDog primal (CLI)
+//!         ├─► SecurityProvider trait (capability: crypto)
+//!         │   └─► CryptoSecurityAdapter (this file)
+//!         │       └─► CLI-based crypto primal (discovered at runtime)
 //!         │
-//!         └─► DiscoveryProvider trait
-//!             └─► SongbirdAdapter (this file)
-//!                 └─► Real Songbird primal (HTTP)
+//!         └─► DiscoveryProvider trait (capability: discovery)
+//!             └─► MeshDiscoveryAdapter (this file)
+//!                 └─► HTTP-based discovery primal (discovered at runtime)
 //! ```
 //!
 //! # Key Features
 //!
-//! - **Agnostic**: Adapters work with any compatible primal
+//! - **Capability-Based**: Adapters work with any primal providing the capability
 //! - **Type-Safe**: Rust types for all interactions
 //! - **Error Handling**: Proper error propagation
 //! - **Health Monitoring**: Real-time health checks
@@ -35,14 +36,15 @@ use async_trait::async_trait;
 use std::time::SystemTime;
 use tracing::{debug, info};
 
-/// BearDog adapter for security primal operations
+/// Crypto/security adapter for security primal operations
 ///
-/// BearDog is CLI-based, so this adapter uses the CliAdapter to execute commands.
-pub struct BeardogSecurityAdapter {
+/// Implements SecurityProvider for any primal providing crypto capability.
+/// Uses CLI interface when the primal is CLI-based (discovered at runtime).
+pub struct CryptoSecurityAdapter {
     cli: CliAdapter,
 }
 
-impl BeardogSecurityAdapter {
+impl CryptoSecurityAdapter {
     pub fn new(binary_path: String) -> Self {
         let cli = CliAdapter::new(binary_path);
         Self { cli }
@@ -50,7 +52,7 @@ impl BeardogSecurityAdapter {
 }
 
 #[async_trait]
-impl SecurityProvider for BeardogSecurityAdapter {
+impl SecurityProvider for CryptoSecurityAdapter {
     async fn request_tunnel(
         &self,
         node_a: &str,
@@ -58,7 +60,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
         proof: &super::LineageProof,
     ) -> Result<super::TunnelRequest> {
         info!(
-            "BeardogAdapter: Requesting BTSP tunnel between {} and {}",
+            "CryptoSecurityAdapter: Requesting BTSP tunnel between {} and {}",
             node_a, node_b
         );
 
@@ -80,15 +82,15 @@ impl SecurityProvider for BeardogSecurityAdapter {
             .cli
             .execute(&args)
             .await
-            .context("Failed to execute BearDog BTSP create-tunnel command")?;
+            .context("Failed to execute crypto primal BTSP create-tunnel command")?;
 
         if !result.is_success() {
-            anyhow::bail!("BearDog command failed: {}", result.stderr());
+            anyhow::bail!("Crypto primal command failed: {}", result.stderr());
         }
 
         let output = result.stdout();
 
-        // Parse BearDog's output
+        // Parse crypto primal output
         let tunnel_id = Self::parse_tunnel_id(output)?;
         let endpoint_a = super::TransportEndpoint {
             node_id: node_a.to_string(),
@@ -115,7 +117,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
     }
 
     async fn check_tunnel_health(&self, tunnel_id: &str) -> Result<TunnelHealth> {
-        debug!("BeardogAdapter: Checking tunnel health for {}", tunnel_id);
+        debug!("CryptoSecurityAdapter: Checking tunnel health for {}", tunnel_id);
 
         let args = vec!["btsp", "status", "--tunnel-id", tunnel_id];
 
@@ -123,10 +125,10 @@ impl SecurityProvider for BeardogSecurityAdapter {
             .cli
             .execute(&args)
             .await
-            .context("Failed to execute BearDog BTSP status command")?;
+            .context("Failed to execute crypto primal BTSP status command")?;
 
         if !result.is_success() {
-            anyhow::bail!("BearDog command failed: {}", result.stderr());
+            anyhow::bail!("Crypto primal command failed: {}", result.stderr());
         }
 
         let output = result.stdout();
@@ -150,7 +152,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
 
     async fn generate_broadcast_keys(&self, family_id: &str) -> Result<BroadcastKeys> {
         info!(
-            "BeardogAdapter: Generating broadcast keys for family {}",
+            "CryptoSecurityAdapter: Generating broadcast keys for family {}",
             family_id
         );
 
@@ -160,10 +162,10 @@ impl SecurityProvider for BeardogSecurityAdapter {
             .cli
             .execute(&args)
             .await
-            .context("Failed to execute BearDog BirdSong generate-keys command")?;
+            .context("Failed to execute crypto primal BirdSong generate-keys command")?;
 
         if !result.is_success() {
-            anyhow::bail!("BearDog command failed: {}", result.stderr());
+            anyhow::bail!("Crypto primal command failed: {}", result.stderr());
         }
 
         let output = result.stdout();
@@ -185,7 +187,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
 
     async fn verify_lineage(&self, requester: &str, target: &str) -> Result<super::LineageInfo> {
         debug!(
-            "BeardogAdapter: Verifying lineage between {} and {}",
+            "CryptoSecurityAdapter: Verifying lineage between {} and {}",
             requester, target
         );
 
@@ -202,10 +204,10 @@ impl SecurityProvider for BeardogSecurityAdapter {
             .cli
             .execute(&args)
             .await
-            .context("Failed to execute BearDog lineage verify command")?;
+            .context("Failed to execute crypto primal lineage verify command")?;
 
         if !result.is_success() {
-            anyhow::bail!("BearDog command failed: {}", result.stderr());
+            anyhow::bail!("Crypto primal command failed: {}", result.stderr());
         }
 
         let output = result.stdout();
@@ -225,16 +227,16 @@ impl SecurityProvider for BeardogSecurityAdapter {
     }
 }
 
-impl BeardogSecurityAdapter {
+impl CryptoSecurityAdapter {
     fn parse_tunnel_id(output: &str) -> Result<String> {
-        // Parse tunnel ID from BearDog output
+        // Parse tunnel ID from crypto primal output
         // Example: "tunnel_id: btsp-123-456"
         output
             .lines()
             .find(|line| line.contains("tunnel_id"))
             .and_then(|line| line.split(':').nth(1))
             .map(|s| s.trim().to_string())
-            .context("Failed to parse tunnel_id from BearDog output")
+            .context("Failed to parse tunnel_id from crypto primal output")
     }
 
     fn parse_broadcast_key(output: &str) -> Result<Bytes> {
@@ -243,43 +245,44 @@ impl BeardogSecurityAdapter {
             .find(|line| line.contains("broadcast_key"))
             .and_then(|line| line.split(':').nth(1))
             .map(|s| s.trim())
-            .context("Failed to parse broadcast_key from BearDog output")?;
+            .context("Failed to parse broadcast_key from crypto primal output")?;
 
         // In real impl, parse hex or base64
         Ok(Bytes::from(key_str.as_bytes().to_vec()))
     }
 }
 
-/// Songbird adapter for discovery primal operations
+/// Mesh/discovery adapter for discovery primal operations
 ///
-/// Songbird has HTTP APIs, so this adapter uses the SongbirdClient.
-pub struct SongbirdDiscoveryAdapter {
+/// Implements DiscoveryProvider for any primal providing discovery capability.
+/// Uses HTTP APIs when the primal is HTTP-based (discovered at runtime).
+pub struct MeshDiscoveryAdapter {
     client: SongbirdClient,
 }
 
-impl SongbirdDiscoveryAdapter {
-    /// Create a new Songbird discovery adapter
-    /// 
+impl MeshDiscoveryAdapter {
+    /// Create a new mesh discovery adapter
+    ///
     /// # Deprecated
     /// This constructor uses hardcoded endpoints. Prefer using `from_discovery()` instead.
     pub fn new(endpoint: String) -> Self {
         // Note: This is a legacy constructor for backward compatibility
         // The endpoint is ignored in favor of proper discovery
         tracing::warn!(
-            "SongbirdDiscoveryAdapter::new() uses hardcoded endpoint '{}'. \
-             Consider using capability-based discovery instead.", 
+            "MeshDiscoveryAdapter::new() uses hardcoded endpoint '{}'. \
+             Consider using capability-based discovery instead.",
             endpoint
         );
-        
+
         // EVOLVED: Return error instead of panic for deprecated function
         anyhow::bail!(
-            "SongbirdDiscoveryAdapter::new() is deprecated. \
+            "MeshDiscoveryAdapter::new() is deprecated. \
              Use SongbirdClient::discover() for capability-based discovery. \
              See migration guide in docs/migrations/SONGBIRD_CLIENT_MIGRATION.md"
         )
     }
-    
-    /// Create adapter from a discovered Songbird client
+
+    /// Create adapter from a discovered discovery client (capability: discovery)
     pub async fn from_discovery(family_id: &str) -> anyhow::Result<Self> {
         let client = SongbirdClient::discover(family_id).await?;
         Ok(Self { client })
@@ -287,14 +290,14 @@ impl SongbirdDiscoveryAdapter {
 }
 
 #[async_trait]
-impl DiscoveryProvider for SongbirdDiscoveryAdapter {
+impl DiscoveryProvider for MeshDiscoveryAdapter {
     async fn register_transport(&self, endpoint: &super::TransportEndpoint) -> Result<()> {
         info!(
-            "SongbirdAdapter: Registering transport for node {}",
+            "MeshDiscoveryAdapter: Registering transport for node {}",
             endpoint.node_id
         );
 
-        // Use Songbird's HTTP API to register transport
+        // Use discovery primal HTTP API to register transport
         // In a real implementation, this would call a specific Songbird API
         // For now, we'll use the register_service method
         use crate::clients::songbird::{ServiceMetadata, ServiceRegistration};
@@ -313,21 +316,21 @@ impl DiscoveryProvider for SongbirdDiscoveryAdapter {
         self.client
             .register_service(&service)
             .await
-            .context("Failed to register transport with Songbird")?;
+            .context("Failed to register transport with discovery primal")?;
 
-        info!("SongbirdAdapter: Transport registered successfully");
+        info!("MeshDiscoveryAdapter: Transport registered successfully");
         Ok(())
     }
 
     async fn enable_encrypted_mode(&self, config: EncryptedDiscoveryConfig) -> Result<()> {
         info!(
-            "SongbirdAdapter: Enabling encrypted discovery mode: {:?}",
+            "MeshDiscoveryAdapter: Enabling encrypted discovery mode: {:?}",
             config.mode
         );
 
-        // In a real implementation, this would call a Songbird API to enable encrypted mode
+        // In a real implementation, this would call discovery API to enable encrypted mode
         // For now, we'll log that it would happen
-        info!("SongbirdAdapter: Encrypted mode would be enabled here");
+        info!("MeshDiscoveryAdapter: Encrypted mode would be enabled here");
         info!("   Mode: {:?}", config.mode);
         info!(
             "   Encryption key size: {} bytes",
@@ -339,11 +342,11 @@ impl DiscoveryProvider for SongbirdDiscoveryAdapter {
 
     async fn check_transport_health(&self, transport_id: &str) -> Result<TransportHealth> {
         debug!(
-            "SongbirdAdapter: Checking transport health for {}",
+            "MeshDiscoveryAdapter: Checking transport health for {}",
             transport_id
         );
 
-        // In a real implementation, this would query Songbird's health API
+        // In a real implementation, this would query discovery primal health API
         // For now, return a healthy status
         Ok(TransportHealth {
             connection_status: super::HealthStatus::Healthy,
@@ -354,9 +357,9 @@ impl DiscoveryProvider for SongbirdDiscoveryAdapter {
     }
 
     async fn test_encrypted_broadcast(&self) -> Result<super::BroadcastTest> {
-        info!("SongbirdAdapter: Testing encrypted broadcast");
+        info!("MeshDiscoveryAdapter: Testing encrypted broadcast");
 
-        // In a real implementation, this would test a broadcast through Songbird
+        // In a real implementation, this would test a broadcast through discovery primal
         Ok(super::BroadcastTest {
             encrypted: true,
             timestamp: SystemTime::now(),
@@ -365,6 +368,14 @@ impl DiscoveryProvider for SongbirdDiscoveryAdapter {
     }
 }
 
+// Backward compatibility: type aliases for legacy name-based references.
+// No modern replacement for the aliases; MeshDiscoveryAdapter::new() is deprecated
+// but the types themselves remain valid. Consumers should use from_discovery().
+#[allow(deprecated)]
+pub type BeardogSecurityAdapter = CryptoSecurityAdapter;
+#[allow(deprecated)]
+pub type SongbirdDiscoveryAdapter = MeshDiscoveryAdapter;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -372,7 +383,7 @@ mod tests {
     #[test]
     fn test_parse_tunnel_id() {
         let output = "tunnel_id: btsp-123-456\nendpoints: btsp://a:9000,btsp://b:9000";
-        let id = BeardogSecurityAdapter::parse_tunnel_id(output).unwrap();
+        let id = CryptoSecurityAdapter::parse_tunnel_id(output).unwrap();
         assert_eq!(id, "btsp-123-456");
     }
 }

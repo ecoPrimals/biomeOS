@@ -254,39 +254,38 @@ pub async fn connect_to_peer(
             }),
         )
         .await
+        && let Some(peers) = result.get("peers").and_then(|p| p.as_array())
     {
-        if let Some(peers) = result.get("peers").and_then(|p| p.as_array()) {
-            let found = peers.iter().any(|p| {
+        let found = peers.iter().any(|p| {
+            p.get("node_id")
+                .and_then(|id| id.as_str())
+                .map(|id| id == peer_id)
+                .unwrap_or(false)
+        });
+        if found
+            && let Some(peer) = peers.iter().find(|p| {
                 p.get("node_id")
                     .and_then(|id| id.as_str())
                     .map(|id| id == peer_id)
                     .unwrap_or(false)
-            });
-            if found {
-                if let Some(peer) = peers.iter().find(|p| {
-                    p.get("node_id")
-                        .and_then(|id| id.as_str())
-                        .map(|id| id == peer_id)
-                        .unwrap_or(false)
-                }) {
-                    let endpoint = peer
-                        .get("endpoint")
-                        .and_then(|e| e.as_str())
-                        .unwrap_or("direct")
-                        .to_string();
+            })
+        {
+            let endpoint = peer
+                .get("endpoint")
+                .and_then(|e| e.as_str())
+                .unwrap_or("direct")
+                .to_string();
 
-                    info!(
-                        "✅ Tier 1 SUCCESS: {} reachable on LAN at {}",
-                        peer_id, endpoint
-                    );
-                    return Ok(ConnectionResult {
-                        tier: ConnectionTier::LanDirect,
-                        endpoint,
-                        elapsed_ms: start.elapsed().as_millis() as u64,
-                        tiers_attempted,
-                    });
-                }
-            }
+            info!(
+                "✅ Tier 1 SUCCESS: {} reachable on LAN at {}",
+                peer_id, endpoint
+            );
+            return Ok(ConnectionResult {
+                tier: ConnectionTier::LanDirect,
+                endpoint,
+                elapsed_ms: start.elapsed().as_millis() as u64,
+                tiers_attempted,
+            });
         }
     }
     debug!("   Tier 1: {} not found on LAN", peer_id);
@@ -795,5 +794,73 @@ mod tests {
         let tier = ConnectionTier::LanDirect;
         let copied = tier;
         assert_eq!(tier, copied);
+    }
+
+    #[test]
+    fn test_nat_type_from_detection_mixed_case() {
+        assert_eq!(NatType::from_detection("SYMMETRIC"), NatType::Symmetric);
+        assert_eq!(NatType::from_detection("Full_Cone"), NatType::FullCone);
+    }
+
+    #[test]
+    fn test_port_pattern_sequential_exact_confidence_threshold() {
+        let json = serde_json::json!({
+            "type": "sequential",
+            "step": 2,
+            "last_port": 50000,
+            "predicted_next": 50002,
+            "confidence": 0.6
+        });
+        let pattern = PortPattern::from_json(&json);
+        assert!(pattern.is_predictable());
+    }
+
+    #[test]
+    fn test_port_pattern_sequential_just_below_threshold() {
+        let json = serde_json::json!({
+            "type": "sequential",
+            "step": 1,
+            "last_port": 40000,
+            "predicted_next": 40001,
+            "confidence": 0.59
+        });
+        let pattern = PortPattern::from_json(&json);
+        assert!(!pattern.is_predictable());
+    }
+
+    #[test]
+    fn test_port_pattern_unknown_type() {
+        let json = serde_json::json!({"type": "custom_unknown"});
+        let pattern = PortPattern::from_json(&json);
+        assert!(matches!(pattern, PortPattern::Unknown));
+        assert!(!pattern.is_predictable());
+    }
+
+    #[test]
+    fn test_connection_tier_partial_eq() {
+        assert_eq!(ConnectionTier::LanDirect, ConnectionTier::LanDirect);
+        assert_ne!(ConnectionTier::LanDirect, ConnectionTier::PureRelay);
+    }
+
+    #[test]
+    fn test_stun_results_deserialization() {
+        let json = r#"{"public_addr":"10.0.0.1:41200","nat_type":"full_cone"}"#;
+        let result: StunResults = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(result.public_addr, "10.0.0.1:41200");
+        assert_eq!(result.nat_type, "full_cone");
+    }
+
+    #[test]
+    fn test_peer_connection_info_empty_stun() {
+        let info = PeerConnectionInfo {
+            stun_results: Some(StunResults {
+                public_addr: "".to_string(),
+                nat_type: "unknown".to_string(),
+            }),
+            relay_endpoint: None,
+            stun_server: None,
+        };
+        let json = serde_json::to_string(&info).expect("serialize");
+        assert!(json.contains("public_addr"));
     }
 }

@@ -6,8 +6,8 @@
 //! Encrypted beacon generation/decryption and lineage verification via
 //! capability-routed crypto (primal-agnostic).
 
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use biomeos_types::{JsonRpcRequest, JSONRPC_VERSION};
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+use biomeos_types::{JSONRPC_VERSION, JsonRpcRequest};
 use bytes::Bytes;
 use std::path::Path;
 use std::sync::Arc;

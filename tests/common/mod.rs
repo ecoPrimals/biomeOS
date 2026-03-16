@@ -9,8 +9,8 @@
 #![allow(dead_code)] // Test utilities may not all be used in every test
 
 use anyhow::Result;
-use biomeos_core::universal_biomeos_manager::{discovery::DiscoveryResult, PrimalInfo};
 use biomeos_core::UniversalBiomeOSManager;
+use biomeos_core::universal_biomeos_manager::{PrimalInfo, discovery::DiscoveryResult};
 use biomeos_primal_sdk::{PrimalCapability, PrimalType};
 use biomeos_types::{BiomeOSConfig, Health, HealthReport};
 use std::collections::HashMap;

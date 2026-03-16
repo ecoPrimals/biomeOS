@@ -100,25 +100,25 @@ impl PrimalRegistry {
             let path = entry.path();
 
             // Check if it's an executable
-            if path.is_file() {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    // Try to detect primal type from name
-                    let primal_name = self.detect_primal_name(name);
-                    let version = self
-                        .detect_version(&path)
-                        .await
-                        .unwrap_or_else(|| "unknown".to_string());
+            if path.is_file()
+                && let Some(name) = path.file_name().and_then(|n| n.to_str())
+            {
+                // Try to detect primal type from name
+                let primal_name = self.detect_primal_name(name);
+                let version = self
+                    .detect_version(&path)
+                    .await
+                    .unwrap_or_else(|| "unknown".to_string());
 
-                    let binary = PrimalBinary {
-                        name: primal_name.clone(),
-                        version,
-                        path: BinaryLocation::Local(path.clone()),
-                        checksum: self.compute_checksum(&path).await.ok(),
-                        metadata: self.default_metadata(&primal_name),
-                    };
+                let binary = PrimalBinary {
+                    name: primal_name.clone(),
+                    version,
+                    path: BinaryLocation::Local(path.clone()),
+                    checksum: self.compute_checksum(&path).await.ok(),
+                    metadata: self.default_metadata(&primal_name),
+                };
 
-                    self.binaries.entry(primal_name).or_default().push(binary);
-                }
+                self.binaries.entry(primal_name).or_default().push(binary);
             }
         }
 

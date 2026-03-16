@@ -95,8 +95,8 @@ pub use universal_biomeos_manager::{
 
 // Re-export atomic client (Universal IPC v3.0 - Multi-Transport)
 pub use atomic_client::{
-    discover_primal_endpoint, AtomicClient, AtomicPrimalClient, ExecutionResult, JsonRpcRequest,
-    JsonRpcResponse,
+    AtomicClient, AtomicPrimalClient, ExecutionResult, JsonRpcRequest, JsonRpcResponse,
+    discover_primal_endpoint,
 };
 
 // Re-export core services
@@ -113,22 +113,22 @@ pub use capabilities::{Capability, PrimalConfig as CapabilitiesPrimalConfig};
 pub use capability_registry::{
     CapabilityRegistry, PrimalInfo as RegistryPrimalInfo, RegisterParams,
 };
-pub use concurrent_startup::{start_in_waves, DependencyGraph};
+pub use concurrent_startup::{DependencyGraph, start_in_waves};
 pub use family_credentials::FamilyCredentials;
 pub use log_session::{LogSessionTracker, PrimalSession};
-pub use primal_discovery::{discover_primals, query_primal_metadata, PrimalMetadata};
+pub use primal_discovery::{PrimalMetadata, discover_primals, query_primal_metadata};
 pub use primal_impls::{
+    // New generic primal system
+    GenericManagedPrimal,
+    ManagedBearDog,
+    ManagedSongbird,
+    PrimalBuilder,
     // Convenience builders
     create_ai_service,
     create_compute_provider,
     create_discovery_orchestrator,
     create_security_provider,
     create_storage_provider,
-    // New generic primal system
-    GenericManagedPrimal,
-    ManagedBearDog,
-    ManagedSongbird,
-    PrimalBuilder,
 };
 // Legacy type aliases removed — use PrimalBuilder directly
 pub use primal_orchestrator::{
@@ -136,16 +136,16 @@ pub use primal_orchestrator::{
 };
 pub use retry::{CircuitBreaker, RetryPolicy};
 pub use socket_discovery::{
-    discover_endpoint, discover_socket, DiscoveredSocket, DiscoveryMethod, DiscoveryStrategy,
-    SocketDiscovery, TransportEndpoint,
+    DiscoveredSocket, DiscoveryMethod, DiscoveryStrategy, SocketDiscovery, TransportEndpoint,
+    discover_endpoint, discover_socket,
 };
 pub use tower_config::PrimalConfig as TowerPrimalConfig;
 pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};
 
 // Connection strategy re-exports
 pub use connection_strategy::{
-    connect_to_peer, ConnectionResult, ConnectionTier, NatType, PeerConnectionInfo, PortPattern,
-    StunResults,
+    ConnectionResult, ConnectionTier, NatType, PeerConnectionInfo, PortPattern, StunResults,
+    connect_to_peer,
 };
 
 // Legacy re-exports for backwards compatibility

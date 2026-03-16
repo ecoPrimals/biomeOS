@@ -18,7 +18,7 @@ use crate::error::SporeResult;
 pub(super) trait DeploymentOps {
     /// Create deployment script for spore
     fn create_deployment_script(&self)
-        -> impl std::future::Future<Output = SporeResult<()>> + Send;
+    -> impl std::future::Future<Output = SporeResult<()>> + Send;
 }
 
 impl DeploymentOps for Spore {

@@ -121,23 +121,23 @@ fn show_niches() {
     if let Ok(entries) = fs::read_dir(templates_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
-            if path.extension().is_some_and(|e| e == "yaml") {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    // Quick parse to get name
-                    if let Some(name_line) = content.lines().find(|l| l.contains("name:")) {
-                        let name = name_line
-                            .split(':')
-                            .nth(1)
-                            .map(|s| s.trim().trim_matches('"'))
-                            .unwrap_or("Unknown");
+            if path.extension().is_some_and(|e| e == "yaml")
+                && let Ok(content) = fs::read_to_string(&path)
+            {
+                // Quick parse to get name
+                if let Some(name_line) = content.lines().find(|l| l.contains("name:")) {
+                    let name = name_line
+                        .split(':')
+                        .nth(1)
+                        .map(|s| s.trim().trim_matches('"'))
+                        .unwrap_or("Unknown");
 
-                        let id = path
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("unknown");
+                    let id = path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("unknown");
 
-                        println!("   🌿 {name} ({id})");
-                    }
+                    println!("   🌿 {name} ({id})");
                 }
             }
         }

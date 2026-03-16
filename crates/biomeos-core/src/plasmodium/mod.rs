@@ -39,7 +39,7 @@ pub use types::*;
 use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tracing::{debug, info, warn};
 
 use crate::atomic_client::AtomicClient;
@@ -385,22 +385,22 @@ impl Plasmodium {
         let mut primals = Vec::new();
 
         // Try lifecycle.status first (if neural API is running)
-        if let Ok(result) = client.call("lifecycle.status", json!({})).await {
-            if let Some(services) = result.get("services").and_then(|s| s.as_object()) {
-                for (name, status) in services {
-                    primals.push(PrimalStatus {
-                        name: name.clone(),
-                        healthy: status
-                            .get("status")
-                            .and_then(|s| s.as_str())
-                            .map(|s| s == "healthy")
-                            .unwrap_or(false),
-                        version: status
-                            .get("version")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string()),
-                    });
-                }
+        if let Ok(result) = client.call("lifecycle.status", json!({})).await
+            && let Some(services) = result.get("services").and_then(|s| s.as_object())
+        {
+            for (name, status) in services {
+                primals.push(PrimalStatus {
+                    name: name.clone(),
+                    healthy: status
+                        .get("status")
+                        .and_then(|s| s.as_str())
+                        .map(|s| s == "healthy")
+                        .unwrap_or(false),
+                    version: status
+                        .get("version")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                });
             }
         }
 

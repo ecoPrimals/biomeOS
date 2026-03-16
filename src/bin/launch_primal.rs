@@ -225,6 +225,7 @@ fn get_log_path(primal: &str, family_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
 
     #[test]
     fn test_get_log_path() {
@@ -249,16 +250,9 @@ mod tests {
 
     #[test]
     fn test_get_socket_path_format() {
-        // get_socket_path uses UID env - test with UID set
-        let orig = std::env::var("UID").ok();
-        std::env::set_var("UID", "1234");
+        let _guard = TestEnvGuard::set("UID", "1234");
         let path = get_socket_path("beardog", "nat0").unwrap();
         assert!(path.contains("/run/user/1234"));
         assert!(path.contains("beardog-nat0.sock"));
-        if let Some(v) = orig {
-            std::env::set_var("UID", v);
-        } else {
-            std::env::remove_var("UID");
-        }
     }
 }

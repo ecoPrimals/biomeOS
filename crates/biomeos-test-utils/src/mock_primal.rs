@@ -8,11 +8,11 @@
 
 use anyhow::{Context, Result};
 use axum::{
+    Router,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Json},
     routing::{get, post},
-    Router,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;

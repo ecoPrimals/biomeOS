@@ -3,6 +3,8 @@
 
 //! Unit tests for graph handlers (graph.list, graph.get, graph.save, graph.execute, graph.status).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use super::graph::{ExecutionStatus, GraphHandler};
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::neural_router::NeuralRouter;
@@ -596,4 +598,359 @@ async fn test_get_status_with_non_string_execution_id() {
     let params = Some(json!({"execution_id": 12345}));
     let err = handler.get_status(&params).await.expect_err("should fail");
     assert!(err.to_string().contains("Missing execution_id"));
+}
+
+// ── graph.start_continuous ────────────────────────────────────────────────
+
+const CONTINUOUS_GRAPH_TOML: &str = r#"
+[graph]
+id = "continuous-test"
+name = "Continuous Test"
+version = "1.0.0"
+coordination = "continuous"
+
+[graph.tick]
+target_hz = 30.0
+
+[[graph.nodes]]
+id = "tick-node"
+name = "Tick Node"
+"#;
+
+#[tokio::test]
+async fn test_start_continuous_missing_params() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let err = handler
+        .start_continuous(&None)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Missing parameters"));
+}
+
+#[tokio::test]
+async fn test_start_continuous_missing_graph_id() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({}));
+    let err = handler
+        .start_continuous(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Missing graph_id"));
+}
+
+#[tokio::test]
+async fn test_start_continuous_graph_not_found() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "nonexistent_continuous"}));
+    let err = handler
+        .start_continuous(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Graph file not found"));
+}
+
+#[tokio::test]
+async fn test_start_continuous_wrong_coordination() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("sequential_graph.toml");
+    let sequential_toml = r#"
+[graph]
+id = "sequential-graph"
+name = "Sequential"
+version = "1.0.0"
+coordination = "sequential"
+
+[[graph.nodes]]
+id = "n1"
+name = "Node 1"
+"#;
+    std::fs::write(&path, sequential_toml).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "sequential_graph"}));
+    let err = handler
+        .start_continuous(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("not Continuous"));
+}
+
+#[tokio::test]
+async fn test_start_continuous_success() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("continuous_graph.toml");
+    std::fs::write(&path, CONTINUOUS_GRAPH_TOML).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "continuous_graph"}));
+    let result = handler
+        .start_continuous(&params)
+        .await
+        .expect("start_continuous");
+    assert!(result["session_id"]
+        .as_str()
+        .unwrap()
+        .starts_with("continuous_graph-"));
+    assert_eq!(result["graph_id"], "continuous_graph");
+    assert!(result["started_at"].as_str().is_some());
+}
+
+// ── graph.pause_continuous, resume_continuous, stop_continuous ───────────────
+
+#[tokio::test]
+async fn test_pause_continuous_missing_params() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let err = handler
+        .pause_continuous(&None)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Missing parameters"));
+}
+
+#[tokio::test]
+async fn test_pause_continuous_session_not_found() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"session_id": "nonexistent-session"}));
+    let err = handler
+        .pause_continuous(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Continuous session not found"));
+}
+
+#[tokio::test]
+async fn test_resume_continuous_missing_params() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let err = handler
+        .resume_continuous(&None)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Missing parameters"));
+}
+
+#[tokio::test]
+async fn test_resume_continuous_session_not_found() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"session_id": "nonexistent-session"}));
+    let err = handler
+        .resume_continuous(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Continuous session not found"));
+}
+
+#[tokio::test]
+async fn test_stop_continuous_missing_params() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let err = handler
+        .stop_continuous(&None)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Missing parameters"));
+}
+
+#[tokio::test]
+async fn test_stop_continuous_session_not_found() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"session_id": "nonexistent-session"}));
+    let err = handler
+        .stop_continuous(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Continuous session not found"));
+}
+
+#[tokio::test]
+async fn test_stop_continuous_success() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("stop_test.toml");
+    std::fs::write(&path, CONTINUOUS_GRAPH_TOML).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "stop_test"}));
+    let start_result = handler.start_continuous(&params).await.expect("start");
+    let session_id = start_result["session_id"].as_str().unwrap().to_string();
+
+    let stop_params = Some(json!({"session_id": session_id}));
+    let stop_result = handler.stop_continuous(&stop_params).await.expect("stop");
+    assert_eq!(stop_result["session_id"], session_id);
+    assert_eq!(stop_result["command"], "stop");
+}
+
+// ── graph.execute_pipeline ────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_execute_pipeline_missing_params() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let err = handler
+        .execute_pipeline(&None)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Missing parameters"));
+}
+
+#[tokio::test]
+async fn test_execute_pipeline_graph_not_found() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "nonexistent_pipeline"}));
+    let err = handler
+        .execute_pipeline(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Graph file not found"));
+}
+
+#[tokio::test]
+async fn test_execute_pipeline_wrong_coordination() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("sequential_pipeline.toml");
+    let sequential_toml = r#"
+[graph]
+id = "sequential-pipeline"
+name = "Sequential"
+version = "1.0.0"
+coordination = "sequential"
+
+[[graph.nodes]]
+id = "n1"
+name = "Node 1"
+"#;
+    std::fs::write(&path, sequential_toml).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "sequential_pipeline"}));
+    let err = handler
+        .execute_pipeline(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("not Pipeline"));
+}
+
+// ── graph.suggest_optimizations ───────────────────────────────────────────
+
+#[tokio::test]
+async fn test_suggest_optimizations_missing_params() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let err = handler
+        .suggest_optimizations(&None)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Missing parameters"));
+}
+
+#[tokio::test]
+async fn test_suggest_optimizations_graph_not_found() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "nonexistent_opt"}));
+    let err = handler
+        .suggest_optimizations(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Graph file not found"));
+}
+
+#[tokio::test]
+async fn test_suggest_optimizations_with_min_samples() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("opt_graph.toml");
+    let opt_toml = r#"
+[graph]
+id = "opt-graph"
+name = "Opt Graph"
+version = "1.0.0"
+coordination = "sequential"
+
+[[graph.nodes]]
+id = "n1"
+name = "Node 1"
+"#;
+    std::fs::write(&path, opt_toml).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({
+        "graph_id": "opt_graph",
+        "min_samples": 5
+    }));
+    let result = handler
+        .suggest_optimizations(&params)
+        .await
+        .expect("suggest_optimizations");
+    assert!(result.get("suggestions").is_some());
+    assert!(result.get("sample_size").is_some());
+}
+
+// ── get_status for continuous session ─────────────────────────────────────
+
+#[tokio::test]
+async fn test_get_status_continuous_session() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("status_continuous.toml");
+    std::fs::write(&path, CONTINUOUS_GRAPH_TOML).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "status_continuous"}));
+    let start_result = handler.start_continuous(&params).await.expect("start");
+    let session_id = start_result["session_id"].as_str().unwrap().to_string();
+
+    let status_params = Some(json!({"execution_id": session_id}));
+    let status_result = handler
+        .get_status(&status_params)
+        .await
+        .expect("get_status");
+    assert_eq!(status_result["execution_id"], session_id);
+    assert_eq!(status_result["graph_id"], "status_continuous");
+    assert_eq!(status_result["continuous"], true);
+    assert!(status_result["started_at"].as_str().is_some());
+}
+
+// ── list coordination field ────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_list_includes_coordination_field() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("coord_graph.toml");
+    let toml_with_coord = r#"
+[graph]
+id = "coord_test"
+version = "1.0.0"
+description = "With coordination"
+
+[[nodes]]
+id = "n1"
+depends_on = []
+capabilities = []
+"#;
+    std::fs::write(&path, toml_with_coord).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let result = handler.list().await.expect("list");
+    let arr = result.as_array().expect("array");
+    assert!(!arr.is_empty());
+    assert!(arr[0].get("coordination").is_some());
 }

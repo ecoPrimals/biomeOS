@@ -403,8 +403,7 @@ impl SovereigntyGuardian {
 
         // Check for vendor lock-in patterns
         if self.policies.economic_sovereignty.prevent_vendor_lockin
-            && service_terms.contains("exclusive")
-            || service_terms.contains("non-transferable")
+            && (service_terms.contains("exclusive") || service_terms.contains("non-transferable"))
         {
             self.record_violation(
                 service_provider,

@@ -254,10 +254,12 @@ mod tests {
     #[test]
     fn test_lab_manager_creation() {
         let manager = LabManager::new();
-        assert!(manager
-            .scripts_dir()
-            .to_string_lossy()
-            .contains("benchscale/scripts"));
+        assert!(
+            manager
+                .scripts_dir()
+                .to_string_lossy()
+                .contains("benchscale/scripts")
+        );
     }
 
     #[test]

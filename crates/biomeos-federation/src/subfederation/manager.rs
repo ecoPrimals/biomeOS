@@ -46,13 +46,12 @@ impl SubFederationManager {
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
 
-            if path.extension().and_then(|e| e.to_str()) == Some("toml") {
-                if let Ok(content) = fs::read_to_string(&path).await {
-                    if let Ok(subfed) = toml::from_str::<SubFederation>(&content) {
-                        debug!("Loaded sub-federation: {}", subfed.name);
-                        self.sub_federations.insert(subfed.name.clone(), subfed);
-                    }
-                }
+            if path.extension().and_then(|e| e.to_str()) == Some("toml")
+                && let Ok(content) = fs::read_to_string(&path).await
+                && let Ok(subfed) = toml::from_str::<SubFederation>(&content)
+            {
+                debug!("Loaded sub-federation: {}", subfed.name);
+                self.sub_federations.insert(subfed.name.clone(), subfed);
             }
         }
 
@@ -209,23 +208,22 @@ impl SubFederationManager {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use std::env;
-
+    use biomeos_test_utils::{remove_test_env, set_test_env};
     use tempfile::TempDir;
 
     use super::*;
-    use crate::capability::{Capability, CapabilitySet};
     use crate::FederationError;
+    use crate::capability::{Capability, CapabilitySet};
 
     fn setup_beardog_env() {
-        env::set_var(
+        set_test_env(
             "BEARDOG_SOCKET",
             "/tmp/nonexistent-beardog-test-manager.sock",
         );
     }
 
     fn teardown_beardog_env() {
-        env::remove_var("BEARDOG_SOCKET");
+        remove_test_env("BEARDOG_SOCKET");
     }
 
     #[test]

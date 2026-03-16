@@ -369,20 +369,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_current_user_with_env_var() {
-        // Save original value
-        let original = std::env::var("BIOMEOS_USER").ok();
+        use biomeos_test_utils::TestEnvGuard;
 
-        // Set env var
-        std::env::set_var("BIOMEOS_USER", "test-env-user");
+        // Use RAII guard to restore on drop
+        let _guard = TestEnvGuard::new("BIOMEOS_USER", Some("test-env-user"));
 
         let user_id = Authorization::get_current_user_id(&None).await;
         assert_eq!(user_id, "test-env-user");
-
-        // Restore original
-        if let Some(val) = original {
-            std::env::set_var("BIOMEOS_USER", val);
-        } else {
-            std::env::remove_var("BIOMEOS_USER");
-        }
     }
 }

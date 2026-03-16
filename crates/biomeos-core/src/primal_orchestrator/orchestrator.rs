@@ -340,7 +340,7 @@ impl PrimalOrchestrator {
 
         let mut queue: Vec<PrimalId> = in_degree
             .iter()
-            .filter(|(_, &degree)| degree == 0)
+            .filter(|&(_, &degree)| degree == 0)
             .map(|(id, _)| id.clone())
             .collect();
 

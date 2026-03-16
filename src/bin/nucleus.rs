@@ -232,14 +232,15 @@ async fn check_primal_health(socket_dir: &str, primal: &str) -> Result<()> {
     // Look for primal socket
     let mut entries = tokio::fs::read_dir(socket_dir).await?;
     while let Some(entry) = entries.next_entry().await? {
-        if let Some(name) = entry.file_name().to_str() {
-            if name.starts_with(&format!("{primal}-")) && name.ends_with(".sock") {
-                // Found socket, try to connect
-                let socket_path = format!("{socket_dir}/{name}");
-                match tokio::net::UnixStream::connect(&socket_path).await {
-                    Ok(_) => return Ok(()),
-                    Err(e) => return Err(anyhow::anyhow!("Cannot connect: {e}")),
-                }
+        if let Some(name) = entry.file_name().to_str()
+            && name.starts_with(&format!("{primal}-"))
+            && name.ends_with(".sock")
+        {
+            // Found socket, try to connect
+            let socket_path = format!("{socket_dir}/{name}");
+            match tokio::net::UnixStream::connect(&socket_path).await {
+                Ok(_) => return Ok(()),
+                Err(e) => return Err(anyhow::anyhow!("Cannot connect: {e}")),
             }
         }
     }
@@ -278,14 +279,13 @@ async fn show_status() -> Result<()> {
 
     let mut entries = tokio::fs::read_dir(&socket_dir).await?;
     while let Some(entry) = entries.next_entry().await? {
-        if let Some(name) = entry.file_name().to_str() {
-            if name.contains("beardog")
+        if let Some(name) = entry.file_name().to_str()
+            && (name.contains("beardog")
                 || name.contains("toadstool")
                 || name.contains("nestgate")
-                || name.contains("biomeos")
-            {
-                info!("  {}", name);
-            }
+                || name.contains("biomeos"))
+        {
+            info!("  {}", name);
         }
     }
 

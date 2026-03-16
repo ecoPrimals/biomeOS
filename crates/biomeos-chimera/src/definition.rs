@@ -442,9 +442,11 @@ fusion:
 "#;
         let result = ChimeraDefinition::from_yaml(yaml);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("at least one component"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("at least one component")
+        );
     }
 }

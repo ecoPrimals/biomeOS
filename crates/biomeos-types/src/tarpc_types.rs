@@ -316,6 +316,7 @@ pub fn protocol_from_env() -> ProtocolPreference {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::{remove_test_env, set_test_env};
     use bytes::Bytes;
 
     #[test]
@@ -365,22 +366,22 @@ mod tests {
 
     #[test]
     fn test_protocol_from_env() {
-        std::env::set_var(PROTOCOL_ENV_VAR, "tarpc");
+        set_test_env(PROTOCOL_ENV_VAR, "tarpc");
         let pref = protocol_from_env();
-        std::env::remove_var(PROTOCOL_ENV_VAR);
+        remove_test_env(PROTOCOL_ENV_VAR);
         assert_eq!(pref, ProtocolPreference::TarpcOnly);
 
-        std::env::set_var(PROTOCOL_ENV_VAR, "jsonrpc");
+        set_test_env(PROTOCOL_ENV_VAR, "jsonrpc");
         let pref = protocol_from_env();
-        std::env::remove_var(PROTOCOL_ENV_VAR);
+        remove_test_env(PROTOCOL_ENV_VAR);
         assert_eq!(pref, ProtocolPreference::JsonRpcOnly);
 
-        std::env::set_var(PROTOCOL_ENV_VAR, "prefer-tarpc");
+        set_test_env(PROTOCOL_ENV_VAR, "prefer-tarpc");
         let pref = protocol_from_env();
-        std::env::remove_var(PROTOCOL_ENV_VAR);
+        remove_test_env(PROTOCOL_ENV_VAR);
         assert_eq!(pref, ProtocolPreference::PreferTarpc);
 
-        std::env::remove_var(PROTOCOL_ENV_VAR);
+        remove_test_env(PROTOCOL_ENV_VAR);
         let pref = protocol_from_env();
         assert_eq!(pref, ProtocolPreference::Auto);
     }

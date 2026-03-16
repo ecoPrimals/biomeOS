@@ -223,7 +223,7 @@ impl GraphEventWebSocketServer {
         let params = request.params.unwrap_or(serde_json::Value::Null);
 
         // Handle method
-        let result = match request.method.as_str() {
+        let result = match request.method.as_ref() {
             "events.subscribe" => {
                 Self::handle_subscribe(params, subscriptions, event_broadcaster, response_tx).await
             }
@@ -449,7 +449,7 @@ mod tests {
 
         assert_eq!(request.jsonrpc, "2.0");
         assert_eq!(request.id, Some(serde_json::json!(1)));
-        assert_eq!(request.method, "test.method");
+        assert_eq!(request.method.as_ref(), "test.method");
     }
 
     #[test]

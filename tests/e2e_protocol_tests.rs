@@ -332,19 +332,23 @@ WORKLOAD_ENDPOINT = "jsonrpc+unix:///tmp/toadstool-test_family-tower1.sock"
 
     // Songbird: tarpc with tarpc+unix:// URL
     assert_eq!(config.primals[1].protocol, Some("tarpc".to_string()));
-    assert!(config.primals[1]
-        .env
-        .get("SECURITY_ENDPOINT")
-        .unwrap()
-        .starts_with("tarpc+unix://"));
+    assert!(
+        config.primals[1]
+            .env
+            .get("SECURITY_ENDPOINT")
+            .unwrap()
+            .starts_with("tarpc+unix://")
+    );
 
     // ToadStool: JSON-RPC with jsonrpc+unix:// URL
     assert_eq!(config.primals[2].protocol, Some("jsonrpc".to_string()));
-    assert!(config.primals[2]
-        .env
-        .get("WORKLOAD_ENDPOINT")
-        .unwrap()
-        .starts_with("jsonrpc+unix://"));
+    assert!(
+        config.primals[2]
+            .env
+            .get("WORKLOAD_ENDPOINT")
+            .unwrap()
+            .starts_with("jsonrpc+unix://")
+    );
 }
 
 #[test]

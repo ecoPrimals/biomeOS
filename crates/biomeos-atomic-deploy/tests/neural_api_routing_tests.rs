@@ -9,6 +9,7 @@
 use biomeos_atomic_deploy::neural_router::{NeuralRouter, RoutingMetrics};
 use serde_json::json;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// Test helper: Create test Neural Router
 fn create_test_router() -> NeuralRouter {
@@ -101,17 +102,17 @@ async fn test_routing_metrics_structure() {
     use chrono::Utc;
 
     let metrics = RoutingMetrics {
-        request_id: "test-123".to_string(),
-        capability: "secure_http".to_string(),
-        method: "http.get".to_string(),
-        routed_through: vec!["songbird".to_string(), "beardog".to_string()],
+        request_id: Arc::from("test-123"),
+        capability: Arc::from("secure_http"),
+        method: Arc::from("http.get"),
+        routed_through: vec![Arc::from("songbird"), Arc::from("beardog")],
         latency_ms: 42,
         success: true,
         timestamp: Utc::now(),
         error: None,
     };
 
-    assert_eq!(metrics.capability, "secure_http");
+    assert_eq!(metrics.capability.as_ref(), "secure_http");
     assert_eq!(metrics.latency_ms, 42);
     assert!(metrics.success);
 }
@@ -122,10 +123,10 @@ async fn test_log_metric() {
     use chrono::Utc;
 
     let metric = RoutingMetrics {
-        request_id: "test-456".to_string(),
-        capability: "storage".to_string(),
-        method: "storage.write".to_string(),
-        routed_through: vec!["toadstool".to_string()],
+        request_id: Arc::from("test-456"),
+        capability: Arc::from("storage"),
+        method: Arc::from("storage.write"),
+        routed_through: vec![Arc::from("toadstool")],
         latency_ms: 100,
         success: true,
         timestamp: Utc::now(),
@@ -138,7 +139,7 @@ async fn test_log_metric() {
     // Verify it was logged
     let metrics = router.get_metrics().await;
     assert_eq!(metrics.len(), 1);
-    assert_eq!(metrics[0].request_id, "test-456");
+    assert_eq!(metrics[0].request_id.as_ref(), "test-456");
 }
 
 #[tokio::test]
@@ -148,10 +149,10 @@ async fn test_clear_metrics() {
 
     // Log a metric
     let metric = RoutingMetrics {
-        request_id: "test-789".to_string(),
-        capability: "compute".to_string(),
-        method: "compute.execute".to_string(),
-        routed_through: vec!["nucleus".to_string()],
+        request_id: Arc::from("test-789"),
+        capability: Arc::from("compute"),
+        method: Arc::from("compute.execute"),
+        routed_through: vec![Arc::from("nucleus")],
         latency_ms: 50,
         success: true,
         timestamp: Utc::now(),
@@ -250,9 +251,9 @@ async fn test_routing_concurrent_metrics() {
         let router_clone = router.clone();
         let handle = task::spawn(async move {
             let metric = RoutingMetrics {
-                request_id: format!("test-{i}"),
-                capability: "test".to_string(),
-                method: "test.method".to_string(),
+                request_id: Arc::from(format!("test-{i}").as_str()),
+                capability: Arc::from("test"),
+                method: Arc::from("test.method"),
                 routed_through: vec![],
                 latency_ms: i * 10,
                 success: true,
@@ -312,9 +313,9 @@ async fn test_metrics_with_errors() {
 
     // Log metric with error
     let metric = RoutingMetrics {
-        request_id: "error-test".to_string(),
-        capability: "failed_op".to_string(),
-        method: "op.execute".to_string(),
+        request_id: Arc::from("error-test"),
+        capability: Arc::from("failed_op"),
+        method: Arc::from("op.execute"),
         routed_through: vec![],
         latency_ms: 5,
         success: false,

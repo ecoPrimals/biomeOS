@@ -6,8 +6,8 @@
 //! Trust/attestation logic via BearDog lineage verification.
 
 use super::verification::IdentityProof;
-use crate::beardog_client::BearDogClient;
 use crate::FederationResult;
+use crate::beardog_client::BearDogClient;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 

@@ -8,7 +8,7 @@
 #[cfg(test)]
 mod tests;
 
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
@@ -17,8 +17,8 @@ use crate::error::{SporeError, SporeResult};
 
 use super::capability::{CapabilityCaller, NeuralApiCapabilityCaller};
 use super::types::{
-    current_timestamp, BeaconGeneticsManifest, BeaconId, MeetingRecord, MeetingRelationship,
-    MeetingVisibility, SyncResult,
+    BeaconGeneticsManifest, BeaconId, MeetingRecord, MeetingRelationship, MeetingVisibility,
+    SyncResult, current_timestamp,
 };
 
 /// Manages beacon genetics (address book, seeds, meetings)
@@ -357,13 +357,12 @@ impl BeaconGeneticsManager {
                 )
                 .await;
 
-            if let Ok(result) = decrypt_response {
-                if let Some(true) = result.get("decrypted").and_then(|d| d.as_bool()) {
-                    if let Some(plaintext) = result.get("payload") {
-                        info!("✅ Beacon decrypted - met peer: {}", beacon_id.short());
-                        return Ok(Some((plaintext.clone(), beacon_id)));
-                    }
-                }
+            if let Ok(result) = decrypt_response
+                && let Some(true) = result.get("decrypted").and_then(|d| d.as_bool())
+                && let Some(plaintext) = result.get("payload")
+            {
+                info!("✅ Beacon decrypted - met peer: {}", beacon_id.short());
+                return Ok(Some((plaintext.clone(), beacon_id)));
             }
         }
         Ok(None)

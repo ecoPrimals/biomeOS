@@ -18,9 +18,9 @@ use tokio::sync::Mutex;
 use tracing::{info, warn};
 
 use biomeos_types::{
+    SystemPaths,
     error::{BiomeError, BiomeResult},
     identifiers::{Endpoint, PrimalId},
-    SystemPaths,
 };
 
 use crate::{
@@ -105,10 +105,10 @@ impl ManagedPrimal for GenericManagedPrimal {
         // Deep Debt Principle: Unix socket first, HTTP bridge is temporary.
 
         // Try Unix socket first
-        if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH") {
-            if let Ok(endpoint) = Endpoint::new(format!("unix://{socket_path}")) {
-                return Some(endpoint);
-            }
+        if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH")
+            && let Ok(endpoint) = Endpoint::new(format!("unix://{socket_path}"))
+        {
+            return Some(endpoint);
         }
 
         // Fallback to HTTP if configured (deprecated)

@@ -406,10 +406,11 @@ mod tests {
 
     #[test]
     fn test_config_from_env_standalone_mode() {
-        std::env::set_var("BIOMEOS_STANDALONE_MODE", "true");
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        set_test_env("BIOMEOS_STANDALONE_MODE", "true");
         let config = Config::from_env();
         assert!(config.standalone_mode);
-        std::env::remove_var("BIOMEOS_STANDALONE_MODE");
+        remove_test_env("BIOMEOS_STANDALONE_MODE");
     }
 
     #[test]

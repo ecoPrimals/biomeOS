@@ -10,6 +10,7 @@
 use crate::capability_translation::{
     resolve_primal_socket, CapabilityTranslation, CapabilityTranslationRegistry, RegistryStats,
 };
+use biomeos_test_utils::{remove_test_env, set_test_env};
 use std::collections::HashMap;
 
 #[test]
@@ -152,12 +153,12 @@ fn test_resolve_primal_socket_env_override() {
     let unique_primal = "testprimal_env_override";
     let env_var = format!("{}_SOCKET", unique_primal.to_uppercase());
 
-    std::env::set_var(&env_var, "/custom/unique-test.sock");
+    set_test_env(&env_var, "/custom/unique-test.sock");
 
     let socket = resolve_primal_socket(unique_primal, "test-family");
     assert_eq!(socket, "/custom/unique-test.sock");
 
-    std::env::remove_var(&env_var);
+    remove_test_env(&env_var);
 }
 
 #[test]
@@ -179,8 +180,8 @@ fn test_resolve_primal_socket_fallback() {
 
 #[test]
 fn test_resolve_primal_socket_different_primals() {
-    std::env::remove_var("SONGBIRD_SOCKET");
-    std::env::remove_var("NESTGATE_SOCKET");
+    remove_test_env("SONGBIRD_SOCKET");
+    remove_test_env("NESTGATE_SOCKET");
 
     let songbird = resolve_primal_socket("songbird", "fam1");
     let nestgate = resolve_primal_socket("nestgate", "fam1");

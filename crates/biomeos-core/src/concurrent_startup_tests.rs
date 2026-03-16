@@ -6,14 +6,14 @@
 //! Extracted from concurrent_startup.rs to keep main module under 1000 LOC.
 
 use crate::capabilities::Capability;
-use crate::concurrent_startup::{start_in_waves, DependencyGraph};
+use crate::concurrent_startup::{DependencyGraph, start_in_waves};
 use crate::discovery_modern::HealthStatus;
 use crate::primal_orchestrator::{ManagedPrimal, PrimalHealthMonitor, PrimalOrchestrator};
 use crate::retry::RetryPolicy;
 use async_trait::async_trait;
+use biomeos_types::PrimalId;
 use biomeos_types::error::BiomeResult;
 use biomeos_types::identifiers::Endpoint;
-use biomeos_types::PrimalId;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -401,9 +401,11 @@ fn test_build_custom_capability() {
     ))];
 
     let graph = DependencyGraph::build(&primals).expect("should build");
-    assert!(graph
-        .capability_providers
-        .contains_key("custom:my-extension"));
+    assert!(
+        graph
+            .capability_providers
+            .contains_key("custom:my-extension")
+    );
 }
 
 #[test]

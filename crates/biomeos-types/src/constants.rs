@@ -83,11 +83,11 @@ pub mod endpoints {
     // 3. mDNS automatic discovery
     //
     // For local development, set environment variables:
-    //   export SONGBIRD_ENDPOINT="http://localhost:3000"
-    //   export TOADSTOOL_ENDPOINT="http://localhost:8080"
-    //   export NESTGATE_ENDPOINT="http://localhost:8002"
-    //   export BEARDOG_ENDPOINT="http://localhost:9000"
-    //   export SQUIRREL_ENDPOINT="http://localhost:8001"
+    //   export SONGBIRD_ENDPOINT="http://localhost:{API_DEFAULT}"
+    //   export TOADSTOOL_ENDPOINT="http://localhost:{HTTP_BRIDGE}"
+    //   export NESTGATE_ENDPOINT="http://localhost:{METRICS}"
+    //   export BEARDOG_ENDPOINT="http://localhost:{NEURAL_API}"
+    //   export SQUIRREL_ENDPOINT="http://localhost:{WEBSOCKET}"
 
     // API PATH CONSTANTS - These ARE appropriate as constants
     // since they define the primal's own API contract
@@ -191,6 +191,48 @@ pub mod limits {
     pub const DEFAULT_DISK_LIMIT_GB: u64 = 10;
 }
 
+/// Well-named port constants for production code
+///
+/// These are the standard/default ports used across biomeOS.
+/// Use these constants instead of magic numbers.
+pub mod ports {
+    /// STUN standard port (RFC 5389)
+    pub const STUN: u16 = 3478;
+
+    /// STUN-over-TLS port (RFC 5389)
+    pub const STUN_TLS: u16 = 3479;
+
+    /// mDNS standard port (RFC 6762)
+    pub const MDNS: u16 = 5353;
+
+    /// SSDP/UPnP standard port
+    pub const SSDP: u16 = 1900;
+
+    /// Default biomeOS API port
+    pub const API_DEFAULT: u16 = 3000;
+
+    /// Default HTTP bridge port
+    pub const HTTP_BRIDGE: u16 = 8080;
+
+    /// Default HTTPS port
+    pub const HTTPS_DEFAULT: u16 = 8443;
+
+    /// Default WebSocket port (alternative to WEBSOCKET for some services)
+    pub const WS_DEFAULT: u16 = 8081;
+
+    /// Default Neural API port
+    pub const NEURAL_API: u16 = 9000;
+
+    /// Default WebSocket port
+    pub const WEBSOCKET: u16 = 8001;
+
+    /// Default metrics port
+    pub const METRICS: u16 = 8002;
+
+    /// TURN/relay default port (RFC 5766)
+    pub const RELAY: u16 = 3490;
+}
+
 /// Network configuration constants
 ///
 /// **DESIGN PRINCIPLE**: These are FALLBACK defaults only.
@@ -200,7 +242,7 @@ pub mod network {
     use std::env;
 
     /// Default HTTP port (fallback only)
-    pub const DEFAULT_HTTP_PORT: u16 = 8080;
+    pub const DEFAULT_HTTP_PORT: u16 = super::ports::HTTP_BRIDGE;
 
     /// Default HTTPS port (fallback only)
     pub const DEFAULT_HTTPS_PORT: u16 = 8443;
@@ -209,16 +251,16 @@ pub mod network {
     pub const DEFAULT_WS_PORT: u16 = 8081;
 
     /// Default MCP port (fallback only)
-    pub const DEFAULT_MCP_PORT: u16 = 3000;
+    pub const DEFAULT_MCP_PORT: u16 = super::ports::API_DEFAULT;
 
     /// Default discovery port (fallback only)
-    pub const DEFAULT_DISCOVERY_PORT: u16 = 8001;
+    pub const DEFAULT_DISCOVERY_PORT: u16 = super::ports::WEBSOCKET;
 
     /// Default BearDog (security) port (fallback only)
-    pub const DEFAULT_BEARDOG_PORT: u16 = 9000;
+    pub const DEFAULT_BEARDOG_PORT: u16 = super::ports::NEURAL_API;
 
     /// Default Songbird (universal adapter) port (fallback only)
-    pub const DEFAULT_SONGBIRD_PORT: u16 = 3000;
+    pub const DEFAULT_SONGBIRD_PORT: u16 = super::ports::API_DEFAULT;
 
     /// Default broadcast discovery port (fallback only)
     pub const DEFAULT_BROADCAST_DISCOVERY_PORT: u16 = 9199;
@@ -405,6 +447,9 @@ pub mod files {
 
     /// Default journal file
     pub const DEFAULT_JOURNAL_FILE: &str = "command_journal.json";
+
+    /// Default Neural API metrics database filename (redb)
+    pub const DEFAULT_NEURAL_METRICS_DB: &str = "neural_api_metrics.redb";
 }
 
 /// Event system constants
@@ -437,12 +482,73 @@ pub mod events {
     pub const CUSTOM_EVENT: &str = "custom.event";
 }
 
+/// Capability domain constants for discovery
+///
+/// **WateringHole standard**: No hardcoded primal names, capability-based discovery.
+/// A primal should only know about itself and discover others at runtime via capabilities.
+///
+/// Use these constants when querying for primals by what they do, not by name.
+/// Primal names (beardog, songbird, etc.) are implementation details discovered at runtime.
+///
+/// # Example
+/// ```
+/// use biomeos_types::constants::capability;
+///
+/// // Use capability constants for discovery (not primal names)
+/// assert_eq!(capability::CRYPTO, "crypto");
+/// assert_eq!(capability::STORAGE, "storage");
+/// assert_eq!(capability::MESH_NETWORKING, "mesh_networking");
+/// ```
+pub mod capability {
+    /// Crypto/security capability (family seed, signing, encryption)
+    pub const CRYPTO: &str = "crypto";
+
+    /// Family seed and lineage operations
+    pub const FAMILY_SEED: &str = "crypto.family_seed";
+
+    /// Mesh networking / P2P relay
+    pub const MESH_NETWORKING: &str = "mesh_networking";
+
+    /// TLS and secure transport
+    pub const TLS: &str = "tls";
+
+    /// Storage and data persistence
+    pub const STORAGE: &str = "storage";
+
+    /// Gateway / NAT traversal
+    pub const GATEWAY: &str = "gateway";
+
+    /// NAT traversal (hole punch, STUN, relay)
+    pub const NAT_TRAVERSAL: &str = "nat_traversal";
+
+    /// Caching capability
+    pub const CACHING: &str = "caching";
+
+    /// Visualization / UI rendering
+    pub const VISUALIZATION: &str = "visualization";
+
+    /// Graph database
+    pub const GRAPH_DATABASE: &str = "graph_database";
+
+    /// Persistence / durable storage
+    pub const PERSISTENCE: &str = "persistence";
+
+    /// GPU compute acceleration
+    pub const GPU_COMPUTE: &str = "gpu_compute";
+
+    /// Cryptographic signing
+    pub const SIGNING: &str = "crypto.sign";
+
+    /// Encryption/decryption
+    pub const ENCRYPTION: &str = "crypto.encrypt";
+}
+
 /// Capability constants for discovery
 ///
 /// **DESIGN PRINCIPLE**: Query by capability, not by primal name.
 ///
 /// These constants are used for capability-based discovery through the
-/// universal adapter (Songbird). No primal should hardcode knowledge of
+/// universal adapter. No primal should hardcode knowledge of
 /// other primals by name.
 ///
 /// # Example
@@ -755,5 +861,19 @@ mod tests {
         assert_eq!(capabilities::NETWORKING, "networking");
         assert_eq!(capabilities::MONITORING, "monitoring");
         assert_eq!(capabilities::DATA_PROCESSING, "data-processing");
+    }
+
+    #[test]
+    fn test_capability_domain_constants() {
+        assert_eq!(capability::CRYPTO, "crypto");
+        assert_eq!(capability::MESH_NETWORKING, "mesh_networking");
+        assert_eq!(capability::STORAGE, "storage");
+        assert_eq!(capability::GATEWAY, "gateway");
+        assert_eq!(capability::CACHING, "caching");
+        assert_eq!(capability::GRAPH_DATABASE, "graph_database");
+        assert_eq!(capability::PERSISTENCE, "persistence");
+        assert_eq!(capability::GPU_COMPUTE, "gpu_compute");
+        assert_eq!(capability::SIGNING, "crypto.sign");
+        assert_eq!(capability::ENCRYPTION, "crypto.encrypt");
     }
 }

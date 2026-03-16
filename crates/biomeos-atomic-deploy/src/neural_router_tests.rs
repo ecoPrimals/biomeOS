@@ -11,6 +11,7 @@ use biomeos_types::tarpc_types::ProtocolPreference;
 use std::fs;
 use std::os::unix::net::UnixListener;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tempfile::TempDir;
 
 #[test]
@@ -43,10 +44,10 @@ async fn test_capability_registration() {
     assert!(providers.is_some());
     let providers = providers.unwrap();
     assert_eq!(providers.len(), 1);
-    assert_eq!(providers[0].capability, "http.request");
-    assert_eq!(providers[0].primal_name, "songbird");
+    assert_eq!(providers[0].capability.as_ref(), "http.request");
+    assert_eq!(providers[0].primal_name.as_ref(), "songbird");
     assert_eq!(providers[0].socket_path, socket_path);
-    assert_eq!(providers[0].source, "manual");
+    assert_eq!(providers[0].source.as_ref(), "manual");
 }
 
 #[tokio::test]
@@ -112,10 +113,10 @@ async fn test_metrics_collection() {
     let router = NeuralRouter::new("test");
 
     let metric = RoutingMetrics {
-        request_id: "test-123".to_string(),
-        capability: "secure_http".to_string(),
-        method: "http.get".to_string(),
-        routed_through: vec!["songbird".to_string()],
+        request_id: Arc::from("test-123"),
+        capability: Arc::from("secure_http"),
+        method: Arc::from("http.get"),
+        routed_through: vec![Arc::from("songbird")],
         latency_ms: 100,
         success: true,
         timestamp: chrono::Utc::now(),
@@ -126,9 +127,9 @@ async fn test_metrics_collection() {
 
     let metrics = router.get_metrics().await;
     assert_eq!(metrics.len(), 1);
-    assert_eq!(metrics[0].request_id, "test-123");
-    assert_eq!(metrics[0].capability, "secure_http");
-    assert_eq!(metrics[0].method, "http.get");
+    assert_eq!(metrics[0].request_id.as_ref(), "test-123");
+    assert_eq!(metrics[0].capability.as_ref(), "secure_http");
+    assert_eq!(metrics[0].method.as_ref(), "http.get");
     assert_eq!(metrics[0].latency_ms, 100);
     assert!(metrics[0].success);
 }
@@ -139,9 +140,9 @@ async fn test_metrics_multiple() {
 
     for i in 0..5 {
         let metric = RoutingMetrics {
-            request_id: format!("test-{i}"),
-            capability: "test".to_string(),
-            method: "test.method".to_string(),
+            request_id: Arc::from(format!("test-{i}").as_str()),
+            capability: Arc::from("test"),
+            method: Arc::from("test.method"),
             routed_through: vec![],
             latency_ms: i * 10,
             success: i % 2 == 0,
@@ -164,9 +165,9 @@ async fn test_clear_metrics() {
     let router = NeuralRouter::new("test");
 
     let metric = RoutingMetrics {
-        request_id: "test".to_string(),
-        capability: "test".to_string(),
-        method: "test".to_string(),
+        request_id: Arc::from("test"),
+        capability: Arc::from("test"),
+        method: Arc::from("test"),
         routed_through: vec![],
         latency_ms: 0,
         success: true,
@@ -229,9 +230,9 @@ async fn test_discover_capability_registered() {
     let result = router.discover_capability("test.capability").await;
     assert!(result.is_ok());
     let discovered = result.unwrap();
-    assert_eq!(discovered.capability, "test.capability");
+    assert_eq!(discovered.capability.as_ref(), "test.capability");
     assert_eq!(discovered.primals.len(), 1);
-    assert_eq!(discovered.primals[0].name, "test-primal");
+    assert_eq!(discovered.primals[0].name.as_ref(), "test-primal");
 }
 
 #[tokio::test]
@@ -275,7 +276,7 @@ async fn test_atomic_type_serialization() {
 #[tokio::test]
 async fn test_discovered_primal_serialization() {
     let primal = DiscoveredPrimal {
-        name: "test-primal".to_string(),
+        name: Arc::from("test-primal"),
         socket_path: PathBuf::from("/tmp/test.sock"),
         capabilities: vec!["test".to_string()],
         healthy: true,
@@ -284,17 +285,17 @@ async fn test_discovered_primal_serialization() {
 
     let serialized = serde_json::to_string(&primal).unwrap();
     let deserialized: DiscoveredPrimal = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(primal.name, deserialized.name);
+    assert_eq!(primal.name.as_ref(), deserialized.name.as_ref());
     assert_eq!(primal.socket_path, deserialized.socket_path);
 }
 
 #[tokio::test]
 async fn test_routing_metrics_serialization() {
     let metric = RoutingMetrics {
-        request_id: "req-123".to_string(),
-        capability: "test".to_string(),
-        method: "test.method".to_string(),
-        routed_through: vec!["primal1".to_string(), "primal2".to_string()],
+        request_id: Arc::from("req-123"),
+        capability: Arc::from("test"),
+        method: Arc::from("test.method"),
+        routed_through: vec![Arc::from("primal1"), Arc::from("primal2")],
         latency_ms: 42,
         success: true,
         timestamp: chrono::Utc::now(),
@@ -303,24 +304,24 @@ async fn test_routing_metrics_serialization() {
 
     let serialized = serde_json::to_string(&metric).unwrap();
     let deserialized: RoutingMetrics = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(metric.request_id, deserialized.request_id);
+    assert_eq!(metric.request_id.as_ref(), deserialized.request_id.as_ref());
     assert_eq!(metric.latency_ms, deserialized.latency_ms);
 }
 
 #[tokio::test]
 async fn test_registered_capability_serialization() {
     let cap = RegisteredCapability {
-        capability: "test".to_string(),
-        primal_name: "primal".to_string(),
+        capability: Arc::from("test"),
+        primal_name: Arc::from("primal"),
         socket_path: PathBuf::from("/tmp/test.sock"),
         registered_at: chrono::Utc::now(),
-        source: "test".to_string(),
+        source: Arc::from("test"),
     };
 
     let serialized = serde_json::to_string(&cap).unwrap();
     let deserialized: RegisteredCapability = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(cap.capability, deserialized.capability);
-    assert_eq!(cap.primal_name, deserialized.primal_name);
+    assert_eq!(cap.capability.as_ref(), deserialized.capability.as_ref());
+    assert_eq!(cap.primal_name.as_ref(), deserialized.primal_name.as_ref());
 }
 
 // Capability domain mapping tests are in crate::capability_domains::tests

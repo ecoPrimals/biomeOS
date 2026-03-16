@@ -34,6 +34,7 @@
 //! - Primals discover peers via capability.call()
 //! - Defaults only used when discovery unavailable
 
+use crate::constants::ports;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -120,12 +121,12 @@ pub struct PortConfig {
 impl Default for PortConfig {
     fn default() -> Self {
         Self {
-            http: 8080,
-            https: 8443,
-            websocket: 8081,
-            discovery: 8001,
-            relay: 3490,
-            stun: 3478,
+            http: ports::HTTP_BRIDGE,
+            https: ports::HTTPS_DEFAULT,
+            websocket: ports::WS_DEFAULT,
+            discovery: ports::WEBSOCKET,
+            relay: ports::RELAY,
+            stun: ports::STUN,
         }
     }
 }
@@ -184,12 +185,12 @@ impl NetworkConfig {
         };
 
         let ports = PortConfig {
-            http: Self::parse_port_with(env, env_vars::HTTP_PORT, 8080),
-            https: Self::parse_port_with(env, env_vars::HTTPS_PORT, 8443),
-            websocket: Self::parse_port_with(env, env_vars::WEBSOCKET_PORT, 8081),
-            discovery: Self::parse_port_with(env, env_vars::DISCOVERY_PORT, 8001),
-            relay: Self::parse_port_with(env, env_vars::RELAY_PORT, 3490),
-            stun: Self::parse_port_with(env, env_vars::STUN_PORT, 3478),
+            http: Self::parse_port_with(env, env_vars::HTTP_PORT, ports::HTTP_BRIDGE),
+            https: Self::parse_port_with(env, env_vars::HTTPS_PORT, ports::HTTPS_DEFAULT),
+            websocket: Self::parse_port_with(env, env_vars::WEBSOCKET_PORT, ports::WS_DEFAULT),
+            discovery: Self::parse_port_with(env, env_vars::DISCOVERY_PORT, ports::WEBSOCKET),
+            relay: Self::parse_port_with(env, env_vars::RELAY_PORT, ports::RELAY),
+            stun: Self::parse_port_with(env, env_vars::STUN_PORT, ports::STUN),
         };
 
         Self {
@@ -369,9 +370,9 @@ impl NetworkConfig {
     /// on corporate infrastructure. Override via `BIOMEOS_STUN_SERVERS` env var.
     fn default_public_stun_servers() -> Vec<String> {
         vec![
-            "stun.nextcloud.com:3478".to_string(),
-            "stun.sip.us:3478".to_string(),
-            "stun.stunprotocol.org:3478".to_string(),
+            format!("stun.nextcloud.com:{}", ports::STUN),
+            format!("stun.sip.us:{}", ports::STUN),
+            format!("stun.stunprotocol.org:{}", ports::STUN),
         ]
     }
 }

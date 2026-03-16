@@ -11,7 +11,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 mod modules;
 use modules::{deploy_manifest, list_manifests, load_config, show_status, validate_config};

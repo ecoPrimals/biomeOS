@@ -27,6 +27,8 @@ biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-federation = { path = "../biomeos-federation", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-primal-sdk = { path = "../biomeos-primal-sdk", version = "0.1.0" }
+tarpc = { workspace = true }
+tokio-serde = { workspace = true }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
 chrono = "0.4"
 futures = { workspace = true }
@@ -37,6 +39,7 @@ toml = "0.8"  # For Neural API graph parsing
 # neural-api-client = { path = "../neural-api-client" }
 
 [dev-dependencies]
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tempfile = "3.8"
 tokio-test = "0.4"
 rand = "0.8"

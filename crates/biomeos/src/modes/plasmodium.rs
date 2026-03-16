@@ -326,7 +326,7 @@ mod tests {
     fn make_gate(gate_id: &str, models: Vec<&str>) -> GateInfo {
         GateInfo {
             gate_id: gate_id.to_string(),
-            address: format!("{gate_id}:8080"),
+            address: format!("{gate_id}:{}", biomeos_types::constants::ports::HTTP_BRIDGE),
             is_local: gate_id == "local",
             primals: vec![PrimalStatus {
                 name: "beardog".to_string(),

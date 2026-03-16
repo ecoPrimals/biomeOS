@@ -19,7 +19,6 @@ use std::time::Duration;
 
 /// Test fixture for chaos testing
 struct ChaosFixture {
-    #[allow(dead_code)]
     family_id: String,
     socket_dir: PathBuf,
 }

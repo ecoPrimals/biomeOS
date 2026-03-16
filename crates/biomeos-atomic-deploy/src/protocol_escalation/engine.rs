@@ -358,8 +358,36 @@ impl ProtocolEscalationManager {
         Ok(())
     }
 
-    async fn verify_tarpc_connection(&self, _from: &str, _to: &str) -> Result<(), String> {
-        debug!("Skipping tarpc verification (not yet implemented)");
+    async fn verify_tarpc_connection(&self, _from: &str, to: &str) -> Result<(), String> {
+        let state = self
+            .graph
+            .get_primal_state(to)
+            .await
+            .ok_or_else(|| format!("Primal not found: {to}"))?;
+
+        let tarpc_socket = state
+            .tarpc_socket
+            .as_ref()
+            .ok_or_else(|| format!("No tarpc socket for {to}"))?;
+
+        if !tarpc_socket.exists() {
+            return Err(format!(
+                "tarpc socket does not exist: {}",
+                tarpc_socket.display()
+            ));
+        }
+
+        let client = crate::tarpc_client::connect_tarpc_health(tarpc_socket)
+            .await
+            .map_err(|e| format!("tarpc connect failed: {e}"))?;
+
+        let ctx = tarpc::context::current();
+        client
+            .health_check(ctx)
+            .await
+            .map_err(|e| format!("tarpc health_check failed: {e}"))?;
+
+        debug!("tarpc verification passed: {} → {}", _from, to);
         Ok(())
     }
 

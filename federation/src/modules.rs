@@ -8,7 +8,7 @@
 
 use anyhow::Result;
 use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, TOADSTOOL};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Deploy a biome manifest to the federation
 pub async fn deploy_manifest(manifest_path: &str) -> Result<()> {
@@ -238,10 +238,12 @@ metadata:
         assert!(result.is_ok());
         let config = result.unwrap();
         assert!(config.get("federation").is_some());
-        assert!(config
-            .get("federation")
-            .and_then(|f| f.get("discovery"))
-            .is_some());
+        assert!(
+            config
+                .get("federation")
+                .and_then(|f| f.get("discovery"))
+                .is_some()
+        );
     }
 
     #[tokio::test]

@@ -118,10 +118,10 @@ impl SporeRefresher {
         }
 
         // Update spore manifest if any binaries were refreshed
-        if !refreshed_binaries.is_empty() {
-            if let Err(e) = self.update_spore_manifest(spore_path, &refreshed_binaries) {
-                warn!("Failed to update spore manifest: {}", e);
-            }
+        if !refreshed_binaries.is_empty()
+            && let Err(e) = self.update_spore_manifest(spore_path, &refreshed_binaries)
+        {
+            warn!("Failed to update spore manifest: {}", e);
         }
 
         Ok(RefreshReport {
@@ -155,12 +155,12 @@ impl SporeRefresher {
             .find(|b| b.name == source_name)
             .map(|b| b.sha256.as_str());
 
-        if let Some(expected) = expected_sha256 {
-            if source_sha256 != expected {
-                return Err(anyhow::anyhow!(
-                    "Source binary SHA256 mismatch: expected {expected}, got {source_sha256}"
-                ));
-            }
+        if let Some(expected) = expected_sha256
+            && source_sha256 != expected
+        {
+            return Err(anyhow::anyhow!(
+                "Source binary SHA256 mismatch: expected {expected}, got {source_sha256}"
+            ));
         }
 
         // Write to destination

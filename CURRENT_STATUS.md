@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 16, 2026 (v2.43: streaming Pipeline coordination, NDJSON streaming client, JSON-RPC notification compliance)
-**Version**: 2.43
+**Updated**: March 16, 2026 (v2.44: Deep audit evolution, Edition 2024, capability-based discovery, tarpc binary protocol)
+**Version**: 2.44
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -15,9 +15,10 @@
 | **IPC Standard** | Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) |
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
-| **Code Quality** | A++ (Pure Rust, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
-| **Tests Passing** | 4,224 lib + bin (0 failures, 28 ignored) |
-| **Test Coverage** | 77.61% line, 80.32% function (llvm-cov, climbing toward 90%) |
+| **Code Quality** | A++ (Pure Rust, Edition 2024, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
+| **Lint hardening** | `deny` on unwrap_used/expect_used |
+| **Tests Passing** | 5,168 lib + bin (0 failures) |
+| **Test Coverage** | 77.92% line, 80.32% function (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production, 0 test |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -34,7 +35,8 @@
 | **P2P Sovereign Onion** | PRODUCTION READY |
 | **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
-| **Files >1000 LOC** | 0 (max 920, incubation 934→330+180+115+60 modules) |
+| **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |
+| **Files >1000 LOC** | 0 (max 920, neural_router split to 4 domain modules) |
 | **JSON-RPC types** | `JSONRPC_VERSION` const + `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
 | **Zero-copy** | `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client); `Arc<str>` for identifiers |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
@@ -761,7 +763,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Mar 14, 2026)
 
-**Overall**: 76.15% line coverage (4,728 tests, 0 failures)
+**Overall**: 77.92% line coverage (5,168 tests, 0 failures)
 
 ### Coverage Distribution
 
@@ -829,7 +831,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 | Standard | Status |
 |----------|--------|
-| ecoBin v2.0 | 100% Pure Rust |
+| ecoBin v3.0 | 100% Pure Rust |
 | Universal IPC v3.0 | Multi-transport (Unix/Abstract/TCP/HTTP JSON-RPC) |
 | PRIMAL_DEPLOYMENT_STANDARD v1.0 | Deterministic behavior |
 | Semantic Method Naming | capability.call routing |
@@ -845,7 +847,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (4,275+ tests)
+# Test (5,168 tests)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -880,7 +882,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A++ (Pure Rust, fully concurrent, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, table-driven routing)
-**Tests**: 4,946 passing fully concurrent (76.15% line coverage via llvm-cov)
+**Tests**: 5,168 passing fully concurrent (77.92% line coverage via llvm-cov)
 **Clippy**: PASS (0 warnings, `-D warnings`) | **Format**: PASS (`cargo fmt --check` clean)
 **Docs**: Full coverage (0 missing_docs warnings across 8 crates)
 **Unsafe Code**: 0 (production + tests)

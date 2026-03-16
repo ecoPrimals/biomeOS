@@ -432,6 +432,7 @@ pub enum IdError {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn primal_id_valid() {
@@ -506,9 +507,9 @@ mod tests {
 
     #[test]
     fn family_id_from_env() {
-        std::env::set_var("BIOMEOS_FAMILY_ID", "env-family");
+        set_test_env("BIOMEOS_FAMILY_ID", "env-family");
         let id = FamilyId::from_env();
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
+        remove_test_env("BIOMEOS_FAMILY_ID");
         assert!(id.is_some());
         assert_eq!(id.unwrap().as_str(), "env-family");
     }

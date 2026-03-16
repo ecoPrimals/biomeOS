@@ -20,14 +20,12 @@ pub fn extract_spore_id(spore_path: &Path) -> SporeResult<String> {
         let content = std::fs::read_to_string(&tower_toml_path)?;
 
         // Parse TOML and extract node_id from meta section
-        if let Ok(config) = toml::from_str::<toml::Value>(&content) {
-            if let Some(meta) = config.get("meta") {
-                if let Some(node_id) = meta.get("node_id") {
-                    if let Some(id) = node_id.as_str() {
-                        return Ok(id.to_string());
-                    }
-                }
-            }
+        if let Ok(config) = toml::from_str::<toml::Value>(&content)
+            && let Some(meta) = config.get("meta")
+            && let Some(node_id) = meta.get("node_id")
+            && let Some(id) = node_id.as_str()
+        {
+            return Ok(id.to_string());
         }
     }
 
@@ -47,21 +45,19 @@ pub fn extract_family_id(spore_path: &Path) -> Result<String, anyhow::Error> {
     let content = std::fs::read_to_string(&tower_toml_path)?;
 
     if let Ok(config) = toml::from_str::<toml::Value>(&content) {
-        if let Some(tower) = config.get("tower") {
-            if let Some(family) = tower.get("family") {
-                if let Some(family_str) = family.as_str() {
-                    return Ok(family_str.to_string());
-                }
-            }
+        if let Some(tower) = config.get("tower")
+            && let Some(family) = tower.get("family")
+            && let Some(family_str) = family.as_str()
+        {
+            return Ok(family_str.to_string());
         }
 
         // Fallback: check meta.family_id
-        if let Some(meta) = config.get("meta") {
-            if let Some(family_id) = meta.get("family_id") {
-                if let Some(id) = family_id.as_str() {
-                    return Ok(id.to_string());
-                }
-            }
+        if let Some(meta) = config.get("meta")
+            && let Some(family_id) = meta.get("family_id")
+            && let Some(id) = family_id.as_str()
+        {
+            return Ok(id.to_string());
         }
     }
 

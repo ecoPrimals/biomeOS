@@ -42,6 +42,7 @@ indexmap = { version = "2.0", features = ["serde"] }
 etcetera = "0.8"  # Pure Rust replacement for dirs
 
 [dev-dependencies]
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tempfile = "3.8"
 
 [features]

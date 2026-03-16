@@ -214,10 +214,10 @@ impl NeuralApiServer {
         debug!("📥 Request: {} (id: {})", request.method, id);
         trace!("📥 Full request: {}", request_line.trim());
 
-        let route = match lookup_route(&request.method) {
+        let route = match lookup_route(request.method.as_ref()) {
             Some(r) => r,
             None => {
-                return Ok(method_not_found_response(&request.method, id));
+                return Ok(method_not_found_response(request.method.as_ref(), id));
             }
         };
 
@@ -303,14 +303,14 @@ impl NeuralApiServer {
             Route::Agent => {
                 super::agents::handle_agent_request(
                     &self.agent_registry,
-                    request.method.as_str(),
+                    request.method.as_ref(),
                     &request.params,
                 )
                 .await?
             }
             Route::ProxyHttp => self.proxy_http(&request.params).await?,
             Route::MeshCapabilityCall => {
-                let parts: Vec<&str> = request.method.split('.').collect();
+                let parts: Vec<&str> = request.method.as_ref().split('.').collect();
                 if parts.len() == 2 {
                     let cap_params = Some(serde_json::json!({
                         "capability": parts[0],
@@ -320,7 +320,7 @@ impl NeuralApiServer {
                     self.capability_handler.call(&cap_params).await?
                 } else {
                     return Ok(method_not_found_response(
-                        &request.method,
+                        request.method.as_ref(),
                         request.id.clone().unwrap_or(serde_json::Value::Null),
                     ));
                 }

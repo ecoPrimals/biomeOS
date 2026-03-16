@@ -89,7 +89,7 @@ impl UnixSocketClient {
     /// Helper to call a method and extract result
     pub async fn call_method(
         &self,
-        method: impl Into<String>,
+        method: impl AsRef<str>,
         params: serde_json::Value,
     ) -> Result<Value> {
         let request = JsonRpcRequest::new(method, params);
@@ -110,7 +110,7 @@ mod tests {
     fn test_json_rpc_request_creation() {
         let request = JsonRpcRequest::new("test.method", json!({"key": "value"}));
         assert_eq!(request.jsonrpc, "2.0");
-        assert_eq!(request.method, "test.method");
+        assert_eq!(request.method.as_ref(), "test.method");
         assert_eq!(request.params.as_ref().unwrap()["key"], "value");
         assert!(request.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0) > 0);
     }

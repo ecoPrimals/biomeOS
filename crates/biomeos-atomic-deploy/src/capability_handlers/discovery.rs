@@ -238,9 +238,10 @@ mod tests {
     #[test]
     #[ignore = "env var BIOMEOS_STRICT_DISCOVERY races with parallel tests — run with --test-threads=1"]
     fn test_known_primal_names_strict_discovery() {
-        std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        set_test_env("BIOMEOS_STRICT_DISCOVERY", "1");
         let primals = known_primal_names();
-        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
+        remove_test_env("BIOMEOS_STRICT_DISCOVERY");
 
         assert!(
             primals.is_empty(),

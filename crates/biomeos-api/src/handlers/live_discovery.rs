@@ -504,17 +504,27 @@ mod tests {
     }
 
     #[test]
-    fn test_socket_dir_default() {
-        // Clear env vars for test
-        std::env::remove_var("BIOMEOS_SOCKET_DIR");
-        std::env::remove_var("XDG_RUNTIME_DIR");
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
-        std::env::remove_var("FAMILY_ID");
-
+    fn test_socket_dir_override() {
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        let _guard = std::env::var("BIOMEOS_SOCKET_DIR").ok();
+        set_test_env("BIOMEOS_SOCKET_DIR", "/tmp/biomeos-test-override");
         let dir = get_socket_dir();
-        // Default fallback uses username for isolation
-        let username = std::env::var("USER").unwrap_or_else(|_| "default".to_string());
-        assert_eq!(dir, format!("/tmp/biomeos-{username}"));
+        assert_eq!(dir, "/tmp/biomeos-test-override");
+        // Restore
+        remove_test_env("BIOMEOS_SOCKET_DIR");
+    }
+
+    #[test]
+    fn test_socket_dir_default_uses_system_paths() {
+        use biomeos_test_utils::remove_test_env;
+        let _guard = std::env::var("BIOMEOS_SOCKET_DIR").ok();
+        remove_test_env("BIOMEOS_SOCKET_DIR");
+        let dir = get_socket_dir();
+        let expected = biomeos_types::SystemPaths::new_lazy()
+            .runtime_dir()
+            .to_string_lossy()
+            .to_string();
+        assert_eq!(dir, expected);
     }
 
     #[test]
@@ -606,26 +616,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_all_primals_empty_dir() {
+        use biomeos_test_utils::{remove_test_env, set_test_env};
         // With no sockets, should return empty without panicking
-        std::env::set_var("BIOMEOS_SOCKET_DIR", "/nonexistent/path/for/tests");
+        set_test_env("BIOMEOS_SOCKET_DIR", "/nonexistent/path/for/tests");
         let primals = discover_all_primals().await;
         assert!(primals.is_empty());
-        std::env::remove_var("BIOMEOS_SOCKET_DIR");
+        remove_test_env("BIOMEOS_SOCKET_DIR");
     }
 
     #[tokio::test]
     async fn test_discover_by_capability_returns() {
-        std::env::set_var("BIOMEOS_SOCKET_DIR", "/nonexistent/path");
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        set_test_env("BIOMEOS_SOCKET_DIR", "/nonexistent/path");
         let primals = discover_by_capability("crypto.encrypt").await;
         assert!(primals.is_empty());
-        std::env::remove_var("BIOMEOS_SOCKET_DIR");
+        remove_test_env("BIOMEOS_SOCKET_DIR");
     }
 
     #[tokio::test]
     async fn test_discover_by_type_returns() {
-        std::env::set_var("BIOMEOS_SOCKET_DIR", "/nonexistent/path");
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        set_test_env("BIOMEOS_SOCKET_DIR", "/nonexistent/path");
         let primals = discover_by_type("security").await;
         assert!(primals.is_empty());
-        std::env::remove_var("BIOMEOS_SOCKET_DIR");
+        remove_test_env("BIOMEOS_SOCKET_DIR");
     }
 }

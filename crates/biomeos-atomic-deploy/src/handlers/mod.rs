@@ -30,6 +30,8 @@
 //! they can do, not what they're named.
 
 pub mod capability;
+#[cfg(test)]
+mod capability_tests;
 pub mod graph;
 #[cfg(test)]
 mod graph_tests;

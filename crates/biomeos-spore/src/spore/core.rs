@@ -23,8 +23,8 @@ use super::deployment::DeploymentOps;
 use super::documentation::DocumentationOps;
 use super::filesystem::FilesystemOps;
 use super::genetics::GeneticsOps;
-use super::types::default_family_id;
 use super::types::SporeConfig;
+use super::types::default_family_id;
 
 /// USB Spore - A self-contained biomeOS deployment
 ///
@@ -326,7 +326,7 @@ node_id = "tower-2"
 
     #[test]
     fn test_default_family_id() {
-        std::env::remove_var("FAMILY_ID");
+        biomeos_test_utils::remove_test_env("FAMILY_ID");
         let id = crate::spore::types::default_family_id();
         assert!(!id.is_empty());
     }

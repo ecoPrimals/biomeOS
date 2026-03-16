@@ -6,6 +6,7 @@
 //! Shared across all biomeOS crates to avoid duplicating the protocol format.
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// JSON-RPC 2.0 protocol version string.
 pub const JSONRPC_VERSION: &str = "2.0";
@@ -15,8 +16,8 @@ pub const JSONRPC_VERSION: &str = "2.0";
 pub struct JsonRpcRequest {
     /// Protocol version (always "2.0").
     pub jsonrpc: String,
-    /// Method name to invoke.
-    pub method: String,
+    /// Method name to invoke. Uses Arc&lt;str&gt; for zero-copy cloning on the hot path.
+    pub method: Arc<str>,
     /// Method parameters (optional per JSON-RPC 2.0 spec).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub params: Option<serde_json::Value>,
@@ -76,22 +77,22 @@ impl JsonRpcRequest {
     }
 
     /// Create a new request with an auto-incrementing id.
-    pub fn new(method: impl Into<String>, params: serde_json::Value) -> Self {
+    pub fn new(method: impl AsRef<str>, params: serde_json::Value) -> Self {
         static REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let id = REQUEST_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Self {
             jsonrpc: JSONRPC_VERSION.to_owned(),
-            method: method.into(),
+            method: Arc::from(method.as_ref()),
             params: Some(params),
             id: Some(serde_json::Value::Number(serde_json::Number::from(id))),
         }
     }
 
     /// Create a notification (no id, no response expected).
-    pub fn notification(method: impl Into<String>, params: serde_json::Value) -> Self {
+    pub fn notification(method: impl AsRef<str>, params: serde_json::Value) -> Self {
         Self {
             jsonrpc: JSONRPC_VERSION.to_owned(),
-            method: method.into(),
+            method: Arc::from(method.as_ref()),
             params: Some(params),
             id: None,
         }
@@ -214,7 +215,7 @@ mod tests {
         let json = r#"{"jsonrpc":"2.0","method":"test","params":{"a":1},"id":1}"#;
         let req = JsonRpcRequest::parse(json).expect("parse");
         assert_eq!(req.jsonrpc, "2.0");
-        assert_eq!(req.method, "test");
+        assert_eq!(req.method.as_ref(), "test");
         assert_eq!(req.params, Some(serde_json::json!({"a": 1})));
         assert_eq!(req.id, Some(serde_json::json!(1)));
     }
@@ -224,7 +225,7 @@ mod tests {
         let json = r#"{"jsonrpc":"2.0","method":"test","params":{"a":1},"id":1}"#;
         let req = JsonRpcRequest::parse(json).unwrap();
         assert_eq!(req.jsonrpc, "2.0");
-        assert_eq!(req.method, "test");
+        assert_eq!(req.method.as_ref(), "test");
         assert!(req.params.is_some());
         assert!(req.id.is_some());
     }
@@ -233,7 +234,7 @@ mod tests {
     fn request_parse_trims_whitespace() {
         let json = "  \n  {\"jsonrpc\":\"2.0\",\"method\":\"m\",\"id\":1}  ";
         let req = JsonRpcRequest::parse(json).expect("parse");
-        assert_eq!(req.method, "m");
+        assert_eq!(req.method.as_ref(), "m");
     }
 
     #[test]
@@ -245,7 +246,7 @@ mod tests {
     #[test]
     fn request_new_has_id_and_params() {
         let req = JsonRpcRequest::new("method", serde_json::json!({"x": 42}));
-        assert_eq!(req.method, "method");
+        assert_eq!(req.method.as_ref(), "method");
         assert_eq!(req.params, Some(serde_json::json!({"x": 42})));
         assert!(req.id.is_some());
     }
@@ -253,7 +254,7 @@ mod tests {
     #[test]
     fn request_notification_has_no_id() {
         let req = JsonRpcRequest::notification("notify", serde_json::json!({}));
-        assert_eq!(req.method, "notify");
+        assert_eq!(req.method.as_ref(), "notify");
         assert_eq!(req.id, None);
     }
 
@@ -261,7 +262,7 @@ mod tests {
     fn test_jsonrpc_request_parse_notification() {
         let json = r#"{"jsonrpc":"2.0","method":"notify","params":{}}"#;
         let req = JsonRpcRequest::parse(json).unwrap();
-        assert_eq!(req.method, "notify");
+        assert_eq!(req.method.as_ref(), "notify");
         assert!(req.id.is_none() || req.id == Some(serde_json::Value::Null));
     }
 
@@ -275,14 +276,14 @@ mod tests {
     fn test_jsonrpc_request_parse_trimmed() {
         let json = "  \n  {\"jsonrpc\":\"2.0\",\"method\":\"m\",\"id\":1}  ";
         let req = JsonRpcRequest::parse(json).unwrap();
-        assert_eq!(req.method, "m");
+        assert_eq!(req.method.as_ref(), "m");
     }
 
     #[test]
     fn test_jsonrpc_request_new() {
         let req = JsonRpcRequest::new("method", serde_json::json!({"x": 1}));
         assert_eq!(req.jsonrpc, "2.0");
-        assert_eq!(req.method, "method");
+        assert_eq!(req.method.as_ref(), "method");
         assert_eq!(req.params, Some(serde_json::json!({"x": 1})));
         assert!(req.id.is_some());
     }
@@ -291,7 +292,7 @@ mod tests {
     fn test_jsonrpc_request_notification() {
         let req = JsonRpcRequest::notification("notify", serde_json::json!({}));
         assert_eq!(req.jsonrpc, "2.0");
-        assert_eq!(req.method, "notify");
+        assert_eq!(req.method.as_ref(), "notify");
         assert!(req.id.is_none());
     }
 
@@ -429,7 +430,7 @@ mod tests {
         let req = JsonRpcRequest::new("ping", serde_json::json!({}));
         let s = serde_json::to_string(&req).expect("serialize");
         let parsed = JsonRpcRequest::parse(&s).expect("parse");
-        assert_eq!(parsed.method, req.method);
+        assert_eq!(parsed.method.as_ref(), req.method.as_ref());
     }
 
     #[test]
@@ -437,7 +438,7 @@ mod tests {
         let req = JsonRpcRequest::new("test", serde_json::json!({}));
         let json = serde_json::to_string(&req).unwrap();
         let parsed: JsonRpcRequest = serde_json::from_str(&json).unwrap();
-        assert_eq!(req.method, parsed.method);
+        assert_eq!(req.method.as_ref(), parsed.method.as_ref());
     }
 
     #[test]
@@ -470,7 +471,7 @@ mod tests {
         let input = r#"{"jsonrpc":"2.0","method":"test","id":1}"#;
         let parsed = JsonRpcInput::parse(input).expect("parse single");
         match parsed {
-            JsonRpcInput::Single(req) => assert_eq!(req.method, "test"),
+            JsonRpcInput::Single(req) => assert_eq!(req.method.as_ref(), "test"),
             JsonRpcInput::Batch(_) => panic!("expected Single"),
         }
     }
@@ -483,8 +484,8 @@ mod tests {
         match parsed {
             JsonRpcInput::Batch(reqs) => {
                 assert_eq!(reqs.len(), 2);
-                assert_eq!(reqs[0].method, "a");
-                assert_eq!(reqs[1].method, "b");
+                assert_eq!(reqs[0].method.as_ref(), "a");
+                assert_eq!(reqs[1].method.as_ref(), "b");
             }
             JsonRpcInput::Single(_) => panic!("expected Batch"),
         }

@@ -416,12 +416,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_primal_binary_with_env_dir_empty() {
+        use biomeos_test_utils::{remove_test_env, set_test_env};
         let temp_dir = TempDir::new().expect("Create temp dir");
-        std::env::set_var("BIOMEOS_PLASMID_BIN_DIR", temp_dir.path());
+        set_test_env("BIOMEOS_PLASMID_BIN_DIR", temp_dir.path());
         let ctx = ExecutionContext::new(HashMap::new());
 
         let result = discover_primal_binary("nonexistent_primal", &ctx).await;
-        std::env::remove_var("BIOMEOS_PLASMID_BIN_DIR");
+        remove_test_env("BIOMEOS_PLASMID_BIN_DIR");
         let err = result.expect_err("Should fail when dir has no binary");
         assert!(
             err.to_string().contains("Binary not found"),

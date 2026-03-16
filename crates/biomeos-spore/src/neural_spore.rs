@@ -86,7 +86,7 @@ impl RollbackState {
             info!("   Killing process {}", pid);
             #[cfg(unix)]
             {
-                use rustix::process::{kill_process, test_kill_process, Pid, Signal};
+                use rustix::process::{Pid, Signal, kill_process, test_kill_process};
                 let pid_i32 = i32::try_from(*pid).unwrap_or(-1);
                 if let Some(rustix_pid) = Pid::from_raw(pid_i32) {
                     if let Err(e) = kill_process(rustix_pid, Signal::Term) {
@@ -100,11 +100,11 @@ impl RollbackState {
                                 // Check for up to 1 second
                                 interval.tick().await;
                                 // Check if process still exists (test_kill_process returns Err when gone)
-                                if let Some(p) = Pid::from_raw(pid_to_check) {
-                                    if test_kill_process(p).is_err() {
-                                        // Process is gone
-                                        return;
-                                    }
+                                if let Some(p) = Pid::from_raw(pid_to_check)
+                                    && test_kill_process(p).is_err()
+                                {
+                                    // Process is gone
+                                    return;
                                 }
                             }
                             // Force kill if still alive
@@ -476,9 +476,11 @@ mod tests {
         state.track_socket(PathBuf::from("/tmp/socket2.sock"));
 
         assert_eq!(state.created_sockets.len(), 2);
-        assert!(state
-            .created_sockets
-            .contains(&PathBuf::from("/tmp/socket1.sock")));
+        assert!(
+            state
+                .created_sockets
+                .contains(&PathBuf::from("/tmp/socket1.sock"))
+        );
     }
 
     #[tokio::test]

@@ -154,14 +154,12 @@ impl SporeLogTracker {
         if tower_toml_path.exists() {
             let content = std::fs::read_to_string(&tower_toml_path)?;
 
-            if let Ok(config) = toml::from_str::<toml::Value>(&content) {
-                if let Some(meta) = config.get("meta") {
-                    if let Some(node_id) = meta.get("node_id") {
-                        if let Some(id) = node_id.as_str() {
-                            return Ok(id.to_string());
-                        }
-                    }
-                }
+            if let Ok(config) = toml::from_str::<toml::Value>(&content)
+                && let Some(meta) = config.get("meta")
+                && let Some(node_id) = meta.get("node_id")
+                && let Some(id) = node_id.as_str()
+            {
+                return Ok(id.to_string());
             }
         }
 

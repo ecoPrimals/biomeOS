@@ -636,22 +636,18 @@ mod tests {
 
     #[test]
     fn test_get_genome_storage_dir_with_xdg() {
-        let orig = std::env::var("XDG_DATA_HOME").ok();
-        std::env::set_var("XDG_DATA_HOME", "/tmp/xdg_test");
+        use biomeos_test_utils::{remove_test_env, TestEnvGuard};
+        let _guard = TestEnvGuard::new("XDG_DATA_HOME", Some("/tmp/xdg_test"));
         let dir = get_genome_storage_dir();
-        if let Some(ref o) = orig {
-            std::env::set_var("XDG_DATA_HOME", o);
-        } else {
-            std::env::remove_var("XDG_DATA_HOME");
-        }
         assert_eq!(dir, PathBuf::from("/tmp/xdg_test/biomeos/genomes"));
     }
 
     #[test]
     #[ignore = "modifies env vars; run with --ignored"]
     fn test_get_genome_storage_dir_home_fallback() {
+        use biomeos_test_utils::remove_test_env;
         let _ = std::env::var("XDG_DATA_HOME").ok();
-        std::env::remove_var("XDG_DATA_HOME");
+        remove_test_env("XDG_DATA_HOME");
         let dir = get_genome_storage_dir();
         assert!(dir.to_string_lossy().contains("genomes"));
     }

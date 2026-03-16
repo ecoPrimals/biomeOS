@@ -1,0 +1,379 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! Capability-based primal discovery
+
+use anyhow::{anyhow, Context, Result};
+use std::path::PathBuf;
+use std::sync::Arc;
+use tracing::{debug, info, warn};
+
+use crate::capability_domains::capability_to_provider_fallback;
+use crate::nucleation::SocketNucleation;
+use biomeos_core::atomic_client::AtomicClient;
+
+use super::types::{AtomicType, DiscoveredAtomic, DiscoveredPrimal};
+use super::NeuralRouter;
+
+impl NeuralRouter {
+    /// Discover primals by capability category
+    async fn discover_by_capability_category(&self, capability: &str) -> Result<DiscoveredAtomic> {
+        let category = match capability {
+            "crypto_sign" | "crypto.sign" | "crypto" | "security" | "encryption" => "security",
+            "discovery" => "discovery",
+            "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" => "ai",
+            _ => {
+                return Err(anyhow!(
+                    "Capability '{capability}' does not map to a known category (security, discovery, ai)"
+                ));
+            }
+        };
+
+        debug!(
+            "   Mapping capability '{}' to category '{}'",
+            capability, category
+        );
+
+        let registry = self.capability_registry.read().await;
+
+        let mut matching_providers = Vec::new();
+        for (registered_cap, providers) in registry.iter() {
+            if registered_cap == category || registered_cap.starts_with(&format!("{category}.")) {
+                matching_providers.extend(providers.iter().cloned());
+            }
+        }
+
+        if matching_providers.is_empty() {
+            return Err(anyhow!(
+                "No primals found providing '{}' capability. Available capabilities: {:?}",
+                category,
+                registry.keys().collect::<Vec<_>>()
+            ));
+        }
+
+        let primary = &matching_providers[0];
+        info!(
+            "   ✅ Found primal via capability category: {} → {} (provides {})",
+            capability, primary.primal_name, category
+        );
+
+        let mut primals = Vec::new();
+        for provider in &matching_providers {
+            let socket_str = provider.socket_path.to_string_lossy();
+            let healthy = Self::check_primal_health(&socket_str).await;
+            primals.push(DiscoveredPrimal {
+                name: provider.primal_name.clone(),
+                socket_path: provider.socket_path.clone(),
+                capabilities: vec![category.to_string()],
+                healthy,
+                last_check: chrono::Utc::now(),
+            });
+        }
+
+        Ok(DiscoveredAtomic {
+            capability: Arc::from(capability),
+            primals,
+            atomic_type: None,
+            primary_socket: primary.socket_path.clone(),
+        })
+    }
+
+    /// Discover primal(s) by capability
+    pub async fn discover_capability(&self, capability: &str) -> Result<DiscoveredAtomic> {
+        info!("🔍 Discovering capability: {}", capability);
+
+        if let Some(providers) = self.get_capability_providers(capability).await {
+            if !providers.is_empty() {
+                let primary = &providers[0];
+                info!(
+                    "   ✅ Found in registry: {} → {}",
+                    capability, primary.primal_name
+                );
+
+                let mut primals = Vec::new();
+                for provider in &providers {
+                    let socket_str = provider.socket_path.to_string_lossy();
+                    let healthy = Self::check_primal_health(&socket_str).await;
+                    primals.push(DiscoveredPrimal {
+                        name: provider.primal_name.clone(),
+                        socket_path: provider.socket_path.clone(),
+                        capabilities: vec![capability.to_string()],
+                        healthy,
+                        last_check: chrono::Utc::now(),
+                    });
+                }
+
+                return Ok(DiscoveredAtomic {
+                    capability: Arc::from(capability),
+                    primals,
+                    atomic_type: None,
+                    primary_socket: primary.socket_path.clone(),
+                });
+            }
+        }
+
+        warn!("   ⚠️  Capability not in registry, trying capability category discovery");
+        match capability {
+            "secure_http" | "http.request" | "http.post" | "http.get" => {
+                self.discover_tower_atomic().await
+            }
+            "secure_storage" => self.discover_nest_atomic().await,
+            "secure_compute" => self.discover_node_atomic().await,
+            "crypto_sign" | "crypto.sign" | "crypto" | "security" | "encryption" => {
+                self.discover_by_capability_category(capability).await
+            }
+            "discovery" => self.discover_by_capability_category(capability).await,
+            "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" => {
+                self.discover_by_capability_category(capability).await
+            }
+            _ => Err(anyhow!(
+                "Capability '{}' not registered. Available: {:?}",
+                capability,
+                self.capability_registry
+                    .read()
+                    .await
+                    .keys()
+                    .collect::<Vec<_>>()
+            )),
+        }
+    }
+
+    /// Discover Tower Atomic (security + discovery capabilities)
+    async fn discover_tower_atomic(&self) -> Result<DiscoveredAtomic> {
+        debug!("   Discovering Tower Atomic (security + discovery capabilities)");
+
+        let security_primal = self
+            .find_primal_by_capability("security")
+            .await
+            .context("Tower Atomic requires a primal with 'security' capability")?;
+
+        let discovery_primal = self
+            .find_primal_by_capability("discovery")
+            .await
+            .context("Tower Atomic requires a primal with 'discovery' capability")?;
+
+        if !security_primal.healthy || !discovery_primal.healthy {
+            warn!(
+                "   ⚠️  Tower Atomic unhealthy: security={}, discovery={}",
+                security_primal.healthy, discovery_primal.healthy
+            );
+        }
+
+        info!(
+            "   ✅ Tower Atomic discovered: {} (security) + {} (discovery)",
+            security_primal.name, discovery_primal.name
+        );
+
+        Ok(DiscoveredAtomic {
+            capability: Arc::from("secure_http"),
+            primals: vec![security_primal.clone(), discovery_primal.clone()],
+            atomic_type: Some(AtomicType::Tower),
+            primary_socket: discovery_primal.socket_path,
+        })
+    }
+
+    /// Discover Nest Atomic (Tower + storage capability)
+    async fn discover_nest_atomic(&self) -> Result<DiscoveredAtomic> {
+        debug!("   Discovering Nest Atomic (Tower + storage capability)");
+
+        let tower = self.discover_tower_atomic().await?;
+
+        let storage_primal = self
+            .find_primal_by_capability("storage")
+            .await
+            .context("Nest Atomic requires a primal with 'storage' capability")?;
+
+        let mut primals = tower.primals;
+        primals.push(storage_primal.clone());
+
+        info!(
+            "   ✅ Nest Atomic discovered: Tower + {} (storage)",
+            storage_primal.name
+        );
+
+        Ok(DiscoveredAtomic {
+            capability: Arc::from("secure_storage"),
+            primals,
+            atomic_type: Some(AtomicType::Nest),
+            primary_socket: storage_primal.socket_path,
+        })
+    }
+
+    /// Discover Node Atomic (Tower + compute capability)
+    async fn discover_node_atomic(&self) -> Result<DiscoveredAtomic> {
+        debug!("   Discovering Node Atomic (Tower + compute capability)");
+
+        let tower = self.discover_tower_atomic().await?;
+
+        let compute_primal = self
+            .find_primal_by_capability("compute")
+            .await
+            .context("Node Atomic requires a primal with 'compute' capability")?;
+
+        let mut primals = tower.primals;
+        primals.push(compute_primal.clone());
+
+        info!(
+            "   ✅ Node Atomic discovered: Tower + {} (compute)",
+            compute_primal.name
+        );
+
+        Ok(DiscoveredAtomic {
+            capability: Arc::from("secure_compute"),
+            primals,
+            atomic_type: Some(AtomicType::Node),
+            primary_socket: compute_primal.socket_path,
+        })
+    }
+
+    /// Find primal by capability
+    async fn find_primal_by_capability(&self, capability: &str) -> Result<DiscoveredPrimal> {
+        let registry = self.capability_registry.read().await;
+
+        if let Some(providers) = registry.get(capability) {
+            if let Some(provider) = providers.first() {
+                debug!(
+                    "   📖 Registry hit: {} provides '{}'",
+                    provider.primal_name, capability
+                );
+
+                let healthy = self.quick_health_check(&provider.socket_path).await;
+
+                return Ok(DiscoveredPrimal {
+                    name: provider.primal_name.clone(),
+                    socket_path: provider.socket_path.clone(),
+                    capabilities: vec![capability.to_string()],
+                    healthy,
+                    last_check: chrono::Utc::now(),
+                });
+            }
+        }
+
+        let fallback_primal = capability_to_provider_fallback(capability);
+
+        if let Some(primal) = fallback_primal {
+            debug!(
+                "   ⚠️  Registry miss: using fallback mapping {} → {}",
+                capability, primal
+            );
+            self.find_primal_by_socket(primal).await
+        } else {
+            Err(anyhow!(
+                "No primal found for capability '{capability}'. Register a provider or check the capability name."
+            ))
+        }
+    }
+
+    /// Find primal by socket pattern (runtime discovery)
+    pub(crate) async fn find_primal_by_socket(
+        &self,
+        primal_name: &str,
+    ) -> Result<DiscoveredPrimal> {
+        {
+            let cache = self.discovered_primals.read().await;
+            if let Some(primal) = cache.get(primal_name) {
+                debug!("   📦 Cache hit: {}", primal_name);
+                return Ok(primal.clone());
+            }
+        }
+
+        let mut nucleation = SocketNucleation::default();
+        let socket_path = nucleation.assign_socket(primal_name, &self.family_id);
+
+        if !socket_path.exists() {
+            return Err(anyhow!(
+                "Primal '{}' not found: socket {} does not exist",
+                primal_name,
+                socket_path.display()
+            ));
+        }
+
+        let healthy = self.quick_health_check(&socket_path).await;
+
+        let primal = DiscoveredPrimal {
+            name: Arc::from(primal_name),
+            socket_path,
+            capabilities: vec![],
+            healthy,
+            last_check: chrono::Utc::now(),
+        };
+
+        {
+            let mut cache = self.discovered_primals.write().await;
+            cache.insert(primal_name.to_string(), primal.clone());
+        }
+
+        debug!(
+            "   ✅ Discovered: {} @ {} (healthy: {})",
+            primal_name,
+            primal.socket_path.display(),
+            healthy
+        );
+
+        Ok(primal)
+    }
+
+    /// Quick health check via AtomicClient
+    async fn quick_health_check(&self, socket_path: &PathBuf) -> bool {
+        let health_timeout = std::time::Duration::from_millis(500);
+
+        let client = AtomicClient::unix(socket_path).with_timeout(health_timeout);
+
+        match client.call("health.check", serde_json::json!({})).await {
+            Ok(response) => response
+                .get("healthy")
+                .and_then(|h| h.as_bool())
+                .unwrap_or(true),
+            Err(_) => {
+                debug!("   ⚠️ Health check failed for {}", socket_path.display());
+                false
+            }
+        }
+    }
+
+    /// Check if a primal is healthy via JSON-RPC health.check call
+    async fn check_primal_health(socket_path: &str) -> bool {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+        use tokio::time::{timeout, Duration};
+
+        if !std::path::Path::new(socket_path).exists() {
+            return false;
+        }
+
+        let health_check = async {
+            let stream = UnixStream::connect(socket_path).await?;
+            let (read_half, mut write_half) = stream.into_split();
+
+            let request = serde_json::json!({
+                "jsonrpc": "2.0",
+                "method": "health.check",
+                "params": {},
+                "id": 1
+            });
+
+            write_half.write_all(request.to_string().as_bytes()).await?;
+            write_half.write_all(b"\n").await?;
+            write_half.flush().await?;
+
+            let mut reader = BufReader::new(read_half);
+            let mut response_line = String::new();
+            reader.read_line(&mut response_line).await?;
+
+            let response: serde_json::Value = serde_json::from_str(&response_line)?;
+
+            Ok::<bool, anyhow::Error>(
+                response
+                    .get("result")
+                    .and_then(|r| r.get("healthy"))
+                    .and_then(|h| h.as_bool())
+                    .unwrap_or(false),
+            )
+        };
+
+        match timeout(Duration::from_secs(2), health_check).await {
+            Ok(Ok(healthy)) => healthy,
+            _ => false,
+        }
+    }
+}

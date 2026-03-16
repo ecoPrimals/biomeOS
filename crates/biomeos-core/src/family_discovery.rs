@@ -141,19 +141,21 @@ pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<Dis
         .family_id_override
         .clone()
         .or_else(|| std::env::var("FAMILY_ID").ok());
-    if let Some(family_id) = family_id {
-        if !family_id.is_empty() {
-            if family_id == "nat0" {
-                warn!("⚠️ FAMILY_ID='nat0' is a deprecated prototype tag — ignoring. Derive from .family.seed instead.");
-            } else {
-                info!("🧬 Family ID from FAMILY_ID env: {}", family_id);
-                return Some(DiscoveredFamily {
-                    id: family_id,
-                    source: FamilySource::FamilyIdEnv,
-                    genesis_seed: None,
-                    node_key: None,
-                });
-            }
+    if let Some(family_id) = family_id
+        && !family_id.is_empty()
+    {
+        if family_id == "nat0" {
+            warn!(
+                "⚠️ FAMILY_ID='nat0' is a deprecated prototype tag — ignoring. Derive from .family.seed instead."
+            );
+        } else {
+            info!("🧬 Family ID from FAMILY_ID env: {}", family_id);
+            return Some(DiscoveredFamily {
+                id: family_id,
+                source: FamilySource::FamilyIdEnv,
+                genesis_seed: None,
+                node_key: None,
+            });
         }
     }
 
@@ -162,16 +164,17 @@ pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<Dis
         .biomeos_family_id_override
         .clone()
         .or_else(|| std::env::var("BIOMEOS_FAMILY_ID").ok());
-    if let Some(family_id) = family_id {
-        if !family_id.is_empty() && family_id != "nat0" {
-            info!("🧬 Family ID from BIOMEOS_FAMILY_ID env: {}", family_id);
-            return Some(DiscoveredFamily {
-                id: family_id,
-                source: FamilySource::BiomeosEnv,
-                genesis_seed: None,
-                node_key: None,
-            });
-        }
+    if let Some(family_id) = family_id
+        && !family_id.is_empty()
+        && family_id != "nat0"
+    {
+        info!("🧬 Family ID from BIOMEOS_FAMILY_ID env: {}", family_id);
+        return Some(DiscoveredFamily {
+            id: family_id,
+            source: FamilySource::BiomeosEnv,
+            genesis_seed: None,
+            node_key: None,
+        });
     }
 
     // 5. Default fallback (development only)

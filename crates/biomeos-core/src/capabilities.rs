@@ -199,6 +199,7 @@ impl PrimalConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::remove_test_env;
     use std::str::FromStr;
 
     #[test]
@@ -348,7 +349,7 @@ mod tests {
     #[test]
     fn test_capability_from_env_empty() {
         // Ensure the env var doesn't exist
-        std::env::remove_var("TEST_CAP_EMPTY_1234");
+        remove_test_env("TEST_CAP_EMPTY_1234");
         let caps = Capability::from_env("TEST_CAP_EMPTY_1234");
         assert!(caps.is_empty());
     }

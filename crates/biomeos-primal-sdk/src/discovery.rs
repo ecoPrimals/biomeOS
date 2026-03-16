@@ -120,10 +120,10 @@ impl PrimalDiscovery {
         let mut results = Vec::new();
 
         // If we have a specific name, try that directly
-        if let Some(name) = &query.name {
-            if let Some(primal) = self.try_discover_primal(&socket_dir, name).await {
-                results.push(primal);
-            }
+        if let Some(name) = &query.name
+            && let Some(primal) = self.try_discover_primal(&socket_dir, name).await
+        {
+            results.push(primal);
         }
 
         // If we have a capability, try known primals from taxonomy
@@ -247,7 +247,8 @@ impl PrimalDiscovery {
             return None;
         };
 
-        // Try to determine capability from name (bootstrap hint when found by path scan)
+        // Try to determine capability from name (bootstrap hint when found by path scan).
+        // Deprecated: capability_from_primal_name; no alternative for path-scan bootstrap yet.
         #[allow(deprecated)]
         let capability = capability_from_primal_name(name);
 
@@ -297,10 +298,10 @@ pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
         ("http", "discovery"),
     ];
     for (alias, canonical) in aliases {
-        if cap.category.eq_ignore_ascii_case(alias) || cap.name.eq_ignore_ascii_case(alias) {
-            if let Some(primal) = biomeos_types::CapabilityTaxonomy::resolve_to_primal(canonical) {
-                return vec![primal];
-            }
+        if (cap.category.eq_ignore_ascii_case(alias) || cap.name.eq_ignore_ascii_case(alias))
+            && let Some(primal) = biomeos_types::CapabilityTaxonomy::resolve_to_primal(canonical)
+        {
+            return vec![primal];
         }
     }
     // Science: taxonomy has no single default; bootstrap hints for wetspring/neuralspring

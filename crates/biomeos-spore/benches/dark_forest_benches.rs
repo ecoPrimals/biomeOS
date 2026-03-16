@@ -37,7 +37,7 @@
 #![allow(clippy::unwrap_used)]
 
 use biomeos_spore::DarkForestBeacon;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 /// Create test seed for benchmarking
 async fn setup_test_seed() -> String {

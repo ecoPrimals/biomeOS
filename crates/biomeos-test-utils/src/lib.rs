@@ -12,12 +12,14 @@
 //! This crate is only for testing - it should never be used in production code.
 
 #![warn(missing_docs)]
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 
 pub mod assertions;
+pub mod env_helpers;
 pub mod fixtures;
 pub mod mock_primal;
 
+pub use env_helpers::{TestEnvGuard, remove_test_env, set_test_env};
 pub use fixtures::{create_test_config, create_test_manifest};
 /// Re-export commonly used test utilities
 pub use mock_primal::{MockPrimal, MockPrimalBuilder};

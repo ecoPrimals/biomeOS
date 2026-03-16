@@ -543,7 +543,7 @@ async fn test_beardog_unavailable_error() {
 #[tokio::test]
 #[ignore = "Requires running BearDog instance"]
 async fn test_timeout_on_slow_response() {
-    use tokio::time::{timeout, Duration};
+    use tokio::time::{Duration, timeout};
 
     let client = create_test_client().await;
     if let Ok(client) = client {

@@ -454,12 +454,14 @@ mod tests {
 
         let size_check = result.checks.iter().find(|c| c.name == "Family seed size");
         assert!(!size_check.expect("seed size check").passed);
-        assert!(size_check
-            .expect("seed size check message")
-            .message
-            .as_ref()
-            .expect("message")
-            .contains("16"));
+        assert!(
+            size_check
+                .expect("seed size check message")
+                .message
+                .as_ref()
+                .expect("message")
+                .contains("16")
+        );
     }
 
     #[tokio::test]

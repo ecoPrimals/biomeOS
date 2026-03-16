@@ -448,11 +448,12 @@ impl HostOS {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_deployment_mode_from_env_cold() {
-        std::env::set_var("BIOMEOS_DEPLOYMENT_MODE", "cold");
-        std::env::set_var("BIOMEOS_MEDIA_PATH", "/media/usb0");
+        set_test_env("BIOMEOS_DEPLOYMENT_MODE", "cold");
+        set_test_env("BIOMEOS_MEDIA_PATH", "/media/usb0");
 
         let mode = DeploymentMode::from_env_string("cold").unwrap();
 
@@ -560,9 +561,9 @@ mod tests {
 
     #[test]
     fn test_from_env_string_cold_persistence() {
-        std::env::set_var("BIOMEOS_DEPLOYMENT_MODE", "cold");
-        std::env::set_var("BIOMEOS_MEDIA_PATH", "/media/usb1");
-        std::env::set_var("BIOMEOS_PERSISTENCE", "1");
+        set_test_env("BIOMEOS_DEPLOYMENT_MODE", "cold");
+        set_test_env("BIOMEOS_MEDIA_PATH", "/media/usb1");
+        set_test_env("BIOMEOS_PERSISTENCE", "1");
 
         let mode = DeploymentMode::from_env_string("cold").unwrap();
         match mode {
@@ -573,7 +574,7 @@ mod tests {
 
     #[test]
     fn test_socket_prefix_livespore_with_xdg() {
-        std::env::set_var("XDG_RUNTIME_DIR", "/run/user/1000");
+        set_test_env("XDG_RUNTIME_DIR", "/run/user/1000");
         let mode = DeploymentMode::LiveSpore {
             root_partition: PathBuf::from("/"),
             boot_partition: PathBuf::from("/boot"),
@@ -581,7 +582,7 @@ mod tests {
         };
         let prefix = mode.socket_prefix();
         assert_eq!(prefix, PathBuf::from("/run/user/1000/biomeos"));
-        std::env::remove_var("XDG_RUNTIME_DIR");
+        remove_test_env("XDG_RUNTIME_DIR");
     }
 
     #[test]

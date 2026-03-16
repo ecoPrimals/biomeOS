@@ -189,7 +189,7 @@ mod discovery_tests {
 
         // Both should work independently
         assert_eq!(registered_primals.len(), 3); // From create_with_test_primals
-                                                 // Network scan may return empty results in test environment
+        // Network scan may return empty results in test environment
         let _ = discovery_results;
 
         Ok(())
