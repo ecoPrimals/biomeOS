@@ -21,6 +21,7 @@ enum Route {
     GraphSave,
     GraphExecute,
     GraphStatus,
+    GraphExecutePipeline,
     GraphStartContinuous,
     GraphPauseContinuous,
     GraphResumeContinuous,
@@ -76,6 +77,9 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("graph.execute", Route::GraphExecute),
     ("neural_api.get_execution_status", Route::GraphStatus),
     ("graph.status", Route::GraphStatus),
+    // Pipeline streaming execution
+    ("graph.execute_pipeline", Route::GraphExecutePipeline),
+    ("neural_api.execute_pipeline", Route::GraphExecutePipeline),
     // Continuous session management
     ("graph.start_continuous", Route::GraphStartContinuous),
     ("graph.pause_continuous", Route::GraphPauseContinuous),
@@ -222,6 +226,9 @@ impl NeuralApiServer {
             Route::GraphGet => self.graph_handler.get(&request.params).await?,
             Route::GraphSave => self.graph_handler.save(&request.params).await?,
             Route::GraphExecute => self.graph_handler.execute(&request.params).await?,
+            Route::GraphExecutePipeline => {
+                self.graph_handler.execute_pipeline(&request.params).await?
+            }
             Route::GraphStatus => self.graph_handler.get_status(&request.params).await?,
             Route::GraphStartContinuous => {
                 self.graph_handler.start_continuous(&request.params).await?

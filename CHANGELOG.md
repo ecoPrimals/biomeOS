@@ -2,6 +2,50 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.43] - 2026-03-16 (Streaming Pipeline Coordination)
+
+### PipelineExecutor — Streaming Graph Execution
+- New `PipelineExecutor` in `biomeos-graph::pipeline` wires nodes with bounded `mpsc` channels
+- Source node re-invoked until it returns `StreamItem::End` — models data producers (sensor feeds, DB cursors, file readers)
+- Transform nodes process items one-at-a-time as they arrive from upstream — true streaming
+- Items flow through the pipeline immediately, enabling overlapping execution across all nodes
+- Per-node throughput stats: `items_processed`, `items_errored`, `avg_item_ms`
+- Configurable channel capacity (default 64) for backpressure tuning
+- `StreamItem` envelope: `Data(Value)`, `End`, `Error { node_id, message }` with serde roundtrip
+- 9 tests: linear ordering, single/multi-item source, error passthrough, serde, empty graph
+
+### Streaming Client (`AtomicClient::call_stream`)
+- New `call_stream()` method reads multiple NDJSON response lines from a single request
+- Spawns a background task that streams `StreamItem`s through an `mpsc::Receiver`
+- Works over Unix sockets, TCP, and abstract sockets — no new protocol needed
+- Falls back gracefully: parses `StreamItem`, then `JsonRpcResponse`, then raw string
+- Re-exports `StreamItem` from `biomeos_graph` for callers
+
+### JSON-RPC 2.0 Notification Compliance
+- Server `handle_connection` now checks `req.id.is_none()` and skips response for notifications
+- Batch handler filters out notifications per JSON-RPC 2.0 Section 4.1
+- All-notification batches return no response (spec-compliant)
+- Existing connection tests still pass (5 tests)
+
+### Pipeline JSON-RPC Integration
+- `graph.execute_pipeline` / `neural_api.execute_pipeline` — new JSON-RPC method
+- `graph.execute` auto-redirects Pipeline coordination graphs to `execute_pipeline`
+- Pipeline nodes route through capability translation registry → `NeuralRouter`
+- Returns full `PipelineResult` with per-node throughput and collected outputs
+
+### Sample Pipeline Graphs
+- `streaming_telemetry_pipeline.toml` — groundSpring sensor → filter → store (3 nodes)
+- `pharmacology_etl_pipeline.toml` — compound fetch → descriptors → Lipinski → docking (4 nodes, fallback="skip")
+
+### Quality
+| Metric | Value |
+|--------|-------|
+| Tests | 4,224 passed, 0 failed, 28 ignored |
+| Clippy | Clean (workspace) |
+| Fmt | Clean |
+
+---
+
 ## [v2.42] - 2026-03-15 (Neural API Evolution — Unified Schema + Continuous API + ConditionalDag + PathwayLearner)
 
 ### Unified Graph Schema

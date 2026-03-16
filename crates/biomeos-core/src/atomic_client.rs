@@ -54,6 +54,9 @@ use crate::socket_discovery::{SocketDiscovery, TransportEndpoint};
 // Re-export JSON-RPC types from biomeos-types for backwards compatibility
 pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
+// Re-export StreamItem for callers of call_stream
+pub use biomeos_graph::StreamItem;
+
 /// Atomic Multi-Transport Client - Universal IPC Standard v3.0
 ///
 /// This client provides atomic, zero-copy communication with primals via
@@ -517,6 +520,152 @@ impl AtomicClient {
             serde_json::from_str(&line).context("Failed to parse JSON-RPC response")?;
 
         Ok(response)
+    }
+
+    /// Call a method that returns a stream of NDJSON items.
+    ///
+    /// Sends a single JSON-RPC request and reads multiple newline-delimited
+    /// responses. Each line is parsed as a `StreamItem`. The stream ends when
+    /// the server sends a `StreamItem::End` or closes the connection.
+    ///
+    /// This leverages the existing NDJSON framing — no new protocol needed.
+    /// A primal that supports streaming simply writes multiple lines before
+    /// closing the connection.
+    ///
+    /// Returns an `mpsc::Receiver` that yields `StreamItem`s as they arrive.
+    pub async fn call_stream(
+        &self,
+        method: &str,
+        params: Value,
+    ) -> Result<tokio::sync::mpsc::Receiver<StreamItem>> {
+        let request = JsonRpcRequest::new(method, params);
+        let (tx, rx) = tokio::sync::mpsc::channel(64);
+
+        let endpoint = self.endpoint.clone();
+        let timeout_dur = self.timeout;
+        let socket_path = self.socket_path.clone();
+
+        tokio::spawn(async move {
+            let result =
+                Self::stream_impl(endpoint, timeout_dur, request, tx.clone(), &socket_path).await;
+
+            if let Err(e) = result {
+                let _ = tx
+                    .send(StreamItem::Error {
+                        node_id: String::new(),
+                        message: format!("Stream transport error: {e}"),
+                    })
+                    .await;
+                let _ = tx.send(StreamItem::End).await;
+            }
+        });
+
+        Ok(rx)
+    }
+
+    /// Internal streaming implementation over any transport.
+    async fn stream_impl(
+        endpoint: TransportEndpoint,
+        timeout_dur: Duration,
+        request: JsonRpcRequest,
+        tx: tokio::sync::mpsc::Sender<StreamItem>,
+        socket_path: &Path,
+    ) -> Result<()> {
+        match &endpoint {
+            TransportEndpoint::UnixSocket { path } => {
+                let stream = timeout(timeout_dur, UnixStream::connect(path))
+                    .await
+                    .context("Unix connect timeout")?
+                    .context(format!("Unix connect: {}", path.display()))?;
+                Self::read_stream(stream, request, &tx).await
+            }
+            TransportEndpoint::TcpSocket { host, port } => {
+                let addr = format!("{host}:{port}");
+                let stream = timeout(timeout_dur, TcpStream::connect(&addr))
+                    .await
+                    .context("TCP connect timeout")?
+                    .context(format!("TCP connect: {addr}"))?;
+                Self::read_stream(stream, request, &tx).await
+            }
+            #[cfg(target_os = "linux")]
+            TransportEndpoint::AbstractSocket { name } => {
+                use std::os::linux::net::SocketAddrExt;
+                use std::os::unix::net::SocketAddr;
+                let addr = SocketAddr::from_abstract_name(name.as_bytes())?;
+                let std_stream = std::os::unix::net::UnixStream::connect_addr(&addr)?;
+                std_stream.set_nonblocking(true)?;
+                let stream = UnixStream::from_std(std_stream)?;
+                Self::read_stream(stream, request, &tx).await
+            }
+            _ => anyhow::bail!(
+                "Streaming not supported for transport: {} (socket: {})",
+                endpoint,
+                socket_path.display()
+            ),
+        }
+    }
+
+    /// Send a request and read multiple NDJSON response lines as `StreamItem`s.
+    async fn read_stream<S>(
+        stream: S,
+        request: JsonRpcRequest,
+        tx: &tokio::sync::mpsc::Sender<StreamItem>,
+    ) -> Result<()>
+    where
+        S: AsyncRead + AsyncWrite + Unpin,
+    {
+        let (reader, mut writer) = tokio::io::split(stream);
+
+        let request_str =
+            serde_json::to_string(&request).context("Failed to serialize streaming request")?;
+
+        writer.write_all(request_str.as_bytes()).await?;
+        writer.write_all(b"\n").await?;
+        writer.flush().await?;
+
+        let mut reader = BufReader::new(reader);
+        let mut line = String::new();
+
+        loop {
+            line.clear();
+            let n = reader.read_line(&mut line).await?;
+            if n == 0 {
+                let _ = tx.send(StreamItem::End).await;
+                break;
+            }
+
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            // Try parsing as StreamItem first, fall back to JsonRpcResponse
+            if let Ok(item) = serde_json::from_str::<StreamItem>(trimmed) {
+                let is_end = matches!(item, StreamItem::End);
+                if tx.send(item).await.is_err() {
+                    break;
+                }
+                if is_end {
+                    break;
+                }
+            } else if let Ok(resp) = serde_json::from_str::<JsonRpcResponse>(trimmed) {
+                // Standard JSON-RPC response — wrap as final StreamItem
+                if let Some(result) = resp.result {
+                    let _ = tx.send(StreamItem::Data(result)).await;
+                }
+                let _ = tx.send(StreamItem::End).await;
+                break;
+            } else {
+                // Unrecognized line — forward as raw data
+                let _ = tx
+                    .send(StreamItem::Data(serde_json::Value::String(
+                        trimmed.to_string(),
+                    )))
+                    .await;
+            }
+        }
+
+        Ok(())
     }
 
     /// Get the socket path for this client (legacy compatibility)

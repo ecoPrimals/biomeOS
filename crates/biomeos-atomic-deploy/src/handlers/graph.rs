@@ -26,7 +26,8 @@ use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
 use biomeos_graph::continuous::{ContinuousExecutor, SessionCommand, SessionState};
 use biomeos_graph::events::GraphEventBroadcaster;
-use biomeos_graph::graph::DeploymentGraph;
+use biomeos_graph::graph::{CoordinationPattern, DeploymentGraph};
+use biomeos_graph::pipeline::{PipelineExecutor, StreamItem};
 use biomeos_types::SystemPaths;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -209,6 +210,12 @@ impl GraphHandler {
         if graph.is_continuous() {
             info!("🔄 Graph is continuous — redirecting to start_continuous");
             return self.start_continuous(raw_params).await;
+        }
+
+        // Auto-redirect pipeline graphs to execute_pipeline
+        if graph.coordination.as_deref() == Some("pipeline") {
+            info!("🔗 Graph is pipeline — redirecting to execute_pipeline");
+            return self.execute_pipeline(raw_params).await;
         }
 
         // Load capability translations from graph
@@ -529,6 +536,133 @@ impl GraphHandler {
             "graph_id": graph_id,
             "started_at": started_at,
         }))
+    }
+
+    /// Execute a pipeline graph — streaming coordination.
+    ///
+    /// JSON-RPC method: `graph.execute_pipeline`
+    ///
+    /// Loads the graph as a `DeploymentGraph`, validates that it uses
+    /// `Pipeline` coordination, then runs it via `PipelineExecutor`.
+    /// The source node produces items, each transform node processes them,
+    /// and the result collects all outputs.
+    ///
+    /// Returns the full `PipelineResult` with per-node throughput stats.
+    pub async fn execute_pipeline(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let graph_id = params["graph_id"].as_str().context("Missing graph_id")?;
+
+        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
+        if !graph_path.exists() {
+            anyhow::bail!("Graph file not found: {}", graph_path.display());
+        }
+
+        let toml_str = std::fs::read_to_string(&graph_path)
+            .with_context(|| format!("Failed to read: {}", graph_path.display()))?;
+
+        let deployment_graph: DeploymentGraph = toml::from_str(&toml_str)
+            .with_context(|| format!("Failed to parse DeploymentGraph: {graph_id}"))?;
+
+        if deployment_graph.definition.coordination != CoordinationPattern::Pipeline {
+            anyhow::bail!(
+                "Graph '{}' has coordination '{:?}', not Pipeline",
+                graph_id,
+                deployment_graph.definition.coordination
+            );
+        }
+
+        let channel_capacity = params["channel_capacity"].as_u64().unwrap_or(64) as usize;
+
+        info!(
+            "🔗 Executing pipeline graph: {} ({} nodes, capacity {})",
+            graph_id,
+            deployment_graph.definition.nodes.len(),
+            channel_capacity,
+        );
+
+        let broadcaster = GraphEventBroadcaster::new(16);
+        let executor = PipelineExecutor::new(deployment_graph, broadcaster)
+            .with_channel_capacity(channel_capacity);
+
+        let router = self.router.clone();
+        let translation_registry = self.translation_registry.clone();
+
+        let result = executor
+            .run(move |node_id, node, item| {
+                let router = router.clone();
+                let translation_registry = translation_registry.clone();
+                async move {
+                    let capability = match &node.capability {
+                        Some(c) => c.clone(),
+                        None => {
+                            return StreamItem::Error {
+                                node_id: node_id.clone(),
+                                message: format!("Node '{node_id}' has no capability"),
+                            };
+                        }
+                    };
+
+                    let input = match item {
+                        StreamItem::Data(v) => v,
+                        other => return other,
+                    };
+
+                    let call_params = json!({
+                        "capability": capability,
+                        "node_id": node_id,
+                        "input": input,
+                    });
+
+                    // Try translation registry first
+                    let registry = translation_registry.read().await;
+                    if let Some(translation) = registry.get_translation(&capability) {
+                        let socket = PathBuf::from(&translation.socket);
+                        let method = translation.actual_method.clone();
+                        drop(registry);
+                        match router.forward_request(&socket, &method, &call_params).await {
+                            Ok(result) => StreamItem::Data(result),
+                            Err(e) => {
+                                debug!("Pipeline node '{}' capability call failed: {}", node_id, e);
+                                StreamItem::Error {
+                                    node_id,
+                                    message: format!("{e}"),
+                                }
+                            }
+                        }
+                    } else {
+                        drop(registry);
+                        // No translation — discover capability and forward
+                        match router.discover_capability(&capability).await {
+                            Ok(discovered) => {
+                                match router
+                                    .forward_request(
+                                        &discovered.primary_socket,
+                                        &capability,
+                                        &call_params,
+                                    )
+                                    .await
+                                {
+                                    Ok(result) => StreamItem::Data(result),
+                                    Err(e) => StreamItem::Error {
+                                        node_id,
+                                        message: format!("{e}"),
+                                    },
+                                }
+                            }
+                            Err(e) => {
+                                debug!("Pipeline node '{}' discovery failed: {}", node_id, e);
+                                StreamItem::Error {
+                                    node_id,
+                                    message: format!("Capability not found: {capability}: {e}"),
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+            .await;
+
+        Ok(serde_json::to_value(result)?)
     }
 
     /// Pause a running continuous session.

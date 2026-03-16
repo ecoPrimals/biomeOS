@@ -1,0 +1,67 @@
+# Pharmacology ETL Streaming Pipeline — Pipeline Coordination
+#
+# Streams molecular data through a transform chain:
+#   fetch SMILES → compute descriptors → filter by Lipinski → score binding
+#
+# Each node processes items as they arrive from upstream, enabling
+# true streaming throughput for large compound libraries.
+#
+# STATUS: Protocol defined (March 2026)
+# Requires: hotSpring (molecular dynamics), healthSpring (pharmacology)
+
+[graph]
+id = "pharmacology-etl-pipeline"
+name = "Pharmacology ETL Pipeline"
+version = "1.0.0"
+description = "Stream compound library through descriptor computation and drug-likeness filtering"
+coordination = "pipeline"
+
+[[graph.nodes]]
+id = "fetch-compounds"
+name = "Fetch Compound Library"
+capability = "medical.compound_screen"
+required = true
+order = 0
+
+[graph.nodes.params]
+source = "chembl"
+query = "target_organism:human AND standard_type:IC50"
+batch_size = 100
+
+[[graph.nodes]]
+id = "compute-descriptors"
+name = "Compute Molecular Descriptors"
+capability = "physics.molecular_descriptors"
+depends_on = ["fetch-compounds"]
+required = true
+order = 1
+budget_ms = 500
+
+[graph.nodes.params]
+descriptors = ["molecular_weight", "logp", "hbd", "hba", "tpsa", "rotatable_bonds"]
+
+[[graph.nodes]]
+id = "filter-lipinski"
+name = "Lipinski Rule-of-Five Filter"
+capability = "medical.drug_likeness"
+depends_on = ["compute-descriptors"]
+required = true
+order = 2
+
+[graph.nodes.params]
+rule = "lipinski"
+strict = false
+
+[[graph.nodes]]
+id = "score-binding"
+name = "Binding Affinity Scoring"
+capability = "physics.docking_score"
+depends_on = ["filter-lipinski"]
+required = true
+order = 3
+budget_ms = 2000
+fallback = "skip"
+
+[graph.nodes.params]
+target_pdb = "6LU7"
+scoring_function = "vina"

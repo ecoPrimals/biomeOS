@@ -1,0 +1,59 @@
+# Streaming Telemetry Pipeline — Pipeline Coordination
+#
+# Demonstrates biomeOS streaming execution: data flows through nodes via
+# bounded channels instead of waiting for each phase to complete.
+#
+# Source (groundSpring sensor) → Transform (filter + normalize) → Sink (store)
+#
+# The PipelineExecutor wires mpsc channels between these nodes:
+#   sensor_ingest ──[channel]──▶ filter_normalize ──[channel]──▶ store_results
+#
+# Each node runs as an independent tokio task. Items flow through as soon
+# as each node produces them, enabling true streaming throughput.
+#
+# STATUS: Protocol defined (March 2026)
+# Requires: groundSpring (sensor data), nestGate (storage)
+
+[graph]
+id = "streaming-telemetry-pipeline"
+name = "Streaming Telemetry Pipeline"
+version = "1.0.0"
+description = "Stream sensor telemetry through filter → normalize → store"
+coordination = "pipeline"
+
+[[graph.nodes]]
+id = "sensor-ingest"
+name = "Sensor Ingestion (Source)"
+capability = "measurement.soil_moisture"
+required = true
+order = 0
+
+[graph.nodes.params]
+sensor_ids = ["SM-001", "SM-002", "SM-003"]
+interval_ms = 100
+batch_size = 50
+
+[[graph.nodes]]
+id = "filter-normalize"
+name = "Filter & Normalize"
+capability = "measurement.calibrate_sensor"
+depends_on = ["sensor-ingest"]
+required = true
+order = 1
+
+[graph.nodes.params]
+min_threshold = 0.01
+max_threshold = 100.0
+normalize = true
+
+[[graph.nodes]]
+id = "store-results"
+name = "Store Telemetry"
+capability = "storage.store"
+depends_on = ["filter-normalize"]
+required = true
+order = 2
+
+[graph.nodes.params]
+family_id = "groundspring"
+key_prefix = "telemetry:soil:"

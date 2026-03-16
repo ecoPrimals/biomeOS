@@ -34,13 +34,13 @@ impl NeuralApiServer {
 
             match read_result {
                 Ok(Ok(n)) if n > 0 => {
-                    let response_value = self.dispatch_line(&line).await;
-
-                    let response_str = serde_json::to_string(&response_value)? + "\n";
-                    let stream = reader.get_mut();
-                    stream.write_all(response_str.as_bytes()).await?;
-                    stream.flush().await?;
-
+                    if let Some(response_value) = self.dispatch_line(&line).await {
+                        let response_str = serde_json::to_string(&response_value)? + "\n";
+                        let stream = reader.get_mut();
+                        stream.write_all(response_str.as_bytes()).await?;
+                        stream.flush().await?;
+                    }
+                    // No response for notifications (id == None)
                     continue;
                 }
                 Ok(Ok(_)) | Ok(Err(_)) | Err(_) => {
@@ -53,22 +53,40 @@ impl NeuralApiServer {
     }
 
     /// Dispatch a single input line, handling both single and batch JSON-RPC.
-    async fn dispatch_line(&self, line: &str) -> Value {
+    ///
+    /// Returns `None` for JSON-RPC notifications (requests with no `id`),
+    /// per JSON-RPC 2.0 Section 4.1: the server MUST NOT reply to a notification.
+    async fn dispatch_line(&self, line: &str) -> Option<Value> {
         match JsonRpcInput::parse(line) {
             Ok(JsonRpcInput::Single(req)) => {
+                // JSON-RPC 2.0: notifications have no `id` — no response
+                if req.id.is_none() {
+                    debug!("Received JSON-RPC notification: {}", req.method);
+                    let raw = serde_json::to_string(&req).unwrap_or_default();
+                    let _ = self.handle_request(&raw).await;
+                    return None;
+                }
                 let raw = serde_json::to_string(&req).unwrap_or_default();
-                match self.handle_request(&raw).await {
+                Some(match self.handle_request(&raw).await {
                     Ok(resp) => resp,
                     Err(e) => {
                         error!("Request error: {}", e);
                         internal_error_response(&e, req.id)
                     }
-                }
+                })
             }
             Ok(JsonRpcInput::Batch(requests)) => {
                 debug!("Processing JSON-RPC batch of {} requests", requests.len());
                 let futures: Vec<_> = requests
                     .into_iter()
+                    .filter(|req| {
+                        // Skip notifications in batch (no response expected)
+                        if req.id.is_none() {
+                            debug!("Skipping batch notification: {}", req.method);
+                            return false;
+                        }
+                        true
+                    })
                     .map(|req| {
                         let raw = serde_json::to_string(&req).unwrap_or_default();
                         let id = req.id.clone();
@@ -85,10 +103,16 @@ impl NeuralApiServer {
                     .collect();
 
                 let results = futures::future::join_all(futures).await;
-                serde_json::to_value(results).unwrap_or(Value::Array(vec![]))
+                if results.is_empty() {
+                    None
+                } else {
+                    Some(serde_json::to_value(results).unwrap_or(Value::Array(vec![])))
+                }
             }
-            Err(err) => serde_json::to_value(JsonRpcResponse::error(Value::Null, err))
-                .unwrap_or(Value::Null),
+            Err(err) => Some(
+                serde_json::to_value(JsonRpcResponse::error(Value::Null, err))
+                    .unwrap_or(Value::Null),
+            ),
         }
     }
 }
