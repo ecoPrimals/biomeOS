@@ -143,7 +143,7 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 # Build
 cargo build --workspace
 
-# Test (5,148 tests — fully concurrent)
+# Test (5,162 tests — fully concurrent)
 cargo test --workspace
 
 # Coverage (78.27% line)
@@ -171,4 +171,4 @@ See `ARCHIVE_INDEX.md` in archive for details.
 **Documentation current as of March 16, 2026**
 **Active: 19 specs, 16 handoffs, 10 scripts**
 **Deploy graphs: 35 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 5,148 passing, fully concurrent (78.27% line coverage) | Clippy: PASS | Docs: Full coverage**
+**Tests: 5,162 passing, fully concurrent (78.27% line coverage) | Clippy: PASS | Docs: Full coverage**

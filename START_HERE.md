@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Modern patterns (OnceLock, or_default, Default trait)
 6. **Zero warnings**: Clippy clean, full doc coverage (0 `missing_docs` warnings across 8 crates)
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 5,148 tests (fully concurrent), 78.27% line coverage (llvm-cov)
+8. **Tested**: 5,162 tests (fully concurrent), 78.27% line coverage (llvm-cov)
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection eliminates global state races
 
 ---
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.45)
+**Status**: Production Ready (v2.46)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
@@ -177,5 +177,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v3.0 compliant
 **Provenance Trio**: rhizoCrypt + LoamSpine + sweetGrass wired into Neural API
-**Tests**: 5,148 passing, fully concurrent (78.27% line) | **Clippy**: PASS | **Docs**: Full coverage
+**Tests**: 5,162 passing, fully concurrent (78.27% line) | **Clippy**: PASS | **Docs**: Full coverage
 **Updated**: March 16, 2026

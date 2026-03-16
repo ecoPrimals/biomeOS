@@ -2,6 +2,44 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.46 (2026-03-16) — Spring Absorption + Ecosystem Alignment
+
+### New: DispatchOutcome Pattern (from airSpring)
+- Neural API dispatch returns structured `DispatchOutcome` enum
+- Separates protocol errors (-32601 method-not-found, -32600 invalid-request, -32700 parse-error) from application errors
+- `handle_request_json()` backward-compatible wrapper
+
+### New: IpcError Type (from healthSpring)
+- `IpcError` enum: `ConnectionFailed`, `Timeout`, `JsonRpcError`, `MissingResult`, `Serialization`
+- `AtomicClient::try_call()` returns `Result<Value, IpcError>` for structured error handling
+- `is_method_not_found()` / `is_timeout()` for caller decision logic
+
+### New: Typed Capability SDK (from groundSpring)
+- `CapabilityClient` with domain-specific methods: `crypto_sign/verify/hash`, `http_request`, `storage_put/get/exists`, `compute_execute`, `discover_capability`, `health_check`
+- Neural API socket discovery: env → XDG → fallback
+- Base64 binary payload encoding
+
+### Modernization: #[expect] Migration (from neuralSpring/rhizoCrypt/ludoSpring)
+- ~60 `#[allow(clippy::...)]` → `#[expect(clippy::..., reason = "...")]` across 59 files
+- Self-documenting lint suppressions that warn when no longer needed (Rust 2024)
+
+### Dependency: tarpc 0.35 → 0.37
+- Aligned with barraCuda v0.3.5 and coralReef GPU stack
+- No breaking changes; all existing APIs and features preserved
+
+### Hardcoded Cleanup
+- Port `9000` → `ports::NEURAL_API` in beacon_genetics, p2p adapters, birdsong
+- `"songbird"` → `primal_names::SONGBIRD` in plasmodium discovery
+- `"beardog"` → `primal_names::BEARDOG` in plasmodium test helper
+
+### Metrics
+- 5,162 tests passing (+14), 0 failures
+- Clippy: PASS (0 warnings, pedantic+nursery)
+- Docs: PASS (0 warnings)
+- Format: PASS
+
+---
+
 ## [v2.45] - 2026-03-16 (Deep Debt Execution + Coverage Evolution)
 
 ### CI/Build
