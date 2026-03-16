@@ -167,9 +167,10 @@ impl GraphValidator {
                 if let Some((namespace, _operation)) = capability.split_once('.') {
                     // Warn if namespace is unknown (but don't fail)
                     if !self.known_namespaces.contains(namespace) {
-                        eprintln!(
-                            "Warning: Unknown capability namespace '{}' in node '{}'",
-                            namespace, node.id
+                        tracing::warn!(
+                            namespace,
+                            node_id = %node.id,
+                            "Unknown capability namespace in node",
                         );
                     }
                 } else {

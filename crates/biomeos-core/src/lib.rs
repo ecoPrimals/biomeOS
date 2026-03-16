@@ -70,6 +70,9 @@ pub mod connection_strategy;
 // biomeOS works without this - falls back to public STUN
 pub mod stun_extension;
 
+/// Sovereignty and human dignity protection enforcement.
+pub mod sovereignty_guardian;
+
 // NUCLEUS model cache (NestGate-integrated, filesystem fallback)
 pub mod model_cache;
 
@@ -159,24 +162,8 @@ pub use ai_first_api::{
 // Configuration builder exports
 pub use config_builder::BiomeOSConfigBuilder;
 
-// ✅ MIGRATION NOTE: The following types are now imported from biomeos-types:
-// - BiomeMetadata -> ManifestMetadata
-// - PrimalConfiguration (unified version)
-// - ServiceConfiguration -> ServiceSpec
-// - UniversalBiomeManifest -> BiomeManifest
-// - HealthStatus -> Health
-// - SystemHealth -> HealthReport
-
 // Build information now centralized in biomeos-types constants module
 pub use biomeos_types::BUILD_INFO;
-
-// ✅ MIGRATION COMPLETE: BiomeError now imported from biomeos-types
-// The old local BiomeError definition has been replaced with the unified version
-// from biomeos-types which includes AI-first features, retry strategies, and
-// comprehensive error context for both human and AI interaction.
-
-// ✅ MIGRATION NOTE: From implementations moved to biomeos-types
-// The unified BiomeError in biomeos-types already provides From implementations
 
 #[cfg(test)]
 mod tests {

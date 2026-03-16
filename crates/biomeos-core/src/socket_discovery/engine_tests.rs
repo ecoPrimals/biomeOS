@@ -71,7 +71,7 @@ fn test_calculate_primal_port_deterministic() {
 #[test]
 fn test_socket_discovery_new() {
     let discovery = SocketDiscovery::new("test-family");
-    assert_eq!(discovery.family_id, "test-family");
+    assert_eq!(discovery.family_id.as_str(), "test-family");
     assert!(discovery.strategy.enable_cache);
 }
 
@@ -79,7 +79,7 @@ fn test_socket_discovery_new() {
 fn test_socket_discovery_with_strategy() {
     let strategy = DiscoveryStrategy::android();
     let discovery = SocketDiscovery::with_strategy("test", strategy.clone());
-    assert_eq!(discovery.family_id, "test");
+    assert_eq!(discovery.family_id.as_str(), "test");
     assert!(!discovery.strategy.use_xdg_runtime);
     assert!(discovery.strategy.try_abstract_sockets);
 }
@@ -161,7 +161,7 @@ async fn test_discover_endpoint_via_env_tcp() {
 
     assert!(result.is_some());
     if let Some(TransportEndpoint::TcpSocket { host, port }) = result {
-        assert_eq!(host, "127.0.0.1");
+        assert_eq!(host.as_ref(), "127.0.0.1");
         assert_eq!(port, 9100);
     } else {
         panic!("Expected TCP endpoint");

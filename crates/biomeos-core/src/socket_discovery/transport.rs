@@ -6,6 +6,7 @@
 //! Defines the transport endpoint abstraction for multi-transport IPC.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// Transport endpoint for connecting to a primal
 ///
@@ -24,13 +25,13 @@ pub enum TransportEndpoint {
     /// Bypasses filesystem, immune to SELinux restrictions
     AbstractSocket {
         /// Abstract socket name (without leading `@`)
-        name: String,
+        name: Arc<str>,
     },
 
     /// TCP socket (Tier 2 - Universal fallback)
     TcpSocket {
         /// Host address
-        host: String,
+        host: Arc<str>,
         /// Port number
         port: u16,
     },
@@ -44,7 +45,7 @@ pub enum TransportEndpoint {
     /// The port is runtime-discoverable via beacon exchange, NOT hardcoded.
     HttpJsonRpc {
         /// Host address
-        host: String,
+        host: Arc<str>,
         /// HTTP port (Songbird default: 8080, runtime-discovered via beacon)
         port: u16,
     },
@@ -86,7 +87,7 @@ impl TransportEndpoint {
         // Abstract socket: starts with @
         if let Some(stripped) = value.strip_prefix('@') {
             return Some(Self::AbstractSocket {
-                name: stripped.to_string(),
+                name: Arc::from(stripped),
             });
         }
 
@@ -121,7 +122,7 @@ impl TransportEndpoint {
         let parts: Vec<&str> = value.rsplitn(2, ':').collect();
         if parts.len() == 2 {
             let port: u16 = parts[0].parse().ok()?;
-            let host = parts[1].to_string();
+            let host = Arc::from(parts[1]);
             return Some(Self::TcpSocket { host, port });
         }
         None
@@ -131,7 +132,7 @@ impl TransportEndpoint {
         let parts: Vec<&str> = value.rsplitn(2, ':').collect();
         if parts.len() == 2 {
             let port: u16 = parts[0].parse().ok()?;
-            let host = parts[1].to_string();
+            let host = Arc::from(parts[1]);
             return Some(Self::HttpJsonRpc { host, port });
         }
         None
@@ -162,7 +163,7 @@ mod tests {
         let endpoint = TransportEndpoint::parse("@biomeos_beardog_1894e909e454").unwrap();
         assert!(matches!(endpoint, TransportEndpoint::AbstractSocket { .. }));
         if let TransportEndpoint::AbstractSocket { name } = endpoint {
-            assert_eq!(name, "biomeos_beardog_1894e909e454");
+            assert_eq!(name.as_ref(), "biomeos_beardog_1894e909e454");
         }
     }
 
@@ -171,7 +172,7 @@ mod tests {
         let endpoint = TransportEndpoint::parse("127.0.0.1:9100").unwrap();
         assert!(matches!(endpoint, TransportEndpoint::TcpSocket { .. }));
         if let TransportEndpoint::TcpSocket { host, port } = endpoint {
-            assert_eq!(host, "127.0.0.1");
+            assert_eq!(host.as_ref(), "127.0.0.1");
             assert_eq!(port, 9100);
         }
     }
@@ -181,7 +182,7 @@ mod tests {
         let endpoint = TransportEndpoint::parse("tcp://192.168.1.100:8080").unwrap();
         assert!(matches!(endpoint, TransportEndpoint::TcpSocket { .. }));
         if let TransportEndpoint::TcpSocket { host, port } = endpoint {
-            assert_eq!(host, "192.168.1.100");
+            assert_eq!(host.as_ref(), "192.168.1.100");
             assert_eq!(port, 8080);
         }
     }
@@ -195,13 +196,13 @@ mod tests {
         assert!(unix.is_native());
 
         let abstract_sock = TransportEndpoint::AbstractSocket {
-            name: "test".to_string(),
+            name: Arc::from("test"),
         };
         assert_eq!(abstract_sock.tier(), 1);
         assert!(abstract_sock.is_native());
 
         let tcp = TransportEndpoint::TcpSocket {
-            host: "127.0.0.1".to_string(),
+            host: Arc::from("127.0.0.1"),
             port: 9100,
         };
         assert_eq!(tcp.tier(), 2);
@@ -216,7 +217,7 @@ mod tests {
         assert_eq!(unix.display_string(), "unix:///tmp/test.sock");
 
         let tcp = TransportEndpoint::TcpSocket {
-            host: "localhost".to_string(),
+            host: Arc::from("localhost"),
             port: 9100,
         };
         assert_eq!(tcp.display_string(), "tcp://localhost:9100");
@@ -225,7 +226,7 @@ mod tests {
     #[test]
     fn test_display_abstract() {
         let abstract_sock = TransportEndpoint::AbstractSocket {
-            name: "biomeos_test".to_string(),
+            name: Arc::from("biomeos_test"),
         };
         assert_eq!(abstract_sock.display_string(), "abstract://@biomeos_test");
     }
@@ -256,7 +257,7 @@ mod tests {
     fn test_parse_tcp_hostname() {
         let endpoint = TransportEndpoint::parse("localhost:8080").unwrap();
         if let TransportEndpoint::TcpSocket { host, port } = endpoint {
-            assert_eq!(host, "localhost");
+            assert_eq!(host.as_ref(), "localhost");
             assert_eq!(port, 8080);
         } else {
             panic!("Expected TCP endpoint");
@@ -306,7 +307,7 @@ mod tests {
     #[test]
     fn test_tier_abstract() {
         let abstract_sock = TransportEndpoint::AbstractSocket {
-            name: "test".to_string(),
+            name: Arc::from("test"),
         };
         assert_eq!(abstract_sock.tier(), 1);
         assert!(abstract_sock.is_native());
@@ -315,7 +316,7 @@ mod tests {
     #[test]
     fn test_tier_tcp() {
         let tcp = TransportEndpoint::TcpSocket {
-            host: "127.0.0.1".to_string(),
+            host: Arc::from("127.0.0.1"),
             port: 9100,
         };
         assert_eq!(tcp.tier(), 2);
@@ -326,7 +327,7 @@ mod tests {
     fn test_parse_tcp_explicit_prefix() {
         let endpoint = TransportEndpoint::parse("tcp://example.com:443").unwrap();
         if let TransportEndpoint::TcpSocket { host, port } = endpoint {
-            assert_eq!(host, "example.com");
+            assert_eq!(host.as_ref(), "example.com");
             assert_eq!(port, 443);
         } else {
             panic!("Expected TCP endpoint");
@@ -351,7 +352,7 @@ mod tests {
         assert_eq!(display, "unix:///tmp/beardog-1894e909e454.sock");
 
         let tcp = TransportEndpoint::TcpSocket {
-            host: "192.168.1.100".to_string(),
+            host: Arc::from("192.168.1.100"),
             port: 9100,
         };
         let display = format!("{tcp}");
@@ -376,17 +377,17 @@ mod tests {
         assert_eq!(endpoint1, endpoint2);
 
         let tcp1 = TransportEndpoint::TcpSocket {
-            host: "localhost".to_string(),
+            host: Arc::from("localhost"),
             port: 9100,
         };
         let tcp2 = TransportEndpoint::TcpSocket {
-            host: "localhost".to_string(),
+            host: Arc::from("localhost"),
             port: 9100,
         };
         assert_eq!(tcp1, tcp2);
 
         let tcp3 = TransportEndpoint::TcpSocket {
-            host: "localhost".to_string(),
+            host: Arc::from("localhost"),
             port: 9101,
         };
         assert_ne!(tcp1, tcp3);
@@ -397,7 +398,7 @@ mod tests {
         let endpoint = TransportEndpoint::parse("http://192.168.1.100:8080").unwrap();
         assert!(matches!(endpoint, TransportEndpoint::HttpJsonRpc { .. }));
         if let TransportEndpoint::HttpJsonRpc { host, port } = endpoint {
-            assert_eq!(host, "192.168.1.100");
+            assert_eq!(host.as_ref(), "192.168.1.100");
             assert_eq!(port, 8080);
         }
     }
@@ -407,7 +408,7 @@ mod tests {
         let endpoint = TransportEndpoint::parse("http://localhost:8080/jsonrpc").unwrap();
         assert!(matches!(endpoint, TransportEndpoint::HttpJsonRpc { .. }));
         if let TransportEndpoint::HttpJsonRpc { host, port } = endpoint {
-            assert_eq!(host, "localhost");
+            assert_eq!(host.as_ref(), "localhost");
             assert_eq!(port, 8080);
         }
     }
@@ -415,7 +416,7 @@ mod tests {
     #[test]
     fn test_display_http_jsonrpc() {
         let http = TransportEndpoint::HttpJsonRpc {
-            host: "songbird.local".to_string(),
+            host: Arc::from("songbird.local"),
             port: 8080,
         };
         assert_eq!(http.display_string(), "http://songbird.local:8080/jsonrpc");
@@ -426,7 +427,7 @@ mod tests {
     #[test]
     fn test_tier_http_jsonrpc() {
         let http = TransportEndpoint::HttpJsonRpc {
-            host: "127.0.0.1".to_string(),
+            host: Arc::from("127.0.0.1"),
             port: 8080,
         };
         assert_eq!(http.tier(), 2);
@@ -437,7 +438,7 @@ mod tests {
     fn test_parse_http_jsonrpc_hostname() {
         let endpoint = TransportEndpoint::parse("http://api.example.com:443").unwrap();
         if let TransportEndpoint::HttpJsonRpc { host, port } = endpoint {
-            assert_eq!(host, "api.example.com");
+            assert_eq!(host.as_ref(), "api.example.com");
             assert_eq!(port, 443);
         } else {
             panic!("Expected HttpJsonRpc");

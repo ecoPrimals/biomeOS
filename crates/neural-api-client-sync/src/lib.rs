@@ -2,6 +2,7 @@
 // Copyright (C) 2024–2026 ecoPrimals Project
 
 #![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
 //! Synchronous Neural API client for biomeOS — zero-tokio, std + serde_json only.
 //!
@@ -45,6 +46,7 @@ pub struct NeuralBridge {
 /// Result of a `capability.call` invocation.
 #[derive(Debug)]
 pub struct CallResult {
+    /// The JSON value returned by the capability call.
     pub value: serde_json::Value,
 }
 
@@ -58,7 +60,12 @@ pub enum NeuralError {
     /// JSON serialization/deserialization error.
     Json(String),
     /// JSON-RPC error response from the Neural API.
-    Rpc { code: i64, message: String },
+    Rpc {
+        /// JSON-RPC error code.
+        code: i64,
+        /// Human-readable error message.
+        message: String,
+    },
     /// Timeout waiting for response.
     Timeout,
 }
@@ -86,6 +93,10 @@ impl NeuralBridge {
         Self::discover_with(None, None)
     }
 
+    /// Discover the Neural API socket with explicit overrides.
+    ///
+    /// Accepts optional socket path and family ID for environments where
+    /// automatic discovery is insufficient.
     #[must_use]
     pub fn discover_with(neural_api_socket: Option<&str>, family_id: Option<&str>) -> Option<Self> {
         let path = resolve_socket_with(neural_api_socket, family_id)?;
@@ -200,6 +211,10 @@ impl NeuralBridge {
     }
 }
 
+/// Resolve the Neural API socket path using the 5-tier discovery strategy.
+///
+/// Checks: `NEURAL_API_SOCKET` env var, `$XDG_RUNTIME_DIR/biomeos/`, `/run/user/{uid}/biomeos/`,
+/// and platform temp dir, in order.
 pub fn resolve_socket_with(
     neural_api_socket: Option<&str>,
     family_id_override: Option<&str>,

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 15, 2026 (Spring Absorption + Deep Debt: BYOB, JSON-RPC batch, compute.dispatch, runtime TOML registry, 50 #[ignore] removed)
-**Version**: 2.40
+**Updated**: March 15, 2026 (Deep Audit: CI hardening, sovereignty integration, tarpc forwarding, zero-copy Arc<str>, incubation refactor)
+**Version**: 2.41
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -16,8 +16,8 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
-| **Tests Passing** | 4,946 fully concurrent (0 failures, 131 ignored) |
-| **Test Coverage** | 76.15% line, 79.23% function (llvm-cov, climbing toward 90%) |
+| **Tests Passing** | 5,017 fully concurrent (0 failures, 0 ignored) |
+| **Test Coverage** | 77.61% line, 80.32% function (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production, 0 test |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -34,7 +34,7 @@
 | **P2P Sovereign Onion** | PRODUCTION READY |
 | **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
-| **Files >1000 LOC** | 0 (max 925, capability_translation 985→302+191+28, provider 944→407+494, concurrent_startup 931→210+672) |
+| **Files >1000 LOC** | 0 (max 920, incubation 934→330+180+115+60 modules) |
 | **JSON-RPC types** | `JSONRPC_VERSION` const + `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
 | **Zero-copy** | `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client); `Arc<str>` for identifiers |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |

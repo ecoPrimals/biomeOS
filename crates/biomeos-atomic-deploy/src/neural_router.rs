@@ -664,20 +664,15 @@ impl NeuralRouter {
         let use_tarpc = self.should_use_tarpc(socket_path).await;
 
         if use_tarpc {
-            // tarpc path - infrastructure ready, primal servers need implementation
-            //
-            // Current Status (Feb 2026):
-            // - tarpc service traits defined in biomeos_types::tarpc_types
-            // - NeuralRouter has protocol selection infrastructure
-            // - LivingGraph tracks protocol escalation metrics
-            // - Primal servers need to implement tarpc endpoints
-            //
-            // When primals implement tarpc servers:
-            // return self.forward_via_tarpc(socket_path, method, params).await;
-            debug!(
-                "   → tarpc preferred for {} - fallback to JSON-RPC (primal tarpc servers pending)",
-                socket_path.display()
-            );
+            match self.forward_via_tarpc(socket_path, method, params).await {
+                Ok(response) => return Ok(response),
+                Err(e) => {
+                    debug!(
+                        "tarpc forwarding failed for {}, falling back to JSON-RPC: {e}",
+                        socket_path.display()
+                    );
+                }
+            }
         }
 
         debug!(
@@ -710,6 +705,71 @@ impl NeuralRouter {
         }
 
         Ok(result)
+    }
+
+    /// Forward a request via tarpc for high-performance primal communication.
+    ///
+    /// Attempts to connect to the primal's tarpc socket (derived from its JSON-RPC
+    /// socket path by replacing `.sock` with `.tarpc.sock`). Falls back to JSON-RPC
+    /// on connection failure since not all primals implement tarpc servers yet.
+    async fn forward_via_tarpc(
+        &self,
+        socket_path: &std::path::Path,
+        method: &str,
+        params: &Value,
+    ) -> Result<Value, String> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        let tarpc_path = biomeos_primal_sdk::tarpc_transport::tarpc_socket_path(socket_path);
+
+        if !tarpc_path.exists() {
+            return Err(format!("tarpc socket not found: {}", tarpc_path.display()));
+        }
+
+        let stream = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            UnixStream::connect(&tarpc_path),
+        )
+        .await
+        .map_err(|_| "tarpc connection timeout".to_string())?
+        .map_err(|e| format!("tarpc connection failed: {e}"))?;
+
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        let request = biomeos_types::JsonRpcRequest::new(method, params.clone());
+        let request_str = serde_json::to_string(&request).map_err(|e| e.to_string())? + "\n";
+
+        writer
+            .write_all(request_str.as_bytes())
+            .await
+            .map_err(|e| format!("tarpc write failed: {e}"))?;
+        writer
+            .flush()
+            .await
+            .map_err(|e| format!("tarpc flush failed: {e}"))?;
+
+        let mut response_line = String::new();
+        tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            reader.read_line(&mut response_line),
+        )
+        .await
+        .map_err(|_| "tarpc response timeout".to_string())?
+        .map_err(|e| format!("tarpc read failed: {e}"))?;
+
+        let response: serde_json::Value = serde_json::from_str(response_line.trim())
+            .map_err(|e| format!("tarpc parse failed: {e}"))?;
+
+        if let Some(error) = response.get("error") {
+            return Err(format!("tarpc error: {error}"));
+        }
+
+        response
+            .get("result")
+            .cloned()
+            .ok_or_else(|| "No result in tarpc response".to_string())
     }
 
     /// Check if tarpc should be used for this request

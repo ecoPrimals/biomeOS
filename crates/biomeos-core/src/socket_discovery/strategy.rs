@@ -5,6 +5,8 @@
 //!
 //! Configures how socket discovery behaves across different platforms and use cases.
 
+use std::sync::Arc;
+
 /// Discovery strategy configuration
 #[derive(Debug, Clone)]
 pub struct DiscoveryStrategy {
@@ -30,7 +32,7 @@ pub struct DiscoveryStrategy {
     pub tcp_port_start: u16,
 
     /// Default TCP host for fallback
-    pub tcp_fallback_host: String,
+    pub tcp_fallback_host: Arc<str>,
 
     /// Scan for sockets
     pub scan_sockets: bool,
@@ -52,7 +54,7 @@ impl Default for DiscoveryStrategy {
             query_registry: true,
             enable_tcp_fallback: true, // Universal IPC v3.0: always try TCP
             tcp_port_start: 9100,      // Default port range for primals
-            tcp_fallback_host: "127.0.0.1".to_string(),
+            tcp_fallback_host: Arc::from("127.0.0.1"),
             scan_sockets: false, // Expensive, disabled by default
             enable_cache: true,
             cache_ttl_secs: 60,
@@ -71,7 +73,7 @@ impl DiscoveryStrategy {
             query_registry: true,
             enable_tcp_fallback: true,
             tcp_port_start: 9100,
-            tcp_fallback_host: "127.0.0.1".to_string(),
+            tcp_fallback_host: Arc::from("127.0.0.1"),
             scan_sockets: false,
             enable_cache: true,
             cache_ttl_secs: 60,
@@ -88,7 +90,7 @@ impl DiscoveryStrategy {
             query_registry: true,
             enable_tcp_fallback: true, // TCP is primary for cross-device
             tcp_port_start: 9100,
-            tcp_fallback_host: "0.0.0.0".to_string(), // Listen on all interfaces
+            tcp_fallback_host: Arc::from("0.0.0.0"), // Listen on all interfaces
             scan_sockets: false,
             enable_cache: true,
             cache_ttl_secs: 30, // Shorter TTL for dynamic environments
@@ -130,6 +132,6 @@ mod tests {
         assert!(!strategy.try_abstract_sockets); // Not cross-device
         assert!(!strategy.use_family_tmp); // Not cross-device
         assert!(strategy.enable_tcp_fallback); // Primary for cross-device
-        assert_eq!(strategy.tcp_fallback_host, "0.0.0.0");
+        assert_eq!(strategy.tcp_fallback_host.as_ref(), "0.0.0.0");
     }
 }

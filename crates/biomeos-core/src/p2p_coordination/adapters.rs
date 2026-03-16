@@ -30,8 +30,6 @@ use super::types::{BroadcastKeys, EncryptedDiscoveryConfig, TransportHealth, Tun
 use super::{DiscoveryProvider, SecurityProvider};
 use crate::api_adapter::cli_adapter::CliAdapter;
 use bytes::Bytes;
-// Legacy client imports - commented out
-// use crate::clients::songbird::SongbirdClient;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use std::time::SystemTime;

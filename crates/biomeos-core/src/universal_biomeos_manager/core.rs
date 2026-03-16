@@ -12,8 +12,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-// Legacy import - client_registry depends on legacy clients module
-// use crate::universal_biomeos_manager::client_registry::ClientRegistry;
 use crate::universal_biomeos_manager::discovery::PrimalDiscoveryService;
 use biomeos_primal_sdk::{PrimalCapability, PrimalType};
 use biomeos_types::{BiomeOSConfig, Health};

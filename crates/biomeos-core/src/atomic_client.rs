@@ -41,6 +41,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::{TcpStream, UnixStream};
@@ -193,10 +194,10 @@ impl AtomicClient {
     /// # Arguments
     /// * `host` - TCP host address
     /// * `port` - TCP port number
-    pub fn tcp(host: impl Into<String>, port: u16) -> Self {
+    pub fn tcp(host: impl AsRef<str>, port: u16) -> Self {
         Self {
             endpoint: TransportEndpoint::TcpSocket {
-                host: host.into(),
+                host: Arc::from(host.as_ref()),
                 port,
             },
             socket_path: PathBuf::new(),
@@ -216,10 +217,10 @@ impl AtomicClient {
     /// # Arguments
     /// * `host` - Remote host address (IP or hostname)
     /// * `port` - Remote Songbird HTTP port (discovered via beacon, default 8080)
-    pub fn http(host: impl Into<String>, port: u16) -> Self {
+    pub fn http(host: impl AsRef<str>, port: u16) -> Self {
         Self {
             endpoint: TransportEndpoint::HttpJsonRpc {
-                host: host.into(),
+                host: Arc::from(host.as_ref()),
                 port,
             },
             socket_path: PathBuf::new(),
@@ -235,9 +236,11 @@ impl AtomicClient {
     /// # Arguments
     /// * `name` - Abstract socket name (without leading @)
     #[cfg(target_os = "linux")]
-    pub fn abstract_socket(name: impl Into<String>) -> Self {
+    pub fn abstract_socket(name: impl AsRef<str>) -> Self {
         Self {
-            endpoint: TransportEndpoint::AbstractSocket { name: name.into() },
+            endpoint: TransportEndpoint::AbstractSocket {
+                name: Arc::from(name.as_ref()),
+            },
             socket_path: PathBuf::new(),
             timeout: Duration::from_secs(30),
         }
@@ -633,7 +636,7 @@ impl AtomicPrimalClient {
     }
 
     /// Create a client with explicit TCP endpoint
-    pub fn tcp(primal_name: impl Into<String>, host: impl Into<String>, port: u16) -> Self {
+    pub fn tcp(primal_name: impl Into<String>, host: impl AsRef<str>, port: u16) -> Self {
         Self {
             client: AtomicClient::tcp(host, port),
             primal_name: primal_name.into(),

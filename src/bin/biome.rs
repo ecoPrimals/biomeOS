@@ -110,12 +110,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Init { template, output } => {
             println!("📝 Initializing biome manifest with template: {template}");
 
-            let manifest_content = match template.as_str() {
-                "basic" => create_basic_template(),
-                "webapp" => create_webapp_template(),
-                "ai-research" => create_ai_research_template(),
-                "gaming" => create_gaming_template(),
-                _ => {
+            let manifest_content = match get_template_content(&template) {
+                Some(content) => content,
+                None => {
                     eprintln!("❌ Unknown template: {template}");
                     std::process::exit(1);
                 }
@@ -347,4 +344,115 @@ scaling:
   max_game_servers: 20
 "#
     .to_string()
+}
+
+/// Returns template content for a given template name, or None if unknown.
+/// Extracted for testability.
+pub fn get_template_content(template: &str) -> Option<String> {
+    match template {
+        "basic" => Some(create_basic_template()),
+        "webapp" => Some(create_webapp_template()),
+        "ai-research" => Some(create_ai_research_template()),
+        "gaming" => Some(create_gaming_template()),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_valid_yaml_and_contains(content: &str, expected_substrings: &[&str]) {
+        // Verify it parses as valid YAML
+        let parsed: serde_yaml::Value =
+            serde_yaml::from_str(content).expect("template should be valid YAML");
+        assert_eq!(
+            parsed.get("apiVersion").and_then(|v| v.as_str()),
+            Some("biomeOS/v1")
+        );
+        assert_eq!(parsed.get("kind").and_then(|v| v.as_str()), Some("Biome"));
+        assert!(parsed.get("metadata").is_some());
+        assert!(parsed.get("services").is_some());
+
+        for substr in expected_substrings {
+            assert!(
+                content.contains(*substr),
+                "template should contain '{}'",
+                substr
+            );
+        }
+    }
+
+    #[test]
+    fn test_create_basic_template() {
+        let content = create_basic_template();
+        assert_valid_yaml_and_contains(
+            &content,
+            &[
+                "basic-biome",
+                "web-server",
+                "nginx:alpine",
+                "nestgate",
+                "load_balancing",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_create_webapp_template() {
+        let content = create_webapp_template();
+        assert_valid_yaml_and_contains(
+            &content,
+            &[
+                "webapp-biome",
+                "frontend",
+                "node:18-alpine",
+                "postgres:15",
+                "cdn_integration",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_create_ai_research_template() {
+        let content = create_ai_research_template();
+        assert_valid_yaml_and_contains(
+            &content,
+            &[
+                "ai-research-biome",
+                "gpu-trainer",
+                "pytorch/pytorch:latest",
+                "model_encryption",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_create_gaming_template() {
+        let content = create_gaming_template();
+        assert_valid_yaml_and_contains(
+            &content,
+            &[
+                "gaming-biome",
+                "game-server",
+                "matchmaking",
+                "anti_cheat",
+                "min_game_servers",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_get_template_content_known_templates() {
+        assert!(get_template_content("basic").is_some());
+        assert!(get_template_content("webapp").is_some());
+        assert!(get_template_content("ai-research").is_some());
+        assert!(get_template_content("gaming").is_some());
+    }
+
+    #[test]
+    fn test_get_template_content_unknown_template() {
+        assert!(get_template_content("unknown").is_none());
+        assert!(get_template_content("").is_none());
+    }
 }

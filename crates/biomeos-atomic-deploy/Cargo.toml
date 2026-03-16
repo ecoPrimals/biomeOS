@@ -26,6 +26,7 @@ biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }
 biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-federation = { path = "../biomeos-federation", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-primal-sdk = { path = "../biomeos-primal-sdk", version = "0.1.0" }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
 chrono = "0.4"
 futures = { workspace = true }

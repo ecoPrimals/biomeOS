@@ -358,7 +358,7 @@ impl SystemMonitor {
                     callback(health_report);
                 }
                 Err(e) => {
-                    eprintln!("Failed to get system health: {e}");
+                    tracing::warn!("Failed to get system health: {e}");
                 }
             }
         }

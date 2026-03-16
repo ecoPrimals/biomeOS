@@ -351,7 +351,7 @@ impl Default for MinimalObserver {
     fn default() -> Self {
         // Graceful degradation: If local_only fails, use disabled mode
         Self::local_only().unwrap_or_else(|e| {
-            eprintln!("Warning: Failed to create observer: {e}, using disabled mode");
+            tracing::warn!("Failed to create observer: {e}, using disabled mode");
             // Fallback to disabled mode
             Self {
                 mode: ObservabilityMode::Disabled,

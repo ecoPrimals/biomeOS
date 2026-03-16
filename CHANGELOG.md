@@ -2,6 +2,50 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.41] - 2026-03-15 (Deep Audit — CI Hardening + Sovereignty + tarpc + Zero-Copy)
+
+### Foundation
+- `rustfmt.toml` edition 2021 → 2024; `#![forbid(unsafe_code)]` on all binaries; SPDX 100% coverage
+- `#![warn(missing_docs)]` added to `neural-api-client-sync` (5 warnings → 0)
+
+### CI Pipeline Hardened
+- Clippy `--lib` → `--all-targets`; removed `continue-on-error` from security audit, dependency check, integration tests
+- Standards checks now fail CI; coverage threshold enforcement (75% minimum)
+
+### Production Code Quality
+- 4 `eprintln!` in library code → `tracing::warn!()` with structured fields
+- Verified all `unwrap()`/`expect()`/`panic!` correctly in test code only
+
+### Sovereignty Guardian Integration
+- Fixed 3 operator precedence bugs (`&&`/`||` without parens)
+- Implemented `evaluate_human_dignity()` with discrimination, oversight, manipulation, explanation checks
+- Integrated into `biomeos-core` (was dead code)
+
+### tarpc Forwarding
+- `forward_via_tarpc()` implemented in NeuralRouter with graceful JSON-RPC fallback
+- Replaces commented-out stub; tarpc-first when primal servers implement endpoints
+
+### Zero-Copy Evolution
+- `SocketDiscovery`, `TransportEndpoint`, `AtomicClient`: `String` → `Arc<str>` / `FamilyId`
+- STUN fallback: hardcoded → `DEFAULT_STUN_FALLBACK` + `BIOMEOS_STUN_FALLBACK_ADDRESS` env var
+
+### Smart Refactoring
+- `incubation.rs` (934 lines) → 4-module structure (330+180+115+60); API preserved via re-exports
+
+### Coverage + Cleanup
+- 17 new tests (binary entry points + sovereignty); `.project-status` deleted; commented-out legacy code removed
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests | 4,946 | 5,017 (+71) |
+| Ignored | 131 | 0 (-131) |
+| Line Coverage | 76.15% | 77.61% |
+| Max File | 934 | 920 |
+| Clippy | PASS (lib) | PASS (all-targets) |
+
+---
+
 ## [v2.40] - 2026-03-15 (Spring Absorption Deep Debt — BYOB + Batch + DI)
 
 ### BYOB Graph Deployment

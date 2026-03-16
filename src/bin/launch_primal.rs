@@ -221,3 +221,44 @@ fn get_socket_path(primal: &str, family_id: &str) -> Result<String> {
 fn get_log_path(primal: &str, family_id: &str) -> String {
     format!("/tmp/{primal}-{family_id}.log")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_log_path() {
+        assert_eq!(get_log_path("beardog", "nat0"), "/tmp/beardog-nat0.log");
+        assert_eq!(
+            get_log_path("songbird", "cf7e8729"),
+            "/tmp/songbird-cf7e8729.log"
+        );
+    }
+
+    #[test]
+    fn test_get_primal_binary_path_format() {
+        // get_primal_binary_path returns PathBuf - we test the path structure
+        // (actual existence is environment-dependent)
+        let path = get_primal_binary_path("beardog").unwrap();
+        assert!(path.to_string_lossy().contains("beardog"));
+        assert!(path.to_string_lossy().contains("plasmidBin"));
+
+        let path = get_primal_binary_path("toadstool").unwrap();
+        assert!(path.to_string_lossy().contains("toadstool"));
+    }
+
+    #[test]
+    fn test_get_socket_path_format() {
+        // get_socket_path uses UID env - test with UID set
+        let orig = std::env::var("UID").ok();
+        std::env::set_var("UID", "1234");
+        let path = get_socket_path("beardog", "nat0").unwrap();
+        assert!(path.contains("/run/user/1234"));
+        assert!(path.contains("beardog-nat0.sock"));
+        if let Some(v) = orig {
+            std::env::set_var("UID", v);
+        } else {
+            std::env::remove_var("UID");
+        }
+    }
+}

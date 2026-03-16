@@ -18,6 +18,28 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::{info, warn};
 
+/// Parse mode from args. Extracted for testability.
+fn parse_mode(args: &[String]) -> &str {
+    args.get(1).map(|s| s.as_str()).unwrap_or("deploy")
+}
+
+/// Parse --family FAMILY_ID from args. Returns None if not present.
+fn parse_family_id_arg(args: &[String]) -> Option<String> {
+    args.iter()
+        .position(|arg| arg == "--family")
+        .and_then(|i| args.get(i + 1))
+        .cloned()
+}
+
+/// Parse --graph PATH from args. Returns default if not present.
+fn parse_graph_path_arg(args: &[String]) -> String {
+    args.iter()
+        .position(|arg| arg == "--graph")
+        .and_then(|i| args.get(i + 1))
+        .cloned()
+        .unwrap_or_else(|| "graphs/nucleus_ecosystem.toml".to_string())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
@@ -31,24 +53,9 @@ async fn main() -> Result<()> {
     info!("");
 
     let args: Vec<String> = std::env::args().collect();
-    let mode = args.get(1).map(|s| s.as_str()).unwrap_or("deploy");
-
-    // Parse command-line arguments
-    // Family ID: CLI arg > FAMILY_ID env > .family.seed file discovery
-    // NOTE: Removed "nat0" hardcoding - use proper Dark Forest family discovery
-    let family_id = args
-        .iter()
-        .position(|arg| arg == "--family")
-        .and_then(|i| args.get(i + 1))
-        .cloned()
-        .unwrap_or_else(family_discovery::get_family_id);
-
-    let graph_path = args
-        .iter()
-        .position(|arg| arg == "--graph")
-        .and_then(|i| args.get(i + 1))
-        .cloned()
-        .unwrap_or_else(|| "graphs/nucleus_ecosystem.toml".to_string());
+    let mode = parse_mode(&args);
+    let family_id = parse_family_id_arg(&args).unwrap_or_else(family_discovery::get_family_id);
+    let graph_path = parse_graph_path_arg(&args);
 
     match mode {
         "deploy" => deploy_nucleus(&family_id, &graph_path).await?,
@@ -369,4 +376,60 @@ async fn serve_neural_api(family_id: &str) -> Result<()> {
     server.serve().await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_mode() {
+        assert_eq!(parse_mode(&[]), "deploy");
+        assert_eq!(parse_mode(&["nucleus".into(), "deploy".into()]), "deploy");
+        assert_eq!(parse_mode(&["nucleus".into(), "serve".into()]), "serve");
+        assert_eq!(parse_mode(&["nucleus".into(), "verify".into()]), "verify");
+        assert_eq!(parse_mode(&["nucleus".into(), "status".into()]), "status");
+        assert_eq!(parse_mode(&["nucleus".into(), "ui".into()]), "ui");
+        assert_eq!(parse_mode(&["nucleus".into(), "all".into()]), "all");
+    }
+
+    #[test]
+    fn test_parse_family_id_arg() {
+        assert!(parse_family_id_arg(&["nucleus".into(), "deploy".into()]).is_none());
+        assert_eq!(
+            parse_family_id_arg(&[
+                "nucleus".into(),
+                "deploy".into(),
+                "--family".into(),
+                "cf7e8729".into()
+            ]),
+            Some("cf7e8729".to_string())
+        );
+        assert_eq!(
+            parse_family_id_arg(&[
+                "nucleus".into(),
+                "--family".into(),
+                "nat0".into(),
+                "serve".into()
+            ]),
+            Some("nat0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_graph_path_arg() {
+        assert_eq!(
+            parse_graph_path_arg(&["nucleus".into(), "deploy".into()]),
+            "graphs/nucleus_ecosystem.toml"
+        );
+        assert_eq!(
+            parse_graph_path_arg(&[
+                "nucleus".into(),
+                "deploy".into(),
+                "--graph".into(),
+                "graphs/custom.toml".into()
+            ]),
+            "graphs/custom.toml"
+        );
+    }
 }

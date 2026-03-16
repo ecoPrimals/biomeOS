@@ -144,7 +144,7 @@ mod tests {
             .or_else(|_| env::var("BIOMEOS_FAMILY_ID"))
             .unwrap_or_else(|_| "default".to_string());
         let discovery = SocketDiscovery::new(&family_id);
-        assert_eq!(discovery.family_id, "env-family-id");
+        assert_eq!(discovery.family_id.as_str(), "env-family-id");
         env::remove_var("BIOMEOS_FAMILY_ID");
     }
 

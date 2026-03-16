@@ -10,7 +10,7 @@
 // - Platform-agnostic (runtime detection)
 // - Self-contained (no external tools)
 
-#![deny(unsafe_code)] // Fast AND safe: Zero unsafe code, pure Rust I/O
+#![forbid(unsafe_code)]
 
 mod format;
 

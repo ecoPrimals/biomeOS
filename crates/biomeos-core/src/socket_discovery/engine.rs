@@ -11,6 +11,8 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::net::{TcpStream, UnixStream};
+
+use biomeos_types::identifiers::FamilyId;
 use tokio::sync::RwLock;
 use tracing::{debug, info, trace, warn};
 
@@ -29,13 +31,13 @@ struct CachedSocket {
 /// Provides capability-based socket discovery without hardcoded paths.
 pub struct SocketDiscovery {
     /// Family ID for namespace isolation
-    pub(crate) family_id: String,
+    pub(crate) family_id: FamilyId,
 
     /// Discovery strategy
     pub(crate) strategy: DiscoveryStrategy,
 
     /// Discovery cache
-    cache: Arc<RwLock<HashMap<String, CachedSocket>>>,
+    cache: Arc<RwLock<HashMap<Arc<str>, CachedSocket>>>,
 
     /// Neural API socket (for capability registry queries)
     pub(crate) neural_api_socket: Option<PathBuf>,
@@ -43,9 +45,9 @@ pub struct SocketDiscovery {
 
 impl SocketDiscovery {
     /// Create new socket discovery with default strategy
-    pub fn new(family_id: impl Into<String>) -> Self {
+    pub fn new(family_id: impl AsRef<str>) -> Self {
         Self {
-            family_id: family_id.into(),
+            family_id: FamilyId::new(family_id),
             strategy: DiscoveryStrategy::default(),
             cache: Arc::new(RwLock::new(HashMap::new())),
             neural_api_socket: None,
@@ -53,9 +55,9 @@ impl SocketDiscovery {
     }
 
     /// Create with custom strategy
-    pub fn with_strategy(family_id: impl Into<String>, strategy: DiscoveryStrategy) -> Self {
+    pub fn with_strategy(family_id: impl AsRef<str>, strategy: DiscoveryStrategy) -> Self {
         Self {
-            family_id: family_id.into(),
+            family_id: FamilyId::new(family_id),
             strategy,
             cache: Arc::new(RwLock::new(HashMap::new())),
             neural_api_socket: None,
@@ -172,7 +174,10 @@ impl SocketDiscovery {
                 trace!("Discovered {} via environment: {}", primal_name, endpoint);
                 let socket = DiscoveredSocket::from_endpoint(
                     endpoint.clone(),
-                    DiscoveryMethod::EnvironmentHint(format!("{}_*", primal_name.to_uppercase())),
+                    DiscoveryMethod::EnvironmentHint(Arc::from(format!(
+                        "{}_*",
+                        primal_name.to_uppercase()
+                    ))),
                 )
                 .with_primal_name(primal_name);
                 self.cache_socket(&cache_key, &socket).await;
@@ -198,7 +203,9 @@ impl SocketDiscovery {
         #[cfg(target_os = "linux")]
         if self.strategy.try_abstract_sockets {
             if let Some(name) = self.try_abstract_socket(primal_name).await {
-                let endpoint = TransportEndpoint::AbstractSocket { name: name.clone() };
+                let endpoint = TransportEndpoint::AbstractSocket {
+                    name: Arc::from(name.as_str()),
+                };
                 let socket = DiscoveredSocket::from_endpoint(
                     endpoint.clone(),
                     DiscoveryMethod::AbstractSocket,
@@ -325,7 +332,8 @@ impl SocketDiscovery {
         let runtime_dir = self.get_xdg_runtime_dir()?;
         let biomeos_dir = runtime_dir.join("biomeos");
 
-        let socket_path = biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id));
+        let socket_path =
+            biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
         if self.verify_unix_socket(&socket_path).await {
             return Some(socket_path);
         }
@@ -342,7 +350,8 @@ impl SocketDiscovery {
         // Use std::env::temp_dir() for portable temp directory
         let temp_dir = std::env::temp_dir();
 
-        let socket_path = temp_dir.join(format!("{}-{}.sock", primal_name, self.family_id));
+        let socket_path =
+            temp_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
         if self.verify_unix_socket(&socket_path).await {
             return Some(socket_path);
         }
@@ -387,7 +396,7 @@ impl SocketDiscovery {
         use std::os::linux::net::SocketAddrExt;
         use std::os::unix::net::SocketAddr;
 
-        let abstract_name = format!("biomeos_{}_{}", primal_name, self.family_id);
+        let abstract_name = format!("biomeos_{}_{}", primal_name, self.family_id.as_str());
 
         let addr = match SocketAddr::from_abstract_name(&abstract_name) {
             Ok(addr) => addr,
@@ -417,7 +426,7 @@ impl SocketDiscovery {
         }
     }
 
-    async fn try_tcp_fallback(&self, primal_name: &str) -> Option<(String, u16)> {
+    async fn try_tcp_fallback(&self, primal_name: &str) -> Option<(Arc<str>, u16)> {
         let host = &self.strategy.tcp_fallback_host;
         let prefix = primal_name.to_uppercase().replace('-', "_");
 
@@ -425,20 +434,20 @@ impl SocketDiscovery {
             if let Some(TransportEndpoint::TcpSocket { host: h, port: p }) =
                 TransportEndpoint::parse(&tcp_env)
             {
-                if self.verify_tcp_connection(&h, p).await {
+                if self.verify_tcp_connection(h.as_ref(), p).await {
                     return Some((h, p));
                 }
             }
             if let Ok(port) = tcp_env.parse::<u16>() {
-                if self.verify_tcp_connection(host, port).await {
-                    return Some((host.clone(), port));
+                if self.verify_tcp_connection(host.as_ref(), port).await {
+                    return Some((Arc::clone(host), port));
                 }
             }
         }
 
         let port = self.calculate_primal_port(primal_name);
-        if self.verify_tcp_connection(host, port).await {
-            return Some((host.clone(), port));
+        if self.verify_tcp_connection(host.as_ref(), port).await {
+            return Some((Arc::clone(host), port));
         }
 
         None
@@ -487,7 +496,7 @@ impl SocketDiscovery {
         primal_socket: Option<&str>,
         xdg_runtime_dir: Option<&Path>,
     ) -> PathBuf {
-        let socket_name = format!("{}-{}.sock", primal_name, self.family_id);
+        let socket_name = format!("{}-{}.sock", primal_name, self.family_id.as_str());
 
         // Tier 1: Explicit override via PRIMAL_SOCKET
         let primal_socket_val = primal_socket
@@ -589,7 +598,7 @@ impl SocketDiscovery {
                     return Some(
                         DiscoveredSocket::from_unix_path(
                             path,
-                            DiscoveryMethod::EnvironmentHint(env_var),
+                            DiscoveryMethod::EnvironmentHint(Arc::from(env_var.as_str())),
                         )
                         .with_primal_name(primal_name),
                     );
@@ -604,7 +613,8 @@ impl SocketDiscovery {
         let runtime_dir = self.get_xdg_runtime_dir()?;
         let biomeos_dir = runtime_dir.join("biomeos");
 
-        let socket_path = biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id));
+        let socket_path =
+            biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
         if socket_path.exists() {
             debug!("Discovered {} via XDG runtime", primal_name);
             return Some(
@@ -629,7 +639,8 @@ impl SocketDiscovery {
         // Use portable temp_dir() instead of hardcoded /tmp/
         let temp_dir = std::env::temp_dir();
 
-        let socket_path = temp_dir.join(format!("{}-{}.sock", primal_name, self.family_id));
+        let socket_path =
+            temp_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
         if socket_path.exists() {
             debug!("Discovered {} via family temp dir", primal_name);
             return Some(
@@ -673,7 +684,7 @@ impl SocketDiscovery {
                         result.get("abstract_socket").and_then(|s| s.as_str())
                     {
                         TransportEndpoint::AbstractSocket {
-                            name: abstract_name.to_string(),
+                            name: Arc::from(abstract_name),
                         }
                     } else {
                         return None;
@@ -730,17 +741,17 @@ impl SocketDiscovery {
                     return None;
                 };
 
-                let primal_name = result
+                let primal_name: Option<Arc<str>> = result
                     .get("provider")
                     .and_then(|p| p.as_str())
-                    .map(String::from);
+                    .map(Arc::from);
 
                 let mut socket =
                     DiscoveredSocket::from_endpoint(endpoint, DiscoveryMethod::CapabilityRegistry)
                         .with_capabilities(vec![capability.to_string()]);
 
                 if let Some(name) = primal_name {
-                    socket = socket.with_primal_name(name);
+                    socket = socket.with_primal_name(name.as_ref());
                 }
 
                 return Some(socket);
@@ -840,7 +851,7 @@ impl SocketDiscovery {
         // Use portable temp_dir() instead of hardcoded /tmp/
         let temp_dir = std::env::temp_dir();
         let standard_locations = vec![
-            temp_dir.join(format!("neural-api-{}.sock", self.family_id)),
+            temp_dir.join(format!("neural-api-{}.sock", self.family_id.as_str())),
             temp_dir.join("neural-api.sock"),
         ];
 
@@ -868,7 +879,7 @@ impl SocketDiscovery {
         if self.strategy.enable_cache {
             let mut cache = self.cache.write().await;
             cache.insert(
-                key.to_string(),
+                Arc::from(key),
                 CachedSocket {
                     socket: socket.clone(),
                     cached_at: std::time::Instant::now(),

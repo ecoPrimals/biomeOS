@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_get_genome_bin_path_env_var_nonexistent_does_not_return_it() {
         let nonexistent = "/nonexistent/genomebin/path/12345";
-        let search_paths: Vec<&Path> = DEFAULT_SEARCH_PATHS.iter().map(|s| Path::new(s)).collect();
+        let search_paths: Vec<&Path> = DEFAULT_SEARCH_PATHS.iter().map(Path::new).collect();
         let result = get_genome_bin_path_with(Some(nonexistent), &search_paths);
         if let Some(p) = result {
             assert_ne!(

@@ -52,6 +52,10 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::time::Duration;
 
+/// Default STUN address when no self-hosted address is configured or discoverable.
+/// Overridable via `BIOMEOS_STUN_FALLBACK_ADDRESS` environment variable.
+const DEFAULT_STUN_FALLBACK: &str = "127.0.0.1:3478";
+
 /// Configuration for the optional STUN extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StunExtensionConfig {
@@ -153,13 +157,10 @@ impl StunExtension {
     async fn probe_self_hosted(&self, songbird_socket: &str) -> bool {
         let address = match &self.config.self_hosted_address {
             Some(addr) => addr.clone(),
-            None => {
-                // Try to discover from known_beacons or use default
-                self.discover_self_hosted_address().unwrap_or_else(|| {
-                    // Default: localhost coturn
-                    "127.0.0.1:3478".to_string()
-                })
-            }
+            None => self.discover_self_hosted_address().unwrap_or_else(|| {
+                std::env::var("BIOMEOS_STUN_FALLBACK_ADDRESS")
+                    .unwrap_or_else(|_| DEFAULT_STUN_FALLBACK.to_string())
+            }),
         };
 
         // Try to get public address from self-hosted STUN

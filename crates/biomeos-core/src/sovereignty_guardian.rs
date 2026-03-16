@@ -278,8 +278,8 @@ impl SovereigntyGuardian {
         }
 
         // Check data extraction prevention
-        if self.policies.data_sovereignty.prevent_data_extraction && purpose.contains("extract")
-            || purpose.contains("export")
+        if self.policies.data_sovereignty.prevent_data_extraction
+            && (purpose.contains("extract") || purpose.contains("export"))
         {
             self.record_violation(
                 requester,
@@ -358,8 +358,8 @@ impl SovereigntyGuardian {
         debug!("Monitoring privacy compliance for activity: {}", activity);
 
         // Check for unauthorized tracking
-        if self.policies.privacy_protection.block_tracking && activity.contains("track")
-            || activity.contains("profile")
+        if self.policies.privacy_protection.block_tracking
+            && (activity.contains("track") || activity.contains("profile"))
         {
             self.record_violation(
                 entity,
@@ -370,8 +370,8 @@ impl SovereigntyGuardian {
         }
 
         // Check for behavioral profiling
-        if self.policies.privacy_protection.prevent_profiling && activity.contains("profile")
-            || activity.contains("analyze behavior")
+        if self.policies.privacy_protection.prevent_profiling
+            && (activity.contains("profile") || activity.contains("analyze behavior"))
         {
             self.record_violation(
                 entity,
@@ -430,6 +430,112 @@ impl SovereigntyGuardian {
             entity: service_provider.to_string(),
             outcome: ActionOutcome::Success,
             context: HashMap::from([("evaluation".to_string(), "passed".to_string())]),
+        });
+
+        Ok(true)
+    }
+
+    /// Evaluate an action for human dignity compliance
+    pub fn evaluate_human_dignity(
+        &mut self,
+        actor: &str,
+        action: &str,
+        context: &HashMap<String, String>,
+    ) -> Result<bool> {
+        info!("Evaluating human dignity compliance for action: {}", action);
+
+        // Check for algorithmic discrimination patterns
+        if self.policies.human_dignity.prevent_discrimination {
+            let discrimination_indicators = [
+                "differential_treatment",
+                "demographic_filter",
+                "exclusion_criteria",
+                "bias_amplification",
+            ];
+            if discrimination_indicators.iter().any(|indicator| {
+                action.contains(indicator) || context.values().any(|v| v.contains(indicator))
+            }) {
+                self.record_violation(
+                    actor,
+                    ViolationType::AlgorithmicDiscrimination,
+                    ViolationSeverity::Critical,
+                    format!("Potential algorithmic discrimination detected in action: {action}"),
+                );
+                return Ok(false);
+            }
+        }
+
+        // Enforce human oversight for critical decisions
+        if self.policies.human_dignity.require_human_oversight {
+            let critical_actions = [
+                "account_termination",
+                "access_revocation",
+                "content_removal",
+                "resource_allocation",
+                "priority_assignment",
+            ];
+            if critical_actions.iter().any(|ca| action.contains(ca)) {
+                let has_oversight = context
+                    .get("human_oversight")
+                    .is_some_and(|v| v == "confirmed");
+                if !has_oversight {
+                    self.record_violation(
+                        actor,
+                        ViolationType::HumanDignityViolation,
+                        ViolationSeverity::High,
+                        format!("Critical action '{action}' requires human oversight"),
+                    );
+                    return Ok(false);
+                }
+            }
+        }
+
+        // Protect against psychological manipulation
+        if self.policies.human_dignity.prevent_manipulation {
+            let manipulation_indicators = [
+                "urgency_pressure",
+                "dark_pattern",
+                "forced_action",
+                "guilt_inducement",
+                "artificial_scarcity",
+            ];
+            if manipulation_indicators.iter().any(|indicator| {
+                action.contains(indicator) || context.values().any(|v| v.contains(indicator))
+            }) {
+                self.record_violation(
+                    actor,
+                    ViolationType::HumanDignityViolation,
+                    ViolationSeverity::High,
+                    format!("Psychological manipulation pattern detected: {action}"),
+                );
+                return Ok(false);
+            }
+        }
+
+        // Ensure right to explanation
+        if self.policies.human_dignity.right_to_explanation {
+            let automated_decisions = [
+                "automated_decision",
+                "algorithmic_outcome",
+                "model_prediction",
+            ];
+            if automated_decisions.iter().any(|ad| action.contains(ad)) {
+                let has_explanation = context.get("explanation_provided").is_some();
+                if !has_explanation {
+                    warn!(
+                        "Automated decision '{}' should provide explanation to affected parties",
+                        action
+                    );
+                }
+            }
+        }
+
+        self.audit_log.push(SovereigntyAuditEntry {
+            timestamp: SystemTime::now(),
+            action: SovereigntyAction::AccessGranted,
+            entity: actor.to_string(),
+            outcome: ActionOutcome::Success,
+            context: context.clone(),
         });
 
         Ok(true)
@@ -665,5 +771,43 @@ mod tests {
         assert_eq!(report.total_entities, 0);
         assert_eq!(report.total_violations, 0);
         assert_eq!(report.compliance_score, 100.0);
+    }
+
+    #[test]
+    fn test_human_dignity_evaluation() {
+        let mut guardian = SovereigntyGuardian::new();
+
+        // Legitimate action passes
+        let ctx = HashMap::new();
+        let result = guardian.evaluate_human_dignity("service-a", "status_check", &ctx);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Discrimination detected
+        let ctx = HashMap::new();
+        let result =
+            guardian.evaluate_human_dignity("service-b", "differential_treatment_applied", &ctx);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+
+        // Critical action without oversight
+        let ctx = HashMap::new();
+        let result = guardian.evaluate_human_dignity("service-c", "account_termination", &ctx);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+
+        // Critical action WITH oversight
+        let mut ctx = HashMap::new();
+        ctx.insert("human_oversight".to_string(), "confirmed".to_string());
+        let result = guardian.evaluate_human_dignity("service-d", "account_termination", &ctx);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Manipulation detected
+        let mut ctx = HashMap::new();
+        ctx.insert("tactic".to_string(), "urgency_pressure".to_string());
+        let result = guardian.evaluate_human_dignity("service-e", "purchase_prompt", &ctx);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
     }
 }

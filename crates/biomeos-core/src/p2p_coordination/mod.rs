@@ -36,14 +36,11 @@
 //! # }
 //! ```
 
-// pub mod adapters;  // Depends on legacy clients module
 pub mod birdsong;
 pub mod btsp;
 pub(crate) mod socket_providers;
 pub mod types;
 
-// Legacy exports - adapters module commented out
-// pub use adapters::{BeardogSecurityAdapter, SongbirdDiscoveryAdapter};
 pub use birdsong::BirdSongCoordinator;
 pub use btsp::BtspCoordinator;
 pub use types::*;

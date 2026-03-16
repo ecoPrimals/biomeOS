@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
-// biomeOS API Server
-// REST API for primal orchestration and discovery
-//
-// SECURITY: Sovereign mode (Dark Forest gate) is ENABLED by default.
-// All connections must prove family lineage before any interaction.
-// The system reveals nothing about itself to non-family members.
+#![forbid(unsafe_code)]
+
+//! biomeOS API Server
+//!
+//! REST API for primal orchestration and discovery.
+//! Sovereign mode (Dark Forest gate) is ENABLED by default.
+//! All connections must prove family lineage before any interaction.
 
 use tracing::{info, warn};
 

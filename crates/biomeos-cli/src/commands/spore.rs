@@ -24,7 +24,9 @@ pub struct PathInfo {
 #[cfg(test)]
 #[derive(Debug, Clone, Default)]
 pub struct RefreshReport {
+    /// Spore paths that need refreshing.
     pub to_refresh: Vec<PathBuf>,
+    /// Spore paths that are up to date.
     pub to_keep: Vec<PathBuf>,
 }
 

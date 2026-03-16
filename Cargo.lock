@@ -447,6 +447,7 @@ dependencies = [
  "biomeos-core",
  "biomeos-federation",
  "biomeos-graph",
+ "biomeos-primal-sdk",
  "biomeos-spore",
  "biomeos-types",
  "bytes 1.11.1",
@@ -874,6 +875,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-test",
+ "tracing",
  "uuid",
 ]
 

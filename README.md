@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.40)
+## Status: Production Ready (v2.41)
 
 | Metric | Value |
 |--------|-------|
@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy) |
-| Tests | 4,946 passing (0 failures, 131 ignored) — fully concurrent (76.15% line, 79.23% function) |
+| Tests | 5,017 passing (0 failures, 0 ignored) — fully concurrent (77.61% line, 80.32% function) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
@@ -240,13 +240,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (4,946 tests — fully concurrent)
+### Test (5,017 tests — fully concurrent)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (76.15% line)
+### Coverage (77.61% line)
 
 ```bash
 cargo llvm-cov --workspace
@@ -334,8 +334,8 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.40)
+**Status**: Production Ready (v2.41)
 **Updated**: March 15, 2026
 **Spring Absorption + Deep Debt Evolution**: BYOB graph deployment, JSON-RPC 2.0 batch, compute.dispatch translations, runtime TOML registry, real capability querying, 50 #[ignore] removed via DI
-**Tests**: 4,946 passing, fully concurrent (76.15% line) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
+**Tests**: 5,017 passing, fully concurrent (77.61% line) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
 **Architecture**: JSON-RPC primary + tarpc escalation | Capability-based discovery | XDG-compliant paths | AGPL-3.0-only

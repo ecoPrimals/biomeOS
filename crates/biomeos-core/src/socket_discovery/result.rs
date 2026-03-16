@@ -6,6 +6,7 @@
 //! Types representing the results of socket discovery operations.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use super::transport::TransportEndpoint;
 
@@ -22,7 +23,7 @@ pub struct DiscoveredSocket {
     pub discovered_via: DiscoveryMethod,
 
     /// Primal name (if known)
-    pub primal_name: Option<String>,
+    pub primal_name: Option<Arc<str>>,
 
     /// Capabilities provided (if known)
     pub capabilities: Vec<String>,
@@ -56,8 +57,8 @@ impl DiscoveredSocket {
     }
 
     /// Set the primal name
-    pub fn with_primal_name(mut self, name: impl Into<String>) -> Self {
-        self.primal_name = Some(name.into());
+    pub fn with_primal_name(mut self, name: impl AsRef<str>) -> Self {
+        self.primal_name = Some(Arc::from(name.as_ref()));
         self
     }
 
@@ -72,7 +73,7 @@ impl DiscoveredSocket {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DiscoveryMethod {
     /// Via environment variable hint
-    EnvironmentHint(String),
+    EnvironmentHint(Arc<str>),
 
     /// Via XDG runtime directory
     XdgRuntime,
@@ -118,7 +119,7 @@ mod tests {
     #[test]
     fn test_from_endpoint() {
         let endpoint = TransportEndpoint::TcpSocket {
-            host: "127.0.0.1".to_string(),
+            host: Arc::from("127.0.0.1"),
             port: 9100,
         };
         let socket =
@@ -142,7 +143,7 @@ mod tests {
         .with_primal_name("beardog")
         .with_capabilities(vec!["crypto".to_string(), "identity".to_string()]);
 
-        assert_eq!(socket.primal_name, Some("beardog".to_string()));
+        assert_eq!(socket.primal_name.as_deref(), Some("beardog"));
         assert_eq!(socket.capabilities.len(), 2);
         assert!(socket.capabilities.contains(&"crypto".to_string()));
     }
@@ -150,7 +151,7 @@ mod tests {
     #[test]
     fn test_from_endpoint_tcp() {
         let endpoint = TransportEndpoint::TcpSocket {
-            host: "127.0.0.1".to_string(),
+            host: Arc::from("127.0.0.1"),
             port: 9100,
         };
         let socket = DiscoveredSocket::from_endpoint(endpoint, DiscoveryMethod::TcpFallback);
@@ -166,7 +167,7 @@ mod tests {
     #[test]
     fn test_from_endpoint_abstract() {
         let endpoint = TransportEndpoint::AbstractSocket {
-            name: "biomeos_test".to_string(),
+            name: Arc::from("biomeos_test"),
         };
         let socket = DiscoveredSocket::from_endpoint(endpoint, DiscoveryMethod::AbstractSocket);
 
@@ -188,15 +189,15 @@ mod tests {
         .with_primal_name("beardog") // Override
         .with_capabilities(vec!["crypto".to_string()]); // Override
 
-        assert_eq!(socket.primal_name, Some("beardog".to_string()));
+        assert_eq!(socket.primal_name.as_deref(), Some("beardog"));
         assert_eq!(socket.capabilities, vec!["crypto".to_string()]);
     }
 
     #[test]
     fn test_discovery_method_equality() {
-        let method1 = DiscoveryMethod::EnvironmentHint("TEST_VAR".to_string());
-        let method2 = DiscoveryMethod::EnvironmentHint("TEST_VAR".to_string());
-        let method3 = DiscoveryMethod::EnvironmentHint("OTHER_VAR".to_string());
+        let method1 = DiscoveryMethod::EnvironmentHint(Arc::from("TEST_VAR"));
+        let method2 = DiscoveryMethod::EnvironmentHint(Arc::from("TEST_VAR"));
+        let method3 = DiscoveryMethod::EnvironmentHint(Arc::from("OTHER_VAR"));
 
         assert_eq!(method1, method2);
         assert_ne!(method1, method3);
@@ -206,7 +207,7 @@ mod tests {
     #[test]
     fn test_discovery_method_variants() {
         let methods = vec![
-            DiscoveryMethod::EnvironmentHint("VAR".to_string()),
+            DiscoveryMethod::EnvironmentHint(Arc::from("VAR")),
             DiscoveryMethod::XdgRuntime,
             DiscoveryMethod::AbstractSocket,
             DiscoveryMethod::FamilyTmp,
@@ -246,7 +247,7 @@ mod tests {
         assert_eq!(socket.path, cloned.path);
         assert_eq!(socket.endpoint, cloned.endpoint);
         assert_eq!(socket.discovered_via, cloned.discovered_via);
-        assert_eq!(socket.primal_name, cloned.primal_name);
+        assert_eq!(socket.primal_name.as_deref(), cloned.primal_name.as_deref());
         assert_eq!(socket.capabilities, cloned.capabilities);
     }
 

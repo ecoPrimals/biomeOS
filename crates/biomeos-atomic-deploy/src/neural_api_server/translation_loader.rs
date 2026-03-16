@@ -104,7 +104,7 @@ impl NeuralApiServer {
                 let family_id = self.extract_family_id_from_node(node);
 
                 // Build socket path using capability-based discovery
-                let socket_discovery = SocketDiscovery::new(family_id.to_string());
+                let socket_discovery = SocketDiscovery::new(family_id);
                 let socket_path = socket_discovery
                     .build_socket_path(primal)
                     .to_string_lossy()
@@ -134,7 +134,7 @@ impl NeuralApiServer {
                     let family_id = self.extract_family_id_from_node(node);
 
                     // Build socket path using capability-based discovery
-                    let socket_discovery = SocketDiscovery::new(family_id.to_string());
+                    let socket_discovery = SocketDiscovery::new(family_id);
                     let socket_path = socket_discovery
                         .build_socket_path(primal)
                         .to_string_lossy()

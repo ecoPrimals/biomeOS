@@ -94,8 +94,11 @@ pub fn load_graphs_from_dir(dir: impl AsRef<Path>) -> Result<Vec<DeploymentGraph
             match GraphLoader::from_file(&path) {
                 Ok(graph) => graphs.push(graph),
                 Err(e) => {
-                    // Log warning but continue loading other graphs
-                    eprintln!("Warning: Failed to load {}: {}", path.display(), e);
+                    tracing::warn!(
+                        path = %path.display(),
+                        error = %e,
+                        "Failed to load graph, continuing with remaining graphs",
+                    );
                 }
             }
         }
