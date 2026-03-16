@@ -169,7 +169,7 @@ fn symmetric_decrypt(ciphertext_hex: &str, key: &[u8; 32]) -> Option<Vec<u8>> {
 struct CryptoMockBearDog {
     family_seed: FamilySeed,
     beacon_id: String,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "serde deserialization requires all fields")]
     beacon_seed_hex: String,
 }
 

@@ -19,7 +19,10 @@ mod error;
 mod manifest;
 
 // Re-export all public items for external consumers (preserve public API)
-#[allow(unused_imports)]
+#[expect(
+    unused_imports,
+    reason = "re-exports for public API surface; consumed by external crates"
+)]
 pub use {
     discovery::get_genome_bin_path,
     distribution::{

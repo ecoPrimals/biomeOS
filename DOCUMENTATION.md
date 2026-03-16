@@ -16,6 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (35 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
+| See evolution handoffs (v2.46) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -49,50 +50,24 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 
 ---
 
-## Handoffs & Evolution Reports (16 active)
+## Handoffs & Evolution Reports
 
-### Deep Debt Execution + Coverage Evolution (Mar 16, 2026)
+Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handoffs/`.
 
-| Document | Content |
-|----------|---------|
-| Deep Debt Session | Clippy PASS (fixed 2 dead-code errors); flaky deployment_mode test fixed; 9 Cargo.toml AGPL-3.0-only; sovereignty (RFC 5737/6761 in tests); doc warnings 0; timeout/port constants centralized; serial_test for env-dependent tests |
+### Recent (March 2026)
 
-### Relay-Assisted Coordinated Punch (Feb 11, 2026)
+| Document | Focus | Date |
+|----------|-------|------|
+| BIOMEOS_V246_SPRING_ABSORPTION_ECOSYSTEM_ALIGNMENT_HANDOFF | Spring absorption, typed SDK, tarpc 0.37 | Mar 16, 2026 |
+| BIOMEOS_V245_DEEP_DEBT_EXECUTION_COVERAGE_EVOLUTION_HANDOFF | P0-P4 debt fixes, +81 tests, 78.27% coverage | Mar 16, 2026 |
+| BIOMEOS_V244_DEEP_AUDIT_EVOLUTION_HANDOFF | Edition 2024, sovereignty, tarpc binary, zero-copy | Mar 16, 2026 |
+| BIOMEOS_V243_STREAMING_PIPELINE_COORDINATION_HANDOFF | Pipeline streaming, NDJSON, notifications | Mar 16, 2026 |
 
-| Document | Team | Priority |
-|----------|------|----------|
-| [RELAY_ASSISTED_COORDINATED_PUNCH_HANDOFF_FEB11_2026.md](docs/handoffs/RELAY_ASSISTED_COORDINATED_PUNCH_HANDOFF_FEB11_2026.md) | Songbird + BearDog | HIGH |
+### Archived (February 2026)
 
-### Covalent Bond Investigation (Feb 10, 2026)
+Earlier handoffs (Feb 7–11, 2026) archived to `ecoPrimals/archive/biomeos-feb09-2026/handoffs/`.
 
-| Document | Team | Priority |
-|----------|------|----------|
-| [COVALENT_BOND_EVOLUTION_HANDOFF_FEB10_2026.md](docs/handoffs/COVALENT_BOND_EVOLUTION_HANDOFF_FEB10_2026.md) | Songbird | **CRITICAL** |
-
-### Primal Evolution Handoffs (Feb 9, 2026)
-
-| Document | Team | Priority |
-|----------|------|----------|
-| [SONGBIRD_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF_FEB09_2026.md) | Songbird | HIGH |
-| [NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md) | NestGate | HIGH |
-| [SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md) | Squirrel | MEDIUM |
-| [TOADSTOOL_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/TOADSTOOL_EVOLUTION_HANDOFF_FEB09_2026.md) | Toadstool | MEDIUM |
-| [BEARDOG_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/BEARDOG_EVOLUTION_HANDOFF_FEB09_2026.md) | BearDog | LOW |
-| [BIOMEOS_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/BIOMEOS_EVOLUTION_HANDOFF_FEB09_2026.md) | biomeOS | COMPLETE |
-
-### System Handoffs (Feb 7-9, 2026)
-
-| Document | Content |
-|----------|---------|
-| [SQUIRREL_NEURAL_API_BRIDGE_HANDOFF_FEB09_2026.md](docs/handoffs/SQUIRREL_NEURAL_API_BRIDGE_HANDOFF_FEB09_2026.md) | AI bridge validation |
-| [PLASMODIUM_OVER_NUCLEUS_HANDOFF_FEB09_2026.md](docs/handoffs/PLASMODIUM_OVER_NUCLEUS_HANDOFF_FEB09_2026.md) | Over-NUCLEUS collective |
-| [NESTGATE_MODEL_CACHE_HANDOFF_FEB09_2026.md](docs/handoffs/NESTGATE_MODEL_CACHE_HANDOFF_FEB09_2026.md) | Model cache + NestGate bugs |
-| [TOADSTOOL_DISTRIBUTED_GPU_HANDOFF_FEB09_2026.md](docs/handoffs/TOADSTOOL_DISTRIBUTED_GPU_HANDOFF_FEB09_2026.md) | Distributed GPU inference |
-| [SONGBIRD_ROUTER_EVOLUTION_HANDOFF_FEB08_2026.md](docs/handoffs/SONGBIRD_ROUTER_EVOLUTION_HANDOFF_FEB08_2026.md) | Songbird multi-path routing |
-| [SOVEREIGN_MULTI_PATH_PROTOCOL_FEB08_2026.md](docs/handoffs/SOVEREIGN_MULTI_PATH_PROTOCOL_FEB08_2026.md) | Sovereign multi-path protocol |
-| [TOR_INTEGRATION_HANDOFF_FEB07_2026.md](docs/handoffs/TOR_INTEGRATION_HANDOFF_FEB07_2026.md) | Tor gateway integration |
-
-14 earlier handoffs archived to `ecoPrimals/archive/biomeos-feb09-2026/handoffs/`.
+Topics include: relay-assisted coordinated punch, covalent bond evolution, primal evolution (Songbird, NestGate, Squirrel, Toadstool, BearDog), Squirrel-Neural API bridge, Plasmodium over-NUCLEUS, NestGate model cache, Toadstool distributed GPU, Songbird router evolution, sovereign multi-path protocol, Tor integration.
 
 ---
 
@@ -169,6 +144,6 @@ See `ARCHIVE_INDEX.md` in archive for details.
 ---
 
 **Documentation current as of March 16, 2026**
-**Active: 19 specs, 16 handoffs, 10 scripts**
+**Active: 19 specs, handoffs in wateringHole (v2.43–v2.46), 10 scripts**
 **Deploy graphs: 35 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Tests: 5,162 passing, fully concurrent (78.27% line coverage) | Clippy: PASS | Docs: Full coverage**

@@ -22,7 +22,10 @@ mod tests {
 
     /// Fallback IPv6 resolver (RFC 3849 documentation prefix).
     /// Reserved for sovereignty DNS fix: used when no DNS servers are configured.
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "reserved for future production IPv6 DNS resolution"
+    )]
     const FALLBACK_RESOLVER_IPV6: &str = "2001:db8::1";
 
     #[test]

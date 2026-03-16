@@ -267,5 +267,5 @@ songbird-lineage-relay = { path = "../songbird-lineage-relay" }  # Relay
 
 - [Arti Documentation](https://arti.torproject.org/)
 - [tor-hsservice crate](https://docs.rs/tor-hsservice)
-- [BirdSong Protocol Spec](../specs/BIRDSONG_PROTOCOL.md)
-- [Lineage Relay Spec](../specs/RELAY_SERVER_SPECIFICATION.md)
+- BirdSong Protocol Spec (archived)
+- Lineage Relay Spec (archived)

@@ -212,7 +212,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 
 ### 5. Neural API - Semantic Capability Routing
 
-- 205+ capability translations across 16 domains
+- 260+ capability translations across 19 domains
 - `capability.call` routes semantic names to provider-specific methods
 - `proxy_http` delegates HTTPS through Songbird + BearDog TLS
 - Capability domains: crypto, security, http, mesh, stun, relay, onion, compute, storage, ai, inference, ephemeral_workspace (rhizoCrypt), permanent_storage (LoamSpine), attribution (sweetGrass), game, medical
@@ -711,7 +711,7 @@ Tower (pop-os, x86_64):
   CPU:    24 cores (i9-14900)
   AI:     Ollama (phi3, llama3.2, tinyllama)
   Primals: BearDog, Songbird, NestGate, Toadstool, Squirrel
-  biomeOS: Neural API capability routing (205+ translations + agent routing)
+  biomeOS: Neural API capability routing (260+ translations + agent routing)
 
 gate2 (pop-os, x86_64):
   GPU:    RTX 3090 (24 GB VRAM)
@@ -876,7 +876,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **XR/VR**: StereoRenderAdapter, MotionCaptureAdapter, HapticPipeline
 **Surgical Domain**: SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams
 **Plasmodium**: HTTP JSON-RPC collective (runtime port, SSH deprecated)
-**Neural API**: 210+ translations, proxy_http, capability.call, compute.hardware.*
+**Neural API**: 260+ translations, proxy_http, capability.call, compute.hardware.*
 **NAT Traversal**: 4-tier strategy orchestrator (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring, auto-resurrection
 **Genetic Model**: Evolved (Mitochondrial + Nuclear, Blake3-Lineage-KDF enrollment)

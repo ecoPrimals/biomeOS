@@ -28,9 +28,9 @@ use tokio::sync::oneshot;
 /// **Concurrency**: Uses oneshot channel to signal readiness instead of sleep
 struct MockPrimalServer {
     socket_path: PathBuf,
-    #[allow(dead_code)] // Stored for test diagnostics
+    #[expect(dead_code, reason = "serde deserialization requires all fields")]
     primal_name: String,
-    #[allow(dead_code)] // Stored for test diagnostics
+    #[expect(dead_code, reason = "serde deserialization requires all fields")]
     capabilities: Vec<String>,
     handle: tokio::task::JoinHandle<()>,
 }

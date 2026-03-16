@@ -22,7 +22,7 @@ use tokio::net::UnixStream;
 
 /// Test fixture for Tower Atomic deployment.
 /// Fields family_id and socket_dir are kept for debugging and future test assertions.
-#[allow(dead_code)]
+#[expect(dead_code, reason = "serde deserialization requires all fields")]
 struct TowerAtomicFixture {
     family_id: String,
     socket_dir: PathBuf,

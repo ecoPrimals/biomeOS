@@ -126,7 +126,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"Name the largest 
 
 ## Neural API - Semantic Routing
 
-210+ capability translations enable primals to compose without knowing each other:
+260+ capability translations enable primals to compose without knowing each other:
 
 ```
 Squirrel -> capability.call("http", "request", ...) -> Neural API

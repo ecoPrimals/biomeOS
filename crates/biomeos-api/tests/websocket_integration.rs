@@ -39,9 +39,9 @@ fn ws_test_url() -> String {
 }
 
 /// Helper to parse JSON-RPC response.
-/// `#[allow(dead_code)]`: serde populates all fields; tests only assert on a subset.
+/// `#[expect(dead_code)]`: serde populates all fields; tests only assert on a subset.
 #[derive(Debug, serde::Deserialize)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "serde deserialization requires all fields")]
 struct JsonRpcResponse {
     jsonrpc: String,
     #[serde(default)]
@@ -52,9 +52,9 @@ struct JsonRpcResponse {
     id: Option<serde_json::Value>,
 }
 
-/// Error payload; allow(dead_code) since tests only check presence, not field values.
+/// Error payload; expect(dead_code) since tests only check presence, not field values.
 #[derive(Debug, serde::Deserialize)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "serde deserialization requires all fields")]
 struct JsonRpcError {
     code: i64,
     message: String,

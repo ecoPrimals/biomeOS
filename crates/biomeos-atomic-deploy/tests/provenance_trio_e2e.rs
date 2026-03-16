@@ -28,7 +28,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
 /// Fixture fields socket_dir kept for debugging; family_id used in test params.
-#[allow(dead_code)]
+#[expect(dead_code, reason = "serde deserialization requires all fields")]
 struct ProvenanceTrioFixture {
     family_id: String,
     socket_dir: PathBuf,
