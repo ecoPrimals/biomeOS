@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.41)
+## Status: Production Ready (v2.43)
 
 | Metric | Value |
 |--------|-------|
@@ -12,14 +12,16 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy) |
-| Tests | 5,017 passing (0 failures, 0 ignored) — fully concurrent (77.61% line, 80.32% function) |
+| Tests | 4,224 passing (0 failures, 28 ignored) — fully concurrent (77.61% line, 80.32% function) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 210+ semantic capability translations (incl. compute.dispatch.*, compute.hardware.*), JSON-RPC 2.0 batch, runtime TOML registry |
-| Continuous Systems | ContinuousExecutor (60Hz tick), push events, sensor routing |
+| Neural API | 260+ capability translations, 19 domains, 5 coordination patterns (Sequential, Parallel, ConditionalDag, Pipeline, Continuous) |
+| Coordination | Sequential + Parallel + ConditionalDag + Pipeline (streaming) + Continuous (60Hz tick) |
+| Streaming | PipelineExecutor (mpsc channels), NDJSON streaming client, JSON-RPC 2.0 notifications |
+| Continuous | ContinuousExecutor (60Hz tick), push events, sensor routing |
 | XR/VR | Stereo rendering, motion capture, haptic feedback pipeline |
 | Surgical Domain | Anatomy models, tissue physics, biosignals, pharmacokinetics |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
@@ -38,8 +40,11 @@
 |  AI Bridge                                                   |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Neural API (210+ semantic translations)                     |
-|  capability.call -> translate -> route to provider           |
+|  Neural API (260+ translations, 5 coordination patterns)     |
+|  graph.execute   -> Sequential / Parallel / ConditionalDag   |
+|  graph.execute_pipeline -> Pipeline (streaming mpsc channels) |
+|  graph.start_continuous -> Continuous (60Hz tick loop)        |
+|  capability.call -> translate -> route to provider            |
 +-------------------------------------------------------------+
 |  Atomics                                                     |
 |  +----------+  +----------+  +----------+  +----------+     |

@@ -1,7 +1,7 @@
 # biomeOS Deployment Graphs
 
-**Updated**: March 12, 2026
-**Status**: 35 deploy graphs (4 core + 31 domain), all XDG-compliant, all tests passing
+**Updated**: March 16, 2026
+**Status**: 40 deploy graphs (4 core + 34 domain + 2 Pipeline), all XDG-compliant, all tests passing
 
 ---
 
@@ -52,7 +52,7 @@ Each primal declares `capabilities_provided` — semantic-to-actual method mappi
 "stun.probe_port_pattern" = "stun.probe_port_pattern"
 ```
 
-These align with the 210+ translations in `capability_translation.rs`.
+These align with the 260+ translations across 19 capability domains.
 
 ---
 
@@ -69,15 +69,31 @@ cargo test -p biomeos-atomic-deploy -- test_parse_nucleus test_parse_ecosystem t
 
 ---
 
+## Coordination Patterns
+
+| Pattern | Method | Description | Example Graph |
+|---------|--------|-------------|---------------|
+| Sequential | `graph.execute` | Nodes execute in dependency order | `nucleus_complete.toml` |
+| Parallel | `graph.execute` | Independent nodes execute concurrently | `ecosystem_full_bootstrap.toml` |
+| ConditionalDag | `graph.execute` | DAG with `condition`/`skip_if` branching | `rootpulse_commit.toml` |
+| Pipeline | `graph.execute_pipeline` | Streaming — items flow through mpsc channels | `streaming_telemetry_pipeline.toml` |
+| Continuous | `graph.start_continuous` | Fixed-timestep tick loop (e.g., 60Hz) | `game_engine_tick.toml` |
+
+### Pipeline Graphs (v2.43)
+
+| Graph | Nodes | Description |
+|-------|-------|-------------|
+| `streaming_telemetry_pipeline.toml` | 3 | groundSpring sensor -> filter -> store |
+| `pharmacology_etl_pipeline.toml` | 4 | compound fetch -> descriptors -> Lipinski filter -> docking score |
+
+Pipeline graphs use `coordination = "pipeline"`. The PipelineExecutor wires bounded mpsc
+channels between nodes — items flow through as soon as each node produces them.
+
 ## Archives
 
-| Archive | Contents | Count |
-|---------|----------|-------|
-| `archive/stale_pre_v2_feb11_2026/` | Pre-v2.0 graphs (broken parsing, hardcoded paths, stale capabilities) | 30 |
-| `archive/old_test_graphs_jan_2026/` | Bonding test graphs from January 2026 | 8 |
-| `archive/outdated_atomic_patterns/` | Pre-atomic-pattern graphs from before Jan 19, 2026 | 15 |
-
-These are kept as fossil record — do not delete.
+Previous archive directories (`stale_pre_v2_feb11_2026/`, `old_test_graphs_jan_2026/`,
+`outdated_atomic_patterns/`) were cleaned during the v2.38-v2.40 evolution. Fossil records
+are kept at `ecoPrimals/archive/`.
 
 ---
 
@@ -111,4 +127,4 @@ Deploy the trio: `graph.execute provenance_trio_deploy` (requires Tower running)
 
 ---
 
-**Tests**: 4,647 passing | **Core graphs**: 4 | **Domain graphs**: 31 | **Archived**: 53
+**Tests**: 4,224 passing | **Core graphs**: 4 | **Domain graphs**: 34 | **Pipeline graphs**: 2
