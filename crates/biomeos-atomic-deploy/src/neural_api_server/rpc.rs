@@ -9,6 +9,42 @@ use serde_json::{json, Value};
 
 pub use biomeos_types::JsonRpcRequest;
 
+/// Outcome of JSON-RPC method dispatch, separating protocol errors from application results.
+///
+/// Follows the airSpring `DispatchOutcome` pattern for clean protocol compliance.
+#[derive(Debug)]
+pub enum DispatchOutcome {
+    /// Method was found and executed successfully
+    Success(Value),
+    /// Method was found but execution failed (application error)
+    ApplicationError {
+        code: i32,
+        message: String,
+        id: Value,
+    },
+    /// Method was not found (JSON-RPC -32601)
+    MethodNotFound { method: String, id: Value },
+    /// Invalid request (JSON-RPC -32600)
+    InvalidRequest { message: String, id: Value },
+    /// Parse error (JSON-RPC -32700)
+    ParseError { message: String },
+}
+
+impl DispatchOutcome {
+    /// Convert to JSON-RPC response value
+    pub fn into_response(self) -> Value {
+        match self {
+            Self::Success(value) => value,
+            Self::ApplicationError { code, message, id } => error_response(code, message, Some(id)),
+            Self::MethodNotFound { method, id } => {
+                error_response(-32601, format!("Method not found: {method}"), Some(id))
+            }
+            Self::InvalidRequest { message, id } => error_response(-32600, message, Some(id)),
+            Self::ParseError { message } => error_response(-32700, message, None),
+        }
+    }
+}
+
 /// Create a JSON-RPC error response
 pub fn error_response(code: i32, message: String, id: Option<Value>) -> Value {
     json!({
@@ -145,5 +181,54 @@ mod tests {
         assert_eq!(resp["error"]["code"], -32601);
         assert_eq!(resp["error"]["message"], "Method not found: unknown.method");
         assert_eq!(resp["id"], 123);
+    }
+
+    #[test]
+    fn test_dispatch_outcome_success_into_response() {
+        let result = json!({"data": "ok"});
+        let id = json!(1);
+        let full_response = success_response(result.clone(), id.clone());
+        let outcome = super::DispatchOutcome::Success(full_response);
+        let resp = outcome.into_response();
+        assert_eq!(resp["jsonrpc"], "2.0");
+        assert_eq!(resp["result"], result);
+        assert_eq!(resp["id"], id);
+    }
+
+    #[test]
+    fn test_dispatch_outcome_method_not_found_into_response() {
+        let outcome = super::DispatchOutcome::MethodNotFound {
+            method: "foo.bar".to_string(),
+            id: json!(42),
+        };
+        let resp = outcome.into_response();
+        assert_eq!(resp["error"]["code"], -32601);
+        assert!(resp["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("foo.bar"));
+        assert_eq!(resp["id"], 42);
+    }
+
+    #[test]
+    fn test_dispatch_outcome_parse_error_into_response() {
+        let outcome = super::DispatchOutcome::ParseError {
+            message: "expected value at line 1".to_string(),
+        };
+        let resp = outcome.into_response();
+        assert_eq!(resp["error"]["code"], -32700);
+        assert!(resp["id"].is_null());
+    }
+
+    #[test]
+    fn test_dispatch_outcome_application_error_into_response() {
+        let outcome = super::DispatchOutcome::ApplicationError {
+            code: -32602,
+            message: "Invalid params".to_string(),
+            id: json!(99),
+        };
+        let resp = outcome.into_response();
+        assert_eq!(resp["error"]["code"], -32602);
+        assert_eq!(resp["id"], 99);
     }
 }

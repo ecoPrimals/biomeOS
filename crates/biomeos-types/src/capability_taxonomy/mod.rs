@@ -15,7 +15,7 @@ pub use definition::CapabilityTaxonomy;
 pub use helpers::capabilities_for_primal;
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;
 

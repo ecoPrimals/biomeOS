@@ -683,6 +683,6 @@ impl fmt::Display for CapabilityTaxonomy {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 #[path = "definition_tests.rs"]
 mod tests;

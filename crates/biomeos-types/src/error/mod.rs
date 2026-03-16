@@ -19,7 +19,7 @@ pub mod core;
 pub mod operations;
 
 // Re-export core types
-pub use core::{BiomeError, ValidationError};
+pub use core::{BiomeError, IpcError, ValidationError};
 
 // Re-export AI context types
 pub use ai_context::{

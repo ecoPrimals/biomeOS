@@ -6,11 +6,10 @@
 //! Routes JSON-RPC requests to appropriate handlers based on method name.
 //! Uses a table-driven handler registry for O(1) lookup.
 
-use anyhow::{Context, Result};
 use serde_json::Value;
 use tracing::{debug, trace};
 
-use super::rpc::{method_not_found_response, JsonRpcRequest};
+use super::rpc::{DispatchOutcome, JsonRpcRequest};
 use super::NeuralApiServer;
 
 /// Route tag for dispatch. Each variant maps to a handler.
@@ -197,7 +196,10 @@ fn lookup_route(method: &str) -> Option<Route> {
 }
 
 impl NeuralApiServer {
-    /// Handle a JSON-RPC request
+    /// Handle a JSON-RPC request, returning a structured dispatch outcome.
+    ///
+    /// Separates protocol errors (method not found, parse error) from application
+    /// results. Use `handle_request_json` for backward compatibility (returns `Value`).
     ///
     /// Delegates to focused handlers for each domain:
     /// - Graph operations → GraphHandler
@@ -206,9 +208,15 @@ impl NeuralApiServer {
     /// - Niche templates → NicheHandler
     /// - Lifecycle management → LifecycleHandler
     /// - Protocol escalation → ProtocolHandler
-    pub async fn handle_request(&self, request_line: &str) -> Result<Value> {
-        let request =
-            JsonRpcRequest::parse(request_line).context("Failed to parse JSON-RPC request")?;
+    pub async fn handle_request(&self, request_line: &str) -> DispatchOutcome {
+        let request = match JsonRpcRequest::parse(request_line) {
+            Ok(r) => r,
+            Err(e) => {
+                return DispatchOutcome::ParseError {
+                    message: e.to_string(),
+                }
+            }
+        };
 
         let id = request.id.clone().unwrap_or(serde_json::Value::Null);
         debug!("📥 Request: {} (id: {})", request.method, id);
@@ -217,98 +225,430 @@ impl NeuralApiServer {
         let route = match lookup_route(request.method.as_ref()) {
             Some(r) => r,
             None => {
-                return Ok(method_not_found_response(request.method.as_ref(), id));
+                return DispatchOutcome::MethodNotFound {
+                    method: request.method.as_ref().to_string(),
+                    id,
+                };
             }
         };
 
-        let result = match route {
-            Route::GraphList => self.graph_handler.list().await?,
-            Route::GraphGet => self.graph_handler.get(&request.params).await?,
-            Route::GraphSave => self.graph_handler.save(&request.params).await?,
-            Route::GraphExecute => self.graph_handler.execute(&request.params).await?,
+        let outcome = match route {
+            Route::GraphList => match self.graph_handler.list().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::GraphGet => match self.graph_handler.get(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::GraphSave => match self.graph_handler.save(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::GraphExecute => match self.graph_handler.execute(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
             Route::GraphExecutePipeline => {
-                self.graph_handler.execute_pipeline(&request.params).await?
+                match self.graph_handler.execute_pipeline(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
-            Route::GraphStatus => self.graph_handler.get_status(&request.params).await?,
+            Route::GraphStatus => match self.graph_handler.get_status(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
             Route::GraphStartContinuous => {
-                self.graph_handler.start_continuous(&request.params).await?
+                match self.graph_handler.start_continuous(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
             Route::GraphPauseContinuous => {
-                self.graph_handler.pause_continuous(&request.params).await?
+                match self.graph_handler.pause_continuous(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
             Route::GraphResumeContinuous => {
-                self.graph_handler
-                    .resume_continuous(&request.params)
-                    .await?
+                match self.graph_handler.resume_continuous(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
             Route::GraphStopContinuous => {
-                self.graph_handler.stop_continuous(&request.params).await?
+                match self.graph_handler.stop_continuous(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
             Route::GraphSuggestOptimizations => {
-                self.graph_handler
+                match self
+                    .graph_handler
                     .suggest_optimizations(&request.params)
-                    .await?
+                    .await
+                {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
-            Route::TopologyGet => self.topology_handler.get().await?,
-            Route::TopologyPrimals => self.topology_handler.get_primals().await?,
-            Route::TopologyProprioception => self.topology_handler.get_proprioception().await?,
-            Route::TopologyMetrics => self.topology_handler.get_metrics().await?,
-            Route::NicheList => self.niche_handler.list().await?,
-            Route::NicheDeploy => self.niche_handler.deploy(&request.params).await?,
-            Route::LifecycleStatus => self.lifecycle_handler.status().await?,
-            Route::LifecycleGet => self.lifecycle_handler.get(&request.params).await?,
-            Route::LifecycleRegister => self.lifecycle_handler.register(&request.params).await?,
-            Route::LifecycleResurrect => self.lifecycle_handler.resurrect(&request.params).await?,
-            Route::LifecycleApoptosis => self.lifecycle_handler.apoptosis(&request.params).await?,
-            Route::LifecycleShutdownAll => self.lifecycle_handler.shutdown_all().await?,
-            Route::ProtocolStatus => self.protocol_handler.status().await?,
-            Route::ProtocolEscalate => self.protocol_handler.escalate(&request.params).await?,
-            Route::ProtocolFallback => self.protocol_handler.fallback(&request.params).await?,
-            Route::ProtocolMetrics => self.protocol_handler.metrics(&request.params).await?,
+            Route::TopologyGet => match self.topology_handler.get().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::TopologyPrimals => match self.topology_handler.get_primals().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::TopologyProprioception => {
+                match self.topology_handler.get_proprioception().await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::TopologyMetrics => match self.topology_handler.get_metrics().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::NicheList => match self.niche_handler.list().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::NicheDeploy => match self.niche_handler.deploy(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::LifecycleStatus => match self.lifecycle_handler.status().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::LifecycleGet => match self.lifecycle_handler.get(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::LifecycleRegister => {
+                match self.lifecycle_handler.register(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::LifecycleResurrect => {
+                match self.lifecycle_handler.resurrect(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::LifecycleApoptosis => {
+                match self.lifecycle_handler.apoptosis(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::LifecycleShutdownAll => match self.lifecycle_handler.shutdown_all().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::ProtocolStatus => match self.protocol_handler.status().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::ProtocolEscalate => {
+                match self.protocol_handler.escalate(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::ProtocolFallback => {
+                match self.protocol_handler.fallback(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::ProtocolMetrics => match self.protocol_handler.metrics(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
             Route::ProtocolRegisterPrimal => {
-                self.protocol_handler
-                    .register_primal(&request.params)
-                    .await?
+                match self.protocol_handler.register_primal(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
             Route::ProtocolRegisterConnection => {
-                self.protocol_handler
+                match self
+                    .protocol_handler
                     .register_connection(&request.params)
-                    .await?
+                    .await
+                {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
             Route::ProtocolRecordRequest => {
-                self.protocol_handler
-                    .record_request(&request.params)
-                    .await?
+                match self.protocol_handler.record_request(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
-            Route::ProtocolStartMonitoring => self.protocol_handler.start_monitoring().await?,
-            Route::ProtocolStopMonitoring => self.protocol_handler.stop_monitoring().await?,
-            Route::GraphProtocolMap => self.protocol_handler.protocol_map().await?,
-            Route::CapabilityRegister => self.capability_handler.register(&request.params).await?,
-            Route::CapabilityDiscover => self.capability_handler.discover(&request.params).await?,
-            Route::CapabilityList => self.capability_handler.list().await?,
+            Route::ProtocolStartMonitoring => {
+                match self.protocol_handler.start_monitoring().await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::ProtocolStopMonitoring => match self.protocol_handler.stop_monitoring().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::GraphProtocolMap => match self.protocol_handler.protocol_map().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::CapabilityRegister => {
+                match self.capability_handler.register(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::CapabilityDiscover => {
+                match self.capability_handler.discover(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::CapabilityList => match self.capability_handler.list().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
             Route::CapabilityProviders => {
-                self.capability_handler.providers(&request.params).await?
+                match self.capability_handler.providers(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
-            Route::CapabilityResolve => self.capability_handler.route(&request.params).await?,
-            Route::CapabilityMetrics => self.capability_handler.get_metrics().await?,
-            Route::CapabilityCall => self.capability_handler.call(&request.params).await?,
+            Route::CapabilityResolve => {
+                match self.capability_handler.route(&request.params).await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
+            }
+            Route::CapabilityMetrics => match self.capability_handler.get_metrics().await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
+            Route::CapabilityCall => match self.capability_handler.call(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
             Route::CapabilityDiscoverTranslations => {
-                self.capability_handler
+                match self
+                    .capability_handler
                     .discover_translations(&request.params)
-                    .await?
+                    .await
+                {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
             Route::CapabilityListTranslations => {
-                self.capability_handler.list_translations().await?
+                match self.capability_handler.list_translations().await {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
             Route::Agent => {
-                super::agents::handle_agent_request(
+                match super::agents::handle_agent_request(
                     &self.agent_registry,
                     request.method.as_ref(),
                     &request.params,
                 )
-                .await?
+                .await
+                {
+                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                    Err(e) => DispatchOutcome::ApplicationError {
+                        code: -32603,
+                        message: format!("Internal error: {e}"),
+                        id: id.clone(),
+                    },
+                }
             }
-            Route::ProxyHttp => self.proxy_http(&request.params).await?,
+            Route::ProxyHttp => match self.proxy_http(&request.params).await {
+                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+                Err(e) => DispatchOutcome::ApplicationError {
+                    code: -32603,
+                    message: format!("Internal error: {e}"),
+                    id: id.clone(),
+                },
+            },
             Route::MeshCapabilityCall => {
                 let parts: Vec<&str> = request.method.as_ref().split('.').collect();
                 if parts.len() == 2 {
@@ -317,25 +657,41 @@ impl NeuralApiServer {
                         "operation": parts[1],
                         "args": request.params.clone().unwrap_or(serde_json::json!({}))
                     }));
-                    self.capability_handler.call(&cap_params).await?
+                    match self.capability_handler.call(&cap_params).await {
+                        Ok(v) => {
+                            DispatchOutcome::Success(super::rpc::success_response(v, id.clone()))
+                        }
+                        Err(e) => DispatchOutcome::ApplicationError {
+                            code: -32603,
+                            message: format!("Internal error: {e}"),
+                            id: id.clone(),
+                        },
+                    }
                 } else {
-                    return Ok(method_not_found_response(
-                        request.method.as_ref(),
-                        request.id.clone().unwrap_or(serde_json::Value::Null),
-                    ));
+                    return DispatchOutcome::MethodNotFound {
+                        method: request.method.as_ref().to_string(),
+                        id,
+                    };
                 }
             }
         };
 
-        Ok(super::rpc::success_response(
-            result,
-            request.id.clone().unwrap_or(serde_json::Value::Null),
-        ))
+        outcome
+    }
+
+    /// Handle a JSON-RPC request and return a JSON-RPC response value.
+    ///
+    /// Backward-compatible wrapper that converts `DispatchOutcome` to `Value`.
+    pub async fn handle_request_json(&self, request_line: &str) -> Value {
+        self.handle_request(request_line).await.into_response()
     }
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use crate::neural_api_server::NeuralApiServer;
 
@@ -351,7 +707,7 @@ mod tests {
     async fn test_handle_request_unknown_method() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"nonexistent.method","id":1}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert_eq!(result["jsonrpc"], "2.0");
         assert_eq!(result["error"]["code"], -32601);
         assert!(result["error"]["message"]
@@ -364,18 +720,17 @@ mod tests {
     #[tokio::test]
     async fn test_handle_request_invalid_json() {
         let (server, _temp) = create_test_server();
-        let err = server
-            .handle_request("{broken")
-            .await
-            .expect_err("should fail");
-        assert!(err.to_string().contains("parse") || err.to_string().contains("JSON"));
+        let result = server.handle_request_json("{broken").await;
+        assert_eq!(result["error"]["code"], -32700);
+        // serde_json error message varies (e.g. "expected value", "EOF while parsing")
+        assert!(result["error"]["message"].as_str().unwrap_or("").len() > 0);
     }
 
     #[tokio::test]
     async fn test_handle_request_mesh_method_invalid_format_single_part() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"mesh","id":2}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert_eq!(result["error"]["code"], -32601);
         assert!(result["error"]["message"]
             .as_str()
@@ -387,7 +742,7 @@ mod tests {
     async fn test_handle_request_mesh_method_invalid_format_three_parts() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"a.b.c","id":3}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert_eq!(result["error"]["code"], -32601);
     }
 
@@ -395,7 +750,7 @@ mod tests {
     async fn test_handle_request_empty_method() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"","id":4}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert_eq!(result["error"]["code"], -32601);
     }
 
@@ -403,7 +758,7 @@ mod tests {
     async fn test_handle_request_method_not_found_response_structure() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"foo.bar.baz","id":99}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_none());
         assert!(result.get("error").is_some());
         assert_eq!(result["id"], 99);
@@ -413,7 +768,7 @@ mod tests {
     async fn test_handle_request_graph_list_route() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"graph.list","id":10}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert_eq!(result["jsonrpc"], "2.0");
         assert!(result.get("result").is_some());
         assert!(result.get("error").is_none());
@@ -424,7 +779,7 @@ mod tests {
     async fn test_handle_request_neural_api_list_graphs_alias() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"neural_api.list_graphs","id":11}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
         assert_eq!(result["id"], 11);
     }
@@ -433,7 +788,7 @@ mod tests {
     async fn test_handle_request_topology_get_route() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"topology.get","id":12}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
         assert_eq!(result["id"], 12);
     }
@@ -442,7 +797,7 @@ mod tests {
     async fn test_handle_request_lifecycle_status_route() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"lifecycle.status","id":13}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
         assert_eq!(result["id"], 13);
     }
@@ -451,7 +806,7 @@ mod tests {
     async fn test_handle_request_capability_list_route() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"capability.list","id":14}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
         assert_eq!(result["id"], 14);
     }
@@ -460,7 +815,7 @@ mod tests {
     async fn test_handle_request_niche_list_route() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"niche.list","id":15}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
         assert_eq!(result["id"], 15);
     }
@@ -469,7 +824,7 @@ mod tests {
     async fn test_handle_request_protocol_status_route() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"protocol.status","id":16}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
         assert_eq!(result["id"], 16);
     }
@@ -479,10 +834,7 @@ mod tests {
         // JSON-RPC 2.0 allows omitting id (notification); we accept and echo null
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"graph.list"}"#;
-        let result = server
-            .handle_request(req)
-            .await
-            .expect("request without id is valid");
+        let result = server.handle_request_json(req).await;
         assert_eq!(result["id"], serde_json::Value::Null);
     }
 
@@ -490,36 +842,24 @@ mod tests {
     async fn test_handle_request_mesh_status_route_dispatches() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"mesh.status","params":{},"id":24}"#;
-        // mesh capability not registered in test server - handler returns Err
-        let result = server.handle_request(req).await;
-        assert!(
-            result.is_err()
-                || result
-                    .as_ref()
-                    .map(|r| r.get("result").is_some())
-                    .unwrap_or(false)
-        );
+        // mesh capability not registered in test server - handler returns ApplicationError
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("error").is_some() || result.get("result").is_some());
     }
 
     #[tokio::test]
     async fn test_handle_request_mesh_find_path_route_dispatches() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"mesh.find_path","params":{},"id":25}"#;
-        let result = server.handle_request(req).await;
-        assert!(
-            result.is_err()
-                || result
-                    .as_ref()
-                    .map(|r| r.get("result").is_some())
-                    .unwrap_or(false)
-        );
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("error").is_some() || result.get("result").is_some());
     }
 
     #[tokio::test]
     async fn test_handle_request_capability_register_route() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"capability.register","params":{"capability":"encryption","primal":"beardog","socket":"/tmp/beardog.sock"},"id":28}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
     }
 
@@ -528,7 +868,7 @@ mod tests {
         let (server, _temp) = create_test_server();
         let req =
             r#"{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":31}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
     }
 
@@ -536,9 +876,9 @@ mod tests {
     async fn test_handle_request_capability_discover_missing_params_returns_err() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"capability.discover","params":{},"id":40}"#;
-        let result = server.handle_request(req).await;
+        let result = server.handle_request_json(req).await;
         assert!(
-            result.is_err(),
+            result.get("error").is_some(),
             "missing capability should propagate handler error"
         );
     }
@@ -547,23 +887,23 @@ mod tests {
     async fn test_handle_request_graph_get_missing_params_returns_err() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"graph.get","params":{},"id":41}"#;
-        let result = server.handle_request(req).await;
-        assert!(result.is_err());
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("error").is_some());
     }
 
     #[tokio::test]
     async fn test_handle_request_graph_status_route_dispatches() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"graph.status","params":{"execution_id":"nonexistent"},"id":43}"#;
-        // Execution not found returns Err - route dispatch is what we test
-        let _ = server.handle_request(req).await;
+        // Execution not found returns ApplicationError - route dispatch is what we test
+        let _ = server.handle_request_json(req).await;
     }
 
     #[tokio::test]
     async fn test_handle_request_capability_metrics_route() {
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"capability.metrics","params":{},"id":44}"#;
-        let result = server.handle_request(req).await.expect("should not error");
+        let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
     }
 }

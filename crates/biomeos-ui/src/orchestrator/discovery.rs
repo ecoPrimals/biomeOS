@@ -288,7 +288,11 @@ impl Discovery {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::{resolve_provider, *};
     use crate::primal_client::{PrimalClient, PrimalConnections};

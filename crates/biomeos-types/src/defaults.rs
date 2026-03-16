@@ -338,7 +338,11 @@ pub fn join_socket_path(dir: impl AsRef<Path>, service: &str) -> PathBuf {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use std::collections::HashMap;
 

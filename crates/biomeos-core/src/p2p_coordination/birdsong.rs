@@ -219,6 +219,7 @@ mod tests {
         RelayStatus, TransportEndpoint, TransportHealth, TunnelHealth, TunnelRequest,
     };
     use async_trait::async_trait;
+    use biomeos_types::constants::ports;
     use std::time::SystemTime;
 
     struct MockSecurityProvider;
@@ -416,7 +417,7 @@ mod tests {
                 relay_endpoint: TransportEndpoint {
                     node_id: "relay-1".to_string(),
                     address: "127.0.0.1".to_string(),
-                    port: 9000,
+                    port: ports::NEURAL_API,
                     protocol: "tcp".to_string(),
                     secure: true,
                 },

@@ -11,9 +11,8 @@ use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::{timeout, Duration};
-use tracing::{debug, error};
+use tracing::debug;
 
-use super::rpc::internal_error_response;
 use super::NeuralApiServer;
 
 impl NeuralApiServer {
@@ -63,17 +62,11 @@ impl NeuralApiServer {
                 if req.id.is_none() {
                     debug!("Received JSON-RPC notification: {}", req.method);
                     let raw = serde_json::to_string(&req).unwrap_or_default();
-                    let _ = self.handle_request(&raw).await;
+                    let _ = self.handle_request_json(&raw).await;
                     return None;
                 }
                 let raw = serde_json::to_string(&req).unwrap_or_default();
-                Some(match self.handle_request(&raw).await {
-                    Ok(resp) => resp,
-                    Err(e) => {
-                        error!("Request error: {}", e);
-                        internal_error_response(&e, req.id)
-                    }
-                })
+                Some(self.handle_request_json(&raw).await)
             }
             Ok(JsonRpcInput::Batch(requests)) => {
                 debug!("Processing JSON-RPC batch of {} requests", requests.len());
@@ -89,16 +82,7 @@ impl NeuralApiServer {
                     })
                     .map(|req| {
                         let raw = serde_json::to_string(&req).unwrap_or_default();
-                        let id = req.id.clone();
-                        async move {
-                            match self.handle_request(&raw).await {
-                                Ok(resp) => resp,
-                                Err(e) => {
-                                    error!("Batch request error: {}", e);
-                                    internal_error_response(&e, id)
-                                }
-                            }
-                        }
+                        async move { self.handle_request_json(&raw).await }
                     })
                     .collect();
 

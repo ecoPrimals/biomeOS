@@ -322,6 +322,7 @@ mod tests {
         BondType, CollectiveCapabilities, ComputeInfo, GateInfo, ModelAvailability,
         PlasmodiumState, PrimalStatus,
     };
+    use biomeos_types::primal_names;
 
     fn make_gate(gate_id: &str, models: Vec<&str>) -> GateInfo {
         GateInfo {
@@ -329,7 +330,7 @@ mod tests {
             address: format!("{gate_id}:{}", biomeos_types::constants::ports::HTTP_BRIDGE),
             is_local: gate_id == "local",
             primals: vec![PrimalStatus {
-                name: "beardog".to_string(),
+                name: primal_names::BEARDOG.to_string(),
                 healthy: true,
                 version: None,
             }],

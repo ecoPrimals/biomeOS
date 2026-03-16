@@ -73,6 +73,9 @@ pub mod discovery;
 /// Inter-primal communication helpers
 pub mod communication;
 
+/// Typed capability wrappers for primal-to-primal IPC (groundSpring-style)
+pub mod capabilities;
+
 /// Spring-as-Provider pattern: data abstraction + capability registration + provenance helpers
 pub mod provider;
 
@@ -81,6 +84,7 @@ pub mod tarpc_transport;
 
 /// Convenient prelude for common SDK imports
 pub mod prelude {
+    pub use crate::capabilities::CapabilityClient;
     pub use crate::communication::{PrimalClient, SecureTunnel};
     pub use crate::discovery::{DiscoveredPrimal, DiscoveryQuery, PrimalDiscovery};
     pub use crate::provider::{BiomeosProvider, CapabilityRegistration, Provider, ProviderError};

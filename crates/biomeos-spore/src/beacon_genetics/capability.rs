@@ -26,6 +26,7 @@
 //! Uses Universal IPC v3.0 AtomicClient for multi-transport support.
 
 use biomeos_core::atomic_client::AtomicClient;
+use biomeos_types::constants::ports;
 use tracing::debug;
 
 /// Trait for calling capabilities via neuralAPI.
@@ -185,7 +186,7 @@ impl DirectBeardogCaller {
             let addr = &self.beardog_endpoint[4..]; // Skip "tcp:"
             let parts: Vec<&str> = addr.rsplitn(2, ':').collect();
             if parts.len() == 2 {
-                let port: u16 = parts[0].parse().unwrap_or(9000);
+                let port: u16 = parts[0].parse().unwrap_or(ports::NEURAL_API);
                 let host = parts[1];
                 debug!("Creating TCP client to {}:{}", host, port);
                 AtomicClient::tcp(host, port)

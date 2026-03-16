@@ -71,7 +71,10 @@ impl Capability {
     ///
     /// Note: For idiomatic Rust, prefer `s.parse::<Capability>()` which uses the `FromStr` trait.
     /// This method is provided for backwards compatibility.
-    #[allow(clippy::should_implement_trait)] // We do implement FromStr, this is a convenience wrapper
+    #[expect(
+        clippy::should_implement_trait,
+        reason = "custom builder pattern intentionally differs from std trait"
+    )]
     pub fn from_str(s: &str) -> Self {
         // Use the FromStr trait implementation (Err = Infallible)
         s.parse().expect("Capability::FromStr is infallible")

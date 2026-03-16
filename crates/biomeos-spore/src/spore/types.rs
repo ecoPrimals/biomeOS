@@ -51,7 +51,10 @@ pub fn default_family_id_with(env_value: Option<&str>, skip_env: bool) -> String
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
 

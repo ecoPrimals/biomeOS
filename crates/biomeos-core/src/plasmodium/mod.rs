@@ -42,6 +42,8 @@ use anyhow::Result;
 use serde_json::{Value, json};
 use tracing::{debug, info, warn};
 
+use biomeos_types::primal_names;
+
 use crate::atomic_client::AtomicClient;
 use crate::model_cache::ModelCache;
 use types::PeerInfo;
@@ -405,8 +407,8 @@ impl Plasmodium {
         }
 
         if primals.is_empty() {
-            let discovery_provider =
-                std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+            let discovery_provider = std::env::var("DISCOVERY_PROVIDER")
+                .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
             primals.push(PrimalStatus {
                 name: discovery_provider,
                 healthy: true,

@@ -159,8 +159,14 @@ pub(crate) fn parse_chimera_id_from_yaml(content: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
-#[allow(clippy::await_holding_lock)] // SAFETY: CWD_TEST_LOCK serializes cwd-changing tests; run with --test-threads=1
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::await_holding_lock,
+    reason = "lock held briefly across await in CLI context"
+)]
 mod tests {
     use super::*;
     use std::io::Write;

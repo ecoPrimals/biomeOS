@@ -42,6 +42,7 @@
 //! ```
 
 use anyhow::{Context, Result};
+use biomeos_types::IpcError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
@@ -337,9 +338,12 @@ impl AtomicClient {
         &self.endpoint
     }
 
-    /// Call a JSON-RPC method on the primal
+    /// Call a JSON-RPC method on the primal (returns `anyhow::Result` for backward compatibility).
     ///
     /// **Universal IPC v3.0**: Works across all transport types.
+    ///
+    /// Use `try_call` for structured `IpcError` when you need to distinguish
+    /// timeouts, method-not-found, or connection failures.
     ///
     /// # Arguments
     /// * `method` - JSON-RPC method name
@@ -354,26 +358,56 @@ impl AtomicClient {
     /// - The request times out
     /// - The primal returns a JSON-RPC error
     pub async fn call(&self, method: &str, params: Value) -> Result<Value> {
+        self.try_call(method, params).await.map_err(Into::into)
+    }
+
+    /// Call a JSON-RPC method on the primal with structured error types.
+    ///
+    /// Returns `IpcError` for typed handling (e.g. `is_method_not_found()`, `is_timeout()`).
+    ///
+    /// # Arguments
+    /// * `method` - JSON-RPC method name
+    /// * `params` - Method parameters as JSON
+    ///
+    /// # Returns
+    /// JSON result from the primal, or `IpcError` on failure
+    pub async fn try_call(&self, method: &str, params: Value) -> Result<Value, IpcError> {
         let request = JsonRpcRequest::new(method, params);
 
         debug!("Calling method '{}' on {}", method, self.endpoint);
 
+        let primal = self.endpoint.to_string();
+
         // Timeout wrapper for fail-fast behavior
-        let response = timeout(self.timeout, self.call_impl(request))
-            .await
-            .context(format!(
-                "Request to {} timed out after {:?}",
-                self.endpoint, self.timeout
-            ))??;
+        let response = match timeout(self.timeout, self.call_impl(request)).await {
+            Ok(Ok(resp)) => resp,
+            Ok(Err(e)) => {
+                return Err(match e.downcast::<serde_json::Error>() {
+                    Ok(serde_err) => IpcError::Serialization(serde_err),
+                    Err(e) => IpcError::ConnectionFailed {
+                        primal: primal.clone(),
+                        source: e,
+                    },
+                });
+            }
+            Err(_) => {
+                return Err(IpcError::Timeout {
+                    primal,
+                    timeout_ms: self.timeout.as_millis() as u64,
+                });
+            }
+        };
 
         // Check for JSON-RPC errors
         if let Some(error) = response.error {
-            anyhow::bail!("JSON-RPC error {}: {}", error.code, error.message);
+            return Err(IpcError::JsonRpcError {
+                primal,
+                code: error.code as i32,
+                message: error.message,
+            });
         }
 
-        response
-            .result
-            .ok_or_else(|| anyhow::anyhow!("Missing result in JSON-RPC response"))
+        response.result.ok_or(IpcError::MissingResult { primal })
     }
 
     /// Internal implementation of the JSON-RPC call

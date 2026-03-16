@@ -16,7 +16,7 @@ bytes = { version = "1.0", features = ["serde"] }
 base64 = "0.21"
 
 # RPC framework (tarpc for high-performance binary RPC)
-tarpc = { version = "0.35", features = ["serde-transport", "serde-transport-bincode", "tokio1"] }
+tarpc = { version = "0.37", features = ["serde-transport", "serde-transport-bincode", "tokio1"] }
 
 # Date/time handling
 chrono = { version = "0.4", features = ["serde"] }
@@ -29,6 +29,7 @@ url = { version = "2.5", features = ["serde"] }
 
 # Error handling
 thiserror = "1.0"
+anyhow = "1.0"
 
 # Async support
 tokio = { version = "1.0", features = ["full"] }

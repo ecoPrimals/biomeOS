@@ -57,7 +57,7 @@ pub use jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse, J
 pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)
 pub use constants::*;
 pub use defaults::{socket_path, RuntimeConfig}; // Runtime configuration with env var overrides
-pub use error::{BiomeError, BiomeResult};
+pub use error::{BiomeError, BiomeResult, IpcError};
 pub use network_config::{NetworkConfig, PortConfig}; // Capability-based network configuration
 pub use paths::SystemPaths;
 pub use tarpc_types::{

@@ -29,6 +29,7 @@
 
 use super::types::{BroadcastKeys, EncryptedDiscoveryConfig, TransportHealth, TunnelHealth};
 use super::{DiscoveryProvider, SecurityProvider};
+use biomeos_types::constants::ports;
 use crate::api_adapter::cli_adapter::CliAdapter;
 use bytes::Bytes;
 use anyhow::{Context, Result};
@@ -95,14 +96,14 @@ impl SecurityProvider for CryptoSecurityAdapter {
         let endpoint_a = super::TransportEndpoint {
             node_id: node_a.to_string(),
             address: format!("btsp://{}", node_a),
-            port: 9000,
+            port: ports::NEURAL_API,
             protocol: "btsp".to_string(),
             secure: true,
         };
         let endpoint_b = super::TransportEndpoint {
             node_id: node_b.to_string(),
             address: format!("btsp://{}", node_b),
-            port: 9000,
+            port: ports::NEURAL_API,
             protocol: "btsp".to_string(),
             secure: true,
         };

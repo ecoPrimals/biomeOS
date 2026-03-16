@@ -206,7 +206,10 @@ impl SubFederationManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use biomeos_test_utils::{remove_test_env, set_test_env};
     use tempfile::TempDir;

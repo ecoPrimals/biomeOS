@@ -574,7 +574,10 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use std::path::{Path, PathBuf};
