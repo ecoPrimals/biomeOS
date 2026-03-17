@@ -239,7 +239,9 @@ impl IdentityLayer for IdentityLayerImpl {
         let verified = response
             .get("verified")
             .and_then(serde_json::Value::as_bool)
-            .ok_or_else(|| Error::invalid_response(primal_names::BEARDOG, "Missing 'verified' field"))?;
+            .ok_or_else(|| {
+                Error::invalid_response(primal_names::BEARDOG, "Missing 'verified' field")
+            })?;
 
         let message = response
             .get("message")

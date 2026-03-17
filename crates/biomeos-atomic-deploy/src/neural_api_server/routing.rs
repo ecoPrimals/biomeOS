@@ -12,6 +12,17 @@ use tracing::{debug, trace};
 use super::rpc::{DispatchOutcome, JsonRpcRequest};
 use super::NeuralApiServer;
 
+fn dispatch(result: Result<Value, anyhow::Error>, id: &Value) -> DispatchOutcome {
+    match result {
+        Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+        Err(e) => DispatchOutcome::ApplicationError {
+            code: -32603,
+            message: format!("Internal error: {e}"),
+            id: id.clone(),
+        },
+    }
+}
+
 /// Route tag for dispatch. Each variant maps to a handler.
 #[derive(Clone, Copy, Debug)]
 enum Route {
@@ -232,441 +243,121 @@ impl NeuralApiServer {
             }
         };
 
+        let params = &request.params;
         let outcome = match route {
-            Route::GraphList => match self.graph_handler.list().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::GraphGet => match self.graph_handler.get(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::GraphSave => match self.graph_handler.save(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::GraphExecute => match self.graph_handler.execute(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
+            // Graph
+            Route::GraphList => dispatch(self.graph_handler.list().await, &id),
+            Route::GraphGet => dispatch(self.graph_handler.get(params).await, &id),
+            Route::GraphSave => dispatch(self.graph_handler.save(params).await, &id),
+            Route::GraphExecute => dispatch(self.graph_handler.execute(params).await, &id),
             Route::GraphExecutePipeline => {
-                match self.graph_handler.execute_pipeline(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.graph_handler.execute_pipeline(params).await, &id)
             }
-            Route::GraphStatus => match self.graph_handler.get_status(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
+            Route::GraphStatus => dispatch(self.graph_handler.get_status(params).await, &id),
             Route::GraphStartContinuous => {
-                match self.graph_handler.start_continuous(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.graph_handler.start_continuous(params).await, &id)
             }
             Route::GraphPauseContinuous => {
-                match self.graph_handler.pause_continuous(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.graph_handler.pause_continuous(params).await, &id)
             }
             Route::GraphResumeContinuous => {
-                match self.graph_handler.resume_continuous(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.graph_handler.resume_continuous(params).await, &id)
             }
             Route::GraphStopContinuous => {
-                match self.graph_handler.stop_continuous(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.graph_handler.stop_continuous(params).await, &id)
             }
             Route::GraphSuggestOptimizations => {
-                match self
-                    .graph_handler
-                    .suggest_optimizations(&request.params)
-                    .await
-                {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.graph_handler.suggest_optimizations(params).await, &id)
             }
-            Route::TopologyGet => match self.topology_handler.get().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::TopologyPrimals => match self.topology_handler.get_primals().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
+            // Topology
+            Route::TopologyGet => dispatch(self.topology_handler.get().await, &id),
+            Route::TopologyPrimals => dispatch(self.topology_handler.get_primals().await, &id),
             Route::TopologyProprioception => {
-                match self.topology_handler.get_proprioception().await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.topology_handler.get_proprioception().await, &id)
             }
-            Route::TopologyMetrics => match self.topology_handler.get_metrics().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::NicheList => match self.niche_handler.list().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::NicheDeploy => match self.niche_handler.deploy(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::LifecycleStatus => match self.lifecycle_handler.status().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::LifecycleGet => match self.lifecycle_handler.get(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
+            Route::TopologyMetrics => dispatch(self.topology_handler.get_metrics().await, &id),
+            // Niche
+            Route::NicheList => dispatch(self.niche_handler.list().await, &id),
+            Route::NicheDeploy => dispatch(self.niche_handler.deploy(params).await, &id),
+            // Lifecycle
+            Route::LifecycleStatus => dispatch(self.lifecycle_handler.status().await, &id),
+            Route::LifecycleGet => dispatch(self.lifecycle_handler.get(params).await, &id),
             Route::LifecycleRegister => {
-                match self.lifecycle_handler.register(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.lifecycle_handler.register(params).await, &id)
             }
             Route::LifecycleResurrect => {
-                match self.lifecycle_handler.resurrect(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.lifecycle_handler.resurrect(params).await, &id)
             }
             Route::LifecycleApoptosis => {
-                match self.lifecycle_handler.apoptosis(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.lifecycle_handler.apoptosis(params).await, &id)
             }
-            Route::LifecycleShutdownAll => match self.lifecycle_handler.shutdown_all().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::ProtocolStatus => match self.protocol_handler.status().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::ProtocolEscalate => {
-                match self.protocol_handler.escalate(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+            Route::LifecycleShutdownAll => {
+                dispatch(self.lifecycle_handler.shutdown_all().await, &id)
             }
-            Route::ProtocolFallback => {
-                match self.protocol_handler.fallback(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
-            }
-            Route::ProtocolMetrics => match self.protocol_handler.metrics(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
+            // Protocol
+            Route::ProtocolStatus => dispatch(self.protocol_handler.status().await, &id),
+            Route::ProtocolEscalate => dispatch(self.protocol_handler.escalate(params).await, &id),
+            Route::ProtocolFallback => dispatch(self.protocol_handler.fallback(params).await, &id),
+            Route::ProtocolMetrics => dispatch(self.protocol_handler.metrics(params).await, &id),
             Route::ProtocolRegisterPrimal => {
-                match self.protocol_handler.register_primal(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.protocol_handler.register_primal(params).await, &id)
             }
             Route::ProtocolRegisterConnection => {
-                match self
-                    .protocol_handler
-                    .register_connection(&request.params)
-                    .await
-                {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.protocol_handler.register_connection(params).await, &id)
             }
             Route::ProtocolRecordRequest => {
-                match self.protocol_handler.record_request(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.protocol_handler.record_request(params).await, &id)
             }
             Route::ProtocolStartMonitoring => {
-                match self.protocol_handler.start_monitoring().await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.protocol_handler.start_monitoring().await, &id)
             }
-            Route::ProtocolStopMonitoring => match self.protocol_handler.stop_monitoring().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::GraphProtocolMap => match self.protocol_handler.protocol_map().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
+            Route::ProtocolStopMonitoring => {
+                dispatch(self.protocol_handler.stop_monitoring().await, &id)
+            }
+            Route::GraphProtocolMap => dispatch(self.protocol_handler.protocol_map().await, &id),
+            // Capability
             Route::CapabilityRegister => {
-                match self.capability_handler.register(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.capability_handler.register(params).await, &id)
             }
             Route::CapabilityDiscover => {
-                match self.capability_handler.discover(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.capability_handler.discover(params).await, &id)
             }
-            Route::CapabilityList => match self.capability_handler.list().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
+            Route::CapabilityList => dispatch(self.capability_handler.list().await, &id),
             Route::CapabilityProviders => {
-                match self.capability_handler.providers(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.capability_handler.providers(params).await, &id)
             }
-            Route::CapabilityResolve => {
-                match self.capability_handler.route(&request.params).await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
-            }
-            Route::CapabilityMetrics => match self.capability_handler.get_metrics().await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::CapabilityCall => match self.capability_handler.call(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
-            Route::CapabilityDiscoverTranslations => {
-                match self
-                    .capability_handler
-                    .discover_translations(&request.params)
-                    .await
-                {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
-            }
+            Route::CapabilityResolve => dispatch(self.capability_handler.route(params).await, &id),
+            Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, &id),
+            Route::CapabilityCall => dispatch(self.capability_handler.call(params).await, &id),
+            Route::CapabilityDiscoverTranslations => dispatch(
+                self.capability_handler.discover_translations(params).await,
+                &id,
+            ),
             Route::CapabilityListTranslations => {
-                match self.capability_handler.list_translations().await {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
+                dispatch(self.capability_handler.list_translations().await, &id)
             }
-            Route::Agent => {
-                match super::agents::handle_agent_request(
+            // Agent
+            Route::Agent => dispatch(
+                super::agents::handle_agent_request(
                     &self.agent_registry,
                     request.method.as_ref(),
-                    &request.params,
+                    params,
                 )
-                .await
-                {
-                    Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                    Err(e) => DispatchOutcome::ApplicationError {
-                        code: -32603,
-                        message: format!("Internal error: {e}"),
-                        id: id.clone(),
-                    },
-                }
-            }
-            Route::ProxyHttp => match self.proxy_http(&request.params).await {
-                Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-                Err(e) => DispatchOutcome::ApplicationError {
-                    code: -32603,
-                    message: format!("Internal error: {e}"),
-                    id: id.clone(),
-                },
-            },
+                .await,
+                &id,
+            ),
+            // Legacy
+            Route::ProxyHttp => dispatch(self.proxy_http(params).await, &id),
+            // Mesh & NAT (capability.call sugar)
             Route::MeshCapabilityCall => {
                 let parts: Vec<&str> = request.method.as_ref().split('.').collect();
                 if parts.len() == 2 {
                     let cap_params = Some(serde_json::json!({
                         "capability": parts[0],
                         "operation": parts[1],
-                        "args": request.params.clone().unwrap_or(serde_json::json!({}))
+                        "args": params.clone().unwrap_or(serde_json::json!({}))
                     }));
-                    match self.capability_handler.call(&cap_params).await {
-                        Ok(v) => {
-                            DispatchOutcome::Success(super::rpc::success_response(v, id.clone()))
-                        }
-                        Err(e) => DispatchOutcome::ApplicationError {
-                            code: -32603,
-                            message: format!("Internal error: {e}"),
-                            id: id.clone(),
-                        },
-                    }
+                    dispatch(self.capability_handler.call(&cap_params).await, &id)
                 } else {
                     return DispatchOutcome::MethodNotFound {
                         method: request.method.as_ref().to_string(),

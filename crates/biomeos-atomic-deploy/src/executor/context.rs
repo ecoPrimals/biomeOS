@@ -111,9 +111,7 @@ impl ExecutionContext {
         breakers
             .entry(primal.to_string())
             .or_insert_with(|| {
-                Arc::new(
-                    CircuitBreaker::new(5, Duration::from_secs(30)).with_success_threshold(2),
-                )
+                Arc::new(CircuitBreaker::new(5, Duration::from_secs(30)).with_success_threshold(2))
             })
             .clone()
     }

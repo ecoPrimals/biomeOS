@@ -398,7 +398,7 @@ impl PipelineExecutor {
 
         let node_stats = match Arc::try_unwrap(stats_map) {
             Ok(mutex) => mutex.into_inner(),
-            Err(arc) => arc.blocking_lock().clone(),
+            Err(arc) => arc.lock().await.clone(),
         };
 
         let items_in = node_stats

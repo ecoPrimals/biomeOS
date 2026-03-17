@@ -203,11 +203,7 @@ impl GraphExecutor {
                     self.context.set_output(&node_id, output).await;
                 }
                 Err(e) => {
-                    let node = self
-                        .graph
-                        .nodes
-                        .iter()
-                        .find(|n| n.id == node_id);
+                    let node = self.graph.nodes.iter().find(|n| n.id == node_id);
                     if node.is_some_and(|n| n.is_optional()) {
                         debug!("Optional node {} failed, skipping: {}", node_id, e);
                         phase_result.completed += 1;

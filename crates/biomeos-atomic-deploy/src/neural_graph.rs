@@ -415,7 +415,6 @@ pub struct GraphNode {
     pub operation_dependencies: Vec<String>,
 }
 
-
 impl GraphNode {
     /// Whether this node is optional (failure won't abort the graph).
     pub fn is_optional(&self) -> bool {

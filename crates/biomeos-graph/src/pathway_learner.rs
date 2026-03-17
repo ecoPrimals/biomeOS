@@ -642,16 +642,25 @@ mod tests {
 
         let metrics = HashMap::from([
             ("a".to_string(), make_node_metrics("a", 100, 10.0)),
-            ("expensive".to_string(), make_node_metrics("expensive", 100, 450.0)),
+            (
+                "expensive".to_string(),
+                make_node_metrics("expensive", 100, 450.0),
+            ),
             ("c".to_string(), make_node_metrics("c", 100, 20.0)),
         ]);
 
         let learner = make_test_learner(0);
         let suggestions = learner.find_reorder_candidates(&graph, &metrics);
 
-        assert!(!suggestions.is_empty(), "should suggest reordering expensive node");
+        assert!(
+            !suggestions.is_empty(),
+            "should suggest reordering expensive node"
+        );
         match &suggestions[0].optimization {
-            OptimizationType::Reorder { node_id, suggested_phase } => {
+            OptimizationType::Reorder {
+                node_id,
+                suggested_phase,
+            } => {
                 assert_eq!(node_id, "expensive");
                 assert_eq!(*suggested_phase, 0);
             }
@@ -664,10 +673,7 @@ mod tests {
         let mut cheap_node = make_node("cheap", vec![], Some("p1"));
         cheap_node.cost_estimate_ms = Some(10);
 
-        let graph = make_graph(vec![
-            make_node("a", vec![], Some("p1")),
-            cheap_node,
-        ]);
+        let graph = make_graph(vec![make_node("a", vec![], Some("p1")), cheap_node]);
 
         let metrics = HashMap::new();
         let learner = make_test_learner(0);
@@ -678,9 +684,7 @@ mod tests {
 
     #[test]
     fn cache_detects_pure_high_success_nodes() {
-        let graph = make_graph(vec![
-            make_node("pure-hash", vec![], Some("rhizocrypt")),
-        ]);
+        let graph = make_graph(vec![make_node("pure-hash", vec![], Some("rhizocrypt"))]);
 
         let metrics = HashMap::from([(
             "pure-hash".to_string(),

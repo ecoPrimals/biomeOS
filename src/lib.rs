@@ -39,6 +39,7 @@ pub enum UIMode {
 
 /// BiomeOS runtime configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[must_use]
 pub struct BiomeOSRuntime {
     /// Version information
     pub version: String,
@@ -61,5 +62,61 @@ impl Default for BiomeOSRuntime {
             ai_first_enabled: true,
             sovereignty_enabled: true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ui_mode_default_is_auto() {
+        let mode = UIMode::default();
+        assert!(matches!(mode, UIMode::Auto));
+    }
+
+    #[test]
+    fn runtime_default_has_sovereignty_enabled() {
+        let rt = BiomeOSRuntime::default();
+        assert!(rt.sovereignty_enabled);
+        assert!(rt.ai_first_enabled);
+        assert!(matches!(rt.ui_mode, UIMode::Auto));
+        assert!(!rt.version.is_empty());
+    }
+
+    #[test]
+    fn runtime_serde_roundtrip() {
+        let rt = BiomeOSRuntime::default();
+        let json = serde_json::to_string(&rt).expect("serialize");
+        let parsed: BiomeOSRuntime = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.version, rt.version);
+        assert_eq!(parsed.ai_first_enabled, rt.ai_first_enabled);
+        assert_eq!(parsed.sovereignty_enabled, rt.sovereignty_enabled);
+    }
+
+    #[test]
+    fn ui_mode_serde_all_variants() {
+        let variants = vec![
+            UIMode::Auto,
+            UIMode::Terminal,
+            UIMode::Web,
+            UIMode::Desktop,
+            UIMode::Mobile,
+            UIMode::Headless,
+        ];
+        for mode in variants {
+            let json = serde_json::to_string(&mode).expect("serialize");
+            let parsed: UIMode = serde_json::from_str(&json).expect("deserialize");
+            assert_eq!(
+                std::mem::discriminant(&mode),
+                std::mem::discriminant(&parsed)
+            );
+        }
+    }
+
+    #[test]
+    fn runtime_version_matches_cargo_pkg() {
+        let rt = BiomeOSRuntime::default();
+        assert_eq!(rt.version, env!("CARGO_PKG_VERSION"));
     }
 }

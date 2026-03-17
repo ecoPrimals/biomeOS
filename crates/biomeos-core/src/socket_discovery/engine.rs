@@ -418,8 +418,7 @@ impl SocketDiscovery {
                         }
                         trace!(
                             "Manifest for {} found but socket not connectable: {}",
-                            primal_name,
-                            manifest.socket
+                            primal_name, manifest.socket
                         );
                     }
                     Err(e) => {

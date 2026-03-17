@@ -576,8 +576,7 @@ mod tests {
 
         assert!(breaker.is_open().await);
 
-        let result: Result<(), anyhow::Error> =
-            breaker.execute(|| async { Ok(()) }).await;
+        let result: Result<(), anyhow::Error> = breaker.execute(|| async { Ok(()) }).await;
 
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Circuit"));
@@ -585,8 +584,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_circuit_breaker_execute_half_open_recovery() {
-        let breaker =
-            CircuitBreaker::new(2, Duration::from_millis(100)).with_success_threshold(1);
+        let breaker = CircuitBreaker::new(2, Duration::from_millis(100)).with_success_threshold(1);
 
         for _ in 0..2 {
             let _: Result<(), anyhow::Error> = breaker

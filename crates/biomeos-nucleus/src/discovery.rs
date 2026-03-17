@@ -257,7 +257,9 @@ impl PhysicalDiscovery for DiscoveryLayer {
         let primals: Vec<DiscoveredPrimal> = serde_json::from_value(
             response
                 .get("primals")
-                .ok_or_else(|| Error::invalid_response(primal_names::SONGBIRD, "Missing 'primals' field"))?
+                .ok_or_else(|| {
+                    Error::invalid_response(primal_names::SONGBIRD, "Missing 'primals' field")
+                })?
                 .clone(),
         )?;
 
@@ -284,7 +286,9 @@ impl PhysicalDiscovery for DiscoveryLayer {
         let primals: Vec<DiscoveredPrimal> = serde_json::from_value(
             response
                 .get("primals")
-                .ok_or_else(|| Error::invalid_response(primal_names::SONGBIRD, "Missing 'primals' field"))?
+                .ok_or_else(|| {
+                    Error::invalid_response(primal_names::SONGBIRD, "Missing 'primals' field")
+                })?
                 .clone(),
         )?;
 

@@ -141,15 +141,24 @@ fn test_load_from_capability_registry_toml() {
         })
         .expect("should load capability_registry.toml");
 
-    assert!(count > 0, "Should load at least some translations from config");
+    assert!(
+        count > 0,
+        "Should load at least some translations from config"
+    );
 
     // Verify new translations exist
     assert!(
         registry.has_capability("compute.dispatch.submit"),
         "Should have compute.dispatch.submit"
     );
-    assert!(registry.has_capability("secrets.store"), "Should have secrets.store");
-    assert!(registry.has_capability("model.register"), "Should have model.register");
+    assert!(
+        registry.has_capability("secrets.store"),
+        "Should have secrets.store"
+    );
+    assert!(
+        registry.has_capability("model.register"),
+        "Should have model.register"
+    );
     assert!(
         registry.has_capability("relay.authorize"),
         "Should have relay.authorize"
