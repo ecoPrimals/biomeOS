@@ -19,7 +19,7 @@
 //! - Runtime discovery, no hardcoded paths
 
 use async_trait::async_trait;
-use biomeos_types::{CapabilityTaxonomy, SystemPaths};
+use biomeos_types::{primal_names, CapabilityTaxonomy, SystemPaths};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{debug, info};
@@ -163,7 +163,7 @@ impl DiscoveryLayer {
         // Uses CapabilityTaxonomy to resolve the discovery primal name
         let discovery_primal = CapabilityTaxonomy::Discovery
             .default_primal()
-            .unwrap_or("songbird");
+            .unwrap_or(primal_names::SONGBIRD);
         let standard_socket = paths.primal_socket(discovery_primal);
         if tokio::fs::metadata(&standard_socket).await.is_ok() {
             debug!(
@@ -190,7 +190,7 @@ impl DiscoveryLayer {
             let path = entry.path();
             #[allow(clippy::collapsible_if)]
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if filename.starts_with("songbird-")
+                if filename.starts_with(&format!("{}-", primal_names::SONGBIRD))
                     && std::path::Path::new(filename)
                         .extension()
                         .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
@@ -258,7 +258,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
         let primals: Vec<DiscoveredPrimal> = serde_json::from_value(
             response
                 .get("primals")
-                .ok_or_else(|| Error::invalid_response("songbird", "Missing 'primals' field"))?
+                .ok_or_else(|| Error::invalid_response(primal_names::SONGBIRD, "Missing 'primals' field"))?
                 .clone(),
         )?;
 
@@ -285,7 +285,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
         let primals: Vec<DiscoveredPrimal> = serde_json::from_value(
             response
                 .get("primals")
-                .ok_or_else(|| Error::invalid_response("songbird", "Missing 'primals' field"))?
+                .ok_or_else(|| Error::invalid_response(primal_names::SONGBIRD, "Missing 'primals' field"))?
                 .clone(),
         )?;
 

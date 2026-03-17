@@ -766,6 +766,81 @@ capabilities = [
 "provenance.get_anchors" = { provider = "sweetgrass", method = "anchoring.get_anchors" }
 "provenance.health" = { provider = "sweetgrass", method = "health.check" }
 
+# ------------------------------------------------------------------------------
+# Compute Dispatch Domain (ToadStool — Sub-Frame GPU Protocol)
+# Direct GPU workload submission bypassing capability routing for latency-critical paths.
+# Adopted by: groundSpring, wetSpring, airSpring, healthSpring, ludoSpring
+# ------------------------------------------------------------------------------
+
+[domains.compute_dispatch]
+provider = "toadstool"
+capabilities = [
+    "compute.dispatch"
+]
+
+[translations.compute_dispatch]
+"compute.dispatch.submit" = { provider = "toadstool", method = "compute.dispatch.submit" }
+"compute.dispatch.result" = { provider = "toadstool", method = "compute.dispatch.result" }
+"compute.dispatch.capabilities" = { provider = "toadstool", method = "compute.dispatch.capabilities" }
+"compute.dispatch.status" = { provider = "toadstool", method = "compute.dispatch.status" }
+"compute.dispatch.cancel" = { provider = "toadstool", method = "compute.dispatch.cancel" }
+
+# ------------------------------------------------------------------------------
+# Secrets Domain (BearDog — Secure Secret Storage)
+# Key-value secret storage with lineage-gated access.
+# New in BearDog v0.9.0
+# ------------------------------------------------------------------------------
+
+[domains.secrets]
+provider = "beardog"
+capabilities = [
+    "secrets"
+]
+
+[translations.secrets]
+"secrets.store" = { provider = "beardog", method = "secrets.store" }
+"secrets.retrieve" = { provider = "beardog", method = "secrets.retrieve" }
+"secrets.list" = { provider = "beardog", method = "secrets.list" }
+"secrets.delete" = { provider = "beardog", method = "secrets.delete" }
+
+# ------------------------------------------------------------------------------
+# Relay Domain (BearDog — Lineage-Gated Relay Authorization)
+# Covalent bonding and relay authorization for cross-network communication.
+# New in BearDog v0.9.0
+# ------------------------------------------------------------------------------
+
+[translations.relay]
+"relay.authorize" = { provider = "beardog", method = "relay.authorize" }
+"relay.status" = { provider = "beardog", method = "relay.status" }
+
+# ------------------------------------------------------------------------------
+# Model Cache Domain (NestGate — Model Registry and Cache)
+# AI/ML model registration, location, and metadata.
+# New in NestGate v4.1-dev
+# ------------------------------------------------------------------------------
+
+[domains.model]
+provider = "nestgate"
+capabilities = [
+    "model"
+]
+
+[translations.model]
+"model.register" = { provider = "nestgate", method = "model.register" }
+"model.exists" = { provider = "nestgate", method = "model.exists" }
+"model.locate" = { provider = "nestgate", method = "model.locate" }
+"model.metadata" = { provider = "nestgate", method = "model.metadata" }
+
+# ------------------------------------------------------------------------------
+# Hardware Observation Domain (ToadStool — Hardware Learning)
+# GPU/NPU hardware observation, distillation, and learned dispatch.
+# ------------------------------------------------------------------------------
+
+[translations.hardware]
+"hardware.observe" = { provider = "toadstool", method = "compute.hardware.observe" }
+"hardware.distill" = { provider = "toadstool", method = "compute.hardware.distill" }
+"hardware.apply" = { provider = "toadstool", method = "compute.hardware.apply" }
+
 # ==============================================================================
 # SOCKET PATH TEMPLATES
 # ==============================================================================

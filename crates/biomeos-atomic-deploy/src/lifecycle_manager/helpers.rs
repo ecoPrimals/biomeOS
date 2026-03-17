@@ -126,33 +126,12 @@ mod tests {
         let manager = LifecycleManager::new("test-family");
         let beardog_node = crate::neural_graph::GraphNode {
             id: "beardog".to_string(),
-            primal: None,
-            output: None,
-            operation: None,
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: std::collections::HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
         let songbird_node = crate::neural_graph::GraphNode {
             id: "songbird".to_string(),
-            primal: None,
-            output: None,
-            operation: None,
-            constraints: None,
             depends_on: vec!["beardog".to_string()],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: std::collections::HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
         manager
             .register_primal(

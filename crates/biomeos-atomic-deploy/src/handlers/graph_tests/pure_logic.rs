@@ -6,7 +6,6 @@
 use super::*;
 use crate::neural_graph::{GraphNode, PrimalSelector};
 use serde_json::json;
-use std::collections::HashMap;
 
 fn make_node(
     id: &str,
@@ -27,17 +26,7 @@ fn make_node(
     GraphNode {
         id: id.to_string(),
         primal,
-        depends_on: vec![],
-        operation: None,
-        output: None,
-        constraints: None,
-        capabilities: vec![],
-        capabilities_provided: None,
-        parameter_mappings: None,
-        node_type: None,
-        dependencies: vec![],
-        config: HashMap::new(),
-        outputs: vec![],
+        ..Default::default()
     }
 }
 

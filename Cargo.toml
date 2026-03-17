@@ -37,7 +37,6 @@ members = [
     "crates/biomeos-compute",  # Isomorphic & fractal compute architecture
     "crates/biomeos-graph",  # Graph-based orchestration for Neural API
     "crates/biomeos-ui",  # Interactive UI orchestration - network effect of multiple primals
-    "federation",
     # "ui",  # Archived 2025-12-23: UI evolved into petalTongue primal (../petalTongue/)
     # Showcase crates archived - moved to showcase/ directory history
     # "showcase/03-p2p-coordination/01-btsp-tunnel-coordination",
@@ -108,7 +107,6 @@ tokio-serde = { version = "0.9", features = ["bincode"] }
 
 # Utilities
 itertools = "0.12"
-once_cell = "1.19"
 dashmap = "5.5"
 
 # Networking

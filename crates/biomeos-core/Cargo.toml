@@ -37,7 +37,6 @@ toml = "0.8"
 # Utilities
 bytes = { workspace = true }
 itertools = { workspace = true }
-once_cell = { workspace = true }
 base64 = "0.22"
 sha2 = "0.10"
 hmac = "0.12"

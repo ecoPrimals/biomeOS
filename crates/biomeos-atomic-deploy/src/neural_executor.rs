@@ -30,7 +30,7 @@ use serde::Serialize;
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::neural_graph::{Graph, GraphNode};
 
@@ -203,12 +203,27 @@ impl GraphExecutor {
                     self.context.set_output(&node_id, output).await;
                 }
                 Err(e) => {
-                    phase_result.failed += 1;
-                    let error_msg = e.to_string();
-                    self.context
-                        .set_status(&node_id, NodeStatus::Failed(error_msg.clone()))
-                        .await;
-                    phase_result.errors.push((node_id.clone(), error_msg));
+                    let node = self
+                        .graph
+                        .nodes
+                        .iter()
+                        .find(|n| n.id == node_id);
+                    if node.is_some_and(|n| n.is_optional()) {
+                        debug!("Optional node {} failed, skipping: {}", node_id, e);
+                        phase_result.completed += 1;
+                        let skip_value = serde_json::json!({"skipped": true});
+                        self.context
+                            .set_status(&node_id, NodeStatus::Completed(skip_value.clone()))
+                            .await;
+                        self.context.set_output(&node_id, skip_value).await;
+                    } else {
+                        phase_result.failed += 1;
+                        let error_msg = e.to_string();
+                        self.context
+                            .set_status(&node_id, NodeStatus::Failed(error_msg.clone()))
+                            .await;
+                        phase_result.errors.push((node_id.clone(), error_msg));
+                    }
                 }
             }
 

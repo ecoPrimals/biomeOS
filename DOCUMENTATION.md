@@ -15,8 +15,8 @@
 | See what changed | [CHANGELOG.md](CHANGELOG.md) |
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
-| Deployment graphs (35 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.47) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
+| Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
+| See evolution handoffs (v2.48) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -118,7 +118,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (5,325 tests — fully concurrent)
+# Test (5,162+ tests — fully concurrent)
 cargo test --workspace
 
 # Coverage (78% line)
@@ -144,6 +144,6 @@ See `ARCHIVE_INDEX.md` in archive for details.
 ---
 
 **Documentation current as of March 16, 2026**
-**Active: 19 specs, handoffs in wateringHole (v2.43–v2.47), 10 scripts**
-**Deploy graphs: 35 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 5,325 passing, fully concurrent (78% line coverage) | Clippy: PASS | Docs: Full coverage**
+**Active: 19 specs, handoffs in wateringHole (v2.43–v2.48), 10 scripts**
+**Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
+**Tests: 5,162+ passing, fully concurrent (78% line coverage) | Clippy: PASS | Docs: Full coverage**

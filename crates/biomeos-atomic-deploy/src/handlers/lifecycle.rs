@@ -281,23 +281,12 @@ mod tests {
     use super::*;
     use crate::lifecycle_manager::LifecycleManager;
     use crate::neural_graph::GraphNode;
-    use std::collections::HashMap;
 
     fn make_graph_node(id: &str, depends_on: Vec<String>) -> GraphNode {
         GraphNode {
             id: id.to_string(),
-            primal: None,
-            output: None,
-            operation: None,
-            constraints: None,
             depends_on,
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         }
     }
 

@@ -231,6 +231,11 @@ impl Graph {
             .and_then(|v| v.as_str())
             .map(String::from);
 
+        let fallback = table
+            .get("fallback")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
         // Extract params from [graph.nodes.params]
         let params: HashMap<String, serde_json::Value> = table
             .get("params")
@@ -307,6 +312,7 @@ impl Graph {
             dependencies: vec![],
             config,
             outputs: vec![],
+            fallback,
         })
     }
 }
@@ -334,7 +340,7 @@ fn toml_value_to_json(v: &toml::Value) -> Option<serde_json::Value> {
 }
 
 /// Graph node
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct GraphNode {
     /// Unique node identifier
     pub id: String,
@@ -377,6 +383,19 @@ pub struct GraphNode {
     /// Output definitions for this node
     #[serde(default)]
     pub outputs: Vec<NodeOutput>,
+
+    /// Fallback behavior when execution fails.
+    /// "skip" = silently skip (optional node), "error" = propagate error (default).
+    #[serde(default)]
+    pub fallback: Option<String>,
+}
+
+
+impl GraphNode {
+    /// Whether this node is optional (failure won't abort the graph).
+    pub fn is_optional(&self) -> bool {
+        self.fallback.as_deref() == Some("skip")
+    }
 }
 
 /// Primal selector (capability-based discovery)

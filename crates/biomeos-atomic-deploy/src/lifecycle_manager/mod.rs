@@ -368,18 +368,8 @@ mod tests {
     fn test_graph_node(id: &str, depends_on: Vec<String>) -> crate::neural_graph::GraphNode {
         crate::neural_graph::GraphNode {
             id: id.to_string(),
-            primal: None,
-            output: None,
-            operation: None,
-            constraints: None,
             depends_on,
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         }
     }
 

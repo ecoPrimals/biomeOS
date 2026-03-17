@@ -99,18 +99,8 @@ fn test_substitute_env_repeated_var() {
 fn test_node_with_config(id: &str, config: HashMap<String, serde_json::Value>) -> GraphNode {
     GraphNode {
         id: id.to_string(),
-        depends_on: vec![],
-        primal: None,
-        output: None,
-        operation: None,
-        constraints: None,
-        capabilities: vec![],
-        capabilities_provided: None,
-        parameter_mappings: None,
-        node_type: None,
-        dependencies: vec![],
         config,
-        outputs: vec![],
+        ..Default::default()
     }
 }
 
@@ -486,18 +476,9 @@ fn test_node_with_capabilities(
 ) -> GraphNode {
     GraphNode {
         id: id.to_string(),
-        depends_on: vec![],
-        primal: None,
-        output: None,
-        operation: None,
-        constraints: None,
-        capabilities,
-        capabilities_provided: None,
-        parameter_mappings: None,
-        node_type: None,
-        dependencies: vec![],
         config,
-        outputs: vec![],
+        capabilities,
+        ..Default::default()
     }
 }
 

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 16, 2026 (v2.47: Edition 2024 deep audit + debt execution)
-**Version**: 2.47
+**Updated**: March 16, 2026 (v2.48: Edition 2024 deep audit + debt execution)
+**Version**: 2.48
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used |
-| **Tests Passing** | 5,325 lib + bin (0 failures) |
+| **Tests Passing** | 5,162+ lib + bin (0 failures) |
 | **Test Coverage** | 78% line, 80% function (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production (2 test-only in env_helpers.rs, Rust 2024 requirement) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
@@ -25,7 +25,7 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 19 domains (+ measurement, physics, health_extended), 260+ translations |
+| **Capability Domains** | 24 domains (+ measurement, physics, health_extended), 280+ translations |
 | **Deploy Graphs** | 40 (+ 2 Pipeline coordination graphs, all parseable via unified schema) |
 | **Niche Templates** | 20 (+ rootpulse-branch, rootpulse-merge, rootpulse-diff, rootpulse-federate, soil-microbiome) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
@@ -45,7 +45,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 260+ capability translations, JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations |
+| **Neural API** | 280+ capability translations, JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
 | **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |
@@ -212,7 +212,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 
 ### 5. Neural API - Semantic Capability Routing
 
-- 260+ capability translations across 19 domains
+- 280+ capability translations across 24 domains
 - `capability.call` routes semantic names to provider-specific methods
 - `proxy_http` delegates HTTPS through Songbird + BearDog TLS
 - Capability domains: crypto, security, http, mesh, stun, relay, onion, compute, storage, ai, inference, ephemeral_workspace (rhizoCrypt), permanent_storage (LoamSpine), attribution (sweetGrass), game, medical
@@ -711,7 +711,7 @@ Tower (pop-os, x86_64):
   CPU:    24 cores (i9-14900)
   AI:     Ollama (phi3, llama3.2, tinyllama)
   Primals: BearDog, Songbird, NestGate, Toadstool, Squirrel
-  biomeOS: Neural API capability routing (260+ translations + agent routing)
+  biomeOS: Neural API capability routing (280+ translations + agent routing)
 
 gate2 (pop-os, x86_64):
   GPU:    RTX 3090 (24 GB VRAM)
@@ -764,7 +764,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Mar 14, 2026)
 
-**Overall**: 78% line coverage (5,325 tests, 0 failures)
+**Overall**: 78% line coverage (5,162+ tests, 0 failures)
 
 ### Coverage Distribution
 
@@ -848,7 +848,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (5,325 tests)
+# Test (5,162+ tests)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -876,14 +876,14 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **XR/VR**: StereoRenderAdapter, MotionCaptureAdapter, HapticPipeline
 **Surgical Domain**: SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams
 **Plasmodium**: HTTP JSON-RPC collective (runtime port, SSH deprecated)
-**Neural API**: 260+ translations, proxy_http, capability.call, compute.hardware.*
+**Neural API**: 280+ translations, proxy_http, capability.call, compute.hardware.*
 **NAT Traversal**: 4-tier strategy orchestrator (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring, auto-resurrection
 **Genetic Model**: Evolved (Mitochondrial + Nuclear, Blake3-Lineage-KDF enrollment)
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A++ (Pure Rust, fully concurrent, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, table-driven routing)
-**Tests**: 5,325 passing fully concurrent (78% line, 80% function via llvm-cov)
+**Tests**: 5,162+ passing fully concurrent (78% line, 80% function via llvm-cov)
 **Clippy**: PASS (0 warnings, `-D warnings`) | **Format**: PASS (`cargo fmt --check` clean)
 **Docs**: Full coverage (0 missing_docs warnings across 8 crates)
 **Unsafe Code**: 0 (production + tests)

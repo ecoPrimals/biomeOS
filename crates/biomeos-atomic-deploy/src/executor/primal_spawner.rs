@@ -547,18 +547,7 @@ mod tests {
     fn make_minimal_node(id: &str) -> GraphNode {
         GraphNode {
             id: id.to_string(),
-            primal: None,
-            output: None,
-            operation: None,
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         }
     }
 

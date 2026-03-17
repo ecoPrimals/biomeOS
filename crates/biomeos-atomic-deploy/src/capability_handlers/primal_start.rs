@@ -293,17 +293,8 @@ mod tests {
         GraphNode {
             id: "test_node".to_string(),
             primal,
-            output: None,
             operation,
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         }
     }
 
@@ -311,22 +302,12 @@ mod tests {
     async fn test_primal_start_capability_missing_by_capability() {
         let node = GraphNode {
             id: "test".to_string(),
-            primal: None,
-            output: None,
             operation: Some(Operation {
                 name: "start".to_string(),
                 params: HashMap::new(),
                 environment: None,
             }),
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
 
         let ctx = ExecutionContext::new(HashMap::new());
@@ -347,21 +328,12 @@ mod tests {
                 by_capability: None,
                 by_name: Some("beardog".to_string()),
             }),
-            output: None,
             operation: Some(Operation {
                 name: "start".to_string(),
                 params: HashMap::new(),
                 environment: None,
             }),
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
 
         let ctx = ExecutionContext::new(HashMap::new());
@@ -382,17 +354,7 @@ mod tests {
                 by_capability: Some("encryption".to_string()),
                 by_name: None,
             }),
-            output: None,
-            operation: None,
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
 
         let ctx = ExecutionContext::new(HashMap::new());

@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.47)
+## Status: Production Ready (v2.48)
 
 | Metric | Value |
 |--------|-------|
@@ -12,13 +12,13 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy) |
-| Tests | 5,325 passing (0 failures) — fully concurrent (78% line, 80% function) |
+| Tests | 5,162+ passing (0 failures) — fully concurrent (78% line, 80% function) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 260+ capability translations, 19 domains, 5 coordination patterns (Sequential, Parallel, ConditionalDag, Pipeline, Continuous) |
+| Neural API | 280+ capability translations, 24 domains, 5 coordination patterns (Sequential, Parallel, ConditionalDag, Pipeline, Continuous) |
 | Coordination | Sequential + Parallel + ConditionalDag + Pipeline (streaming) + Continuous (60Hz tick) |
 | Streaming | PipelineExecutor (mpsc channels), NDJSON streaming client, JSON-RPC 2.0 notifications |
 | Continuous | ContinuousExecutor (60Hz tick), push events, sensor routing |
@@ -40,7 +40,7 @@
 |  AI Bridge                                                   |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Neural API (260+ translations, 5 coordination patterns)     |
+|  Neural API (280+ translations, 5 coordination patterns)     |
 |  graph.execute   -> Sequential / Parallel / ConditionalDag   |
 |  graph.execute_pipeline -> Pipeline (streaming mpsc channels) |
 |  graph.start_continuous -> Continuous (60Hz tick loop)        |
@@ -126,7 +126,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"Name the largest 
 
 ## Neural API - Semantic Routing
 
-260+ capability translations enable primals to compose without knowing each other:
+280+ capability translations enable primals to compose without knowing each other:
 
 ```
 Squirrel -> capability.call("http", "request", ...) -> Neural API
@@ -245,7 +245,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (5,325 tests — fully concurrent)
+### Test (5,162+ tests — fully concurrent)
 
 ```bash
 cargo test --workspace
@@ -272,7 +272,7 @@ cargo doc --workspace      # 0 missing_docs warnings
 
 ```
 biomeOS/
-├── crates/                    # Rust workspace (24 crates)
+├── crates/                    # Rust workspace (25 crates)
 │   ├── biomeos/               # Main binary (CLI + nucleus modes)
 │   ├── biomeos-core/          # Core orchestration + discovery + plasmodium
 │   ├── biomeos-types/         # Shared types, SystemPaths, capability taxonomy
@@ -339,8 +339,8 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.47)
+**Status**: Production Ready (v2.48)
 **Updated**: March 16, 2026
 **Deep Audit Evolution**: Edition 2024 (all 25 crates), capability-based discovery, tarpc binary protocol, zero-copy Arc<str>, lint hardening (deny unwrap_used/expect_used), 0 files >1000 lines
-**Tests**: 5,325 passing, fully concurrent (78% line, 80% function) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
+**Tests**: 5,162+ passing, fully concurrent (78% line, 80% function) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | AGPL-3.0-only

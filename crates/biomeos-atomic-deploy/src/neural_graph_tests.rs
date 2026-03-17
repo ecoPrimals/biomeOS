@@ -425,6 +425,57 @@ fn test_parse_real_game_engine_tick() {
 }
 
 #[test]
+fn graph_node_is_optional_with_skip_fallback() {
+    let node = GraphNode {
+        id: "test_node".to_string(),
+        fallback: Some("skip".to_string()),
+        ..Default::default()
+    };
+    assert!(node.is_optional());
+}
+
+#[test]
+fn graph_node_is_not_optional_by_default() {
+    let node = GraphNode {
+        id: "test_node".to_string(),
+        fallback: None,
+        ..Default::default()
+    };
+    assert!(!node.is_optional());
+}
+
+#[test]
+fn graph_node_is_not_optional_with_error_fallback() {
+    let node = GraphNode {
+        id: "test_node".to_string(),
+        fallback: Some("error".to_string()),
+        ..Default::default()
+    };
+    assert!(!node.is_optional());
+}
+
+#[test]
+fn graph_node_fallback_deserializes_from_toml() {
+    let toml_str = r#"
+        id = "optional_step"
+        fallback = "skip"
+    "#;
+    let node: GraphNode = toml::from_str(toml_str).expect("should deserialize");
+    assert_eq!(node.id, "optional_step");
+    assert!(node.is_optional());
+}
+
+#[test]
+fn graph_node_fallback_absent_deserializes() {
+    let toml_str = r#"
+        id = "required_step"
+    "#;
+    let node: GraphNode = toml::from_str(toml_str).expect("should deserialize");
+    assert_eq!(node.id, "required_step");
+    assert!(!node.is_optional());
+}
+
+#[test]
 fn test_is_continuous_false_for_sequential() {
     let toml = r#"
 [graph]

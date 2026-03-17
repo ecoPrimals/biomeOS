@@ -2,6 +2,47 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.48 (2026-03-16) — Cross-Ecosystem Absorption + Capability Registry Evolution
+
+### New: Capability Registry Expansion (5 New Domains)
+- `compute.dispatch.*` — sub-frame GPU dispatch protocol (submit, result, capabilities, status, cancel)
+- `secrets.*` — BearDog secret storage (store, retrieve, list, delete) — new in BearDog v0.9.0
+- `relay.*` — BearDog relay authorization (authorize, status) — new in BearDog v0.9.0
+- `model.*` — NestGate model registry (register, exists, locate, metadata) — new in NestGate v4.1-dev
+- `hardware.*` — ToadStool hardware learning (observe, distill, apply)
+- Registry grows from 260+ to 280+ semantic translations across 24 domains
+
+### New: Graph Executor Fallback Support
+- `biomeos-atomic-deploy` GraphNode now supports `fallback: Option<String>`
+- `fallback = "skip"` makes nodes optional — failures are logged and skipped
+- Non-optional node failures still abort the graph (existing behavior preserved)
+- `is_optional()` helper method for clean fallback checks
+- Aligns with `biomeos-graph` ContinuousExecutor which already supported fallback
+- Enables rhizoCrypt deploy graph `fallback = "skip"` for optional dependencies
+
+### Hardcoding Evolution
+- `biomeos-nucleus/identity.rs` — primal name literals → `primal_names::BEARDOG`
+- `biomeos-nucleus/discovery.rs` — `"songbird"`, `"beardog"` → `primal_names::*`
+- Socket path construction uses `primal_names` constants instead of string literals
+- Production code now references constants; test fixtures retain string literals for documentation
+
+### Dependency Evolution
+- Removed `once_cell` workspace dependency — no code usage remains (LazyLock migration complete)
+- Removed `once_cell` from `biomeos-core/Cargo.toml`
+- `async-trait` retained (still required for `dyn Trait + async` — native async traits don't support dynamic dispatch)
+
+### Audit Results (Clean)
+- 0 files over 1000 lines (largest: `atomic_client.rs` at 963)
+- 0 unsafe blocks in production code (only in `biomeos-test-utils` env helpers, documented)
+- 0 mocks in production code (all mocks are `#[cfg(test)]` or dev-dependencies)
+- 0 clippy warnings (pedantic + nursery)
+- 5,162+ tests, 0 failures
+
+### New Tests
+- 5 `GraphNode` fallback tests (optional, non-optional, TOML deserialization)
+- 5 `primal_names` tests (counts, uniqueness, biomeos identification)
+- 1 capability registry loading test (verifies new translations exist)
+
 ## v2.47 (2026-03-16) — Edition 2024 Deep Audit + Debt Execution
 
 ### Breaking: Edition 2024 Migration

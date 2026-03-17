@@ -17,6 +17,8 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
+use biomeos_types::primal_names;
+
 use crate::{discovery::DiscoveredPrimal, Error, Result};
 
 /// Identity proof (from primal, signed by `BearDog`)
@@ -127,7 +129,7 @@ impl IdentityLayerImpl {
 
         // 2. Check XDG runtime directory (standard location)
         if let Ok(uid) = std::env::var("UID") {
-            let runtime_path = format!("/run/user/{uid}/biomeos/beardog.sock");
+            let runtime_path = format!("/run/user/{uid}/biomeos/{}.sock", primal_names::BEARDOG);
             if tokio::fs::metadata(&runtime_path).await.is_ok() {
                 debug!(
                     "Found BearDog socket in XDG runtime directory: {}",
@@ -148,7 +150,7 @@ impl IdentityLayerImpl {
             let path = entry.path();
             #[allow(clippy::collapsible_if)]
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if filename.starts_with("beardog-")
+                if filename.starts_with(&format!("{}-", primal_names::BEARDOG))
                     && std::path::Path::new(filename)
                         .extension()
                         .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
@@ -238,7 +240,7 @@ impl IdentityLayer for IdentityLayerImpl {
         let verified = response
             .get("verified")
             .and_then(serde_json::Value::as_bool)
-            .ok_or_else(|| Error::invalid_response("beardog", "Missing 'verified' field"))?;
+            .ok_or_else(|| Error::invalid_response(primal_names::BEARDOG, "Missing 'verified' field"))?;
 
         let message = response
             .get("message")

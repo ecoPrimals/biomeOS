@@ -205,18 +205,7 @@ mod tests {
         let server = create_test_server("default_family");
         let node = GraphNode {
             id: "node1".to_string(),
-            primal: None,
-            output: None,
-            operation: None,
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
         assert_eq!(server.extract_family_id_from_node(&node), "default_family");
     }
@@ -228,22 +217,12 @@ mod tests {
         params.insert("other".to_string(), serde_json::json!("value"));
         let node = GraphNode {
             id: "node2".to_string(),
-            primal: None,
-            output: None,
             operation: Some(Operation {
                 name: "op".to_string(),
                 params,
                 environment: None,
             }),
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
         assert_eq!(server.extract_family_id_from_node(&node), "server_family");
     }
@@ -258,22 +237,12 @@ mod tests {
         );
         let node = GraphNode {
             id: "node3".to_string(),
-            primal: None,
-            output: None,
             operation: Some(Operation {
                 name: "op".to_string(),
                 params,
                 environment: None,
             }),
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
         assert_eq!(server.extract_family_id_from_node(&node), "node_family");
     }
@@ -288,22 +257,12 @@ mod tests {
         );
         let node = GraphNode {
             id: "node4".to_string(),
-            primal: None,
-            output: None,
             operation: Some(Operation {
                 name: "op".to_string(),
                 params,
                 environment: None,
             }),
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
         assert_eq!(server.extract_family_id_from_node(&node), "resolved_family");
     }
@@ -315,22 +274,12 @@ mod tests {
         params.insert("family_id".to_string(), serde_json::json!(42));
         let node = GraphNode {
             id: "node5".to_string(),
-            primal: None,
-            output: None,
             operation: Some(Operation {
                 name: "op".to_string(),
                 params,
                 environment: None,
             }),
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
         assert_eq!(server.extract_family_id_from_node(&node), "fallback_family");
     }
@@ -366,17 +315,9 @@ mod tests {
                 by_capability: Some("security".to_string()),
                 by_name: None,
             }),
-            output: None,
-            operation: None,
-            constraints: None,
-            depends_on: vec![],
             capabilities: vec!["security".to_string(), "crypto".to_string()],
             capabilities_provided: Some(caps_provided),
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
         let graph = crate::neural_graph::Graph {
             id: "test".to_string(),

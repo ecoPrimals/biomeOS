@@ -6,7 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%h/Development/ecoPrimals/phase2/biomeOS/scripts/beacon_dns_updater.sh daemon
+ExecStart=%h/Development/ecoPrimals/phase2/biomeOS/archive/scripts-feb13-2026/beacon_dns_updater.sh daemon
 Restart=on-failure
 RestartSec=30
 # Environment

@@ -111,6 +111,55 @@ fn test_stats() {
     assert_eq!(stats.capabilities_by_provider["songbird"], 1);
 }
 
+fn find_capability_registry_config() -> Option<std::path::PathBuf> {
+    let mut dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    loop {
+        let candidate = dir.join("config/capability_registry.toml");
+        if candidate.exists() {
+            return Some(candidate);
+        }
+        if !dir.pop() {
+            return None;
+        }
+    }
+}
+
+#[test]
+fn test_load_from_capability_registry_toml() {
+    let config_path = match find_capability_registry_config() {
+        Some(p) => p,
+        None => {
+            eprintln!("Skipping: config/capability_registry.toml not found");
+            return;
+        }
+    };
+
+    let mut registry = CapabilityTranslationRegistry::new();
+    let count = registry
+        .load_from_config(&config_path, |provider, _family_id| {
+            format!("/tmp/{provider}.sock")
+        })
+        .expect("should load capability_registry.toml");
+
+    assert!(count > 0, "Should load at least some translations from config");
+
+    // Verify new translations exist
+    assert!(
+        registry.has_capability("compute.dispatch.submit"),
+        "Should have compute.dispatch.submit"
+    );
+    assert!(registry.has_capability("secrets.store"), "Should have secrets.store");
+    assert!(registry.has_capability("model.register"), "Should have model.register");
+    assert!(
+        registry.has_capability("relay.authorize"),
+        "Should have relay.authorize"
+    );
+    assert!(
+        registry.has_capability("hardware.observe"),
+        "Should have hardware.observe"
+    );
+}
+
 #[test]
 fn test_load_defaults() {
     let mut registry = CapabilityTranslationRegistry::new();

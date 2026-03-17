@@ -14,7 +14,7 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Primals**: Self-contained Rust binaries with specific capabilities
 - **Atomics**: Primal combinations (Tower = BearDog + Songbird)
 - **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
-- **Neural API**: Semantic routing via `capability.call` (260+ translations, part of biomeOS)
+- **Neural API**: Semantic routing via `capability.call` (280+ translations, part of biomeOS)
 - **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
@@ -71,7 +71,7 @@ echo '{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":
 |  Layer 3: AI Bridge                                          |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Layer 2: Neural API (260+ semantic translations)            |
+|  Layer 2: Neural API (280+ semantic translations)            |
 |  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Layer 1: Atomics                                            |
@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 files >1000 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 5,325 tests (fully concurrent), 78% line coverage (llvm-cov)
+8. **Tested**: 5,162+ tests (fully concurrent), 78% line coverage (llvm-cov)
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection eliminates global state races
 
 ---
@@ -167,15 +167,15 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.47)
+**Status**: Production Ready (v2.48)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
-**Neural API**: 260+ semantic translations, 19 capability domains (part of biomeOS)
+**Neural API**: 280+ semantic translations, 24 capability domains (part of biomeOS)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v3.0 compliant
 **Provenance Trio**: rhizoCrypt + LoamSpine + sweetGrass wired into Neural API
-**Tests**: 5,325 passing, fully concurrent (78% line) | **Clippy**: PASS | **Docs**: Full coverage
+**Tests**: 5,162+ passing, fully concurrent (78% line) | **Clippy**: PASS | **Docs**: Full coverage
 **Updated**: March 16, 2026

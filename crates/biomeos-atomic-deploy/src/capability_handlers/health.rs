@@ -155,17 +155,8 @@ mod tests {
         GraphNode {
             id: "health_node".to_string(),
             primal,
-            output: None,
             operation,
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         }
     }
 
@@ -177,17 +168,7 @@ mod tests {
                 by_capability: Some("encryption".to_string()),
                 by_name: None,
             }),
-            output: None,
-            operation: None,
-            constraints: None,
-            depends_on: vec![],
-            capabilities: vec![],
-            capabilities_provided: None,
-            parameter_mappings: None,
-            node_type: None,
-            dependencies: vec![],
-            config: HashMap::new(),
-            outputs: vec![],
+            ..Default::default()
         };
 
         let ctx = ExecutionContext::new(HashMap::new());

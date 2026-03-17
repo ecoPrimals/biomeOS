@@ -7,7 +7,7 @@ Before=biomeos-beacon-dns.service
 
 [Service]
 Type=forking
-ExecStart=%h/Development/ecoPrimals/phase2/biomeOS/scripts/start_nucleus.sh sovereign
+ExecStart=%h/Development/ecoPrimals/phase2/biomeOS/target/release/biomeos nucleus start tower
 # Evolved standard v2 environment
 Environment=FAMILY_ID=1894e909e454
 Environment=NODE_ID=gate

@@ -155,4 +155,36 @@ mod tests {
             assert_eq!(*name, name.to_ascii_lowercase(), "{name} must be lowercase");
         }
     }
+
+    #[test]
+    fn is_known_primal_biomeos() {
+        assert!(is_known_primal("biomeos"));
+        assert!(is_known_primal("BIOMEOS"));
+    }
+
+    #[test]
+    fn core_primals_count() {
+        assert_eq!(CORE_PRIMALS.len(), 5);
+    }
+
+    #[test]
+    fn provenance_primals_count() {
+        assert_eq!(PROVENANCE_PRIMALS.len(), 3);
+    }
+
+    #[test]
+    fn spring_primals_count() {
+        assert_eq!(SPRING_PRIMALS.len(), 7);
+    }
+
+    #[test]
+    fn all_primal_names_are_unique() {
+        let mut all: Vec<&str> = Vec::new();
+        all.extend_from_slice(CORE_PRIMALS);
+        all.extend_from_slice(PROVENANCE_PRIMALS);
+        all.extend_from_slice(SPRING_PRIMALS);
+        all.push(BIOMEOS);
+        let unique: std::collections::HashSet<&&str> = all.iter().collect();
+        assert_eq!(all.len(), unique.len(), "duplicate primal name found");
+    }
 }

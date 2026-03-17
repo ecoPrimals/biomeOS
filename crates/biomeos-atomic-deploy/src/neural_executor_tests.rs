@@ -83,17 +83,7 @@ fn create_test_node(id: &str, depends_on: Vec<String>) -> GraphNode {
     GraphNode {
         id: id.to_string(),
         depends_on,
-        primal: None,
-        output: None,
-        operation: None,
-        constraints: None,
-        capabilities: vec![],
-        capabilities_provided: None,
-        parameter_mappings: None,
-        node_type: None,
-        dependencies: vec![],
-        config: HashMap::new(),
-        outputs: vec![],
+        ..Default::default()
     }
 }
 
