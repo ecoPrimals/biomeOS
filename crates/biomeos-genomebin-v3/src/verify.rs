@@ -102,6 +102,8 @@ impl GenomeBin {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use crate::{Arch, CompressedBinary};
     use std::io::Write;
@@ -126,5 +128,62 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert!(results.values().all(|r| r.valid));
         assert!(genome.is_valid().unwrap());
+    }
+
+    #[test]
+    fn test_verify_invalid_checksum_returns_false_result() {
+        let mut genome = GenomeBin::new("invalid-test");
+        let mut compressed = CompressedBinary::compress(Arch::X86_64, b"data");
+        compressed.checksum[0] ^= 0xff;
+        genome.binaries.insert(Arch::X86_64, compressed);
+
+        let results = genome.verify_all().unwrap();
+        assert_eq!(results.len(), 1);
+        let result = results.values().next().unwrap();
+        assert!(!result.valid);
+        assert_eq!(result.actual, "FAILED");
+        assert!(!genome.is_valid().unwrap());
+    }
+
+    #[test]
+    fn test_verify_embedded_genome() {
+        let mut child = GenomeBin::new("child");
+        child.add_binary_bytes(Arch::Aarch64, b"child binary");
+
+        let mut parent = GenomeBin::new("parent");
+        parent.add_binary_bytes(Arch::X86_64, b"parent binary");
+        parent.embed(child).unwrap();
+
+        let results = parent.verify_all().unwrap();
+        assert!(results.len() >= 2);
+        assert!(results.values().all(|r| r.valid));
+        assert!(parent.is_valid().unwrap());
+    }
+
+    #[test]
+    fn test_verify_embedded_genome_invalid_propagates() {
+        let mut child = GenomeBin::new("child");
+        let mut bad_compressed = CompressedBinary::compress(Arch::Aarch64, b"child");
+        bad_compressed.checksum[0] ^= 0xff;
+        child.binaries.insert(Arch::Aarch64, bad_compressed);
+
+        let mut parent = GenomeBin::new("parent");
+        parent.add_binary_bytes(Arch::X86_64, b"parent");
+        parent.embed(child).unwrap();
+
+        let results = parent.verify_all().unwrap();
+        assert!(!results.values().all(|r| r.valid));
+        assert!(!parent.is_valid().unwrap());
+    }
+
+    #[test]
+    fn test_verify_result_fields() {
+        let mut genome = GenomeBin::new("fields-test");
+        genome.add_binary_bytes(Arch::X86_64, b"x");
+
+        let results = genome.verify_all().unwrap();
+        let result = results.values().next().unwrap();
+        assert!(result.valid);
+        assert_eq!(result.expected, result.actual);
     }
 }

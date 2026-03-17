@@ -37,3 +37,62 @@ impl GeneticsOps for Spore {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::spore_types::SporeType;
+    use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn generate_seed_file_creates_family_seed() {
+        let temp = TempDir::new().unwrap();
+        let root_path = temp.path().to_path_buf();
+        let config = super::super::types::SporeConfig {
+            label: "test".to_string(),
+            node_id: "tower1".to_string(),
+            family_id: "default".to_string(),
+            spore_type: SporeType::Live,
+            plasmid_bin_dir: None,
+        };
+        let spore = Spore {
+            root_path: root_path.clone(),
+            config,
+        };
+
+        spore.generate_seed_file().await.unwrap();
+
+        let seed_path = root_path.join(".family.seed");
+        assert!(seed_path.exists());
+        assert_eq!(std::fs::metadata(&seed_path).unwrap().len(), 32);
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn generate_seed_file_fails_on_readonly_path() {
+        let temp = TempDir::new().unwrap();
+        let root_path = temp.path().join("readonly_dir");
+        let config = super::super::types::SporeConfig {
+            label: "test".to_string(),
+            node_id: "tower1".to_string(),
+            family_id: "default".to_string(),
+            spore_type: SporeType::Live,
+            plasmid_bin_dir: None,
+        };
+        let spore = Spore {
+            root_path: root_path.clone(),
+            config,
+        };
+
+        std::fs::create_dir_all(&root_path).unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&root_path).unwrap().permissions();
+        perms.set_mode(0o444);
+        std::fs::set_permissions(&root_path, perms).unwrap();
+
+        let result = spore.generate_seed_file().await;
+        assert!(result.is_err());
+    }
+}

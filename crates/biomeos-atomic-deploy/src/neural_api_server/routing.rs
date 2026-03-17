@@ -723,7 +723,7 @@ mod tests {
         let result = server.handle_request_json("{broken").await;
         assert_eq!(result["error"]["code"], -32700);
         // serde_json error message varies (e.g. "expected value", "EOF while parsing")
-        assert!(result["error"]["message"].as_str().unwrap_or("").len() > 0);
+        assert!(!result["error"]["message"].as_str().unwrap_or("").is_empty());
     }
 
     #[tokio::test]

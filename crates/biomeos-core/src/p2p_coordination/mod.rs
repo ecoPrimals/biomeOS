@@ -404,7 +404,7 @@ pub(crate) fn compute_status_impl(
 use socket_providers::{SocketDiscoveryProvider, SocketRoutingProvider, SocketSecurityProvider};
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

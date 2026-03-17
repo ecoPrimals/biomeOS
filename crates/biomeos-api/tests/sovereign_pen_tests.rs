@@ -26,7 +26,7 @@ use axum::{
     Router,
 };
 use biomeos_api::{AppState, Config};
-use biomeos_test_utils::{remove_test_env, set_test_env};
+use biomeos_test_utils::set_test_env;
 use http_body_util::BodyExt;
 use std::time::Instant;
 use tower::ServiceExt;

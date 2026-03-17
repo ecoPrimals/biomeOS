@@ -12,7 +12,7 @@ use axum::{
 };
 use biomeos_api::{AppState, Config};
 use biomeos_core::CompositeDiscovery;
-use biomeos_test_utils::{remove_test_env, set_test_env};
+use biomeos_test_utils::set_test_env;
 use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt; // Required for .oneshot() method on Router

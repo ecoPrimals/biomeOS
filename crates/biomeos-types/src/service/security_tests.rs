@@ -312,8 +312,8 @@ fn enum_seccomp_profile_variants() {
 
 #[test]
 fn enum_key_provider_variants() {
-    let gen: KeyProvider = serde_json::from_str(r#""Generated""#).unwrap();
-    assert!(matches!(gen, KeyProvider::Generated));
+    let generated: KeyProvider = serde_json::from_str(r#""Generated""#).unwrap();
+    assert!(matches!(generated, KeyProvider::Generated));
 
     let ext_json = r#"{"External":{"provider":"aws","config":{"region":"us-east-1"}}}"#;
     let ext: KeyProvider = serde_json::from_str(ext_json).unwrap();

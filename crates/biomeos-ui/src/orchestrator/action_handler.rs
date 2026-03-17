@@ -258,7 +258,7 @@ impl ActionHandler {
         device_id: &str,
         primal_id: &str,
     ) -> Result<String> {
-        if let Some(ref songbird) = songbird {
+        if let Some(songbird) = songbird {
             info!("🎵 Songbird available - registering assignment");
 
             match songbird
@@ -301,7 +301,7 @@ impl ActionHandler {
         info!("Unassigning device {}", device_id);
 
         // Step 1: Remove from Songbird registry
-        if let Some(ref songbird) = songbird {
+        if let Some(songbird) = songbird {
             match songbird
                 .call(
                     "registry.unassign_device",
@@ -332,7 +332,7 @@ impl ActionHandler {
     ) -> Result<ActionResult> {
         info!("Starting primal {}", primal_name);
 
-        if let Some(ref toadstool) = toadstool {
+        if let Some(toadstool) = toadstool {
             match toadstool
                 .call(
                     "compute.start_primal",
@@ -368,7 +368,7 @@ impl ActionHandler {
     ) -> Result<ActionResult> {
         info!("Stopping primal {}", primal_id);
 
-        if let Some(ref toadstool) = toadstool {
+        if let Some(toadstool) = toadstool {
             match toadstool
                 .call(
                     "compute.stop_primal",
@@ -401,7 +401,7 @@ impl ActionHandler {
     ) -> Result<ActionResult> {
         info!("Restarting primal {}", primal_id);
 
-        if let Some(ref toadstool) = toadstool {
+        if let Some(toadstool) = toadstool {
             match toadstool
                 .call(
                     "compute.restart_primal",
@@ -438,7 +438,7 @@ impl ActionHandler {
     ) -> Result<ActionResult> {
         info!("Accepting suggestion {}", suggestion_id);
 
-        if let Some(ref squirrel) = squirrel {
+        if let Some(squirrel) = squirrel {
             match squirrel
                 .call(
                     "ai.accept_suggestion",
@@ -471,7 +471,7 @@ impl ActionHandler {
     ) -> Result<ActionResult> {
         info!("Dismissing suggestion {}", suggestion_id);
 
-        if let Some(ref squirrel) = squirrel {
+        if let Some(squirrel) = squirrel {
             match squirrel
                 .call(
                     "ai.dismiss_suggestion",
@@ -507,7 +507,7 @@ impl ActionHandler {
         let mut refresh_results = Vec::new();
 
         // Refresh device list from Songbird
-        if let Some(ref songbird) = songbird {
+        if let Some(songbird) = songbird {
             match songbird
                 .call("registry.list_devices", serde_json::json!({}))
                 .await
@@ -526,7 +526,7 @@ impl ActionHandler {
         }
 
         // Refresh metrics from ToadStool
-        if let Some(ref toadstool) = toadstool {
+        if let Some(toadstool) = toadstool {
             match toadstool
                 .call("compute.get_metrics", serde_json::json!({}))
                 .await

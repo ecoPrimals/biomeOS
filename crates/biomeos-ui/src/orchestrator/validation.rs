@@ -46,7 +46,7 @@ impl Validation {
             device_id, primal_id
         );
 
-        if let Some(ref songbird) = songbird {
+        if let Some(songbird) = songbird {
             info!("🎵 Songbird available - checking validation");
 
             // Call Songbird to validate the assignment

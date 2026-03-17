@@ -87,16 +87,13 @@ impl HapticPipeline {
         if let Some(caps) = self.find_device(command.device) {
             command.intensity = command.intensity.clamp(0.0, 1.0);
 
-            if let (Some(ref mut force), Some(max_force)) =
-                (&mut command.force_vector, caps.max_force_n)
-            {
+            if let (Some(force), Some(max_force)) = (&mut command.force_vector, caps.max_force_n) {
                 for component in force.iter_mut() {
                     *component = component.clamp(-max_force, max_force);
                 }
             }
 
-            if let (Some(ref mut freq), Some(max_freq)) =
-                (&mut command.frequency_hz, caps.max_frequency_hz)
+            if let (Some(freq), Some(max_freq)) = (&mut command.frequency_hz, caps.max_frequency_hz)
             {
                 *freq = freq.clamp(0.0, max_freq);
             }

@@ -2,6 +2,46 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.47 (2026-03-16) — Edition 2024 Deep Audit + Debt Execution
+
+### Breaking: Edition 2024 Migration
+- All 25 workspace crates now on Rust edition 2024 (was: 19 on 2021)
+- Fixed 24+ edition 2024 compatibility issues: binding modes, let-chains, reserved keywords
+- `gen` keyword reserved — renamed all `gen` identifiers to descriptive names
+
+### Refactoring: File Size Compliance
+- `main.rs` (1091→752 lines) — extracted genome module to `src/genome.rs`
+- `graph_tests.rs` (1045→8 modules) — split into focused submodules (execution_status, crud, execute, continuous, pipeline, optimization, pure_logic)
+- 0 files over 1000 lines (was: 2 violations)
+
+### Modernization: Dependency Evolution
+- `once_cell::sync::Lazy` → `std::sync::LazyLock` (stdlib, zero external deps)
+- Tracked: bincode v1 transitive via tarpc (RUSTSEC-2025-0141), awaiting upstream
+
+### Code Quality: Clippy Clean
+- Fixed 7 unfulfilled `#[expect]` lint attributes
+- Resolved all `collapsible_if` lints via let-chains
+- Fixed reserved keyword `gen` → `generated`
+- PASS: 0 warnings (pedantic + nursery, `-D warnings`)
+
+### Hardcoded Port Evolution
+- `federation/src/modules.rs`: magic numbers → `constants::ports::*`
+- `config/network.rs`: `8080` → `constants::ports::HTTP_BRIDGE`
+
+### Archive: Legacy Standalone Binaries
+- Archived 5 pre-UniBin binaries from `src/bin/` (1,839 lines total)
+- `biome.rs`, `nucleus.rs`, `launch_primal.rs`, `livespore-deploy.rs`, `biomeos-validate-federation.rs`
+- All superseded by UniBin mode-based dispatch
+
+### Test Coverage
+- 30 new tests across 6 previously low-coverage modules
+- 5,295 → 5,325 tests (0 failures)
+- Targeted: tower_metadata, genome/validation, test_support, verify, genetics, model_cache/types
+
+### Documentation
+- README, START_HERE, CURRENT_STATUS updated to match actual state
+- Removed false claims (edition 2024 was not actually applied to most crates)
+
 ## v2.46 (2026-03-16) — Spring Absorption + Ecosystem Alignment
 
 ### New: DispatchOutcome Pattern (from airSpring)

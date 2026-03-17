@@ -47,7 +47,7 @@ impl Authorization {
         );
 
         // Check if BearDog is available
-        if let Some(ref beardog) = beardog {
+        if let Some(beardog) = beardog {
             info!("🔒 BearDog available - checking authorization");
 
             // Call BearDog to check authorization
@@ -100,7 +100,7 @@ impl Authorization {
     /// Falls back to "anonymous" if no session is available.
     pub async fn get_current_user_id(beardog: &Option<BearDogClient>) -> String {
         // Try to get from BearDog session
-        if let Some(ref beardog) = beardog {
+        if let Some(beardog) = beardog {
             if let Ok(result) = beardog
                 .call("auth.get_current_user", serde_json::json!({}))
                 .await

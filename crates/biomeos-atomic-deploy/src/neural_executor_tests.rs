@@ -702,8 +702,10 @@ async fn test_execute_rollback_on_failure() {
         environment: None,
     });
 
-    let mut config = GraphConfig::default();
-    config.rollback_on_failure = true;
+    let config = GraphConfig {
+        rollback_on_failure: true,
+        ..GraphConfig::default()
+    };
 
     let graph = Graph {
         id: "rollback-test".to_string(),
@@ -726,7 +728,7 @@ async fn test_execute_rollback_on_failure() {
 
 #[test]
 fn test_execution_report_new_and_builder() {
-    use crate::executor::types::{ExecutionReport, PhaseResult};
+    use crate::executor::types::ExecutionReport;
 
     let mut report = ExecutionReport::new("graph-1");
     assert_eq!(report.graph_id, "graph-1");

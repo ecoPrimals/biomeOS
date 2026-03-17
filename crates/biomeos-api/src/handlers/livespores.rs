@@ -176,10 +176,7 @@ pub async fn get_livespores(
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

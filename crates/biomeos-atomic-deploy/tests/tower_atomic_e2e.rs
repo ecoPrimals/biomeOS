@@ -13,7 +13,7 @@
 //! cargo test --test tower_atomic_e2e -- --test-threads=1
 //! ```
 
-use biomeos_test_utils::{remove_test_env, set_test_env};
+use biomeos_test_utils::set_test_env;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;

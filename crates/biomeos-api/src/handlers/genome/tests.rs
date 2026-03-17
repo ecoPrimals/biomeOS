@@ -114,6 +114,76 @@ async fn test_verify_genome_file_not_found() {
 }
 
 #[tokio::test]
+async fn test_verify_genome_file_valid() {
+    use super::types::VerifyRequest;
+    use super::validation::verify_genome_file;
+
+    let temp_dir = TempDir::new().expect("create temp dir");
+    let genome_path = temp_dir.path().join("valid.genome");
+
+    let mut genome = GenomeBin::new("valid-test");
+    genome.add_binary_bytes(biomeos_genomebin_v3::Arch::X86_64, b"test binary");
+    genome.save(&genome_path).expect("save genome");
+
+    let req = VerifyRequest {
+        path: genome_path.clone(),
+    };
+    let result = verify_genome_file(axum::Json(req)).await;
+    let resp = result.expect("verify should succeed");
+    assert!(resp.valid);
+    assert_eq!(resp.message, "All checksums valid");
+}
+
+#[tokio::test]
+async fn test_verify_genome_file_invalid_checksum() {
+    use super::types::VerifyRequest;
+    use super::validation::verify_genome_file;
+
+    let temp_dir = TempDir::new().expect("create temp dir");
+    let genome_path = temp_dir.path().join("invalid.genome");
+
+    let mut genome = GenomeBin::new("invalid-test");
+    genome.add_binary_bytes(biomeos_genomebin_v3::Arch::X86_64, b"test binary");
+    let mut compressed = genome
+        .binaries
+        .get(&biomeos_genomebin_v3::Arch::X86_64)
+        .unwrap()
+        .clone();
+    compressed.checksum[0] ^= 0xff;
+    genome
+        .binaries
+        .insert(biomeos_genomebin_v3::Arch::X86_64, compressed);
+    genome.save(&genome_path).expect("save genome");
+
+    let req = VerifyRequest {
+        path: genome_path.clone(),
+    };
+    let result = verify_genome_file(axum::Json(req)).await;
+    let resp = result.expect("verify should return Ok with valid: false");
+    assert!(!resp.valid);
+    assert_eq!(resp.message, "Checksum verification failed");
+}
+
+#[tokio::test]
+async fn test_verify_genome_file_load_error() {
+    use super::types::VerifyRequest;
+    use super::validation::verify_genome_file;
+
+    let temp_dir = TempDir::new().expect("create temp dir");
+    let genome_path = temp_dir.path().join("invalid-json.genome");
+    std::fs::write(&genome_path, "not valid json").expect("write");
+
+    let req = VerifyRequest {
+        path: genome_path.clone(),
+    };
+    let result = verify_genome_file(axum::Json(req)).await;
+    assert!(
+        matches!(result, Err(axum::http::StatusCode::BAD_REQUEST)),
+        "expected BAD_REQUEST for invalid JSON, got: {result:?}"
+    );
+}
+
+#[tokio::test]
 async fn test_verify_genome_not_found() {
     use super::validation::verify_genome;
     use axum::extract::Path;

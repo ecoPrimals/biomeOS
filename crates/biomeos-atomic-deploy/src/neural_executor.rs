@@ -390,7 +390,7 @@ impl GraphExecutor {
         let mut phases = Vec::new();
         let mut queue: VecDeque<String> = in_degree
             .iter()
-            .filter(|(_, &degree)| degree == 0)
+            .filter(|(_, degree)| **degree == 0)
             .map(|(id, _)| id.clone())
             .collect();
 

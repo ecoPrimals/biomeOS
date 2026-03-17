@@ -442,6 +442,7 @@ impl ContinuousExecutor {
     async fn get_feedback_input(&self, node_id: &str) -> Option<serde_json::Value> {
         let cache = self.output_cache.read().await;
         for (source, target) in &self.feedback_map {
+            #[allow(clippy::collapsible_if)]
             if target == node_id {
                 if let Some(cached) = cache.get(source) {
                     return Some(cached.value.clone());

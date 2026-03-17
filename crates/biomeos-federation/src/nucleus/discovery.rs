@@ -119,10 +119,7 @@ pub(crate) async fn layer1_physical_discovery_sockets() -> FederationResult<Vec<
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
 mod tests {
     use super::*;
 

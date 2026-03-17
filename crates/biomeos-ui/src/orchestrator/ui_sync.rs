@@ -32,7 +32,7 @@ impl UISync {
     ) -> Result<()> {
         debug!("Updating UI: device={}, primal={}", device_id, primal_id);
 
-        if let Some(ref petaltongue) = petaltongue {
+        if let Some(petaltongue) = petaltongue {
             info!("🌸 petalTongue available - updating UI");
 
             // Call petalTongue to update the topology display
@@ -67,7 +67,7 @@ impl UISync {
         petaltongue: &Option<PetalTongueClient>,
         device_id: &str,
     ) -> Result<()> {
-        if let Some(ref petaltongue) = petaltongue {
+        if let Some(petaltongue) = petaltongue {
             match petaltongue
                 .call(
                     "ui.update_topology",
@@ -97,7 +97,7 @@ impl UISync {
         petaltongue: &Option<PetalTongueClient>,
         initial_state: serde_json::Value,
     ) -> Result<()> {
-        if let Some(ref petaltongue) = petaltongue {
+        if let Some(petaltongue) = petaltongue {
             match petaltongue.call("ui.initialize", initial_state).await {
                 Ok(_) => {
                     info!("✅ Initial UI state pushed to petalTongue");
@@ -119,7 +119,7 @@ impl UISync {
         petaltongue: &Option<PetalTongueClient>,
         refresh_results: Vec<&str>,
     ) -> Result<()> {
-        if let Some(ref petaltongue) = petaltongue {
+        if let Some(petaltongue) = petaltongue {
             let _ = petaltongue
                 .call(
                     "ui.refresh",
@@ -132,7 +132,7 @@ impl UISync {
 
     /// Send UI heartbeat
     pub async fn send_heartbeat(petaltongue: &Option<PetalTongueClient>) -> Result<()> {
-        if let Some(ref petaltongue) = petaltongue {
+        if let Some(petaltongue) = petaltongue {
             let _ = petaltongue
                 .call("ui.heartbeat", serde_json::json!({ "status": "running" }))
                 .await;

@@ -6,7 +6,7 @@
 // Deep Debt: Fast AND Safe - uses nix crate for safe POSIX syscalls
 
 use std::path::PathBuf;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 /// Test configuration
 pub struct TestConfig {
@@ -28,7 +28,7 @@ impl TestConfig {
 }
 
 /// Global test configuration
-pub static TEST_CONFIG: Lazy<TestConfig> = Lazy::new(TestConfig::default);
+pub static TEST_CONFIG: LazyLock<TestConfig> = LazyLock::new(TestConfig::default);
 
 /// Test timeouts
 pub mod timeouts {

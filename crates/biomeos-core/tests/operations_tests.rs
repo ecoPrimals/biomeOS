@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+#![allow(clippy::collapsible_if)]
 // Copyright 2025 ecoPrimals Project
 
 //! Comprehensive tests for operations module

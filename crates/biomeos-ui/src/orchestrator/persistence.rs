@@ -37,7 +37,7 @@ impl Persistence {
             assignment_id, device_id, primal_id
         );
 
-        if let Some(ref nestgate) = nestgate {
+        if let Some(nestgate) = nestgate {
             info!("🏠 NestGate available - persisting assignment");
 
             // Call NestGate to store the assignment
@@ -79,7 +79,7 @@ impl Persistence {
         nestgate: &Option<NestGateClient>,
         device_id: &str,
     ) -> Result<()> {
-        if let Some(ref nestgate) = nestgate {
+        if let Some(nestgate) = nestgate {
             match nestgate
                 .call(
                     "storage.delete",

@@ -181,6 +181,6 @@ for diagnostics.
 
 **Status**: Production Ready
 **Updated**: March 16, 2026
-**Tests**: 5,162 passing, fully concurrent (78.27% line coverage)
+**Tests**: 5,325 passing, fully concurrent (78% line coverage)
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

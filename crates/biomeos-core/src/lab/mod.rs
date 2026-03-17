@@ -247,7 +247,7 @@ impl TestResult {
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

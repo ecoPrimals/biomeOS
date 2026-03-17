@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (35 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.46) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
+| See evolution handoffs (v2.47) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -59,7 +59,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 | Document | Focus | Date |
 |----------|-------|------|
 | BIOMEOS_V246_SPRING_ABSORPTION_ECOSYSTEM_ALIGNMENT_HANDOFF | Spring absorption, typed SDK, tarpc 0.37 | Mar 16, 2026 |
-| BIOMEOS_V245_DEEP_DEBT_EXECUTION_COVERAGE_EVOLUTION_HANDOFF | P0-P4 debt fixes, +81 tests, 78.27% coverage | Mar 16, 2026 |
+| BIOMEOS_V245_DEEP_DEBT_EXECUTION_COVERAGE_EVOLUTION_HANDOFF | P0-P4 debt fixes, +81 tests, 78% coverage | Mar 16, 2026 |
 | BIOMEOS_V244_DEEP_AUDIT_EVOLUTION_HANDOFF | Edition 2024, sovereignty, tarpc binary, zero-copy | Mar 16, 2026 |
 | BIOMEOS_V243_STREAMING_PIPELINE_COORDINATION_HANDOFF | Pipeline streaming, NDJSON, notifications | Mar 16, 2026 |
 
@@ -118,10 +118,10 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (5,162 tests — fully concurrent)
+# Test (5,325 tests — fully concurrent)
 cargo test --workspace
 
-# Coverage (78.27% line)
+# Coverage (78% line)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -144,6 +144,6 @@ See `ARCHIVE_INDEX.md` in archive for details.
 ---
 
 **Documentation current as of March 16, 2026**
-**Active: 19 specs, handoffs in wateringHole (v2.43–v2.46), 10 scripts**
+**Active: 19 specs, handoffs in wateringHole (v2.43–v2.47), 10 scripts**
 **Deploy graphs: 35 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 5,162 passing, fully concurrent (78.27% line coverage) | Clippy: PASS | Docs: Full coverage**
+**Tests: 5,325 passing, fully concurrent (78% line coverage) | Clippy: PASS | Docs: Full coverage**

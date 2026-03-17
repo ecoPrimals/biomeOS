@@ -97,20 +97,20 @@ async fn test_unix_socket_health_check_unhealthy() {
             let mut reader = BufReader::new(read);
             let mut request_line = String::new();
 
-            if reader.read_line(&mut request_line).await.is_ok() {
-                if let Ok(req) = serde_json::from_str::<serde_json::Value>(&request_line) {
-                    // Send unhealthy response
-                    let response = serde_json::json!({
-                        "jsonrpc": "2.0",
-                        "result": {
-                            "status": "degraded"
-                        },
-                        "id": req["id"]
-                    });
+            if reader.read_line(&mut request_line).await.is_ok()
+                && let Ok(req) = serde_json::from_str::<serde_json::Value>(&request_line)
+            {
+                // Send unhealthy response
+                let response = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {
+                        "status": "degraded"
+                    },
+                    "id": req["id"]
+                });
 
-                    let response_str = serde_json::to_string(&response).unwrap() + "\n";
-                    write.write_all(response_str.as_bytes()).await.unwrap();
-                }
+                let response_str = serde_json::to_string(&response).unwrap() + "\n";
+                write.write_all(response_str.as_bytes()).await.unwrap();
             }
         }
     });

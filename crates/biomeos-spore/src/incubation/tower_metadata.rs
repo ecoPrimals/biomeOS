@@ -63,3 +63,143 @@ pub fn extract_family_id(spore_path: &Path) -> Result<String, anyhow::Error> {
 
     Ok("unknown".to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn extract_spore_id_from_tower_toml_meta_node_id() {
+        let temp = TempDir::new().unwrap();
+        let tower_toml = temp.path().join("tower.toml");
+        fs::write(
+            &tower_toml,
+            r#"
+[meta]
+node_id = "spore-abc-123"
+"#,
+        )
+        .unwrap();
+
+        let id = extract_spore_id(temp.path()).unwrap();
+        assert_eq!(id, "spore-abc-123");
+    }
+
+    #[test]
+    fn extract_spore_id_fallback_to_dir_name_when_no_tower_toml() {
+        let temp = TempDir::new().unwrap();
+        let subdir = temp.path().join("my-spore-dir");
+        fs::create_dir_all(&subdir).unwrap();
+
+        let id = extract_spore_id(&subdir).unwrap();
+        assert_eq!(id, "my-spore-dir");
+    }
+
+    #[test]
+    fn extract_spore_id_fallback_when_tower_toml_missing_meta() {
+        let temp = TempDir::new().unwrap();
+        fs::write(
+            temp.path().join("tower.toml"),
+            r#"
+[tower]
+family = "test"
+"#,
+        )
+        .unwrap();
+
+        let id = extract_spore_id(temp.path()).unwrap();
+        assert_eq!(id, temp.path().file_name().unwrap().to_str().unwrap());
+    }
+
+    #[test]
+    fn extract_spore_id_fallback_when_node_id_not_string() {
+        let temp = TempDir::new().unwrap();
+        fs::write(
+            temp.path().join("tower.toml"),
+            r#"
+[meta]
+node_id = 42
+"#,
+        )
+        .unwrap();
+
+        let id = extract_spore_id(temp.path()).unwrap();
+        assert_eq!(id, temp.path().file_name().unwrap().to_str().unwrap());
+    }
+
+    #[test]
+    fn extract_family_id_from_tower_family() {
+        let temp = TempDir::new().unwrap();
+        fs::write(
+            temp.path().join("tower.toml"),
+            r#"
+[tower]
+family = "beardog-clan"
+"#,
+        )
+        .unwrap();
+
+        let family = extract_family_id(temp.path()).unwrap();
+        assert_eq!(family, "beardog-clan");
+    }
+
+    #[test]
+    fn extract_family_id_from_meta_family_id() {
+        let temp = TempDir::new().unwrap();
+        fs::write(
+            temp.path().join("tower.toml"),
+            r#"
+[meta]
+family_id = "meta-family-xyz"
+"#,
+        )
+        .unwrap();
+
+        let family = extract_family_id(temp.path()).unwrap();
+        assert_eq!(family, "meta-family-xyz");
+    }
+
+    #[test]
+    fn extract_family_id_fallback_to_unknown() {
+        let temp = TempDir::new().unwrap();
+        fs::write(temp.path().join("tower.toml"), "[other]\nkey = \"value\"").unwrap();
+
+        let family = extract_family_id(temp.path()).unwrap();
+        assert_eq!(family, "unknown");
+    }
+
+    #[test]
+    fn extract_family_id_tower_takes_precedence_over_meta() {
+        let temp = TempDir::new().unwrap();
+        fs::write(
+            temp.path().join("tower.toml"),
+            r#"
+[tower]
+family = "tower-family"
+[meta]
+family_id = "meta-family"
+"#,
+        )
+        .unwrap();
+
+        let family = extract_family_id(temp.path()).unwrap();
+        assert_eq!(family, "tower-family");
+    }
+
+    #[test]
+    fn extract_family_id_errors_when_tower_toml_missing() {
+        let temp = TempDir::new().unwrap();
+        let result = extract_family_id(temp.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn extract_spore_id_fallback_unknown_for_root_path() {
+        let id = extract_spore_id(Path::new("/")).unwrap();
+        assert_eq!(id, "unknown");
+    }
+}

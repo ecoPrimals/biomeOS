@@ -9,6 +9,7 @@
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
+#![allow(clippy::collapsible_if)] // Edition 2021; let-chains require 2024
 
 /// CLI command implementations
 pub mod commands;

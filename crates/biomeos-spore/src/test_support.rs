@@ -192,3 +192,62 @@ pub fn cleanup_test_binaries() -> SporeResult<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn setup_test_binaries_at_creates_structure() {
+        let temp = TempDir::new().unwrap();
+        let plasmid_bin = setup_test_binaries_at(temp.path()).unwrap();
+
+        assert!(plasmid_bin.join("tower/tower").exists());
+        assert!(plasmid_bin.join("primals/beardog").exists());
+        assert!(plasmid_bin.join("primals/songbird").exists());
+
+        let tower_content = fs::read_to_string(plasmid_bin.join("tower/tower")).unwrap();
+        assert!(tower_content.contains("Mock tower"));
+
+        let beardog_content = fs::read_to_string(plasmid_bin.join("primals/beardog")).unwrap();
+        assert!(beardog_content.contains("Mock beardog"));
+    }
+
+    #[test]
+    fn setup_test_binaries_at_returns_correct_path() {
+        let temp = TempDir::new().unwrap();
+        let plasmid_bin = setup_test_binaries_at(temp.path()).unwrap();
+
+        assert_eq!(plasmid_bin, temp.path().join("plasmidBin"));
+    }
+
+    #[test]
+    fn setup_test_binaries_at_idempotent() {
+        let temp = TempDir::new().unwrap();
+        let first = setup_test_binaries_at(temp.path()).unwrap();
+        let second = setup_test_binaries_at(temp.path()).unwrap();
+
+        assert_eq!(first, second);
+        assert!(first.join("tower/tower").exists());
+    }
+
+    #[test]
+    fn cleanup_test_binaries_safe_when_no_mocks() {
+        let result = cleanup_test_binaries();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn setup_test_binaries_succeeds() {
+        let original_cwd = std::env::current_dir().unwrap();
+        let result = setup_test_binaries();
+        assert!(result.is_ok());
+        let plasmid_bin = result.unwrap();
+        assert!(plasmid_bin.join("tower").exists());
+        assert!(plasmid_bin.join("primals").exists());
+        let _ = std::env::set_current_dir(&original_cwd);
+    }
+}

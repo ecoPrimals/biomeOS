@@ -12,6 +12,7 @@
 //!
 //! **Concurrency-First Design**:
 //! - Service polling uses exponential backoff for efficiency
+#![allow(clippy::collapsible_if)]
 //! - Minimal delays, fast failure detection
 //! - Optimized for concurrent test execution
 

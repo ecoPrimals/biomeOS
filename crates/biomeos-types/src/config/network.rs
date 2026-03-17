@@ -247,7 +247,7 @@ impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
             bind_address: "0.0.0.0".to_string(),
-            port: 8080,
+            port: crate::constants::ports::HTTP_BRIDGE,
             tls: None,
             http: HttpConfig::default(),
             websocket: None,

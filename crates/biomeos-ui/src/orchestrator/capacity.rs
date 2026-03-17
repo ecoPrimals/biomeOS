@@ -48,7 +48,7 @@ impl Capacity {
             device_id, primal_id
         );
 
-        if let Some(ref toadstool) = toadstool {
+        if let Some(toadstool) = toadstool {
             info!("🍄 ToadStool available - checking capacity");
 
             // Call ToadStool to check resource capacity

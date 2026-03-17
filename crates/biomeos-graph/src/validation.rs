@@ -119,6 +119,7 @@ impl GraphValidator {
         let mut rec_stack = HashSet::new();
 
         for node in nodes {
+            #[allow(clippy::collapsible_if)]
             if !visited.contains(node.id.as_str()) {
                 if let Some(cycle_node) =
                     Self::detect_cycle(node.id.as_str(), &adj, &mut visited, &mut rec_stack)

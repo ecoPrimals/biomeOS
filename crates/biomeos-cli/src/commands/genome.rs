@@ -639,7 +639,7 @@ mod tests {
 
     #[test]
     fn test_get_genome_storage_dir_with_xdg() {
-        use biomeos_test_utils::{remove_test_env, TestEnvGuard};
+        use biomeos_test_utils::TestEnvGuard;
         let _guard = TestEnvGuard::new("XDG_DATA_HOME", Some("/tmp/xdg_test"));
         let dir = get_genome_storage_dir();
         assert_eq!(dir, PathBuf::from("/tmp/xdg_test/biomeos/genomes"));

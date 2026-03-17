@@ -20,10 +20,10 @@ async fn beardog_available() -> Option<BearDogClient> {
     // Use timeout to prevent hanging when BearDog isn't available
     let result = tokio::time::timeout(AVAILABILITY_TIMEOUT, async {
         // Try to find BearDog via discovery first
-        if let Ok(client) = BearDogClient::from_discovery().await {
-            if client.is_available().await {
-                return Some(client);
-            }
+        if let Ok(client) = BearDogClient::from_discovery().await
+            && client.is_available().await
+        {
+            return Some(client);
         }
 
         // Try common endpoints with individual timeouts

@@ -83,7 +83,12 @@ pub async fn load_config(config_path: Option<&str>) -> Result<Value> {
                     "discovery": {
                         "method": "network_scan",
                         "timeout": 30,
-                        "scan_ports": [8080, 8081, 8082, 8083]
+                        "scan_ports": [
+                            biomeos_types::constants::ports::HTTP_BRIDGE,
+                            biomeos_types::constants::ports::WS_DEFAULT,
+                            biomeos_types::constants::ports::HTTP_BRIDGE + 2,
+                            biomeos_types::constants::ports::HTTP_BRIDGE + 3,
+                        ]
                     },
                     "coordination": {
                         "enabled": true,
@@ -112,10 +117,26 @@ pub async fn show_status() -> Result<()> {
     // Active services
     println!("\n📦 Active Services:");
     let services = vec![
-        (TOADSTOOL, "8080", "Healthy"),
-        (SONGBIRD, "8081", "Healthy"),
-        (NESTGATE, "8082", "Warning"),
-        (BEARDOG, "8083", "Healthy"),
+        (
+            TOADSTOOL,
+            biomeos_types::constants::ports::HTTP_BRIDGE.to_string(),
+            "Healthy",
+        ),
+        (
+            SONGBIRD,
+            biomeos_types::constants::ports::WS_DEFAULT.to_string(),
+            "Healthy",
+        ),
+        (
+            NESTGATE,
+            (biomeos_types::constants::ports::HTTP_BRIDGE + 2).to_string(),
+            "Warning",
+        ),
+        (
+            BEARDOG,
+            (biomeos_types::constants::ports::HTTP_BRIDGE + 3).to_string(),
+            "Healthy",
+        ),
     ];
 
     for (name, port, health) in services {
