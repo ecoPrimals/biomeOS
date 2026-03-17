@@ -71,6 +71,16 @@ pub struct GraphNode {
     /// In Continuous graphs, "skip" allows optional primals to miss ticks without killing the loop.
     #[serde(default)]
     pub fallback: Option<String>,
+
+    /// Estimated execution cost in milliseconds.
+    /// Used by Pathway Learner for cost-aware scheduling and reordering.
+    #[serde(default)]
+    pub cost_estimate_ms: Option<u64>,
+
+    /// Declared operation dependencies for Pathway Learner analysis.
+    /// Semantic operation names this node depends on beyond structural `depends_on`.
+    #[serde(default)]
+    pub operation_dependencies: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -724,5 +734,42 @@ mod tests {
         "#;
         let node: GraphNode = toml::from_str(toml_str).unwrap();
         assert!(node.is_optional());
+    }
+
+    #[test]
+    fn test_cost_estimate_ms_deserializes() {
+        let toml_str = r#"
+            id = "expensive-node"
+            name = "GPU Compute"
+            cost_estimate_ms = 500
+        "#;
+        let node: GraphNode = toml::from_str(toml_str).unwrap();
+        assert_eq!(node.cost_estimate_ms, Some(500));
+    }
+
+    #[test]
+    fn test_cost_estimate_ms_defaults_to_none() {
+        let node = make_test_node();
+        assert_eq!(node.cost_estimate_ms, None);
+    }
+
+    #[test]
+    fn test_operation_dependencies_deserializes() {
+        let toml_str = r#"
+            id = "write-node"
+            name = "Storage Write"
+            operation_dependencies = ["storage.write", "crypto.sign"]
+        "#;
+        let node: GraphNode = toml::from_str(toml_str).unwrap();
+        assert_eq!(
+            node.operation_dependencies,
+            vec!["storage.write", "crypto.sign"]
+        );
+    }
+
+    #[test]
+    fn test_operation_dependencies_defaults_to_empty() {
+        let node = make_test_node();
+        assert!(node.operation_dependencies.is_empty());
     }
 }

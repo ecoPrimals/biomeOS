@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 16, 2026 (v2.48: Edition 2024 deep audit + debt execution)
-**Version**: 2.48
+**Updated**: March 16, 2026 (v2.49: Resilient dispatch + cost-aware Pathway Learner)
+**Version**: 2.49
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used |
-| **Tests Passing** | 5,162+ lib + bin (0 failures) |
+| **Tests Passing** | 5,161+ lib + bin (0 failures) |
 | **Test Coverage** | 78% line, 80% function (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production (2 test-only in env_helpers.rs, Rust 2024 requirement) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
@@ -25,12 +25,12 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 24 domains (+ measurement, physics, health_extended), 280+ translations |
+| **Capability Domains** | 25 domains (+ health cross-cutting), 285+ translations |
 | **Deploy Graphs** | 40 (+ 2 Pipeline coordination graphs, all parseable via unified schema) |
 | **Niche Templates** | 20 (+ rootpulse-branch, rootpulse-merge, rootpulse-diff, rootpulse-federate, soil-microbiome) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
-| **Discovery Model** | Dynamic socket scanning + capability taxonomy |
+| **Discovery Model** | Dynamic socket scanning + capability taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
 | **Deep Debt Session (Mar 16)** | Clippy: PASS (was FAIL with 2 dead-code errors); 1 flaky test fixed (deployment_mode env race); 9 Cargo.toml AGPL-3.0-only; Sovereignty: all hardcoded Google DNS removed from tests; Doc warnings: 0 (was 1); Timeout/port constants centralized; serial_test for env-dependent tests |
@@ -45,7 +45,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 280+ capability translations, JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations |
+| **Neural API** | 285+ capability translations, JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations, circuit-breaker protected RPC |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
 | **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |

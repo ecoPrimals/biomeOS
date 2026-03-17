@@ -66,7 +66,7 @@ mod engine_tests;
 
 // Re-export primary types
 pub use engine::SocketDiscovery;
-pub use result::{DiscoveredSocket, DiscoveryMethod};
+pub use result::{DiscoveredSocket, DiscoveryMethod, PrimalManifest};
 pub use strategy::DiscoveryStrategy;
 pub use transport::TransportEndpoint;
 

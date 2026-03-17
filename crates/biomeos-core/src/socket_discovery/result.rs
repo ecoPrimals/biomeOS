@@ -5,6 +5,7 @@
 //!
 //! Types representing the results of socket discovery operations.
 
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -84,6 +85,9 @@ pub enum DiscoveryMethod {
     /// Via family-scoped /tmp
     FamilyTmp,
 
+    /// Via filesystem manifest (`$XDG_RUNTIME_DIR/ecoPrimals/manifests/{primal}.json`)
+    Manifest,
+
     /// Via capability registry query
     CapabilityRegistry,
 
@@ -95,6 +99,24 @@ pub enum DiscoveryMethod {
 
     /// Cached from previous discovery
     Cached,
+}
+
+/// Lightweight filesystem manifest written by primals at startup.
+///
+/// Primals write this to `$XDG_RUNTIME_DIR/ecoPrimals/manifests/{primal}.json`
+/// so other primals can discover them without the Neural API running.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrimalManifest {
+    /// Primal name
+    pub primal: String,
+    /// Socket path
+    pub socket: String,
+    /// Capabilities this primal provides
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+    /// Process ID (for liveness verification)
+    #[serde(default)]
+    pub pid: Option<u32>,
 }
 
 #[cfg(test)]
@@ -205,12 +227,37 @@ mod tests {
     }
 
     #[test]
+    fn test_primal_manifest_serde_roundtrip() {
+        let manifest = PrimalManifest {
+            primal: "beardog".to_string(),
+            socket: "/run/user/1000/biomeos/beardog-abc123.sock".to_string(),
+            capabilities: vec!["security".to_string(), "secrets".to_string()],
+            pid: Some(12345),
+        };
+        let json = serde_json::to_string(&manifest).unwrap();
+        let parsed: PrimalManifest = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.primal, "beardog");
+        assert_eq!(parsed.capabilities.len(), 2);
+        assert_eq!(parsed.pid, Some(12345));
+    }
+
+    #[test]
+    fn test_primal_manifest_optional_fields() {
+        let json = r#"{"primal":"songbird","socket":"/tmp/songbird.sock"}"#;
+        let manifest: PrimalManifest = serde_json::from_str(json).unwrap();
+        assert_eq!(manifest.primal, "songbird");
+        assert!(manifest.capabilities.is_empty());
+        assert_eq!(manifest.pid, None);
+    }
+
+    #[test]
     fn test_discovery_method_variants() {
         let methods = vec![
             DiscoveryMethod::EnvironmentHint(Arc::from("VAR")),
             DiscoveryMethod::XdgRuntime,
             DiscoveryMethod::AbstractSocket,
             DiscoveryMethod::FamilyTmp,
+            DiscoveryMethod::Manifest,
             DiscoveryMethod::CapabilityRegistry,
             DiscoveryMethod::TcpFallback,
             DiscoveryMethod::SocketScan,

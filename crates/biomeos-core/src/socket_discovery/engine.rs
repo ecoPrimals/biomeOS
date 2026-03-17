@@ -109,7 +109,13 @@ impl SocketDiscovery {
             return Some(socket);
         }
 
-        // 5. Capability registry
+        // 5. Filesystem manifest
+        if let Some(socket) = self.discover_via_manifest(primal_name).await {
+            self.cache_socket(&cache_key, &socket).await;
+            return Some(socket);
+        }
+
+        // 6. Capability registry
         if self.strategy.query_registry
             && let Some(socket) = self.discover_via_registry_by_name(primal_name).await
         {
@@ -226,7 +232,13 @@ impl SocketDiscovery {
             return Some(endpoint);
         }
 
-        // 6. Query capability registry
+        // 6. Filesystem manifest
+        if let Some(socket) = self.discover_via_manifest(primal_name).await {
+            self.cache_socket(&cache_key, &socket).await;
+            return Some(socket.endpoint);
+        }
+
+        // 7. Query capability registry
         if self.strategy.query_registry
             && let Some(socket) = self.discover_via_registry_by_name(primal_name).await
         {
@@ -357,6 +369,64 @@ impl SocketDiscovery {
         let legacy_path = temp_dir.join(format!("{primal_name}.sock"));
         if self.verify_unix_socket(&legacy_path).await {
             return Some(legacy_path);
+        }
+
+        None
+    }
+
+    /// Discover a primal via filesystem manifest.
+    ///
+    /// Primals write a JSON manifest at startup so neighbours can discover
+    /// them without the neural-api. Checked locations (highest priority first):
+    ///
+    /// 1. `$XDG_RUNTIME_DIR/ecoPrimals/manifests/{primal}.json`
+    /// 2. `/tmp/ecoPrimals/manifests/{primal}.json`
+    async fn discover_via_manifest(&self, primal_name: &str) -> Option<DiscoveredSocket> {
+        use super::result::PrimalManifest;
+
+        let manifest_name = format!("{primal_name}.json");
+
+        let mut candidates = Vec::new();
+        if let Some(xdg) = self.get_xdg_runtime_dir() {
+            candidates.push(xdg.join("ecoPrimals/manifests").join(&manifest_name));
+        }
+        candidates.push(
+            std::env::temp_dir()
+                .join("ecoPrimals/manifests")
+                .join(&manifest_name),
+        );
+
+        for path in candidates {
+            if let Ok(contents) = tokio::fs::read_to_string(&path).await {
+                match serde_json::from_str::<PrimalManifest>(&contents) {
+                    Ok(manifest) => {
+                        let socket_path = PathBuf::from(&manifest.socket);
+                        if self.verify_unix_socket(&socket_path).await {
+                            debug!(
+                                "Discovered {} via manifest at {}",
+                                primal_name,
+                                path.display()
+                            );
+                            return Some(
+                                DiscoveredSocket::from_unix_path(
+                                    socket_path,
+                                    DiscoveryMethod::Manifest,
+                                )
+                                .with_primal_name(primal_name)
+                                .with_capabilities(manifest.capabilities),
+                            );
+                        }
+                        trace!(
+                            "Manifest for {} found but socket not connectable: {}",
+                            primal_name,
+                            manifest.socket
+                        );
+                    }
+                    Err(e) => {
+                        trace!("Invalid manifest at {}: {}", path.display(), e);
+                    }
+                }
+            }
         }
 
         None

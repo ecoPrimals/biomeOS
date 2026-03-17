@@ -2,6 +2,56 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.49 (2026-03-16) — Resilient Dispatch + Cost-Aware Pathway Learner
+
+### New: Circuit Breaker Integration in Neural Executor
+- `node_rpc_call` and `node_capability_call` now protected by per-primal circuit breakers
+- After 5 consecutive failures to a primal, calls fail fast for 30s before half-open recovery
+- Uses the generic `CircuitBreaker::execute()` method (new) for seamless `anyhow::Error` compatibility
+- Circuit breakers shared across all nodes via `ExecutionContext` (lazy per-primal creation)
+- Prevents cascade failures when a primal is down during graph execution
+
+### New: CircuitBreaker::execute() — Generic Error Circuit Breaker
+- Added `execute<F, Fut, T, E>()` to `biomeos-core::retry::CircuitBreaker`
+- Like `call()` but accepts any error type where `E: From<RetryError>`
+- Works natively with `anyhow::Error`, eliminating manual error mapping boilerplate
+- `call()` now delegates to `execute()` internally (zero behavior change)
+
+### New: Health Domain in Capability Registry (25th Domain)
+- `[domains.health]` — cross-cutting `health.liveness`, `health.readiness`, `health.check`, `health.metrics`
+- 5 translations: `health.liveness`, `health.readiness`, `health.check`, `health.metrics`, `health.status`
+- Provider = `"*"` (every primal SHOULD implement)
+- Converged from: healthSpring V32, rhizoCrypt Session 16, petalTongue iter-7
+- Registry grows to 285+ translations across 25 domains
+
+### New: Cost-Aware Pathway Learner Optimization
+- `GraphNode` gains `cost_estimate_ms: Option<u64>` and `operation_dependencies: Vec<String>`
+- Both `biomeos-graph::GraphNode` and `biomeos-atomic-deploy::GraphNode` updated
+- PathwayLearner `find_reorder_candidates()` — moves expensive (>100ms) nodes earlier for I/O overlap
+- PathwayLearner `find_cache_candidates()` — identifies pure nodes (no op_deps, >99% success) for caching
+- `convert_deployment_node()` extracts both fields from TOML graph definitions
+- Feeds into `OptimizationType::Reorder` and `OptimizationType::Cache` suggestions
+
+### New: Manifest-Based Primal Discovery Fallback
+- `PrimalManifest` JSON struct for lightweight filesystem discovery
+- Primals write `$XDG_RUNTIME_DIR/ecoPrimals/manifests/{primal}.json` at startup
+- Discovery engine checks manifests between family-tmp and capability-registry steps
+- Works without Neural API running — essential for bootstrap and single-primal deployments
+- Verifies socket connectivity before returning manifest-discovered sockets
+
+### New Tests (14 new)
+- 3 `CircuitBreaker::execute()` tests (generic success, opens on failures, half-open recovery)
+- 4 PathwayLearner tests (reorder expensive, reorder ignores cheap, cache pure, cache ignores impure)
+- 3 `ExecutionContext` circuit breaker tests (lazy creation, per-primal isolation, shared across clones)
+- 5 `GraphNode` cost/deps tests (TOML deser, defaults, convert_deployment_node)
+- 2 `PrimalManifest` tests (serde roundtrip, optional fields)
+- Total: 5,161+ tests, 0 failures
+
+### Audit Results (Clean)
+- 0 clippy warnings (pedantic + nursery)
+- 0 files over 1000 lines
+- 0 unsafe blocks in production code
+
 ## v2.48 (2026-03-16) — Cross-Ecosystem Absorption + Capability Registry Evolution
 
 ### New: Capability Registry Expansion (5 New Domains)

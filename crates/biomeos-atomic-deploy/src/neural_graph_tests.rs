@@ -489,3 +489,68 @@ nodes = []
     let graph = Graph::from_toml_str(toml).unwrap();
     assert!(!graph.is_continuous());
 }
+
+#[test]
+fn graph_node_cost_estimate_ms_from_toml() {
+    let toml_str = r#"
+        id = "gpu-node"
+        cost_estimate_ms = 250
+    "#;
+    let node: GraphNode = toml::from_str(toml_str).expect("should deserialize");
+    assert_eq!(node.cost_estimate_ms, Some(250));
+}
+
+#[test]
+fn graph_node_cost_estimate_ms_default() {
+    let node = GraphNode {
+        id: "cheap".to_string(),
+        ..Default::default()
+    };
+    assert_eq!(node.cost_estimate_ms, None);
+}
+
+#[test]
+fn graph_node_operation_dependencies_from_toml() {
+    let toml_str = r#"
+        id = "writer"
+        operation_dependencies = ["storage.write", "crypto.sign"]
+    "#;
+    let node: GraphNode = toml::from_str(toml_str).expect("should deserialize");
+    assert_eq!(
+        node.operation_dependencies,
+        vec!["storage.write", "crypto.sign"]
+    );
+}
+
+#[test]
+fn graph_node_operation_dependencies_default_empty() {
+    let node = GraphNode {
+        id: "pure".to_string(),
+        ..Default::default()
+    };
+    assert!(node.operation_dependencies.is_empty());
+}
+
+#[test]
+fn convert_deployment_node_carries_cost_estimate() {
+    let toml = r#"
+[graph]
+id = "cost-test"
+version = "1.0.0"
+description = "Tests cost_estimate_ms in deployment format"
+
+[[graph.nodes]]
+id = "expensive"
+name = "GPU Compute"
+capability = "compute.dispatch"
+cost_estimate_ms = 500
+operation_dependencies = ["model.load"]
+
+[graph.nodes.config]
+primal = "toadstool"
+"#;
+    let graph = Graph::from_toml_str(toml).unwrap();
+    let node = &graph.nodes[0];
+    assert_eq!(node.cost_estimate_ms, Some(500));
+    assert_eq!(node.operation_dependencies, vec!["model.load"]);
+}

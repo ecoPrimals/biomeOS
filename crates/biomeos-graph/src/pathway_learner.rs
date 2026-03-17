@@ -133,6 +133,8 @@ impl PathwayLearner {
         suggestions.extend(self.find_parallelization_opportunities(graph, &node_metrics));
         suggestions.extend(self.find_prewarm_candidates(graph, &node_metrics));
         suggestions.extend(self.find_batch_candidates(graph, &node_metrics));
+        suggestions.extend(self.find_reorder_candidates(graph, &node_metrics));
+        suggestions.extend(self.find_cache_candidates(graph, &node_metrics));
 
         suggestions.sort_by(|a, b| {
             b.estimated_speedup
@@ -257,6 +259,101 @@ impl PathwayLearner {
             .collect()
     }
 
+    /// Find nodes with declared cost estimates that could benefit from reordering.
+    ///
+    /// Expensive nodes (high `cost_estimate_ms`) with no dependents should be
+    /// moved to early phases so their I/O overlaps with lighter work.
+    fn find_reorder_candidates(
+        &self,
+        graph: &DeploymentGraph,
+        node_metrics: &HashMap<String, NodeMetricsAggregate>,
+    ) -> Vec<OptimizationSuggestion> {
+        let nodes = &graph.definition.nodes;
+
+        let dependent_set: std::collections::HashSet<&str> = nodes
+            .iter()
+            .flat_map(|n| n.depends_on.iter().map(String::as_str))
+            .collect();
+
+        nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| {
+                node.cost_estimate_ms.is_some_and(|c| c > 100)
+                    && !dependent_set.contains(node.id.as_str())
+            })
+            .filter_map(|(idx, node)| {
+                let declared_cost = node.cost_estimate_ms?;
+                let actual_avg = node_metrics
+                    .get(node.id.as_str())
+                    .map(|m| m.avg_duration_ms as u64);
+                let cost = actual_avg.unwrap_or(declared_cost);
+
+                if cost > 100 && idx > 0 {
+                    Some(OptimizationSuggestion {
+                        optimization: OptimizationType::Reorder {
+                            node_id: node.id.as_str().to_string(),
+                            suggested_phase: 0,
+                        },
+                        estimated_speedup: 1.0 + (cost as f64 / 2000.0).min(0.3),
+                        confidence: if actual_avg.is_some() { 0.7 } else { 0.4 },
+                        reason: format!(
+                            "{} has cost {}ms (declared: {}ms) — moving earlier overlaps I/O",
+                            node.id.as_str(),
+                            cost,
+                            declared_cost
+                        ),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Find pure nodes (no side effects) whose output can be cached.
+    ///
+    /// Nodes with high execution count and consistent success rate are good
+    /// cache candidates, especially if they have no `operation_dependencies`
+    /// (indicating they're referentially transparent).
+    fn find_cache_candidates(
+        &self,
+        graph: &DeploymentGraph,
+        node_metrics: &HashMap<String, NodeMetricsAggregate>,
+    ) -> Vec<OptimizationSuggestion> {
+        graph
+            .definition
+            .nodes
+            .iter()
+            .filter(|node| node.operation_dependencies.is_empty())
+            .filter_map(|node| {
+                let metrics = node_metrics.get(node.id.as_str())?;
+                if metrics.total_executions >= 10
+                    && metrics.success_rate > 0.99
+                    && metrics.avg_duration_ms > 5.0
+                {
+                    Some(OptimizationSuggestion {
+                        optimization: OptimizationType::Cache {
+                            node_id: node.id.as_str().to_string(),
+                        },
+                        estimated_speedup: 1.0 + (metrics.avg_duration_ms / 500.0).min(0.8),
+                        confidence: metrics.success_rate * 0.9,
+                        reason: format!(
+                            "{} is pure (no op_deps), {:.1}ms avg, {:.0}% success over {} runs — \
+                             safe to cache",
+                            node.id.as_str(),
+                            metrics.avg_duration_ms,
+                            metrics.success_rate * 100.0,
+                            metrics.total_executions
+                        ),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Find nodes targeting the same primal that could be batched.
     fn find_batch_candidates(
         &self,
@@ -367,6 +464,8 @@ mod tests {
             feedback_to: None,
             budget_ms: None,
             fallback: None,
+            cost_estimate_ms: None,
+            operation_dependencies: Vec::new(),
         }
     }
 
@@ -528,6 +627,101 @@ mod tests {
         let parsed: GraphAnalysis = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.graph_id, "test-graph");
         assert_eq!(parsed.sample_size, 42);
+    }
+
+    #[test]
+    fn reorder_detects_expensive_non_dependent_nodes() {
+        let mut expensive_node = make_node("expensive", vec![], Some("toadstool"));
+        expensive_node.cost_estimate_ms = Some(500);
+
+        let graph = make_graph(vec![
+            make_node("a", vec![], Some("p1")),
+            expensive_node,
+            make_node("c", vec!["a"], Some("p2")),
+        ]);
+
+        let metrics = HashMap::from([
+            ("a".to_string(), make_node_metrics("a", 100, 10.0)),
+            ("expensive".to_string(), make_node_metrics("expensive", 100, 450.0)),
+            ("c".to_string(), make_node_metrics("c", 100, 20.0)),
+        ]);
+
+        let learner = make_test_learner(0);
+        let suggestions = learner.find_reorder_candidates(&graph, &metrics);
+
+        assert!(!suggestions.is_empty(), "should suggest reordering expensive node");
+        match &suggestions[0].optimization {
+            OptimizationType::Reorder { node_id, suggested_phase } => {
+                assert_eq!(node_id, "expensive");
+                assert_eq!(*suggested_phase, 0);
+            }
+            other => panic!("expected Reorder, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn reorder_ignores_cheap_nodes() {
+        let mut cheap_node = make_node("cheap", vec![], Some("p1"));
+        cheap_node.cost_estimate_ms = Some(10);
+
+        let graph = make_graph(vec![
+            make_node("a", vec![], Some("p1")),
+            cheap_node,
+        ]);
+
+        let metrics = HashMap::new();
+        let learner = make_test_learner(0);
+        let suggestions = learner.find_reorder_candidates(&graph, &metrics);
+
+        assert!(suggestions.is_empty(), "10ms is below 100ms threshold");
+    }
+
+    #[test]
+    fn cache_detects_pure_high_success_nodes() {
+        let graph = make_graph(vec![
+            make_node("pure-hash", vec![], Some("rhizocrypt")),
+        ]);
+
+        let metrics = HashMap::from([(
+            "pure-hash".to_string(),
+            NodeMetricsAggregate {
+                node_id: "pure-hash".to_string(),
+                total_executions: 50,
+                successful_executions: 50,
+                avg_duration_ms: 30.0,
+                success_rate: 1.0,
+            },
+        )]);
+
+        let learner = make_test_learner(0);
+        let suggestions = learner.find_cache_candidates(&graph, &metrics);
+
+        assert_eq!(suggestions.len(), 1);
+        match &suggestions[0].optimization {
+            OptimizationType::Cache { node_id } => assert_eq!(node_id, "pure-hash"),
+            other => panic!("expected Cache, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cache_ignores_nodes_with_operation_dependencies() {
+        let mut impure_node = make_node("side-effect", vec![], Some("p1"));
+        impure_node.operation_dependencies = vec!["storage.write".to_string()];
+
+        let graph = make_graph(vec![impure_node]);
+
+        let metrics = HashMap::from([(
+            "side-effect".to_string(),
+            make_node_metrics("side-effect", 50, 30.0),
+        )]);
+
+        let learner = make_test_learner(0);
+        let suggestions = learner.find_cache_candidates(&graph, &metrics);
+
+        assert!(
+            suggestions.is_empty(),
+            "node with operation_dependencies should not be cached"
+        );
     }
 
     fn make_test_learner(min_samples: u64) -> PathwayLearner {

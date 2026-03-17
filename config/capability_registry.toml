@@ -841,6 +841,29 @@ capabilities = [
 "hardware.distill" = { provider = "toadstool", method = "compute.hardware.distill" }
 "hardware.apply" = { provider = "toadstool", method = "compute.hardware.apply" }
 
+# ------------------------------------------------------------------------------
+# Health Domain (Cross-Cutting — All Primals)
+# Standard liveness/readiness probe protocol adopted across the ecosystem.
+# Every primal SHOULD implement health.liveness and health.readiness.
+# Converged from: healthSpring V32, rhizoCrypt Session 16, petalTongue iter-7
+# ------------------------------------------------------------------------------
+
+[domains.health]
+provider = "*"
+capabilities = [
+    "health.liveness",
+    "health.readiness",
+    "health.check",
+    "health.metrics",
+]
+
+[translations.health]
+"health.liveness" = { provider = "*", method = "health.liveness" }
+"health.readiness" = { provider = "*", method = "health.readiness" }
+"health.check" = { provider = "*", method = "health.check" }
+"health.metrics" = { provider = "*", method = "health.metrics" }
+"health.status" = { provider = "*", method = "health.status" }
+
 # ==============================================================================
 # SOCKET PATH TEMPLATES
 # ==============================================================================

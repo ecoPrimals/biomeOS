@@ -525,6 +525,8 @@ mod tests {
             feedback_to: None,
             budget_ms: None,
             fallback: None,
+            cost_estimate_ms: None,
+            operation_dependencies: Vec::new(),
         }
     }
 

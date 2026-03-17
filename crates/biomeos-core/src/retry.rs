@@ -342,6 +342,22 @@ impl CircuitBreaker {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T, BirdSongError>>,
     {
+        self.execute(operation).await
+    }
+
+    /// Execute an operation through the circuit breaker with generic error type.
+    ///
+    /// Like [`call`], this manages the full circuit state machine: checks for
+    /// open state, handles half-open recovery, and records success/failure.
+    /// Unlike `call`, the operation can return any error type convertible from
+    /// [`RetryError`], making it compatible with `anyhow::Error` and other
+    /// common error types.
+    pub async fn execute<F, Fut, T, E>(&self, operation: F) -> Result<T, E>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<T, E>>,
+        E: From<RetryError>,
+    {
         // Check if we should attempt reset
         if self.should_attempt_reset().await {
             let mut state = self.state.write().await;
@@ -360,10 +376,10 @@ impl CircuitBreaker {
             } = *state
             {
                 let elapsed = Instant::now().duration_since(opened_at);
-                return Err(BirdSongError::CircuitBreakerOpen(format!(
-                    "Circuit open for {:?} ({} failures, timeout: {:?})",
-                    elapsed, failure_count, self.timeout
-                )));
+                return Err(E::from(RetryError::CircuitBreakerOpen(format!(
+                    "Circuit open for {elapsed:?} ({failure_count} failures, timeout: {:?})",
+                    self.timeout
+                ))));
             }
         }
 
@@ -536,6 +552,58 @@ mod tests {
             .await;
 
         assert!(matches!(result, Err(BirdSongError::CircuitBreakerOpen(_))));
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_execute_generic_error() {
+        let breaker = CircuitBreaker::new(3, Duration::from_secs(1));
+
+        let result: Result<String, anyhow::Error> =
+            breaker.execute(|| async { Ok("hello".to_string()) }).await;
+
+        assert_eq!(result.unwrap(), "hello");
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_execute_opens_on_failures() {
+        let breaker = CircuitBreaker::new(2, Duration::from_secs(60));
+
+        for _ in 0..2 {
+            let _: Result<(), anyhow::Error> = breaker
+                .execute(|| async { Err(anyhow::anyhow!("boom")) })
+                .await;
+        }
+
+        assert!(breaker.is_open().await);
+
+        let result: Result<(), anyhow::Error> =
+            breaker.execute(|| async { Ok(()) }).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Circuit"));
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_execute_half_open_recovery() {
+        let breaker =
+            CircuitBreaker::new(2, Duration::from_millis(100)).with_success_threshold(1);
+
+        for _ in 0..2 {
+            let _: Result<(), anyhow::Error> = breaker
+                .execute(|| async { Err(anyhow::anyhow!("fail")) })
+                .await;
+        }
+
+        assert!(breaker.is_open().await);
+
+        tokio::time::sleep(Duration::from_millis(150)).await;
+
+        let result: Result<&str, anyhow::Error> =
+            breaker.execute(|| async { Ok("recovered") }).await;
+
+        assert_eq!(result.unwrap(), "recovered");
+        let state = breaker.state().await;
+        assert_eq!(state, CircuitState::Closed);
     }
 
     #[tokio::test]

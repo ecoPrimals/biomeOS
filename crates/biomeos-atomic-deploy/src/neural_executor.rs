@@ -574,104 +574,109 @@ impl GraphExecutor {
     //   - `crate::beardog_jwt_client::generate_secure_random_jwt()` for fallback
 
     /// Node executor: rpc_call
-    /// Makes a JSON-RPC call to a target primal
+    /// Makes a JSON-RPC call to a target primal, protected by a per-primal circuit breaker.
     ///
-    /// NEW (Feb 6, 2026) - Allows graph nodes to orchestrate primal behavior
-    /// Used for: onion.start, mesh.init, birdsong.advertise, etc.
+    /// The circuit breaker prevents cascade failures: after 5 consecutive RPC
+    /// failures to a primal, subsequent calls fail fast for 30 s before retrying.
     async fn node_rpc_call(
         node: &GraphNode,
         context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
         use std::time::Duration;
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
 
-        // Get target primal from config
         let target = node
             .config
             .get("target")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("rpc_call requires 'target' config (primal name)"))?;
 
-        // Get method name from config
         let method = node
             .config
             .get("method")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("rpc_call requires 'method' config"))?;
 
-        // Get params from config (optional, default to empty object)
         let params = node
             .config
             .get("params")
             .cloned()
             .unwrap_or_else(|| serde_json::json!({}));
 
-        // Substitute environment variables in params
         let params_str = serde_json::to_string(&params)?;
         let params_expanded = crate::executor::substitute_env(&params_str, context.env());
         let params: serde_json::Value = serde_json::from_str(&params_expanded)?;
 
         info!("   📞 RPC call to {}: {}({:?})", target, method, params);
 
-        // Get socket path for target primal
         let socket_path = context.get_socket_path(target).await;
+        let breaker = context.get_circuit_breaker(target).await;
 
-        // Build JSON-RPC request
-        let request = JsonRpcRequest::new(method, params);
+        let target_owned = target.to_string();
+        let method_owned = method.to_string();
 
-        // Connect to primal
-        let stream =
-            tokio::time::timeout(Duration::from_secs(10), UnixStream::connect(&socket_path))
-                .await
-                .context(format!("Timeout connecting to {target} at {socket_path}"))?
-                .context(format!("Failed to connect to {target} at {socket_path}"))?;
+        breaker
+            .execute(|| {
+                let socket_path = socket_path.clone();
+                let target = target_owned.clone();
+                let method = method_owned.clone();
+                let params = params.clone();
 
-        let (read_half, mut write_half) = stream.into_split();
+                async move {
+                    let request = JsonRpcRequest::new(&method, params.clone());
 
-        // Send request
-        let request_json = serde_json::to_string(&request)?;
-        write_half.write_all(request_json.as_bytes()).await?;
-        write_half.write_all(b"\n").await?;
-        write_half.flush().await?;
+                    let stream = tokio::time::timeout(
+                        Duration::from_secs(10),
+                        tokio::net::UnixStream::connect(&socket_path),
+                    )
+                    .await
+                    .context(format!("Timeout connecting to {target} at {socket_path}"))?
+                    .context(format!("Failed to connect to {target} at {socket_path}"))?;
 
-        // Read response with timeout
-        let mut reader = BufReader::new(read_half);
-        let mut response_line = String::new();
-        tokio::time::timeout(
-            Duration::from_secs(30),
-            reader.read_line(&mut response_line),
-        )
-        .await
-        .context(format!("Timeout waiting for {target} response"))?
-        .context(format!("Failed to read response from {target}"))?;
+                    let (read_half, mut write_half) = stream.into_split();
 
-        let response: serde_json::Value = serde_json::from_str(&response_line)
-            .context(format!("Invalid JSON response from {target}"))?;
+                    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+                    let request_json = serde_json::to_string(&request)?;
+                    write_half.write_all(request_json.as_bytes()).await?;
+                    write_half.write_all(b"\n").await?;
+                    write_half.flush().await?;
 
-        // Check for error
-        if let Some(error) = response.get("error") {
-            let error_msg = error
-                .get("message")
-                .and_then(|m| m.as_str())
-                .unwrap_or("Unknown error");
-            anyhow::bail!("RPC error from {target}: {error_msg}");
-        }
+                    let mut reader = BufReader::new(read_half);
+                    let mut response_line = String::new();
+                    tokio::time::timeout(
+                        Duration::from_secs(30),
+                        reader.read_line(&mut response_line),
+                    )
+                    .await
+                    .context(format!("Timeout waiting for {target} response"))?
+                    .context(format!("Failed to read response from {target}"))?;
 
-        // Extract result
-        let result = response
-            .get("result")
-            .cloned()
-            .unwrap_or(serde_json::Value::Null);
+                    let response: serde_json::Value = serde_json::from_str(&response_line)
+                        .context(format!("Invalid JSON response from {target}"))?;
 
-        info!("   ✅ RPC call successful: {} → {:?}", method, result);
+                    if let Some(error) = response.get("error") {
+                        let error_msg = error
+                            .get("message")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("Unknown error");
+                        anyhow::bail!("RPC error from {target}: {error_msg}");
+                    }
 
-        Ok(serde_json::json!({
-            "target": target,
-            "method": method,
-            "result": result,
-            "success": true
-        }))
+                    let result = response
+                        .get("result")
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
+
+                    info!("   ✅ RPC call successful: {} → {:?}", method, result);
+
+                    Ok(serde_json::json!({
+                        "target": target,
+                        "method": method,
+                        "result": result,
+                        "success": true
+                    }))
+                }
+            })
+            .await
     }
 
     /// Node executor: capability_call
@@ -779,7 +784,7 @@ impl GraphExecutor {
             }
         }
 
-        // Strategy 2: Direct primal resolution via capability domains
+        // Strategy 2: Direct primal resolution via capability domains (circuit-breaker protected)
         let provider = crate::capability_domains::capability_to_provider_fallback(capability)
             .or_else(|| crate::capability_domains::capability_to_provider_fallback(&cap_domain));
 
@@ -795,40 +800,55 @@ impl GraphExecutor {
         );
 
         let socket_path = context.get_socket_path(provider).await;
+        let breaker = context.get_circuit_breaker(provider).await;
 
-        let request = JsonRpcRequest::new(capability, params);
+        let cap_owned = capability.to_string();
+        let provider_owned = provider.to_string();
 
-        let response = tokio::time::timeout(
-            Duration::from_millis(timeout_ms),
-            Self::send_jsonrpc_async(&socket_path, &request),
-        )
-        .await
-        .context(format!("Timeout on capability call: {capability}"))?
-        .context(format!(
-            "Failed capability call {capability} → {provider} at {socket_path}"
-        ))?;
+        breaker
+            .execute(|| {
+                let socket_path = socket_path.clone();
+                let cap = cap_owned.clone();
+                let provider = provider_owned.clone();
+                let params = params.clone();
 
-        if let Some(error) = response.get("error") {
-            let msg = error
-                .get("message")
-                .and_then(|m| m.as_str())
-                .unwrap_or("unknown");
-            anyhow::bail!("Capability call {capability} failed: {msg}");
-        }
+                async move {
+                    let request = JsonRpcRequest::new(&cap, params);
 
-        let result = response
-            .get("result")
-            .cloned()
-            .unwrap_or(serde_json::Value::Null);
+                    let response = tokio::time::timeout(
+                        Duration::from_millis(timeout_ms),
+                        Self::send_jsonrpc_async(&socket_path, &request),
+                    )
+                    .await
+                    .context(format!("Timeout on capability call: {cap}"))?
+                    .context(format!(
+                        "Failed capability call {cap} → {provider} at {socket_path}"
+                    ))?;
 
-        info!("   ✅ Direct capability call: {} → success", capability);
+                    if let Some(error) = response.get("error") {
+                        let msg = error
+                            .get("message")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("unknown");
+                        anyhow::bail!("Capability call {cap} failed: {msg}");
+                    }
 
-        Ok(serde_json::json!({
-            "capability": capability,
-            "routed_via": provider,
-            "result": result,
-            "success": true,
-        }))
+                    let result = response
+                        .get("result")
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
+
+                    info!("   ✅ Direct capability call: {} → success", cap);
+
+                    Ok(serde_json::json!({
+                        "capability": cap,
+                        "routed_via": provider,
+                        "result": result,
+                        "success": true,
+                    }))
+                }
+            })
+            .await
     }
 
     /// Helper: send a JSON-RPC request over a Unix socket and return the response.

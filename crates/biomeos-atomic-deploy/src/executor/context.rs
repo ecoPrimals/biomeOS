@@ -7,10 +7,12 @@
 //! during graph execution, including environment variables, outputs, and status tracking.
 
 use anyhow::Result;
+use biomeos_core::retry::CircuitBreaker;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 
 /// Execution status for a node
@@ -49,6 +51,9 @@ pub struct ExecutionContext {
     pub nucleation: Option<Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>>,
     /// Family ID for socket path namespacing (`Arc<str>` for zero-copy clone across tasks)
     pub family_id: Arc<str>,
+    /// Per-primal circuit breakers for resilient RPC dispatch.
+    /// Created lazily on first access per primal target.
+    pub circuit_breakers: Arc<Mutex<HashMap<String, Arc<CircuitBreaker>>>>,
 }
 
 impl std::fmt::Debug for ExecutionContext {
@@ -93,7 +98,24 @@ impl ExecutionContext {
             checkpoint_dir: None,
             nucleation: None,
             family_id,
+            circuit_breakers: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    /// Get or create a circuit breaker for a primal target.
+    ///
+    /// Breakers are lazily created with sensible defaults: 5 failures open
+    /// the circuit, 30 s timeout before half-open recovery attempt.
+    pub async fn get_circuit_breaker(&self, primal: &str) -> Arc<CircuitBreaker> {
+        let mut breakers = self.circuit_breakers.lock().await;
+        breakers
+            .entry(primal.to_string())
+            .or_insert_with(|| {
+                Arc::new(
+                    CircuitBreaker::new(5, Duration::from_secs(30)).with_success_threshold(2),
+                )
+            })
+            .clone()
     }
 
     /// Set socket nucleation for deterministic socket path assignment
@@ -420,6 +442,32 @@ mod tests {
             let parsed: NodeStatus = serde_json::from_str(&json).unwrap();
             assert_eq!(parsed, status);
         }
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_created_lazily() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        let breaker1 = ctx.get_circuit_breaker("beardog").await;
+        let breaker2 = ctx.get_circuit_breaker("beardog").await;
+        // Same Arc (pointer equality)
+        assert!(Arc::ptr_eq(&breaker1, &breaker2));
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_per_primal() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        let b1 = ctx.get_circuit_breaker("beardog").await;
+        let b2 = ctx.get_circuit_breaker("songbird").await;
+        assert!(!Arc::ptr_eq(&b1, &b2));
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_shared_across_clones() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        let ctx2 = ctx.clone();
+        let b1 = ctx.get_circuit_breaker("nestgate").await;
+        let b2 = ctx2.get_circuit_breaker("nestgate").await;
+        assert!(Arc::ptr_eq(&b1, &b2));
     }
 
     #[tokio::test]

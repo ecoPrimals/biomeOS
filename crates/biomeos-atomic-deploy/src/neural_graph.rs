@@ -298,6 +298,21 @@ impl Graph {
             config.insert("name".to_string(), serde_json::Value::String(name));
         }
 
+        let cost_estimate_ms = table
+            .get("cost_estimate_ms")
+            .and_then(|v| v.as_integer())
+            .and_then(|v| u64::try_from(v).ok());
+
+        let operation_dependencies: Vec<String> = table
+            .get("operation_dependencies")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default();
+
         Ok(GraphNode {
             id,
             primal: None,
@@ -313,6 +328,8 @@ impl Graph {
             config,
             outputs: vec![],
             fallback,
+            cost_estimate_ms,
+            operation_dependencies,
         })
     }
 }
@@ -388,6 +405,14 @@ pub struct GraphNode {
     /// "skip" = silently skip (optional node), "error" = propagate error (default).
     #[serde(default)]
     pub fallback: Option<String>,
+
+    /// Estimated execution cost in milliseconds (for Pathway Learner optimization).
+    #[serde(default)]
+    pub cost_estimate_ms: Option<u64>,
+
+    /// Declared operation dependencies for Pathway Learner cost analysis.
+    #[serde(default)]
+    pub operation_dependencies: Vec<String>,
 }
 
 
