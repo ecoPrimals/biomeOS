@@ -188,7 +188,6 @@ impl DiscoveryLayer {
             Error::discovery_failed(format!("Failed to read directory entry: {e}"), None)
         })? {
             let path = entry.path();
-            #[allow(clippy::collapsible_if)]
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
                 if filename.starts_with(&format!("{}-", primal_names::SONGBIRD))
                     && std::path::Path::new(filename)

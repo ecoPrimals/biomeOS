@@ -87,7 +87,6 @@ impl GenomeFactory {
             let entry = entry?;
             let path = entry.path();
 
-            #[allow(clippy::collapsible_if)]
             if path.extension().map(|e| e == "genome").unwrap_or(false) {
                 if let Some(stem) = path.file_stem() {
                     genomes.push(stem.to_string_lossy().to_string());

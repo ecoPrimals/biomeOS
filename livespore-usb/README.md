@@ -62,8 +62,8 @@ FAMILY_ID=livespore ./start_tower.sh
 # Start Tower + NestGate + Squirrel
 FAMILY_ID=livespore ./start_nest.sh
 
-# Or use unified script from scripts/ directory
-../../../scripts/start_nucleus.sh nest
+# Or use unified Rust binary
+biomeos nucleus start --mode nest
 ```
 
 ### **Socket Path Resolution**
@@ -255,8 +255,8 @@ cp -r livespore-usb/* /media/usb-mount/
 cd livespore-usb/$(uname -m)/scripts/
 FAMILY_ID=ecosystem ./start_tower.sh
 
-# Or use unified script
-../../../scripts/start_nucleus.sh tower
+# Or use unified Rust binary
+biomeos nucleus start --mode tower
 ```
 
 ---

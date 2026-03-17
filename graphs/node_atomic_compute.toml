@@ -16,7 +16,7 @@
 #
 # Usage:
 #   biomeos deploy graphs/node_atomic_compute.toml
-#   ./scripts/start_nucleus.sh node
+#   biomeos nucleus start --mode node
 #
 # =============================================================================
 

@@ -311,7 +311,7 @@ pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
     let nucleus_path = PathBuf::from("plasmidBin");
     if !nucleus_path.exists() {
         return Err(anyhow::anyhow!(
-            "plasmidBin not found. Expected at: {}. Run './scripts/harvest-primals.sh' to build binaries first.",
+            "plasmidBin not found. Expected at: {}. Run 'cargo run -p biomeos-harvest' to build binaries first.",
             nucleus_path.display()
         ));
     }

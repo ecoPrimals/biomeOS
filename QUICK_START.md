@@ -174,13 +174,13 @@ for diagnostics.
 ## Next Steps
 
 1. Read [CURRENT_STATUS.md](CURRENT_STATUS.md) for validated systems
-2. See `docs/handoffs/` for evolution reports
+2. See `ecoPrimals/wateringHole/handoffs/` for evolution reports
 3. Review `specs/EVOLUTION_ROADMAP.md` for the full roadmap
 
 ---
 
 **Status**: Production Ready
 **Updated**: March 16, 2026
-**Tests**: 5,162+ passing, fully concurrent (78% line coverage)
+**Tests**: 5,161+ passing, fully concurrent (78% line coverage)
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

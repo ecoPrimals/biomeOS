@@ -372,9 +372,9 @@ impl DiscoveryProvider for MeshDiscoveryAdapter {
 // Backward compatibility: type aliases for legacy name-based references.
 // No modern replacement for the aliases; MeshDiscoveryAdapter::new() is deprecated
 // but the types themselves remain valid. Consumers should use from_discovery().
-#[allow(deprecated)]
+#[expect(deprecated, reason = "legacy alias kept for backward compat")]
 pub type BeardogSecurityAdapter = CryptoSecurityAdapter;
-#[allow(deprecated)]
+#[expect(deprecated, reason = "legacy alias kept for backward compat")]
 pub type SongbirdDiscoveryAdapter = MeshDiscoveryAdapter;
 
 #[cfg(test)]

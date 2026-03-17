@@ -157,7 +157,6 @@ impl NicheManifest {
     fn resolve_paths(&mut self, base_path: &Path) {
         // Resolve primal binary paths
         for primal in &mut self.primals {
-            #[allow(clippy::collapsible_if)]
             if primal.binary.starts_with("./") || primal.binary.starts_with("../") {
                 if let Ok(absolute) = base_path.join(&primal.binary).canonicalize() {
                     primal.binary = absolute.to_string_lossy().to_string();
@@ -167,7 +166,6 @@ impl NicheManifest {
 
         // Resolve graph paths
         for graph in &mut self.graphs {
-            #[allow(clippy::collapsible_if)]
             if graph.path.starts_with("./") || graph.path.starts_with("../") {
                 if let Ok(absolute) = base_path.join(&graph.path).canonicalize() {
                     graph.path = absolute.to_string_lossy().to_string();
@@ -176,7 +174,6 @@ impl NicheManifest {
         }
 
         // Resolve family seed file
-        #[allow(clippy::collapsible_if)]
         if let Some(ref seed_file) = self.niche.family_seed_file {
             if seed_file.starts_with("./") || seed_file.starts_with("../") {
                 if let Ok(absolute) = base_path.join(seed_file).canonicalize() {

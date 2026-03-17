@@ -186,7 +186,6 @@ impl BiomeOSConfig {
         let mut config = Self::default();
 
         // Apply environment variable overrides
-        #[allow(clippy::collapsible_if)]
         if let Ok(port) = std::env::var("BIOMEOS_PORT") {
             if let Ok(port_num) = port.parse::<u16>() {
                 config.network.port = port_num;

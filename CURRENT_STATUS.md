@@ -446,7 +446,7 @@ All biomeOS-owned tasks from the relay-punch protocol handoff:
 
 Key types: `ConnectionTier`, `NatType`, `PortPattern`, `PeerConnectionInfo`, `StunResults`.
 22 new unit tests across `biomeos-core` (11) and `biomeos-api` (11 updated + 1 new).
-See: `docs/handoffs/RELAY_ASSISTED_COORDINATED_PUNCH_HANDOFF_FEB11_2026.md`
+See: `ecoPrimals/wateringHole/handoffs/` (formerly docs/handoffs/)
 
 ### Plasmodium Agent Dispatch + Coverage (Feb 11)
 Added `agent.route` RPC method — resolves a capability through an agent's routing table
@@ -743,7 +743,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 1. **Fix mesh state split** - 3 independent MeshHandler instances need shared state via Arc
 2. **Fix UDP discovery protocol** - Bind to actual discovery port, not ephemeral; avoid mDNS 5353
 3. **Eliminate hardcoded 3492** - 22 occurrences across 12 files → runtime `SONGBIRD_HTTP_PORT` / 8080
-4. See `docs/handoffs/COVALENT_BOND_EVOLUTION_HANDOFF_FEB10_2026.md` for root causes + file locations
+4. See `ecoPrimals/wateringHole/handoffs/` for root causes + file locations (formerly docs/handoffs/)
 
 ### High Priority (Primal Teams)
 1. **Songbird `discover_capabilities`** - Enables pure runtime discovery (no env var bypass)

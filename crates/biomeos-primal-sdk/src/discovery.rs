@@ -249,7 +249,7 @@ impl PrimalDiscovery {
 
         // Try to determine capability from name (bootstrap hint when found by path scan).
         // Deprecated: capability_from_primal_name; no alternative for path-scan bootstrap yet.
-        #[allow(deprecated)]
+        #[expect(deprecated, reason = "no alternative for path-scan bootstrap yet")]
         let capability = capability_from_primal_name(name);
 
         // Quick health check

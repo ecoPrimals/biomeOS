@@ -249,7 +249,6 @@ impl DeploymentGraph {
 
                 // Decrease in-degree of dependent nodes
                 for other in &self.definition.nodes {
-                    #[allow(clippy::collapsible_if)]
                     if other.depends_on.contains(&node_id.to_string()) {
                         if let Some(deg) = in_degree.get_mut(other.id.as_str()) {
                             *deg -= 1;

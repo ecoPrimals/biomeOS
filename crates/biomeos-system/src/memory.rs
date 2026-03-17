@@ -27,7 +27,6 @@ pub(crate) fn get_memory_info() -> BiomeResult<MemoryInfo> {
         let mut total_kb = 0;
         let mut available_kb = 0;
 
-        #[allow(clippy::collapsible_if)]
         for line in meminfo.lines() {
             if line.starts_with("MemTotal:") {
                 if let Some(value) = line.split_whitespace().nth(1) {

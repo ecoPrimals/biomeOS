@@ -23,7 +23,7 @@
 //! for each step. The actual UDP/STUN/relay operations are performed by Songbird.
 //! Cryptographic authorization is performed by BearDog.
 //!
-//! See: `docs/handoffs/RELAY_ASSISTED_COORDINATED_PUNCH_HANDOFF_FEB11_2026.md`
+//! See: `ecoPrimals/wateringHole/handoffs/archive/` (relay/coordinated punch handoff)
 
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
