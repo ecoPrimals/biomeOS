@@ -68,6 +68,77 @@ pub const BIOMEOS: &str = "biomeos";
 /// biomeOS device management variant.
 pub const BIOMEOS_DEVICE_MANAGEMENT: &str = "biomeos-device-management";
 
+/// primalSpring — ecosystem integration experiments and IPC resilience.
+pub const PRIMALSPRING: &str = "primalspring";
+
+// =========================================================================
+// Display names — mixed-case for UI/logs.
+// Absorbed from neuralSpring `primal_names::display`.
+// =========================================================================
+
+/// Human-readable display names keyed by lowercase identifier.
+pub mod display {
+    /// BearDog display name.
+    pub const BEARDOG: &str = "BearDog";
+    /// SongBird display name.
+    pub const SONGBIRD: &str = "SongBird";
+    /// ToadStool display name.
+    pub const TOADSTOOL: &str = "ToadStool";
+    /// NestGate display name.
+    pub const NESTGATE: &str = "NestGate";
+    /// Squirrel display name.
+    pub const SQUIRREL: &str = "Squirrel";
+    /// LoamSpine display name.
+    pub const LOAMSPINE: &str = "LoamSpine";
+    /// rhizoCrypt display name.
+    pub const RHIZOCRYPT: &str = "rhizoCrypt";
+    /// sweetGrass display name.
+    pub const SWEETGRASS: &str = "sweetGrass";
+    /// airSpring display name.
+    pub const AIRSPRING: &str = "airSpring";
+    /// wetSpring display name.
+    pub const WETSPRING: &str = "wetSpring";
+    /// neuralSpring display name.
+    pub const NEURALSPRING: &str = "neuralSpring";
+    /// groundSpring display name.
+    pub const GROUNDSPRING: &str = "groundSpring";
+    /// hotSpring display name.
+    pub const HOTSPRING: &str = "hotSpring";
+    /// healthSpring display name.
+    pub const HEALTHSPRING: &str = "healthSpring";
+    /// ludoSpring display name.
+    pub const LUDOSPRING: &str = "ludoSpring";
+    /// biomeOS display name.
+    pub const BIOMEOS: &str = "biomeOS";
+    /// primalSpring display name.
+    pub const PRIMALSPRING: &str = "primalSpring";
+
+    /// Look up the display name for a lowercase primal identifier.
+    #[must_use]
+    pub fn for_id(id: &str) -> Option<&'static str> {
+        match id {
+            super::BEARDOG => Some(BEARDOG),
+            super::SONGBIRD => Some(SONGBIRD),
+            super::TOADSTOOL => Some(TOADSTOOL),
+            super::NESTGATE => Some(NESTGATE),
+            super::SQUIRREL => Some(SQUIRREL),
+            super::LOAMSPINE => Some(LOAMSPINE),
+            super::RHIZOCRYPT => Some(RHIZOCRYPT),
+            super::SWEETGRASS => Some(SWEETGRASS),
+            super::AIRSPRING => Some(AIRSPRING),
+            super::WETSPRING => Some(WETSPRING),
+            super::NEURALSPRING => Some(NEURALSPRING),
+            super::GROUNDSPRING => Some(GROUNDSPRING),
+            super::HOTSPRING => Some(HOTSPRING),
+            super::HEALTHSPRING => Some(HEALTHSPRING),
+            super::LUDOSPRING => Some(LUDOSPRING),
+            super::BIOMEOS => Some(BIOMEOS),
+            super::PRIMALSPRING => Some(PRIMALSPRING),
+            _ => None,
+        }
+    }
+}
+
 /// All bootstrap-time primal names (Tower + Node + Nest core).
 pub const CORE_PRIMALS: &[&str] = &[BEARDOG, SONGBIRD, TOADSTOOL, NESTGATE, SQUIRREL];
 
@@ -94,6 +165,7 @@ pub fn is_known_primal(name: &str) -> bool {
         || SPRING_PRIMALS.contains(&lower.as_str())
         || lower == BIOMEOS
         || lower == BIOMEOS_DEVICE_MANAGEMENT
+        || lower == PRIMALSPRING
 }
 
 #[cfg(test)]
@@ -184,7 +256,48 @@ mod tests {
         all.extend_from_slice(PROVENANCE_PRIMALS);
         all.extend_from_slice(SPRING_PRIMALS);
         all.push(BIOMEOS);
+        all.push(PRIMALSPRING);
         let unique: std::collections::HashSet<&&str> = all.iter().collect();
         assert_eq!(all.len(), unique.len(), "duplicate primal name found");
+    }
+
+    #[test]
+    fn is_known_primal_primalspring() {
+        assert!(is_known_primal("primalspring"));
+        assert!(is_known_primal("PrimalSpring"));
+    }
+
+    #[test]
+    fn display_for_id_core() {
+        assert_eq!(display::for_id("beardog"), Some("BearDog"));
+        assert_eq!(display::for_id("songbird"), Some("SongBird"));
+        assert_eq!(display::for_id("toadstool"), Some("ToadStool"));
+        assert_eq!(display::for_id("nestgate"), Some("NestGate"));
+        assert_eq!(display::for_id("squirrel"), Some("Squirrel"));
+    }
+
+    #[test]
+    fn display_for_id_provenance() {
+        assert_eq!(display::for_id("loamspine"), Some("LoamSpine"));
+        assert_eq!(display::for_id("rhizocrypt"), Some("rhizoCrypt"));
+        assert_eq!(display::for_id("sweetgrass"), Some("sweetGrass"));
+    }
+
+    #[test]
+    fn display_for_id_springs() {
+        assert_eq!(display::for_id("airspring"), Some("airSpring"));
+        assert_eq!(display::for_id("neuralspring"), Some("neuralSpring"));
+        assert_eq!(display::for_id("healthspring"), Some("healthSpring"));
+    }
+
+    #[test]
+    fn display_for_id_unknown() {
+        assert_eq!(display::for_id("unknown"), None);
+        assert_eq!(display::for_id(""), None);
+    }
+
+    #[test]
+    fn display_for_id_biomeos() {
+        assert_eq!(display::for_id("biomeos"), Some("biomeOS"));
     }
 }

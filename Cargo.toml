@@ -136,6 +136,7 @@ dotenvy = "0.15"
 mockall = "0.12"
 tempfile = "3.8"
 criterion = "0.5"
+temp-env = "0.3"
 
 # Documentation
 mdbook = "0.4"

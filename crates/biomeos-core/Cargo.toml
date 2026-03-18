@@ -71,6 +71,7 @@ biomeos-test-utils = { path = "../biomeos-test-utils" }
 serde_json = { workspace = true }
 tracing-test = "0.2"
 serial_test = "3.2"
+proptest = "1"
 
 [features]
 default = []

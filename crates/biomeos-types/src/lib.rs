@@ -24,6 +24,8 @@ pub mod api_schema;
 pub mod atomic;
 /// Well-known capability taxonomy for discovery
 pub mod capability_taxonomy;
+/// Type-safe numeric cast helpers (absorbed from airSpring)
+pub mod cast;
 pub mod config;
 pub mod constants;
 pub mod defaults; // Runtime defaults (socket paths, etc.) with env var overrides
@@ -31,17 +33,27 @@ pub mod env_config; // Centralized environment variable constants and typed acce
 pub mod error;
 pub mod health;
 pub mod identifiers;
+/// IPC resilience utilities: phase-tagged errors, result extraction
+pub mod ipc;
 pub mod jsonrpc;
 pub mod manifest;
+/// MCP tool definitions for Squirrel AI discovery
+pub mod mcp;
 pub mod network_config; // Capability-based network configuration
+/// Zero-panic startup validation
+pub mod or_exit;
 /// XDG-compliant system paths
 pub mod paths;
 pub mod primal;
+/// Primal-specific capability routing types (relay, compute, model, lifecycle)
+pub mod primal_capabilities;
 pub mod primal_names;
 pub mod service;
 pub mod surgical; // Surgical simulation and medical domain types
 pub mod tarpc_types; // tarpc service definitions for high-performance RPC
 pub mod time_series; // Cross-spring time series exchange (ecoPrimals/time-series/v1)
+/// Pluggable validation output
+pub mod validation;
 pub mod xr; // Extended Reality (VR/AR/XR) types
 
 // Re-export key types from each module
@@ -53,7 +65,13 @@ pub use atomic::{
     AtomicCapability, AtomicTier, FullNucleus, NestAtomic, NodeAtomic, PrimalHealth,
     ProviderHealthMap, TowerAtomic,
 };
+pub use ipc::{IpcErrorPhase, RpcExtractionError, extract_rpc_error, extract_rpc_result};
 pub use jsonrpc::{JSONRPC_VERSION, JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse};
+pub use mcp::{McpToolDefinition, McpToolManifest};
+pub use or_exit::OrExit;
+pub use validation::{
+    BufferSink, StderrSink, ValidationFinding, ValidationSeverity, ValidationSink,
+};
 
 // tarpc types for high-performance RPC
 pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)

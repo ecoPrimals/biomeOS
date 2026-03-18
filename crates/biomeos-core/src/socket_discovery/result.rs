@@ -88,6 +88,9 @@ pub enum DiscoveryMethod {
     /// Via filesystem manifest (`$XDG_RUNTIME_DIR/ecoPrimals/manifests/{primal}.json`)
     Manifest,
 
+    /// Via centralized socket registry (`$XDG_RUNTIME_DIR/biomeos/socket-registry.json`)
+    SocketRegistry,
+
     /// Via capability registry query
     CapabilityRegistry,
 
@@ -117,6 +120,43 @@ pub struct PrimalManifest {
     /// Process ID (for liveness verification)
     #[serde(default)]
     pub pid: Option<u32>,
+}
+
+/// Entry in the centralized socket registry.
+///
+/// Absorbed from Squirrel's `SocketRegistryDiscovery` pattern. Squirrel writes
+/// this file; biomeOS and other primals read it as a discovery source.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SocketRegistryEntry {
+    /// Primal name
+    pub primal: String,
+    /// Socket path
+    pub socket: String,
+    /// Capabilities this primal provides
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+    /// Process ID for liveness verification
+    #[serde(default)]
+    pub pid: Option<u32>,
+    /// Unix timestamp when this entry was last updated
+    #[serde(default)]
+    pub updated_at: Option<u64>,
+}
+
+/// Centralized socket registry file format.
+///
+/// Written by Squirrel to `$XDG_RUNTIME_DIR/biomeos/socket-registry.json`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SocketRegistry {
+    /// Registry version
+    #[serde(default = "default_registry_version")]
+    pub version: String,
+    /// Registered primal sockets
+    pub entries: Vec<SocketRegistryEntry>,
+}
+
+fn default_registry_version() -> String {
+    "1.0".to_owned()
 }
 
 #[cfg(test)]

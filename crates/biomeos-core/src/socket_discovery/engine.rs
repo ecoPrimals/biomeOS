@@ -117,7 +117,13 @@ impl SocketDiscovery {
             return Some(socket);
         }
 
-        // 6. Capability registry
+        // 6. Socket registry (Squirrel writes, everyone reads)
+        if let Some(socket) = self.discover_via_socket_registry(primal_name).await {
+            self.cache_socket(&cache_key, &socket).await;
+            return Some(socket);
+        }
+
+        // 7. Capability registry (Neural API query)
         if self.strategy.query_registry
             && let Some(socket) = self.discover_via_registry_by_name(primal_name).await
         {
@@ -426,6 +432,47 @@ impl SocketDiscovery {
                     Err(e) => {
                         trace!("Invalid manifest at {}: {}", path.display(), e);
                     }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Discover a primal via the centralized socket registry.
+    ///
+    /// Absorbed from Squirrel's `SocketRegistryDiscovery` pattern. Squirrel
+    /// writes a `socket-registry.json` file; biomeOS reads it as a fallback
+    /// discovery source between per-primal manifests and Neural API queries.
+    ///
+    /// Checked at `$XDG_RUNTIME_DIR/biomeos/socket-registry.json`.
+    async fn discover_via_socket_registry(&self, primal_name: &str) -> Option<DiscoveredSocket> {
+        use super::result::SocketRegistry;
+
+        let registry_path = Self::get_xdg_runtime_dir()?
+            .join("biomeos")
+            .join("socket-registry.json");
+
+        let contents = tokio::fs::read_to_string(&registry_path).await.ok()?;
+        let registry: SocketRegistry = serde_json::from_str(&contents).ok()?;
+
+        for entry in &registry.entries {
+            if entry.primal.eq_ignore_ascii_case(primal_name) {
+                let socket_path = PathBuf::from(&entry.socket);
+                if self.verify_unix_socket(&socket_path).await {
+                    debug!(
+                        "Discovered {} via socket-registry at {}",
+                        primal_name,
+                        registry_path.display()
+                    );
+                    return Some(
+                        DiscoveredSocket::from_unix_path(
+                            socket_path,
+                            DiscoveryMethod::SocketRegistry,
+                        )
+                        .with_primal_name(primal_name)
+                        .with_capabilities(entry.capabilities.clone()),
+                    );
                 }
             }
         }

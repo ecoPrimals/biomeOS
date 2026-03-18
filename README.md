@@ -4,19 +4,20 @@
 
 ---
 
-## Status: Production Ready (v2.50)
+## Status: Production Ready (v2.51)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v3.0 compliant |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy) |
-| Tests | 5,203 passing (0 failures) — fully concurrent (~82% line coverage) |
+| Code Quality | A++ (Pure Rust, Edition 2024 all crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
+| Tests | 5,268 passing (0 failures) — fully concurrent (~83% line coverage) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, pedantic+nursery, all 23 crates via workspace lint inheritance) |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0 + ORC + CC-BY-SA 4.0) |
+| Ecosystem Absorption | IpcErrorPhase, extract_rpc_result, OrExit, cast module, proptest fuzz, MCP tools, ValidationSink, socket-registry, capability cost/deps |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
 | Neural API | 285+ capability translations, 25 domains, 5 coordination patterns (Sequential, Parallel, ConditionalDag, Pipeline, Continuous) |
