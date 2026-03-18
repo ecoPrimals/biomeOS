@@ -48,6 +48,8 @@ pub mod primal;
 /// Primal-specific capability routing types (relay, compute, model, lifecycle)
 pub mod primal_capabilities;
 pub mod primal_names;
+/// Structured provenance for absorbed patterns (absorbed from primalSpring v0.3.0)
+pub mod provenance;
 pub mod service;
 pub mod surgical; // Surgical simulation and medical domain types
 pub mod tarpc_types; // tarpc service definitions for high-performance RPC
@@ -69,6 +71,7 @@ pub use ipc::{IpcErrorPhase, RpcExtractionError, extract_rpc_error, extract_rpc_
 pub use jsonrpc::{JSONRPC_VERSION, JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse};
 pub use mcp::{McpToolDefinition, McpToolManifest};
 pub use or_exit::OrExit;
+pub use provenance::{Provenance, ProvenanceManifest};
 pub use validation::{
     BufferSink, StderrSink, ValidationFinding, ValidationSeverity, ValidationSink,
 };

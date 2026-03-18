@@ -2,6 +2,39 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.52 (2026-03-18) — Capability-First Discovery + MCP Aggregation + Provenance + TOML Sync
+
+### Capability-First Socket Discovery (Squirrel alpha.13)
+- Discovery engine now tries capability-named sockets (e.g. `security.sock`, `compute.sock`) before primal-named sockets
+- `discover_capability()` tries filesystem sockets → taxonomy resolution → registry query
+- Extracted `capability_sockets` module with primal→capability domain mappings
+- Updated discovery order docs (8 steps including socket-registry)
+
+### MCP Tool Aggregation (`mcp.tools.list`)
+- New JSON-RPC method `mcp.tools.list` aggregates MCP tool definitions from all capability translations
+- Returns tool count, provider list, and full MCP-compliant tool definitions for Squirrel AI gateway
+- Two route aliases: `mcp.tools.list`, `mcp.tools_list`
+
+### Structured Provenance (`biomeos-types::provenance`)
+- `Provenance` type: source, baseline_date, description, version — traces absorbed patterns
+- `ProvenanceManifest` for module-level provenance tracking
+- Builder pattern, Display impl, serde roundtrip tests
+
+### Capability Registry TOML Sync Tests
+- `capabilities_match_registry_toml`: verifies all TOML providers are known primals
+- `all_core_primals_have_capabilities_in_toml`: verifies core primals have translations
+- Caught missing primals: petalTongue, skunkBat, sourDough — now registered
+
+### Primal Registry Expansion
+- 3 new primals: `petaltongue`, `skunkbat`, `sourdough`
+- New `AUXILIARY_PRIMALS` array, display names, `is_known_primal` updated
+- Capability sockets for petalTongue: `ui.sock`, `visualization.sock`
+
+### Quality Gates
+- Tests: 5,279 passing (11 new), 0 failures
+- Clippy: PASS (0 warnings, pedantic+nursery)
+- Format: PASS
+
 ## v2.51 (2026-03-18) — Ecosystem Absorption: IPC Resilience + Proptest + MCP + Capability Routing
 
 ### Ecosystem Review

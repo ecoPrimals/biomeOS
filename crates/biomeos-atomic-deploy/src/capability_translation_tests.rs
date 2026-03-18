@@ -394,3 +394,87 @@ fn test_registry_stats_serialization() {
     assert!(json.contains("10"));
     assert!(json.contains("3"));
 }
+
+/// Verify that capability_registry.toml providers are all known primal names.
+///
+/// Absorbed from primalSpring v0.3.0's `capabilities_match_registry_toml` pattern.
+/// Prevents config/code drift: if the TOML references a primal, that primal
+/// must exist in `biomeos_types::primal_names`.
+#[test]
+fn capabilities_match_registry_toml() {
+    let config_path = match find_capability_registry_config() {
+        Some(p) => p,
+        None => {
+            eprintln!("Skipping: config/capability_registry.toml not found");
+            return;
+        }
+    };
+
+    let mut registry = CapabilityTranslationRegistry::new();
+    let count = registry
+        .load_from_config(&config_path, |provider, _family_id| {
+            format!("/tmp/{provider}.sock")
+        })
+        .expect("should load capability_registry.toml");
+
+    assert!(count > 0, "Registry should have translations");
+
+    let all = registry.list_all();
+    let providers: std::collections::HashSet<&str> =
+        all.iter().map(|t| t.provider.as_str()).collect();
+
+    for provider in &providers {
+        if *provider == "*" {
+            continue; // wildcard = every primal implements this capability
+        }
+        assert!(
+            biomeos_types::primal_names::is_known_primal(provider),
+            "Provider '{provider}' in capability_registry.toml is not a known primal. \
+             Add it to biomeos_types::primal_names or fix the TOML."
+        );
+    }
+}
+
+/// Verify every known primal has at least one translation in the TOML.
+///
+/// This ensures that if we add a primal to the code, we also add
+/// its capabilities to the registry config.
+#[test]
+fn all_core_primals_have_capabilities_in_toml() {
+    use biomeos_types::primal_names;
+
+    let config_path = match find_capability_registry_config() {
+        Some(p) => p,
+        None => {
+            eprintln!("Skipping: config/capability_registry.toml not found");
+            return;
+        }
+    };
+
+    let mut registry = CapabilityTranslationRegistry::new();
+    registry
+        .load_from_config(&config_path, |provider, _family_id| {
+            format!("/tmp/{provider}.sock")
+        })
+        .expect("should load capability_registry.toml");
+
+    let all = registry.list_all();
+    let providers: std::collections::HashSet<&str> =
+        all.iter().map(|t| t.provider.as_str()).collect();
+
+    let core_primals = [
+        primal_names::BEARDOG,
+        primal_names::SONGBIRD,
+        primal_names::TOADSTOOL,
+        primal_names::NESTGATE,
+        primal_names::SQUIRREL,
+    ];
+
+    for primal in &core_primals {
+        assert!(
+            providers.contains(primal),
+            "Core primal '{primal}' has no capabilities in capability_registry.toml. \
+             Add its translations to the config."
+        );
+    }
+}

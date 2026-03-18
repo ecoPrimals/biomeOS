@@ -68,6 +68,7 @@ enum Route {
     CapabilityCall,
     CapabilityDiscoverTranslations,
     CapabilityListTranslations,
+    McpToolsList,
     Agent,
     ProxyHttp,
     MeshCapabilityCall,
@@ -165,6 +166,9 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
         "capability.list_translations",
         Route::CapabilityListTranslations,
     ),
+    // MCP tool discovery (Squirrel alpha.13 aggregation)
+    ("mcp.tools.list", Route::McpToolsList),
+    ("mcp.tools_list", Route::McpToolsList),
     // Agent
     ("agent.create", Route::Agent),
     ("agent.list", Route::Agent),
@@ -336,6 +340,8 @@ impl NeuralApiServer {
             Route::CapabilityListTranslations => {
                 dispatch(self.capability_handler.list_translations().await, &id)
             }
+            // MCP
+            Route::McpToolsList => dispatch(self.capability_handler.mcp_tools_list().await, &id),
             // Agent
             Route::Agent => dispatch(
                 super::agents::handle_agent_request(

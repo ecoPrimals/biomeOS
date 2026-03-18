@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 18, 2026 (v2.51: Ecosystem absorption — IPC resilience, proptest, MCP tools, capability cost/deps)
-**Version**: 2.51
+**Updated**: March 18, 2026 (v2.52: Capability-first discovery, MCP aggregation, Provenance, TOML sync)
+**Version**: 2.52
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,8 +17,8 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 23 crates |
-| **Tests Passing** | 5,268 lib + bin (0 failures) |
-| **Test Coverage** | ~83% line, climbing toward 90% (65 new tests this session: proptest IPC fuzz + ecosystem type coverage) |
+| **Tests Passing** | 5,279 lib + bin (0 failures) |
+| **Test Coverage** | ~83% line, climbing toward 90% (11 new tests: capability sockets, provenance, TOML sync) |
 | **Unsafe Code** | 0 production (2 test-only in env_helpers.rs, Rust 2024 requirement) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -35,6 +35,7 @@
 | **P2P Sovereign Onion** | PRODUCTION READY |
 | **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 23 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
 | **Ecosystem Absorption (Mar 18)** | IpcErrorPhase + extract_rpc_result (5+ springs), OrExit trait (groundSpring/loamSpine), cast module (airSpring), proptest IPC fuzzing (8 fuzz tests), capability.list cost_estimates+operation_dependencies (Squirrel Pathway Learner), socket-registry.json discovery (Squirrel), MCP tool definitions (healthSpring/airSpring/wetSpring), ValidationSink (rhizoCrypt/airSpring), primal_names::display (neuralSpring), primal capability routing types (relay.authorize, compute.dispatch, model.*, sourDough lifecycle), deny.toml expanded to 15 C-dep bans |
+| **Capability-First Discovery (Mar 18)** | Capability-named sockets (security.sock, compute.sock), `mcp.tools.list` aggregation (Squirrel alpha.13), Provenance metadata type (primalSpring v0.3.0), capability_registry.toml sync tests, 3 new primals registered (petalTongue, skunkBat, sourDough) |
 | **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
 | **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |

@@ -62,6 +62,15 @@ pub const HEALTHSPRING: &str = "healthspring";
 /// ludoSpring — game science, HCI, procedural content, interaction design.
 pub const LUDOSPRING: &str = "ludospring";
 
+/// petalTongue — UI rendering, input handling, topology visualization.
+pub const PETALTONGUE: &str = "petaltongue";
+
+/// skunkBat — ephemeral compute, sandbox, experiments.
+pub const SKUNKBAT: &str = "skunkbat";
+
+/// sourDough — primal compliance, lifecycle standards, ecosystem starter.
+pub const SOURDOUGH: &str = "sourdough";
+
 /// biomeOS itself — appears in socket discovery as a pseudo-primal.
 pub const BIOMEOS: &str = "biomeos";
 
@@ -112,6 +121,12 @@ pub mod display {
     pub const BIOMEOS: &str = "biomeOS";
     /// primalSpring display name.
     pub const PRIMALSPRING: &str = "primalSpring";
+    /// petalTongue display name.
+    pub const PETALTONGUE: &str = "petalTongue";
+    /// skunkBat display name.
+    pub const SKUNKBAT: &str = "skunkBat";
+    /// sourDough display name.
+    pub const SOURDOUGH: &str = "sourDough";
 
     /// Look up the display name for a lowercase primal identifier.
     #[must_use]
@@ -134,6 +149,9 @@ pub mod display {
             super::LUDOSPRING => Some(LUDOSPRING),
             super::BIOMEOS => Some(BIOMEOS),
             super::PRIMALSPRING => Some(PRIMALSPRING),
+            super::PETALTONGUE => Some(PETALTONGUE),
+            super::SKUNKBAT => Some(SKUNKBAT),
+            super::SOURDOUGH => Some(SOURDOUGH),
             _ => None,
         }
     }
@@ -156,6 +174,9 @@ pub const SPRING_PRIMALS: &[&str] = &[
     LUDOSPRING,
 ];
 
+/// Additional primals — UI, sandbox, compliance.
+pub const AUXILIARY_PRIMALS: &[&str] = &[PETALTONGUE, SKUNKBAT, SOURDOUGH, PRIMALSPRING];
+
 /// Check whether a string matches a known primal name (case-insensitive).
 #[must_use]
 pub fn is_known_primal(name: &str) -> bool {
@@ -163,9 +184,9 @@ pub fn is_known_primal(name: &str) -> bool {
     CORE_PRIMALS.contains(&lower.as_str())
         || PROVENANCE_PRIMALS.contains(&lower.as_str())
         || SPRING_PRIMALS.contains(&lower.as_str())
+        || AUXILIARY_PRIMALS.contains(&lower.as_str())
         || lower == BIOMEOS
         || lower == BIOMEOS_DEVICE_MANAGEMENT
-        || lower == PRIMALSPRING
 }
 
 #[cfg(test)]
@@ -255,16 +276,21 @@ mod tests {
         all.extend_from_slice(CORE_PRIMALS);
         all.extend_from_slice(PROVENANCE_PRIMALS);
         all.extend_from_slice(SPRING_PRIMALS);
+        all.extend_from_slice(AUXILIARY_PRIMALS);
         all.push(BIOMEOS);
-        all.push(PRIMALSPRING);
+        all.push(BIOMEOS_DEVICE_MANAGEMENT);
         let unique: std::collections::HashSet<&&str> = all.iter().collect();
         assert_eq!(all.len(), unique.len(), "duplicate primal name found");
     }
 
     #[test]
-    fn is_known_primal_primalspring() {
+    fn is_known_primal_auxiliary() {
         assert!(is_known_primal("primalspring"));
         assert!(is_known_primal("PrimalSpring"));
+        assert!(is_known_primal("petaltongue"));
+        assert!(is_known_primal("PetalTongue"));
+        assert!(is_known_primal("skunkbat"));
+        assert!(is_known_primal("sourdough"));
     }
 
     #[test]

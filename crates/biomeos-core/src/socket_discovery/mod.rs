@@ -31,11 +31,13 @@
 //! ## Discovery Order
 //!
 //! 1. Environment variable hint (e.g., `BEARDOG_SOCKET`, `BEARDOG_TCP`)
-//! 2. XDG_RUNTIME_DIR (e.g., `/run/user/1000/biomeos/beardog-1894e909e454.sock`)
-//! 3. Abstract socket (Android: `@biomeos_beardog_1894e909e454`)
-//! 4. Family-scoped /tmp (e.g., `/tmp/beardog-1894e909e454.sock`)
-//! 5. Capability registry query via Neural API
-//! 6. TCP fallback (e.g., `127.0.0.1:9100`)
+//! 2. Capability-first sockets (e.g., `security.sock`, `crypto.sock`)
+//! 3. XDG_RUNTIME_DIR (e.g., `/run/user/1000/biomeos/beardog-1894e909e454.sock`)
+//! 4. Abstract socket (Android: `@biomeos_beardog_1894e909e454`)
+//! 5. Family-scoped /tmp (e.g., `/tmp/beardog-1894e909e454.sock`)
+//! 6. Socket registry (`$XDG_RUNTIME_DIR/biomeos/socket-registry.json`)
+//! 7. Capability registry query via Neural API
+//! 8. TCP fallback (e.g., `127.0.0.1:9100`)
 //!
 //! ## Usage
 //!
@@ -56,6 +58,7 @@
 //! }
 //! ```
 
+mod capability_sockets;
 mod engine;
 mod neural_api;
 mod path_builder;

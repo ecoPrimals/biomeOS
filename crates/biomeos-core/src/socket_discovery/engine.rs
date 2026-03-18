@@ -135,7 +135,10 @@ impl SocketDiscovery {
         None
     }
 
-    /// Discover socket by capability
+    /// Discover socket by capability domain name.
+    ///
+    /// Tries capability-first filesystem sockets (e.g. `security.sock`) before
+    /// falling back to the Neural API registry. Absorbed from Squirrel alpha.13.
     pub async fn discover_capability(&self, capability: &str) -> Option<DiscoveredSocket> {
         let cache_key = format!("capability:{capability}");
 
@@ -143,6 +146,22 @@ impl SocketDiscovery {
             && let Some(cached) = self.check_cache(&cache_key).await
         {
             return Some(cached);
+        }
+
+        // Try capability-named socket on filesystem first
+        if let Some(socket) = self.discover_capability_socket(capability).await {
+            self.cache_socket(&cache_key, &socket).await;
+            return Some(socket);
+        }
+
+        // Fall through to taxonomy-based primal resolution
+        if let Some(primal) =
+            biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(capability)
+        {
+            if let Some(socket) = self.discover_primal(primal).await {
+                self.cache_socket(&cache_key, &socket).await;
+                return Some(socket);
+            }
         }
 
         if self.strategy.query_registry
@@ -622,6 +641,35 @@ impl SocketDiscovery {
     // DISCOVERY IMPLEMENTATIONS
     // ========================================================================
 
+    /// Try to discover a capability-named socket on the filesystem.
+    ///
+    /// Checks `$XDG_RUNTIME_DIR/biomeos/{capability}.sock` and the temp dir.
+    async fn discover_capability_socket(&self, capability: &str) -> Option<DiscoveredSocket> {
+        let sock_name = format!("{capability}.sock");
+
+        if let Some(runtime_dir) = Self::get_xdg_runtime_dir() {
+            let path = runtime_dir.join("biomeos").join(&sock_name);
+            if self.verify_unix_socket(&path).await {
+                debug!("Discovered capability '{}' via XDG socket", capability);
+                return Some(DiscoveredSocket::from_unix_path(
+                    path,
+                    DiscoveryMethod::XdgRuntime,
+                ));
+            }
+        }
+
+        let tmp_path = std::env::temp_dir().join(&sock_name);
+        if self.verify_unix_socket(&tmp_path).await {
+            debug!("Discovered capability '{}' via tmp socket", capability);
+            return Some(DiscoveredSocket::from_unix_path(
+                tmp_path,
+                DiscoveryMethod::FamilyTmp,
+            ));
+        }
+
+        None
+    }
+
     pub(crate) async fn discover_via_env_hint(
         &self,
         primal_name: &str,
@@ -676,6 +724,22 @@ impl SocketDiscovery {
         let runtime_dir = Self::get_xdg_runtime_dir()?;
         let biomeos_dir = runtime_dir.join("biomeos");
 
+        // Capability-first: try capability-named sockets before primal-named ones.
+        // Absorbed from Squirrel alpha.13 — primals discover capabilities, not identities.
+        for cap_name in Self::capability_socket_names(primal_name) {
+            let cap_path = biomeos_dir.join(format!("{cap_name}.sock"));
+            if self.verify_unix_socket(&cap_path).await {
+                debug!(
+                    "Discovered {} via capability socket {}.sock (XDG)",
+                    primal_name, cap_name
+                );
+                return Some(
+                    DiscoveredSocket::from_unix_path(cap_path, DiscoveryMethod::XdgRuntime)
+                        .with_primal_name(primal_name),
+                );
+            }
+        }
+
         let socket_path =
             biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
         if socket_path.exists() {
@@ -699,8 +763,21 @@ impl SocketDiscovery {
     }
 
     async fn discover_via_family_tmp(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        // Use portable temp_dir() instead of hardcoded /tmp/
         let temp_dir = std::env::temp_dir();
+
+        for cap_name in Self::capability_socket_names(primal_name) {
+            let cap_path = temp_dir.join(format!("{cap_name}.sock"));
+            if self.verify_unix_socket(&cap_path).await {
+                debug!(
+                    "Discovered {} via capability socket {}.sock (tmp)",
+                    primal_name, cap_name
+                );
+                return Some(
+                    DiscoveredSocket::from_unix_path(cap_path, DiscoveryMethod::FamilyTmp)
+                        .with_primal_name(primal_name),
+                );
+            }
+        }
 
         let socket_path =
             temp_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
@@ -885,6 +962,10 @@ impl SocketDiscovery {
             .ok()
             .map(PathBuf::from)
             .filter(|p| p.exists())
+    }
+
+    fn capability_socket_names(primal_name: &str) -> Vec<&'static str> {
+        super::capability_sockets::names_for_primal(primal_name)
     }
 
     pub(crate) fn get_neural_api_socket(&self) -> Option<PathBuf> {
