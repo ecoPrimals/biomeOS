@@ -105,18 +105,21 @@ Detailed handoffs in `docs/handoffs/`:
 
 ---
 
-## 5. Deep Debt Metrics (Updated Mar 14, 2026)
+## 5. Deep Debt Metrics (Updated Mar 18, 2026)
 
 | Metric | Value |
 |--------|-------|
-| TODO markers in source | 4 (all intentional: family-scoped AI, discovery config, cache CLI, degradation reporting) |
+| TODO markers in Rust source | 0 |
+| TODO in config (deny.toml) | 1 (bincode v1 unmaintained, blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND | 0 |
-| Unsafe code | 1 (`Mmap::map` in biomeos-genome-deploy -- documented, OS-level) |
-| Clippy warnings | 0 (entire workspace, including biomeos-boot) |
+| Unsafe code | 2 (test-only: `env::set_var` in Rust 2024) |
+| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 23 crates via workspace lint inheritance) |
 | Production unwrap() | 0 (all in test code) |
 | Shell-outs from Rust | 3 (`sudo ip link/addr/set` in deploy/network.rs -- requires root) |
-| `deny(unsafe_code)` crates | 8 |
+| `deny(unsafe_code)` / `forbid(unsafe_code)` crates | all production crates |
 | Mocks in production | 0 |
+| Proptest IPC fuzz tests | 8 |
+| C-dep crates banned (deny.toml) | 15 |
 | Tests | 4,275 (0 failures, 167 ignored) |
 | Region coverage | 75.21% (llvm-cov) |
 | Files >1000 LOC | 0 |

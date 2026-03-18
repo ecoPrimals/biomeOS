@@ -2,6 +2,43 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.51 (2026-03-18) — Ecosystem Absorption: IPC Resilience + Proptest + MCP + Capability Routing
+
+### Ecosystem Review
+- Pulled and reviewed 8 springs, 11 primals, and 30+ wateringHole handoffs
+- Identified 18 ecosystem patterns; absorbed all applicable ones
+
+### New Modules in `biomeos-types`
+- `ipc.rs`: `IpcErrorPhase` (7 variants), `extract_rpc_result()`, `extract_rpc_error()`, `RpcExtractionError` — from loamSpine/petalTongue/sweetGrass/primalSpring/healthSpring
+- `or_exit.rs`: `OrExit<T>` trait for zero-panic startup validation — from groundSpring/loamSpine/ludoSpring
+- `cast.rs`: 9 type-safe numeric cast helpers (`usize_f64`, `f64_usize`, etc.) — from airSpring
+- `validation.rs`: `ValidationSink` trait, `BufferSink`, `StderrSink` — from rhizoCrypt/airSpring/ludoSpring
+- `mcp.rs`: `McpToolDefinition`, `McpToolManifest`, `SchemaBuilder` — from healthSpring/airSpring/wetSpring
+- `primal_capabilities.rs`: Relay, compute, model, lifecycle routing types — from beardog/toadStool/nestgate/sourDough
+
+### Enhanced Existing Code
+- `primal_names.rs`: `PRIMALSPRING` constant + `display` submodule (17 mixed-case names)
+- `capability.list`: Now returns `cost_estimates`, `operation_dependencies`, `locality`, `domains`
+- Socket discovery: New `SocketRegistry` step (Squirrel writes, everyone reads)
+- `deny.toml`: 9 → 15 C-dep bans (aligned with ecosystem)
+
+### Proptest IPC Fuzzing (8 tests)
+- `parse_request_never_panics`, `parse_input_never_panics`, `deeply_nested_json_no_panic`
+- `extract_result_never_panics`, `extract_error_never_panics`
+- `large_method_name_no_panic`, `unicode_method_names`, `null_bytes_no_panic`
+
+### Quality Gates
+- Tests: 5,268 passing (65 new), 0 failures
+- Clippy: PASS (0 warnings, pedantic+nursery)
+- Format: PASS
+- Coverage: ~83% line
+
+## v2.50 (2026-03-18) — Deep Audit Execution + Modern Idiomatic Rust Evolution
+
+### Summary
+- Full audit execution: Edition 2024 all crates, tarpc sidecar, sovereignty STUN, scyBorg license
+- See `wateringHole/handoffs/archive/BIOMEOS_V250_DEEP_AUDIT_EXECUTION_MODERN_RUST_HANDOFF_MAR18_2026.md`
+
 ## v2.49 (2026-03-16) — Resilient Dispatch + Cost-Aware Pathway Learner
 
 ### New: Circuit Breaker Integration in Neural Executor

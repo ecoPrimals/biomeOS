@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.50) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
+| See evolution handoffs (v2.51) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,10 +58,10 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V251_ECOSYSTEM_ABSORPTION_HANDOFF | IPC resilience, proptest, MCP tools, capability cost/deps, 8 springs absorbed | Mar 18, 2026 |
+| BIOMEOS_V250_DEEP_AUDIT_EXECUTION_MODERN_RUST_HANDOFF | Edition 2024 all crates, tarpc sidecar, sovereignty STUN, scyBorg license | Mar 18, 2026 |
 | BIOMEOS_V246_SPRING_ABSORPTION_ECOSYSTEM_ALIGNMENT_HANDOFF | Spring absorption, typed SDK, tarpc 0.37 | Mar 16, 2026 |
 | BIOMEOS_V245_DEEP_DEBT_EXECUTION_COVERAGE_EVOLUTION_HANDOFF | P0-P4 debt fixes, +81 tests, 78% coverage | Mar 16, 2026 |
-| BIOMEOS_V244_DEEP_AUDIT_EVOLUTION_HANDOFF | Edition 2024, sovereignty, tarpc binary, zero-copy | Mar 16, 2026 |
-| BIOMEOS_V243_STREAMING_PIPELINE_COORDINATION_HANDOFF | Pipeline streaming, NDJSON, notifications | Mar 16, 2026 |
 
 ### Archived (February 2026)
 
@@ -118,10 +118,10 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (5,161+ tests — fully concurrent)
+# Test (5,268 tests — fully concurrent)
 cargo test --workspace
 
-# Coverage (78% line)
+# Coverage (~83% line)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -143,7 +143,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 16, 2026**
-**Active: 19 specs, handoffs in wateringHole (v2.43–v2.49), 10 scripts**
+**Documentation current as of March 18, 2026**
+**Active: 19 specs, handoffs in wateringHole (v2.43–v2.51), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 5,161+ passing, fully concurrent (78% line coverage) | Clippy: PASS | Docs: Full coverage**
+**Tests: 5,268 passing, fully concurrent (~83% line coverage) | Clippy: PASS | Docs: Full coverage**

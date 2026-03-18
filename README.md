@@ -247,13 +247,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (5,161+ tests — fully concurrent)
+### Test (5,268 tests — fully concurrent)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (78% line)
+### Coverage (~83% line)
 
 ```bash
 cargo llvm-cov --workspace
@@ -341,8 +341,8 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.49)
-**Updated**: March 16, 2026
-**Deep Audit Evolution**: Edition 2024 (all 25 crates), capability-based discovery, tarpc binary protocol, zero-copy Arc<str>, lint hardening (deny unwrap_used/expect_used), 0 files >1000 lines, circuit-breaker resilient dispatch, cost-aware Pathway Learner, manifest discovery fallback
-**Tests**: 5,161+ passing, fully concurrent (78% line, 80% function) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | AGPL-3.0-only
+**Status**: Production Ready (v2.51)
+**Updated**: March 18, 2026
+**Ecosystem Absorption**: IPC resilience (IpcErrorPhase, extract_rpc_result), proptest IPC fuzzing, MCP tool definitions, ValidationSink, capability.list cost/deps, socket-registry discovery, OrExit trait, cast module, primal capability routing types, deny.toml 15 C-dep bans
+**Tests**: 5,268 passing, fully concurrent (~83% line) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | scyBorg (AGPL-3.0 + ORC + CC-BY-SA)
