@@ -16,7 +16,7 @@
 use anyhow::{Context, Result};
 use biomeos_ui::capabilities::device_management::DeviceManagementProvider;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -140,6 +140,10 @@ async fn handle_connection(
     Ok(())
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "JSON-RPC method dispatcher with multiple handlers"
+)]
 async fn handle_method(
     request: JsonRpcRequest,
     provider: &Arc<RwLock<DeviceManagementProvider>>,
@@ -179,7 +183,7 @@ async fn handle_method(
             }
         }
         "assign_device" => {
-            let params = request.params.unwrap_or(json!({}));
+            let params = request.params.unwrap_or_else(|| json!({}));
             let device_id = params["device_id"].as_str().unwrap_or("");
             let primal_id = params["primal_id"].as_str().unwrap_or("");
 
@@ -197,7 +201,7 @@ async fn handle_method(
             }
         }
         "validate_niche" => {
-            let params = request.params.unwrap_or(json!({}));
+            let params = request.params.unwrap_or_else(|| json!({}));
             // Get template from provider
             let provider_guard = provider.read().await;
             let templates = match provider_guard.get_niche_templates().await {
@@ -217,20 +221,17 @@ async fn handle_method(
             };
 
             let template_id = params["template_id"].as_str().unwrap_or("");
-            let template = match templates.iter().find(|t| t.id == template_id) {
-                Some(t) => t,
-                None => {
-                    return JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        result: None,
-                        error: Some(JsonRpcError {
-                            code: -32602,
-                            message: format!("Template not found: {template_id}"),
-                            data: None,
-                        }),
-                        id: request.id,
-                    };
-                }
+            let Some(template) = templates.iter().find(|t| t.id == template_id) else {
+                return JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    result: None,
+                    error: Some(JsonRpcError {
+                        code: -32602,
+                        message: format!("Template not found: {template_id}"),
+                        data: None,
+                    }),
+                    id: request.id,
+                };
             };
 
             match provider_guard.validate_niche(template).await {
@@ -243,7 +244,7 @@ async fn handle_method(
             }
         }
         "deploy_niche" => {
-            let params = request.params.unwrap_or(json!({}));
+            let params = request.params.unwrap_or_else(|| json!({}));
             let config = params["config"].clone();
 
             let provider_guard = provider.read().await;

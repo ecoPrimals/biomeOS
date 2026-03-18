@@ -2,7 +2,21 @@
 // Copyright 2025 ecoPrimals Project
 
 use anyhow::Result;
-use biomeos_cli::{commands::*, CliUtils, OutputFormat};
+use biomeos_cli::{
+    CliUtils, OutputFormat,
+    commands::{
+        federation, genome, handle_chimera_build, handle_chimera_list, handle_chimera_show,
+        handle_create, handle_dashboard, handle_deploy, handle_deploy_graph_direct,
+        handle_discover, handle_exec, handle_federation_check_access,
+        handle_federation_create_subfed, handle_federation_join_subfed,
+        handle_federation_list_subfeds, handle_genome_compose, handle_genome_create,
+        handle_genome_list, handle_genome_self_replicate, handle_genome_verify, handle_health,
+        handle_logs, handle_monitor, handle_niche_list, handle_niche_show, handle_node_list_local,
+        handle_primal_list, handle_probe, handle_scale, handle_scan, handle_spore_clone,
+        handle_spore_create, handle_spore_incubate, handle_spore_info, handle_spore_list,
+        handle_spore_refresh, handle_spore_verify, handle_status, incubation, verify,
+    },
+};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -33,7 +47,7 @@ pub(crate) fn parse_ai_intent(query: &str) -> AiIntent {
 }
 
 /// Format AI response lines for intent (pure, testable)
-pub(crate) fn format_ai_response(intent: AiIntent) -> Vec<String> {
+pub(crate) fn format_ai_response(intent: &AiIntent) -> Vec<String> {
     match intent {
         AiIntent::Health => vec![
             "🏥 Health Status Analysis".to_string(),
@@ -484,6 +498,7 @@ enum Commands {
 }
 
 #[tokio::main]
+#[allow(clippy::too_many_lines, reason = "main command dispatch")]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     CliUtils::init_logging(&cli.log_level)?;
@@ -635,7 +650,7 @@ async fn main() -> Result<()> {
                 handle_genome_create(args)?;
             }
             GenomeAction::Compose(args) => {
-                handle_genome_compose(args)?;
+                handle_genome_compose(&args)?;
             }
             GenomeAction::SelfReplicate => {
                 handle_genome_self_replicate()?;
@@ -644,7 +659,7 @@ async fn main() -> Result<()> {
                 handle_genome_list()?;
             }
             GenomeAction::Verify(args) => {
-                handle_genome_verify(args)?;
+                handle_genome_verify(&args)?;
             }
         },
         Commands::Node { action } => match action {
@@ -659,7 +674,7 @@ async fn main() -> Result<()> {
 
 /// Handle AI command
 async fn handle_ai_command(query: String, context: Option<String>) -> anyhow::Result<()> {
-    use colored::*;
+    use colored::Colorize;
 
     println!("{}", "🤖 BiomeOS AI Assistant".bright_cyan().bold());
     println!(
@@ -673,7 +688,7 @@ async fn handle_ai_command(query: String, context: Option<String>) -> anyhow::Re
     }
 
     let intent = parse_ai_intent(&query);
-    let lines = format_ai_response(intent);
+    let lines = format_ai_response(&intent);
     for line in lines {
         println!("\n{line}");
     }
@@ -719,14 +734,14 @@ mod tests {
 
     #[test]
     fn test_format_ai_response_health() {
-        let lines = format_ai_response(AiIntent::Health);
+        let lines = format_ai_response(&AiIntent::Health);
         assert!(!lines.is_empty());
         assert!(lines[0].contains("Health"));
     }
 
     #[test]
     fn test_format_ai_response_unknown() {
-        let lines = format_ai_response(AiIntent::Unknown);
+        let lines = format_ai_response(&AiIntent::Unknown);
         assert!(lines.iter().any(|l| l.contains("Suggestions")));
     }
 }

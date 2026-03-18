@@ -161,7 +161,7 @@ impl ManagedPrimal for GenericManagedPrimal {
                 .config
                 .provides
                 .iter()
-                .map(|c| c.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(",");
             cmd.env("PRIMAL_PROVIDES", provides_str);
@@ -295,8 +295,7 @@ impl ManagedPrimal for GenericManagedPrimal {
             .env_config
             .get("PRIMAL_STARTUP_TIMEOUT")
             .and_then(|s| s.parse::<u64>().ok())
-            .map(Duration::from_secs)
-            .unwrap_or(Duration::from_secs(30))
+            .map_or(Duration::from_secs(30), Duration::from_secs)
     }
 }
 

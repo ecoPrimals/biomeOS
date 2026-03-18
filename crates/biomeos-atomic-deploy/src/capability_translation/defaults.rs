@@ -10,8 +10,8 @@
 use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
 use tracing::{debug, info};
 
-use super::socket;
 use super::CapabilityTranslationRegistry;
+use super::socket;
 
 /// Method translation tuple: (semantic_name, actual_method_name)
 type MethodTranslation = (&'static str, &'static str);

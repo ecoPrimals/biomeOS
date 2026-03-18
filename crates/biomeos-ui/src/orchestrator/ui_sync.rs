@@ -26,7 +26,7 @@ impl UISync {
     ///
     /// Falls back gracefully if petalTongue is unavailable.
     pub async fn update_ui_after_assignment(
-        petaltongue: &Option<PetalTongueClient>,
+        petaltongue: Option<&PetalTongueClient>,
         device_id: &str,
         primal_id: &str,
     ) -> Result<()> {
@@ -64,7 +64,7 @@ impl UISync {
 
     /// Update UI after device unassignment
     pub async fn update_ui_after_unassignment(
-        petaltongue: &Option<PetalTongueClient>,
+        petaltongue: Option<&PetalTongueClient>,
         device_id: &str,
     ) -> Result<()> {
         if let Some(petaltongue) = petaltongue {
@@ -94,7 +94,7 @@ impl UISync {
 
     /// Initialize UI state
     pub async fn initialize_ui(
-        petaltongue: &Option<PetalTongueClient>,
+        petaltongue: Option<&PetalTongueClient>,
         initial_state: serde_json::Value,
     ) -> Result<()> {
         if let Some(petaltongue) = petaltongue {
@@ -116,7 +116,7 @@ impl UISync {
 
     /// Push UI refresh
     pub async fn push_refresh(
-        petaltongue: &Option<PetalTongueClient>,
+        petaltongue: Option<&PetalTongueClient>,
         refresh_results: Vec<&str>,
     ) -> Result<()> {
         if let Some(petaltongue) = petaltongue {
@@ -131,7 +131,7 @@ impl UISync {
     }
 
     /// Send UI heartbeat
-    pub async fn send_heartbeat(petaltongue: &Option<PetalTongueClient>) -> Result<()> {
+    pub async fn send_heartbeat(petaltongue: Option<&PetalTongueClient>) -> Result<()> {
         if let Some(petaltongue) = petaltongue {
             let _ = petaltongue
                 .call("ui.heartbeat", serde_json::json!({ "status": "running" }))
@@ -148,7 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_ui_no_petaltongue() {
-        let result = UISync::update_ui_after_assignment(&None, "test-device", "test-primal").await;
+        let result = UISync::update_ui_after_assignment(None, "test-device", "test-primal").await;
 
         // Should return error but not panic
         assert!(result.is_err());
@@ -162,7 +162,8 @@ mod tests {
             PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
         let petaltongue = Some(client);
         let result =
-            UISync::update_ui_after_assignment(&petaltongue, "device-123", "primal-456").await;
+            UISync::update_ui_after_assignment(petaltongue.as_ref(), "device-123", "primal-456")
+                .await;
         assert!(
             result.is_ok(),
             "graceful degradation when petaltongue call fails"
@@ -172,7 +173,7 @@ mod tests {
     #[tokio::test]
     async fn test_initialize_ui_no_petaltongue() {
         let state = serde_json::json!({"test": "data"});
-        let result = UISync::initialize_ui(&None, state).await;
+        let result = UISync::initialize_ui(None, state).await;
 
         // Should succeed gracefully (running headless)
         assert!(result.is_ok());
@@ -184,7 +185,7 @@ mod tests {
             PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
         let petaltongue = Some(client);
         let state = serde_json::json!({"family_id": "test", "primals": {}});
-        let result = UISync::initialize_ui(&petaltongue, state).await;
+        let result = UISync::initialize_ui(petaltongue.as_ref(), state).await;
         assert!(
             result.is_err(),
             "initialize_ui propagates error when call fails"
@@ -193,7 +194,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_ui_after_unassignment_no_client() {
-        let result = UISync::update_ui_after_unassignment(&None, "device-123").await;
+        let result = UISync::update_ui_after_unassignment(None, "device-123").await;
 
         // Should succeed (graceful degradation)
         assert!(result.is_ok());
@@ -204,14 +205,14 @@ mod tests {
         let client: PetalTongueClient =
             PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
         let petaltongue = Some(client);
-        let result = UISync::update_ui_after_unassignment(&petaltongue, "device-123").await;
+        let result = UISync::update_ui_after_unassignment(petaltongue.as_ref(), "device-123").await;
         assert!(result.is_ok(), "graceful degradation when call fails");
     }
 
     #[tokio::test]
     async fn test_push_refresh_no_client() {
         let refresh_results = vec!["devices", "primals", "metrics"];
-        let result = UISync::push_refresh(&None, refresh_results).await;
+        let result = UISync::push_refresh(None, refresh_results).await;
 
         // Should succeed (graceful degradation)
         assert!(result.is_ok());
@@ -222,13 +223,13 @@ mod tests {
         let client: PetalTongueClient =
             PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
         let petaltongue = Some(client);
-        let result = UISync::push_refresh(&petaltongue, vec!["devices", "primals"]).await;
+        let result = UISync::push_refresh(petaltongue.as_ref(), vec!["devices", "primals"]).await;
         assert!(result.is_ok(), "push_refresh always returns Ok");
     }
 
     #[tokio::test]
     async fn test_push_refresh_empty_results() {
-        let result = UISync::push_refresh(&None, vec![]).await;
+        let result = UISync::push_refresh(None, vec![]).await;
 
         // Should succeed with empty results
         assert!(result.is_ok());
@@ -236,7 +237,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_heartbeat_no_client() {
-        let result = UISync::send_heartbeat(&None).await;
+        let result = UISync::send_heartbeat(None).await;
 
         // Should succeed (graceful degradation)
         assert!(result.is_ok());
@@ -247,7 +248,7 @@ mod tests {
         let client: PetalTongueClient =
             PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
         let petaltongue = Some(client);
-        let result = UISync::send_heartbeat(&petaltongue).await;
+        let result = UISync::send_heartbeat(petaltongue.as_ref()).await;
         assert!(result.is_ok(), "send_heartbeat always returns Ok");
     }
 
@@ -255,13 +256,15 @@ mod tests {
     async fn test_update_ui_after_assignment_with_device_and_primal() {
         // Test that the function handles device and primal IDs properly
         let result =
-            UISync::update_ui_after_assignment(&None, "device-abc-123", "primal-xyz-456").await;
+            UISync::update_ui_after_assignment(None, "device-abc-123", "primal-xyz-456").await;
 
         assert!(result.is_err());
         // Error message should be consistent
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("visualization primal"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("visualization primal")
+        );
     }
 }

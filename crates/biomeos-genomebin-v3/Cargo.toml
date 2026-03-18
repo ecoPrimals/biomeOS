@@ -1,7 +1,7 @@
 [package]
 name = "biomeos-genomebin-v3"
 version = "3.0.0"
-edition = "2021"
+edition.workspace = true
 authors = ["ecoPrimals Team"]
 license = "AGPL-3.0-only"
 description = "genomeBin v3.0 - TRUE binary isomorphic format for ecoPrimals"
@@ -60,3 +60,6 @@ path = "src/lib.rs"
 # ✅ Self-extracting capability
 # ✅ Fractal composition (genomeBins can contain genomeBins)
 # ✅ NUCLEUS atomic types (TOWER, NODE, NEST, NUCLEUS)
+
+[lints]
+workspace = true

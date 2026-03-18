@@ -184,14 +184,17 @@ impl UniversalBiomeOSManager {
 mod tests {
     use super::*;
     use biomeos_types::PrimalType;
+    use biomeos_types::paths::SystemPaths;
     use chrono::Utc;
 
     fn test_primal(id: &str, name: &str, health: biomeos_types::Health) -> PrimalInfo {
+        let paths = SystemPaths::default();
+        let socket_path = paths.primal_socket(id);
         PrimalInfo {
             id: id.to_string(),
             name: name.to_string(),
             primal_type: PrimalType::from_discovered("test", name, "1.0.0"),
-            endpoint: format!("unix:/tmp/{id}"),
+            endpoint: format!("unix:{}", socket_path.display()),
             capabilities: vec![],
             health,
             last_seen: Utc::now(),

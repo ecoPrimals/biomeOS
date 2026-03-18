@@ -183,7 +183,7 @@ impl MetricsCollector {
             executed_at: chrono::Utc::now(),
             metadata: serde_json::to_string(&result.node_results).unwrap_or_else(|e| {
                 tracing::warn!("JSON parse fallback: {}", e);
-                Default::default()
+                String::default()
             }),
         };
 

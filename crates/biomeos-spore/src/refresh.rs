@@ -24,20 +24,17 @@ impl SporeRefresher {
         let nucleus_path = nucleus_path.as_ref().to_path_buf();
 
         // Load or generate nucleus manifest
-        let nucleus_manifest = match BinaryManifest::load(&nucleus_path) {
-            Ok(manifest) => {
-                info!("Loaded existing nucleus manifest");
-                manifest
+        let nucleus_manifest = if let Ok(manifest) = BinaryManifest::load(&nucleus_path) {
+            info!("Loaded existing nucleus manifest");
+            manifest
+        } else {
+            info!("Generating nucleus manifest from binaries");
+            let manifest = BinaryManifest::from_nucleus(&nucleus_path)?;
+            // Save for next time
+            if let Err(e) = manifest.save(nucleus_path.join("MANIFEST.toml")) {
+                warn!("Failed to save generated manifest: {}", e);
             }
-            Err(_) => {
-                info!("Generating nucleus manifest from binaries");
-                let manifest = BinaryManifest::from_nucleus(&nucleus_path)?;
-                // Save for next time
-                if let Err(e) = manifest.save(nucleus_path.join("MANIFEST.toml")) {
-                    warn!("Failed to save generated manifest: {}", e);
-                }
-                manifest
-            }
+            manifest
         };
 
         Ok(Self {
@@ -89,7 +86,7 @@ impl SporeRefresher {
 
                     // Copy binary
                     match self.copy_binary(&source_path, &dest_path) {
-                        Ok(_) => {
+                        Ok(()) => {
                             info!("✅ Refreshed: {}", binary_verification.name);
                             refreshed_binaries.push(RefreshedBinary {
                                 name: binary_verification.name.clone(),
@@ -119,7 +116,7 @@ impl SporeRefresher {
 
         // Update spore manifest if any binaries were refreshed
         if !refreshed_binaries.is_empty()
-            && let Err(e) = self.update_spore_manifest(spore_path, &refreshed_binaries)
+            && let Err(e) = Self::update_spore_manifest(spore_path, &refreshed_binaries)
         {
             warn!("Failed to update spore manifest: {}", e);
         }
@@ -186,27 +183,23 @@ impl SporeRefresher {
 
     /// Update spore manifest after refresh
     fn update_spore_manifest(
-        &self,
         spore_path: &Path,
         refreshed_binaries: &[RefreshedBinary],
     ) -> Result<()> {
         let _manifest_path = spore_path.join(".manifest.toml");
 
         // Load existing manifest or create new one
-        let mut manifest = match SporeManifest::load(spore_path) {
-            Ok(m) => m,
-            Err(_) => {
-                // If no manifest exists, we can't update it
-                // This is okay for legacy spores
-                return Ok(());
-            }
+        let Ok(mut manifest) = SporeManifest::load(spore_path) else {
+            // If no manifest exists, we can't update it
+            // This is okay for legacy spores
+            return Ok(());
         };
 
         // Update binary information
         for refreshed in refreshed_binaries {
             if let Some(binary_info) = manifest.binaries.get_mut(&refreshed.name) {
-                binary_info.version = refreshed.new_version.clone();
-                binary_info.sha256 = refreshed.new_sha256.clone();
+                binary_info.version.clone_from(&refreshed.new_version);
+                binary_info.sha256.clone_from(&refreshed.new_sha256);
                 binary_info.copied_at = chrono::Utc::now();
             }
         }

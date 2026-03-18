@@ -68,7 +68,7 @@ impl std::str::FromStr for NucleusMode {
 
 impl NucleusMode {
     /// Get the primals needed for this mode (in startup order)
-    fn primals(&self) -> Vec<&'static str> {
+    fn primals(self) -> Vec<&'static str> {
         match self {
             NucleusMode::Tower => vec![BEARDOG, SONGBIRD],
             NucleusMode::Node => vec![BEARDOG, SONGBIRD, TOADSTOOL],
@@ -108,9 +108,8 @@ pub(crate) fn resolve_startup_config_with(
     socket_dir_override: Option<&str>,
 ) -> Result<StartupConfig> {
     let mode: NucleusMode = mode.parse()?;
-    let family_id = family_id
-        .map(String::from)
-        .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
+    let family_id =
+        family_id.map_or_else(biomeos_core::family_discovery::get_family_id, String::from);
     let socket_dir = resolve_socket_dir_with(socket_dir_override)?;
     Ok(StartupConfig {
         mode,
@@ -176,19 +175,16 @@ pub(crate) fn build_primal_command(
         openai_api_key: openai.as_deref(),
         ai_http_providers: ai_providers.as_deref(),
     };
-    build_primal_command_with(config)
+    build_primal_command_with(&config)
 }
 
-pub(crate) fn build_primal_command_with(config: PrimalCommandConfig<'_>) -> std::process::Command {
+pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std::process::Command {
     let socket_path = config
         .socket_dir
         .join(format!("{}-{}.sock", config.name, config.family_id));
     let mut cmd = std::process::Command::new(config.binary);
 
     match config.name {
-        BEARDOG => {
-            cmd.arg("server").arg("--socket").arg(&socket_path);
-        }
         SONGBIRD => {
             let security_socket =
                 socket_path_for_capability(config.socket_dir, config.family_id, "security");
@@ -247,7 +243,7 @@ pub(crate) fn format_nucleus_summary(
     socket_dir: &std::path::Path,
     family_id: &str,
     node_id: &str,
-    mode: &NucleusMode,
+    mode: NucleusMode,
     mode_label: &str,
 ) -> Vec<String> {
     let mut lines = Vec::new();
@@ -272,6 +268,7 @@ pub(crate) fn format_nucleus_summary(
 }
 
 /// Run the nucleus startup
+#[allow(clippy::too_many_lines, reason = "nucleus startup flow")]
 pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Result<()> {
     let config = resolve_startup_config(&mode, &node_id, family_id.as_deref())?;
     let mode = config.mode;
@@ -405,7 +402,7 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
         &socket_dir,
         &family_id,
         &node_id,
-        &mode,
+        mode,
         mode_label,
     );
     for line in summary_lines {
@@ -422,12 +419,14 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
 
     // Clean up child process handles
     for (name, mut child) in children {
-        match tokio::time::timeout(Duration::from_secs(2), child.wait()).await {
-            Ok(_) => info!("  {} exited", name),
-            Err(_) => {
-                let _ = child.kill().await;
-                info!("  {} force-killed", name);
-            }
+        if tokio::time::timeout(Duration::from_secs(2), child.wait())
+            .await
+            .is_ok()
+        {
+            info!("  {} exited", name);
+        } else {
+            let _ = child.kill().await;
+            info!("  {} force-killed", name);
         }
     }
 
@@ -494,7 +493,7 @@ fn discover_binaries(primals: &[&str]) -> Result<HashMap<String, PathBuf>> {
         .ok()
         .map(|s| s.split(':').map(PathBuf::from).collect())
         .unwrap_or_default();
-    let path_dirs: Vec<&Path> = path_owned.iter().map(|p| p.as_path()).collect();
+    let path_dirs: Vec<&Path> = path_owned.iter().map(std::path::PathBuf::as_path).collect();
     discover_binaries_with(primals, plasmid_bin_dir.as_deref(), &path_dirs)
 }
 
@@ -607,29 +606,25 @@ async fn health_check(socket_path: &std::path::Path) -> Result<()> {
 
     // Try plain "health" first (BearDog, Songbird, NestGate, Squirrel),
     // then semantic "{primal}.health" (Toadstool follows the naming standard)
-    let response = match client.call("health", serde_json::json!({})).await {
-        Ok(resp) => resp,
-        Err(_) => {
-            // Extract primal name from socket path for semantic method naming
-            let primal_name = socket_path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .and_then(|s| s.split('-').next())
-                .unwrap_or("unknown");
-            let semantic_method = format!("{primal_name}.health");
-            client
-                .call(&semantic_method, serde_json::json!({}))
-                .await
-                .context("Health check RPC failed")?
-        }
+    let response = if let Ok(resp) = client.call("health", serde_json::json!({})).await {
+        resp
+    } else {
+        // Extract primal name from socket path for semantic method naming
+        let primal_name = socket_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .and_then(|s| s.split('-').next())
+            .unwrap_or("unknown");
+        let semantic_method = format!("{primal_name}.health");
+        client
+            .call(&semantic_method, serde_json::json!({}))
+            .await
+            .context("Health check RPC failed")?
     };
 
-    if response.get("status").and_then(|s| s.as_str()) == Some("healthy") {
-        Ok(())
-    } else {
-        // Accept any non-error response as healthy
-        Ok(())
-    }
+    // Accept any non-error response as healthy
+    let _ = response.get("status").and_then(|s| s.as_str());
+    Ok(())
 }
 
 /// Generate a random JWT secret

@@ -9,8 +9,8 @@
 use serde_json::Value;
 use tracing::{debug, trace};
 
-use super::rpc::{DispatchOutcome, JsonRpcRequest};
 use super::NeuralApiServer;
+use super::rpc::{DispatchOutcome, JsonRpcRequest};
 
 fn dispatch(result: Result<Value, anyhow::Error>, id: &Value) -> DispatchOutcome {
     match result {
@@ -225,7 +225,7 @@ impl NeuralApiServer {
             Err(e) => {
                 return DispatchOutcome::ParseError {
                     message: e.to_string(),
-                }
+                };
             }
         };
 
@@ -401,10 +401,12 @@ mod tests {
         let result = server.handle_request_json(req).await;
         assert_eq!(result["jsonrpc"], "2.0");
         assert_eq!(result["error"]["code"], -32601);
-        assert!(result["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("nonexistent.method"));
+        assert!(
+            result["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("nonexistent.method")
+        );
         assert_eq!(result["id"], 1);
     }
 
@@ -423,10 +425,12 @@ mod tests {
         let req = r#"{"jsonrpc":"2.0","method":"mesh","id":2}"#;
         let result = server.handle_request_json(req).await;
         assert_eq!(result["error"]["code"], -32601);
-        assert!(result["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("mesh"));
+        assert!(
+            result["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("mesh")
+        );
     }
 
     #[tokio::test]

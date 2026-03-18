@@ -416,7 +416,7 @@ mod tests {
     #[test]
     fn test_helpers_degraded_response() {
         let id = uuid::Uuid::new_v4();
-        let resp = helpers::degraded_response(id, vec!["issue1".to_string()]);
+        let resp = helpers::degraded_response(id, &["issue1".to_string()]);
         assert_eq!(resp.request_id, id);
         let issues = resp
             .payload
@@ -429,7 +429,7 @@ mod tests {
     #[test]
     fn test_helpers_critical_response() {
         let id = uuid::Uuid::new_v4();
-        let resp = helpers::critical_response(id, vec!["critical".to_string()]);
+        let resp = helpers::critical_response(id, &["critical".to_string()]);
         assert_eq!(resp.request_id, id);
         assert_eq!(
             resp.payload.get("health").and_then(|v| v.as_str()),
@@ -447,7 +447,7 @@ mod tests {
 
 /// Helper functions for creating common primal operations
 pub mod helpers {
-    use super::*;
+    use super::{PrimalRequest, PrimalResponse, RequestPriority};
 
     /// Create a health check request
     pub fn health_check_request() -> PrimalRequest {
@@ -477,28 +477,25 @@ pub mod helpers {
     }
 
     /// Create a degraded health response with issues
-    pub fn degraded_response(request_id: uuid::Uuid, issues: Vec<String>) -> PrimalResponse {
+    pub fn degraded_response(request_id: uuid::Uuid, issues: &[String]) -> PrimalResponse {
         PrimalResponse::success(
             request_id,
             serde_json::json!({
                 "health": "degraded",
                 "status": "degraded",
-                "issues": issues
+                "issues": issues.to_vec()
             }),
         )
     }
 
     /// Create a critical health response
-    pub fn critical_response(
-        request_id: uuid::Uuid,
-        critical_issues: Vec<String>,
-    ) -> PrimalResponse {
+    pub fn critical_response(request_id: uuid::Uuid, critical_issues: &[String]) -> PrimalResponse {
         PrimalResponse::success(
             request_id,
             serde_json::json!({
                 "health": "critical",
                 "status": "critical",
-                "critical_issues": critical_issues
+                "critical_issues": critical_issues.to_vec()
             }),
         )
     }

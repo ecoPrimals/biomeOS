@@ -51,7 +51,7 @@ pub mod generators {
     
     pub fn random_jwt_secret() -> String {
         let mut rng = rand::thread_rng();
-        let secret: [u8; 48] = rng.gen();
+        let secret: [u8; 48] = rng.r#gen();
         base64::encode(secret)
     }
     

@@ -32,7 +32,7 @@
 //! - Rendezvous slots expire after 5 minutes
 //! - Only same-lineage nodes can be paired
 
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -204,12 +204,9 @@ pub async fn post_beacon(
     state.clean_expired().await;
 
     // Verify family membership via shared beacon verification
-    let lineage_hash = match state.verify_beacon(&request.dark_forest_token).await {
-        Some(hash) => hash,
-        None => {
-            // Not family — silent rejection (Dark Forest: reveal nothing)
-            return (StatusCode::FORBIDDEN, Json(serde_json::json!({}))).into_response();
-        }
+    let Some(lineage_hash) = state.verify_beacon(&request.dark_forest_token).await else {
+        // Not family — silent rejection (Dark Forest: reveal nothing)
+        return (StatusCode::FORBIDDEN, Json(serde_json::json!({}))).into_response();
     };
 
     let now = SystemTime::now()
@@ -235,7 +232,9 @@ pub async fn post_beacon(
     let lineage_slots = slots.entry(lineage_hash.clone()).or_default();
 
     // Check if a matching peer is already waiting
-    let (peer_beacon, peer_connection_info) = if !lineage_slots.is_empty() {
+    let (peer_beacon, peer_connection_info) = if lineage_slots.is_empty() {
+        (None, None)
+    } else {
         // Find a slot from a DIFFERENT node (not ourselves)
         let peer_idx = lineage_slots.iter().position(|s| s.node_hash != node_hash);
 
@@ -250,8 +249,6 @@ pub async fn post_beacon(
             }
             None => (None, None),
         }
-    } else {
-        (None, None)
     };
 
     let peers_waiting = lineage_slots.len();
@@ -280,11 +277,8 @@ pub async fn check_peer(
     state.clean_expired().await;
 
     // Verify family membership via shared beacon verification
-    let lineage_hash = match state.verify_beacon(&request.dark_forest_token).await {
-        Some(hash) => hash,
-        None => {
-            return (StatusCode::FORBIDDEN, Json(serde_json::json!({}))).into_response();
-        }
+    let Some(lineage_hash) = state.verify_beacon(&request.dark_forest_token).await else {
+        return (StatusCode::FORBIDDEN, Json(serde_json::json!({}))).into_response();
     };
 
     let slots = state.slots.read().await;

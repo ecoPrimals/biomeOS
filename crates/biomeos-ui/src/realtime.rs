@@ -202,7 +202,9 @@ impl RealTimeEventSubscriber {
         if self.websocket_url.is_some() || self.sse_url.is_some() {
             info!("✅ Event endpoints discovered from environment");
         } else {
-            info!("ℹ️  No event endpoints configured (set BIOMEOS_WS_ENDPOINT or BIOMEOS_SSE_ENDPOINT)");
+            info!(
+                "ℹ️  No event endpoints configured (set BIOMEOS_WS_ENDPOINT or BIOMEOS_SSE_ENDPOINT)"
+            );
         }
 
         Ok(())
@@ -233,9 +235,11 @@ impl RealTimeEventSubscriber {
             }),
         );
 
+        #[expect(clippy::expect_used, reason = "subscribe_request is JSON-serializable")]
         write
             .send(Message::Text(
-                serde_json::to_string(&subscribe_request).unwrap(),
+                serde_json::to_string(&subscribe_request)
+                    .expect("subscribe_request is JSON-serializable"),
             ))
             .await
             .context("Failed to send subscribe request")?;

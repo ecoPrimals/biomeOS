@@ -24,12 +24,12 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::tungstenite::Message;
 
 // Re-export JSON-RPC types and graph types
 pub use biomeos_graph::{GraphEvent, GraphEventBroadcaster};
-pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, JSONRPC_VERSION};
+pub use biomeos_types::{JSONRPC_VERSION, JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 /// Subscription filter parameters
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]

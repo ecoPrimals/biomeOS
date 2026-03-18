@@ -2,7 +2,7 @@
 name = "neural-api-client-sync"
 description = "Synchronous Neural API client for biomeOS — zero-tokio, std + serde_json only"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 license = "AGPL-3.0-only"
 repository = "https://github.com/ecoPrimals/biomeOS"
 

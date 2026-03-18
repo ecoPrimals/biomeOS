@@ -296,18 +296,21 @@ impl AIErrorContext {
     }
 
     /// Add automation hint
+    #[must_use]
     pub fn with_hint(mut self, hint: impl Into<String>) -> Self {
         self.automation_hints.push(hint.into());
         self
     }
 
     /// Set severity
+    #[must_use]
     pub fn with_severity(mut self, severity: ErrorSeverity) -> Self {
         self.severity = severity;
         self
     }
 
     /// Set human intervention requirement
+    #[must_use]
     pub fn requires_human(mut self) -> Self {
         self.requires_human_intervention = true;
         self.automation_confidence = 0.0;
@@ -330,6 +333,7 @@ impl RetryStrategy {
     }
 
     /// Create exponential backoff retry strategy
+    #[allow(clippy::cast_lossless)]
     pub fn exponential_backoff(
         max_attempts: u32,
         initial_delay_ms: u64,
@@ -350,6 +354,7 @@ impl RetryStrategy {
     }
 
     /// Create linear backoff retry strategy
+    #[allow(clippy::cast_lossless)]
     pub fn linear_backoff(max_attempts: u32, delay_ms: u64, increment_ms: u64) -> Self {
         Self {
             should_retry: true,

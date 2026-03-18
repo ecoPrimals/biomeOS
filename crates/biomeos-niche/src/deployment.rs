@@ -275,7 +275,8 @@ impl DeploymentManager {
     /// # Errors
     /// Returns an error if the deployment fails to stop.
     pub async fn undeploy(&self, id: Uuid) -> NicheResult<()> {
-        if let Some(deployment) = self.deployments.write().await.remove(&id) {
+        let value = self.deployments.write().await.remove(&id);
+        if let Some(deployment) = value {
             deployment.stop().await?;
         }
         Ok(())

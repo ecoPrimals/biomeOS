@@ -215,10 +215,10 @@ impl SporeVerification {
             result.add_check(
                 "Config uses seed file",
                 uses_file_ref,
-                if !uses_file_ref {
-                    Some("Should reference BEARDOG_FAMILY_SEED_FILE".to_string())
-                } else {
+                if uses_file_ref {
                     None
+                } else {
+                    Some("Should reference BEARDOG_FAMILY_SEED_FILE".to_string())
                 },
             );
 
@@ -266,10 +266,10 @@ impl SporeVerification {
                     result.add_check(
                         format!("{name} executable"),
                         is_executable,
-                        if !is_executable {
-                            Some("Not executable".to_string())
-                        } else {
+                        if is_executable {
                             None
+                        } else {
+                            Some("Not executable".to_string())
                         },
                     );
                 }

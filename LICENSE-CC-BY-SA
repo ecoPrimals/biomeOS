@@ -1,0 +1,42 @@
+Creative Commons Attribution-ShareAlike 4.0 International
+==========================================================
+
+This project includes creative content licensed under the
+Creative Commons Attribution-ShareAlike 4.0 International License
+(CC-BY-SA 4.0).
+
+The full license text is available at:
+  https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+Covered Content
+---------------
+
+The following creative works in this repository are licensed under
+CC-BY-SA 4.0:
+
+  - Documentation (specs/, docs/, *.md files)
+  - Architecture diagrams and visualizations (visualizations/)
+  - Templates and example configurations (templates/, specs/examples/)
+  - Deployment topology descriptions (topologies/)
+
+Attribution
+-----------
+
+When redistributing or creating derivative works from the creative
+content in this repository, you must:
+
+  1. Give appropriate credit to the ecoPrimals Project
+  2. Provide a link to the CC-BY-SA 4.0 license
+  3. Indicate if changes were made
+  4. Distribute derivative creative works under the same license
+
+Notice
+------
+
+This file is part of the scyBorg triple-copyleft licensing framework:
+  - Software: AGPL-3.0-or-later (see LICENSE)
+  - Mechanics: ORC (see LICENSE-ORC)
+  - Creative: CC-BY-SA 4.0 (this file)
+
+No single entity can revoke any of these licenses. Each is governed
+by an independent nonprofit foundation.

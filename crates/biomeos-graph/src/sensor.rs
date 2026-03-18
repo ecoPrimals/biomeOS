@@ -18,7 +18,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 use tracing::{debug, warn};
 
 /// A sensor event from an input device.
@@ -167,11 +167,12 @@ impl SensorCollector {
                         events.push(event);
                     }
                 }
-                Err(broadcast::error::TryRecvError::Empty) => break,
+                Err(
+                    broadcast::error::TryRecvError::Empty | broadcast::error::TryRecvError::Closed,
+                ) => break,
                 Err(broadcast::error::TryRecvError::Lagged(n)) => {
                     warn!("SensorCollector lagged, lost {} events", n);
                 }
-                Err(broadcast::error::TryRecvError::Closed) => break,
             }
         }
         events

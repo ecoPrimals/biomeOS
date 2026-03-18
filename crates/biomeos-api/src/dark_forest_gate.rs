@@ -125,17 +125,14 @@ impl DarkForestGateState {
     /// Create a new gate state with the given configuration
     pub fn new(config: DarkForestGateConfig) -> Self {
         if config.enabled {
-            match &config.neural_api_socket {
-                Some(socket) => {
-                    info!(
-                        "🌲 Dark Forest gate ACTIVE via Tower Atomic (Neural API: {})",
-                        socket
-                    );
-                }
-                None => {
-                    info!("🌲 Dark Forest gate ACTIVE via direct capability routing");
-                    info!("   (Neural API not found — using socket discovery fallback)");
-                }
+            if let Some(socket) = &config.neural_api_socket {
+                info!(
+                    "🌲 Dark Forest gate ACTIVE via Tower Atomic (Neural API: {})",
+                    socket
+                );
+            } else {
+                info!("🌲 Dark Forest gate ACTIVE via direct capability routing");
+                info!("   (Neural API not found — using socket discovery fallback)");
             }
         } else {
             warn!("🌲 Dark Forest gate DISABLED — system is open (development mode only!)");
@@ -234,25 +231,22 @@ pub async fn dark_forest_gate_middleware(
         .get("X-Dark-Forest-Token")
         .and_then(|v| v.to_str().ok());
 
-    match token {
-        Some(token_value) => {
-            if gate.verify_token(token_value).await {
-                // Family member verified — allow through
-                next.run(request).await
-            } else {
-                // Not family — return 403 with no information
-                let mut res = Response::new(Body::empty());
-                *res.status_mut() = StatusCode::FORBIDDEN;
-                res
-            }
-        }
-        None => {
-            // No token — return 403 with no information
-            // Dark Forest: reveal nothing about what's expected
+    if let Some(token_value) = token {
+        if gate.verify_token(token_value).await {
+            // Family member verified — allow through
+            next.run(request).await
+        } else {
+            // Not family — return 403 with no information
             let mut res = Response::new(Body::empty());
             *res.status_mut() = StatusCode::FORBIDDEN;
             res
         }
+    } else {
+        // No token — return 403 with no information
+        // Dark Forest: reveal nothing about what's expected
+        let mut res = Response::new(Body::empty());
+        *res.status_mut() = StatusCode::FORBIDDEN;
+        res
     }
 }
 

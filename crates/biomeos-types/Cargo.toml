@@ -1,7 +1,7 @@
 [package]
 name = "biomeos-types"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 authors = ["biomeOS Team"]
 description = "Unified type system for the biomeOS ecosystem"
 license = "AGPL-3.0-only"
@@ -51,3 +51,5 @@ default = []
 # Optional features for advanced functionality
 validation = []
 metrics = [] 
+[lints]
+workspace = true

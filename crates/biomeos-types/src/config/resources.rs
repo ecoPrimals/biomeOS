@@ -230,7 +230,7 @@ pub struct DiscoveryConfig {
 }
 
 /// Discovery methods
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiscoveryMethod {
     /// Static service list
     Static,

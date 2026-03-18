@@ -6,7 +6,7 @@
 //! Creates and manages device nodes required for boot logging.
 
 use crate::init_error::{BootError, Result};
-use rustix::fs::{makedev, mknodat, FileType, Mode, CWD};
+use rustix::fs::{CWD, FileType, Mode, makedev, mknodat};
 use std::path::Path;
 
 /// Manages device node creation and permissions

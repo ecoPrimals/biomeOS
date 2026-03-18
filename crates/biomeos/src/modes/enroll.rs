@@ -25,10 +25,10 @@
 
 use anyhow::{Context, Result};
 use biomeos_spore::beacon_genetics::{
-    generate_device_entropy, DirectBeardogCaller, LineageDeriver,
+    DirectBeardogCaller, LineageDeriver, generate_device_entropy,
 };
-use biomeos_types::primal_names::BEARDOG;
 use biomeos_types::Uuid;
+use biomeos_types::primal_names::BEARDOG;
 use clap::Args;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
@@ -73,7 +73,7 @@ pub struct EnrollArgs {
 /// Falls back to UUID generation if no device_id provided and machine-id unavailable.
 pub(crate) fn resolve_device_id(device_id: Option<&str>) -> String {
     device_id
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .filter(|s| !s.is_empty())
         .or_else(get_machine_id)
         .unwrap_or_else(|| Uuid::new_v4().to_string())
@@ -119,9 +119,10 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
     info!("   Family: {}", args.family_id);
     info!("   Node: {}", args.node_id);
 
-    if let Err(EnrollmentValidationError::AlreadyEnrolled) =
-        validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force)
-    {
+    if matches!(
+        validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force),
+        Err(EnrollmentValidationError::AlreadyEnrolled)
+    ) {
         warn!(
             "⚠️  Device already enrolled (lineage exists at {})",
             args.lineage_seed.display()

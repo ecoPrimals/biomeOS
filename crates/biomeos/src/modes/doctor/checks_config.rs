@@ -87,7 +87,7 @@ pub(crate) async fn check_graphs_dir_at(base_dir: &Path) -> Result<HealthCheck> 
 
     if graphs_dir.exists() && graphs_dir.is_dir() {
         let graph_count = std::fs::read_dir(&graphs_dir)?
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| e.path().extension().is_some_and(|ext| ext == "toml"))
             .count();
 
@@ -132,10 +132,12 @@ mod tests {
         let check = check_graphs_dir().await.unwrap();
         std::env::set_current_dir(&old_cwd).unwrap();
         assert_eq!(check.status, HealthStatus::Warning);
-        assert!(check
-            .details
-            .iter()
-            .any(|d| d.contains("not found") || d.contains("Directory")));
+        assert!(
+            check
+                .details
+                .iter()
+                .any(|d| d.contains("not found") || d.contains("Directory"))
+        );
     }
 
     #[tokio::test]

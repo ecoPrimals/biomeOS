@@ -51,8 +51,7 @@ pub async fn discover_primals(dir: &Path) -> Result<Vec<PrimalMetadata>> {
             || path
                 .file_name()
                 .and_then(|n| n.to_str())
-                .map(|s| s.starts_with('.'))
-                .unwrap_or(false)
+                .is_some_and(|s| s.starts_with('.'))
         {
             continue;
         }
@@ -97,7 +96,7 @@ pub async fn discover_primals(dir: &Path) -> Result<Vec<PrimalMetadata>> {
 /// Query primal binary for its capabilities
 ///
 /// Calls: ./primal --biomeos-capabilities
-/// Expects JSON: {"provides": ["Security"], "requires": ["Discovery"]}
+/// Expects JSON: `{"provides": ["Security"], "requires": ["Discovery"]}`
 pub async fn query_primal_metadata(binary: &Path) -> Result<PrimalMetadata> {
     debug!("🔍 Querying primal metadata: {}", binary.display());
 

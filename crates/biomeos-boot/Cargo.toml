@@ -1,7 +1,7 @@
 [package]
 name = "biomeos-boot"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 authors = ["BiomeOS Contributors"]
 description = "Pure Rust boot infrastructure for BiomeOS"
 license = "AGPL-3.0-only"
@@ -82,3 +82,6 @@ default = []
 # Hardware-specific features
 efi = []
 bios = ["default"]
+
+[lints]
+workspace = true

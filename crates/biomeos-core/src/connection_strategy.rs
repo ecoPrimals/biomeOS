@@ -152,16 +152,21 @@ impl PortPattern {
         if let Some(pattern_type) = value.get("type").and_then(|v| v.as_str()) {
             match pattern_type {
                 "sequential" => {
-                    let step = value.get("step").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
-                    let last_port =
-                        value.get("last_port").and_then(|v| v.as_u64()).unwrap_or(0) as u16;
+                    let step = value
+                        .get("step")
+                        .and_then(serde_json::Value::as_i64)
+                        .unwrap_or(1) as i32;
+                    let last_port = value
+                        .get("last_port")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0) as u16;
                     let predicted_next = value
                         .get("predicted_next")
-                        .and_then(|v| v.as_u64())
+                        .and_then(serde_json::Value::as_u64)
                         .unwrap_or(0) as u16;
                     let confidence = value
                         .get("confidence")
-                        .and_then(|v| v.as_f64())
+                        .and_then(serde_json::Value::as_f64)
                         .unwrap_or(0.0);
                     Self::Sequential {
                         step,
@@ -231,6 +236,7 @@ pub struct StunResults {
 /// # Returns
 ///
 /// The tier and endpoint of the best connection, or an error if all tiers fail.
+#[allow(clippy::too_many_lines)]
 pub async fn connect_to_peer(
     peer_id: &str,
     neural_api_socket: &str,
@@ -259,15 +265,13 @@ pub async fn connect_to_peer(
         let found = peers.iter().any(|p| {
             p.get("node_id")
                 .and_then(|id| id.as_str())
-                .map(|id| id == peer_id)
-                .unwrap_or(false)
+                .is_some_and(|id| id == peer_id)
         });
         if found
             && let Some(peer) = peers.iter().find(|p| {
                 p.get("node_id")
                     .and_then(|id| id.as_str())
-                    .map(|id| id == peer_id)
-                    .unwrap_or(false)
+                    .is_some_and(|id| id == peer_id)
             })
         {
             let endpoint = peer
@@ -298,8 +302,9 @@ pub async fn connect_to_peer(
     // Get peer NAT type from connection info (if available from rendezvous)
     let peer_nat = peer_connection_info
         .and_then(|info| info.stun_results.as_ref())
-        .map(|stun| NatType::from_detection(&stun.nat_type))
-        .unwrap_or(NatType::Unknown);
+        .map_or(NatType::Unknown, |stun| {
+            NatType::from_detection(&stun.nat_type)
+        });
 
     debug!("🔍 Peer NAT type: {:?}", peer_nat);
 
@@ -323,7 +328,7 @@ pub async fn connect_to_peer(
         {
             let success = result
                 .get("success")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false);
 
             if success {
@@ -408,7 +413,7 @@ pub async fn connect_to_peer(
                     if let Ok(result) = punch_result {
                         let success = result
                             .get("success")
-                            .and_then(|v| v.as_bool())
+                            .and_then(serde_json::Value::as_bool)
                             .unwrap_or(false);
 
                         if success {

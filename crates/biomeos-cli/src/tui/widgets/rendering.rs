@@ -16,11 +16,11 @@ use super::formatting::{
 };
 use crate::tui::types::{DashboardState, TabId};
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Wrap},
-    Frame,
 };
 
 /// Advanced widget renderer for ecosystem interface
@@ -54,7 +54,7 @@ impl WidgetRenderer {
             TabId::EcosystemOverview => Self::render_ecosystem_overview(f, chunks[2], state),
             TabId::PrimalStatus => Self::render_primal_status(f, chunks[2], state),
             TabId::DeploymentOrchestration => {
-                Self::render_deployment_orchestration(f, chunks[2], state)
+                Self::render_deployment_orchestration(f, chunks[2], state);
             }
             TabId::Services => Self::render_services(f, chunks[2], state),
             TabId::Health => Self::render_health(f, chunks[2], state),

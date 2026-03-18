@@ -7,7 +7,6 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 pub use crate::orchestrator::DeploymentResult;
 
@@ -31,7 +30,11 @@ pub struct AtomicDeploymentGraph {
 
 impl AtomicDeploymentGraph {
     /// Create graph for deploying all 3 atomics from USB seed
-    pub fn full_nucleus_deployment(usb_seed_path: PathBuf, family_id: String) -> Self {
+    pub fn full_nucleus_deployment(
+        usb_seed_path: impl AsRef<std::path::Path>,
+        family_id: &str,
+    ) -> Self {
+        let usb_seed_path = usb_seed_path.as_ref();
         let mut nodes = Vec::new();
 
         // Node 1: Verify USB seed
@@ -165,19 +168,22 @@ impl AtomicDeploymentGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_create_deployment_graph() {
         let graph = AtomicDeploymentGraph::full_nucleus_deployment(
             PathBuf::from("/tmp/test.seed"),
-            "1894e909e454".to_string(),
+            "1894e909e454",
         );
 
         assert!(!graph.nodes.is_empty());
         assert!(graph.nodes.iter().any(|n| n.id == "verify_usb_seed"));
-        assert!(graph
-            .nodes
-            .iter()
-            .any(|n| n.id == "verify_lineage_recognition"));
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|n| n.id == "verify_lineage_recognition")
+        );
     }
 }

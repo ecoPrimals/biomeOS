@@ -5,7 +5,7 @@
 //!
 //! Provides health check endpoint for monitoring and load balancer integration.
 
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -44,12 +44,7 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> 
 /// Readiness probe endpoint (Kubernetes-style)
 pub async fn readiness(State(state): State<Arc<AppState>>) -> Json<HealthResponse> {
     // In live mode, could check if discovery service is available
-    let is_ready = if state.is_standalone_mode() {
-        true // Standalone mode is always ready
-    } else {
-        // Could add checks here: discovery service, database, etc.
-        true
-    };
+    let is_ready = true; // Standalone always ready; live could add discovery/db checks
 
     Json(HealthResponse {
         status: if is_ready { "ready" } else { "not_ready" }.to_string(),

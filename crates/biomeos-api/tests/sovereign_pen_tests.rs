@@ -21,9 +21,9 @@
 //! - No payload size causes different behavior
 
 use axum::{
-    body::Body,
-    http::{header, Method, Request, StatusCode},
     Router,
+    body::Body,
+    http::{Method, Request, StatusCode, header},
 };
 use biomeos_api::{AppState, Config};
 use biomeos_test_utils::set_test_env;

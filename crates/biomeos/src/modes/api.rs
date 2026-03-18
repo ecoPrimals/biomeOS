@@ -132,4 +132,33 @@ mod tests {
         assert!(s.contains("socket_path"));
         assert!(s.contains("port_deprecated"));
     }
+
+    #[test]
+    fn test_resolve_api_config_unix_only_socket_priority() {
+        let config = resolve_api_config(
+            Some(9000),
+            Some(PathBuf::from("/run/biomeos.sock")),
+            PathBuf::from("/default.sock"),
+        );
+        assert_eq!(config.socket_path, PathBuf::from("/run/biomeos.sock"));
+        assert_eq!(config.port_deprecated, Some(9000));
+    }
+
+    #[test]
+    fn test_api_config_clone() {
+        let config = ApiConfig {
+            socket_path: PathBuf::from("/tmp/clone-test.sock"),
+            port_deprecated: None,
+        };
+        let cloned = config.clone();
+        assert_eq!(cloned.socket_path, config.socket_path);
+        assert_eq!(cloned.port_deprecated, config.port_deprecated);
+    }
+
+    #[test]
+    fn test_resolve_api_config_empty_port() {
+        let config = resolve_api_config(None, None, PathBuf::from("/run/empty.sock"));
+        assert_eq!(config.socket_path, PathBuf::from("/run/empty.sock"));
+        assert_eq!(config.port_deprecated, None);
+    }
 }

@@ -134,29 +134,27 @@ impl UniversalBiomeOSManager {
 
         if let Some(primal) = primal {
             // Probe the endpoint for current health
-            match self.probe_endpoint(&primal.endpoint).await {
-                Ok(probe_info) => {
-                    result.insert("service_name".to_string(), serde_json::json!(primal.name));
-                    result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
-                    result.insert("health".to_string(), serde_json::json!(primal.health));
-                    result.insert("probe_result".to_string(), serde_json::json!(probe_info));
-                    result.insert("last_seen".to_string(), serde_json::json!(primal.last_seen));
-                    result.insert(
-                        "capabilities".to_string(),
-                        serde_json::json!(primal.capabilities),
-                    );
-                    result.insert("status".to_string(), serde_json::json!("Reachable"));
-                }
-                Err(_) => {
-                    result.insert("service_name".to_string(), serde_json::json!(primal.name));
-                    result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
-                    result.insert("health".to_string(), serde_json::json!(primal.health));
-                    result.insert("status".to_string(), serde_json::json!("Unreachable"));
-                    result.insert(
-                        "error".to_string(),
-                        serde_json::json!("Failed to probe endpoint"),
-                    );
-                }
+            #[allow(clippy::branches_sharing_code)]
+            if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint).await {
+                result.insert("service_name".to_string(), serde_json::json!(primal.name));
+                result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
+                result.insert("health".to_string(), serde_json::json!(primal.health));
+                result.insert("probe_result".to_string(), serde_json::json!(probe_info));
+                result.insert("last_seen".to_string(), serde_json::json!(primal.last_seen));
+                result.insert(
+                    "capabilities".to_string(),
+                    serde_json::json!(primal.capabilities),
+                );
+                result.insert("status".to_string(), serde_json::json!("Reachable"));
+            } else {
+                result.insert("service_name".to_string(), serde_json::json!(primal.name));
+                result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
+                result.insert("health".to_string(), serde_json::json!(primal.health));
+                result.insert("status".to_string(), serde_json::json!("Unreachable"));
+                result.insert(
+                    "error".to_string(),
+                    serde_json::json!("Failed to probe endpoint"),
+                );
             }
         } else {
             result.insert(
@@ -392,15 +390,12 @@ impl UniversalBiomeOSManager {
             });
 
             // Try to probe the endpoint
-            match self.probe_endpoint(&primal.endpoint).await {
-                Ok(probe_info) => {
-                    service_info["probe_status"] = serde_json::json!("reachable");
-                    service_info["probe_info"] = serde_json::json!(probe_info);
-                }
-                Err(_) => {
-                    service_info["probe_status"] = serde_json::json!("unreachable");
-                    issues_found += 1;
-                }
+            if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint).await {
+                service_info["probe_status"] = serde_json::json!("reachable");
+                service_info["probe_info"] = serde_json::json!(probe_info);
+            } else {
+                service_info["probe_status"] = serde_json::json!("unreachable");
+                issues_found += 1;
             }
 
             service_details.insert(id.clone(), service_info);

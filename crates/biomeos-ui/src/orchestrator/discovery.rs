@@ -40,12 +40,12 @@ impl DiscoveryConfig {
 /// Resolve a capability to its provider primal name at runtime.
 pub fn resolve_capability_provider(
     env_var: &str,
-    capability: CapabilityTaxonomy,
+    capability: &CapabilityTaxonomy,
 ) -> Option<String> {
     resolve_provider(std::env::var(env_var).ok(), capability)
 }
 
-fn resolve_provider(env_value: Option<String>, capability: CapabilityTaxonomy) -> Option<String> {
+fn resolve_provider(env_value: Option<String>, capability: &CapabilityTaxonomy) -> Option<String> {
     env_value.or_else(|| capability.default_primal().map(String::from))
 }
 
@@ -185,12 +185,11 @@ impl Discovery {
     ) -> Result<()> {
         info!("Loading saved UI state...");
 
-        let storage_name = match &config.storage_provider {
-            Some(name) => name.clone(),
-            None => {
-                info!("No DataStorage provider available; skipping state load");
-                return Ok(());
-            }
+        let storage_name = if let Some(name) = &config.storage_provider {
+            name.clone()
+        } else {
+            info!("No DataStorage provider available; skipping state load");
+            return Ok(());
         };
 
         if let Some(storage) = connections.get(&storage_name) {
@@ -258,29 +257,25 @@ impl Discovery {
             .registry_provider
             .as_deref()
             .and_then(|n| connections.get(n))
-        {
-            if let Ok(devices) = registry
+            && let Ok(devices) = registry
                 .call("registry.list_devices", serde_json::json!({}))
                 .await
-            {
-                state["devices"] = devices;
-            }
+        {
+            state["devices"] = devices;
         }
 
         if let Some(storage) = config
             .storage_provider
             .as_deref()
             .and_then(|n| connections.get(n))
-        {
-            if let Ok(assignments) = storage
+            && let Ok(assignments) = storage
                 .call(
                     "storage.list",
                     serde_json::json!({ "key_prefix": "assignment:" }),
                 )
                 .await
-            {
-                state["assignments"] = assignments;
-            }
+        {
+            state["assignments"] = assignments;
         }
 
         state
@@ -302,14 +297,14 @@ mod tests {
     fn test_resolve_capability_provider_env_var_takes_priority() {
         let result = resolve_provider(
             Some("custom-registry".to_string()),
-            CapabilityTaxonomy::Discovery,
+            &CapabilityTaxonomy::Discovery,
         );
         assert_eq!(result, Some("custom-registry".to_string()));
     }
 
     #[test]
     fn test_resolve_capability_provider_taxonomy_fallback() {
-        let result = resolve_provider(None, CapabilityTaxonomy::Discovery);
+        let result = resolve_provider(None, &CapabilityTaxonomy::Discovery);
         assert_eq!(result, Some("songbird".to_string()));
     }
 
@@ -453,10 +448,12 @@ mod tests {
         assert_eq!(state["primal_count"], 0);
         assert!(state["primals"].as_object().expect("primals").is_empty());
         assert!(state["devices"].as_array().expect("devices").is_empty());
-        assert!(state["assignments"]
-            .as_array()
-            .expect("assignments")
-            .is_empty());
+        assert!(
+            state["assignments"]
+                .as_array()
+                .expect("assignments")
+                .is_empty()
+        );
     }
 
     #[tokio::test]
@@ -504,15 +501,17 @@ mod tests {
                 .await;
         assert_eq!(state["family_id"], "test-family");
         assert!(state["devices"].as_array().expect("devices").is_empty());
-        assert!(state["assignments"]
-            .as_array()
-            .expect("assignments")
-            .is_empty());
+        assert!(
+            state["assignments"]
+                .as_array()
+                .expect("assignments")
+                .is_empty()
+        );
     }
 
     #[test]
     fn test_resolve_capability_provider_unset_returns_taxonomy() {
-        let result = resolve_provider(None, CapabilityTaxonomy::Discovery);
+        let result = resolve_provider(None, &CapabilityTaxonomy::Discovery);
         assert_eq!(result, Some("songbird".to_string()));
     }
 
@@ -549,7 +548,7 @@ mod tests {
 
     #[test]
     fn test_resolve_capability_provider_data_storage() {
-        let result = resolve_provider(None, CapabilityTaxonomy::DataStorage);
+        let result = resolve_provider(None, &CapabilityTaxonomy::DataStorage);
         assert_eq!(result, Some("nestgate".to_string()));
     }
 

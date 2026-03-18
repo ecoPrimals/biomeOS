@@ -1,7 +1,7 @@
 [package]
 name = "biomeos-genome-deploy"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 license = "AGPL-3.0-only"
 authors = ["ecoPrimals Collective"]
 description = "Rust-based genomeBin deployment wrapper"
@@ -26,3 +26,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "genome-deploy"
 path = "src/main.rs"
+
+[lints]
+workspace = true

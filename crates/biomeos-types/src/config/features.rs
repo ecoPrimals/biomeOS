@@ -10,6 +10,10 @@ use std::collections::HashMap;
 
 /// Feature flags configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "Config struct; refactoring would break API and serialization"
+)]
 pub struct FeatureFlags {
     /// Enable experimental features
     pub experimental: bool,
@@ -219,6 +223,10 @@ pub struct LoginPageConfig {
 
 /// Accessibility configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "Config struct; refactoring would break API and serialization"
+)]
 pub struct AccessibilityConfig {
     /// High contrast mode
     pub high_contrast: bool,

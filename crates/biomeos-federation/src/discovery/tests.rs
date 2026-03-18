@@ -345,8 +345,7 @@ fn test_primal_info_debug_and_clone() {
 
 #[test]
 fn test_discover_songbird_socket_not_found() {
-    let pd = PrimalDiscovery::new();
-    let result = pd.discover_songbird_socket();
+    let result = PrimalDiscovery::discover_songbird_socket();
     if let Err(e) = result {
         let err_msg = format!("{e}");
         assert!(err_msg.contains("not found") || err_msg.contains("Songbird"));

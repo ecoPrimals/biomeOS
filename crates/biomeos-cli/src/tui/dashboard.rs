@@ -13,9 +13,9 @@ use biomeos_core::UniversalBiomeOSManager;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 use std::time::Instant;
 use tokio::time::interval;
@@ -66,10 +66,9 @@ impl BiomeOSDashboard {
                     self.refresh_data().await?;
                     last_update = Instant::now();
                 }
-                DashboardAction::ShowHelp => {
+                DashboardAction::ShowHelp | DashboardAction::None => {
                     // Help functionality not implemented yet - skip for now
                 }
-                DashboardAction::None => {}
             }
 
             // Auto-refresh data
@@ -85,7 +84,7 @@ impl BiomeOSDashboard {
         }
 
         // Cleanup terminal
-        self.cleanup_terminal(&mut terminal)?;
+        Self::cleanup_terminal(&mut terminal)?;
         Ok(())
     }
 
@@ -101,22 +100,19 @@ impl BiomeOSDashboard {
                 .resources
                 .as_ref()
                 .and_then(|r| r.cpu_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             memory_usage: system_health
                 .metrics
                 .resources
                 .as_ref()
                 .and_then(|r| r.memory_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             disk_usage: system_health
                 .metrics
                 .resources
                 .as_ref()
                 .and_then(|r| r.disk_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             network_status: "OK".to_string(),
         };
         self.state.add_health_data(cli_health);
@@ -166,7 +162,7 @@ impl BiomeOSDashboard {
     }
 
     /// Handle item selection
-    async fn handle_selection(&mut self) -> Result<()> {
+    async fn handle_selection(&self) -> Result<()> {
         if let Some(_selected_service) = self.state.selected_service() {
             // Service selection handling - simplified for now
             tracing::info!("Service selected for action");
@@ -175,10 +171,7 @@ impl BiomeOSDashboard {
     }
 
     /// Cleanup terminal state
-    fn cleanup_terminal(
-        &self,
-        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-    ) -> Result<()> {
+    fn cleanup_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
         disable_raw_mode()?;
         execute!(
             terminal.backend_mut(),

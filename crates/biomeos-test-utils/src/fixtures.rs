@@ -8,6 +8,7 @@
 use serde_json::json;
 
 /// Create a test configuration with sensible defaults
+#[must_use]
 pub fn create_test_config() -> serde_json::Value {
     json!({
         "network": {
@@ -25,6 +26,7 @@ pub fn create_test_config() -> serde_json::Value {
 }
 
 /// Create a test biome manifest
+#[must_use]
 pub fn create_test_manifest(name: &str) -> serde_json::Value {
     json!({
         "name": name,
@@ -41,6 +43,7 @@ pub fn create_test_manifest(name: &str) -> serde_json::Value {
 }
 
 /// Create a test primal registration
+#[must_use]
 pub fn create_test_primal_registration(name: &str, port: u16) -> serde_json::Value {
     json!({
         "name": name,

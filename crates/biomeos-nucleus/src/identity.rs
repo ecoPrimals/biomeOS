@@ -19,7 +19,7 @@ use tracing::{debug, info};
 
 use biomeos_types::primal_names;
 
-use crate::{discovery::DiscoveredPrimal, Error, Result};
+use crate::{Error, Result, discovery::DiscoveredPrimal};
 
 /// Identity proof (from primal, signed by `BearDog`)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -148,15 +148,14 @@ impl IdentityLayerImpl {
             Error::discovery_failed(format!("Failed to read directory entry: {e}"), None)
         })? {
             let path = entry.path();
-            if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if filename.starts_with(&format!("{}-", primal_names::BEARDOG))
-                    && std::path::Path::new(filename)
-                        .extension()
-                        .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
-                {
-                    debug!("Found BearDog socket: {}", path.display());
-                    return Ok(path.to_string_lossy().to_string());
-                }
+            if let Some(filename) = path.file_name().and_then(|n| n.to_str())
+                && filename.starts_with(&format!("{}-", primal_names::BEARDOG))
+                && std::path::Path::new(filename)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+            {
+                debug!("Found BearDog socket: {}", path.display());
+                return Ok(path.to_string_lossy().to_string());
             }
         }
 

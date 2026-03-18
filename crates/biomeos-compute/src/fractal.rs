@@ -15,7 +15,11 @@
 //
 // =============================================================================
 
-use crate::node::*;
+use crate::node::{
+    CapacityInfo, ComputeNode, HealthStatus, NodeConfig, NodeMetrics, NodeTopology,
+    ResourceAllocation, ResourceInfo, ResourceType, TreeMetrics, UtilizationInfo, Workload,
+    WorkloadId, WorkloadInfo, WorkloadStatus,
+};
 use anyhow::{Context, Result};
 use std::future::Future;
 use std::pin::Pin;
@@ -53,7 +57,7 @@ impl FractalBuilder {
                 memory_mb: 16384,
                 gpu_count: 0,
                 gpu_memory_mb: 0,
-                disk_mb: 100000,
+                disk_mb: 100_000,
             },
         }
     }
@@ -178,10 +182,9 @@ impl FractalBuilder {
     fn get_branching_factor(&self) -> usize {
         match self.topology {
             NodeTopology::Leaf => 0,
-            NodeTopology::BinaryTree => 2,
+            NodeTopology::BinaryTree | NodeTopology::Hybrid => 2, // Default for hybrid
             NodeTopology::NAryTree { branching_factor } => branching_factor,
             NodeTopology::QuadTree => 4,
-            NodeTopology::Hybrid => 2, // Default for hybrid
         }
     }
 
@@ -453,7 +456,7 @@ impl ComputeNode for ParentNode {
 
         for child in &self.children {
             let child_resources = child.get_resources().await?;
-            total.aggregate(child_resources);
+            total.aggregate(&child_resources);
         }
 
         Ok(total)
@@ -482,8 +485,8 @@ impl ComputeNode for ParentNode {
             let capacity = child.get_capacity().await?;
             total_slots += capacity.max_concurrent_workloads;
             available_slots += capacity.available_slots;
-            total_resources.aggregate(capacity.total_resources);
-            available_resources.aggregate(capacity.available_resources);
+            total_resources.aggregate(&capacity.total_resources);
+            available_resources.aggregate(&capacity.available_resources);
         }
 
         Ok(CapacityInfo {
@@ -649,7 +652,7 @@ impl ComputeNode for ParentNode {
             total_nodes += child_metrics.total_nodes;
             total_active += child_metrics.total_workloads_active;
             total_completed += child_metrics.total_workloads_completed;
-            aggregate_resources.aggregate(child_metrics.aggregate_resources);
+            aggregate_resources.aggregate(&child_metrics.aggregate_resources);
         }
 
         Ok(TreeMetrics {
@@ -666,6 +669,7 @@ impl ComputeNode for ParentNode {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::node::Runtime;
 
     #[tokio::test]
     async fn test_fractal_builder_binary_tree() {

@@ -112,7 +112,7 @@ fn test_types_serialization_roundtrip() {
 #[test]
 fn test_get_builtin_templates() {
     let provider = DeviceManagementProvider::new("/tmp/test.sock");
-    let templates = provider.get_builtin_templates();
+    let templates = DeviceManagementProvider::get_builtin_templates();
 
     assert_eq!(templates.len(), 2);
     let ids: Vec<_> = templates.iter().map(|t| t.id.as_str()).collect();

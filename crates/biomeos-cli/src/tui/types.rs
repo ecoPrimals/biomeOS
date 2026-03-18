@@ -26,7 +26,7 @@ pub struct TabInfo {
 }
 
 /// Available tabs in the ecosystem dashboard
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TabId {
     /// Overview of the entire ecosystem
     EcosystemOverview,

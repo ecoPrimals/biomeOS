@@ -48,10 +48,12 @@ async fn test_execute_success_returns_immediate_response() {
     let params = Some(json!({"graph_id": "test_minimal"}));
     let result = handler.execute(&params).await.expect("execute");
 
-    assert!(result["execution_id"]
-        .as_str()
-        .unwrap()
-        .starts_with("test_minimal-"));
+    assert!(
+        result["execution_id"]
+            .as_str()
+            .unwrap()
+            .starts_with("test_minimal-")
+    );
     assert_eq!(result["graph_id"], "test_minimal");
     assert!(result["started_at"].as_str().is_some());
 
@@ -75,10 +77,12 @@ async fn test_execute_with_family_id_param() {
     }));
     let result = handler.execute(&params).await.expect("execute");
     assert_eq!(result["graph_id"], "test_minimal");
-    assert!(result["execution_id"]
-        .as_str()
-        .unwrap()
-        .starts_with("test_minimal-"));
+    assert!(
+        result["execution_id"]
+            .as_str()
+            .unwrap()
+            .starts_with("test_minimal-")
+    );
 }
 
 #[tokio::test]

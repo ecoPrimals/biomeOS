@@ -16,6 +16,8 @@ use biomeos_types::identifiers::FamilyId;
 use tokio::sync::RwLock;
 use tracing::{debug, info, trace, warn};
 
+use super::neural_api;
+use super::path_builder;
 use super::result::{DiscoveredSocket, DiscoveryMethod};
 use super::strategy::DiscoveryStrategy;
 use super::transport::TransportEndpoint;
@@ -339,7 +341,7 @@ impl SocketDiscovery {
     }
 
     async fn try_unix_socket_xdg(&self, primal_name: &str) -> Option<PathBuf> {
-        let runtime_dir = self.get_xdg_runtime_dir()?;
+        let runtime_dir = Self::get_xdg_runtime_dir()?;
         let biomeos_dir = runtime_dir.join("biomeos");
 
         let socket_path =
@@ -387,7 +389,7 @@ impl SocketDiscovery {
         let manifest_name = format!("{primal_name}.json");
 
         let mut candidates = Vec::new();
-        if let Some(xdg) = self.get_xdg_runtime_dir() {
+        if let Some(xdg) = Self::get_xdg_runtime_dir() {
             candidates.push(xdg.join("ecoPrimals/manifests").join(&manifest_name));
         }
         candidates.push(
@@ -550,73 +552,23 @@ impl SocketDiscovery {
     ///
     /// Implements 5-tier socket resolution per PRIMAL_DEPLOYMENT_STANDARD.
     pub fn build_socket_path(&self, primal_name: &str) -> PathBuf {
-        self.build_socket_path_with(primal_name, None, None)
+        path_builder::build_socket_path(primal_name, self.family_id.as_str(), None, None)
     }
 
     /// Build socket path with explicit env overrides (for testing without env mutation).
+    #[allow(dead_code)]
     pub(crate) fn build_socket_path_with(
         &self,
         primal_name: &str,
         primal_socket: Option<&str>,
         xdg_runtime_dir: Option<&Path>,
     ) -> PathBuf {
-        let socket_name = format!("{}-{}.sock", primal_name, self.family_id.as_str());
-
-        // Tier 1: Explicit override via PRIMAL_SOCKET
-        let primal_socket_val = primal_socket
-            .map(String::from)
-            .or_else(|| env::var("PRIMAL_SOCKET").ok());
-        if let Some(primal_socket) = primal_socket_val {
-            let path = PathBuf::from(&primal_socket);
-            if path.is_dir() || !path.exists() {
-                return path.join(&socket_name);
-            }
-            return path;
-        }
-
-        // Tier 2: XDG runtime directory
-        let runtime_dir = xdg_runtime_dir
-            .map(PathBuf::from)
-            .or_else(|| self.get_xdg_runtime_dir());
-        if let Some(runtime_dir) = runtime_dir {
-            let biomeos_dir = runtime_dir.join("biomeos");
-            std::fs::create_dir_all(&biomeos_dir).ok();
-            return biomeos_dir.join(&socket_name);
-        }
-
-        // Tier 3: Linux /run/user/$UID/biomeos/
-        if let Ok(uid) = env::var("UID") {
-            let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
-            if run_user.parent().map(|p| p.exists()).unwrap_or(false) {
-                std::fs::create_dir_all(&run_user).ok();
-                return run_user.join(&socket_name);
-            }
-        }
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::MetadataExt;
-            if let Ok(meta) = std::fs::metadata("/proc/self") {
-                let uid = meta.uid();
-                let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
-                if run_user.parent().map(|p| p.exists()).unwrap_or(false) {
-                    std::fs::create_dir_all(&run_user).ok();
-                    return run_user.join(&socket_name);
-                }
-            }
-        }
-
-        // Tier 4: Android /data/local/tmp/biomeos/
-        let android_dir = PathBuf::from("/data/local/tmp/biomeos");
-        if android_dir.parent().map(|p| p.exists()).unwrap_or(false) {
-            std::fs::create_dir_all(&android_dir).ok();
-            return android_dir.join(&socket_name);
-        }
-
-        // Tier 5: Fallback to /tmp/biomeos/
-        let fallback_dir = PathBuf::from("/tmp/biomeos");
-        std::fs::create_dir_all(&fallback_dir).ok();
-        fallback_dir.join(&socket_name)
+        path_builder::build_socket_path(
+            primal_name,
+            self.family_id.as_str(),
+            primal_socket,
+            xdg_runtime_dir,
+        )
     }
 
     // ========================================================================
@@ -674,7 +626,7 @@ impl SocketDiscovery {
     }
 
     async fn discover_via_xdg(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        let runtime_dir = self.get_xdg_runtime_dir()?;
+        let runtime_dir = Self::get_xdg_runtime_dir()?;
         let biomeos_dir = runtime_dir.join("biomeos");
 
         let socket_path =
@@ -881,7 +833,7 @@ impl SocketDiscovery {
     // HELPERS
     // ========================================================================
 
-    pub(crate) fn get_xdg_runtime_dir(&self) -> Option<PathBuf> {
+    pub(crate) fn get_xdg_runtime_dir() -> Option<PathBuf> {
         env::var("XDG_RUNTIME_DIR")
             .ok()
             .map(PathBuf::from)
@@ -897,29 +849,11 @@ impl SocketDiscovery {
         &self,
         neural_api_env_override: Option<&Path>,
     ) -> Option<PathBuf> {
-        if let Some(ref socket) = self.neural_api_socket
-            && socket.exists()
-        {
-            return Some(socket.clone());
-        }
-
-        let env_path = neural_api_env_override
-            .map(PathBuf::from)
-            .or_else(|| env::var("NEURAL_API_SOCKET").ok().map(PathBuf::from));
-        if let Some(path) = env_path
-            && path.exists()
-        {
-            return Some(path);
-        }
-
-        // Use portable temp_dir() instead of hardcoded /tmp/
-        let temp_dir = std::env::temp_dir();
-        let standard_locations = vec![
-            temp_dir.join(format!("neural-api-{}.sock", self.family_id.as_str())),
-            temp_dir.join("neural-api.sock"),
-        ];
-
-        standard_locations.into_iter().find(|path| path.exists())
+        neural_api::resolve_neural_api_socket(
+            self.family_id.as_str(),
+            self.neural_api_socket.as_ref(),
+            neural_api_env_override,
+        )
     }
 
     /// Check cache for a socket
@@ -959,5 +893,3 @@ impl SocketDiscovery {
         info!("Socket discovery cache cleared");
     }
 }
-
-// Tests are in engine_tests.rs to keep this file under 1000 lines

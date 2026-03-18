@@ -128,7 +128,7 @@ impl Identity {
         
         Self {
             id: format!("did:platypus:{}", hex::encode(&id_hash.as_bytes()[..16])),
-            public_key: Bytes::from(verifying.as_bytes().to_vec()),
+            public_key: Bytes::copy_from_slice(verifying.as_bytes()),
             generation: keys.generation(),
             lineage_hashes: keys.lineage.iter()
                 .map(|h| hex::encode(&h[..8]))

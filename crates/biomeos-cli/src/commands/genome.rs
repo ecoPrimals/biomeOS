@@ -200,7 +200,7 @@ pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
 }
 
 /// Handle genome compose command
-pub fn handle_genome_compose(args: ComposeArgs) -> Result<()> {
+pub fn handle_genome_compose(args: &ComposeArgs) -> Result<()> {
     info!(
         "Composing {} atomic from {} genomes",
         args.nucleus_type,
@@ -354,7 +354,7 @@ pub fn handle_genome_list() -> Result<()> {
 }
 
 /// Handle genome verify command
-pub fn handle_genome_verify(args: VerifyArgs) -> Result<()> {
+pub fn handle_genome_verify(args: &VerifyArgs) -> Result<()> {
     if !args.path.exists() {
         anyhow::bail!("GenomeBin not found: {}", args.path.display());
     }
@@ -386,6 +386,7 @@ pub fn handle_genome_verify(args: VerifyArgs) -> Result<()> {
 // ============================================================================
 
 /// Execute genome command
+#[expect(clippy::too_many_lines, reason = "genome subcommand dispatch")]
 pub async fn execute(args: GenomeArgs) -> Result<()> {
     match args.command {
         GenomeCommand::Build {

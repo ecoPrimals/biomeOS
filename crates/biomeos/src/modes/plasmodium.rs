@@ -42,11 +42,7 @@ pub(crate) fn build_model_gates_map(state: &PlasmodiumState) -> HashMap<String, 
 
 /// Pluralize suffix for counts (e.g. "gate" -> "gates" when count != 1)
 pub(crate) fn plural_suffix(count: usize) -> &'static str {
-    if count == 1 {
-        ""
-    } else {
-        "s"
-    }
+    if count == 1 { "" } else { "s" }
 }
 
 /// Format status table lines (pure, testable).
@@ -136,7 +132,7 @@ pub(crate) fn format_status_table(state: &PlasmodiumState) -> Vec<String> {
     if !bond_types.is_empty() {
         lines.push(format!(
             "  Bond: {} (shared family seed, genetic trust)",
-            bond_types.first().unwrap_or(&"none".to_string())
+            bond_types.first().map_or("none", |s| s.as_str())
         ));
     }
 
@@ -185,7 +181,12 @@ pub(crate) fn format_gates_detail(state: &PlasmodiumState) -> Vec<String> {
         }
 
         if !gate.compute.gpus.is_empty() {
-            let gpu_strs: Vec<String> = gate.compute.gpus.iter().map(|g| g.to_string()).collect();
+            let gpu_strs: Vec<String> = gate
+                .compute
+                .gpus
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect();
             lines.push(format!("    GPUs:     {}", gpu_strs.join(", ")));
         }
 

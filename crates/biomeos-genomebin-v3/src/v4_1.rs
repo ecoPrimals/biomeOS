@@ -106,8 +106,9 @@ impl GenomeBin {
 
         for (arch, extractor_path) in sorted_extractors {
             // Read extractor binary
-            let mut extractor_file = File::open(extractor_path)
-                .with_context(|| format!("Failed to open extractor: {extractor_path:?}"))?;
+            let mut extractor_file = File::open(extractor_path).with_context(|| {
+                format!("Failed to open extractor: {}", extractor_path.display())
+            })?;
 
             let mut extractor_bytes = Vec::new();
             extractor_file.read_to_end(&mut extractor_bytes)?;
@@ -125,7 +126,7 @@ impl GenomeBin {
                 Arch::X86_64 => "x86_64",
                 Arch::Aarch64 => "aarch64",
                 Arch::Riscv64 => "riscv64",
-                _ => continue, // Skip unsupported architectures
+                Arch::Arm => continue, // Skip unsupported architectures
             };
 
             let entry =
@@ -260,7 +261,7 @@ impl GenomeBin {
                 Arch::X86_64 => "x86_64",
                 Arch::Aarch64 => "aarch64",
                 Arch::Riscv64 => "riscv64",
-                _ => "unknown",
+                Arch::Arm => "unknown",
             };
 
             // Create 64-byte entry

@@ -46,8 +46,6 @@ pub struct UniversalBiomeOSManager {
     pub config: Arc<BiomeOSConfig>,
     pub(crate) discovery_service: Arc<PrimalDiscoveryService>,
     pub(crate) registered_primals: Arc<RwLock<HashMap<String, PrimalInfo>>>,
-    // Legacy field - ClientRegistry depends on old clients module
-    // pub(crate) clients: Arc<ClientRegistry>,
 }
 
 impl UniversalBiomeOSManager {
@@ -56,14 +54,11 @@ impl UniversalBiomeOSManager {
         let config_arc = Arc::new(config);
         let registered_primals = Arc::new(RwLock::new(HashMap::new()));
         let discovery_service = Arc::new(PrimalDiscoveryService::new(config_arc.clone()));
-        // Legacy ClientRegistry initialization removed
-        // let clients = Arc::new(ClientRegistry::new());
 
         Ok(Self {
             config: config_arc,
             registered_primals,
             discovery_service,
-            // clients,  // Removed
         })
     }
 
@@ -77,12 +72,7 @@ impl UniversalBiomeOSManager {
     pub async fn initialize(&self) -> Result<()> {
         tracing::info!("🚀 Initializing Universal BiomeOS Manager");
 
-        // Initialize discovery service
         self.discovery_service.initialize().await?;
-
-        // Legacy client initialization removed
-        // Initialize primal clients through zero-knowledge discovery
-        // self.clients.initialize().await?;
 
         tracing::info!("✅ Universal BiomeOS Manager initialized successfully");
         Ok(())
@@ -152,9 +142,6 @@ impl UniversalBiomeOSManager {
     pub fn registered_primals(&self) -> &Arc<RwLock<HashMap<String, PrimalInfo>>> {
         &self.registered_primals
     }
-
-    // NOTE: ClientRegistry removed - clients() method deprecated
-    // pub fn clients(&self) -> &Arc<ClientRegistry> { &self.clients }
 
     /// Shutdown the manager gracefully
     pub async fn shutdown(&self) -> Result<()> {

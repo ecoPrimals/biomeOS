@@ -8,14 +8,28 @@ pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 
 # Allow stylistic lints that are noisy without adding significant value
-# These are intentional style choices for internal documentation
-doc_markdown = "allow"           # BiomeOS, JSON-RPC, etc. don't need backticks internally
-missing_errors_doc = "allow"     # Error handling is clear from Result types
-missing_panics_doc = "allow"     # Panics are avoided via unwrap_used/expect_used warnings
-uninlined_format_args = "allow"  # Format string style is a preference
-module_name_repetitions = "allow" # Module::ModuleThing is idiomatic in our codebase
-similar_names = "allow"          # avg_cpu vs avg_gpu is intentionally similar
-collapsible_if = "allow"         # let-chains preferred; fix incrementally (edition 2024)
+doc_markdown = "allow"             # BiomeOS, JSON-RPC, etc. don't need backticks internally
+missing_errors_doc = "allow"       # Error handling is clear from Result types
+missing_panics_doc = "allow"       # Panics are avoided via unwrap_used/expect_used warnings
+uninlined_format_args = "allow"    # Format string style is a preference
+module_name_repetitions = "allow"  # Module::ModuleThing is idiomatic in our codebase
+similar_names = "allow"            # avg_cpu vs avg_gpu is intentionally similar
+collapsible_if = "allow"           # let-chains preferred; fix incrementally (edition 2024)
+must_use_candidate = "allow"       # Fix incrementally; too noisy for entire codebase at once
+return_self_not_must_use = "allow" # Builders return Self; fix incrementally
+missing_const_for_fn = "allow"     # Fix incrementally; many functions need const evaluation
+cast_possible_truncation = "allow" # Handled case-by-case with explicit allow where needed
+cast_precision_loss = "allow"      # f64 display values don't need full u64 precision
+cast_sign_loss = "allow"           # Handled case-by-case
+cast_lossless = "allow"            # Explicit casts for clarity
+option_if_let_else = "allow"       # Style preference; match is often clearer
+redundant_pub_crate = "allow"      # pub(crate) vs pub is a valid choice
+significant_drop_tightening = "allow" # RwLock/Mutex scoping is intentional
+struct_excessive_bools = "allow"   # Config structs legitimately have multiple bool fields
+use_self = "allow"                 # Type::Method vs Self::Method is a style preference
+unnecessary_wraps = "allow"        # Some Result wraps needed for trait conformance
+items_after_statements = "allow"   # Const/type items near their usage is intentional
+unused_async = "allow"             # Async trait methods may not await yet
 
 [workspace]
 resolver = "2"

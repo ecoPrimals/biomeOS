@@ -6,9 +6,9 @@
 //! Tests the /api/v1/primals/discovered endpoint with various scenarios
 
 use axum::{
+    Router,
     body::Body,
     http::{Request, StatusCode},
-    Router,
 };
 use biomeos_api::{AppState, Config};
 use biomeos_core::CompositeDiscovery;

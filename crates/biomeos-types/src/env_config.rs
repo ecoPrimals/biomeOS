@@ -73,6 +73,7 @@ pub mod vars {
 }
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)
+#[must_use]
 pub fn family_id() -> Option<String> {
     family_id_with(&env::vars().collect::<HashMap<_, _>>())
 }
@@ -85,6 +86,7 @@ fn family_id_with(env: &HashMap<String, String>) -> Option<String> {
 }
 
 /// Get the security provider name override, or `None` for taxonomy-based resolution
+#[must_use]
 pub fn security_provider() -> Option<String> {
     security_provider_with(&env::vars().collect::<HashMap<_, _>>())
 }
@@ -95,6 +97,7 @@ fn security_provider_with(env: &HashMap<String, String>) -> Option<String> {
 }
 
 /// Get the network provider name override, or `None` for taxonomy-based resolution
+#[must_use]
 pub fn network_provider() -> Option<String> {
     network_provider_with(&env::vars().collect::<HashMap<_, _>>())
 }
@@ -105,6 +108,7 @@ fn network_provider_with(env: &HashMap<String, String>) -> Option<String> {
 }
 
 /// Returns `true` if strict discovery mode is enabled (no fallback providers)
+#[must_use]
 pub fn strict_discovery() -> bool {
     strict_discovery_with(&env::vars().collect::<HashMap<_, _>>())
 }
@@ -115,6 +119,7 @@ fn strict_discovery_with(env: &HashMap<String, String>) -> bool {
 }
 
 /// Get the socket directory override, or `None` for XDG-resolved default
+#[must_use]
 pub fn socket_dir() -> Option<PathBuf> {
     socket_dir_with(&env::vars().collect::<HashMap<_, _>>())
 }
@@ -125,6 +130,7 @@ fn socket_dir_with(env: &HashMap<String, String>) -> Option<PathBuf> {
 }
 
 /// Get the XDG runtime directory
+#[must_use]
 pub fn xdg_runtime_dir() -> Option<PathBuf> {
     xdg_runtime_dir_with(&env::vars().collect::<HashMap<_, _>>())
 }
@@ -136,6 +142,7 @@ fn xdg_runtime_dir_with(env: &HashMap<String, String>) -> Option<PathBuf> {
 }
 
 /// Get the primal binary directory (tries ecosystem-level, then biomeOS-local)
+#[must_use]
 pub fn plasmid_bin_dir() -> Option<PathBuf> {
     plasmid_bin_dir_with(&env::vars().collect::<HashMap<_, _>>())
 }

@@ -16,7 +16,7 @@
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use colored::Colorize;
 use flate2::read::GzDecoder;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -52,7 +52,8 @@ impl Architecture {
     }
 
     /// Get architecture string for binary lookup
-    pub fn as_str(&self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::X86_64 => "x86_64",
             Self::Aarch64 => "aarch64",
@@ -92,7 +93,8 @@ impl Platform {
     }
 
     /// Get platform name
-    pub fn name(&self) -> &'static str {
+    #[must_use]
+    pub const fn name(&self) -> &'static str {
         match self {
             Self::Linux => "Linux",
             Self::Android => "Android",
@@ -102,7 +104,8 @@ impl Platform {
     }
 
     /// Check if platform supports abstract sockets
-    pub fn supports_abstract_sockets(&self) -> bool {
+    #[must_use]
+    pub const fn supports_abstract_sockets(&self) -> bool {
         matches!(self, Self::Android | Self::Linux)
     }
 }
@@ -150,6 +153,7 @@ impl GenomeDeployer {
     }
 
     /// Set custom installation directory
+    #[must_use]
     pub fn with_install_dir<P: AsRef<Path>>(mut self, dir: P) -> Self {
         self.install_dir = Some(dir.as_ref().to_path_buf());
         self
@@ -161,15 +165,15 @@ impl GenomeDeployer {
     /// Root detection via $EUID/$USER instead of nix::Uid.
     fn default_install_dir(&self, primal_name: &str) -> PathBuf {
         let home_dir = || -> PathBuf {
-            std::env::var("HOME")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| PathBuf::from("/tmp"))
+            std::env::var("HOME").map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from)
         };
 
         let is_root = std::env::var("EUID")
             .or_else(|_| std::env::var("UID"))
-            .map(|uid| uid == "0")
-            .unwrap_or_else(|_| std::env::var("USER").map(|u| u == "root").unwrap_or(false));
+            .map_or_else(
+                |_| std::env::var("USER").map(|u| u == "root").unwrap_or(false),
+                |uid| uid == "0",
+            );
 
         match self.platform {
             Platform::Android => PathBuf::from(format!("/data/local/tmp/{primal_name}")),
@@ -182,8 +186,7 @@ impl GenomeDeployer {
             }
             Platform::MacOS => home_dir().join(format!("Library/{primal_name}")),
             Platform::Windows => std::env::var("LOCALAPPDATA")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| PathBuf::from("C:\\ProgramData"))
+                .map_or_else(|_| PathBuf::from("C:\\ProgramData"), PathBuf::from)
                 .join(primal_name),
         }
     }
@@ -199,18 +202,18 @@ impl GenomeDeployer {
         let file = File::open(&self.genome_path)?;
         let file_size = file.metadata()?.len();
 
+        // Truncation acceptable: f64 mantissa is 52 bits; display-only for human-readable MB
+        #[allow(clippy::cast_precision_loss)]
+        let size_mb = file_size as f64 / 1_048_576.0;
         println!(
             "{}",
-            format!(
-                "  Reading {:.1}MB genomeBin...",
-                file_size as f64 / 1_048_576.0
-            )
-            .dimmed()
+            format!("  Reading {:.1}MB genomeBin...", size_mb).dimmed()
         );
 
         // Safe read — no unsafe, no mmap, no SIGBUS risk
         let mut file = file;
-        let mut data = Vec::with_capacity(file_size as usize);
+        let capacity = usize::try_from(file_size).unwrap_or(0);
+        let mut data = Vec::with_capacity(capacity);
         file.read_to_end(&mut data)?;
 
         // Find __ARCHIVE_START__ marker
@@ -228,11 +231,10 @@ impl GenomeDeployer {
 
         // Create progress bar
         let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
-                .expect("valid progress bar template"),
-        );
+        let style = ProgressStyle::default_spinner()
+            .template("{spinner:.green} {msg}")
+            .context("valid progress bar template")?;
+        pb.set_style(style);
         pb.set_message("Extracting binaries...");
 
         // Extract to temp dir first
@@ -325,7 +327,7 @@ impl GenomeDeployer {
 
         // Verify installation
         println!();
-        self.verify_installation(&install_dir, genome_name)?;
+        Self::verify_installation(&install_dir, genome_name)?;
 
         // Print next steps
         self.print_next_steps(&install_dir, genome_name);
@@ -334,7 +336,7 @@ impl GenomeDeployer {
     }
 
     /// Verify installation
-    fn verify_installation(&self, install_dir: &Path, primal_name: &str) -> Result<()> {
+    fn verify_installation(install_dir: &Path, primal_name: &str) -> Result<()> {
         println!("{}", "Verifying installation...".blue());
 
         let binary_path = install_dir.join(primal_name);

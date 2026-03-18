@@ -295,7 +295,7 @@ pub struct ResourceInfo {
 
 impl ResourceInfo {
     /// Aggregate resources (for parent nodes)
-    pub fn aggregate(&mut self, other: ResourceInfo) {
+    pub fn aggregate(&mut self, other: &ResourceInfo) {
         self.cpu_cores += other.cpu_cores;
         self.memory_mb += other.memory_mb;
         self.gpu_count += other.gpu_count;
@@ -573,7 +573,7 @@ mod tests {
             gpu_memory_mb: 4096,
             disk_mb: 50,
         };
-        a.aggregate(b);
+        a.aggregate(&b);
         assert_eq!(a.cpu_cores, 6);
         assert_eq!(a.memory_mb, 1536);
         assert_eq!(a.gpu_count, 1);
@@ -597,7 +597,7 @@ mod tests {
             gpu_memory_mb: 4096,
             disk_mb: 50,
         };
-        r1.aggregate(r2);
+        r1.aggregate(&r2);
         assert_eq!(r1.cpu_cores, 6);
         assert_eq!(r1.memory_mb, 1536);
         assert_eq!(r1.gpu_count, 1);

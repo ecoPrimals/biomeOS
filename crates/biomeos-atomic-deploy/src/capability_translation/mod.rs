@@ -35,7 +35,7 @@
 mod defaults;
 mod socket;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use biomeos_core::atomic_client::AtomicClient;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

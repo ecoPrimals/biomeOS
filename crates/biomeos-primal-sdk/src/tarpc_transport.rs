@@ -146,6 +146,106 @@ pub async fn serve_tarpc_health(
     Ok(())
 }
 
+/// Default `HealthRpc` implementation suitable for any primal.
+///
+/// Provides basic health, metrics, and version information derived from
+/// the running process. Primals can either use this directly or supply
+/// a custom implementation of [`HealthRpc`].
+#[derive(Clone)]
+pub struct DefaultHealthService {
+    primal_name: String,
+    start_time: std::time::Instant,
+}
+
+impl DefaultHealthService {
+    /// Create a new default health service.
+    #[must_use]
+    pub fn new(primal_name: impl Into<String>) -> Self {
+        Self {
+            primal_name: primal_name.into(),
+            start_time: std::time::Instant::now(),
+        }
+    }
+}
+
+impl HealthRpc for DefaultHealthService {
+    async fn health_check(
+        self,
+        _: tarpc::context::Context,
+    ) -> biomeos_types::tarpc_types::HealthStatus {
+        biomeos_types::tarpc_types::HealthStatus {
+            healthy: true,
+            message: Some(format!("{} healthy", self.primal_name)),
+            uptime_secs: self.start_time.elapsed().as_secs(),
+        }
+    }
+
+    async fn health_metrics(
+        self,
+        _: tarpc::context::Context,
+    ) -> biomeos_types::tarpc_types::HealthMetrics {
+        biomeos_types::tarpc_types::HealthMetrics {
+            healthy: true,
+            cpu_usage: 0.0,
+            memory_bytes: 0,
+            active_connections: 0,
+            total_requests: 0,
+            total_errors: 0,
+            avg_latency_us: 0,
+        }
+    }
+
+    async fn version(self, _: tarpc::context::Context) -> biomeos_types::tarpc_types::VersionInfo {
+        biomeos_types::tarpc_types::VersionInfo {
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            git_commit: None,
+            build_timestamp: None,
+            protocols: vec!["jsonrpc".to_string(), "tarpc".to_string()],
+        }
+    }
+}
+
+/// Prepare and start a tarpc health sidecar alongside a primal's JSON-RPC socket.
+///
+/// Given the path to a primal's JSON-RPC socket, derives the corresponding
+/// `.tarpc.sock` path and serves `HealthRpc` on it. This function runs
+/// the tarpc server loop — call it from a dedicated task or select branch.
+///
+/// # Protocol Escalation
+///
+/// This enables the dual-protocol pattern:
+/// ```text
+/// beardog-family123.sock          ← JSON-RPC  (always present)
+/// beardog-family123.tarpc.sock    ← tarpc      (started by this function)
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the socket cannot be prepared or the listener fails.
+pub async fn start_tarpc_sidecar(
+    jsonrpc_socket: &std::path::Path,
+    service: impl HealthRpc + Clone + Send + 'static,
+) -> Result<()> {
+    let tarpc_path = tarpc_socket_path(jsonrpc_socket);
+    serve_tarpc_health(&tarpc_path, service).await
+}
+
+/// Convenience: start a default tarpc health sidecar for a primal.
+///
+/// Uses [`DefaultHealthService`] as the implementation. Runs the server
+/// loop — call from a dedicated task or select branch.
+///
+/// # Errors
+///
+/// Returns an error if the socket cannot be prepared or the listener fails.
+pub async fn start_default_tarpc_sidecar(
+    jsonrpc_socket: &std::path::Path,
+    primal_name: impl Into<String>,
+) -> Result<()> {
+    let service = DefaultHealthService::new(primal_name);
+    start_tarpc_sidecar(jsonrpc_socket, service).await
+}
+
 #[cfg(test)]
 #[expect(
     clippy::unwrap_used,
@@ -227,5 +327,45 @@ mod tests {
         let _stream = UnixStream::connect(&sock_clone).await.unwrap();
 
         assert!(server.await.unwrap());
+    }
+
+    #[test]
+    fn default_health_service_creation() {
+        let svc = DefaultHealthService::new("beardog");
+        assert_eq!(svc.primal_name, "beardog");
+    }
+
+    #[tokio::test]
+    async fn default_health_service_check() {
+        let svc = DefaultHealthService::new("beardog");
+        let status = svc.health_check(tarpc::context::current()).await;
+        assert!(status.healthy);
+        assert!(status.message.unwrap().contains("beardog"));
+    }
+
+    #[tokio::test]
+    async fn default_health_service_metrics() {
+        let svc = DefaultHealthService::new("beardog");
+        let metrics = svc.health_metrics(tarpc::context::current()).await;
+        assert!(metrics.healthy);
+    }
+
+    #[tokio::test]
+    async fn default_health_service_version() {
+        let svc = DefaultHealthService::new("beardog");
+        let info = svc.version(tarpc::context::current()).await;
+        assert!(!info.version.is_empty());
+        assert!(info.protocols.contains(&"tarpc".to_string()));
+        assert!(info.protocols.contains(&"jsonrpc".to_string()));
+    }
+
+    #[tokio::test]
+    async fn start_tarpc_sidecar_derives_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let jsonrpc_sock = dir.path().join("test-primal.sock");
+        let expected_tarpc = dir.path().join("test-primal.tarpc.sock");
+
+        let tarpc_path = tarpc_socket_path(&jsonrpc_sock);
+        assert_eq!(tarpc_path, expected_tarpc);
     }
 }

@@ -11,7 +11,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{error::GraphError, graph::DeploymentGraph, Result};
+use crate::{Result, error::GraphError, graph::DeploymentGraph};
 
 /// Validates deployment graphs.
 pub struct GraphValidator {
@@ -59,16 +59,16 @@ impl GraphValidator {
     /// - Dependencies form a cycle
     /// - Capabilities are malformed
     pub fn validate(&self, graph: &DeploymentGraph) -> Result<()> {
-        self.validate_unique_node_ids(graph)?;
-        self.validate_dependencies_exist(graph)?;
-        self.validate_no_cycles(graph)?;
+        Self::validate_unique_node_ids(graph)?;
+        Self::validate_dependencies_exist(graph)?;
+        Self::validate_no_cycles(graph)?;
         self.validate_capabilities(graph)?;
 
         Ok(())
     }
 
     /// Ensure all node IDs are unique within the graph.
-    fn validate_unique_node_ids(&self, graph: &DeploymentGraph) -> Result<()> {
+    fn validate_unique_node_ids(graph: &DeploymentGraph) -> Result<()> {
         let mut seen = HashSet::new();
 
         for node in graph.nodes() {
@@ -84,7 +84,7 @@ impl GraphValidator {
     }
 
     /// Ensure all dependencies reference existing nodes.
-    fn validate_dependencies_exist(&self, graph: &DeploymentGraph) -> Result<()> {
+    fn validate_dependencies_exist(graph: &DeploymentGraph) -> Result<()> {
         let node_ids: HashSet<&str> = graph.nodes().iter().map(|n| n.id.as_str()).collect();
 
         for node in graph.nodes() {
@@ -102,7 +102,7 @@ impl GraphValidator {
     }
 
     /// Detect dependency cycles using DFS.
-    fn validate_no_cycles(&self, graph: &DeploymentGraph) -> Result<()> {
+    fn validate_no_cycles(graph: &DeploymentGraph) -> Result<()> {
         let nodes = graph.nodes();
 
         // Build adjacency list
@@ -110,7 +110,7 @@ impl GraphValidator {
         for node in nodes {
             adj.insert(
                 node.id.as_str(),
-                node.depends_on.iter().map(|s| s.as_str()).collect(),
+                node.depends_on.iter().map(String::as_str).collect(),
             );
         }
 

@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 use tokio::net::UnixStream;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 use tracing::{debug, info, warn};
 
 /// biomeOS Operating Mode
@@ -76,12 +76,12 @@ impl BiomeOsMode {
         // Tower Atomic consists of security + network primals
         // If either is reachable, Tower Atomic exists
         // Uses SocketNucleation for deterministic paths
-        // DEEP DEBT EVOLUTION: Resolve provider names from env, not hardcoded
+        // Bootstrap hints from canonical constants; production uses runtime discovery
 
-        let security_provider =
-            std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
-        let network_provider =
-            std::env::var("BIOMEOS_NETWORK_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+        let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+            .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string());
+        let network_provider = std::env::var("BIOMEOS_NETWORK_PROVIDER")
+            .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
 
         let mut nucleation = SocketNucleation::default();
         let security_socket = nucleation.assign_socket(&security_provider, family_id);

@@ -71,6 +71,10 @@ pub enum NetworkDriver {
 
 /// Network configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "Config struct; refactoring would break API"
+)]
 pub struct NetworkConfig {
     /// Enable IPv6
     pub enable_ipv6: bool,

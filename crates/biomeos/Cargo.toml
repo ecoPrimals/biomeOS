@@ -1,7 +1,7 @@
 [package]
 name = "biomeos-unibin"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 license = "AGPL-3.0-only"
 description = "biomeOS Universal Nucleus & Orchestrator - UniBin"
 authors = ["biomeOS Team"]
@@ -60,3 +60,6 @@ etcetera = "0.8"  # Pure Rust replacement
 biomeos-test-utils = { path = "../biomeos-test-utils" }
 tempfile = "3.8"
 
+
+[lints]
+workspace = true

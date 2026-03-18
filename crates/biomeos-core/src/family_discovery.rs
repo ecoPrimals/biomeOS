@@ -219,9 +219,9 @@ fn read_family_seed(path: &Path) -> Option<DiscoveredFamily> {
             let family_id = hex::encode(&data[0..8]);
 
             // Extract genesis seed and node key
-            let genesis_seed = Bytes::from(data[0..32].to_vec());
+            let genesis_seed = Bytes::copy_from_slice(&data[0..32]);
             let node_key = if data.len() >= 64 {
-                Some(Bytes::from(data[32..64].to_vec()))
+                Some(Bytes::copy_from_slice(&data[32..64]))
             } else {
                 None
             };
@@ -229,7 +229,7 @@ fn read_family_seed(path: &Path) -> Option<DiscoveredFamily> {
             info!(
                 "🧬 Read family seed: genesis={} bytes, node_key={} bytes",
                 genesis_seed.len(),
-                node_key.as_ref().map_or(0, |k| k.len())
+                node_key.as_ref().map_or(0, bytes::Bytes::len)
             );
 
             Some(DiscoveredFamily {
@@ -248,16 +248,12 @@ fn read_family_seed(path: &Path) -> Option<DiscoveredFamily> {
 
 /// Get family ID string, falling back to default if not found
 pub fn get_family_id() -> String {
-    discover_family()
-        .map(|f| f.id)
-        .unwrap_or_else(|| "default".to_string())
+    discover_family().map_or_else(|| "default".to_string(), |f| f.id)
 }
 
 /// Get family ID with custom configuration
 pub fn get_family_id_with_config(config: &FamilyDiscoveryConfig) -> String {
-    discover_family_with_config(config)
-        .map(|f| f.id)
-        .unwrap_or_else(|| "default".to_string())
+    discover_family_with_config(config).map_or_else(|| "default".to_string(), |f| f.id)
 }
 
 /// Get family ID from environment or default

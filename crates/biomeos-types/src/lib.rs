@@ -11,6 +11,8 @@
 // This significantly reduces noise while maintaining documentation coverage.
 #![warn(missing_docs)]
 #![allow(clippy::doc_markdown)]
+// Type crate: pedantic/nursery produce 140+ must_use/const_fn suggestions; fix incrementally
+#![allow(clippy::must_use_candidate, clippy::missing_const_for_fn)]
 // Deny unsafe code in type definitions
 #![forbid(unsafe_code)]
 
@@ -51,19 +53,19 @@ pub use atomic::{
     AtomicCapability, AtomicTier, FullNucleus, NestAtomic, NodeAtomic, PrimalHealth,
     ProviderHealthMap, TowerAtomic,
 };
-pub use jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse, JSONRPC_VERSION};
+pub use jsonrpc::{JSONRPC_VERSION, JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse};
 
 // tarpc types for high-performance RPC
 pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)
 pub use constants::*;
-pub use defaults::{socket_path, RuntimeConfig}; // Runtime configuration with env var overrides
+pub use defaults::{RuntimeConfig, socket_path}; // Runtime configuration with env var overrides
 pub use error::{BiomeError, BiomeResult, IpcError};
 pub use network_config::{NetworkConfig, PortConfig}; // Capability-based network configuration
 pub use paths::SystemPaths;
 pub use tarpc_types::{
-    protocol_from_env, HealthMetrics, HealthStatus, JwtSecretResult, LineageResult, ProtocolInfo,
+    HealthMetrics, HealthStatus, JwtSecretResult, LineageResult, PROTOCOL_ENV_VAR, ProtocolInfo,
     ProtocolPreference, RegistrationResult, ServiceInfo, ServiceRegistration, SignatureResult,
-    VersionInfo, PROTOCOL_ENV_VAR,
+    VersionInfo, protocol_from_env,
 }; // XDG-compliant paths
 
 // Health system exports
@@ -107,7 +109,7 @@ pub use surgical::{
 };
 
 // Cross-spring time series exports
-pub use time_series::{CrossSpringTimeSeries, TimeSeriesError, TimeSeriesSource, SCHEMA_V1};
+pub use time_series::{CrossSpringTimeSeries, SCHEMA_V1, TimeSeriesError, TimeSeriesSource};
 
 // XR (Extended Reality) type exports
 pub use xr::{

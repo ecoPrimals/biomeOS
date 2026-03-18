@@ -18,12 +18,12 @@ use std::path::Path;
 
 // Import from biomeos-types using the actual available exports
 use biomeos_types::{
+    BiomeError,
+    BiomeResult,
     manifest::manifest_core::NetworkSpec,
     manifest::manifest_extensions::BiomeDependency,
     // Import from the actual modules that exist
     manifest::{BiomeManifest, ServiceSpec},
-    BiomeError,
-    BiomeResult,
 };
 
 /// Core manifest processing and validation functionality
@@ -177,8 +177,8 @@ impl BiomeManifestTemplates {
     /// Generate a basic web application manifest
     pub fn web_application(name: &str, image: &str) -> BiomeManifest {
         use biomeos_types::{
-            manifest::{BiomeSpec, BiomeType},
             Environment, ManifestMetadata,
+            manifest::{BiomeSpec, BiomeType},
         };
         use chrono::Utc;
         use std::collections::HashMap;
@@ -240,8 +240,8 @@ impl BiomeManifestTemplates {
     /// Generate a database service manifest
     pub fn database(name: &str, db_type: &str, volume_size_gb: f64) -> BiomeManifest {
         use biomeos_types::{
-            manifest::{BiomeSpec, BiomeType},
             Environment, ManifestMetadata,
+            manifest::{BiomeSpec, BiomeType},
         };
         use chrono::Utc;
         use std::collections::HashMap;
@@ -283,7 +283,7 @@ impl BiomeManifestTemplates {
                         "volume_size_gb".to_string(),
                         serde_json::Value::Number(
                             serde_json::Number::from_f64(volume_size_gb)
-                                .unwrap_or(serde_json::Number::from(10)),
+                                .unwrap_or_else(|| serde_json::Number::from(10)),
                         ),
                     );
                     config
@@ -311,7 +311,7 @@ impl ManifestAnalyzer {
         let mut capabilities = Vec::new();
 
         // BiomeManifest.services is a HashMap<String, ServiceSpec> at the top level
-        for (_service_name, service) in manifest.services.iter() {
+        for service in manifest.services.values() {
             // Convert PrimalCapability to String for the return type
             let service_caps: Vec<String> = service
                 .metadata
@@ -371,7 +371,7 @@ impl ManifestAnalyzer {
             }
         }
 
-        ports.sort();
+        ports.sort_unstable();
         ports.dedup();
         ports
     }

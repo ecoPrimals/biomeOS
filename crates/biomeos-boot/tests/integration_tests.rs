@@ -93,10 +93,12 @@ fn test_kernel_manager_with_custom_kernel() -> Result<()> {
     let manager = KernelManager::detect_or_custom(Some(kernel_path.clone()))?;
 
     assert_eq!(manager.kernel_path(), &kernel_path);
-    assert!(manager
-        .initramfs_path()
-        .to_string_lossy()
-        .contains("initramfs"));
+    assert!(
+        manager
+            .initramfs_path()
+            .to_string_lossy()
+            .contains("initramfs")
+    );
 
     Ok(())
 }

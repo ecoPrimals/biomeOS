@@ -19,6 +19,7 @@ pub mod universal_biomeos_manager;
 pub mod atomic_client;
 #[cfg(test)]
 mod atomic_client_tests;
+pub mod atomic_primal_client;
 
 // Primal adapter pattern (CLI-agnostic integration)
 pub mod primal_adapter;
@@ -94,10 +95,8 @@ pub use universal_biomeos_manager::{
 };
 
 // Re-export atomic client (Universal IPC v3.0 - Multi-Transport)
-pub use atomic_client::{
-    AtomicClient, AtomicPrimalClient, ExecutionResult, JsonRpcRequest, JsonRpcResponse,
-    discover_primal_endpoint,
-};
+pub use atomic_client::{AtomicClient, JsonRpcRequest, JsonRpcResponse, discover_primal_endpoint};
+pub use atomic_primal_client::{AtomicPrimalClient, ExecutionResult};
 
 // Re-export core services
 pub use universal_biomeos_manager::{HealthMonitor, PrimalDiscoveryService};

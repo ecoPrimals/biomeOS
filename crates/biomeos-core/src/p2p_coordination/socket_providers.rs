@@ -59,8 +59,12 @@ impl SocketRpcClient {
 
     /// Send a JSON-RPC 2.0 request and return the result
     pub fn call(&self, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
-        let mut stream = UnixStream::connect(&self.socket_path)
-            .with_context(|| format!("Failed to connect to provider at {:?}", self.socket_path))?;
+        let mut stream = UnixStream::connect(&self.socket_path).with_context(|| {
+            format!(
+                "Failed to connect to provider at {}",
+                self.socket_path.display()
+            )
+        })?;
 
         stream.set_read_timeout(Some(self.timeout))?;
         stream.set_write_timeout(Some(self.timeout))?;
@@ -77,13 +81,12 @@ impl SocketRpcClient {
         let response: serde_json::Value = serde_json::from_slice(&response_buf[..n])?;
 
         if let Some(error) = response.get("error") {
-            anyhow::bail!("RPC error from {:?}: {}", self.socket_path, error);
+            anyhow::bail!("RPC error from {}: {}", self.socket_path.display(), error);
         }
 
-        response
-            .get("result")
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("No result in response from {:?}", self.socket_path))
+        response.get("result").cloned().ok_or_else(|| {
+            anyhow::anyhow!("No result in response from {}", self.socket_path.display())
+        })
     }
 
     /// Spawn a blocking RPC call on the tokio blocking pool
@@ -162,11 +165,11 @@ impl SecurityProvider for SocketSecurityProvider {
             .to_string();
         let port_a = result
             .get("endpoint_a_port")
-            .and_then(|v| v.as_u64())
+            .and_then(serde_json::Value::as_u64)
             .unwrap_or(0) as u16;
         let port_b = result
             .get("endpoint_b_port")
-            .and_then(|v| v.as_u64())
+            .and_then(serde_json::Value::as_u64)
             .unwrap_or(0) as u16;
 
         Ok(TunnelRequest {
@@ -261,9 +264,12 @@ impl SecurityProvider for SocketSecurityProvider {
         Ok(LineageInfo {
             is_ancestor: result
                 .get("is_ancestor")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false),
-            depth: result.get("depth").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+            depth: result
+                .get("depth")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0) as u32,
             proof: LineageProof {
                 lineage_id: requester.to_string(),
                 depth: 0,
@@ -347,7 +353,7 @@ impl DiscoveryProvider for SocketDiscoveryProvider {
             connection_status: status,
             latency_ms: result
                 .get("latency_ms")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .map(|v| v as u32),
             packet_loss: None,
             status,
@@ -363,12 +369,12 @@ impl DiscoveryProvider for SocketDiscoveryProvider {
         Ok(BroadcastTest {
             encrypted: result
                 .get("encrypted")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false),
             timestamp: std::time::SystemTime::now(),
             success: result
                 .get("success")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false),
         })
     }
@@ -429,7 +435,10 @@ impl RoutingProvider for SocketRoutingProvider {
             relay_endpoint: TransportEndpoint {
                 node_id: relay_node,
                 address,
-                port: result.get("port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
+                port: result
+                    .get("port")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0) as u16,
                 protocol: "tcp".to_string(),
                 secure: true,
             },

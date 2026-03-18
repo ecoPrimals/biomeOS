@@ -4,7 +4,7 @@
 //! JSON-RPC handler for agent-related requests.
 
 use anyhow::Result;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::collective::agents_from_collective;
 use super::registry::AgentRegistry;

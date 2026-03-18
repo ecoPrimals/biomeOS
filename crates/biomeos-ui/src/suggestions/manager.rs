@@ -12,7 +12,10 @@ use biomeos_types::JsonRpcRequest;
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
 
-use super::types::*;
+use super::types::{
+    AISuggestion, DeviceInfo, Impact, PrimalInfo, SuggestedAction, SuggestionContext,
+    SuggestionFeedback, SuggestionType,
+};
 
 /// AI Suggestion Manager
 ///
@@ -102,9 +105,8 @@ impl AISuggestionManager {
         use std::io::{Read, Write};
         use std::os::unix::net::UnixStream;
 
-        let mut stream = match UnixStream::connect(socket_path) {
-            Ok(s) => s,
-            Err(_) => return false,
+        let Ok(mut stream) = UnixStream::connect(socket_path) else {
+            return false;
         };
 
         let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(2)));
@@ -118,13 +120,12 @@ impl AISuggestionManager {
             let _ = stream.flush();
 
             let mut buf = vec![0u8; 4096];
-            if let Ok(n) = stream.read(&mut buf) {
-                if let Ok(response) = serde_json::from_slice::<serde_json::Value>(&buf[..n]) {
-                    if let Some(result) = response.get("result") {
-                        let result_str = result.to_string().to_lowercase();
-                        return result_str.contains("ai") || result_str.contains("suggest");
-                    }
-                }
+            if let Ok(n) = stream.read(&mut buf)
+                && let Ok(response) = serde_json::from_slice::<serde_json::Value>(&buf[..n])
+                && let Some(result) = response.get("result")
+            {
+                let result_str = result.to_string().to_lowercase();
+                return result_str.contains("ai") || result_str.contains("suggest");
             }
         }
 
@@ -143,7 +144,7 @@ impl AISuggestionManager {
         }
 
         // Generate suggestions (via AI provider if available, otherwise local heuristics)
-        let suggestions = self.generate_local_suggestions(&context);
+        let suggestions = Self::generate_local_suggestions(&context);
 
         // Store active suggestions
         for suggestion in &suggestions {
@@ -190,45 +191,43 @@ impl AISuggestionManager {
     }
 
     /// Generate local suggestions using heuristics (fallback when AI unavailable)
-    pub(crate) fn generate_local_suggestions(
-        &self,
-        context: &SuggestionContext,
-    ) -> Vec<AISuggestion> {
+    pub(crate) fn generate_local_suggestions(context: &SuggestionContext) -> Vec<AISuggestion> {
         let mut suggestions = Vec::new();
 
         // Heuristic 1: Suggest assigning unassigned devices
         for device in &context.available_devices {
-            if device.current_assignment.is_none() {
-                if let Some(primal) = Self::find_compatible_primal(device, context) {
-                    suggestions.push(AISuggestion {
-                        id: format!("local_assign_{}", device.id),
-                        suggestion_type: SuggestionType::DeviceAssignment,
-                        confidence: 0.7,
-                        explanation: format!(
-                            "Device '{}' is unassigned. Primal '{}' has compatible capabilities.",
-                            device.id, primal.name
-                        ),
-                        action: SuggestedAction::AssignDevice {
-                            device_id: device.id.clone(),
-                            primal_id: primal.id.clone(),
-                            reason: "Compatible capabilities and available capacity".to_string(),
-                        },
-                        impact: Impact {
-                            performance_improvement: Some(10.0),
-                            cost_change: None,
-                            affected_primals: vec![primal.id.clone()],
-                            risk_level: "low".to_string(),
-                        },
-                    });
-                }
+            if device.current_assignment.is_none()
+                && let Some(primal) = Self::find_compatible_primal(device, context)
+            {
+                suggestions.push(AISuggestion {
+                    id: format!("local_assign_{}", device.id),
+                    suggestion_type: SuggestionType::DeviceAssignment,
+                    confidence: 0.7,
+                    explanation: format!(
+                        "Device '{}' is unassigned. Primal '{}' has compatible capabilities.",
+                        device.id, primal.name
+                    ),
+                    action: SuggestedAction::AssignDevice {
+                        device_id: device.id.clone(),
+                        primal_id: primal.id.clone(),
+                        reason: "Compatible capabilities and available capacity".to_string(),
+                    },
+                    impact: Impact {
+                        performance_improvement: Some(10.0),
+                        cost_change: None,
+                        affected_primals: vec![primal.id.clone()],
+                        risk_level: "low".to_string(),
+                    },
+                });
             }
         }
 
         // Heuristic 2: Suggest rebalancing if primals are overloaded
         for primal in &context.running_primals {
-            if let Some(load) = primal.load {
-                if load > 0.8 {
-                    suggestions.push(AISuggestion {
+            if let Some(load) = primal.load
+                && load > 0.8
+            {
+                suggestions.push(AISuggestion {
                         id: format!("local_rebalance_{}", primal.id),
                         suggestion_type: SuggestionType::ResourceReallocation,
                         confidence: 0.6,
@@ -251,7 +250,6 @@ impl AISuggestionManager {
                             risk_level: "medium".to_string(),
                         },
                     });
-                }
             }
         }
 
@@ -299,7 +297,7 @@ mod tests {
             recent_events: None,
             preferences: None,
         };
-        let suggestions = mgr.generate_local_suggestions(&ctx);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&ctx);
         assert!(suggestions.is_empty());
     }
 
@@ -325,7 +323,7 @@ mod tests {
             recent_events: None,
             preferences: None,
         };
-        let suggestions = mgr.generate_local_suggestions(&ctx);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&ctx);
         assert_eq!(suggestions.len(), 1);
         assert!(suggestions[0].id.starts_with("local_assign_"));
         assert_eq!(
@@ -351,7 +349,7 @@ mod tests {
             recent_events: None,
             preferences: None,
         };
-        let suggestions = mgr.generate_local_suggestions(&ctx);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&ctx);
         assert_eq!(suggestions.len(), 1);
         assert!(suggestions[0].id.starts_with("local_rebalance_"));
         assert_eq!(
@@ -382,7 +380,7 @@ mod tests {
             recent_events: None,
             preferences: None,
         };
-        let suggestions = mgr.generate_local_suggestions(&ctx);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&ctx);
         assert!(suggestions.is_empty());
     }
 

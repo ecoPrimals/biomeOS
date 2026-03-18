@@ -35,3 +35,6 @@ hyper-util = { version = "0.1", features = ["client-legacy", "http1", "tokio"] }
 http-body-util = "0.1"  # Body utilities for hyper
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
 # reqwest = { workspace = true } # REMOVED (TRUE ecoBin v2.0): Use atomic_client for Pure Rust testing
+
+[lints]
+workspace = true

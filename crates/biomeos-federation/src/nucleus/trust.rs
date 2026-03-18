@@ -42,8 +42,7 @@ pub(crate) async fn layer4_trust_evaluation(
             {
                 Ok(lineage) => {
                     let trust_level = match lineage.relationship.as_str() {
-                        "parent" => TrustLevel::High,
-                        "child" => TrustLevel::High,
+                        "parent" | "child" => TrustLevel::High,
                         "sibling" => TrustLevel::Highest,
                         _ if lineage.is_family_member => TrustLevel::Elevated,
                         _ => TrustLevel::Basic,

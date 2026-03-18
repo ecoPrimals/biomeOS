@@ -26,12 +26,12 @@ mod manifest;
 pub use {
     discovery::get_genome_bin_path,
     distribution::{
-        download_binary, update_livespore, ArchSummary, UpdateLiveSporeRequest,
-        UpdateLiveSporeResponse,
+        ArchSummary, UpdateLiveSporeRequest, UpdateLiveSporeResponse, download_binary,
+        update_livespore,
     },
     error::DistError,
     manifest::{
-        get_checksum, get_latest, get_manifest, AtomicInfo, ChecksumResponse, DistManifest,
-        PrimalInfo,
+        AtomicInfo, ChecksumResponse, DistManifest, PrimalInfo, get_checksum, get_latest,
+        get_manifest,
     },
 };

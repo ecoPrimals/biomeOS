@@ -68,17 +68,17 @@ impl ByobManager {
 
     /// Configure team isolation
     pub async fn configure_team(&mut self, team_id: String, config: ByobTeamConfig) -> Result<()> {
-        self.validate_team_config(&team_id, &config)?;
+        Self::validate_team_config(&team_id, &config)?;
 
         // Apply isolation settings
-        let isolated_config = self.apply_isolation_settings(config.clone())?;
+        let isolated_config = Self::apply_isolation_settings(config)?;
 
         self.teams.insert(team_id, isolated_config);
         Ok(())
     }
 
     /// Validate team configuration against resource and naming constraints.
-    fn validate_team_config(&self, team_id: &str, config: &ByobTeamConfig) -> Result<()> {
+    fn validate_team_config(team_id: &str, config: &ByobTeamConfig) -> Result<()> {
         anyhow::ensure!(!team_id.is_empty(), "team_id must not be empty");
         anyhow::ensure!(
             !config.team_id.is_empty(),
@@ -108,7 +108,7 @@ impl ByobManager {
     }
 
     /// Apply isolation settings to configuration
-    fn apply_isolation_settings(&self, mut config: ByobTeamConfig) -> Result<ByobTeamConfig> {
+    fn apply_isolation_settings(mut config: ByobTeamConfig) -> Result<ByobTeamConfig> {
         // Apply isolation logic based on self.config
         match config.isolation_level {
             IsolationLevel::Complete => {

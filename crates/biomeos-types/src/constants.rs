@@ -60,6 +60,7 @@ pub mod endpoints {
     ///
     /// Checks `BIND_ADDRESS` environment variable first.
     /// Falls back to `DEFAULT_LOCALHOST` for development.
+    #[must_use]
     pub fn bind_address() -> String {
         env::var(env_vars::BIND_ADDRESS).unwrap_or_else(|_| DEFAULT_LOCALHOST.to_string())
     }
@@ -68,6 +69,7 @@ pub mod endpoints {
     ///
     /// Checks `BIND_ADDRESS` environment variable first.
     /// Falls back to `PRODUCTION_BIND_ADDRESS` for production.
+    #[must_use]
     pub fn production_bind_address() -> String {
         env::var(env_vars::BIND_ADDRESS).unwrap_or_else(|_| PRODUCTION_BIND_ADDRESS.to_string())
     }
@@ -285,6 +287,7 @@ pub mod network {
     /// Get HTTP port from environment or fallback to default
     ///
     /// Checks `HTTP_PORT` environment variable first.
+    #[must_use]
     pub fn http_port() -> u16 {
         env::var(env_vars::HTTP_PORT)
             .ok()
@@ -295,6 +298,7 @@ pub mod network {
     /// Get HTTPS port from environment or fallback to default
     ///
     /// Checks `HTTPS_PORT` environment variable first.
+    #[must_use]
     pub fn https_port() -> u16 {
         env::var(env_vars::HTTPS_PORT)
             .ok()
@@ -305,6 +309,7 @@ pub mod network {
     /// Get WebSocket port from environment or fallback to default
     ///
     /// Checks `WEBSOCKET_PORT` environment variable first.
+    #[must_use]
     pub fn websocket_port() -> u16 {
         env::var(env_vars::WEBSOCKET_PORT)
             .ok()
@@ -315,6 +320,7 @@ pub mod network {
     /// Get MCP port from environment or fallback to default
     ///
     /// Checks `MCP_PORT` or `MCP_WEBSOCKET_PORT` environment variable first.
+    #[must_use]
     pub fn mcp_port() -> u16 {
         env::var(env_vars::MCP_WEBSOCKET_PORT)
             .or_else(|_| env::var("MCP_PORT"))
@@ -326,6 +332,7 @@ pub mod network {
     /// Get discovery port from environment or fallback to default
     ///
     /// Checks `DISCOVERY_PORT` environment variable first.
+    #[must_use]
     pub fn discovery_port() -> u16 {
         env::var("DISCOVERY_PORT")
             .ok()
@@ -336,6 +343,7 @@ pub mod network {
     /// Get BearDog port from environment or fallback to default
     ///
     /// Checks `BEARDOG_PORT` environment variable first.
+    #[must_use]
     pub fn beardog_port() -> u16 {
         env::var(env_vars::BEARDOG_PORT)
             .ok()
@@ -346,6 +354,7 @@ pub mod network {
     /// Get Songbird port from environment or fallback to default
     ///
     /// Checks `SONGBIRD_PORT` or `MCP_PORT` environment variable first.
+    #[must_use]
     pub fn songbird_port() -> u16 {
         env::var(env_vars::SONGBIRD_PORT)
             .or_else(|_| env::var(env_vars::MCP_WEBSOCKET_PORT))
@@ -391,7 +400,7 @@ pub mod security {
     pub const DEFAULT_TOKEN_EXPIRY: Duration = Duration::from_secs(3600); // 1 hour
 
     /// Default key rotation interval
-    pub const DEFAULT_KEY_ROTATION_INTERVAL: Duration = Duration::from_secs(86400); // 24 hours
+    pub const DEFAULT_KEY_ROTATION_INTERVAL: Duration = Duration::from_secs(86_400); // 24 hours
 
     /// Default lockout duration
     pub const DEFAULT_LOCKOUT_DURATION: Duration = Duration::from_secs(1800); // 30 minutes
@@ -400,10 +409,10 @@ pub mod security {
     pub const DEFAULT_KEY_CACHE_TTL: Duration = Duration::from_secs(300); // 5 minutes
 
     /// Default audit retention period
-    pub const DEFAULT_AUDIT_RETENTION: Duration = Duration::from_secs(2592000); // 30 days
+    pub const DEFAULT_AUDIT_RETENTION: Duration = Duration::from_secs(2_592_000); // 30 days
 
     /// Default compliance check interval
-    pub const DEFAULT_COMPLIANCE_CHECK_INTERVAL: Duration = Duration::from_secs(86400); // 24 hours
+    pub const DEFAULT_COMPLIANCE_CHECK_INTERVAL: Duration = Duration::from_secs(86_400); // 24 hours
 
     /// Default threat scan interval
     pub const DEFAULT_THREAT_SCAN_INTERVAL: Duration = Duration::from_secs(3600);
@@ -437,6 +446,7 @@ pub mod files {
     /// let dir = files::default_plugin_dir("squirrel");
     /// assert_eq!(dir, ".squirrel/plugins");
     /// ```
+    #[must_use]
     pub fn default_plugin_dir(primal_name: &str) -> String {
         format!(".{primal_name}/plugins")
     }
@@ -451,6 +461,7 @@ pub mod files {
     /// // Assumes PRIMAL_NAME is set in environment
     /// let dir = files::current_primal_plugin_dir();
     /// ```
+    #[must_use]
     pub fn current_primal_plugin_dir() -> String {
         let primal_name = std::env::var("PRIMAL_NAME").unwrap_or_else(|_| "unknown".to_string());
         default_plugin_dir(&primal_name)
@@ -695,7 +706,7 @@ pub mod env_vars {
 /// Re-export commonly used constants at module level
 pub use endpoints::DEFAULT_LOCALHOST;
 pub use limits::{DEFAULT_BUFFER_SIZE, DEFAULT_MAX_CONNECTIONS};
-pub use network::{DEFAULT_HTTPS_PORT, DEFAULT_HTTP_PORT};
+pub use network::{DEFAULT_HTTP_PORT, DEFAULT_HTTPS_PORT};
 pub use timeouts::{DEFAULT_CONNECTION_TIMEOUT, DEFAULT_REQUEST_TIMEOUT};
 pub use version::*;
 

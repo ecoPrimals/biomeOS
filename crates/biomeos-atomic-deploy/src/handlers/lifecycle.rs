@@ -12,7 +12,7 @@
 //! - `lifecycle.shutdown_all` - Initiate system-wide shutdown
 
 use anyhow::{Context, Result};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -416,10 +416,12 @@ mod tests {
             .await
             .expect("get returns Ok with error in body");
         assert!(result.get("error").is_some());
-        assert!(result["error"]
-            .as_str()
-            .expect("error string")
-            .contains("nonexistent"));
+        assert!(
+            result["error"]
+                .as_str()
+                .expect("error string")
+                .contains("nonexistent")
+        );
     }
 
     #[tokio::test]

@@ -31,7 +31,7 @@ pub(crate) fn format_system_overview(system: &Value) -> Vec<String> {
             if let Some(total_gb) = memory.get("total_gb") {
                 let percent = memory
                     .get("usage_percent")
-                    .and_then(|p| p.as_f64())
+                    .and_then(serde_json::Value::as_f64)
                     .unwrap_or(0.0);
                 lines.push(format!(
                     "  🧠 Memory: {used_gb:.1}GB / {total_gb:.1}GB ({percent:.1}%)"
@@ -302,7 +302,9 @@ pub async fn handle_monitor(
 /// Enable the `deprecated-tui` feature to use the legacy dashboard.
 #[cfg(feature = "deprecated-tui")]
 pub async fn handle_dashboard(interval: u64, refresh: bool) -> Result<()> {
-    eprintln!("WARNING: The built-in dashboard is deprecated. Use petalTongue for ecosystem visualization.");
+    eprintln!(
+        "WARNING: The built-in dashboard is deprecated. Use petalTongue for ecosystem visualization."
+    );
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;
     let mut dashboard = BiomeOSDashboard::new(manager);
@@ -585,9 +587,11 @@ mod tests {
         });
         let lines = format_service_rows(&services);
         assert!(lines.iter().any(|l| l.contains("Service Status")));
-        assert!(lines
-            .iter()
-            .any(|l| l.contains("svc1") && l.contains("running")));
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("svc1") && l.contains("running"))
+        );
     }
 
     #[test]

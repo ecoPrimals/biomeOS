@@ -352,10 +352,12 @@ mod tests {
         assert!(status.socket_accessible);
         assert_eq!(status.rpc_responsive, Some(false));
         assert!(status.latency_ms.is_some());
-        assert!(status
-            .message
-            .as_ref()
-            .is_some_and(|m| m.contains("RPC") || m.contains("ping")));
+        assert!(
+            status
+                .message
+                .as_ref()
+                .is_some_and(|m| m.contains("RPC") || m.contains("ping"))
+        );
     }
 
     #[tokio::test]

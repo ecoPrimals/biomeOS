@@ -3,7 +3,7 @@
 
 //! Capability-based primal discovery
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
@@ -12,8 +12,8 @@ use crate::capability_domains::capability_to_provider_fallback;
 use crate::nucleation::SocketNucleation;
 use biomeos_core::atomic_client::AtomicClient;
 
-use super::types::{AtomicType, DiscoveredAtomic, DiscoveredPrimal};
 use super::NeuralRouter;
+use super::types::{AtomicType, DiscoveredAtomic, DiscoveredPrimal};
 
 impl NeuralRouter {
     /// Discover primals by capability category
@@ -335,7 +335,7 @@ impl NeuralRouter {
     async fn check_primal_health(socket_path: &str) -> bool {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
-        use tokio::time::{timeout, Duration};
+        use tokio::time::{Duration, timeout};
 
         if !std::path::Path::new(socket_path).exists() {
             return false;

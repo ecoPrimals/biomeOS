@@ -91,6 +91,7 @@ pub mod env_vars {
 }
 
 /// Get socket path with explicit environment map (for testing)
+#[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
 pub fn socket_path_with(service: &str, env: &HashMap<String, String>) -> Result<PathBuf, String> {
     // 1. Check service-specific environment variable
     let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
@@ -148,11 +149,13 @@ impl RuntimeConfig {
     /// 2. `$XDG_RUNTIME_DIR/biomeos` (XDG standard)
     /// 3. `/run/user/$UID/biomeos` (systemd, derived from env)
     /// 4. `/tmp` fallback (development only)
+    #[must_use]
     pub fn from_env() -> Self {
         Self::from_env_with(None, None)
     }
 
     /// Create RuntimeConfig with explicit overrides (for testing)
+    #[must_use]
     pub fn from_env_with(
         socket_dir_override: Option<&str>,
         xdg_runtime_dir_override: Option<&str>,
@@ -165,6 +168,8 @@ impl RuntimeConfig {
     }
 
     /// Create RuntimeConfig from explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn from_env_with_map(
         env: &HashMap<String, String>,
         socket_dir_override: Option<&str>,
@@ -184,7 +189,7 @@ impl RuntimeConfig {
             .unwrap_or_else(|| {
                 if let Some(uid) = env.get("UID").or_else(|| env.get("EUID")) {
                     let uid_path = PathBuf::from(format!("/run/user/{}/biomeos", uid));
-                    if uid_path.parent().is_some_and(|p| p.exists()) {
+                    if uid_path.parent().is_some_and(Path::exists) {
                         return uid_path;
                     }
                 }
@@ -195,6 +200,7 @@ impl RuntimeConfig {
     }
 
     /// Create RuntimeConfig with custom socket directory
+    #[must_use]
     pub fn with_socket_dir(socket_dir: impl Into<PathBuf>) -> Self {
         Self {
             socket_dir: socket_dir.into(),
@@ -202,15 +208,19 @@ impl RuntimeConfig {
     }
 
     /// Get Neural API socket path
+    #[must_use]
     pub fn neural_api_socket(&self) -> PathBuf {
         self.neural_api_socket_with(&env::vars().collect())
     }
 
     /// Get Neural API socket path with explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn neural_api_socket_with(&self, env: &HashMap<String, String>) -> PathBuf {
-        env.get(env_vars::NEURAL_API_SOCKET)
-            .map(PathBuf::from)
-            .unwrap_or_else(|| self.socket_dir.join(DEFAULT_NEURAL_API_SOCKET))
+        env.get(env_vars::NEURAL_API_SOCKET).map_or_else(
+            || self.socket_dir.join(DEFAULT_NEURAL_API_SOCKET),
+            PathBuf::from,
+        )
     }
 
     /// Get socket path for any service by name
@@ -218,11 +228,14 @@ impl RuntimeConfig {
     /// Resolution order:
     /// 1. `<SERVICE>_SOCKET` environment variable (e.g., `BEARDOG_SOCKET`)
     /// 2. This config's `socket_dir` + `<service>.sock`
+    #[must_use]
     pub fn service_socket(&self, service: &str) -> PathBuf {
         self.service_socket_with(service, &env::vars().collect())
     }
 
     /// Get socket path for any service with explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn service_socket_with(&self, service: &str, env: &HashMap<String, String>) -> PathBuf {
         let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
         if let Some(path) = env.get(&env_var) {
@@ -232,6 +245,7 @@ impl RuntimeConfig {
     }
 
     /// Get socket directory
+    #[must_use]
     pub fn socket_dir(&self) -> &Path {
         &self.socket_dir
     }
@@ -241,11 +255,14 @@ impl RuntimeConfig {
     // ========================================================================
 
     /// Get HTTP port from environment or fallback to default
+    #[must_use]
     pub fn http_port(&self) -> u16 {
         Self::http_port_with(&env::vars().collect())
     }
 
     /// Get HTTP port with explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn http_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("HTTP_PORT")
             .and_then(|v| v.parse().ok())
@@ -253,11 +270,14 @@ impl RuntimeConfig {
     }
 
     /// Get HTTPS port from environment or fallback to default
+    #[must_use]
     pub fn https_port(&self) -> u16 {
         Self::https_port_with(&env::vars().collect())
     }
 
     /// Get HTTPS port with explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn https_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("HTTPS_PORT")
             .and_then(|v| v.parse().ok())
@@ -265,11 +285,14 @@ impl RuntimeConfig {
     }
 
     /// Get WebSocket port from environment or fallback to default
+    #[must_use]
     pub fn websocket_port(&self) -> u16 {
         Self::websocket_port_with(&env::vars().collect())
     }
 
     /// Get WebSocket port with explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn websocket_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("WEBSOCKET_PORT")
             .and_then(|v| v.parse().ok())
@@ -277,11 +300,14 @@ impl RuntimeConfig {
     }
 
     /// Get MCP port from environment or fallback to default
+    #[must_use]
     pub fn mcp_port(&self) -> u16 {
         Self::mcp_port_with(&env::vars().collect())
     }
 
     /// Get MCP port with explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn mcp_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("MCP_WEBSOCKET_PORT")
             .or_else(|| env.get("MCP_PORT"))
@@ -290,11 +316,14 @@ impl RuntimeConfig {
     }
 
     /// Get discovery port from environment or fallback to default
+    #[must_use]
     pub fn discovery_port(&self) -> u16 {
         Self::discovery_port_with(&env::vars().collect())
     }
 
     /// Get discovery port with explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn discovery_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("DISCOVERY_PORT")
             .and_then(|v| v.parse().ok())
@@ -305,11 +334,14 @@ impl RuntimeConfig {
     ///
     /// DEEP DEBT EVOLUTION: Defaults to `::1` (IPv6 loopback) for dual-stack support.
     /// Use `BIND_ADDRESS` env var to override. Prefers `BIOMEOS_BIND_ADDRESS` first.
+    #[must_use]
     pub fn bind_address(&self) -> String {
         Self::bind_address_with(&env::vars().collect())
     }
 
     /// Get bind address with explicit environment map (for testing)
+    #[must_use]
+    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn bind_address_with(env: &HashMap<String, String>) -> String {
         env.get("BIOMEOS_BIND_ADDRESS")
             .or_else(|| env.get("BIND_ADDRESS"))
@@ -419,9 +451,11 @@ mod tests {
         let config = RuntimeConfig::with_socket_dir("/test");
 
         assert!(config.neural_api_socket_with(&env).starts_with("/test"));
-        assert!(config
-            .service_socket_with("beardog", &env)
-            .starts_with("/test"));
+        assert!(
+            config
+                .service_socket_with("beardog", &env)
+                .starts_with("/test")
+        );
     }
 
     #[test]
@@ -444,9 +478,11 @@ mod tests {
         );
         let config = RuntimeConfig::from_env_with_map(&env, None, None);
 
-        assert!(config
-            .neural_api_socket_with(&env)
-            .starts_with("/custom/socket/dir"));
+        assert!(
+            config
+                .neural_api_socket_with(&env)
+                .starts_with("/custom/socket/dir")
+        );
     }
 
     #[test]
@@ -459,12 +495,16 @@ mod tests {
         assert!(config.service_socket("songbird").ends_with("songbird.sock"));
         assert!(config.service_socket("squirrel").ends_with("squirrel.sock"));
         assert!(config.service_socket("nestgate").ends_with("nestgate.sock"));
-        assert!(config
-            .service_socket("toadstool")
-            .ends_with("toadstool.sock"));
-        assert!(config
-            .service_socket("petaltongue")
-            .ends_with("petaltongue.sock"));
+        assert!(
+            config
+                .service_socket("toadstool")
+                .ends_with("toadstool.sock")
+        );
+        assert!(
+            config
+                .service_socket("petaltongue")
+                .ends_with("petaltongue.sock")
+        );
     }
 
     #[test]

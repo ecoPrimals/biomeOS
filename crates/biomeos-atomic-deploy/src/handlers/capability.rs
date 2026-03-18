@@ -32,7 +32,7 @@
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
 use anyhow::{Context, Result};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -417,9 +417,7 @@ impl CapabilityHandler {
                 let latency = start.elapsed().as_millis();
                 trace!(
                     "   ✓ {} completed in {}ms via {}",
-                    semantic_name,
-                    latency,
-                    provider
+                    semantic_name, latency, provider
                 );
 
                 Ok(result)

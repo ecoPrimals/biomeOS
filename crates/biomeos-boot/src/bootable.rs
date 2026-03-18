@@ -71,7 +71,7 @@ impl BootableMediaBuilder {
         // Step 6: Create bootable image with GRUB
         let image_path = self.create_bootable_image(&boot_dir, target).await?;
 
-        self.print_success_message(&image_path, target)?;
+        Self::print_success_message(&image_path, target)?;
 
         Ok(image_path)
     }
@@ -167,14 +167,14 @@ impl BootableMediaBuilder {
         info!("  • Initramfs: {}", initramfs_dest.display());
 
         // Create GRUB configuration
-        self.create_grub_config(&grub_dir)?;
+        Self::create_grub_config(&grub_dir)?;
 
         info!("✅ Boot structure created");
         Ok(boot_dir)
     }
 
     /// Create GRUB configuration with modern syntax (pub for testing)
-    pub(crate) fn create_grub_config(&self, grub_dir: &Path) -> Result<()> {
+    pub(crate) fn create_grub_config(grub_dir: &Path) -> Result<()> {
         use std::io::Write;
 
         let grub_cfg = grub_dir.join("grub.cfg");
@@ -194,7 +194,10 @@ impl BootableMediaBuilder {
         writeln!(file, "    echo 'BiomeOS - Loading Pure Rust Platform...'")?;
         writeln!(file, "    echo ''")?;
         // Boot from initramfs - no root filesystem needed
-        writeln!(file, "    linux /boot/vmlinuz rdinit=/init rootfstype=rootfs rw console=tty0 console=ttyS0,115200")?;
+        writeln!(
+            file,
+            "    linux /boot/vmlinuz rdinit=/init rootfstype=rootfs rw console=tty0 console=ttyS0,115200"
+        )?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
         writeln!(file)?;
@@ -234,7 +237,7 @@ impl BootableMediaBuilder {
         if let Some(parent) = self.project_root.parent() {
             let bins_dir = parent.join("phase1bins");
             if bins_dir.exists() {
-                self.copy_directory(&bins_dir, &biomeos_dir.join("primals"))?;
+                Self::copy_directory(&bins_dir, &biomeos_dir.join("primals"))?;
                 info!("  • Phase 1 primals: copied");
             } else {
                 warn!("  • Phase 1 primals: not found (skipping)");
@@ -244,7 +247,7 @@ impl BootableMediaBuilder {
         // Copy templates
         let templates_src = self.project_root.join("templates");
         if templates_src.exists() {
-            self.copy_directory(&templates_src, &biomeos_dir.join("templates"))?;
+            Self::copy_directory(&templates_src, &biomeos_dir.join("templates"))?;
             info!("  • Templates: copied");
         }
 
@@ -253,7 +256,7 @@ impl BootableMediaBuilder {
     }
 
     /// Copy directory recursively with proper error handling (pub for testing)
-    pub(crate) fn copy_directory(&self, src: &Path, dest: &Path) -> Result<()> {
+    pub(crate) fn copy_directory(src: &Path, dest: &Path) -> Result<()> {
         std::fs::create_dir_all(dest)
             .with_context(|| format!("Failed to create directory: {}", dest.display()))?;
 
@@ -266,7 +269,7 @@ impl BootableMediaBuilder {
             let dest_path = dest.join(file_name);
 
             if path.is_dir() {
-                self.copy_directory(&path, &dest_path)?;
+                Self::copy_directory(&path, &dest_path)?;
             } else {
                 std::fs::copy(&path, &dest_path).with_context(|| {
                     format!(
@@ -354,8 +357,8 @@ impl BootableMediaBuilder {
 
     /// Create tar.gz archive as final fallback
     async fn create_archive_fallback(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
-        use flate2::write::GzEncoder;
         use flate2::Compression;
+        use flate2::write::GzEncoder;
         use tar::Builder;
 
         let output_tar = output.with_extension("tar.gz");
@@ -375,7 +378,7 @@ impl BootableMediaBuilder {
     }
 
     /// Print success message with usage instructions
-    fn print_success_message(&self, image_path: &Path, target: BootTarget) -> Result<()> {
+    fn print_success_message(image_path: &Path, target: BootTarget) -> Result<()> {
         info!("");
         info!("✅ Bootable {:?} created!", target);
         info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -499,7 +502,7 @@ mod tests {
         std::fs::create_dir_all(src.join("subdir")).expect("create subdir");
         std::fs::write(src.join("subdir").join("file2.txt"), "content2").expect("write");
 
-        builder.copy_directory(&src, &dest).expect("copy");
+        BootableMediaBuilder::copy_directory(&src, &dest).expect("copy");
 
         assert!(dest.join("file1.txt").exists());
         assert!(dest.join("subdir").join("file2.txt").exists());
@@ -539,7 +542,7 @@ mod tests {
         let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
         let boot_root = temp.path().join("build/boot-media/boot-root");
         std::fs::create_dir_all(boot_root.join("boot/grub")).expect("create");
-        let result = builder.create_grub_config(&boot_root.join("boot/grub"));
+        let result = BootableMediaBuilder::create_grub_config(&boot_root.join("boot/grub"));
         assert!(result.is_ok());
         let grub_cfg = boot_root.join("boot/grub/grub.cfg");
         assert!(grub_cfg.exists());

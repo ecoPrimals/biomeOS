@@ -2,8 +2,14 @@
 // Copyright 2025 ecoPrimals Project
 
 //! Live Primal Discovery - Capability-Based Dynamic Discovery.
-//! Reserved for discovery routes and future REST API; functions are pub for cross-module use.
-#![allow(dead_code)]
+//!
+//! Provides capability-based runtime discovery utilities used by API handlers
+//! and future REST routes. Functions are `pub` for cross-module use.
+
+#![expect(
+    dead_code,
+    reason = "Discovery utilities reserved for upcoming REST API routes"
+)]
 
 // =============================================================================
 // Live Primal Discovery - Capability-Based Dynamic Discovery
@@ -111,8 +117,7 @@ pub async fn discover_primal(socket_path: &str) -> Result<LivePrimalInfo> {
     let socket_hint = Path::new(&socket)
         .file_stem()
         .and_then(|s| s.to_str())
-        .map(|s| s.split('-').next().unwrap_or(s))
-        .unwrap_or("unknown")
+        .map_or("unknown", |s| s.split('-').next().unwrap_or(s))
         .to_string();
 
     info!(
@@ -150,18 +155,20 @@ pub async fn discover_primal(socket_path: &str) -> Result<LivePrimalInfo> {
             let family_id = response
                 .get("family_id")
                 .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
+                .map(std::string::ToString::to_string);
 
             // Capabilities from primal self-report
             let capabilities = response
                 .get("capabilities")
                 .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect()
-                })
-                .unwrap_or_else(|| infer_capabilities_from_name(&name));
+                .map_or_else(
+                    || infer_capabilities_from_name(&name),
+                    |arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(std::string::ToString::to_string))
+                            .collect()
+                    },
+                );
 
             // Determine primary type from capabilities or name
             let primal_type = capabilities
@@ -298,7 +305,11 @@ fn infer_capabilities_from_name(name: &str) -> Vec<String> {
     for domain in CAPABILITY_DOMAINS {
         for keyword in domain.keywords {
             if name_lower.contains(keyword) {
-                return domain.capabilities.iter().map(|s| s.to_string()).collect();
+                return domain
+                    .capabilities
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect();
             }
         }
     }
@@ -322,8 +333,7 @@ fn infer_type_from_name(name: &str) -> String {
                 return domain
                     .capabilities
                     .first()
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| "primal".to_string());
+                    .map_or_else(|| "primal".to_string(), std::string::ToString::to_string);
             }
         }
     }

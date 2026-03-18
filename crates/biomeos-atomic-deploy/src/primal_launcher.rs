@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::process::Command;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use tracing::{debug, info};
 
 /// Primal instance information
@@ -38,7 +38,7 @@ impl PrimalInstance {
     /// Uses signal 0 (null signal) to test process existence without affecting it.
     /// This is safe and idiomatic using the rustix crate's signal handling.
     pub fn is_running(&self) -> bool {
-        use rustix::process::{test_kill_process, Pid};
+        use rustix::process::{Pid, test_kill_process};
 
         // Signal 0 checks process existence without sending an actual signal
         // Returns Ok if process exists and we have permission to signal it
@@ -226,10 +226,12 @@ mod tests {
 
         let result = PrimalLauncher::new(binary_dir, runtime_dir);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Binary directory not found"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Binary directory not found")
+        );
     }
 
     #[test]

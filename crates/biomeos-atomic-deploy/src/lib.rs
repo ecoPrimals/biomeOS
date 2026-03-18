@@ -16,6 +16,29 @@
 // Crate-level lint configuration
 #![warn(missing_docs)]
 #![allow(clippy::doc_markdown)] // Allow technical terms without backticks
+#![allow(clippy::too_many_lines)] // Complex orchestration logic
+#![allow(clippy::redundant_closure_for_method_calls)] // Method references in chains
+#![allow(clippy::map_unwrap_or)] // map_or/map_or_else style preference
+#![allow(clippy::single_match_else)] // match vs if let style
+#![allow(clippy::implicit_hasher)] // HashMap with default hasher
+#![allow(clippy::implicit_clone)] // Clone style
+#![allow(clippy::used_underscore_binding)] // Debug logging
+#![allow(clippy::needless_pass_by_ref_mut)] // Trait method signatures
+#![allow(clippy::future_not_send)] // Async with Serialize refs
+#![allow(clippy::unused_self)] // Trait method signatures
+#![allow(clippy::manual_let_else)] // Style preference
+#![allow(clippy::if_not_else)] // Style preference
+#![allow(clippy::or_fun_call)] // unwrap_or with const
+#![allow(clippy::redundant_clone)] // Arc/clone patterns
+#![allow(clippy::ref_option)] // &Option vs Option<&>
+#![allow(clippy::case_sensitive_file_extension_comparisons)] // .sock convention
+#![allow(clippy::no_effect_underscore_binding)] // Intentional discard
+#![allow(clippy::suboptimal_flops)] // mul_add clarity
+#![allow(clippy::bool_to_int_with_if)] // Style
+#![allow(clippy::let_and_return)] // Explicit return
+#![allow(clippy::needless_pass_by_value)] // API signatures
+#![allow(clippy::ignored_unit_patterns)] // Ok(()) matching
+#![allow(clippy::match_same_arms)] // Grouped match arms
 #![forbid(unsafe_code)] // No unsafe code in deployment
 
 //! # Architecture

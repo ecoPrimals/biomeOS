@@ -200,12 +200,12 @@ impl NodeParams {
 
     /// Get a bool parameter.
     pub fn get_bool(&self, key: &str) -> Option<bool> {
-        self.0.get(key).and_then(|v| v.as_bool())
+        self.0.get(key).and_then(ParamValue::as_bool)
     }
 
     /// Get an integer parameter.
     pub fn get_i64(&self, key: &str) -> Option<i64> {
-        self.0.get(key).and_then(|v| v.as_i64())
+        self.0.get(key).and_then(ParamValue::as_i64)
     }
 
     /// Insert a parameter.

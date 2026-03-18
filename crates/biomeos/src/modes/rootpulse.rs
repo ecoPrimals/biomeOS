@@ -11,8 +11,8 @@
 //! - `status`  → health checks on the provenance trio
 
 use anyhow::{Context, Result};
-use biomeos_types::primal_names::{BEARDOG, NESTGATE, PROVENANCE_PRIMALS};
 use biomeos_types::CapabilityTaxonomy;
+use biomeos_types::primal_names::{BEARDOG, NESTGATE, PROVENANCE_PRIMALS};
 use biomeos_types::{JsonRpcRequest, SystemPaths};
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -207,9 +207,10 @@ async fn run_status(socket: Option<PathBuf>, family_id: Option<String>) -> Resul
                 } else {
                     info!(
                         "  {primal}: unhealthy ({})",
-                        response
-                            .get("error")
-                            .map_or("unknown".to_string(), |e| e.to_string())
+                        response.get("error").map_or_else(
+                            || "unknown".to_string(),
+                            std::string::ToString::to_string
+                        )
                     );
                 }
             }

@@ -71,7 +71,7 @@ struct CredentialPayload {
     family_seed: String,
 }
 
-fn load_credential_v2(file: CredentialFileV2) -> Result<FamilyCredentials, BirdSongError> {
+fn load_credential_v2(file: &CredentialFileV2) -> Result<FamilyCredentials, BirdSongError> {
     if file.version != 2 {
         return Err(BirdSongError::InvalidCredentials(format!(
             "Unsupported credential version: {}",
@@ -231,7 +231,7 @@ impl FamilyCredentials {
 
         // Try versioned format first
         if let Ok(v2) = serde_json::from_str::<CredentialFileV2>(&contents) {
-            return load_credential_v2(v2);
+            return load_credential_v2(&v2);
         }
 
         // Fallback to legacy plaintext JSON (version 1)

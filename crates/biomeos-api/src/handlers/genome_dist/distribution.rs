@@ -6,11 +6,11 @@
 //! Handles binary downloads and LiveSpore updates.
 
 use axum::{
+    Json,
     body::Body,
     extract::Path,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::Response,
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -11,6 +11,7 @@
 
 use super::atomic_client::*;
 use crate::TransportEndpoint;
+use crate::atomic_primal_client::{AtomicPrimalClient, ExecutionResult};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;

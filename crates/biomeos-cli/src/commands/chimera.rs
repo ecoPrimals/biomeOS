@@ -14,7 +14,10 @@ pub async fn handle_chimera_list() -> anyhow::Result<()> {
     let definitions_dir = Path::new("chimeras/definitions");
 
     if !definitions_dir.exists() {
-        println!("❌ Chimera definitions directory not found: {definitions_dir:?}");
+        println!(
+            "❌ Chimera definitions directory not found: {}",
+            definitions_dir.display()
+        );
         println!("   Run from biomeOS root directory");
         return Ok(());
     }
@@ -49,48 +52,45 @@ pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
 
     let registry = ChimeraRegistry::from_directory(definitions_dir)?;
 
-    match registry.get(id) {
-        Some(def) => {
-            println!("🧬 Chimera: {}", def.chimera.id);
-            println!("   Name: {}", def.chimera.name);
-            println!("   Version: {}", def.chimera.version);
-            println!();
-            println!("   Description:");
-            for line in def.chimera.description.lines() {
-                println!("     {line}");
-            }
-            println!();
+    if let Some(def) = registry.get(id) {
+        println!("🧬 Chimera: {}", def.chimera.id);
+        println!("   Name: {}", def.chimera.name);
+        println!("   Version: {}", def.chimera.version);
+        println!();
+        println!("   Description:");
+        for line in def.chimera.description.lines() {
+            println!("     {line}");
+        }
+        println!();
 
-            println!("   Components:");
-            for (name, component) in &def.components {
-                println!("     📦 {} ({})", name, component.version);
-                for module in &component.modules {
-                    println!("        └─ {}: {}", module.name, module.description);
-                }
-            }
-            println!();
-
-            println!("   Fusion Bindings:");
-            for (name, binding) in &def.fusion.bindings {
-                let provider = binding.provider.as_deref().unwrap_or("(none)");
-                println!("     🔗 {}: {} → {:?}", name, provider, binding.consumers);
-            }
-            println!();
-
-            println!("   API Endpoints:");
-            for endpoint in &def.fusion.api.endpoints {
-                println!(
-                    "     📡 {}({}) -> {}",
-                    endpoint.name,
-                    endpoint.params.join(", "),
-                    endpoint.returns
-                );
+        println!("   Components:");
+        for (name, component) in &def.components {
+            println!("     📦 {} ({})", name, component.version);
+            for module in &component.modules {
+                println!("        └─ {}: {}", module.name, module.description);
             }
         }
-        None => {
-            println!("❌ Chimera not found: {id}");
-            println!("   Run 'biomeos chimera list' to see available chimeras");
+        println!();
+
+        println!("   Fusion Bindings:");
+        for (name, binding) in &def.fusion.bindings {
+            let provider = binding.provider.as_deref().unwrap_or("(none)");
+            println!("     🔗 {}: {} → {:?}", name, provider, binding.consumers);
         }
+        println!();
+
+        println!("   API Endpoints:");
+        for endpoint in &def.fusion.api.endpoints {
+            println!(
+                "     📡 {}({}) -> {}",
+                endpoint.name,
+                endpoint.params.join(", "),
+                endpoint.returns
+            );
+        }
+    } else {
+        println!("❌ Chimera not found: {id}");
+        println!("   Run 'biomeos chimera list' to see available chimeras");
     }
 
     Ok(())
@@ -125,7 +125,7 @@ pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
             match builder.build() {
                 Ok(result) => {
                     println!("   ✅ Built in {:?}", result.duration);
-                    println!("   📦 Output: {:?}", result.binary_path);
+                    println!("   📦 Output: {}", result.binary_path.display());
                     for warning in &result.warnings {
                         println!("   ⚠️  {warning}");
                     }

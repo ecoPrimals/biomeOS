@@ -104,7 +104,7 @@ impl PrimalRegistry {
                 && let Some(name) = path.file_name().and_then(|n| n.to_str())
             {
                 // Try to detect primal type from name
-                let primal_name = self.detect_primal_name(name);
+                let primal_name = Self::detect_primal_name(name);
                 let version = self
                     .detect_version(&path)
                     .await
@@ -115,7 +115,7 @@ impl PrimalRegistry {
                     version,
                     path: BinaryLocation::Local(path.clone()),
                     checksum: self.compute_checksum(&path).await.ok(),
-                    metadata: self.default_metadata(&primal_name),
+                    metadata: Self::default_metadata(&primal_name),
                 };
 
                 self.binaries.entry(primal_name).or_default().push(binary);
@@ -170,7 +170,7 @@ impl PrimalRegistry {
     ///
     /// **Deep Debt Principle**: No hardcoded primal names!
     /// Discovers primals based on what they can do, not what they're called.
-    pub fn find_by_capability(&self, capability: CapabilityTaxonomy) -> Vec<&PrimalBinary> {
+    pub fn find_by_capability(&self, capability: &CapabilityTaxonomy) -> Vec<&PrimalBinary> {
         let capability_str = capability.to_string();
         let mut results = Vec::new();
 
@@ -181,7 +181,7 @@ impl PrimalRegistry {
                     .metadata
                     .capabilities
                     .iter()
-                    .any(|c| c == &capability_str || self.capability_matches(c, &capability_str))
+                    .any(|c| c == &capability_str || Self::capability_matches(c, &capability_str))
                 {
                     results.push(binary);
                 }
@@ -213,7 +213,7 @@ impl PrimalRegistry {
                         .metadata
                         .capabilities
                         .iter()
-                        .any(|c| c == &cap_str || self.capability_matches(c, &cap_str))
+                        .any(|c| c == &cap_str || Self::capability_matches(c, &cap_str))
                 });
 
                 if provides_all {
@@ -235,7 +235,10 @@ impl PrimalRegistry {
     ///
     /// Returns the primal with the highest version number that provides
     /// the requested capability.
-    pub fn get_best_for_capability(&self, capability: CapabilityTaxonomy) -> Option<&PrimalBinary> {
+    pub fn get_best_for_capability(
+        &self,
+        capability: &CapabilityTaxonomy,
+    ) -> Option<&PrimalBinary> {
         let mut candidates = self.find_by_capability(capability);
 
         // Sort by version (descending)
@@ -248,7 +251,7 @@ impl PrimalRegistry {
     ///
     /// Handles legacy string capabilities that might not exactly match
     /// the CapabilityTaxonomy enum strings.
-    fn capability_matches(&self, legacy_cap: &str, new_cap: &str) -> bool {
+    fn capability_matches(legacy_cap: &str, new_cap: &str) -> bool {
         let legacy_lower = legacy_cap.to_lowercase();
         let new_lower = new_cap.to_lowercase();
 
@@ -326,7 +329,7 @@ impl PrimalRegistry {
 
     /// Detect primal name from filename
     /// TRUE PRIMAL: No hardcoded list - accept any binary
-    fn detect_primal_name(&self, filename: &str) -> String {
+    fn detect_primal_name(filename: &str) -> String {
         // Remove common suffixes
         let name = filename
             .trim_end_matches(".exe")
@@ -363,7 +366,7 @@ impl PrimalRegistry {
 
     /// Get default metadata for a primal
     /// TRUE PRIMAL: No hardcoded metadata - primals announce their own capabilities
-    fn default_metadata(&self, name: &str) -> PrimalMetadata {
+    fn default_metadata(name: &str) -> PrimalMetadata {
         // Return minimal metadata - primal should announce its own capabilities
         // This is only used as a fallback for legacy primals that don't support
         // capability announcement
@@ -389,9 +392,15 @@ mod tests {
     #[test]
     fn test_primal_name_detection() {
         let registry = PrimalRegistry::new("/tmp");
-        assert_eq!(registry.detect_primal_name("beardog"), "beardog");
-        assert_eq!(registry.detect_primal_name("beardog-linux"), "beardog");
-        assert_eq!(registry.detect_primal_name("songbird.exe"), "songbird");
+        assert_eq!(PrimalRegistry::detect_primal_name("beardog"), "beardog");
+        assert_eq!(
+            PrimalRegistry::detect_primal_name("beardog-linux"),
+            "beardog"
+        );
+        assert_eq!(
+            PrimalRegistry::detect_primal_name("songbird.exe"),
+            "songbird"
+        );
     }
 
     #[test]
@@ -433,16 +442,16 @@ mod tests {
             .insert("songbird".to_string(), vec![songbird]);
 
         // Test finding by capability
-        let encryption_primals = registry.find_by_capability(CapabilityTaxonomy::Encryption);
+        let encryption_primals = registry.find_by_capability(&CapabilityTaxonomy::Encryption);
         assert_eq!(encryption_primals.len(), 1);
         assert_eq!(encryption_primals[0].name, "beardog");
 
-        let discovery_primals = registry.find_by_capability(CapabilityTaxonomy::Discovery);
+        let discovery_primals = registry.find_by_capability(&CapabilityTaxonomy::Discovery);
         assert_eq!(discovery_primals.len(), 1);
         assert_eq!(discovery_primals[0].name, "songbird");
 
         // Test finding non-existent capability
-        let compute_primals = registry.find_by_capability(CapabilityTaxonomy::WorkloadExecution);
+        let compute_primals = registry.find_by_capability(&CapabilityTaxonomy::WorkloadExecution);
         assert_eq!(compute_primals.len(), 0);
     }
 
@@ -524,7 +533,7 @@ mod tests {
             .insert("beardog".to_string(), vec![v1, v2]);
 
         // Get best (should return v2.0.0)
-        let best = registry.get_best_for_capability(CapabilityTaxonomy::Encryption);
+        let best = registry.get_best_for_capability(&CapabilityTaxonomy::Encryption);
         assert!(best.is_some());
         assert_eq!(best.unwrap().version, "2.0.0");
     }
@@ -534,18 +543,24 @@ mod tests {
         let registry = PrimalRegistry::new("/tmp");
 
         // Test encryption/crypto match
-        assert!(registry.capability_matches("crypto", "encryption"));
-        assert!(registry.capability_matches("security", "encryption"));
+        assert!(PrimalRegistry::capability_matches("crypto", "encryption"));
+        assert!(PrimalRegistry::capability_matches("security", "encryption"));
 
         // Test discovery/federation match
-        assert!(registry.capability_matches("mesh", "discovery"));
-        assert!(registry.capability_matches("federation", "discovery"));
+        assert!(PrimalRegistry::capability_matches("mesh", "discovery"));
+        assert!(PrimalRegistry::capability_matches(
+            "federation",
+            "discovery"
+        ));
 
         // Test compute/orchestration match
-        assert!(registry.capability_matches("orchestration", "compute"));
+        assert!(PrimalRegistry::capability_matches(
+            "orchestration",
+            "compute"
+        ));
 
         // Test non-matches
-        assert!(!registry.capability_matches("storage", "encryption"));
-        assert!(!registry.capability_matches("random", "discovery"));
+        assert!(!PrimalRegistry::capability_matches("storage", "encryption"));
+        assert!(!PrimalRegistry::capability_matches("random", "discovery"));
     }
 }

@@ -283,8 +283,8 @@ impl SovereigntyGuardian {
         {
             self.record_violation(
                 requester,
-                ViolationType::DataExtraction,
-                ViolationSeverity::High,
+                &ViolationType::DataExtraction,
+                &ViolationSeverity::High,
                 "Attempted unauthorized data extraction".to_string(),
             );
             return Ok(false);
@@ -321,8 +321,8 @@ impl SovereigntyGuardian {
         if cost_estimate > self.policies.ai_interactions.cost_protection.daily_limit {
             self.record_violation(
                 ai_provider,
-                ViolationType::EconomicExploitation,
-                ViolationSeverity::Medium,
+                &ViolationType::EconomicExploitation,
+                &ViolationSeverity::Medium,
                 format!("Cost estimate {} exceeds daily limit", cost_estimate),
             );
             return Ok(false);
@@ -363,8 +363,8 @@ impl SovereigntyGuardian {
         {
             self.record_violation(
                 entity,
-                ViolationType::PrivacyInvasion,
-                ViolationSeverity::High,
+                &ViolationType::PrivacyInvasion,
+                &ViolationSeverity::High,
                 format!("Unauthorized tracking detected: {}", activity),
             );
         }
@@ -375,8 +375,8 @@ impl SovereigntyGuardian {
         {
             self.record_violation(
                 entity,
-                ViolationType::PrivacyInvasion,
-                ViolationSeverity::Medium,
+                &ViolationType::PrivacyInvasion,
+                &ViolationSeverity::Medium,
                 format!("Behavioral profiling detected: {}", activity),
             );
         }
@@ -407,8 +407,8 @@ impl SovereigntyGuardian {
         {
             self.record_violation(
                 service_provider,
-                ViolationType::EconomicExploitation,
-                ViolationSeverity::High,
+                &ViolationType::EconomicExploitation,
+                &ViolationSeverity::High,
                 "Vendor lock-in terms detected".to_string(),
             );
             return Ok(false);
@@ -456,8 +456,8 @@ impl SovereigntyGuardian {
             }) {
                 self.record_violation(
                     actor,
-                    ViolationType::AlgorithmicDiscrimination,
-                    ViolationSeverity::Critical,
+                    &ViolationType::AlgorithmicDiscrimination,
+                    &ViolationSeverity::Critical,
                     format!("Potential algorithmic discrimination detected in action: {action}"),
                 );
                 return Ok(false);
@@ -480,8 +480,8 @@ impl SovereigntyGuardian {
                 if !has_oversight {
                     self.record_violation(
                         actor,
-                        ViolationType::HumanDignityViolation,
-                        ViolationSeverity::High,
+                        &ViolationType::HumanDignityViolation,
+                        &ViolationSeverity::High,
                         format!("Critical action '{action}' requires human oversight"),
                     );
                     return Ok(false);
@@ -503,8 +503,8 @@ impl SovereigntyGuardian {
             }) {
                 self.record_violation(
                     actor,
-                    ViolationType::HumanDignityViolation,
-                    ViolationSeverity::High,
+                    &ViolationType::HumanDignityViolation,
+                    &ViolationSeverity::High,
                     format!("Psychological manipulation pattern detected: {action}"),
                 );
                 return Ok(false);
@@ -544,8 +544,8 @@ impl SovereigntyGuardian {
     fn record_violation(
         &mut self,
         entity: &str,
-        violation_type: ViolationType,
-        severity: ViolationSeverity,
+        violation_type: &ViolationType,
+        severity: &ViolationSeverity,
         description: String,
     ) {
         let violation = SovereigntyViolation {
@@ -605,7 +605,7 @@ impl SovereigntyGuardian {
 
     /// Generate sovereignty compliance report
     pub fn generate_compliance_report(&self) -> SovereigntyComplianceReport {
-        let total_violations = self.violations.values().map(|v| v.len()).sum();
+        let total_violations = self.violations.values().map(std::vec::Vec::len).sum();
         let critical_violations = self
             .violations
             .values()

@@ -8,7 +8,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use crate::capability_translation::{
-    resolve_primal_socket, CapabilityTranslation, CapabilityTranslationRegistry, RegistryStats,
+    CapabilityTranslation, CapabilityTranslationRegistry, RegistryStats, resolve_primal_socket,
 };
 use biomeos_test_utils::{remove_test_env, set_test_env};
 use std::collections::HashMap;
@@ -300,10 +300,12 @@ async fn test_call_capability_no_provider() {
         .await;
 
     assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("No provider for capability"));
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("No provider for capability")
+    );
 }
 
 #[tokio::test]

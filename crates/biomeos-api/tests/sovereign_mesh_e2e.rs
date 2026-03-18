@@ -79,7 +79,7 @@ impl FamilySeed {
 /// Format: [8-byte nonce][xor-encrypted data][32-byte hmac]
 fn symmetric_encrypt(plaintext: &[u8], key: &[u8; 32]) -> String {
     let mut rng = rand::thread_rng();
-    let nonce: [u8; 8] = rng.gen();
+    let nonce: [u8; 8] = rng.r#gen();
 
     // Derive stream key from key + nonce
     let mut hasher = Sha256::new();
@@ -798,13 +798,15 @@ async fn e2e_phase6_full_sovereign_mesh_flow() {
     let attacker = SimulatedNode::new("attacker", attacker_seed, "evil.com:666");
     assert!(attacker.decrypt_peer_beacon(&pixel_beacon).is_none());
     assert!(attacker.decrypt_data(&encrypted_payload).is_none());
-    assert!(rendezvous
-        .post_beacon(
-            &attacker.create_token(),
-            &attacker.encrypt_beacon(),
-            "attacker"
-        )
-        .is_err());
+    assert!(
+        rendezvous
+            .post_beacon(
+                &attacker.create_token(),
+                &attacker.encrypt_beacon(),
+                "attacker"
+            )
+            .is_err()
+    );
 }
 
 /// Verify crypto properties: same plaintext produces different ciphertext each time

@@ -116,7 +116,7 @@ impl PrimalDiscovery {
 
     /// Discover primals matching query
     pub async fn discover(&self, query: &DiscoveryQuery) -> Result<Vec<DiscoveredPrimal>> {
-        let socket_dir = self.resolve_socket_dir();
+        let socket_dir = Self::resolve_socket_dir();
         let mut results = Vec::new();
 
         // If we have a specific name, try that directly
@@ -158,7 +158,7 @@ impl PrimalDiscovery {
 
     /// Discover specific primal by name
     pub async fn discover_primal(&self, name: &str) -> Option<DiscoveredPrimal> {
-        let socket_dir = self.resolve_socket_dir();
+        let socket_dir = Self::resolve_socket_dir();
         self.try_discover_primal(&socket_dir, name).await
     }
 
@@ -171,7 +171,7 @@ impl PrimalDiscovery {
             biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
                 .map(|p| vec![p])
                 .unwrap_or_default();
-        let socket_dir = self.resolve_socket_dir();
+        let socket_dir = Self::resolve_socket_dir();
         let mut discovered = Vec::new();
         for name in provider_names {
             if self.try_discover_primal(&socket_dir, name).await.is_some() {
@@ -182,7 +182,7 @@ impl PrimalDiscovery {
     }
 
     /// 5-tier socket directory resolution per PRIMAL_DEPLOYMENT_STANDARD
-    fn resolve_socket_dir(&self) -> PathBuf {
+    fn resolve_socket_dir() -> PathBuf {
         // Tier 1: Explicit override
         if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
             return PathBuf::from(dir);
@@ -196,7 +196,7 @@ impl PrimalDiscovery {
         // Tier 3: Linux /run/user (get UID from environment or /proc)
         if let Ok(uid) = std::env::var("UID") {
             let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
-            if run_user.parent().map(|p| p.exists()).unwrap_or(false) {
+            if run_user.parent().is_some_and(std::path::Path::exists) {
                 return run_user;
             }
         }
@@ -208,7 +208,7 @@ impl PrimalDiscovery {
             if let Ok(meta) = std::fs::metadata("/proc/self") {
                 let uid = meta.uid();
                 let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
-                if run_user.parent().map(|p| p.exists()).unwrap_or(false) {
+                if run_user.parent().is_some_and(std::path::Path::exists) {
                     return run_user;
                 }
             }
@@ -216,7 +216,7 @@ impl PrimalDiscovery {
 
         // Tier 4: Android
         let android = PathBuf::from("/data/local/tmp/biomeos");
-        if android.parent().map(|p| p.exists()).unwrap_or(false) {
+        if android.parent().is_some_and(std::path::Path::exists) {
             return android;
         }
 
@@ -240,9 +240,9 @@ impl PrimalDiscovery {
         let alt_socket_path = socket_dir.join(format!("{name}.sock"));
 
         let (path, method) = if socket_path.exists() {
-            (socket_path, self.method_for_dir(socket_dir))
+            (socket_path, Self::method_for_dir(socket_dir))
         } else if alt_socket_path.exists() {
-            (alt_socket_path, self.method_for_dir(socket_dir))
+            (alt_socket_path, Self::method_for_dir(socket_dir))
         } else {
             return None;
         };
@@ -264,7 +264,7 @@ impl PrimalDiscovery {
         })
     }
 
-    fn method_for_dir(&self, dir: &std::path::Path) -> DiscoveryMethod {
+    fn method_for_dir(dir: &std::path::Path) -> DiscoveryMethod {
         let path_str = dir.to_string_lossy();
         if path_str.contains("XDG_RUNTIME_DIR") || path_str.contains("/run/user/") {
             DiscoveryMethod::XdgRuntime

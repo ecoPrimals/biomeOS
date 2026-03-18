@@ -283,7 +283,9 @@ async fn resolve_model(model_id: &str) -> Result<()> {
             println!("  NOT FOUND in local cache or mesh.");
             println!();
             println!("  To cache this model:");
-            println!("    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{model_id}')\"");
+            println!(
+                "    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{model_id}')\""
+            );
             println!("    2. Register: biomeos model-cache import-hf");
         }
     }
@@ -324,7 +326,9 @@ async fn resolve_model_with(cache_dir: &Path, model_id: &str) -> Result<()> {
             println!("  NOT FOUND in local cache or mesh.");
             println!();
             println!("  To cache this model:");
-            println!("    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{model_id}')\"");
+            println!(
+                "    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{model_id}')\""
+            );
             println!("    2. Register: biomeos model-cache import-hf");
         }
     }
@@ -407,7 +411,7 @@ async fn show_status() -> Result<()> {
             let hf_models: Vec<_> = std::fs::read_dir(hf_path)
                 .into_iter()
                 .flatten()
-                .filter_map(|e| e.ok())
+                .filter_map(std::result::Result::ok)
                 .filter(|e| e.file_name().to_string_lossy().starts_with("models--"))
                 .collect();
 
@@ -842,5 +846,68 @@ mod tests {
     fn test_hf_dir_to_model_id_no_prefix() {
         assert_eq!(hf_dir_to_model_id("random-dir"), None);
         assert_eq!(hf_dir_to_model_id("models"), None);
+    }
+
+    #[tokio::test]
+    async fn test_run_import_hf_with_importable_model() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let cache_dir = temp.path().join("model-cache");
+        let hf_hub = temp.path().join("hf-hub");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        let model_dir = hf_hub
+            .join("models--test--importable-model")
+            .join("snapshots")
+            .join("abc123hash");
+        std::fs::create_dir_all(&model_dir).expect("create HF model structure");
+        std::fs::write(model_dir.join("config.json"), "{}").expect("write config");
+
+        let result = run_with(cache_dir, Some(hf_hub), ModelCacheCommand::ImportHf).await;
+        assert!(
+            result.is_ok(),
+            "import-hf with valid HF structure should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_resolve_local_with_files() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let cache_dir = temp.path().join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        let model_dir = temp.path().join("multi-file-model");
+        std::fs::create_dir_all(&model_dir).expect("create model dir");
+        std::fs::write(model_dir.join("config.json"), "{}").expect("write config");
+        std::fs::write(model_dir.join("model.safetensors"), b"data").expect("write safetensors");
+
+        run_with(
+            cache_dir.clone(),
+            None,
+            ModelCacheCommand::Register {
+                model_id: "test/multi-file".to_string(),
+                path: model_dir,
+            },
+        )
+        .await
+        .expect("register");
+
+        let result = run_with(
+            cache_dir,
+            None,
+            ModelCacheCommand::Resolve {
+                model_id: "test/multi-file".to_string(),
+            },
+        )
+        .await;
+        assert!(result.is_ok(), "resolve multi-file model should succeed");
+    }
+
+    #[test]
+    fn test_format_size_mb_small_fractional() {
+        assert_eq!(format_size_mb(524_288), "0.5 MB");
+    }
+
+    #[test]
+    fn test_format_size_gb_small() {
+        assert_eq!(format_size_gb(536_870_912), "0.5 GB");
     }
 }

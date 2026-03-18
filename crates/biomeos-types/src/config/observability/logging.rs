@@ -54,7 +54,7 @@ pub enum LogDestination {
     /// Send to a network endpoint
     Network(NetworkLogConfig),
     /// Fan-out to multiple destinations
-    Multiple(Vec<LogDestination>),
+    Multiple(Vec<Self>),
 }
 
 /// Syslog configuration

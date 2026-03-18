@@ -93,11 +93,13 @@ impl MockPrimal {
     }
 
     /// Get the address the server is listening on
-    pub fn addr(&self) -> SocketAddr {
+    #[must_use]
+    pub const fn addr(&self) -> SocketAddr {
         self.addr
     }
 
     /// Get the base URL for the server
+    #[must_use]
     pub fn url(&self) -> String {
         format!("http://{}", self.addr)
     }
@@ -114,10 +116,12 @@ impl MockPrimal {
 
     /// Stop the mock server
     pub async fn stop(self) -> Result<()> {
-        let mut handle = self.handle.write().await;
-        if let Some(h) = handle.take() {
-            h.abort();
-            tracing::info!("Mock primal '{}' stopped", self.name);
+        {
+            let mut handle = self.handle.write().await;
+            if let Some(h) = handle.take() {
+                h.abort();
+                tracing::info!("Mock primal '{}' stopped", self.name);
+            }
         }
         Ok(())
     }
@@ -141,8 +145,10 @@ async fn command_handler(
     State(mock): State<MockPrimal>,
     Json(req): Json<CommandRequest>,
 ) -> impl IntoResponse {
-    let mut state = mock.state.write().await;
-    state.commands_received.push(req.command.clone());
+    {
+        let mut state = mock.state.write().await;
+        state.commands_received.push(req.command.clone());
+    }
 
     (
         StatusCode::OK,
@@ -154,7 +160,7 @@ async fn command_handler(
 }
 
 async fn capabilities_handler(State(mock): State<MockPrimal>) -> impl IntoResponse {
-    Json(mock.capabilities.clone())
+    Json(mock.capabilities)
 }
 
 /// Builder for MockPrimal
@@ -175,24 +181,28 @@ impl MockPrimalBuilder {
     }
 
     /// Set the port (0 for random available port)
-    pub fn port(mut self, port: u16) -> Self {
+    #[must_use]
+    pub const fn port(mut self, port: u16) -> Self {
         self.port = Some(port);
         self
     }
 
     /// Add a capability
+    #[must_use]
     pub fn capability(mut self, capability: impl Into<String>) -> Self {
         self.capabilities.push(capability.into());
         self
     }
 
     /// Add multiple capabilities
+    #[must_use]
     pub fn capabilities(mut self, capabilities: Vec<String>) -> Self {
         self.capabilities.extend(capabilities);
         self
     }
 
     /// Build the MockPrimal (not started yet)
+    #[must_use]
     pub fn build(self) -> MockPrimal {
         let port = self.port.unwrap_or(0);
         let addr = SocketAddr::from(([127, 0, 0, 1], port));

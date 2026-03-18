@@ -117,14 +117,14 @@ impl PrimalConnections {
             if let Ok(entries) = std::fs::read_dir(runtime_dir) {
                 for entry in entries.flatten() {
                     let path = entry.path();
-                    if path.extension().is_some_and(|e| e == "sock") {
-                        if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
-                            // Strip family_id suffix if present (e.g., "beardog-family" → "beardog")
-                            let base_name = name.split('-').next().unwrap_or(name);
-                            let client = PrimalClient::with_socket(base_name, &path);
-                            debug!("   Found socket: {} → {}", base_name, path.display());
-                            connections.clients.insert(base_name.to_string(), client);
-                        }
+                    if path.extension().is_some_and(|e| e == "sock")
+                        && let Some(name) = path.file_stem().and_then(|s| s.to_str())
+                    {
+                        // Strip family_id suffix if present (e.g., "beardog-family" → "beardog")
+                        let base_name = name.split('-').next().unwrap_or(name);
+                        let client = PrimalClient::with_socket(base_name, &path);
+                        debug!("   Found socket: {} → {}", base_name, path.display());
+                        connections.clients.insert(base_name.to_string(), client);
                     }
                 }
             }
@@ -176,7 +176,10 @@ impl PrimalConnections {
 
     /// List all discovered primal names
     pub fn available_primals(&self) -> Vec<&str> {
-        self.clients.keys().map(|k| k.as_str()).collect()
+        self.clients
+            .keys()
+            .map(std::string::String::as_str)
+            .collect()
     }
 
     // ===================================================================

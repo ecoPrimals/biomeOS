@@ -45,8 +45,7 @@ async fn main() -> Result<()> {
         .iter()
         .position(|arg| arg == "--family-id")
         .and_then(|i| args.get(i + 1))
-        .map(|s| s.as_str())
-        .unwrap_or("nat0");
+        .map_or("nat0", std::string::String::as_str);
 
     let socket_path = format!("/tmp/neural-api-{family_id}.sock");
 

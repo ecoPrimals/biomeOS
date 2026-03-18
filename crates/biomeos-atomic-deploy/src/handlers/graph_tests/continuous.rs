@@ -100,10 +100,12 @@ async fn test_start_continuous_success() {
         .start_continuous(&params)
         .await
         .expect("start_continuous");
-    assert!(result["session_id"]
-        .as_str()
-        .unwrap()
-        .starts_with("continuous_graph-"));
+    assert!(
+        result["session_id"]
+            .as_str()
+            .unwrap()
+            .starts_with("continuous_graph-")
+    );
     assert_eq!(result["graph_id"], "continuous_graph");
     assert!(result["started_at"].as_str().is_some());
 }

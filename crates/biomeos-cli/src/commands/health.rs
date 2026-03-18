@@ -419,15 +419,12 @@ async fn perform_health_check(
     service: Option<&str>,
     detailed: bool,
 ) -> Result<()> {
-    let health_result = match service {
-        Some(service_name) => {
-            println!("🩺 Health check for service: {service_name}");
-            manager.check_service_health(service_name).await?
-        }
-        None => {
-            println!("🩺 System-wide health check");
-            manager.check_system_health().await?
-        }
+    let health_result = if let Some(service_name) = service {
+        println!("🩺 Health check for service: {service_name}");
+        manager.check_service_health(service_name).await?
+    } else {
+        println!("🩺 System-wide health check");
+        manager.check_system_health().await?
     };
 
     display_health_results(&health_result, detailed);
@@ -539,12 +536,16 @@ mod tests {
         );
         let lines = format_health_summary(&results, false);
         assert!(lines.iter().any(|l| l.contains("Service Health")));
-        assert!(lines
-            .iter()
-            .any(|l| l.contains("svc1") && l.contains("Healthy")));
-        assert!(lines
-            .iter()
-            .any(|l| l.contains("svc2") && l.contains("Degraded")));
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("svc1") && l.contains("Healthy"))
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("svc2") && l.contains("Degraded"))
+        );
     }
 
     #[test]

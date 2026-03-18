@@ -3,7 +3,10 @@
 
 //! Interface discovery - probe and learn how to talk to primals
 
-use super::types::*;
+use super::types::{
+    HealthCheckConfig, InterfacePattern, PortConfigMethod, PrimalAdapter, PrimalCapabilities,
+    PrimalInterface,
+};
 use anyhow::Result;
 use std::path::Path;
 use std::time::Duration;

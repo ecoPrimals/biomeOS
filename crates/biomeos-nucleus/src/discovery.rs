@@ -19,7 +19,7 @@
 //! - Runtime discovery, no hardcoded paths
 
 use async_trait::async_trait;
-use biomeos_types::{primal_names, CapabilityTaxonomy, SystemPaths};
+use biomeos_types::{CapabilityTaxonomy, SystemPaths, primal_names};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{debug, info};
@@ -188,15 +188,14 @@ impl DiscoveryLayer {
             Error::discovery_failed(format!("Failed to read directory entry: {e}"), None)
         })? {
             let path = entry.path();
-            if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if filename.starts_with(&format!("{}-", primal_names::SONGBIRD))
-                    && std::path::Path::new(filename)
-                        .extension()
-                        .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
-                {
-                    debug!("Found Songbird socket: {}", path.display());
-                    return Ok(path.to_string_lossy().to_string());
-                }
+            if let Some(filename) = path.file_name().and_then(|n| n.to_str())
+                && filename.starts_with(&format!("{}-", primal_names::SONGBIRD))
+                && std::path::Path::new(filename)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+            {
+                debug!("Found Songbird socket: {}", path.display());
+                return Ok(path.to_string_lossy().to_string());
             }
         }
 

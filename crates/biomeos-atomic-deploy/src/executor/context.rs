@@ -63,7 +63,7 @@ impl std::fmt::Debug for ExecutionContext {
             .field("checkpoint_dir", &self.checkpoint_dir)
             .field("family_id", &self.family_id)
             .field("nucleation", &self.nucleation.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -88,8 +88,10 @@ impl ExecutionContext {
         let family_id = env
             .get("FAMILY_ID")
             .or_else(|| env.get("BIOMEOS_FAMILY_ID"))
-            .map(|s| Arc::from(s.as_str()))
-            .unwrap_or_else(|| Arc::from(biomeos_core::family_discovery::get_family_id().as_str()));
+            .map_or_else(
+                || Arc::from(biomeos_core::family_discovery::get_family_id().as_str()),
+                |s| Arc::from(s.as_str()),
+            );
 
         Self {
             env,

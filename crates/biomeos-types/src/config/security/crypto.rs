@@ -118,7 +118,7 @@ impl Default for KeyDerivationConfig {
     fn default() -> Self {
         Self {
             algorithm: KeyDerivationAlgorithm::PBKDF2,
-            iterations: 100000,
+            iterations: 100_000,
             salt_length: 32,
         }
     }

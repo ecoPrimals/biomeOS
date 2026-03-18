@@ -26,7 +26,7 @@ impl Persistence {
     ///
     /// Falls back gracefully if NestGate is unavailable.
     pub async fn persist_assignment(
-        nestgate: &Option<NestGateClient>,
+        nestgate: Option<&NestGateClient>,
         family_id: &str,
         assignment_id: &str,
         device_id: &str,
@@ -76,7 +76,7 @@ impl Persistence {
 
     /// Remove assignment from NestGate persistence
     pub async fn remove_assignment(
-        nestgate: &Option<NestGateClient>,
+        nestgate: Option<&NestGateClient>,
         device_id: &str,
     ) -> Result<()> {
         if let Some(nestgate) = nestgate {
@@ -111,7 +111,7 @@ mod tests {
     #[tokio::test]
     async fn test_persist_assignment_no_nestgate() {
         let result = Persistence::persist_assignment(
-            &None,
+            None,
             "test-family",
             "test-id",
             "test-device",
@@ -130,7 +130,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_remove_assignment_no_nestgate() {
-        let result = Persistence::remove_assignment(&None, "test-device").await;
+        let result = Persistence::remove_assignment(None, "test-device").await;
 
         // Should succeed gracefully (no-op when no NestGate)
         assert!(result.is_ok());
@@ -145,7 +145,7 @@ mod tests {
         ));
 
         let result = Persistence::persist_assignment(
-            &nestgate,
+            nestgate.as_ref(),
             "test-family",
             "assign-001",
             "gpu-0",
@@ -163,7 +163,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_assignment_nestgate_unavailable_returns_ok() {
         // When NestGate is None, remove_assignment returns Ok (no-op)
-        let result = Persistence::remove_assignment(&None, "gpu-0").await;
+        let result = Persistence::remove_assignment(None, "gpu-0").await;
         assert!(result.is_ok());
     }
 
@@ -175,7 +175,7 @@ mod tests {
             "/tmp/nonexistent-biomeos-remove-test-67890.sock",
         ));
 
-        let result = Persistence::remove_assignment(&nestgate, "gpu-0").await;
+        let result = Persistence::remove_assignment(nestgate.as_ref(), "gpu-0").await;
 
         // remove_assignment propagates errors when NestGate call fails
         assert!(
@@ -189,7 +189,7 @@ mod tests {
         // Verify the persistence key format is assignment:{id}
         // We test with None to ensure the error path includes our params
         let result = Persistence::persist_assignment(
-            &None,
+            None,
             "family-xyz",
             "unique-assign-id",
             "device-abc",

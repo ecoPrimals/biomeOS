@@ -133,6 +133,10 @@ impl BeaconGeneticsManager {
     }
 
     /// Initiate a meeting with a peer: exchange encrypted seeds and store for future decryption.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "orchestrates multi-step beacon exchange with BearDog"
+    )]
     pub async fn initiate_meeting(
         &mut self,
         peer_endpoint: &str,
@@ -326,7 +330,7 @@ impl BeaconGeneticsManager {
         decrypt_response
             .get("plaintext")
             .and_then(|p| p.as_str())
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .ok_or_else(|| SporeError::ValidationFailed("Failed to decrypt met seed".to_string()))
     }
 
@@ -341,9 +345,8 @@ impl BeaconGeneticsManager {
 
         for beacon_id_str in manifest.meetings.keys() {
             let beacon_id = BeaconId::from_hex(beacon_id_str);
-            let seed_hex = match self.load_met_seed(&beacon_id).await {
-                Ok(s) => s,
-                Err(_) => continue,
+            let Ok(seed_hex) = self.load_met_seed(&beacon_id).await else {
+                continue;
             };
 
             let decrypt_response = self
@@ -358,7 +361,7 @@ impl BeaconGeneticsManager {
                 .await;
 
             if let Ok(result) = decrypt_response
-                && let Some(true) = result.get("decrypted").and_then(|d| d.as_bool())
+                && result.get("decrypted").and_then(serde_json::Value::as_bool) == Some(true)
                 && let Some(plaintext) = result.get("payload")
             {
                 info!("✅ Beacon decrypted - met peer: {}", beacon_id.short());

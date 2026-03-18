@@ -17,7 +17,7 @@ use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 use std::sync::Arc;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 // Note: We can't import from biomeos-api since it's a binary crate

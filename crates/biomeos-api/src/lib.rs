@@ -25,11 +25,11 @@ pub use websocket::{
 };
 
 use axum::{
+    Json, Router,
     extract::State,
     http::{HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
 use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
@@ -87,6 +87,10 @@ async fn websocket_handler(
 /// EVOLVED (Mar 11, 2026): Push-based graph events from GraphEventBroadcaster.
 ///
 /// After subscribe, graph events are pushed in real-time as JSON-RPC notifications.
+#[allow(
+    clippy::too_many_lines,
+    reason = "WebSocket message handling and subscription logic"
+)]
 async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppState>) {
     use axum::extract::ws::Message;
     use std::collections::HashMap;
@@ -158,11 +162,14 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                         let response = match serde_json::from_str::<JsonRpcRequest>(&text) {
                             Ok(req) => match req.method.as_ref() {
                                 "events.subscribe" => {
-                                    let params = req.params.clone().unwrap_or(serde_json::json!({}));
+                                    let params = req
+                                        .params
+                                        .clone()
+                                        .unwrap_or_else(|| serde_json::json!({}));
                                     let filter: SubscriptionFilter =
                                         serde_json::from_value(params).unwrap_or_else(|e| {
                                             tracing::warn!("JSON parse fallback: {}", e);
-                                            Default::default()
+                                            SubscriptionFilter::default()
                                         });
                                     let sub_id = format!("sub_{}", next_sub_id.fetch_add(1, Ordering::SeqCst));
                                     subscriptions.write().await.insert(sub_id.clone(), filter);
@@ -255,6 +262,10 @@ pub fn create_app_for_tcp(state: AppState) -> Router {
 }
 
 /// Internal: create app with transport-aware security
+#[allow(
+    clippy::too_many_lines,
+    reason = "router setup with CORS, routes, and middleware"
+)]
 fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
     let shared_state = Arc::new(state);
 

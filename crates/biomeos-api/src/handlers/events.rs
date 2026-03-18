@@ -157,6 +157,7 @@ pub async fn event_stream(
 }
 
 /// Detect changes in the ecosystem and emit appropriate events
+#[allow(clippy::too_many_lines, reason = "change detection logic")]
 async fn detect_and_emit_changes(
     state: Arc<AppState>,
     previous_state: Arc<RwLock<EcosystemState>>,
@@ -193,7 +194,10 @@ async fn detect_and_emit_changes(
                     primal_id: primal_id.clone(),
                     name: primal.name.clone(),
                     primal_type: format!("{:?}", primal.primal_type),
-                    family_id: primal.family_id.as_ref().map(|f| f.to_string()),
+                    family_id: primal
+                        .family_id
+                        .as_ref()
+                        .map(std::string::ToString::to_string),
                     capabilities: primal
                         .capabilities
                         .iter()
@@ -242,7 +246,10 @@ async fn detect_and_emit_changes(
 
                 // Check for family changes
                 let prev_family = prev_snapshot.family_id.as_deref();
-                let curr_family = primal.family_id.as_ref().map(|f| f.as_str());
+                let curr_family = primal
+                    .family_id
+                    .as_ref()
+                    .map(biomeos_types::FamilyId::as_str);
 
                 if prev_family != curr_family {
                     if let Some(family_id) = &primal.family_id {
@@ -263,7 +270,10 @@ async fn detect_and_emit_changes(
             PrimalSnapshot {
                 name: primal.name.clone(),
                 health: primal.health,
-                family_id: primal.family_id.as_ref().map(|f| f.to_string()),
+                family_id: primal
+                    .family_id
+                    .as_ref()
+                    .map(std::string::ToString::to_string),
                 capabilities_count: primal.capabilities.len(),
             },
         );
@@ -274,7 +284,9 @@ async fn detect_and_emit_changes(
         current_primals.iter().map(|p| p.id.to_string()).collect();
 
     prev.primals.retain(|id, snapshot| {
-        if !current_ids.contains(id) {
+        if current_ids.contains(id) {
+            true
+        } else {
             info!("👋 SSE: Primal removed: {}", snapshot.name);
             events.push(EcosystemEvent::TopologyChanged {
                 nodes: current_primals.len(),
@@ -282,8 +294,6 @@ async fn detect_and_emit_changes(
                 change: "primal_removed".to_string(),
             });
             false
-        } else {
-            true
         }
     });
 
@@ -295,7 +305,7 @@ async fn detect_and_emit_changes(
 
     let families: Vec<String> = current_primals
         .iter()
-        .filter_map(|p| p.family_id.as_ref().map(|f| f.to_string()))
+        .filter_map(|p| p.family_id.as_ref().map(std::string::ToString::to_string))
         .collect::<std::collections::HashSet<_>>()
         .into_iter()
         .collect();

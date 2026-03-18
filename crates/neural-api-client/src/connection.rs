@@ -9,7 +9,7 @@ use serde_json::Value;
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 use crate::error::NeuralApiError;
 
@@ -57,7 +57,7 @@ pub async fn json_rpc_call(
     if let Some(error) = response.get("error") {
         let code = error
             .get("code")
-            .and_then(|c| c.as_i64())
+            .and_then(serde_json::Value::as_i64)
             .and_then(|c| i32::try_from(c).ok())
             .unwrap_or(-1);
         let message = error

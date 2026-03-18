@@ -29,8 +29,8 @@ mod translation_loader;
 
 // Re-export types that may be needed externally
 pub use rpc::{
-    error_response, internal_error_response, method_not_found_response, success_response,
-    JsonRpcRequest,
+    JsonRpcRequest, error_response, internal_error_response, method_not_found_response,
+    success_response,
 };
 
 use crate::capability_translation::CapabilityTranslationRegistry;

@@ -145,7 +145,7 @@ impl BiomeosProvider {
     }
 
     /// Build a `capability.call` JSON-RPC request.
-    fn build_request(&self, operation: &str, params: serde_json::Value) -> serde_json::Value {
+    fn build_request(&self, operation: &str, params: &serde_json::Value) -> serde_json::Value {
         serde_json::json!({
             "jsonrpc": "2.0",
             "method": "capability.call",
@@ -161,7 +161,7 @@ impl BiomeosProvider {
 
 #[async_trait]
 impl Provider for BiomeosProvider {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "biomeOS"
     }
 
@@ -181,7 +181,7 @@ impl Provider for BiomeosProvider {
             )));
         }
 
-        let request = self.build_request(operation, params);
+        let request = self.build_request(operation, &params);
 
         let response = send_jsonrpc_uds(&self.neural_api_socket, &request)
             .await
@@ -241,7 +241,7 @@ pub async fn register_capabilities(
 ///
 /// Absorbed from airSpring's provenance integration pattern.
 pub mod provenance {
-    use super::*;
+    use super::{Provider, ProviderError, Result};
 
     /// Begin a provenance experiment session via `capability.call`.
     ///
@@ -366,7 +366,8 @@ mod tests {
     #[test]
     fn biomeos_provider_build_request() {
         let provider = BiomeosProvider::new("ecology", "/tmp/test.sock");
-        let req = provider.build_request("et0_fao56", serde_json::json!({"temperature": 25.0}));
+        let params = serde_json::json!({"temperature": 25.0});
+        let req = provider.build_request("et0_fao56", &params);
         assert_eq!(req["method"], "capability.call");
         assert_eq!(req["params"]["capability"], "ecology");
         assert_eq!(req["params"]["operation"], "et0_fao56");

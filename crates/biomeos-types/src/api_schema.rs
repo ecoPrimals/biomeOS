@@ -156,16 +156,16 @@ pub struct SchemaDiscoveryConfig {
     pub fallback_to_static: bool,
 }
 
-fn default_timeout() -> u64 {
+const fn default_timeout() -> u64 {
     30
 }
-fn default_cache() -> bool {
+const fn default_cache() -> bool {
     true
 }
-fn default_cache_ttl() -> u64 {
+const fn default_cache_ttl() -> u64 {
     3600
 } // 1 hour
-fn default_fallback() -> bool {
+const fn default_fallback() -> bool {
     true
 }
 

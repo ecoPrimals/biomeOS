@@ -13,13 +13,14 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 /// Create a spinner with biomeOS styling
+#[expect(clippy::expect_used, reason = "static template string is always valid")]
 pub fn create_spinner(message: &str) -> ProgressBar {
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(
         ProgressStyle::default_spinner()
             .tick_strings(&["🌱", "🌿", "🍃", "🌳", "🌲", "🌴", "🎋", "🎍"])
             .template("{spinner:.green} {msg}")
-            .expect("valid progress bar template"),
+            .expect("valid progress bar template; static format string"),
     );
     spinner.set_message(message.to_string());
     spinner.enable_steady_tick(Duration::from_millis(100));
@@ -67,6 +68,10 @@ pub fn parse_capabilities(caps_str: &str) -> Result<Vec<PrimalCapability>> {
 }
 
 /// Display results in a formatted manner
+#[allow(
+    clippy::implicit_hasher,
+    reason = "HashMap with default hasher is sufficient for display"
+)]
 pub async fn display_results(
     title: &str,
     results: &HashMap<String, Value>,

@@ -10,7 +10,7 @@
 use anyhow::{Context, Result};
 use biomeos_boot::{BootLogger, BootStage};
 use biomeos_core::observability::MinimalObserver;
-use rustix::mount::{mount, MountFlags};
+use rustix::mount::{MountFlags, mount};
 use rustix::process::getpid;
 use std::path::Path;
 use std::process::ExitCode;
@@ -267,7 +267,7 @@ fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MountFlags)
 
     // Try to mount - if already mounted (EBUSY), that's OK
     match mount(source, target, fstype, flags, "") {
-        Ok(_) => {
+        Ok(()) => {
             info!("  ✓ {}", target);
             Ok(())
         }
@@ -282,14 +282,15 @@ fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MountFlags)
 
 /// Detect hardware capabilities via /proc (pure Rust - ecoBin v3).
 async fn detect_hardware() -> Result<HardwareInfo> {
-    let _ = tokio::task::yield_now().await;
+    let () = tokio::task::yield_now().await;
 
     #[cfg(target_os = "linux")]
     let (cpu_count, total_memory_gb) = {
         let cpu_count = std::fs::read_to_string("/proc/cpuinfo")
             .ok()
-            .map(|s| s.lines().filter(|l| l.starts_with("processor")).count())
-            .unwrap_or(1)
+            .map_or(1, |s| {
+                s.lines().filter(|l| l.starts_with("processor")).count()
+            })
             .max(1);
         let total_memory_gb = std::fs::read_to_string("/proc/meminfo")
             .ok()
@@ -299,8 +300,8 @@ async fn detect_hardware() -> Result<HardwareInfo> {
                     .and_then(|l| l.split_whitespace().nth(1))
                     .and_then(|v| v.parse::<u64>().ok())
             })
-            .map(|kb| (kb * 1024) / (1024 * 1024 * 1024))
-            .unwrap_or(0) as usize;
+            .map_or(0, |kb| (kb * 1024) / (1024 * 1024 * 1024))
+            as usize;
         (cpu_count, total_memory_gb)
     };
 

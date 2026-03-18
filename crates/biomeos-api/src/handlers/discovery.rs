@@ -4,7 +4,7 @@
 // Discovery handler
 // Returns list of discovered primals with trust levels
 
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::info;
@@ -283,10 +283,10 @@ fn get_socket_dir() -> String {
     let socket_path = discovery.build_socket_path("_discovery_probe");
 
     // Extract directory from path
-    socket_path
-        .parent()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|| "/tmp/biomeos".to_string())
+    socket_path.parent().map_or_else(
+        || "/tmp/biomeos".to_string(),
+        |p| p.to_string_lossy().to_string(),
+    )
 }
 
 #[cfg(test)]

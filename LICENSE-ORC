@@ -1,0 +1,40 @@
+Open RPG Creative License (ORC)
+================================
+
+This project includes game mechanics and rules content licensed under
+the Open RPG Creative (ORC) License.
+
+The ORC License is available at:
+  https://paizo.com/orclicense
+
+Licensed Material
+-----------------
+
+Any game rules, stat blocks, progression systems, encounter math, or
+mechanical designs in this repository are ORC Licensed Material.
+
+ORC Licensed Material may be freely used, modified, and redistributed
+by anyone under the terms of the ORC License. The ORC License is
+irrevocable and perpetual.
+
+Reserved Material
+-----------------
+
+The following are ORC Reserved Material and may NOT be used without
+explicit permission from the rights holders:
+
+  - The "ecoPrimals" name and logo
+  - Individual primal names (BearDog, Songbird, NestGate, ToadStool,
+    biomeOS, etc.) when used as trademarks or branding
+  - The scyBorg licensing framework name
+
+Notice
+------
+
+This file is part of the scyBorg triple-copyleft licensing framework:
+  - Software: AGPL-3.0-or-later (see LICENSE)
+  - Mechanics: ORC (this file)
+  - Creative: CC-BY-SA 4.0 (see LICENSE-CC-BY-SA)
+
+No single entity can revoke any of these licenses. Each is governed
+by an independent nonprofit foundation.

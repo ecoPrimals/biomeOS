@@ -12,7 +12,7 @@
 use anyhow::{Context as AnyhowContext, Result};
 use biomeos_types::JsonRpcRequest;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -59,42 +59,39 @@ pub async fn crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) ->
     // Capability-based: Find security provider via environment or discovery
     let security_socket = discover_capability_provider(context, "security").await;
 
-    match security_socket {
-        Some(socket_path) => {
-            // Use BearDog for real crypto derivation
-            info!(
-                "🔐 Using security provider at {} for seed derivation",
-                socket_path
-            );
+    if let Some(socket_path) = security_socket {
+        // Use BearDog for real crypto derivation
+        info!(
+            "🔐 Using security provider at {} for seed derivation",
+            socket_path
+        );
 
-            let request = JsonRpcRequest::new(
-                "crypto.derive_seed",
-                json!({
-                    "family_id": family_id,
-                    "source": source
-                }),
-            );
+        let request = JsonRpcRequest::new(
+            "crypto.derive_seed",
+            json!({
+                "family_id": family_id,
+                "source": source
+            }),
+        );
 
-            let response = call_primal_rpc(&socket_path, &request).await?;
+        let response = call_primal_rpc(&socket_path, &request).await?;
 
-            if let Some(result) = response.get("result") {
-                Ok(result.clone())
-            } else if let Some(err) = response.get("error") {
-                anyhow::bail!("Crypto derive failed: {err}");
-            } else {
-                anyhow::bail!("Invalid response from security provider");
-            }
+        if let Some(result) = response.get("result") {
+            Ok(result.clone())
+        } else if let Some(err) = response.get("error") {
+            anyhow::bail!("Crypto derive failed: {err}");
+        } else {
+            anyhow::bail!("Invalid response from security provider");
         }
-        None => {
-            // Fallback: Generate deterministic seed from family_id
-            warn!("⚠️  No security provider found, using deterministic fallback");
-            let seed = format!("seed-{family_id}-{source}");
-            Ok(json!({
-                "seed": seed,
-                "derived_from": source,
-                "method": "deterministic_fallback"
-            }))
-        }
+    } else {
+        // Fallback: Generate deterministic seed from family_id
+        warn!("⚠️  No security provider found, using deterministic fallback");
+        let seed = format!("seed-{family_id}-{source}");
+        Ok(json!({
+            "seed": seed,
+            "derived_from": source,
+            "method": "deterministic_fallback"
+        }))
     }
 }
 
@@ -152,7 +149,7 @@ pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Resul
     let timeout_secs = node
         .config
         .get("timeout_secs")
-        .and_then(|v| v.as_u64())
+        .and_then(serde_json::Value::as_u64)
         .unwrap_or(10);
 
     info!("🏥 Health check: {} at {}", primal_name, socket_path);
@@ -170,7 +167,7 @@ pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Resul
     let healthy = response
         .get("result")
         .and_then(|r| r.get("healthy"))
-        .and_then(|h| h.as_bool())
+        .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
 
     if healthy {
@@ -236,36 +233,33 @@ pub async fn lineage_verify(node: &GraphNode, context: &ExecutionContext) -> Res
     // Find security provider for verification
     let security_socket = discover_capability_provider(context, "security").await;
 
-    match security_socket {
-        Some(socket_path) => {
-            let request = JsonRpcRequest::new(
-                "lineage.verify",
-                json!({
-                    "primal_name": primal_name,
-                    "family_id": context.family_id
-                }),
-            );
+    if let Some(socket_path) = security_socket {
+        let request = JsonRpcRequest::new(
+            "lineage.verify",
+            json!({
+                "primal_name": primal_name,
+                "family_id": context.family_id
+            }),
+        );
 
-            let response = call_primal_rpc(&socket_path, &request).await?;
+        let response = call_primal_rpc(&socket_path, &request).await?;
 
-            if let Some(result) = response.get("result") {
-                info!("✅ Lineage verified for {}", primal_name);
-                Ok(result.clone())
-            } else {
-                warn!("⚠️  Lineage verification response missing result");
-                Ok(json!({
-                    "verified": false,
-                    "error": "No result in response"
-                }))
-            }
-        }
-        None => {
-            warn!("⚠️  No security provider for lineage verification, assuming valid");
+        if let Some(result) = response.get("result") {
+            info!("✅ Lineage verified for {}", primal_name);
+            Ok(result.clone())
+        } else {
+            warn!("⚠️  Lineage verification response missing result");
             Ok(json!({
-                "verified": true,
-                "method": "assumed_valid_no_provider"
+                "verified": false,
+                "error": "No result in response"
             }))
         }
+    } else {
+        warn!("⚠️  No security provider for lineage verification, assuming valid");
+        Ok(json!({
+            "verified": true,
+            "method": "assumed_valid_no_provider"
+        }))
     }
 }
 
@@ -358,6 +352,10 @@ pub async fn deployment_report(node: &GraphNode, context: &ExecutionContext) -> 
 /// Substitute environment variables in a string
 ///
 /// Supports both ${VAR} and $VAR syntax.
+#[allow(
+    clippy::implicit_hasher,
+    reason = "default hasher sufficient for env substitution"
+)]
 pub fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
     let mut result = s.to_string();
 
@@ -426,6 +424,7 @@ async fn discover_capability_provider(
 ///
 /// **Deep Debt Principle**: Pure JSON-RPC, no HTTP dependencies.
 async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<Value> {
+    let request_json = serde_json::to_string(request)?;
     let stream = UnixStream::connect(socket_path)
         .await
         .with_context(|| format!("Failed to connect to {socket_path}"))?;
@@ -433,7 +432,6 @@ async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<
     let (read_half, mut write_half) = stream.into_split();
 
     // Send request
-    let request_json = serde_json::to_string(request)?;
     write_half.write_all(request_json.as_bytes()).await?;
     write_half.write_all(b"\n").await?;
     write_half.flush().await?;

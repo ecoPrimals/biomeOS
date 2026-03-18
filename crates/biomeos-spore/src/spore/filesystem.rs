@@ -142,6 +142,10 @@ impl FilesystemOps for Spore {
 
             // Only copy files (not directories)
             if path.is_file() {
+                #[expect(
+                    clippy::expect_used,
+                    reason = "path confirmed as file must have filename"
+                )]
                 let file_name = path
                     .file_name()
                     .expect("path confirmed as file must have filename");

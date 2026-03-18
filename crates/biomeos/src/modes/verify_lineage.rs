@@ -210,7 +210,7 @@ async fn verify_cryptographic_lineage(
     let seed_path = path.join(".family.seed");
     if !seed_path.exists() {
         return Ok(vec![
-            "Cryptographic verification skipped: no seed file".to_string()
+            "Cryptographic verification skipped: no seed file".to_string(),
         ]);
     }
 
@@ -236,12 +236,15 @@ async fn verify_cryptographic_lineage(
         Ok(response) => {
             if response
                 .get("valid")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false)
             {
                 details.push("Cryptographic lineage verified ✓".to_string());
 
-                if let Some(generation) = response.get("generation").and_then(|v| v.as_u64()) {
+                if let Some(generation) = response
+                    .get("generation")
+                    .and_then(serde_json::Value::as_u64)
+                {
                     details.push(format!("Generation: {generation}"));
                 }
 
@@ -310,9 +313,10 @@ mod tests {
         assert!(v.details.contains(&"Directory exists".to_string()));
         assert!(v.warnings.contains(&"No manifest.toml found".to_string()));
         assert!(v.warnings.contains(&"No .family.seed found".to_string()));
-        assert!(v
-            .warnings
-            .contains(&"No primals directory found".to_string()));
+        assert!(
+            v.warnings
+                .contains(&"No primals directory found".to_string())
+        );
     }
 
     #[tokio::test]
@@ -348,9 +352,10 @@ node_id = "test-node-456"
         let result = verify_lineage(&path, false).await;
         let v = result.expect("verify_lineage should succeed");
         assert!(v.valid);
-        assert!(v
-            .details
-            .contains(&"Family seed valid (64 bytes)".to_string()));
+        assert!(
+            v.details
+                .contains(&"Family seed valid (64 bytes)".to_string())
+        );
     }
 
     #[tokio::test]
@@ -400,9 +405,10 @@ node_id = "test-node-456"
         let result = verify_lineage(&path, false).await;
         let v = result.expect("verify_lineage should succeed");
         assert!(v.valid);
-        assert!(v
-            .details
-            .contains(&"Valid seed file (64 bytes)".to_string()));
+        assert!(
+            v.details
+                .contains(&"Valid seed file (64 bytes)".to_string())
+        );
     }
 
     #[tokio::test]
@@ -416,9 +422,10 @@ node_id = "test-node-456"
         let result = verify_lineage(&path, false).await;
         let v = result.expect("verify_lineage should succeed");
         assert!(v.valid);
-        assert!(v
-            .details
-            .contains(&"Valid hash file (32 bytes)".to_string()));
+        assert!(
+            v.details
+                .contains(&"Valid hash file (32 bytes)".to_string())
+        );
     }
 
     #[tokio::test]
@@ -511,9 +518,15 @@ node_id = "test-node-456"
         let seed_path = dir.path().join(".family.seed");
         std::fs::write(&seed_path, [0u8; 64]).expect("write seed");
 
-        std::env::set_var("BIOMEOS_SECURITY_PROVIDER", "nonexistent-beardog-xyz");
+        // SAFETY: test isolation - single-threaded test
+        unsafe {
+            std::env::set_var("BIOMEOS_SECURITY_PROVIDER", "nonexistent-beardog-xyz");
+        }
         let result = verify_lineage(&dir.path().to_path_buf(), true).await;
-        std::env::remove_var("BIOMEOS_SECURITY_PROVIDER");
+        // SAFETY: test isolation - single-threaded test
+        unsafe {
+            std::env::remove_var("BIOMEOS_SECURITY_PROVIDER");
+        }
 
         let v = result.expect("verify_lineage should succeed");
         assert!(v.valid);
@@ -561,9 +574,10 @@ node_id = "test-node-456"
         assert_eq!(v.family_id.as_deref(), Some("full-fam"));
         assert_eq!(v.node_id.as_deref(), Some("full-node"));
         assert!(v.details.contains(&"Manifest found".to_string()));
-        assert!(v
-            .details
-            .contains(&"Family seed valid (64 bytes)".to_string()));
+        assert!(
+            v.details
+                .contains(&"Family seed valid (64 bytes)".to_string())
+        );
     }
 
     #[tokio::test]

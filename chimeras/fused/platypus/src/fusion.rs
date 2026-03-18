@@ -187,7 +187,7 @@ impl Platypus {
         let signature = keys.sign(data);
         
         GeneticSignature {
-            signature: Bytes::from(signature.to_bytes().to_vec()),
+            signature: Bytes::copy_from_slice(&signature.to_bytes()),
             signer: identity.clone(),
             generation: keys.generation(),
         }

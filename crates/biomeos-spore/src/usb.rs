@@ -82,19 +82,18 @@ async fn probe_device(path: PathBuf) -> SporeResult<UsbDevice> {
     #[cfg(unix)]
     let (available_space, total_space) = {
         let path_clone = path.clone();
-        match tokio::task::spawn_blocking(move || rustix::fs::statvfs(path_clone.as_path())).await {
-            Ok(Ok(st)) => {
-                let avail = st.f_bavail * st.f_frsize;
-                let total = st.f_blocks * st.f_frsize;
-                (avail, total)
-            }
-            _ => {
-                tracing::warn!(
-                    "statvfs failed for {}, reporting zero free space",
-                    path.display()
-                );
-                (0, 0)
-            }
+        if let Ok(Ok(st)) =
+            tokio::task::spawn_blocking(move || rustix::fs::statvfs(path_clone.as_path())).await
+        {
+            let avail = st.f_bavail * st.f_frsize;
+            let total = st.f_blocks * st.f_frsize;
+            (avail, total)
+        } else {
+            tracing::warn!(
+                "statvfs failed for {}, reporting zero free space",
+                path.display()
+            );
+            (0, 0)
         }
     };
 
@@ -111,7 +110,7 @@ async fn probe_device(path: PathBuf) -> SporeResult<UsbDevice> {
     let label = path
         .file_name()
         .and_then(|n| n.to_str())
-        .map(|s| s.to_string());
+        .map(std::string::ToString::to_string);
 
     Ok(UsbDevice {
         mount_point: path,

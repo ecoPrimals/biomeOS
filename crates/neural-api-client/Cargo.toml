@@ -1,7 +1,7 @@
 [package]
 name = "neural-api-client"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 authors = ["biomeOS Team"]
 description = "Pure Rust client for Neural API capability-based routing"
 license = "AGPL-3.0-only"
@@ -20,3 +20,6 @@ tempfile = "3.10"
 tokio = { version = "1.35", features = ["full"] }
 tokio-test = "0.4"
 
+
+[lints]
+workspace = true

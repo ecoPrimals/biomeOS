@@ -79,7 +79,9 @@ async fn show_system_summary() -> Result<()> {
         if let Ok(entries) = std::fs::read_dir(dir) {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                if name.ends_with(".sock")
+                if std::path::Path::new(&name)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
                     && biomeos_types::primal_names::CORE_PRIMALS
                         .iter()
                         .any(|p| name.contains(p))
@@ -113,7 +115,7 @@ async fn show_system_summary() -> Result<()> {
     // Check for graphs
     if Path::new("graphs").exists() {
         let graph_count = std::fs::read_dir("graphs")
-            .map(|d| d.filter(|e| e.is_ok()).count())
+            .map(|d| d.flatten().count())
             .unwrap_or(0);
         if graph_count > 0 {
             println!(

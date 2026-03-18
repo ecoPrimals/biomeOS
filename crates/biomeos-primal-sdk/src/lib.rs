@@ -88,6 +88,9 @@ pub mod prelude {
     pub use crate::communication::{PrimalClient, SecureTunnel};
     pub use crate::discovery::{DiscoveredPrimal, DiscoveryQuery, PrimalDiscovery};
     pub use crate::provider::{BiomeosProvider, CapabilityRegistration, Provider, ProviderError};
+    pub use crate::tarpc_transport::{
+        DefaultHealthService, start_default_tarpc_sidecar, start_tarpc_sidecar,
+    };
     pub use crate::types::{PrimalRequest, PrimalResponse, RequestPriority};
     pub use crate::{BiomeResult, Health, PrimalCapability, PrimalType, UniversalPrimalService};
 }

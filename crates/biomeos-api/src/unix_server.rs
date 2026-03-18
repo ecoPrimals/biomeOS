@@ -75,18 +75,12 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(socket_path: P, app: Router) -> R
 
                             async move {
                                 // Use tower::Service::call directly
+                                // Axum Router::call returns Result<Response, Infallible> — always Ok
                                 use tower::Service;
-                                match app.call(request).await {
-                                    Ok(response) => Ok::<_, hyper::Error>(response),
-                                    Err(_) => {
-                                        // Create error response
-                                        let response = axum::http::Response::builder()
-                                            .status(500)
-                                            .body(axum::body::Body::from("Internal Server Error"))
-                                            .expect("static 500 response");
-                                        Ok(response)
-                                    }
-                                }
+                                let response = app.call(request).await;
+                                Ok::<_, hyper::Error>(
+                                    response.expect("Axum Router::call never returns Err"),
+                                )
                             }
                         },
                     );

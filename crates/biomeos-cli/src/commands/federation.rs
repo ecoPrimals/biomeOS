@@ -193,12 +193,16 @@ pub async fn handle_federation_list_subfeds(args: &ListSubfedsArgs) -> Result<()
     }
 
     println!("\n🌐 Sub-Federations:");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!(
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    );
     println!(
         "{:<20} {:<20} {:<10} {:<15} {:<20}",
         "NAME", "FAMILY", "MEMBERS", "ISOLATION", "CAPABILITIES"
     );
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!(
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    );
 
     for subfed in &filtered {
         println!(
@@ -219,7 +223,9 @@ pub async fn handle_federation_list_subfeds(args: &ListSubfedsArgs) -> Result<()
         }
     }
 
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!(
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    );
     println!("Total: {} sub-federation(s)", filtered.len());
 
     Ok(())
@@ -315,7 +321,7 @@ pub async fn handle_federation_check_access(args: &CheckAccessArgs) -> Result<()
 pub(crate) fn format_capabilities(caps: &CapabilitySet) -> String {
     caps.all()
         .iter()
-        .map(|c| c.to_string())
+        .map(std::string::ToString::to_string)
         .collect::<Vec<_>>()
         .join(",")
 }

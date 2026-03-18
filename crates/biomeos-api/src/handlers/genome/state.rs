@@ -108,7 +108,7 @@ impl GenomeState {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().map(|e| e == "genome").unwrap_or(false) {
+            if path.extension().is_some_and(|e| e == "genome") {
                 if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
                     match GenomeBin::load(&path) {
                         Ok(genome) => {

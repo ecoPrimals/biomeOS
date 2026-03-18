@@ -10,7 +10,7 @@ use biomeos_types::jsonrpc::{JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 use tracing::debug;
 
 use super::NeuralApiServer;
@@ -40,9 +40,8 @@ impl NeuralApiServer {
                         stream.flush().await?;
                     }
                     // No response for notifications (id == None)
-                    continue;
                 }
-                Ok(Ok(_)) | Ok(Err(_)) | Err(_) => {
+                Ok(Ok(_) | Err(_)) | Err(_) => {
                     break;
                 }
             }

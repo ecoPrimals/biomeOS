@@ -30,12 +30,9 @@ pub async fn build_genome(
     }
 
     for spec in req.binaries {
-        let arch = match parse_arch_for_build(&spec.arch) {
-            Ok(a) => a,
-            Err(_) => {
-                error!("Invalid architecture: {}", spec.arch);
-                return Err(StatusCode::BAD_REQUEST);
-            }
+        let Ok(arch) = parse_arch_for_build(&spec.arch) else {
+            error!("Invalid architecture: {}", spec.arch);
+            return Err(StatusCode::BAD_REQUEST);
         };
 
         if !spec.path.exists() {

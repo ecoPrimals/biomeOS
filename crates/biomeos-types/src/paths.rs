@@ -73,6 +73,7 @@ pub type Result<T> = std::result::Result<T, PathError>;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_field_names)] // dir suffix is XDG convention (runtime_dir, data_dir, etc.)
 pub struct SystemPaths {
     /// Runtime directory (Unix sockets, PID files)
     /// Default: $XDG_RUNTIME_DIR/biomeos or /tmp/biomeos-$USER/
@@ -127,14 +128,12 @@ impl SystemPaths {
         xdg_runtime_dir: Option<impl AsRef<Path>>,
         xdg_data_home: Option<impl AsRef<Path>>,
     ) -> Result<Self> {
-        let runtime_dir = match xdg_runtime_dir {
-            Some(p) => Ok(p.as_ref().to_path_buf().join("biomeos")),
-            None => Self::get_runtime_dir(),
-        }?;
-        let data_dir = match xdg_data_home {
-            Some(p) => Ok(p.as_ref().to_path_buf().join("biomeos")),
-            None => Self::get_data_dir(),
-        }?;
+        let runtime_dir = xdg_runtime_dir.map_or_else(Self::get_runtime_dir, |p| {
+            Ok(p.as_ref().to_path_buf().join("biomeos"))
+        })?;
+        let data_dir = xdg_data_home.map_or_else(Self::get_data_dir, |p| {
+            Ok(p.as_ref().to_path_buf().join("biomeos"))
+        })?;
         let config_dir = Self::get_config_dir()?;
         let cache_dir = Self::get_cache_dir()?;
         let state_dir = Self::get_state_dir()?;
@@ -320,6 +319,7 @@ impl SystemPaths {
     }
 
     /// Get XDG runtime directory
+    #[allow(clippy::unnecessary_wraps)] // Result required for consistency with other get_*_dir methods
     fn get_runtime_dir() -> Result<PathBuf> {
         // 1. Try $XDG_RUNTIME_DIR
         if let Ok(xdg_runtime) = env::var("XDG_RUNTIME_DIR") {
@@ -333,6 +333,7 @@ impl SystemPaths {
 
     /// Get XDG data directory
     fn get_data_dir() -> Result<PathBuf> {
+        use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_DATA_HOME
         if let Ok(xdg_data) = env::var("XDG_DATA_HOME") {
             return Ok(PathBuf::from(xdg_data).join("biomeos"));
@@ -344,13 +345,13 @@ impl SystemPaths {
         }
 
         // 3. Use etcetera (Pure Rust!) as fallback
-        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
         let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
         Ok(strategy.data_dir().join("biomeos"))
     }
 
     /// Get XDG config directory
     fn get_config_dir() -> Result<PathBuf> {
+        use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_CONFIG_HOME
         if let Ok(xdg_config) = env::var("XDG_CONFIG_HOME") {
             return Ok(PathBuf::from(xdg_config).join("biomeos"));
@@ -362,13 +363,13 @@ impl SystemPaths {
         }
 
         // 3. Use etcetera (Pure Rust!) as fallback
-        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
         let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
         Ok(strategy.config_dir().join("biomeos"))
     }
 
     /// Get XDG cache directory
     fn get_cache_dir() -> Result<PathBuf> {
+        use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_CACHE_HOME
         if let Ok(xdg_cache) = env::var("XDG_CACHE_HOME") {
             return Ok(PathBuf::from(xdg_cache).join("biomeos"));
@@ -380,7 +381,6 @@ impl SystemPaths {
         }
 
         // 3. Use etcetera (Pure Rust!) as fallback
-        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
         let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
         Ok(strategy.cache_dir().join("biomeos"))
     }
@@ -643,10 +643,12 @@ mod tests {
         std::fs::create_dir_all(&xdg_runtime).unwrap();
 
         let paths = SystemPaths::new_with_xdg_overrides(Some(&xdg_runtime), None::<&Path>).unwrap();
-        assert!(paths
-            .runtime_dir()
-            .to_string_lossy()
-            .contains("xdg-runtime"));
+        assert!(
+            paths
+                .runtime_dir()
+                .to_string_lossy()
+                .contains("xdg-runtime")
+        );
     }
 
     #[test]

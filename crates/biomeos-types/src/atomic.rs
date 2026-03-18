@@ -323,9 +323,10 @@ mod tests {
         let mut node = NodeAtomic::new("eastgate");
         node.compute = PrimalHealth::Healthy;
         assert!(node.can_compute());
-        assert!(node
-            .capabilities()
-            .contains(&AtomicCapability::ComputeDispatch));
+        assert!(
+            node.capabilities()
+                .contains(&AtomicCapability::ComputeDispatch)
+        );
     }
 
     #[test]

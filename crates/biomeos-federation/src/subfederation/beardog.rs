@@ -95,7 +95,7 @@ pub async fn verify_member_lineage(
     let all_verified = response
         .get("result")
         .and_then(|r| r.get("all_verified"))
-        .and_then(|v| v.as_bool())
+        .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
 
     if all_verified {

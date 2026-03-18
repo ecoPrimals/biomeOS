@@ -40,3 +40,6 @@ rustix = { version = "0.38", features = ["process"] }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
 
+
+[lints]
+workspace = true

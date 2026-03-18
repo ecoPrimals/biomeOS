@@ -81,23 +81,20 @@ impl SporeVerifier {
         let nucleus_path = nucleus_path.as_ref();
 
         // Try to load existing manifest, generate if not found
-        let nucleus_manifest = match BinaryManifest::load(nucleus_path) {
-            Ok(manifest) => {
-                info!(
-                    "Loaded existing nucleus manifest with {} binaries",
-                    manifest.binaries.len()
-                );
-                manifest
+        let nucleus_manifest = if let Ok(manifest) = BinaryManifest::load(nucleus_path) {
+            info!(
+                "Loaded existing nucleus manifest with {} binaries",
+                manifest.binaries.len()
+            );
+            manifest
+        } else {
+            info!("Generating nucleus manifest from binaries");
+            let manifest = BinaryManifest::from_nucleus(nucleus_path)?;
+            // Save for next time
+            if let Err(e) = manifest.save(nucleus_path.join("MANIFEST.toml")) {
+                warn!("Failed to save generated manifest: {}", e);
             }
-            Err(_) => {
-                info!("Generating nucleus manifest from binaries");
-                let manifest = BinaryManifest::from_nucleus(nucleus_path)?;
-                // Save for next time
-                if let Err(e) = manifest.save(nucleus_path.join("MANIFEST.toml")) {
-                    warn!("Failed to save generated manifest: {}", e);
-                }
-                manifest
-            }
+            manifest
         };
 
         Ok(Self { nucleus_manifest })
@@ -116,7 +113,7 @@ impl SporeVerifier {
         let node_id = if let Some(ref manifest) = spore_manifest {
             manifest.spore.node_id.clone()
         } else {
-            self.extract_node_id_from_tower_toml(spore_path)?
+            Self::extract_node_id_from_tower_toml(spore_path)?
         };
 
         let mut binary_verifications = Vec::new();
@@ -131,7 +128,7 @@ impl SporeVerifier {
             };
 
             let verification = if binary_path.exists() {
-                let actual_sha256 = self.compute_sha256(&binary_path)?;
+                let actual_sha256 = Self::compute_sha256(&binary_path)?;
 
                 let status = if actual_sha256 == expected_binary.sha256 {
                     VerificationStatus::Fresh
@@ -140,12 +137,10 @@ impl SporeVerifier {
                     // Check if spore manifest has version info
                     if let Some(ref manifest) = spore_manifest {
                         if let Some(spore_binary) = manifest.binaries.get(key) {
-                            if spore_binary.version < expected_binary.version {
-                                VerificationStatus::Stale
-                            } else if spore_binary.version > expected_binary.version {
-                                VerificationStatus::Newer
-                            } else {
-                                VerificationStatus::Modified
+                            match spore_binary.version.cmp(&expected_binary.version) {
+                                std::cmp::Ordering::Less => VerificationStatus::Stale,
+                                std::cmp::Ordering::Greater => VerificationStatus::Newer,
+                                std::cmp::Ordering::Equal => VerificationStatus::Modified,
                             }
                         } else {
                             VerificationStatus::Stale
@@ -217,7 +212,7 @@ impl SporeVerifier {
     /// Verify all mounted spores
     pub fn verify_all_spores(&self) -> Result<Vec<VerificationReport>> {
         // Auto-detect mounted USB spores
-        let mount_points = self.discover_spores()?;
+        let mount_points = Self::discover_spores()?;
 
         info!("Found {} mounted spores", mount_points.len());
 
@@ -241,7 +236,7 @@ impl SporeVerifier {
     }
 
     /// Compute SHA256 hash of a file
-    fn compute_sha256(&self, path: &Path) -> Result<String> {
+    fn compute_sha256(path: &Path) -> Result<String> {
         let bytes = std::fs::read(path)
             .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
@@ -253,7 +248,7 @@ impl SporeVerifier {
     }
 
     /// Discover mounted spores by scanning /media/*
-    fn discover_spores(&self) -> Result<Vec<PathBuf>> {
+    fn discover_spores() -> Result<Vec<PathBuf>> {
         let mut spores = Vec::new();
 
         // Check common mount points
@@ -265,7 +260,7 @@ impl SporeVerifier {
                 let spore_candidate = entry.path().join("biomeOS");
 
                 // Check if this looks like a biomeOS spore
-                if spore_candidate.exists() && self.is_valid_spore(&spore_candidate) {
+                if spore_candidate.exists() && Self::is_valid_spore(&spore_candidate) {
                     spores.push(spore_candidate);
                 }
             }
@@ -275,7 +270,7 @@ impl SporeVerifier {
     }
 
     /// Check if a directory is a valid biomeOS spore
-    fn is_valid_spore(&self, path: &Path) -> bool {
+    fn is_valid_spore(path: &Path) -> bool {
         // Check for key indicators: tower.toml, .family.seed, bin/, primals/
         path.join("tower.toml").exists()
             && path.join(".family.seed").exists()
@@ -284,7 +279,7 @@ impl SporeVerifier {
     }
 
     /// Extract node_id from tower.toml
-    fn extract_node_id_from_tower_toml(&self, spore_path: &Path) -> Result<String> {
+    fn extract_node_id_from_tower_toml(spore_path: &Path) -> Result<String> {
         let tower_toml_path = spore_path.join("tower.toml");
         let tower_toml_str = std::fs::read_to_string(&tower_toml_path)
             .with_context(|| format!("Failed to read tower.toml from {}", spore_path.display()))?;

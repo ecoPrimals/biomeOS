@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{watch, RwLock};
+use tokio::sync::{RwLock, watch};
 use tracing::{debug, info, warn};
 
 use crate::events::{GraphEvent, GraphEventBroadcaster};
@@ -69,6 +69,10 @@ impl TickClock {
     }
 
     /// Advance the clock by real elapsed time. Returns how many ticks should run.
+    #[expect(
+        clippy::expect_used,
+        reason = "accumulator > max_accumulator in this branch"
+    )]
     pub fn advance(&mut self) -> u32 {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_advance);
@@ -76,7 +80,11 @@ impl TickClock {
 
         self.accumulator += elapsed;
         if self.accumulator > self.max_accumulator {
-            let skipped = (self.accumulator - self.max_accumulator).as_secs_f64()
+            let skipped = self
+                .accumulator
+                .checked_sub(self.max_accumulator)
+                .expect("accumulator > max_accumulator in this branch")
+                .as_secs_f64()
                 / self.tick_duration.as_secs_f64();
             if skipped > 1.0 {
                 warn!(
@@ -250,6 +258,7 @@ impl ContinuousExecutor {
     ///
     /// `cmd_rx` receives [`SessionCommand`]s for pause/resume/stop.
     /// `node_executor` is called for each node on each tick to do actual work.
+    #[allow(clippy::too_many_lines)]
     pub async fn run<F, Fut>(
         &mut self,
         mut cmd_rx: tokio::sync::mpsc::Receiver<SessionCommand>,
@@ -347,8 +356,7 @@ impl ContinuousExecutor {
 
                     let node_budget = node
                         .budget_ms
-                        .map(|ms| Duration::from_secs_f64(ms / 1000.0))
-                        .unwrap_or(budget_warning);
+                        .map_or(budget_warning, |ms| Duration::from_secs_f64(ms / 1000.0));
 
                     let is_optional = node.is_optional();
                     let node_start = Instant::now();

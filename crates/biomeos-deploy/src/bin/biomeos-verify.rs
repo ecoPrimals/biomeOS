@@ -13,7 +13,7 @@ use biomeos_deploy::verify::{VerifyConfig, VmVerifier};
 use clap::Parser;
 use std::path::PathBuf;
 use tracing::{error, info};
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 #[derive(Parser, Debug)]
 #[command(name = "biomeos-verify")]

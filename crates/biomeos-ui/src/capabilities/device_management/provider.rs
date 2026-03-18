@@ -13,10 +13,12 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
-use super::types::*;
+use super::types::{
+    Device, DeviceStatus, DeviceType, ManagedPrimal, NicheTemplate, PrimalStatus, ValidationResult,
+};
 
 /// Resolve a capability to its runtime provider name via env var or taxonomy default.
-fn resolve_provider(env_var: &str, capability: CapabilityTaxonomy) -> String {
+fn resolve_provider(env_var: &str, capability: &CapabilityTaxonomy) -> String {
     std::env::var(env_var)
         .unwrap_or_else(|_| capability.default_primal().unwrap_or("unknown").to_string())
 }
@@ -79,7 +81,7 @@ impl DeviceManagementProvider {
 
         // Advertise capability via registry provider (Songbird or env-configured)
         let registry_provider =
-            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
+            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
         if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
             match registry
                 .call(
@@ -123,7 +125,7 @@ impl DeviceManagementProvider {
 
         // Update cache
         let mut cache = self.cache.write().await;
-        cache.devices = devices.clone();
+        cache.devices.clone_from(&devices);
         cache.last_update = Some(std::time::Instant::now());
 
         Ok(devices)
@@ -139,7 +141,7 @@ impl DeviceManagementProvider {
 
         // Update cache
         let mut cache = self.cache.write().await;
-        cache.primals = primals.clone();
+        cache.primals.clone_from(&primals);
         cache.last_update = Some(std::time::Instant::now());
 
         Ok(primals)
@@ -155,7 +157,7 @@ impl DeviceManagementProvider {
 
         // Try to load from storage provider (NestGate or env-configured)
         let storage_provider =
-            resolve_provider("BIOMEOS_STORAGE_PROVIDER", CapabilityTaxonomy::DataStorage);
+            resolve_provider("BIOMEOS_STORAGE_PROVIDER", &CapabilityTaxonomy::DataStorage);
         if let Ok(storage) = AtomicClient::discover(&storage_provider).await {
             match storage
                 .call(
@@ -190,13 +192,13 @@ impl DeviceManagementProvider {
 
         // Fall back to built-in templates if none loaded
         if templates.is_empty() {
-            templates = self.get_builtin_templates();
+            templates = Self::get_builtin_templates();
             debug!("📚 Using {} built-in templates", templates.len());
         }
 
         // Update cache
         let mut cache = self.cache.write().await;
-        cache.templates = templates.clone();
+        cache.templates.clone_from(&templates);
         cache.last_update = Some(std::time::Instant::now());
 
         Ok(templates)
@@ -315,7 +317,7 @@ impl DeviceManagementProvider {
 
         // Try orchestration provider as backup
         let orch_provider =
-            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
+            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
         if let Ok(orchestrator) = AtomicClient::discover(&orch_provider).await {
             match orchestrator
                 .call("orchestration.deploy_niche", config)
@@ -347,7 +349,7 @@ impl DeviceManagementProvider {
 
         // Coordinate via registry provider
         let registry_provider =
-            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
+            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
         if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
             match registry
                 .call(
@@ -365,7 +367,7 @@ impl DeviceManagementProvider {
                     // Persist assignment to storage provider
                     let storage_prov = resolve_provider(
                         "BIOMEOS_STORAGE_PROVIDER",
-                        CapabilityTaxonomy::DataStorage,
+                        &CapabilityTaxonomy::DataStorage,
                     );
                     if let Ok(storage) = AtomicClient::discover(&storage_prov).await {
                         let _ = storage
@@ -401,7 +403,7 @@ impl DeviceManagementProvider {
     ///
     /// Delegates to the templates module for standard templates.
     /// This keeps template definitions separate from provider logic.
-    pub(crate) fn get_builtin_templates(&self) -> Vec<NicheTemplate> {
+    pub(crate) fn get_builtin_templates() -> Vec<NicheTemplate> {
         super::templates::builtin_templates()
     }
 }
@@ -437,7 +439,7 @@ mod tests {
     #[test]
     fn test_get_builtin_templates() {
         let provider = DeviceManagementProvider::new("/tmp/test.sock");
-        let templates = provider.get_builtin_templates();
+        let templates = DeviceManagementProvider::get_builtin_templates();
         assert_eq!(templates.len(), 2);
         assert!(templates.iter().any(|t| t.id == "tower"));
         assert!(templates.iter().any(|t| t.id == "node"));

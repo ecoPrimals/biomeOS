@@ -66,17 +66,17 @@ pub mod option_bytes_serde {
 
     /// Deserialize `Option<Bytes>` from optional base64 string.
     pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Bytes>, D::Error> {
+        use base64::Engine;
         let opt: Option<String> = Option::deserialize(d)?;
-        match opt {
-            Some(encoded) => {
-                use base64::Engine;
+        opt.map_or_else(
+            || Ok(None),
+            |encoded| {
                 base64::engine::general_purpose::STANDARD
                     .decode(&encoded)
                     .map(|v| Some(Bytes::from(v)))
                     .map_err(serde::de::Error::custom)
-            }
-            None => Ok(None),
-        }
+            },
+        )
     }
 }
 
@@ -303,12 +303,12 @@ pub const PROTOCOL_ENV_VAR: &str = "IPC_PROTOCOL";
 #[must_use]
 pub fn protocol_from_env() -> ProtocolPreference {
     match std::env::var(PROTOCOL_ENV_VAR).as_deref() {
-        Ok("jsonrpc") | Ok("json-rpc") => ProtocolPreference::JsonRpcOnly,
+        Ok("jsonrpc" | "json-rpc") => ProtocolPreference::JsonRpcOnly,
         Ok("tarpc") => ProtocolPreference::TarpcOnly,
         Ok("prefer-jsonrpc") => ProtocolPreference::PreferJsonRpc,
         Ok("prefer-tarpc") => ProtocolPreference::PreferTarpc,
         // "auto" and any unrecognized value default to Auto
-        Ok("auto") | Ok(_) | Err(_) => ProtocolPreference::Auto,
+        Ok("auto" | _) | Err(_) => ProtocolPreference::Auto,
     }
 }
 

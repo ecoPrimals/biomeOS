@@ -167,10 +167,12 @@ mod tests {
         );
         assert_eq!(config.family_id, "discovery-family");
         assert_eq!(config.graphs_dir, PathBuf::from("g"));
-        assert!(config
-            .socket_path
-            .to_string_lossy()
-            .contains("discovery-family"));
+        assert!(
+            config
+                .socket_path
+                .to_string_lossy()
+                .contains("discovery-family")
+        );
     }
 
     #[test]
@@ -182,10 +184,12 @@ mod tests {
             Some("discovery-family"),
         );
         assert_eq!(config.family_id, "explicit-family");
-        assert!(config
-            .socket_path
-            .to_string_lossy()
-            .contains("explicit-family"));
+        assert!(
+            config
+                .socket_path
+                .to_string_lossy()
+                .contains("explicit-family")
+        );
     }
 
     #[test]

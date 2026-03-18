@@ -43,6 +43,10 @@ use std::path::{Path, PathBuf};
 /// 4. Creates minimal mocks only if NOTHING exists
 ///
 /// For isolated testing, prefer `setup_test_binaries_at()` instead.
+#[expect(
+    clippy::unwrap_used,
+    reason = "test setup: known path structure from CARGO_MANIFEST_DIR"
+)]
 pub fn setup_test_binaries() -> SporeResult<PathBuf> {
     let project_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -75,11 +79,14 @@ pub fn setup_test_binaries() -> SporeResult<PathBuf> {
     }
 
     // Check primals - we need at least one primal binary (file, not directory)
-    let has_primal_binary = primals_dir.read_dir()?.filter_map(|e| e.ok()).any(|entry| {
-        let path = entry.path();
-        // Count files that are executable binaries (not directories, not dotfiles)
-        path.is_file() && !entry.file_name().to_string_lossy().starts_with('.')
-    });
+    let has_primal_binary = primals_dir
+        .read_dir()?
+        .filter_map(std::result::Result::ok)
+        .any(|entry| {
+            let path = entry.path();
+            // Count files that are executable binaries (not directories, not dotfiles)
+            path.is_file() && !entry.file_name().to_string_lossy().starts_with('.')
+        });
 
     if !has_primal_binary {
         // No primal binaries found - create minimal mocks
@@ -160,6 +167,10 @@ pub fn setup_test_binaries_at(base_dir: &Path) -> SporeResult<PathBuf> {
 ///
 /// Only removes files that contain "Mock" to avoid deleting real binaries.
 /// Safe to call even if no mock binaries exist.
+#[expect(
+    clippy::unwrap_used,
+    reason = "test setup: known path structure from CARGO_MANIFEST_DIR"
+)]
 pub fn cleanup_test_binaries() -> SporeResult<()> {
     let project_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()

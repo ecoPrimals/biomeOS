@@ -251,9 +251,11 @@ mod tests {
     #[test]
     fn test_btsp_session_id_missing() {
         let response = json!({ "error": "tunnel establishment failed" });
-        assert!(response
-            .get("session_id")
-            .and_then(|s| s.as_str())
-            .is_none());
+        assert!(
+            response
+                .get("session_id")
+                .and_then(|s| s.as_str())
+                .is_none()
+        );
     }
 }

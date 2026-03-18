@@ -12,9 +12,8 @@ fn parse_net_dev(content: &str) -> Vec<(String, u64, u64, u64, u64)> {
     let mut out = Vec::new();
     for line in content.lines().skip(2) {
         // Format: "  eth0: bytes packets ..."
-        let colon = match line.find(':') {
-            Some(i) => i,
-            None => continue,
+        let Some(colon) = line.find(':') else {
+            continue;
         };
         let name = line[..colon].trim().to_string();
         let rest = line[colon + 1..].trim();
@@ -109,12 +108,11 @@ pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
 
         let status = fs::read_to_string(format!("/sys/class/net/{name}/operstate"))
             .ok()
-            .map(|s| match s.trim() {
+            .map_or(NetworkInterfaceStatus::Unknown, |s| match s.trim() {
                 "up" => NetworkInterfaceStatus::Up,
                 "down" => NetworkInterfaceStatus::Down,
                 _ => NetworkInterfaceStatus::Unknown,
-            })
-            .unwrap_or(NetworkInterfaceStatus::Unknown);
+            });
 
         let mac_address = fs::read_to_string(format!("/sys/class/net/{name}/address"))
             .ok()

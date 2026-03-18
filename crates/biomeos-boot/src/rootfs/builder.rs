@@ -4,6 +4,7 @@
 //! Root filesystem builder
 
 use anyhow::{Context, Result};
+use std::fmt::Write;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -37,7 +38,7 @@ impl RootFsBuilder {
 
         let mount_point = self.mount_image()?;
 
-        self.install_base_system(&mount_point)?;
+        Self::install_base_system(&mount_point)?;
         self.install_biomeos(&mount_point).await?;
 
         if let Some(primals_dir) = &self.config.primals_dir {
@@ -45,11 +46,11 @@ impl RootFsBuilder {
         }
 
         if let Some(services_dir) = &self.config.services_dir {
-            self.install_services(&mount_point, services_dir)?;
+            Self::install_services(&mount_point, services_dir)?;
         }
 
         self.configure_system(&mount_point)?;
-        self.unmount_image(&mount_point)?;
+        Self::unmount_image(&mount_point)?;
 
         info!("✅ Root filesystem built: {}", self.config.output.display());
         Ok(self.config.output.clone())
@@ -133,7 +134,7 @@ impl RootFsBuilder {
     }
 
     /// Unmount the filesystem and detach NBD
-    fn unmount_image(&self, mount_point: &Path) -> Result<()> {
+    fn unmount_image(mount_point: &Path) -> Result<()> {
         info!("📤 Unmounting filesystem...");
 
         let status = Command::new("umount")
@@ -169,7 +170,7 @@ impl RootFsBuilder {
     }
 
     /// Install base system (minimal Linux userspace)
-    fn install_base_system(&self, root: &Path) -> Result<()> {
+    fn install_base_system(root: &Path) -> Result<()> {
         info!("🌱 Installing base system...");
 
         let dirs = [
@@ -196,14 +197,14 @@ impl RootFsBuilder {
             std::fs::create_dir_all(root.join(dir))?;
         }
 
-        self.install_busybox(root)?;
+        Self::install_busybox(root)?;
 
         info!("  ✓ Base system installed");
         Ok(())
     }
 
     /// Install BusyBox for minimal Linux userspace
-    fn install_busybox(&self, root: &Path) -> Result<()> {
+    fn install_busybox(root: &Path) -> Result<()> {
         let busybox_path = which::which("busybox")
             .context("BusyBox not found - install with: apt install busybox-static")?;
 
@@ -308,7 +309,7 @@ impl RootFsBuilder {
         Ok(())
     }
 
-    pub(crate) fn install_services(&self, root: &Path, services_dir: &Path) -> Result<()> {
+    pub(crate) fn install_services(root: &Path, services_dir: &Path) -> Result<()> {
         info!("⚙️  Installing systemd services...");
 
         if !services_dir.exists() {
@@ -328,9 +329,8 @@ impl RootFsBuilder {
             let path = entry.path();
 
             if path.is_file() && path.extension().is_some_and(|ext| ext == "service") {
-                let filename = match path.file_name() {
-                    Some(f) => f,
-                    None => continue,
+                let Some(filename) = path.file_name() else {
+                    continue;
                 };
                 let dest = systemd_dir.join(filename);
 
@@ -378,7 +378,7 @@ impl RootFsBuilder {
         let dns_servers = if let Some(ref servers) = self.config.dns_servers {
             servers.clone()
         } else {
-            self.discover_system_dns()?
+            Self::discover_system_dns()?
         };
 
         if dns_servers.is_empty() {
@@ -388,7 +388,8 @@ impl RootFsBuilder {
 
         let mut content = String::new();
         for server in &dns_servers {
-            content.push_str(&format!("nameserver {server}\n"));
+            writeln!(content, "nameserver {server}")
+                .map_err(|e| anyhow::anyhow!("Failed to write DNS config: {e}"))?;
         }
 
         std::fs::write(&resolv_conf, content)?;
@@ -398,7 +399,7 @@ impl RootFsBuilder {
     }
 
     /// Discover DNS servers from system
-    pub(super) fn discover_system_dns(&self) -> Result<Vec<String>> {
+    pub(super) fn discover_system_dns() -> Result<Vec<String>> {
         let system_resolv = std::fs::read_to_string("/etc/resolv.conf")
             .context("Failed to read /etc/resolv.conf")?;
 

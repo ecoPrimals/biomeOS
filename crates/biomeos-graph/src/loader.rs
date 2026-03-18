@@ -8,7 +8,7 @@
 
 use std::path::Path;
 
-use crate::{error::GraphError, graph::DeploymentGraph, validation::GraphValidator, Result};
+use crate::{Result, error::GraphError, graph::DeploymentGraph, validation::GraphValidator};
 
 /// Loads and validates deployment graphs.
 pub struct GraphLoader {
@@ -65,9 +65,8 @@ impl GraphLoader {
     fn parse_and_validate(&self, content: &str, source: Option<&Path>) -> Result<DeploymentGraph> {
         // Step 1: Parse TOML into typed struct
         let graph: DeploymentGraph = toml::from_str(content).map_err(|e| {
-            let location = source
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|| "<string>".to_string());
+            let location =
+                source.map_or_else(|| "<string>".to_string(), |p| p.display().to_string());
             GraphError::Parse(format!("Failed to parse {location} as graph: {e}"))
         })?;
 

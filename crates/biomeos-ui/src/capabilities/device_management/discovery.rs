@@ -12,7 +12,7 @@ use biomeos_types::JsonRpcRequest;
 use tracing::info;
 use tracing::warn;
 
-use super::types::*;
+use super::types::{Device, DeviceStatus, DeviceType, ManagedPrimal, PrimalStatus};
 
 /// Discover all devices from the system (GPU, CPU, storage, network).
 pub async fn discover_devices() -> Result<Vec<Device>> {
@@ -60,10 +60,10 @@ pub async fn discover_gpus() -> Result<Vec<Device>> {
 
                 let pci_id = entry.file_name().to_string_lossy().to_string();
                 let mem_path = format!("/sys/bus/pci/devices/{pci_id}/mem_info_vram_total");
-                if let Ok(mem_str) = tokio::fs::read_to_string(&mem_path).await {
-                    if let Ok(bytes) = mem_str.trim().parse::<u64>() {
-                        memory_total_mb = bytes / (1024 * 1024);
-                    }
+                if let Ok(mem_str) = tokio::fs::read_to_string(&mem_path).await
+                    && let Ok(bytes) = mem_str.trim().parse::<u64>()
+                {
+                    memory_total_mb = bytes / (1024 * 1024);
                 }
 
                 gpus.push(Device {
@@ -167,11 +167,8 @@ pub async fn discover_storage() -> Result<Vec<Device>> {
                 let mount_point = parts[1];
 
                 if source.starts_with("/dev/") {
-                    let (size_str, used_str, usage) = statvfs_info(mount_point).unwrap_or((
-                        "unknown".to_string(),
-                        "unknown".to_string(),
-                        0.0,
-                    ));
+                    let (size_str, used_str, usage) = statvfs_info(mount_point)
+                        .unwrap_or_else(|| ("unknown".to_string(), "unknown".to_string(), 0.0));
 
                     storage.push(Device {
                         id: format!("storage-{idx}"),
@@ -271,31 +268,33 @@ pub async fn discover_primals() -> Result<Vec<ManagedPrimal>> {
 
     if let Ok(mut entries) = tokio::fs::read_dir(&socket_dir).await {
         while let Ok(Some(entry)) = entries.next_entry().await {
-            if let Some(name) = entry.file_name().to_str() {
-                if name.ends_with(".sock") {
-                    let socket_path = format!("{socket_dir}/{name}");
+            if let Some(name) = entry.file_name().to_str()
+                && std::path::Path::new(name)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+            {
+                let socket_path = format!("{socket_dir}/{name}");
 
-                    let primal_name = query_primal_identity(&socket_path).await;
-                    let primal_id = primal_name.to_lowercase();
+                let primal_name = query_primal_identity(&socket_path).await;
+                let primal_id = primal_name.to_lowercase();
 
-                    let (health, load, status) = probe_primal_health(&socket_path).await;
+                let (health, load, status) = probe_primal_health(&socket_path).await;
 
-                    let capabilities = get_primal_capabilities(&socket_path).await;
+                let capabilities = get_primal_capabilities(&socket_path).await;
 
-                    primals.push(ManagedPrimal {
-                        id: primal_id.clone(),
-                        name: primal_name,
-                        status,
-                        health,
-                        load,
-                        capabilities,
-                        assigned_devices: vec![],
-                        metadata: serde_json::json!({
-                            "socket": name,
-                            "discovered_at": chrono::Utc::now().to_rfc3339()
-                        }),
-                    });
-                }
+                primals.push(ManagedPrimal {
+                    id: primal_id.clone(),
+                    name: primal_name,
+                    status,
+                    health,
+                    load,
+                    capabilities,
+                    assigned_devices: vec![],
+                    metadata: serde_json::json!({
+                        "socket": name,
+                        "discovered_at": chrono::Utc::now().to_rfc3339()
+                    }),
+                });
             }
         }
     }
@@ -357,10 +356,10 @@ pub async fn query_primal_identity(socket_path: &str) -> String {
     .await
     {
         Ok(Ok(_)) => {
-            if let Ok(response) = serde_json::from_str::<serde_json::Value>(&response_line) {
-                if let Some(name) = response["result"]["name"].as_str() {
-                    return name.to_string();
-                }
+            if let Ok(response) = serde_json::from_str::<serde_json::Value>(&response_line)
+                && let Some(name) = response["result"]["name"].as_str()
+            {
+                return name.to_string();
             }
             warn!("Invalid identity response from {}", socket_path);
             "unknown".to_string()
@@ -381,9 +380,8 @@ pub async fn probe_primal_health(socket_path: &str) -> (f64, f64, PrimalStatus) 
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixStream;
 
-    let stream = match UnixStream::connect(socket_path).await {
-        Ok(s) => s,
-        Err(_) => return (0.0, 1.0, PrimalStatus::Offline),
+    let Ok(stream) = UnixStream::connect(socket_path).await else {
+        return (0.0, 1.0, PrimalStatus::Offline);
     };
 
     let request = JsonRpcRequest::new("health.check", serde_json::json!({}));
@@ -417,7 +415,6 @@ pub async fn probe_primal_health(socket_path: &str) -> (f64, f64, PrimalStatus) 
                 let status_str = response["result"]["status"].as_str().unwrap_or("healthy");
 
                 let status = match status_str {
-                    "healthy" | "ok" => PrimalStatus::Healthy,
                     "degraded" | "unhealthy" => PrimalStatus::Degraded,
                     "offline" => PrimalStatus::Offline,
                     _ => PrimalStatus::Healthy,
@@ -473,13 +470,13 @@ pub async fn get_primal_capabilities(socket_path: &str) -> Vec<String> {
     .await
     {
         Ok(Ok(_)) => {
-            if let Ok(response) = serde_json::from_str::<serde_json::Value>(&response_line) {
-                if let Some(caps) = response["result"]["capabilities"].as_array() {
-                    return caps
-                        .iter()
-                        .filter_map(|v| v.as_str().map(String::from))
-                        .collect();
-                }
+            if let Ok(response) = serde_json::from_str::<serde_json::Value>(&response_line)
+                && let Some(caps) = response["result"]["capabilities"].as_array()
+            {
+                return caps
+                    .iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect();
             }
             warn!("Invalid capabilities response from {}", socket_path);
             vec![]

@@ -201,6 +201,7 @@ impl VmFederationManager {
     /// Discover IP addresses of VMs in a federation
     ///
     /// Uses virsh to query DHCP leases for federation VMs.
+    #[allow(clippy::unused_self)]
     fn discover_vm_ips(&self, federation_name: &str) -> Result<Vec<String>> {
         // Query libvirt for VMs matching our federation
         let output = Command::new("virsh")

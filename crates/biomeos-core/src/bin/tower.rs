@@ -142,6 +142,7 @@ fn cleanup_pid_file() {
 }
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
@@ -189,7 +190,7 @@ async fn main() -> Result<()> {
                 info!("✅ Discovered {} primals", discovered.len());
 
                 for metadata in discovered {
-                    let primal = metadata_to_primal(metadata)?;
+                    let primal = metadata_to_primal(&metadata)?;
                     all_primals.push(primal);
                 }
             }
@@ -523,12 +524,11 @@ async fn main() -> Result<()> {
 
                                         if let Ok(entries) = std::fs::read_dir(&socket_dir) {
                                             let sockets: Vec<_> = entries
-                                                .filter_map(|e| e.ok())
+                                                .filter_map(std::result::Result::ok)
                                                 .filter(|e| {
                                                     e.path()
                                                         .extension()
-                                                        .map(|x| x == "sock")
-                                                        .unwrap_or(false)
+                                                        .is_some_and(|x| x == "sock")
                                                 })
                                                 .collect();
 
@@ -629,7 +629,7 @@ async fn main() -> Result<()> {
 }
 
 // Helper: Convert PrimalMetadata to ManagedPrimal
-fn metadata_to_primal(metadata: PrimalMetadata) -> Result<Arc<dyn biomeos_core::ManagedPrimal>> {
+fn metadata_to_primal(metadata: &PrimalMetadata) -> Result<Arc<dyn biomeos_core::ManagedPrimal>> {
     use biomeos_core::PrimalBuilder;
 
     let provides: Vec<Capability> = metadata
@@ -670,7 +670,7 @@ async fn config_to_primal(
                         .binary
                         .file_stem()
                         .and_then(|s| s.to_str())
-                        .map(|s| s.to_string())
+                        .map(std::string::ToString::to_string)
                 })
                 .unwrap_or_else(|| "unknown".to_string());
 

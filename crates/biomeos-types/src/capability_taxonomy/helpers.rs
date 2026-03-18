@@ -11,6 +11,7 @@
 ///
 /// **DEEP DEBT NOTE**: This is a bootstrap-time hint. In production,
 /// primals should self-report capabilities via `discover_capabilities`.
+#[must_use]
 pub fn capabilities_for_primal(primal_name: &str) -> Vec<String> {
     match primal_name {
         "beardog" => vec!["crypto".to_string(), "security".to_string()],

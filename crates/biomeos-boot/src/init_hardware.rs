@@ -70,7 +70,7 @@ impl Architecture {
 ///
 /// Returns an error if hardware detection fails.
 pub async fn detect() -> Result<HardwareInfo> {
-    let _ = tokio::task::yield_now().await;
+    let () = tokio::task::yield_now().await;
 
     #[cfg(target_os = "linux")]
     let (cpu_count, total_memory_gb) = {

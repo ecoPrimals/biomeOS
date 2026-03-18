@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 // ─── Core Types ──────────────────────────────────────────────────────────
 
 /// Bond type between gates (from NUCLEUS_BONDING_MODEL)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum BondType {
     /// Shared family seed, genetic trust, zero metering
     Covalent,

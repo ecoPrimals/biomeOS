@@ -8,7 +8,7 @@
 
 #![deny(unsafe_code)]
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};

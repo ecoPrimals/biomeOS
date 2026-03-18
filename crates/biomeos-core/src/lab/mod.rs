@@ -43,8 +43,7 @@ impl LabManager {
             // We're in biomeOS root, go up one level and into benchscale
             current
                 .parent()
-                .map(|p| p.join("benchscale"))
-                .unwrap_or_else(|| current.join("../benchscale"))
+                .map_or_else(|| current.join("../benchscale"), |p| p.join("benchscale"))
         } else {
             // Try to find it relative to cargo manifest dir
             // Use safe navigation with fallback
@@ -52,9 +51,7 @@ impl LabManager {
             manifest_path
                 .parent() // crates/
                 .and_then(|p| p.parent()) // biomeOS/
-                .and_then(|p| p.parent()) // phase2/
-                .map(|p| p.join("benchscale"))
-                .unwrap_or_else(|| PathBuf::from("benchscale"))
+                .and_then(|p| p.parent()).map_or_else(|| PathBuf::from("benchscale"), |p| p.join("benchscale"))
         };
         Self { benchscale_root }
     }

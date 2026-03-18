@@ -35,7 +35,7 @@ mod run {
         let config = RootFsConfig::default();
         let builder = RootFsBuilder::new(config);
 
-        let dns_servers = builder.discover_system_dns();
+        let dns_servers = RootFsBuilder::discover_system_dns();
         if let Ok(servers) = dns_servers {
             for server in servers {
                 assert!(!server.is_empty());
@@ -318,7 +318,7 @@ nameserver 10.0.0.1
             ..Default::default()
         };
         let builder = RootFsBuilder::new(config);
-        builder.install_services(&root, services_dir).unwrap();
+        RootFsBuilder::install_services(&root, services_dir).unwrap();
 
         assert!(root.join("etc/systemd/system/real.service").exists());
         assert!(!root.join("etc/systemd/system/not-a-service.txt").exists());
@@ -337,7 +337,7 @@ nameserver 10.0.0.1
             ..Default::default()
         };
         let builder = RootFsBuilder::new(config);
-        builder.install_services(&root, services_dir).unwrap();
+        RootFsBuilder::install_services(&root, services_dir).unwrap();
     }
 
     #[tokio::test]

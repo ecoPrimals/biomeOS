@@ -38,11 +38,11 @@ pub struct ActionHandler;
 
 /// Context for device assignment coordination (bundles primal clients)
 struct DeviceAssignmentCtx<'a> {
-    petaltongue: &'a Option<PetalTongueClient>,
-    songbird: &'a Option<SongbirdClient>,
-    beardog: &'a Option<BearDogClient>,
-    nestgate: &'a Option<NestGateClient>,
-    toadstool: &'a Option<ToadStoolClient>,
+    petaltongue: Option<&'a PetalTongueClient>,
+    songbird: Option<&'a SongbirdClient>,
+    beardog: Option<&'a BearDogClient>,
+    nestgate: Option<&'a NestGateClient>,
+    toadstool: Option<&'a ToadStoolClient>,
 }
 
 impl ActionHandler {
@@ -72,40 +72,49 @@ impl ActionHandler {
                 primal_id,
             } => {
                 let ctx = DeviceAssignmentCtx {
-                    petaltongue: &petaltongue,
-                    songbird: &songbird,
-                    beardog: &beardog,
-                    nestgate: &nestgate,
-                    toadstool: &toadstool,
+                    petaltongue: petaltongue.as_ref(),
+                    songbird: songbird.as_ref(),
+                    beardog: beardog.as_ref(),
+                    nestgate: nestgate.as_ref(),
+                    toadstool: toadstool.as_ref(),
                 };
                 Self::handle_assign_device(&device_id, &primal_id, family_id, &ctx).await
             }
 
             UserAction::UnassignDevice { device_id } => {
-                Self::handle_unassign_device(&device_id, &songbird, &nestgate, &petaltongue).await
+                Self::handle_unassign_device(
+                    &device_id,
+                    songbird.as_ref(),
+                    nestgate.as_ref(),
+                    petaltongue.as_ref(),
+                )
+                .await
             }
 
             UserAction::StartPrimal { primal_name } => {
-                Self::handle_start_primal(&primal_name, &toadstool).await
+                Self::handle_start_primal(&primal_name, toadstool.as_ref()).await
             }
 
             UserAction::StopPrimal { primal_id } => {
-                Self::handle_stop_primal(&primal_id, &toadstool).await
+                Self::handle_stop_primal(&primal_id, toadstool.as_ref()).await
             }
 
             UserAction::RestartPrimal { primal_id } => {
-                Self::handle_restart_primal(&primal_id, &toadstool).await
+                Self::handle_restart_primal(&primal_id, toadstool.as_ref()).await
             }
 
             UserAction::AcceptSuggestion { suggestion_id } => {
-                Self::handle_accept_suggestion(&suggestion_id, family_id, &squirrel).await
+                Self::handle_accept_suggestion(&suggestion_id, family_id, squirrel.as_ref()).await
             }
 
             UserAction::DismissSuggestion { suggestion_id } => {
-                Self::handle_dismiss_suggestion(&suggestion_id, family_id, &squirrel).await
+                Self::handle_dismiss_suggestion(&suggestion_id, family_id, squirrel.as_ref()).await
             }
 
-            UserAction::Refresh => Self::handle_refresh(&songbird, &toadstool, &petaltongue).await,
+            UserAction::Refresh => {
+                Self::handle_refresh(songbird.as_ref(), toadstool.as_ref(), petaltongue.as_ref())
+                    .await
+            }
         }
     }
 
@@ -121,6 +130,10 @@ impl ActionHandler {
     /// 4. **Songbird**: Register assignment (service registry)
     /// 5. **NestGate**: Persist assignment (recovery after restart)
     /// 6. **petalTongue**: Update UI (visual feedback)
+    #[expect(
+        clippy::too_many_lines,
+        reason = "orchestrates 6-phase device assignment across primals"
+    )]
     async fn handle_assign_device(
         device_id: &str,
         primal_id: &str,
@@ -254,7 +267,7 @@ impl ActionHandler {
     /// Creates the assignment record in the service registry.
     /// Returns assignment ID for tracking.
     async fn register_assignment(
-        songbird: &Option<SongbirdClient>,
+        songbird: Option<&SongbirdClient>,
         device_id: &str,
         primal_id: &str,
     ) -> Result<String> {
@@ -275,8 +288,10 @@ impl ActionHandler {
                     let assignment_id = result
                         .get("assignment_id")
                         .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| format!("songbird-{device_id}-{primal_id}"));
+                        .map_or_else(
+                            || format!("songbird-{device_id}-{primal_id}"),
+                            std::string::ToString::to_string,
+                        );
                     info!("✅ Registered via Songbird: {}", assignment_id);
                     return Ok(assignment_id);
                 }
@@ -294,9 +309,9 @@ impl ActionHandler {
     /// Handle device unassignment
     async fn handle_unassign_device(
         device_id: &str,
-        songbird: &Option<SongbirdClient>,
-        nestgate: &Option<NestGateClient>,
-        petaltongue: &Option<PetalTongueClient>,
+        songbird: Option<&SongbirdClient>,
+        nestgate: Option<&NestGateClient>,
+        petaltongue: Option<&PetalTongueClient>,
     ) -> Result<ActionResult> {
         info!("Unassigning device {}", device_id);
 
@@ -328,7 +343,7 @@ impl ActionHandler {
     /// Handle primal start
     async fn handle_start_primal(
         primal_name: &str,
-        toadstool: &Option<ToadStoolClient>,
+        toadstool: Option<&ToadStoolClient>,
     ) -> Result<ActionResult> {
         info!("Starting primal {}", primal_name);
 
@@ -341,7 +356,10 @@ impl ActionHandler {
                 .await
             {
                 Ok(result) => {
-                    let pid = result.get("pid").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let pid = result
+                        .get("pid")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0);
                     info!("✅ Primal {} started with PID {}", primal_name, pid);
                     return Ok(ActionResult::success(format!(
                         "Primal {primal_name} started (PID: {pid})"
@@ -364,7 +382,7 @@ impl ActionHandler {
     /// Handle primal stop
     async fn handle_stop_primal(
         primal_id: &str,
-        toadstool: &Option<ToadStoolClient>,
+        toadstool: Option<&ToadStoolClient>,
     ) -> Result<ActionResult> {
         info!("Stopping primal {}", primal_id);
 
@@ -397,7 +415,7 @@ impl ActionHandler {
     /// Handle primal restart
     async fn handle_restart_primal(
         primal_id: &str,
-        toadstool: &Option<ToadStoolClient>,
+        toadstool: Option<&ToadStoolClient>,
     ) -> Result<ActionResult> {
         info!("Restarting primal {}", primal_id);
 
@@ -410,7 +428,10 @@ impl ActionHandler {
                 .await
             {
                 Ok(result) => {
-                    let new_pid = result.get("pid").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let new_pid = result
+                        .get("pid")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0);
                     info!("✅ Primal {} restarted with PID {}", primal_id, new_pid);
                     return Ok(ActionResult::success(format!(
                         "Primal {primal_id} restarted (new PID: {new_pid})"
@@ -434,7 +455,7 @@ impl ActionHandler {
     async fn handle_accept_suggestion(
         suggestion_id: &str,
         family_id: &str,
-        squirrel: &Option<SquirrelClient>,
+        squirrel: Option<&SquirrelClient>,
     ) -> Result<ActionResult> {
         info!("Accepting suggestion {}", suggestion_id);
 
@@ -467,7 +488,7 @@ impl ActionHandler {
     async fn handle_dismiss_suggestion(
         suggestion_id: &str,
         family_id: &str,
-        squirrel: &Option<SquirrelClient>,
+        squirrel: Option<&SquirrelClient>,
     ) -> Result<ActionResult> {
         info!("Dismissing suggestion {}", suggestion_id);
 
@@ -498,9 +519,9 @@ impl ActionHandler {
 
     /// Handle UI refresh
     async fn handle_refresh(
-        songbird: &Option<SongbirdClient>,
-        toadstool: &Option<ToadStoolClient>,
-        petaltongue: &Option<PetalTongueClient>,
+        songbird: Option<&SongbirdClient>,
+        toadstool: Option<&ToadStoolClient>,
+        petaltongue: Option<&PetalTongueClient>,
     ) -> Result<ActionResult> {
         info!("Refreshing UI state");
 
@@ -562,7 +583,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_start_primal_no_toadstool() {
-        let result = ActionHandler::handle_start_primal("beardog", &None).await;
+        let result = ActionHandler::handle_start_primal("beardog", None).await;
 
         assert!(result.is_ok());
         let action_result = result.unwrap();
@@ -571,7 +592,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_stop_primal_no_toadstool() {
-        let result = ActionHandler::handle_stop_primal("primal-123", &None).await;
+        let result = ActionHandler::handle_stop_primal("primal-123", None).await;
 
         assert!(result.is_ok());
         let action_result = result.unwrap();
@@ -580,7 +601,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_restart_primal_no_toadstool() {
-        let result = ActionHandler::handle_restart_primal("primal-456", &None).await;
+        let result = ActionHandler::handle_restart_primal("primal-456", None).await;
 
         assert!(result.is_ok());
         let action_result = result.unwrap();
@@ -590,7 +611,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_accept_suggestion_no_squirrel() {
         let result =
-            ActionHandler::handle_accept_suggestion("suggestion-001", "family-123", &None).await;
+            ActionHandler::handle_accept_suggestion("suggestion-001", "family-123", None).await;
 
         assert!(result.is_ok());
         let action_result = result.unwrap();
@@ -601,7 +622,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_dismiss_suggestion_no_squirrel() {
         let result =
-            ActionHandler::handle_dismiss_suggestion("suggestion-002", "family-123", &None).await;
+            ActionHandler::handle_dismiss_suggestion("suggestion-002", "family-123", None).await;
 
         assert!(result.is_ok());
         let action_result = result.unwrap();
@@ -611,7 +632,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_unassign_device_no_clients() {
-        let result = ActionHandler::handle_unassign_device("device-123", &None, &None, &None).await;
+        let result = ActionHandler::handle_unassign_device("device-123", None, None, None).await;
 
         assert!(result.is_ok());
         let action_result = result.unwrap();
@@ -620,7 +641,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_refresh_no_clients() {
-        let result = ActionHandler::handle_refresh(&None, &None, &None).await;
+        let result = ActionHandler::handle_refresh(None, None, None).await;
 
         assert!(result.is_ok());
         let action_result = result.unwrap();
@@ -629,7 +650,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_assignment_no_songbird() {
-        let result = ActionHandler::register_assignment(&None, "device-001", "primal-001").await;
+        let result = ActionHandler::register_assignment(None, "device-001", "primal-001").await;
 
         assert!(result.is_ok());
         let assignment_id = result.unwrap();
@@ -781,7 +802,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_assignment_songbird_returns_fallback_id() {
-        let result = ActionHandler::register_assignment(&None, "device-001", "primal-001").await;
+        let result = ActionHandler::register_assignment(None, "device-001", "primal-001").await;
         assert!(result.is_ok());
         let id = result.unwrap();
         assert!(id.starts_with("local-"));
@@ -845,7 +866,7 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let songbird = SongbirdClient::with_socket("songbird", &socket_path);
         let result =
-            ActionHandler::register_assignment(&Some(songbird), "device-1", "primal-1").await;
+            ActionHandler::register_assignment(Some(&songbird), "device-1", "primal-1").await;
         assert!(result.is_ok());
         let id = result.unwrap();
         assert_eq!(id, "songbird-abc-123");

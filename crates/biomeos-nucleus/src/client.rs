@@ -15,16 +15,16 @@ use std::sync::Arc;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 use tracing::{debug, info, warn};
 
 use crate::{
+    Error, Result, VerifiedPrimal,
     capability::{CapabilityLayer, CapabilityLayerImpl},
     discovery::{DiscoveryLayer, DiscoveryRequest, PhysicalDiscovery},
     identity::{IdentityLayer, IdentityLayerImpl},
     registry::Registry,
     trust::{TrustLayer, TrustLayerImpl, TrustLevel},
-    Error, Result, VerifiedPrimal,
 };
 
 /// Call a Unix socket JSON-RPC method
@@ -312,7 +312,7 @@ impl NucleusClient {
     /// or secure runtime storage. Missing seed results in reduced trust
     /// rather than failure.
     fn get_family_seed_from_storage() -> Bytes {
-        use base64::{engine::general_purpose::STANDARD, Engine};
+        use base64::{Engine, engine::general_purpose::STANDARD};
 
         // Priority 1: Environment variable (for bootstrap/testing)
         if let Ok(seed_b64) = std::env::var("BIOMEOS_FAMILY_SEED") {

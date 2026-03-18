@@ -76,8 +76,7 @@ impl ModelCache {
             .or_else(|_| std::env::var("HOSTNAME"))
             .unwrap_or_else(|_| {
                 std::fs::read_to_string("/etc/hostname")
-                    .map(|s| s.trim().to_string())
-                    .unwrap_or_else(|_| "unknown".to_string())
+                    .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string())
             });
 
         info!(
@@ -277,7 +276,7 @@ impl ModelCache {
         {
             Ok(response) => response
                 .get("exists")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false),
             Err(e) => {
                 debug!("NestGate mesh existence check failed: {}", e);
@@ -302,10 +301,10 @@ impl ModelCache {
         match result {
             Ok(response) => {
                 if let Some(data) = response.get("data") {
-                    if !data.is_null() {
-                        serde_json::from_value(data.clone()).ok()
-                    } else {
+                    if data.is_null() {
                         None
+                    } else {
+                        serde_json::from_value(data.clone()).ok()
                     }
                 } else {
                     None
@@ -320,9 +319,8 @@ impl ModelCache {
 
     /// List all models known across the mesh
     pub async fn list_mesh_models(&self) -> Vec<ModelEntry> {
-        let client = match self.nestgate.as_ref() {
-            Some(c) => c,
-            None => return vec![],
+        let Some(client) = self.nestgate.as_ref() else {
+            return vec![];
         };
 
         let result = client
@@ -381,9 +379,8 @@ impl ModelCache {
     }
 
     async fn register_with_nestgate(&self, entry: &ModelEntry) {
-        let client = match self.nestgate.as_ref() {
-            Some(c) => c,
-            None => return,
+        let Some(client) = self.nestgate.as_ref() else {
+            return;
         };
 
         let result = client
@@ -464,10 +461,17 @@ impl ModelCache {
                 if name.ends_with(".safetensors") {
                     return "safetensors".to_string();
                 }
-                if name.ends_with(".gguf") {
+                if std::path::Path::new(&name)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("gguf"))
+                {
                     return "gguf".to_string();
                 }
-                if name.ends_with(".bin") && name.contains("pytorch") {
+                if std::path::Path::new(&name)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("bin"))
+                    && name.contains("pytorch")
+                {
                     return "pytorch".to_string();
                 }
             }
@@ -493,15 +497,15 @@ impl ModelCache {
         }
 
         let mut entries: Vec<_> = std::fs::read_dir(&snapshots_dir)?
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
             .collect();
 
-        entries.sort_by_key(|e| e.file_name());
+        entries.sort_by_key(std::fs::DirEntry::file_name);
 
         entries
             .last()
-            .map(|e| e.path())
+            .map(std::fs::DirEntry::path)
             .ok_or_else(|| anyhow::anyhow!("No snapshot found in {}", snapshots_dir.display()))
     }
 }

@@ -16,8 +16,8 @@
 
 #![deny(unsafe_code)]
 
-use anyhow::{anyhow, Result};
-use serde_json::{json, Value};
+use anyhow::{Result, anyhow};
+use serde_json::{Value, json};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -529,11 +529,13 @@ mod tests {
         assert_eq!(result["to"], "primal-b");
 
         // Verify registration
-        assert!(handler
-            .graph
-            .get_connection("primal-a", "primal-b")
-            .await
-            .is_some());
+        assert!(
+            handler
+                .graph
+                .get_connection("primal-a", "primal-b")
+                .await
+                .is_some()
+        );
     }
 
     #[tokio::test]

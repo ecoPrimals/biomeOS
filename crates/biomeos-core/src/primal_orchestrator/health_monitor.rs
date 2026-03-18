@@ -90,9 +90,8 @@ impl PrimalHealthMonitor {
             return false;
         }
 
-        let stream = match UnixStream::connect(socket).await {
-            Ok(s) => s,
-            Err(_) => return false,
+        let Ok(stream) = UnixStream::connect(socket).await else {
+            return false;
         };
 
         let (reader, mut writer) = stream.into_split();

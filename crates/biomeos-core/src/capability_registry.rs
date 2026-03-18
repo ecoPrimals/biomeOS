@@ -450,6 +450,7 @@ impl CapabilityRegistry {
     }
 
     /// Handle a registry request
+    #[allow(clippy::too_many_lines)]
     async fn handle_request(&self, request: RegistryRequest) -> RegistryResponse {
         match request {
             RegistryRequest::Register {
@@ -458,7 +459,7 @@ impl CapabilityRegistry {
                 params,
             } => match PrimalId::new(&id) {
                 Ok(primal_id) => match self.register(primal_id, params).await {
-                    Ok(_) => RegistryResponse {
+                    Ok(()) => RegistryResponse {
                         request_id,
                         status: ResponseStatus::Success,
                         data: Some(serde_json::json!({
@@ -536,7 +537,7 @@ impl CapabilityRegistry {
                 primal_id,
             } => match PrimalId::new(&primal_id) {
                 Ok(id) => match self.heartbeat(&id).await {
-                    Ok(_) => RegistryResponse {
+                    Ok(()) => RegistryResponse {
                         request_id,
                         status: ResponseStatus::Success,
                         data: Some(serde_json::json!({
@@ -564,7 +565,7 @@ impl CapabilityRegistry {
                 primal_id,
             } => match PrimalId::new(&primal_id) {
                 Ok(id) => match self.unregister(&id).await {
-                    Ok(_) => RegistryResponse {
+                    Ok(()) => RegistryResponse {
                         request_id,
                         status: ResponseStatus::Success,
                         data: Some(serde_json::json!({

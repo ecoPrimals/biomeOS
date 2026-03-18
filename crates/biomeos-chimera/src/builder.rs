@@ -181,6 +181,7 @@ impl ChimeraBuilder {
     }
 
     /// Generate the chimera orchestrator Rust code
+    #[expect(clippy::expect_used, reason = "write to String cannot fail")]
     fn generate_orchestrator(&self) -> String {
         let def = &self.definition;
 
@@ -303,6 +304,7 @@ impl ComponentInstance {
     }
 
     /// Write a shell launcher script
+    #[expect(clippy::expect_used, reason = "write to String cannot fail")]
     fn write_launcher(&self, output_path: &Path, primal_paths: &[PathBuf]) -> ChimeraResult<()> {
         let def = &self.definition;
 

@@ -13,7 +13,7 @@
 //! - Uses `NeuralApiClient` for all security provider calls
 //! - Removed raw `std::os::unix::net::UnixStream` — pure async throughout
 
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};

@@ -376,7 +376,7 @@ async fn test_neural_router_concurrent_discovery() {
     for handle in handles {
         let result = handle.await;
         assert!(result.is_ok()); // Should complete
-                                 // Inner result may be Err (no primals), but should not panic
+        // Inner result may be Err (no primals), but should not panic
     }
 }
 

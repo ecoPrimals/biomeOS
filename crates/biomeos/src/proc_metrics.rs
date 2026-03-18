@@ -81,7 +81,7 @@ pub fn cpu_count() -> usize {
         }
     }
     std::thread::available_parallelism()
-        .map(|p| p.get())
+        .map(std::num::NonZero::get)
         .unwrap_or(1)
 }
 

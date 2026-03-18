@@ -75,6 +75,7 @@ impl VerifyResult {
 
     /// Get a human-readable summary
     pub fn summary(&self) -> String {
+        use std::fmt::Write;
         let mut summary = String::new();
 
         summary.push_str("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
@@ -94,17 +95,17 @@ impl VerifyResult {
         }
 
         if let Some(boot_time) = self.boot_time_ms {
-            summary.push_str(&format!("⏱️  Boot time: {boot_time}ms\n"));
+            let _ = writeln!(summary, "⏱️  Boot time: {boot_time}ms");
         }
 
         if let Some(count) = self.primal_count {
             summary.push_str("\n📦 Primal Installation Check:\n\n");
-            summary.push_str(&format!("✅ Found {count} primals\n"));
+            let _ = writeln!(summary, "✅ Found {count} primals");
 
             if !self.primals.is_empty() {
                 summary.push_str("\nPrimals:\n");
                 for primal in &self.primals {
-                    summary.push_str(&format!("  • {primal}\n"));
+                    let _ = writeln!(summary, "  • {primal}");
                 }
             }
         }
@@ -157,7 +158,7 @@ impl VmVerifier {
             shell_spawned: false,
             primal_count: None,
             primals: Vec::new(),
-            log_excerpt: self.extract_excerpt(&log_content),
+            log_excerpt: Self::extract_excerpt(&log_content),
         };
 
         // Check boot success
@@ -168,7 +169,7 @@ impl VmVerifier {
             log_content.contains("Spawning shell") || log_content.contains("shell started");
 
         // Extract boot time
-        result.boot_time_ms = self.extract_boot_time(&log_content);
+        result.boot_time_ms = Self::extract_boot_time(&log_content);
 
         // Check primals if rootfs provided
         if let Some(ref rootfs_dir) = self.config.rootfs_dir {
@@ -209,7 +210,7 @@ impl VmVerifier {
     }
 
     /// Extract boot time from log
-    fn extract_boot_time(&self, log: &str) -> Option<u64> {
+    fn extract_boot_time(log: &str) -> Option<u64> {
         // Look for patterns like "BootLogger stats: 145ms" or "Boot time: 145ms"
         for line in log.lines() {
             if line.contains("BootLogger stats") || line.contains("Boot time") {
@@ -228,7 +229,7 @@ impl VmVerifier {
     }
 
     /// Extract relevant excerpt from log
-    fn extract_excerpt(&self, log: &str) -> String {
+    fn extract_excerpt(log: &str) -> String {
         // Get last 20 lines or up to 1000 chars
         let lines: Vec<&str> = log.lines().collect();
         let start = lines.len().saturating_sub(20);
@@ -297,13 +298,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_boot_time() {
-        let verifier = VmVerifier::default();
-
         let log = "Some boot output\nBootLogger stats: 145ms\nMore output";
-        assert_eq!(verifier.extract_boot_time(log), Some(145));
+        assert_eq!(VmVerifier::extract_boot_time(log), Some(145));
 
         let log2 = "Boot time: 250ms";
-        assert_eq!(verifier.extract_boot_time(log2), Some(250));
+        assert_eq!(VmVerifier::extract_boot_time(log2), Some(250));
     }
 
     #[tokio::test]

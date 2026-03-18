@@ -16,7 +16,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 
 /// Event emitted during graph execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -326,7 +326,7 @@ impl EventCollector {
                         Err(broadcast::error::RecvError::Closed) => break,
                     }
                 }
-                _ = tokio::time::sleep_until(deadline) => break,
+                () = tokio::time::sleep_until(deadline) => break,
             }
         }
 

@@ -37,7 +37,7 @@ impl Validation {
     ///
     /// Falls back to allowing the operation if Songbird is unavailable.
     pub async fn validate_device_assignment(
-        songbird: &Option<SongbirdClient>,
+        songbird: Option<&SongbirdClient>,
         device_id: &str,
         primal_id: &str,
     ) -> Result<ValidationResult> {
@@ -63,7 +63,7 @@ impl Validation {
                 Ok(result) => {
                     if result
                         .get("valid")
-                        .and_then(|v| v.as_bool())
+                        .and_then(serde_json::Value::as_bool)
                         .unwrap_or(true)
                     {
                         info!("✅ Songbird validation: Passed");
@@ -151,7 +151,7 @@ mod tests {
     #[tokio::test]
     async fn test_validation_no_songbird() {
         let result =
-            Validation::validate_device_assignment(&None, "test-device", "test-primal").await;
+            Validation::validate_device_assignment(None, "test-device", "test-primal").await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), ValidationResult::Valid);
@@ -161,7 +161,7 @@ mod tests {
     async fn test_validation_no_songbird_graceful_degradation() {
         // Tests that validation passes by default when Songbird is unavailable
         let result =
-            Validation::validate_device_assignment(&None, "device-abc-123", "primal-xyz-456").await;
+            Validation::validate_device_assignment(None, "device-abc-123", "primal-xyz-456").await;
 
         // Should succeed with graceful degradation
         assert!(result.is_ok());
@@ -226,7 +226,8 @@ mod tests {
             "songbird", &path,
         ));
         let result =
-            Validation::validate_device_assignment(&client, "test-device", "test-primal").await;
+            Validation::validate_device_assignment(client.as_ref(), "test-device", "test-primal")
+                .await;
 
         assert!(result.is_ok());
         match result.unwrap() {
@@ -242,7 +243,8 @@ mod tests {
             "songbird", &path,
         ));
         let result =
-            Validation::validate_device_assignment(&client, "test-device", "test-primal").await;
+            Validation::validate_device_assignment(client.as_ref(), "test-device", "test-primal")
+                .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), ValidationResult::Valid);
@@ -255,7 +257,8 @@ mod tests {
             "/nonexistent/songbird.sock",
         ));
         let result =
-            Validation::validate_device_assignment(&client, "test-device", "test-primal").await;
+            Validation::validate_device_assignment(client.as_ref(), "test-device", "test-primal")
+                .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), ValidationResult::Valid);

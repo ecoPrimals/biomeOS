@@ -12,8 +12,8 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 use crate::{
-    capability::CapabilityVerification, discovery::DiscoveredPrimal,
-    identity::IdentityVerification, trust::TrustEvaluation, TrustLevel, VerifiedPrimal,
+    TrustLevel, VerifiedPrimal, capability::CapabilityVerification, discovery::DiscoveredPrimal,
+    identity::IdentityVerification, trust::TrustEvaluation,
 };
 
 /// Primal information (full context)

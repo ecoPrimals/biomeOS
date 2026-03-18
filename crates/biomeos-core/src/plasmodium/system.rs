@@ -61,7 +61,7 @@ pub(crate) fn get_system_load() -> f64 {
                 .next()
                 .and_then(|load| load.parse::<f64>().ok())
         })
-        .map(|load_1m| {
+        .map_or(0.0, |load_1m| {
             let cores = num_cpus() as f64;
             if cores > 0.0 {
                 (load_1m / cores).min(1.0)
@@ -69,7 +69,6 @@ pub(crate) fn get_system_load() -> f64 {
                 0.0
             }
         })
-        .unwrap_or(0.0)
 }
 
 /// Read total system RAM from `/proc/meminfo`, in gigabytes.
@@ -85,16 +84,16 @@ pub(crate) fn get_system_ram_gb() -> u64 {
                         .and_then(|kb| kb.parse::<u64>().ok())
                 })
         })
-        .map(|kb| kb / 1_048_576) // KB to GB
-        .unwrap_or(0)
+        .map_or(0, |kb| kb / 1_048_576)
 }
 
 /// CPU core count from `/proc/cpuinfo` (no external dependency).
 pub(crate) fn num_cpus() -> usize {
     std::fs::read_to_string("/proc/cpuinfo")
         .ok()
-        .map(|s| s.lines().filter(|l| l.starts_with("processor")).count())
-        .unwrap_or(1)
+        .map_or(1, |s| {
+            s.lines().filter(|l| l.starts_with("processor")).count()
+        })
 }
 
 #[cfg(test)]

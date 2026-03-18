@@ -173,6 +173,7 @@ impl PipelineExecutor {
     /// `StreamItem::Data(Value::Null)` as its initial trigger. It should
     /// produce the actual stream items by returning them one at a time.
     /// When the source is exhausted, it returns `StreamItem::End`.
+    #[allow(clippy::too_many_lines)]
     pub async fn run<F, Fut>(self, node_executor: F) -> Result<PipelineResult, GraphError>
     where
         F: Fn(String, GraphNode, StreamItem) -> Fut + Send + Sync + 'static,
@@ -403,8 +404,7 @@ impl PipelineExecutor {
 
         let items_in = node_stats
             .get(&node_ids[0])
-            .map(|s| s.items_processed + s.items_errored)
-            .unwrap_or(0);
+            .map_or(0, |s| s.items_processed + s.items_errored);
 
         let duration_ms = start.elapsed().as_millis() as u64;
 
@@ -705,11 +705,13 @@ mod tests {
     fn test_stream_item_is_data() {
         assert!(StreamItem::Data(serde_json::json!(1)).is_data());
         assert!(!StreamItem::End.is_data());
-        assert!(!StreamItem::Error {
-            node_id: "x".into(),
-            message: "y".into()
-        }
-        .is_data());
+        assert!(
+            !StreamItem::Error {
+                node_id: "x".into(),
+                message: "y".into()
+            }
+            .is_data()
+        );
     }
 
     #[test]

@@ -500,12 +500,16 @@ async fn test_register_capabilities_with_caps() {
     assert_eq!(result["count"], 2);
     let registered = result["registered"].as_array().unwrap();
     assert_eq!(registered.len(), 2);
-    assert!(registered
-        .iter()
-        .any(|v| v.as_str() == Some("crypto.encrypt")));
-    assert!(registered
-        .iter()
-        .any(|v| v.as_str() == Some("crypto.decrypt")));
+    assert!(
+        registered
+            .iter()
+            .any(|v| v.as_str() == Some("crypto.encrypt"))
+    );
+    assert!(
+        registered
+            .iter()
+            .any(|v| v.as_str() == Some("crypto.decrypt"))
+    );
 }
 
 #[tokio::test]

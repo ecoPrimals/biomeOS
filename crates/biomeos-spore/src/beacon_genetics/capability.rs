@@ -173,7 +173,7 @@ impl DirectBeardogCaller {
     ///
     /// BearDog uses flat method names like "genetic.derive_lineage_key"
     /// while semantic capabilities might be expressed differently.
-    fn translate_capability<'a>(&self, capability: &'a str) -> &'a str {
+    fn translate_capability(capability: &str) -> &str {
         // Most capabilities map directly to BearDog methods
         // This provides a hook for future translation if needed
         capability
@@ -213,7 +213,7 @@ impl CapabilityCaller for DirectBeardogCaller {
         capability: &str,
         params: serde_json::Value,
     ) -> Result<serde_json::Value, String> {
-        let method = self.translate_capability(capability);
+        let method = Self::translate_capability(capability);
         debug!(
             "DirectBeardogCaller: calling {} (mapped from {})",
             method, capability
@@ -283,16 +283,18 @@ mod tests {
 
     #[test]
     fn test_translate_capability_passthrough() {
-        let caller = DirectBeardogCaller::new("/tmp/test.sock");
         assert_eq!(
-            caller.translate_capability("beacon.encrypt"),
+            DirectBeardogCaller::translate_capability("beacon.encrypt"),
             "beacon.encrypt"
         );
         assert_eq!(
-            caller.translate_capability("genetic.derive_lineage_key"),
+            DirectBeardogCaller::translate_capability("genetic.derive_lineage_key"),
             "genetic.derive_lineage_key"
         );
-        assert_eq!(caller.translate_capability("crypto.sign"), "crypto.sign");
+        assert_eq!(
+            DirectBeardogCaller::translate_capability("crypto.sign"),
+            "crypto.sign"
+        );
     }
 
     #[test]

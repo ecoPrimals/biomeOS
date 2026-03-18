@@ -75,8 +75,7 @@ impl Plasmodium {
             .or_else(|_| std::env::var("HOSTNAME"))
             .unwrap_or_else(|_| {
                 std::fs::read_to_string("/etc/hostname")
-                    .map(|s| s.trim().to_string())
-                    .unwrap_or_else(|_| "unknown".to_string())
+                    .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string())
             });
 
         Self {
@@ -180,12 +179,11 @@ impl Plasmodium {
                                 healthy: result
                                     .get("status")
                                     .and_then(|s| s.as_str())
-                                    .map(|s| s == "healthy")
-                                    .unwrap_or(false),
+                                    .is_some_and(|s| s == "healthy"),
                                 version: result
                                     .get("version")
                                     .and_then(|v| v.as_str())
-                                    .map(|s| s.to_string()),
+                                    .map(std::string::ToString::to_string),
                             });
                         }
                         Err(_) => {
@@ -241,12 +239,11 @@ impl Plasmodium {
                 healthy: result
                     .get("status")
                     .and_then(|s| s.as_str())
-                    .map(|s| s == "healthy")
-                    .unwrap_or(false),
+                    .is_some_and(|s| s == "healthy"),
                 version: result
                     .get("version")
                     .and_then(|v| v.as_str())
-                    .map(|s| s.to_string()),
+                    .map(std::string::ToString::to_string),
             },
             Err(_) => PrimalStatus {
                 name: name.to_string(),
@@ -396,12 +393,11 @@ impl Plasmodium {
                     healthy: status
                         .get("status")
                         .and_then(|s| s.as_str())
-                        .map(|s| s == "healthy")
-                        .unwrap_or(false),
+                        .is_some_and(|s| s == "healthy"),
                     version: status
                         .get("version")
                         .and_then(|v| v.as_str())
-                        .map(|s| s.to_string()),
+                        .map(std::string::ToString::to_string),
                 });
             }
         }

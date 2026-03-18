@@ -10,7 +10,7 @@ use anyhow::Result;
 use serde_json::json;
 use std::path::PathBuf;
 use std::process::Stdio;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use tracing::{debug, error, info, warn};
 
 use crate::executor::context::ExecutionContext;

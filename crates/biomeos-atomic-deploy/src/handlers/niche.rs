@@ -15,7 +15,7 @@
 use crate::neural_graph::Graph;
 use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;

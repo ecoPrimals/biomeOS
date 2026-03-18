@@ -15,8 +15,8 @@ use biomeos_graph::continuous::SessionCommand;
 use biomeos_graph::{
     ContinuousExecutor, CoordinationPattern, GraphEventBroadcaster, GraphLoader, GraphNode,
 };
-use biomeos_types::paths::SystemPaths;
 use biomeos_types::JsonRpcRequest;
+use biomeos_types::paths::SystemPaths;
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -162,12 +162,7 @@ pub(crate) async fn run_controlled(
         );
     }
 
-    let tick_hz = graph
-        .definition
-        .tick
-        .as_ref()
-        .map(|t| t.target_hz)
-        .unwrap_or(60.0);
+    let tick_hz = graph.definition.tick.as_ref().map_or(60.0, |t| t.target_hz);
 
     info!(
         "  id:    {} ({} nodes @ {tick_hz} Hz)",
@@ -182,8 +177,7 @@ pub(crate) async fn run_controlled(
             let primal = node.config.primal.as_deref().unwrap_or("(auto)");
             let budget = node
                 .budget_ms
-                .map(|b| format!("{b}ms"))
-                .unwrap_or_else(|| "-".to_string());
+                .map_or_else(|| "-".to_string(), |b| format!("{b}ms"));
             let fb = node
                 .feedback_to
                 .as_deref()
@@ -650,7 +644,7 @@ mod tests {
                 Ok(Ok(biomeos_graph::GraphEvent::SessionStateChanged { new_state, .. }))
                     if new_state == "stopped" =>
                 {
-                    break
+                    break;
                 }
                 Ok(Err(_)) | Err(_) => break,
                 _ => {}

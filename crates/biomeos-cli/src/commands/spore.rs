@@ -170,7 +170,7 @@ pub async fn handle_spore_clone(from: PathBuf, to: PathBuf, node_id: String) -> 
     println!("   New Node ID: {node_id}");
 
     // Load source spore
-    let source = Spore::from_path(from)?;
+    let source = Spore::from_path(&from)?;
     println!("   Source label: {}", source.config().label);
 
     // Clone to create sibling (same family, different node_id)
@@ -211,7 +211,7 @@ pub async fn handle_spore_info(mount: PathBuf) -> Result<()> {
     println!("📊 Spore Information");
     println!("   Path: {}", mount.display());
 
-    let spore = Spore::from_path(mount)?;
+    let spore = Spore::from_path(&mount)?;
 
     println!("\n📝 Configuration:");
     println!("   Label: {}", spore.config().label);
@@ -288,6 +288,10 @@ pub async fn handle_spore_list() -> Result<()> {
 }
 
 /// Refresh spore binaries from plasmidBin
+#[allow(
+    clippy::too_many_lines,
+    reason = "spore refresh flow with dry-run and apply paths"
+)]
 pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
     use biomeos_spore::refresh::SporeRefresher;
     use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
@@ -333,22 +337,19 @@ pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
                 println!("🔄 {}", binary.name);
                 println!(
                     "   Current: v{}",
-                    binary
-                        .actual_version
-                        .as_ref()
-                        .unwrap_or(&"unknown".to_string())
+                    binary.actual_version.as_deref().unwrap_or("unknown")
                 );
                 println!("   New:     v{}", binary.expected_version);
                 println!();
             }
         }
 
-        if !would_refresh {
-            println!("✅ No binaries need refreshing - spore is already fresh!");
-        } else {
+        if would_refresh {
             println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             println!();
             println!("💡 Run without --dry-run to apply these updates");
+        } else {
+            println!("✅ No binaries need refreshing - spore is already fresh!");
         }
     } else {
         // Actual refresh
@@ -471,9 +472,11 @@ mod tests {
         assert_eq!(report.to_refresh.len(), 2);
         assert_eq!(report.to_keep.len(), 1);
         assert!(report.to_refresh.contains(&PathBuf::from("bin/tower")));
-        assert!(report
-            .to_refresh
-            .contains(&PathBuf::from("primals/songbird")));
+        assert!(
+            report
+                .to_refresh
+                .contains(&PathBuf::from("primals/songbird"))
+        );
         assert!(report.to_keep.contains(&PathBuf::from("primals/beardog")));
     }
 

@@ -112,7 +112,7 @@ pub fn parse_cmdline(cmdline: &str) -> Result<BootParams> {
     let extra_params = params
         .iter()
         .filter(|p| !p.starts_with("biomeos."))
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect();
 
     info!("Boot mode: {}", mode.description());

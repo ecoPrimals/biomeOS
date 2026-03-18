@@ -12,6 +12,7 @@ use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
 #[tokio::main]
+#[allow(clippy::too_many_lines, reason = "verify-lineage flow")]
 async fn main() -> Result<()> {
     println!("\n🧬 BearDog Genetic Lineage Verifier");
     println!("═══════════════════════════════════\n");

@@ -206,11 +206,13 @@ mod tests {
         assert_eq!(health.status, HealthStatus::Unknown);
         assert!(!health.boot_completed);
         assert!(health.error.is_some());
-        assert!(health
-            .error
-            .as_ref()
-            .expect("error present")
-            .contains("Serial log not found"));
+        assert!(
+            health
+                .error
+                .as_ref()
+                .expect("error present")
+                .contains("Serial log not found")
+        );
     }
 
     #[tokio::test]

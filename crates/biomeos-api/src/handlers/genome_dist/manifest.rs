@@ -5,7 +5,7 @@
 //!
 //! Handles manifest.toml, checksums.toml, and version lookups.
 
-use axum::{extract::Path, http::StatusCode, Json};
+use axum::{Json, extract::Path, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -98,6 +98,7 @@ pub async fn get_manifest() -> Result<Json<DistManifest>, (StatusCode, Json<Dist
     get_manifest_from(genome_bin).await.map(Json)
 }
 
+#[allow(clippy::too_many_lines, reason = "manifest parsing and validation")]
 pub(crate) async fn get_manifest_from(
     genome_bin: impl AsRef<std::path::Path>,
 ) -> Result<DistManifest, (StatusCode, Json<DistError>)> {
@@ -381,7 +382,7 @@ pub(crate) async fn get_checksum_from(
 
     let size = checksum_entry
         .get("size")
-        .and_then(|v| v.as_integer())
+        .and_then(toml::Value::as_integer)
         .unwrap_or(0) as u64;
 
     Ok(Json(ChecksumResponse {

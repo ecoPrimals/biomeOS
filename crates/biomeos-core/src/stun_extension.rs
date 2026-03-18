@@ -96,15 +96,16 @@ impl Default for StunExtensionConfig {
         let public_servers = if no_public_stun {
             Vec::new()
         } else {
-            std::env::var("BIOMEOS_STUN_SERVERS")
-                .map(|s| s.split(',').map(|p| p.trim().to_string()).collect())
-                .unwrap_or_else(|_| {
+            std::env::var("BIOMEOS_STUN_SERVERS").map_or_else(
+                |_| {
                     vec![
                         format!("stun.nextcloud.com:{}", ports::STUN),
                         format!("stun.sip.us:{}", ports::STUN),
                         format!("stun.stunprotocol.org:{}", ports::STUN),
                     ]
-                })
+                },
+                |s| s.split(',').map(|p| p.trim().to_string()).collect(),
+            )
         };
 
         Self {
@@ -181,6 +182,7 @@ impl StunExtension {
     }
 
     /// Discover self-hosted STUN address from configuration or beacons
+    #[allow(clippy::unused_self)]
     fn discover_self_hosted_address(&self) -> Option<String> {
         // Check environment variable
         if let Ok(addr) = std::env::var("BIOMEOS_STUN_SERVER") {

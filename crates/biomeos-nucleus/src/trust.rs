@@ -17,7 +17,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use crate::{discovery::DiscoveredPrimal, identity::IdentityProof, Error, Result};
+use crate::{Error, Result, discovery::DiscoveredPrimal, identity::IdentityProof};
 
 /// Trust level (evaluated by `BearDog`)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

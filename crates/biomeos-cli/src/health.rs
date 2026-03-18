@@ -42,22 +42,19 @@ impl HealthUtils {
                 .resources
                 .as_ref()
                 .and_then(|r| r.cpu_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             memory_usage: health_report
                 .metrics
                 .resources
                 .as_ref()
                 .and_then(|r| r.memory_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             disk_usage: health_report
                 .metrics
                 .resources
                 .as_ref()
                 .and_then(|r| r.disk_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             network_status: "OK".to_string(),
         };
 
@@ -92,7 +89,7 @@ impl HealthUtils {
                     }
                 }
             }
-        };
+        }
 
         Ok(CLIHealthReport {
             system: system_health,
@@ -143,22 +140,19 @@ impl HealthUtils {
                 .resources
                 .as_ref()
                 .and_then(|r| r.cpu_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             memory_usage: health_report
                 .metrics
                 .resources
                 .as_ref()
                 .and_then(|r| r.memory_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             disk_usage: health_report
                 .metrics
                 .resources
                 .as_ref()
                 .and_then(|r| r.disk_usage)
-                .map(|u| u * 100.0)
-                .unwrap_or(0.0),
+                .map_or(0.0, |u| u * 100.0),
             network_status: "OK".to_string(),
         };
 
@@ -237,6 +231,7 @@ impl HealthUtils {
         let mut conditions = Vec::new();
 
         // Check uptime from availability metrics
+        #[allow(clippy::cast_possible_wrap, reason = "uptime hours bounded")]
         let uptime_hours = if let Some(availability) = &health_report.metrics.availability {
             (availability.uptime_seconds / 3600) as i64
         } else {

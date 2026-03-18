@@ -24,7 +24,7 @@
 use crate::neural_router::NeuralRouter;
 use anyhow::Result;
 use biomeos_types::SystemPaths;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;

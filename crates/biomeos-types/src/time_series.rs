@@ -53,7 +53,7 @@ pub struct CrossSpringTimeSeries {
 }
 
 /// Origin information for a time series.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TimeSeriesSource {
     /// Originating spring (e.g. `airSpring`).
     pub spring: String,
@@ -152,13 +152,13 @@ impl CrossSpringTimeSeries {
 
     /// Number of data points.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.values.len()
     }
 
     /// Whether the series contains no data points.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.values.is_empty()
     }
 }

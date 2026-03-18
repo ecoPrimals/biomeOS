@@ -330,7 +330,7 @@ pub async fn send_jsonrpc(socket_path: &PathBuf, message: &str) -> Result<serde_
 fn generate_secure_jwt() -> Result<String> {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    let secret: [u8; 48] = rng.gen();
+    let secret: [u8; 48] = rng.r#gen();
     Ok(base64::encode(secret))
 }
 

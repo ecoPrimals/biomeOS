@@ -24,8 +24,8 @@ use std::collections::HashMap;
 use std::fs;
 
 use biomeos_types::{
-    health::HealthMetrics, AvailabilityMetrics, BiomeResult, ComponentHealth, Health, HealthReport,
-    HealthSubject, HealthSubjectType, ResourceMetrics,
+    AvailabilityMetrics, BiomeResult, ComponentHealth, Health, HealthReport, HealthSubject,
+    HealthSubjectType, ResourceMetrics, health::HealthMetrics,
 };
 
 /// System information inspector
@@ -72,6 +72,7 @@ impl SystemInspector {
     }
 
     /// Get system health report
+    #[allow(clippy::too_many_lines)]
     pub async fn get_system_health() -> BiomeResult<HealthReport> {
         let resource_metrics = Self::get_resource_usage().await?;
         let system_info = Self::get_system_info().await?;

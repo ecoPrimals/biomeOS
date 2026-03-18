@@ -4,7 +4,7 @@
 //! CLI commands for spore incubation and local node management
 
 use anyhow::Result;
-use biomeos_spore::incubation::{list_local_nodes, SporeIncubator};
+use biomeos_spore::incubation::{SporeIncubator, list_local_nodes};
 use clap::Args;
 use std::path::PathBuf;
 use tracing::info;
@@ -97,12 +97,16 @@ pub async fn handle_node_list_local(args: &ListLocalArgs) -> Result<()> {
     }
 
     println!("\n📊 Locally Incubated Nodes:");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!(
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    );
     println!(
         "{:<25} {:<25} {:<30} {:<20}",
         "NODE_ID", "SPORE_ID", "DEPLOYED_AT", "FAMILY_ID"
     );
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!(
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    );
 
     for node in &filtered {
         println!(
@@ -139,7 +143,9 @@ pub async fn handle_node_list_local(args: &ListLocalArgs) -> Result<()> {
         }
     }
 
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!(
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    );
     println!("Total: {} node(s)", filtered.len());
 
     Ok(())

@@ -9,7 +9,7 @@
 //! Note: These handlers are defined and ready to wire into the axum Router.
 //! They will be connected when the capability API routes are enabled.
 
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::info;
@@ -72,7 +72,7 @@ pub async fn list_capabilities(
 
     if state.is_standalone_mode() {
         info!("   Using standalone capabilities (BIOMEOS_STANDALONE_MODE=true)");
-        let capabilities = get_standalone_capabilities(&query.filter);
+        let capabilities = get_standalone_capabilities(query.filter.as_ref());
         return Ok(Json(ListCapabilitiesResponse {
             count: capabilities.len(),
             capabilities,
@@ -84,7 +84,7 @@ pub async fn list_capabilities(
 
     match state.discovery().discover_all().await {
         Ok(discovered) => {
-            let capabilities = build_capability_list(&discovered, &query.filter);
+            let capabilities = build_capability_list(&discovered, query.filter.as_ref());
             Ok(Json(ListCapabilitiesResponse {
                 count: capabilities.len(),
                 capabilities,
@@ -92,7 +92,7 @@ pub async fn list_capabilities(
         }
         Err(e) => {
             tracing::warn!("   Discovery failed: {}, using standalone fallback", e);
-            let capabilities = get_standalone_capabilities(&query.filter);
+            let capabilities = get_standalone_capabilities(query.filter.as_ref());
             Ok(Json(ListCapabilitiesResponse {
                 count: capabilities.len(),
                 capabilities,
@@ -175,7 +175,7 @@ pub async fn discover_capability(
 /// Build capability list from discovered primals
 fn build_capability_list(
     discovered: &[biomeos_core::DiscoveredPrimal],
-    filter: &Option<String>,
+    filter: Option<&String>,
 ) -> Vec<CapabilityInfo> {
     use std::collections::HashMap;
 
@@ -233,9 +233,9 @@ fn build_capability_list(
 /// directory for active primal sockets and infers capabilities from the
 /// taxonomy. Falls back to an empty list when no primals are discovered
 /// — biomeOS only has self-knowledge, other primals are discovered at runtime.
-fn get_standalone_capabilities(filter: &Option<String>) -> Vec<CapabilityInfo> {
-    use biomeos_types::capability_taxonomy::capabilities_for_primal;
+fn get_standalone_capabilities(filter: Option<&String>) -> Vec<CapabilityInfo> {
     use biomeos_types::SystemPaths;
+    use biomeos_types::capability_taxonomy::capabilities_for_primal;
 
     let paths = SystemPaths::new_lazy();
     let mut capability_map: std::collections::HashMap<String, Vec<CapabilityProvider>> =
@@ -249,7 +249,10 @@ fn get_standalone_capabilities(filter: &Option<String>) -> Vec<CapabilityInfo> {
                 None => continue,
             };
 
-            if !file_name.ends_with(".sock") {
+            if !std::path::Path::new(&file_name)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+            {
                 continue;
             }
 
@@ -297,7 +300,7 @@ fn get_standalone_capabilities(filter: &Option<String>) -> Vec<CapabilityInfo> {
 
 /// Get standalone providers for a capability via runtime discovery
 fn get_standalone_providers(capability: &str) -> Vec<CapabilityProvider> {
-    get_standalone_capabilities(&None)
+    get_standalone_capabilities(None)
         .into_iter()
         .filter(|c| c.name == capability || c.name.starts_with(&format!("{capability}.")))
         .flat_map(|c| c.providers)
@@ -430,18 +433,20 @@ mod tests {
         // Standalone mode now does runtime socket discovery — in a test
         // environment with no primal sockets, returns empty (correct behavior:
         // biomeOS only knows what's actually running)
-        let capabilities = get_standalone_capabilities(&None);
+        let capabilities = get_standalone_capabilities(None);
         // Result depends on whether primals are running; verify it doesn't panic
         // and the filter contract holds
-        let filtered = get_standalone_capabilities(&Some("nonexistent_xyz".to_string()));
+        let filter = Some("nonexistent_xyz".to_string());
+        let filtered = get_standalone_capabilities(filter.as_ref());
         assert!(filtered.is_empty());
         assert!(filtered.len() <= capabilities.len());
     }
 
     #[test]
     fn test_get_standalone_capabilities_filter_contract() {
-        let all = get_standalone_capabilities(&None);
-        let filtered = get_standalone_capabilities(&Some("crypto".to_string()));
+        let all = get_standalone_capabilities(None);
+        let filter = Some("crypto".to_string());
+        let filtered = get_standalone_capabilities(filter.as_ref());
 
         assert!(filtered.len() <= all.len());
         assert!(filtered.iter().all(|c| c.name.contains("crypto")));
@@ -457,7 +462,7 @@ mod tests {
     fn test_get_standalone_providers_filter_contract() {
         // With runtime discovery, providers for a given capability are
         // a subset of all discovered capabilities
-        let all_caps = get_standalone_capabilities(&None);
+        let all_caps = get_standalone_capabilities(None);
         let security_providers = get_standalone_providers("security");
         // Security providers should not exceed total capabilities
         assert!(security_providers.len() <= all_caps.len() + 1);
@@ -495,7 +500,7 @@ mod tests {
             },
         ];
 
-        let capabilities = build_capability_list(&primals, &None);
+        let capabilities = build_capability_list(&primals, None);
 
         assert_eq!(capabilities.len(), 3); // security, crypto.encrypt, orchestration
         assert!(capabilities.iter().any(|c| c.name == "security"));
@@ -522,8 +527,9 @@ mod tests {
             family_id: Some(FamilyId::new("family-1")),
         }];
 
-        let all = build_capability_list(&primals, &None);
-        let filtered = build_capability_list(&primals, &Some("crypto".to_string()));
+        let all = build_capability_list(&primals, None);
+        let filter = Some("crypto".to_string());
+        let filtered = build_capability_list(&primals, filter.as_ref());
 
         assert!(filtered.len() <= all.len());
         assert!(filtered.iter().all(|c| c.name.contains("crypto")));

@@ -151,8 +151,8 @@ pub struct NeuralSpore {
 
 impl NeuralSpore {
     /// Create new Neural Spore structure
-    pub fn new(usb_mount: PathBuf) -> Result<Self> {
-        let root_path = usb_mount.join("biomeOS");
+    pub fn new(usb_mount: impl AsRef<std::path::Path>) -> Result<Self> {
+        let root_path = usb_mount.as_ref().join("biomeOS");
         let graphs_dir = root_path.join("graphs");
         let binaries_dir = root_path.join("primals");
 
@@ -276,7 +276,7 @@ impl NeuralSpore {
     /// Create README
     pub async fn create_readme(&self) -> Result<()> {
         let readme = format!(
-            r#"# 🌱 Neural LiveSpore - Portable NUCLEUS
+            r"# 🌱 Neural LiveSpore - Portable NUCLEUS
 
 **Version**: 2.0.0 (Neural API)
 **Created**: {}
@@ -356,7 +356,7 @@ For more information, see:
 ---
 
 **biomeOS**: Deploy and assume ecosystems, not isolated primals. ✨
-"#,
+",
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
         );
 

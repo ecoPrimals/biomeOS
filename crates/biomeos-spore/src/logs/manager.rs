@@ -54,7 +54,7 @@ impl LogManager {
             if path.is_dir() {
                 let metadata_path = path.join(".metadata.toml");
                 if metadata_path.exists() {
-                    match self.load_active_session(&metadata_path) {
+                    match Self::load_active_session(&metadata_path) {
                         Ok(session) => sessions.push(session),
                         Err(e) => {
                             warn!(
@@ -72,7 +72,7 @@ impl LogManager {
     }
 
     /// Load an active session from metadata file
-    fn load_active_session(&self, path: &PathBuf) -> SporeResult<ActiveLogSession> {
+    fn load_active_session(path: &PathBuf) -> SporeResult<ActiveLogSession> {
         let content = fs::read_to_string(path)?;
         let session: ActiveLogSession = toml::from_str(&content)?;
         Ok(session)
@@ -100,6 +100,7 @@ impl LogManager {
         // Copy log files to fossil directory
         for log_file in &session.log_files {
             if log_file.path.exists() {
+                #[expect(clippy::expect_used, reason = "log file path must have filename")]
                 let dest = fossil_dir.join(
                     log_file
                         .path

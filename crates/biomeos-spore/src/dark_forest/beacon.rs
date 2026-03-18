@@ -104,7 +104,7 @@ impl DarkForestBeacon {
             .get("result")
             .and_then(|r| r.get("key"))
             .and_then(|k| k.as_str())
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .ok_or_else(|| {
                 SporeError::ValidationFailed("Failed to derive broadcast key".to_string())
             })
@@ -144,7 +144,7 @@ impl DarkForestBeacon {
             timestamp,
             socket_path: socket_path.to_string(),
             capabilities_hash: capabilities_hash[..16].to_string(),
-            lineage_mode: lineage_mode.map(|s| s.to_string()),
+            lineage_mode: lineage_mode.map(std::string::ToString::to_string),
         };
 
         // Serialize and encode
@@ -263,7 +263,7 @@ impl DarkForestBeacon {
             .get("result")
             .and_then(|r| r.get("hash"))
             .and_then(|h| h.as_str())
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .ok_or_else(|| SporeError::ValidationFailed("Failed to hash string".to_string()))
     }
 
@@ -277,7 +277,7 @@ impl DarkForestBeacon {
         let params = request
             .get("params")
             .cloned()
-            .unwrap_or(serde_json::json!({}));
+            .unwrap_or_else(|| serde_json::json!({}));
 
         let result = self
             .capability_caller
@@ -293,7 +293,7 @@ impl DarkForestBeacon {
         Ok(serde_json::json!({
             "jsonrpc": JSONRPC_VERSION,
             "result": result,
-            "id": request.get("id").cloned().unwrap_or(serde_json::json!(1))
+            "id": request.get("id").cloned().unwrap_or_else(|| serde_json::json!(1))
         }))
     }
 
@@ -321,7 +321,7 @@ impl DarkForestBeacon {
         let valid = response
             .get("result")
             .and_then(|r| r.get("valid"))
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
 
         if valid {
@@ -351,7 +351,7 @@ impl DarkForestBeacon {
             .get("result")
             .and_then(|r| r.get("proof"))
             .and_then(|p| p.as_str())
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .ok_or_else(|| {
                 SporeError::ValidationFailed("Failed to generate lineage proof".to_string())
             })
@@ -376,7 +376,7 @@ impl DarkForestBeacon {
             .get("result")
             .and_then(|r| r.get("key"))
             .and_then(|k| k.as_str())
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .ok_or_else(|| SporeError::ValidationFailed("Failed to derive session key".to_string()))
     }
 
@@ -396,7 +396,7 @@ impl DarkForestBeacon {
             .get("result")
             .and_then(|r| r.get("beacon_key"))
             .and_then(|k| k.as_str())
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .ok_or_else(|| {
                 SporeError::ValidationFailed("Failed to derive dedicated beacon key".to_string())
             })
@@ -491,9 +491,8 @@ impl DarkForestBeacon {
             return Ok(None);
         }
 
-        let beacon_key = match self.derive_dedicated_beacon_key().await {
-            Ok(key) => key,
-            Err(_) => return Ok(None),
+        let Ok(beacon_key) = self.derive_dedicated_beacon_key().await else {
+            return Ok(None);
         };
 
         let nonce = &noise_bytes[0..12];
@@ -521,32 +520,28 @@ impl DarkForestBeacon {
         );
         let decrypt_value = serde_json::to_value(&decrypt_request)
             .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
-        let response = match self.call_beardog(&decrypt_value).await {
-            Ok(resp) => resp,
-            Err(_) => return Ok(None),
+        let Ok(response) = self.call_beardog(&decrypt_value).await else {
+            return Ok(None);
         };
 
         if response.get("error").is_some() {
             return Ok(None);
         }
 
-        let plaintext_b64 = match response
+        let Some(plaintext_b64) = response
             .get("result")
             .and_then(|r| r.get("plaintext"))
             .and_then(|p| p.as_str())
-        {
-            Some(p) => p,
-            None => return Ok(None),
+        else {
+            return Ok(None);
         };
 
-        let plaintext_bytes = match BASE64.decode(plaintext_b64) {
-            Ok(bytes) => bytes,
-            Err(_) => return Ok(None),
+        let Ok(plaintext_bytes) = BASE64.decode(plaintext_b64) else {
+            return Ok(None);
         };
 
-        let beacon: serde_json::Value = match serde_json::from_slice(&plaintext_bytes) {
-            Ok(b) => b,
-            Err(_) => return Ok(None),
+        let Ok(beacon) = serde_json::from_slice::<serde_json::Value>(&plaintext_bytes) else {
+            return Ok(None);
         };
 
         info!("✅ Pure noise beacon decrypted - family member found");

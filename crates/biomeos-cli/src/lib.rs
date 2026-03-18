@@ -36,7 +36,6 @@ impl CliUtils {
         let log_level = match level.to_lowercase().as_str() {
             "trace" => tracing::Level::TRACE,
             "debug" => tracing::Level::DEBUG,
-            "info" => tracing::Level::INFO,
             "warn" => tracing::Level::WARN,
             "error" => tracing::Level::ERROR,
             _ => tracing::Level::INFO,

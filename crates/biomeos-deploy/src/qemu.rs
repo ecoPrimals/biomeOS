@@ -165,7 +165,7 @@ impl QemuInstance {
             // Send SIGTERM for graceful shutdown
             #[cfg(unix)]
             {
-                use rustix::process::{kill_process, Pid, Signal};
+                use rustix::process::{Pid, Signal, kill_process};
 
                 let pid_i32 = i32::try_from(process.id()).unwrap_or(-1);
                 if let Some(pid) = Pid::from_raw(pid_i32) {

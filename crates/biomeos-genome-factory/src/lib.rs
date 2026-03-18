@@ -52,7 +52,7 @@ impl GenomeFactory {
 
     /// Create factory with XDG-compliant storage
     pub fn with_xdg_storage() -> Result<Self> {
-        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
+        use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
 
         let strategy = choose_base_strategy().context("Failed to determine base strategy")?;
 
@@ -87,7 +87,7 @@ impl GenomeFactory {
             let entry = entry?;
             let path = entry.path();
 
-            if path.extension().map(|e| e == "genome").unwrap_or(false) {
+            if path.extension().is_some_and(|e| e == "genome") {
                 if let Some(stem) = path.file_stem() {
                     genomes.push(stem.to_string_lossy().to_string());
                 }

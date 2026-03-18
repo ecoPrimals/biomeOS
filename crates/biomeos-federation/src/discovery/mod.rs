@@ -118,7 +118,9 @@ impl PrimalDiscovery {
             let path = entry.path();
 
             if let Some(filename) = path.file_name().and_then(|n| n.to_str())
-                && filename.ends_with(".sock")
+                && std::path::Path::new(filename)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
             {
                 self.register_unix_socket_primal(&path).await;
             }
@@ -220,7 +222,7 @@ impl PrimalDiscovery {
 
         let discovered = DiscoveredPrimal {
             name: primal_name.clone(),
-            primal_type: primal_type.to_string(),
+            primal_type,
             capabilities,
             endpoints: vec![PrimalEndpoint::UnixSocket {
                 path: socket_path.clone(),
@@ -311,7 +313,7 @@ impl PrimalDiscovery {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
 
-        let songbird_socket = self.discover_songbird_socket()?;
+        let songbird_socket = Self::discover_songbird_socket()?;
 
         debug!(
             "Querying Songbird for UDP-discovered peers: {}",
@@ -380,7 +382,7 @@ impl PrimalDiscovery {
     }
 
     /// Find discovery provider socket. pub(crate) for tests.
-    pub(crate) fn discover_songbird_socket(&self) -> FederationResult<String> {
+    pub(crate) fn discover_songbird_socket() -> FederationResult<String> {
         use biomeos_types::paths::SystemPaths;
 
         let provider = std::env::var("DISCOVERY_PROVIDER")
@@ -409,8 +411,8 @@ impl PrimalDiscovery {
         Err(crate::FederationError::DiscoveryError(format!(
             "Discovery provider '{provider}' socket not found. \
              Set SONGBIRD_SOCKET or ensure the discovery provider is running. \
-             Checked: XDG runtime dir: {:?}",
-            paths.runtime_dir()
+             Checked: XDG runtime dir: {}",
+            paths.runtime_dir().display()
         )))
     }
 

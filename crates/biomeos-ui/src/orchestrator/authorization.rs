@@ -36,7 +36,7 @@ impl Authorization {
     ///
     /// Falls back to allowing the operation if BearDog is unavailable.
     pub async fn authorize_device_assignment(
-        beardog: &Option<BearDogClient>,
+        beardog: Option<&BearDogClient>,
         user_id: &str,
         device_id: &str,
         primal_id: &str,
@@ -65,7 +65,7 @@ impl Authorization {
                 Ok(result) => {
                     if result
                         .get("authorized")
-                        .and_then(|v| v.as_bool())
+                        .and_then(serde_json::Value::as_bool)
                         .unwrap_or(false)
                     {
                         info!("✅ BearDog authorization: Approved");
@@ -98,17 +98,15 @@ impl Authorization {
     /// Get the current user ID from BearDog session or environment
     ///
     /// Falls back to "anonymous" if no session is available.
-    pub async fn get_current_user_id(beardog: &Option<BearDogClient>) -> String {
+    pub async fn get_current_user_id(beardog: Option<&BearDogClient>) -> String {
         // Try to get from BearDog session
-        if let Some(beardog) = beardog {
-            if let Ok(result) = beardog
+        if let Some(beardog) = beardog
+            && let Ok(result) = beardog
                 .call("auth.get_current_user", serde_json::json!({}))
                 .await
-            {
-                if let Some(user_id) = result.get("user_id").and_then(|v| v.as_str()) {
-                    return user_id.to_string();
-                }
-            }
+            && let Some(user_id) = result.get("user_id").and_then(|v| v.as_str())
+        {
+            return user_id.to_string();
         }
 
         // Fall back to environment variable
@@ -218,7 +216,7 @@ mod tests {
     #[tokio::test]
     async fn test_authorization_no_beardog() {
         let result = Authorization::authorize_device_assignment(
-            &None,
+            None,
             "test-user",
             "test-device",
             "test-primal",
@@ -231,7 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_current_user_no_beardog() {
-        let user_id = Authorization::get_current_user_id(&None).await;
+        let user_id = Authorization::get_current_user_id(None).await;
         // Should return something (env var or "anonymous")
         assert!(!user_id.is_empty());
     }
@@ -240,7 +238,7 @@ mod tests {
     async fn test_authorization_no_beardog_graceful_degradation() {
         // Tests that authorization is granted by default when BearDog is unavailable
         let result = Authorization::authorize_device_assignment(
-            &None,
+            None,
             "user-abc-123",
             "device-xyz-456",
             "primal-789",
@@ -310,7 +308,7 @@ mod tests {
             "beardog", &path,
         ));
         let result = Authorization::authorize_device_assignment(
-            &client,
+            client.as_ref(),
             "test-user",
             "test-device",
             "test-primal",
@@ -331,7 +329,7 @@ mod tests {
             "beardog", &path,
         ));
         let result = Authorization::authorize_device_assignment(
-            &client,
+            client.as_ref(),
             "test-user",
             "test-device",
             "test-primal",
@@ -349,7 +347,7 @@ mod tests {
             "/nonexistent/beardog.sock",
         ));
         let result = Authorization::authorize_device_assignment(
-            &client,
+            client.as_ref(),
             "test-user",
             "test-device",
             "test-primal",
@@ -366,7 +364,7 @@ mod tests {
         let client = Some(crate::primal_client::BearDogClient::with_socket(
             "beardog", &path,
         ));
-        let user_id = Authorization::get_current_user_id(&client).await;
+        let user_id = Authorization::get_current_user_id(client.as_ref()).await;
         assert_eq!(user_id, "beardog-user-123");
     }
 
@@ -377,7 +375,7 @@ mod tests {
         // Use RAII guard to restore on drop
         let _guard = TestEnvGuard::new("BIOMEOS_USER", Some("test-env-user"));
 
-        let user_id = Authorization::get_current_user_id(&None).await;
+        let user_id = Authorization::get_current_user_id(None).await;
         assert_eq!(user_id, "test-env-user");
     }
 }

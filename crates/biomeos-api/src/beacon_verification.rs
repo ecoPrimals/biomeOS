@@ -228,7 +228,6 @@ async fn verify_via_socket_discovery(family_id: &str, token: &str) -> Option<Bea
                     socket_path.display(),
                     e
                 );
-                continue;
             }
         }
     }
@@ -244,7 +243,7 @@ async fn verify_via_socket_discovery(family_id: &str, token: &str) -> Option<Bea
 fn parse_decrypt_result(value: &Value, default_family_id: &str) -> Option<BeaconVerification> {
     let success = value
         .get("success")
-        .and_then(|v| v.as_bool())
+        .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
 
     let plaintext = value
@@ -294,7 +293,9 @@ fn discover_beacon_providers(
             let path = entry.path();
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                 // Skip already-discovered sockets and non-family sockets
-                if name.ends_with(".sock")
+                if std::path::Path::new(name)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
                     && name.contains(family_id)
                     && !name.starts_with("beardog-")
                     && !name.starts_with("songbird-")

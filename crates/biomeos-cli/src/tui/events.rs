@@ -10,7 +10,7 @@ use crossterm::event::{self, Event, KeyCode};
 use std::time::Duration;
 
 /// Available dashboard actions that can be triggered by user input
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DashboardAction {
     /// Quit the application
     Quit,
@@ -50,32 +50,26 @@ impl EventHandler {
     pub fn poll_event(&self) -> Result<DashboardAction> {
         if event::poll(self.poll_timeout)? {
             if let Event::Key(key) = event::read()? {
-                return Ok(self.handle_key_event(key.code));
+                return Ok(Self::handle_key_event(key.code));
             }
         }
         Ok(DashboardAction::None)
     }
 
     /// Handle keyboard input and map to dashboard actions
-    fn handle_key_event(&self, key_code: KeyCode) -> DashboardAction {
+    fn handle_key_event(key_code: KeyCode) -> DashboardAction {
         match key_code {
             // Navigation
             KeyCode::Char('q') | KeyCode::Esc => DashboardAction::Quit,
-            KeyCode::Tab => DashboardAction::NextTab,
-            KeyCode::BackTab => DashboardAction::PreviousTab,
-            KeyCode::Up => DashboardAction::MoveUp,
-            KeyCode::Down => DashboardAction::MoveDown,
+            KeyCode::Tab | KeyCode::Char('l') => DashboardAction::NextTab,
+            KeyCode::BackTab | KeyCode::Char('p') => DashboardAction::PreviousTab,
+            KeyCode::Up | KeyCode::Char('k') => DashboardAction::MoveUp,
+            KeyCode::Down | KeyCode::Char('j') => DashboardAction::MoveDown,
             KeyCode::Enter => DashboardAction::Select,
 
             // Actions
             KeyCode::Char('r') => DashboardAction::Refresh,
             KeyCode::Char('h') => DashboardAction::ShowHelp,
-
-            // Alternative navigation keys
-            KeyCode::Char('k') => DashboardAction::MoveUp,
-            KeyCode::Char('j') => DashboardAction::MoveDown,
-            KeyCode::Char('l') => DashboardAction::NextTab,
-            KeyCode::Char('p') => DashboardAction::PreviousTab,
 
             _ => DashboardAction::None,
         }
@@ -109,39 +103,39 @@ mod tests {
 
         // Test quit keys
         assert_eq!(
-            handler.handle_key_event(KeyCode::Char('q')),
+            EventHandler::handle_key_event(KeyCode::Char('q')),
             DashboardAction::Quit
         );
         assert_eq!(
-            handler.handle_key_event(KeyCode::Esc),
+            EventHandler::handle_key_event(KeyCode::Esc),
             DashboardAction::Quit
         );
 
         // Test navigation
         assert_eq!(
-            handler.handle_key_event(KeyCode::Tab),
+            EventHandler::handle_key_event(KeyCode::Tab),
             DashboardAction::NextTab
         );
         assert_eq!(
-            handler.handle_key_event(KeyCode::BackTab),
+            EventHandler::handle_key_event(KeyCode::BackTab),
             DashboardAction::PreviousTab
         );
         assert_eq!(
-            handler.handle_key_event(KeyCode::Up),
+            EventHandler::handle_key_event(KeyCode::Up),
             DashboardAction::MoveUp
         );
         assert_eq!(
-            handler.handle_key_event(KeyCode::Down),
+            EventHandler::handle_key_event(KeyCode::Down),
             DashboardAction::MoveDown
         );
 
         // Test actions
         assert_eq!(
-            handler.handle_key_event(KeyCode::Enter),
+            EventHandler::handle_key_event(KeyCode::Enter),
             DashboardAction::Select
         );
         assert_eq!(
-            handler.handle_key_event(KeyCode::Char('r')),
+            EventHandler::handle_key_event(KeyCode::Char('r')),
             DashboardAction::Refresh
         );
         // F5 key not available in current crossterm version
@@ -149,21 +143,21 @@ mod tests {
 
         // Test vim-style navigation
         assert_eq!(
-            handler.handle_key_event(KeyCode::Char('k')),
+            EventHandler::handle_key_event(KeyCode::Char('k')),
             DashboardAction::MoveUp
         );
         assert_eq!(
-            handler.handle_key_event(KeyCode::Char('j')),
+            EventHandler::handle_key_event(KeyCode::Char('j')),
             DashboardAction::MoveDown
         );
         assert_eq!(
-            handler.handle_key_event(KeyCode::Char('l')),
+            EventHandler::handle_key_event(KeyCode::Char('l')),
             DashboardAction::NextTab
         );
 
         // Test unknown key
         assert_eq!(
-            handler.handle_key_event(KeyCode::Char('z')),
+            EventHandler::handle_key_event(KeyCode::Char('z')),
             DashboardAction::None
         );
     }

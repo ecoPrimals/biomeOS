@@ -11,7 +11,7 @@
 
 use tracing::{info, warn};
 
-use biomeos_api::{create_app, AppState, Config};
+use biomeos_api::{AppState, Config, create_app};
 
 /// Resolve API server configuration from environment (extracted for testability)
 pub(crate) fn resolve_api_server_config() -> anyhow::Result<(AppState, Config)> {

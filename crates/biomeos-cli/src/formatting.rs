@@ -5,7 +5,7 @@
 //!
 //! Additional formatting functions: table, duration, file_size, percentage, timestamp.
 
-use colored::*;
+use colored::Colorize;
 
 /// Format data as pretty-printed JSON
 pub fn format_json_pretty<T: serde::Serialize>(data: &T) -> String {

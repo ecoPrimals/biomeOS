@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
-use crate::{discovery::DiscoveredPrimal, identity::IdentityProof, Error, Result};
+use crate::{Error, Result, discovery::DiscoveredPrimal, identity::IdentityProof};
 
 /// Capability information (from primal)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,13 +66,7 @@ pub trait CapabilityLayer: Send + Sync {
         let actual = &actual_caps.capabilities;
 
         // Check if all expected capabilities are present
-        let missing: Vec<_> = expected
-            .iter()
-            .filter(|cap| !actual.contains(cap))
-            .cloned()
-            .collect();
-
-        if !missing.is_empty() {
+        if expected.iter().any(|cap| !actual.contains(cap)) {
             return Err(Error::capability_mismatch(expected.clone(), actual.clone()));
         }
 

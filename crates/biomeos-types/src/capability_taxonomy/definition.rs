@@ -288,6 +288,7 @@ impl CapabilityTaxonomy {
     ///
     /// Returns `Cow<'static, str>` to avoid memory leaks for custom capabilities
     /// while maintaining zero-copy for static descriptions.
+    #[must_use]
     pub fn description(&self) -> Cow<'static, str> {
         match self {
             // Security
@@ -372,7 +373,8 @@ impl CapabilityTaxonomy {
     }
 
     /// Get the capability category
-    pub fn category(&self) -> CapabilityCategory {
+    #[must_use]
+    pub const fn category(&self) -> CapabilityCategory {
         match self {
             Self::Encryption
             | Self::Identity
@@ -419,7 +421,12 @@ impl CapabilityTaxonomy {
             | Self::PharmacokineticModeling
             | Self::SurgicalToolSimulation
             | Self::TissuePhysics
-            | Self::AnatomyModeling => CapabilityCategory::Specialized,
+            | Self::AnatomyModeling
+            | Self::BluetoothGenesis
+            | Self::SporeDeployment
+            | Self::GeneticLineage
+            | Self::NicheDeployment
+            | Self::Custom(_) => CapabilityCategory::Specialized,
 
             Self::LifecycleManagement
             | Self::HealthMonitoring
@@ -432,16 +439,11 @@ impl CapabilityTaxonomy {
             | Self::AiMultiProvider
             | Self::McpServer
             | Self::AiCapabilityDiscovery => CapabilityCategory::AI,
-
-            Self::BluetoothGenesis
-            | Self::SporeDeployment
-            | Self::GeneticLineage
-            | Self::NicheDeployment
-            | Self::Custom(_) => CapabilityCategory::Specialized,
         }
     }
 
     /// Parse from string (case-insensitive)
+    #[must_use]
     pub fn from_str_flexible(s: &str) -> Option<Self> {
         let s_lower = s.to_lowercase();
         match s_lower.as_str() {
@@ -550,12 +552,14 @@ impl CapabilityTaxonomy {
     ///
     /// Set `BIOMEOS_STRICT_DISCOVERY=1` to disable this fallback and require
     /// all capabilities to be discovered via Songbird.
+    #[must_use]
     pub fn default_primal(&self) -> Option<&'static str> {
         self.default_primal_with(std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
     }
 
     /// Same as `default_primal()` but with explicit strict flag (no env var).
-    pub fn default_primal_with(&self, strict: bool) -> Option<&'static str> {
+    #[must_use]
+    pub const fn default_primal_with(&self, strict: bool) -> Option<&'static str> {
         if strict {
             return None;
         }
@@ -604,7 +608,8 @@ impl CapabilityTaxonomy {
             | Self::McpServer
             | Self::AiCapabilityDiscovery => Some(crate::primal_names::SQUIRREL),
 
-            // UI → petalTongue (integrated when available via Songbird discovery)
+            // UI → petalTongue, Medical/Surgical → healthSpring (discovered at runtime)
+            // Custom capabilities have no default
             Self::VisualRendering
             | Self::InputHandling
             | Self::MultiModal
@@ -612,14 +617,13 @@ impl CapabilityTaxonomy {
             | Self::RealtimeUpdates
             | Self::StereoRendering
             | Self::MotionTracking
-            | Self::HapticFeedback => None, // petalTongue discovered at runtime
-
-            // Medical / Surgical → healthSpring (discovered at runtime)
-            Self::BiosignalProcessing
+            | Self::HapticFeedback
+            | Self::BiosignalProcessing
             | Self::PharmacokineticModeling
             | Self::SurgicalToolSimulation
             | Self::TissuePhysics
-            | Self::AnatomyModeling => None, // healthSpring discovered at runtime
+            | Self::AnatomyModeling
+            | Self::Custom(_) => None,
 
             // Orchestration → biomeOS (self)
             Self::LifecycleManagement
@@ -631,9 +635,6 @@ impl CapabilityTaxonomy {
             | Self::SporeDeployment
             | Self::GeneticLineage
             | Self::NicheDeployment => Some("biomeos"),
-
-            // Custom capabilities have no default
-            Self::Custom(_) => None,
         }
     }
 
@@ -641,6 +642,7 @@ impl CapabilityTaxonomy {
     ///
     /// This is a convenience function for migrating from hardcoded capability→primal
     /// mappings to taxonomy-based resolution.
+    #[must_use]
     pub fn resolve_to_primal(capability: &str) -> Option<&'static str> {
         Self::from_str_flexible(capability).and_then(|cap| cap.default_primal())
     }
@@ -657,12 +659,14 @@ impl CapabilityTaxonomy {
     /// # Returns
     ///
     /// Bootstrap-time primal name hints (empty if strict discovery is enabled)
+    #[must_use]
     pub fn known_primals() -> &'static [&'static str] {
         Self::known_primals_with(std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
     }
 
     /// Returns known primal names; empty when `strict` is `true`.
-    pub fn known_primals_with(strict: bool) -> &'static [&'static str] {
+    #[must_use]
+    pub const fn known_primals_with(strict: bool) -> &'static [&'static str] {
         if strict {
             return &[];
         }
@@ -672,12 +676,11 @@ impl CapabilityTaxonomy {
 
 impl fmt::Display for CapabilityTaxonomy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Custom(name) => write!(f, "custom:{name}"),
-            _ => {
-                let s = format!("{self:?}");
-                write!(f, "{}", s.to_lowercase())
-            }
+        if let Self::Custom(name) = self {
+            write!(f, "custom:{name}")
+        } else {
+            let s = format!("{self:?}");
+            write!(f, "{}", s.to_lowercase())
         }
     }
 }

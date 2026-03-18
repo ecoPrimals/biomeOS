@@ -220,9 +220,11 @@ mod tests {
         assert_ne!(family_a_socket, family_b_socket);
 
         // Verify both follow expected patterns
-        assert!(family_a_socket
-            .to_string_lossy()
-            .contains("beardog-test_family"));
+        assert!(
+            family_a_socket
+                .to_string_lossy()
+                .contains("beardog-test_family")
+        );
         assert!(family_b_socket.to_string_lossy().contains("beardog-nat1"));
     }
 

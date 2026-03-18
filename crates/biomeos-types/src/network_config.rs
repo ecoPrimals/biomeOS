@@ -152,8 +152,7 @@ impl NetworkConfig {
     pub fn from_env_with(env: &HashMap<String, String>) -> Self {
         let bind_all = env
             .get(env_vars::BIND_ALL)
-            .map(|v| v == "1" || v.to_lowercase() == "true")
-            .unwrap_or(false);
+            .is_some_and(|v| v == "1" || v.to_lowercase() == "true");
 
         let bind_address = if bind_all {
             // Use IPv6 unspecified [::] for dual-stack (accepts both IPv4 and IPv6)
@@ -170,18 +169,15 @@ impl NetworkConfig {
         // DEEP DEBT: In sovereign mode, public STUN is disabled by default
         let is_sovereign = env
             .get("BIOMEOS_SOVEREIGN")
-            .map(|v| v == "1" || v.to_lowercase() == "true")
-            .unwrap_or(false);
+            .is_some_and(|v| v == "1" || v.to_lowercase() == "true");
 
         let allow_public_stun = if is_sovereign {
             // Sovereign mode: no external dependencies unless explicitly opted in
             env.get("BIOMEOS_ALLOW_PUBLIC_STUN")
-                .map(|v| v == "1" || v.to_lowercase() == "true")
-                .unwrap_or(false)
+                .is_some_and(|v| v == "1" || v.to_lowercase() == "true")
         } else {
             env.get(env_vars::NO_PUBLIC_STUN)
-                .map(|v| v != "1" && v.to_lowercase() != "true")
-                .unwrap_or(true)
+                .is_none_or(|v| v != "1" && v.to_lowercase() != "true")
         };
 
         let ports = PortConfig {
@@ -352,15 +348,14 @@ impl NetworkConfig {
     }
 
     fn resolve_stun_servers_with(env: &HashMap<String, String>) -> Vec<String> {
-        if let Some(servers) = env.get(env_vars::STUN_SERVERS) {
-            servers
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect()
-        } else {
-            Vec::new()
-        }
+        env.get(env_vars::STUN_SERVERS)
+            .map_or_else(Vec::new, |servers| {
+                servers
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            })
     }
 
     /// Default public STUN servers (community-run, FOSS-aligned)

@@ -90,9 +90,11 @@ fn test_load_livespore_create_graph_format() {
     assert_eq!(ordered[2].id.as_str(), "generate-seed");
 
     // Verify env resolution
-    assert!(graph
-        .resolve_env("${SPORE_TARGET}/biomeOS")
-        .contains("/biomeOS"));
+    assert!(
+        graph
+            .resolve_env("${SPORE_TARGET}/biomeOS")
+            .contains("/biomeOS")
+    );
 }
 
 #[test]

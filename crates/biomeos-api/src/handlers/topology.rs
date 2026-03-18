@@ -4,7 +4,7 @@
 // Topology handler
 // Returns network topology (nodes + edges)
 
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::info;

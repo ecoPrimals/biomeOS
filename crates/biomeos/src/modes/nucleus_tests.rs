@@ -154,12 +154,14 @@ fn test_build_primal_command_songbird() {
         "node1",
     );
     let envs: Vec<_> = cmd.get_envs().collect();
-    assert!(envs
-        .iter()
-        .any(|(k, _)| k == &std::ffi::OsStr::new("SONGBIRD_SECURITY_PROVIDER")));
-    assert!(envs
-        .iter()
-        .any(|(k, _)| k == &std::ffi::OsStr::new("FAMILY_ID")));
+    assert!(
+        envs.iter()
+            .any(|(k, _)| k == &std::ffi::OsStr::new("SONGBIRD_SECURITY_PROVIDER"))
+    );
+    assert!(
+        envs.iter()
+            .any(|(k, _)| k == &std::ffi::OsStr::new("FAMILY_ID"))
+    );
 }
 
 #[test]
@@ -186,9 +188,10 @@ fn test_build_primal_command_toadstool() {
         "node1",
     );
     let envs: Vec<_> = cmd.get_envs().collect();
-    assert!(envs
-        .iter()
-        .any(|(k, _)| k == &std::ffi::OsStr::new("TOADSTOOL_FAMILY_ID")));
+    assert!(
+        envs.iter()
+            .any(|(k, _)| k == &std::ffi::OsStr::new("TOADSTOOL_FAMILY_ID"))
+    );
 }
 
 #[test]
@@ -201,9 +204,10 @@ fn test_build_primal_command_squirrel() {
         "node1",
     );
     let envs: Vec<_> = cmd.get_envs().collect();
-    assert!(envs
-        .iter()
-        .any(|(k, _)| k == &std::ffi::OsStr::new("BIOMEOS_DISCOVERY_SOCKET")));
+    assert!(
+        envs.iter()
+            .any(|(k, _)| k == &std::ffi::OsStr::new("BIOMEOS_DISCOVERY_SOCKET"))
+    );
 }
 
 #[test]
@@ -230,7 +234,7 @@ fn test_format_nucleus_summary() {
         std::path::Path::new("/tmp/sock"),
         "fam1",
         "node1",
-        &NucleusMode::Tower,
+        NucleusMode::Tower,
         "bootstrap",
     );
     assert!(!lines.is_empty());
@@ -248,7 +252,7 @@ fn test_format_nucleus_summary_empty_children() {
         std::path::Path::new("/tmp/sock"),
         "fam1",
         "node1",
-        &NucleusMode::Node,
+        NucleusMode::Node,
         "coordinated",
     );
     assert!(lines.iter().any(|l| l.contains("coordinated")));
@@ -281,10 +285,12 @@ fn test_startup_config_debug() {
 fn test_resolve_startup_config_invalid_mode() {
     let result = resolve_startup_config("invalid", "node1", None);
     assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("Unknown nucleus mode"));
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("Unknown nucleus mode")
+    );
 }
 
 #[test]
@@ -479,7 +485,7 @@ fn test_build_primal_command_squirrel_with_ai_providers() {
         openai_api_key: None,
         ai_http_providers: None,
     };
-    let cmd = build_primal_command_with(config);
+    let cmd = build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let ai_providers = envs
         .iter()
@@ -502,7 +508,7 @@ fn test_build_primal_command_squirrel_with_openai_key() {
         openai_api_key: Some("sk-test"),
         ai_http_providers: None,
     };
-    let cmd = build_primal_command_with(config);
+    let cmd = build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let ai_providers = envs
         .iter()
@@ -578,7 +584,7 @@ fn test_format_nucleus_summary_health_check_line() {
         std::path::Path::new("/tmp/sock"),
         "fam1",
         "node1",
-        &NucleusMode::Tower,
+        NucleusMode::Tower,
         "bootstrap",
     );
     assert!(lines.iter().any(|l| l.contains("nc -U")));
@@ -608,7 +614,7 @@ fn test_build_primal_command_squirrel_without_ai_keys() {
         openai_api_key: None,
         ai_http_providers: None,
     };
-    let cmd = super::build_primal_command_with(config);
+    let cmd = super::build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let ai_providers = envs
         .iter()
@@ -634,7 +640,7 @@ fn test_format_nucleus_summary_coordinated_mode() {
         std::path::Path::new("/run/sock"),
         "fam1",
         "node1",
-        &NucleusMode::Full,
+        NucleusMode::Full,
         "coordinated",
     );
     assert!(lines.iter().any(|l| l.contains("coordinated")));
@@ -654,4 +660,40 @@ fn test_primal_command_config_debug() {
         ai_http_providers: None,
     };
     let _ = format!("{config:?}");
+}
+
+#[test]
+fn test_build_primal_command_squirrel_with_custom_ai_providers() {
+    let config = super::PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: Some("key"),
+        openai_api_key: None,
+        ai_http_providers: Some("custom,anthropic"),
+    };
+    let cmd = super::build_primal_command_with(&config);
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let ai_providers = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("AI_HTTP_PROVIDERS"));
+    assert!(ai_providers.is_some());
+    let (_, v) = ai_providers.unwrap();
+    assert_eq!(v.unwrap().to_string_lossy(), "custom,anthropic");
+}
+
+#[test]
+fn test_base64_encode_single_byte_padding() {
+    let r = super::base64_encode(&[0x41]);
+    assert_eq!(r.len(), 4);
+    assert!(r.ends_with("=="));
+}
+
+#[test]
+fn test_base64_encode_two_byte_padding() {
+    let r = super::base64_encode(&[0x41, 0x42]);
+    assert_eq!(r.len(), 4);
+    assert!(r.ends_with("="));
 }

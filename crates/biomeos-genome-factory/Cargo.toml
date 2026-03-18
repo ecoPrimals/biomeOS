@@ -1,7 +1,7 @@
 [package]
 name = "biomeos-genome-factory"
 version = "1.0.0"
-edition = "2021"
+edition.workspace = true
 authors = ["ecoPrimals Team"]
 license = "AGPL-3.0-only"
 description = "Genome Factory - Universal genomeBin production for any primal"
@@ -48,3 +48,6 @@ path = "src/lib.rs"
 # ✅ Runtime discovery
 # ✅ Self-replication capability
 # ✅ Federation-native
+
+[lints]
+workspace = true

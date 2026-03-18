@@ -9,7 +9,7 @@ use biomeos_spore::manifest::BinaryManifest;
 use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
 
 /// Map verification status to (icon, text) for display (testable pure function)
-pub fn verification_status_display(status: VerificationStatus) -> (&'static str, &'static str) {
+pub fn verification_status_display(status: &VerificationStatus) -> (&'static str, &'static str) {
     match status {
         VerificationStatus::Fresh => ("✅", "Fresh"),
         VerificationStatus::Stale => ("⚠️ ", "Stale"),
@@ -191,7 +191,7 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     for binary in &report.binaries {
-        let (status_icon, status_text) = verification_status_display(binary.status.clone());
+        let (status_icon, status_text) = verification_status_display(&binary.status);
 
         println!("{} {}: {}", status_icon, binary.name, status_text);
         println!(
@@ -275,11 +275,11 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
         let (status_icon, status_text) = match report.overall_status {
             VerificationStatus::Fresh => {
                 fresh_count += 1;
-                verification_status_display(VerificationStatus::Fresh)
+                verification_status_display(&VerificationStatus::Fresh)
             }
             VerificationStatus::Stale => {
                 stale_count += 1;
-                verification_status_display(VerificationStatus::Stale)
+                verification_status_display(&VerificationStatus::Stale)
             }
             _ => {
                 other_count += 1;
@@ -340,23 +340,23 @@ mod tests {
     #[test]
     fn test_verification_status_display() {
         assert_eq!(
-            verification_status_display(VerificationStatus::Fresh),
+            verification_status_display(&VerificationStatus::Fresh),
             ("✅", "Fresh")
         );
         assert_eq!(
-            verification_status_display(VerificationStatus::Stale),
+            verification_status_display(&VerificationStatus::Stale),
             ("⚠️ ", "Stale")
         );
         assert_eq!(
-            verification_status_display(VerificationStatus::Missing),
+            verification_status_display(&VerificationStatus::Missing),
             ("❌", "Missing")
         );
         assert_eq!(
-            verification_status_display(VerificationStatus::Modified),
+            verification_status_display(&VerificationStatus::Modified),
             ("⚠️ ", "Modified")
         );
         assert_eq!(
-            verification_status_display(VerificationStatus::Newer),
+            verification_status_display(&VerificationStatus::Newer),
             ("❓", "Newer")
         );
     }
@@ -378,7 +378,7 @@ mod tests {
             (VerificationStatus::Newer, "❓", "Newer"),
         ];
         for (status, expected_icon, expected_text) in variants {
-            let (icon, text) = verification_status_display(status.clone());
+            let (icon, text) = verification_status_display(&status);
             assert_eq!(icon, expected_icon, "icon for {status:?}");
             assert_eq!(text, expected_text, "text for {status:?}");
         }
@@ -386,8 +386,8 @@ mod tests {
 
     #[test]
     fn test_verification_status_display_icons_distinct() {
-        let (fresh_icon, _) = verification_status_display(VerificationStatus::Fresh);
-        let (missing_icon, _) = verification_status_display(VerificationStatus::Missing);
+        let (fresh_icon, _) = verification_status_display(&VerificationStatus::Fresh);
+        let (missing_icon, _) = verification_status_display(&VerificationStatus::Missing);
         assert_ne!(fresh_icon, missing_icon);
     }
 }

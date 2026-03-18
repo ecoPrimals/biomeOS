@@ -86,7 +86,7 @@ pub(crate) async fn check_plasmid_bin_at(base_dir: &Path) -> Result<HealthCheck>
 
     if plasmid_dir.exists() && plasmid_dir.is_dir() {
         let binaries: Vec<_> = std::fs::read_dir(&plasmid_dir)?
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| e.path().is_file())
             .collect();
 
@@ -132,10 +132,12 @@ mod tests {
         let check = check_plasmid_bin().await.unwrap();
         std::env::set_current_dir(&old_cwd).unwrap();
         assert_eq!(check.status, HealthStatus::Warning);
-        assert!(check
-            .details
-            .iter()
-            .any(|d| d.contains("not found") || d.contains("Directory")));
+        assert!(
+            check
+                .details
+                .iter()
+                .any(|d| d.contains("not found") || d.contains("Directory"))
+        );
     }
 
     #[tokio::test]
@@ -144,10 +146,12 @@ mod tests {
         assert_eq!(check.name, "Primal Discovery");
         assert!(check.details.iter().any(|d| d.starts_with("Socket dir:")));
         assert!(check.details.iter().any(|d| d.starts_with("Family ID:")));
-        assert!(check
-            .details
-            .iter()
-            .any(|d| d.contains("primals discovered")));
+        assert!(
+            check
+                .details
+                .iter()
+                .any(|d| d.contains("primals discovered"))
+        );
         // Status may be Healthy or Warning depending on running primals
         assert!(matches!(
             check.status,
@@ -174,10 +178,12 @@ mod tests {
         std::fs::write(plasmid_parent.join("primals"), "not-a-dir").unwrap();
         let check = check_plasmid_bin_at(temp.path()).await.unwrap();
         assert_eq!(check.status, HealthStatus::Warning);
-        assert!(check
-            .details
-            .iter()
-            .any(|d| d.contains("not found") || d.contains("Directory")));
+        assert!(
+            check
+                .details
+                .iter()
+                .any(|d| d.contains("not found") || d.contains("Directory"))
+        );
     }
 
     #[tokio::test]
@@ -224,10 +230,12 @@ mod tests {
 
         assert_eq!(check.name, "Primal Discovery");
         assert!(check.details.iter().any(|d| d.contains("Healthy")));
-        assert!(check
-            .details
-            .iter()
-            .any(|d| d.contains("primals discovered")));
+        assert!(
+            check
+                .details
+                .iter()
+                .any(|d| d.contains("primals discovered"))
+        );
         assert_eq!(check.status, HealthStatus::Healthy);
     }
 
@@ -245,10 +253,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(check.status, HealthStatus::Warning);
-        assert!(check
-            .details
-            .iter()
-            .any(|d| d.contains("1/5") || d.contains("2/5")));
+        assert!(
+            check
+                .details
+                .iter()
+                .any(|d| d.contains("1/5") || d.contains("2/5"))
+        );
     }
 
     #[tokio::test]

@@ -182,14 +182,15 @@ impl BiomeOSConfig {
     }
 
     /// Load configuration from environment variables
+    #[must_use]
     pub fn from_env() -> Self {
         let mut config = Self::default();
 
         // Apply environment variable overrides
-        if let Ok(port) = std::env::var("BIOMEOS_PORT") {
-            if let Ok(port_num) = port.parse::<u16>() {
-                config.network.port = port_num;
-            }
+        if let Ok(port) = std::env::var("BIOMEOS_PORT")
+            && let Ok(port_num) = port.parse::<u16>()
+        {
+            config.network.port = port_num;
         }
 
         if let Ok(bind_addr) = std::env::var("BIOMEOS_BIND_ADDRESS") {
@@ -200,7 +201,6 @@ impl BiomeOSConfig {
             config.observability.logging.level = match log_level.to_lowercase().as_str() {
                 "trace" => observability::LogLevel::Trace,
                 "debug" => observability::LogLevel::Debug,
-                "info" => observability::LogLevel::Info,
                 "warn" => observability::LogLevel::Warn,
                 "error" => observability::LogLevel::Error,
                 "off" => observability::LogLevel::Off,
@@ -266,7 +266,7 @@ impl BiomeOSConfig {
     }
 
     /// Merge with another configuration (other takes precedence)
-    pub fn merge(&mut self, other: BiomeOSConfig) -> BiomeResult<()> {
+    pub fn merge(&mut self, other: Self) -> BiomeResult<()> {
         // Update metadata
         self.metadata.modified_at = Utc::now();
         self.metadata.version = other.metadata.version;
@@ -331,6 +331,7 @@ impl BiomeOSConfig {
     }
 
     /// Create a configuration builder
+    #[must_use]
     pub fn builder() -> BiomeOSConfigBuilder {
         BiomeOSConfigBuilder::new()
     }
@@ -343,6 +344,7 @@ pub struct BiomeOSConfigBuilder {
 
 impl BiomeOSConfigBuilder {
     /// Create a new configuration builder
+    #[must_use]
     pub fn new() -> Self {
         Self {
             config: BiomeOSConfig::default(),
@@ -350,54 +352,67 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Set configuration name
+    #[must_use]
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.config.metadata.name = name.into();
         self
     }
 
     /// Set configuration version
+    #[must_use]
     pub fn version(mut self, version: impl Into<String>) -> Self {
         self.config.metadata.version = version.into();
         self
     }
 
     /// Set system environment
+    #[must_use]
     pub fn environment(mut self, env: Environment) -> Self {
         self.config.system.environment = env;
         self
     }
 
     /// Set network port
+    #[must_use]
+    #[expect(clippy::missing_const_for_fn, reason = "builder method mutates self")]
     pub fn port(mut self, port: u16) -> Self {
         self.config.network.port = port;
         self
     }
 
     /// Set bind address
+    #[must_use]
     pub fn bind_address(mut self, addr: impl Into<String>) -> Self {
         self.config.network.bind_address = addr.into();
         self
     }
 
     /// Enable debug mode
+    #[must_use]
+    #[expect(clippy::missing_const_for_fn, reason = "builder method mutates self")]
     pub fn debug(mut self, debug: bool) -> Self {
         self.config.features.debug = debug;
         self
     }
 
     /// Enable experimental features
+    #[must_use]
+    #[expect(clippy::missing_const_for_fn, reason = "builder method mutates self")]
     pub fn experimental(mut self, experimental: bool) -> Self {
         self.config.features.experimental = experimental;
         self
     }
 
     /// Set log level
+    #[must_use]
+    #[expect(clippy::missing_const_for_fn, reason = "builder method mutates self")]
     pub fn log_level(mut self, level: observability::LogLevel) -> Self {
         self.config.observability.logging.level = level;
         self
     }
 
     /// Add environment configuration
+    #[must_use]
     pub fn add_environment(
         mut self,
         name: impl Into<String>,
@@ -408,6 +423,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Add custom extension
+    #[must_use]
     pub fn add_extension(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.config.metadata.custom.insert(key.into(), value);
         self

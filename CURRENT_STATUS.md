@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 16, 2026 (v2.49: Resilient dispatch + cost-aware Pathway Learner)
-**Version**: 2.49
+**Updated**: March 18, 2026 (v2.50: Deep debt audit execution + modern idiomatic Rust evolution)
+**Version**: 2.50
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -15,12 +15,12 @@
 | **IPC Standard** | Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) |
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
-| **Code Quality** | A++ (Pure Rust, Edition 2024, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
-| **Lint hardening** | `deny` on unwrap_used/expect_used |
-| **Tests Passing** | 5,161+ lib + bin (0 failures) |
-| **Test Coverage** | 78% line, 80% function (llvm-cov, climbing toward 90%) |
+| **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
+| **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 23 crates |
+| **Tests Passing** | 5,203 lib + bin (0 failures) |
+| **Test Coverage** | ~82% line, climbing toward 90% (39 new tests in low-coverage modules) |
 | **Unsafe Code** | 0 production (2 test-only in env_helpers.rs, Rust 2024 requirement) |
-| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
+| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
@@ -33,11 +33,11 @@
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
-| **Deep Debt Session (Mar 16)** | Clippy: PASS (was FAIL with 2 dead-code errors); 1 flaky test fixed (deployment_mode env race); 9 Cargo.toml AGPL-3.0-only; Sovereignty: all hardcoded Google DNS removed from tests; Doc warnings: 0 (was 1); Timeout/port constants centralized; serial_test for env-dependent tests |
+| **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 23 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
 | **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
 | **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |
-| **Files >1000 LOC** | 0 (max 920, neural_router split to 4 domain modules) |
+| **Files >1000 LOC** | 0 (max 899, atomic_client split + engine path_builder/neural_api extracted) |
 | **JSON-RPC types** | `JSONRPC_VERSION` const + `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
 | **Zero-copy** | `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client); `Arc<str>` for identifiers |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |

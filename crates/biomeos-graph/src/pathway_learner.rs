@@ -130,11 +130,14 @@ impl PathwayLearner {
 
         let mut suggestions = Vec::new();
 
-        suggestions.extend(self.find_parallelization_opportunities(graph, &node_metrics));
-        suggestions.extend(self.find_prewarm_candidates(graph, &node_metrics));
-        suggestions.extend(self.find_batch_candidates(graph, &node_metrics));
-        suggestions.extend(self.find_reorder_candidates(graph, &node_metrics));
-        suggestions.extend(self.find_cache_candidates(graph, &node_metrics));
+        suggestions.extend(Self::find_parallelization_opportunities(
+            graph,
+            &node_metrics,
+        ));
+        suggestions.extend(Self::find_prewarm_candidates(graph, &node_metrics));
+        suggestions.extend(Self::find_batch_candidates(graph, &node_metrics));
+        suggestions.extend(Self::find_reorder_candidates(graph, &node_metrics));
+        suggestions.extend(Self::find_cache_candidates(graph, &node_metrics));
 
         suggestions.sort_by(|a, b| {
             b.estimated_speedup
@@ -169,7 +172,6 @@ impl PathwayLearner {
 
     /// Find pairs of sequential nodes that can be parallelized.
     fn find_parallelization_opportunities(
-        &self,
         graph: &DeploymentGraph,
         node_metrics: &HashMap<String, NodeMetricsAggregate>,
     ) -> Vec<OptimizationSuggestion> {
@@ -225,7 +227,6 @@ impl PathwayLearner {
 
     /// Identify primals that appear frequently and could benefit from prewarming.
     fn find_prewarm_candidates(
-        &self,
         graph: &DeploymentGraph,
         node_metrics: &HashMap<String, NodeMetricsAggregate>,
     ) -> Vec<OptimizationSuggestion> {
@@ -264,7 +265,6 @@ impl PathwayLearner {
     /// Expensive nodes (high `cost_estimate_ms`) with no dependents should be
     /// moved to early phases so their I/O overlaps with lighter work.
     fn find_reorder_candidates(
-        &self,
         graph: &DeploymentGraph,
         node_metrics: &HashMap<String, NodeMetricsAggregate>,
     ) -> Vec<OptimizationSuggestion> {
@@ -317,7 +317,6 @@ impl PathwayLearner {
     /// cache candidates, especially if they have no `operation_dependencies`
     /// (indicating they're referentially transparent).
     fn find_cache_candidates(
-        &self,
         graph: &DeploymentGraph,
         node_metrics: &HashMap<String, NodeMetricsAggregate>,
     ) -> Vec<OptimizationSuggestion> {
@@ -356,7 +355,6 @@ impl PathwayLearner {
 
     /// Find nodes targeting the same primal that could be batched.
     fn find_batch_candidates(
-        &self,
         graph: &DeploymentGraph,
         node_metrics: &HashMap<String, NodeMetricsAggregate>,
     ) -> Vec<OptimizationSuggestion> {
@@ -492,8 +490,8 @@ mod tests {
             ("b".to_string(), make_node_metrics("b", 100, 30.0)),
         ]);
 
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_parallelization_opportunities(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_parallelization_opportunities(&graph, &metrics);
 
         assert!(!suggestions.is_empty(), "should find a parallelization");
         let s = &suggestions[0];
@@ -519,8 +517,8 @@ mod tests {
             ("b".to_string(), make_node_metrics("b", 100, 30.0)),
         ]);
 
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_parallelization_opportunities(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_parallelization_opportunities(&graph, &metrics);
         assert!(
             suggestions.is_empty(),
             "dependent nodes should not be parallelized"
@@ -541,8 +539,8 @@ mod tests {
             ("c".to_string(), make_node_metrics("c", 50, 10.0)),
         ]);
 
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_batch_candidates(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_batch_candidates(&graph, &metrics);
         assert_eq!(suggestions.len(), 1, "only rhizocrypt has 2+ nodes");
         match &suggestions[0].optimization {
             OptimizationType::Batch { primal, nodes } => {
@@ -559,8 +557,8 @@ mod tests {
 
         let metrics = HashMap::from([("a".to_string(), make_node_metrics("a", 100, 200.0))]);
 
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_prewarm_candidates(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_prewarm_candidates(&graph, &metrics);
         assert_eq!(suggestions.len(), 1);
         match &suggestions[0].optimization {
             OptimizationType::Prewarm { primal } => assert_eq!(primal, "beardog"),
@@ -574,8 +572,8 @@ mod tests {
 
         let metrics = HashMap::from([("a".to_string(), make_node_metrics("a", 100, 5.0))]);
 
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_prewarm_candidates(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_prewarm_candidates(&graph, &metrics);
         assert!(suggestions.is_empty(), "5ms is below the 50ms threshold");
     }
 
@@ -649,8 +647,8 @@ mod tests {
             ("c".to_string(), make_node_metrics("c", 100, 20.0)),
         ]);
 
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_reorder_candidates(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_reorder_candidates(&graph, &metrics);
 
         assert!(
             !suggestions.is_empty(),
@@ -676,8 +674,8 @@ mod tests {
         let graph = make_graph(vec![make_node("a", vec![], Some("p1")), cheap_node]);
 
         let metrics = HashMap::new();
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_reorder_candidates(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_reorder_candidates(&graph, &metrics);
 
         assert!(suggestions.is_empty(), "10ms is below 100ms threshold");
     }
@@ -697,8 +695,8 @@ mod tests {
             },
         )]);
 
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_cache_candidates(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_cache_candidates(&graph, &metrics);
 
         assert_eq!(suggestions.len(), 1);
         match &suggestions[0].optimization {
@@ -719,8 +717,8 @@ mod tests {
             make_node_metrics("side-effect", 50, 30.0),
         )]);
 
-        let learner = make_test_learner(0);
-        let suggestions = learner.find_cache_candidates(&graph, &metrics);
+        let _learner = make_test_learner(0);
+        let suggestions = PathwayLearner::find_cache_candidates(&graph, &metrics);
 
         assert!(
             suggestions.is_empty(),

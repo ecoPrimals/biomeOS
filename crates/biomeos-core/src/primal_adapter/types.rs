@@ -305,7 +305,7 @@ impl PrimalAdapter {
                 // Try common patterns
                 cmd.env("PORT", port.to_string());
             }
-            _ => {}
+            PortConfigMethod::ConfigFile { .. } => {}
         }
 
         // Redirect output to XDG state directory

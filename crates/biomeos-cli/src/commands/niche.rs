@@ -25,8 +25,10 @@ pub fn parse_niche_yaml_info(content: &str) -> (String, String) {
         .lines()
         .find(|l| l.contains("name:") && !l.contains("primal"))
         .and_then(|l| l.split(':').nth(1))
-        .map(|s| s.trim().trim_matches('"').to_string())
-        .unwrap_or_else(|| "Unknown".to_string());
+        .map_or_else(
+            || "Unknown".to_string(),
+            |s| s.trim().trim_matches('"').to_string(),
+        );
 
     let category = content
         .lines()
@@ -40,7 +42,7 @@ pub fn parse_niche_yaml_info(content: &str) -> (String, String) {
 
 /// Map primal name to display icon (testable pure function)
 pub fn primal_to_icon(primal: &str) -> &'static str {
-    use biomeos_types::primal_names::*;
+    use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
     match primal {
         NESTGATE => "🏰",
         SONGBIRD => "🎼",
@@ -56,7 +58,10 @@ pub async fn handle_niche_list() -> anyhow::Result<()> {
     let templates_dir = Path::new("niches/templates");
 
     if !templates_dir.exists() {
-        println!("❌ Niche templates directory not found: {templates_dir:?}");
+        println!(
+            "❌ Niche templates directory not found: {}",
+            templates_dir.display()
+        );
         return Ok(());
     }
 
@@ -106,7 +111,6 @@ pub async fn handle_niche_show(id: &str) -> anyhow::Result<()> {
 
     // Parse and display sections
     let mut in_section = "";
-    let _indent = 0;
 
     for line in content.lines() {
         let trimmed = line.trim();
@@ -208,7 +212,7 @@ pub async fn handle_primal_list() -> anyhow::Result<()> {
         println!();
     }
 
-    let total: usize = primal_counts.values().map(|v| v.len()).sum();
+    let total: usize = primal_counts.values().map(std::vec::Vec::len).sum();
     println!(
         "Total: {} binaries from {} primals",
         total,

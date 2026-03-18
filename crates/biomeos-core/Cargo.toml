@@ -75,3 +75,6 @@ serial_test = "3.2"
 [features]
 default = []
 # http-transport = [] # REMOVED: HTTP transport removed, use atomic_client
+
+[lints]
+workspace = true

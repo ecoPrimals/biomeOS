@@ -340,7 +340,7 @@ impl UniversalBiomeOSManager {
         );
 
         // Use Pure Rust atomic client (Tower-based, Unix sockets)
-        let client = crate::atomic_client::AtomicPrimalClient::discover(&primal.name)
+        let client = crate::atomic_primal_client::AtomicPrimalClient::discover(&primal.name)
             .await
             .with_context(|| format!("Failed to discover primal: {}", primal.name))?;
 

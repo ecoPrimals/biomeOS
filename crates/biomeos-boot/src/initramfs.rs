@@ -7,8 +7,8 @@
 //! Creates a minimal boot environment with BiomeOS binaries.
 
 use anyhow::{Context, Result};
-use flate2::write::GzEncoder;
 use flate2::Compression;
+use flate2::write::GzEncoder;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -352,9 +352,8 @@ impl KernelManager {
                     kernel_path,
                     initramfs_path: initramfs,
                 });
-            } else {
-                warn!("BIOMEOS_KERNEL set but file not found: {}", env_kernel);
             }
+            warn!("BIOMEOS_KERNEL set but file not found: {}", env_kernel);
         }
 
         // Try to find system kernel

@@ -133,14 +133,16 @@ impl RetryPolicy {
             return Duration::from_secs(0);
         }
 
-        let base_delay =
-            self.initial_delay.as_millis() as f64 * self.multiplier.powi((attempt - 1) as i32);
+        let base_delay = self.initial_delay.as_millis() as f64
+            * self
+                .multiplier
+                .powi(i32::try_from(attempt - 1).unwrap_or(0));
 
         let delay_ms = base_delay.min(self.max_delay.as_millis() as f64);
 
         let final_delay = if self.jitter {
             // Add up to 25% jitter
-            let jitter_factor = 1.0 + (rand::random::<f64>() * 0.25);
+            let jitter_factor = rand::random::<f64>().mul_add(0.25, 1.0);
             (delay_ms * jitter_factor) as u64
         } else {
             delay_ms as u64
@@ -186,6 +188,10 @@ impl RetryPolicy {
             }
         }
 
+        #[expect(
+            clippy::expect_used,
+            reason = "retry loop must have executed at least once"
+        )]
         Err(last_error.expect("retry loop must have executed at least once"))
     }
 }
@@ -347,7 +353,7 @@ impl CircuitBreaker {
 
     /// Execute an operation through the circuit breaker with generic error type.
     ///
-    /// Like [`call`], this manages the full circuit state machine: checks for
+    /// Like [`CircuitBreaker::call`], this manages the full circuit state machine: checks for
     /// open state, handles half-open recovery, and records success/failure.
     /// Unlike `call`, the operation can return any error type convertible from
     /// [`RetryError`], making it compatible with `anyhow::Error` and other

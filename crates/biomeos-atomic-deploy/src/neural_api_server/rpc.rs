@@ -5,7 +5,7 @@
 //!
 //! Provides types for parsing and handling JSON-RPC 2.0 requests and responses.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub use biomeos_types::JsonRpcRequest;
 
@@ -161,10 +161,12 @@ mod tests {
         let err = anyhow::anyhow!("Something broke");
         let resp = internal_error_response(&err, Some(json!(5)));
         assert_eq!(resp["error"]["code"], -32603);
-        assert!(resp["error"]["message"]
-            .as_str()
-            .expect("message")
-            .contains("Something broke"));
+        assert!(
+            resp["error"]["message"]
+                .as_str()
+                .expect("message")
+                .contains("Something broke")
+        );
         assert_eq!(resp["id"], 5);
     }
 
@@ -203,10 +205,12 @@ mod tests {
         };
         let resp = outcome.into_response();
         assert_eq!(resp["error"]["code"], -32601);
-        assert!(resp["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("foo.bar"));
+        assert!(
+            resp["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("foo.bar")
+        );
         assert_eq!(resp["id"], 42);
     }
 

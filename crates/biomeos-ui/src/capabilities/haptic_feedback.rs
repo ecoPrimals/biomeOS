@@ -190,12 +190,16 @@ mod tests {
         pipeline.active = true;
 
         assert!(pipeline.find_device(HapticDeviceType::Rumble).is_some());
-        assert!(pipeline
-            .find_device(HapticDeviceType::ForceFeedback)
-            .is_some());
-        assert!(pipeline
-            .find_device(HapticDeviceType::Electrotactile)
-            .is_none());
+        assert!(
+            pipeline
+                .find_device(HapticDeviceType::ForceFeedback)
+                .is_some()
+        );
+        assert!(
+            pipeline
+                .find_device(HapticDeviceType::Electrotactile)
+                .is_none()
+        );
     }
 
     #[test]
@@ -269,9 +273,11 @@ mod tests {
             update_hz: 1000,
         }];
         pipeline.active = true;
-        assert!(pipeline
-            .find_device(HapticDeviceType::ForceFeedback)
-            .is_some());
+        assert!(
+            pipeline
+                .find_device(HapticDeviceType::ForceFeedback)
+                .is_some()
+        );
     }
 
     #[test]
@@ -294,9 +300,11 @@ mod tests {
             update_hz: 500,
         }];
         pipeline.active = true;
-        assert!(pipeline
-            .find_device(HapticDeviceType::PrecisionActuator)
-            .is_some());
+        assert!(
+            pipeline
+                .find_device(HapticDeviceType::PrecisionActuator)
+                .is_some()
+        );
         assert!(!pipeline.has_force_feedback());
     }
 
@@ -311,9 +319,11 @@ mod tests {
             update_hz: 200,
         }];
         pipeline.active = true;
-        assert!(pipeline
-            .find_device(HapticDeviceType::Electrotactile)
-            .is_some());
+        assert!(
+            pipeline
+                .find_device(HapticDeviceType::Electrotactile)
+                .is_some()
+        );
     }
 
     #[tokio::test]

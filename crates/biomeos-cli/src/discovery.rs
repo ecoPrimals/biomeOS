@@ -7,7 +7,7 @@
 //! location-based, and advanced filtering.
 
 use anyhow::Result;
-use biomeos_core::{universal_biomeos_manager::DiscoveryResult, UniversalBiomeOSManager};
+use biomeos_core::{UniversalBiomeOSManager, universal_biomeos_manager::DiscoveryResult};
 use biomeos_types::{Health, PrimalCapability, PrimalType};
 use uuid::Uuid;
 
@@ -26,34 +26,31 @@ impl DiscoveryUtils {
 
         for endpoint in endpoints {
             // Try to probe the endpoint to get detailed information
-            match manager.probe_endpoint(&endpoint).await {
-                Ok(_probe_result) => {
-                    // Create a DiscoveryResult from the probe result
-                    let discovery_result = DiscoveryResult {
-                        id: Uuid::new_v4().to_string(),
-                        primal_type: PrimalType::new("unknown", "Unknown Primal", "1.0.0"),
-                        endpoint: endpoint.clone(),
-                        capabilities: vec![PrimalCapability::new("basic", "basic", "1.0.0")],
-                        health: Health::Healthy,
-                        discovered_at: chrono::Utc::now(),
-                    };
-                    results.push(discovery_result);
-                }
-                Err(_) => {
-                    // Even if probing fails, create a basic DiscoveryResult
-                    let discovery_result = DiscoveryResult {
-                        id: Uuid::new_v4().to_string(),
-                        primal_type: PrimalType::new("unknown", "Unknown Primal", "1.0.0"),
-                        endpoint: endpoint.clone(),
-                        capabilities: vec![],
-                        health: Health::Unknown {
-                            reason: "Probe failed".to_string(),
-                            last_known: None,
-                        },
-                        discovered_at: chrono::Utc::now(),
-                    };
-                    results.push(discovery_result);
-                }
+            if let Ok(_probe_result) = manager.probe_endpoint(&endpoint).await {
+                // Create a DiscoveryResult from the probe result
+                let discovery_result = DiscoveryResult {
+                    id: Uuid::new_v4().to_string(),
+                    primal_type: PrimalType::new("unknown", "Unknown Primal", "1.0.0"),
+                    endpoint: endpoint.clone(),
+                    capabilities: vec![PrimalCapability::new("basic", "basic", "1.0.0")],
+                    health: Health::Healthy,
+                    discovered_at: chrono::Utc::now(),
+                };
+                results.push(discovery_result);
+            } else {
+                // Even if probing fails, create a basic DiscoveryResult
+                let discovery_result = DiscoveryResult {
+                    id: Uuid::new_v4().to_string(),
+                    primal_type: PrimalType::new("unknown", "Unknown Primal", "1.0.0"),
+                    endpoint: endpoint.clone(),
+                    capabilities: vec![],
+                    health: Health::Unknown {
+                        reason: "Probe failed".to_string(),
+                        last_known: None,
+                    },
+                    discovered_at: chrono::Utc::now(),
+                };
+                results.push(discovery_result);
             }
         }
 
@@ -280,9 +277,11 @@ mod tests {
         ];
         let filtered = filter_by_type(&services, "discovery");
         assert_eq!(filtered.len(), 2);
-        assert!(filtered
-            .iter()
-            .all(|s| s.primal_type.category == "discovery"));
+        assert!(
+            filtered
+                .iter()
+                .all(|s| s.primal_type.category == "discovery")
+        );
 
         let filtered_case = filter_by_type(&services, "DISCOVERY");
         assert_eq!(filtered_case.len(), 2);

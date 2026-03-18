@@ -40,12 +40,20 @@ impl DependencyGraph {
             let provided = primal.provides();
             let required = primal.requires();
 
-            graph
-                .provides
-                .insert(id.clone(), provided.iter().map(|c| c.to_string()).collect());
-            graph
-                .requires
-                .insert(id.clone(), required.iter().map(|c| c.to_string()).collect());
+            graph.provides.insert(
+                id.clone(),
+                provided
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect(),
+            );
+            graph.requires.insert(
+                id.clone(),
+                required
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect(),
+            );
 
             // Map capabilities to providers
             for cap in provided {
@@ -83,8 +91,7 @@ impl DependencyGraph {
                                 // Check if capability provider has started
                                 self.capability_providers
                                     .get(cap)
-                                    .map(|provider| started.contains(provider))
-                                    .unwrap_or(false)
+                                    .is_some_and(|provider| started.contains(provider))
                             }) || req.is_empty()
                         }
                     }
@@ -105,8 +112,7 @@ impl DependencyGraph {
                                 !self
                                     .capability_providers
                                     .get(*cap)
-                                    .map(|p| started.contains(p))
-                                    .unwrap_or(false)
+                                    .is_some_and(|p| started.contains(p))
                             })
                             .cloned()
                             .collect();
@@ -118,7 +124,7 @@ impl DependencyGraph {
             }
 
             // Sort wave for deterministic ordering (by display string)
-            wave.sort_by_key(|a| a.to_string());
+            wave.sort_by_key(std::string::ToString::to_string);
 
             // Mark as started
             for id in &wave {
@@ -187,7 +193,7 @@ pub async fn start_in_waves(
         let results = futures::future::join_all(tasks).await;
 
         // Check for errors
-        for result in results.into_iter() {
+        for result in results {
             match result {
                 Ok(Ok(())) => {}
                 Ok(Err(e)) => {

@@ -6,7 +6,7 @@
 //! Handles mounting and managing essential filesystems during boot.
 
 use crate::init_error::{BootError, Result};
-use rustix::mount::{mount, MountFlags};
+use rustix::mount::{MountFlags, mount};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tracing::info;
@@ -104,7 +104,7 @@ impl FilesystemManager {
 
         // Try to mount (rustix: source, target, fstype, flags, data)
         match mount(source, target.as_ref(), fstype, flags, "") {
-            Ok(_) => {
+            Ok(()) => {
                 info!("  ✓ {}", target.as_ref().display());
                 self.mounted.insert(target_path);
                 Ok(())
@@ -130,7 +130,10 @@ impl FilesystemManager {
 
     /// Gets list of mounted filesystems
     pub fn mounted_filesystems(&self) -> Vec<&Path> {
-        self.mounted.iter().map(|p| p.as_path()).collect()
+        self.mounted
+            .iter()
+            .map(std::path::PathBuf::as_path)
+            .collect()
     }
 }
 

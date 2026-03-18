@@ -54,7 +54,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.generate_local_suggestions(&context);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&context);
         assert_eq!(suggestions.len(), 1);
         assert_eq!(
             suggestions[0].suggestion_type,
@@ -81,7 +81,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.generate_local_suggestions(&context);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&context);
         assert_eq!(suggestions.len(), 1);
         assert_eq!(
             suggestions[0].suggestion_type,
@@ -113,7 +113,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.generate_local_suggestions(&context);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&context);
         assert!(
             suggestions.is_empty(),
             "Already-assigned devices should not get assignment suggestions"
@@ -144,7 +144,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.generate_local_suggestions(&context);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&context);
         assert!(
             suggestions.is_empty(),
             "No suggestion when device capabilities don't match any primal"
@@ -170,7 +170,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.generate_local_suggestions(&context);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&context);
         assert_eq!(suggestions.len(), 1);
         assert_eq!(
             suggestions[0].suggestion_type,
@@ -197,7 +197,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.generate_local_suggestions(&context);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&context);
         assert!(
             suggestions.is_empty(),
             "No rebalance suggestion when load < 0.8"
@@ -223,7 +223,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.generate_local_suggestions(&context);
+        let suggestions = AISuggestionManager::generate_local_suggestions(&context);
         assert!(
             suggestions.is_empty(),
             "No rebalance suggestion when load is unknown"

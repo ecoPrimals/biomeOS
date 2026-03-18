@@ -1,7 +1,7 @@
 [package]
 name = "biomeos-graph"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 description = "Type-safe ingestion layer for Neural API deployment graphs"
 license = "AGPL-3.0-only"
 repository = "https://github.com/ecoPrimals/biomeOS"
@@ -42,3 +42,6 @@ default = []
 
 # Enable async execution
 async = []
+
+[lints]
+workspace = true

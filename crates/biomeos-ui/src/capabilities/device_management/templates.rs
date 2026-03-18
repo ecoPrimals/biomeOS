@@ -157,10 +157,12 @@ mod tests {
         // Check security role
         let security = tower.required_primals.iter().find(|r| r.role == "security");
         assert!(security.is_some(), "Tower should have security role");
-        assert!(security
-            .unwrap()
-            .capabilities
-            .contains(&"crypto".to_string()));
+        assert!(
+            security
+                .unwrap()
+                .capabilities
+                .contains(&"crypto".to_string())
+        );
 
         // Check discovery role
         let discovery = tower

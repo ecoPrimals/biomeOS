@@ -353,4 +353,173 @@ mod tests {
         assert_eq!(infos.len(), 1);
         assert_eq!(infos[0].name, "json-primal");
     }
+
+    #[tokio::test]
+    async fn test_handle_genome_build_manifest_only() {
+        use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let output = temp.path().join("out.genome");
+        let cmd = GenomeCommand::Build(GenomeBuildArgs {
+            binary_x86_64: None,
+            binary_aarch64: None,
+            output: output.clone(),
+            name: Some("test-genome".to_string()),
+            version: "2.0.0".to_string(),
+            description: Some("Test description".to_string()),
+        });
+        let result = handle_genome_command(cmd).await;
+        assert!(result.is_ok(), "build should succeed: {:?}", result.err());
+        let content = std::fs::read_to_string(&output).expect("read output");
+        let genome = GenomeBin::from_json(&content).expect("parse output");
+        assert_eq!(genome.manifest.name, "test-genome");
+        assert_eq!(genome.manifest.version, "2.0.0");
+        assert_eq!(genome.manifest.description, "Test description");
+    }
+
+    #[tokio::test]
+    async fn test_handle_genome_build_with_binaries() {
+        use biomeos_genomebin_v3::GenomeBin;
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let bin_x86 = temp.path().join("primal-x86");
+        let bin_aarch = temp.path().join("primal-aarch");
+        std::fs::write(&bin_x86, b"x86 binary").expect("write x86");
+        std::fs::write(&bin_aarch, b"aarch binary").expect("write aarch");
+        let output = temp.path().join("out.genome");
+        let cmd = GenomeCommand::Build(GenomeBuildArgs {
+            binary_x86_64: Some(bin_x86),
+            binary_aarch64: Some(bin_aarch),
+            output: output.clone(),
+            name: None,
+            version: "1.0.0".to_string(),
+            description: None,
+        });
+        let result = handle_genome_command(cmd).await;
+        assert!(
+            result.is_ok(),
+            "build with binaries should succeed: {:?}",
+            result.err()
+        );
+        let content = std::fs::read_to_string(&output).expect("read output");
+        let genome = GenomeBin::from_json(&content).expect("parse output");
+        assert_eq!(genome.manifest.name, "primal");
+        assert!(genome.manifest.architectures.len() >= 1);
+    }
+
+    #[tokio::test]
+    async fn test_handle_genome_verify() {
+        use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let genome = GenomeBin::with_manifest(GenomeManifest::new("verify-test").version("1.0"));
+        let json = genome.to_json().expect("serialize");
+        let path = temp.path().join("verify.genome");
+        std::fs::write(&path, json).expect("write genome");
+        let cmd = GenomeCommand::Verify(GenomeVerifyArgs { path });
+        let result = handle_genome_command(cmd).await;
+        assert!(result.is_ok(), "verify should succeed: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_handle_genome_verify_invalid_json_fails() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp.path().join("invalid.genome");
+        std::fs::write(&path, "not valid json").expect("write");
+        let cmd = GenomeCommand::Verify(GenomeVerifyArgs { path });
+        let result = handle_genome_command(cmd).await;
+        assert!(result.is_err(), "verify invalid should fail");
+    }
+
+    #[tokio::test]
+    async fn test_handle_genome_info() {
+        use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let genome = GenomeBin::with_manifest(
+            GenomeManifest::new("info-test")
+                .version("3.0")
+                .description("Info desc"),
+        );
+        let json = genome.to_json().expect("serialize");
+        let path = temp.path().join("info.genome");
+        std::fs::write(&path, json).expect("write genome");
+        let cmd = GenomeCommand::Info(GenomeInfoArgs { path });
+        let result = handle_genome_command(cmd).await;
+        assert!(result.is_ok(), "info should succeed: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_handle_genome_list_empty_dir() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let cmd = GenomeCommand::List(GenomeListArgs {
+            directory: temp.path().to_path_buf(),
+        });
+        let result = handle_genome_command(cmd).await;
+        assert!(
+            result.is_ok(),
+            "list empty dir should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_genome_list_nonexistent_dir() {
+        let cmd = GenomeCommand::List(GenomeListArgs {
+            directory: std::path::PathBuf::from("/nonexistent-dir-xyz-12345"),
+        });
+        let result = handle_genome_command(cmd).await;
+        assert!(
+            result.is_ok(),
+            "list nonexistent prints message and succeeds"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_genome_compose() {
+        use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let g1 = GenomeBin::with_manifest(GenomeManifest::new("g1").version("1.0"));
+        let g2 = GenomeBin::with_manifest(GenomeManifest::new("g2").version("1.0"));
+        let j1 = g1.to_json().expect("serialize");
+        let j2 = g2.to_json().expect("serialize");
+        let p1 = temp.path().join("g1.genome");
+        let p2 = temp.path().join("g2.genome");
+        std::fs::write(&p1, j1).expect("write g1");
+        std::fs::write(&p2, j2).expect("write g2");
+        let output = temp.path().join("atomic.genome");
+        let cmd = GenomeCommand::Compose(GenomeComposeArgs {
+            name: "atomic-test".to_string(),
+            genomes: vec![p1, p2],
+            output: output.clone(),
+        });
+        let result = handle_genome_command(cmd).await;
+        assert!(result.is_ok(), "compose should succeed: {:?}", result.err());
+        let content = std::fs::read_to_string(&output).expect("read output");
+        assert!(content.contains("atomic-test"));
+        assert!(content.contains("atomic"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_genome_build_add_binary_error_path() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let output = temp.path().join("out.genome");
+        let cmd = GenomeCommand::Build(GenomeBuildArgs {
+            binary_x86_64: Some(std::path::PathBuf::from("/nonexistent-binary-xyz")),
+            binary_aarch64: None,
+            output,
+            name: None,
+            version: "1.0.0".to_string(),
+            description: None,
+        });
+        let result = handle_genome_command(cmd).await;
+        assert!(result.is_err(), "build with missing binary should fail");
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Failed to add x86_64")
+        );
+    }
 }

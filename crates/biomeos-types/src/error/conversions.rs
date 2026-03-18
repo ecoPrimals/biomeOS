@@ -18,7 +18,7 @@ impl BiomeError {
     pub fn config_error(message: impl Into<String>, key: Option<impl Into<String>>) -> Self {
         Self::Configuration {
             message: message.into(),
-            key: key.map(|k| k.into()),
+            key: key.map(Into::into),
             config_path: None,
             ai_context: Box::new(AIErrorContext::new(AIErrorCategory::ConfigurationIssue)),
         }
@@ -32,7 +32,7 @@ impl BiomeError {
     ) -> Self {
         Self::Network {
             message: message.into(),
-            endpoint: endpoint.map(|e| e.into()),
+            endpoint: endpoint.map(Into::into),
             status_code,
             timeout_ms: None,
             operation: None,
@@ -64,8 +64,8 @@ impl BiomeError {
         Self::Resource {
             message: message.into(),
             resource_type: Some(resource_type.into()),
-            requested: requested.map(|s| s.into()),
-            available: available.map(|s| s.into()),
+            requested: requested.map(Into::into),
+            available: available.map(Into::into),
             operation: None,
             ai_context: Box::new(AIErrorContext::new(AIErrorCategory::ResourceLimitation)),
         }
@@ -75,7 +75,7 @@ impl BiomeError {
     pub fn discovery_failed(message: impl Into<String>, target: Option<impl Into<String>>) -> Self {
         Self::Network {
             message: message.into(),
-            endpoint: target.map(|s| s.into()),
+            endpoint: target.map(Into::into),
             status_code: None,
             timeout_ms: None,
             operation: None,
@@ -90,7 +90,7 @@ impl BiomeError {
     ) -> Self {
         Self::Integration {
             message: message.into(),
-            component: service.map(|s| s.into()),
+            component: service.map(Into::into),
             integration_type: None,
             ai_context: Box::new(AIErrorContext::new(AIErrorCategory::DependencyFailure)),
         }
@@ -103,7 +103,7 @@ impl BiomeError {
     ) -> Self {
         Self::Internal {
             message: message.into(),
-            error_code: error_code.map(|c| c.into()),
+            error_code: error_code.map(Into::into),
             stack_trace: None,
             ai_context: Box::new(AIErrorContext::new(AIErrorCategory::SystemError)),
         }
@@ -118,7 +118,7 @@ impl BiomeError {
         Self::Timeout {
             message: message.into(),
             timeout_ms,
-            operation: operation.map(|o| o.into()),
+            operation: operation.map(Into::into),
             ai_context: Box::new(AIErrorContext::with_retry(
                 AIErrorCategory::NetworkFailure,
                 RetryStrategy::exponential_backoff(3, 1000, 10000),
@@ -226,7 +226,7 @@ impl BiomeError {
 // Standard error conversions
 impl From<std::io::Error> for BiomeError {
     fn from(err: std::io::Error) -> Self {
-        BiomeError::internal_error(
+        Self::internal_error(
             format!("IO error: {err}"),
             Some(format!("io_error_{}", err.kind() as u8)),
         )
@@ -235,7 +235,7 @@ impl From<std::io::Error> for BiomeError {
 
 impl From<serde_json::Error> for BiomeError {
     fn from(err: serde_json::Error) -> Self {
-        BiomeError::validation_error(
+        Self::validation_error(
             format!("JSON serialization error: {err}"),
             vec![ValidationError {
                 field: "json".to_string(),
@@ -249,7 +249,7 @@ impl From<serde_json::Error> for BiomeError {
 
 impl From<uuid::Error> for BiomeError {
     fn from(err: uuid::Error) -> Self {
-        BiomeError::validation_error(
+        Self::validation_error(
             format!("UUID error: {err}"),
             vec![ValidationError {
                 field: "uuid".to_string(),

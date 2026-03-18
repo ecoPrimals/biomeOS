@@ -102,7 +102,7 @@ impl SporeIncubator {
         info!("Creating incubated node: {}", node_id);
 
         // 4. Create local configuration
-        let local_config_path = self.get_local_config_path(&spore_id)?;
+        let local_config_path = Self::get_local_config_path(&spore_id)?;
         self.create_local_config(CreateLocalConfigParams {
             config_path: &local_config_path,
             spore_id: &spore_id,
@@ -168,7 +168,7 @@ impl SporeIncubator {
         hasher.update(&spore_seed_bytes);
         hasher.update(entropy_hash.as_bytes());
 
-        Ok(Bytes::from(hasher.finalize().to_vec()))
+        Ok(Bytes::copy_from_slice(&hasher.finalize()))
     }
 
     /// Hash a seed for display/storage
@@ -179,7 +179,7 @@ impl SporeIncubator {
     }
 
     /// Get local configuration path for this spore
-    fn get_local_config_path(&self, spore_id: &str) -> SporeResult<PathBuf> {
+    fn get_local_config_path(spore_id: &str) -> SporeResult<PathBuf> {
         let home = std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .context("Could not determine home directory")?;

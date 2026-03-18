@@ -85,7 +85,8 @@ use_as_fallback_only = true       # Only use if Tier 1-2 fail
 rotate_servers = true             # Rotate to prevent tracking
 rotation_interval_secs = 3600     # Rotate every hour
 
-# Priority 1-9: Vetted (open-source friendly)
+# Sovereignty-first: community-operated and open-source STUN servers only.
+# No corporate surveillance infrastructure (Google, Cloudflare, etc.).
 [[public_stun.servers]]
 address = "stun.nextcloud.com:3478"
 protocol = "udp"
@@ -95,52 +96,32 @@ verified = false
 vetted = true
 comment = "Nextcloud community (open-source, privacy-focused)"
 
-# Priority 10-19: Major tech (neutral ground)
-[[public_stun.servers]]
-address = "stun.l.google.com:19302"
-protocol = "udp"
-priority = 10
-enabled = true
-verified = false
-vetted = false
-comment = "Google STUN - high availability, international"
-
-[[public_stun.servers]]
-address = "stun1.l.google.com:19302"
-protocol = "udp"
-priority = 11
-enabled = true
-verified = false
-vetted = false
-comment = "Google STUN backup"
-
-[[public_stun.servers]]
-address = "stun.cloudflare.com:3478"
-protocol = "udp"
-priority = 12
-enabled = true
-verified = false
-vetted = false
-comment = "Cloudflare STUN - privacy-respecting"
-
-# Priority 20-29: Backup servers
 [[public_stun.servers]]
 address = "stun.stunprotocol.org:3478"
 protocol = "udp"
-priority = 20
+priority = 2
 enabled = true
 verified = false
-vetted = false
-comment = "stunprotocol.org - community maintained"
+vetted = true
+comment = "stunprotocol.org - community maintained, open protocol"
+
+[[public_stun.servers]]
+address = "stun.sip.us:3478"
+protocol = "udp"
+priority = 3
+enabled = true
+verified = false
+vetted = true
+comment = "SIP.US community STUN"
 
 [[public_stun.servers]]
 address = "stun.services:3478"
 protocol = "udp"
-priority = 21
+priority = 4
 enabled = true
 verified = false
 vetted = false
-comment = "Generic STUN service"
+comment = "Generic community STUN service"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # TIER 4: Rendezvous (Future - Low Trust)

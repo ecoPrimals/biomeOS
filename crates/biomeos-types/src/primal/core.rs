@@ -15,7 +15,7 @@ use uuid::Uuid;
 ///
 /// This replaces both the old PrimalType struct and string-based primal_type fields.
 /// It provides a flexible, extensible way to identify and categorize primals.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PrimalType {
     /// Service category (compute, storage, security, orchestration, etc.)
     pub category: String,

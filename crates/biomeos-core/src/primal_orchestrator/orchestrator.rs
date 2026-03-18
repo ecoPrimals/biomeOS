@@ -132,11 +132,11 @@ impl PrimalOrchestrator {
             .await;
 
         match start_result {
-            Ok(_) => {
+            Ok(()) => {
                 info!("✅ Primal {} started", id);
 
                 match timeout(primal.startup_timeout(), self.wait_for_health(&primal)).await {
-                    Ok(Ok(_)) => {
+                    Ok(Ok(())) => {
                         if let Some(endpoint) = primal.endpoint().await {
                             self.health_monitor.register(id.clone(), endpoint).await;
                         }
@@ -203,7 +203,7 @@ impl PrimalOrchestrator {
             }
 
             match self.start_primal(&provider_id).await {
-                Ok(_) => {
+                Ok(()) => {
                     info!(
                         "✅ Started capability provider {} for {}",
                         provider_id, capability
@@ -321,7 +321,7 @@ impl PrimalOrchestrator {
         let mut in_degree: HashMap<PrimalId, usize> = HashMap::new();
         let mut graph: HashMap<PrimalId, Vec<PrimalId>> = HashMap::new();
 
-        for (consumer_id, required_caps) in primal_requirements.iter() {
+        for (consumer_id, required_caps) in &primal_requirements {
             in_degree.entry(consumer_id.clone()).or_insert(0);
 
             for required_cap in required_caps {

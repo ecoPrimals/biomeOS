@@ -248,8 +248,7 @@ impl CryptoSecurityAdapter {
             .map(|s| s.trim())
             .context("Failed to parse broadcast_key from crypto primal output")?;
 
-        // In real impl, parse hex or base64
-        Ok(Bytes::from(key_str.as_bytes().to_vec()))
+        Ok(Bytes::copy_from_slice(key_str.as_bytes()))
     }
 }
 

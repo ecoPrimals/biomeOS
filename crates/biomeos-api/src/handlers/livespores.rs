@@ -3,12 +3,12 @@
 
 // LiveSpore USB device discovery handler
 
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{error, info};
 
-use crate::{state::AppState, ApiError};
+use crate::{ApiError, state::AppState};
 
 /// LiveSpore USB device information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,9 +109,15 @@ pub async fn get_livespores(
                                 // No hardcoded whitelist — primals self-identify at runtime.
                                 // Skip hidden files and non-executable entries.
                                 if !name.starts_with('.')
-                                    && !name.ends_with(".toml")
-                                    && !name.ends_with(".json")
-                                    && !name.ends_with(".genome")
+                                    && !std::path::Path::new(name)
+                                        .extension()
+                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"))
+                                    && !std::path::Path::new(name)
+                                        .extension()
+                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+                                    && !std::path::Path::new(name)
+                                        .extension()
+                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("genome"))
                                 {
                                     if let Ok(meta) = entry.metadata().await {
                                         if meta.is_file() {

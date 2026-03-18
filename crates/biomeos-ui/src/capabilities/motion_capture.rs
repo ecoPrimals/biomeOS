@@ -219,10 +219,12 @@ mod tests {
     fn test_surgical_adapter() {
         let adapter = MotionCaptureAdapter::for_surgical();
         assert_eq!(adapter.config().tracked_devices.len(), 4);
-        assert!(adapter
-            .config()
-            .tracked_devices
-            .contains(&TrackedDeviceType::Tool));
+        assert!(
+            adapter
+                .config()
+                .tracked_devices
+                .contains(&TrackedDeviceType::Tool)
+        );
         assert_eq!(adapter.config().prediction_ms, 5.0);
     }
 

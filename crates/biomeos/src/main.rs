@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
-#![forbid(unsafe_code)]
+#![cfg_attr(not(test), forbid(unsafe_code))]
 
 //! biomeOS Universal Nucleus & Orchestrator
 //!
@@ -25,7 +25,7 @@ mod genome;
 mod modes;
 mod proc_metrics;
 
-use genome::{handle_genome_command, GenomeCommand};
+use genome::{GenomeCommand, handle_genome_command};
 
 #[derive(Parser)]
 #[command(name = "biomeos")]
@@ -404,7 +404,7 @@ async fn main() -> Result<()> {
 
 /// Initialize logging based on configuration
 fn init_logging(log_level: &str, verbose: bool) -> Result<()> {
-    use tracing_subscriber::{fmt, EnvFilter};
+    use tracing_subscriber::{EnvFilter, fmt};
 
     let level = if verbose { "debug" } else { log_level };
 
@@ -733,6 +733,211 @@ mod tests {
             },
             _ => panic!("expected Genome mode"),
         }
+    }
+
+    #[test]
+    fn test_cli_parse_cli_mode() {
+        let cli = Cli::parse_from(["biomeos", "cli"]);
+        match &cli.mode {
+            Mode::Cli {} => {}
+            _ => panic!("expected Cli mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_genome_build() {
+        let cli = Cli::parse_from([
+            "biomeos",
+            "genome",
+            "build",
+            "--output",
+            "/tmp/out.genome",
+            "--name",
+            "test",
+        ]);
+        match &cli.mode {
+            Mode::Genome { command } => match command {
+                GenomeCommand::Build(args) => {
+                    assert_eq!(args.output, PathBuf::from("/tmp/out.genome"));
+                    assert_eq!(args.name.as_deref(), Some("test"));
+                }
+                _ => panic!("expected Build subcommand"),
+            },
+            _ => panic!("expected Genome mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_genome_verify() {
+        let cli = Cli::parse_from(["biomeos", "genome", "verify", "/path/to/genome.genome"]);
+        match &cli.mode {
+            Mode::Genome { command } => match command {
+                GenomeCommand::Verify(args) => {
+                    assert_eq!(args.path, PathBuf::from("/path/to/genome.genome"))
+                }
+                _ => panic!("expected Verify subcommand"),
+            },
+            _ => panic!("expected Genome mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_model_cache_resolve() {
+        let cli = Cli::parse_from([
+            "biomeos",
+            "model-cache",
+            "resolve",
+            "TinyLlama/TinyLlama-1.1B",
+        ]);
+        match &cli.mode {
+            Mode::ModelCache { command } => match command {
+                ModelCacheCommand::Resolve { model_id } => {
+                    assert_eq!(model_id, "TinyLlama/TinyLlama-1.1B")
+                }
+                _ => panic!("expected Resolve subcommand"),
+            },
+            _ => panic!("expected ModelCache mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_model_cache_register() {
+        let cli = Cli::parse_from([
+            "biomeos",
+            "model-cache",
+            "register",
+            "test/model",
+            "/path/to/model",
+        ]);
+        match &cli.mode {
+            Mode::ModelCache { command } => match command {
+                ModelCacheCommand::Register { model_id, path } => {
+                    assert_eq!(model_id, "test/model");
+                    assert_eq!(path, &PathBuf::from("/path/to/model"));
+                }
+                _ => panic!("expected Register subcommand"),
+            },
+            _ => panic!("expected ModelCache mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_model_cache_status() {
+        let cli = Cli::parse_from(["biomeos", "model-cache", "status"]);
+        match &cli.mode {
+            Mode::ModelCache { command } => match command {
+                ModelCacheCommand::Status => {}
+                _ => panic!("expected Status subcommand"),
+            },
+            _ => panic!("expected ModelCache mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_model_cache_import_hf() {
+        let cli = Cli::parse_from(["biomeos", "model-cache", "import-hf"]);
+        match &cli.mode {
+            Mode::ModelCache { command } => match command {
+                ModelCacheCommand::ImportHf => {}
+                _ => panic!("expected ImportHf subcommand"),
+            },
+            _ => panic!("expected ModelCache mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_plasmodium_gates() {
+        let cli = Cli::parse_from(["biomeos", "plasmodium", "gates"]);
+        match &cli.mode {
+            Mode::Plasmodium { command } => match command {
+                PlasmodiumCommand::Gates => {}
+                _ => panic!("expected Gates subcommand"),
+            },
+            _ => panic!("expected Plasmodium mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_plasmodium_models() {
+        let cli = Cli::parse_from(["biomeos", "plasmodium", "models"]);
+        match &cli.mode {
+            Mode::Plasmodium { command } => match command {
+                PlasmodiumCommand::Models => {}
+                _ => panic!("expected Models subcommand"),
+            },
+            _ => panic!("expected Plasmodium mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_rootpulse_branch() {
+        let cli = Cli::parse_from([
+            "biomeos",
+            "rootpulse",
+            "branch",
+            "--session-id",
+            "s1",
+            "--branch-name",
+            "feature",
+            "--agent-did",
+            "did:key:z6Mk",
+        ]);
+        match &cli.mode {
+            Mode::RootPulse { command } => match command {
+                RootPulseCommand::Branch {
+                    session_id,
+                    branch_name,
+                    agent_did,
+                    ..
+                } => {
+                    assert_eq!(session_id, "s1");
+                    assert_eq!(branch_name, "feature");
+                    assert_eq!(agent_did, "did:key:z6Mk");
+                }
+                _ => panic!("expected Branch subcommand"),
+            },
+            _ => panic!("expected RootPulse mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_rootpulse_status() {
+        let cli = Cli::parse_from(["biomeos", "rootpulse", "status"]);
+        match &cli.mode {
+            Mode::RootPulse { command } => match command {
+                RootPulseCommand::Status { .. } => {}
+                _ => panic!("expected Status subcommand"),
+            },
+            _ => panic!("expected RootPulse mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_continuous_dry_run() {
+        let cli = Cli::parse_from(["biomeos", "continuous", "graph.json", "--dry-run"]);
+        match &cli.mode {
+            Mode::Continuous { graph, dry_run } => {
+                assert_eq!(graph, &PathBuf::from("graph.json"));
+                assert!(*dry_run);
+            }
+            _ => panic!("expected Continuous mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_api_unix_only() {
+        let cli = Cli::parse_from(["biomeos", "api", "--unix-only"]);
+        match &cli.mode {
+            Mode::Api { unix_only, .. } => assert!(*unix_only),
+            _ => panic!("expected Api mode"),
+        }
+    }
+
+    #[test]
+    #[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
+    fn test_init_logging_verbose_overrides_level() {
+        let result = init_logging("warn", true);
+        assert!(result.is_ok());
     }
 
     #[tokio::test]

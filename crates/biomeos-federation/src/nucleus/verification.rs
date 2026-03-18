@@ -62,6 +62,7 @@ struct GetCapabilitiesResponse {
 }
 
 /// Layer 2: Identity Verification via BearDog
+#[expect(clippy::expect_used, reason = "system clock before UNIX epoch")]
 pub(crate) async fn layer2_identity_verification(
     _beardog: &BearDogClient,
     primal: &DiscoveredPrimal,
@@ -100,7 +101,9 @@ pub(crate) async fn layer2_identity_verification(
                     .as_str()
                     .unwrap_or(&primal.name)
                     .to_string();
-                let family_id = result["family_id"].as_str().map(|s| s.to_string());
+                let family_id = result["family_id"]
+                    .as_str()
+                    .map(std::string::ToString::to_string);
                 let signature = result["signature"]
                     .as_str()
                     .unwrap_or(UNVERIFIED_SIGNATURE)
@@ -172,10 +175,10 @@ pub(crate) async fn layer3_capability_verification(
 
                         let mut capabilities = CapabilitySet::new();
                         for cap_info in cap_response.provided_capabilities {
-                            let cap: Capability = cap_info
-                                .capability_type
-                                .parse()
-                                .unwrap_or(Capability::Custom(cap_info.capability_type.clone()));
+                            let cap: Capability =
+                                cap_info.capability_type.parse().unwrap_or_else(|_| {
+                                    Capability::Custom(cap_info.capability_type.clone())
+                                });
                             capabilities.add(cap);
                         }
 

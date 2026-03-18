@@ -50,7 +50,7 @@ impl LocalEntropy {
 
         // 1. Hostname
         let hostname = computer_name
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .or_else(|| std::env::var("HOSTNAME").ok())
             .or_else(|| std::env::var("COMPUTERNAME").ok())
             .unwrap_or_else(|| {
@@ -151,7 +151,7 @@ impl LocalEntropy {
             let net_dir = "/sys/class/net";
             if let Ok(entries) = std::fs::read_dir(net_dir) {
                 let mut ifaces: Vec<std::path::PathBuf> = entries
-                    .filter_map(|e| e.ok())
+                    .filter_map(std::result::Result::ok)
                     .map(|e| e.path())
                     .filter(|p| {
                         let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");

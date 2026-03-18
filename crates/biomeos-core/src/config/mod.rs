@@ -146,7 +146,10 @@ impl Default for BiomeOSConfigBuilder {
 
 /// Configuration presets for common scenarios
 pub mod presets {
-    use super::*;
+    use super::{
+        BiomeOSConfig, BiomeOSConfigBuilder, BiomeResult, DiscoveryMethod, Environment,
+        OrganizationScale, timeouts,
+    };
 
     /// Development configuration preset
     pub fn development() -> BiomeResult<BiomeOSConfig> {
@@ -235,7 +238,7 @@ pub mod presets {
 
 /// Configuration validation utilities
 pub mod validation {
-    use super::*;
+    use super::{BiomeOSConfig, BiomeResult, DiscoveryMethod, Environment};
 
     /// Validate configuration for common issues
     pub fn validate_config(config: &BiomeOSConfig) -> BiomeResult<Vec<String>> {
@@ -292,8 +295,7 @@ pub mod validation {
             .discovery
             .registry
             .as_ref()
-            .map(|r| r.url.contains("localhost"))
-            .unwrap_or(false);
+            .is_some_and(|r| r.url.contains("localhost"));
 
         let worker_count = config.system.workers.worker_threads.unwrap_or(1);
 

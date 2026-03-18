@@ -20,7 +20,7 @@ use anyhow::Result;
 use tracing::{debug, info, warn};
 
 /// Result of capacity check
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CapacityResult {
     /// Capacity available
     Available,
@@ -39,7 +39,7 @@ impl Capacity {
     ///
     /// Falls back to allowing the operation if ToadStool is unavailable.
     pub async fn check_primal_capacity(
-        toadstool: &Option<ToadStoolClient>,
+        toadstool: Option<&ToadStoolClient>,
         device_id: &str,
         primal_id: &str,
     ) -> Result<CapacityResult> {
@@ -65,7 +65,7 @@ impl Capacity {
                 Ok(result) => {
                     if result
                         .get("available")
-                        .and_then(|v| v.as_bool())
+                        .and_then(serde_json::Value::as_bool)
                         .unwrap_or(true)
                     {
                         info!("✅ ToadStool capacity: Available");
@@ -155,7 +155,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_capacity_no_toadstool() {
-        let result = Capacity::check_primal_capacity(&None, "test-device", "test-primal").await;
+        let result = Capacity::check_primal_capacity(None, "test-device", "test-primal").await;
 
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), CapacityResult::Available));
@@ -165,7 +165,7 @@ mod tests {
     async fn test_capacity_no_toadstool_graceful_degradation() {
         // Tests that capacity check passes by default when ToadStool is unavailable
         let result =
-            Capacity::check_primal_capacity(&None, "device-abc-123", "primal-xyz-456").await;
+            Capacity::check_primal_capacity(None, "device-abc-123", "primal-xyz-456").await;
 
         // Should succeed with graceful degradation
         assert!(result.is_ok());
@@ -242,7 +242,8 @@ mod tests {
             "toadstool",
             &path,
         ));
-        let result = Capacity::check_primal_capacity(&client, "test-device", "test-primal").await;
+        let result =
+            Capacity::check_primal_capacity(client.as_ref(), "test-device", "test-primal").await;
 
         assert!(result.is_ok());
         match result.unwrap() {
@@ -258,7 +259,8 @@ mod tests {
             "toadstool",
             &path,
         ));
-        let result = Capacity::check_primal_capacity(&client, "test-device", "test-primal").await;
+        let result =
+            Capacity::check_primal_capacity(client.as_ref(), "test-device", "test-primal").await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), CapacityResult::Available);
@@ -270,7 +272,8 @@ mod tests {
             "toadstool",
             "/nonexistent/toadstool.sock",
         ));
-        let result = Capacity::check_primal_capacity(&client, "test-device", "test-primal").await;
+        let result =
+            Capacity::check_primal_capacity(client.as_ref(), "test-device", "test-primal").await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), CapacityResult::Available);

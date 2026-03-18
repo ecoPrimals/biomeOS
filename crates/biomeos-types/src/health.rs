@@ -49,7 +49,7 @@ pub enum Health {
         /// Reason why health is unknown
         reason: String,
         /// Last known health status
-        last_known: Option<Box<Health>>,
+        last_known: Option<Box<Self>>,
     },
 
     /// System is starting up
@@ -144,8 +144,8 @@ impl Health {
             Self::Critical { .. } => 0.2,
             Self::Unhealthy { .. } => 0.0,
             Self::Unknown { .. } => 0.5,
-            Self::Starting { progress, .. } => *progress as f64 / 100.0 * 0.8,
-            Self::Stopping { progress, .. } => (100 - *progress) as f64 / 100.0 * 0.3,
+            Self::Starting { progress, .. } => f64::from(*progress) / 100.0 * 0.8,
+            Self::Stopping { progress, .. } => f64::from(100 - *progress) / 100.0 * 0.3,
             Self::Maintenance { .. } => 0.6,
         }
     }
@@ -161,6 +161,7 @@ impl Health {
     }
 
     /// Calculate impact score from issues
+    #[allow(clippy::cast_precision_loss)]
     fn calculate_impact_score(issues: &[HealthIssue]) -> f64 {
         if issues.is_empty() {
             return 0.0;
@@ -176,7 +177,7 @@ impl Health {
 }
 
 /// Health issue details
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthIssue {
     /// Unique issue identifier
     pub id: String,
@@ -413,7 +414,7 @@ pub struct HealthReport {
 }
 
 /// Subject of health monitoring
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthSubject {
     /// Subject identifier
     pub id: String,
@@ -429,7 +430,7 @@ pub struct HealthSubject {
 }
 
 /// Types of health subjects
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HealthSubjectType {
     /// Individual primal
     Primal,

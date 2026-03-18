@@ -133,7 +133,7 @@ impl CapabilityClient {
         result
             .get("valid")
             .or_else(|| result.get("result"))
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .ok_or_else(|| anyhow!("Missing valid/result in response"))
     }
 
@@ -208,7 +208,7 @@ impl CapabilityClient {
         result
             .get("exists")
             .or_else(|| result.get("result"))
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .ok_or_else(|| anyhow!("Missing exists/result in response"))
     }
 

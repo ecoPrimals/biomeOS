@@ -128,7 +128,7 @@ impl Spore {
     }
 
     /// Load existing spore from USB
-    pub fn from_path(mount_point: PathBuf) -> SporeResult<Self> {
+    pub fn from_path(mount_point: &Path) -> SporeResult<Self> {
         let root_path = mount_point.join("biomeOS");
 
         if !root_path.exists() {
@@ -290,7 +290,7 @@ node_id = "tower-2"
 
     #[test]
     fn test_spore_from_path_nonexistent() {
-        let result = Spore::from_path(std::path::PathBuf::from("/nonexistent/path"));
+        let result = Spore::from_path(Path::new("/nonexistent/path"));
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("not found") || err.to_string().contains("Device"));
@@ -304,7 +304,7 @@ node_id = "tower-2"
         let mut f = std::fs::File::create(biomeos_dir.join("tower.toml")).unwrap();
         f.write_all(b"node_id = \"tower1\"\n").unwrap();
 
-        let result = Spore::from_path(temp.path().to_path_buf());
+        let result = Spore::from_path(temp.path());
         assert!(result.is_ok());
         let spore = result.unwrap();
         assert_eq!(spore.config().node_id, "tower1");

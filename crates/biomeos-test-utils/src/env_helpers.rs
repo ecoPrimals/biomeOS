@@ -45,6 +45,7 @@ pub struct TestEnvGuard {
 
 impl TestEnvGuard {
     /// Capture the current value and optionally set a new one.
+    #[must_use]
     pub fn new(key: &str, new_value: Option<&str>) -> Self {
         let original = std::env::var(key).ok();
         match new_value {
@@ -58,11 +59,13 @@ impl TestEnvGuard {
     }
 
     /// Set the env var and capture the original for restoration.
+    #[must_use]
     pub fn set(key: &str, value: &str) -> Self {
         Self::new(key, Some(value))
     }
 
     /// Remove the env var and capture the original for restoration.
+    #[must_use]
     pub fn remove(key: &str) -> Self {
         Self::new(key, None)
     }

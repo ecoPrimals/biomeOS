@@ -112,7 +112,9 @@ impl LiveService {
                 // Use the unified discovery system to find available primals
                 match manager_clone.discover_network_scan().await {
                     Ok(discovered_services) => {
-                        if !discovered_services.is_empty() {
+                        if discovered_services.is_empty() {
+                            debug!("Discovery refresh: no new services found");
+                        } else {
                             info!(
                                 "Discovery refresh found {} services",
                                 discovered_services.len()
@@ -120,8 +122,6 @@ impl LiveService {
                             for service in &discovered_services {
                                 debug!("Discovered service: {}", service);
                             }
-                        } else {
-                            debug!("Discovery refresh: no new services found");
                         }
                     }
                     Err(e) => {

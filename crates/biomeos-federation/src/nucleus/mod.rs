@@ -152,6 +152,7 @@ impl SecureNucleusDiscovery {
     ///
     /// This is used when Songbird/BearDog are not yet available.
     /// It falls back to basic socket scanning without verification.
+    #[expect(clippy::expect_used, reason = "system clock before UNIX epoch")]
     pub async fn discover_insecure(&mut self) -> FederationResult<Vec<VerifiedPrimal>> {
         warn!("⚠️  Using insecure discovery (no Songbird/BearDog verification)");
         warn!("   This should only be used for bootstrapping!");
@@ -250,6 +251,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Verify a primal through layers 2-5
+    #[expect(clippy::expect_used, reason = "system clock before UNIX epoch")]
     async fn verify_primal(&self, primal: DiscoveredPrimal) -> FederationResult<VerifiedPrimal> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)

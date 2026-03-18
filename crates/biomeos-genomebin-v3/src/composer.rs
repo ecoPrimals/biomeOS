@@ -57,7 +57,10 @@ impl GenomeBinComposer {
 
         // Create composed genomeBin
         let mut composed = GenomeBin::new(&self.name);
-        composed.manifest.nucleus_atomic = self.nucleus_type.clone();
+        composed
+            .manifest
+            .nucleus_atomic
+            .clone_from(&self.nucleus_type);
 
         // Validate atomic composition
         if let Some(ref atomic_type) = self.nucleus_type {

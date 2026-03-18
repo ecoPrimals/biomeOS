@@ -25,7 +25,7 @@ pub async fn get_genome_info(
 
             Ok(Json(GenomeInfoResponse {
                 name: genome.manifest.name.clone(),
-                version: genome.manifest.version.clone(),
+                version: genome.manifest.version,
                 architectures: archs,
             }))
         }

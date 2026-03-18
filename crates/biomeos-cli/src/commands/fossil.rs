@@ -52,7 +52,11 @@ pub(crate) fn format_session_display(session: &ActiveLogSession) -> Vec<String> 
     ));
 
     if !session.process_pids.is_empty() {
-        let pids: Vec<String> = session.process_pids.iter().map(|p| p.to_string()).collect();
+        let pids: Vec<String> = session
+            .process_pids
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         lines.push(format!("  PIDs: {}", pids.join(" ")));
     }
 
@@ -349,6 +353,10 @@ async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
 
     manager.initialize().await?;
 
+    #[allow(
+        clippy::cast_possible_wrap,
+        reason = "days for fossil cleanup is bounded"
+    )]
     let cutoff = Utc::now() - Duration::days(older_than as i64);
     println!(
         "🗑️  Cleaning fossils older than {} days (before {})",
@@ -430,12 +438,20 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
 
     println!("Found {} old log files", old_logs.len());
 
-    if !dry_run {
+    if dry_run {
         for log_path in &old_logs {
-            let file_name = log_path
-                .file_name()
-                .expect("log path has no filename")
-                .to_string_lossy();
+            let file_name = log_path.file_name().map_or_else(
+                || std::borrow::Cow::Borrowed("unknown"),
+                |n| n.to_string_lossy(),
+            );
+            println!("  Would migrate: {file_name}");
+        }
+    } else {
+        for log_path in &old_logs {
+            let file_name = log_path.file_name().map_or_else(
+                || std::borrow::Cow::Borrowed("unknown"),
+                |n| n.to_string_lossy(),
+            );
             let dest = config.fossil_dir.join("legacy").join(&*file_name);
 
             if let Some(parent) = dest.parent() {
@@ -447,14 +463,6 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
         }
 
         println!("\n✅ Migration complete!");
-    } else {
-        for log_path in &old_logs {
-            let file_name = log_path
-                .file_name()
-                .expect("log path has no filename")
-                .to_string_lossy();
-            println!("  Would migrate: {file_name}");
-        }
     }
 
     Ok(())

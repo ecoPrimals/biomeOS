@@ -3,7 +3,7 @@
 
 //! Metrics and status retrieval for protocol escalation
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::living_graph::LivingGraph;
 

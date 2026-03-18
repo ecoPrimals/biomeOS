@@ -313,11 +313,10 @@ mod tests {
 
     #[test]
     fn no_socket_returns_none() {
-        assert!(NeuralBridge::discover_with(
-            Some("/nonexistent/neural-api.sock"),
-            Some("test-family")
-        )
-        .is_none());
+        assert!(
+            NeuralBridge::discover_with(Some("/nonexistent/neural-api.sock"), Some("test-family"))
+                .is_none()
+        );
     }
 
     #[test]

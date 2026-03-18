@@ -207,7 +207,7 @@ async fn test_get_xdg_runtime_dir() {
     let discovery = SocketDiscovery::new("test");
 
     // May or may not be set in test environment
-    let _xdg_dir = discovery.get_xdg_runtime_dir();
+    let _xdg_dir = SocketDiscovery::get_xdg_runtime_dir();
     // Just verify it doesn't panic
 }
 

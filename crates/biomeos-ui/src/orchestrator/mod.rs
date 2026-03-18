@@ -179,7 +179,7 @@ impl InteractiveUIOrchestrator {
         // Phase 5: Sync initial state to UI provider
         let initial_state = self.build_initial_ui_state().await;
         let petaltongue = self.connections.get_by_capability("ui").cloned();
-        let _ = UISync::initialize_ui(&petaltongue, initial_state).await;
+        let _ = UISync::initialize_ui(petaltongue.as_ref(), initial_state).await;
 
         info!("✅ Interactive UI Orchestrator started successfully!");
 
@@ -210,7 +210,7 @@ impl InteractiveUIOrchestrator {
         // Subscribe to registry provider events if available
         let registry_name = discovery::resolve_capability_provider(
             "BIOMEOS_REGISTRY_PROVIDER",
-            biomeos_types::CapabilityTaxonomy::Discovery,
+            &biomeos_types::CapabilityTaxonomy::Discovery,
         );
         if let Some(registry) = registry_name
             .as_deref()
@@ -240,19 +240,17 @@ impl InteractiveUIOrchestrator {
             if let Some(registry) = registry_name
                 .as_deref()
                 .and_then(|n| self.connections.get(n))
+                && let Ok(events) = registry.call("events.poll", serde_json::json!({})).await
+                && let Some(event_list) = events.as_array()
             {
-                if let Ok(events) = registry.call("events.poll", serde_json::json!({})).await {
-                    if let Some(event_list) = events.as_array() {
-                        for event in event_list {
-                            self.handle_primal_event(event);
-                        }
-                    }
+                for event in event_list {
+                    self.handle_primal_event(event);
                 }
             }
 
             // Push any state updates to petalTongue
             let pt = self.connections.get_by_capability("ui").cloned();
-            let _ = UISync::send_heartbeat(&pt).await;
+            let _ = UISync::send_heartbeat(pt.as_ref()).await;
         }
     }
 

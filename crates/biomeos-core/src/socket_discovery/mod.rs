@@ -57,6 +57,8 @@
 //! ```
 
 mod engine;
+mod neural_api;
+mod path_builder;
 mod result;
 mod strategy;
 mod transport;

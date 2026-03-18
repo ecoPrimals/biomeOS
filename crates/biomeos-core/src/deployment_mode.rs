@@ -219,8 +219,7 @@ impl DeploymentMode {
         match s.to_lowercase().as_str() {
             "cold" | "coldspore" | "cold_spore" => {
                 let media_path = std::env::var("BIOMEOS_MEDIA_PATH")
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|_| PathBuf::from("/media/biomeos"));
+                    .map_or_else(|_| PathBuf::from("/media/biomeos"), PathBuf::from);
                 let persistence = std::env::var("BIOMEOS_PERSISTENCE")
                     .map(|v| v == "true" || v == "1")
                     .unwrap_or(false);
@@ -339,9 +338,8 @@ impl DeploymentMode {
                         });
                     } else if name.to_lowercase().contains("bsd") {
                         return Ok(HostOS::BSD { variant: name });
-                    } else {
-                        return Ok(HostOS::Linux { distro: name });
                     }
+                    return Ok(HostOS::Linux { distro: name });
                 }
             }
         }

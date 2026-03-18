@@ -205,8 +205,7 @@ impl Config {
 
         // Unix socket path (PRIMARY)
         let socket_path = std::env::var("BIOMEOS_API_SOCKET_PATH")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| Self::default_socket_path());
+            .map_or_else(|_| Self::default_socket_path(), PathBuf::from);
 
         // HTTP bridge (DEPRECATED — for PetalTongue transition, removal in v0.5.0)
         let enable_http_bridge = std::env::var("BIOMEOS_API_HTTP_BRIDGE")
@@ -272,12 +271,11 @@ impl AppStateBuilder {
         let discovery = self.discovery.ok_or(BuildError::MissingDiscovery)?;
 
         // Initialize genome factory
-        let genome = match self.genome {
-            Some(g) => g,
-            None => {
-                tracing::info!("🧬 Initializing default genome factory");
-                Arc::new(GenomeState::new().map_err(|e| BuildError::ConfigError(e.to_string()))?)
-            }
+        let genome = if let Some(g) = self.genome {
+            g
+        } else {
+            tracing::info!("🧬 Initializing default genome factory");
+            Arc::new(GenomeState::new().map_err(BuildError::ConfigError)?)
         };
 
         let config = self.config.unwrap_or_default();
@@ -295,28 +293,26 @@ impl AppStateBuilder {
     /// NOTE: HTTP-based discovery (create_local_discovery) has been deprecated.
     /// For live primal discovery, use Unix socket JSON-RPC via live_discovery module.
     pub fn build_with_defaults(self) -> Result<AppState, BuildError> {
-        let discovery = match self.discovery {
-            Some(d) => d,
-            None => {
-                // EVOLUTION: HTTP-based discovery deprecated
-                // Live discovery now uses Unix sockets via handlers/live_discovery.rs
-                // For AppState, we provide an empty composite discovery
-                // Real discovery happens via JSON-RPC to running primals
-                tracing::info!("📡 Creating default composite discovery (Unix socket based)");
-                tracing::info!("   Use /api/v1/discovery/live for active primal discovery");
+        let discovery = if let Some(d) = self.discovery {
+            d
+        } else {
+            // EVOLUTION: HTTP-based discovery deprecated
+            // Live discovery now uses Unix sockets via handlers/live_discovery.rs
+            // For AppState, we provide an empty composite discovery
+            // Real discovery happens via JSON-RPC to running primals
+            tracing::info!("📡 Creating default composite discovery (Unix socket based)");
+            tracing::info!("   Use /api/v1/discovery/live for active primal discovery");
 
-                let composite = CompositeDiscovery::new();
-                Arc::new(composite)
-            }
+            let composite = CompositeDiscovery::new();
+            Arc::new(composite)
         };
 
         // Initialize genome factory
-        let genome = match self.genome {
-            Some(g) => g,
-            None => {
-                tracing::info!("🧬 Initializing default genome factory");
-                Arc::new(GenomeState::new().map_err(|e| BuildError::ConfigError(e.to_string()))?)
-            }
+        let genome = if let Some(g) = self.genome {
+            g
+        } else {
+            tracing::info!("🧬 Initializing default genome factory");
+            Arc::new(GenomeState::new().map_err(BuildError::ConfigError)?)
         };
 
         let config = self.config.unwrap_or_default();
