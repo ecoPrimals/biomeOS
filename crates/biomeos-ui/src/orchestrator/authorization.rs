@@ -132,6 +132,7 @@ impl Authorization {
 mod tests {
     use super::*;
     use biomeos_core::atomic_client::{JsonRpcRequest, JsonRpcResponse};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixListener;
 
@@ -150,9 +151,11 @@ mod tests {
         };
 
         let path_for_listener = path_str.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
         let handle = tokio::spawn(async move {
             let _dir = dir;
             let listener = UnixListener::bind(&path_for_listener).unwrap();
+            ready_tx.signal();
             if let Ok((stream, _)) = listener.accept().await {
                 let (reader, mut writer) = tokio::io::split(stream);
                 let mut reader = BufReader::new(reader);
@@ -174,7 +177,7 @@ mod tests {
             }
         });
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        ready_rx.wait().await.unwrap();
         (path_str, handle)
     }
 
@@ -185,9 +188,11 @@ mod tests {
         let user_id = user_id.to_string();
 
         let path_for_listener = path_str.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
         let handle = tokio::spawn(async move {
             let _dir = dir;
             let listener = UnixListener::bind(&path_for_listener).unwrap();
+            ready_tx.signal();
             if let Ok((stream, _)) = listener.accept().await {
                 let (reader, mut writer) = tokio::io::split(stream);
                 let mut reader = BufReader::new(reader);
@@ -209,7 +214,7 @@ mod tests {
             }
         });
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        ready_rx.wait().await.unwrap();
         (path_str, handle)
     }
 

@@ -190,3 +190,69 @@ pub async fn request_subfederation_key(
     );
     Ok(key_ref.to_string())
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use biomeos_test_utils::{remove_test_env, set_test_env};
+
+    #[test]
+    fn test_discover_beardog_socket_from_env() {
+        set_test_env("BEARDOG_SOCKET", "/tmp/test-beardog.sock");
+        let result = discover_beardog_socket();
+        remove_test_env("BEARDOG_SOCKET");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/tmp/test-beardog.sock");
+    }
+
+    #[test]
+    fn test_discover_beardog_socket_without_env() {
+        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("BIOMEOS_FAMILY_ID");
+        let result = discover_beardog_socket();
+        match result {
+            Ok(path) => assert!(!path.is_empty()),
+            Err(e) => assert!(
+                e.to_string().to_lowercase().contains("not found")
+                    || e.to_string().to_lowercase().contains("beardog")
+            ),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_verify_member_lineage_connection_error() {
+        set_test_env("BEARDOG_SOCKET", "/nonexistent/path/beardog.sock");
+        let result = verify_member_lineage(
+            "parent-family",
+            &["member1".to_string(), "member2".to_string()],
+        )
+        .await;
+        remove_test_env("BEARDOG_SOCKET");
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("connection")
+                || err_msg.contains("Connection")
+                || err_msg.contains("failed"),
+            "expected connection-related error, got: {}",
+            err_msg
+        );
+    }
+
+    #[tokio::test]
+    async fn test_request_subfederation_key_connection_error() {
+        set_test_env("BEARDOG_SOCKET", "/nonexistent/path/beardog.sock");
+        let result = request_subfederation_key("parent-family", "subfed-name").await;
+        remove_test_env("BEARDOG_SOCKET");
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("connection")
+                || err_msg.contains("Connection")
+                || err_msg.contains("failed"),
+            "expected connection-related error, got: {}",
+            err_msg
+        );
+    }
+}

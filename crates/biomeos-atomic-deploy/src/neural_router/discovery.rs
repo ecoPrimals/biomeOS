@@ -377,3 +377,64 @@ impl NeuralRouter {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_discover_capability_unregistered() {
+        let router = NeuralRouter::new("test-family");
+        let result = router
+            .discover_capability("nonexistent_capability_xyz")
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("not registered")
+                || err.contains("Capability")
+                || err.contains("not found"),
+            "expected capability error, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_registered() {
+        let router = NeuralRouter::new("test-family");
+        router
+            .register_capability(
+                "security",
+                "beardog",
+                PathBuf::from("/tmp/beardog-test.sock"),
+                "test",
+            )
+            .await
+            .expect("register");
+
+        let result = router.discover_capability("security").await;
+        assert!(result.is_ok());
+        let atomic = result.unwrap();
+        assert_eq!(atomic.capability.as_ref(), "security");
+        assert_eq!(atomic.primals.len(), 1);
+        assert_eq!(atomic.primals[0].name.as_ref(), "beardog");
+    }
+
+    #[tokio::test]
+    async fn test_find_primal_by_socket_nonexistent() {
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+
+        set_test_env("XDG_RUNTIME_DIR", "/nonexistent/path/for/tests");
+        let router = NeuralRouter::new("test-family-xyz");
+        let result = router.find_primal_by_socket("beardog").await;
+        remove_test_env("XDG_RUNTIME_DIR");
+
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("not found") || err.contains("does not exist"),
+            "expected socket not found, got: {err}"
+        );
+    }
+}

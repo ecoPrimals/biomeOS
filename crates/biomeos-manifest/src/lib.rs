@@ -403,6 +403,7 @@ impl ManifestAnalyzer {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
@@ -479,5 +480,91 @@ mod tests {
 
         // Template creates empty services, so no exposed ports
         assert!(ports.is_empty());
+    }
+
+    #[test]
+    fn test_manifest_validation_empty_dependency_name() {
+        let mut manifest = BiomeManifest::default();
+        manifest.metadata.name = "test".to_string();
+        manifest.dependencies = vec![
+            biomeos_types::manifest::manifest_extensions::BiomeDependency {
+                name: "".to_string(),
+                version: None,
+                optional: false,
+                source: biomeos_types::manifest::manifest_extensions::DependencySource::Local {
+                    path: "/tmp".to_string(),
+                },
+            },
+        ];
+        let result = BiomeManifestProcessor::validate(&manifest);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_manifest_validation_empty_network_name() {
+        let mut manifest = BiomeManifest::default();
+        manifest.metadata.name = "test".to_string();
+        manifest.networks.insert(
+            "".to_string(),
+            biomeos_types::manifest::networking_core::NetworkSpec::default(),
+        );
+        let result = BiomeManifestProcessor::validate(&manifest);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_from_yaml_invalid() {
+        let result = BiomeManifestProcessor::load_from_yaml("not: valid: yaml: [");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_has_security_requirements_false() {
+        let manifest = BiomeManifestTemplates::web_application("test", "nginx");
+        assert!(!ManifestAnalyzer::has_security_requirements(&manifest));
+    }
+
+    #[test]
+    fn test_has_security_policies_false() {
+        let manifest = BiomeManifestTemplates::web_application("test", "nginx");
+        assert!(!ManifestAnalyzer::has_security_policies(&manifest));
+    }
+
+    #[test]
+    fn test_get_dependency_graph_empty() {
+        let manifest = BiomeManifestTemplates::web_application("test", "nginx");
+        let graph = ManifestAnalyzer::get_dependency_graph(&manifest);
+        assert!(graph.is_empty());
+    }
+
+    #[test]
+    fn test_get_services_with_capabilities_empty() {
+        let manifest = BiomeManifestTemplates::web_application("test", "nginx");
+        let services =
+            ManifestAnalyzer::get_services_with_capabilities(&manifest, &["compute".to_string()]);
+        assert!(services.is_empty());
+    }
+
+    #[test]
+    fn test_database_template_volume_size() {
+        let manifest = BiomeManifestTemplates::database("app", "postgres", 25.5);
+        assert!(manifest.spec.config.contains_key("volume_size_gb"));
+        assert!(manifest.spec.config.contains_key("database_type"));
+    }
+
+    #[test]
+    fn test_load_from_file_nonexistent() {
+        let result = BiomeManifestProcessor::load_from_file("/nonexistent/manifest.yaml");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_save_to_file_invalid_path() {
+        let manifest = BiomeManifestTemplates::web_application("test", "nginx");
+        let result = BiomeManifestProcessor::save_to_file(
+            &manifest,
+            "/nonexistent/readonly/path/manifest.yaml",
+        );
+        assert!(result.is_err());
     }
 }

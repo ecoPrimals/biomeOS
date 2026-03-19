@@ -522,7 +522,6 @@ mod tests {
     #[test]
     fn test_current_timestamp() {
         let ts1 = current_timestamp();
-        std::thread::sleep(std::time::Duration::from_millis(10));
         let ts2 = current_timestamp();
 
         assert!(ts1 > 1577836800); // Jan 1, 2020

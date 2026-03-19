@@ -161,6 +161,7 @@ pub struct BootLoggerStats {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -243,5 +244,55 @@ mod tests {
 
         assert!(checkpoint_msg.contains("Boot checkpoint"));
         assert!(checkpoint_msg.contains("FilesystemMount"));
+    }
+
+    #[test]
+    fn test_boot_logger_log_levels() {
+        let levels = [
+            LogLevel::Info,
+            LogLevel::Warning,
+            LogLevel::Error,
+            LogLevel::Critical,
+        ];
+        for level in levels {
+            let s = format!("{level:?}");
+            assert!(!s.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_boot_logger_stats_construction() {
+        let stats = BootLoggerStats {
+            log_count: 42,
+            uptime_ms: 1000,
+            serial_active: true,
+        };
+        assert_eq!(stats.log_count, 42);
+        assert_eq!(stats.uptime_ms, 1000);
+        assert!(stats.serial_active);
+    }
+
+    #[test]
+    fn test_boot_stage_all_variants() {
+        let _ = format!("{:?}", BootStage::GrubHandoff);
+        let _ = format!("{:?}", BootStage::InitStart);
+        let _ = format!("{:?}", BootStage::FilesystemMount);
+        let _ = format!("{:?}", BootStage::Complete);
+    }
+
+    #[test]
+    fn test_boot_logger_new_may_fail_without_serial() {
+        let result = BootLogger::new();
+        if result.is_ok() {
+            let mut logger = result.unwrap();
+            logger.info("test");
+            logger.warning("warn");
+            logger.error("err");
+            logger.critical("critical");
+            logger.checkpoint(BootStage::InitStart);
+            logger.flush();
+            let stats = logger.stats();
+            assert!(stats.log_count >= 5);
+        }
     }
 }

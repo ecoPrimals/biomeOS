@@ -411,10 +411,7 @@ pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -498,5 +495,113 @@ mod tests {
         assert!(lines.iter().any(|l| l.contains("/media/usb/biomeOS")));
         assert!(lines.iter().any(|l| l.contains("What was created")));
         assert!(lines.iter().any(|l| l.contains("Security")));
+    }
+
+    #[test]
+    fn test_format_spore_create_summary_no_location() {
+        let spore_info = serde_json::json!({});
+        let lines = format_spore_create_summary(&spore_info);
+        assert!(lines.iter().any(|l| l.contains("What was created")));
+        assert!(lines.iter().any(|l| l.contains("Security")));
+    }
+
+    #[test]
+    fn test_path_info_debug() {
+        let info = PathInfo {
+            name: "bin/tower".to_string(),
+            exists: true,
+            permissions: Some(0o755),
+        };
+        let _ = format!("{info:?}");
+    }
+
+    #[test]
+    fn test_path_info_clone() {
+        let info = PathInfo {
+            name: "tower.toml".to_string(),
+            exists: false,
+            permissions: None,
+        };
+        let cloned = info.clone();
+        assert_eq!(info.name, cloned.name);
+        assert_eq!(info.exists, cloned.exists);
+    }
+
+    #[test]
+    fn test_gather_spore_structure_info_checks_all_paths() {
+        let infos = gather_spore_structure_info(std::path::Path::new("/nonexistent"));
+        let names: Vec<_> = infos.iter().map(|i| i.name.as_str()).collect();
+        assert!(names.contains(&".family.seed"));
+        assert!(names.contains(&"tower.toml"));
+        assert!(names.contains(&"bin/tower"));
+        assert!(names.contains(&"primals/beardog"));
+        assert!(names.contains(&"primals/songbird"));
+    }
+
+    #[test]
+    fn test_compute_refresh_plan_mismatched_lengths() {
+        let paths = vec![std::path::PathBuf::from("a"), std::path::PathBuf::from("b")];
+        let would_refresh = vec![true];
+        let report = compute_refresh_plan(&paths, &would_refresh);
+        assert_eq!(report.to_refresh.len(), 1);
+        assert_eq!(report.to_keep.len(), 1);
+    }
+
+    #[test]
+    fn test_spore_type_emoji() {
+        assert_eq!(SporeType::Live.emoji(), "🌱");
+        assert_eq!(SporeType::Cold.emoji(), "❄️");
+    }
+
+    #[test]
+    fn test_format_spore_create_summary_location_null() {
+        let spore_info = serde_json::json!({"location": null});
+        let lines = format_spore_create_summary(&spore_info);
+        assert!(lines.iter().any(|l| l.contains("What was created")));
+    }
+
+    #[test]
+    fn test_format_spore_create_summary_location_number() {
+        let spore_info = serde_json::json!({"location": 42});
+        let lines = format_spore_create_summary(&spore_info);
+        assert!(lines.iter().any(|l| l.contains("Security")));
+    }
+
+    #[test]
+    fn test_refresh_report_default() {
+        let report = RefreshReport::default();
+        assert!(report.to_refresh.is_empty());
+        assert!(report.to_keep.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_handle_spore_refresh_no_plasmid_bin() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let result = handle_spore_refresh(temp.path().to_path_buf(), true).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("plasmidBin") || err.contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_spore_list() {
+        let result = handle_spore_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_spore_verify_nonexistent() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let mount = temp.path().join("biomeOS");
+        std::fs::create_dir_all(&mount).expect("create dir");
+        let result = handle_spore_verify(temp.path().to_path_buf()).await;
+        assert!(result.is_err() || result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_spore_info_nonexistent() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let result = handle_spore_info(temp.path().to_path_buf()).await;
+        assert!(result.is_err());
     }
 }

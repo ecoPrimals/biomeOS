@@ -125,6 +125,7 @@ impl Default for ConsoleWriter {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -135,10 +136,42 @@ mod tests {
     }
 
     #[test]
+    fn test_console_writer_default() {
+        let writer = ConsoleWriter::default();
+        let _ = writer;
+    }
+
+    #[test]
     fn test_write_to_stdout() -> io::Result<()> {
         let mut writer = ConsoleWriter::new()?;
-        // This test just ensures the API works; output verification is manual
         writer.write_line("test message")?;
         Ok(())
+    }
+
+    #[test]
+    fn test_write_error() -> io::Result<()> {
+        let mut writer = ConsoleWriter::new()?;
+        writer.write_error("test error")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_bytes() -> io::Result<()> {
+        let mut writer = ConsoleWriter::new()?;
+        writer.write_bytes(b"raw bytes\n")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_banner() -> io::Result<()> {
+        let mut writer = ConsoleWriter::new()?;
+        writer.write_banner("Test Banner")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_console_writer_default_fallback() {
+        let writer = ConsoleWriter::default();
+        let _ = writer;
     }
 }

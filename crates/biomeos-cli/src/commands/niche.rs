@@ -223,7 +223,7 @@ pub async fn handle_primal_list() -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -296,5 +296,37 @@ other: stuff
         assert_eq!(category_to_icon("federation"), "🌐");
         assert_eq!(category_to_icon("research"), "🌿");
         assert_eq!(category_to_icon("custom"), "🌿");
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_primal_name() {
+        let yaml = r#"
+primal:
+  name: "Primal Name"
+niche:
+  name: "Niche Name"
+  category: "gaming"
+"#;
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(name, "Primal Name");
+        assert_eq!(category, "gaming");
+    }
+
+    #[tokio::test]
+    async fn test_handle_niche_list_nonexistent_dir() {
+        let result = handle_niche_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_niche_show_nonexistent() {
+        let result = handle_niche_show("nonexistent-template-id").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_list_nonexistent_dir() {
+        let result = handle_primal_list().await;
+        assert!(result.is_ok());
     }
 }

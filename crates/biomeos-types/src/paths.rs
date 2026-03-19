@@ -23,6 +23,8 @@
 //
 // =============================================================================
 
+use crate::primal_names;
+
 use std::env;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -129,10 +131,10 @@ impl SystemPaths {
         xdg_data_home: Option<impl AsRef<Path>>,
     ) -> Result<Self> {
         let runtime_dir = xdg_runtime_dir.map_or_else(Self::get_runtime_dir, |p| {
-            Ok(p.as_ref().to_path_buf().join("biomeos"))
+            Ok(p.as_ref().to_path_buf().join(primal_names::BIOMEOS))
         })?;
         let data_dir = xdg_data_home.map_or_else(Self::get_data_dir, |p| {
-            Ok(p.as_ref().to_path_buf().join("biomeos"))
+            Ok(p.as_ref().to_path_buf().join(primal_names::BIOMEOS))
         })?;
         let config_dir = Self::get_config_dir()?;
         let cache_dir = Self::get_cache_dir()?;
@@ -323,12 +325,12 @@ impl SystemPaths {
     fn get_runtime_dir() -> Result<PathBuf> {
         // 1. Try $XDG_RUNTIME_DIR
         if let Ok(xdg_runtime) = env::var("XDG_RUNTIME_DIR") {
-            return Ok(PathBuf::from(xdg_runtime).join("biomeos"));
+            return Ok(PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS));
         }
 
         // 2. Fallback to /tmp/biomeos-$USER
         let username = Self::get_username();
-        Ok(env::temp_dir().join(format!("biomeos-{username}")))
+        Ok(env::temp_dir().join(format!("{}-{}", primal_names::BIOMEOS, username)))
     }
 
     /// Get XDG data directory
@@ -336,17 +338,19 @@ impl SystemPaths {
         use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_DATA_HOME
         if let Ok(xdg_data) = env::var("XDG_DATA_HOME") {
-            return Ok(PathBuf::from(xdg_data).join("biomeos"));
+            return Ok(PathBuf::from(xdg_data).join(primal_names::BIOMEOS));
         }
 
         // 2. Try $HOME/.local/share
         if let Ok(home) = env::var("HOME") {
-            return Ok(PathBuf::from(home).join(".local/share/biomeos"));
+            return Ok(PathBuf::from(home)
+                .join(".local/share")
+                .join(primal_names::BIOMEOS));
         }
 
         // 3. Use etcetera (Pure Rust!) as fallback
         let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
-        Ok(strategy.data_dir().join("biomeos"))
+        Ok(strategy.data_dir().join(primal_names::BIOMEOS))
     }
 
     /// Get XDG config directory
@@ -354,17 +358,19 @@ impl SystemPaths {
         use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_CONFIG_HOME
         if let Ok(xdg_config) = env::var("XDG_CONFIG_HOME") {
-            return Ok(PathBuf::from(xdg_config).join("biomeos"));
+            return Ok(PathBuf::from(xdg_config).join(primal_names::BIOMEOS));
         }
 
         // 2. Try $HOME/.config
         if let Ok(home) = env::var("HOME") {
-            return Ok(PathBuf::from(home).join(".config/biomeos"));
+            return Ok(PathBuf::from(home)
+                .join(".config")
+                .join(primal_names::BIOMEOS));
         }
 
         // 3. Use etcetera (Pure Rust!) as fallback
         let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
-        Ok(strategy.config_dir().join("biomeos"))
+        Ok(strategy.config_dir().join(primal_names::BIOMEOS))
     }
 
     /// Get XDG cache directory
@@ -372,29 +378,33 @@ impl SystemPaths {
         use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_CACHE_HOME
         if let Ok(xdg_cache) = env::var("XDG_CACHE_HOME") {
-            return Ok(PathBuf::from(xdg_cache).join("biomeos"));
+            return Ok(PathBuf::from(xdg_cache).join(primal_names::BIOMEOS));
         }
 
         // 2. Try $HOME/.cache
         if let Ok(home) = env::var("HOME") {
-            return Ok(PathBuf::from(home).join(".cache/biomeos"));
+            return Ok(PathBuf::from(home)
+                .join(".cache")
+                .join(primal_names::BIOMEOS));
         }
 
         // 3. Use etcetera (Pure Rust!) as fallback
         let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
-        Ok(strategy.cache_dir().join("biomeos"))
+        Ok(strategy.cache_dir().join(primal_names::BIOMEOS))
     }
 
     /// Get XDG state directory
     fn get_state_dir() -> Result<PathBuf> {
         // 1. Try $XDG_STATE_HOME
         if let Ok(xdg_state) = env::var("XDG_STATE_HOME") {
-            return Ok(PathBuf::from(xdg_state).join("biomeos"));
+            return Ok(PathBuf::from(xdg_state).join(primal_names::BIOMEOS));
         }
 
         // 2. Try $HOME/.local/state
         if let Ok(home) = env::var("HOME") {
-            return Ok(PathBuf::from(home).join(".local/state/biomeos"));
+            return Ok(PathBuf::from(home)
+                .join(".local/state")
+                .join(primal_names::BIOMEOS));
         }
 
         // 3. Fallback to data_dir/state
@@ -421,15 +431,15 @@ impl SystemPaths {
     pub fn new_lazy() -> Self {
         // Compute paths with fallbacks - these operations cannot fail
         let runtime_dir =
-            Self::get_runtime_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos"));
-        let data_dir =
-            Self::get_data_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos-data"));
-        let config_dir =
-            Self::get_config_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos-config"));
-        let cache_dir =
-            Self::get_cache_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos-cache"));
-        let state_dir =
-            Self::get_state_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos-state"));
+            Self::get_runtime_dir().unwrap_or_else(|_| env::temp_dir().join(primal_names::BIOMEOS));
+        let data_dir = Self::get_data_dir()
+            .unwrap_or_else(|_| env::temp_dir().join(format!("{}-data", primal_names::BIOMEOS)));
+        let config_dir = Self::get_config_dir()
+            .unwrap_or_else(|_| env::temp_dir().join(format!("{}-config", primal_names::BIOMEOS)));
+        let cache_dir = Self::get_cache_dir()
+            .unwrap_or_else(|_| env::temp_dir().join(format!("{}-cache", primal_names::BIOMEOS)));
+        let state_dir = Self::get_state_dir()
+            .unwrap_or_else(|_| env::temp_dir().join(format!("{}-state", primal_names::BIOMEOS)));
 
         Self {
             runtime_dir,

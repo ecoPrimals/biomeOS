@@ -446,21 +446,28 @@ async fn test_subscribe_sse_no_url_returns_err() {
 #[tokio::test]
 async fn test_process_events_handler_error_continues() {
     use std::sync::atomic::{AtomicU32, Ordering};
+    use tokio::sync::oneshot;
 
     let subscriber = Arc::new(RealTimeEventSubscriber::new("test_family".to_string()));
     let handler = RealTimeEventHandler::new(subscriber.clone());
 
     let processed = Arc::new(AtomicU32::new(0));
     let errored = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let (tx, rx) = oneshot::channel::<()>();
 
     let p = processed.clone();
     let e = errored.clone();
+    let tx = Arc::new(tokio::sync::Mutex::new(Some(tx)));
+    let tx_clone = tx.clone();
     let mut h = handler;
     let handle = tokio::spawn(async move {
         h.process_events(move |event| {
             p.fetch_add(1, Ordering::SeqCst);
             if matches!(event, RealTimeEvent::Heartbeat { .. }) {
                 e.store(true, Ordering::SeqCst);
+                if let Some(sender) = tx_clone.blocking_lock().take() {
+                    let _ = sender.send(());
+                }
                 Err(anyhow::anyhow!("simulated handler error"))
             } else {
                 Ok(())
@@ -480,7 +487,7 @@ async fn test_process_events_handler_error_continues() {
         healthy_count: 2,
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(2), rx).await;
     assert!(
         processed.load(Ordering::SeqCst) >= 1,
         "handler should have processed at least one event"
@@ -495,16 +502,23 @@ async fn test_process_events_handler_error_continues() {
 #[tokio::test]
 async fn test_process_events_receives_and_processes() {
     use std::sync::atomic::{AtomicU32, Ordering};
+    use tokio::sync::oneshot;
 
     let subscriber = Arc::new(RealTimeEventSubscriber::new("test_family".to_string()));
     let handler = RealTimeEventHandler::new(subscriber.clone());
 
     let event_count = Arc::new(AtomicU32::new(0));
+    let (tx, rx) = oneshot::channel::<()>();
     let ec = event_count.clone();
+    let tx = Arc::new(tokio::sync::Mutex::new(Some(tx)));
+    let tx_clone = tx.clone();
     let mut h = handler;
     let _handle = tokio::spawn(async move {
         h.process_events(move |_| {
             ec.fetch_add(1, Ordering::SeqCst);
+            if let Some(sender) = tx_clone.blocking_lock().take() {
+                let _ = sender.send(());
+            }
             Ok(())
         })
         .await
@@ -516,7 +530,7 @@ async fn test_process_events_receives_and_processes() {
         healthy_count: 1,
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(2), rx).await;
     assert!(
         event_count.load(Ordering::SeqCst) >= 1,
         "should have processed at least one event"
@@ -643,5 +657,44 @@ fn test_jsonrpc_notification_for_test() {
         serde_json::json!({"type":"heartbeat","timestamp":1,"primals_count":1,"healthy_count":1}),
     );
     let result = RealTimeEventSubscriber::parse_event_for_test(&notif);
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_subscription_multiple_receivers_independent() {
+    let subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+    let mut rx1 = subscriber.subscribe();
+    let mut rx2 = subscriber.subscribe();
+
+    let event = RealTimeEvent::Heartbeat {
+        timestamp: 1,
+        primals_count: 1,
+        healthy_count: 1,
+    };
+    subscriber.send_event(event);
+
+    let e1 = rx1.try_recv();
+    let e2 = rx2.try_recv();
+    assert!(e1.is_ok());
+    assert!(e2.is_ok());
+    assert!(rx1.try_recv().is_err());
+    assert!(rx2.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn test_discover_endpoints_biomeos_api_ws_fallback() {
+    set_test_env("BIOMEOS_API_WS", "ws://fallback.example/ws");
+    let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+    let result = subscriber.discover_endpoints().await;
+    remove_test_env("BIOMEOS_API_WS");
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_discover_endpoints_biomeos_api_sse_fallback() {
+    set_test_env("BIOMEOS_API_SSE", "http://fallback.example/sse");
+    let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+    let result = subscriber.discover_endpoints().await;
+    remove_test_env("BIOMEOS_API_SSE");
     assert!(result.is_ok());
 }

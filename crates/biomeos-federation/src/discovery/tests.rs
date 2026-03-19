@@ -3,6 +3,8 @@
 
 //! Discovery tests - extracted to keep discovery/mod.rs under 1000 lines
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
@@ -350,4 +352,23 @@ fn test_discover_songbird_socket_not_found() {
         let err_msg = format!("{e}");
         assert!(err_msg.contains("not found") || err_msg.contains("Songbird"));
     }
+}
+
+#[test]
+fn test_discover_songbird_socket_from_env() {
+    let _guard = biomeos_test_utils::TestEnvGuard::set("SONGBIRD_SOCKET", "/tmp/test-sb.sock");
+    let result = PrimalDiscovery::discover_songbird_socket();
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "/tmp/test-sb.sock");
+}
+
+#[test]
+fn test_parse_endpoint_empty() {
+    assert!(PrimalDiscovery::parse_endpoint("").is_none());
+}
+
+#[test]
+fn test_parse_endpoint_udp_ipv6() {
+    let ep = PrimalDiscovery::parse_endpoint("udp://[::1]:8080");
+    assert!(ep.is_some());
 }

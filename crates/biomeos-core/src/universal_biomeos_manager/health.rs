@@ -416,11 +416,14 @@ impl UniversalBiomeOSManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use biomeos_types::Health;
+    use crate::universal_biomeos_manager::{PrimalInfo, UniversalBiomeOSManager};
+    use biomeos_primal_sdk::PrimalCapability;
+    use biomeos_types::{BiomeOSConfig, Health, PrimalType};
     use chrono::Utc;
+    use std::collections::HashMap;
 
     #[test]
     fn test_health_to_status_string() {
@@ -510,5 +513,204 @@ mod tests {
             last_known: None,
         };
         assert_eq!(health_to_quick_status(&health), "issue");
+    }
+
+    fn test_primal_info(id: &str, name: &str, endpoint: &str, health: Health) -> PrimalInfo {
+        PrimalInfo {
+            id: id.to_string(),
+            name: name.to_string(),
+            primal_type: PrimalType::from_discovered("compute", name, "1.0.0"),
+            endpoint: endpoint.to_string(),
+            capabilities: vec![PrimalCapability::new("compute", "execution", "1.0")],
+            health,
+            last_seen: Utc::now(),
+            discovered_at: Utc::now(),
+            metadata: HashMap::new(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_manager_get_system_health() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+        let report = manager.get_system_health().await;
+        assert_eq!(report.subject.id, "system");
+        assert!(matches!(report.health, Health::Healthy));
+    }
+
+    #[tokio::test]
+    async fn test_manager_probe_endpoint() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+        // probe_endpoint uses discovery_service which returns Ok with default values
+        let result = manager.probe_endpoint("unix:///tmp/test.sock").await;
+        assert!(result.is_ok());
+        let s = result.unwrap();
+        assert!(s.contains("unknown") || s.contains("1.0.0"));
+    }
+
+    #[tokio::test]
+    async fn test_check_service_health_found_reachable() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info(
+            "health-1",
+            "health-svc",
+            "unix:///tmp/health.sock",
+            Health::Healthy,
+        );
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager
+            .check_service_health("health-svc")
+            .await
+            .expect("check health");
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("Reachable")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_check_service_health_not_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager
+            .check_service_health("nonexistent")
+            .await
+            .expect("check health");
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("Not Found")
+        );
+        assert!(result.contains_key("error"));
+    }
+
+    #[tokio::test]
+    async fn test_check_system_health() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager
+            .check_system_health()
+            .await
+            .expect("check system health");
+        assert!(result.contains_key("overall_status"));
+        assert!(result.contains_key("timestamp"));
+        assert!(result.contains_key("services"));
+        assert!(result.contains_key("service_summary"));
+        assert!(result.contains_key("system_metrics"));
+    }
+
+    #[tokio::test]
+    async fn test_check_system_health_with_primals() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("p1", "svc1", "unix:///a.sock", Health::Healthy);
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager.check_system_health().await.expect("check");
+        let summary = result.get("service_summary").expect("summary");
+        assert_eq!(summary["total"].as_u64(), Some(1));
+        assert_eq!(summary["healthy"].as_u64(), Some(1));
+    }
+
+    #[tokio::test]
+    async fn test_probe_service_health_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("probe-1", "probe-svc", "unix:///x.sock", Health::Healthy);
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager
+            .probe_service_health("probe-svc", 5)
+            .await
+            .expect("probe");
+        assert!(result.contains_key("connectivity"));
+    }
+
+    #[tokio::test]
+    async fn test_probe_service_health_not_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager
+            .probe_service_health("nonexistent", 5)
+            .await
+            .expect("probe");
+        assert!(result.contains_key("error"));
+    }
+
+    #[tokio::test]
+    async fn test_quick_system_scan() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager.quick_system_scan().await.expect("scan");
+        assert_eq!(
+            result.get("scan_type").and_then(|v| v.as_str()),
+            Some("quick")
+        );
+        assert!(result.contains_key("services_scanned"));
+        assert!(result.contains_key("issues_count"));
+    }
+
+    #[tokio::test]
+    async fn test_quick_system_scan_with_issues() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let degraded = test_primal_info(
+            "d1",
+            "degraded-svc",
+            "unix:///d.sock",
+            Health::Degraded {
+                issues: vec![],
+                impact_score: None,
+            },
+        );
+        manager.register_primal(degraded).await.expect("register");
+
+        let result = manager.quick_system_scan().await.expect("scan");
+        assert_eq!(result.get("issues_count").and_then(|v| v.as_u64()), Some(1));
+    }
+
+    #[tokio::test]
+    async fn test_comprehensive_system_scan() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager.comprehensive_system_scan().await.expect("scan");
+        assert_eq!(
+            result.get("scan_type").and_then(|v| v.as_str()),
+            Some("comprehensive")
+        );
+        assert!(result.contains_key("system_health"));
     }
 }

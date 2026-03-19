@@ -154,7 +154,7 @@ pub async fn serve_tarpc_health(
 #[derive(Clone)]
 pub struct DefaultHealthService {
     primal_name: String,
-    start_time: std::time::Instant,
+    start_time: tokio::time::Instant,
 }
 
 impl DefaultHealthService {
@@ -163,7 +163,7 @@ impl DefaultHealthService {
     pub fn new(primal_name: impl Into<String>) -> Self {
         Self {
             primal_name: primal_name.into(),
-            start_time: std::time::Instant::now(),
+            start_time: tokio::time::Instant::now(),
         }
     }
 }
@@ -247,12 +247,10 @@ pub async fn start_default_tarpc_sidecar(
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::ready_signal;
 
     #[test]
     fn tarpc_socket_name_standard() {
@@ -318,12 +316,14 @@ mod tests {
         let prepared = prepare_socket(&sock).await.unwrap();
 
         // Use raw UnixListener to verify socket path works
+        let (mut ready_tx, ready_rx) = ready_signal();
         let listener = UnixListener::bind(&prepared).unwrap();
+        ready_tx.signal();
 
         let sock_clone = sock.clone();
         let server = tokio::spawn(async move { listener.accept().await.is_ok() });
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        ready_rx.wait().await.unwrap();
         let _stream = UnixStream::connect(&sock_clone).await.unwrap();
 
         assert!(server.await.unwrap());
@@ -367,5 +367,57 @@ mod tests {
 
         let tarpc_path = tarpc_socket_path(&jsonrpc_sock);
         assert_eq!(tarpc_path, expected_tarpc);
+    }
+
+    #[test]
+    fn tarpc_socket_name_empty_string() {
+        assert_eq!(tarpc_socket_name(""), ".tarpc");
+    }
+
+    #[test]
+    fn tarpc_socket_name_dot_sock_only() {
+        assert_eq!(tarpc_socket_name(".sock"), ".tarpc.sock");
+    }
+
+    #[test]
+    fn tarpc_socket_path_with_extension() {
+        let p = std::path::Path::new("/tmp/foo.bar.sock");
+        let tarpc = tarpc_socket_path(p);
+        assert_eq!(tarpc, std::path::PathBuf::from("/tmp/foo.bar.tarpc.sock"));
+    }
+
+    #[tokio::test]
+    async fn prepare_socket_root_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let sock = dir.path().join("single.sock");
+        let prepared = prepare_socket(&sock).await.unwrap();
+        assert_eq!(prepared, sock);
+        assert!(sock.parent().unwrap().exists());
+    }
+
+    #[tokio::test]
+    async fn prepare_socket_no_parent() {
+        let dir = tempfile::tempdir().unwrap();
+        let sock = dir.path().join("x.sock");
+        let prepared = prepare_socket(&sock).await.unwrap();
+        assert_eq!(prepared, sock);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn default_health_service_uptime() {
+        let svc = DefaultHealthService::new("test");
+        tokio::time::advance(std::time::Duration::from_millis(10)).await;
+        let status = svc.health_check(tarpc::context::current()).await;
+        assert!(status.healthy);
+        assert!(status.message.is_some());
+    }
+
+    #[test]
+    fn default_health_service_version_protocols() {
+        let svc = DefaultHealthService::new("beardog");
+        let info = futures::executor::block_on(svc.version(tarpc::context::current()));
+        assert!(info.protocols.contains(&"jsonrpc".to_string()));
+        assert!(info.protocols.contains(&"tarpc".to_string()));
+        assert!(info.version.len() > 0);
     }
 }

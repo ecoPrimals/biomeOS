@@ -75,6 +75,7 @@ async fn main() -> anyhow::Result<()> {
         rootfs_dir: cli.rootfs.clone(),
         boot_timeout: cli.boot_timeout,
         expected_boot_message: cli.expected_message.clone(),
+        ..Default::default()
     };
 
     // Run verification

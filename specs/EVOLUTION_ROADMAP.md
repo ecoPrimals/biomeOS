@@ -1,16 +1,16 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: February 9, 2026 (biomeOS Evolution Complete + Formatting Fixed)
+**Updated**: March 19, 2026 (all bypasses resolved, shell-outs eliminated, zero-copy evolution)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
 
 ## Current State
 
-biomeOS and the full NUCLEUS stack are **production validated** with 5 documented bypasses.
-All bypasses are working and documented. This roadmap defines the evolution path to
-eliminate each one and achieve pure, self-contained operation.
+biomeOS and the full NUCLEUS stack are **production validated** with **0 active bypasses**.
+All 6 original bypasses have been evolved to production-quality solutions. This roadmap
+is preserved as a fossil record of the evolution paths taken.
 
 **Post-cleanup**: 19 active specs, 14 active handoffs, 10 active scripts.
 47 specs, 14 handoffs, 35 scripts archived to `ecoPrimals/archive/biomeos-feb09-2026/`.
@@ -19,13 +19,10 @@ eliminate each one and achieve pure, self-contained operation.
 
 ## 1. Bypasses and Their Evolution Paths
 
-### Bypass 1: HTTP_REQUEST_PROVIDER_SOCKET env var
+### ~~Bypass 1: HTTP_REQUEST_PROVIDER_SOCKET env var~~ (EVOLVED Mar 19)
 
-**Current**: Squirrel discovers Songbird via explicit `HTTP_REQUEST_PROVIDER_SOCKET` env var.
-**Root Cause**: Songbird does not implement `discover_capabilities` JSON-RPC method.
-
-**Evolution**: Songbird adds `discover_capabilities` handler (50 LOC).
-**Handoff**: `docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF_FEB09_2026.md` Item 1.
+**Was**: Squirrel discovered Songbird via explicit `HTTP_REQUEST_PROVIDER_SOCKET` env var.
+**Now**: `http_bridge` registered as Songbird capability in `capability_sockets.rs` and `CapabilityTaxonomy`. Squirrel uses `BIOMEOS_DISCOVERY_SOCKET` and capability-based discovery. Env var removed from nucleus spawn.
 
 ### Bypass 2: Socket nucleation symlinks
 
@@ -36,15 +33,15 @@ eliminate each one and achieve pure, self-contained operation.
 This enables multi-family support and is the correct architecture for primal sharing.
 See Section 7 for full multi-family spec.
 
-### Bypass 3: NestGate inverted boolean
+### ~~Bypass 3: NestGate inverted boolean~~ (EVOLVED Mar 19)
 
-**Fix**: 1 line upstream. `let enable_http = !config.socket_only;`
-**Handoff**: `docs/handoffs/NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md` Bug 1.
+**Was**: biomeOS passed `--socket-only` with inverted semantics.
+**Now**: biomeOS omits the flag entirely; with the inversion, this yields socket-only mode. Documented in nucleus.rs.
 
-### Bypass 4: Squirrel default model override
+### ~~Bypass 4: Squirrel default model override~~ (EVOLVED Mar 19)
 
-**Fix**: Read from `AI_DEFAULT_MODEL` env var (15 LOC).
-**Handoff**: `docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md` Item 1.
+**Was**: Had to pass model explicitly.
+**Now**: `AI_DEFAULT_MODEL` env var passed through to Squirrel in nucleus spawn and graph deployment.
 
 ### Bypass 5: SSH-based Plasmodium queries
 

@@ -590,6 +590,61 @@ mod tests {
         assert!(debug_str.contains("ValidationConfig"));
     }
 
+    #[test]
+    fn test_parse_ip_from_domifaddr_192_168_in_middle() {
+        let output = " Name       MAC address          Protocol     Address\n\nvnet0      xx:xx    ipv4         10.0.0.1/24\nvnet1      yy:yy    ipv4         192.168.122.50/24\n";
+        let ip = super::parse_ip_from_domifaddr_output(output);
+        assert_eq!(ip, Some("192.168.122.50".to_string()));
+    }
+
+    #[test]
+    fn test_parse_vm_names_from_list_extra_columns() {
+        let list = " Id    Name                State       CPU    Memory\n----------------------------------------------------\n 1     fed-node1           running     1      1024\n";
+        let names = super::parse_vm_names_from_list(list, "fed");
+        assert_eq!(names, vec!["fed-node1"]);
+    }
+
+    #[test]
+    fn test_validation_config_clone() {
+        let config = ValidationConfig::default();
+        let cloned = config.clone();
+        assert_eq!(cloned.ssh_max_retries, config.ssh_max_retries);
+        assert_eq!(cloned.cloud_init_timeout, config.cloud_init_timeout);
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_empty_lines() {
+        let output = "\n\n  ipv4    192.168.1.1/24  \n\n";
+        let ip = super::parse_ip_from_domifaddr_output(output);
+        assert_eq!(ip, Some("192.168.1.1".to_string()));
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_contains_192_168_in_line() {
+        let output = " ipv4  192.168.0.1/24";
+        let ip = super::parse_ip_from_domifaddr_output(output);
+        assert_eq!(ip, Some("192.168.0.1".to_string()));
+    }
+
+    #[test]
+    fn test_parse_vm_names_from_list_malformed_line() {
+        let list = " 1     fed-node1    running\n single_word\n";
+        let names = super::parse_vm_names_from_list(list, "fed");
+        assert_eq!(names, vec!["fed-node1"]);
+    }
+
+    #[test]
+    fn test_validation_config_builder_pattern() {
+        let config = ValidationConfig {
+            cloud_init_timeout: Duration::from_secs(900),
+            ssh_timeout: Duration::from_secs(600),
+            ssh_retry_interval: Duration::from_secs(15),
+            ssh_max_retries: 40,
+        };
+        assert_eq!(config.cloud_init_timeout.as_secs(), 900);
+        assert_eq!(config.ssh_max_retries, 40);
+    }
+
     #[tokio::test]
     #[ignore = "requires benchscale and libvirt"]
     async fn test_full_lifecycle() -> Result<()> {

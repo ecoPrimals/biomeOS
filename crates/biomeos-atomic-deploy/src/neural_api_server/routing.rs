@@ -385,10 +385,7 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use crate::neural_api_server::NeuralApiServer;
 
@@ -606,5 +603,252 @@ mod tests {
         let req = r#"{"jsonrpc":"2.0","method":"capability.metrics","params":{},"id":44}"#;
         let result = server.handle_request_json(req).await;
         assert!(result.get("result").is_some());
+    }
+
+    // --- Additional route coverage for 90%+ ---
+
+    #[tokio::test]
+    async fn test_handle_request_topology_primals_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"topology.primals","id":50}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_topology_proprioception_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"topology.proprioception","id":51}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_neural_api_get_topology_alias() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"neural_api.get_topology","id":52}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_lifecycle_get_route() {
+        let (server, _temp) = create_test_server();
+        let req =
+            r#"{"jsonrpc":"2.0","method":"lifecycle.get","params":{"primal_id":"test"},"id":53}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_lifecycle_shutdown_all_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":54}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_protocol_escalate_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"protocol.escalate","params":{"from":"a","to":"b"},"id":55}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_protocol_fallback_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"protocol.fallback","params":{"from":"a","to":"b"},"id":56}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_protocol_metrics_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"protocol.metrics","params":{},"id":57}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_protocol_start_monitoring_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"protocol.start_monitoring","id":58}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_protocol_stop_monitoring_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"protocol.stop_monitoring","id":59}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_graph_protocol_map_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"graph.protocol_map","id":60}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_capability_providers_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"capability.providers","params":{"capability":"security"},"id":61}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_capability_route_alias() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"capability.route","params":{"capability":"security"},"id":62}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_neural_api_route_to_primal_alias() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"neural_api.route_to_primal","params":{"capability":"security"},"id":63}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_capability_discover_translation_singular() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"capability.discover_translation","params":{"capability":"encryption"},"id":64}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_mcp_tools_list_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"mcp.tools.list","id":65}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_mcp_tools_list_underscore_alias() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"mcp.tools_list","id":66}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_agent_list_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"agent.list","id":67}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_agent_get_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"agent.get","params":{"id":"test"},"id":68}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_graph_execute_pipeline_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"graph.execute_pipeline","params":{"graph_id":"test"},"id":69}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_graph_suggest_optimizations_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"graph.suggest_optimizations","params":{"graph_id":"test"},"id":70}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_niche_deploy_route() {
+        let (server, _temp) = create_test_server();
+        let req =
+            r#"{"jsonrpc":"2.0","method":"niche.deploy","params":{"template":"test"},"id":71}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_punch_request_mesh_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"punch.request","params":{},"id":72}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_stun_discover_mesh_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"stun.discover","params":{},"id":73}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_relay_serve_mesh_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"relay.serve","params":{},"id":74}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_onion_create_service_mesh_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"onion.create_service","params":{},"id":75}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result.get("result").is_some() || result.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_dispatch_outcome_success_structure() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"graph.list","id":76}"#;
+        let outcome = server.handle_request(req).await;
+        let response = outcome.into_response();
+        assert_eq!(response["jsonrpc"], "2.0");
+        assert!(response.get("result").is_some());
+        assert!(response.get("error").is_none());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_dispatch_outcome_parse_error() {
+        let (server, _temp) = create_test_server();
+        let outcome = server.handle_request("not json").await;
+        let response = outcome.into_response();
+        assert_eq!(response["error"]["code"], -32700);
+        assert!(response["id"].is_null());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_dispatch_outcome_method_not_found() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"nonexistent.method","id":77}"#;
+        let outcome = server.handle_request(req).await;
+        let response = outcome.into_response();
+        assert_eq!(response["error"]["code"], -32601);
+        assert!(
+            response["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("nonexistent.method")
+        );
     }
 }

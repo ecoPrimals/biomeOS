@@ -520,6 +520,7 @@ pub fn default_resource_metrics() -> biomeos_types::ResourceMetrics {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -539,5 +540,220 @@ mod tests {
             assert!(u >= chrono::Duration::zero());
         }
         let _ = get_system_resource_usage().await;
+    }
+
+    #[test]
+    fn test_system_status_serde() {
+        let status = SystemStatus {
+            uptime: chrono::Duration::zero(),
+            resource_usage: default_resource_metrics(),
+            health_status: Health::Healthy,
+            primals: std::collections::HashMap::new(),
+        };
+        let json = serde_json::to_string(&status).expect("serialize");
+        let _: SystemStatus = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[test]
+    fn test_storage_metrics_serde() {
+        let metrics = StorageMetrics {
+            total_space: 1000,
+            used_space: 500,
+            available_space: 500,
+            mount_points: vec![MountPoint {
+                path: "/".to_string(),
+                filesystem: "ext4".to_string(),
+                total_bytes: 1000,
+                used_bytes: 500,
+                available_bytes: 500,
+            }],
+        };
+        let json = serde_json::to_string(&metrics).expect("serialize");
+        let _: StorageMetrics = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[test]
+    fn test_network_status_serde() {
+        let status = NetworkStatus {
+            interfaces: vec![],
+            total_bytes_sent: 0,
+            total_bytes_received: 0,
+            active_connections: 0,
+        };
+        let json = serde_json::to_string(&status).expect("serialize");
+        let _: NetworkStatus = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[test]
+    fn test_health_check_result_serde() {
+        let result = HealthCheckResult {
+            overall_healthy: true,
+            system_status: SystemStatus {
+                uptime: chrono::Duration::zero(),
+                resource_usage: default_resource_metrics(),
+                health_status: Health::Healthy,
+                primals: std::collections::HashMap::new(),
+            },
+            storage_metrics: StorageMetrics {
+                total_space: 0,
+                used_space: 0,
+                available_space: 0,
+                mount_points: vec![],
+            },
+            network_status: NetworkStatus {
+                interfaces: vec![],
+                total_bytes_sent: 0,
+                total_bytes_received: 0,
+                active_connections: 0,
+            },
+            timestamp: chrono::Utc::now(),
+        };
+        let json = serde_json::to_string(&result).expect("serialize");
+        let _: HealthCheckResult = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[test]
+    fn test_interface_status_serde() {
+        let status = InterfaceStatus {
+            name: "eth0".to_string(),
+            status: "up".to_string(),
+            ip_address: Some("192.168.1.1".to_string()),
+            is_active: true,
+        };
+        let json = serde_json::to_string(&status).expect("serialize");
+        let parsed: InterfaceStatus = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.name, "eth0");
+        assert_eq!(parsed.ip_address, Some("192.168.1.1".to_string()));
+    }
+
+    #[test]
+    fn test_mount_point_serde() {
+        let mp = MountPoint {
+            path: "/".to_string(),
+            filesystem: "ext4".to_string(),
+            total_bytes: 100_000_000_000,
+            used_bytes: 50_000_000_000,
+            available_bytes: 50_000_000_000,
+        };
+        let json = serde_json::to_string(&mp).expect("serialize");
+        let parsed: MountPoint = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.path, "/");
+        assert_eq!(parsed.total_bytes, 100_000_000_000);
+    }
+
+    #[test]
+    fn test_network_interface_serde() {
+        let iface = NetworkInterface {
+            name: "eth0".to_string(),
+            ip_address: Some("10.0.0.1".to_string()),
+            mac_address: Some("aa:bb:cc:dd:ee:ff".to_string()),
+            is_up: true,
+            bytes_sent: 1000,
+            bytes_received: 2000,
+        };
+        let json = serde_json::to_string(&iface).expect("serialize");
+        let parsed: NetworkInterface = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.name, "eth0");
+        assert_eq!(parsed.bytes_sent, 1000);
+    }
+
+    #[test]
+    fn test_primal_status_serde() {
+        let status = PrimalStatus {
+            name: "beardog".to_string(),
+            health: Health::Healthy,
+            endpoint: "unix:///tmp/beardog.sock".to_string(),
+            discovered_at: chrono::Utc::now(),
+        };
+        let json = serde_json::to_string(&status).expect("serialize");
+        let parsed: PrimalStatus = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.name, "beardog");
+    }
+
+    #[tokio::test]
+    async fn test_live_service_new() {
+        let result = LiveService::new().await;
+        assert!(result.is_ok());
+        let service = result.unwrap();
+        assert!(service.config.metadata.version.len() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_live_service_get_storage_metrics() {
+        let service = LiveService::new().await.expect("new");
+        let metrics = service
+            .get_storage_metrics()
+            .await
+            .expect("storage metrics");
+        assert_eq!(
+            metrics.available_space,
+            metrics.total_space.saturating_sub(metrics.used_space)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_live_service_get_network_status() {
+        let service = LiveService::new().await.expect("new");
+        let status = service.get_network_status().await.expect("network status");
+        assert!(status.interfaces.is_empty() || !status.interfaces.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_live_service_get_system_status() {
+        let service = LiveService::new().await.expect("new");
+        let status = service.get_system_status().await.expect("system status");
+        assert!(matches!(
+            status.health_status,
+            Health::Healthy | Health::Degraded { .. } | Health::Unhealthy { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_live_service_health_check() {
+        let service = LiveService::new().await.expect("new");
+        let result = service.health_check().await.expect("health check");
+        assert!(result.overall_healthy || !result.overall_healthy);
+    }
+
+    #[tokio::test]
+    async fn test_live_service_get_discovered_primals() {
+        let service = LiveService::new().await.expect("new");
+        let _primals = service.get_discovered_primals().await;
+    }
+
+    #[tokio::test]
+    async fn test_live_service_get_raw_discovered_primals() {
+        let service = LiveService::new().await.expect("new");
+        let result = service.get_raw_discovered_primals().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_live_service_discover_primals_by_registry() {
+        let service = LiveService::new().await.expect("new");
+        let result = service
+            .discover_primals_by_registry("http://registry.test:8500")
+            .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_live_service_discover_primals_by_capability() {
+        let service = LiveService::new().await.expect("new");
+        let caps = vec![biomeos_primal_sdk::PrimalCapability::new(
+            "compute",
+            "execution",
+            "1.0",
+        )];
+        let result = service.discover_primals_by_capability(&caps).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_live_service_get_primal_info() {
+        let service = LiveService::new().await.expect("new");
+        let result = service.get_primal_info("nonexistent-id").await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
     }
 }

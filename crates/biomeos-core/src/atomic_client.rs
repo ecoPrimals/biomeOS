@@ -273,11 +273,13 @@ impl AtomicClient {
     /// between NUCLEUS instances on LAN or internet.
     ///
     /// The port should be runtime-discovered via beacon exchange, not hardcoded.
-    /// Songbird's default HTTP port is 8080 (configurable via `SONGBIRD_HTTP_PORT`).
+    /// Songbird's default HTTP port is [`biomeos_types::constants::ports::HTTP_BRIDGE`]
+    /// (configurable via `SONGBIRD_HTTP_PORT`).
     ///
     /// # Arguments
     /// * `host` - Remote host address (IP or hostname)
-    /// * `port` - Remote Songbird HTTP port (discovered via beacon, default 8080)
+    /// * `port` - Remote Songbird HTTP port (discovered via beacon, default
+    ///   [`biomeos_types::constants::ports::HTTP_BRIDGE`])
     pub fn http(host: impl AsRef<str>, port: u16) -> Self {
         Self {
             endpoint: TransportEndpoint::HttpJsonRpc {

@@ -313,6 +313,7 @@ pub(crate) async fn update_livespore_from(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::io::Write;
@@ -486,5 +487,105 @@ architectures = ["x86_64-linux-musl"]
         .await;
         let response = result.expect("download with latest should succeed");
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_download_binary_latest_primal_not_found() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        let manifest_content = r#"
+[manifest]
+version = "1.0"
+generated = "2026"
+
+[primals.beardog]
+name = "BearDog"
+latest = "0.9.0"
+versions = ["0.9.0"]
+architectures = ["x86_64-linux-musl"]
+"#;
+        std::fs::write(temp.path().join("manifest.toml"), manifest_content)
+            .expect("write manifest");
+        let result = download_binary_from(
+            temp.path().to_path_buf(),
+            "nonexistent-primal".to_string(),
+            "latest".to_string(),
+            "x86_64-linux-musl".to_string(),
+        )
+        .await;
+        let Err((status, body)) = result else {
+            panic!("expected Err when primal not in manifest");
+        };
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert_eq!(body.code, "PRIMAL_NOT_FOUND");
+    }
+
+    #[tokio::test]
+    async fn test_update_livespore_copy_failure_still_succeeds() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        std::fs::write(
+            temp.path().join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("write manifest");
+        let target = tempfile::tempdir().expect("target temp dir");
+        let result = update_livespore_from(
+            temp.path().to_path_buf(),
+            UpdateLiveSporeRequest {
+                target_path: target.path().to_path_buf(),
+                architectures: Some(vec!["x86_64-linux-musl".to_string()]),
+            },
+        )
+        .await;
+        let json = result.expect("update_livespore should succeed even with no binaries");
+        assert!(json.success);
+        assert_eq!(json.binaries_copied, 0);
+    }
+
+    #[tokio::test]
+    async fn test_update_livespore_default_architectures() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        std::fs::write(
+            temp.path().join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("write manifest");
+        let target = tempfile::tempdir().expect("target temp dir");
+        let result = update_livespore_from(
+            temp.path().to_path_buf(),
+            UpdateLiveSporeRequest {
+                target_path: target.path().to_path_buf(),
+                architectures: None,
+            },
+        )
+        .await;
+        let json = result.expect("update_livespore should succeed");
+        assert!(json.success);
+        assert!(json.by_arch.contains_key("x86_64"));
+        assert!(json.by_arch.contains_key("aarch64"));
+    }
+
+    #[tokio::test]
+    async fn test_download_binary_explicit_version_not_found() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        std::fs::write(
+            temp.path().join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("write manifest");
+        let primal_dir = temp.path().join("primals").join("beardog").join("v0.9.0");
+        std::fs::create_dir_all(&primal_dir).expect("create dir");
+        std::fs::write(primal_dir.join("beardog-x86_64-linux-musl"), b"bin").expect("write");
+        let result = download_binary_from(
+            temp.path().to_path_buf(),
+            "beardog".to_string(),
+            "1.0.0".to_string(),
+            "x86_64-linux-musl".to_string(),
+        )
+        .await;
+        let Err((status, body)) = result else {
+            panic!("expected Err when version dir doesn't exist");
+        };
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert_eq!(body.code, "BINARY_NOT_FOUND");
     }
 }

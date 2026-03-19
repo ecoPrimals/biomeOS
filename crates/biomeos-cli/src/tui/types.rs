@@ -804,3 +804,192 @@ impl Default for EcosystemHealth {
         }
     }
 }
+
+#[cfg(all(test, feature = "deprecated-tui"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use biomeos_core::universal_biomeos_manager::DiscoveryResult;
+    use biomeos_types::{Health, PrimalCapability, PrimalType};
+    use std::time::Duration;
+
+    #[test]
+    fn test_tab_id_all_tabs() {
+        let tabs = TabId::all_tabs();
+        assert!(!tabs.is_empty());
+        assert_eq!(tabs.len(), 10);
+        assert!(tabs.iter().any(|t| t.id == TabId::EcosystemOverview));
+        assert!(tabs.iter().any(|t| t.id == TabId::PrimalStatus));
+        assert!(tabs.iter().any(|t| t.id == TabId::Logs));
+    }
+
+    #[test]
+    fn test_tab_info_clone() {
+        let tabs = TabId::all_tabs();
+        let first = &tabs[0];
+        assert!(!first.title.is_empty());
+        assert!(!first.icon.is_empty());
+    }
+
+    #[test]
+    fn test_dashboard_state_new() {
+        let state = DashboardState::new();
+        assert_eq!(state.current_tab, 0);
+        assert_eq!(state.selected_service, 0);
+        assert_eq!(state.selected_primal, 0);
+        assert!(state.primal_states.is_empty());
+        assert!(state.discovered_services.is_empty());
+        assert!(state.ai_chat_history.is_empty());
+    }
+
+    #[test]
+    fn test_dashboard_state_default() {
+        let state = DashboardState::default();
+        assert_eq!(state.current_tab, 0);
+    }
+
+    #[test]
+    fn test_dashboard_state_current_tab_info() {
+        let state = DashboardState::new();
+        let tab = state.current_tab_info();
+        assert!(!tab.title.is_empty());
+    }
+
+    #[test]
+    fn test_dashboard_state_next_tab() {
+        let mut state = DashboardState::new();
+        let tabs = TabId::all_tabs();
+        state.next_tab();
+        assert_eq!(state.current_tab, 1);
+        state.current_tab = tabs.len() - 1;
+        state.next_tab();
+        assert_eq!(state.current_tab, 0);
+    }
+
+    #[test]
+    fn test_dashboard_state_previous_tab() {
+        let mut state = DashboardState::new();
+        state.previous_tab();
+        assert_eq!(state.current_tab, TabId::all_tabs().len() - 1);
+        state.current_tab = 1;
+        state.previous_tab();
+        assert_eq!(state.current_tab, 0);
+    }
+
+    #[test]
+    fn test_dashboard_state_add_ai_message() {
+        let mut state = DashboardState::new();
+        state.add_ai_message(AiRole::Human, "hello".to_string(), None);
+        state.add_ai_message(AiRole::Assistant, "hi".to_string(), None);
+        assert_eq!(state.ai_chat_history.len(), 2);
+    }
+
+    #[test]
+    fn test_dashboard_state_update_capability_stats() {
+        let mut state = DashboardState::new();
+        state.discovered_services.push(DiscoveryResult {
+            id: "s1".into(),
+            endpoint: "http://a".into(),
+            primal_type: PrimalType::new("orchestration", "tower", "1.0.0"),
+            capabilities: vec![PrimalCapability::new("storage", "file", "1.0")],
+            health: Health::Healthy,
+            discovered_at: chrono::Utc::now(),
+        });
+        state.update_capability_stats();
+        assert!(!state.capability_stats.is_empty());
+    }
+
+    #[test]
+    fn test_ecosystem_health_default() {
+        let h = EcosystemHealth::default();
+        assert_eq!(h.primal_count, 0);
+        assert_eq!(h.healthy_primals, 0);
+    }
+
+    #[test]
+    fn test_service_status_variants() {
+        let _ = format!("{:?}", ServiceStatus::Running);
+        let _ = format!("{:?}", ServiceStatus::Starting);
+        let _ = format!("{:?}", ServiceStatus::Stopping);
+        let _ = format!("{:?}", ServiceStatus::Failed);
+        let _ = format!("{:?}", ServiceStatus::Scaling);
+    }
+
+    #[test]
+    fn test_deployment_phase_variants() {
+        let _ = format!("{:?}", DeploymentPhase::Validating);
+        let _ = format!("{:?}", DeploymentPhase::Complete);
+        let _ = format!(
+            "{:?}",
+            DeploymentPhase::Failed {
+                reason: "err".into(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_ai_role_variants() {
+        let _ = format!("{:?}", AiRole::Human);
+        let _ = format!("{:?}", AiRole::Assistant);
+        let _ = format!("{:?}", AiRole::System);
+    }
+
+    #[test]
+    fn test_ai_suggestion_category_variants() {
+        let _ = format!("{:?}", AiSuggestionCategory::Scaling);
+        let _ = format!("{:?}", AiSuggestionCategory::Security);
+    }
+
+    #[test]
+    fn test_insight_severity_variants() {
+        let _ = format!("{:?}", InsightSeverity::Info);
+        let _ = format!("{:?}", InsightSeverity::Critical);
+    }
+
+    #[test]
+    fn test_api_status_variants() {
+        let _ = format!("{:?}", ApiStatus::Connected);
+        let _ = format!("{:?}", ApiStatus::Disconnected);
+        let _ = format!(
+            "{:?}",
+            ApiStatus::Error {
+                message: "err".into(),
+            }
+        );
+        let _ = format!("{:?}", ApiStatus::Timeout);
+    }
+
+    #[test]
+    fn test_log_level_variants() {
+        let _ = format!("{:?}", LogLevel::Trace);
+        let _ = format!("{:?}", LogLevel::Error);
+    }
+
+    #[test]
+    fn test_primal_metadata_debug() {
+        let m = PrimalMetadata {
+            name: "test".into(),
+            version: "1.0".into(),
+            description: "desc".into(),
+            uptime: Duration::from_secs(100),
+            resource_usage: ResourceUsage {
+                cpu_percent: 50.0,
+                memory_mb: 256.0,
+                disk_gb: 10.0,
+                network_mbps: 1.0,
+            },
+        };
+        let _ = format!("{m:?}");
+    }
+
+    #[test]
+    fn test_log_filter_debug() {
+        let f = LogFilter {
+            source_pattern: Some("*.log".into()),
+            level_filter: None,
+            message_pattern: None,
+            time_range: None,
+        };
+        let _ = format!("{f:?}");
+    }
+}

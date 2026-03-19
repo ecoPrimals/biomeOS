@@ -26,8 +26,19 @@ pub fn is_explicit_coordinated_mode_str(mode: &str) -> bool {
 /// Check if BIOMEOS_MODE env var indicates explicit coordinated mode
 #[must_use]
 pub fn is_explicit_coordinated_mode() -> bool {
-    std::env::var("BIOMEOS_MODE")
-        .as_deref()
+    is_explicit_coordinated_mode_with(None)
+}
+
+/// Check coordinated mode with optional override (for testing without env mutation).
+///
+/// - `Some(s)` — use the given mode string
+/// - `None` — read from BIOMEOS_MODE env var (or false if unset)
+#[must_use]
+pub fn is_explicit_coordinated_mode_with(env_override: Option<&str>) -> bool {
+    let mode: Option<String> = env_override
+        .map(String::from)
+        .or_else(|| std::env::var("BIOMEOS_MODE").ok());
+    mode.as_deref()
         .map(is_explicit_coordinated_mode_str)
         .unwrap_or(false)
 }
@@ -257,7 +268,7 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -312,10 +323,34 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Requires BIOMEOS_MODE env var - run with explicit env"]
-    fn test_is_explicit_coordinated_mode_env() {
-        // When BIOMEOS_MODE=coordinated, should return true
-        let _ = is_explicit_coordinated_mode();
+    fn test_is_explicit_coordinated_mode_env_coordinated() {
+        assert!(is_explicit_coordinated_mode_with(Some("coordinated")));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_env_coord() {
+        assert!(is_explicit_coordinated_mode_with(Some("coord")));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_env_join() {
+        assert!(is_explicit_coordinated_mode_with(Some("join")));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_env_bootstrap_returns_false() {
+        assert!(!is_explicit_coordinated_mode_with(Some("bootstrap")));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_env_unset_returns_false() {
+        // Use Some("") to simulate unset - both yield false without env mutation
+        assert!(!is_explicit_coordinated_mode_with(Some("")));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_env_unknown_returns_false() {
+        assert!(!is_explicit_coordinated_mode_with(Some("unknown")));
     }
 
     #[test]

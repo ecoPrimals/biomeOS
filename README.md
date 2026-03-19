@@ -4,17 +4,17 @@
 
 ---
 
-## Status: Production Ready (v2.51)
+## Status: Production Ready (v2.54)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v3.0 compliant |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
-| Tests | 5,268 passing (0 failures) — fully concurrent (~83% line coverage) |
+| Code Quality | A++ (Pure Rust, Edition 2024 all 26 crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
+| Tests | 6,169 passing (0 failures) — fully concurrent, zero sleeps/serial (~84% line coverage, llvm-cov verified) |
 | Unsafe Code | 0 in production |
-| Clippy | PASS (0 warnings, pedantic+nursery, all 23 crates via workspace lint inheritance) |
+| Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0 + ORC + CC-BY-SA 4.0) |
 | Ecosystem Absorption | IpcErrorPhase, extract_rpc_result, OrExit, cast module, proptest fuzz, MCP tools, ValidationSink, socket-registry, capability cost/deps |
@@ -30,6 +30,7 @@
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Agents | Plasmodium Agent Model (meld/split/mix routing contexts) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
+| Files >1000 LOC | 0 (test modules extracted to separate files) |
 
 ---
 
@@ -247,13 +248,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (5,268 tests — fully concurrent)
+### Test (6,169 tests — fully concurrent, zero sleeps)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (~83% line)
+### Coverage (~84% line)
 
 ```bash
 cargo llvm-cov --workspace
@@ -274,7 +275,7 @@ cargo doc --workspace      # 0 missing_docs warnings
 
 ```
 biomeOS/
-├── crates/                    # Rust workspace (25 crates)
+├── crates/                    # Rust workspace (26 crates)
 │   ├── biomeos/               # Main binary (CLI + nucleus modes)
 │   ├── biomeos-core/          # Core orchestration + discovery + plasmodium
 │   ├── biomeos-types/         # Shared types, SystemPaths, capability taxonomy
@@ -341,8 +342,7 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.51)
-**Updated**: March 18, 2026
-**Ecosystem Absorption**: IPC resilience (IpcErrorPhase, extract_rpc_result), proptest IPC fuzzing, MCP tool definitions, ValidationSink, capability.list cost/deps, socket-registry discovery, OrExit trait, cast module, primal capability routing types, deny.toml 15 C-dep bans
-**Tests**: 5,268 passing, fully concurrent (~83% line) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
+**Status**: Production Ready (v2.54)
+**Updated**: March 19, 2026
+**Tests**: 6,169 passing, fully concurrent, zero sleeps/serial (~84% line, llvm-cov verified) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | scyBorg (AGPL-3.0 + ORC + CC-BY-SA)

@@ -211,6 +211,7 @@ pub(crate) async fn layer3_capability_verification(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -284,5 +285,43 @@ mod tests {
         assert_eq!(resp.primal, "nestgate");
         assert_eq!(resp.provided_capabilities.len(), 1);
         assert_eq!(resp.family_id, Some("fam-1".into()));
+    }
+
+    #[test]
+    fn test_identity_proof_is_unverified() {
+        let verified = IdentityProof {
+            node_id: "n".into(),
+            family_id: None,
+            signature: "sig-123".into(),
+            challenge: "c".into(),
+            public_key: "pk".into(),
+            timestamp: 0,
+        };
+        assert!(!verified.is_unverified());
+
+        let unverified = IdentityProof {
+            node_id: "n".into(),
+            family_id: None,
+            signature: UNVERIFIED_SIGNATURE.into(),
+            challenge: "c".into(),
+            public_key: "pk".into(),
+            timestamp: 0,
+        };
+        assert!(unverified.is_unverified());
+    }
+
+    #[test]
+    fn test_identity_proof_debug() {
+        let proof = IdentityProof {
+            node_id: "debug".into(),
+            family_id: Some("fam".into()),
+            signature: "s".into(),
+            challenge: "c".into(),
+            public_key: "pk".into(),
+            timestamp: 1,
+        };
+        let dbg = format!("{proof:?}");
+        assert!(dbg.contains("debug"));
+        assert!(dbg.contains("fam"));
     }
 }

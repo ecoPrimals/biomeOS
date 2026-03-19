@@ -13,6 +13,7 @@ use std::sync::Arc;
 use tokio::net::{TcpStream, UnixStream};
 
 use biomeos_types::identifiers::FamilyId;
+use biomeos_types::primal_names;
 use tokio::sync::RwLock;
 use tracing::{debug, info, trace, warn};
 
@@ -25,7 +26,7 @@ use super::transport::TransportEndpoint;
 /// Cached socket entry
 struct CachedSocket {
     socket: DiscoveredSocket,
-    cached_at: std::time::Instant,
+    cached_at: tokio::time::Instant,
 }
 
 /// Socket discovery engine
@@ -43,6 +44,12 @@ pub struct SocketDiscovery {
 
     /// Neural API socket (for capability registry queries)
     pub(crate) neural_api_socket: Option<PathBuf>,
+
+    /// Override for XDG_RUNTIME_DIR (for testing without env mutation)
+    pub(crate) xdg_runtime_dir_override: Option<PathBuf>,
+
+    /// Override for temp dir / TMPDIR (for testing without env mutation)
+    pub(crate) temp_dir_override: Option<PathBuf>,
 }
 
 impl SocketDiscovery {
@@ -53,6 +60,8 @@ impl SocketDiscovery {
             strategy: DiscoveryStrategy::default(),
             cache: Arc::new(RwLock::new(HashMap::new())),
             neural_api_socket: None,
+            xdg_runtime_dir_override: None,
+            temp_dir_override: None,
         }
     }
 
@@ -63,12 +72,26 @@ impl SocketDiscovery {
             strategy,
             cache: Arc::new(RwLock::new(HashMap::new())),
             neural_api_socket: None,
+            xdg_runtime_dir_override: None,
+            temp_dir_override: None,
         }
     }
 
     /// Set Neural API socket for registry queries
     pub fn with_neural_api(mut self, socket: PathBuf) -> Self {
         self.neural_api_socket = Some(socket);
+        self
+    }
+
+    /// Set XDG_RUNTIME_DIR override (for testing without env mutation)
+    pub fn with_xdg_override(mut self, path: impl AsRef<Path>) -> Self {
+        self.xdg_runtime_dir_override = Some(path.as_ref().to_path_buf());
+        self
+    }
+
+    /// Set temp dir override / TMPDIR (for testing without env mutation)
+    pub fn with_temp_dir_override(mut self, path: impl AsRef<Path>) -> Self {
+        self.temp_dir_override = Some(path.as_ref().to_path_buf());
         self
     }
 
@@ -366,8 +389,8 @@ impl SocketDiscovery {
     }
 
     async fn try_unix_socket_xdg(&self, primal_name: &str) -> Option<PathBuf> {
-        let runtime_dir = Self::get_xdg_runtime_dir()?;
-        let biomeos_dir = runtime_dir.join("biomeos");
+        let runtime_dir = self.xdg_runtime_dir()?;
+        let biomeos_dir = runtime_dir.join(primal_names::BIOMEOS);
 
         let socket_path =
             biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
@@ -384,8 +407,7 @@ impl SocketDiscovery {
     }
 
     async fn try_unix_socket_tmp(&self, primal_name: &str) -> Option<PathBuf> {
-        // Use std::env::temp_dir() for portable temp directory
-        let temp_dir = std::env::temp_dir();
+        let temp_dir = self.temp_dir();
 
         let socket_path =
             temp_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
@@ -414,11 +436,11 @@ impl SocketDiscovery {
         let manifest_name = format!("{primal_name}.json");
 
         let mut candidates = Vec::new();
-        if let Some(xdg) = Self::get_xdg_runtime_dir() {
+        if let Some(xdg) = self.xdg_runtime_dir() {
             candidates.push(xdg.join("ecoPrimals/manifests").join(&manifest_name));
         }
         candidates.push(
-            std::env::temp_dir()
+            self.temp_dir()
                 .join("ecoPrimals/manifests")
                 .join(&manifest_name),
         );
@@ -427,7 +449,7 @@ impl SocketDiscovery {
             if let Ok(contents) = tokio::fs::read_to_string(&path).await {
                 match serde_json::from_str::<PrimalManifest>(&contents) {
                     Ok(manifest) => {
-                        let socket_path = PathBuf::from(&manifest.socket);
+                        let socket_path = PathBuf::from(manifest.socket.as_ref());
                         if self.verify_unix_socket(&socket_path).await {
                             debug!(
                                 "Discovered {} via manifest at {}",
@@ -445,7 +467,8 @@ impl SocketDiscovery {
                         }
                         trace!(
                             "Manifest for {} found but socket not connectable: {}",
-                            primal_name, manifest.socket
+                            primal_name,
+                            manifest.socket.as_ref()
                         );
                     }
                     Err(e) => {
@@ -468,8 +491,9 @@ impl SocketDiscovery {
     async fn discover_via_socket_registry(&self, primal_name: &str) -> Option<DiscoveredSocket> {
         use super::result::SocketRegistry;
 
-        let registry_path = Self::get_xdg_runtime_dir()?
-            .join("biomeos")
+        let registry_path = self
+            .xdg_runtime_dir()?
+            .join(primal_names::BIOMEOS)
             .join("socket-registry.json");
 
         let contents = tokio::fs::read_to_string(&registry_path).await.ok()?;
@@ -647,8 +671,8 @@ impl SocketDiscovery {
     async fn discover_capability_socket(&self, capability: &str) -> Option<DiscoveredSocket> {
         let sock_name = format!("{capability}.sock");
 
-        if let Some(runtime_dir) = Self::get_xdg_runtime_dir() {
-            let path = runtime_dir.join("biomeos").join(&sock_name);
+        if let Some(runtime_dir) = self.xdg_runtime_dir() {
+            let path = runtime_dir.join(primal_names::BIOMEOS).join(&sock_name);
             if self.verify_unix_socket(&path).await {
                 debug!("Discovered capability '{}' via XDG socket", capability);
                 return Some(DiscoveredSocket::from_unix_path(
@@ -658,7 +682,7 @@ impl SocketDiscovery {
             }
         }
 
-        let tmp_path = std::env::temp_dir().join(&sock_name);
+        let tmp_path = self.temp_dir().join(&sock_name);
         if self.verify_unix_socket(&tmp_path).await {
             debug!("Discovered capability '{}' via tmp socket", capability);
             return Some(DiscoveredSocket::from_unix_path(
@@ -721,8 +745,8 @@ impl SocketDiscovery {
     }
 
     async fn discover_via_xdg(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        let runtime_dir = Self::get_xdg_runtime_dir()?;
-        let biomeos_dir = runtime_dir.join("biomeos");
+        let runtime_dir = self.xdg_runtime_dir()?;
+        let biomeos_dir = runtime_dir.join(primal_names::BIOMEOS);
 
         // Capability-first: try capability-named sockets before primal-named ones.
         // Absorbed from Squirrel alpha.13 — primals discover capabilities, not identities.
@@ -763,7 +787,7 @@ impl SocketDiscovery {
     }
 
     async fn discover_via_family_tmp(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        let temp_dir = std::env::temp_dir();
+        let temp_dir = self.temp_dir();
 
         for cap_name in Self::capability_socket_names(primal_name) {
             let cap_path = temp_dir.join(format!("{cap_name}.sock"));
@@ -801,162 +825,31 @@ impl SocketDiscovery {
         None
     }
 
-    async fn discover_via_registry_by_name(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        let neural_api = self.get_neural_api_socket()?;
-
-        match self
-            .query_registry(
-                "primal.discover",
-                &serde_json::json!({ "name": primal_name }),
-                &neural_api,
-            )
-            .await
-        {
-            Ok(result) => {
-                let endpoint =
-                    if let Some(socket_path) = result.get("socket_path").and_then(|s| s.as_str()) {
-                        TransportEndpoint::UnixSocket {
-                            path: PathBuf::from(socket_path),
-                        }
-                    } else if let Some(tcp) = result.get("tcp_endpoint").and_then(|s| s.as_str()) {
-                        TransportEndpoint::parse(tcp)?
-                    } else if let Some(abstract_name) =
-                        result.get("abstract_socket").and_then(|s| s.as_str())
-                    {
-                        TransportEndpoint::AbstractSocket {
-                            name: Arc::from(abstract_name),
-                        }
-                    } else {
-                        return None;
-                    };
-
-                let capabilities = result
-                    .get("capabilities")
-                    .and_then(|c| c.as_array())
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|v| v.as_str().map(String::from))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-
-                return Some(
-                    DiscoveredSocket::from_endpoint(endpoint, DiscoveryMethod::CapabilityRegistry)
-                        .with_primal_name(primal_name)
-                        .with_capabilities(capabilities),
-                );
-            }
-            Err(e) => {
-                debug!("Registry query failed for {}: {}", primal_name, e);
-            }
-        }
-
-        None
-    }
-
-    async fn discover_via_registry_by_capability(
-        &self,
-        capability: &str,
-    ) -> Option<DiscoveredSocket> {
-        let neural_api = self.get_neural_api_socket()?;
-
-        match self
-            .query_registry(
-                "capability.discover",
-                &serde_json::json!({ "capability": capability }),
-                &neural_api,
-            )
-            .await
-        {
-            Ok(result) => {
-                let endpoint = if let Some(socket_path) =
-                    result.get("primary_socket").and_then(|s| s.as_str())
-                {
-                    TransportEndpoint::UnixSocket {
-                        path: PathBuf::from(socket_path),
-                    }
-                } else if let Some(tcp) = result.get("tcp_endpoint").and_then(|s| s.as_str()) {
-                    TransportEndpoint::parse(tcp)?
-                } else {
-                    return None;
-                };
-
-                let primal_name: Option<Arc<str>> = result
-                    .get("provider")
-                    .and_then(|p| p.as_str())
-                    .map(Arc::from);
-
-                let mut socket =
-                    DiscoveredSocket::from_endpoint(endpoint, DiscoveryMethod::CapabilityRegistry)
-                        .with_capabilities(vec![capability.to_string()]);
-
-                if let Some(name) = primal_name {
-                    socket = socket.with_primal_name(name.as_ref());
-                }
-
-                return Some(socket);
-            }
-            Err(e) => {
-                debug!("Registry query failed for capability {}: {}", capability, e);
-            }
-        }
-
-        None
-    }
-
-    async fn query_registry(
-        &self,
-        method: &str,
-        params: &serde_json::Value,
-        neural_api_socket: &Path,
-    ) -> Result<serde_json::Value, String> {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
-        use tokio::time::{Duration, timeout};
-
-        let stream = timeout(
-            Duration::from_secs(5),
-            UnixStream::connect(neural_api_socket),
-        )
-        .await
-        .map_err(|_| "Connection timeout")?
-        .map_err(|e| format!("Connection failed: {e}"))?;
-
-        let (reader, mut writer) = stream.into_split();
-        let mut reader = BufReader::new(reader);
-
-        let request = biomeos_types::JsonRpcRequest::new(method, params.clone());
-
-        let request_str = serde_json::to_string(&request).map_err(|e| e.to_string())? + "\n";
-        writer
-            .write_all(request_str.as_bytes())
-            .await
-            .map_err(|e| e.to_string())?;
-        writer.flush().await.map_err(|e| e.to_string())?;
-
-        let mut response_line = String::new();
-        timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
-            .await
-            .map_err(|_| "Response timeout")?
-            .map_err(|e| format!("Read failed: {e}"))?;
-
-        let response: serde_json::Value =
-            serde_json::from_str(response_line.trim()).map_err(|e| format!("Parse failed: {e}"))?;
-
-        if let Some(error) = response.get("error") {
-            return Err(format!("Registry error: {error}"));
-        }
-
-        response
-            .get("result")
-            .cloned()
-            .ok_or_else(|| "No result in response".to_string())
-    }
-
     // ========================================================================
     // HELPERS
     // ========================================================================
 
+    /// Get XDG runtime dir: override if set, else env var.
+    fn xdg_runtime_dir(&self) -> Option<PathBuf> {
+        self.xdg_runtime_dir_override
+            .clone()
+            .filter(|p| p.exists())
+            .or_else(|| {
+                env::var("XDG_RUNTIME_DIR")
+                    .ok()
+                    .map(PathBuf::from)
+                    .filter(|p| p.exists())
+            })
+    }
+
+    /// Get temp dir: override if set, else std::env::temp_dir().
+    fn temp_dir(&self) -> PathBuf {
+        self.temp_dir_override
+            .clone()
+            .unwrap_or_else(std::env::temp_dir)
+    }
+
+    #[allow(dead_code)] // Used in engine_tests::test_get_xdg_runtime_dir
     pub(crate) fn get_xdg_runtime_dir() -> Option<PathBuf> {
         env::var("XDG_RUNTIME_DIR")
             .ok()
@@ -1008,7 +901,7 @@ impl SocketDiscovery {
                 Arc::from(key),
                 CachedSocket {
                     socket: socket.clone(),
-                    cached_at: std::time::Instant::now(),
+                    cached_at: tokio::time::Instant::now(),
                 },
             );
         }

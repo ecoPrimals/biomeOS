@@ -218,8 +218,10 @@ impl std::fmt::Display for ErrorSeverity {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_error_severity() {
@@ -231,14 +233,95 @@ mod tests {
     }
 
     #[test]
+    fn test_error_severity_all_variants() {
+        assert_eq!(
+            BootError::InitAlreadyRunning.severity(),
+            ErrorSeverity::Fatal
+        );
+        assert_eq!(
+            BootError::mount_failed("/mnt", "/dev/sda1", rustix::io::Errno::INVAL).severity(),
+            ErrorSeverity::Critical
+        );
+        assert_eq!(
+            BootError::DirectoryCreation {
+                path: PathBuf::from("/tmp"),
+                error: "test".to_string(),
+            }
+            .severity(),
+            ErrorSeverity::Critical
+        );
+        assert_eq!(
+            BootError::BiomeOsUsbNotFound.severity(),
+            ErrorSeverity::Warning
+        );
+        assert_eq!(
+            BootError::NetworkInterfaceDetection.severity(),
+            ErrorSeverity::Warning
+        );
+        assert_eq!(
+            BootError::InvalidBootParameter("x".to_string()).severity(),
+            ErrorSeverity::Error
+        );
+    }
+
+    #[test]
     fn test_error_recoverability() {
         assert!(BootError::AlreadyMounted("/proc".to_string()).is_recoverable());
         assert!(!BootError::NotPid1(42).is_recoverable());
+        assert!(BootError::BiomeOsUsbNotFound.is_recoverable());
+        assert!(BootError::NetworkInterfaceDetection.is_recoverable());
+        assert!(!BootError::InvalidBootParameter("x".to_string()).is_recoverable());
     }
 
     #[test]
     fn test_error_display() {
         let err = BootError::NotPid1(42);
         assert_eq!(err.to_string(), "not running as PID 1 (current PID: 42)");
+    }
+
+    #[test]
+    fn test_mount_failed_constructor() {
+        let err = BootError::mount_failed("/mnt", "/dev/sda1", rustix::io::Errno::INVAL);
+        assert!(err.to_string().contains("mount"));
+        assert!(err.to_string().contains("/mnt"));
+    }
+
+    #[test]
+    fn test_error_severity_display() {
+        assert_eq!(ErrorSeverity::Info.to_string(), "INFO");
+        assert_eq!(ErrorSeverity::Warning.to_string(), "WARN");
+        assert_eq!(ErrorSeverity::Error.to_string(), "ERROR");
+        assert_eq!(ErrorSeverity::Critical.to_string(), "CRITICAL");
+        assert_eq!(ErrorSeverity::Fatal.to_string(), "FATAL");
+    }
+
+    #[test]
+    fn test_error_severity_ordering() {
+        assert!(ErrorSeverity::Fatal > ErrorSeverity::Info);
+        assert!(ErrorSeverity::Critical > ErrorSeverity::Warning);
+        assert!(ErrorSeverity::Error >= ErrorSeverity::Error);
+    }
+
+    #[test]
+    fn test_error_severity_debug() {
+        let s = format!("{:?}", ErrorSeverity::Fatal);
+        assert!(s.contains("Fatal"));
+    }
+
+    #[test]
+    fn test_io_error_display() {
+        let err = BootError::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "file not found",
+        ));
+        assert!(err.to_string().contains("I/O"));
+    }
+
+    #[test]
+    fn test_device_not_found_display() {
+        let err = BootError::DeviceNotFound {
+            device: "/dev/sda".to_string(),
+        };
+        assert!(err.to_string().contains("/dev/sda"));
     }
 }

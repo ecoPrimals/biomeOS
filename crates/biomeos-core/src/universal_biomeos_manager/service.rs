@@ -362,9 +362,27 @@ impl UniversalBiomeOSManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use crate::universal_biomeos_manager::{PrimalInfo, UniversalBiomeOSManager};
+    use biomeos_primal_sdk::PrimalCapability;
+    use biomeos_types::{BiomeOSConfig, Health, PrimalType};
+    use std::collections::HashMap;
+
+    fn test_primal_info(id: &str, name: &str, endpoint: &str) -> PrimalInfo {
+        PrimalInfo {
+            id: id.to_string(),
+            name: name.to_string(),
+            primal_type: PrimalType::from_discovered("compute", name, "1.0.0"),
+            endpoint: endpoint.to_string(),
+            capabilities: vec![PrimalCapability::new("compute", "execution", "1.0")],
+            health: Health::Healthy,
+            last_seen: chrono::Utc::now(),
+            discovered_at: chrono::Utc::now(),
+            metadata: HashMap::new(),
+        }
+    }
 
     #[test]
     fn test_parse_scale_result_from_json() {
@@ -409,5 +427,220 @@ mod tests {
             status: "scaling".to_string(),
         };
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_parse_scale_result_from_json_invalid_current_replicas() {
+        let json = serde_json::json!({
+            "current_replicas": "not_a_number",
+            "status": "scaling"
+        });
+        let result = parse_scale_result_from_json(&json, 2);
+        assert_eq!(result.current_replicas, 1);
+        assert_eq!(result.target_replicas, 2);
+    }
+
+    #[tokio::test]
+    async fn test_create_service_dry_run() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let result = manager
+            .create_service("compute", "test-svc", None, true)
+            .await
+            .expect("create_service dry_run");
+
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("planned")
+        );
+        assert_eq!(result.get("dry_run").and_then(|v| v.as_bool()), Some(true));
+        assert!(result.contains_key("execution_plan"));
+    }
+
+    #[tokio::test]
+    async fn test_create_service_dry_run_with_config_path() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let config_path = std::path::PathBuf::from("/tmp/test-config.yaml");
+        let result = manager
+            .create_service("storage", "nest-svc", Some(config_path), true)
+            .await
+            .expect("create_service dry_run");
+
+        assert_eq!(
+            result.get("service_type").and_then(|v| v.as_str()),
+            Some("storage")
+        );
+        assert_eq!(
+            result.get("service_name").and_then(|v| v.as_str()),
+            Some("nest-svc")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_service_non_dry_run_no_compute_primal() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+        // No primals registered, discover_by_capability returns empty
+        let result = manager
+            .create_service("compute", "test-svc", None, false)
+            .await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("No compute primal") || err_msg.contains("BIOMEOS_COMPUTE_ENDPOINT"),
+            "expected discovery/env error, got: {err_msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_service_with_registered_compute_primal() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("compute-1", "toadstool", "unix:///tmp/toadstool.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager
+            .create_service("compute", "new-svc", None, false)
+            .await;
+        // create_service_integration succeeds, but we need endpoint - discovery finds our primal
+        // Endpoint will be primal.endpoint + "/" + name = unix:///tmp/toadstool.sock/new-svc
+        if let Ok(res) = &result {
+            assert_eq!(res.get("status").and_then(|v| v.as_str()), Some("created"));
+        }
+        // May fail if AtomicClient/scale not available - integration point
+        let _ = result;
+    }
+
+    #[tokio::test]
+    async fn test_get_service_status_found_by_name() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("svc-1", "my-service", "unix:///run/svc.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager
+            .get_service_status("my-service")
+            .await
+            .expect("get status");
+        assert_eq!(
+            result.get("service_name").and_then(|v| v.as_str()),
+            Some("my-service")
+        );
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("running")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_service_status_found_by_id() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("svc-42", "other-service", "unix:///run/other.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager
+            .get_service_status("svc-42")
+            .await
+            .expect("get status");
+        assert_eq!(
+            result.get("service_id").and_then(|v| v.as_str()),
+            Some("svc-42")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_service_status_not_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let result = manager
+            .get_service_status("nonexistent")
+            .await
+            .expect("get status");
+        assert!(result.contains_key("error"));
+        assert!(
+            result
+                .get("error")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .contains("nonexistent")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_scale_service_not_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let result = manager.scale_service("nonexistent", Some(3), false).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_scale_service_must_specify_replicas_or_auto() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("svc-1", "scale-test", "unix:///tmp/scale.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager.scale_service("scale-test", None, false).await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Must specify replicas")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_enable_auto_scaling() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager creation");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("auto-1", "auto-scale-svc", "unix:///tmp/auto.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager
+            .enable_auto_scaling("auto-scale-svc")
+            .await
+            .expect("enable auto scaling");
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("success")
+        );
+        assert_eq!(
+            result.get("message").and_then(|v| v.as_str()),
+            Some("Auto-scaling enabled")
+        );
     }
 }

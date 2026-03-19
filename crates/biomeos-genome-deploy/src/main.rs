@@ -5,6 +5,8 @@
 //!
 //! Command-line interface for deploying genomeBins
 
+#![forbid(unsafe_code)]
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use genome_deploy::GenomeDeployer;

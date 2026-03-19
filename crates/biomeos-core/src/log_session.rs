@@ -219,13 +219,15 @@ struct FossilEntry {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_tracker_creation() {
         let tracker = LogSessionTracker::new("test-node".to_string());
-        assert_eq!(tracker.node_id, "test-node");
+        let sessions = futures::executor::block_on(tracker.get_all_sessions());
+        assert!(sessions.is_empty());
     }
 
     #[tokio::test]
@@ -339,6 +341,18 @@ mod tests {
 
         // Should succeed even with no sessions
         let result = tracker.archive_all_sessions("test").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_archive_sessions_with_registered_sessions() {
+        let tracker = LogSessionTracker::new("archive-test-node".to_string());
+        let primal_id = PrimalId::new("archive-primal").unwrap();
+        tracker
+            .register_session(primal_id.clone(), 9999, None)
+            .await;
+
+        let result = tracker.archive_all_sessions("shutdown").await;
         assert!(result.is_ok());
     }
 

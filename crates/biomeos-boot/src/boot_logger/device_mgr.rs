@@ -114,7 +114,7 @@ impl DeviceManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::path::Path;
@@ -147,5 +147,45 @@ mod tests {
     fn test_console_symlink_target() {
         let target = "/dev/ttyS0";
         assert!(target.starts_with("/dev"));
+    }
+
+    #[test]
+    fn test_makedev_major_minor() {
+        // Verify makedev produces valid dev_t for ttyS0 (major 4, minor 64)
+        let dev = makedev(4, 64);
+        assert_eq!(rustix::fs::major(dev), 4);
+        assert_eq!(rustix::fs::minor(dev), 64);
+    }
+
+    #[test]
+    fn test_makedev_tty0() {
+        // tty0: major 4, minor 0
+        let dev = makedev(4, 0);
+        assert_eq!(rustix::fs::major(dev), 4);
+        assert_eq!(rustix::fs::minor(dev), 0);
+    }
+
+    #[test]
+    fn test_mode_bits() {
+        // 0660 = rw-rw----
+        let mode = Mode::from_bits_truncate(0o660);
+        assert_eq!(mode.bits() & 0o777, 0o660);
+    }
+
+    #[test]
+    fn test_ensure_serial_device_when_exists() {
+        // If /dev/ttyS0 exists, should return Ok immediately
+        if Path::new("/dev/ttyS0").exists() {
+            let result = DeviceManager::ensure_serial_device();
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_ensure_vga_device_when_exists() {
+        if Path::new("/dev/tty0").exists() {
+            let result = DeviceManager::ensure_vga_device();
+            assert!(result.is_ok());
+        }
     }
 }

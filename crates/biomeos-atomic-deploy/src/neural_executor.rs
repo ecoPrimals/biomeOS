@@ -140,7 +140,7 @@ impl GraphExecutor {
                 duration_ms: report.duration_ms,
             };
             if let Err(e) = collector
-                .record_execution(&self.graph.id, &graph_result, report.duration_ms)
+                .record_execution(&self.graph.id, &graph_result, report.duration_ms, None)
                 .await
             {
                 warn!("Failed to record graph metrics: {e}");

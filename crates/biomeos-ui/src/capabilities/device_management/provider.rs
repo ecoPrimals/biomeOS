@@ -9,6 +9,7 @@
 use anyhow::Result;
 use biomeos_core::atomic_client::AtomicClient;
 use biomeos_types::CapabilityTaxonomy;
+use biomeos_types::primal_names;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -294,7 +295,7 @@ impl DeviceManagementProvider {
         info!("🚀 Deploying niche with config: {:?}", config);
 
         // Deploy via biomeOS orchestration capability
-        if let Ok(biomeos) = AtomicClient::discover("biomeos").await {
+        if let Ok(biomeos) = AtomicClient::discover(primal_names::BIOMEOS).await {
             match biomeos
                 .call("orchestration.deploy_niche", config.clone())
                 .await

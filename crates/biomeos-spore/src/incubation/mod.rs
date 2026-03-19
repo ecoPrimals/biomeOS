@@ -306,6 +306,7 @@ pub async fn list_local_nodes() -> SporeResult<Vec<NodeConfig>> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use chrono::Utc;
@@ -598,5 +599,40 @@ mod tests {
 
         assert_eq!(deserialized.node.node_id, "n1");
         assert_eq!(deserialized.federation.family_id, "fam");
+    }
+
+    #[test]
+    fn test_spore_incubator_new_missing_seed() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let spore_path = temp_dir.path();
+        std::fs::create_dir_all(spore_path).unwrap();
+        let result = SporeIncubator::new(spore_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_spore_incubator_new_success() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let spore_path = temp_dir.path();
+        std::fs::create_dir_all(spore_path).unwrap();
+        std::fs::write(spore_path.join(".family.seed"), &[0u8; 32]).unwrap();
+        std::fs::write(
+            spore_path.join("tower.toml"),
+            r#"[meta]
+node_id = "incubator-test-spore"
+[tower]
+family = "test-family"
+"#,
+        )
+        .unwrap();
+
+        let result = SporeIncubator::new(spore_path);
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_list_local_nodes_empty() {
+        let result = list_local_nodes().await;
+        assert!(result.is_ok());
     }
 }

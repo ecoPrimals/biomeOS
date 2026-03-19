@@ -170,7 +170,7 @@ impl RootFsBuilder {
     }
 
     /// Install base system (minimal Linux userspace)
-    fn install_base_system(root: &Path) -> Result<()> {
+    pub(crate) fn install_base_system(root: &Path) -> Result<()> {
         info!("🌱 Installing base system...");
 
         let dirs = [
@@ -404,5 +404,240 @@ impl RootFsBuilder {
             .context("Failed to read /etc/resolv.conf")?;
 
         Ok(parse_resolv_conf(&system_resolv))
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn test_config() -> RootFsConfig {
+        RootFsConfig {
+            size: "1G".to_string(),
+            output: PathBuf::from("/tmp/test-rootfs.qcow2"),
+            primals_dir: None,
+            services_dir: None,
+            mount_point: None,
+            fs_type: "ext4".to_string(),
+            dns_servers: Some(vec![]),
+            nbd_device: None,
+            hostname: "test-biomeos".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_builder_new() {
+        let config = test_config();
+        let builder = RootFsBuilder::new(config.clone());
+        assert_eq!(builder.config.size, "1G");
+        assert_eq!(builder.config.hostname, "test-biomeos");
+    }
+
+    #[test]
+    fn test_configure_dns_empty_servers_early_return() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc")).expect("create etc");
+
+        let config = RootFsConfig {
+            dns_servers: Some(vec![]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        builder.configure_dns(root).expect("configure_dns");
+        // resolv.conf should not be written when empty
+        assert!(!root.join("etc/resolv.conf").exists());
+    }
+
+    #[test]
+    fn test_configure_dns_with_servers() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc")).expect("create etc");
+
+        let config = RootFsConfig {
+            dns_servers: Some(vec!["10.0.0.1".to_string(), "10.0.0.2".to_string()]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        builder.configure_dns(root).expect("configure_dns");
+
+        let content = std::fs::read_to_string(root.join("etc/resolv.conf")).expect("read");
+        assert!(content.contains("nameserver 10.0.0.1"));
+        assert!(content.contains("nameserver 10.0.0.2"));
+    }
+
+    #[test]
+    fn test_configure_system_writes_hostname() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc")).expect("create etc");
+
+        let config = RootFsConfig {
+            hostname: "my-custom-host".to_string(),
+            dns_servers: Some(vec![]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        builder.configure_system(root).expect("configure_system");
+
+        let hostname = std::fs::read_to_string(root.join("etc/hostname")).expect("read");
+        assert_eq!(hostname.trim(), "my-custom-host");
+    }
+
+    #[tokio::test]
+    async fn test_install_primals_with_files() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        let primals_dir = temp.path().join("primals");
+        std::fs::create_dir_all(&primals_dir).expect("create primals");
+        std::fs::write(primals_dir.join("beardog"), b"#!/bin/sh\necho beardog").expect("write");
+        std::fs::write(primals_dir.join("songbird"), b"#!/bin/sh\necho songbird").expect("write");
+
+        let config = RootFsConfig {
+            primals_dir: Some(primals_dir.clone()),
+            dns_servers: Some(vec![]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        builder
+            .install_primals(root, &primals_dir)
+            .await
+            .expect("install_primals");
+
+        let target = root.join("usr/local/bin");
+        assert!(target.join("beardog").exists());
+        assert!(target.join("songbird").exists());
+    }
+
+    #[tokio::test]
+    async fn test_install_primals_nonexistent_dir_returns_ok() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("usr/local/bin")).expect("create target");
+
+        let config = RootFsConfig {
+            primals_dir: Some(PathBuf::from("/nonexistent/path")),
+            dns_servers: Some(vec![]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        builder
+            .install_primals(root, Path::new("/nonexistent/path"))
+            .await
+            .expect("install_primals");
+    }
+
+    #[test]
+    fn test_install_services_nonexistent_dir_returns_ok() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc/systemd/system")).expect("create systemd");
+
+        let services_dir = Path::new("/nonexistent/services");
+        RootFsBuilder::install_services(root, services_dir).expect("install_services");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_install_services_with_service_file() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let services_dir = temp.path().join("services");
+        std::fs::create_dir_all(&services_dir).expect("create services");
+        std::fs::write(
+            services_dir.join("test.service"),
+            "[Unit]\nDescription=Test\n[Service]\nExecStart=/bin/true\n",
+        )
+        .expect("write");
+
+        let root = temp.path().join("root");
+        std::fs::create_dir_all(root.join("etc/systemd/system")).expect("create systemd");
+
+        RootFsBuilder::install_services(&root, &services_dir).expect("install_services");
+
+        assert!(root.join("etc/systemd/system/test.service").exists());
+        assert!(
+            root.join("etc/systemd/system/multi-user.target.wants/test.service")
+                .exists()
+        );
+    }
+
+    #[test]
+    fn test_install_services_skips_non_service_files() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let services_dir = temp.path().join("services");
+        std::fs::create_dir_all(&services_dir).expect("create services");
+        std::fs::write(services_dir.join("not-a-service.txt"), "content").expect("write");
+        std::fs::write(services_dir.join("config.conf"), "config").expect("write");
+
+        let root = temp.path().join("root");
+        std::fs::create_dir_all(root.join("etc/systemd/system")).expect("create systemd");
+
+        RootFsBuilder::install_services(&root, &services_dir).expect("install_services");
+
+        assert!(!root.join("etc/systemd/system/not-a-service.txt").exists());
+        assert!(!root.join("etc/systemd/system/config.conf").exists());
+    }
+
+    #[test]
+    fn test_install_services_with_existing_symlink() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let services_dir = temp.path().join("services");
+        std::fs::create_dir_all(&services_dir).expect("create services");
+        std::fs::write(
+            services_dir.join("dup.service"),
+            "[Unit]\nDescription=Dup\n[Service]\nExecStart=/bin/true\n",
+        )
+        .expect("write");
+
+        let root = temp.path().join("root");
+        let systemd_dir = root.join("etc/systemd/system");
+        let wants_dir = systemd_dir.join("multi-user.target.wants");
+        std::fs::create_dir_all(&wants_dir).expect("create");
+        std::fs::write(systemd_dir.join("dup.service"), "old").expect("write");
+        std::os::unix::fs::symlink(
+            systemd_dir.join("dup.service"),
+            wants_dir.join("dup.service"),
+        )
+        .expect("symlink");
+
+        RootFsBuilder::install_services(&root, &services_dir).expect("install_services");
+        assert!(wants_dir.join("dup.service").exists());
+    }
+
+    #[test]
+    fn test_configure_dns_uses_system_when_none() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc")).expect("create etc");
+
+        let config = RootFsConfig {
+            dns_servers: None,
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        let result = builder.configure_dns(root);
+        if result.is_ok() {
+            if root.join("etc/resolv.conf").exists() {
+                let content = std::fs::read_to_string(root.join("etc/resolv.conf")).unwrap();
+                assert!(content.contains("nameserver"));
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_install_base_system_creates_dirs() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        if RootFsBuilder::install_base_system(root).is_ok() {
+            for dir in [
+                "bin", "sbin", "usr/bin", "etc", "var/log", "proc", "sys", "dev", "tmp", "run",
+            ] {
+                assert!(root.join(dir).exists(), "{} should exist", dir);
+            }
+        }
     }
 }

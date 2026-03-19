@@ -78,6 +78,56 @@ mod tests {
 
     use super::*;
 
+    #[tokio::test]
+    async fn test_run_fails_when_socket_path_is_directory() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_dir = temp.path().to_path_buf();
+
+        let result = run(None, Some(socket_dir), true).await;
+        assert!(
+            result.is_err(),
+            "run with directory as socket path should fail: {:?}",
+            result
+        );
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("socket") || err.to_string().contains("remove"),
+            "Expected socket-related error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_when_socket_path_parent_nonexistent() {
+        let socket_path = PathBuf::from("/nonexistent-parent-xyz-12345/biomeos.sock");
+
+        let result = run(None, Some(socket_path), true).await;
+        assert!(
+            result.is_err(),
+            "run with nonexistent parent should fail: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_succeeds_with_temp_socket() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("api.sock");
+        let path_for_spawn = socket_path.clone();
+
+        let run_handle = tokio::spawn(async move { run(None, Some(path_for_spawn), true).await });
+
+        // Wait for server to bind (socket file appears)
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while !socket_path.exists() && std::time::Instant::now() < deadline {
+            tokio::task::yield_now().await;
+        }
+        assert!(socket_path.exists(), "Server should create socket");
+
+        run_handle.abort();
+        let _ = run_handle.await;
+    }
+
     #[test]
     fn test_resolve_api_config_socket_override() {
         let config = resolve_api_config(

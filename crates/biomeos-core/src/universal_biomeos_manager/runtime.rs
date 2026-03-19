@@ -366,3 +366,182 @@ pub(super) struct ExecutionResult {
     pub stdout: String,
     pub stderr: String,
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use crate::universal_biomeos_manager::{PrimalInfo, UniversalBiomeOSManager};
+    use biomeos_primal_sdk::PrimalCapability;
+    use biomeos_types::{BiomeOSConfig, Health, PrimalType};
+    use std::collections::HashMap;
+
+    fn test_primal_info(id: &str, name: &str, endpoint: &str) -> PrimalInfo {
+        PrimalInfo {
+            id: id.to_string(),
+            name: name.to_string(),
+            primal_type: PrimalType::from_discovered("compute", name, "1.0.0"),
+            endpoint: endpoint.to_string(),
+            capabilities: vec![PrimalCapability::new("compute", "execution", "1.0")],
+            health: Health::Healthy,
+            last_seen: chrono::Utc::now(),
+            discovered_at: chrono::Utc::now(),
+            metadata: HashMap::new(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_service_logs_service_not_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager
+            .get_service_logs("nonexistent", false, Some(10), None)
+            .await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_exec_in_service_service_not_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager
+            .exec_in_service(
+                "nonexistent",
+                &["echo".to_string(), "hi".to_string()],
+                false,
+            )
+            .await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_monitor_service_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("mon-1", "monitor-svc", "unix:///tmp/mon.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager
+            .monitor_service("monitor-svc")
+            .await
+            .expect("monitor");
+        assert_eq!(
+            result.get("service_name").and_then(|v| v.as_str()),
+            Some("monitor-svc")
+        );
+        assert!(result.contains_key("health"));
+        assert!(result.contains_key("resources"));
+    }
+
+    #[tokio::test]
+    async fn test_monitor_service_not_found() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager
+            .monitor_service("nonexistent")
+            .await
+            .expect("monitor");
+        assert!(result.contains_key("error"));
+    }
+
+    #[tokio::test]
+    async fn test_monitor_service_by_id() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("id-1", "by-id-svc", "unix:///tmp/id.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager.monitor_service("id-1").await.expect("monitor");
+        assert_eq!(
+            result.get("service_name").and_then(|v| v.as_str()),
+            Some("by-id-svc")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_monitor_system() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager.monitor_system().await.expect("monitor");
+        assert!(result.contains_key("system"));
+        assert!(result.contains_key("services"));
+        assert!(result.contains_key("network"));
+        assert!(result.contains_key("alerts"));
+
+        let system = result.get("system").expect("system");
+        assert!(system.get("cpu_usage_percent").is_some());
+        assert!(system.get("memory").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_monitor_system_with_primals() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("sys-1", "sys-svc", "unix:///tmp/sys.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager.monitor_system().await.expect("monitor");
+        let services = result
+            .get("services")
+            .expect("services")
+            .as_object()
+            .expect("obj");
+        assert_eq!(services.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_system_status() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager.get_system_status().await.expect("status");
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("running")
+        );
+        assert!(result.contains_key("uptime"));
+        assert!(result.contains_key("version"));
+        assert!(result.contains_key("services"));
+        assert!(result.contains_key("health"));
+    }
+
+    #[tokio::test]
+    async fn test_get_system_status_with_primals() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info("stat-1", "stat-svc", "unix:///tmp/stat.sock");
+        manager.register_primal(primal).await.expect("register");
+
+        let result = manager.get_system_status().await.expect("status");
+        let services = result.get("services").expect("services");
+        assert_eq!(services["total"].as_u64(), Some(1));
+    }
+}

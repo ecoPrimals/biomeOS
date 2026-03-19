@@ -362,12 +362,12 @@ impl ComponentInstance {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::definition::ChimeraDefinition;
 
-    #[test]
-    fn test_generate_orchestrator() {
+    fn test_definition() -> Arc<ChimeraDefinition> {
         let yaml = r#"
 chimera:
   id: test-chimera
@@ -393,14 +393,130 @@ fusion:
         params: [peer_did]
         returns: SecureChannel
 "#;
+        Arc::new(ChimeraDefinition::from_yaml(yaml).unwrap())
+    }
 
-        let def = ChimeraDefinition::from_yaml(yaml).unwrap();
-        let builder = ChimeraBuilder::new(Arc::new(def));
+    #[test]
+    fn test_generate_orchestrator() {
+        let def = test_definition();
+        let builder = ChimeraBuilder::new(def);
 
         let code = builder.generate_orchestrator();
 
         assert!(code.contains("test-chimera"));
         assert!(code.contains("pub struct ChimeraState"));
         assert!(code.contains("pub async fn connect"));
+    }
+
+    #[test]
+    fn test_builder_new_defaults() {
+        let def = test_definition();
+        let builder = ChimeraBuilder::new(def);
+        // Default output_dir and primals_dir
+        let _ = builder;
+    }
+
+    #[test]
+    fn test_builder_output_dir() {
+        let def = test_definition();
+        let builder = ChimeraBuilder::new(def).output_dir("/custom/out");
+        let _ = builder;
+    }
+
+    #[test]
+    fn test_builder_primals_dir() {
+        let def = test_definition();
+        let builder = ChimeraBuilder::new(def).primals_dir("/custom/primals");
+        let _ = builder;
+    }
+
+    #[test]
+    fn test_builder_release() {
+        let def = test_definition();
+        let builder = ChimeraBuilder::new(def).release(false);
+        let _ = builder;
+    }
+
+    #[test]
+    fn test_check_primals_missing() {
+        let def = test_definition();
+        let tmp = tempfile::tempdir().unwrap();
+        let builder = ChimeraBuilder::new(def).primals_dir(tmp.path());
+        let result = builder.check_primals();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("beardog") || err.to_string().contains("Primal"));
+    }
+
+    #[test]
+    fn test_check_primals_exact_match() {
+        let def = test_definition();
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("beardog"), b"#!/bin/sh").unwrap();
+        let builder = ChimeraBuilder::new(def).primals_dir(tmp.path());
+        let result = builder.check_primals();
+        assert!(result.is_ok());
+        let paths = result.unwrap();
+        assert_eq!(paths.len(), 1);
+        assert!(paths[0].ends_with("beardog"));
+    }
+
+    #[test]
+    fn test_check_primals_prefix_match() {
+        let def = test_definition();
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("beardog-v1.2.3"), b"#!/bin/sh").unwrap();
+        let builder = ChimeraBuilder::new(def).primals_dir(tmp.path());
+        let result = builder.check_primals();
+        assert!(result.is_ok());
+        let paths = result.unwrap();
+        assert_eq!(paths.len(), 1);
+        assert!(
+            paths[0]
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with("beardog")
+        );
+    }
+
+    #[test]
+    fn test_build_success() {
+        let def = test_definition();
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("primals")).unwrap();
+        std::fs::write(tmp.path().join("primals").join("beardog"), b"#!/bin/sh").unwrap();
+
+        let builder = ChimeraBuilder::new(def)
+            .output_dir(tmp.path().join("out"))
+            .primals_dir(tmp.path().join("primals"));
+
+        let result = builder.build();
+        assert!(result.is_ok());
+        let build_result = result.unwrap();
+        assert_eq!(build_result.chimera_id, "test-chimera");
+        assert!(build_result.binary_path.exists());
+        assert!(!build_result.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_build_result_fields() {
+        let def = test_definition();
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("primals")).unwrap();
+        std::fs::write(tmp.path().join("primals").join("beardog"), b"#!/bin/sh").unwrap();
+
+        let builder = ChimeraBuilder::new(def)
+            .output_dir(tmp.path().join("out"))
+            .primals_dir(tmp.path().join("primals"));
+
+        let build_result = builder.build().unwrap();
+        assert!(build_result.duration.as_secs() < 60);
+        assert!(
+            build_result
+                .warnings
+                .iter()
+                .any(|w| w.contains("Generated code"))
+        );
     }
 }

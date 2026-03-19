@@ -320,6 +320,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -375,5 +376,41 @@ mod tests {
         assert_eq!(primal.capabilities.len(), 2);
         assert!(primal.capabilities.contains(&"encryption".to_string()));
         assert!(primal.capabilities.contains(&"identity".to_string()));
+    }
+
+    #[test]
+    fn test_discovery_request_default_timeout_none() {
+        let req = DiscoveryRequest::new(CapabilityTaxonomy::Discovery);
+        assert!(req.timeout.is_none());
+    }
+
+    #[test]
+    fn test_discovery_request_with_family() {
+        let req = DiscoveryRequest::new(CapabilityTaxonomy::Encryption).with_family("fam-123");
+        assert_eq!(req.family.as_deref(), Some("fam-123"));
+    }
+
+    #[test]
+    fn test_discovered_primal_serialization_roundtrip() {
+        let primal = DiscoveredPrimal {
+            primal: "songbird".to_string(),
+            node_id: "n1".to_string(),
+            family_id: "f1".to_string(),
+            capabilities: vec!["discovery".to_string()],
+            endpoints: vec![],
+            signature: "sig".to_string(),
+            timestamp: "2026-01-01T00:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&primal).unwrap();
+        let parsed: DiscoveredPrimal = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.primal, primal.primal);
+        assert_eq!(parsed.node_id, primal.node_id);
+    }
+
+    #[test]
+    fn test_capability_taxonomy_to_string_for_songbird() {
+        let cap = CapabilityTaxonomy::Discovery;
+        let s = cap.to_string();
+        assert!(!s.is_empty());
     }
 }

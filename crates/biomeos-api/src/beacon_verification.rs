@@ -311,6 +311,7 @@ fn discover_beacon_providers(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -473,6 +474,72 @@ mod tests {
         // With no NEURAL_API_SOCKET and no real socket files, should return None
         let result = discover_neural_api_socket("nonexistent-family-xyz-12345");
         // Result is environment-dependent; we just verify it doesn't panic
+        let _ = result;
+    }
+
+    #[test]
+    fn test_discover_beacon_providers_empty_dir() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let providers = discover_beacon_providers(temp.path(), "family-123");
+        assert!(providers.is_empty(), "empty dir should yield no providers");
+    }
+
+    #[test]
+    fn test_discover_beacon_providers_known_primals() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let beardog = temp.path().join("beardog-family-123.sock");
+        let songbird = temp.path().join("songbird-family-123.sock");
+        std::fs::write(&beardog, "").expect("create beardog sock");
+        std::fs::write(&songbird, "").expect("create songbird sock");
+
+        let providers = discover_beacon_providers(temp.path(), "family-123");
+        assert_eq!(providers.len(), 2, "should find beardog and songbird");
+        let names: Vec<_> = providers
+            .iter()
+            .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
+            .collect();
+        assert!(names.contains(&"beardog-family-123.sock"));
+        assert!(names.contains(&"songbird-family-123.sock"));
+    }
+
+    #[test]
+    fn test_discover_beacon_providers_skips_neural_api() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let neural = temp.path().join("neural-api-family-123.sock");
+        std::fs::write(&neural, "").expect("create neural sock");
+        let providers = discover_beacon_providers(temp.path(), "family-123");
+        assert!(
+            !providers
+                .iter()
+                .any(|p| p.to_string_lossy().contains("neural-api")),
+            "should not include neural-api socket"
+        );
+    }
+
+    #[test]
+    fn test_discover_beacon_providers_other_family_sockets() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let other = temp.path().join("custom-family-456.sock");
+        std::fs::write(&other, "").expect("create custom sock");
+        let providers = discover_beacon_providers(temp.path(), "family-456");
+        assert!(
+            providers
+                .iter()
+                .any(|p| p.to_string_lossy().contains("custom-family-456")),
+            "should find other family-scoped sockets"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_hash_via_capability_no_socket_returns_none() {
+        let result = hash_via_capability(None, "family", "data").await;
+        assert!(result.is_none(), "no socket should return None");
+    }
+
+    #[tokio::test]
+    async fn test_verify_dark_forest_token_no_socket() {
+        let result = verify_dark_forest_token(None, "family", "token").await;
+        // Without Neural API socket and no real beardog/songbird, should be None
         let _ = result;
     }
 }

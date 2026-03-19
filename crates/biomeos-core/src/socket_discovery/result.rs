@@ -104,6 +104,23 @@ pub enum DiscoveryMethod {
     Cached,
 }
 
+/// Serialize helper for Arc<str> (serialize as &str for JSON compatibility).
+fn serialize_arc_str<S>(s: &Arc<str>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    s.as_ref().serialize(serializer)
+}
+
+/// Deserialize helper for Arc<str> (str doesn't implement Deserialize; deserialize as String first).
+fn deserialize_arc_str<'de, D>(deserializer: D) -> Result<Arc<str>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = String::deserialize(deserializer)?;
+    Ok(Arc::from(s))
+}
+
 /// Lightweight filesystem manifest written by primals at startup.
 ///
 /// Primals write this to `$XDG_RUNTIME_DIR/ecoPrimals/manifests/{primal}.json`
@@ -111,9 +128,17 @@ pub enum DiscoveryMethod {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalManifest {
     /// Primal name
-    pub primal: String,
+    #[serde(
+        serialize_with = "serialize_arc_str",
+        deserialize_with = "deserialize_arc_str"
+    )]
+    pub primal: Arc<str>,
     /// Socket path
-    pub socket: String,
+    #[serde(
+        serialize_with = "serialize_arc_str",
+        deserialize_with = "deserialize_arc_str"
+    )]
+    pub socket: Arc<str>,
     /// Capabilities this primal provides
     #[serde(default)]
     pub capabilities: Vec<String>,
@@ -269,14 +294,14 @@ mod tests {
     #[test]
     fn test_primal_manifest_serde_roundtrip() {
         let manifest = PrimalManifest {
-            primal: "beardog".to_string(),
-            socket: "/run/user/1000/biomeos/beardog-abc123.sock".to_string(),
+            primal: Arc::from("beardog"),
+            socket: Arc::from("/run/user/1000/biomeos/beardog-abc123.sock"),
             capabilities: vec!["security".to_string(), "secrets".to_string()],
             pid: Some(12345),
         };
         let json = serde_json::to_string(&manifest).unwrap();
         let parsed: PrimalManifest = serde_json::from_str(&json).unwrap();
-        assert_eq!(parsed.primal, "beardog");
+        assert_eq!(parsed.primal.as_ref(), "beardog");
         assert_eq!(parsed.capabilities.len(), 2);
         assert_eq!(parsed.pid, Some(12345));
     }
@@ -285,7 +310,7 @@ mod tests {
     fn test_primal_manifest_optional_fields() {
         let json = r#"{"primal":"songbird","socket":"/tmp/songbird.sock"}"#;
         let manifest: PrimalManifest = serde_json::from_str(json).unwrap();
-        assert_eq!(manifest.primal, "songbird");
+        assert_eq!(manifest.primal.as_ref(), "songbird");
         assert!(manifest.capabilities.is_empty());
         assert_eq!(manifest.pid, None);
     }

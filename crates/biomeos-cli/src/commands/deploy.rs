@@ -225,9 +225,10 @@ fn display_create_result(result: &HashMap<String, Value>, dry_run: bool) {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use serde_json::Value;
     use std::path::PathBuf;
 
     #[test]
@@ -299,5 +300,60 @@ mod tests {
         let result = handle_deploy_graph_direct(PathBuf::from("/nonexistent"), false).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("DEPRECATED"));
+    }
+
+    #[test]
+    fn test_format_deployment_result_dry_run() {
+        let mut result = HashMap::new();
+        result.insert("status".to_string(), Value::String("planned".to_string()));
+        result.insert(
+            "execution_plan".to_string(),
+            serde_json::json!({"steps": ["step1", "step2"]}),
+        );
+        let lines = format_deployment_result(&result, true);
+        assert!(lines.iter().any(|l| l.contains("Creation Plan")));
+        assert!(lines.iter().any(|l| l.contains("Execution Plan")));
+        assert!(lines.iter().any(|l| l.contains("step1")));
+    }
+
+    #[test]
+    fn test_format_deployment_result_with_capabilities() {
+        let mut result = HashMap::new();
+        result.insert("status".to_string(), Value::String("created".to_string()));
+        result.insert(
+            "capabilities".to_string(),
+            serde_json::json!(["storage", "compute"]),
+        );
+        let lines = format_deployment_result(&result, false);
+        assert!(lines.iter().any(|l| l.contains("storage")));
+        assert!(lines.iter().any(|l| l.contains("compute")));
+    }
+
+    #[test]
+    fn test_format_deployment_result_with_endpoint() {
+        let mut result = HashMap::new();
+        result.insert("status".to_string(), Value::String("created".to_string()));
+        result.insert(
+            "endpoint".to_string(),
+            Value::String("http://localhost:9000".to_string()),
+        );
+        let lines = format_deployment_result(&result, false);
+        assert!(lines.iter().any(|l| l.contains("localhost")));
+    }
+
+    #[test]
+    fn test_format_deployment_result_with_service_id() {
+        let mut result = HashMap::new();
+        result.insert(
+            "service_id".to_string(),
+            Value::String("svc-123".to_string()),
+        );
+        let lines = format_deployment_result(&result, false);
+        assert!(lines.iter().any(|l| l.contains("svc-123")));
+    }
+
+    #[test]
+    fn test_status_to_display_updated() {
+        assert_eq!(status_to_display("updated"), ("🔄", "Service updated"));
     }
 }

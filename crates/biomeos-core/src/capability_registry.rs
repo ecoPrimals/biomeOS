@@ -336,6 +336,23 @@ impl CapabilityRegistry {
 
     /// Start Unix socket IPC server
     pub async fn serve(&self) -> Result<(), BiomeError> {
+        self.serve_inner(None).await
+    }
+
+    /// Start Unix socket IPC server with readiness signal (for tests).
+    #[cfg(test)]
+    pub async fn serve_with_ready(
+        &self,
+        mut ready_tx: biomeos_test_utils::ReadySender,
+    ) -> Result<(), BiomeError> {
+        self.serve_inner(Some(Box::new(move || ready_tx.signal())))
+            .await
+    }
+
+    async fn serve_inner(
+        &self,
+        on_ready: Option<Box<dyn FnOnce() + Send>>,
+    ) -> Result<(), BiomeError> {
         // Remove existing socket if present
         if self.socket_path.exists() {
             std::fs::remove_file(&self.socket_path).map_err(|e| {
@@ -357,6 +374,10 @@ impl CapabilityRegistry {
                 None::<String>,
             )
         })?;
+
+        if let Some(f) = on_ready {
+            f();
+        }
 
         info!(
             "🔌 biomeOS capability registry listening on {:?}",

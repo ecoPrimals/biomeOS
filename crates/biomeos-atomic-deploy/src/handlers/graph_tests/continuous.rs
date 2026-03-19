@@ -207,6 +207,52 @@ async fn test_stop_continuous_success() {
 // ── get_status for continuous session ─────────────────────────────────────
 
 #[tokio::test]
+async fn test_pause_continuous_success() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("pause_test.toml");
+    std::fs::write(&path, CONTINUOUS_GRAPH_TOML).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "pause_test"}));
+    let start_result = handler.start_continuous(&params).await.expect("start");
+    let session_id = start_result["session_id"].as_str().unwrap().to_string();
+
+    let pause_params = Some(json!({"session_id": session_id}));
+    let pause_result = handler
+        .pause_continuous(&pause_params)
+        .await
+        .expect("pause");
+    assert_eq!(pause_result["session_id"], session_id);
+    assert_eq!(pause_result["command"], "pause");
+}
+
+#[tokio::test]
+async fn test_resume_continuous_success() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("resume_test.toml");
+    std::fs::write(&path, CONTINUOUS_GRAPH_TOML).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "resume_test"}));
+    let start_result = handler.start_continuous(&params).await.expect("start");
+    let session_id = start_result["session_id"].as_str().unwrap().to_string();
+
+    let pause_params = Some(json!({"session_id": session_id}));
+    handler
+        .pause_continuous(&pause_params)
+        .await
+        .expect("pause");
+
+    let resume_params = Some(json!({"session_id": session_id}));
+    let resume_result = handler
+        .resume_continuous(&resume_params)
+        .await
+        .expect("resume");
+    assert_eq!(resume_result["session_id"], session_id);
+    assert_eq!(resume_result["command"], "resume");
+}
+
+#[tokio::test]
 async fn test_get_status_continuous_session() {
     let temp = tempdir().expect("tempdir");
     let path = temp.path().join("status_continuous.toml");

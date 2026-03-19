@@ -10,6 +10,7 @@
 //! Follows groundSpring's typed capability pattern.
 
 use anyhow::{Context, Result, anyhow};
+use bytes::Bytes;
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -104,7 +105,7 @@ impl CapabilityClient {
     // --- Crypto domain ---
 
     /// Sign data using the ecosystem's crypto provider (BearDog).
-    pub async fn crypto_sign(&self, data: &[u8]) -> Result<Vec<u8>> {
+    pub async fn crypto_sign(&self, data: &[u8]) -> Result<Bytes> {
         let args = json!({
             "data": base64_encode(data),
         });
@@ -138,7 +139,7 @@ impl CapabilityClient {
     }
 
     /// Generate a cryptographic hash.
-    pub async fn crypto_hash(&self, data: &[u8], algorithm: &str) -> Result<Vec<u8>> {
+    pub async fn crypto_hash(&self, data: &[u8], algorithm: &str) -> Result<Bytes> {
         let args = json!({
             "data": base64_encode(data),
             "algorithm": algorithm,
@@ -188,7 +189,7 @@ impl CapabilityClient {
     }
 
     /// Retrieve stored data.
-    pub async fn storage_get(&self, key: &str) -> Result<Option<Vec<u8>>> {
+    pub async fn storage_get(&self, key: &str) -> Result<Option<Bytes>> {
         let args = json!({ "key": key });
         let result = self.capability_call("storage", "get", args).await?;
         let value_b64 = result.get("value").or_else(|| result.get("result"));
@@ -326,7 +327,7 @@ fn base64_encode(data: &[u8]) -> String {
 }
 
 /// Simple base64 decoding (no external dependency).
-fn base64_decode(s: &str) -> Result<Vec<u8>> {
+fn base64_decode(s: &str) -> Result<Bytes> {
     let s = s.trim_end_matches('=');
     let decode_char = |c: u8| -> Option<u8> {
         match c {
@@ -361,10 +362,11 @@ fn base64_decode(s: &str) -> Result<Vec<u8>> {
             result.push(u8::try_from(v & 0xFF).unwrap_or(0));
         }
     }
-    Ok(result)
+    Ok(Bytes::from(result))
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -398,7 +400,65 @@ mod tests {
         let data = b"hello world";
         let encoded = base64_encode(data);
         let decoded = base64_decode(&encoded).unwrap();
-        assert_eq!(decoded, data);
+        assert_eq!(decoded.as_ref(), data);
+    }
+
+    #[test]
+    fn test_base64_encode_empty() {
+        let encoded = base64_encode(b"");
+        assert_eq!(encoded, "");
+    }
+
+    #[test]
+    fn test_base64_encode_single_byte() {
+        let encoded = base64_encode(b"a");
+        assert_eq!(encoded.len(), 4);
+        assert!(encoded.ends_with("=="));
+        let decoded = base64_decode(&encoded).unwrap();
+        assert_eq!(decoded.as_ref(), b"a");
+    }
+
+    #[test]
+    fn test_base64_encode_two_bytes() {
+        let encoded = base64_encode(b"ab");
+        assert_eq!(encoded.len(), 4);
+        assert!(encoded.ends_with("="));
+        let decoded = base64_decode(&encoded).unwrap();
+        assert_eq!(decoded.as_ref(), b"ab");
+    }
+
+    #[test]
+    fn test_base64_encode_three_bytes() {
+        let encoded = base64_encode(b"abc");
+        assert_eq!(encoded.len(), 4);
+        assert!(!encoded.ends_with("="));
+        let decoded = base64_decode(&encoded).unwrap();
+        assert_eq!(decoded.as_ref(), b"abc");
+    }
+
+    #[test]
+    fn test_base64_decode_with_padding() {
+        let decoded = base64_decode("YQ==").unwrap();
+        assert_eq!(decoded.as_ref(), b"a");
+    }
+
+    #[test]
+    fn test_base64_decode_without_padding() {
+        let decoded = base64_decode("YQ").unwrap();
+        assert_eq!(decoded.as_ref(), b"a");
+    }
+
+    #[test]
+    fn test_base64_decode_ignores_invalid_chars() {
+        // Invalid chars are filtered out
+        let decoded = base64_decode("YQ==\n\t ").unwrap();
+        assert_eq!(decoded.as_ref(), b"a");
+    }
+
+    #[test]
+    fn test_base64_decode_empty() {
+        let decoded = base64_decode("").unwrap();
+        assert!(decoded.is_empty());
     }
 
     #[test]
@@ -407,5 +467,235 @@ mod tests {
         let result = resolve_neural_api_socket();
         // May succeed if biomeOS happens to be running in test env
         let _ = result;
+    }
+
+    #[test]
+    fn test_capability_client_discover() {
+        // discover() may fail if no socket exists
+        let result = CapabilityClient::discover();
+        let _ = result;
+    }
+
+    #[test]
+    fn test_capability_client_path_impl() {
+        let client = CapabilityClient::new("/var/run/neural.sock");
+        let client2 = CapabilityClient::new(PathBuf::from("/var/run/neural.sock"));
+        drop(client);
+        drop(client2);
+    }
+
+    #[test]
+    fn test_base64_encode_decode_large_data() {
+        let data: Vec<u8> = (0u8..200).collect();
+        let encoded = base64_encode(&data);
+        let decoded = base64_decode(&encoded).unwrap();
+        assert_eq!(decoded.as_ref(), data.as_slice());
+    }
+
+    #[test]
+    fn test_base64_decode_invalid_characters_filtered() {
+        let decoded = base64_decode("Y\nQ\t=\r\n=").unwrap();
+        assert_eq!(decoded.as_ref(), b"a");
+    }
+
+    #[test]
+    fn test_base64_decode_plus_slash() {
+        let decoded = base64_decode("+/+").unwrap();
+        assert!(!decoded.is_empty());
+    }
+
+    #[test]
+    fn test_http_request_params_structure() {
+        let args = json!({
+            "method": "GET",
+            "url": "https://example.com",
+            "headers": {"Authorization": "Bearer x"},
+            "body": "request body"
+        });
+        assert_eq!(args["method"], "GET");
+        assert_eq!(args["url"], "https://example.com");
+        assert!(args["headers"].is_object());
+        assert_eq!(args["body"], "request body");
+    }
+
+    #[test]
+    fn test_storage_put_params() {
+        let args = json!({
+            "key": "my-key",
+            "value": base64_encode(b"value bytes")
+        });
+        assert_eq!(args["key"], "my-key");
+        assert!(args["value"].as_str().is_some());
+    }
+
+    #[test]
+    fn test_storage_get_params() {
+        let args = json!({ "key": "lookup-key" });
+        assert_eq!(args["key"], "lookup-key");
+    }
+
+    #[test]
+    fn test_crypto_sign_params() {
+        let args = json!({
+            "data": base64_encode(b"data to sign")
+        });
+        assert!(args["data"].as_str().is_some());
+    }
+
+    #[test]
+    fn test_crypto_verify_params() {
+        let args = json!({
+            "data": base64_encode(b"data"),
+            "signature": base64_encode(b"sig"),
+            "public_key": base64_encode(b"pubkey")
+        });
+        assert!(args["data"].as_str().is_some());
+        assert!(args["signature"].as_str().is_some());
+        assert!(args["public_key"].as_str().is_some());
+    }
+
+    #[test]
+    fn test_crypto_hash_params() {
+        let args = json!({
+            "data": base64_encode(b"data"),
+            "algorithm": "sha256"
+        });
+        assert_eq!(args["algorithm"], "sha256");
+    }
+
+    #[test]
+    fn test_compute_execute_params() {
+        let args = json!({
+            "task": "inference",
+            "params": {"model": "test"}
+        });
+        assert_eq!(args["task"], "inference");
+        assert!(args["params"].is_object());
+    }
+
+    #[test]
+    fn test_health_check_params() {
+        let args = json!({ "primal": "beardog" });
+        assert_eq!(args["primal"], "beardog");
+    }
+
+    #[tokio::test]
+    async fn test_capability_client_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/path/12345.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.crypto_sign(b"test").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Failed")
+                || err.contains("connect")
+                || err.contains("timeout")
+                || err.contains("Connection"),
+            "expected connection error, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_storage_put_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/456.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.storage_put("key", b"value").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_storage_get_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/789.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.storage_get("key").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_storage_exists_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/exists.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.storage_exists("key").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_http_request_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/http.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client
+            .http_request("GET", "https://example.com", None, None)
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_compute_execute_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/compute.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.compute_execute("task", json!({})).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/discover.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.discover_capability("crypto").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_translations_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/list.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.list_translations().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_health_check_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/health.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.health_check("beardog").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_crypto_verify_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/verify.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.crypto_verify(b"data", b"sig", b"pubkey").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_crypto_hash_connection_refused() {
+        let client = CapabilityClient::new("/nonexistent/socket/hash.sock")
+            .with_timeout(Duration::from_millis(100));
+
+        let result = client.crypto_hash(b"data", "sha256").await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resolve_neural_api_socket_invocation() {
+        let result = resolve_neural_api_socket();
+        match &result {
+            Ok(p) => assert!(p.as_os_str().len() > 0),
+            Err(e) => {
+                assert!(e.to_string().contains("not found") || e.to_string().contains("Neural"))
+            }
+        }
     }
 }

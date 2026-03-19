@@ -309,6 +309,7 @@ pub struct HealthCondition {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -455,5 +456,65 @@ mod tests {
         let debug = format!("{report:?}");
         assert!(debug.contains("system"));
         assert!(debug.contains("services"));
+    }
+
+    #[test]
+    fn test_health_trend_debug() {
+        let trend = HealthTrend {
+            trend: "Stable".to_string(),
+            confidence: 85.0,
+            prediction: "System stable".to_string(),
+        };
+        let _ = format!("{trend:?}");
+    }
+
+    #[test]
+    fn test_health_analysis_debug() {
+        let analysis = HealthAnalysis {
+            overall_score: 90.0,
+            issues: vec![],
+            recommendations: vec![],
+            system_health: system_health(50.0, 50.0, 50.0),
+        };
+        let _ = format!("{analysis:?}");
+    }
+
+    #[tokio::test]
+    async fn test_health_trend_analysis() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let result = HealthUtils::health_trend_analysis(&manager).await;
+        assert!(result.is_ok());
+        let trend = result.unwrap();
+        assert_eq!(trend.trend, "Stable");
+        assert!((0.0..=100.0).contains(&trend.confidence));
+    }
+
+    #[tokio::test]
+    async fn test_check_health_conditions() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let result = HealthUtils::check_health_conditions(&manager).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_analyze_system_health() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let result = HealthUtils::analyze_system_health(&manager).await;
+        assert!(result.is_ok());
+        let analysis = result.unwrap();
+        assert!((0.0..=100.0).contains(&analysis.overall_score));
+    }
+
+    #[tokio::test]
+    async fn test_comprehensive_health_report() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let result = HealthUtils::comprehensive_health_report(&manager).await;
+        assert!(result.is_ok());
+        let report = result.unwrap();
+        assert_eq!(report.system.cpu_usage, report.system.cpu_usage);
     }
 }

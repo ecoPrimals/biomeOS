@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: March 18, 2026
-**Status**: Production Ready - 5,268 tests, Edition 2024 all crates, Zero Warnings, Zero C deps, scyBorg licensed, ecosystem absorption complete
+**Last Updated**: March 19, 2026
+**Status**: Production Ready - 6,169 tests (fully concurrent, zero sleeps/serial), Edition 2024 all 26 crates, ~84% line coverage, Zero Warnings, Zero C deps, scyBorg licensed
 
 ---
 
@@ -108,8 +108,8 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 files >1000 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 5,268 tests (fully concurrent), ~83% line coverage (llvm-cov)
-9. **Concurrent**: All non-chaos tests run in parallel — dependency injection eliminates global state races
+8. **Tested**: 6,169 tests (fully concurrent, zero sleeps), ~84% line coverage (llvm-cov verified)
+9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns
 
 ---
 
@@ -167,16 +167,13 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.51)
+**Status**: Production Ready (v2.54)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
-**Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
 **Neural API**: 285+ semantic translations, 25 capability domains (part of biomeOS)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v3.0 compliant
-**Provenance Trio**: rhizoCrypt + LoamSpine + sweetGrass wired into Neural API
-**Ecosystem Absorption**: IpcErrorPhase, extract_rpc_result, OrExit, cast, proptest, MCP tools, ValidationSink, socket-registry
-**Tests**: 5,268 passing, fully concurrent (~83% line) | **Clippy**: PASS | **Docs**: Full coverage
-**Updated**: March 18, 2026
+**Tests**: 6,169 passing, fully concurrent, zero sleeps/serial (~84% line, llvm-cov) | **Clippy**: PASS | **Docs**: Full coverage
+**Updated**: March 19, 2026

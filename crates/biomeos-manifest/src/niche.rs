@@ -305,6 +305,7 @@ impl NicheManifest {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -451,6 +452,182 @@ path = "./graph2.toml"
 
         let manifest = NicheManifest::from_toml(toml);
         // Should fail (duplicate graph names)
+        assert!(manifest.is_err());
+    }
+
+    #[test]
+    fn test_provides_capability() {
+        let toml = r#"
+[niche]
+name = "cap-test"
+version = "1.0.0"
+type = "test"
+description = "Test"
+architecture = "x86_64"
+
+[[primals]]
+binary = "./primal1"
+provides = ["compute", "storage"]
+
+[[primals]]
+binary = "./primal2"
+provides = ["network"]
+optional = true
+"#;
+        let manifest = NicheManifest::from_toml(toml).unwrap();
+        assert!(manifest.provides_capability("compute"));
+        assert!(manifest.provides_capability("storage"));
+        assert!(
+            !manifest.provides_capability("network"),
+            "optional primals are excluded"
+        );
+        assert!(!manifest.provides_capability("nonexistent"));
+    }
+
+    #[test]
+    fn test_get_all_capabilities() {
+        let toml = r#"
+[niche]
+name = "caps"
+version = "1.0.0"
+type = "test"
+description = "Test"
+architecture = "x86_64"
+
+[[primals]]
+binary = "./a"
+provides = ["x", "y"]
+
+[[primals]]
+binary = "./b"
+provides = ["y", "z"]
+"#;
+        let manifest = NicheManifest::from_toml(toml).unwrap();
+        let caps = manifest.get_all_capabilities();
+        assert!(caps.contains(&"x".to_string()));
+        assert!(caps.contains(&"y".to_string()));
+        assert!(caps.contains(&"z".to_string()));
+    }
+
+    #[test]
+    fn test_get_graph_by_name() {
+        let toml = r#"
+[niche]
+name = "graph-test"
+version = "1.0.0"
+type = "test"
+description = "Test"
+architecture = "test"
+
+[[primals]]
+binary = "./test"
+provides = ["test"]
+
+[[graphs]]
+name = "main"
+path = "./main.toml"
+default = true
+
+[[graphs]]
+name = "secondary"
+path = "./sec.toml"
+"#;
+        let manifest = NicheManifest::from_toml(toml).unwrap();
+        let main_graph = manifest.get_graph("main");
+        assert!(main_graph.is_some());
+        assert!(main_graph.unwrap().default);
+        let sec = manifest.get_graph("secondary");
+        assert!(sec.is_some());
+        assert!(!sec.unwrap().default);
+        assert!(manifest.get_graph("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_niche_error_display() {
+        let err = NicheError::ValidationError("test error".to_string());
+        assert!(err.to_string().contains("Validation error"));
+        assert!(err.to_string().contains("test error"));
+    }
+
+    #[test]
+    fn test_niche_manifest_serialization() {
+        let toml = r#"
+[niche]
+name = "serial"
+version = "1.0.0"
+type = "test"
+description = "Test"
+architecture = "x86_64"
+
+[[primals]]
+binary = "./bin"
+provides = ["test"]
+"#;
+        let manifest = NicheManifest::from_toml(toml).unwrap();
+        let serialized = toml::to_string(&manifest).expect("serialize");
+        assert!(serialized.contains("serial"));
+        assert!(serialized.contains("[[primals]]"));
+    }
+
+    #[test]
+    fn test_multiple_default_graphs_fails() {
+        let toml = r#"
+[niche]
+name = "multi-default"
+version = "1.0.0"
+type = "test"
+description = "Test"
+architecture = "test"
+
+[[primals]]
+binary = "./test"
+provides = ["test"]
+
+[[graphs]]
+name = "a"
+path = "./a.toml"
+default = true
+
+[[graphs]]
+name = "b"
+path = "./b.toml"
+default = true
+"#;
+        let manifest = NicheManifest::from_toml(toml);
+        assert!(manifest.is_err());
+    }
+
+    #[test]
+    fn test_empty_niche_name_fails() {
+        let toml = r#"
+[niche]
+name = ""
+version = "1.0.0"
+type = "test"
+description = "Test"
+architecture = "test"
+
+[[primals]]
+binary = "./test"
+provides = ["test"]
+"#;
+        let manifest = NicheManifest::from_toml(toml);
+        assert!(manifest.is_err());
+    }
+
+    #[test]
+    fn test_empty_primals_fails() {
+        let toml = r#"
+[niche]
+name = "no-primals"
+version = "1.0.0"
+type = "test"
+description = "Test"
+architecture = "test"
+
+primals = []
+"#;
+        let manifest = NicheManifest::from_toml(toml);
         assert!(manifest.is_err());
     }
 }

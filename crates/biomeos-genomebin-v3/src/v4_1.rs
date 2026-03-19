@@ -291,6 +291,7 @@ impl GenomeBin {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::collections::HashMap;
@@ -379,5 +380,46 @@ mod tests {
         assert_eq!(BOOTSTRAP_SIZE, 4096);
         assert_eq!(TABLE_SIZE, 128);
         assert_eq!(EXTRACTOR_SIZE, 1_048_576);
+    }
+
+    #[test]
+    fn test_write_v4_1_with_extractor() {
+        let mut genome = GenomeBin::new("v41-extractor-test");
+        genome.add_binary_bytes(Arch::X86_64, b"binary content");
+        let temp = tempfile::tempdir().expect("temp dir");
+        let extractor_path = temp.path().join("extractor");
+        std::fs::write(&extractor_path, b"#!/bin/sh\necho extractor").expect("write extractor");
+        let mut extractors = HashMap::new();
+        extractors.insert(Arch::X86_64, extractor_path.as_path());
+        let output = temp.path().join("out.genome");
+        genome.write_v4_1(&output, &extractors).expect("write_v4_1");
+        assert!(output.exists());
+        let meta = std::fs::metadata(&output).expect("metadata");
+        assert!(meta.len() > (BOOTSTRAP_SIZE + TABLE_SIZE + EXTRACTOR_SIZE) as u64);
+    }
+
+    #[test]
+    fn test_extractor_entry_checksum() {
+        let checksum = [0xab; 32];
+        let entry = ExtractorEntry::new("riscv64", 8192, 2048, &checksum);
+        let bytes = entry.to_bytes();
+        assert_eq!(bytes[32..40], checksum[..8]);
+    }
+
+    #[test]
+    fn test_write_v4_payload_binary_table() {
+        let mut genome = GenomeBin::new("payload-test");
+        genome.add_binary_bytes(Arch::X86_64, b"x");
+        genome.add_binary_bytes(Arch::Aarch64, b"y");
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp.path().join("test.genome");
+        std::fs::File::create(&path).expect("create");
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .expect("open");
+        genome.write_v4_payload(&mut file).expect("write payload");
+        let meta = std::fs::metadata(&path).expect("metadata");
+        assert!(meta.len() > 60);
     }
 }

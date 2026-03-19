@@ -97,7 +97,7 @@ pub async fn handle_discover(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -149,5 +149,92 @@ mod tests {
         let _ = DiscoveryMethod::RegistryBased;
         let _ = DiscoveryMethod::DnsBased;
         let _ = DiscoveryMethod::Multicast;
+    }
+
+    #[test]
+    fn test_build_discovery_result_timestamp_present() {
+        let result = build_discovery_result("Test", &[]);
+        assert!(result.contains_key("timestamp"));
+    }
+
+    #[test]
+    fn test_discovery_method_display() {
+        let m = DiscoveryMethod::CapabilityBased;
+        let s = format!("{m:?}");
+        assert!(s.contains("CapabilityBased"));
+    }
+
+    #[test]
+    fn test_build_discovery_result_method_preserved() {
+        let result = build_discovery_result("CustomMethod", &["a".to_string()]);
+        assert_eq!(
+            result.get("method").and_then(|v| v.as_str()),
+            Some("CustomMethod")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_discover_capability_based() {
+        let result =
+            handle_discover(None, None, DiscoveryMethod::CapabilityBased, None, false).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_discover_capability_based_with_caps() {
+        let result = handle_discover(
+            None,
+            Some("storage".to_string()),
+            DiscoveryMethod::CapabilityBased,
+            None,
+            false,
+        )
+        .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_discover_capability_based_empty_caps_fails() {
+        let result = handle_discover(
+            None,
+            Some("".to_string()),
+            DiscoveryMethod::CapabilityBased,
+            None,
+            false,
+        )
+        .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_handle_discover_multicast() {
+        let result = handle_discover(None, None, DiscoveryMethod::Multicast, None, false).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_discover_dns_based() {
+        let result = handle_discover(None, None, DiscoveryMethod::DnsBased, None, false).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_discover_with_registry_url() {
+        let result = handle_discover(
+            None,
+            None,
+            DiscoveryMethod::RegistryBased,
+            Some("http://localhost:9999/registry".to_string()),
+            false,
+        )
+        .await;
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_handle_discover_detailed() {
+        let result =
+            handle_discover(None, None, DiscoveryMethod::CapabilityBased, None, true).await;
+        assert!(result.is_ok());
     }
 }

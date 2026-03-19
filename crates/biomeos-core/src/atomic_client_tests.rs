@@ -12,10 +12,12 @@
 use super::atomic_client::*;
 use crate::TransportEndpoint;
 use crate::atomic_primal_client::{AtomicPrimalClient, ExecutionResult};
+use biomeos_test_utils::ready_signal;
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 // ========================================================================
 // JSON-RPC Tests
@@ -568,4 +570,255 @@ fn test_execution_result_without_exit_code() {
         exit_code: None,
     };
     assert!(result.exit_code.is_none());
+}
+
+// ========================================================================
+// AtomicClient call error paths (connection refused, socket not found)
+// ========================================================================
+
+#[tokio::test]
+async fn test_atomic_client_call_connection_refused() {
+    let client = AtomicClient::unix("/nonexistent/socket/path/12345.sock")
+        .with_timeout(Duration::from_millis(100));
+
+    let result = client.call("ping", Value::Null).await;
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(
+        err.contains("Failed")
+            || err.contains("connect")
+            || err.contains("No such file")
+            || err.contains("Connection refused"),
+        "Expected connection error, got: {err}"
+    );
+}
+
+#[tokio::test]
+async fn test_atomic_client_try_call_connection_refused() {
+    use biomeos_types::IpcError;
+
+    let client = AtomicClient::unix("/nonexistent/socket/path/67890.sock")
+        .with_timeout(Duration::from_millis(100));
+
+    let result = client.try_call("ping", Value::Null).await;
+    assert!(result.is_err());
+    let ipc_err = result.unwrap_err();
+    assert!(
+        matches!(ipc_err, IpcError::ConnectionFailed { .. }) || ipc_err.is_timeout(),
+        "Expected ConnectionFailed or Timeout, got: {ipc_err:?}"
+    );
+}
+
+#[tokio::test]
+async fn test_atomic_client_tcp_connection_refused() {
+    let client = AtomicClient::tcp("127.0.0.1", 59999).with_timeout(Duration::from_millis(100));
+
+    let result = client.call("ping", Value::Null).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_atomic_client_call_timeout() {
+    let client =
+        AtomicClient::unix("/nonexistent/socket.sock").with_timeout(Duration::from_millis(1));
+
+    let result = client.call("ping", Value::Null).await;
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_execution_result_serialization_roundtrip() {
+    let result = ExecutionResult {
+        stdout: "out".to_string(),
+        stderr: "err".to_string(),
+        exit_code: Some(1),
+    };
+    let json = serde_json::to_string(&result).expect("serialize");
+    let parsed: ExecutionResult = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(parsed.stdout, result.stdout);
+    assert_eq!(parsed.stderr, result.stderr);
+    assert_eq!(parsed.exit_code, result.exit_code);
+}
+
+// ========================================================================
+// AtomicPrimalClient error path tests
+// ========================================================================
+
+#[tokio::test]
+async fn test_atomic_primal_client_discover_failure() {
+    let result = AtomicPrimalClient::discover("nonexistent_primal_xyz_789").await;
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("not found") || err.contains("Primal"));
+}
+
+#[tokio::test]
+async fn test_atomic_primal_client_health_check_connection_refused() {
+    let client =
+        AtomicPrimalClient::unix("test-primal", "/nonexistent/socket/health_check_test.sock");
+    let result = client.health_check().await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_atomic_primal_client_execute_command_connection_refused() {
+    let client = AtomicPrimalClient::unix("test-primal", "/nonexistent/socket/execute_test.sock");
+    let result = client.execute_command("echo hello").await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_atomic_primal_client_get_identity_connection_refused() {
+    let client = AtomicPrimalClient::unix("test-primal", "/nonexistent/socket/identity_test.sock");
+    let result = client.get_identity().await;
+    assert!(result.is_err());
+}
+
+// ========================================================================
+// Additional AtomicClient coverage - try_call error paths, call_stream
+// ========================================================================
+
+#[tokio::test]
+async fn test_try_call_missing_result() {
+    use biomeos_types::IpcError;
+
+    let temp = tempfile::tempdir().expect("temp dir");
+    let socket_path = temp.path().join("missing_result.sock");
+
+    let (mut ready_tx, ready_rx) = ready_signal();
+    let listener = tokio::net::UnixListener::bind(&socket_path).expect("bind");
+    ready_tx.signal();
+    tokio::spawn(async move {
+        if let Ok((mut stream, _)) = listener.accept().await {
+            let mut buf = vec![0u8; 1024];
+            let n = stream.read(&mut buf).await.unwrap_or(0);
+            if n > 0 {
+                let response = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": null,
+                    "id": 1
+                });
+                let _ = stream
+                    .write_all(
+                        format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes(),
+                    )
+                    .await;
+            }
+        }
+    });
+
+    ready_rx.wait().await.unwrap();
+
+    let client = AtomicClient::unix(&socket_path).with_timeout(Duration::from_secs(2));
+    let result = client.try_call("test", Value::Null).await;
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(err, IpcError::MissingResult { .. }));
+}
+
+#[tokio::test]
+async fn test_try_call_jsonrpc_error() {
+    use biomeos_types::IpcError;
+
+    let temp = tempfile::tempdir().expect("temp dir");
+    let socket_path = temp.path().join("jsonrpc_error.sock");
+
+    let (mut ready_tx, ready_rx) = ready_signal();
+    let listener = tokio::net::UnixListener::bind(&socket_path).expect("bind");
+    ready_tx.signal();
+    tokio::spawn(async move {
+        if let Ok((mut stream, _)) = listener.accept().await {
+            let mut buf = vec![0u8; 1024];
+            let _ = stream.read(&mut buf).await;
+            let response = serde_json::json!({
+                "jsonrpc": "2.0",
+                "error": {"code": -32601, "message": "Method not found"},
+                "id": 1
+            });
+            let _ = stream
+                .write_all(format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes())
+                .await;
+        }
+    });
+
+    ready_rx.wait().await.unwrap();
+
+    let client = AtomicClient::unix(&socket_path).with_timeout(Duration::from_secs(2));
+    let result = client.try_call("nonexistent", Value::Null).await;
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(err, IpcError::JsonRpcError { code: -32601, .. }));
+}
+
+#[tokio::test]
+async fn test_call_stream_connection_refused() {
+    let client = AtomicClient::unix("/nonexistent/socket/stream_test.sock")
+        .with_timeout(Duration::from_millis(100));
+
+    let mut rx = client
+        .call_stream("stream_method", Value::Null)
+        .await
+        .expect("call_stream returns receiver");
+
+    let item = rx.recv().await;
+    assert!(item.is_some());
+    let item = item.unwrap();
+    assert!(
+        matches!(item, biomeos_graph::StreamItem::Error { .. })
+            || matches!(item, biomeos_graph::StreamItem::End)
+    );
+}
+
+#[tokio::test]
+async fn test_call_success_with_result() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let socket_path = temp.path().join("success.sock");
+
+    let (mut ready_tx, ready_rx) = ready_signal();
+    let listener = tokio::net::UnixListener::bind(&socket_path).expect("bind");
+    ready_tx.signal();
+    tokio::spawn(async move {
+        if let Ok((mut stream, _)) = listener.accept().await {
+            let mut buf = vec![0u8; 2048];
+            let _ = stream.read(&mut buf).await;
+            let response = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": {"status": "ok", "value": 42},
+                "id": 1
+            });
+            let _ = stream
+                .write_all(format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes())
+                .await;
+        }
+    });
+
+    ready_rx.wait().await.unwrap();
+
+    let client = AtomicClient::unix(&socket_path).with_timeout(Duration::from_secs(2));
+    let result = client.call("test", Value::Null).await;
+    assert!(result.is_ok());
+    let value = result.unwrap();
+    assert_eq!(value["status"], "ok");
+    assert_eq!(value["value"], 42);
+}
+
+#[test]
+fn test_atomic_client_http_display() {
+    let client = AtomicClient::http("api.example.com", 443);
+    let endpoint = client.endpoint();
+    assert!(
+        endpoint.display_string().contains("api.example.com")
+            || endpoint.display_string().contains("443")
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn test_atomic_client_abstract_socket_linux() {
+    let client = AtomicClient::abstract_socket("test-abstract");
+    assert!(matches!(
+        client.endpoint(),
+        TransportEndpoint::AbstractSocket { .. }
+    ));
+    assert!(client.is_available());
 }

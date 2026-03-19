@@ -197,9 +197,10 @@ impl PrimalConfig {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use biomeos_test_utils::remove_test_env;
+    use biomeos_test_utils::{remove_test_env, set_test_env};
     use std::str::FromStr;
 
     #[test]
@@ -386,5 +387,46 @@ mod tests {
         // UUID format: 8-4-4-4-12 hex characters
         assert!(config.id.len() == 36);
         assert!(config.id.chars().filter(|c| *c == '-').count() == 4);
+    }
+
+    #[test]
+    fn test_capability_from_env_multiple() {
+        set_test_env("TEST_CAP_MULTI_123", "security,compute,storage");
+        let caps = Capability::from_env("TEST_CAP_MULTI_123");
+        remove_test_env("TEST_CAP_MULTI_123");
+        assert_eq!(caps.len(), 3);
+        assert!(caps.contains(&Capability::Security));
+        assert!(caps.contains(&Capability::Compute));
+        assert!(caps.contains(&Capability::Storage));
+    }
+
+    #[test]
+    fn test_capability_from_env_with_spaces() {
+        set_test_env("TEST_CAP_SPACES_123", "  ai  ,  network  ");
+        let caps = Capability::from_env("TEST_CAP_SPACES_123");
+        remove_test_env("TEST_CAP_SPACES_123");
+        assert_eq!(caps.len(), 2);
+        assert!(caps.contains(&Capability::AI));
+        assert!(caps.contains(&Capability::Network));
+    }
+
+    #[test]
+    fn test_primal_config_from_env_with_primal_id() {
+        set_test_env("PRIMAL_ID", "test-primal-123");
+        set_test_env("PRIMAL_BINARY", "/usr/bin/test-primal");
+        set_test_env("PRIMAL_PROVIDES", "security");
+        set_test_env("PRIMAL_REQUIRES", "discovery");
+        set_test_env("HTTP_PORT", "8080");
+        let config = PrimalConfig::from_env().expect("from_env with PRIMAL_ID");
+        remove_test_env("PRIMAL_ID");
+        remove_test_env("PRIMAL_BINARY");
+        remove_test_env("PRIMAL_PROVIDES");
+        remove_test_env("PRIMAL_REQUIRES");
+        remove_test_env("HTTP_PORT");
+        assert_eq!(config.id, "test-primal-123");
+        assert_eq!(config.binary_path, "/usr/bin/test-primal");
+        assert_eq!(config.http_port, 8080);
+        assert!(config.provides.contains(&Capability::Security));
+        assert!(config.requires.contains(&Capability::Discovery));
     }
 }

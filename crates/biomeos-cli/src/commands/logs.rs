@@ -385,9 +385,9 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
         for log_path in &old_logs {
             let file_name = log_path
                 .file_name()
-                .expect("log path has no filename")
-                .to_string_lossy();
-            let dest = config.fossil_dir.join("legacy").join(&*file_name);
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "unknown.log".to_string());
+            let dest = config.fossil_dir.join("legacy").join(&file_name);
 
             if let Some(parent) = dest.parent() {
                 std::fs::create_dir_all(parent)?;
@@ -402,8 +402,8 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
         for log_path in &old_logs {
             let file_name = log_path
                 .file_name()
-                .expect("log path has no filename")
-                .to_string_lossy();
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "unknown.log".to_string());
             println!("  Would migrate: {}", file_name);
         }
     }

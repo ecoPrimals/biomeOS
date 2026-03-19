@@ -482,6 +482,8 @@ impl Plasmodium {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -574,5 +576,209 @@ mod tests {
     #[test]
     fn test_num_cpus() {
         assert!(system::num_cpus() > 0);
+    }
+
+    #[test]
+    fn test_aggregate_unreachable_gates_excluded() {
+        let gates = vec![
+            GateInfo {
+                gate_id: "reachable".to_string(),
+                address: "local".to_string(),
+                is_local: true,
+                primals: vec![PrimalStatus {
+                    name: "beardog".to_string(),
+                    healthy: true,
+                    version: None,
+                }],
+                compute: ComputeInfo {
+                    gpus: vec![],
+                    ram_gb: 16,
+                    cpu_cores: 8,
+                },
+                models: vec![],
+                load: 0.0,
+                reachable: true,
+                bond_type: BondType::Covalent,
+            },
+            GateInfo {
+                gate_id: "unreachable".to_string(),
+                address: "192.168.1.99".to_string(),
+                is_local: false,
+                primals: vec![],
+                compute: ComputeInfo {
+                    gpus: vec![GpuInfo {
+                        name: "RTX 4090".to_string(),
+                        vram_mb: 24576,
+                        gate_id: "unreachable".to_string(),
+                    }],
+                    ram_gb: 64,
+                    cpu_cores: 32,
+                },
+                models: vec!["BigModel".to_string()],
+                load: 0.0,
+                reachable: false,
+                bond_type: BondType::Covalent,
+            },
+        ];
+
+        let caps = Plasmodium::aggregate_capabilities(&gates);
+        assert_eq!(caps.total_gpus, 0, "unreachable gate GPUs excluded");
+        assert_eq!(caps.total_ram_gb, 16, "only reachable gate RAM");
+        assert_eq!(caps.models.len(), 0, "unreachable models excluded");
+    }
+
+    #[test]
+    fn test_aggregate_ionic_bond_type() {
+        let gates = vec![GateInfo {
+            gate_id: "ionic".to_string(),
+            address: "local".to_string(),
+            is_local: true,
+            primals: vec![],
+            compute: ComputeInfo::default(),
+            models: vec![],
+            load: 0.0,
+            reachable: true,
+            bond_type: BondType::Ionic,
+        }];
+
+        let caps = Plasmodium::aggregate_capabilities(&gates);
+        assert!(caps.capabilities.is_empty());
+    }
+
+    #[test]
+    fn test_plasmodium_default() {
+        let _p = Plasmodium::default();
+        // Just verify construction succeeds
+    }
+
+    #[test]
+    fn test_plasmodium_new() {
+        let _p = Plasmodium::new();
+        // Just verify construction succeeds
+    }
+
+    #[test]
+    fn test_aggregate_capabilities_sorted() {
+        let gates = vec![
+            GateInfo {
+                gate_id: "z-gate".to_string(),
+                address: "local".to_string(),
+                is_local: true,
+                primals: vec![PrimalStatus {
+                    name: "beardog".to_string(),
+                    healthy: true,
+                    version: None,
+                }],
+                compute: ComputeInfo::default(),
+                models: vec![],
+                load: 0.0,
+                reachable: true,
+                bond_type: BondType::Covalent,
+            },
+            GateInfo {
+                gate_id: "a-gate".to_string(),
+                address: "local".to_string(),
+                is_local: true,
+                primals: vec![PrimalStatus {
+                    name: "songbird".to_string(),
+                    healthy: true,
+                    version: None,
+                }],
+                compute: ComputeInfo::default(),
+                models: vec![],
+                load: 0.0,
+                reachable: true,
+                bond_type: BondType::Covalent,
+            },
+        ];
+        let caps = Plasmodium::aggregate_capabilities(&gates);
+        assert!(!caps.capabilities.is_empty());
+        let mut sorted = caps.capabilities.clone();
+        sorted.sort();
+        assert_eq!(caps.capabilities, sorted, "capabilities should be sorted");
+    }
+
+    #[test]
+    fn test_aggregate_capabilities_unhealthy_primal_excluded() {
+        let gates = vec![GateInfo {
+            gate_id: "gate".to_string(),
+            address: "local".to_string(),
+            is_local: true,
+            primals: vec![PrimalStatus {
+                name: "beardog".to_string(),
+                healthy: false,
+                version: None,
+            }],
+            compute: ComputeInfo::default(),
+            models: vec![],
+            load: 0.0,
+            reachable: true,
+            bond_type: BondType::Covalent,
+        }];
+        let caps = Plasmodium::aggregate_capabilities(&gates);
+        assert!(
+            caps.capabilities.is_empty(),
+            "unhealthy primals don't contribute"
+        );
+    }
+
+    #[test]
+    fn test_aggregate_capabilities_model_availability() {
+        let gates = vec![GateInfo {
+            gate_id: "gate1".to_string(),
+            address: "local".to_string(),
+            is_local: true,
+            primals: vec![],
+            compute: ComputeInfo::default(),
+            models: vec!["model-a".to_string(), "model-b".to_string()],
+            load: 0.0,
+            reachable: true,
+            bond_type: BondType::Covalent,
+        }];
+        let caps = Plasmodium::aggregate_capabilities(&gates);
+        assert_eq!(caps.total_models, 2);
+        assert_eq!(caps.models.len(), 2);
+    }
+
+    #[test]
+    fn test_aggregate_capabilities_same_model_multiple_gates() {
+        let gates = vec![
+            GateInfo {
+                gate_id: "gate1".to_string(),
+                address: "local".to_string(),
+                is_local: true,
+                primals: vec![],
+                compute: ComputeInfo::default(),
+                models: vec!["shared-model".to_string()],
+                load: 0.0,
+                reachable: true,
+                bond_type: BondType::Covalent,
+            },
+            GateInfo {
+                gate_id: "gate2".to_string(),
+                address: "remote".to_string(),
+                is_local: false,
+                primals: vec![],
+                compute: ComputeInfo::default(),
+                models: vec!["shared-model".to_string()],
+                load: 0.0,
+                reachable: true,
+                bond_type: BondType::Covalent,
+            },
+        ];
+        let caps = Plasmodium::aggregate_capabilities(&gates);
+        assert_eq!(caps.total_models, 1);
+        assert_eq!(caps.models[0].gates.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_query_collective_no_peers() {
+        let p = Plasmodium::new();
+        let result = p.query_collective().await;
+        assert!(result.is_ok());
+        let state = result.unwrap();
+        assert!(!state.gates.is_empty(), "at least local gate");
+        assert!(!state.family_id.is_empty());
+        assert!(!state.snapshot_at.is_empty());
     }
 }

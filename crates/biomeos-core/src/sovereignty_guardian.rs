@@ -715,6 +715,7 @@ impl Default for SovereigntyGuardian {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -741,7 +742,7 @@ mod tests {
         assert!(!result.unwrap());
 
         // Should have recorded a violation
-        assert_eq!(guardian.violations.len(), 1);
+        assert_eq!(guardian.get_violations("suspicious-service").len(), 1);
     }
 
     #[tokio::test]
@@ -759,7 +760,7 @@ mod tests {
         assert!(!result.unwrap());
 
         // Should have recorded a violation
-        assert_eq!(guardian.violations.len(), 1);
+        assert_eq!(guardian.get_violations("expensive-ai").len(), 1);
     }
 
     #[test]
@@ -808,5 +809,85 @@ mod tests {
         let result = guardian.evaluate_human_dignity("service-e", "purchase_prompt", &ctx);
         assert!(result.is_ok());
         assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_monitor_privacy_compliance_tracking() {
+        let mut guardian = SovereigntyGuardian::new();
+        guardian
+            .monitor_privacy_compliance("track user behavior", "tracker-svc")
+            .unwrap();
+        assert_eq!(guardian.get_violations("tracker-svc").len(), 1);
+    }
+
+    #[test]
+    fn test_monitor_privacy_compliance_profiling() {
+        let mut guardian = SovereigntyGuardian::new();
+        guardian
+            .monitor_privacy_compliance("analyze behavior patterns", "analytics-svc")
+            .unwrap();
+        assert_eq!(guardian.get_violations("analytics-svc").len(), 1);
+    }
+
+    #[test]
+    fn test_enforce_economic_sovereignty_vendor_lockin() {
+        let mut guardian = SovereigntyGuardian::new();
+        let result = guardian.enforce_economic_sovereignty(
+            "vendor-x",
+            "This license is exclusive and non-transferable",
+        );
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+        assert_eq!(guardian.get_violations("vendor-x").len(), 1);
+    }
+
+    #[test]
+    fn test_enforce_economic_sovereignty_ok() {
+        let mut guardian = SovereigntyGuardian::new();
+        let result =
+            guardian.enforce_economic_sovereignty("vendor-y", "Terms support portable data export");
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_get_violations_empty() {
+        let guardian = SovereigntyGuardian::new();
+        assert!(guardian.get_violations("nonexistent").is_empty());
+    }
+
+    #[test]
+    fn test_update_policies() {
+        let mut guardian = SovereigntyGuardian::new();
+        let mut policies = SovereigntyPolicies::default();
+        policies.data_sovereignty.require_explicit_consent = false;
+        guardian.update_policies(policies);
+        let result = guardian.evaluate_data_access("x", "y", "z");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_compliance_report_with_violations() {
+        let mut guardian = SovereigntyGuardian::new();
+        guardian
+            .evaluate_data_access("bad", "data", "extract-all")
+            .unwrap();
+        let report = guardian.generate_compliance_report();
+        assert_eq!(report.total_entities, 1);
+        assert!(report.total_violations >= 1);
+    }
+
+    #[test]
+    fn test_violation_types_serde() {
+        let vt = ViolationType::DataExtraction;
+        let json = serde_json::to_string(&vt).unwrap();
+        let _: ViolationType = serde_json::from_str(&json).unwrap();
+    }
+
+    #[test]
+    fn test_action_outcome_serde() {
+        let o = ActionOutcome::Partial("reason".into());
+        let json = serde_json::to_string(&o).unwrap();
+        let _: ActionOutcome = serde_json::from_str(&json).unwrap();
     }
 }

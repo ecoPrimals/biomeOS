@@ -231,6 +231,198 @@ mod tests {
         assert_eq!(stats.total, 0);
         assert_eq!(stats.healthy, 0);
     }
+
+    #[test]
+    fn test_compute_primal_statistics_unhealthy_and_unknown() {
+        let primals = vec![
+            test_primal("u1", "unhealthy", biomeos_types::Health::unhealthy(vec![])),
+            test_primal("u2", "unknown", biomeos_types::Health::unknown("test")),
+        ];
+        let stats = compute_primal_statistics(primals);
+        assert_eq!(stats.total, 2);
+        assert_eq!(stats.unhealthy, 1);
+        assert_eq!(stats.unknown, 1);
+    }
+
+    #[tokio::test]
+    async fn test_register_and_get_primal() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal("reg-1", "registered", biomeos_types::Health::Healthy);
+        manager
+            .register_primal(primal.clone())
+            .await
+            .expect("register");
+
+        let retrieved = manager.get_primal("reg-1").await;
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().name, "registered");
+    }
+
+    #[tokio::test]
+    async fn test_update_primal() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let mut primal = test_primal("upd-1", "original", biomeos_types::Health::Healthy);
+        manager
+            .register_primal(primal.clone())
+            .await
+            .expect("register");
+
+        primal.name = "updated".to_string();
+        manager
+            .update_primal("upd-1", primal)
+            .await
+            .expect("update");
+
+        let retrieved = manager.get_primal("upd-1").await.unwrap();
+        assert_eq!(retrieved.name, "updated");
+    }
+
+    #[tokio::test]
+    async fn test_update_primal_not_found() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal("nonexistent", "x", biomeos_types::Health::Healthy);
+        let result = manager.update_primal("nonexistent", primal).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_unregister_primal() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal("unreg-1", "toremove", biomeos_types::Health::Healthy);
+        manager.register_primal(primal).await.expect("register");
+        assert!(manager.is_primal_registered("unreg-1").await);
+
+        let removed = manager
+            .unregister_primal("unreg-1")
+            .await
+            .expect("unregister");
+        assert_eq!(removed.name, "toremove");
+        assert!(!manager.is_primal_registered("unreg-1").await);
+    }
+
+    #[tokio::test]
+    async fn test_unregister_primal_not_found() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let result = manager.unregister_primal("nonexistent").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_primal_count_and_healthy() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        manager
+            .register_primal(test_primal("c1", "a", biomeos_types::Health::Healthy))
+            .await
+            .expect("register");
+        manager
+            .register_primal(test_primal("c2", "b", biomeos_types::Health::Healthy))
+            .await
+            .expect("register");
+
+        assert_eq!(manager.get_primal_count().await, 2);
+        assert_eq!(manager.get_healthy_primals().await.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_update_primal_health() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        manager
+            .register_primal(test_primal("h1", "healthy", biomeos_types::Health::Healthy))
+            .await
+            .expect("register");
+
+        manager
+            .update_primal_health("h1", biomeos_types::Health::unhealthy(vec![]))
+            .await
+            .expect("update");
+
+        let primal = manager.get_primal("h1").await.unwrap();
+        assert!(matches!(
+            primal.health,
+            biomeos_types::Health::Unhealthy { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_clear_all_primals() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        manager
+            .register_primal(test_primal("clr1", "x", biomeos_types::Health::Healthy))
+            .await
+            .expect("register");
+        manager.clear_all_primals().await.expect("clear");
+        assert_eq!(manager.get_primal_count().await, 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_primal_statistics() {
+        let manager =
+            crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
+                .await
+                .expect("manager");
+        manager.initialize().await.expect("init");
+
+        manager
+            .register_primal(test_primal("s1", "a", biomeos_types::Health::Healthy))
+            .await
+            .expect("register");
+        manager
+            .register_primal(test_primal(
+                "s2",
+                "b",
+                biomeos_types::Health::Degraded {
+                    issues: vec![],
+                    impact_score: None,
+                },
+            ))
+            .await
+            .expect("register");
+
+        let stats = manager.get_primal_statistics().await;
+        assert_eq!(stats.total, 2);
+        assert_eq!(stats.healthy, 1);
+        assert_eq!(stats.degraded, 1);
+    }
 }
 
 /// Statistics about registered primals

@@ -394,10 +394,12 @@ fn discover_songbird_socket() -> Result<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_test_utils::TestEnvGuard;
     use serial_test::serial;
+    use tokio::io::AsyncBufReadExt;
 
     #[test]
     fn test_json_rpc_request_deserialize() {
@@ -493,5 +495,479 @@ mod tests {
         let result = discover_songbird_socket();
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    // ─── handle_method: all RPC methods ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_handle_method_get_primals_extended() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-primals.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "get_primals_extended".to_string(),
+            params: None,
+            id: json!(2),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_none());
+        assert!(response.result.is_some());
+        let result = response.result.unwrap();
+        assert!(result.is_array());
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_get_niche_templates() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-templates.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "get_niche_templates".to_string(),
+            params: None,
+            id: json!(3),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_none());
+        assert!(response.result.is_some());
+        let result = response.result.unwrap();
+        let arr = result.as_array().unwrap();
+        assert!(!arr.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_assign_device_with_params() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-assign.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "assign_device".to_string(),
+            params: Some(json!({
+                "device_id": "gpu-0",
+                "primal_id": "toadstool-1"
+            })),
+            id: json!(4),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_some());
+        let err = response.error.unwrap();
+        assert_eq!(err.code, -32603);
+        assert!(err.message.contains("Internal error"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_assign_device_without_params() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-assign-empty.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "assign_device".to_string(),
+            params: None,
+            id: json!(5),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_validate_niche_success() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-validate.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "validate_niche".to_string(),
+            params: Some(json!({"template_id": "tower"})),
+            id: json!(6),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_none());
+        assert!(response.result.is_some());
+        let result = response.result.unwrap();
+        assert!(result.get("valid").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_validate_niche_template_not_found() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-validate-nf.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "validate_niche".to_string(),
+            params: Some(json!({"template_id": "nonexistent_template"})),
+            id: json!(7),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_some());
+        let err = response.error.unwrap();
+        assert_eq!(err.code, -32602);
+        assert!(err.message.contains("Template not found"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_deploy_niche() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-deploy.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "deploy_niche".to_string(),
+            params: Some(json!({"config": {"template": "tower"}})),
+            id: json!(8),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_some());
+        let err = response.error.unwrap();
+        assert_eq!(err.code, -32603);
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_deploy_niche_without_config() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-deploy-empty.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "deploy_niche".to_string(),
+            params: Some(json!({})),
+            id: json!(9),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_result_success_structure() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-struct.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "get_devices".to_string(),
+            params: None,
+            id: json!("string-id"),
+        };
+        let response = handle_method(request, &provider).await;
+        assert_eq!(response.jsonrpc, "2.0");
+        assert!(response.error.is_none());
+        assert_eq!(response.id, json!("string-id"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_result_error_structure() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-err-struct.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "bogus".to_string(),
+            params: None,
+            id: json!(null),
+        };
+        let response = handle_method(request, &provider).await;
+        assert_eq!(response.jsonrpc, "2.0");
+        assert!(response.result.is_none());
+        assert!(response.error.is_some());
+        assert_eq!(response.id, json!(null));
+    }
+
+    // ─── handle_connection ──────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_handle_connection_valid_request_returns_response() {
+        let (client_stream, server_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-conn.sock",
+        )));
+
+        let provider_clone = provider.clone();
+        let handle =
+            tokio::spawn(async move { handle_connection(server_stream, provider_clone).await });
+
+        let (reader, mut writer) = client_stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        let request = r#"{"jsonrpc":"2.0","method":"get_devices","params":null,"id":1}"#;
+        writer
+            .write_all((request.to_string() + "\n").as_bytes())
+            .await
+            .unwrap();
+        writer.flush().await.unwrap();
+
+        let mut response_line = String::new();
+        reader.read_line(&mut response_line).await.unwrap();
+        assert!(!response_line.is_empty());
+        let response: JsonRpcResponse = serde_json::from_str(response_line.trim()).unwrap();
+        assert!(response.error.is_none());
+        assert!(response.result.is_some());
+
+        drop(writer);
+        let _ = handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_handle_connection_invalid_json_continues_then_valid_works() {
+        let (client_stream, server_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-invalid.sock",
+        )));
+
+        let provider_clone = provider.clone();
+        let handle =
+            tokio::spawn(async move { handle_connection(server_stream, provider_clone).await });
+
+        let (reader, mut writer) = client_stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        writer.write_all(b"{invalid json\n").await.unwrap();
+        writer.flush().await.unwrap();
+
+        let valid_request = r#"{"jsonrpc":"2.0","method":"unknown_method","params":null,"id":1}"#;
+        writer
+            .write_all((valid_request.to_string() + "\n").as_bytes())
+            .await
+            .unwrap();
+        writer.flush().await.unwrap();
+
+        let mut response_line = String::new();
+        reader.read_line(&mut response_line).await.unwrap();
+        let response: JsonRpcResponse = serde_json::from_str(response_line.trim()).unwrap();
+        assert!(response.error.is_some());
+        assert_eq!(response.error.unwrap().code, -32601);
+
+        drop(writer);
+        let _ = handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_handle_connection_closed_on_eof() {
+        let (client_stream, server_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-eof.sock",
+        )));
+
+        let provider_clone = provider.clone();
+        let handle =
+            tokio::spawn(async move { handle_connection(server_stream, provider_clone).await });
+
+        drop(client_stream);
+
+        let result = handle.await.unwrap();
+        assert!(result.is_ok());
+    }
+
+    // ─── discover_songbird_socket: all branches ──────────────────────────────
+
+    #[test]
+    #[serial]
+    fn test_discover_songbird_socket_xdg_runtime_exists() {
+        let temp = tempfile::tempdir().unwrap();
+        let socket_path = temp.path().join("biomeos").join("songbird.sock");
+        std::fs::create_dir_all(socket_path.parent().unwrap()).unwrap();
+        std::fs::File::create(&socket_path).unwrap();
+
+        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
+        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
+        let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
+        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+
+        let result = discover_songbird_socket();
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            format!("{}/biomeos/songbird.sock", temp.path().display())
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn test_discover_songbird_socket_family_xdg_path() {
+        let temp = tempfile::tempdir().unwrap();
+        let socket_path = temp.path().join("biomeos").join("songbird-family99.sock");
+        std::fs::create_dir_all(socket_path.parent().unwrap()).unwrap();
+        std::fs::File::create(&socket_path).unwrap();
+
+        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
+        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
+        let _guard_fam = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "family99");
+        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+
+        let result = discover_songbird_socket();
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            format!("{}/biomeos/songbird-family99.sock", temp.path().display())
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn test_discover_songbird_socket_family_legacy_tmp() {
+        let legacy_socket = "/tmp/songbird-testlegacy123.sock";
+        let _ = std::fs::remove_file(legacy_socket);
+        std::fs::File::create(legacy_socket).unwrap();
+
+        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
+        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", "/nonexistent");
+        let _guard_fam = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "testlegacy123");
+        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+
+        let result = discover_songbird_socket();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), legacy_socket);
+
+        let _ = std::fs::remove_file(legacy_socket);
+    }
+
+    #[test]
+    #[serial]
+    fn test_discover_songbird_socket_common_pattern_tmp() {
+        let tmp_socket = "/tmp/songbird.sock";
+        let existed = std::path::Path::new(tmp_socket).exists();
+        if !existed {
+            std::fs::File::create(tmp_socket).unwrap();
+        }
+
+        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
+        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", "/nonexistent");
+        let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
+        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+
+        let result = discover_songbird_socket();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), tmp_socket);
+
+        if !existed {
+            let _ = std::fs::remove_file(tmp_socket);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_discover_songbird_socket_family_id_fallback() {
+        let temp = tempfile::tempdir().unwrap();
+        let biomeos_dir = temp.path().join("biomeos");
+        std::fs::create_dir_all(&biomeos_dir).unwrap();
+        let socket_path = biomeos_dir.join("songbird-fam2.sock");
+        std::fs::File::create(&socket_path).unwrap();
+
+        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
+        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
+        let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
+        let _guard_legacy = TestEnvGuard::set("FAMILY_ID", "fam2");
+
+        let result = discover_songbird_socket();
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            format!("{}/biomeos/songbird-fam2.sock", temp.path().display())
+        );
+    }
+
+    // ─── register_with_songbird with mock server ──────────────────────────────
+
+    #[tokio::test]
+    #[serial]
+    async fn test_register_with_songbird_success() {
+        let temp = tempfile::tempdir().unwrap();
+        let socket_path = temp.path().join("songbird.sock");
+
+        let _guard = TestEnvGuard::set("SONGBIRD_SOCKET", socket_path.to_str().unwrap());
+
+        let listener = tokio::net::UnixListener::bind(&socket_path).unwrap();
+
+        let server_handle = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let (reader, mut writer) = stream.into_split();
+            let mut reader = BufReader::new(reader);
+            let mut line = String::new();
+            reader.read_line(&mut line).await.unwrap();
+            let success_response = r#"{"jsonrpc":"2.0","result":{},"id":1}"#;
+            writer
+                .write_all((success_response.to_string() + "\n").as_bytes())
+                .await
+                .unwrap();
+            writer.flush().await.unwrap();
+        });
+
+        let result = register_with_songbird("/run/user/1000/biomeos-device.sock").await;
+        assert!(result.is_ok());
+
+        server_handle.await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_register_with_songbird_error_response() {
+        let temp = tempfile::tempdir().unwrap();
+        let socket_path = temp.path().join("songbird-err.sock");
+
+        let _guard = TestEnvGuard::set("SONGBIRD_SOCKET", socket_path.to_str().unwrap());
+
+        let listener = tokio::net::UnixListener::bind(&socket_path).unwrap();
+
+        let server_handle = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let (reader, mut writer) = stream.into_split();
+            let mut reader = BufReader::new(reader);
+            let mut line = String::new();
+            reader.read_line(&mut line).await.unwrap();
+            let err_response =
+                r#"{"jsonrpc":"2.0","error":{"code":-1,"message":"Registration rejected"},"id":1}"#;
+            writer
+                .write_all((err_response.to_string() + "\n").as_bytes())
+                .await
+                .unwrap();
+            writer.flush().await.unwrap();
+        });
+
+        let result = register_with_songbird("/run/user/1000/biomeos-device.sock").await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Registration rejected")
+        );
+
+        server_handle.await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_register_with_songbird_error_unknown_message() {
+        let temp = tempfile::tempdir().unwrap();
+        let socket_path = temp.path().join("songbird-err2.sock");
+
+        let _guard = TestEnvGuard::set("SONGBIRD_SOCKET", socket_path.to_str().unwrap());
+
+        let listener = tokio::net::UnixListener::bind(&socket_path).unwrap();
+
+        let server_handle = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let (reader, mut writer) = stream.into_split();
+            let mut reader = BufReader::new(reader);
+            let mut line = String::new();
+            reader.read_line(&mut line).await.unwrap();
+            let err_response = r#"{"jsonrpc":"2.0","error":{"code":-1},"id":1}"#;
+            writer
+                .write_all((err_response.to_string() + "\n").as_bytes())
+                .await
+                .unwrap();
+            writer.flush().await.unwrap();
+        });
+
+        let result = register_with_songbird("/run/user/1000/biomeos-device.sock").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unknown error"));
+
+        server_handle.await.unwrap();
     }
 }

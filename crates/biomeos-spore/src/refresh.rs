@@ -266,6 +266,7 @@ impl RefreshReport {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -444,5 +445,58 @@ mod tests {
         let debug = format!("{report:?}");
         assert!(debug.contains("debug-node"));
         assert!(debug.contains("/test"));
+    }
+
+    #[test]
+    fn test_spore_refresher_from_nucleus() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let nucleus_path = temp_dir.path();
+        std::fs::create_dir_all(nucleus_path.join("tower")).unwrap();
+        std::fs::create_dir_all(nucleus_path.join("primals")).unwrap();
+        std::fs::write(nucleus_path.join("tower").join("tower"), b"tower_binary").unwrap();
+
+        let result = SporeRefresher::from_nucleus(nucleus_path);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_spore_refresher_refresh_spore() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let nucleus_path = temp_dir.path();
+        std::fs::create_dir_all(nucleus_path.join("tower")).unwrap();
+        std::fs::create_dir_all(nucleus_path.join("primals")).unwrap();
+        let tower_bin = b"tower_binary_content";
+        std::fs::write(nucleus_path.join("tower").join("tower"), tower_bin).unwrap();
+
+        let spore_path = temp_dir.path().join("spore");
+        std::fs::create_dir_all(spore_path.join("bin")).unwrap();
+        std::fs::create_dir_all(spore_path.join("primals")).unwrap();
+        std::fs::write(
+            spore_path.join("tower.toml"),
+            r#"[tower]
+NODE_ID = "test-node"
+"#,
+        )
+        .unwrap();
+        std::fs::write(spore_path.join(".family.seed"), b"seed").unwrap();
+        std::fs::write(spore_path.join("bin").join("tower"), b"stale_tower").unwrap();
+
+        let refresher = SporeRefresher::from_nucleus(nucleus_path).unwrap();
+        let report = refresher.refresh_spore(&spore_path).unwrap();
+        assert!(report.is_success() || !report.failed_binaries.is_empty());
+    }
+
+    #[test]
+    fn test_refreshed_binary_debug() {
+        let binary = RefreshedBinary {
+            name: "tower".to_string(),
+            old_version: Some("0.5".to_string()),
+            new_version: "0.6".to_string(),
+            old_sha256: Some("old".to_string()),
+            new_sha256: "new".to_string(),
+        };
+        let dbg = format!("{binary:?}");
+        assert!(dbg.contains("tower"));
+        assert!(dbg.contains("0.6"));
     }
 }

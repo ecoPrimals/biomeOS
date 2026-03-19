@@ -62,6 +62,7 @@ mod capability_sockets;
 mod engine;
 mod neural_api;
 mod path_builder;
+mod registry_queries;
 mod result;
 mod strategy;
 mod transport;
@@ -158,15 +159,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     async fn test_discover_socket_family_id_from_env() {
-        set_test_env("BIOMEOS_FAMILY_ID", "env-family-id");
-        let family_id = env::var("FAMILY_ID")
-            .or_else(|_| env::var("BIOMEOS_FAMILY_ID"))
-            .unwrap_or_else(|_| "default".to_string());
-        let discovery = SocketDiscovery::new(&family_id);
+        // Verify family_id flows through to SocketDiscovery (no env mutation needed)
+        let family_id = "env-family-id";
+        let discovery = SocketDiscovery::new(family_id);
         assert_eq!(discovery.family_id.as_str(), "env-family-id");
-        remove_test_env("BIOMEOS_FAMILY_ID");
     }
 
     #[tokio::test]

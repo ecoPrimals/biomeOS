@@ -231,3 +231,95 @@ pub(crate) async fn discover_stop_command(binary: &Path) -> Option<String> {
     );
     None
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_discover_primal_interface_nonexistent() {
+        // discover_primal_interface does not fail for nonexistent path - it returns
+        // an adapter with Unknown interface (probe times out or fails)
+        let result = discover_primal_interface(Path::new("/nonexistent/binary")).await;
+        assert!(result.is_ok());
+        let adapter = result.unwrap();
+        assert!(!adapter.interface.is_known());
+        assert!(matches!(adapter.interface, PrimalInterface::Unknown { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_probe_interface_patterns_nonexistent() {
+        let patterns = probe_interface_patterns(Path::new("/nonexistent/binary")).await;
+        assert_eq!(patterns.len(), 1);
+        assert!(matches!(
+            &patterns[0],
+            PrimalInterface::Unknown { attempted_patterns } if attempted_patterns.len() == 5
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_discover_primal_interface_direct_with_true() {
+        #[cfg(unix)]
+        {
+            for path in [Path::new("/bin/true"), Path::new("/usr/bin/true")] {
+                if path.exists() {
+                    let adapter = discover_primal_interface(path).await.unwrap();
+                    assert_eq!(adapter.name, "true");
+                    assert!(adapter.interface.is_known());
+                    assert!(matches!(adapter.interface, PrimalInterface::Direct { .. }));
+                    assert!(adapter.capabilities.lifecycle.can_start);
+                    assert!(adapter.capabilities.lifecycle.graceful_shutdown);
+                    assert!(adapter.capabilities.health_check.is_some());
+                    break;
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_discover_primal_interface_name_trim_bin_suffix() {
+        #[cfg(unix)]
+        {
+            for path in [Path::new("/bin/true"), Path::new("/usr/bin/true")] {
+                if path.exists() {
+                    let adapter = discover_primal_interface(path).await.unwrap();
+                    assert_eq!(adapter.name, "true");
+                    break;
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_discover_stop_command_nonexistent() {
+        let stop = discover_stop_command(&PathBuf::from("/nonexistent/fake")).await;
+        assert!(stop.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_discover_stop_command_true() {
+        #[cfg(unix)]
+        {
+            for path in [Path::new("/bin/true"), Path::new("/usr/bin/true")] {
+                if path.exists() {
+                    let stop = discover_stop_command(path).await;
+                    // true accepts any args and exits 0 - may report stop or not
+                    // depending on which subcommand is tried first
+                    let _ = stop;
+                    break;
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_probe_returns_unknown_for_bad_binary() {
+        let patterns = probe_interface_patterns(Path::new("/nonexistent")).await;
+        assert!(!patterns.is_empty());
+        if let PrimalInterface::Unknown { attempted_patterns } = &patterns[0] {
+            assert_eq!(attempted_patterns.len(), 5);
+        }
+    }
+}

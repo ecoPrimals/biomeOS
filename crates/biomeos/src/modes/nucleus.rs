@@ -196,8 +196,12 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
                 .env("BEARDOG_SOCKET", &security_socket);
         }
         NESTGATE => {
+            // NestGate upstream bug: socket_only has inverted semantics.
+            // Upstream uses `enable_http = config.socket_only` (should be `!config.socket_only`).
+            // Handoff: docs/handoffs/NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md Bug 1.
+            // Compatibility: we want socket-only (no HTTP). With the bug, passing --socket-only
+            // enables HTTP. So we omit --socket-only to achieve socket-only mode.
             cmd.arg("daemon")
-                .arg("--socket-only")
                 .arg("--family-id")
                 .arg(config.family_id)
                 .env("NESTGATE_JWT_SECRET", generate_jwt_secret());
@@ -210,14 +214,22 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
                 .env("TOADSTOOL_FAMILY_ID", config.family_id);
         }
         SQUIRREL => {
+            // Squirrel discovers Songbird's HTTP bridge via capability discovery.
+            // BIOMEOS_DISCOVERY_SOCKET points to Songbird; Squirrel calls
+            // discover_capabilities("http_bridge") to get the HTTP bridge socket.
+            // No HTTP_REQUEST_PROVIDER_SOCKET env var — capability-based discovery only.
             let discovery_socket =
                 socket_path_for_capability(config.socket_dir, config.family_id, "discovery");
             cmd.arg("server")
                 .arg("--socket")
                 .arg(socket_path.as_os_str())
                 .env("SQUIRREL_SOCKET", socket_path.as_os_str())
-                .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket)
-                .env("HTTP_REQUEST_PROVIDER_SOCKET", discovery_socket.as_os_str());
+                .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket);
+            // AI_DEFAULT_MODEL: Squirrel reads this at startup for default model override.
+            // Handoff: docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md Item 1.
+            if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
+                cmd.env("AI_DEFAULT_MODEL", model);
+            }
             if config.anthropic_api_key.is_some() || config.openai_api_key.is_some() {
                 cmd.env(
                     "AI_HTTP_PROVIDERS",
@@ -356,7 +368,12 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
         let pid = child.id();
 
         // Wait for socket to appear (use health_socket for primals with separate JSON-RPC sockets)
-        wait_for_socket(&health_socket, Duration::from_secs(10)).await?;
+        wait_for_socket(
+            &health_socket,
+            Duration::from_secs(10),
+            DEFAULT_SOCKET_POLL_INTERVAL,
+        )
+        .await?;
 
         // Health check via JSON-RPC
         if let Err(e) = health_check(&health_socket).await {
@@ -582,14 +599,21 @@ async fn start_primal(
     Ok(child)
 }
 
+/// Default poll interval when waiting for socket (100ms).
+const DEFAULT_SOCKET_POLL_INTERVAL: Duration = Duration::from_millis(100);
+
 /// Wait for a socket file to appear
-async fn wait_for_socket(socket_path: &std::path::Path, timeout: Duration) -> Result<()> {
+async fn wait_for_socket(
+    socket_path: &std::path::Path,
+    timeout: Duration,
+    poll_interval: Duration,
+) -> Result<()> {
     let start = std::time::Instant::now();
     while start.elapsed() < timeout {
         if socket_path.exists() {
             return Ok(());
         }
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(poll_interval).await;
     }
     Err(anyhow::anyhow!(
         "Socket {} did not appear within {:?}",

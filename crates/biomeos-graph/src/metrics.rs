@@ -169,14 +169,19 @@ impl MetricsCollector {
     }
 
     /// Record a graph execution (redb storage - ecoBin!)
+    ///
+    /// When `execution_id` is `Some`, that value is used for the record id (for deterministic tests).
+    /// Otherwise uses `chrono::Utc::now().timestamp_millis()`.
     pub async fn record_execution(
         &self,
         graph_name: &str,
         result: &GraphResult,
         duration_ms: u64,
+        execution_id: Option<i64>,
     ) -> Result<()> {
+        let id = execution_id.unwrap_or_else(|| chrono::Utc::now().timestamp_millis());
         let record = ExecutionRecord {
-            id: chrono::Utc::now().timestamp_millis(),
+            id,
             graph_name: graph_name.to_string(),
             success: result.success,
             duration_ms,
@@ -522,7 +527,7 @@ mod tests {
         };
 
         collector
-            .record_execution("test_graph", &result, 100)
+            .record_execution("test_graph", &result, 100, None)
             .await
             .unwrap();
 
@@ -536,14 +541,14 @@ mod tests {
         assert_eq!(metrics.success_rate, 1.0);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_multiple_executions() {
         let dir = tempdir().unwrap();
         let db_path = dir.path().join("metrics_multi.redb");
 
         let collector = MetricsCollector::new(&db_path).await.unwrap();
 
-        // Record multiple executions (small delay ensures unique timestamps)
+        // Record multiple executions (advance ensures unique timestamps)
         for i in 0..5 {
             let result = GraphResult {
                 success: i % 2 == 0, // Alternate success/failure
@@ -553,10 +558,10 @@ mod tests {
             };
 
             collector
-                .record_execution("multi_graph", &result, (i + 1) * 100)
+                .record_execution("multi_graph", &result, (i + 1) * 100, Some(1000 + i as i64))
                 .await
                 .unwrap();
-            tokio::time::sleep(tokio::time::Duration::from_millis(2)).await;
+            tokio::time::advance(tokio::time::Duration::from_millis(2)).await;
         }
 
         let metrics = collector.get_graph_metrics("multi_graph").await.unwrap();
@@ -595,7 +600,7 @@ mod tests {
                 duration_ms: 100,
             };
             collector
-                .record_execution(graph, &result, 100)
+                .record_execution(graph, &result, 100, None)
                 .await
                 .unwrap();
         }
@@ -622,7 +627,7 @@ mod tests {
             duration_ms: 100,
         };
         collector
-            .record_execution("test", &result, 100)
+            .record_execution("test", &result, 100, None)
             .await
             .unwrap();
 

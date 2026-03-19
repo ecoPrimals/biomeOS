@@ -551,6 +551,8 @@ async fn probe_port_pattern(client: &AtomicClient) -> PortPattern {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     // ── NatType tests ──────────────────────────────────────────────────
@@ -867,5 +869,67 @@ mod tests {
         };
         let json = serde_json::to_string(&info).expect("serialize");
         assert!(json.contains("public_addr"));
+    }
+
+    /// connect_to_peer with non-existent neural-api socket — tests error path
+    #[tokio::test]
+    async fn test_connect_to_peer_socket_not_found() {
+        let result =
+            connect_to_peer("peer-123", "/nonexistent/path/neural-api-12345.sock", None).await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Failed")
+                || err.contains("connect")
+                || err.contains("No such file")
+                || err.contains("Connection refused"),
+            "Expected connection error, got: {err}"
+        );
+    }
+
+    /// connect_to_peer with peer_connection_info (uses stun_results for peer NAT)
+    #[tokio::test]
+    async fn test_connect_to_peer_with_connection_info() {
+        let info = PeerConnectionInfo {
+            stun_results: Some(StunResults {
+                public_addr: "1.2.3.4:41200".to_string(),
+                nat_type: "symmetric".to_string(),
+            }),
+            relay_endpoint: None,
+            stun_server: None,
+        };
+
+        let result = connect_to_peer("peer-456", "/nonexistent/neural-api.sock", Some(&info)).await;
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_connection_result_roundtrip() {
+        let result = ConnectionResult {
+            tier: ConnectionTier::LanDirect,
+            endpoint: "/tmp/sock".to_string(),
+            elapsed_ms: 10,
+            tiers_attempted: vec![ConnectionTier::LanDirect],
+        };
+        let json = serde_json::to_string(&result).expect("serialize");
+        let parsed: ConnectionResult = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.tier, result.tier);
+        assert_eq!(parsed.endpoint, result.endpoint);
+    }
+
+    #[test]
+    fn test_connection_tier_serialization_roundtrip() {
+        for tier in &[
+            ConnectionTier::LanDirect,
+            ConnectionTier::DirectPunch,
+            ConnectionTier::CoordinatedPunch,
+            ConnectionTier::PureRelay,
+        ] {
+            let json = serde_json::to_string(tier).expect("serialize");
+            let parsed: ConnectionTier = serde_json::from_str(&json).expect("deserialize");
+            assert_eq!(parsed, *tier);
+        }
     }
 }

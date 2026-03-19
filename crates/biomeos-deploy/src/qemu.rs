@@ -226,6 +226,7 @@ impl Drop for QemuInstance {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -320,5 +321,54 @@ mod tests {
         };
         let instance = QemuInstance::new(config);
         assert_eq!(instance.name(), "minimal");
+    }
+
+    #[test]
+    fn test_qemu_config_with_kvm() {
+        let config = QemuConfig {
+            name: "kvm-vm".to_string(),
+            memory: 2048,
+            cpus: 4,
+            disk_image: PathBuf::from("/tmp/kvm.qcow2"),
+            bridge_name: "br0".to_string(),
+            mac_address: "52:54:00:aa:bb:cc".to_string(),
+            serial_log: PathBuf::from("/tmp/kvm.log"),
+            enable_kvm: true,
+            extra_args: vec!["-no-reboot".to_string(), "-no-shutdown".to_string()],
+        };
+        let instance = QemuInstance::new(config);
+        assert_eq!(instance.name(), "kvm-vm");
+    }
+
+    #[tokio::test]
+    async fn test_qemu_stop_when_not_running() {
+        let config = sample_qemu_config();
+        let mut instance = QemuInstance::new(config);
+        let result = instance.stop().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_qemu_start_twice_fails() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let config = QemuConfig {
+            name: "double-start".to_string(),
+            memory: 128,
+            cpus: 1,
+            disk_image: temp.path().join("disk.qcow2"),
+            bridge_name: "virbr0".to_string(),
+            mac_address: "52:54:00:00:00:99".to_string(),
+            serial_log: temp.path().join("serial.log"),
+            enable_kvm: false,
+            extra_args: vec!["-no-reboot".to_string()],
+        };
+        std::fs::write(&config.disk_image, b"").expect("create disk");
+        let mut instance = QemuInstance::new(config);
+        let first = instance.start().await;
+        if first.is_ok() {
+            let second = instance.start().await;
+            assert!(second.is_err());
+            let _ = instance.stop().await;
+        }
     }
 }

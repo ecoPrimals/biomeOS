@@ -3,6 +3,8 @@
 
 //! Genome handler tests
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use super::build::build_genome;
 use super::retrieval::get_genome_info;
 use super::state::GenomeState;
@@ -216,4 +218,96 @@ async fn test_list_genomes_uses_global_state() {
     assert!(result.is_ok(), "list_genomes should not panic");
     let json = result.unwrap();
     assert!(json.genomes.is_empty() || !json.genomes.is_empty());
+}
+
+#[tokio::test]
+async fn test_genome_state_list_all_empty_dir() {
+    let temp_dir = TempDir::new().expect("create temp dir");
+    let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
+    let genomes = state.list_all().await.expect("list");
+    assert!(genomes.is_empty());
+}
+
+#[tokio::test]
+async fn test_genome_state_load_from_cache() {
+    let temp_dir = TempDir::new().expect("create temp dir");
+    let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
+
+    let manifest = GenomeManifest::new("cached").version("1.0");
+    let genome = GenomeBin::with_manifest(manifest);
+    state
+        .save_genome("cached-1.0", &genome)
+        .await
+        .expect("save");
+
+    let loaded1 = state.load_genome("cached-1.0").await.expect("load");
+    let loaded2 = state
+        .load_genome("cached-1.0")
+        .await
+        .expect("load from cache");
+    assert_eq!(loaded1.manifest.name, loaded2.manifest.name);
+}
+
+#[test]
+fn test_verify_request_deserialization() {
+    use super::types::VerifyRequest;
+
+    let json = r#"{"path":"/tmp/test.genome"}"#;
+    let req: VerifyRequest = serde_json::from_str(json).expect("deserialize");
+    assert_eq!(req.path, PathBuf::from("/tmp/test.genome"));
+}
+
+#[test]
+fn test_download_response_serialization() {
+    use super::types::DownloadResponse;
+
+    let resp = DownloadResponse {
+        url: "/api/v1/genome/x/data".to_string(),
+        size: 1024,
+    };
+    let json = serde_json::to_string(&resp).expect("serialize");
+    assert!(json.contains("/api/v1/genome"));
+    assert!(json.contains("1024"));
+}
+
+#[test]
+fn test_genome_info_response_serialization() {
+    use super::types::GenomeInfoResponse;
+
+    let resp = GenomeInfoResponse {
+        name: "test".to_string(),
+        version: "1.0".to_string(),
+        architectures: vec!["x86_64".to_string()],
+    };
+    let json = serde_json::to_string(&resp).expect("serialize");
+    assert!(json.contains("test"));
+    assert!(json.contains("x86_64"));
+}
+
+#[test]
+fn test_genome_summary_serialization() {
+    use super::types::GenomeSummary;
+
+    let summary = GenomeSummary {
+        id: "id-1".to_string(),
+        name: "name".to_string(),
+        version: "1.0".to_string(),
+        architectures: vec!["aarch64".to_string()],
+    };
+    let json = serde_json::to_string(&summary).expect("serialize");
+    assert!(json.contains("id-1"));
+    assert!(json.contains("aarch64"));
+}
+
+#[test]
+fn test_verify_response_serialization() {
+    use super::types::VerifyResponse;
+
+    let resp = VerifyResponse {
+        valid: true,
+        message: "All checksums valid".to_string(),
+    };
+    let json = serde_json::to_string(&resp).expect("serialize");
+    assert!(json.contains("valid"));
+    assert!(json.contains("checksums"));
 }

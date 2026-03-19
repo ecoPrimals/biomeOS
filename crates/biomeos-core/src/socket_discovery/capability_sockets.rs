@@ -21,7 +21,7 @@ pub(crate) fn names_for_primal(primal_name: &str) -> Vec<&'static str> {
             vec!["security", "crypto"]
         }
         p if p.eq_ignore_ascii_case(primal_names::SONGBIRD) => {
-            vec!["discovery", "relay", "mesh"]
+            vec!["discovery", "relay", "mesh", "http_bridge"]
         }
         p if p.eq_ignore_ascii_case(primal_names::TOADSTOOL) => {
             vec!["compute", "gpu"]

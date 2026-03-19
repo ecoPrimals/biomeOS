@@ -173,6 +173,7 @@ async fn is_executable(path: &Path) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::fs;
@@ -250,5 +251,106 @@ mod tests {
             err.to_string().contains("Failed to execute") || err.to_string().contains("No such"),
             "Expected execution error, got: {err}"
         );
+    }
+
+    #[tokio::test]
+    async fn test_discover_executable_primal() {
+        let dir = TempDir::new().unwrap();
+        let primal_path = dir.path().join("my-primal");
+        #[cfg(unix)]
+        {
+            fs::write(
+                &primal_path,
+                "#!/bin/sh\nprintf '%s' '{\"provides\":[\"ai\"],\"requires\":[]}'",
+            )
+            .unwrap();
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&primal_path).unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&primal_path, perms).unwrap();
+        }
+        #[cfg(not(unix))]
+        {
+            fs::write(&primal_path, "test").unwrap();
+        }
+
+        let primals = discover_primals(dir.path()).await.unwrap();
+        #[cfg(unix)]
+        {
+            assert!(
+                primals.len() >= 1,
+                "Should discover at least one primal on unix"
+            );
+            if let Some(p) = primals.first() {
+                assert_eq!(p.id, "my-primal");
+                if !p.provides.is_empty() {
+                    assert_eq!(p.provides, vec!["ai"]);
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = primals;
+        }
+    }
+
+    #[tokio::test]
+    async fn test_query_primal_metadata_existing_binary() {
+        // /bin/true exists on unix - doesn't support --biomeos-capabilities
+        #[cfg(unix)]
+        {
+            for path in [Path::new("/bin/true"), Path::new("/usr/bin/true")] {
+                if path.exists() {
+                    let result = query_primal_metadata(path).await;
+                    // true doesn't support --biomeos-capabilities, so we expect either
+                    // "Binary returned error" or "Failed to parse"
+                    assert!(result.is_err());
+                    let err = result.unwrap_err().to_string();
+                    assert!(
+                        err.contains("Binary") || err.contains("parse") || err.contains("Failed"),
+                        "Expected capability-related error, got: {err}"
+                    );
+                    break;
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_discover_nonexistent_dir() {
+        let result = discover_primals(Path::new("/nonexistent/dir/12345")).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Failed to read"));
+    }
+
+    #[test]
+    fn test_primal_metadata_debug() {
+        let meta = PrimalMetadata {
+            binary: PathBuf::from("/bin/test"),
+            id: "test".to_string(),
+            provides: vec!["ai".to_string()],
+            requires: vec![],
+            version: None,
+            name: None,
+        };
+        let debug_str = format!("{:?}", meta);
+        assert!(debug_str.contains("test"));
+        assert!(debug_str.contains("ai"));
+    }
+
+    #[test]
+    fn test_primal_metadata_clone() {
+        let meta = PrimalMetadata {
+            binary: PathBuf::from("/bin/x"),
+            id: "x".to_string(),
+            provides: vec![],
+            requires: vec!["compute".to_string()],
+            version: Some("1.0".to_string()),
+            name: Some("Test".to_string()),
+        };
+        let cloned = meta.clone();
+        assert_eq!(meta.id, cloned.id);
+        assert_eq!(meta.provides, cloned.provides);
+        assert_eq!(meta.version, cloned.version);
     }
 }

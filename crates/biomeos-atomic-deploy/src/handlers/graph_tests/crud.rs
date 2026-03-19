@@ -119,6 +119,34 @@ capabilities = []
     assert!(arr[0].get("coordination").is_some());
 }
 
+#[tokio::test]
+async fn test_list_includes_continuous_field() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("continuous_list.toml");
+    let continuous_toml = r#"
+[graph]
+id = "continuous_list"
+version = "1.0.0"
+description = "Continuous"
+coordination = "continuous"
+
+[graph.tick]
+target_hz = 60.0
+
+[[graph.nodes]]
+id = "n1"
+name = "Node 1"
+"#;
+    std::fs::write(&path, continuous_toml).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let result = handler.list().await.expect("list");
+    let arr = result.as_array().expect("array");
+    assert!(!arr.is_empty());
+    assert!(arr[0].get("continuous").is_some());
+    assert_eq!(arr[0]["continuous"], true);
+}
+
 // ── graph.get ─────────────────────────────────────────────────────────
 
 #[tokio::test]

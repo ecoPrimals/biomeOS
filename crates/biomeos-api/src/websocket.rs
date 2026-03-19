@@ -194,8 +194,8 @@ impl GraphEventWebSocketServer {
         Ok(())
     }
 
-    /// Handle a JSON-RPC message
-    async fn handle_message(
+    /// Handle a JSON-RPC message (pub for testing)
+    pub(crate) async fn handle_message(
         text: &str,
         subscriptions: &Arc<RwLock<HashMap<String, Subscription>>>,
         event_broadcaster: &Arc<GraphEventBroadcaster>,
@@ -350,6 +350,12 @@ impl GraphEventWebSocketServer {
 }
 
 #[cfg(test)]
+fn test_empty_subscriptions() -> Arc<RwLock<HashMap<String, Subscription>>> {
+    Arc::new(RwLock::new(HashMap::new()))
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use chrono::Utc;
@@ -657,5 +663,163 @@ mod tests {
             timestamp: Utc::now(),
         };
         assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn test_subscription_filter_non_node_events_pass_node_filter() {
+        // GraphStarted has no node_id - node_filter should pass (returns true for non-node events)
+        let filter = SubscriptionFilter {
+            graph_id: None,
+            event_types: None,
+            node_filter: Some("some_node".to_string()),
+        };
+        let event = GraphEvent::GraphStarted {
+            graph_id: "g1".to_string(),
+            graph_name: "G1".to_string(),
+            total_nodes: 1,
+            coordination: "sequential".to_string(),
+            timestamp: Utc::now(),
+        };
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn test_json_rpc_parse_error_response() {
+        let err = JsonRpcError::parse_error();
+        let resp = JsonRpcResponse::error(serde_json::Value::Null, err);
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("-32700"));
+        assert!(json.contains("Parse error"));
+    }
+
+    #[test]
+    fn test_json_rpc_invalid_request_response() {
+        let err = JsonRpcError::invalid_request();
+        let resp = JsonRpcResponse::error(serde_json::json!(1), err);
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("-32600"));
+    }
+
+    #[test]
+    fn test_subscription_filter_event_type_empty_list() {
+        let filter = SubscriptionFilter {
+            graph_id: None,
+            event_types: Some(vec![]),
+            node_filter: None,
+        };
+        let event = GraphEvent::GraphStarted {
+            graph_id: "g1".to_string(),
+            graph_name: "G1".to_string(),
+            total_nodes: 1,
+            coordination: "sequential".to_string(),
+            timestamp: Utc::now(),
+        };
+        assert!(!filter.matches(&event));
+    }
+
+    #[tokio::test]
+    async fn test_handle_message_invalid_json() {
+        let subscriptions = test_empty_subscriptions();
+        let broadcaster = Arc::new(GraphEventBroadcaster::new(16));
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let resp = GraphEventWebSocketServer::handle_message(
+            "not valid json",
+            &subscriptions,
+            &broadcaster,
+            tx,
+        )
+        .await;
+
+        assert!(resp.error.is_some());
+        assert_eq!(resp.error.as_ref().unwrap().code, -32700);
+    }
+
+    #[tokio::test]
+    async fn test_handle_message_invalid_version() {
+        let subscriptions = test_empty_subscriptions();
+        let broadcaster = Arc::new(GraphEventBroadcaster::new(16));
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let req = r#"{"jsonrpc":"1.0","id":1,"method":"events.subscribe","params":{}}"#;
+        let resp =
+            GraphEventWebSocketServer::handle_message(req, &subscriptions, &broadcaster, tx).await;
+
+        assert!(resp.error.is_some());
+        assert_eq!(resp.error.as_ref().unwrap().code, -32600);
+    }
+
+    #[tokio::test]
+    async fn test_handle_message_method_not_found() {
+        let subscriptions = test_empty_subscriptions();
+        let broadcaster = Arc::new(GraphEventBroadcaster::new(16));
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let req = r#"{"jsonrpc":"2.0","id":1,"method":"unknown.method","params":{}}"#;
+        let resp =
+            GraphEventWebSocketServer::handle_message(req, &subscriptions, &broadcaster, tx).await;
+
+        assert!(resp.error.is_some());
+        assert_eq!(resp.error.as_ref().unwrap().code, -32601);
+    }
+
+    #[tokio::test]
+    async fn test_handle_message_subscribe_and_list() {
+        let subscriptions = test_empty_subscriptions();
+        let broadcaster = Arc::new(GraphEventBroadcaster::new(16));
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let req =
+            r#"{"jsonrpc":"2.0","id":1,"method":"events.subscribe","params":{"graph_id":"g1"}}"#;
+        let resp = GraphEventWebSocketServer::handle_message(
+            req,
+            &subscriptions,
+            &broadcaster,
+            tx.clone(),
+        )
+        .await;
+
+        assert!(resp.error.is_none());
+        let result = resp.result.expect("result");
+        assert!(
+            result
+                .get("subscription_id")
+                .and_then(|v| v.as_str())
+                .is_some()
+        );
+        assert!(
+            result
+                .get("success")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+        );
+
+        let list_req =
+            r#"{"jsonrpc":"2.0","id":2,"method":"events.list_subscriptions","params":{}}"#;
+        let list_resp =
+            GraphEventWebSocketServer::handle_message(list_req, &subscriptions, &broadcaster, tx)
+                .await;
+
+        assert!(list_resp.error.is_none());
+        let list_result = list_resp.result.expect("result");
+        let count = list_result
+            .get("count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn test_handle_message_unsubscribe_invalid_params() {
+        let subscriptions = test_empty_subscriptions();
+        let broadcaster = Arc::new(GraphEventBroadcaster::new(16));
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let req = r#"{"jsonrpc":"2.0","id":1,"method":"events.unsubscribe","params":{}}"#;
+        let resp =
+            GraphEventWebSocketServer::handle_message(req, &subscriptions, &broadcaster, tx).await;
+
+        assert!(resp.error.is_some());
+        assert_eq!(resp.error.as_ref().unwrap().code, -32602);
     }
 }

@@ -478,7 +478,7 @@ async fn display_status_results(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
@@ -635,5 +635,150 @@ mod tests {
         assert_eq!(format_bytes(1023), "1023 B");
         assert_eq!(format_bytes(1024), "1.0 KB");
         assert_eq!(format_bytes(1536), "1.5 KB");
+    }
+
+    #[test]
+    fn test_format_health_summary_with_services_detailed() {
+        let mut results = HashMap::new();
+        results.insert(
+            "services".to_string(),
+            serde_json::json!({
+                "svc1": {
+                    "status": "Healthy",
+                    "issues": [{"message": "Minor issue"}],
+                    "metrics": {"cpu_usage": 50}
+                }
+            }),
+        );
+        let lines = format_health_summary(&results, true);
+        assert!(lines.iter().any(|l| l.contains("Minor issue")));
+        assert!(lines.iter().any(|l| l.contains("50")));
+    }
+
+    #[test]
+    fn test_format_health_summary_with_system_metrics() {
+        let mut results = HashMap::new();
+        results.insert(
+            "system_metrics".to_string(),
+            serde_json::json!({
+                "cpu_usage": 25,
+                "memory_usage": {"used_bytes": 1073741824_i64, "total_bytes": 4294967296_i64},
+                "disk_usage": {"used_bytes": 5368709120_i64},
+                "network": {"bytes_sent": 1000, "bytes_received": 2000}
+            }),
+        );
+        let lines = format_health_summary(&results, false);
+        assert!(lines.iter().any(|l| l.contains("System Metrics")));
+    }
+
+    #[test]
+    fn test_format_probe_results_with_performance() {
+        let mut results = HashMap::new();
+        results.insert(
+            "performance".to_string(),
+            serde_json::json!({
+                "throughput_rps": 100,
+                "avg_latency_ms": 5,
+                "error_rate_percent": 0.1
+            }),
+        );
+        let lines = format_probe_results("svc", &results);
+        assert!(lines.iter().any(|l| l.contains("Performance")));
+        assert!(lines.iter().any(|l| l.contains("100")));
+    }
+
+    #[test]
+    fn test_format_probe_results_with_diagnostics() {
+        let mut results = HashMap::new();
+        results.insert(
+            "diagnostics".to_string(),
+            serde_json::json!({
+                "key1": "value1",
+                "key2": 42,
+                "key3": true,
+                "key4": [1, 2, 3],
+                "key5": {"nested": "obj"}
+            }),
+        );
+        let lines = format_probe_results("svc", &results);
+        assert!(lines.iter().any(|l| l.contains("Diagnostics")));
+    }
+
+    #[test]
+    fn test_format_probe_results_with_endpoints() {
+        let mut results = HashMap::new();
+        results.insert(
+            "connectivity".to_string(),
+            serde_json::json!({
+                "reachable": true,
+                "response_time_ms": 10,
+                "endpoints": [
+                    {"url": "http://a", "status": "ok"},
+                    {"url": "http://b", "status": "fail"}
+                ]
+            }),
+        );
+        let lines = format_probe_results("svc", &results);
+        assert!(lines.iter().any(|l| l.contains("http://a")));
+        assert!(lines.iter().any(|l| l.contains("http://b")));
+    }
+
+    #[test]
+    fn test_format_scan_results_empty() {
+        let results = HashMap::new();
+        let output = format_scan_results(&results, "default").unwrap();
+        assert!(output.contains("No results"));
+    }
+
+    #[test]
+    fn test_format_health_summary_overall_status_unknown() {
+        let mut results = HashMap::new();
+        results.insert("overall_status".to_string(), serde_json::json!(42));
+        let lines = format_health_summary(&results, false);
+        assert!(lines[0].contains("Unknown") || lines[0].contains("🔹"));
+    }
+
+    #[test]
+    fn test_format_health_summary_system_metrics_only() {
+        let mut results = HashMap::new();
+        results.insert(
+            "system_metrics".to_string(),
+            serde_json::json!({
+                "cpu_usage": 50,
+                "memory_usage": {"used_bytes": 1_073_741_824_u64, "total_bytes": 2_147_483_648_u64},
+                "disk_usage": {"used_bytes": 5_368_709_120_u64},
+                "network": {"bytes_sent": 1000, "bytes_received": 2000}
+            }),
+        );
+        let lines = format_health_summary(&results, false);
+        assert!(lines.iter().any(|l| l.contains("System Metrics")));
+    }
+
+    #[test]
+    fn test_format_health_summary_services_empty_object() {
+        let mut results = HashMap::new();
+        results.insert("services".to_string(), serde_json::json!({}));
+        let lines = format_health_summary(&results, false);
+        assert!(lines.iter().any(|l| l.contains("Service Health")));
+    }
+
+    #[tokio::test]
+    async fn test_handle_health_legacy() {
+        let result = handle_health(None, false, false, 10, false, None).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_health_with_service() {
+        let result = handle_health(
+            Some("test-service".to_string()),
+            false,
+            false,
+            10,
+            false,
+            None,
+        )
+        .await;
+        assert!(result.is_ok());
     }
 }

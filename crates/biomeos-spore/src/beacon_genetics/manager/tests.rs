@@ -346,3 +346,200 @@ fn test_save_manifest_with_manifest() {
     manager.save_manifest().expect("save should succeed");
     assert!(temp_dir.path().join(".beacon.genetics.json").exists());
 }
+
+#[tokio::test]
+async fn test_initiate_meeting_full_flow() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    mock_caller
+        .set_response(
+            "beacon.get_id",
+            serde_json::json!({"beacon_id": "our-beacon-123"}),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "beacon.get_seed",
+            serde_json::json!({"seed_hex": "deadbeefcafebabe"}),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "crypto.encrypt",
+            serde_json::json!({"ciphertext": "encrypted_our_seed"}),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "network.beacon_exchange",
+            serde_json::json!({
+                "peer_beacon_id": "peer-beacon-456",
+                "peer_encrypted_seed": "encrypted_peer_seed"
+            }),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "crypto.decrypt",
+            serde_json::json!({"plaintext": "peer_seed_hex"}),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "crypto.encrypt_with_lineage",
+            serde_json::json!({"ciphertext": "encrypted_for_storage"}),
+        )
+        .await;
+
+    std::fs::create_dir_all(temp_dir.path().join(".beacon_seeds")).expect("create seeds dir");
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+    manager.set_manifest(BeaconGeneticsManifest::new(
+        BeaconId::from_hex("our-beacon-123"),
+        "lineage",
+    ));
+
+    let result = manager
+        .initiate_meeting("192.168.1.10:9900", "peer-node")
+        .await
+        .expect("initiate meeting");
+
+    assert_eq!(result.0, "peer-beacon-456");
+    let meetings = manager.list_meetings();
+    assert_eq!(meetings.len(), 1);
+    assert_eq!(meetings[0].0.0, "peer-beacon-456");
+    assert_eq!(meetings[0].1.node_name, "peer-node");
+}
+
+#[tokio::test]
+async fn test_initiate_meeting_beacon_get_id_fails() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+    manager.set_manifest(BeaconGeneticsManifest::new(
+        BeaconId::from_hex("our"),
+        "lineage",
+    ));
+
+    let result = manager.initiate_meeting("192.168.1.10:9900", "peer").await;
+
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("beacon.get_id"));
+}
+
+#[tokio::test]
+async fn test_sync_with_lineage_peer_updates_existing() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+    let mut local_manifest =
+        BeaconGeneticsManifest::new(BeaconId::from_hex("local123"), "same_lineage");
+    local_manifest.add_meeting(
+        BeaconId::from_hex("peer_a"),
+        MeetingRecord {
+            node_name: "peer-a".to_string(),
+            first_met: 1000,
+            last_seen: 1000,
+            endpoints: vec!["192.168.1.1:9900".to_string()],
+            capabilities_hint: vec![],
+            notes: "Local".to_string(),
+            relationship: MeetingRelationship::Direct,
+            visibility: MeetingVisibility::Mutual,
+            seed_file: "peer_a.seed".to_string(),
+        },
+    );
+    manager.set_manifest(local_manifest);
+
+    let mut remote_manifest =
+        BeaconGeneticsManifest::new(BeaconId::from_hex("remote456"), "same_lineage");
+    remote_manifest.add_meeting(
+        BeaconId::from_hex("peer_a"),
+        MeetingRecord {
+            node_name: "peer-a".to_string(),
+            first_met: 1000,
+            last_seen: 2000,
+            endpoints: vec![
+                "192.168.1.1:9900".to_string(),
+                "192.168.1.2:9900".to_string(),
+            ],
+            capabilities_hint: vec![],
+            notes: "Remote".to_string(),
+            relationship: MeetingRelationship::Direct,
+            visibility: MeetingVisibility::Mutual,
+            seed_file: "peer_a.seed".to_string(),
+        },
+    );
+
+    let result = manager
+        .sync_with_lineage_peer(&remote_manifest)
+        .await
+        .expect("sync");
+
+    assert_eq!(result.added, 0);
+    assert_eq!(result.updated, 1);
+    let manifest = manager.manifest.as_ref().expect("manifest");
+    let meeting = manifest
+        .get_meeting(&BeaconId::from_hex("peer_a"))
+        .expect("meeting");
+    assert_eq!(meeting.last_seen, 2000);
+    assert_eq!(meeting.endpoints.len(), 2);
+}
+
+#[tokio::test]
+async fn test_try_decrypt_with_met_seeds_success() {
+    let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+    std::fs::create_dir_all(temp_dir.path().join(".beacon_seeds")).expect("create dir");
+    let seed_content = "encrypted_seed_data";
+    std::fs::write(
+        temp_dir.path().join(".beacon_seeds").join("peer1234.seed"),
+        seed_content,
+    )
+    .expect("write seed");
+
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    mock_caller
+        .set_response(
+            "crypto.decrypt_with_lineage",
+            serde_json::json!({"plaintext": "decrypted_seed_hex"}),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "beacon.try_decrypt",
+            serde_json::json!({
+                "decrypted": true,
+                "payload": {"data": "decrypted_payload"}
+            }),
+        )
+        .await;
+
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+    let mut manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("our"), "lineage");
+    manifest.add_meeting(
+        BeaconId::from_hex("peer12345678"),
+        MeetingRecord {
+            node_name: "peer".to_string(),
+            first_met: 1000,
+            last_seen: 1000,
+            endpoints: vec![],
+            capabilities_hint: vec![],
+            notes: "".to_string(),
+            relationship: MeetingRelationship::Direct,
+            visibility: MeetingVisibility::Mutual,
+            seed_file: "peer1234.seed".to_string(),
+        },
+    );
+    manager.set_manifest(manifest);
+
+    let result = manager
+        .try_decrypt_with_met_seeds(b"encrypted_beacon_data")
+        .await
+        .expect("decrypt");
+
+    let (payload, beacon_id) = result.expect("should decrypt");
+    assert_eq!(beacon_id.0, "peer12345678");
+    assert_eq!(
+        payload.get("data").and_then(|v| v.as_str()),
+        Some("decrypted_payload")
+    );
+}

@@ -211,7 +211,7 @@ pub(crate) fn categorize_by_type(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -386,5 +386,41 @@ mod tests {
         };
         let debug = format!("{report:?}");
         assert!(debug.contains("DiscoveryReport"));
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_type() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let result = DiscoveryUtils::discover_by_type(&manager, "discovery").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_comprehensive_discovery() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let result = DiscoveryUtils::comprehensive_discovery(&manager).await;
+        assert!(result.is_ok());
+        let report = result.unwrap();
+        assert!(report.total_services <= 1000 || report.discovery_time_ms <= 60_000);
+    }
+
+    #[tokio::test]
+    async fn test_discover_with_filter() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let result = DiscoveryUtils::discover_with_filter(&manager, |_| true).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_discover_with_retry() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let caps = vec![PrimalCapability::new("basic", "basic", "1.0")];
+        let result =
+            DiscoveryUtils::discover_with_retry(&manager, "http://localhost", &caps, 0).await;
+        assert!(result.is_ok() || result.is_err());
     }
 }

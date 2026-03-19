@@ -319,6 +319,124 @@ impl InitramfsBuilder {
     }
 }
 
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_initramfs_builder_new() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let _builder = InitramfsBuilder::new(temp.path()).expect("new");
+        assert!(temp.path().join("initramfs-root").exists());
+    }
+
+    #[test]
+    fn test_binary_spec_debug() {
+        let spec = BinarySpec {
+            source: PathBuf::from("/bin/true"),
+            dest: "/init".to_string(),
+            permissions: 0o755,
+        };
+        let s = format!("{:?}", spec);
+        assert!(s.contains("BinarySpec"));
+    }
+
+    #[test]
+    fn test_create_directory_structure() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let mut builder = InitramfsBuilder::new(temp.path()).expect("new");
+        builder.create_directory_structure().expect("create dirs");
+
+        let root = temp.path().join("initramfs-root");
+        for dir in ["bin", "sbin", "proc", "sys", "dev", "tmp", "biomeos", "etc"] {
+            assert!(root.join(dir).exists(), "{} should exist", dir);
+        }
+    }
+
+    #[test]
+    fn test_add_binary_skips_nonexistent() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let mut builder = InitramfsBuilder::new(temp.path()).expect("new");
+        let spec = BinarySpec {
+            source: PathBuf::from("/nonexistent/binary"),
+            dest: "/bin/missing".to_string(),
+            permissions: 0o755,
+        };
+        builder
+            .add_binary(spec)
+            .expect("add_binary should not fail for missing");
+    }
+
+    #[test]
+    fn test_add_binary_adds_existing() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let bin_path = temp.path().join("mybin");
+        std::fs::write(&bin_path, b"#!/bin/sh").expect("write");
+        let mut builder = InitramfsBuilder::new(temp.path()).expect("new");
+        let spec = BinarySpec {
+            source: bin_path.clone(),
+            dest: "/bin/mybin".to_string(),
+            permissions: 0o755,
+        };
+        builder.add_binary(spec).expect("add_binary");
+        builder.install_binaries().expect("install");
+        assert!(temp.path().join("initramfs-root/bin/mybin").exists());
+    }
+
+    #[test]
+    fn test_create_init_script() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let mut builder = InitramfsBuilder::new(temp.path()).expect("new");
+        builder.create_directory_structure().expect("dirs");
+        builder.create_init_script().expect("init script");
+
+        let init_path = temp.path().join("initramfs-root/init");
+        assert!(init_path.exists());
+        let content = std::fs::read_to_string(&init_path).expect("read");
+        assert!(content.contains("#!/bin/sh"));
+        assert!(content.contains("exec /init"));
+    }
+
+    #[test]
+    fn test_kernel_manager_custom() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let kernel_path = temp.path().join("vmlinuz");
+        std::fs::write(&kernel_path, b"kernel").expect("write");
+        let mgr = KernelManager::detect_or_custom(Some(kernel_path.clone())).expect("custom");
+        assert_eq!(mgr.kernel_path(), kernel_path.as_path());
+        assert_eq!(
+            mgr.initramfs_path(),
+            kernel_path
+                .parent()
+                .unwrap()
+                .join("initramfs.img")
+                .as_path()
+        );
+    }
+
+    #[test]
+    fn test_kernel_manager_detect_or_custom_takes_precedence() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let kernel_path = temp.path().join("vmlinuz");
+        std::fs::write(&kernel_path, b"kernel").expect("write");
+        let mgr = KernelManager::detect_or_custom(Some(kernel_path.clone())).expect("custom");
+        assert_eq!(mgr.kernel_path(), kernel_path.as_path());
+    }
+
+    #[test]
+    fn test_build_creates_output() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let mut builder = InitramfsBuilder::new(temp.path()).expect("new");
+        builder.create_directory_structure().expect("dirs");
+        std::fs::write(temp.path().join("initramfs-root/test.txt"), "content").expect("write");
+        let output = temp.path().join("initramfs.img");
+        builder.build(&output).expect("build");
+        assert!(output.exists());
+        assert!(std::fs::metadata(&output).unwrap().len() > 0);
+    }
+}
+
 /// Kernel manager for selecting/downloading kernel
 pub struct KernelManager {
     kernel_path: PathBuf,

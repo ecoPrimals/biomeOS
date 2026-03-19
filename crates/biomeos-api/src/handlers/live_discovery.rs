@@ -457,6 +457,7 @@ pub async fn discover_by_type(primal_type: &str) -> Vec<LivePrimalInfo> {
 // - `discover_primal(socket_path)` for querying a specific socket
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -514,27 +515,26 @@ mod tests {
     }
 
     #[test]
-    fn test_socket_dir_override() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
-        let _guard = std::env::var("BIOMEOS_SOCKET_DIR").ok();
-        set_test_env("BIOMEOS_SOCKET_DIR", "/tmp/biomeos-test-override");
-        let dir = get_socket_dir();
-        assert_eq!(dir, "/tmp/biomeos-test-override");
-        // Restore
-        remove_test_env("BIOMEOS_SOCKET_DIR");
-    }
+    fn test_socket_dir_override_and_default() {
+        use biomeos_test_utils::TestEnvGuard;
 
-    #[test]
-    fn test_socket_dir_default_uses_system_paths() {
-        use biomeos_test_utils::remove_test_env;
-        let _guard = std::env::var("BIOMEOS_SOCKET_DIR").ok();
-        remove_test_env("BIOMEOS_SOCKET_DIR");
-        let dir = get_socket_dir();
-        let expected = biomeos_types::SystemPaths::new_lazy()
-            .runtime_dir()
-            .to_string_lossy()
-            .to_string();
-        assert_eq!(dir, expected);
+        // Test override path
+        {
+            let _guard = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", "/tmp/biomeos-test-override");
+            let dir = get_socket_dir();
+            assert_eq!(dir, "/tmp/biomeos-test-override");
+        }
+
+        // Test default path (env var removed by guard drop)
+        {
+            let _guard = TestEnvGuard::remove("BIOMEOS_SOCKET_DIR");
+            let dir = get_socket_dir();
+            let expected = biomeos_types::SystemPaths::new_lazy()
+                .runtime_dir()
+                .to_string_lossy()
+                .to_string();
+            assert_eq!(dir, expected);
+        }
     }
 
     #[test]
@@ -650,5 +650,72 @@ mod tests {
         let primals = discover_by_type("security").await;
         assert!(primals.is_empty());
         remove_test_env("BIOMEOS_SOCKET_DIR");
+    }
+
+    #[tokio::test]
+    async fn test_discover_primal_connection_refused() {
+        let result = discover_primal("/nonexistent/socket/path.sock").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("Failed to connect")
+                || err.to_string().contains("socket")
+                || err.to_string().contains("Connection refused")
+                || err.to_string().contains("No such file"),
+            "expected connection error, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_all_primals_nonexistent_dir() {
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        set_test_env(
+            "BIOMEOS_SOCKET_DIR",
+            "/nonexistent/path/that/does/not/exist",
+        );
+        let primals = discover_all_primals().await;
+        assert!(primals.is_empty());
+        remove_test_env("BIOMEOS_SOCKET_DIR");
+    }
+
+    #[test]
+    fn test_discover_by_capability_filter_substring() {
+        let info = LivePrimalInfo {
+            id: "test-1".to_string(),
+            name: "Test".to_string(),
+            primal_type: "security".to_string(),
+            version: "1.0".to_string(),
+            health: "healthy".to_string(),
+            capabilities: vec!["crypto.encrypt".to_string(), "crypto.sign".to_string()],
+            endpoint: "/tmp/test.sock".to_string(),
+            family_id: None,
+        };
+        assert!(info.capabilities.iter().any(|c| c == &"crypto.encrypt"));
+        assert!(
+            info.capabilities
+                .iter()
+                .any(|c| c.starts_with(&format!("{}.", "crypto")))
+        );
+    }
+
+    #[test]
+    fn test_live_primal_info_deserialize() {
+        let json = r#"{"id":"x","name":"N","primal_type":"t","version":"1","health":"ok","capabilities":["c1"],"endpoint":"/tmp/x.sock"}"#;
+        let info: LivePrimalInfo = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(info.id, "x");
+        assert_eq!(info.name, "N");
+        assert_eq!(info.capabilities.len(), 1);
+    }
+
+    #[test]
+    fn test_identity_attestation_serialize() {
+        let attestation = IdentityAttestation {
+            provider_capability: "crypto.verify".to_string(),
+            format: "jwt".to_string(),
+            data: serde_json::json!({"sub": "primal"}),
+        };
+        let json = serde_json::to_string(&attestation).expect("serialize");
+        assert!(json.contains("crypto.verify"));
+        assert!(json.contains("jwt"));
     }
 }

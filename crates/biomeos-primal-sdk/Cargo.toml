@@ -20,10 +20,13 @@ chrono = { workspace = true }
 futures = "0.3"
 
 # Tokio for async runtime
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 # tarpc for high-performance binary RPC (protocol escalation)
 tarpc = { workspace = true }
+
+# Zero-copy IPC payloads (wateringHole guidelines)
+bytes = { workspace = true }
 tokio-serde = { workspace = true }
 
 # Error handling
@@ -33,6 +36,7 @@ thiserror = "1.0"
 tracing = { workspace = true }
 
 [dev-dependencies]
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tempfile = "3.8"
 
 [lints]

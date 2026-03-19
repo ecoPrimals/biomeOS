@@ -451,4 +451,53 @@ mod tests {
         assert!(msg.contains("none"));
         assert!(msg.contains("critical"));
     }
+
+    #[test]
+    fn test_create_subfed_args_debug() {
+        let args = CreateSubfedArgs {
+            name: "test".to_string(),
+            parent_family: "fam1".to_string(),
+            members: "n1,n2".to_string(),
+            capabilities: "storage,compute".to_string(),
+            isolation: "low".to_string(),
+            config_dir: PathBuf::from("/tmp"),
+        };
+        let _ = format!("{args:?}");
+    }
+
+    #[test]
+    fn test_list_subfeds_args_debug() {
+        let args = ListSubfedsArgs {
+            config_dir: PathBuf::from("/tmp"),
+            family: Some("fam".to_string()),
+            detailed: true,
+        };
+        let _ = format!("{args:?}");
+    }
+
+    #[test]
+    fn test_join_subfed_args_debug() {
+        let args = JoinSubfedArgs {
+            name: "subfed".to_string(),
+            node: "node-1".to_string(),
+            config_dir: PathBuf::from("/tmp"),
+        };
+        let _ = format!("{args:?}");
+    }
+
+    #[test]
+    fn test_check_access_args_debug() {
+        let args = CheckAccessArgs {
+            node: "n1".to_string(),
+            capability: "storage".to_string(),
+            subfed: Some("sf".to_string()),
+            config_dir: PathBuf::from("/tmp"),
+        };
+        let _ = format!("{args:?}");
+    }
+
+    #[test]
+    fn test_truncate_unicode() {
+        assert_eq!(truncate("hello", 2), "...");
+    }
 }

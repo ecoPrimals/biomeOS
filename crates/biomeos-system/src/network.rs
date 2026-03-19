@@ -173,9 +173,20 @@ pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
     }])
 }
 
+/// Default sample interval for network I/O (1s).
+const DEFAULT_NETWORK_SAMPLE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
+
 /// Get current network I/O via /proc/net/dev (pure Rust).
 #[cfg(target_os = "linux")]
 pub(crate) async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
+    get_network_io_with_interval(DEFAULT_NETWORK_SAMPLE_INTERVAL).await
+}
+
+/// Get current network I/O with configurable sample interval.
+#[cfg(target_os = "linux")]
+pub(crate) async fn get_network_io_with_interval(
+    sample_interval: std::time::Duration,
+) -> BiomeResult<NetworkIoMetrics> {
     let content1 = fs::read_to_string("/proc/net/dev").unwrap_or_default();
     let parsed1 = parse_net_dev(&content1);
     let (init_rx, init_tx, init_rxp, init_txp) = parsed1.iter().fold(
@@ -183,7 +194,7 @@ pub(crate) async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
         |(rx, tx, rxp, txp), (_, a, b, c, d)| (rx + a, tx + c, rxp + b, txp + d),
     );
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(sample_interval).await;
 
     let content2 = fs::read_to_string("/proc/net/dev").unwrap_or_default();
     let parsed2 = parse_net_dev(&content2);

@@ -57,6 +57,8 @@ certs/
 data/
 tmp-cloud-init/
 audit.log
+command_history.json
+command_journal.json
 
 # Primal binaries (ELF/Mach-O - use genomeBin for distribution)
 validation/primals/

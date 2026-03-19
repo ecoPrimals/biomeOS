@@ -291,6 +291,7 @@ impl Discovery {
 mod tests {
     use super::{resolve_provider, *};
     use crate::primal_client::{PrimalClient, PrimalConnections};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 
     #[test]
@@ -557,9 +558,11 @@ mod tests {
         let temp_dir = tempfile::tempdir().expect("temp dir");
         let socket_path = temp_dir.path().join("registry.sock");
         let path_clone = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
 
         let server = tokio::spawn(async move {
             let listener = tokio::net::UnixListener::bind(&path_clone).expect("bind");
+            ready_tx.signal();
             if let Ok((stream, _)) = listener.accept().await {
                 let (read_half, mut write_half) = stream.into_split();
                 let mut reader = tokio::io::BufReader::new(read_half);
@@ -578,7 +581,7 @@ mod tests {
             }
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        ready_rx.wait().await.unwrap();
 
         let config = DiscoveryConfig {
             registry_provider: Some("test-registry".to_string()),

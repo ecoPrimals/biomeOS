@@ -173,6 +173,7 @@ pub async fn get_identity(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -424,5 +425,45 @@ mod tests {
         assert_eq!(resp.encryption_tag, "tag");
         assert_eq!(resp.capabilities.len(), 1);
         assert_eq!(resp.capabilities[0], "btsp");
+    }
+
+    #[test]
+    fn test_trust_evaluation_response_evaluate_decision() {
+        let resp = TrustEvaluationResponse {
+            decision: "evaluate".to_string(),
+            confidence: 0.3,
+            reason: "needs_more_data".to_string(),
+            trust_level: "low".to_string(),
+            metadata: serde_json::json!({"pending": true}),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        let back: TrustEvaluationResponse = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.decision, "evaluate");
+        assert_eq!(back.trust_level, "low");
+    }
+
+    #[test]
+    fn test_identity_response_debug() {
+        let resp = IdentityResponse {
+            encryption_tag: "tag".to_string(),
+            capabilities: vec![],
+            family_id: "fam".to_string(),
+            identity_attestations: None,
+        };
+        let debug = format!("{resp:?}");
+        assert!(debug.contains("tag"));
+        assert!(debug.contains("fam"));
+    }
+
+    #[test]
+    fn test_trust_evaluation_request_many_tags() {
+        let req = TrustEvaluationRequest {
+            peer_id: "p1".to_string(),
+            peer_tags: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        let json = serde_json::to_string(&req).expect("serialize");
+        let back: TrustEvaluationRequest = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.peer_id, "p1");
+        assert_eq!(back.peer_tags.len(), 3);
     }
 }

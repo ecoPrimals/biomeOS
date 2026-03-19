@@ -182,6 +182,9 @@ pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<Str
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
     use serde_json::json;
 
     #[test]
@@ -257,5 +260,62 @@ mod tests {
                 .and_then(|s| s.as_str())
                 .is_none()
         );
+    }
+
+    /// verify_primal_health with non-existent socket — connection refused
+    #[tokio::test]
+    async fn test_verify_primal_health_connection_refused() {
+        let path = std::path::Path::new("/nonexistent/socket/primal_12345.sock");
+        let result = verify_primal_health(path, "test-primal").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Failed")
+                || err.contains("connect")
+                || err.contains("No such file")
+                || err.contains("Connection"),
+            "Expected connection error, got: {err}"
+        );
+    }
+
+    /// verify_primal_health_with_discovery with nonexistent primal
+    #[tokio::test]
+    async fn test_verify_primal_health_with_discovery_failure() {
+        let result = verify_primal_health_with_discovery("nonexistent_primal_xyz").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Failed") || err.contains("discover") || err.contains("not found"));
+    }
+
+    /// establish_btsp_tunnel with non-existent beardog socket
+    #[tokio::test]
+    async fn test_establish_btsp_tunnel_connection_refused() {
+        let path = std::path::Path::new("/nonexistent/beardog_12345.sock");
+        let result = establish_btsp_tunnel(path, "test-family").await;
+        assert!(result.is_err());
+    }
+
+    /// establish_btsp_tunnel_with_discovery — fails when beardog not found
+    #[tokio::test]
+    async fn test_establish_btsp_tunnel_with_discovery_failure() {
+        let result = establish_btsp_tunnel_with_discovery("test-family").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Failed") || err.contains("discover") || err.contains("not found"));
+    }
+
+    #[test]
+    fn test_capabilities_response_non_string_items_filtered() {
+        let response = json!({ "capabilities": ["a", 123, "b", null, "c"] });
+        let capabilities = response
+            .get("capabilities")
+            .and_then(|c| c.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        assert_eq!(capabilities, vec!["a", "b", "c"]);
     }
 }

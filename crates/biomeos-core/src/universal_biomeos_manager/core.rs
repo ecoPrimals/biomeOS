@@ -92,8 +92,9 @@ impl UniversalBiomeOSManager {
                         tracing::warn!("Health check failed: {}", e);
                     }
 
-                    // Wait 30 seconds between checks
-                    tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+                    // Wait between checks (configurable via config.health.check_interval)
+                    let interval = manager.config.health.check_interval;
+                    tokio::time::sleep(interval).await;
                 }
             }
         });
@@ -154,5 +155,104 @@ impl UniversalBiomeOSManager {
 
         tracing::info!("✅ Universal BiomeOS Manager shutdown complete");
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use biomeos_types::BiomeOSConfig;
+
+    #[tokio::test]
+    async fn test_new_with_config() {
+        let config = BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("new");
+        assert!(manager.get_config().metadata.version.len() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_with_default_config() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("with_default_config");
+        let config = manager.get_config();
+        assert!(!config.metadata.version.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_initialize() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("initialize");
+    }
+
+    #[tokio::test]
+    async fn test_get_config() {
+        let mut config = BiomeOSConfig::default();
+        config.metadata.version = "2.0.0-test".to_string();
+        let manager = UniversalBiomeOSManager::new(config).await.expect("new");
+        assert_eq!(manager.get_config().metadata.version, "2.0.0-test");
+    }
+
+    #[tokio::test]
+    async fn test_discovery_service_accessor() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        let discovery = manager.discovery_service();
+        assert!(std::mem::size_of_val(discovery) > 0);
+    }
+
+    #[tokio::test]
+    async fn test_registered_primals_accessor() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        let primals = manager.registered_primals();
+        let count = primals.read().await.len();
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn test_shutdown() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.shutdown().await.expect("shutdown");
+    }
+
+    #[tokio::test]
+    async fn test_start_monitoring() {
+        let mut config = BiomeOSConfig::default();
+        config.health.check_interval = std::time::Duration::ZERO;
+        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        manager.initialize().await.expect("init");
+        manager.start_monitoring().await.expect("start_monitoring");
+        // Give the spawned task a moment to start (zero interval = tight loop)
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+
+    #[test]
+    fn test_primal_info_serialization() {
+        use biomeos_primal_sdk::PrimalCapability;
+        use biomeos_types::{Health, PrimalType};
+        use std::collections::HashMap;
+
+        let info = PrimalInfo {
+            id: "test-1".to_string(),
+            name: "test-primal".to_string(),
+            primal_type: PrimalType::from_discovered("compute", "toadstool", "1.0"),
+            endpoint: "unix:///tmp/test.sock".to_string(),
+            capabilities: vec![PrimalCapability::new("compute", "execution", "1.0")],
+            health: Health::Healthy,
+            last_seen: chrono::Utc::now(),
+            discovered_at: chrono::Utc::now(),
+            metadata: HashMap::new(),
+        };
+        let json = serde_json::to_string(&info).expect("serialize");
+        assert!(json.contains("test-1"));
+        assert!(json.contains("test-primal"));
     }
 }

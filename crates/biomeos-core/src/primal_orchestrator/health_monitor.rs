@@ -202,6 +202,8 @@ impl PrimalHealthMonitorBuilder {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use std::time::Duration;
 
@@ -286,5 +288,82 @@ mod tests {
         assert_eq!(cloned.interval, Duration::from_secs(10));
         assert!(Arc::ptr_eq(&monitor.primals, &cloned.primals));
         assert!(Arc::ptr_eq(&monitor.status, &cloned.status));
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_register_with_endpoint() {
+        use biomeos_types::identifiers::Endpoint;
+        let monitor = PrimalHealthMonitor::builder().build();
+        let id = pid("endpoint-primal");
+        let endpoint = Endpoint::new("file:///tmp/test-endpoint.sock").expect("valid url");
+        monitor.register(id.clone(), endpoint).await;
+        assert_eq!(monitor.is_healthy(&id).await, Some(true));
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_health_nonexistent_socket() {
+        let monitor = PrimalHealthMonitor::builder().build();
+        monitor
+            .register_socket(pid("ghost"), "/nonexistent/path/to/socket.sock")
+            .await;
+        let healthy = monitor.is_healthy(&pid("ghost")).await;
+        assert_eq!(healthy, Some(true));
+    }
+
+    #[tokio::test]
+    async fn test_start_monitoring() {
+        let monitor = PrimalHealthMonitor::builder()
+            .interval(Duration::from_millis(100))
+            .build();
+        monitor
+            .register_socket(pid("monitored"), "/tmp/monitored.sock")
+            .await;
+        let result = monitor.start_monitoring().await;
+        assert!(result.is_ok());
+        monitor.stop();
+    }
+
+    #[tokio::test]
+    async fn test_register_with_http_endpoint_fallback() {
+        use biomeos_types::identifiers::Endpoint;
+        let monitor = PrimalHealthMonitor::builder().build();
+        let id = pid("http-primal");
+        let endpoint = Endpoint::new("http://localhost:8080").expect("valid url");
+        monitor.register(id.clone(), endpoint).await;
+        assert!(monitor.is_healthy(&id).await.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_all_status_empty() {
+        let monitor = PrimalHealthMonitor::builder().build();
+        let status = monitor.all_status().await;
+        assert!(status.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_register_then_unregister_then_reregister() {
+        let monitor = PrimalHealthMonitor::builder().build();
+        let id = pid("transient");
+
+        monitor
+            .register_socket(id.clone(), "/tmp/transient.sock")
+            .await;
+        assert!(monitor.is_healthy(&id).await.is_some());
+
+        monitor.unregister(&id).await;
+        assert!(monitor.is_healthy(&id).await.is_none());
+
+        monitor
+            .register_socket(id.clone(), "/tmp/transient2.sock")
+            .await;
+        assert!(monitor.is_healthy(&id).await.is_some());
+    }
+
+    #[test]
+    fn test_builder_chain() {
+        let monitor = PrimalHealthMonitor::builder()
+            .interval(Duration::from_secs(15))
+            .build();
+        assert_eq!(monitor.interval, Duration::from_secs(15));
     }
 }

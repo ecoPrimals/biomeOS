@@ -318,9 +318,6 @@ mod config_tests {
         let mut base = BiomeOSConfig::default();
         let original_modified = base.metadata.modified_at;
 
-        // Small sleep to ensure timestamp changes
-        std::thread::sleep(std::time::Duration::from_millis(2));
-
         let other = BiomeOSConfig::default();
         base.merge(other)?;
 

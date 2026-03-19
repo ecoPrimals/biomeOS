@@ -203,7 +203,7 @@ pub(crate) fn parse_arch_for_build(arch: &str) -> Result<Arch, &'static str> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -238,5 +238,53 @@ mod tests {
         // Build handler expects lowercase
         assert!(parse_arch_for_build("X86_64").is_err());
         assert!(parse_arch_for_build("AArch64").is_err());
+    }
+
+    #[test]
+    fn test_build_request_deserialization() {
+        use crate::handlers::genome::types::BuildRequest;
+
+        let json = r#"{"name":"test-genome","version":"1.0","binaries":[{"arch":"x86_64","path":"/tmp/binary"}]}"#;
+        let req: BuildRequest = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(req.name, "test-genome");
+        assert_eq!(req.version.as_deref(), Some("1.0"));
+        assert_eq!(req.binaries.len(), 1);
+        assert_eq!(req.binaries[0].arch, "x86_64");
+    }
+
+    #[test]
+    fn test_build_response_serialization() {
+        use crate::handlers::genome::types::BuildResponse;
+
+        let resp = BuildResponse {
+            success: true,
+            genome_id: "test-1.0".to_string(),
+            message: "Built".to_string(),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("test-1.0"));
+        assert!(json.contains("success"));
+    }
+
+    #[test]
+    fn test_compose_request_deserialization() {
+        use crate::handlers::genome::types::ComposeRequest;
+
+        let json = r#"{"name":"composed","nucleus_type":"ORCHESTRATOR","genomes":["g1","g2"]}"#;
+        let req: ComposeRequest = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(req.name, "composed");
+        assert_eq!(req.nucleus_type, "ORCHESTRATOR");
+        assert_eq!(req.genomes.len(), 2);
+    }
+
+    #[test]
+    fn test_create_genome_request_optional_fields() {
+        use crate::handlers::genome::types::CreateGenomeRequest;
+
+        let json = r#"{"name":"minimal"}"#;
+        let req: CreateGenomeRequest = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(req.name, "minimal");
+        assert!(req.version.is_none());
+        assert!(req.description.is_none());
     }
 }

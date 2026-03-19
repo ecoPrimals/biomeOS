@@ -161,7 +161,7 @@ fn truncate(s: &str, max: usize) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -208,5 +208,67 @@ mod tests {
             detailed: true,
         };
         let _ = format!("{args:?}");
+    }
+
+    #[test]
+    fn test_incubate_args_default_deploy_local() {
+        let args = IncubateArgs {
+            spore: PathBuf::from("/tmp/spore"),
+            computer_name: None,
+            deploy_local: false,
+        };
+        assert!(!args.deploy_local);
+    }
+
+    #[test]
+    fn test_list_local_args_filter_none() {
+        let args = ListLocalArgs {
+            spore_id: None,
+            detailed: false,
+        };
+        assert!(args.spore_id.is_none());
+        assert!(!args.detailed);
+    }
+
+    #[test]
+    fn test_truncate_to_short_max() {
+        // When max < 4, we get "..." (max.saturating_sub(3) = 0)
+        assert_eq!(truncate("hello", 3), "...");
+    }
+
+    #[test]
+    fn test_truncate_zero_max() {
+        assert_eq!(truncate("hello", 0), "...");
+    }
+
+    #[tokio::test]
+    async fn test_handle_spore_incubate_nonexistent_path() {
+        let args = IncubateArgs {
+            spore: PathBuf::from("/nonexistent/spore/path/12345"),
+            computer_name: None,
+            deploy_local: false,
+        };
+        let result = handle_spore_incubate(&args).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_handle_node_list_local_empty() {
+        let args = ListLocalArgs {
+            spore_id: None,
+            detailed: false,
+        };
+        let result = handle_node_list_local(&args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_node_list_local_with_filter_no_match() {
+        let args = ListLocalArgs {
+            spore_id: Some("nonexistent-spore-id-xyz".to_string()),
+            detailed: false,
+        };
+        let result = handle_node_list_local(&args).await;
+        assert!(result.is_ok());
     }
 }

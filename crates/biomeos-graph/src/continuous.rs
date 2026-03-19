@@ -12,11 +12,12 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{RwLock, watch};
+use tokio::time::Instant;
 use tracing::{debug, info, warn};
 
 use crate::events::{GraphEvent, GraphEventBroadcaster};
@@ -498,15 +499,14 @@ mod tests {
         assert_eq!(ticks, 0);
     }
 
-    #[test]
-    fn test_tick_clock_advance_after_sleep() {
-        // Intentional: testing clock advancement with real elapsed time
+    #[tokio::test(start_paused = true)]
+    async fn test_tick_clock_advance_after_sleep() {
         let mut clock = TickClock::new(10.0); // 10 Hz = 100ms per tick
-        std::thread::sleep(Duration::from_millis(10));
+        tokio::time::advance(Duration::from_millis(10)).await;
         let _ticks = clock.advance();
         assert_eq!(clock.tick_count(), 0, "10ms is not enough for a 100ms tick");
 
-        std::thread::sleep(Duration::from_millis(250));
+        tokio::time::advance(Duration::from_millis(250)).await;
         let ticks = clock.advance();
         assert!(
             ticks >= 1,
@@ -515,16 +515,15 @@ mod tests {
         assert!(clock.tick_count() >= 1);
     }
 
-    #[test]
-    fn test_tick_clock_max_accumulator_clamp() {
-        // Intentional: testing accumulator clamping with real elapsed time
+    #[tokio::test(start_paused = true)]
+    async fn test_tick_clock_max_accumulator_clamp() {
         let config = TickConfig {
             target_hz: 10.0,
             max_accumulator_ms: 200.0,
             budget_warning_ms: 4.0,
         };
         let mut clock = TickClock::from_config(&config);
-        std::thread::sleep(Duration::from_millis(500));
+        tokio::time::advance(Duration::from_millis(500)).await;
         let ticks = clock.advance();
         assert!(
             ticks <= 2,
@@ -532,11 +531,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_tick_clock_reset_accumulator() {
-        // Intentional: testing reset with real elapsed time
+    #[tokio::test(start_paused = true)]
+    async fn test_tick_clock_reset_accumulator() {
         let mut clock = TickClock::new(60.0);
-        std::thread::sleep(Duration::from_millis(50));
+        tokio::time::advance(Duration::from_millis(50)).await;
         clock.reset_accumulator();
         let ticks = clock.advance();
         assert_eq!(ticks, 0);

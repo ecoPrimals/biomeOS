@@ -179,6 +179,7 @@ pub struct FossilIndexEntry {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -205,5 +206,105 @@ mod tests {
 
         let not_found = index.find_by_node("node-2");
         assert!(not_found.is_empty());
+    }
+
+    #[test]
+    fn test_fossil_index_add() {
+        let mut index = FossilIndex::new();
+        index.add(FossilIndexEntry {
+            node_id: "n1".into(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::Manual,
+            fossil_path: PathBuf::from("/tmp/f1"),
+            issue_count: 0,
+            encrypted: false,
+        });
+        assert_eq!(index.fossils.len(), 1);
+    }
+
+    #[test]
+    fn test_fossil_index_load_save() {
+        let mut index = FossilIndex::new();
+        index.add(FossilIndexEntry {
+            node_id: "node-save".into(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: PathBuf::from("/tmp/fossil"),
+            issue_count: 0,
+            encrypted: false,
+        });
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp.path().join("index.toml");
+        index.save(&path).expect("save");
+        let loaded = FossilIndex::load(&path).expect("load");
+        assert_eq!(loaded.fossils.len(), 1);
+        assert_eq!(loaded.fossils[0].node_id, "node-save");
+    }
+
+    #[test]
+    fn test_archival_reason_variants() {
+        let _ = format!("{:?}", ArchivalReason::GracefulShutdown);
+        let _ = format!("{:?}", ArchivalReason::Crash { exit_code: 1 });
+        let _ = format!("{:?}", ArchivalReason::Manual);
+        let _ = format!("{:?}", ArchivalReason::AutomaticRotation);
+        let _ = format!("{:?}", ArchivalReason::Redeployment);
+        let _ = format!("{:?}", ArchivalReason::Reboot);
+    }
+
+    #[test]
+    fn test_archival_reason_serde() {
+        let reason = ArchivalReason::Crash { exit_code: 1 };
+        let json = serde_json::to_string(&reason).expect("serialize");
+        let back: ArchivalReason = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(reason, back);
+    }
+
+    #[test]
+    fn test_fossil_record_from_active_session() {
+        let session = ActiveLogSession::new("node-1".into(), "deploy-1".into());
+        let record = FossilRecord::from_active_session(&session, ArchivalReason::Manual);
+        assert_eq!(record.node_id, "node-1");
+        assert_eq!(record.deployment_id, "deploy-1");
+        assert_eq!(record.archival_reason, ArchivalReason::Manual);
+        assert!(record.duration().num_seconds() >= 0);
+    }
+
+    #[test]
+    fn test_fossil_record_issue_count() {
+        let record = FossilRecord {
+            node_id: "n".into(),
+            session_started: Utc::now() - chrono::Duration::seconds(60),
+            session_ended: Utc::now(),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            deployment_id: "d".into(),
+            issues: vec![
+                LogIssue {
+                    timestamp: Utc::now(),
+                    severity: IssueSeverity::Error,
+                    primal: "p".into(),
+                    description: "err".into(),
+                    log_line: None,
+                },
+                LogIssue {
+                    timestamp: Utc::now(),
+                    severity: IssueSeverity::Warning,
+                    primal: "p".into(),
+                    description: "warn".into(),
+                    log_line: None,
+                },
+            ],
+            metrics: None,
+            encrypted: false,
+            parent_seed_fingerprint: None,
+        };
+        assert_eq!(record.issue_count(None), 2);
+        assert_eq!(record.issue_count(Some(IssueSeverity::Error)), 1);
+        assert_eq!(record.issue_count(Some(IssueSeverity::Warning)), 1);
+    }
+
+    #[test]
+    fn test_fossil_index_default() {
+        let index = FossilIndex::default();
+        assert!(index.fossils.is_empty());
     }
 }

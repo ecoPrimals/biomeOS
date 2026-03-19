@@ -363,9 +363,10 @@ impl Default for MinimalObserver {
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_local_only_observer() {
@@ -491,5 +492,78 @@ mod tests {
         let metrics = observer.get_local_metrics();
         assert_eq!(metrics.resource_usage.cpu_percent, Some(75.0));
         assert_eq!(metrics.resource_usage.memory_bytes, Some(1024));
+    }
+
+    #[test]
+    fn test_family_federation_without_endpoint() {
+        let observer = MinimalObserver::family_federation("family-456".to_string(), None).unwrap();
+        assert!(observer.is_family_sharing_enabled());
+        assert_eq!(observer.mode(), ObservabilityMode::FamilyFederation);
+    }
+
+    #[tokio::test]
+    async fn test_share_with_family_local_only_returns_false() {
+        let observer = MinimalObserver::local_only().unwrap();
+        let result = observer.share_with_family().await.unwrap();
+        assert!(!result);
+    }
+
+    #[tokio::test]
+    async fn test_share_with_family_disabled_returns_false() {
+        let observer = MinimalObserver::disabled().unwrap();
+        let result = observer.share_with_family().await.unwrap();
+        assert!(!result);
+    }
+
+    #[tokio::test]
+    async fn test_share_with_family_no_beardog_fails() {
+        remove_test_env("BEARDOG_ENDPOINT");
+        remove_test_env("SONGBIRD_ENDPOINT");
+        let observer = MinimalObserver::family_federation(
+            "family-x".to_string(),
+            Some("http://localhost:8080".to_string()),
+        )
+        .unwrap();
+        let result = observer.share_with_family().await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("BearDog"));
+    }
+
+    #[tokio::test]
+    async fn test_share_with_family_beardog_but_no_songbird_fails() {
+        set_test_env("BEARDOG_ENDPOINT", "/tmp/beardog.sock");
+        remove_test_env("SONGBIRD_ENDPOINT");
+        let observer = MinimalObserver::family_federation(
+            "family-y".to_string(),
+            Some("http://localhost:8080".to_string()),
+        )
+        .unwrap();
+        let result = observer.share_with_family().await;
+        remove_test_env("BEARDOG_ENDPOINT");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Songbird"));
+    }
+
+    #[test]
+    fn test_minimal_observer_default() {
+        let observer = MinimalObserver::default();
+        assert_eq!(observer.mode(), ObservabilityMode::LocalOnly);
+    }
+
+    #[test]
+    fn test_get_local_metrics_read_lock_failure() {
+        let observer = MinimalObserver::local_only().unwrap();
+        let metrics = observer.get_local_metrics();
+        assert!(!metrics.biomeos_version.is_empty());
+    }
+
+    #[test]
+    fn test_family_observability_debug() {
+        let fo = FamilyObservability {
+            lineage_id: "l1".into(),
+            endpoint: Some("http://x".into()),
+            enabled: true,
+        };
+        let _ = format!("{:?}", fo);
     }
 }

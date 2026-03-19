@@ -701,47 +701,5 @@ async fn handle_ai_command(query: String, context: Option<String>) -> anyhow::Re
 }
 
 #[cfg(test)]
-mod tests {
-    #![allow(clippy::unwrap_used)]
-
-    use super::*;
-
-    #[test]
-    fn test_parse_ai_intent_health() {
-        assert_eq!(parse_ai_intent("health status"), AiIntent::Health);
-        assert_eq!(parse_ai_intent("check health"), AiIntent::Health);
-    }
-
-    #[test]
-    fn test_parse_ai_intent_discover() {
-        assert_eq!(parse_ai_intent("discover primals"), AiIntent::Discover);
-    }
-
-    #[test]
-    fn test_parse_ai_intent_deploy() {
-        assert_eq!(parse_ai_intent("deploy help"), AiIntent::Deploy);
-    }
-
-    #[test]
-    fn test_parse_ai_intent_status() {
-        assert_eq!(parse_ai_intent("status"), AiIntent::Status);
-    }
-
-    #[test]
-    fn test_parse_ai_intent_unknown() {
-        assert_eq!(parse_ai_intent("random query"), AiIntent::Unknown);
-    }
-
-    #[test]
-    fn test_format_ai_response_health() {
-        let lines = format_ai_response(&AiIntent::Health);
-        assert!(!lines.is_empty());
-        assert!(lines[0].contains("Health"));
-    }
-
-    #[test]
-    fn test_format_ai_response_unknown() {
-        let lines = format_ai_response(&AiIntent::Unknown);
-        assert!(lines.iter().any(|l| l.contains("Suggestions")));
-    }
-}
+#[path = "../main_tests.rs"]
+mod tests;

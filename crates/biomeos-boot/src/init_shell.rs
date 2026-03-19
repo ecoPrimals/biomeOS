@@ -74,6 +74,7 @@ impl Default for ShellManager {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -82,4 +83,29 @@ mod tests {
         let _mgr = ShellManager::new();
         // Just verify it can be created
     }
+
+    #[test]
+    fn test_shell_manager_default() {
+        let mgr = ShellManager::default();
+        let mgr2 = ShellManager::new();
+        // Both should be constructible
+        let _ = (mgr, mgr2);
+    }
+
+    #[test]
+    fn test_shell_manager_default_equals_new() {
+        let default_mgr = ShellManager::default();
+        let new_mgr = ShellManager::new();
+        let _ = (default_mgr, new_mgr);
+    }
+
+    #[tokio::test]
+    #[ignore = "spawn_interactive runs real shell - use for integration testing"]
+    async fn test_spawn_interactive_placeholder() {
+        let mgr = ShellManager::new();
+        let _ = mgr;
+    }
+
+    // Note: spawn_interactive is not unit-tested as it runs /bin/busybox sh and enters
+    // infinite_wait on exit - would require process isolation or mocking.
 }

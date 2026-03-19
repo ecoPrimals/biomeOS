@@ -98,6 +98,18 @@ pub trait ValidationSink {
 }
 
 /// Sink that prints findings to stderr (interactive CLI use).
+///
+/// # Examples
+///
+/// ```
+/// use biomeos_types::validation::{StderrSink, ValidationSink};
+/// let mut sink = StderrSink::default();
+/// sink.error("ecobin-no-c-deps", "found openssl-sys");
+/// sink.warning("lint-check", "unused import");
+/// assert!(sink.has_errors());
+/// assert_eq!(sink.error_count(), 1);
+/// assert_eq!(sink.warning_count(), 1);
+/// ```
 #[derive(Debug, Default)]
 pub struct StderrSink {
     error_count: usize,
@@ -136,6 +148,19 @@ impl ValidationSink for StderrSink {
 }
 
 /// Sink that collects findings into a `Vec` (programmatic/test use).
+///
+/// # Examples
+///
+/// ```
+/// use biomeos_types::validation::{BufferSink, ValidationSink};
+/// let mut sink = BufferSink::default();
+/// sink.error("rule-1", "error message");
+/// sink.warning("rule-2", "warning message");
+/// sink.info("rule-3", "info message");
+/// assert_eq!(sink.findings.len(), 3);
+/// assert!(sink.has_errors());
+/// assert_eq!(sink.error_count(), 1);
+/// ```
 #[derive(Debug, Default)]
 pub struct BufferSink {
     /// All collected findings.

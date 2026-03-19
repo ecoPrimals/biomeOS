@@ -42,6 +42,7 @@ pub fn get_genome_bin_path() -> Option<PathBuf> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::path::{Path, PathBuf};
@@ -71,5 +72,61 @@ mod tests {
                 "should not return nonexistent path when env points to missing dir"
             );
         }
+    }
+
+    #[test]
+    fn test_get_genome_bin_path_with_no_env_searches_paths() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let genome_dir = temp.path().join("genomeBin");
+        std::fs::create_dir_all(&genome_dir).expect("create dir");
+        std::fs::write(
+            genome_dir.join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("write manifest");
+        let search_paths = vec![genome_dir.as_path()];
+        let result = get_genome_bin_path_with(None, &search_paths);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), genome_dir);
+    }
+
+    #[test]
+    fn test_get_genome_bin_path_with_env_existing_dir_returns_it() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let dir_with_manifest = temp.path().join("with-manifest");
+        std::fs::create_dir_all(&dir_with_manifest).expect("create dir");
+        std::fs::write(
+            dir_with_manifest.join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("write manifest");
+        let search_paths: Vec<&Path> = vec![];
+        let result =
+            get_genome_bin_path_with(Some(dir_with_manifest.to_str().unwrap()), &search_paths);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), dir_with_manifest);
+    }
+
+    #[test]
+    fn test_get_genome_bin_path_with_env_nonexistent_falls_through() {
+        let nonexistent = "/tmp/nonexistent-genomebin-xyz-98765";
+        let temp = tempfile::tempdir().expect("temp dir");
+        let genome_dir = temp.path().join("genomeBin");
+        std::fs::create_dir_all(&genome_dir).expect("create dir");
+        std::fs::write(
+            genome_dir.join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("write manifest");
+        let search_paths = vec![genome_dir.as_path()];
+        let result = get_genome_bin_path_with(Some(nonexistent), &search_paths);
+        assert!(result.is_some(), "should fall through to search_paths");
+        assert_eq!(result.unwrap(), genome_dir);
+    }
+
+    #[test]
+    fn test_get_genome_bin_path_with_empty_search_paths() {
+        let result = get_genome_bin_path_with(None, &[]);
+        assert!(result.is_none());
     }
 }

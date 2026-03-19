@@ -23,15 +23,15 @@ use std::path::PathBuf;
 use tracing::info;
 
 /// Arguments for verification commands
-#[derive(Args)]
+#[derive(Args, Debug)]
 pub struct VerifyArgs {
     /// Verification target
     #[command(subcommand)]
-    target: VerifyTarget,
+    pub target: VerifyTarget,
 }
 
 /// Targets for verification
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 pub enum VerifyTarget {
     /// Verify plasmidBin integrity
     Nucleus {
@@ -332,7 +332,7 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_spore::verification::VerificationStatus;
@@ -389,5 +389,111 @@ mod tests {
         let (fresh_icon, _) = verification_status_display(&VerificationStatus::Fresh);
         let (missing_icon, _) = verification_status_display(&VerificationStatus::Missing);
         assert_ne!(fresh_icon, missing_icon);
+    }
+
+    #[test]
+    fn test_verify_args_target_nucleus() {
+        let args = VerifyArgs {
+            target: VerifyTarget::Nucleus {
+                path: PathBuf::from("plasmidBin"),
+            },
+        };
+        match &args.target {
+            VerifyTarget::Nucleus { path } => assert_eq!(path, &PathBuf::from("plasmidBin")),
+            _ => panic!("expected Nucleus"),
+        }
+    }
+
+    #[test]
+    fn test_verify_args_target_spore() {
+        let args = VerifyArgs {
+            target: VerifyTarget::Spore {
+                mount_point: PathBuf::from("/media/usb/biomeOS"),
+            },
+        };
+        match &args.target {
+            VerifyTarget::Spore { mount_point } => {
+                assert_eq!(mount_point, &PathBuf::from("/media/usb/biomeOS"));
+            }
+            _ => panic!("expected Spore"),
+        }
+    }
+
+    #[test]
+    fn test_verify_args_target_all() {
+        let args = VerifyArgs {
+            target: VerifyTarget::All { verbose: false },
+        };
+        match &args.target {
+            VerifyTarget::All { verbose } => assert!(!*verbose),
+            _ => panic!("expected All"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_run_nucleus_nonexistent_path() {
+        let args = VerifyArgs {
+            target: VerifyTarget::Nucleus {
+                path: PathBuf::from("/nonexistent/path/xyz"),
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok(), "run should return Ok (prints message)");
+    }
+
+    #[tokio::test]
+    async fn test_run_spore_nonexistent() {
+        let args = VerifyArgs {
+            target: VerifyTarget::Spore {
+                mount_point: PathBuf::from("/nonexistent/spore/mount"),
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok(), "spore verify with no plasmidBin returns Ok");
+    }
+
+    #[tokio::test]
+    async fn test_run_all_spores() {
+        let args = VerifyArgs {
+            target: VerifyTarget::All { verbose: false },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_all_spores_verbose() {
+        let args = VerifyArgs {
+            target: VerifyTarget::All { verbose: true },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_args_debug() {
+        let args = VerifyArgs {
+            target: VerifyTarget::Nucleus {
+                path: PathBuf::from("plasmidBin"),
+            },
+        };
+        let _ = format!("{args:?}");
+    }
+
+    #[test]
+    fn test_verify_target_variants() {
+        let _ = format!(
+            "{:?}",
+            VerifyTarget::Nucleus {
+                path: PathBuf::from("p")
+            }
+        );
+        let _ = format!(
+            "{:?}",
+            VerifyTarget::Spore {
+                mount_point: PathBuf::from("/m")
+            }
+        );
+        let _ = format!("{:?}", VerifyTarget::All { verbose: true });
     }
 }

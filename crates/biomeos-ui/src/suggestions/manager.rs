@@ -272,7 +272,7 @@ impl AISuggestionManager {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
     use crate::suggestions::types::{
@@ -472,6 +472,59 @@ mod tests {
         .await
         .unwrap();
         assert!(mgr.get_active_suggestions().is_empty());
+    }
+
+    #[test]
+    fn test_generate_local_suggestions_load_exactly_0_8_no_suggestion() {
+        let ctx = SuggestionContext {
+            assignments: std::collections::HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![PrimalInfo {
+                id: "p1".to_string(),
+                name: "boundary".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.8),
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = AISuggestionManager::generate_local_suggestions(&ctx);
+        assert!(
+            suggestions.is_empty(),
+            "load exactly 0.8 should NOT trigger (condition is > 0.8)"
+        );
+    }
+
+    #[test]
+    fn test_generate_local_suggestions_load_0_81_triggers_rebalance() {
+        let ctx = SuggestionContext {
+            assignments: std::collections::HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![PrimalInfo {
+                id: "p1".to_string(),
+                name: "overloaded".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.81),
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = AISuggestionManager::generate_local_suggestions(&ctx);
+        assert_eq!(suggestions.len(), 1);
+        assert!(suggestions[0].id.starts_with("local_rebalance_"));
+    }
+
+    #[tokio::test]
+    async fn test_discover_ai_provider_strict_discovery() {
+        let _guard = biomeos_test_utils::TestEnvGuard::set("BIOMEOS_STRICT_DISCOVERY", "1");
+        let mut mgr = AISuggestionManager::new("fam1".to_string());
+        let result = mgr.discover_ai_provider().await;
+        assert!(result.is_ok());
+        assert!(mgr.ai_provider_socket.is_none());
     }
 
     #[tokio::test]

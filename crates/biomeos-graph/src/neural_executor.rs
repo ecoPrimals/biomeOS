@@ -288,9 +288,8 @@ impl GraphExecutor {
     }
 
     /// Node executor: crypto.derive_child_seed
-    async fn node_crypto_derive_seed(node: &GraphNode, _context: &ExecutionContext) -> Result<serde_json::Value> {
-        // NOTE: Seed derivation moved to BearDog primal - use JSON-RPC to call it
-        // This is a placeholder demonstrating capability-based evolution
+    async fn node_crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) -> Result<serde_json::Value> {
+        // Local seed derivation via FamilySeed — BearDog provides the crypto primitives
 
         let parent_seed = node.config.get("parent_seed")
             .and_then(|v| v.as_str())

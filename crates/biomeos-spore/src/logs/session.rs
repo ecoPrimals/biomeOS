@@ -96,6 +96,7 @@ impl LogFile {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -112,5 +113,70 @@ mod tests {
         session.add_process(1234);
         session.add_process(1234); // Duplicate
         assert_eq!(session.process_pids.len(), 1);
+    }
+
+    #[test]
+    fn test_add_log_file() {
+        let mut session = ActiveLogSession::new("node-1".into(), "deploy-1".into());
+        session.add_log_file(LogFile {
+            primal: "beardog".into(),
+            path: PathBuf::from("/tmp/beardog.log"),
+            pid: Some(1234),
+            size_bytes: 0,
+            last_modified: Utc::now(),
+        });
+        assert_eq!(session.log_files.len(), 1);
+        assert_eq!(session.log_files[0].primal, "beardog");
+    }
+
+    #[test]
+    fn test_is_active_no_pids() {
+        let session = ActiveLogSession::new("node-1".into(), "deploy-1".into());
+        assert!(!session.is_active());
+    }
+
+    #[test]
+    fn test_is_active_with_self_pid() {
+        let mut session = ActiveLogSession::new("node-1".into(), "deploy-1".into());
+        session.add_process(std::process::id());
+        assert!(session.is_active());
+    }
+
+    #[test]
+    fn test_duration() {
+        let session = ActiveLogSession::new("node-1".into(), "deploy-1".into());
+        let d = session.duration();
+        assert!(d.num_seconds() >= 0);
+    }
+
+    #[test]
+    fn test_log_file_refresh() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let log_path = temp.path().join("test.log");
+        std::fs::write(&log_path, "hello world").expect("write");
+        let mut log_file = LogFile {
+            primal: "test".into(),
+            path: log_path.clone(),
+            pid: None,
+            size_bytes: 0,
+            last_modified: Utc::now(),
+        };
+        log_file.refresh().expect("refresh");
+        assert_eq!(log_file.size_bytes, 11);
+    }
+
+    #[test]
+    fn test_log_file_serialization() {
+        let lf = LogFile {
+            primal: "p".into(),
+            path: PathBuf::from("/tmp/x.log"),
+            pid: Some(1),
+            size_bytes: 100,
+            last_modified: Utc::now(),
+        };
+        let json = serde_json::to_string(&lf).expect("serialize");
+        let back: LogFile = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.primal, "p");
+        assert_eq!(back.size_bytes, 100);
     }
 }

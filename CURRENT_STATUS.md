@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 18, 2026 (v2.52: Capability-first discovery, MCP aggregation, Provenance, TOML sync)
-**Version**: 2.52
+**Updated**: March 19, 2026 (v2.54: Concurrency evolution, sleep elimination, coverage push 78%→84%, 6169 tests)
+**Version**: 2.54
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,9 +17,9 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 23 crates |
-| **Tests Passing** | 5,279 lib + bin (0 failures) |
-| **Test Coverage** | ~83% line, climbing toward 90% (11 new tests: capability sockets, provenance, TOML sync) |
-| **Unsafe Code** | 0 production (2 test-only in env_helpers.rs, Rust 2024 requirement) |
+| **Tests Passing** | 6,169 lib + bin + doc (0 failures, fully concurrent — no serial/sleep test constraints) |
+| **Test Coverage** | ~84% line (83.62% llvm-cov verified), climbing toward 90% — massive coverage push across all crates |
+| **Unsafe Code** | 0 production (2 test-only in env_helpers.rs, Rust 2024 requirement; verify_lineage evolved to TestEnvGuard) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
@@ -36,12 +36,12 @@
 | **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 23 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
 | **Ecosystem Absorption (Mar 18)** | IpcErrorPhase + extract_rpc_result (5+ springs), OrExit trait (groundSpring/loamSpine), cast module (airSpring), proptest IPC fuzzing (8 fuzz tests), capability.list cost_estimates+operation_dependencies (Squirrel Pathway Learner), socket-registry.json discovery (Squirrel), MCP tool definitions (healthSpring/airSpring/wetSpring), ValidationSink (rhizoCrypt/airSpring), primal_names::display (neuralSpring), primal capability routing types (relay.authorize, compute.dispatch, model.*, sourDough lifecycle), deny.toml expanded to 15 C-dep bans |
 | **Capability-First Discovery (Mar 18)** | Capability-named sockets (security.sock, compute.sock), `mcp.tools.list` aggregation (Squirrel alpha.13), Provenance metadata type (primalSpring v0.3.0), capability_registry.toml sync tests, 3 new primals registered (petalTongue, skunkBat, sourDough) |
-| **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
-| **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
+| **External C deps** | 0 (nix→rustix, sysinfo→/proc, libc removed, dirs→etcetera, sudo ip→rtnetlink) |
+| **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, rtnetlink for networking, zero -sys crates, zero shell-outs) |
 | **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |
-| **Files >1000 LOC** | 0 (max 899, atomic_client split + engine path_builder/neural_api extracted) |
+| **Files >1000 LOC** | 0 (all under 1000, test modules extracted to separate files) |
 | **JSON-RPC types** | `JSONRPC_VERSION` const + `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
-| **Zero-copy** | `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client); `Arc<str>` for identifiers |
+| **Zero-copy** | `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client, primal SDK IPC); `Arc<str>` for identifiers + `PrimalManifest` + `PrimalConnections` keys + `OptimizationType` graph nodes |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
 | **Dep policy** | `deny.toml` (cargo-deny 0.19) bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
@@ -239,6 +239,46 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 ---
 
 ## Completed Evolution Items (biomeOS Team)
+
+### Concurrency Evolution + Coverage Push — v2.54 (Mar 19, 2026)
+
+Deep evolution to fully concurrent, modern idiomatic Rust. Eliminated all test sleeps and serial constraints — test issues are production issues.
+
+| Category | Change |
+|----------|--------|
+| **Test count** | 5,340 → 6,169 (829 new tests across all crates) |
+| **Line coverage** | 78.32% → 83.62% (5,386 more lines covered) |
+| **Sleep-before-connect** | Eliminated — all socket tests use `ReadySender`/`ReadyReceiver` (biomeos-test-utils) |
+| **Wall-clock sleeps** | Eliminated — `TickClock`, circuit breaker, cooldown, cache TTL all use `tokio::time::Instant` + `start_paused = true` + `advance()` |
+| **`#[ignore]` removed** | 10 tests evolved from `#[ignore]` to concurrent — env-var tests use DI overrides (`with_xdg_override`) instead of global mutation |
+| **Production sleeps** | All configurable — `DEFAULT_POLL_INTERVAL`, `DEFAULT_RETRY_INTERVAL`, `DEFAULT_SOCKET_POLL_INTERVAL` consts with injectable durations |
+| **New test infra** | `biomeos_test_utils::ready_signal` (oneshot readiness), `MockJsonRpcServer` (zero-sleep mock), `server_ready_signal` convenience |
+| **Env var safety** | Combined concurrent-hostile env tests into single test with `TestEnvGuard` (RAII restoration) |
+| **Hanging tests** | Pipeline redirect test evolved to use `tokio::time::timeout` |
+| **File extraction** | `genome_tests.rs`, `neural_executor_async_tests.rs`, `main_tests.rs` (CLI) extracted — all files under 1000 lines |
+| **Time types** | `std::time::Instant` → `tokio::time::Instant` in cache, cooldown, circuit breaker, tick clock, health service |
+
+### Deep Audit Execution — v2.53 (Mar 19, 2026)
+
+Comprehensive audit against all wateringHole standards + systematic evolution execution:
+
+| Category | Change |
+|----------|--------|
+| **Bypasses resolved** | All 3 active bypasses evolved: HTTP_REQUEST_PROVIDER_SOCKET → capability discovery, NestGate boolean → omit flag, Squirrel model → AI_DEFAULT_MODEL env passthrough |
+| **engine.rs refactor** | Registry query logic extracted to `registry_queries.rs` (1023→871 lines, under 1000 limit) |
+| **Hardcoded primal names** | Production code evolved to `primal_names::*` constants in engine.rs, paths.rs, provider.rs, discovery.rs |
+| **Zero-copy evolution** | primal-sdk IPC: `Vec<u8>` → `bytes::Bytes` for crypto_sign/hash/storage_get; neural_router forwarding → Bytes; `PrimalManifest` primal/socket → `Arc<str>`; `PrimalConnections` keys → `Arc<str>`; `OptimizationType` nodes → `Arc<str>` |
+| **Shell-out elimination** | `sudo ip link/addr/set` → `rtnetlink` crate (pure Rust Netlink); 0 remaining shell-outs in production |
+| **Unsafe code evolution** | verify_lineage.rs: raw `unsafe { set_var/remove_var }` → `biomeos_test_utils::TestEnvGuard` RAII pattern |
+| **Infallible unwrap** | unix_server.rs: `.expect("never Err")` → `match infallible {}` (exhaustive match on Infallible) |
+| **forbid(unsafe_code)** | Added to `biomeos-genome-deploy/src/main.rs`; biomeos-test-utils kept at `deny` (has legitimate #[allow] functions) |
+| **Doc-tests** | 25 new doc-tests in biomeos-types (JsonRpc, FamilyId, PrimalId, ValidationSink, BufferSink) |
+| **Property-based tests** | New `proptest_types.rs`: FamilyId roundtrip, JsonRpcRequest serde, PrimalId validation, is_known_primal constants |
+| **Coverage push** | device_management_server: 37%→88% (+19 tests); api.rs: 73%→96% (+3 tests); model_cache: 73%→79% (+11 tests); nucleus: 68%→69% (+5 tests); realtime +3, orchestrator +2, action_handler +6, enroll +2, suggestions +3 |
+| **Formatting** | `cargo fmt --all` clean after all changes |
+| **Clippy** | PASS (0 warnings, pedantic+nursery, -D warnings) |
+| **Tests** | 5,279 → 5,340+ (+61 new tests), 0 failures |
+| **Coverage** | 77.83% → 78.36% line (llvm-cov verified) |
 
 ### Spring Absorption Deep Debt — v2.40 (Mar 15, 2026)
 
@@ -622,16 +662,14 @@ doc comments (`///` or `//!`). All 2,297 tests pass with 0 failures.
 
 ---
 
-## Remaining Bypasses (3 active, 3 evolved)
+## Remaining Bypasses (0 active, 6 evolved)
 
-These are intentional workarounds that enable the system to work now. Each has a clean evolution path:
+All bypasses have been resolved:
 
-### 1. HTTP_REQUEST_PROVIDER_SOCKET env var bypass (ACTIVE)
+### 1. ~~HTTP_REQUEST_PROVIDER_SOCKET env var bypass~~ (EVOLVED Mar 19)
 
-**What**: Squirrel discovers Songbird via explicit env var instead of socket scanning.
-**Why**: Songbird doesn't implement `discover_capabilities` JSON-RPC method.
-**Evolution**: Songbird implements `discover_capabilities` returning `["http", "discovery", "secure_http"]`.
-**Owner**: Songbird team.
+**Was**: Squirrel discovered Songbird via explicit env var.
+**Now**: `http_bridge` registered as Songbird capability in `capability_sockets.rs` and `CapabilityTaxonomy`. Squirrel uses `BIOMEOS_DISCOVERY_SOCKET` and `discover_capabilities("http_bridge")`. `HTTP_REQUEST_PROVIDER_SOCKET` env var removed from nucleus spawn.
 
 ### 2. ~~Socket nucleation symlinks~~ (EVOLVED)
 
@@ -639,17 +677,15 @@ These are intentional workarounds that enable the system to work now. Each has a
 **Now**: `biomeos nucleus start` creates family-suffixed sockets directly. Multi-family
 architecture (Option A) implemented. Socket resolution via `SystemPaths::primal_socket()`.
 
-### 3. NestGate inverted boolean patch (ACTIVE - downstream)
+### 3. ~~NestGate inverted boolean patch~~ (EVOLVED Mar 19)
 
-**What**: biomeOS patches NestGate's `--socket-only` flag.
-**Evolution**: NestGate upstream fix (1 line: `let enable_http = !config.socket_only`).
-**Owner**: NestGate team.
+**Was**: biomeOS passed `--socket-only` to NestGate, getting inverted semantics.
+**Now**: biomeOS omits `--socket-only` flag entirely; with the inverted semantics this yields socket-only mode (the desired behavior). Documented with compatibility comment in nucleus.rs.
 
-### 4. Squirrel default model override (ACTIVE)
+### 4. ~~Squirrel default model override~~ (EVOLVED Mar 19)
 
-**What**: Must pass `model: "claude-3-haiku-20240307"` explicitly.
-**Evolution**: Squirrel reads model preference from `AI_DEFAULT_MODEL` env var.
-**Owner**: Squirrel team.
+**Was**: Had to pass `model: "claude-3-haiku-20240307"` explicitly.
+**Now**: `AI_DEFAULT_MODEL` env var passed through to Squirrel in both nucleus spawn and graph deployment. Squirrel reads it at startup.
 
 ### 5. ~~SSH-based Plasmodium queries~~ (EVOLVED)
 
@@ -662,7 +698,7 @@ deprecated fallback only. Capability-based primal discovery via socket scanning.
 **Was**: `plasmodium.rs` hardcoded port 3492 for `AtomicClient::tcp()` connections.
 **Now**: Uses `AtomicClient::http()` with runtime port: `mesh.peers` → `SONGBIRD_MESH_PORT` → 8080.
 Beacon discovery payload includes `jsonrpc_port`. Songbird HTTP gateway (port 8080) serves as
-covalent bond transport. See `COVALENT_BOND_EVOLUTION_HANDOFF_FEB10_2026.md`.
+covalent bond transport.
 
 ---
 
@@ -764,9 +800,9 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ---
 
-## Test Coverage Analysis (llvm-cov, Mar 14, 2026)
+## Test Coverage Analysis (llvm-cov, Mar 19, 2026)
 
-**Overall**: 78% line coverage (5,162+ tests, 0 failures)
+**Overall**: 78.36% line coverage (5,340+ tests, 0 failures, 25 doc-tests, 4 proptests)
 
 ### Coverage Distribution
 
@@ -850,7 +886,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (5,162+ tests)
+# Test (6,169 tests — fully concurrent, zero sleeps)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -872,21 +908,22 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (concurrency evolution + deep debt + hw-learn wiring complete)
+**Status**: Production Ready (v2.54 — concurrency evolution + deep debt + coverage push)
 **AI Bridge**: Squirrel -> Songbird -> Cloud/Local AI (validated)
 **Continuous Systems**: ContinuousExecutor (60Hz tick), push events, sensor routing
 **XR/VR**: StereoRenderAdapter, MotionCaptureAdapter, HapticPipeline
 **Surgical Domain**: SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams
 **Plasmodium**: HTTP JSON-RPC collective (runtime port, SSH deprecated)
-**Neural API**: 280+ translations, proxy_http, capability.call, compute.hardware.*
+**Neural API**: 285+ translations, proxy_http, capability.call, compute.hardware.*
 **NAT Traversal**: 4-tier strategy orchestrator (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring, auto-resurrection
 **Genetic Model**: Evolved (Mitochondrial + Nuclear, Blake3-Lineage-KDF enrollment)
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A++ (Pure Rust, fully concurrent, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, table-driven routing)
-**Tests**: 5,162+ passing fully concurrent (78% line, 80% function via llvm-cov)
+**Tests**: 6,169 passing, fully concurrent, zero sleeps/serial (83.62% line via llvm-cov)
 **Clippy**: PASS (0 warnings, `-D warnings`) | **Format**: PASS (`cargo fmt --check` clean)
-**Docs**: Full coverage (0 missing_docs warnings across 8 crates)
-**Unsafe Code**: 0 (production + tests)
-**External C deps**: 0 (nix→rustix, sysinfo→/proc, libc removed, pure Rust)
+**Docs**: Full coverage (0 missing_docs warnings across all crates)
+**Unsafe Code**: 0 production (2 test-only in env_helpers.rs with `#[allow]` + safety docs)
+**External C deps**: 0 (nix→rustix, sysinfo→/proc, libc removed, sudo ip→rtnetlink, pure Rust)
+**Bypasses**: 0 active (all 6 evolved)

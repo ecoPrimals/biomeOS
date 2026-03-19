@@ -311,6 +311,7 @@ impl SporeVerifier {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::io::Write;
@@ -532,5 +533,61 @@ node_id = "simple-node-789"
         let status = VerificationStatus::Fresh;
         let cloned = status.clone();
         assert_eq!(status, cloned);
+    }
+
+    #[test]
+    fn test_verifier_from_nucleus() {
+        let temp_dir = TempDir::new().unwrap();
+        let nucleus_path = temp_dir.path();
+        std::fs::create_dir_all(nucleus_path.join("tower")).unwrap();
+        std::fs::create_dir_all(nucleus_path.join("primals")).unwrap();
+        std::fs::write(nucleus_path.join("tower").join("tower"), b"tower").unwrap();
+
+        let result = SporeVerifier::from_nucleus(nucleus_path);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_spore_minimal() {
+        let temp_dir = TempDir::new().unwrap();
+        let nucleus_path = temp_dir.path();
+        std::fs::create_dir_all(nucleus_path.join("tower")).unwrap();
+        std::fs::create_dir_all(nucleus_path.join("primals")).unwrap();
+        let tower_bytes = b"tower_binary";
+        std::fs::write(nucleus_path.join("tower").join("tower"), tower_bytes).unwrap();
+
+        let spore_path = temp_dir.path().join("spore");
+        std::fs::create_dir_all(spore_path.join("bin")).unwrap();
+        std::fs::create_dir_all(spore_path.join("primals")).unwrap();
+        std::fs::write(
+            spore_path.join("tower.toml"),
+            r#"[tower]
+NODE_ID = "verify-test-node"
+"#,
+        )
+        .unwrap();
+        std::fs::write(spore_path.join(".family.seed"), b"seed").unwrap();
+
+        std::fs::write(spore_path.join("bin").join("tower"), tower_bytes).unwrap();
+
+        let verifier = SporeVerifier::from_nucleus(nucleus_path).unwrap();
+        let report = verifier.verify_spore(&spore_path).unwrap();
+        assert_eq!(report.node_id, "verify-test-node");
+        assert!(
+            report.overall_status == VerificationStatus::Fresh
+                || report.overall_status == VerificationStatus::Stale
+        );
+    }
+
+    #[test]
+    fn test_extract_node_id_missing_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let spore_path = temp_dir.path();
+        std::fs::create_dir_all(spore_path).unwrap();
+        let result = SporeVerifier::from_nucleus(spore_path).unwrap();
+        let spore_no_tower = temp_dir.path().join("empty");
+        std::fs::create_dir_all(&spore_no_tower).unwrap();
+        let report_result = result.verify_spore(&spore_no_tower);
+        assert!(report_result.is_err());
     }
 }

@@ -55,12 +55,28 @@ use std::sync::Arc;
 pub struct PrimalId(Arc<str>);
 
 impl PrimalId {
-    /// Create a new primal ID with validation
+    /// Create a new primal ID with validation.
     ///
     /// # Errors
     ///
     /// Returns `IdError::Empty` if the ID is empty.
     /// Returns `IdError::InvalidCharacters` if the ID contains invalid characters.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use biomeos_types::PrimalId;
+    /// let id = PrimalId::new("beardog-local").unwrap();
+    /// assert_eq!(id.as_str(), "beardog-local");
+    /// ```
+    ///
+    /// Invalid IDs are rejected:
+    ///
+    /// ```
+    /// use biomeos_types::PrimalId;
+    /// assert!(PrimalId::new("").is_err());
+    /// assert!(PrimalId::new("has spaces").is_err());
+    /// ```
     pub fn new(id: impl AsRef<str>) -> Result<Self, IdError> {
         let id = id.as_ref();
 
@@ -153,7 +169,15 @@ impl AsRef<str> for PrimalId {
 pub struct FamilyId(Arc<str>);
 
 impl FamilyId {
-    /// Create a new family ID
+    /// Create a new family ID.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use biomeos_types::FamilyId;
+    /// let family = FamilyId::new("iidn");
+    /// assert_eq!(family.as_str(), "iidn");
+    /// ```
     pub fn new(id: impl AsRef<str>) -> Self {
         Self(Arc::from(id.as_ref()))
     }

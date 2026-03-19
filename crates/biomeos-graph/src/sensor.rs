@@ -270,7 +270,7 @@ mod tests {
         assert_eq!(by_source.get("gamepad"), Some(&5));
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_sensor_collector_drain() {
         let bus = SensorEventBus::new(100);
         let rx = bus.subscribe();
@@ -286,13 +286,13 @@ mod tests {
             .await;
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::advance(std::time::Duration::from_millis(10)).await;
 
         let events = collector.drain();
         assert_eq!(events.len(), 3);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_sensor_collector_filter() {
         let bus = SensorEventBus::new(100);
         let rx = bus.subscribe();
@@ -320,14 +320,14 @@ mod tests {
         })
         .await;
 
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::advance(std::time::Duration::from_millis(10)).await;
 
         let events = collector.drain();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].source, SensorSource::Mouse);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_sensor_collector_drain_as_json() {
         let bus = SensorEventBus::new(100);
         let rx = bus.subscribe();
@@ -341,7 +341,7 @@ mod tests {
         })
         .await;
 
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::advance(std::time::Duration::from_millis(10)).await;
 
         let json = collector.drain_as_json();
         assert_eq!(json["count"], 1);

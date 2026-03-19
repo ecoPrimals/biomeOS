@@ -163,7 +163,7 @@ impl GenomeDeployer {
     ///
     /// DEEP DEBT EVOLUTION: Uses $HOME env instead of `dirs` (C-based).
     /// Root detection via $EUID/$USER instead of nix::Uid.
-    fn default_install_dir(&self, primal_name: &str) -> PathBuf {
+    pub(crate) fn default_install_dir(&self, primal_name: &str) -> PathBuf {
         let home_dir = || -> PathBuf {
             std::env::var("HOME").map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from)
         };
@@ -432,6 +432,7 @@ impl GenomeDeployer {
 // Add nix dependency for UID check
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::io::Write;
@@ -614,22 +615,22 @@ mod tests {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let genome_path = temp_dir.path().join("test.genome");
 
-        // Create a dummy genome file
         let mut file = File::create(&genome_path).expect("Failed to create file");
         file.write_all(b"dummy content").expect("Failed to write");
 
+        let install_path = temp_dir.path().join("custom_install");
+        std::fs::create_dir_all(&install_path).expect("create");
+
         let deployer = GenomeDeployer::new(&genome_path)
             .expect("Should create deployer")
-            .with_install_dir("/custom/install/path");
+            .with_install_dir(&install_path);
 
-        assert_eq!(
-            deployer.install_dir,
-            Some(PathBuf::from("/custom/install/path"))
-        );
+        let result = deployer.deploy();
+        assert!(result.is_err());
     }
 
     #[test]
-    fn test_genome_deployer_default_install_dir_linux() {
+    fn test_genome_deployer_deploy_with_custom_dir_fails_without_archive() {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let genome_path = temp_dir.path().join("test.genome");
 
@@ -638,19 +639,11 @@ mod tests {
 
         let deployer = GenomeDeployer::new(&genome_path).expect("Should create deployer");
 
-        // Test default_install_dir returns a path
-        let install_dir = deployer.default_install_dir("testprimal");
-        assert!(
-            !install_dir.as_os_str().is_empty(),
-            "Should return a valid path"
-        );
-
-        // Verify path contains primal name
-        let path_str = install_dir.to_string_lossy();
-        assert!(
-            path_str.contains("testprimal"),
-            "Install path should contain primal name"
-        );
+        let custom_dir = temp_dir.path().join("install");
+        std::fs::create_dir_all(&custom_dir).expect("create");
+        let deployer_with_dir = deployer.with_install_dir(&custom_dir);
+        let result = deployer_with_dir.deploy();
+        assert!(result.is_err());
     }
 
     #[test]

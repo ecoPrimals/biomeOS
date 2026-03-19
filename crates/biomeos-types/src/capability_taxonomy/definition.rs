@@ -455,7 +455,7 @@ impl CapabilityTaxonomy {
             "hardware_security" | "hardwaresecurity" | "hsm" => Some(Self::HardwareSecurity),
             "secure_tunneling" | "securetunneling" => Some(Self::SecureTunneling),
 
-            "discovery" | "network" => Some(Self::Discovery),
+            "discovery" | "network" | "http_bridge" => Some(Self::Discovery),
             "p2p_federation" | "p2pfederation" | "federation" => Some(Self::P2PFederation),
             "tunneling" => Some(Self::Tunneling),
             "routing" => Some(Self::Routing),

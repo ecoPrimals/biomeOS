@@ -628,4 +628,53 @@ mod tests {
         );
         assert!(result.unwrap().contains("beardog-testfamily123.sock"));
     }
+
+    #[tokio::test]
+    async fn test_run_fails_when_family_seed_empty() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let family_seed = temp.path().join(".family.seed");
+        std::fs::write(&family_seed, "").expect("write empty family seed");
+        let lineage_seed = temp.path().join(".lineage.seed");
+
+        let args = EnrollArgs {
+            family_id: "test".to_string(),
+            node_id: "node".to_string(),
+            device_id: Some("device-xyz".to_string()),
+            family_seed,
+            lineage_seed,
+            beardog_socket: None,
+            beardog_socket_dir: None,
+            force: false,
+        };
+        let result = run(args).await;
+        assert!(
+            result.is_err(),
+            "run with empty family seed should fail at BearDog or derivation"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_when_beardog_socket_connection_refused() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let family_seed = temp.path().join(".family.seed");
+        std::fs::write(&family_seed, "valid-seed-content").expect("write family seed");
+        let lineage_seed = temp.path().join(".lineage.seed");
+        let nonexistent_socket = temp.path().join("nonexistent.sock");
+
+        let args = EnrollArgs {
+            family_id: "test".to_string(),
+            node_id: "node".to_string(),
+            device_id: Some("device-xyz".to_string()),
+            family_seed,
+            lineage_seed,
+            beardog_socket: Some(nonexistent_socket.to_string_lossy().to_string()),
+            beardog_socket_dir: None,
+            force: false,
+        };
+        let result = run(args).await;
+        assert!(
+            result.is_err(),
+            "run with nonexistent BearDog socket should fail"
+        );
+    }
 }

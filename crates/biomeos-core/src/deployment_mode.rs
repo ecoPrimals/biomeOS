@@ -444,6 +444,7 @@ impl HostOS {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_test_utils::{remove_test_env, set_test_env};
@@ -682,5 +683,57 @@ mod tests {
             let restored: IsolationLevel = serde_json::from_str(&json).expect("deserialize");
             assert_eq!(level, restored);
         }
+    }
+
+    #[test]
+    #[serial]
+    fn test_socket_prefix_livespore_without_xdg() {
+        remove_test_env("XDG_RUNTIME_DIR");
+        remove_test_env("UID");
+        let mode = DeploymentMode::LiveSpore {
+            root_partition: PathBuf::from("/"),
+            boot_partition: PathBuf::from("/boot"),
+            installed_version: "1.0".to_string(),
+        };
+        let prefix = mode.socket_prefix();
+        assert!(prefix.to_string_lossy().contains("biomeos"));
+        assert!(
+            prefix.to_string_lossy().contains("/run/user/")
+                || prefix.to_string_lossy().contains("biomeos")
+        );
+    }
+
+    #[test]
+    fn test_from_env_string_coldspore_livespore_variants() {
+        let c1 = DeploymentMode::from_env_string("coldspore").unwrap();
+        assert!(matches!(c1, DeploymentMode::ColdSpore { .. }));
+        let c2 = DeploymentMode::from_env_string("livespore").unwrap();
+        assert!(matches!(c2, DeploymentMode::LiveSpore { .. }));
+    }
+
+    #[test]
+    fn test_from_env_string_biomeos_version() {
+        set_test_env("BIOMEOS_VERSION", "9.9.9");
+        let mode = DeploymentMode::from_env_string("live").unwrap();
+        remove_test_env("BIOMEOS_VERSION");
+        match mode {
+            DeploymentMode::LiveSpore {
+                installed_version, ..
+            } => {
+                assert_eq!(installed_version, "9.9.9");
+            }
+            _ => panic!("expected LiveSpore"),
+        }
+    }
+
+    #[test]
+    fn test_deployment_mode_serde_coldspore() {
+        let mode = DeploymentMode::ColdSpore {
+            media_path: PathBuf::from("/media/usb"),
+            persistence: false,
+            host_os: HostOS::Unknown,
+        };
+        let json = serde_json::to_string(&mode).expect("serialize");
+        let _: DeploymentMode = serde_json::from_str(&json).expect("deserialize");
     }
 }

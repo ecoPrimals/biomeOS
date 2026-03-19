@@ -495,11 +495,12 @@ async fn handle_cleanup_stale() -> Result<()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_spore::logs::LogFile;
     use chrono::Utc;
+    use std::path::PathBuf;
 
     #[test]
     fn test_filter_sessions_no_filter() {
@@ -627,5 +628,270 @@ mod tests {
         };
         let result = run(args).await;
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_format_fossil_detail_encrypted() {
+        let fossil = FossilIndexEntry {
+            node_id: "node-enc".into(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::Manual,
+            fossil_path: PathBuf::from("/tmp/encrypted-fossil"),
+            issue_count: 0,
+            encrypted: true,
+        };
+        let lines = format_fossil_detail(&fossil);
+        assert!(lines.iter().any(|l| l.contains("Encrypted: Yes")));
+        assert!(lines.iter().any(|l| l.contains("node-enc")));
+    }
+
+    #[test]
+    fn test_compute_cleanup_plan_with_fossils() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let fossil_path = temp.path().join("fossil1");
+        std::fs::write(&fossil_path, b"fake fossil data").expect("write");
+
+        let fossils = vec![FossilIndexEntry {
+            node_id: "node-1".into(),
+            session_started: Utc::now() - chrono::Duration::days(60),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: fossil_path.clone(),
+            issue_count: 0,
+            encrypted: false,
+        }];
+        let cutoff = Utc::now() - chrono::Duration::days(30);
+        let plan = compute_cleanup_plan(&fossils, cutoff);
+        assert_eq!(plan.count, 1);
+        assert_eq!(plan.to_remove.len(), 1);
+        assert!(plan.freed_bytes > 0);
+    }
+
+    #[test]
+    fn test_compute_cleanup_plan_fossil_after_cutoff() {
+        let fossils = vec![FossilIndexEntry {
+            node_id: "node-recent".into(),
+            session_started: Utc::now() - chrono::Duration::days(5),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: PathBuf::from("/tmp/recent"),
+            issue_count: 0,
+            encrypted: false,
+        }];
+        let cutoff = Utc::now() - chrono::Duration::days(30);
+        let plan = compute_cleanup_plan(&fossils, cutoff);
+        assert_eq!(plan.count, 0);
+        assert!(plan.to_remove.is_empty());
+    }
+
+    #[test]
+    fn test_cleanup_plan_default() {
+        let plan = CleanupPlan::default();
+        assert!(plan.to_remove.is_empty());
+        assert_eq!(plan.freed_bytes, 0);
+        assert_eq!(plan.count, 0);
+    }
+
+    #[test]
+    fn test_cleanup_plan_debug() {
+        let plan = CleanupPlan {
+            to_remove: vec![PathBuf::from("/tmp/a")],
+            freed_bytes: 1024,
+            count: 1,
+        };
+        let _ = format!("{plan:?}");
+    }
+
+    #[test]
+    fn test_format_session_display_no_logs_no_pids() {
+        let session = ActiveLogSession::new("node-minimal".into(), "deploy-1".into());
+        let lines = format_session_display(&session);
+        assert!(lines.iter().any(|l| l.contains("node-minimal")));
+        assert!(!lines.iter().any(|l| l.contains("PIDs:")));
+        assert!(!lines.iter().any(|l| l.contains("Logs:")));
+    }
+
+    #[test]
+    fn test_scan_old_logs_existing_dir_with_logs() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        std::fs::write(temp.path().join("a.log"), b"log").expect("write");
+        std::fs::write(temp.path().join("b.txt"), b"not log").expect("write");
+        std::fs::write(temp.path().join("c.log"), b"log2").expect("write");
+
+        let result = scan_old_logs(temp.path());
+        assert!(result.is_ok());
+        let logs = result.unwrap();
+        assert_eq!(logs.len(), 2);
+    }
+
+    #[test]
+    fn test_fossil_args_debug() {
+        let args = FossilArgs {
+            action: FossilAction::Active { node: None },
+        };
+        let _ = format!("{args:?}");
+    }
+
+    #[test]
+    fn test_fossil_action_variants_debug() {
+        let _ = format!(
+            "{:?}",
+            FossilAction::Fossil {
+                node: Some("n".into()),
+                limit: 5,
+                show: Some(1),
+            }
+        );
+        let _ = format!(
+            "{:?}",
+            FossilAction::Archive {
+                node_id: "n".into()
+            }
+        );
+        let _ = format!(
+            "{:?}",
+            FossilAction::Clean {
+                older_than: 30,
+                dry_run: true,
+            }
+        );
+        let _ = format!(
+            "{:?}",
+            FossilAction::Migrate {
+                from: PathBuf::from("/tmp"),
+                dry_run: false,
+            }
+        );
+        let _ = format!("{:?}", FossilAction::CleanupStale);
+    }
+
+    #[tokio::test]
+    async fn test_run_active() {
+        let args = FossilArgs {
+            action: FossilAction::Active { node: None },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_fossil_with_show_invalid_index() {
+        let args = FossilArgs {
+            action: FossilAction::Fossil {
+                node: None,
+                limit: 10,
+                show: Some(999),
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires /var/biomeos writable for LogManager - run with --ignored"]
+    async fn test_run_migrate_empty_dir() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let args = FossilArgs {
+            action: FossilAction::Migrate {
+                from: temp.path().to_path_buf(),
+                dry_run: true,
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_archive_no_session() {
+        let args = FossilArgs {
+            action: FossilAction::Archive {
+                node_id: "nonexistent-node-xyz-123".to_string(),
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("No active session")
+        );
+    }
+
+    #[test]
+    fn test_compute_cleanup_plan_fossil_path_nonexistent() {
+        let fossils = vec![FossilIndexEntry {
+            node_id: "node-old".into(),
+            session_started: Utc::now() - chrono::Duration::days(60),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: PathBuf::from("/nonexistent/path/12345"),
+            issue_count: 0,
+            encrypted: false,
+        }];
+        let cutoff = Utc::now() - chrono::Duration::days(30);
+        let plan = compute_cleanup_plan(&fossils, cutoff);
+        assert_eq!(plan.count, 0, "nonexistent path is not added to to_remove");
+        assert_eq!(plan.freed_bytes, 0);
+    }
+
+    #[test]
+    fn test_format_session_display_multiple_logs() {
+        let mut session = ActiveLogSession::new("node-multi".into(), "deploy-1".into());
+        session.add_process(1111);
+        session.add_log_file(LogFile {
+            primal: "tower".into(),
+            path: PathBuf::from("/tmp/tower.log"),
+            pid: Some(1111),
+            size_bytes: 2048,
+            last_modified: Utc::now(),
+        });
+        session.add_log_file(LogFile {
+            primal: "beardog".into(),
+            path: PathBuf::from("/tmp/beardog.log"),
+            pid: None,
+            size_bytes: 512,
+            last_modified: Utc::now(),
+        });
+        let lines = format_session_display(&session);
+        assert!(lines.iter().any(|l| l.contains("tower")));
+        assert!(lines.iter().any(|l| l.contains("beardog")));
+        assert!(lines.iter().any(|l| l.contains("closed")));
+    }
+
+    #[test]
+    fn test_format_fossil_detail_all_archival_reasons() {
+        for reason in [
+            ArchivalReason::GracefulShutdown,
+            ArchivalReason::Manual,
+            ArchivalReason::AutomaticRotation,
+        ] {
+            let fossil = FossilIndexEntry {
+                node_id: "node".into(),
+                session_started: Utc::now(),
+                archival_reason: reason,
+                fossil_path: PathBuf::from("/tmp/f"),
+                issue_count: 0,
+                encrypted: false,
+            };
+            let lines = format_fossil_detail(&fossil);
+            assert!(lines.iter().any(|l| l.contains("node")));
+            assert!(lines.iter().any(|l| l.contains("Path:")));
+        }
+    }
+
+    #[test]
+    fn test_scan_old_logs_empty_dir() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let result = scan_old_logs(temp.path());
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_scan_old_logs_ignores_non_log() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        std::fs::write(temp.path().join("a.txt"), b"x").expect("write");
+        std::fs::write(temp.path().join("b.yaml"), b"y").expect("write");
+        let result = scan_old_logs(temp.path());
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
     }
 }

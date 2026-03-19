@@ -110,11 +110,30 @@ impl HealthCheck {
         })
     }
 
+    /// Default poll interval between health checks (1s).
+    pub const DEFAULT_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
+
     /// Wait for VM to become healthy (with timeout)
     pub async fn wait_for_healthy<P: AsRef<Path>>(
         vm_name: &str,
         serial_log: P,
         timeout: std::time::Duration,
+    ) -> Result<VmHealth> {
+        Self::wait_for_healthy_with_poll_interval(
+            vm_name,
+            serial_log,
+            timeout,
+            Self::DEFAULT_POLL_INTERVAL,
+        )
+        .await
+    }
+
+    /// Wait for VM to become healthy (with timeout and configurable poll interval)
+    pub async fn wait_for_healthy_with_poll_interval<P: AsRef<Path>>(
+        vm_name: &str,
+        serial_log: P,
+        timeout: std::time::Duration,
+        poll_interval: std::time::Duration,
     ) -> Result<VmHealth> {
         let start = std::time::Instant::now();
 
@@ -140,7 +159,7 @@ impl HealthCheck {
                             message: "Health check timed out".to_string(),
                         });
                     }
-                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                    tokio::time::sleep(poll_interval).await;
                 }
             }
         }
@@ -148,6 +167,7 @@ impl HealthCheck {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::time::UNIX_EPOCH;
@@ -235,5 +255,110 @@ mod tests {
         let health = result.expect("check_vm should succeed");
         assert_eq!(health.status, HealthStatus::Unhealthy);
         assert!(health.error.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_check_vm_degraded() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "Booting...\n").expect("write log");
+        let result = HealthCheck::check_vm("degraded-vm", &log_path).await;
+        let health = result.expect("check_vm should succeed");
+        assert_eq!(health.status, HealthStatus::Degraded);
+        assert!(!health.boot_completed);
+    }
+
+    #[tokio::test]
+    async fn test_check_vm_spawning_shell() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "Spawning shell\n").expect("write log");
+        let result = HealthCheck::check_vm("shell-vm", &log_path).await;
+        let health = result.expect("check_vm should succeed");
+        assert_eq!(health.status, HealthStatus::Healthy);
+        assert!(health.boot_completed);
+    }
+
+    #[tokio::test]
+    async fn test_check_vm_busybox() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "BusyBox v1.0\n").expect("write log");
+        let result = HealthCheck::check_vm("busybox-vm", &log_path).await;
+        let health = result.expect("check_vm should succeed");
+        assert_eq!(health.status, HealthStatus::Healthy);
+        assert!(health.boot_completed);
+    }
+
+    #[tokio::test]
+    async fn test_check_vm_fatal_error() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "FATAL: Something went wrong\n").expect("write log");
+        let result = HealthCheck::check_vm("fatal-vm", &log_path).await;
+        let health = result.expect("check_vm should succeed");
+        assert_eq!(health.status, HealthStatus::Unhealthy);
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_healthy_success() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "BiomeOS Init Complete\n").expect("write log");
+        let result = HealthCheck::wait_for_healthy(
+            "healthy-vm",
+            &log_path,
+            std::time::Duration::from_secs(5),
+        )
+        .await;
+        let health = result.expect("wait_for_healthy should succeed");
+        assert_eq!(health.status, HealthStatus::Healthy);
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_healthy_unhealthy_fails() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "Kernel panic\n").expect("write log");
+        let result =
+            HealthCheck::wait_for_healthy("panic-vm", &log_path, std::time::Duration::from_secs(2))
+                .await;
+        let err = result.expect_err("unhealthy VM should fail");
+        assert!(err.to_string().contains("panic"));
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_healthy_timeout() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "Booting...\n").expect("write log");
+        let result = HealthCheck::wait_for_healthy_with_poll_interval(
+            "slow-vm",
+            &log_path,
+            std::time::Duration::from_millis(100),
+            std::time::Duration::ZERO,
+        )
+        .await;
+        let err = result.expect_err("degraded VM should timeout");
+        assert!(err.to_string().contains("timed out"));
+    }
+
+    #[test]
+    fn test_health_status_all_variants() {
+        let _ = format!("{:?}", HealthStatus::Degraded);
+        let _ = format!("{:?}", HealthStatus::Unknown);
+    }
+
+    #[test]
+    fn test_vm_health_with_error() {
+        let health = VmHealth {
+            vm_name: "err-vm".to_string(),
+            status: HealthStatus::Unhealthy,
+            last_message_time: None,
+            boot_completed: false,
+            error: Some("Kernel panic".to_string()),
+        };
+        let json = serde_json::to_string(&health).expect("serialize");
+        assert!(json.contains("Kernel panic"));
     }
 }

@@ -493,4 +493,29 @@ mod tests {
         assert!(display.contains("member=false"));
         assert!(display.contains("unknown"));
     }
+
+    #[tokio::test]
+    async fn test_beardog_is_available_unix_nonexistent() {
+        let client =
+            BearDogClient::with_endpoint("unix:///nonexistent/beardog/socket.sock".to_string())
+                .unwrap();
+        assert!(!client.is_available().await);
+    }
+
+    #[tokio::test]
+    async fn test_beardog_health_check_unix_nonexistent() {
+        let client =
+            BearDogClient::with_endpoint("unix:///nonexistent/socket.sock".to_string()).unwrap();
+        let result = client.health_check().await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_beardog_http_deprecated() {
+        let client = BearDogClient::with_endpoint("http://localhost:9000".to_string()).unwrap();
+        let result = client.health_check().await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("deprecated"));
+    }
 }

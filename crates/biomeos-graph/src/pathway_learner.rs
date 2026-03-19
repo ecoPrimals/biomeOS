@@ -24,11 +24,27 @@
 //! ```
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
 use crate::graph::DeploymentGraph;
 use crate::metrics::{MetricsCollector, NodeMetricsAggregate};
+
+fn serialize_arc_str<S>(s: &Arc<str>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    s.as_ref().serialize(serializer)
+}
+
+fn deserialize_arc_str<'de, D>(deserializer: D) -> Result<Arc<str>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = String::deserialize(deserializer)?;
+    Ok(Arc::from(s))
+}
 
 /// Type of optimization the Pathway Learner can suggest.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -36,19 +52,35 @@ pub enum OptimizationType {
     /// Run two sequential nodes concurrently.
     Parallelize {
         /// First node to run in parallel.
-        node_a: String,
+        #[serde(
+            serialize_with = "serialize_arc_str",
+            deserialize_with = "deserialize_arc_str"
+        )]
+        node_a: Arc<str>,
         /// Second node to run in parallel.
-        node_b: String,
+        #[serde(
+            serialize_with = "serialize_arc_str",
+            deserialize_with = "deserialize_arc_str"
+        )]
+        node_b: Arc<str>,
     },
     /// Pre-warm a primal before graph execution starts.
     Prewarm {
         /// Primal to pre-warm.
-        primal: String,
+        #[serde(
+            serialize_with = "serialize_arc_str",
+            deserialize_with = "deserialize_arc_str"
+        )]
+        primal: Arc<str>,
     },
     /// Batch operations to the same primal.
     Batch {
         /// Target primal.
-        primal: String,
+        #[serde(
+            serialize_with = "serialize_arc_str",
+            deserialize_with = "deserialize_arc_str"
+        )]
+        primal: Arc<str>,
         /// Nodes that can be batched.
         nodes: Vec<String>,
     },
@@ -207,8 +239,8 @@ impl PathwayLearner {
                 if speedup > 1.1 {
                     suggestions.push(OptimizationSuggestion {
                         optimization: OptimizationType::Parallelize {
-                            node_a: a_id.to_string(),
-                            node_b: b_id.to_string(),
+                            node_a: Arc::from(a_id),
+                            node_b: Arc::from(b_id),
                         },
                         estimated_speedup: speedup,
                         confidence: 0.8,
@@ -248,7 +280,7 @@ impl PathwayLearner {
             .filter(|(_, lat)| **lat > 50.0)
             .map(|(primal, lat)| OptimizationSuggestion {
                 optimization: OptimizationType::Prewarm {
-                    primal: primal.clone(),
+                    primal: Arc::from(primal.as_str()),
                 },
                 estimated_speedup: 1.0 + (lat / 1000.0).min(0.5),
                 confidence: 0.6,
@@ -393,7 +425,7 @@ impl PathwayLearner {
 
                 OptimizationSuggestion {
                     optimization: OptimizationType::Batch {
-                        primal: primal.clone(),
+                        primal: Arc::from(primal.as_str()),
                         nodes: nodes.clone(),
                     },
                     estimated_speedup: speedup,
@@ -497,8 +529,8 @@ mod tests {
         let s = &suggestions[0];
         match &s.optimization {
             OptimizationType::Parallelize { node_a, node_b } => {
-                assert_eq!(node_a, "a");
-                assert_eq!(node_b, "b");
+                assert_eq!(node_a.as_ref(), "a");
+                assert_eq!(node_b.as_ref(), "b");
             }
             other => panic!("expected Parallelize, got {other:?}"),
         }
@@ -544,7 +576,7 @@ mod tests {
         assert_eq!(suggestions.len(), 1, "only rhizocrypt has 2+ nodes");
         match &suggestions[0].optimization {
             OptimizationType::Batch { primal, nodes } => {
-                assert_eq!(primal, "rhizocrypt");
+                assert_eq!(primal.as_ref(), "rhizocrypt");
                 assert_eq!(nodes.len(), 2);
             }
             other => panic!("expected Batch, got {other:?}"),
@@ -561,7 +593,7 @@ mod tests {
         let suggestions = PathwayLearner::find_prewarm_candidates(&graph, &metrics);
         assert_eq!(suggestions.len(), 1);
         match &suggestions[0].optimization {
-            OptimizationType::Prewarm { primal } => assert_eq!(primal, "beardog"),
+            OptimizationType::Prewarm { primal } => assert_eq!(primal.as_ref(), "beardog"),
             other => panic!("expected Prewarm, got {other:?}"),
         }
     }
@@ -581,8 +613,8 @@ mod tests {
     fn optimization_suggestion_round_trips_json() {
         let suggestion = OptimizationSuggestion {
             optimization: OptimizationType::Parallelize {
-                node_a: "a".to_string(),
-                node_b: "b".to_string(),
+                node_a: Arc::from("a"),
+                node_b: Arc::from("b"),
             },
             estimated_speedup: 1.6,
             confidence: 0.8,

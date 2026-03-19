@@ -518,15 +518,11 @@ node_id = "test-node-456"
         let seed_path = dir.path().join(".family.seed");
         std::fs::write(&seed_path, [0u8; 64]).expect("write seed");
 
-        // SAFETY: test isolation - single-threaded test
-        unsafe {
-            std::env::set_var("BIOMEOS_SECURITY_PROVIDER", "nonexistent-beardog-xyz");
-        }
+        let _guard = biomeos_test_utils::TestEnvGuard::set(
+            "BIOMEOS_SECURITY_PROVIDER",
+            "nonexistent-beardog-xyz",
+        );
         let result = verify_lineage(&dir.path().to_path_buf(), true).await;
-        // SAFETY: test isolation - single-threaded test
-        unsafe {
-            std::env::remove_var("BIOMEOS_SECURITY_PROVIDER");
-        }
 
         let v = result.expect("verify_lineage should succeed");
         assert!(v.valid);

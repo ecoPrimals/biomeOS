@@ -37,8 +37,9 @@
 //! ```
 
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::RwLock;
+use tokio::time::Instant;
 
 /// Error type for retry logic operations
 #[derive(Debug, thiserror::Error)]
@@ -588,7 +589,7 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Circuit"));
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_circuit_breaker_execute_half_open_recovery() {
         let breaker = CircuitBreaker::new(2, Duration::from_millis(100)).with_success_threshold(1);
 
@@ -600,7 +601,7 @@ mod tests {
 
         assert!(breaker.is_open().await);
 
-        tokio::time::sleep(Duration::from_millis(150)).await;
+        tokio::time::advance(Duration::from_millis(150)).await;
 
         let result: Result<&str, anyhow::Error> =
             breaker.execute(|| async { Ok("recovered") }).await;
@@ -610,7 +611,7 @@ mod tests {
         assert_eq!(state, CircuitState::Closed);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_circuit_breaker_half_open_recovery() {
         let breaker = CircuitBreaker::new(2, Duration::from_millis(100)).with_success_threshold(2);
 
@@ -623,8 +624,7 @@ mod tests {
 
         assert!(breaker.is_open().await);
 
-        // Wait for timeout
-        tokio::time::sleep(Duration::from_millis(150)).await;
+        tokio::time::advance(Duration::from_millis(150)).await;
 
         // First success in half-open
         let _ = breaker

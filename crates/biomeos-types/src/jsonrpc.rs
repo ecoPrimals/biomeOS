@@ -77,6 +77,15 @@ impl JsonRpcRequest {
     }
 
     /// Create a new request with an auto-incrementing id.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use biomeos_types::JsonRpcRequest;
+    /// let req = JsonRpcRequest::new("method", serde_json::json!({}));
+    /// assert_eq!(req.method.as_ref(), "method");
+    /// assert!(req.id.is_some());
+    /// ```
     pub fn new(method: impl AsRef<str>, params: serde_json::Value) -> Self {
         static REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let id = REQUEST_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -116,6 +125,16 @@ pub struct JsonRpcResponse {
 
 impl JsonRpcResponse {
     /// Build a success response for the given request id.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use biomeos_types::JsonRpcResponse;
+    /// let resp = JsonRpcResponse::success(serde_json::json!(1), serde_json::json!({"ok": true}));
+    /// assert!(resp.result.is_some());
+    /// assert!(resp.error.is_none());
+    /// assert_eq!(resp.id, serde_json::json!(1));
+    /// ```
     pub fn success(id: serde_json::Value, result: serde_json::Value) -> Self {
         Self {
             jsonrpc: JSONRPC_VERSION.to_owned(),
@@ -126,6 +145,17 @@ impl JsonRpcResponse {
     }
 
     /// Build an error response for the given request id.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use biomeos_types::{JsonRpcError, JsonRpcResponse};
+    /// let err = JsonRpcError::method_not_found();
+    /// let resp = JsonRpcResponse::error(serde_json::json!(1), err);
+    /// assert!(resp.result.is_none());
+    /// assert!(resp.error.is_some());
+    /// assert_eq!(resp.error.as_ref().unwrap().code, -32601);
+    /// ```
     pub fn error(id: serde_json::Value, error: JsonRpcError) -> Self {
         Self {
             jsonrpc: JSONRPC_VERSION.to_owned(),

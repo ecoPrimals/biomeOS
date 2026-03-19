@@ -380,6 +380,7 @@ impl PrimalRegistry {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -562,5 +563,151 @@ mod tests {
         // Test non-matches
         assert!(!PrimalRegistry::capability_matches("storage", "encryption"));
         assert!(!PrimalRegistry::capability_matches("random", "discovery"));
+    }
+
+    #[tokio::test]
+    async fn test_scan_local_nonexistent_dir() {
+        let mut registry = PrimalRegistry::new("/nonexistent/path/12345");
+        let result = registry.scan_local().await;
+        assert!(result.is_ok());
+        assert!(registry.list_primals().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_deploy_to_target_not_found() {
+        let registry = PrimalRegistry::new("/tmp");
+        let result = registry
+            .deploy_to_target("nonexistent-primal", None, "/tmp/target")
+            .await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_deploy_to_target_version_not_found() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+        let bin_path = temp_dir.path().join("testbin");
+        std::fs::write(&bin_path, b"binary").expect("write");
+        let mut registry = PrimalRegistry::new(temp_dir.path());
+        registry.scan_local().await.expect("scan");
+        let result = registry
+            .deploy_to_target(
+                "testbin",
+                Some("2.0.0"),
+                temp_dir.path().join("target").to_str().unwrap(),
+            )
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_binary_location_serde() {
+        let local = BinaryLocation::Local(PathBuf::from("/tmp/beardog"));
+        let json = serde_json::to_string(&local).expect("serialize");
+        let _: BinaryLocation = serde_json::from_str(&json).expect("deserialize");
+
+        let github = BinaryLocation::GitHub {
+            org: "eco".to_string(),
+            repo: "beardog".to_string(),
+            tag: "v1.0".to_string(),
+            asset: "beardog-linux".to_string(),
+        };
+        let json = serde_json::to_string(&github).expect("serialize");
+        let _: BinaryLocation = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[tokio::test]
+    async fn test_scan_local_with_binaries() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+        let bin_path = temp_dir.path().join("test-primal");
+        std::fs::write(&bin_path, b"#!/bin/sh\necho test").expect("write");
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&bin_path).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&bin_path, perms).unwrap();
+        }
+
+        let mut registry = PrimalRegistry::new(temp_dir.path());
+        let result = registry.scan_local().await;
+        assert!(result.is_ok());
+        let primals = registry.list_primals();
+        assert!(!primals.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_deploy_to_target_local_success() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+        let bin_path = temp_dir.path().join("deployable");
+        std::fs::write(&bin_path, b"binary").expect("write");
+
+        let mut registry = PrimalRegistry::new(temp_dir.path());
+        registry.scan_local().await.expect("scan");
+
+        let target = temp_dir.path().join("target");
+        std::fs::create_dir_all(&target).unwrap();
+        let result = registry
+            .deploy_to_target("deployable", None, target.to_str().unwrap())
+            .await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), bin_path);
+    }
+
+    #[tokio::test]
+    async fn test_fetch_from_github() {
+        let mut registry = PrimalRegistry::new("/tmp");
+        let result = registry
+            .fetch_from_github("ecoPrimals", &["beardog", "songbird"])
+            .await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_primal_versions_empty() {
+        let _registry = PrimalRegistry::new("/tmp");
+        let versions = _registry.get_primal_versions("nonexistent");
+        assert!(versions.is_empty());
+    }
+
+    #[test]
+    fn test_get_latest_empty() {
+        let _registry = PrimalRegistry::new("/tmp");
+        assert!(_registry.get_latest("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_primal_name_detection_variants() {
+        assert_eq!(
+            PrimalRegistry::detect_primal_name("biomeos-beardog-bin"),
+            "beardog"
+        );
+        assert_eq!(
+            PrimalRegistry::detect_primal_name("songbird-server"),
+            "songbird"
+        );
+        assert_eq!(
+            PrimalRegistry::detect_primal_name("toadstool-cli"),
+            "toadstool"
+        );
+    }
+
+    #[test]
+    fn test_primal_binary_serde() {
+        let binary = PrimalBinary {
+            name: "test".to_string(),
+            version: "1.0".to_string(),
+            path: BinaryLocation::Local(PathBuf::from("/tmp/test")),
+            checksum: Some("abc123".to_string()),
+            metadata: PrimalMetadata {
+                description: "Test".to_string(),
+                capabilities: vec!["compute".to_string()],
+                default_ports: HashMap::new(),
+                config_hints: HashMap::new(),
+            },
+        };
+        let json = serde_json::to_string(&binary).expect("serialize");
+        let _: PrimalBinary = serde_json::from_str(&json).expect("deserialize");
     }
 }

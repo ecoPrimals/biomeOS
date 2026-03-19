@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: March 18, 2026
+**Updated**: March 19, 2026
 
 ---
 
@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.51) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
+| See evolution handoffs (v2.51–v2.54) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,10 +58,10 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V254_CONCURRENCY_EVOLUTION_COVERAGE_PUSH_HANDOFF | Sleep elimination, concurrency evolution, 6169 tests, 84% coverage, 0 files >1000 LOC | Mar 19, 2026 |
+| BIOMEOS_V253_COORDINATION_EXTRICATION_HANDOFF | Coordination pattern audit for primalSpring, capability-based validation matrix | Mar 18, 2026 |
+| BIOMEOS_V252_CAPABILITY_FIRST_DISCOVERY_HANDOFF | Capability-named sockets, MCP aggregation, Provenance metadata type | Mar 18, 2026 |
 | BIOMEOS_V251_ECOSYSTEM_ABSORPTION_HANDOFF | IPC resilience, proptest, MCP tools, capability cost/deps, 8 springs absorbed | Mar 18, 2026 |
-| BIOMEOS_V250_DEEP_AUDIT_EXECUTION_MODERN_RUST_HANDOFF | Edition 2024 all crates, tarpc sidecar, sovereignty STUN, scyBorg license | Mar 18, 2026 |
-| BIOMEOS_V246_SPRING_ABSORPTION_ECOSYSTEM_ALIGNMENT_HANDOFF | Spring absorption, typed SDK, tarpc 0.37 | Mar 16, 2026 |
-| BIOMEOS_V245_DEEP_DEBT_EXECUTION_COVERAGE_EVOLUTION_HANDOFF | P0-P4 debt fixes, +81 tests, 78% coverage | Mar 16, 2026 |
 
 ### Archived (February 2026)
 
@@ -118,10 +118,10 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (5,268 tests — fully concurrent)
+# Test (6,169 tests — fully concurrent, zero sleeps)
 cargo test --workspace
 
-# Coverage (~83% line)
+# Coverage (~84% line)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -143,7 +143,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 18, 2026**
-**Active: 19 specs, handoffs in wateringHole (v2.43–v2.51), 4 scripts**
+**Documentation current as of March 19, 2026**
+**Active: 19 specs, handoffs in wateringHole (v2.43–v2.54), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 5,268 passing, fully concurrent (~83% line coverage) | Clippy: PASS | Docs: Full coverage**
+**Tests: 6,169 passing, fully concurrent, zero sleeps/serial (~84% line, llvm-cov) | Clippy: PASS | Docs: Full coverage**

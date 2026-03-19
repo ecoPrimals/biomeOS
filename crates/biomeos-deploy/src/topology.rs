@@ -142,6 +142,7 @@ impl Topology {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -185,5 +186,180 @@ mod tests {
         assert!(topology.validate().is_ok());
         assert_eq!(topology.vm_count(), 2);
         assert!(topology.get_vm("vm1").is_some());
+    }
+
+    #[test]
+    fn test_topology_validation_duplicate_vm_name() {
+        let topology = Topology {
+            metadata: TopologyMetadata {
+                name: "test".to_string(),
+                version: "1.0".to_string(),
+                description: "".to_string(),
+            },
+            network: NetworkTopology {
+                bridge_name: "br0".to_string(),
+                bridge_ip: "10.0.0.1/24".to_string(),
+                subnet: "10.0.0.0/24".to_string(),
+            },
+            vms: vec![
+                VmTopology {
+                    name: "vm1".to_string(),
+                    memory: 1024,
+                    cpus: 1,
+                    disk_image: PathBuf::from("a.qcow2"),
+                    ip_address: "10.0.0.10".to_string(),
+                    mac_address: "52:54:00:00:00:01".to_string(),
+                    serial_log: PathBuf::from("a.log"),
+                    options: HashMap::new(),
+                },
+                VmTopology {
+                    name: "vm1".to_string(),
+                    memory: 1024,
+                    cpus: 1,
+                    disk_image: PathBuf::from("b.qcow2"),
+                    ip_address: "10.0.0.11".to_string(),
+                    mac_address: "52:54:00:00:00:02".to_string(),
+                    serial_log: PathBuf::from("b.log"),
+                    options: HashMap::new(),
+                },
+            ],
+        };
+        let err = topology.validate().expect_err("duplicate name should fail");
+        assert!(err.to_string().contains("Duplicate VM name"));
+    }
+
+    #[test]
+    fn test_topology_validation_duplicate_ip() {
+        let topology = Topology {
+            metadata: TopologyMetadata {
+                name: "test".to_string(),
+                version: "1.0".to_string(),
+                description: "".to_string(),
+            },
+            network: NetworkTopology {
+                bridge_name: "br0".to_string(),
+                bridge_ip: "10.0.0.1/24".to_string(),
+                subnet: "10.0.0.0/24".to_string(),
+            },
+            vms: vec![
+                VmTopology {
+                    name: "vm1".to_string(),
+                    memory: 1024,
+                    cpus: 1,
+                    disk_image: PathBuf::from("a.qcow2"),
+                    ip_address: "10.0.0.10".to_string(),
+                    mac_address: "52:54:00:00:00:01".to_string(),
+                    serial_log: PathBuf::from("a.log"),
+                    options: HashMap::new(),
+                },
+                VmTopology {
+                    name: "vm2".to_string(),
+                    memory: 1024,
+                    cpus: 1,
+                    disk_image: PathBuf::from("b.qcow2"),
+                    ip_address: "10.0.0.10".to_string(),
+                    mac_address: "52:54:00:00:00:02".to_string(),
+                    serial_log: PathBuf::from("b.log"),
+                    options: HashMap::new(),
+                },
+            ],
+        };
+        let err = topology.validate().expect_err("duplicate IP should fail");
+        assert!(err.to_string().contains("Duplicate IP address"));
+    }
+
+    #[test]
+    fn test_topology_validation_duplicate_mac() {
+        let topology = Topology {
+            metadata: TopologyMetadata {
+                name: "test".to_string(),
+                version: "1.0".to_string(),
+                description: "".to_string(),
+            },
+            network: NetworkTopology {
+                bridge_name: "br0".to_string(),
+                bridge_ip: "10.0.0.1/24".to_string(),
+                subnet: "10.0.0.0/24".to_string(),
+            },
+            vms: vec![
+                VmTopology {
+                    name: "vm1".to_string(),
+                    memory: 1024,
+                    cpus: 1,
+                    disk_image: PathBuf::from("a.qcow2"),
+                    ip_address: "10.0.0.10".to_string(),
+                    mac_address: "52:54:00:00:00:01".to_string(),
+                    serial_log: PathBuf::from("a.log"),
+                    options: HashMap::new(),
+                },
+                VmTopology {
+                    name: "vm2".to_string(),
+                    memory: 1024,
+                    cpus: 1,
+                    disk_image: PathBuf::from("b.qcow2"),
+                    ip_address: "10.0.0.11".to_string(),
+                    mac_address: "52:54:00:00:00:01".to_string(),
+                    serial_log: PathBuf::from("b.log"),
+                    options: HashMap::new(),
+                },
+            ],
+        };
+        let err = topology.validate().expect_err("duplicate MAC should fail");
+        assert!(err.to_string().contains("Duplicate MAC address"));
+    }
+
+    #[test]
+    fn test_topology_get_vm_missing() {
+        let topology = Topology {
+            metadata: TopologyMetadata {
+                name: "test".to_string(),
+                version: "1.0".to_string(),
+                description: "".to_string(),
+            },
+            network: NetworkTopology {
+                bridge_name: "br0".to_string(),
+                bridge_ip: "10.0.0.1/24".to_string(),
+                subnet: "10.0.0.0/24".to_string(),
+            },
+            vms: vec![],
+        };
+        assert!(topology.get_vm("nonexistent").is_none());
+        assert_eq!(topology.vm_count(), 0);
+    }
+
+    #[test]
+    fn test_topology_from_file() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let yaml = r#"
+metadata:
+  name: file-test
+  version: "1.0"
+  description: From file
+network:
+  bridge_name: br0
+  bridge_ip: 10.0.0.1/24
+  subnet: 10.0.0.0/24
+vms:
+  - name: vm1
+    memory: 2048
+    cpus: 2
+    disk_image: vm1.qcow2
+    ip_address: 10.0.0.10
+    mac_address: 52:54:00:00:00:01
+    serial_log: vm1.log
+"#;
+        let path = temp.path().join("topology.yaml");
+        std::fs::write(&path, yaml).expect("write yaml");
+        let topology = Topology::from_file(&path).expect("load topology");
+        assert_eq!(topology.metadata.name, "file-test");
+        assert_eq!(topology.vm_count(), 1);
+        assert!(topology.get_vm("vm1").is_some());
+    }
+
+    #[test]
+    fn test_topology_metadata_default_description() {
+        let json = r#"{"metadata":{"name":"x","version":"1.0"},"network":{"bridge_name":"br0","bridge_ip":"10.0.0.1/24","subnet":"10.0.0.0/24"},"vms":[]}"#;
+        let topology: Topology = serde_json::from_str(json).expect("parse");
+        assert_eq!(topology.metadata.description, "");
     }
 }

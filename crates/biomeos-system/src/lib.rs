@@ -249,7 +249,7 @@ impl SystemInspector {
     }
 
     /// Determine health from resource metrics
-    fn determine_health_from_metrics(metrics: &ResourceMetrics) -> Health {
+    pub(crate) fn determine_health_from_metrics(metrics: &ResourceMetrics) -> Health {
         let cpu_usage = metrics.cpu_usage.unwrap_or(0.0);
         let memory_usage = metrics.memory_usage.unwrap_or(0.0);
         let disk_usage = metrics.disk_usage.unwrap_or(0.0);
@@ -286,7 +286,7 @@ impl SystemInspector {
     }
 
     /// Calculate uptime percentage
-    fn calculate_uptime_percentage(system_info: &SystemInfo) -> f64 {
+    pub(crate) fn calculate_uptime_percentage(system_info: &SystemInfo) -> f64 {
         // Simplified calculation - in production would track actual downtime
         let uptime_hours = system_info.uptime.as_secs() as f64 / 3600.0;
         if uptime_hours < 24.0 {
@@ -367,6 +367,7 @@ impl SystemMonitor {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_types::HealthSubjectType;
@@ -578,25 +579,36 @@ mod tests {
         // Verify constructor succeeds; interval is used by start_monitoring
     }
 
-    #[tokio::test]
-    #[ignore = "Slow: get_system_health takes ~1.2s; run with --ignored for full coverage"]
+    #[tokio::test(start_paused = true)]
+    #[ignore = "Slow: get_system_health takes ~1.2s real time; run with --ignored for full coverage"]
     async fn test_system_monitor_start_monitoring_receives_reports() {
         let monitor = SystemMonitor::new(std::time::Duration::from_millis(100));
         let report_count = std::sync::Arc::new(AtomicUsize::new(0));
         let count_for_spawn = report_count.clone();
+        let notify = std::sync::Arc::new(tokio::sync::Notify::new());
+        let notify_for_wait = notify.clone();
 
         let monitor_handle = tokio::spawn(async move {
             let count = count_for_spawn;
+            let notify_clone = notify.clone();
             monitor
                 .start_monitoring(move |report| {
                     count.fetch_add(1, Ordering::SeqCst);
+                    notify_clone.notify_one();
                     assert_eq!(report.subject.subject_type, HealthSubjectType::System);
                 })
                 .await
         });
 
-        // get_system_health sleeps ~1.2s (CPU 200ms + network I/O 1s)
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        // Advance time so interval ticks; first get_system_health runs (real time ~1.2s)
+        tokio::time::advance(std::time::Duration::from_secs(3)).await;
+        // Wait for first report (callback runs after get_system_health completes)
+        tokio::time::timeout(
+            std::time::Duration::from_secs(3),
+            notify_for_wait.notified(),
+        )
+        .await
+        .expect("timeout waiting for report");
         monitor_handle.abort();
 
         let received = report_count.load(Ordering::SeqCst);
@@ -606,7 +618,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_system_monitor_start_monitoring_spawns_and_aborts() {
         let monitor = SystemMonitor::new(std::time::Duration::from_secs(60));
         let monitor_handle = tokio::spawn(async move {
@@ -617,7 +629,7 @@ mod tests {
                 .await
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        tokio::time::advance(std::time::Duration::from_millis(50)).await;
         monitor_handle.abort();
         let _ = monitor_handle.await;
         // Verify we can spawn and abort without panicking
@@ -754,5 +766,109 @@ mod tests {
             serde_json::from_str(&json).expect("deserialization should succeed");
         assert!(deserialized.disk_info.is_empty());
         assert!(deserialized.network_info.is_empty());
+    }
+
+    #[test]
+    fn test_determine_health_from_metrics_healthy() {
+        let metrics = ResourceMetrics {
+            cpu_usage: Some(0.5),
+            memory_usage: Some(0.5),
+            disk_usage: Some(0.5),
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Healthy));
+    }
+
+    #[test]
+    fn test_determine_health_from_metrics_critical() {
+        let metrics = ResourceMetrics {
+            cpu_usage: Some(0.96),
+            memory_usage: Some(0.5),
+            disk_usage: Some(0.5),
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Critical { .. }));
+    }
+
+    #[test]
+    fn test_determine_health_from_metrics_degraded() {
+        let metrics = ResourceMetrics {
+            cpu_usage: Some(0.85),
+            memory_usage: Some(0.5),
+            disk_usage: Some(0.5),
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Degraded { .. }));
+    }
+
+    #[test]
+    fn test_calculate_uptime_percentage_short() {
+        let info = SystemInfo {
+            hostname: "test".to_string(),
+            kernel_info: KernelInfo {
+                name: "Linux".to_string(),
+                version: "5.0".to_string(),
+                architecture: "x86_64".to_string(),
+            },
+            cpu_info: CpuInfo {
+                model: "Test".to_string(),
+                cores: 1,
+                architecture: "x86_64".to_string(),
+            },
+            memory_info: MemoryInfo {
+                total_gb: 1.0,
+                used_gb: 0.5,
+                available_gb: 0.5,
+                usage_percent: 0.5,
+            },
+            disk_info: vec![],
+            network_info: vec![],
+            uptime: std::time::Duration::from_secs(3600),
+            load_average: LoadAverage {
+                load_1m: 0.0,
+                load_5m: 0.0,
+                load_15m: 0.0,
+            },
+            timestamp: chrono::Utc::now(),
+        };
+        let pct = SystemInspector::calculate_uptime_percentage(&info);
+        assert!(pct > 0.0 && pct < 1.0);
+    }
+
+    #[test]
+    fn test_calculate_uptime_percentage_long() {
+        let info = SystemInfo {
+            hostname: "test".to_string(),
+            kernel_info: KernelInfo {
+                name: "Linux".to_string(),
+                version: "5.0".to_string(),
+                architecture: "x86_64".to_string(),
+            },
+            cpu_info: CpuInfo {
+                model: "Test".to_string(),
+                cores: 1,
+                architecture: "x86_64".to_string(),
+            },
+            memory_info: MemoryInfo {
+                total_gb: 1.0,
+                used_gb: 0.5,
+                available_gb: 0.5,
+                usage_percent: 0.5,
+            },
+            disk_info: vec![],
+            network_info: vec![],
+            uptime: std::time::Duration::from_secs(86400 * 2),
+            load_average: LoadAverage {
+                load_1m: 0.0,
+                load_5m: 0.0,
+                load_15m: 0.0,
+            },
+            timestamp: chrono::Utc::now(),
+        };
+        let pct = SystemInspector::calculate_uptime_percentage(&info);
+        assert!((pct - 0.999).abs() < 0.01);
     }
 }

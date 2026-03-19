@@ -15,6 +15,8 @@
 //! - **No hardcoding**: Socket paths via SystemPaths
 //! - **Graceful degradation**: Missing primals don't break the system
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use biomeos_core::atomic_client::AtomicClient;
 use serde_json::Value;
@@ -92,12 +94,12 @@ pub type SquirrelClient = PrimalClient;
 /// Dynamic primal connection registry
 ///
 /// DEEP DEBT EVOLUTION (Feb 7, 2026): Replaced fixed-field struct with
-/// `HashMap<String, PrimalClient>`. This allows ANY primal to be discovered
-/// at runtime without code changes. Typed accessors provide backward compatibility.
+/// `HashMap<Arc<str>, PrimalClient>`. This allows ANY primal to be discovered
+/// at runtime without code changes. Arc<str> keys enable zero-copy sharing.
 #[derive(Debug, Clone, Default)]
 pub struct PrimalConnections {
     /// Dynamic registry of discovered primals (name → client)
-    clients: std::collections::HashMap<String, PrimalClient>,
+    clients: std::collections::HashMap<Arc<str>, PrimalClient>,
 }
 
 impl PrimalConnections {
@@ -124,7 +126,7 @@ impl PrimalConnections {
                         let base_name = name.split('-').next().unwrap_or(name);
                         let client = PrimalClient::with_socket(base_name, &path);
                         debug!("   Found socket: {} → {}", base_name, path.display());
-                        connections.clients.insert(base_name.to_string(), client);
+                        connections.clients.insert(Arc::from(base_name), client);
                     }
                 }
             }
@@ -139,7 +141,7 @@ impl PrimalConnections {
                 if !connections.clients.contains_key(*name) {
                     match PrimalClient::discover(name).await {
                         Ok(client) => {
-                            connections.clients.insert(name.to_string(), client);
+                            connections.clients.insert(Arc::from(*name), client);
                         }
                         Err(_) => {
                             debug!("   {} not available", name);
@@ -176,10 +178,7 @@ impl PrimalConnections {
 
     /// List all discovered primal names
     pub fn available_primals(&self) -> Vec<&str> {
-        self.clients
-            .keys()
-            .map(std::string::String::as_str)
-            .collect()
+        self.clients.keys().map(Arc::as_ref).collect()
     }
 
     // ===================================================================
@@ -235,8 +234,8 @@ impl PrimalConnections {
 
     /// Add a client for testing (allows discovery/orchestrator tests to inject mock connections)
     #[cfg(test)]
-    pub fn add_client(&mut self, name: impl Into<String>, client: PrimalClient) {
-        self.clients.insert(name.into(), client);
+    pub fn add_client(&mut self, name: impl AsRef<str>, client: PrimalClient) {
+        self.clients.insert(Arc::from(name.as_ref()), client);
     }
 }
 
@@ -317,15 +316,15 @@ mod tests {
     fn test_primal_connections_dynamic_get() {
         let mut connections = PrimalConnections::default();
         connections.clients.insert(
-            "beardog".to_string(),
+            Arc::from("beardog"),
             PrimalClient::with_socket("beardog", "/tmp/bd.sock"),
         );
         connections.clients.insert(
-            "songbird".to_string(),
+            Arc::from("songbird"),
             PrimalClient::with_socket("songbird", "/tmp/sb.sock"),
         );
         connections.clients.insert(
-            "nestgate".to_string(),
+            Arc::from("nestgate"),
             PrimalClient::with_socket("nestgate", "/tmp/ng.sock"),
         );
 
@@ -352,7 +351,7 @@ mod tests {
             "squirrel",
         ] {
             connections.clients.insert(
-                name.to_string(),
+                Arc::from(*name),
                 PrimalClient::with_socket(name, format!("/tmp/{name}.sock")),
             );
         }
@@ -365,7 +364,7 @@ mod tests {
         let mut connections = PrimalConnections::default();
         // Any primal can be added dynamically — not limited to hardcoded 6
         connections.clients.insert(
-            "my-custom-primal".to_string(),
+            Arc::from("my-custom-primal"),
             PrimalClient::with_socket("my-custom-primal", "/tmp/custom.sock"),
         );
         assert_eq!(connections.count_available(), 1);

@@ -420,7 +420,7 @@ impl BootableMediaBuilder {
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used, clippy::unwrap_used)] // Tests use expect/unwrap for clear failure context
+#[allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)] // Tests use expect/unwrap for clear failure context
 mod tests {
     use super::*;
 
@@ -464,9 +464,7 @@ mod tests {
     fn test_bootable_media_builder_paths() {
         let temp = tempfile::tempdir().expect("temp dir");
         let project_root = temp.path().to_path_buf();
-        let builder = BootableMediaBuilder::new(project_root).expect("new");
-        // Builder stores project_root, work_dir, output_dir - we verified dirs exist above
-        let _ = builder; // use builder
+        let _builder = BootableMediaBuilder::new(project_root).expect("new");
     }
 
     #[test]
@@ -493,7 +491,7 @@ mod tests {
     fn test_copy_directory() {
         let temp = tempfile::tempdir().expect("temp dir");
         let project_root = temp.path().to_path_buf();
-        let builder = BootableMediaBuilder::new(project_root).expect("new");
+        let _builder = BootableMediaBuilder::new(project_root).expect("new");
 
         let src = temp.path().join("src");
         let dest = temp.path().join("dest");
@@ -527,19 +525,18 @@ mod tests {
     fn test_bootable_media_builder_creates_nested_dirs() {
         let temp = tempfile::tempdir().expect("temp dir");
         let project_root = temp.path().to_path_buf();
-        let builder = BootableMediaBuilder::new(project_root).expect("new");
+        let _builder = BootableMediaBuilder::new(project_root).expect("new");
         let work_dir = temp.path().join("build/boot-media");
         let output_dir = temp.path().join("dist");
         assert!(work_dir.exists());
         assert!(output_dir.exists());
         assert!(!work_dir.join("boot-root").exists());
-        let _ = builder;
     }
 
     #[test]
     fn test_grub_config_path_structure() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
+        let _builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
         let boot_root = temp.path().join("build/boot-media/boot-root");
         std::fs::create_dir_all(boot_root.join("boot/grub")).expect("create");
         let result = BootableMediaBuilder::create_grub_config(&boot_root.join("boot/grub"));
@@ -551,5 +548,64 @@ mod tests {
         assert!(content.contains("menuentry"));
         assert!(content.contains("vmlinuz"));
         assert!(content.contains("initramfs"));
+    }
+
+    #[test]
+    fn test_grub_config_all_menu_entries() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let boot_root = temp.path().join("boot/grub");
+        std::fs::create_dir_all(&boot_root).expect("create");
+        BootableMediaBuilder::create_grub_config(&boot_root).expect("create_grub_config");
+        let content = std::fs::read_to_string(boot_root.join("grub.cfg")).expect("read");
+        assert!(content.contains("Sovereignty-First"));
+        assert!(content.contains("Discovery Mode"));
+        assert!(content.contains("Network Boot"));
+        assert!(content.contains("biomeos.discovery"));
+        assert!(content.contains("biomeos.network"));
+        assert!(content.contains("rdinit=/init"));
+    }
+
+    #[test]
+    fn test_copy_directory_empty_src() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let src = temp.path().join("empty");
+        let dest = temp.path().join("dest");
+        std::fs::create_dir_all(&src).expect("create");
+        BootableMediaBuilder::copy_directory(&src, &dest).expect("copy empty dir");
+        assert!(dest.exists());
+    }
+
+    #[test]
+    fn test_copy_directory_symlink_skipped() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let src = temp.path().join("src");
+        let dest = temp.path().join("dest");
+        std::fs::create_dir_all(&src).expect("create");
+        std::fs::write(src.join("file.txt"), "content").expect("write");
+        BootableMediaBuilder::copy_directory(&src, &dest).expect("copy");
+        assert!(dest.join("file.txt").exists());
+    }
+
+    #[test]
+    fn test_print_success_message_iso() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let image_path = temp.path().join("biomeos.iso");
+        std::fs::write(&image_path, b"").expect("create file");
+        BootableMediaBuilder::print_success_message(&image_path, BootTarget::Iso).expect("print");
+    }
+
+    #[test]
+    fn test_print_success_message_usb() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let image_path = temp.path().join("biomeos.img");
+        std::fs::write(&image_path, b"").expect("create file");
+        BootableMediaBuilder::print_success_message(&image_path, BootTarget::Usb).expect("print");
+    }
+
+    #[test]
+    fn test_create_grub_config_nonexistent_dir_fails() {
+        let result =
+            BootableMediaBuilder::create_grub_config(std::path::Path::new("/nonexistent/grub/dir"));
+        assert!(result.is_err());
     }
 }

@@ -3,21 +3,19 @@
 
 //! Network bridge management
 //!
-//! ## Shell-outs (accepted - privileged network configuration)
+//! Pure Rust implementation via rtnetlink (Netlink). No shell-outs.
+//! Bridge create/delete/configure use netlink socket calls.
 //!
-//! The `create()` and `destroy()` methods call `sudo ip link/addr` to manage
-//! Linux network bridges. These require root privileges and cannot be replaced
-//! with pure Rust without a netlink library (`netlink-rs` or `rtnetlink`).
-//!
-//! The `exists()` method has been evolved to pure Rust via `/sys/class/net/`.
-//!
-//! **Evolution path**: When the `rtnetlink` crate stabilizes for our use case,
-//! bridge create/delete/configure operations can be replaced with Netlink
-//! socket calls, eliminating the `sudo ip` dependency entirely.
+//! **Privilege requirement**: Creating and destroying bridges requires
+//! CAP_NET_ADMIN (typically root). The process must run with sufficient
+//! privileges; rtnetlink does not invoke sudo.
 
 use crate::error::{DeployError, Result};
-use std::process::Command;
+use futures::StreamExt;
+use std::net::IpAddr;
 use tracing::{info, warn};
+
+use rtnetlink::{LinkBridge, LinkUnspec};
 
 /// Network bridge configuration
 #[derive(Debug, Clone)]
@@ -38,6 +36,22 @@ pub struct NetworkBridge {
     created: bool,
 }
 
+/// Parse CIDR string (e.g. "10.0.0.1/24") into (IpAddr, prefix_len)
+pub(crate) fn parse_cidr(cidr: &str) -> Result<(IpAddr, u8)> {
+    let (ip_str, prefix_str) = cidr
+        .split_once('/')
+        .ok_or_else(|| DeployError::NetworkBridge {
+            message: format!("Invalid CIDR: expected ADDR/PREFIX, got '{cidr}'"),
+        })?;
+    let ip: IpAddr = ip_str.parse().map_err(|e| DeployError::NetworkBridge {
+        message: format!("Invalid IP in CIDR '{cidr}': {e}"),
+    })?;
+    let prefix: u8 = prefix_str.parse().map_err(|e| DeployError::NetworkBridge {
+        message: format!("Invalid prefix in CIDR '{cidr}': {e}"),
+    })?;
+    Ok((ip, prefix))
+}
+
 impl NetworkBridge {
     /// Create a new network bridge manager
     pub fn new(config: BridgeConfig) -> Self {
@@ -52,7 +66,7 @@ impl NetworkBridge {
         std::path::Path::new(&format!("/sys/class/net/{}", self.config.name)).exists()
     }
 
-    /// Create the network bridge
+    /// Create the network bridge (pure Rust via rtnetlink)
     pub async fn create(&mut self) -> Result<()> {
         if self.exists() {
             info!("Network bridge {} already exists", self.config.name);
@@ -62,63 +76,61 @@ impl NetworkBridge {
 
         info!("Creating network bridge {}...", self.config.name);
 
-        // Create bridge
-        let output = Command::new("sudo")
-            .args(["ip", "link", "add", &self.config.name, "type", "bridge"])
-            .output()
+        let (connection, handle, _) =
+            rtnetlink::new_connection().map_err(|e| DeployError::NetworkBridge {
+                message: format!("Failed to create netlink connection: {e}"),
+            })?;
+        tokio::spawn(connection);
+
+        // Create bridge (create down so we can add address first)
+        handle
+            .link()
+            .add(LinkBridge::new(&self.config.name).down().build())
+            .execute()
+            .await
             .map_err(|e| DeployError::NetworkBridge {
                 message: format!("Failed to create bridge: {e}"),
             })?;
 
-        if !output.status.success() {
-            return Err(DeployError::NetworkBridge {
-                message: format!(
-                    "Failed to create bridge: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                ),
-            });
-        }
+        // Get link index by name
+        let mut links = handle
+            .link()
+            .get()
+            .match_name(self.config.name.clone())
+            .execute();
+        let link_msg = links
+            .next()
+            .await
+            .transpose()
+            .map_err(|e| DeployError::NetworkBridge {
+                message: format!("Failed to get bridge link: {e}"),
+            })?
+            .ok_or_else(|| DeployError::NetworkBridge {
+                message: format!("Bridge {} created but link not found", self.config.name),
+            })?;
+
+        let index = link_msg.header.index;
 
         // Set IP address
-        let output = Command::new("sudo")
-            .args([
-                "ip",
-                "addr",
-                "add",
-                &self.config.ip_address,
-                "dev",
-                &self.config.name,
-            ])
-            .output()
+        let (ip, prefix_len) = parse_cidr(&self.config.ip_address)?;
+        handle
+            .address()
+            .add(index, ip, prefix_len)
+            .execute()
+            .await
             .map_err(|e| DeployError::NetworkBridge {
                 message: format!("Failed to set IP address: {e}"),
             })?;
 
-        if !output.status.success() {
-            return Err(DeployError::NetworkBridge {
-                message: format!(
-                    "Failed to set IP address: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                ),
-            });
-        }
-
         // Bring up bridge
-        let output = Command::new("sudo")
-            .args(["ip", "link", "set", &self.config.name, "up"])
-            .output()
+        handle
+            .link()
+            .change(LinkUnspec::new_with_name(&self.config.name).up().build())
+            .execute()
+            .await
             .map_err(|e| DeployError::NetworkBridge {
                 message: format!("Failed to bring up bridge: {e}"),
             })?;
-
-        if !output.status.success() {
-            return Err(DeployError::NetworkBridge {
-                message: format!(
-                    "Failed to bring up bridge: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                ),
-            });
-        }
 
         info!("✅ Network bridge {} created", self.config.name);
         self.created = true;
@@ -142,21 +154,37 @@ impl NetworkBridge {
 
         info!("Destroying network bridge {}...", self.config.name);
 
-        let output = Command::new("sudo")
-            .args(["ip", "link", "delete", &self.config.name])
-            .output()
+        let (connection, handle, _) =
+            rtnetlink::new_connection().map_err(|e| DeployError::NetworkBridge {
+                message: format!("Failed to create netlink connection: {e}"),
+            })?;
+        tokio::spawn(connection);
+
+        // Get link index by name for deletion
+        let mut links = handle
+            .link()
+            .get()
+            .match_name(self.config.name.clone())
+            .execute();
+        let link_msg = links
+            .next()
+            .await
+            .transpose()
+            .map_err(|e| DeployError::NetworkBridge {
+                message: format!("Failed to get bridge link: {e}"),
+            })?
+            .ok_or_else(|| DeployError::NetworkBridge {
+                message: format!("Bridge {} not found for deletion", self.config.name),
+            })?;
+
+        handle
+            .link()
+            .del(link_msg.header.index)
+            .execute()
+            .await
             .map_err(|e| DeployError::NetworkBridge {
                 message: format!("Failed to destroy bridge: {e}"),
             })?;
-
-        if !output.status.success() {
-            return Err(DeployError::NetworkBridge {
-                message: format!(
-                    "Failed to destroy bridge: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                ),
-            });
-        }
 
         info!("✅ Network bridge {} destroyed", self.config.name);
         self.created = false;
@@ -196,6 +224,13 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_cidr() {
+        let (ip, prefix) = parse_cidr("10.0.0.1/24").unwrap();
+        assert_eq!(ip.to_string(), "10.0.0.1");
+        assert_eq!(prefix, 24);
+    }
+
+    #[test]
     fn test_network_bridge_new() {
         let config = BridgeConfig {
             name: "biomeos-test-bridge-xyz".to_string(),
@@ -226,5 +261,61 @@ mod tests {
         };
         let bridge = NetworkBridge::new(config);
         assert!(bridge.exists());
+    }
+
+    #[test]
+    fn test_parse_cidr_ipv6() {
+        let (ip, prefix) = parse_cidr("fe80::1/64").unwrap();
+        assert!(ip.is_ipv6());
+        assert_eq!(prefix, 64);
+    }
+
+    #[test]
+    fn test_parse_cidr_invalid_no_slash() {
+        let result = parse_cidr("10.0.0.1");
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Invalid CIDR") || err.contains("ADDR/PREFIX"));
+    }
+
+    #[test]
+    fn test_parse_cidr_invalid_ip() {
+        let result = parse_cidr("not-an-ip/24");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_cidr_invalid_prefix() {
+        let result = parse_cidr("10.0.0.1/256");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_cidr_invalid_prefix_non_numeric() {
+        let result = parse_cidr("10.0.0.1/xx");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_bridge_config_clone() {
+        let config = BridgeConfig {
+            name: "br0".to_string(),
+            ip_address: "10.0.0.1/24".to_string(),
+            subnet: "10.0.0.0/24".to_string(),
+        };
+        let cloned = config.clone();
+        assert_eq!(config.name, cloned.name);
+        assert_eq!(config.ip_address, cloned.ip_address);
+    }
+
+    #[test]
+    fn test_bridge_config_debug() {
+        let config = BridgeConfig {
+            name: "test".to_string(),
+            ip_address: "192.168.1.1/24".to_string(),
+            subnet: "192.168.1.0/24".to_string(),
+        };
+        let s = format!("{config:?}");
+        assert!(s.contains("test"));
     }
 }

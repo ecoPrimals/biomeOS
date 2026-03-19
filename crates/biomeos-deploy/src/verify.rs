@@ -13,6 +13,9 @@ use tokio::fs;
 use tokio::time::timeout;
 use tracing::{debug, info, warn};
 
+/// Default retry interval when waiting for log file (500ms).
+pub const DEFAULT_RETRY_INTERVAL: Duration = Duration::from_millis(500);
+
 /// Verification configuration
 #[derive(Debug, Clone)]
 pub struct VerifyConfig {
@@ -27,6 +30,9 @@ pub struct VerifyConfig {
 
     /// Expected boot message
     pub expected_boot_message: String,
+
+    /// Interval between retries when waiting for log file (default: 500ms)
+    pub retry_interval: Duration,
 }
 
 impl Default for VerifyConfig {
@@ -41,6 +47,7 @@ impl Default for VerifyConfig {
             rootfs_dir: None,
             boot_timeout: 30,
             expected_boot_message: "BiomeOS initialization complete".to_string(),
+            retry_interval: DEFAULT_RETRY_INTERVAL,
         }
     }
 }
@@ -201,7 +208,7 @@ impl VmVerifier {
                 }
             }
 
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            tokio::time::sleep(self.config.retry_interval).await;
         }
 
         Err(DeployError::FileNotFound {
@@ -319,6 +326,7 @@ mod tests {
             rootfs_dir: None,
             boot_timeout: 5,
             expected_boot_message: "BiomeOS initialization complete".to_string(),
+            retry_interval: Duration::ZERO,
         };
 
         let verifier = VmVerifier::new(config);

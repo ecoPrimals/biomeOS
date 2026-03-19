@@ -404,9 +404,262 @@ pub(crate) fn compute_status_impl(
 use socket_providers::{SocketDiscoveryProvider, SocketRoutingProvider, SocketSecurityProvider};
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use std::time::SystemTime;
+
+    /// Mock security provider for testing
+    struct MockSecurityProvider;
+    #[async_trait::async_trait]
+    impl SecurityProvider for MockSecurityProvider {
+        async fn request_tunnel(
+            &self,
+            node_a: &str,
+            node_b: &str,
+            proof: &LineageProof,
+        ) -> Result<TunnelRequest> {
+            Ok(TunnelRequest {
+                id: format!("tunnel-{node_a}-{node_b}"),
+                endpoint_a: TransportEndpoint {
+                    node_id: node_a.to_string(),
+                    address: "127.0.0.1".to_string(),
+                    port: 9000,
+                    protocol: "tcp".to_string(),
+                    secure: true,
+                },
+                endpoint_b: TransportEndpoint {
+                    node_id: node_b.to_string(),
+                    address: "127.0.0.1".to_string(),
+                    port: 9001,
+                    protocol: "tcp".to_string(),
+                    secure: true,
+                },
+                encryption_key: bytes::Bytes::new(),
+                created_at: SystemTime::now(),
+            })
+        }
+        async fn check_tunnel_health(&self, tunnel_id: &str) -> Result<TunnelHealth> {
+            Ok(TunnelHealth {
+                encryption_status: HealthStatus::Healthy,
+                forward_secrecy: true,
+                last_key_rotation: None,
+                status: if tunnel_id.contains("bad") {
+                    HealthStatus::Unhealthy
+                } else {
+                    HealthStatus::Healthy
+                },
+            })
+        }
+        async fn generate_broadcast_keys(&self, family_id: &str) -> Result<BroadcastKeys> {
+            Ok(BroadcastKeys {
+                broadcast_key: bytes::Bytes::from(format!("key-{family_id}")),
+                lineage_proof: LineageProof {
+                    lineage_id: family_id.to_string(),
+                    depth: 0,
+                    proof: bytes::Bytes::new(),
+                    timestamp: SystemTime::now(),
+                },
+                generated_at: SystemTime::now(),
+            })
+        }
+        async fn verify_lineage(&self, requester: &str, target: &str) -> Result<LineageInfo> {
+            Ok(LineageInfo {
+                is_ancestor: requester != target,
+                depth: 1,
+                proof: LineageProof {
+                    lineage_id: requester.to_string(),
+                    depth: 0,
+                    proof: bytes::Bytes::new(),
+                    timestamp: SystemTime::now(),
+                },
+            })
+        }
+    }
+
+    /// Mock discovery provider for testing
+    struct MockDiscoveryProvider;
+    #[async_trait::async_trait]
+    impl DiscoveryProvider for MockDiscoveryProvider {
+        async fn register_transport(&self, _endpoint: &TransportEndpoint) -> Result<()> {
+            Ok(())
+        }
+        async fn enable_encrypted_mode(&self, _config: EncryptedDiscoveryConfig) -> Result<()> {
+            Ok(())
+        }
+        async fn check_transport_health(&self, transport_id: &str) -> Result<TransportHealth> {
+            Ok(TransportHealth {
+                connection_status: if transport_id.contains("bad") {
+                    HealthStatus::Unhealthy
+                } else {
+                    HealthStatus::Healthy
+                },
+                latency_ms: Some(5),
+                packet_loss: None,
+                status: if transport_id.contains("bad") {
+                    HealthStatus::Unhealthy
+                } else {
+                    HealthStatus::Healthy
+                },
+            })
+        }
+        async fn test_encrypted_broadcast(&self) -> Result<BroadcastTest> {
+            Ok(BroadcastTest {
+                encrypted: true,
+                timestamp: SystemTime::now(),
+                success: true,
+            })
+        }
+    }
+
+    /// Mock routing provider for testing
+    struct MockRoutingProvider;
+    #[async_trait::async_trait]
+    impl RoutingProvider for MockRoutingProvider {
+        async fn request_relay(
+            &self,
+            requester: &str,
+            target: &str,
+            lineage: LineageInfo,
+        ) -> Result<RelayOffer> {
+            Ok(RelayOffer {
+                relay_node: "relay-node".to_string(),
+                relay_endpoint: TransportEndpoint {
+                    node_id: "relay".to_string(),
+                    address: "127.0.0.1".to_string(),
+                    port: 9002,
+                    protocol: "tcp".to_string(),
+                    secure: true,
+                },
+                expires_at: SystemTime::now() + std::time::Duration::from_secs(300),
+                lineage_verified: lineage.is_ancestor,
+            })
+        }
+        async fn accept_relay(&self, offer: &RelayOffer) -> Result<RelayConnection> {
+            Ok(RelayConnection {
+                connection_id: format!("conn-{}", offer.relay_node),
+                relay_node: offer.relay_node.clone(),
+                established_at: SystemTime::now(),
+                status: RelayStatus::Active,
+            })
+        }
+    }
+
+    #[test]
+    fn test_p2p_coordinator_new_with_explicit_providers() {
+        let security: Arc<dyn SecurityProvider> = Arc::new(MockSecurityProvider);
+        let discovery: Arc<dyn DiscoveryProvider> = Arc::new(MockDiscoveryProvider);
+        let routing: Option<Arc<dyn RoutingProvider>> = Some(Arc::new(MockRoutingProvider));
+        let coordinator = P2PCoordinator::new(security, discovery, routing);
+        // Construction succeeds
+        drop(coordinator);
+    }
+
+    #[test]
+    fn test_p2p_coordinator_new_without_routing() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider);
+        let coordinator = P2PCoordinator::new(security, discovery, None);
+        drop(coordinator);
+    }
+
+    #[tokio::test]
+    async fn test_create_secure_tunnel() {
+        let coordinator = P2PCoordinator::new(
+            Arc::new(MockSecurityProvider),
+            Arc::new(MockDiscoveryProvider),
+            None,
+        );
+        let proof = LineageProof {
+            lineage_id: "family-1".to_string(),
+            depth: 0,
+            proof: bytes::Bytes::new(),
+            timestamp: SystemTime::now(),
+        };
+        let tunnel = coordinator
+            .create_secure_tunnel("node-a", "node-b", proof)
+            .await
+            .expect("create tunnel");
+        assert_eq!(tunnel.tunnel_id, "tunnel-node-a-node-b");
+        assert_eq!(tunnel.endpoints.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_enable_encrypted_discovery() {
+        let coordinator = P2PCoordinator::new(
+            Arc::new(MockSecurityProvider),
+            Arc::new(MockDiscoveryProvider),
+            None,
+        );
+        let mode = coordinator
+            .enable_encrypted_discovery("family-123")
+            .await
+            .expect("enable encrypted discovery");
+        assert_eq!(mode, DiscoveryMode::Encrypted);
+    }
+
+    #[tokio::test]
+    async fn test_coordinate_relay_with_routing() {
+        let coordinator = P2PCoordinator::new(
+            Arc::new(MockSecurityProvider),
+            Arc::new(MockDiscoveryProvider),
+            Some(Arc::new(MockRoutingProvider)),
+        );
+        let relay = coordinator
+            .coordinate_relay("requester", "target")
+            .await
+            .expect("coordinate relay");
+        assert_eq!(relay.relay_node, "relay-node");
+        assert_eq!(relay.requester, "requester");
+        assert_eq!(relay.target, "target");
+        assert_eq!(relay.status, RelayStatus::Active);
+    }
+
+    #[tokio::test]
+    async fn test_coordinate_relay_without_routing_fails() {
+        let coordinator = P2PCoordinator::new(
+            Arc::new(MockSecurityProvider),
+            Arc::new(MockDiscoveryProvider),
+            None,
+        );
+        let result = coordinator.coordinate_relay("requester", "target").await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("No routing provider")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_monitor_tunnel_healthy() {
+        let coordinator = P2PCoordinator::new(
+            Arc::new(MockSecurityProvider),
+            Arc::new(MockDiscoveryProvider),
+            None,
+        );
+        let health = coordinator
+            .monitor_tunnel("tunnel-1")
+            .await
+            .expect("monitor tunnel");
+        assert_eq!(health.tunnel_id, "tunnel-1");
+        assert_eq!(health.status, HealthStatus::Healthy);
+    }
+
+    #[tokio::test]
+    async fn test_monitor_tunnel_unhealthy() {
+        let coordinator = P2PCoordinator::new(
+            Arc::new(MockSecurityProvider),
+            Arc::new(MockDiscoveryProvider),
+            None,
+        );
+        let health = coordinator
+            .monitor_tunnel("bad-tunnel")
+            .await
+            .expect("monitor tunnel");
+        assert_eq!(health.status, HealthStatus::Unhealthy);
+    }
 
     #[test]
     fn test_compute_status_impl() {

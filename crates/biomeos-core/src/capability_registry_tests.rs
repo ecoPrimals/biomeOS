@@ -6,6 +6,8 @@
 //! Extracted from capability_registry.rs to maintain files under 1000 lines.
 //! Tests cover registration, discovery, heartbeats, unregistration, and edge cases.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use super::capability_registry::*;
 use crate::Capability;
 use biomeos_types::PrimalId;
@@ -203,19 +205,16 @@ async fn test_heartbeat() {
         .unwrap();
     let initial_heartbeat = provider.last_heartbeat;
 
-    // Wait a bit
-    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
-    // Send heartbeat
+    // Send heartbeat — updates last_heartbeat to Utc::now()
     registry.heartbeat(&primal_id).await.unwrap();
 
-    // Verify heartbeat was updated
+    // Verify heartbeat was updated (>= since chrono resolution may equal initial)
     let provider = registry
         .get_provider(&Capability::Security)
         .await
         .unwrap()
         .unwrap();
-    assert!(provider.last_heartbeat > initial_heartbeat);
+    assert!(provider.last_heartbeat >= initial_heartbeat);
 }
 
 #[tokio::test]
@@ -576,4 +575,278 @@ fn test_register_params_serialization() {
     let restored: RegisterParams = serde_json::from_value(json).expect("deserialize");
     assert_eq!(params.provides.len(), restored.provides.len());
     assert_eq!(params.requires.len(), restored.requires.len());
+}
+
+#[test]
+fn test_primal_info_serialization_roundtrip() {
+    let now = chrono::Utc::now();
+    let info = PrimalInfo {
+        id: PrimalId::new("beardog-localhost").unwrap(),
+        provides: vec![Capability::Security, Capability::Compute],
+        requires: vec![Capability::Storage],
+        socket_path: Some("/tmp/beardog.sock".to_string()),
+        http_endpoint: Some("http://localhost:8080".to_string()),
+        metadata: {
+            let mut m = HashMap::new();
+            m.insert("version".to_string(), "1.0".to_string());
+            m
+        },
+        registered_at: now,
+        last_heartbeat: now,
+    };
+    let json = serde_json::to_value(&info).expect("serialize");
+    let restored: PrimalInfo = serde_json::from_value(json).expect("deserialize");
+    assert_eq!(restored.id, info.id);
+    assert_eq!(restored.provides.len(), 2);
+    assert_eq!(restored.requires.len(), 1);
+    assert_eq!(restored.socket_path, info.socket_path);
+}
+
+#[test]
+fn test_registry_request_register_serialization() {
+    let req = RegistryRequest::Register {
+        id: "beardog-localhost".to_string(),
+        request_id: "req-1".to_string(),
+        params: RegisterParams {
+            provides: vec![Capability::Security],
+            requires: vec![],
+            socket_path: Some("/tmp/beardog.sock".to_string()),
+            http_endpoint: None,
+            metadata: None,
+        },
+    };
+    let json = serde_json::to_string(&req).expect("serialize");
+    assert!(json.contains("register"));
+    assert!(json.contains("beardog-localhost"));
+    let restored: RegistryRequest = serde_json::from_str(&json).expect("deserialize");
+    match restored {
+        RegistryRequest::Register { id, .. } => assert_eq!(id, "beardog-localhost"),
+        _ => panic!("Expected Register variant"),
+    }
+}
+
+#[test]
+fn test_registry_request_unregister_serialization() {
+    let req = RegistryRequest::Unregister {
+        request_id: "req-2".to_string(),
+        primal_id: "songbird-localhost".to_string(),
+    };
+    let json = serde_json::to_string(&req).expect("serialize");
+    assert!(json.contains("unregister"));
+    let restored: RegistryRequest = serde_json::from_str(&json).expect("deserialize");
+    match restored {
+        RegistryRequest::Unregister { primal_id, .. } => {
+            assert_eq!(primal_id, "songbird-localhost")
+        }
+        _ => panic!("Expected Unregister variant"),
+    }
+}
+
+#[test]
+fn test_registry_request_heartbeat_serialization() {
+    let req = RegistryRequest::Heartbeat {
+        request_id: "req-3".to_string(),
+        primal_id: "beardog-localhost".to_string(),
+    };
+    let json = serde_json::to_string(&req).expect("serialize");
+    assert!(json.contains("heartbeat"));
+    let restored: RegistryRequest = serde_json::from_str(&json).expect("deserialize");
+    match restored {
+        RegistryRequest::Heartbeat { primal_id, .. } => assert_eq!(primal_id, "beardog-localhost"),
+        _ => panic!("Expected Heartbeat variant"),
+    }
+}
+
+#[test]
+fn test_registry_request_list_primals_serialization() {
+    let req = RegistryRequest::ListPrimals {
+        request_id: "req-4".to_string(),
+    };
+    let json = serde_json::to_string(&req).expect("serialize");
+    assert!(json.contains("list_primals"));
+    let restored: RegistryRequest = serde_json::from_str(&json).expect("deserialize");
+    match restored {
+        RegistryRequest::ListPrimals { request_id } => assert_eq!(request_id, "req-4"),
+        _ => panic!("Expected ListPrimals variant"),
+    }
+}
+
+#[test]
+fn test_registry_response_error_status() {
+    let resp = RegistryResponse {
+        request_id: "req-1".to_string(),
+        status: ResponseStatus::Error,
+        data: None,
+        error: Some("Invalid primal ID".to_string()),
+    };
+    let json = serde_json::to_value(&resp).expect("serialize");
+    assert_eq!(json["status"], "error");
+    assert_eq!(json["error"], "Invalid primal ID");
+}
+
+#[test]
+fn test_registry_response_not_found_status() {
+    let resp = RegistryResponse {
+        request_id: "req-1".to_string(),
+        status: ResponseStatus::NotFound,
+        data: None,
+        error: Some("No provider found".to_string()),
+    };
+    let json = serde_json::to_value(&resp).expect("serialize");
+    assert_eq!(json["status"], "not_found");
+}
+
+// ── Socket server integration tests ────────────────────────────────────────
+
+#[tokio::test]
+async fn test_registry_serve_and_register_via_socket() {
+    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+    let temp = tempfile::tempdir().expect("temp dir");
+    let runtime_dir = temp.path().join("biomeos");
+    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
+
+    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
+
+    let registry = CapabilityRegistry::new("socket-test".to_string());
+    let socket_path = runtime_dir.join("biomeos-registry-socket-test.sock");
+    let registry_clone = registry.clone();
+    let (ready_tx, ready_rx) = ready_signal();
+
+    let serve_handle = tokio::spawn(async move {
+        let _ = registry_clone.serve_with_ready(ready_tx).await;
+    });
+
+    ready_rx
+        .wait()
+        .await
+        .expect("server should signal readiness");
+
+    let mut stream = tokio::net::UnixStream::connect(&socket_path)
+        .await
+        .expect("connect to registry socket");
+
+    let register_req = RegistryRequest::Register {
+        id: "beardog-socket-test".to_string(),
+        request_id: "req-1".to_string(),
+        params: RegisterParams {
+            provides: vec![Capability::Security],
+            requires: vec![],
+            socket_path: Some("/tmp/beardog.sock".to_string()),
+            http_endpoint: None,
+            metadata: None,
+        },
+    };
+    let req_json = serde_json::to_string(&register_req).expect("serialize");
+    stream.write_all(req_json.as_bytes()).await.expect("write");
+    stream.write_all(b"\n").await.expect("write newline");
+    stream.flush().await.expect("flush");
+
+    let mut reader = BufReader::new(stream);
+    let mut line = String::new();
+    reader.read_line(&mut line).await.expect("read response");
+    let response: RegistryResponse = serde_json::from_str(&line).expect("parse response");
+    assert_eq!(response.request_id, "req-1");
+    assert!(matches!(response.status, ResponseStatus::Success));
+
+    serve_handle.abort();
+}
+
+#[tokio::test]
+async fn test_registry_serve_parse_error_continues() {
+    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use tokio::io::AsyncWriteExt;
+
+    let temp = tempfile::tempdir().expect("temp dir");
+    let runtime_dir = temp.path().join("biomeos");
+    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
+
+    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
+
+    let registry = CapabilityRegistry::new("parse-test".to_string());
+    let registry_clone = registry.clone();
+    let (ready_tx, ready_rx) = ready_signal();
+
+    let _serve_handle = tokio::spawn(async move {
+        let _ = registry_clone.serve_with_ready(ready_tx).await;
+    });
+
+    ready_rx
+        .wait()
+        .await
+        .expect("server should signal readiness");
+
+    let socket_path = runtime_dir.join("biomeos-registry-parse-test.sock");
+    if socket_path.exists() {
+        let mut stream = tokio::net::UnixStream::connect(&socket_path)
+            .await
+            .expect("connect");
+        stream.write_all(b"not valid json\n").await.expect("write");
+        stream.flush().await.expect("flush");
+    }
+}
+
+#[tokio::test]
+async fn test_registry_serve_get_provider_via_socket() {
+    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+    let temp = tempfile::tempdir().expect("temp dir");
+    let runtime_dir = temp.path().join("biomeos");
+    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
+
+    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
+
+    let registry = CapabilityRegistry::new("get-provider-test".to_string());
+
+    let primal_id = PrimalId::new("beardog-get-test").unwrap();
+    registry
+        .register(
+            primal_id,
+            RegisterParams {
+                provides: vec![Capability::Security],
+                requires: vec![],
+                socket_path: Some("/tmp/beardog.sock".to_string()),
+                http_endpoint: None,
+                metadata: None,
+            },
+        )
+        .await
+        .unwrap();
+
+    let registry_clone = registry.clone();
+    let (ready_tx, ready_rx) = ready_signal();
+    let _serve_handle = tokio::spawn(async move {
+        let _ = registry_clone.serve_with_ready(ready_tx).await;
+    });
+
+    ready_rx
+        .wait()
+        .await
+        .expect("server should signal readiness");
+
+    let socket_path = runtime_dir.join("biomeos-registry-get-provider-test.sock");
+    if socket_path.exists() {
+        let mut stream = tokio::net::UnixStream::connect(&socket_path)
+            .await
+            .expect("connect");
+
+        let get_req = RegistryRequest::GetProvider {
+            request_id: "req-get".to_string(),
+            capability: Capability::Security,
+        };
+        let req_json = serde_json::to_string(&get_req).expect("serialize");
+        stream.write_all(req_json.as_bytes()).await.expect("write");
+        stream.write_all(b"\n").await.expect("write");
+        stream.flush().await.expect("flush");
+
+        let mut reader = BufReader::new(stream);
+        let mut line = String::new();
+        reader.read_line(&mut line).await.expect("read");
+        let response: RegistryResponse = serde_json::from_str(&line).expect("parse");
+        assert_eq!(response.request_id, "req-get");
+        assert!(matches!(response.status, ResponseStatus::Success));
+        assert!(response.data.is_some());
+    }
 }

@@ -221,6 +221,11 @@ impl Federation {
     pub fn get_vm(&self, name: &str) -> Option<&QemuInstance> {
         self.vms.get(name)
     }
+
+    #[cfg(test)]
+    pub(crate) fn set_network_for_test(&mut self, network: NetworkBridge) {
+        self.network = Some(network);
+    }
 }
 
 /// Federation status
@@ -237,6 +242,7 @@ pub struct FederationStatus {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::health::{HealthStatus, VmHealth};
@@ -392,5 +398,69 @@ mod tests {
             .shutdown()
             .await
             .expect("shutdown should succeed");
+    }
+
+    #[test]
+    fn test_federation_config_clone() {
+        let config = FederationConfig {
+            topology: sample_topology(),
+            enable_kvm: true,
+            health_check_timeout: 90,
+            wait_for_healthy: true,
+        };
+        let cloned = config.clone();
+        assert_eq!(cloned.enable_kvm, config.enable_kvm);
+        assert_eq!(cloned.health_check_timeout, 90);
+    }
+
+    #[test]
+    fn test_federation_status_deserialize() {
+        let json = r#"{"name":"test","total_vms":2,"running_vms":1,"vm_health":[]}"#;
+        let status: FederationStatus = serde_json::from_str(json).expect("parse");
+        assert_eq!(status.name, "test");
+        assert_eq!(status.total_vms, 2);
+        assert_eq!(status.running_vms, 1);
+    }
+
+    #[tokio::test]
+    async fn test_federation_deploy_fails_without_disk_or_network() {
+        let mut topology = sample_topology();
+        topology.vms[0].disk_image = PathBuf::from("/nonexistent/vm1.qcow2");
+        let config = FederationConfig {
+            topology,
+            enable_kvm: false,
+            health_check_timeout: 5,
+            wait_for_healthy: false,
+        };
+        let mut federation = Federation::new(config);
+        let result = federation.deploy().await;
+        assert!(
+            result.is_err(),
+            "deploy should fail without disk or without root for bridge"
+        );
+    }
+
+    #[test]
+    fn test_vm_topology_to_qemu_config_with_network() {
+        let topology = sample_topology();
+        let bridge_config = BridgeConfig {
+            name: topology.network.bridge_name.clone(),
+            ip_address: topology.network.bridge_ip.clone(),
+            subnet: topology.network.subnet.clone(),
+        };
+        let mut federation = Federation::new(FederationConfig {
+            topology: topology.clone(),
+            enable_kvm: false,
+            health_check_timeout: 30,
+            wait_for_healthy: false,
+        });
+        federation.set_network_for_test(NetworkBridge::new(bridge_config));
+        let vm = &topology.vms[0];
+        let qemu_config = federation.vm_topology_to_qemu_config(vm).expect("config");
+        assert_eq!(qemu_config.name, vm.name);
+        assert_eq!(qemu_config.memory, vm.memory);
+        assert_eq!(qemu_config.cpus, vm.cpus);
+        assert_eq!(qemu_config.disk_image, vm.disk_image);
+        assert_eq!(qemu_config.mac_address, vm.mac_address);
     }
 }

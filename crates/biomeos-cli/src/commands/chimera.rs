@@ -159,10 +159,7 @@ pub(crate) fn parse_chimera_id_from_yaml(content: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[expect(
     clippy::await_holding_lock,
     reason = "lock held briefly across await in CLI context"
@@ -245,6 +242,28 @@ chimera:
             parse_chimera_id_from_yaml(yaml),
             Some("my-chimera".to_string())
         );
+    }
+
+    #[test]
+    fn test_parse_chimera_id_from_yaml_no_id_key() {
+        let yaml = "name: only-name\nversion: 1.0";
+        assert_eq!(parse_chimera_id_from_yaml(yaml), None);
+    }
+
+    #[test]
+    fn test_parse_chimera_id_from_yaml_empty_content() {
+        assert_eq!(parse_chimera_id_from_yaml(""), None);
+    }
+
+    #[test]
+    fn test_chimera_registry_from_valid_yaml() {
+        let temp = tempdir().unwrap();
+        let path = create_test_chimera_yaml(temp.path(), "reg-test");
+        let defs_dir = path.parent().unwrap();
+        let result = ChimeraRegistry::from_directory(defs_dir);
+        assert!(result.is_ok());
+        let registry = result.unwrap();
+        assert!(registry.get("reg-test").is_some());
     }
 
     #[test]
@@ -376,6 +395,32 @@ fusion:
         assert!(
             result.is_ok(),
             "build with nonexistent chimera should return Ok (prints message)"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    async fn test_handle_chimera_build_missing_primals() {
+        let _guard = CWD_TEST_LOCK.lock().unwrap();
+        let temp = tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        create_test_chimera_yaml(temp.path(), "build-test");
+        std::fs::create_dir_all("bin/primals").unwrap();
+
+        let result = handle_chimera_build("build-test").await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_chimera_id_from_yaml_with_spaces() {
+        let yaml = r#"chimera:
+  id:   spaced-id
+  name: Test"#;
+        assert_eq!(
+            parse_chimera_id_from_yaml(yaml),
+            Some("spaced-id".to_string())
         );
     }
 }

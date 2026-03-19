@@ -9,10 +9,14 @@
 
 use anyhow::Result;
 use biomeos_types::JsonRpcRequest;
+use biomeos_types::primal_names;
 use tracing::info;
 use tracing::warn;
 
 use super::types::{Device, DeviceStatus, DeviceType, ManagedPrimal, PrimalStatus};
+
+/// Default interval between /proc/stat reads for CPU usage (100ms).
+pub const DEFAULT_CPU_SAMPLE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 
 /// Discover all devices from the system (GPU, CPU, storage, network).
 pub async fn discover_devices() -> Result<Vec<Device>> {
@@ -93,7 +97,9 @@ pub async fn discover_cpus() -> Result<Vec<Device>> {
 
     if let Ok(cpuinfo) = tokio::fs::read_to_string("/proc/cpuinfo").await {
         let cpu_count = cpuinfo.matches("processor").count();
-        let cpu_usage = get_cpu_usage().await.unwrap_or(0.0);
+        let cpu_usage = get_cpu_usage_with_interval(DEFAULT_CPU_SAMPLE_INTERVAL)
+            .await
+            .unwrap_or(0.0);
 
         cpus.push(Device {
             id: "cpu-0".to_string(),
@@ -116,10 +122,10 @@ pub async fn discover_cpus() -> Result<Vec<Device>> {
     Ok(cpus)
 }
 
-/// Get current CPU usage from /proc/stat
-async fn get_cpu_usage() -> Result<f64> {
+/// Get current CPU usage from /proc/stat with configurable sample interval.
+pub async fn get_cpu_usage_with_interval(sample_interval: std::time::Duration) -> Result<f64> {
     let stat1 = tokio::fs::read_to_string("/proc/stat").await?;
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    tokio::time::sleep(sample_interval).await;
     let stat2 = tokio::fs::read_to_string("/proc/stat").await?;
 
     let parse_cpu_line = |line: &str| -> Option<(u64, u64)> {
@@ -300,8 +306,8 @@ pub async fn discover_primals() -> Result<Vec<ManagedPrimal>> {
     }
 
     primals.push(ManagedPrimal {
-        id: "biomeos".to_string(),
-        name: "biomeOS".to_string(),
+        id: primal_names::BIOMEOS.to_string(),
+        name: primal_names::display::BIOMEOS.to_string(),
         status: PrimalStatus::Healthy,
         health: 1.0,
         load: 0.1,

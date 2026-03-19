@@ -331,6 +331,7 @@ impl InteractiveUIOrchestrator {
 mod tests {
     use super::*;
     use crate::events::UIEvent;
+    use biomeos_test_utils::ready_signal;
 
     #[tokio::test]
     async fn test_orchestrator_creation() {
@@ -600,5 +601,101 @@ mod tests {
         orchestrator.start().await.unwrap();
         let _ =
             tokio::time::timeout(std::time::Duration::from_millis(100), orchestrator.run()).await;
+    }
+
+    #[tokio::test]
+    async fn test_run_with_registry_subscribe_failure() {
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        use tokio::io::{AsyncBufReadExt, BufReader};
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let biomeos_dir = temp.path().join("biomeos");
+        std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
+        let socket_path = biomeos_dir.join("songbird.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((stream, _)) = listener.accept().await {
+                let mut reader = BufReader::new(stream);
+                let mut line = String::new();
+                let _ = reader.read_line(&mut line).await;
+                drop(reader);
+            }
+        });
+
+        ready_rx.wait().await.unwrap();
+
+        set_test_env("XDG_RUNTIME_DIR", temp.path());
+        set_test_env("BIOMEOS_REGISTRY_PROVIDER", "songbird");
+
+        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        orchestrator.start().await.unwrap();
+
+        let result =
+            tokio::time::timeout(std::time::Duration::from_millis(500), orchestrator.run()).await;
+
+        remove_test_env("XDG_RUNTIME_DIR");
+        remove_test_env("BIOMEOS_REGISTRY_PROVIDER");
+        server.abort();
+
+        assert!(
+            result.is_err(),
+            "run() blocks indefinitely; timeout should elapse (Err = timeout fired)"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_with_registry_events_poll_non_array() {
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let biomeos_dir = temp.path().join("biomeos");
+        std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
+        let socket_path = biomeos_dir.join("songbird.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            let mut conn_count = 0u32;
+            while let Ok((mut stream, _)) = listener.accept().await {
+                conn_count += 1;
+                let mut buf = vec![0u8; 4096];
+                let _ = stream.read(&mut buf).await;
+                let resp = if conn_count == 1 {
+                    serde_json::json!({"jsonrpc":"2.0","result":{},"id":1})
+                } else {
+                    serde_json::json!({"jsonrpc":"2.0","result":"not_an_array","id":1})
+                };
+                let line = format!("{}\n", resp);
+                let _ = stream.write_all(line.as_bytes()).await;
+                let _ = stream.flush().await;
+            }
+        });
+
+        ready_rx.wait().await.unwrap();
+
+        set_test_env("XDG_RUNTIME_DIR", temp.path());
+        set_test_env("BIOMEOS_REGISTRY_PROVIDER", "songbird");
+
+        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        orchestrator.start().await.unwrap();
+
+        let result =
+            tokio::time::timeout(std::time::Duration::from_millis(500), orchestrator.run()).await;
+
+        remove_test_env("XDG_RUNTIME_DIR");
+        remove_test_env("BIOMEOS_REGISTRY_PROVIDER");
+        server.abort();
+
+        assert!(
+            result.is_err(),
+            "run() blocks indefinitely; timeout should elapse"
+        );
     }
 }

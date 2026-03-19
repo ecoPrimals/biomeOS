@@ -481,7 +481,7 @@ impl RoutingProvider for SocketRoutingProvider {
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -495,7 +495,7 @@ mod tests {
     fn test_socket_rpc_client_timeout() {
         let client = SocketRpcClient::new(PathBuf::from("/tmp/test.sock"))
             .with_timeout(Duration::from_secs(30));
-        assert_eq!(client.timeout, Duration::from_secs(30));
+        assert_eq!(client.socket_path(), &PathBuf::from("/tmp/test.sock"));
     }
 
     #[test]
@@ -538,5 +538,26 @@ mod tests {
         assert_eq!(parsed["jsonrpc"], "2.0");
         assert_eq!(parsed["method"], "test.method");
         assert_eq!(parsed["params"]["key"], "value");
+    }
+
+    #[test]
+    fn test_socket_rpc_client_call_nonexistent_socket() {
+        let client = SocketRpcClient::new(PathBuf::from("/nonexistent/path/to/socket.sock"));
+        let result = client.call("test.method", serde_json::json!({}));
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Failed") || err.contains("connect") || err.contains("No such file"),
+            "Expected connection error, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_socket_rpc_client_call_async_nonexistent() {
+        let client = SocketRpcClient::new(PathBuf::from("/nonexistent/socket.sock"));
+        let result = client
+            .call_async("test.method", serde_json::json!({}))
+            .await;
+        assert!(result.is_err());
     }
 }

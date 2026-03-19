@@ -449,10 +449,11 @@ fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
 /// The Dark Forest gate still applies for defense in depth, but Unix
 /// socket connections are already limited to the local user.
 pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> anyhow::Result<()> {
-    unix_server::serve_unix_socket(socket_path, app).await
+    unix_server::serve_unix_socket(socket_path, app, None).await
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -619,5 +620,43 @@ mod tests {
         let json = serde_json::to_string(&response).expect("serialize");
         assert!(json.contains("sub_1"));
         assert!(json.contains("42"));
+    }
+
+    #[tokio::test]
+    async fn test_api_error_json_body_contains_error_key() {
+        let error = ApiError::Internal("test".to_string());
+        let response = error.into_response();
+        let (_, body) = response.into_parts();
+        let bytes = axum::body::to_bytes(body, usize::MAX).await.expect("body");
+        let json: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
+        assert!(json.get("error").is_some());
+        assert_eq!(json["error"].as_str(), Some("test"));
+    }
+
+    #[test]
+    fn test_api_error_discovery_failed_status() {
+        let error = ApiError::DiscoveryFailed("no primals".to_string());
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn test_create_app_routes_registered() {
+        let state = AppState::builder()
+            .build_with_defaults()
+            .expect("create state");
+        let app = create_app(state);
+        // Router should have routes - we can't easily inspect axum Router
+        // but we verify it builds without panic
+        let _ = app;
+    }
+
+    #[test]
+    fn test_subscription_filter_deserialization_defaults() {
+        let json = "{}";
+        let filter: SubscriptionFilter = serde_json::from_str(json).expect("deserialize");
+        assert!(filter.graph_id.is_none());
+        assert!(filter.event_types.is_none());
+        assert!(filter.node_filter.is_none());
     }
 }

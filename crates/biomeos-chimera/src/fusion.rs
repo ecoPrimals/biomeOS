@@ -209,6 +209,7 @@ impl FusionEndpoint {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -239,5 +240,92 @@ mod tests {
 
         assert!(fusion.validate_references(&["beardog", "songbird"]).is_ok());
         assert!(fusion.validate_references(&["songbird"]).is_err());
+    }
+
+    #[test]
+    fn test_fusion_default() {
+        let fusion = Fusion::default();
+        assert!(fusion.bindings.is_empty());
+        assert!(fusion.api.endpoints.is_empty());
+        assert!(fusion.providers().is_empty());
+        assert!(fusion.consumers().is_empty());
+    }
+
+    #[test]
+    fn test_fusion_validate_consumer_reference() {
+        let fusion = Fusion::new().with_binding(
+            "test",
+            FusionBinding::new()
+                .with_provider("beardog.btsp")
+                .with_consumers(vec!["unknown.mesh".into()]),
+        );
+        assert!(fusion.validate_references(&["beardog"]).is_err());
+        assert!(fusion.validate_references(&["beardog", "unknown"]).is_ok());
+    }
+
+    #[test]
+    fn test_fusion_validate_array_consumer() {
+        let fusion = Fusion::new().with_binding(
+            "test",
+            FusionBinding::new()
+                .with_provider("beardog.btsp")
+                .with_consumers(vec!["songbird[].mesh".into()]),
+        );
+        assert!(fusion.validate_references(&["beardog", "songbird"]).is_ok());
+    }
+
+    #[test]
+    fn test_fusion_binding_default() {
+        let binding = FusionBinding::default();
+        assert!(binding.provider.is_none());
+        assert!(binding.consumers.is_empty());
+        assert!(binding.config.is_empty());
+    }
+
+    #[test]
+    fn test_fusion_binding_with_config() {
+        let binding = FusionBinding::new()
+            .with_provider("beardog.btsp")
+            .with_config("timeout", serde_json::json!(30));
+        assert_eq!(binding.config.get("timeout"), Some(&serde_json::json!(30)));
+    }
+
+    #[test]
+    fn test_fusion_endpoint_builder() {
+        let endpoint = FusionEndpoint::new("get_status")
+            .with_description("Get component status")
+            .with_params(vec!["component_id".into()])
+            .with_returns("Status");
+        assert_eq!(endpoint.name, "get_status");
+        assert_eq!(endpoint.description, "Get component status");
+        assert_eq!(endpoint.params, vec!["component_id"]);
+        assert_eq!(endpoint.returns, "Status");
+    }
+
+    #[test]
+    fn test_fusion_consumers() {
+        let fusion = Fusion::new()
+            .with_binding(
+                "b1",
+                FusionBinding::new().with_consumers(vec!["a.mod".into(), "b.mod".into()]),
+            )
+            .with_binding(
+                "b2",
+                FusionBinding::new().with_consumers(vec!["c.mod".into()]),
+            );
+        let consumers = fusion.consumers();
+        assert_eq!(consumers.len(), 3);
+        assert!(consumers.contains(&"a.mod"));
+        assert!(consumers.contains(&"b.mod"));
+        assert!(consumers.contains(&"c.mod"));
+    }
+
+    #[test]
+    fn test_validate_references_empty_binding() {
+        let fusion = Fusion::new().with_binding(
+            "empty",
+            FusionBinding::new(), // no provider, no consumers
+        );
+        assert!(fusion.validate_references(&["beardog"]).is_ok());
     }
 }

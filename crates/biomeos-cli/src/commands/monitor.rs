@@ -538,7 +538,7 @@ pub(crate) fn scale_status_icon(status: &str) -> &'static str {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::commands::utils::{format_bytes, format_duration};
@@ -766,5 +766,132 @@ mod tests {
             format_duration(std::time::Duration::from_secs(125)),
             "2m 5s"
         );
+    }
+
+    #[test]
+    fn test_format_exec_output_exit_code_failure() {
+        let results: HashMap<String, Value> = serde_json::from_value(serde_json::json!({
+            "exit_code": 1,
+            "stderr": "error message"
+        }))
+        .unwrap();
+        let lines = format_exec_output(&results);
+        assert!(lines.iter().any(|l| l.contains("❌")));
+        assert!(lines.iter().any(|l| l.contains("STDERR")));
+    }
+
+    #[test]
+    fn test_format_exec_output_empty_stdout_stderr() {
+        let results: HashMap<String, Value> =
+            serde_json::from_value(serde_json::json!({"exit_code": 0})).unwrap();
+        let lines = format_exec_output(&results);
+        assert!(lines.iter().any(|l| l.contains("✅")));
+    }
+
+    #[test]
+    fn test_format_scale_output_with_auto() {
+        let results: HashMap<String, Value> = serde_json::from_value(serde_json::json!({
+            "status": "success",
+            "current_replicas": 2,
+            "target_replicas": 2,
+            "auto_scaling": {
+                "min_replicas": 1,
+                "max_replicas": 5,
+                "cpu_threshold_percent": 80
+            }
+        }))
+        .unwrap();
+        let lines = format_scale_output(&results, true);
+        assert!(lines.iter().any(|l| l.contains("Auto-scaling")));
+        assert!(lines.iter().any(|l| l.contains("Min replicas")));
+        assert!(lines.iter().any(|l| l.contains("Max replicas")));
+        assert!(lines.iter().any(|l| l.contains("CPU threshold")));
+    }
+
+    #[test]
+    fn test_format_scale_output_with_message() {
+        let results: HashMap<String, Value> = serde_json::from_value(serde_json::json!({
+            "status": "in_progress",
+            "message": "Scaling in progress"
+        }))
+        .unwrap();
+        let lines = format_scale_output(&results, false);
+        assert!(lines.iter().any(|l| l.contains("Scaling in progress")));
+    }
+
+    #[test]
+    fn test_format_scale_output_status_unknown() {
+        let results: HashMap<String, Value> =
+            serde_json::from_value(serde_json::json!({"status": "unknown"})).unwrap();
+        let lines = format_scale_output(&results, false);
+        assert!(!lines.is_empty());
+    }
+
+    #[test]
+    fn test_format_service_rows_with_resources() {
+        let services = serde_json::json!({
+            "svc1": {
+                "status": "running",
+                "health": "Healthy",
+                "resources": {"cpu_percent": 50, "memory_mb": 256}
+            }
+        });
+        let lines = format_service_rows(&services);
+        assert!(lines.iter().any(|l| l.contains("50")));
+        assert!(lines.iter().any(|l| l.contains("256")));
+    }
+
+    #[test]
+    fn test_format_service_rows_empty_object() {
+        let services = serde_json::json!({});
+        let lines = format_service_rows(&services);
+        assert!(lines.is_empty());
+    }
+
+    #[test]
+    fn test_format_system_overview_with_load() {
+        let system = serde_json::json!({
+            "load_average": {"1m": 1.5, "5m": 1.2, "15m": 1.0}
+        });
+        let lines = format_system_overview(&system);
+        assert!(lines.iter().any(|l| l.contains("1.5")));
+    }
+
+    #[test]
+    fn test_format_system_overview_with_disk() {
+        let system = serde_json::json!({
+            "disk": {"usage_percent": 75}
+        });
+        let lines = format_system_overview(&system);
+        assert!(lines.iter().any(|l| l.contains("75")));
+    }
+
+    #[test]
+    fn test_format_network_activity_partial() {
+        let network = serde_json::json!({"bytes_in_per_sec": 1024});
+        let lines = format_network_activity(&network);
+        assert!(lines.is_empty());
+    }
+
+    #[test]
+    fn test_format_alert_rows_severity_info() {
+        let alerts = serde_json::json!([
+            {"message": "Info msg", "severity": "info"}
+        ]);
+        let lines = format_alert_rows(&alerts);
+        assert!(lines.iter().any(|l| l.contains("Info msg")));
+    }
+
+    #[test]
+    fn test_format_log_entry_all_levels() {
+        for level in ["error", "warn", "info", "debug", "trace"] {
+            let entry = serde_json::json!({
+                "timestamp": "2025-01-01T12:00:00Z",
+                "level": level,
+                "message": "test"
+            });
+            let s = format_log_entry(&entry);
+            assert!(!s.is_empty());
+        }
     }
 }

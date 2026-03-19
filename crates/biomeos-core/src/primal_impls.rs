@@ -453,8 +453,10 @@ pub type ManagedBearDog = GenericManagedPrimal;
 pub type ManagedSongbird = GenericManagedPrimal;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_builder_pattern() {
@@ -549,5 +551,98 @@ mod tests {
             create_security_provider("/bin/true".to_string(), 9000).unwrap();
         let _songbird: Arc<GenericManagedPrimal> =
             create_discovery_orchestrator("/bin/true".to_string()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_endpoint_unix_socket_preferred() {
+        set_test_env("PRIMAL_SOCKET_PATH", "/run/user/1000/biomeos/test.sock");
+        let primal = PrimalBuilder::new()
+            .id("test".to_string())
+            .binary_path("/bin/true".to_string())
+            .http_port(9000)
+            .build()
+            .unwrap();
+        let endpoint = primal.endpoint().await;
+        remove_test_env("PRIMAL_SOCKET_PATH");
+        assert!(endpoint.is_some());
+        let ep = endpoint.unwrap();
+        assert!(ep.to_string().contains("unix://"));
+    }
+
+    #[tokio::test]
+    async fn test_endpoint_http_fallback() {
+        remove_test_env("PRIMAL_SOCKET_PATH");
+        let primal = PrimalBuilder::new()
+            .id("test".to_string())
+            .binary_path("/bin/true".to_string())
+            .http_port(9000)
+            .build()
+            .unwrap();
+        let endpoint = primal.endpoint().await;
+        // May be None if RuntimeConfig bind_address fails, or Some with http
+        let _ = endpoint;
+    }
+
+    #[tokio::test]
+    async fn test_health_check_no_process() {
+        let primal = PrimalBuilder::new()
+            .id("test".to_string())
+            .binary_path("/bin/true".to_string())
+            .build()
+            .unwrap();
+        let status = primal.health_check().await.unwrap();
+        assert_eq!(status, HealthStatus::Unhealthy);
+    }
+
+    #[tokio::test]
+    async fn test_startup_timeout_default() {
+        let primal = PrimalBuilder::new()
+            .id("test".to_string())
+            .binary_path("/bin/true".to_string())
+            .build()
+            .unwrap();
+        let timeout = primal.startup_timeout();
+        assert_eq!(timeout, Duration::from_secs(30));
+    }
+
+    #[tokio::test]
+    async fn test_startup_timeout_custom() {
+        let primal = PrimalBuilder::new()
+            .id("test".to_string())
+            .binary_path("/bin/true".to_string())
+            .env_var("PRIMAL_STARTUP_TIMEOUT".to_string(), "60".to_string())
+            .build()
+            .unwrap();
+        let timeout = primal.startup_timeout();
+        assert_eq!(timeout, Duration::from_secs(60));
+    }
+
+    #[tokio::test]
+    async fn test_with_config_invalid_id() {
+        let config = PrimalConfig {
+            id: "".to_string(),
+            binary_path: "/bin/true".to_string(),
+            provides: vec![],
+            requires: vec![],
+            http_port: 0,
+            env_config: std::collections::HashMap::new(),
+        };
+        let result = GenericManagedPrimal::with_config(config);
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_provides_requires_accessors() {
+        let primal = PrimalBuilder::new()
+            .id("test".to_string())
+            .binary_path("/bin/true".to_string())
+            .provides(vec![Capability::Security, Capability::Discovery])
+            .requires(vec![Capability::Compute])
+            .build()
+            .unwrap();
+        assert_eq!(primal.provides().len(), 2);
+        assert!(primal.provides().contains(&Capability::Security));
+        assert_eq!(primal.requires().len(), 1);
+        assert!(primal.requires().contains(&Capability::Compute));
     }
 }

@@ -122,6 +122,7 @@ impl GenomeBin {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -174,5 +175,38 @@ mod tests {
         assert!(!genome.has_current_arch());
         genome.add_binary_bytes(Arch::detect(), b"data");
         assert!(genome.has_current_arch());
+    }
+
+    #[test]
+    fn test_run_in_place_success() {
+        let mut genome = GenomeBin::new("run-test");
+        genome.add_binary_bytes(Arch::detect(), b"#!/bin/sh\nexit 0");
+        let result = genome.run_in_place(&[]);
+        result.expect("run_in_place with exit 0 should succeed");
+    }
+
+    #[test]
+    fn test_run_in_place_failure() {
+        let mut genome = GenomeBin::new("run-fail");
+        genome.add_binary_bytes(Arch::detect(), b"#!/bin/sh\nexit 1");
+        let result = genome.run_in_place(&[]);
+        let err = result.expect_err("exit 1 should fail");
+        assert!(err.to_string().contains("status"));
+    }
+
+    #[test]
+    fn test_extract_with_embedded_genome() {
+        let mut parent = GenomeBin::new("parent");
+        parent.add_binary_bytes(Arch::detect(), b"parent-bin");
+        let mut child = GenomeBin::new("child");
+        child.add_binary_bytes(Arch::detect(), b"child-bin");
+        parent.embed(child).expect("embed");
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = parent.extract(temp.path()).expect("extract");
+        assert!(path.exists());
+        let child_dir = temp.path().join("child");
+        assert!(child_dir.exists());
+        let child_bin = child_dir.join("child");
+        assert!(child_bin.exists());
     }
 }

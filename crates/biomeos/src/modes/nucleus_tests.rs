@@ -4,6 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::*;
+use biomeos_test_utils::TestEnvGuard;
 use std::path::PathBuf;
 
 #[test]
@@ -394,7 +395,7 @@ fn test_discover_binaries_finds_in_path() {
 async fn test_wait_for_socket_times_out_on_nonexistent() {
     let temp = tempfile::tempdir().expect("temp dir");
     let path = temp.path().join("nonexistent.sock");
-    let result = wait_for_socket(&path, Duration::from_millis(50)).await;
+    let result = wait_for_socket(&path, Duration::from_millis(50), Duration::ZERO).await;
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(err.to_string().contains("did not appear"));
@@ -405,7 +406,7 @@ async fn test_wait_for_socket_succeeds_when_file_exists() {
     let temp = tempfile::tempdir().expect("temp dir");
     let path = temp.path().join("test.sock");
     std::fs::write(&path, "").expect("create socket file");
-    let result = wait_for_socket(&path, Duration::from_secs(1)).await;
+    let result = wait_for_socket(&path, Duration::from_secs(1), Duration::ZERO).await;
     assert!(result.is_ok());
 }
 
@@ -696,4 +697,76 @@ fn test_base64_encode_two_byte_padding() {
     let r = super::base64_encode(&[0x41, 0x42]);
     assert_eq!(r.len(), 4);
     assert!(r.ends_with("="));
+}
+
+#[test]
+fn test_resolve_startup_config_uses_biomeos_socket_dir_env() {
+    let _guard = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", "/tmp/nucleus-env-test");
+    let config = resolve_startup_config("tower", "node1", Some("fam1")).expect("should succeed");
+    assert_eq!(config.socket_dir, PathBuf::from("/tmp/nucleus-env-test"));
+}
+
+#[test]
+fn test_build_primal_command_squirrel_ai_default_model_env() {
+    let _guard = TestEnvGuard::set("AI_DEFAULT_MODEL", "custom-model-v1");
+    let cmd = build_primal_command(
+        "squirrel",
+        std::path::Path::new("/usr/bin/squirrel"),
+        std::path::Path::new("/tmp/sock"),
+        "fam1",
+        "node1",
+    );
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let model = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("AI_DEFAULT_MODEL"));
+    assert!(model.is_some(), "AI_DEFAULT_MODEL should be set from env");
+    let (_, v) = model.unwrap();
+    assert_eq!(v.unwrap().to_string_lossy(), "custom-model-v1");
+}
+
+#[test]
+fn test_build_primal_command_squirrel_with_anthropic_key_env() {
+    let _guard = TestEnvGuard::set("ANTHROPIC_API_KEY", "sk-ant-test");
+    let cmd = build_primal_command(
+        "squirrel",
+        std::path::Path::new("/usr/bin/squirrel"),
+        std::path::Path::new("/tmp/sock"),
+        "fam1",
+        "node1",
+    );
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let ai_providers = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("AI_HTTP_PROVIDERS"));
+    assert!(
+        ai_providers.is_some(),
+        "AI_HTTP_PROVIDERS should be set when ANTHROPIC_API_KEY present"
+    );
+}
+
+#[test]
+fn test_build_primal_command_squirrel_with_openai_key_env() {
+    let _guard = TestEnvGuard::set("OPENAI_API_KEY", "sk-openai-test");
+    let cmd = build_primal_command(
+        "squirrel",
+        std::path::Path::new("/usr/bin/squirrel"),
+        std::path::Path::new("/tmp/sock"),
+        "fam1",
+        "node1",
+    );
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let ai_providers = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("AI_HTTP_PROVIDERS"));
+    assert!(ai_providers.is_some());
+}
+
+#[test]
+fn test_discover_binaries_empty_path_env() {
+    let _guard = TestEnvGuard::set("PATH", "");
+    let map = discover_binaries(&["beardog"]).expect("discover should not panic");
+    // May or may not find beardog depending on relative paths (plasmidBin, target/release)
+    // Just verify it doesn't panic with empty PATH
+    let _ = map;
 }

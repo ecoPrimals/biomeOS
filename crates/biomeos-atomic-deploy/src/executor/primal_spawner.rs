@@ -203,6 +203,13 @@ pub async fn spawn_primal_process(
         }
     }
 
+    // AI_DEFAULT_MODEL: Squirrel reads at startup for default model override (Bypass 4 evolution)
+    if primal_name.eq_ignore_ascii_case("squirrel") {
+        if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
+            cmd.env("AI_DEFAULT_MODEL", &model);
+        }
+    }
+
     // 7. Capture stdout/stderr for logging
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
@@ -335,35 +342,48 @@ pub(crate) async fn configure_primal_sockets(
     }
 }
 
+/// Default poll interval for socket readiness (100ms).
+pub const DEFAULT_SOCKET_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
+
 /// Wait for socket to become available with timeout
 ///
 /// # Arguments
 ///
 /// * `socket_path` - Path to the Unix socket to wait for
-/// * `timeout_attempts` - Maximum number of attempts (100ms each)
+/// * `timeout_attempts` - Maximum number of attempts (100ms each by default)
 ///
 /// # Returns
 ///
 /// `Ok(())` if socket becomes available, error if timeout
 pub async fn wait_for_socket(socket_path: &str, timeout_attempts: u32) -> Result<()> {
+    wait_for_socket_with_poll_interval(socket_path, timeout_attempts, DEFAULT_SOCKET_POLL_INTERVAL)
+        .await
+}
+
+/// Wait for socket with configurable poll interval (for tests: use `Duration::ZERO`).
+pub async fn wait_for_socket_with_poll_interval(
+    socket_path: &str,
+    timeout_attempts: u32,
+    poll_interval: std::time::Duration,
+) -> Result<()> {
     debug!("   Waiting for socket: {}", socket_path);
 
     for attempt in 1..=timeout_attempts {
         if PathBuf::from(socket_path).exists() {
             info!(
-                "   ✅ Socket available: {} (after {}00ms)",
+                "   ✅ Socket available: {} (after {} attempts)",
                 socket_path, attempt
             );
             return Ok(());
         }
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        tokio::time::sleep(poll_interval).await;
     }
 
     anyhow::bail!(
-        "Socket did not become available: {} (timeout after {}s)",
+        "Socket did not become available: {} (timeout after {} attempts)",
         socket_path,
-        timeout_attempts / 10
+        timeout_attempts
     )
 }
 
@@ -432,7 +452,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_wait_for_socket_timeout() {
-        let result = wait_for_socket("/tmp/nonexistent-socket-xyz-12345.sock", 2).await;
+        let result = wait_for_socket_with_poll_interval(
+            "/tmp/nonexistent-socket-xyz-12345.sock",
+            2,
+            std::time::Duration::ZERO,
+        )
+        .await;
         let err = result.expect_err("Should timeout on nonexistent socket");
         assert!(
             err.to_string().contains("Socket did not become available"),
