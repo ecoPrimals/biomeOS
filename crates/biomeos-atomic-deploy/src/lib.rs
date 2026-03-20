@@ -13,34 +13,94 @@
 //! - **Genetic Lineage**: Cryptographic family trust
 //! - **Verifiable Deployment**: Every step logged and checkpointed
 
-// Crate-level lint configuration
 #![warn(missing_docs)]
-#![allow(clippy::doc_markdown)] // Allow technical terms without backticks
-#![allow(clippy::too_many_lines)] // Complex orchestration logic
-#![allow(clippy::redundant_closure_for_method_calls)] // Method references in chains
-#![allow(clippy::map_unwrap_or)] // map_or/map_or_else style preference
-#![allow(clippy::single_match_else)] // match vs if let style
-#![allow(clippy::implicit_hasher)] // HashMap with default hasher
-#![allow(clippy::implicit_clone)] // Clone style
-#![allow(clippy::used_underscore_binding)] // Debug logging
-#![allow(clippy::needless_pass_by_ref_mut)] // Trait method signatures
-#![allow(clippy::future_not_send)] // Async with Serialize refs
-#![allow(clippy::unused_self)] // Trait method signatures
-#![allow(clippy::manual_let_else)] // Style preference
-#![allow(clippy::if_not_else)] // Style preference
-#![allow(clippy::or_fun_call)] // unwrap_or with const
-#![allow(clippy::redundant_clone)] // Arc/clone patterns
-#![allow(clippy::ref_option)] // &Option vs Option<&>
-#![allow(clippy::case_sensitive_file_extension_comparisons)] // .sock convention
-#![allow(clippy::no_effect_underscore_binding)] // Intentional discard
-#![allow(clippy::suboptimal_flops)] // mul_add clarity
-#![allow(clippy::bool_to_int_with_if)] // Style
-#![allow(clippy::let_and_return)] // Explicit return
-#![allow(clippy::needless_pass_by_value)] // API signatures
-#![allow(clippy::ignored_unit_patterns)] // Ok(()) matching
-#![allow(clippy::match_same_arms)] // Grouped match arms
-#![forbid(unsafe_code)] // No unsafe code in deployment
+#![forbid(unsafe_code)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+// Crate-specific lint expectations — orchestration crate with complex async,
+// Arc-heavy coordination, and trait-method signatures that trigger pedantic/nursery.
+// Using #[expect] so clippy reports when a suppression becomes unnecessary.
+#![expect(
+    clippy::too_many_lines,
+    reason = "orchestration functions coordinate multi-step deployment"
+)]
+#![expect(
+    clippy::redundant_closure_for_method_calls,
+    reason = "closures in async chains are clearer than method refs"
+)]
+#![expect(
+    clippy::future_not_send,
+    reason = "async handlers hold Serialize refs across awaits"
+)]
+#![expect(
+    clippy::needless_pass_by_ref_mut,
+    reason = "trait method signatures require &mut self"
+)]
+#![expect(clippy::unused_self, reason = "trait method signatures")]
+#![expect(
+    clippy::redundant_clone,
+    reason = "Arc/clone patterns in concurrent coordinator code"
+)]
+#![expect(
+    clippy::needless_pass_by_value,
+    reason = "public API stability — callers pass owned types"
+)]
+#![expect(
+    clippy::map_unwrap_or,
+    reason = "map().unwrap_or() chains read left-to-right in Option/Result pipelines"
+)]
+#![expect(
+    clippy::single_match_else,
+    reason = "match is clearer than if-let for enum destructuring"
+)]
+#![expect(
+    clippy::manual_let_else,
+    reason = "explicit match preferred over let-else in multi-arm contexts"
+)]
+#![expect(
+    clippy::match_same_arms,
+    reason = "grouped match arms for readability when variants share handling"
+)]
+#![expect(
+    clippy::case_sensitive_file_extension_comparisons,
+    reason = ".sock convention is case-exact on Unix"
+)]
+#![expect(
+    clippy::no_effect_underscore_binding,
+    reason = "intentional binding for debug/trace inspection"
+)]
+#![expect(
+    clippy::used_underscore_binding,
+    reason = "underscore-prefixed bindings used in tracing/debug"
+)]
+#![expect(
+    clippy::ignored_unit_patterns,
+    reason = "Ok(()) matching in async result chains"
+)]
+#![expect(
+    clippy::implicit_clone,
+    reason = "to_string() on &str is idiomatic clone"
+)]
+#![expect(clippy::or_fun_call, reason = "unwrap_or with short expressions")]
+#![expect(
+    clippy::if_not_else,
+    reason = "negated conditions are sometimes clearer for early-return"
+)]
+#![expect(
+    clippy::let_and_return,
+    reason = "explicit let binding aids debugger breakpoints"
+)]
+#![expect(
+    clippy::suboptimal_flops,
+    reason = "a * b + c reads clearer than mul_add for metrics"
+)]
+#![expect(
+    clippy::ref_option,
+    reason = "&Option<T> in public API for ergonomic call sites"
+)]
+#![expect(
+    clippy::bool_to_int_with_if,
+    reason = "if cond { 1 } else { 0 } is self-documenting"
+)]
 
 //! # Architecture
 //!

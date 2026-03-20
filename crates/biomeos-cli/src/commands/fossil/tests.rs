@@ -9,6 +9,7 @@ use biomeos_spore::logs::{
 };
 use biomeos_test_utils::env_helpers::TestEnvGuard;
 use chrono::Utc;
+use serial_test::serial;
 use std::path::{Path, PathBuf};
 
 use super::format::{
@@ -721,6 +722,7 @@ fn write_fossil_index(root: &Path, entries: Vec<FossilIndexEntry>) {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_fossil_lists_records_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -753,6 +755,7 @@ async fn test_run_fossil_lists_records_with_temp_log_root() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_fossil_show_detail_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -784,6 +787,7 @@ async fn test_run_fossil_show_detail_with_temp_log_root() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_fossil_invalid_show_index_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -815,6 +819,7 @@ async fn test_run_fossil_invalid_show_index_with_temp_log_root() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_fossil_node_filter_no_match() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -846,6 +851,7 @@ async fn test_run_fossil_node_filter_no_match() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_fossil_node_filter_matches_with_header() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -877,6 +883,7 @@ async fn test_run_fossil_node_filter_matches_with_header() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_clean_dry_run_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -907,6 +914,7 @@ async fn test_run_clean_dry_run_with_temp_log_root() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_clean_deletes_old_fossils_not_dry_run() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -938,6 +946,7 @@ async fn test_run_clean_deletes_old_fossils_not_dry_run() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_migrate_real_move_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -958,6 +967,7 @@ async fn test_run_migrate_real_move_with_temp_log_root() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_active_lists_session_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -975,6 +985,7 @@ async fn test_run_active_lists_session_with_temp_log_root() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_run_cleanup_stale_archives_idle_session() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();

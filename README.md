@@ -4,17 +4,17 @@
 
 ---
 
-## Status: Production Ready (v2.57)
+## Status: Production Ready (v2.58)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v3.0 compliant |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all 26 crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
-| Tests | 6,959 passing (0 failures) — 89.84% line / 90.74% function coverage (llvm-cov verified) |
+| Code Quality | A++ (Pure Rust, Edition 2024 all 22 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
+| Tests | 6,869 passing (0 failures) — 88.82% line overall / 90.54% library coverage (llvm-cov verified) |
 | Unsafe Code | 0 in production |
-| Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
+| Clippy | PASS (0 warnings, pedantic+nursery, all crates via workspace lint inheritance) |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0 + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI |
@@ -23,7 +23,7 @@
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
-| Files >1000 LOC | 0 production AND test (all split into domain submodules) |
+| Files >1000 LOC | 0 production (all split into domain submodules) |
 
 ---
 
@@ -241,13 +241,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (6,760 tests)
+### Test (6,869 tests)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (~89% region)
+### Coverage (90.54% library / 88.82% overall)
 
 ```bash
 cargo llvm-cov --workspace
@@ -293,7 +293,7 @@ biomeOS/
 │   ├── x86_64/                # Intel/AMD binaries
 │   └── aarch64/               # ARM64 binaries
 ├── pixel8a-deploy/            # Pixel 8a deployment
-├── specs/                     # Standards and specs (19 active)
+├── specs/                     # Standards and specs (24 active)
 ├── docs/                      # Architecture docs (handoffs in ecoPrimals/wateringHole/)
 ├── graphs/                    # Deployment graphs
 └── scripts/                   # Startup and build scripts
@@ -335,7 +335,7 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.55)
+**Status**: Production Ready (v2.58)
 **Updated**: March 20, 2026
-**Tests**: 6,760 passing, ~89% region coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
+**Tests**: 6,869 passing, 90.54% library coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | scyBorg (AGPL-3.0 + ORC + CC-BY-SA)

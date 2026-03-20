@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.58 (2026-03-20) — Deep Resilience + Test Extraction
+
+### Bugs Fixed
+- **TOCTOU socket discovery**: `discover_unix_sockets()` in `biomeos-federation` made
+  `read_dir` failure non-fatal (was hard error killing discovery chain)
+- **Socket nucleation dir creation**: `assign_socket()` now creates parent directory
+  regardless of strategy (was only done for XDG strategy)
+- **Fossil test races**: Added `#[serial_test::serial]` to 10 fossil tests using
+  `TestEnvGuard` for `BIOMEOS_CLI_LOG_ROOT`
+
+### Smart Refactoring — Test Extraction
+- `capabilities.rs` (primal-sdk): 946 → 377 lines (579 extracted to `capabilities/tests.rs`)
+- `handlers/discovery.rs` (api): 908 → 293 lines (617 extracted to `discovery/tests.rs`)
+- `vm_federation.rs` (core): 929 → 470 lines (462 extracted to `vm_federation/tests.rs`)
+- `universal_biomeos_manager/discovery.rs`: 923 → 462 lines (468 extracted to `discovery/tests.rs`)
+
+### Quality Gates
+- Tests: 6,869 passing, 0 failures
+- Coverage: 88.82% overall / 90.54% library (binary entrypoints account for gap)
+- Clippy: 0 warnings (pedantic+nursery)
+- Format: clean
+- Files >1000 LOC: 0 production
+
+### Docs
+- Updated README.md, CURRENT_STATUS.md, DOCUMENTATION.md to v2.58
+- Created wateringHole handoff: `BIOMEOS_V258_DEEP_RESILIENCE_HANDOFF_MAR20_2026.md`
+- Updated wateringHole README.md and BIOMEOS_LEVERAGE_GUIDE.md versions
+
 ## v2.55 (2026-03-20) — Coverage Hardening + Quality Gate Final Push
 
 ### Coverage Push (84% → 89%)

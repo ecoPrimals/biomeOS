@@ -61,6 +61,12 @@ impl SocketNucleation {
             SocketStrategy::XdgRuntime => Self::xdg_runtime_path(primal, family_id),
         };
 
+        if let Some(parent) = socket.parent() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                tracing::warn!("Failed to create socket dir {}: {e}", parent.display());
+            }
+        }
+
         info!("📍 Socket assigned: {} → {:?}", key, socket);
         self.assignments.insert(key, socket.clone());
         socket

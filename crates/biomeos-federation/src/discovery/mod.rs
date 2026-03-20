@@ -108,9 +108,18 @@ impl PrimalDiscovery {
             return Ok(());
         }
 
-        let mut entries = tokio::fs::read_dir(&socket_dir).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to read socket dir: {e}"))
-        })?;
+        // Non-fatal: directory may vanish between exists() check and read_dir() (TOCTOU),
+        // or have restrictive permissions under instrumented builds.
+        let mut entries = match tokio::fs::read_dir(&socket_dir).await {
+            Ok(entries) => entries,
+            Err(e) => {
+                warn!(
+                    "Cannot read socket dir {}: {e} (non-fatal)",
+                    socket_dir.display()
+                );
+                return Ok(());
+            }
+        };
 
         while let Some(entry) = entries.next_entry().await.map_err(|e| {
             crate::FederationError::DiscoveryError(format!("Failed to read entry: {e}"))

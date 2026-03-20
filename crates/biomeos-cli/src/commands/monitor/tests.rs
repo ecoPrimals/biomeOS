@@ -464,7 +464,7 @@ fn test_format_scale_output_auto_partial_fields() {
 #[tokio::test]
 #[cfg(not(feature = "deprecated-tui"))]
 async fn test_handle_dashboard_deprecated_message() {
-    let result = handle_dashboard(5, false).await;
+    let result = super::handlers::handle_dashboard(5, false).await;
     assert!(result.is_ok());
 }
 

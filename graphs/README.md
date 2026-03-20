@@ -15,6 +15,8 @@
 | `gate2_nucleus.toml` | Full NUCLEUS on a second gate | 12 | Yes |
 
 All graphs use `${XDG_RUNTIME_DIR}/biomeos/` and `${FAMILY_ID}` placeholders — zero hardcoded paths.
+`DISCOVERY_ADDRESS`/`DISCOVERY_ENDPOINT` default to the local Neural API (`127.0.0.1:8080`)
+and are overridden at runtime by `$BIOMEOS_DISCOVERY_ENDPOINT` or capability-based socket scanning.
 
 ### Execute via Neural API
 

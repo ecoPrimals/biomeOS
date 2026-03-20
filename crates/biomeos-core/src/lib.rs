@@ -7,10 +7,8 @@
 //! Now split into focused modules for better maintainability and compliance
 //! with the 1000-line file size limit.
 
-// Crate-level lint configuration
 #![warn(missing_docs)]
-#![allow(clippy::doc_markdown)] // Allow technical terms without backticks
-#![forbid(unsafe_code)] // No unsafe code in core
+#![forbid(unsafe_code)]
 
 // Core universal manager (now modular)
 pub mod universal_biomeos_manager;

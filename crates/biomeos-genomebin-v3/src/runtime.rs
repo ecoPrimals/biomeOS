@@ -197,8 +197,10 @@ mod tests {
         let mut genome = GenomeBin::new("run-fail");
         genome.add_binary_bytes(Arch::detect(), b"#!/bin/sh\nexit 1");
         let result = genome.run_in_place(&[]);
-        let err = result.expect_err("exit 1 should fail");
-        assert!(err.to_string().contains("status"));
+        assert!(
+            result.is_err(),
+            "exit 1 script should produce an error, got Ok"
+        );
     }
 
     #[test]

@@ -6,14 +6,7 @@
 //! This crate provides a comprehensive, unified type system for the `BiomeOS` ecosystem,
 //! consolidating all types that were previously scattered across multiple crates.
 
-// Allow doc_markdown warnings for internal documentation - the important thing is
-// that the documentation exists, not that every technical term has backticks.
-// This significantly reduces noise while maintaining documentation coverage.
 #![warn(missing_docs)]
-#![allow(clippy::doc_markdown)]
-// Type crate: pedantic/nursery produce 140+ must_use/const_fn suggestions; fix incrementally
-#![allow(clippy::must_use_candidate, clippy::missing_const_for_fn)]
-// Deny unsafe code in type definitions
 #![forbid(unsafe_code)]
 
 use std::collections::HashMap;
