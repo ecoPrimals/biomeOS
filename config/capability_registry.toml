@@ -66,6 +66,31 @@ capabilities = [
 "security.verify_jwt" = { provider = "beardog", method = "verify_jwt" }
 
 # ------------------------------------------------------------------------------
+# Genetic Domain (BearDog)
+# Lineage derivation, entropy mixing, lineage verification and proof generation.
+# Used by biomeOS enrollment, beacon genetics, dark forest, and federation.
+# Added: primalSpring Tower co-evolution (Mar 18, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.genetic]
+provider = "beardog"
+capabilities = [
+    "genetic",
+    "lineage",
+]
+
+[translations.genetic]
+"genetic.derive_lineage_key" = { provider = "beardog", method = "genetic.derive_lineage_key" }
+"genetic.mix_entropy" = { provider = "beardog", method = "genetic.mix_entropy" }
+"genetic.verify_lineage" = { provider = "beardog", method = "genetic.verify_lineage" }
+"genetic.generate_lineage_proof" = { provider = "beardog", method = "genetic.generate_lineage_proof" }
+
+[translations.lineage]
+"lineage.verify_siblings" = { provider = "beardog", method = "lineage.verify_siblings" }
+"lineage.verify_members" = { provider = "beardog", method = "lineage.verify_members" }
+"lineage.derive_child" = { provider = "beardog", method = "crypto.derive_child_seed" }
+
+# ------------------------------------------------------------------------------
 # Network Domain (Songbird)
 # Discovery, HTTP, orchestration, federation, beacon exchange
 # ------------------------------------------------------------------------------
