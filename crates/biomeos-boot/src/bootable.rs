@@ -420,7 +420,7 @@ impl BootableMediaBuilder {
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used, clippy::unwrap_used, clippy::indexing_slicing)] // Tests use expect/unwrap for clear failure context
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -484,7 +484,7 @@ mod tests {
         let result = rt.block_on(builder.create_archive_fallback(&boot_dir, &output));
         let path = result.expect("create_archive_fallback should succeed");
         assert!(path.exists());
-        assert!(path.extension().map(|e| e == "gz").unwrap_or(false));
+        assert!(path.extension().is_some_and(|e| e == "gz"));
     }
 
     #[test]
@@ -607,5 +607,216 @@ mod tests {
         let result =
             BootableMediaBuilder::create_grub_config(std::path::Path::new("/nonexistent/grub/dir"));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_copy_directory_src_not_a_directory_fails() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let f = temp.path().join("file_not_dir");
+        std::fs::write(&f, b"x").expect("write");
+        let dest = temp.path().join("dest");
+        let r = BootableMediaBuilder::copy_directory(&f, &dest);
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn test_copy_directory_missing_src_fails() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let r = BootableMediaBuilder::copy_directory(
+            &temp.path().join("nope"),
+            &temp.path().join("dest"),
+        );
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_create_boot_structure_copies_kernel_and_initramfs() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let builder = BootableMediaBuilder::new(project_root).expect("new");
+        let kernel_path = temp.path().join("vmlinuz-test");
+        std::fs::write(&kernel_path, b"fake-kernel-bytes").expect("kernel");
+        let initramfs = temp.path().join("mini-initramfs.img");
+        std::fs::write(&initramfs, b"cpio-bytes").expect("initramfs");
+        let km = KernelManager::detect_or_custom(Some(kernel_path)).expect("kernel mgr");
+        let boot_dir = builder
+            .create_boot_structure(&km, &initramfs)
+            .await
+            .expect("boot structure");
+        assert!(boot_dir.join("boot/vmlinuz").exists());
+        assert!(boot_dir.join("boot/initramfs.img").exists());
+        assert!(boot_dir.join("boot/grub/grub.cfg").exists());
+    }
+
+    #[tokio::test]
+    async fn test_add_biomeos_data_copies_phase1_and_templates() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().join("proj");
+        std::fs::create_dir_all(&project_root).expect("proj");
+        std::fs::create_dir_all(temp.path().join("phase1bins")).expect("p1");
+        std::fs::write(temp.path().join("phase1bins").join("p.bin"), b"p").expect("p1 bin");
+        std::fs::create_dir_all(project_root.join("templates")).expect("tpl");
+        std::fs::write(project_root.join("templates/hello.txt"), b"tpl").expect("tpl file");
+        let builder = BootableMediaBuilder::new(project_root).expect("builder");
+        let boot_dir = temp.path().join("boot-root");
+        std::fs::create_dir_all(&boot_dir).expect("boot");
+        builder.add_biomeos_data(&boot_dir).await.expect("add data");
+        assert!(boot_dir.join("biomeos/primals/p.bin").exists());
+        assert!(boot_dir.join("biomeos/templates/hello.txt").exists());
+    }
+
+    #[tokio::test]
+    async fn test_add_biomeos_data_without_phase1_parent() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let builder = BootableMediaBuilder::new(project_root.clone()).expect("new");
+        let boot_dir = temp.path().join("br");
+        std::fs::create_dir_all(&boot_dir).expect("boot");
+        builder
+            .add_biomeos_data(&boot_dir)
+            .await
+            .expect("ok without phase1");
+        assert!(boot_dir.join("biomeos/primals").exists());
+    }
+
+    #[tokio::test]
+    async fn test_create_bootable_image_produces_artifact() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
+        let boot_dir = temp.path().join("br");
+        std::fs::create_dir_all(boot_dir.join("boot/grub")).expect("grub");
+        std::fs::write(boot_dir.join("boot/grub/grub.cfg"), b"# test").expect("cfg");
+        let path = builder
+            .create_bootable_image(&boot_dir, BootTarget::Iso)
+            .await
+            .expect("image");
+        assert!(path.exists());
+    }
+
+    #[tokio::test]
+    async fn test_create_with_grub_mkrescue_or_error() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
+        let boot_dir = temp.path().join("br2");
+        std::fs::create_dir_all(&boot_dir).expect("create");
+        let out = temp.path().join("out.iso");
+        let r = builder.create_with_grub_mkrescue(&boot_dir, &out).await;
+        let grub_ok = std::process::Command::new("grub-mkrescue")
+            .arg("--help")
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if grub_ok {
+            assert!(r.is_ok() || r.is_err());
+        } else {
+            assert!(r.is_err());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_create_with_xorriso_or_error() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
+        let boot_dir = temp.path().join("br3");
+        std::fs::create_dir_all(&boot_dir).expect("create");
+        let out = temp.path().join("out-xor.iso");
+        let r = builder.create_with_xorriso(&boot_dir, &out).await;
+        let xor_ok = std::process::Command::new("xorriso")
+            .arg("-version")
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if xor_ok {
+            assert!(r.is_ok() || r.is_err());
+        } else {
+            assert!(r.is_err());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_create_boot_structure_initramfs_copy_failures() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let builder = BootableMediaBuilder::new(project_root).expect("new");
+        let kernel_path = temp.path().join("vmlinuz-ok");
+        std::fs::write(&kernel_path, b"k").expect("k");
+        let km = KernelManager::detect_or_custom(Some(kernel_path)).expect("km");
+        let bad_init = temp.path().join("missing-initramfs.img");
+        let r = builder.create_boot_structure(&km, &bad_init).await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_build_initramfs_with_minimal_release_binaries() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let tr = project_root.join("target/release");
+        std::fs::create_dir_all(&tr).expect("release dir");
+        std::fs::write(tr.join("biomeos-init"), b"#!fake").expect("init bin");
+        std::fs::write(tr.join("biome"), b"#!fake").expect("biome bin");
+        let builder = BootableMediaBuilder::new(project_root).expect("new");
+        let path = builder.build_initramfs().await.expect("initramfs build");
+        assert!(path.exists());
+        assert!(path.extension().is_some_and(|e| e == "img"));
+    }
+
+    #[tokio::test]
+    async fn test_add_biomeos_data_skips_phase1_when_parent_has_no_bins() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().join("proj");
+        std::fs::create_dir_all(&project_root).expect("proj");
+        let builder = BootableMediaBuilder::new(project_root).expect("builder");
+        let boot_dir = temp.path().join("boot-root");
+        std::fs::create_dir_all(&boot_dir).expect("boot");
+        builder.add_biomeos_data(&boot_dir).await.expect("add data");
+        assert!(boot_dir.join("biomeos/primals").exists());
+    }
+
+    #[tokio::test]
+    async fn test_add_biomeos_data_without_templates_dir() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        std::fs::create_dir_all(&project_root).expect("root");
+        let builder = BootableMediaBuilder::new(project_root).expect("builder");
+        let boot_dir = temp.path().join("br");
+        std::fs::create_dir_all(&boot_dir).expect("boot");
+        builder.add_biomeos_data(&boot_dir).await.expect("ok");
+        assert!(boot_dir.join("biomeos/templates").exists());
+    }
+
+    #[tokio::test]
+    async fn test_create_boot_structure_kernel_copy_fails() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
+        let missing_kernel = temp.path().join("no-such-vmlinuz");
+        let km = KernelManager::detect_or_custom(Some(missing_kernel.clone())).expect("km");
+        let initramfs = temp.path().join("ir.img");
+        std::fs::write(&initramfs, b"x").expect("init");
+        let r = builder.create_boot_structure(&km, &initramfs).await;
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn test_copy_directory_invalid_entry_name_edge() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let src = temp.path().join("src");
+        std::fs::create_dir_all(&src).expect("src");
+        std::fs::write(src.join("ok.txt"), b"1").expect("w");
+        let dest = temp.path().join("dest");
+        let r = BootableMediaBuilder::copy_directory(&src, &dest);
+        assert!(r.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_create_archive_fallback_errors_on_bad_parent() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
+        let boot_dir = temp.path().join("br");
+        std::fs::create_dir_all(&boot_dir).expect("boot");
+        let blocker = temp.path().join("blocker");
+        std::fs::write(&blocker, b"x").expect("file");
+        let out = blocker.join("nested.iso");
+        let r = builder.create_archive_fallback(&boot_dir, &out).await;
+        assert!(r.is_err());
     }
 }

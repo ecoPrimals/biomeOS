@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! E2E tests for verify/refresh workflow
 //!
 //! Tests the complete lifecycle: nucleus setup → spore creation → verification → refresh
@@ -208,6 +210,7 @@ BEARDOG_NODE_ID = "test-node"
     }
 }
 
+#[allow(clippy::too_many_lines)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_e2e_multi_binary_refresh() {
     let temp_dir = TempDir::new().unwrap();

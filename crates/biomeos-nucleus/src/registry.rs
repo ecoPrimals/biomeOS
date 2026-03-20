@@ -205,6 +205,7 @@ pub struct RegistryStats {
     pub by_trust_level: HashMap<String, usize>,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

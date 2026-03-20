@@ -261,6 +261,7 @@ impl From<uuid::Error> for BiomeError {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

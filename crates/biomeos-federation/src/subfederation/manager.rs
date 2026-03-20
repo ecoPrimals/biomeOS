@@ -205,11 +205,8 @@ impl SubFederationManager {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
 mod tests {
     use biomeos_test_utils::{remove_test_env, set_test_env};
     use tempfile::TempDir;
@@ -316,7 +313,7 @@ mod tests {
 
         let subfed = mgr
             .create(
-                "".to_string(),
+                String::new(),
                 "family".to_string(),
                 vec!["node-a".to_string()],
                 CapabilitySet::new(),

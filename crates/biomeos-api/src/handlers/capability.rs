@@ -387,7 +387,7 @@ mod tests {
         let json = serde_json::to_string(&provider).expect("should serialize");
         assert!(json.contains("test-primal"));
         assert!(json.contains("healthy"));
-        assert!(json.contains("2"));
+        assert!(json.contains('2'));
 
         let deserialized: CapabilityProvider =
             serde_json::from_str(&json).expect("should deserialize");

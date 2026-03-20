@@ -428,6 +428,7 @@ pub enum Priority {
     Low,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -520,7 +521,7 @@ mod tests {
         assert!(
             result
                 .get("confidence")
-                .and_then(|v| v.as_f64())
+                .and_then(serde_json::Value::as_f64)
                 .unwrap_or(0.0)
                 <= 1.0
         );
@@ -552,7 +553,9 @@ mod tests {
             .await
             .expect("get_ai_status should succeed");
         assert_eq!(
-            status.get("ai_enabled").and_then(|v| v.as_bool()),
+            status
+                .get("ai_enabled")
+                .and_then(serde_json::Value::as_bool),
             Some(true)
         );
         assert_eq!(status.get("status").and_then(|v| v.as_str()), Some("ready"));

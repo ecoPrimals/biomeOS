@@ -321,11 +321,11 @@ impl RealTimeEventSubscriber {
         }
 
         // Try to parse data as RealTimeEvent
-        if let Some(data_str) = data {
-            if let Ok(event) = serde_json::from_str::<RealTimeEvent>(&data_str) {
-                debug!("📨 Parsed SSE event: {:?}", event_type);
-                return Some(event);
-            }
+        if let Some(data_str) = data
+            && let Ok(event) = serde_json::from_str::<RealTimeEvent>(&data_str)
+        {
+            debug!("📨 Parsed SSE event: {:?}", event_type);
+            return Some(event);
         }
 
         None

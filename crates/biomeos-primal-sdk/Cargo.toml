@@ -36,8 +36,9 @@ thiserror = "1.0"
 tracing = { workspace = true }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils" }
+biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tempfile = "3.8"
+serial_test = "3.2"
 
 [lints]
 workspace = true

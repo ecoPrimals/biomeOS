@@ -254,10 +254,9 @@ async fn send_jsonrpc(
     serde_json::from_str(&response_line).context("Failed to parse Neural API response")
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
-
     use super::*;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixListener;
@@ -269,7 +268,7 @@ mod tests {
     ) -> (PathBuf, tokio::task::JoinHandle<()>) {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("neural-api.sock");
-        let path_buf = socket_path.to_path_buf();
+        let path_buf = socket_path.clone();
         let path_for_listener = path_buf.clone();
         let (ready_tx, ready_rx) = oneshot::channel();
 

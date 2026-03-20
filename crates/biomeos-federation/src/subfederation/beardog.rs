@@ -196,9 +196,15 @@ pub async fn request_subfederation_key(
 mod tests {
     use super::*;
     use biomeos_test_utils::{remove_test_env, set_test_env};
+    use serial_test::serial;
+    use std::path::PathBuf;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
+    use tokio::sync::oneshot;
 
-    #[test]
-    fn test_discover_beardog_socket_from_env() {
+    #[tokio::test]
+    #[serial]
+    async fn test_discover_beardog_socket_from_env() {
         set_test_env("BEARDOG_SOCKET", "/tmp/test-beardog.sock");
         let result = discover_beardog_socket();
         remove_test_env("BEARDOG_SOCKET");
@@ -206,8 +212,9 @@ mod tests {
         assert_eq!(result.unwrap(), "/tmp/test-beardog.sock");
     }
 
-    #[test]
-    fn test_discover_beardog_socket_without_env() {
+    #[tokio::test]
+    #[serial]
+    async fn test_discover_beardog_socket_without_env() {
         remove_test_env("BEARDOG_SOCKET");
         remove_test_env("BIOMEOS_FAMILY_ID");
         let result = discover_beardog_socket();
@@ -220,7 +227,33 @@ mod tests {
         }
     }
 
+    async fn spawn_beardog_mock(response_line: String) -> (tempfile::TempDir, PathBuf) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("beardog-mock.sock");
+        let (ready_tx, ready_rx) = oneshot::channel();
+        let path_for_task = path.clone();
+        let line = response_line;
+        tokio::spawn(async move {
+            let _ = tokio::fs::remove_file(&path_for_task).await;
+            let listener = UnixListener::bind(&path_for_task).expect("bind mock beardog");
+            ready_tx.send(()).expect("ready");
+            let (stream, _) = listener.accept().await.expect("accept");
+            let (read_half, mut write_half) = stream.into_split();
+            let mut reader = BufReader::new(read_half);
+            let mut request = String::new();
+            reader.read_line(&mut request).await.expect("read request");
+            assert!(!request.is_empty());
+            write_half
+                .write_all(line.as_bytes())
+                .await
+                .expect("write response");
+        });
+        ready_rx.await.expect("mock start");
+        (dir, path)
+    }
+
     #[tokio::test]
+    #[serial]
     async fn test_verify_member_lineage_connection_error() {
         set_test_env("BEARDOG_SOCKET", "/nonexistent/path/beardog.sock");
         let result = verify_member_lineage(
@@ -241,6 +274,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_request_subfederation_key_connection_error() {
         set_test_env("BEARDOG_SOCKET", "/nonexistent/path/beardog.sock");
         let result = request_subfederation_key("parent-family", "subfed-name").await;
@@ -254,5 +288,113 @@ mod tests {
             "expected connection-related error, got: {}",
             err_msg
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_verify_member_lineage_success() {
+        let line = r#"{"jsonrpc":"2.0","id":1,"result":{"all_verified":true}}"#.to_string() + "\n";
+        let (_dir, sock) = spawn_beardog_mock(line).await;
+        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        let result = verify_member_lineage("fam", &["a".into(), "b".into()]).await;
+        remove_test_env("BEARDOG_SOCKET");
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_verify_member_lineage_json_rpc_error_with_message() {
+        let line =
+            r#"{"jsonrpc":"2.0","id":1,"error":{"message":"bad lineage"}}"#.to_string() + "\n";
+        let (_dir, sock) = spawn_beardog_mock(line).await;
+        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        let result = verify_member_lineage("fam", &["m".into()]).await;
+        remove_test_env("BEARDOG_SOCKET");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Lineage verification failed"));
+        assert!(err.contains("bad lineage"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_verify_member_lineage_json_rpc_error_empty_object_uses_unknown() {
+        let line = r#"{"jsonrpc":"2.0","id":1,"error":{}}"#.to_string() + "\n";
+        let (_dir, sock) = spawn_beardog_mock(line).await;
+        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        let result = verify_member_lineage("fam", &["m".into()]).await;
+        remove_test_env("BEARDOG_SOCKET");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Unknown") || err.contains("Lineage verification failed"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_verify_member_lineage_not_all_verified_lists_failed() {
+        let line =
+            r#"{"jsonrpc":"2.0","id":1,"result":{"all_verified":false,"failed_members":["x","y"]}}"#
+                .to_string() + "\n";
+        let (_dir, sock) = spawn_beardog_mock(line).await;
+        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        let result = verify_member_lineage("fam", &["m".into()]).await;
+        remove_test_env("BEARDOG_SOCKET");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Lineage verification failed"));
+        assert!(err.contains('x'));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_verify_member_lineage_malformed_json_response() {
+        let line = "%%%not-json\n".to_string();
+        let (_dir, sock) = spawn_beardog_mock(line).await;
+        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        let result = verify_member_lineage("fam", &["m".into()]).await;
+        remove_test_env("BEARDOG_SOCKET");
+        assert!(result.unwrap_err().to_string().contains("JSON parse"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_request_subfederation_key_success() {
+        let line =
+            r#"{"jsonrpc":"2.0","id":1,"result":{"key_ref":"vault/key/abc"}}"#.to_string() + "\n";
+        let (_dir, sock) = spawn_beardog_mock(line).await;
+        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        let result = request_subfederation_key("fam", "sub").await;
+        remove_test_env("BEARDOG_SOCKET");
+        match result {
+            Ok(key) => assert_eq!(key, "vault/key/abc"),
+            Err(e) => {
+                let msg = e.to_string();
+                assert!(
+                    msg.contains("connection") || msg.contains("No such file"),
+                    "unexpected error: {msg}"
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_request_subfederation_key_json_rpc_error() {
+        let line = r#"{"jsonrpc":"2.0","id":1,"error":{"message":"denied"}}"#.to_string() + "\n";
+        let (_dir, sock) = spawn_beardog_mock(line).await;
+        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        let result = request_subfederation_key("fam", "sub").await;
+        remove_test_env("BEARDOG_SOCKET");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Key derivation failed"));
+        assert!(err.contains("denied"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_request_subfederation_key_missing_key_ref() {
+        let line = r#"{"jsonrpc":"2.0","id":1,"result":{}}"#.to_string() + "\n";
+        let (_dir, sock) = spawn_beardog_mock(line).await;
+        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        let result = request_subfederation_key("fam", "sub").await;
+        remove_test_env("BEARDOG_SOCKET");
+        assert!(result.unwrap_err().to_string().contains("Missing key_ref"));
     }
 }

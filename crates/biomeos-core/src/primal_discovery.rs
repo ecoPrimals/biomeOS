@@ -278,7 +278,7 @@ mod tests {
         #[cfg(unix)]
         {
             assert!(
-                primals.len() >= 1,
+                !primals.is_empty(),
                 "Should discover at least one primal on unix"
             );
             if let Some(p) = primals.first() {

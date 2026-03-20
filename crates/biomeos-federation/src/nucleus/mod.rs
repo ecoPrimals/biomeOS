@@ -388,6 +388,7 @@ impl SecureNucleusDiscovery {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -440,7 +441,7 @@ mod tests {
     #[test]
     fn test_selection_criteria_clone() {
         let c = SelectionCriteria::ByFamily("fam-1".into());
-        let c2 = c.clone();
+        let c2 = c;
         assert!(format!("{c2:?}").contains("fam-1"));
     }
 

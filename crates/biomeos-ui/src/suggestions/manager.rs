@@ -29,7 +29,8 @@ pub struct AISuggestionManager {
     ai_provider_socket: Option<std::path::PathBuf>,
 
     /// Family ID (for family-scoped AI suggestions)
-    pub(crate) _family_id: String,
+    #[allow(dead_code)] // read from tests; future AI RPC context
+    pub(crate) family_id: String,
 
     /// Active suggestions
     pub(crate) active_suggestions: HashMap<String, AISuggestion>,
@@ -40,7 +41,7 @@ impl AISuggestionManager {
     pub fn new(family_id: String) -> Self {
         Self {
             ai_provider_socket: None,
-            _family_id: family_id,
+            family_id,
             active_suggestions: HashMap::new(),
         }
     }
@@ -283,13 +284,12 @@ mod tests {
     #[test]
     fn test_new() {
         let mgr = AISuggestionManager::new("fam1".to_string());
-        assert_eq!(mgr._family_id, "fam1");
+        assert_eq!(mgr.family_id, "fam1");
         assert!(mgr.get_active_suggestions().is_empty());
     }
 
     #[test]
     fn test_generate_local_suggestions_empty_context() {
-        let mgr = AISuggestionManager::new("fam1".to_string());
         let ctx = SuggestionContext {
             assignments: std::collections::HashMap::new(),
             available_devices: vec![],
@@ -303,7 +303,6 @@ mod tests {
 
     #[test]
     fn test_generate_local_suggestions_unassigned_device() {
-        let mgr = AISuggestionManager::new("fam1".to_string());
         let ctx = SuggestionContext {
             assignments: std::collections::HashMap::new(),
             available_devices: vec![DeviceInfo {
@@ -334,7 +333,6 @@ mod tests {
 
     #[test]
     fn test_generate_local_suggestions_overloaded_primal() {
-        let mgr = AISuggestionManager::new("fam1".to_string());
         let ctx = SuggestionContext {
             assignments: std::collections::HashMap::new(),
             available_devices: vec![],
@@ -360,7 +358,6 @@ mod tests {
 
     #[test]
     fn test_generate_local_suggestions_no_compatible_primal() {
-        let mgr = AISuggestionManager::new("fam1".to_string());
         let ctx = SuggestionContext {
             assignments: std::collections::HashMap::new(),
             available_devices: vec![DeviceInfo {

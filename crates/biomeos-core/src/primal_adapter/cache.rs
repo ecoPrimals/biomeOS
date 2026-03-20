@@ -99,6 +99,7 @@ pub fn load_adapter(primal_name: &str) -> Result<PrimalAdapter> {
     cache.load(primal_name)
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

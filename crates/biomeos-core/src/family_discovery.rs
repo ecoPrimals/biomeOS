@@ -301,7 +301,7 @@ mod tests {
             allow_default: false,
             default_family: "default".to_string(),
             family_id_override: Some("test_family_123".to_string()),
-            biomeos_family_id_override: Some("".to_string()),
+            biomeos_family_id_override: Some(String::new()),
         };
         let result = discover_family_with_config(&config);
         assert!(result.is_some());
@@ -322,11 +322,11 @@ mod tests {
         file.write_all(&seed_data).unwrap();
 
         let config = FamilyDiscoveryConfig {
-            seed_file_paths: vec![seed_path.clone()],
+            seed_file_paths: vec![seed_path],
             allow_default: false,
             default_family: "default".to_string(),
-            family_id_override: Some("".to_string()),
-            biomeos_family_id_override: Some("".to_string()),
+            family_id_override: Some(String::new()),
+            biomeos_family_id_override: Some(String::new()),
         };
 
         let result = discover_family_with_config(&config);
@@ -343,8 +343,8 @@ mod tests {
             seed_file_paths: vec![],
             allow_default: true,
             default_family: "default".to_string(),
-            family_id_override: Some("".to_string()),
-            biomeos_family_id_override: Some("".to_string()),
+            family_id_override: Some(String::new()),
+            biomeos_family_id_override: Some(String::new()),
         };
         let family_id = get_family_id_with_config(&config);
         assert_eq!(family_id, "default");
@@ -376,8 +376,8 @@ mod tests {
             seed_file_paths: vec![seed_path],
             allow_default: false,
             default_family: "default".to_string(),
-            family_id_override: Some("".to_string()),
-            biomeos_family_id_override: Some("".to_string()),
+            family_id_override: Some(String::new()),
+            biomeos_family_id_override: Some(String::new()),
         };
         let result = discover_family_with_config(&config);
         assert!(result.is_none());
@@ -422,7 +422,7 @@ mod tests {
             seed_file_paths: vec![],
             allow_default: true,
             default_family: "default".to_string(),
-            family_id_override: Some("".to_string()),
+            family_id_override: Some(String::new()),
             biomeos_family_id_override: Some("biomeos_test_123".to_string()),
         };
         let result = discover_family_with_config(&config);
@@ -437,7 +437,7 @@ mod tests {
             allow_default: true,
             default_family: "fallback".to_string(),
             family_id_override: Some("nat0".to_string()),
-            biomeos_family_id_override: Some("".to_string()),
+            biomeos_family_id_override: Some(String::new()),
         };
         let result = discover_family_with_config(&config);
         assert!(result.is_some());

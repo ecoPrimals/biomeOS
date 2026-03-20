@@ -45,12 +45,13 @@ vm-testing/*.qcow2
 secrets/
 certs/
 
-# Identity and seed files (never commit)
-.family.seed
-.lineage.seed
-.lineage.json
-.beacon.seed
-.known_beacons.json
+# Identity and seed files (never commit — recursive across all subdirs)
+**/.family.seed
+**/.lineage.seed
+**/.lineage.json
+**/.beacon.seed
+**/.known_beacons.json
+**/.device.identity
 .project-status
 
 # Runtime data (generated at runtime, not source)
@@ -70,5 +71,20 @@ archive/
 cloudflared
 *.bak*/
 plasmidBin/optimized/
+plasmidBin/stable/
+plasmidBin/static/
+plasmidBin/biomeOS/
+
+# Genome and binary files (distribute via genomeBin, not git)
+*.genome
+
+# Primal ELF binaries in deployment dirs
+livespore-usb/plasmidBin/
+pixel8a-deploy/beardog
+pixel8a-deploy/songbird
+pixel8a-deploy/squirrel
+pixel8a-deploy/nestgate
+pixel8a-deploy/toadstool
+
 chimeras/**/Cargo.lock
 chimeras/**/target/

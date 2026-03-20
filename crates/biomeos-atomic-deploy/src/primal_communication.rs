@@ -185,6 +185,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use biomeos_test_utils::MockJsonRpcServer;
     use serde_json::json;
 
     #[test]
@@ -317,5 +318,45 @@ mod tests {
             })
             .unwrap_or_default();
         assert_eq!(capabilities, vec!["a", "b", "c"]);
+    }
+
+    #[tokio::test]
+    async fn test_verify_primal_health_success_mock_socket() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("primal-mock.sock");
+        let _server = MockJsonRpcServer::spawn_echo_success(
+            &sock,
+            json!({ "capabilities": ["security", "crypto.lineage"] }),
+        )
+        .await;
+
+        let caps = verify_primal_health(&sock, "mock-p").await.expect("health");
+        assert_eq!(caps.len(), 2);
+        assert!(caps.iter().any(|c| c == "security"));
+    }
+
+    #[tokio::test]
+    async fn test_establish_btsp_tunnel_success_mock_socket() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("beardog-mock.sock");
+        let _server =
+            MockJsonRpcServer::spawn_echo_success(&sock, json!({ "session_id": "btsp-unit-1" }))
+                .await;
+
+        let sid = establish_btsp_tunnel(&sock, "family-x")
+            .await
+            .expect("btsp");
+        assert_eq!(sid, "btsp-unit-1");
+    }
+
+    #[tokio::test]
+    async fn test_establish_btsp_tunnel_missing_session_id() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("beardog-mock2.sock");
+        let _server =
+            MockJsonRpcServer::spawn_echo_success(&sock, json!({ "established": true })).await;
+
+        let err = establish_btsp_tunnel(&sock, "f").await.unwrap_err();
+        assert!(err.to_string().contains("session_id") || err.to_string().contains("Missing"));
     }
 }

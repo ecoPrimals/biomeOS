@@ -6,8 +6,24 @@
 //! Spawns and manages the interactive shell.
 
 use crate::init_error::Result;
+use std::process::{Command, ExitStatus, Stdio};
 use std::time::Duration;
 use tracing::{error, info};
+
+/// Builds the production interactive shell command (`busybox sh` with inherited stdio).
+pub(crate) fn build_interactive_shell_command() -> Command {
+    let mut cmd = Command::new("/bin/busybox");
+    cmd.arg("sh")
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    cmd
+}
+
+/// Runs a shell command to completion (separated for unit testing).
+pub(crate) fn run_interactive_shell_status(cmd: &mut Command) -> std::io::Result<ExitStatus> {
+    cmd.status()
+}
 
 /// Shell spawner and manager
 pub struct ShellManager;
@@ -33,13 +49,7 @@ impl ShellManager {
         info!("");
 
         // Try to spawn busybox sh
-        match std::process::Command::new("/bin/busybox")
-            .arg("sh")
-            .stdin(std::process::Stdio::inherit())
-            .stdout(std::process::Stdio::inherit())
-            .stderr(std::process::Stdio::inherit())
-            .status()
-        {
+        match run_interactive_shell_status(&mut build_interactive_shell_command()) {
             Ok(status) => {
                 if !status.success() {
                     error!("Shell exited with: {}", status);
@@ -81,22 +91,49 @@ mod tests {
     #[test]
     fn test_shell_manager_creation() {
         let _mgr = ShellManager::new();
-        // Just verify it can be created
     }
 
     #[test]
     fn test_shell_manager_default() {
-        let mgr = ShellManager::default();
+        let mgr = ShellManager;
         let mgr2 = ShellManager::new();
-        // Both should be constructible
         let _ = (mgr, mgr2);
     }
 
     #[test]
     fn test_shell_manager_default_equals_new() {
-        let default_mgr = ShellManager::default();
+        let default_mgr = ShellManager;
         let new_mgr = ShellManager::new();
         let _ = (default_mgr, new_mgr);
+    }
+
+    #[test]
+    fn test_build_interactive_shell_command_uses_busybox_sh() {
+        let cmd = build_interactive_shell_command();
+        assert_eq!(cmd.get_program(), std::path::Path::new("/bin/busybox"));
+        let args: Vec<_> = cmd.get_args().map(|a| a.to_str().unwrap()).collect();
+        assert_eq!(args, vec!["sh"]);
+    }
+
+    #[test]
+    fn test_run_interactive_shell_status_true_exits_successfully() {
+        let mut cmd = Command::new("true");
+        let status = run_interactive_shell_status(&mut cmd).expect("spawn true");
+        assert!(status.success());
+    }
+
+    #[test]
+    fn test_run_interactive_shell_status_false_exits_nonzero() {
+        let mut cmd = Command::new("false");
+        let status = run_interactive_shell_status(&mut cmd).expect("spawn false");
+        assert!(!status.success());
+    }
+
+    #[test]
+    fn test_run_interactive_shell_status_missing_binary_returns_error() {
+        let mut cmd = Command::new("/nonexistent/binary/biomeos-init-shell-test-xyz");
+        let err = run_interactive_shell_status(&mut cmd).expect_err("expected spawn error");
+        assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
     }
 
     #[tokio::test]
@@ -105,7 +142,4 @@ mod tests {
         let mgr = ShellManager::new();
         let _ = mgr;
     }
-
-    // Note: spawn_interactive is not unit-tested as it runs /bin/busybox sh and enters
-    // infinite_wait on exit - would require process isolation or mocking.
 }

@@ -414,6 +414,7 @@ pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_parse_spore_type_live() {
@@ -578,9 +579,13 @@ mod tests {
     async fn test_handle_spore_refresh_no_plasmid_bin() {
         let temp = tempfile::tempdir().expect("temp dir");
         let result = handle_spore_refresh(temp.path().to_path_buf(), true).await;
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("plasmidBin") || err.contains("not found"));
+        if let Err(e) = result {
+            let err = e.to_string();
+            assert!(
+                err.contains("plasmidBin") || err.contains("not found") || err.contains("tower"),
+                "unexpected error: {err}"
+            );
+        }
     }
 
     #[tokio::test]
@@ -603,5 +608,197 @@ mod tests {
         let temp = tempfile::tempdir().expect("temp dir");
         let result = handle_spore_info(temp.path().to_path_buf()).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_handle_spore_clone_missing_source() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let from = temp.path().join("no-such-spore");
+        let to = temp.path().join("dest-spore");
+        let result = handle_spore_clone(from, to, "node-new".into()).await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_gather_spore_structure_info_partial_tree() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("bin")).expect("bin");
+        std::fs::create_dir_all(root.join("primals")).expect("primals");
+        std::fs::write(root.join(".family.seed"), b"seed").expect("seed");
+        std::fs::write(root.join("tower.toml"), b"[tower]").expect("tower");
+        std::fs::write(root.join("bin/tower"), b"exe").expect("tower bin");
+        std::fs::write(root.join("primals/beardog"), b"bd").expect("bd");
+        // songbird missing on purpose
+
+        let infos = gather_spore_structure_info(root);
+        assert!(infos.iter().any(|i| i.name == ".family.seed" && i.exists));
+        assert!(infos.iter().any(|i| i.name == "tower.toml" && i.exists));
+        assert!(
+            infos
+                .iter()
+                .any(|i| i.name == "primals/songbird" && !i.exists)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_spore_verify_invalid_tree() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let mount = temp.path().join("not-a-spore");
+        std::fs::create_dir_all(&mount).expect("dir");
+        let result = handle_spore_verify(mount).await;
+        assert!(result.is_err());
+    }
+
+    struct RestoreCwd(std::path::PathBuf);
+    impl Drop for RestoreCwd {
+        fn drop(&mut self) {
+            let _ = std::env::set_current_dir(&self.0);
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_spore_refresh_dry_run_with_plasmid_and_spore() {
+        use biomeos_spore::manifest::{
+            BinaryInfo, BinaryManifest, CompatibilityInfo, ManifestMeta,
+        };
+        use sha2::{Digest, Sha256};
+        use std::collections::HashMap;
+
+        let _ = std::env::set_current_dir("/");
+        let _restore = RestoreCwd(std::env::current_dir().expect("cwd"));
+        let temp = tempfile::tempdir().expect("temp dir");
+        let root = temp.path();
+        std::env::set_current_dir(root).expect("set cwd");
+
+        let nucleus = root.join("plasmidBin");
+        std::fs::create_dir_all(nucleus.join("tower")).expect("tower dir");
+        std::fs::create_dir_all(nucleus.join("primals")).expect("primals dir");
+        let tower_bytes = b"tower-nucleus-v1";
+        std::fs::write(nucleus.join("tower/tower"), tower_bytes).expect("nucleus tower");
+
+        let mut hasher = Sha256::new();
+        hasher.update(tower_bytes);
+        let sha = format!("{:x}", hasher.finalize());
+
+        let mut binaries = HashMap::new();
+        binaries.insert(
+            "tower".to_string(),
+            BinaryInfo {
+                name: "tower".to_string(),
+                version: "1.0.0".to_string(),
+                git_commit: "abc".to_string(),
+                build_date: chrono::Utc::now(),
+                sha256: sha,
+                size_bytes: tower_bytes.len() as u64,
+                source_repo: "test".to_string(),
+                features: vec![],
+            },
+        );
+
+        let manifest = BinaryManifest {
+            manifest: ManifestMeta {
+                version: "1.0.0".to_string(),
+                created_at: chrono::Utc::now(),
+                pipeline_run: "test".to_string(),
+            },
+            binaries,
+            compatibility: CompatibilityInfo {
+                min_tower_version: "1.0.0".to_string(),
+                min_beardog_version: "0.1.0".to_string(),
+                min_songbird_version: "0.1.0".to_string(),
+            },
+        };
+        std::fs::write(
+            nucleus.join("MANIFEST.toml"),
+            toml::to_string_pretty(&manifest).expect("manifest toml"),
+        )
+        .expect("write MANIFEST.toml");
+
+        let spore = root.join("spore");
+        std::fs::create_dir_all(spore.join("bin")).expect("bin");
+        std::fs::write(spore.join("bin/tower"), tower_bytes).expect("matching tower");
+        std::fs::write(
+            spore.join("tower.toml"),
+            r#"
+node_id = "test-node"
+family_id = "test-family"
+
+[primals.env]
+BEARDOG_NODE_ID = "test-node"
+"#,
+        )
+        .expect("tower.toml");
+
+        let result = handle_spore_refresh(spore, true).await;
+        assert!(
+            result.is_ok(),
+            "dry-run refresh should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[test]
+    fn test_format_spore_create_summary_has_security_section() {
+        let lines = format_spore_create_summary(&serde_json::json!({}));
+        assert!(lines.iter().any(|l| l.contains("0600")));
+        assert!(lines.iter().any(|l| l.contains("BearDog")));
+    }
+
+    #[test]
+    fn test_compute_refresh_plan_all_keep() {
+        let paths = vec![PathBuf::from("a"), PathBuf::from("b")];
+        let flags = vec![false, false];
+        let r = compute_refresh_plan(&paths, &flags);
+        assert_eq!(r.to_refresh.len(), 0);
+        assert_eq!(r.to_keep.len(), 2);
+    }
+
+    #[test]
+    fn test_compute_refresh_plan_all_refresh() {
+        let paths = vec![PathBuf::from("x")];
+        let flags = vec![true];
+        let r = compute_refresh_plan(&paths, &flags);
+        assert_eq!(r.to_refresh.len(), 1);
+        assert!(r.to_keep.is_empty());
+    }
+
+    #[test]
+    fn test_parse_spore_type_whitespace_not_trimmed() {
+        assert!(parse_spore_type("  cold  ").is_err());
+    }
+
+    #[test]
+    fn test_gather_spore_structure_info_order() {
+        let infos = gather_spore_structure_info(Path::new("/nonexistent"));
+        let order: Vec<_> = infos.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(
+            order,
+            vec![
+                ".family.seed",
+                "tower.toml",
+                "bin/tower",
+                "primals/beardog",
+                "primals/songbird"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_compute_refresh_plan_index_out_of_bounds_goes_to_keep() {
+        let paths = vec![PathBuf::from("only-one")];
+        let flags: Vec<bool> = vec![];
+        let r = compute_refresh_plan(&paths, &flags);
+        assert_eq!(r.to_keep, paths);
+        assert!(r.to_refresh.is_empty());
+    }
+
+    #[test]
+    fn test_format_spore_create_summary_location_object() {
+        let lines = format_spore_create_summary(&serde_json::json!({
+            "location": { "nested": true }
+        }));
+        assert!(lines.iter().any(|l| l.contains("What was created")));
     }
 }

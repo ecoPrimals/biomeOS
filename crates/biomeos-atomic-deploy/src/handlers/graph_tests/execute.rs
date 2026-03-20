@@ -39,6 +39,22 @@ async fn test_execute_graph_not_found() {
 }
 
 #[tokio::test]
+async fn test_execute_corrupt_graph_toml() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("corrupt_exec.toml");
+    std::fs::write(&path, "[[[not valid graph toml").expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "corrupt_exec"}));
+    let err = handler.execute(&params).await.expect_err("should fail");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Failed to load graph") || msg.contains("parse") || msg.contains("TOML"),
+        "unexpected error: {msg}"
+    );
+}
+
+#[tokio::test]
 async fn test_execute_success_returns_immediate_response() {
     let temp = tempdir().expect("tempdir");
     let path = temp.path().join("test_minimal.toml");

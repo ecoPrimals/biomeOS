@@ -1,6 +1,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use super::get_genome_storage_dir;
 use super::*;
+use biomeos_genomebin_v3::{Arch, GenomeBinBuilder};
 use std::path::{Path, PathBuf};
 
 #[test]
@@ -101,6 +103,16 @@ fn test_handle_genome_verify_path_not_found() {
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(err.to_string().contains("GenomeBin not found"));
+}
+
+#[test]
+fn test_handle_genome_verify_invalid_json() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let path = temp.path().join("corrupt.json");
+    std::fs::write(&path, b"{ not valid json").expect("write");
+    let args = VerifyArgs { path };
+    let result = handle_genome_verify(&args);
+    assert!(result.is_err());
 }
 
 #[test]
@@ -219,7 +231,7 @@ fn test_handle_genome_create_success_with_temp_binary() {
     let output = temp.path().join("genome.json");
 
     let args = CreateArgs {
-        binary: binary.clone(),
+        binary,
         output: output.clone(),
         arch: "x86_64".to_string(),
         name: Some("test-genome".to_string()),
@@ -416,6 +428,84 @@ async fn test_execute_verify_success() {
     assert!(result.is_ok());
 }
 
+#[test]
+fn test_handle_genome_list_with_genomes_under_xdg() {
+    let data = tempfile::tempdir().expect("tempdir");
+    let _guard = biomeos_test_utils::TestEnvGuard::set(
+        "XDG_DATA_HOME",
+        data.path().to_str().expect("utf8 path"),
+    );
+    let store = get_genome_storage_dir();
+    std::fs::create_dir_all(&store).expect("mkdir genomes");
+
+    let binary = data.path().join("list-bin");
+    std::fs::write(&binary, b"x").expect("binary");
+    let out = store.join("listed-genome.json");
+
+    let args = CreateArgs {
+        binary,
+        output: out,
+        arch: "x86_64".to_string(),
+        name: Some("listed-genome".to_string()),
+        version: None,
+        description: None,
+    };
+    handle_genome_create(args).expect("create in storage dir");
+
+    let result = handle_genome_list();
+    assert!(result.is_ok(), "{:?}", result.err());
+}
+
+#[tokio::test]
+async fn test_execute_extract_no_binary_for_foreign_arch() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let binary = temp.path().join("foreign-bin");
+    std::fs::write(&binary, b"x").expect("write");
+
+    let foreign = if cfg!(target_arch = "x86_64") {
+        Arch::Aarch64
+    } else {
+        Arch::X86_64
+    };
+
+    let mut builder = GenomeBinBuilder::new("foreign-only");
+    builder = builder.add_binary(foreign, &binary);
+    let genome = builder.build().expect("build");
+    let gpath = temp.path().join("foreign.json");
+    genome.save(&gpath).expect("save");
+
+    let out_dir = temp.path().join("extract-out");
+    std::fs::create_dir_all(&out_dir).expect("out");
+
+    let args = GenomeArgs {
+        command: GenomeCommand::Extract {
+            genome: gpath,
+            output: out_dir,
+        },
+    };
+    let err = execute(args)
+        .await
+        .expect_err("should fail: no native binary");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("No binary") || msg.contains("architecture"),
+        "{msg}"
+    );
+}
+
+#[tokio::test]
+async fn test_execute_verify_invalid_json() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let path = temp.path().join("bad.json");
+    std::fs::write(&path, b"[1,2,3").expect("write");
+
+    let args = GenomeArgs {
+        command: GenomeCommand::Verify { path },
+    };
+    let result = execute(args).await;
+    assert!(result.is_err());
+}
+
 #[tokio::test]
 async fn test_execute_info_success() {
     let temp = tempfile::tempdir().expect("temp dir");
@@ -438,4 +528,84 @@ async fn test_execute_info_success() {
     };
     let result = execute(exec_args).await;
     assert!(result.is_ok());
+}
+
+#[test]
+fn test_handle_genome_self_replicate() {
+    let result = handle_genome_self_replicate();
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_handle_genome_compose_two_genomes_success() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let b1 = temp.path().join("b1");
+    let b2 = temp.path().join("b2");
+    std::fs::write(&b1, b"bin1").unwrap();
+    std::fs::write(&b2, b"bin2").unwrap();
+
+    let g1 = temp.path().join("g1.json");
+    let g2 = temp.path().join("g2.json");
+    let out = temp.path().join("composed.json");
+
+    // TOWER composition requires manifest names `beardog` and `songbird`
+    handle_genome_create(CreateArgs {
+        binary: b1,
+        output: g1.clone(),
+        arch: "x86_64".to_string(),
+        name: Some("beardog".to_string()),
+        version: None,
+        description: None,
+    })
+    .unwrap();
+    handle_genome_create(CreateArgs {
+        binary: b2,
+        output: g2.clone(),
+        arch: "x86_64".to_string(),
+        name: Some("songbird".to_string()),
+        version: None,
+        description: None,
+    })
+    .unwrap();
+
+    let args = ComposeArgs {
+        name: "tower".to_string(),
+        nucleus_type: "TOWER".to_string(),
+        genomes: vec![g1, g2],
+        output: out.clone(),
+    };
+    assert!(handle_genome_compose(&args).is_ok());
+    assert!(out.exists());
+}
+
+#[tokio::test]
+async fn test_execute_verify_checksum_failure() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let binary = temp.path().join("b");
+    std::fs::write(&binary, b"x").unwrap();
+    let path = temp.path().join("tampered.json");
+    handle_genome_create(CreateArgs {
+        binary,
+        output: path.clone(),
+        arch: "x86_64".to_string(),
+        name: Some("tamper".to_string()),
+        version: None,
+        description: None,
+    })
+    .unwrap();
+    let mut raw = std::fs::read_to_string(&path).unwrap();
+    raw.push_str("\n\"corrupt\":true\n");
+    std::fs::write(&path, raw).unwrap();
+
+    let args = GenomeArgs {
+        command: GenomeCommand::Verify { path },
+    };
+    assert!(execute(args).await.is_err());
+}
+
+#[test]
+fn test_get_genome_storage_dir_fallback_home() {
+    let _xdg = biomeos_test_utils::TestEnvGuard::remove("XDG_DATA_HOME");
+    let dir = get_genome_storage_dir();
+    assert!(dir.to_string_lossy().contains("genomes"));
 }

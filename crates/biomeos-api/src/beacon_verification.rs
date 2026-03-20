@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
-//! Shared Beacon Verification — Deep Debt Evolution
+//! Shared Dark Forest beacon verification
 //!
-//! Single source of truth for Dark Forest beacon verification.
-//! All verification flows use this module — no duplicate crypto logic.
+//! Single source of truth for beacon token verification. All verification flows use this
+//! module — no duplicate crypto logic.
 //!
-//! ## Deep Debt Principles
+//! ## WateringHole / runtime discovery
 //!
-//! - **No direct primal knowledge**: Routes through Neural API capability.call
-//! - **No hardcoded socket paths**: Discovers at runtime via SystemPaths
-//! - **No duplicate logic**: One function, used everywhere
-//! - **Fail-closed**: Returns `Err` on any ambiguity
+//! - **No hardcoded primal names**: Atomic sockets are found by scanning the runtime
+//!   directory for family-scoped `*.sock` files (`{instance}-{family_id}.sock`), not by
+//!   enumerating known primal identifiers.
+//! - **Neural API first**: When available, verification routes through
+//!   `capability.call` on the Neural API socket (semantic routing).
+//! - **Fail-closed**: Returns `None` on any ambiguity or failure.
 //!
 //! ## Architecture
 //!
@@ -20,14 +22,16 @@
 //!                      ├─→ beacon_verification::verify_dark_forest_token()
 //! rendezvous.rs ───────┘       │
 //!                              ├─→ Neural API (preferred)
-//!                              │   └─→ capability.call("birdsong", "decrypt")
+//!                              │   └─→ capability routing (e.g. birdsong.decrypt)
 //!                              │
 //!                              └─→ Direct socket discovery (fallback)
-//!                                  └─→ AtomicClient → discovered provider
+//!                                  └─→ AtomicClient → any family-scoped primal socket
 //! ```
 
 use base64::Engine;
+use biomeos_types::constants::runtime_ipc;
 use serde_json::Value;
+use std::path::{Path, PathBuf};
 use tracing::{debug, warn};
 
 /// Result of a successful beacon verification
@@ -46,8 +50,9 @@ pub struct BeaconVerification {
 ///
 /// ## Resolution Order
 ///
-/// 1. **Neural API** `capability.call("birdsong", "decrypt")` — preferred, semantic routing
-/// 2. **Direct socket discovery** — fallback when Neural API is not running
+/// 1. **Neural API** — preferred, semantic capability routing
+/// 2. **Direct socket discovery** — fallback when Neural API is not running: try
+///    `birdsong.decrypt` on every family-scoped primal socket under the runtime dir
 ///
 /// ## Security
 ///
@@ -102,34 +107,48 @@ pub async fn hash_via_capability(
         }
     }
 
-    // FALLBACK: Direct socket discovery
+    // FALLBACK: Capability-named socket (e.g. `crypto.sock`), then any family-scoped primal
+    let discovery = biomeos_core::socket_discovery::SocketDiscovery::new(family_id);
+    if let Some(sock) = discovery
+        .discover_capability(biomeos_types::constants::capability::CRYPTO)
+        .await
+    {
+        if let Some(hash) = try_blake3_hash(&sock.path, &encoded).await {
+            return Some(hash);
+        }
+    }
+
     let paths = biomeos_types::paths::SystemPaths::new_lazy();
-    let runtime_dir = paths.runtime_dir();
-    let socket_path = runtime_dir.join(format!("beardog-{family_id}.sock"));
-
-    if socket_path.exists() {
-        let client = biomeos_core::AtomicClient::unix(socket_path.to_string_lossy().as_ref())
-            .with_timeout(std::time::Duration::from_secs(5));
-
-        if let Ok(r) = client
-            .call("crypto.blake3_hash", serde_json::json!({ "data": encoded }))
-            .await
-        {
-            if let Some(hash) = r.get("hash").and_then(|h| h.as_str()) {
-                return Some(hash.to_string());
-            }
+    for socket_path in discover_family_scoped_primal_sockets(paths.runtime_dir(), family_id) {
+        if let Some(hash) = try_blake3_hash(&socket_path, &encoded).await {
+            return Some(hash);
         }
     }
 
     None
 }
 
+async fn try_blake3_hash(socket_path: &Path, encoded_data: &str) -> Option<String> {
+    let client = biomeos_core::AtomicClient::unix(socket_path.to_string_lossy().as_ref())
+        .with_timeout(std::time::Duration::from_secs(5));
+
+    let r = client
+        .call(
+            "crypto.blake3_hash",
+            serde_json::json!({ "data": encoded_data }),
+        )
+        .await
+        .ok()?;
+
+    r.get("hash").and_then(|h| h.as_str()).map(str::to_string)
+}
+
 /// Discover the Neural API socket for the current family
 ///
 /// Resolution order:
 /// 1. `NEURAL_API_SOCKET` environment variable
-/// 2. XDG runtime dir: `neural-api-{family_id}.sock`
-/// 3. `/tmp` fallback: `neural-api-{family_id}.sock`
+/// 2. XDG runtime dir: `{NEURAL_API_BASENAME_PREFIX}{family_id}.sock`
+/// 3. `/tmp` fallback: same basename under the temp dir
 pub fn discover_neural_api_socket(family_id: &str) -> Option<String> {
     // 1. Explicit env var
     if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {
@@ -140,17 +159,17 @@ pub fn discover_neural_api_socket(family_id: &str) -> Option<String> {
 
     // 2. XDG runtime dir
     let paths = biomeos_types::paths::SystemPaths::new_lazy();
-    let xdg_path = format!(
-        "{}/neural-api-{}.sock",
-        paths.runtime_dir().display(),
-        family_id
+    let basename = format!(
+        "{}{family_id}.sock",
+        runtime_ipc::NEURAL_API_BASENAME_PREFIX
     );
-    if std::path::Path::new(&xdg_path).exists() {
-        return Some(xdg_path);
+    let xdg_path = paths.runtime_dir().join(&basename);
+    if xdg_path.exists() {
+        return Some(xdg_path.to_string_lossy().to_string());
     }
 
     // 3. System temp dir fallback (bootstrap scenarios)
-    let tmp_path = std::env::temp_dir().join(format!("neural-api-{family_id}.sock"));
+    let tmp_path = std::env::temp_dir().join(&basename);
     if tmp_path.exists() {
         return Some(tmp_path.to_string_lossy().to_string());
     }
@@ -199,9 +218,7 @@ async fn verify_via_socket_discovery(family_id: &str, token: &str) -> Option<Bea
     let paths = biomeos_types::paths::SystemPaths::new_lazy();
     let runtime_dir = paths.runtime_dir();
 
-    // Discover any primal providing birdsong.decrypt
-    // Deep Debt: capability-based discovery, not name-based
-    let providers = discover_beacon_providers(runtime_dir, family_id);
+    let providers = discover_family_scoped_primal_sockets(runtime_dir, family_id);
 
     for socket_path in providers {
         let client = biomeos_core::AtomicClient::unix(socket_path.to_string_lossy().as_ref())
@@ -268,45 +285,48 @@ fn parse_decrypt_result(value: &Value, default_family_id: &str) -> Option<Beacon
     }
 }
 
-/// Discover beacon provider sockets in the runtime directory
+/// Discover atomic primal sockets for this family under `runtime_dir`
 ///
-/// Deep Debt: Scans for *any* primal socket that might provide birdsong,
-/// not just hardcoded names. Falls back to known providers as a last resort.
-fn discover_beacon_providers(
-    runtime_dir: &std::path::Path,
-    family_id: &str,
-) -> Vec<std::path::PathBuf> {
+/// **Inclusive rule** (WateringHole): any regular file whose name ends with
+/// `-{family_id}.sock` is treated as a candidate primal IPC endpoint. Verification
+/// succeeds only if `birdsong.decrypt` (or `crypto.blake3_hash` for hashing) responds.
+///
+/// The Neural API control socket shares the same suffix pattern but is not a primal
+/// atomic provider; it is skipped using [`runtime_ipc::NEURAL_API_BASENAME_PREFIX`]
+/// (infrastructure IPC, not a primal name).
+fn discover_family_scoped_primal_sockets(runtime_dir: &Path, family_id: &str) -> Vec<PathBuf> {
+    let suffix = format!("-{family_id}.sock");
     let mut providers = Vec::new();
 
-    // Try known beacon-capable primals with family-scoped sockets
-    for primal in &["beardog", "songbird"] {
-        let path = runtime_dir.join(format!("{primal}-{family_id}.sock"));
-        if path.exists() {
-            providers.push(path);
+    let Ok(entries) = std::fs::read_dir(runtime_dir) else {
+        return providers;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+
+        if !name
+            .rsplit_once('.')
+            .is_some_and(|(_, ext)| ext.eq_ignore_ascii_case("sock"))
+        {
+            continue;
         }
+
+        if !name.ends_with(&suffix) {
+            continue;
+        }
+
+        if name.starts_with(runtime_ipc::NEURAL_API_BASENAME_PREFIX) {
+            continue;
+        }
+
+        providers.push(path);
     }
 
-    // Also scan for any other sockets in the runtime dir that might be beacon providers
-    // Deep Debt: runtime discovery, not hardcoded enumeration
-    if let Ok(entries) = std::fs::read_dir(runtime_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                // Skip already-discovered sockets and non-family sockets
-                if std::path::Path::new(name)
-                    .extension()
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
-                    && name.contains(family_id)
-                    && !name.starts_with("beardog-")
-                    && !name.starts_with("songbird-")
-                    && !name.starts_with("neural-api-")
-                {
-                    providers.push(path);
-                }
-            }
-        }
-    }
-
+    providers.sort();
     providers
 }
 
@@ -391,9 +411,8 @@ mod tests {
             family_id: "fam".to_string(),
             plaintext: "pt".to_string(),
         };
-        let c = v.clone();
-        assert_eq!(c.family_id, "fam");
-        assert_eq!(c.plaintext, "pt");
+        assert_eq!(v.family_id, "fam");
+        assert_eq!(v.plaintext, "pt");
     }
 
     // ========== parse_decrypt_result edge cases ==========
@@ -480,54 +499,64 @@ mod tests {
     #[test]
     fn test_discover_beacon_providers_empty_dir() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let providers = discover_beacon_providers(temp.path(), "family-123");
+        let providers = discover_family_scoped_primal_sockets(temp.path(), "family-123");
         assert!(providers.is_empty(), "empty dir should yield no providers");
     }
 
     #[test]
-    fn test_discover_beacon_providers_known_primals() {
+    fn test_discover_beacon_providers_family_scoped_sockets() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let beardog = temp.path().join("beardog-family-123.sock");
-        let songbird = temp.path().join("songbird-family-123.sock");
-        std::fs::write(&beardog, "").expect("create beardog sock");
-        std::fs::write(&songbird, "").expect("create songbird sock");
+        let a = temp.path().join("alpha-primal-family-123.sock");
+        let b = temp.path().join("beta-instance-family-123.sock");
+        std::fs::write(&a, "").expect("create sock");
+        std::fs::write(&b, "").expect("create sock");
 
-        let providers = discover_beacon_providers(temp.path(), "family-123");
-        assert_eq!(providers.len(), 2, "should find beardog and songbird");
+        let providers = discover_family_scoped_primal_sockets(temp.path(), "family-123");
+        assert_eq!(providers.len(), 2, "should find all family-scoped sockets");
         let names: Vec<_> = providers
             .iter()
             .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
             .collect();
-        assert!(names.contains(&"beardog-family-123.sock"));
-        assert!(names.contains(&"songbird-family-123.sock"));
+        assert!(names.contains(&"alpha-primal-family-123.sock"));
+        assert!(names.contains(&"beta-instance-family-123.sock"));
     }
 
     #[test]
     fn test_discover_beacon_providers_skips_neural_api() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let neural = temp.path().join("neural-api-family-123.sock");
+        let neural = temp.path().join(format!(
+            "{}family-123.sock",
+            runtime_ipc::NEURAL_API_BASENAME_PREFIX
+        ));
         std::fs::write(&neural, "").expect("create neural sock");
-        let providers = discover_beacon_providers(temp.path(), "family-123");
+        let providers = discover_family_scoped_primal_sockets(temp.path(), "family-123");
         assert!(
-            !providers
-                .iter()
-                .any(|p| p.to_string_lossy().contains("neural-api")),
-            "should not include neural-api socket"
+            !providers.iter().any(|p| p
+                .to_string_lossy()
+                .contains(runtime_ipc::NEURAL_API_BASENAME_PREFIX)),
+            "should not include neural API socket"
         );
     }
 
     #[test]
-    fn test_discover_beacon_providers_other_family_sockets() {
+    fn test_discover_beacon_providers_wrong_family_suffix_excluded() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let other = temp.path().join("custom-family-456.sock");
-        std::fs::write(&other, "").expect("create custom sock");
-        let providers = discover_beacon_providers(temp.path(), "family-456");
+        let other = temp.path().join("gamma-other-family.sock");
+        std::fs::write(&other, "").expect("create sock");
+        let providers = discover_family_scoped_primal_sockets(temp.path(), "family-456");
         assert!(
-            providers
-                .iter()
-                .any(|p| p.to_string_lossy().contains("custom-family-456")),
-            "should find other family-scoped sockets"
+            providers.is_empty(),
+            "suffix must match requested family exactly"
         );
+    }
+
+    #[test]
+    fn test_discover_beacon_providers_hyphenated_family_id() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let sock = temp.path().join("any-instance-my-family-id.sock");
+        std::fs::write(&sock, "").expect("create sock");
+        let providers = discover_family_scoped_primal_sockets(temp.path(), "my-family-id");
+        assert_eq!(providers.len(), 1);
     }
 
     #[tokio::test]
@@ -539,7 +568,7 @@ mod tests {
     #[tokio::test]
     async fn test_verify_dark_forest_token_no_socket() {
         let result = verify_dark_forest_token(None, "family", "token").await;
-        // Without Neural API socket and no real beardog/songbird, should be None
+        // Without Neural API socket and no real primal sockets, should be None
         let _ = result;
     }
 }

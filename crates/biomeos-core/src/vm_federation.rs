@@ -425,9 +425,8 @@ impl VmFederationManager {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
-
     use super::*;
 
     #[test]
@@ -627,6 +626,16 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_ip_from_domifaddr_192_168_without_ipv4_keyword() {
+        // Branch: line matches via `192.168` substring without `ipv4` label
+        let output = " Name   MAC   Address\n  vnet0  xx  192.168.122.200/24\n";
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output(output),
+            Some("192.168.122.200".to_string())
+        );
+    }
+
+    #[test]
     fn test_parse_vm_names_from_list_malformed_line() {
         let list = " 1     fed-node1    running\n single_word\n";
         let names = super::parse_vm_names_from_list(list, "fed");
@@ -645,6 +654,214 @@ mod tests {
         assert_eq!(config.ssh_max_retries, 40);
     }
 
+    #[test]
+    fn test_parse_ip_ipv4_label_but_non_rfc1918_returns_none() {
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output("ipv4         10.0.0.1/24"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_parse_ip_line_ipv4_without_192_168_until_later_line() {
+        let output = "vnet0  xx  ipv4  10.0.0.1/24\nvnet1  yy  ipv4  192.168.50.2/24\n";
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output(output),
+            Some("192.168.50.2".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_single_token_line_not_pushed() {
+        let list = "my-fed\n";
+        let names = super::parse_vm_names_from_list(list, "my-fed");
+        assert!(names.is_empty());
+    }
+
+    #[test]
+    fn test_parse_vm_names_header_line_extracts_second_column() {
+        // Only lines containing the federation substring participate; `real-vm-1` line has no `my-fed`.
+        let list = "my-fed header line\n 1     real-vm-1    running\n";
+        let names = super::parse_vm_names_from_list(list, "my-fed");
+        assert_eq!(names, vec!["header"]);
+    }
+
+    #[test]
+    fn test_parse_ip_last_token_not_ip() {
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output("ipv4   garbage"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_parse_ip_non_numeric_octets_still_matches_prefix_heuristic() {
+        // Parser does not validate dotted-decimal; it only checks the `192.168` prefix.
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output("foo 192.168.abc.1/24"),
+            Some("192.168.abc.1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_tabs_and_multiple_spaces() {
+        let list = "1\tmy-fed-node1\trunning\n";
+        let names = super::parse_vm_names_from_list(list, "my-fed");
+        assert_eq!(names, vec!["my-fed-node1"]);
+    }
+
+    #[test]
+    fn test_validation_config_extreme_retries_zero() {
+        let config = ValidationConfig {
+            cloud_init_timeout: Duration::from_secs(1),
+            ssh_timeout: Duration::from_secs(1),
+            ssh_retry_interval: Duration::from_secs(1),
+            ssh_max_retries: 0,
+        };
+        assert_eq!(config.ssh_max_retries, 0);
+    }
+
+    #[test]
+    fn test_parse_vm_names_duplicate_lines() {
+        let list = " 1     dup-fed-a    running\n 2     dup-fed-b    running\n";
+        let names = super::parse_vm_names_from_list(list, "dup-fed");
+        assert_eq!(names, vec!["dup-fed-a", "dup-fed-b"]);
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_only_non_matching_lines() {
+        let output = "header\n  ipv6  fe80::1/64\n  other  text\n";
+        assert_eq!(super::parse_ip_from_domifaddr_output(output), None);
+    }
+
+    #[test]
+    fn test_parse_vm_names_numeric_id_with_federation_in_name() {
+        let list = " 10    my-fed-10    running\n";
+        let names = super::parse_vm_names_from_list(list, "my-fed");
+        assert_eq!(names, vec!["my-fed-10"]);
+    }
+
+    #[test]
+    fn test_parse_ip_strips_cidr_from_token() {
+        let output = "  ipv4    192.168.255.254/16  ";
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output(output),
+            Some("192.168.255.254".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_line_contains_fed_but_less_than_two_columns() {
+        let list = "my-fed\n";
+        let names = parse_vm_names_from_list(list, "my-fed");
+        assert!(names.is_empty());
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_ipv4_keyword_non_matching_ip_token() {
+        assert_eq!(
+            parse_ip_from_domifaddr_output("ipv4         garbage/24"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_preserves_order() {
+        let list = " 2     fed-b    running\n 1     fed-a    running\n";
+        let names = parse_vm_names_from_list(list, "fed");
+        assert_eq!(names, vec!["fed-b", "fed-a"]);
+    }
+
+    #[test]
+    fn test_parse_vm_names_match_in_first_column_extracts_second_column() {
+        // Any line containing the federation substring participates; the VM name is always column 2.
+        let list = "my-fed-prefix    actual-vm-name    running\n";
+        let names = parse_vm_names_from_list(list, "my-fed");
+        assert_eq!(names, vec!["actual-vm-name"]);
+    }
+
+    #[test]
+    fn test_parse_ip_line_ipv4_only_no_192_match() {
+        assert_eq!(
+            parse_ip_from_domifaddr_output("proto  ipv4  10.11.12.13/24"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_long_federation_substring() {
+        let list = " 1     prefix-my-fed-suffix    running\n";
+        let names = parse_vm_names_from_list(list, "my-fed");
+        assert_eq!(names, vec!["prefix-my-fed-suffix"]);
+    }
+
+    #[test]
+    fn test_parse_ip_domifaddr_ipv4_keyword_non_192_line_then_valid() {
+        let t = "vnet0  ipv4  10.0.0.1/24\nvnet1  ipv4  192.168.1.2/24\n";
+        assert_eq!(
+            parse_ip_from_domifaddr_output(t),
+            Some("192.168.1.2".to_string())
+        );
+    }
+
+    #[test]
+    fn test_validation_config_extreme_durations() {
+        let c = ValidationConfig {
+            cloud_init_timeout: Duration::from_secs(u64::MAX / 4),
+            ssh_timeout: Duration::from_secs(1),
+            ssh_retry_interval: Duration::from_millis(1),
+            ssh_max_retries: u32::MAX,
+        };
+        assert!(c.cloud_init_timeout > Duration::from_secs(1_000_000));
+    }
+
+    #[test]
+    fn test_parse_vm_names_windows_style_line_endings() {
+        let list = " 1     my-fed-w1    running\r\n 2     my-fed-w2    running\r\n";
+        let names = parse_vm_names_from_list(list, "my-fed");
+        assert_eq!(names, vec!["my-fed-w1", "my-fed-w2"]);
+    }
+
+    #[test]
+    fn test_parse_ip_slash_only_after_dot() {
+        assert_eq!(
+            parse_ip_from_domifaddr_output("ipv4  192.168.0.1/"),
+            Some("192.168.0.1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_uuid_suffix_in_name() {
+        let list = " 1     fed-node-550e8400-e29b-41d4-a716-446655440000    running\n";
+        let names = parse_vm_names_from_list(list, "fed-node");
+        assert_eq!(names, vec!["fed-node-550e8400-e29b-41d4-a716-446655440000"]);
+    }
+
+    #[test]
+    fn test_parse_ip_tabs_instead_of_spaces() {
+        let t = "vnet0\tipv4\t192.168.99.1/24\n";
+        assert_eq!(
+            parse_ip_from_domifaddr_output(t),
+            Some("192.168.99.1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_three_columns_id_name_state() {
+        let list = "42    vm-fed-core    shut off\n";
+        let names = parse_vm_names_from_list(list, "fed");
+        assert_eq!(names, vec!["vm-fed-core"]);
+    }
+
+    #[test]
+    fn test_parse_ip_rejects_line_with_192_168_substring_in_wrong_token() {
+        // Last token must parse as starting with 192.168 after split on '/'
+        assert_eq!(
+            parse_ip_from_domifaddr_output("note: 192.168 is reserved  garbage"),
+            None
+        );
+    }
+
     #[tokio::test]
     #[ignore = "requires benchscale and libvirt"]
     async fn test_full_lifecycle() -> Result<()> {
@@ -654,12 +871,8 @@ mod tests {
             return Ok(());
         }
 
-        let manager = match VmFederationManager::new() {
-            Ok(m) => m,
-            Err(_) => {
-                // benchscale not available, skip test
-                return Ok(());
-            }
+        let Ok(manager) = VmFederationManager::new() else {
+            return Ok(());
         };
 
         let name = "test-federation";

@@ -432,6 +432,7 @@ impl Default for MetricsConfig {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -589,7 +590,7 @@ mod tests {
         let config = CpuConfig {
             cores: Some(4),
             shares: Some(1024),
-            period: Some(100000),
+            period: Some(100_000),
             quota: Some(50000),
             affinity: Some(vec![0, 1, 2, 3]),
         };
@@ -742,7 +743,7 @@ mod tests {
     #[test]
     fn test_resource_config_clone() {
         let original = ResourceConfig::default();
-        let cloned = original.clone();
+        let cloned = original;
         assert!(cloned.cpu.cores.is_none());
     }
 

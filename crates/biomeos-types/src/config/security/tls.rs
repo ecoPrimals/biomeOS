@@ -43,6 +43,7 @@ pub struct HstsConfig {
     pub preload: bool,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -58,11 +59,11 @@ mod tests {
     #[test]
     fn test_hsts_config_creation() {
         let config = HstsConfig {
-            max_age: 31536000,
+            max_age: 31_536_000,
             include_subdomains: true,
             preload: true,
         };
-        assert_eq!(config.max_age, 31536000);
+        assert_eq!(config.max_age, 31_536_000);
         assert!(config.preload);
     }
 

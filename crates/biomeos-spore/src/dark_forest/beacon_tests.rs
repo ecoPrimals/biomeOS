@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 
 use super::*;
@@ -185,9 +186,9 @@ async fn test_generate_encrypted_beacon_missing_derive_key_fails() {
 #[tokio::test]
 async fn test_try_decrypt_beacon_success() {
     let plaintext = BeaconPlaintext {
-        family_hash: "famhash1234567890".to_string(),
+        family_hash: "famhash1_234_567_890".to_string(),
         node_id: "peer_tower".to_string(),
-        timestamp: 1700000000,
+        timestamp: 1_700_000_000,
         socket_path: "/run/peer/beardog.sock".to_string(),
         capabilities_hash: "capshash12345678".to_string(),
         lineage_mode: Some("sibling".to_string()),
@@ -216,7 +217,7 @@ async fn test_try_decrypt_beacon_success() {
     let decrypted = result.expect("decrypted beacon");
     assert_eq!(decrypted.node_id, "peer_tower");
     assert_eq!(decrypted.socket_path, "/run/peer/beardog.sock");
-    assert_eq!(decrypted.timestamp, 1700000000);
+    assert_eq!(decrypted.timestamp, 1_700_000_000);
     assert_eq!(decrypted.lineage_mode, Some("sibling".to_string()));
 }
 
@@ -361,7 +362,7 @@ fn test_beacon_plaintext_serde_roundtrip() {
     let beacon = BeaconPlaintext {
         family_hash: "abc123def4567890".to_string(),
         node_id: "tower1".to_string(),
-        timestamp: 1234567890,
+        timestamp: 1_234_567_890,
         socket_path: "/tmp/beardog.sock".to_string(),
         capabilities_hash: "cap_hash_def4567890".to_string(),
         lineage_mode: Some("genesis".to_string()),
@@ -421,7 +422,7 @@ fn test_beacon_plaintext_json_to_base64_roundtrip() {
     let beacon = BeaconPlaintext {
         family_hash: "fam123".to_string(),
         node_id: "tower1".to_string(),
-        timestamp: 1700000000,
+        timestamp: 1_700_000_000,
         socket_path: "/run/user/1000/biomeos/beardog.sock".to_string(),
         capabilities_hash: "cap456".to_string(),
         lineage_mode: Some("genesis".to_string()),
@@ -563,7 +564,7 @@ async fn test_try_decrypt_pure_noise_beacon_ciphertext_too_short_returns_none() 
 async fn test_try_decrypt_pure_noise_beacon_success() {
     let inner = serde_json::json!({
         "node_id": "tower2",
-        "timestamp": 1700000000,
+        "timestamp": 1_700_000_000,
         "socket_path": "/tmp/peer.sock",
         "capabilities": ["compute"],
         "lineage_mode": "genesis"
@@ -605,8 +606,10 @@ async fn test_try_decrypt_pure_noise_beacon_success() {
         Some("tower2")
     );
     assert_eq!(
-        decrypted.get("timestamp").and_then(|v| v.as_u64()),
-        Some(1700000000)
+        decrypted
+            .get("timestamp")
+            .and_then(serde_json::Value::as_u64),
+        Some(1_700_000_000)
     );
 }
 
@@ -642,6 +645,38 @@ async fn test_dark_forest_beacon_clone() {
     let mock = MockDarkForestCaller::new();
     let beacon = make_beacon(mock, "c2VlZA==", "tower1");
     let cloned = beacon.clone();
-    assert_eq!(cloned.node_id, "tower1");
-    assert_eq!(cloned.family_seed_b64, "c2VlZA==");
+    assert_eq!(cloned.node_id, beacon.node_id);
+    assert_eq!(cloned.family_seed_b64, beacon.family_seed_b64);
+}
+
+#[tokio::test]
+async fn test_derive_session_key_missing_key_in_response_fails() {
+    let mock = MockDarkForestCaller::new();
+    mock.set_response("genetic.derive_lineage_key", serde_json::json!({}))
+        .await;
+    let beacon_mgr = make_beacon(mock, "dGVzdHNlZWQ=", "tower1");
+    let result = beacon_mgr.derive_session_key("peer_id", "ctx-v1").await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_generate_pure_noise_beacon_missing_beacon_key_fails() {
+    let mock = MockDarkForestCaller::new();
+    let beacon_mgr = make_beacon(mock, "dGVzdHNlZWQ=", "tower1");
+    let result = beacon_mgr
+        .generate_pure_noise_beacon("/tmp/sock", &["compute"], None)
+        .await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_try_decrypt_pure_noise_beacon_derive_key_fails_returns_none() {
+    let mock = MockDarkForestCaller::new();
+    let beacon_mgr = make_beacon(mock, "dGVzdHNlZWQ=", "tower1");
+    let bytes = vec![1u8; 40];
+    let result = beacon_mgr
+        .try_decrypt_pure_noise_beacon(&bytes)
+        .await
+        .expect("ok wrapper");
+    assert!(result.is_none());
 }

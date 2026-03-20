@@ -287,10 +287,7 @@ mod tests {
     #[test]
     fn test_extract_name_empty() {
         assert_eq!(DiscoveredPrimal::extract_name(""), None);
-        assert_eq!(
-            DiscoveredPrimal::extract_name(".sock"),
-            Some("".to_string())
-        );
+        assert_eq!(DiscoveredPrimal::extract_name(".sock"), Some(String::new()));
     }
 
     // ========================================================================

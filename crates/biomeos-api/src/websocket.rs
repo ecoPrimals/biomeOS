@@ -86,7 +86,7 @@ impl SubscriptionFilter {
 }
 
 /// Active subscription
-struct Subscription {
+pub(crate) struct Subscription {
     /// Subscription ID (used in list_subscriptions and event notifications)
     id: String,
     filter: SubscriptionFilter,
@@ -499,7 +499,7 @@ mod tests {
         let filter: SubscriptionFilter = serde_json::from_str(json).expect("deserialize");
 
         assert_eq!(filter.graph_id, Some("g1".to_string()));
-        assert_eq!(filter.event_types.as_ref().map(|e| e.len()), Some(2));
+        assert_eq!(filter.event_types.as_ref().map(Vec::len), Some(2));
         assert_eq!(filter.node_filter, Some("n*".to_string()));
     }
 
@@ -784,13 +784,13 @@ mod tests {
         assert!(
             result
                 .get("subscription_id")
-                .and_then(|v| v.as_str())
+                .and_then(serde_json::Value::as_str)
                 .is_some()
         );
         assert!(
             result
                 .get("success")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false)
         );
 
@@ -804,7 +804,7 @@ mod tests {
         let list_result = list_resp.result.expect("result");
         let count = list_result
             .get("count")
-            .and_then(|v| v.as_u64())
+            .and_then(serde_json::Value::as_u64)
             .unwrap_or(0);
         assert_eq!(count, 1);
     }

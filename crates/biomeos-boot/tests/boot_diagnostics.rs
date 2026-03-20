@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Boot Diagnostics and Testing
 //!
 //! Comprehensive test suite for BiomeOS boot infrastructure
@@ -59,7 +61,7 @@ fn test_binary_spec() {
     };
 
     assert_eq!(spec.permissions, 0o755);
-    assert!(spec.dest.starts_with("/"));
+    assert!(spec.dest.starts_with('/'));
 }
 
 /// Test initramfs build (integration test)

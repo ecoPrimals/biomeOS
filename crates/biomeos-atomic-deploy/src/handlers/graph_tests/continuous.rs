@@ -63,6 +63,25 @@ async fn test_start_continuous_graph_not_found() {
 }
 
 #[tokio::test]
+async fn test_start_continuous_invalid_toml_for_deployment_graph() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("bad_parse.toml");
+    std::fs::write(&path, "this is not valid toml [[[ ").expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "bad_parse"}));
+    let err = handler
+        .start_continuous(&params)
+        .await
+        .expect_err("should fail");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("parse") || msg.contains("Failed") || msg.contains("TOML"),
+        "unexpected: {msg}"
+    );
+}
+
+#[tokio::test]
 async fn test_start_continuous_wrong_coordination() {
     let temp = tempdir().expect("tempdir");
     let path = temp.path().join("sequential_graph.toml");

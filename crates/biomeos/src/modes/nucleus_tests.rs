@@ -5,6 +5,7 @@
 
 use super::*;
 use biomeos_test_utils::TestEnvGuard;
+use serial_test::serial;
 use std::path::PathBuf;
 
 #[test]
@@ -340,7 +341,7 @@ fn test_nucleus_mode_from_str_case_insensitive() {
 fn test_base64_encode_two_bytes() {
     let result = base64_encode(&[0x4d, 0x61]);
     assert_eq!(result.len(), 4);
-    assert!(result.ends_with("="));
+    assert!(result.ends_with('='));
 }
 
 #[test]
@@ -696,10 +697,11 @@ fn test_base64_encode_single_byte_padding() {
 fn test_base64_encode_two_byte_padding() {
     let r = super::base64_encode(&[0x41, 0x42]);
     assert_eq!(r.len(), 4);
-    assert!(r.ends_with("="));
+    assert!(r.ends_with('='));
 }
 
 #[test]
+#[serial]
 fn test_resolve_startup_config_uses_biomeos_socket_dir_env() {
     let _guard = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", "/tmp/nucleus-env-test");
     let config = resolve_startup_config("tower", "node1", Some("fam1")).expect("should succeed");
@@ -707,6 +709,7 @@ fn test_resolve_startup_config_uses_biomeos_socket_dir_env() {
 }
 
 #[test]
+#[serial]
 fn test_build_primal_command_squirrel_ai_default_model_env() {
     let _guard = TestEnvGuard::set("AI_DEFAULT_MODEL", "custom-model-v1");
     let cmd = build_primal_command(
@@ -726,6 +729,7 @@ fn test_build_primal_command_squirrel_ai_default_model_env() {
 }
 
 #[test]
+#[serial]
 fn test_build_primal_command_squirrel_with_anthropic_key_env() {
     let _guard = TestEnvGuard::set("ANTHROPIC_API_KEY", "sk-ant-test");
     let cmd = build_primal_command(
@@ -746,6 +750,7 @@ fn test_build_primal_command_squirrel_with_anthropic_key_env() {
 }
 
 #[test]
+#[serial]
 fn test_build_primal_command_squirrel_with_openai_key_env() {
     let _guard = TestEnvGuard::set("OPENAI_API_KEY", "sk-openai-test");
     let cmd = build_primal_command(
@@ -763,10 +768,191 @@ fn test_build_primal_command_squirrel_with_openai_key_env() {
 }
 
 #[test]
+#[serial]
 fn test_discover_binaries_empty_path_env() {
     let _guard = TestEnvGuard::set("PATH", "");
     let map = discover_binaries(&["beardog"]).expect("discover should not panic");
     // May or may not find beardog depending on relative paths (plasmidBin, target/release)
     // Just verify it doesn't panic with empty PATH
     let _ = map;
+}
+
+#[test]
+fn test_build_primal_command_with_beardog_server_socket() {
+    let cmd = build_primal_command(
+        "beardog",
+        std::path::Path::new("/usr/bin/beardog"),
+        std::path::Path::new("/tmp/sock"),
+        "fam1",
+        "node1",
+    );
+    let args: Vec<_> = cmd.get_args().map(|a| a.to_str().unwrap()).collect();
+    assert!(
+        args.windows(2).any(|w| w == ["server", "--socket"]),
+        "beardog should use default server socket args, got {args:?}"
+    );
+}
+
+#[tokio::test]
+async fn test_detect_ecosystem_coordinated_when_socket_responds() {
+    use std::sync::Arc;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
+    use tokio::sync::Notify;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let family = "coord-test-family";
+    let sock_name = format!("beardog-{family}.sock");
+    let sock_path = tmp.path().join(&sock_name);
+
+    let ready = Arc::new(Notify::new());
+    let ready_c = Arc::clone(&ready);
+    let sock_path_c = sock_path.clone();
+    let server = tokio::spawn(async move {
+        let listener = UnixListener::bind(&sock_path_c).expect("bind");
+        ready_c.notify_one();
+        let (stream, _) = listener.accept().await.expect("accept");
+        let (mut r, mut w) = stream.into_split();
+        let mut line = String::new();
+        BufReader::new(&mut r)
+            .read_line(&mut line)
+            .await
+            .expect("read");
+        let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse rpc");
+        let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
+        let resp = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "result": {"status": "ok"}
+        });
+        w.write_all(format!("{resp}\n").as_bytes())
+            .await
+            .expect("write");
+    });
+
+    ready.notified().await;
+    let state = detect_ecosystem(tmp.path(), family).await;
+    server.await.expect("server");
+
+    match state {
+        EcosystemState::Coordinated { active_primals } => {
+            assert!(
+                active_primals.iter().any(|p| p == "beardog"),
+                "expected beardog active, got {active_primals:?}"
+            );
+        }
+        EcosystemState::Bootstrap => {
+            panic!("expected Coordinated when health RPC succeeds, got Bootstrap");
+        }
+    }
+}
+
+#[test]
+fn test_nucleus_mode_debug() {
+    let _ = format!("{:?}", NucleusMode::Full);
+}
+
+#[test]
+fn test_resolve_startup_config_with_explicit_family() {
+    let c =
+        resolve_startup_config_with("nest", "n1", Some("myfam"), Some("/tmp/sock-nest")).unwrap();
+    assert_eq!(c.family_id, "myfam");
+    assert!(matches!(c.mode, NucleusMode::Nest));
+}
+
+#[test]
+fn test_socket_path_for_capability_registry_alias() {
+    let p = super::socket_path_for_capability(std::path::Path::new("/run"), "fam", "registry");
+    assert!(p.to_string_lossy().contains("songbird"));
+}
+
+#[test]
+fn test_format_nucleus_summary_full_mode_label() {
+    let lines = format_nucleus_summary(
+        &[],
+        std::path::Path::new("/x"),
+        "f",
+        "n",
+        NucleusMode::Full,
+        "bootstrap",
+    );
+    assert!(lines.iter().any(|l| l.contains("Full")));
+}
+
+#[tokio::test]
+async fn test_wait_for_socket_immediate_with_zero_poll() {
+    let tmp = tempfile::tempdir().expect("temp");
+    let p = tmp.path().join("s.sock");
+    std::fs::write(&p, b"").expect("touch");
+    let r = wait_for_socket(&p, Duration::from_secs(1), Duration::ZERO).await;
+    assert!(r.is_ok());
+}
+
+#[test]
+fn test_discover_binaries_with_missing_primal_returns_partial_ok() {
+    let map = discover_binaries_with(&["missing_primal_abc"], None, &[]).expect("ok");
+    assert!(map.is_empty());
+}
+
+#[tokio::test]
+#[serial]
+async fn test_discover_binaries_with_livespore_usb_arch_primals() {
+    let _guard = crate::CWD_TEST_LOCK.lock().await;
+    let temp = tempfile::tempdir().expect("tempdir");
+    let arch = std::env::consts::ARCH;
+    let primal_dir = temp.path().join("livespore-usb").join(arch).join("primals");
+    std::fs::create_dir_all(&primal_dir).expect("mkdir");
+    let name = "biomeos_unique_primal_livespore_usb_xyz";
+    let binary_path = primal_dir.join(name);
+    std::fs::write(&binary_path, b"#! /bin/sh\nexit 0\n").expect("write bin");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&binary_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path, perms).unwrap();
+    }
+    let old = std::env::current_dir().unwrap();
+    std::env::set_current_dir(temp.path()).unwrap();
+    let map = discover_binaries_with(&[name], None, &[]);
+    std::env::set_current_dir(old).unwrap();
+    let map = map.expect("discover");
+    assert!(
+        map.contains_key(name),
+        "expected {name} under livespore-usb/{arch}/primals, got {map:?}"
+    );
+}
+
+#[test]
+fn test_nucleus_mode_from_str_nucleus_alias() {
+    let m: NucleusMode = "nucleus".parse().expect("parse");
+    assert!(matches!(m, NucleusMode::Full));
+}
+
+#[test]
+fn test_socket_path_for_capability_encryption_alias() {
+    let p = super::socket_path_for_capability(std::path::Path::new("/s"), "fam", "encryption");
+    assert!(p.to_string_lossy().contains("beardog"));
+}
+
+#[test]
+fn test_resolve_startup_config_with_explicit_family_override() {
+    let c = resolve_startup_config_with("full", "n1", Some("explicit-fam"), Some("/tmp/sock-full"))
+        .unwrap();
+    assert_eq!(c.family_id, "explicit-fam");
+    assert!(matches!(c.mode, NucleusMode::Full));
+}
+
+#[test]
+fn test_format_nucleus_summary_includes_socket_paths_for_all_children() {
+    let lines = format_nucleus_summary(
+        &[("beardog".to_string(), 10), ("songbird".to_string(), 11)],
+        std::path::Path::new("/run/s"),
+        "fam",
+        "node",
+        NucleusMode::Nest,
+        "bootstrap",
+    );
+    assert!(lines.iter().any(|l| l.contains("beardog")));
+    assert!(lines.iter().any(|l| l.contains("songbird")));
 }

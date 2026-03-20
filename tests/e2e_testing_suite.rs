@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! End-to-End Testing Suite for BiomeOS
 //!
 //! This comprehensive test suite validates complete biomeOS workflows including

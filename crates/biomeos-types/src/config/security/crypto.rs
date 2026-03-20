@@ -137,6 +137,7 @@ pub enum KeyDerivationAlgorithm {
     Custom(String),
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,7 +171,7 @@ mod tests {
     fn test_key_derivation_default() {
         let config = KeyDerivationConfig::default();
         assert!(matches!(config.algorithm, KeyDerivationAlgorithm::PBKDF2));
-        assert_eq!(config.iterations, 100000);
+        assert_eq!(config.iterations, 100_000);
         assert_eq!(config.salt_length, 32);
     }
 

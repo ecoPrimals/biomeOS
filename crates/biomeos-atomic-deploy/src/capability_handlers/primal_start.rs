@@ -239,6 +239,7 @@ pub(crate) async fn wait_for_socket_with_timeout(socket_path: &str, attempts: u3
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::executor::context::ExecutionContext;

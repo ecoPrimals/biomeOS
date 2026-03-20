@@ -235,6 +235,7 @@ pub struct SurgicalSessionMetrics {
     pub overall_score: f64,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

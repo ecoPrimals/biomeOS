@@ -569,18 +569,20 @@ mod tests {
         use biomeos_types::config::resources::{DiscoveryMethod, RegistryConfig};
         use std::time::Duration;
 
-        let mut config = BiomeOSConfig::default();
-        config.discovery = DiscoveryConfig {
-            default_method: DiscoveryMethod::Registry,
-            methods: vec![DiscoveryMethod::Registry],
-            registry: Some(RegistryConfig {
-                url: "http://registry.test:8500".to_string(),
-                auth: None,
-                health_check_interval: Duration::from_secs(30),
-            }),
-            dns: None,
-            consul: None,
-            kubernetes: None,
+        let config = BiomeOSConfig {
+            discovery: DiscoveryConfig {
+                default_method: DiscoveryMethod::Registry,
+                methods: vec![DiscoveryMethod::Registry],
+                registry: Some(RegistryConfig {
+                    url: "http://registry.test:8500".to_string(),
+                    auth: None,
+                    health_check_interval: Duration::from_secs(30),
+                }),
+                dns: None,
+                consul: None,
+                kubernetes: None,
+            },
+            ..Default::default()
         };
 
         let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
@@ -761,5 +763,136 @@ mod tests {
         assert_eq!(result.name, "unknown");
         assert_eq!(result.version, "1.0.0");
         assert!(matches!(result.health, Health::Healthy));
+    }
+
+    #[tokio::test]
+    async fn test_primal_discovery_service_discover_registry_returns_empty() {
+        let config = Arc::new(BiomeOSConfig::default());
+        let service = PrimalDiscoveryService::new(config);
+        let v = service
+            .discover_registry("http://example.invalid:9/registry")
+            .await
+            .expect("registry");
+        assert!(v.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_primal_discovery_service_discover_network_scan_empty() {
+        let config = Arc::new(BiomeOSConfig::default());
+        let service = PrimalDiscoveryService::new(config);
+        let v = service.discover_network_scan().await.expect("scan");
+        assert!(v.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_primal_discovery_service_discover_multicast_empty() {
+        let config = Arc::new(BiomeOSConfig::default());
+        let service = PrimalDiscoveryService::new(config);
+        let v = service.discover_multicast().await.expect("multicast");
+        assert!(v.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_primal_discovery_service_discover_orchestration_empty() {
+        let config = Arc::new(BiomeOSConfig::default());
+        let service = PrimalDiscoveryService::new(config);
+        let v = service
+            .discover_orchestration("http://x.test/registry")
+            .await
+            .expect("orch");
+        assert!(v.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_discover_all_services_empty_without_registry_hits() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+        let map = manager.discover_all_services().await.expect("all");
+        assert!(map.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_discover_from_registry_empty_endpoints() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+        let map = manager
+            .discover_from_registry("http://registry.test:8500")
+            .await
+            .expect("from reg");
+        assert!(map.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_capabilities_registered_mismatch_endpoints() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+        let primal = test_primal_info(
+            "dcb-1",
+            "dcb",
+            "unix:///tmp/dcb.sock",
+            vec![PrimalCapability::new("compute", "execution", "1.0")],
+        );
+        manager.register_primal(primal).await.expect("register");
+        let caps = vec![PrimalCapability::new("compute", "execution", "1.0")];
+        let services = manager
+            .discover_by_capabilities(&caps)
+            .await
+            .expect("by caps");
+        // Implementation matches endpoints to capability ids — may be empty.
+        let _ = services;
+    }
+
+    #[test]
+    fn test_discovery_result_debug_clone() {
+        let a = DiscoveryResult {
+            id: "i".to_string(),
+            endpoint: "e".to_string(),
+            primal_type: PrimalType::new("t", "n", "v"),
+            capabilities: vec![],
+            health: Health::Healthy,
+            discovered_at: chrono::Utc::now(),
+        };
+        let b = a.clone();
+        assert_eq!(a.id, b.id);
+    }
+
+    #[test]
+    fn test_probe_result_clone() {
+        let p = ProbeResult {
+            name: "n".to_string(),
+            version: "v".to_string(),
+            capabilities: vec![],
+            health: Health::Healthy,
+        };
+        assert_eq!(p.name, p.clone().name);
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_capabilities_populates_when_endpoint_matches_id() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let primal = test_primal_info(
+            "same-id",
+            "svc",
+            "same-id",
+            vec![PrimalCapability::new("compute", "execution", "1.0")],
+        );
+        manager.register_primal(primal).await.expect("register");
+
+        let caps = vec![PrimalCapability::new("compute", "execution", "1.0")];
+        let services = manager
+            .discover_by_capabilities(&caps)
+            .await
+            .expect("discover");
+        assert!(services.contains_key("same-id"));
     }
 }

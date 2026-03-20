@@ -463,7 +463,7 @@ async fn show_status_with(cache_dir: &Path, hf_hub_dir: Option<&Path>) -> Result
             let hf_models: Vec<_> = std::fs::read_dir(hf_path)
                 .into_iter()
                 .flatten()
-                .filter_map(|e| e.ok())
+                .filter_map(Result::ok)
                 .filter(|e| e.file_name().to_string_lossy().starts_with("models--"))
                 .collect();
 

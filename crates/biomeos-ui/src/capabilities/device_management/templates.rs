@@ -258,7 +258,7 @@ mod tests {
         let json = serde_json::to_string(&role).unwrap();
         let parsed: PrimalRole = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.role, role.role);
-        assert_eq!(parsed.min_health, role.min_health);
+        assert!((parsed.min_health - role.min_health).abs() < f64::EPSILON);
     }
 
     #[test]

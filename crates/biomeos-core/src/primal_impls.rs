@@ -553,8 +553,11 @@ mod tests {
             create_discovery_orchestrator("/bin/true".to_string()).unwrap();
     }
 
+    static ENDPOINT_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     #[tokio::test]
     async fn test_endpoint_unix_socket_preferred() {
+        let _guard = ENDPOINT_ENV_LOCK.lock().await;
         set_test_env("PRIMAL_SOCKET_PATH", "/run/user/1000/biomeos/test.sock");
         let primal = PrimalBuilder::new()
             .id("test".to_string())
@@ -571,6 +574,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_endpoint_http_fallback() {
+        let _guard = ENDPOINT_ENV_LOCK.lock().await;
         remove_test_env("PRIMAL_SOCKET_PATH");
         let primal = PrimalBuilder::new()
             .id("test".to_string())
@@ -579,7 +583,6 @@ mod tests {
             .build()
             .unwrap();
         let endpoint = primal.endpoint().await;
-        // May be None if RuntimeConfig bind_address fails, or Some with http
         let _ = endpoint;
     }
 
@@ -620,7 +623,7 @@ mod tests {
     #[tokio::test]
     async fn test_with_config_invalid_id() {
         let config = PrimalConfig {
-            id: "".to_string(),
+            id: String::new(),
             binary_path: "/bin/true".to_string(),
             provides: vec![],
             requires: vec![],

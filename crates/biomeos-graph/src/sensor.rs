@@ -202,6 +202,7 @@ pub fn collect_sensor_input(bus: &SensorEventBus, sources: &[SensorSource]) -> s
     collector.drain_as_json()
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

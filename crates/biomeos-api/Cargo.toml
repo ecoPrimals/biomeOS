@@ -66,7 +66,8 @@ chrono = { version = "0.4", features = ["serde"] }
 async-stream = "0.3.6"
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils" }
+serial_test = "3.2"
+biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 # Testing utilities
 tokio-test = "0.4"
 http-body-util = "0.1"

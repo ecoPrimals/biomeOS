@@ -224,7 +224,7 @@ mod tests {
             ActionResult::Success { message } => {
                 assert_eq!(message, "Operation completed");
             }
-            _ => panic!("Wrong result type"),
+            ActionResult::Error { .. } => panic!("Wrong result type"),
         }
     }
 
@@ -238,7 +238,7 @@ mod tests {
             ActionResult::Error { message } => {
                 assert_eq!(message, "Operation failed");
             }
-            _ => panic!("Wrong result type"),
+            ActionResult::Success { .. } => panic!("Wrong result type"),
         }
     }
 

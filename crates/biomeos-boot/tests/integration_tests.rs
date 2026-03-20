@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for biomeos-boot
 //!
 //! These tests verify end-to-end functionality of the boot infrastructure.
@@ -223,7 +225,7 @@ async fn test_initramfs_reproducible_builds() -> Result<()> {
     // Sizes should be similar (within 10%)
     let size1 = fs::metadata(&output1)?.len();
     let size2 = fs::metadata(&output2)?.len();
-    let diff = (size1 as i64 - size2 as i64).unsigned_abs();
+    let diff = size1.abs_diff(size2);
     let percent_diff = (diff * 100) / size1.max(size2);
 
     assert!(percent_diff < 10, "Builds differ by {percent_diff}%");

@@ -306,6 +306,7 @@ pub async fn check_peer(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -543,13 +544,12 @@ mod tests {
             connection_info: None,
         };
 
-        let cloned = slot.clone();
-        assert_eq!(cloned.encrypted_beacon, "beacon");
-        assert_eq!(cloned.node_hash, "hash");
-        assert_eq!(cloned.lineage_hash, "lineage");
-        assert_eq!(cloned.created_at, 1000);
-        assert_eq!(cloned.expires_at, 1300);
-        assert!(cloned.connection_info.is_none());
+        assert_eq!(slot.encrypted_beacon, "beacon");
+        assert_eq!(slot.node_hash, "hash");
+        assert_eq!(slot.lineage_hash, "lineage");
+        assert_eq!(slot.created_at, 1000);
+        assert_eq!(slot.expires_at, 1300);
+        assert!(slot.connection_info.is_none());
     }
 
     #[test]

@@ -156,6 +156,7 @@ pub(crate) fn get_load_average() -> BiomeResult<LoadAverage> {
     })
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -218,6 +219,6 @@ mod tests {
             load_15m: 1.0,
         };
         let cloned = load.clone();
-        assert_eq!(load.load_1m, cloned.load_1m);
+        assert!((load.load_1m - cloned.load_1m).abs() < f64::EPSILON);
     }
 }

@@ -324,4 +324,288 @@ mod tests {
         assert!(dbg.contains("debug"));
         assert!(dbg.contains("fam"));
     }
+
+    use std::collections::HashMap;
+
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
+
+    use crate::beardog_client::BearDogClient;
+    use crate::capability::{Capability, CapabilitySet};
+    use crate::discovery::{DiscoveredPrimal, PrimalEndpoint};
+
+    fn test_primal_with_socket(path: std::path::PathBuf) -> DiscoveredPrimal {
+        let mut caps = CapabilitySet::new();
+        caps.add(Capability::Discovery);
+        DiscoveredPrimal {
+            name: "test-primal".into(),
+            primal_type: "test".into(),
+            capabilities: caps,
+            endpoints: vec![PrimalEndpoint::UnixSocket { path }],
+            metadata: HashMap::new(),
+        }
+    }
+
+    #[tokio::test]
+    async fn layer2_identity_verification_no_socket_returns_unverified() {
+        let primal = DiscoveredPrimal {
+            name: "solo".into(),
+            primal_type: "t".into(),
+            capabilities: CapabilitySet::new(),
+            endpoints: vec![PrimalEndpoint::Http {
+                url: "http://127.0.0.1:9".into(),
+            }],
+            metadata: HashMap::new(),
+        };
+        let beardog =
+            BearDogClient::with_endpoint("unix:///tmp/biomeos-unused-beardog-socket".to_string())
+                .expect("endpoint");
+        let proof = layer2_identity_verification(&beardog, &primal)
+            .await
+            .expect("layer2");
+        assert_eq!(proof.node_id, "solo");
+        assert!(proof.is_unverified());
+        assert_eq!(proof.challenge, "no-socket");
+    }
+
+    #[tokio::test]
+    async fn layer2_identity_verification_socket_success_parses_result() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("identity.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind unix listener");
+        let sock_path_clone = sock_path.clone();
+
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.expect("accept");
+            let (mut read_half, mut write_half) = stream.into_split();
+            let mut line = String::new();
+            BufReader::new(&mut read_half)
+                .read_line(&mut line)
+                .await
+                .expect("read line");
+            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse request");
+            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": {
+                    "node_id": "rpc-node",
+                    "family_id": "rpc-family",
+                    "signature": "verified-sig",
+                    "public_key": "rpc-pk"
+                }
+            });
+            write_half
+                .write_all(format!("{body}\n").as_bytes())
+                .await
+                .expect("write response");
+        });
+
+        let primal = test_primal_with_socket(sock_path_clone);
+        let beardog =
+            BearDogClient::with_endpoint("unix:///tmp/unused".to_string()).expect("endpoint");
+        let proof = layer2_identity_verification(&beardog, &primal)
+            .await
+            .expect("layer2");
+
+        server.await.expect("server task");
+        assert_eq!(proof.node_id, "rpc-node");
+        assert_eq!(proof.family_id.as_deref(), Some("rpc-family"));
+        assert_eq!(proof.signature, "verified-sig");
+        assert!(!proof.is_unverified());
+    }
+
+    #[tokio::test]
+    async fn layer2_identity_verification_socket_error_yields_unverified_proof() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("dead.sock");
+        std::fs::write(&sock_path, b"").expect("placeholder path");
+
+        let primal = test_primal_with_socket(sock_path);
+        let beardog =
+            BearDogClient::with_endpoint("unix:///tmp/unused".to_string()).expect("endpoint");
+        let proof = layer2_identity_verification(&beardog, &primal)
+            .await
+            .expect("layer2");
+        assert_eq!(proof.node_id, "test-primal");
+        assert!(proof.is_unverified());
+        assert!(proof.challenge.contains("nucleus-challenge"));
+    }
+
+    #[tokio::test]
+    async fn layer3_capability_verification_no_socket_returns_discovered() {
+        let mut caps = CapabilitySet::new();
+        caps.add(Capability::Storage);
+        let primal = DiscoveredPrimal {
+            name: "n".into(),
+            primal_type: "t".into(),
+            capabilities: caps.clone(),
+            endpoints: vec![],
+            metadata: HashMap::new(),
+        };
+        let got = layer3_capability_verification(&primal)
+            .await
+            .expect("layer3");
+        assert!(got.has(&Capability::Storage));
+    }
+
+    #[tokio::test]
+    async fn layer3_capability_verification_rpc_error_falls_back() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("dead-cap.sock");
+        std::fs::write(&sock_path, b"").expect("file not socket listener");
+
+        let mut caps = CapabilitySet::new();
+        caps.add(Capability::Compute);
+        let primal = test_primal_with_socket(sock_path);
+        let primal = DiscoveredPrimal {
+            capabilities: caps.clone(),
+            ..primal
+        };
+        let got = layer3_capability_verification(&primal)
+            .await
+            .expect("layer3");
+        assert!(got.has(&Capability::Compute));
+    }
+
+    #[tokio::test]
+    async fn layer3_capability_verification_empty_capabilities_falls_back() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("cap.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind");
+
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.expect("accept");
+            let (mut read_half, mut write_half) = stream.into_split();
+            let mut line = String::new();
+            BufReader::new(&mut read_half)
+                .read_line(&mut line)
+                .await
+                .expect("read");
+            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
+            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": {
+                    "primal": "p",
+                    "version": "1",
+                    "family_id": null,
+                    "node_id": "n1",
+                    "protocols": [],
+                    "provided_capabilities": []
+                }
+            });
+            write_half
+                .write_all(format!("{body}\n").as_bytes())
+                .await
+                .expect("write");
+        });
+
+        let mut caps = CapabilitySet::new();
+        caps.add(Capability::Voice);
+        let primal = DiscoveredPrimal {
+            name: "p".into(),
+            primal_type: "t".into(),
+            capabilities: caps.clone(),
+            endpoints: vec![PrimalEndpoint::UnixSocket {
+                path: sock_path.clone(),
+            }],
+            metadata: HashMap::new(),
+        };
+
+        let got = layer3_capability_verification(&primal)
+            .await
+            .expect("layer3");
+        server.await.expect("server");
+        assert!(got.has(&Capability::Voice));
+    }
+
+    #[tokio::test]
+    async fn layer3_capability_verification_parses_custom_capability_type() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("cap2.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind");
+
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.expect("accept");
+            let (mut read_half, mut write_half) = stream.into_split();
+            let mut line = String::new();
+            BufReader::new(&mut read_half)
+                .read_line(&mut line)
+                .await
+                .expect("read");
+            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
+            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": {
+                    "primal": "p",
+                    "version": "1",
+                    "family_id": null,
+                    "node_id": "n1",
+                    "protocols": [],
+                    "provided_capabilities": [
+                        {"type": "not_a_builtin_cap_xyz", "methods": [], "version": "1"}
+                    ]
+                }
+            });
+            write_half
+                .write_all(format!("{body}\n").as_bytes())
+                .await
+                .expect("write");
+        });
+
+        let primal = test_primal_with_socket(sock_path.clone());
+        let got = layer3_capability_verification(&primal)
+            .await
+            .expect("layer3");
+        server.await.expect("server");
+        assert!(got.has(&Capability::Custom("not_a_builtin_cap_xyz".into())));
+    }
+
+    #[tokio::test]
+    async fn layer3_capability_verification_malformed_result_falls_back() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("cap3.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind");
+
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.expect("accept");
+            let (mut read_half, mut write_half) = stream.into_split();
+            let mut line = String::new();
+            BufReader::new(&mut read_half)
+                .read_line(&mut line)
+                .await
+                .expect("read");
+            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
+            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "result": "not-an-object"
+            });
+            write_half
+                .write_all(format!("{body}\n").as_bytes())
+                .await
+                .expect("write");
+        });
+
+        let mut caps = CapabilitySet::new();
+        caps.add(Capability::Admin);
+        let primal = DiscoveredPrimal {
+            name: "p".into(),
+            primal_type: "t".into(),
+            capabilities: caps.clone(),
+            endpoints: vec![PrimalEndpoint::UnixSocket { path: sock_path }],
+            metadata: HashMap::new(),
+        };
+
+        let got = layer3_capability_verification(&primal)
+            .await
+            .expect("layer3");
+        server.await.expect("server");
+        assert!(got.has(&Capability::Admin));
+    }
 }

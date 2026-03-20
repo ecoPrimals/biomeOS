@@ -120,6 +120,7 @@ impl UniversalBiomeOSManager {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use crate::universal_biomeos_manager::UniversalBiomeOSManager;
@@ -205,7 +206,9 @@ mod tests {
             Some("/tmp/test-manifest.yaml")
         );
         assert_eq!(
-            result.get("validate_only").and_then(|v| v.as_bool()),
+            result
+                .get("validate_only")
+                .and_then(serde_json::Value::as_bool),
             Some(true)
         );
     }

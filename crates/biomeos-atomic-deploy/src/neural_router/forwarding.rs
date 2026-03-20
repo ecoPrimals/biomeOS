@@ -618,4 +618,250 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap()["ok"], true);
     }
+
+    #[tokio::test]
+    async fn test_forward_request_jsonrpc_times_out_when_server_hangs() {
+        use std::time::Duration;
+
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("hanging.sock");
+        let path = socket_path.clone();
+
+        tokio::spawn(async move {
+            let listener = UnixListener::bind(&path).expect("bind");
+            if let Ok((_, _)) = listener.accept().await {
+                // Accepted but never send a response — client should hit request_timeout
+                tokio::time::sleep(Duration::from_secs(120)).await;
+            }
+        });
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let mut router =
+            create_router("test").with_protocol_preference(ProtocolPreference::JsonRpcOnly);
+        router.request_timeout = Duration::from_millis(200);
+
+        let result = router
+            .forward_request(&socket_path, "health.check", &serde_json::json!({}))
+            .await;
+
+        assert!(result.is_err(), "expected timeout error, got {result:?}");
+    }
+
+    #[tokio::test]
+    async fn test_forward_request_with_living_graph_records_success_path() {
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("record.sock");
+        let rpc_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": {"recorded": true},
+            "id": 1
+        });
+
+        let (ready_tx, ready_rx) = oneshot::channel();
+        let _server = run_mock_jsonrpc_server(&socket_path, rpc_response, Some(ready_tx)).await;
+        ready_rx.await.expect("server ready");
+
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let state = PrimalProtocolState::new("record", socket_path.clone());
+        graph.register_primal(state).await;
+
+        let router = create_router("test-family")
+            .with_protocol_preference(ProtocolPreference::JsonRpcOnly)
+            .with_living_graph(graph);
+
+        let result = router
+            .forward_request(&socket_path, "any.method", &serde_json::json!({}))
+            .await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap()["recorded"], true);
+    }
+
+    #[tokio::test]
+    async fn test_forward_via_tarpc_discovery_unknown_method_after_socket_exists() {
+        let router = create_router("test");
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("disc.sock");
+        let tarpc_path = temp.path().join("disc.tarpc.sock");
+        let _ = std::fs::File::create(&tarpc_path);
+
+        let result = router
+            .forward_via_tarpc(
+                &socket_path,
+                "discovery.not_a_real_method",
+                &serde_json::json!({}),
+            )
+            .await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("unknown discovery method") || err.contains("connect"),
+            "unexpected: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_forward_request_tarpc_only_fails_without_server() {
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("solo.sock");
+
+        let router = create_router("test").with_protocol_preference(ProtocolPreference::TarpcOnly);
+
+        let result = router
+            .forward_request(&socket_path, "health.check", &serde_json::json!({}))
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_forward_via_tarpc_discovery_register_invalid_body() {
+        let router = create_router("test");
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("p.sock");
+        let tarpc_path = temp.path().join("p.tarpc.sock");
+        let _ = std::fs::File::create(&tarpc_path);
+
+        let result = router
+            .forward_via_tarpc(
+                &socket_path,
+                "discovery.register",
+                &serde_json::json!({"not": "ServiceRegistration"}),
+            )
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("serde") || err.contains("connect") || err.contains("register"),
+            "unexpected: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_forward_via_tarpc_security_sign_missing_data() {
+        let router = create_router("test");
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("sec.sock");
+        let tarpc_path = temp.path().join("sec.tarpc.sock");
+        let _ = std::fs::File::create(&tarpc_path);
+
+        let result = router
+            .forward_via_tarpc(&socket_path, "security.sign", &serde_json::json!({}))
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("missing param: data") || err.contains("connect"),
+            "unexpected: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_forward_via_tarpc_security_unknown_method() {
+        let router = create_router("test");
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("sec2.sock");
+        let tarpc_path = temp.path().join("sec2.tarpc.sock");
+        let _ = std::fs::File::create(&tarpc_path);
+
+        let result = router
+            .forward_via_tarpc(&socket_path, "security.unknown_xyz", &serde_json::json!({}))
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("unknown security") || err.contains("connect"),
+            "unexpected: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_forward_via_tarpc_health_metrics_alias() {
+        let router = create_router("test");
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("hm.sock");
+        let tarpc_path = temp.path().join("hm.tarpc.sock");
+        let _ = std::fs::File::create(&tarpc_path);
+
+        let result = router
+            .forward_via_tarpc(&socket_path, "health_metrics", &serde_json::json!({}))
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_forward_via_tarpc_health_version_alias() {
+        let router = create_router("test");
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("hv.sock");
+        let tarpc_path = temp.path().join("hv.tarpc.sock");
+        let _ = std::fs::File::create(&tarpc_path);
+
+        let result = router
+            .forward_via_tarpc(&socket_path, "version", &serde_json::json!({}))
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_forward_via_tarpc_discovery_discover_all() {
+        let router = create_router("test");
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("da.sock");
+        let tarpc_path = temp.path().join("da.tarpc.sock");
+        let _ = std::fs::File::create(&tarpc_path);
+
+        let result = router
+            .forward_via_tarpc(
+                &socket_path,
+                "discovery_discover_all",
+                &serde_json::json!({}),
+            )
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_should_use_tarpc_auto_no_primal_in_graph_returns_false() {
+        let temp = TempDir::new().expect("temp dir");
+        let json_sock = temp.path().join("other.sock");
+        let graph = Arc::new(LivingGraph::new("test"));
+        let mut state = PrimalProtocolState::new("beardog", temp.path().join("beardog.sock"))
+            .with_tarpc_socket(temp.path().join("beardog.tarpc.sock"));
+        state.current_mode = ProtocolMode::Tarpc;
+        let _ = std::fs::File::create(temp.path().join("beardog.tarpc.sock"));
+        graph.register_primal(state).await;
+
+        let router = create_router("test")
+            .with_protocol_preference(ProtocolPreference::Auto)
+            .with_living_graph(graph);
+
+        assert!(!router.should_use_tarpc(&json_sock).await);
+    }
+
+    #[tokio::test]
+    async fn test_forward_request_jsonrpc_error_response_from_server() {
+        let temp = TempDir::new().expect("temp dir");
+        let socket_path = temp.path().join("err.sock");
+        let rpc_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "error": {"code": -1, "message": "method not found"},
+            "id": null
+        });
+
+        let (ready_tx, ready_rx) = oneshot::channel();
+        let _server = run_mock_jsonrpc_server(&socket_path, rpc_response, Some(ready_tx)).await;
+        ready_rx.await.expect("server ready");
+
+        let router =
+            create_router("test").with_protocol_preference(ProtocolPreference::JsonRpcOnly);
+
+        let result = router
+            .forward_request(&socket_path, "bad.method", &serde_json::json!({}))
+            .await;
+
+        assert!(result.is_err());
+    }
 }

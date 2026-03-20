@@ -590,4 +590,118 @@ NODE_ID = "verify-test-node"
         let report_result = result.verify_spore(&spore_no_tower);
         assert!(report_result.is_err());
     }
+
+    #[test]
+    fn test_verify_all_spores_smoke() {
+        let temp_dir = TempDir::new().unwrap();
+        let nucleus_path = temp_dir.path();
+        std::fs::create_dir_all(nucleus_path.join("tower")).unwrap();
+        std::fs::create_dir_all(nucleus_path.join("primals")).unwrap();
+        std::fs::write(nucleus_path.join("tower").join("tower"), b"tower").unwrap();
+
+        let verifier = SporeVerifier::from_nucleus(nucleus_path).unwrap();
+        let reports = verifier.verify_all_spores().expect("verify_all");
+        let _ = reports;
+    }
+
+    #[test]
+    fn test_verify_spore_modified_when_hash_mismatch_equal_version() {
+        let temp = TempDir::new().unwrap();
+        let nucleus = temp.path().join("nucleus");
+        let spore = temp.path().join("spore");
+        std::fs::create_dir_all(nucleus.join("tower")).unwrap();
+        std::fs::create_dir_all(spore.join("bin")).unwrap();
+        std::fs::create_dir_all(spore.join("primals")).unwrap();
+
+        let tower_bytes = b"v1binary";
+        std::fs::write(nucleus.join("tower").join("tower"), tower_bytes).unwrap();
+        std::fs::write(spore.join("bin").join("tower"), b"tampered").unwrap();
+
+        use crate::manifest::{
+            BinaryInfo, BinaryManifest, CompatibilityInfo, LineageInfo, ManifestMeta,
+            SporeBinaryInfo, SporeInfo, SporeManifest,
+        };
+        use chrono::Utc;
+
+        let mut hasher = sha2::Sha256::new();
+        use sha2::Digest;
+        hasher.update(tower_bytes);
+        let expected_sha = format!("{:x}", hasher.finalize());
+
+        let manifest = BinaryManifest {
+            manifest: ManifestMeta {
+                version: "1".into(),
+                created_at: Utc::now(),
+                pipeline_run: "t".into(),
+            },
+            binaries: {
+                let mut m = std::collections::HashMap::new();
+                m.insert(
+                    "tower".into(),
+                    BinaryInfo {
+                        name: "tower".into(),
+                        version: "1.0.0".into(),
+                        git_commit: "x".into(),
+                        build_date: Utc::now(),
+                        sha256: expected_sha,
+                        size_bytes: tower_bytes.len() as u64,
+                        source_repo: "s".into(),
+                        features: vec![],
+                    },
+                );
+                m
+            },
+            compatibility: CompatibilityInfo {
+                min_tower_version: "0".into(),
+                min_beardog_version: "0".into(),
+                min_songbird_version: "0".into(),
+            },
+        };
+        std::fs::write(
+            nucleus.join("MANIFEST.toml"),
+            toml::to_string(&manifest).unwrap(),
+        )
+        .unwrap();
+
+        let spore_manifest = SporeManifest {
+            spore: SporeInfo {
+                node_id: "n1".into(),
+                family_id: "f".into(),
+                created_at: Utc::now(),
+                created_by: "t".into(),
+                spore_type: "usb".into(),
+                deployment_batch: "b".into(),
+            },
+            lineage: LineageInfo {
+                parent_seed_hash: "p".into(),
+                child_seed_hash: "c".into(),
+                derivation_method: "m".into(),
+            },
+            binaries: {
+                let mut m = std::collections::HashMap::new();
+                m.insert(
+                    "tower".into(),
+                    SporeBinaryInfo {
+                        name: "tower".into(),
+                        version: "1.0.0".into(),
+                        sha256: "old".into(),
+                        source_manifest: "s".into(),
+                        copied_at: Utc::now(),
+                    },
+                );
+                m
+            },
+            deployment_history: vec![],
+        };
+        spore_manifest.save(&spore).unwrap();
+
+        let verifier = SporeVerifier::from_nucleus(&nucleus).expect("verifier");
+        let report = verifier.verify_spore(&spore).expect("report");
+        let tower_v = report
+            .binaries
+            .iter()
+            .find(|b| b.name == "tower")
+            .expect("tower");
+        assert_eq!(tower_v.status, VerificationStatus::Modified);
+    }
 }

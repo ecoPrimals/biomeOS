@@ -225,12 +225,8 @@ pub(crate) async fn run_controlled(
     Ok(())
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
 mod tests {
     use super::*;
     use biomeos_test_utils::TestEnvGuard;
@@ -286,7 +282,7 @@ mod tests {
             params
                 .get("_feedback")
                 .and_then(|v| v.get("collision"))
-                .and_then(|v| v.as_bool()),
+                .and_then(serde_json::Value::as_bool),
             Some(true)
         );
     }

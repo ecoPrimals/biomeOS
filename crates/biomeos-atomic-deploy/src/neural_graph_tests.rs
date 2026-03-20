@@ -93,12 +93,11 @@ fn find_graphs_dir() -> std::path::PathBuf {
         if candidate.is_dir() {
             return candidate;
         }
-        if !dir.pop() {
-            panic!(
-                "Could not find graphs/ directory from {}",
-                env!("CARGO_MANIFEST_DIR")
-            );
-        }
+        assert!(
+            dir.pop(),
+            "Could not find graphs/ directory from {}",
+            env!("CARGO_MANIFEST_DIR")
+        );
     }
 }
 
@@ -288,9 +287,11 @@ fn test_all_deployment_graphs_parse() {
         parsed_count >= 4,
         "Expected to parse at least 4 deployment graphs, got {parsed_count}"
     );
-    if !errors.is_empty() {
-        panic!("Deployment graph parse errors:\n{}", errors.join("\n"));
-    }
+    assert!(
+        errors.is_empty(),
+        "Deployment graph parse errors:\n{}",
+        errors.join("\n")
+    );
 }
 
 #[test]

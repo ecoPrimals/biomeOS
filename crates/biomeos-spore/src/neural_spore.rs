@@ -497,7 +497,7 @@ mod tests {
     #[test]
     fn test_neural_spore_new() {
         let temp_dir = TempDir::new().unwrap();
-        let spore = NeuralSpore::new(temp_dir.path().to_path_buf()).unwrap();
+        let spore = NeuralSpore::new(temp_dir.path()).unwrap();
 
         assert_eq!(spore.root_path, temp_dir.path().join("biomeOS"));
         assert_eq!(spore.graphs_dir, temp_dir.path().join("biomeOS/graphs"));
@@ -508,7 +508,7 @@ mod tests {
     #[tokio::test]
     async fn test_neural_spore_prepare() {
         let temp_dir = TempDir::new().unwrap();
-        let spore = NeuralSpore::new(temp_dir.path().to_path_buf()).unwrap();
+        let spore = NeuralSpore::new(temp_dir.path()).unwrap();
 
         spore.prepare().await.unwrap();
 
@@ -523,7 +523,7 @@ mod tests {
     #[tokio::test]
     async fn test_neural_spore_install_graphs() {
         let temp_dir = TempDir::new().unwrap();
-        let spore = NeuralSpore::new(temp_dir.path().to_path_buf()).unwrap();
+        let spore = NeuralSpore::new(temp_dir.path()).unwrap();
         spore.prepare().await.unwrap();
 
         // Create source graphs directory with test graphs
@@ -549,7 +549,7 @@ mod tests {
     #[tokio::test]
     async fn test_neural_spore_install_binaries() {
         let temp_dir = TempDir::new().unwrap();
-        let spore = NeuralSpore::new(temp_dir.path().to_path_buf()).unwrap();
+        let spore = NeuralSpore::new(temp_dir.path()).unwrap();
         spore.prepare().await.unwrap();
 
         // Create source binaries directory with test files
@@ -586,7 +586,7 @@ mod tests {
     #[tokio::test]
     async fn test_neural_spore_install_nucleus() {
         let temp_dir = TempDir::new().unwrap();
-        let spore = NeuralSpore::new(temp_dir.path().to_path_buf()).unwrap();
+        let spore = NeuralSpore::new(temp_dir.path()).unwrap();
         spore.prepare().await.unwrap();
 
         // Create test nucleus binary
@@ -617,7 +617,7 @@ mod tests {
     #[tokio::test]
     async fn test_neural_spore_create_readme() {
         let temp_dir = TempDir::new().unwrap();
-        let spore = NeuralSpore::new(temp_dir.path().to_path_buf()).unwrap();
+        let spore = NeuralSpore::new(temp_dir.path()).unwrap();
         spore.prepare().await.unwrap();
 
         spore.create_readme().await.unwrap();
@@ -636,7 +636,7 @@ mod tests {
     #[tokio::test]
     async fn test_neural_spore_save_metrics() {
         let temp_dir = TempDir::new().unwrap();
-        let spore = NeuralSpore::new(temp_dir.path().to_path_buf()).unwrap();
+        let spore = NeuralSpore::new(temp_dir.path()).unwrap();
         spore.prepare().await.unwrap();
 
         let metrics = DeploymentMetrics {
@@ -684,7 +684,7 @@ mod tests {
     #[tokio::test]
     async fn test_neural_spore_full_setup() {
         let temp_dir = TempDir::new().unwrap();
-        let spore = NeuralSpore::new(temp_dir.path().to_path_buf()).unwrap();
+        let spore = NeuralSpore::new(temp_dir.path()).unwrap();
 
         // Step 1: Prepare structure
         spore.prepare().await.unwrap();

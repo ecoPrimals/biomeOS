@@ -70,6 +70,7 @@ pub(crate) async fn layer4_trust_evaluation(
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

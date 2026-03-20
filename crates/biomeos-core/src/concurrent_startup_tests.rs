@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Unit tests for concurrent wave-based primal startup.
 //!
 //! Extracted from concurrent_startup.rs to keep main module under 1000 LOC.
@@ -190,8 +192,8 @@ fn test_circular_dependency_error() {
     requires.insert(b.clone(), HashSet::from(["cap-a".into()]));
 
     let mut cap_providers = HashMap::new();
-    cap_providers.insert("cap-a".into(), a.clone());
-    cap_providers.insert("cap-b".into(), b.clone());
+    cap_providers.insert("cap-a".into(), a);
+    cap_providers.insert("cap-b".into(), b);
 
     let graph = DependencyGraph {
         provides,
@@ -216,7 +218,7 @@ fn test_missing_capability_provider_error() {
     provides.insert(a.clone(), HashSet::new());
 
     let mut requires = HashMap::new();
-    requires.insert(a.clone(), HashSet::from(["nonexistent-cap".into()]));
+    requires.insert(a, HashSet::from(["nonexistent-cap".into()]));
 
     let graph = DependencyGraph {
         provides,

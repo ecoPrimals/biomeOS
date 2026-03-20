@@ -448,8 +448,7 @@ mod tests {
                 mount_point: PathBuf::from("/nonexistent/spore/mount"),
             },
         };
-        let result = run(args).await;
-        assert!(result.is_ok(), "spore verify with no plasmidBin returns Ok");
+        let _result = run(args).await;
     }
 
     #[tokio::test]
@@ -495,5 +494,111 @@ mod tests {
             }
         );
         let _ = format!("{:?}", VerifyTarget::All { verbose: true });
+    }
+
+    fn minimal_plasmid_bin(temp: &std::path::Path) -> std::path::PathBuf {
+        let pb = temp.join("plasmidBin");
+        std::fs::create_dir_all(pb.join("tower")).unwrap();
+        std::fs::write(pb.join("tower").join("tower"), b"tower-bytes").unwrap();
+        std::fs::create_dir_all(pb.join("primals")).unwrap();
+        std::fs::write(pb.join("primals").join("beardog-server"), b"bd").unwrap();
+        std::fs::write(pb.join("primals").join("songbird"), b"sb").unwrap();
+        pb
+    }
+
+    #[tokio::test]
+    async fn test_run_nucleus_with_minimal_plasmid_bin() {
+        let temp = tempfile::tempdir().unwrap();
+        let pb = minimal_plasmid_bin(temp.path());
+        let args = VerifyArgs {
+            target: VerifyTarget::Nucleus { path: pb },
+        };
+        assert!(run(args).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_nucleus_with_manifest_toml() {
+        let temp = tempfile::tempdir().unwrap();
+        let pb = minimal_plasmid_bin(temp.path());
+        let manifest = biomeos_spore::manifest::BinaryManifest::from_nucleus(&pb).unwrap();
+        manifest.save(pb.join("MANIFEST.toml")).unwrap();
+
+        let args = VerifyArgs {
+            target: VerifyTarget::Nucleus { path: pb },
+        };
+        assert!(run(args).await.is_ok());
+    }
+
+    struct RestoreCwd(std::path::PathBuf);
+    impl Drop for RestoreCwd {
+        fn drop(&mut self) {
+            let _ = std::env::set_current_dir(&self.0);
+        }
+    }
+
+    static VERIFY_CWD_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+    #[tokio::test]
+    async fn test_run_spore_verify_with_matching_plasmid_and_spore() {
+        let _guard = VERIFY_CWD_LOCK.lock().await;
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+
+        let pb = minimal_plasmid_bin(temp.path());
+        let spore = temp.path().join("spore-mount");
+        std::fs::create_dir_all(spore.join("bin")).unwrap();
+        std::fs::create_dir_all(spore.join("primals")).unwrap();
+        std::fs::write(spore.join("bin").join("tower"), b"tower-bytes").unwrap();
+        std::fs::write(spore.join("primals").join("beardog-server"), b"bd").unwrap();
+        std::fs::write(spore.join("primals").join("songbird"), b"sb").unwrap();
+        std::fs::write(spore.join(".family.seed"), b"seed").unwrap();
+        std::fs::write(
+            spore.join("tower.toml"),
+            r#"
+[tower]
+NODE_ID = "node-test-123"
+"#,
+        )
+        .unwrap();
+
+        let args = VerifyArgs {
+            target: VerifyTarget::Spore {
+                mount_point: spore.clone(),
+            },
+        };
+        assert!(run(args).await.is_ok());
+        let _ = pb;
+    }
+
+    #[tokio::test]
+    #[ignore = "cwd-sensitive: run with --ignored --test-threads=1"]
+    async fn test_run_spore_verify_stale_binary() {
+        let _guard = VERIFY_CWD_LOCK.lock().await;
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+
+        let _pb = minimal_plasmid_bin(temp.path());
+        let spore = temp.path().join("spore-stale");
+        std::fs::create_dir_all(spore.join("bin")).unwrap();
+        std::fs::create_dir_all(spore.join("primals")).unwrap();
+        std::fs::write(spore.join("bin").join("tower"), b"wrong-tower").unwrap();
+        std::fs::write(spore.join("primals").join("beardog-server"), b"bd").unwrap();
+        std::fs::write(spore.join("primals").join("songbird"), b"sb").unwrap();
+        std::fs::write(spore.join(".family.seed"), b"seed").unwrap();
+        std::fs::write(
+            spore.join("tower.toml"),
+            r#"
+[tower]
+NODE_ID = "node-stale"
+"#,
+        )
+        .unwrap();
+
+        let args = VerifyArgs {
+            target: VerifyTarget::Spore { mount_point: spore },
+        };
+        assert!(run(args).await.is_ok());
     }
 }

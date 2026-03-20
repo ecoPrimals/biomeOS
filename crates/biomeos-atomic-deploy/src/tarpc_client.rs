@@ -62,3 +62,34 @@ pub async fn connect_tarpc_security(socket_path: &Path) -> Result<SecurityRpcCli
     let client = SecurityRpcClient::new(client::Config::default(), transport).spawn();
     Ok(client)
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[tokio::test]
+    async fn connect_tarpc_health_nonexistent_socket_reports_path() {
+        let p = Path::new("/nonexistent/biomeos/tarpc-health-missing.sock");
+        let err = connect_tarpc_health(p).await.unwrap_err();
+        let s = format!("{err:#}");
+        assert!(
+            s.contains("Failed to connect") || s.contains("connect"),
+            "{s}"
+        );
+        assert!(s.contains("tarpc-health-missing") || s.contains("nonexistent"));
+    }
+
+    #[tokio::test]
+    async fn connect_tarpc_discovery_nonexistent_socket_is_error() {
+        let p = Path::new("/nonexistent/biomeos/tarpc-discovery-missing.sock");
+        assert!(connect_tarpc_discovery(p).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn connect_tarpc_security_nonexistent_socket_is_error() {
+        let p = Path::new("/nonexistent/biomeos/tarpc-security-missing.sock");
+        assert!(connect_tarpc_security(p).await.is_err());
+    }
+}

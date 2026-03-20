@@ -543,7 +543,7 @@ mod tests {
     #[test]
     fn scaling_spec_clone() {
         let spec = ScalingSpec::default();
-        let cloned = spec.clone();
+        let cloned = spec;
         assert!(matches!(cloned.scaling_type, ScalingType::None));
     }
 

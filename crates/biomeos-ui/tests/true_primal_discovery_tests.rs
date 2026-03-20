@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for TRUE PRIMAL discovery implementations
 //!
 //! These tests verify that we query primals for their self-knowledge
@@ -28,7 +30,7 @@ async fn start_mock_primal(
     let (ready_tx, ready_rx) = oneshot::channel();
     let listener = UnixListener::bind(&socket_path).unwrap();
     let identity = identity.to_string();
-    let capabilities: Vec<String> = capabilities.iter().map(|s| s.to_string()).collect();
+    let capabilities: Vec<String> = capabilities.iter().copied().map(str::to_string).collect();
 
     tokio::spawn(async move {
         // Signal ready immediately after bind
@@ -171,8 +173,11 @@ async fn test_query_primal_health() {
 
     let (health, load, status) = query_health(&socket_path).await;
 
-    assert_eq!(health, 1.0, "Should get health metric");
-    assert_eq!(load, 0.2, "Should get load metric");
+    assert!(
+        (health - 1.0).abs() < f64::EPSILON,
+        "Should get health metric"
+    );
+    assert!((load - 0.2).abs() < f64::EPSILON, "Should get load metric");
     assert_eq!(status, "healthy", "Should get status");
 }
 
@@ -249,9 +254,8 @@ async fn test_agnostic_capability_discovery() {
 async fn query_identity(socket_path: &PathBuf) -> String {
     use tokio::net::UnixStream;
 
-    let stream = match UnixStream::connect(socket_path).await {
-        Ok(s) => s,
-        Err(_) => return "unknown".to_string(),
+    let Ok(stream) = UnixStream::connect(socket_path).await else {
+        return "unknown".to_string();
     };
 
     let request = serde_json::json!({
@@ -292,9 +296,8 @@ async fn query_identity(socket_path: &PathBuf) -> String {
 async fn query_capabilities(socket_path: &PathBuf) -> Vec<String> {
     use tokio::net::UnixStream;
 
-    let stream = match UnixStream::connect(socket_path).await {
-        Ok(s) => s,
-        Err(_) => return vec![],
+    let Ok(stream) = UnixStream::connect(socket_path).await else {
+        return vec![];
     };
 
     let request = serde_json::json!({
@@ -338,9 +341,8 @@ async fn query_capabilities(socket_path: &PathBuf) -> Vec<String> {
 async fn query_health(socket_path: &PathBuf) -> (f64, f64, String) {
     use tokio::net::UnixStream;
 
-    let stream = match UnixStream::connect(socket_path).await {
-        Ok(s) => s,
-        Err(_) => return (0.0, 1.0, "offline".to_string()),
+    let Ok(stream) = UnixStream::connect(socket_path).await else {
+        return (0.0, 1.0, "offline".to_string());
     };
 
     let request = serde_json::json!({

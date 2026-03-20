@@ -276,9 +276,16 @@ pub struct AnatomyLayer {
     pub visible: bool,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn assert_f64_array_eq<const N: usize>(actual: &[f64; N], expected: &[f64; N]) {
+        for (a, e) in actual.iter().zip(expected.iter()) {
+            assert!((a - e).abs() < f64::EPSILON, "expected {e}, got {a}");
+        }
+    }
 
     #[test]
     fn test_visual_output_default() {
@@ -305,8 +312,8 @@ mod tests {
     #[test]
     fn test_pose6dof_default() {
         let pose = Pose6DoF::default();
-        assert_eq!(pose.position, [0.0, 0.0, 0.0]);
-        assert_eq!(pose.orientation, [0.0, 0.0, 0.0, 1.0]);
+        assert_f64_array_eq(&pose.position, &[0.0, 0.0, 0.0]);
+        assert_f64_array_eq(&pose.orientation, &[0.0, 0.0, 0.0, 1.0]);
         assert!(pose.velocity.is_none());
     }
 
@@ -320,7 +327,7 @@ mod tests {
         };
         let json = serde_json::to_string(&pose).unwrap();
         let back: Pose6DoF = serde_json::from_str(&json).unwrap();
-        assert_eq!(back.position, pose.position);
+        assert_f64_array_eq(&back.position, &pose.position);
     }
 
     #[test]
@@ -343,8 +350,8 @@ mod tests {
         };
         let json = serde_json::to_string(&cmd).unwrap();
         let back: HapticCommand = serde_json::from_str(&json).unwrap();
-        assert_eq!(back.intensity, 0.5);
-        assert_eq!(back.force_vector.unwrap(), [0.0, -1.0, 0.0]);
+        assert!((back.intensity - 0.5).abs() < f64::EPSILON);
+        assert_f64_array_eq(back.force_vector.as_ref().unwrap(), &[0.0, -1.0, 0.0]);
     }
 
     #[test]
@@ -438,7 +445,7 @@ mod tests {
 
         let frame = TrackingFrame {
             frame: 42,
-            timestamp_us: 700000,
+            timestamp_us: 700_000,
             devices,
             confidence: 0.95,
         };

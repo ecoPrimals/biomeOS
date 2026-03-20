@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! E2E Tests for Spring Niche Deployment
 //!
 //! Validates deploying springs as biomeOS niches:
@@ -36,8 +38,7 @@ struct NicheFixture {
 impl NicheFixture {
     fn new(family_id: &str) -> Self {
         let socket_dir = std::env::var("XDG_RUNTIME_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("/tmp"))
+            .map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from)
             .join("biomeos");
 
         Self {

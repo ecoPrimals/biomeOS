@@ -135,19 +135,19 @@ mod tests {
                 let (reader, mut writer) = tokio::io::split(stream);
                 let mut reader = BufReader::new(reader);
                 let mut line = String::new();
-                if reader.read_line(&mut line).await.is_ok() {
-                    if let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line) {
-                        let response = JsonRpcResponse {
-                            jsonrpc: "2.0".to_string(),
-                            result: Some(capacity_response),
-                            error: None,
-                            id: req.id.clone().unwrap_or(serde_json::Value::Null),
-                        };
-                        let _ = writer
-                            .write_all(serde_json::to_string(&response).unwrap().as_bytes())
-                            .await;
-                        let _ = writer.write_all(b"\n").await;
-                    }
+                if reader.read_line(&mut line).await.is_ok()
+                    && let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line)
+                {
+                    let response = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: Some(capacity_response),
+                        error: None,
+                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
+                    };
+                    let _ = writer
+                        .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                        .await;
+                    let _ = writer.write_all(b"\n").await;
                 }
             }
         });
@@ -191,7 +191,7 @@ mod tests {
 
         match result {
             CapacityResult::Insufficient { reason: r } => assert_eq!(r, reason),
-            _ => panic!("Expected Insufficient result"),
+            CapacityResult::Available => panic!("Expected Insufficient result"),
         }
     }
 
@@ -251,7 +251,7 @@ mod tests {
         assert!(result.is_ok());
         match result.unwrap() {
             CapacityResult::Insufficient { reason } => assert_eq!(reason, "Not enough memory"),
-            _ => panic!("Expected Insufficient"),
+            CapacityResult::Available => panic!("Expected Insufficient"),
         }
     }
 

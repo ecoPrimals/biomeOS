@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for BiomeOS discovery system
 //!
 //! These tests validate the complete discovery workflow:
@@ -207,7 +209,9 @@ async fn test_discover_multiple_primals() {
 
     // We should discover at least some primals if they're available
     // This is not a hard requirement as primals might not be built
-    if !discovered.is_empty() {
+    if discovered.is_empty() {
+        println!("⚠️  No primals discovered - binaries may not be built yet");
+    } else {
         // Verify all discovered primals have known interfaces
         for adapter in discovered {
             assert!(
@@ -216,8 +220,6 @@ async fn test_discover_multiple_primals() {
                 adapter.name
             );
         }
-    } else {
-        println!("⚠️  No primals discovered - binaries may not be built yet");
     }
 }
 

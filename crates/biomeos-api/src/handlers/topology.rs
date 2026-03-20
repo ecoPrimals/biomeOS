@@ -595,7 +595,7 @@ mod tests {
         let json = serde_json::to_string(&metadata).unwrap();
         assert!(json.contains("1.0.0"));
         assert!(json.contains("1894e909e454"));
-        assert!(json.contains("3"));
+        assert!(json.contains('3'));
     }
 
     #[test]
@@ -607,7 +607,7 @@ mod tests {
     #[test]
     fn test_extract_node_id_empty_string() {
         let result = extract_node_id_from_primal("");
-        assert_eq!(result, Some("".to_string()));
+        assert_eq!(result, Some(String::new()));
     }
 
     #[test]

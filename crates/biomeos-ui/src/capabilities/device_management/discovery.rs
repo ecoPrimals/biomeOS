@@ -497,3 +497,36 @@ pub async fn get_primal_capabilities(socket_path: &str) -> Vec<String> {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod discovery_tests {
+    use super::*;
+
+    #[test]
+    fn test_default_cpu_sample_interval() {
+        assert_eq!(DEFAULT_CPU_SAMPLE_INTERVAL.as_millis(), 100);
+    }
+
+    #[tokio::test]
+    async fn test_discover_devices_returns_vec() {
+        let devices = discover_devices().await.expect("discover_devices");
+        // Linux CI: at least CPU from /proc/cpuinfo when readable
+        let _ = devices;
+    }
+
+    #[tokio::test]
+    async fn test_get_cpu_usage_with_interval_zero_total_diff() {
+        // Uses real /proc/stat — should return Ok in [0,1] on Linux
+        let usage = get_cpu_usage_with_interval(std::time::Duration::from_millis(50))
+            .await
+            .expect("cpu usage");
+        assert!((0.0..=1.0).contains(&usage));
+    }
+
+    #[tokio::test]
+    async fn test_discover_network_skips_loopback() {
+        let nets = discover_network().await.expect("net");
+        assert!(!nets.iter().any(|d| d.id == "net-lo"));
+    }
+}

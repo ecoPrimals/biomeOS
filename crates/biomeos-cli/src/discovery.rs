@@ -324,8 +324,8 @@ mod tests {
         ];
         let by_type = categorize_by_type(&services);
         assert_eq!(by_type.len(), 2);
-        assert_eq!(by_type.get("a").map(|v| v.len()), Some(2));
-        assert_eq!(by_type.get("b").map(|v| v.len()), Some(1));
+        assert_eq!(by_type.get("a").map(Vec::len), Some(2));
+        assert_eq!(by_type.get("b").map(Vec::len), Some(1));
     }
 
     #[test]
@@ -357,7 +357,7 @@ mod tests {
         ];
         let by_type = categorize_by_type(&services);
         assert_eq!(by_type.len(), 1);
-        assert_eq!(by_type.get("compute").map(|v| v.len()), Some(2));
+        assert_eq!(by_type.get("compute").map(Vec::len), Some(2));
     }
 
     #[test]

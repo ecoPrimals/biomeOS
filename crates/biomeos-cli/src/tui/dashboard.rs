@@ -196,6 +196,7 @@ impl BiomeOSDashboard {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_types::BiomeOSConfig;
@@ -231,5 +232,26 @@ mod tests {
         let mut dashboard = create_test_dashboard().await;
         let result = dashboard.refresh_data().await;
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_service_navigation_empty_list_no_panic() {
+        let mut dashboard = create_test_dashboard().await;
+        assert!(dashboard.state().discovered_services.is_empty());
+        dashboard.state.next_service();
+        dashboard.state.previous_service();
+    }
+
+    #[tokio::test]
+    async fn test_set_update_interval() {
+        let mut dashboard = create_test_dashboard().await;
+        dashboard.set_update_interval(std::time::Duration::from_millis(250));
+        assert_eq!(dashboard.state().update_interval.as_millis(), 250);
+    }
+
+    #[tokio::test]
+    async fn test_handle_selection_smoke() {
+        let dashboard = create_test_dashboard().await;
+        assert!(dashboard.handle_selection().await.is_ok());
     }
 }

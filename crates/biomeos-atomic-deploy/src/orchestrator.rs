@@ -749,4 +749,76 @@ mod tests {
             "unexpected error: {err_msg}"
         );
     }
+
+    #[tokio::test]
+    async fn test_deploy_atomic_all_launches_fail_still_ok_empty_instances() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let binary_dir = temp_dir.path().join("bin");
+        std::fs::create_dir(&binary_dir).expect("create binary dir");
+
+        let seed_path = temp_dir.path().join("usb.seed");
+        std::fs::write(&seed_path, vec![0u8; 32]).expect("32-byte seed");
+
+        let mut config = DeploymentConfig::test_config(seed_path);
+        config.binary_dir = binary_dir;
+        config.runtime_dir = temp_dir.path().join("runtime");
+
+        let mut orch = DeploymentOrchestrator::new(config).expect("create orchestrator");
+
+        let result = orch.deploy_atomic(AtomicType::Tower).await;
+        assert!(
+            result.is_ok(),
+            "degraded deploy with no binaries should return Ok(empty): {:?}",
+            result
+        );
+        let instances = result.expect("ok");
+        assert!(instances.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_deploy_all_three_phases_ok_when_launches_degraded() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let binary_dir = temp_dir.path().join("bin");
+        std::fs::create_dir(&binary_dir).expect("create binary dir");
+
+        let seed_path = temp_dir.path().join("usb.seed");
+        std::fs::write(&seed_path, vec![0u8; 32]).expect("seed");
+
+        let mut config = DeploymentConfig::test_config(seed_path);
+        config.binary_dir = binary_dir;
+        config.runtime_dir = temp_dir.path().join("runtime");
+
+        let mut orch = DeploymentOrchestrator::new(config).expect("orchestrator");
+        let report = orch.deploy_all().await.expect("deploy_all completes");
+        assert_eq!(report.success_count, 3);
+        assert!(report.errors.is_empty());
+        assert!(report.tower.as_ref().map(|v| v.is_empty()).unwrap_or(false));
+    }
+
+    #[test]
+    fn test_atomic_type_required_primals_count() {
+        assert_eq!(AtomicType::Tower.required_primals().len(), 2);
+        assert_eq!(AtomicType::Node.required_primals().len(), 3);
+        assert_eq!(AtomicType::Nest.required_primals().len(), 3);
+    }
+
+    #[test]
+    fn test_deployment_result_is_success_requires_no_errors() {
+        let mut r = DeploymentResult::new();
+        r.success_count = 3;
+        r.errors.push("e".into());
+        assert!(!r.is_success());
+    }
+
+    #[test]
+    fn test_deployment_config_neural_api_fields_roundtrip() {
+        let temp_dir = TempDir::new().expect("temp");
+        let mut c = DeploymentConfig::test_config(temp_dir.path().join("s.seed"));
+        c.neural_api_enabled = true;
+        c.neural_api_endpoint = Some("http://127.0.0.1:1".into());
+        let j = serde_json::to_string(&c).expect("ser");
+        let d: DeploymentConfig = serde_json::from_str(&j).expect("de");
+        assert!(d.neural_api_enabled);
+        assert_eq!(d.neural_api_endpoint.as_deref(), Some("http://127.0.0.1:1"));
+    }
 }

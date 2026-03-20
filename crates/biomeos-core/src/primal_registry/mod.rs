@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_primal_name_detection() {
-        let registry = PrimalRegistry::new("/tmp");
+        let _registry = PrimalRegistry::new("/tmp");
         assert_eq!(PrimalRegistry::detect_primal_name("beardog"), "beardog");
         assert_eq!(
             PrimalRegistry::detect_primal_name("beardog-linux"),
@@ -541,7 +541,7 @@ mod tests {
 
     #[test]
     fn test_capability_fuzzy_matching() {
-        let registry = PrimalRegistry::new("/tmp");
+        let _registry = PrimalRegistry::new("/tmp");
 
         // Test encryption/crypto match
         assert!(PrimalRegistry::capability_matches("crypto", "encryption"));
@@ -666,15 +666,15 @@ mod tests {
 
     #[test]
     fn test_get_primal_versions_empty() {
-        let _registry = PrimalRegistry::new("/tmp");
-        let versions = _registry.get_primal_versions("nonexistent");
+        let registry = PrimalRegistry::new("/tmp");
+        let versions = registry.get_primal_versions("nonexistent");
         assert!(versions.is_empty());
     }
 
     #[test]
     fn test_get_latest_empty() {
-        let _registry = PrimalRegistry::new("/tmp");
-        assert!(_registry.get_latest("nonexistent").is_none());
+        let registry = PrimalRegistry::new("/tmp");
+        assert!(registry.get_latest("nonexistent").is_none());
     }
 
     #[test]

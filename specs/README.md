@@ -1,7 +1,7 @@
 # biomeOS Specifications
 
-**Last Updated**: February 13, 2026
-**Active Specs**: 20 (47 archived to `ecoPrimals/archive/biomeos-feb09-2026/specs/`)
+**Last Updated**: March 20, 2026
+**Active Specs**: 24 (47 archived to `ecoPrimals/archive/biomeos-feb09-2026/specs/`)
 
 ---
 
@@ -44,11 +44,19 @@
 | [MESH_IPC_METHODS_SPEC.md](MESH_IPC_METHODS_SPEC.md) | Mesh JSON-RPC method definitions |
 | [MULTI_TIER_NAT_TRAVERSAL_SPEC.md](MULTI_TIER_NAT_TRAVERSAL_SPEC.md) | Full/restricted/symmetric NAT handling |
 
-### Standards
+### Standards & Deployment
 | Spec | Purpose |
 |------|---------|
 | [PRIMAL_DEPLOYMENT_STANDARD.md](PRIMAL_DEPLOYMENT_STANDARD.md) | Deterministic deployment v1.0 |
 | [BINARY_BUILD_TARGETS_SPEC.md](BINARY_BUILD_TARGETS_SPEC.md) | PIE vs static linking (EVOLVED Feb 13) |
+| [UNIVERSAL_GENOME_DEPLOYMENT_SPEC.md](UNIVERSAL_GENOME_DEPLOYMENT_SPEC.md) | Universal genome distribution and deployment |
+
+### Lifecycle
+| Spec | Purpose |
+|------|---------|
+| [lifecycle/BIOMEOS_BOOTSTRAP_MODE.md](lifecycle/BIOMEOS_BOOTSTRAP_MODE.md) | Bootstrap mode detection and startup |
+| [lifecycle/NEURAL_API_NUCLEATION_POINT_JAN_21_2026.md](lifecycle/NEURAL_API_NUCLEATION_POINT_JAN_21_2026.md) | Neural API nucleation design |
+| [lifecycle/PRIMAL_LIFECYCLE_GERMINATION_TERRARIA_JAN_21_2026.md](lifecycle/PRIMAL_LIFECYCLE_GERMINATION_TERRARIA_JAN_21_2026.md) | Primal lifecycle germination model |
 
 ---
 

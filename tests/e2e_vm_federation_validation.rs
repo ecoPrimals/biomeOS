@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! E2E test for VM Federation with mandatory validation
 //!
 //! This test validates that our VM federation manager properly waits for

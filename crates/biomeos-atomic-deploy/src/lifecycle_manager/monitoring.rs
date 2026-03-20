@@ -154,10 +154,11 @@ impl LifecycleManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::lifecycle_manager::ApoptosisReason;
+    use std::os::unix::net::UnixListener;
     use std::path::PathBuf;
 
     #[tokio::test]
@@ -191,5 +192,107 @@ mod tests {
         let result = manager.start_monitoring().await;
         assert!(result.is_ok());
         manager.shutdown_all().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_health_incubating_becomes_active_with_socket() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let sock = tmp.path().join("incubating.sock");
+        let _listener = UnixListener::bind(&sock).expect("bind socket");
+
+        let manager = LifecycleManager::new("test-family");
+        manager
+            .register_primal("incu", sock, None, None)
+            .await
+            .expect("register");
+
+        manager
+            .check_primal_health("incu")
+            .await
+            .expect("health check");
+
+        let state = manager.get_primal_info("incu").await.expect("info");
+        assert!(matches!(state.state, LifecycleState::Active { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_health_skips_degraded_early_return() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let sock = tmp.path().join("deg.sock");
+        let _listener = UnixListener::bind(&sock).expect("bind");
+
+        let manager = LifecycleManager::new("test-family");
+        manager
+            .register_primal("deg-p", sock, None, None)
+            .await
+            .expect("register");
+
+        {
+            let mut primals = manager.primals.write().await;
+            let p = primals.get_mut("deg-p").expect("primal");
+            p.state = LifecycleState::Degraded {
+                since: chrono::Utc::now(),
+                reason: "test".to_string(),
+                resurrection_attempts: 0,
+            };
+        }
+
+        manager
+            .check_primal_health("deg-p")
+            .await
+            .expect("degraded should no-op ok");
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_health_germinating_skipped() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let sock = tmp.path().join("germ.sock");
+        let _listener = UnixListener::bind(&sock).expect("bind");
+
+        let manager = LifecycleManager::new("test-family");
+        manager
+            .register_primal("germ", sock, None, None)
+            .await
+            .expect("register");
+
+        {
+            let mut primals = manager.primals.write().await;
+            let p = primals.get_mut("germ").expect("primal");
+            p.state = LifecycleState::Germinating;
+        }
+
+        manager
+            .check_primal_health("germ")
+            .await
+            .expect("germinating skip");
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_health_active_increments_failures_toward_degraded() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let sock = tmp.path().join("active.sock");
+        let _listener = UnixListener::bind(&sock).expect("bind");
+
+        let manager = LifecycleManager::new("test-family");
+        manager
+            .register_primal("act", sock.clone(), None, None)
+            .await
+            .expect("register");
+
+        // Incubating → Active (socket-only check succeeds)
+        manager.check_primal_health("act").await.expect("first");
+        // Deep checks fail (no JSON-RPC server) but socket exists
+        manager.check_primal_health("act").await.expect("f1");
+        manager.check_primal_health("act").await.expect("f2");
+        let info = manager.get_primal_info("act").await.expect("info");
+        assert_eq!(info.metrics.health_failures, 2);
+
+        manager.check_primal_health("act").await.expect("f3");
+        let info = manager
+            .get_primal_info("act")
+            .await
+            .expect("info after threshold");
+        assert!(matches!(info.state, LifecycleState::Degraded { .. }));
+        assert!(info.metrics.health_failures >= 3);
     }
 }

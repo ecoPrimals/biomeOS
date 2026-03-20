@@ -66,6 +66,7 @@ pub(crate) fn get_memory_usage() -> BiomeResult<f64> {
     Ok(memory_info.usage_percent)
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,6 +121,6 @@ mod tests {
         let deserialized: MemoryInfo =
             serde_json::from_str(&json).expect("deserialization should succeed");
         assert!(!deserialized.usage_percent.is_nan());
-        assert_eq!(deserialized.usage_percent, 0.0);
+        assert!((deserialized.usage_percent - 0.0).abs() < f64::EPSILON);
     }
 }

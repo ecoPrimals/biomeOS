@@ -43,6 +43,7 @@ pub struct ObservabilityConfig {
     pub alerting: Option<AlertingConfig>,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,7 +155,7 @@ mod tests {
     #[test]
     fn test_observability_config_clone() {
         let original = ObservabilityConfig::default();
-        let cloned = original.clone();
+        let cloned = original;
         assert!(cloned.metrics.enabled);
     }
 

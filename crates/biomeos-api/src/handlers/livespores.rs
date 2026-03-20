@@ -421,7 +421,7 @@ mod tests {
         };
         let cloned = device.clone();
         assert_eq!(cloned.id, device.id);
-        assert_eq!(cloned.utilization_percent, device.utilization_percent);
+        assert!((cloned.utilization_percent - device.utilization_percent).abs() < f64::EPSILON);
     }
 
     #[test]

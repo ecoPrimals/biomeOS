@@ -392,7 +392,7 @@ fn test_registry_stats_serialization() {
     };
     let json = serde_json::to_string(&stats).expect("serialize");
     assert!(json.contains("10"));
-    assert!(json.contains("3"));
+    assert!(json.contains('3'));
 }
 
 /// Verify that capability_registry.toml providers are all known primal names.

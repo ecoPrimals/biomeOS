@@ -223,6 +223,7 @@ pub(crate) async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
     })
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -330,7 +331,7 @@ mod tests {
     #[test]
     fn test_clone_network_interface_status() {
         let status = NetworkInterfaceStatus::Up;
-        let cloned_status = status.clone();
+        let cloned_status = status;
         assert!(matches!(cloned_status, NetworkInterfaceStatus::Up));
     }
 }

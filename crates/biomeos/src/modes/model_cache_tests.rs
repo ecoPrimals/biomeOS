@@ -5,6 +5,8 @@
 
 use super::*;
 use crate::ModelCacheCommand;
+use biomeos_test_utils::TestEnvGuard;
+use serial_test::serial;
 
 #[test]
 fn test_format_size_mb() {
@@ -37,7 +39,7 @@ fn test_hf_dir_to_model_id() {
     );
     assert_eq!(hf_dir_to_model_id("other--prefix"), None);
     assert_eq!(hf_dir_to_model_id(""), None);
-    assert_eq!(hf_dir_to_model_id("models--"), Some("".to_string()));
+    assert_eq!(hf_dir_to_model_id("models--"), Some(String::new()));
     assert_eq!(
         hf_dir_to_model_id("models--single--level"),
         Some("single/level".to_string())
@@ -300,11 +302,102 @@ async fn test_run_resolve_with_empty_model_id() {
         cache_dir,
         None,
         ModelCacheCommand::Resolve {
-            model_id: "".to_string(),
+            model_id: String::new(),
         },
     )
     .await;
     assert!(result.is_ok(), "resolve empty model_id should not panic");
+}
+
+#[test]
+#[serial]
+fn test_hf_dir_to_model_id_unicode_safe() {
+    assert_eq!(
+        hf_dir_to_model_id("models--org--model-name"),
+        Some("org/model-name".to_string())
+    );
+}
+
+#[test]
+fn test_format_size_mb_one_byte() {
+    assert_eq!(format_size_mb(1), "0.0 MB");
+}
+
+#[test]
+fn test_format_size_gb_half() {
+    assert_eq!(format_size_gb(536_870_912), "0.5 GB");
+}
+
+#[tokio::test]
+async fn test_run_list_after_failed_register_leaves_cache_consistent() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+
+    let bad = run_with(
+        cache_dir.clone(),
+        None,
+        ModelCacheCommand::Register {
+            model_id: "bad/path".to_string(),
+            path: temp.path().join("missing-dir-xyz"),
+        },
+    )
+    .await;
+    assert!(bad.is_err());
+
+    let list = run_with(cache_dir, None, ModelCacheCommand::List).await;
+    assert!(list.is_ok());
+}
+
+#[tokio::test]
+async fn test_status_after_register_and_resolve() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+    let model_dir = temp.path().join("m");
+    std::fs::create_dir_all(&model_dir).expect("create");
+    std::fs::write(model_dir.join("config.json"), "{}").expect("write");
+
+    run_with(
+        cache_dir.clone(),
+        None,
+        ModelCacheCommand::Register {
+            model_id: "org/status-test".to_string(),
+            path: model_dir,
+        },
+    )
+    .await
+    .expect("register");
+
+    let st = run_with(cache_dir, None, ModelCacheCommand::Status).await;
+    assert!(st.is_ok());
+}
+
+#[tokio::test]
+async fn test_import_hf_then_list() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    let hf_hub = temp.path().join("hf-hub");
+    std::fs::create_dir_all(&cache_dir).expect("cache");
+    std::fs::create_dir_all(hf_hub.join("models--a--b").join("snapshots").join("h")).expect("hf");
+    std::fs::write(hf_hub.join("models--a--b/snapshots/h/config.json"), "{}").expect("cfg");
+
+    run_with(cache_dir.clone(), Some(hf_hub), ModelCacheCommand::ImportHf)
+        .await
+        .expect("import");
+
+    let list = run_with(cache_dir, None, ModelCacheCommand::List).await;
+    assert!(list.is_ok());
+}
+
+#[test]
+fn test_format_size_mb_exactly_one_gb_bytes() {
+    assert_eq!(format_size_mb(1_048_576), "1.0 MB");
+}
+
+#[test]
+fn test_hf_dir_models_prefix_only() {
+    assert_eq!(hf_dir_to_model_id("models--"), Some(String::new()));
 }
 
 #[tokio::test]
@@ -654,6 +747,128 @@ async fn test_run_command_dispatch() {
     )
     .await;
     assert!(result.is_ok(), "resolve should succeed: {:?}", result.err());
+}
+
+#[tokio::test]
+async fn test_run_with_corrupt_manifest_still_lists() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+    std::fs::write(cache_dir.join("manifest.json"), "not valid json {{{").expect("write corrupt");
+
+    let result = run_with(cache_dir, None, ModelCacheCommand::List).await;
+    assert!(
+        result.is_ok(),
+        "corrupt manifest should be recovered (empty manifest): {:?}",
+        result.err()
+    );
+}
+
+#[tokio::test]
+async fn test_run_register_model_path_is_file_errors() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+    let file_path = temp.path().join("not-a-directory.bin");
+    std::fs::write(&file_path, b"x").expect("write file");
+
+    let result = run_with(
+        cache_dir,
+        None,
+        ModelCacheCommand::Register {
+            model_id: "test/file-as-model".to_string(),
+            path: file_path,
+        },
+    )
+    .await;
+    assert!(
+        result.is_err(),
+        "register should fail when path is a file (scan/register): {:?}",
+        result
+    );
+}
+
+#[tokio::test]
+async fn test_run_register_same_model_id_twice_updates_cache() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+
+    let model_dir_a = temp.path().join("model-v1");
+    std::fs::create_dir_all(&model_dir_a).expect("create model dir");
+    std::fs::write(model_dir_a.join("config.json"), r#"{"v":1}"#).expect("write config");
+
+    run_with(
+        cache_dir.clone(),
+        None,
+        ModelCacheCommand::Register {
+            model_id: "test/double-register".to_string(),
+            path: model_dir_a.clone(),
+        },
+    )
+    .await
+    .expect("first register");
+
+    let model_dir_b = temp.path().join("model-v2");
+    std::fs::create_dir_all(&model_dir_b).expect("create model dir v2");
+    std::fs::write(model_dir_b.join("config.json"), r#"{"v":2}"#).expect("write config v2");
+
+    let result = run_with(
+        cache_dir,
+        None,
+        ModelCacheCommand::Register {
+            model_id: "test/double-register".to_string(),
+            path: model_dir_b.clone(),
+        },
+    )
+    .await;
+    assert!(
+        result.is_ok(),
+        "re-register same id with new path should succeed: {:?}",
+        result.err()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn test_run_list_uses_home_for_default_model_cache() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let home = temp.path().to_string_lossy();
+    let _guard = TestEnvGuard::set("HOME", home.as_ref());
+    let result = run(ModelCacheCommand::List).await;
+    assert!(
+        result.is_ok(),
+        "production run(List) with isolated HOME should succeed: {:?}",
+        result.err()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn test_run_status_production_uses_home_for_hf_scan() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let home = temp.path();
+    let _guard = TestEnvGuard::set("HOME", home.to_string_lossy().as_ref());
+    let hub = home.join(".cache/huggingface/hub");
+    std::fs::create_dir_all(hub.join("models--org--model-xyz")).expect("hf hub layout");
+    let result = run(ModelCacheCommand::Status).await;
+    assert!(
+        result.is_ok(),
+        "production run(Status) with HF cache under HOME: {:?}",
+        result.err()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn test_run_resolve_production_not_found() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let _guard = TestEnvGuard::set("HOME", temp.path().to_string_lossy().as_ref());
+    let result = run(ModelCacheCommand::Resolve {
+        model_id: "no/such/model-for-run-test".to_string(),
+    })
+    .await;
+    assert!(result.is_ok(), "resolve NotFound path: {:?}", result.err());
 }
 
 #[tokio::test]

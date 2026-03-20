@@ -23,7 +23,7 @@ mod run {
         assert!(response.error.is_none());
         assert_eq!(response.data, "test data");
         assert_eq!(response.processing_time_ms, 100);
-        assert_eq!(response.confidence_score, 0.95);
+        assert!((response.confidence_score - 0.95).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -35,7 +35,7 @@ mod run {
 
         assert!(!response.success);
         assert!(response.error.is_some());
-        assert_eq!(response.confidence_score, 0.0);
+        assert!((response.confidence_score - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -51,7 +51,7 @@ mod run {
 
         assert!(strategy.should_retry);
         assert_eq!(strategy.max_attempts, 3);
-        assert_eq!(strategy.success_probability, 0.8);
+        assert!((strategy.success_probability - 0.8).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -74,15 +74,15 @@ mod run {
     #[test]
     fn test_performance_metrics_default() {
         let metrics = PerformanceMetrics::default();
-        assert_eq!(metrics.cpu_usage_percent, 0.0);
-        assert_eq!(metrics.memory_usage_mb, 0.0);
+        assert!((metrics.cpu_usage_percent - 0.0).abs() < f64::EPSILON);
+        assert!((metrics.memory_usage_mb - 0.0).abs() < f64::EPSILON);
         assert_eq!(metrics.io_operations, 0);
     }
 
     #[test]
     fn test_ai_resource_usage_default() {
         let usage = AIResourceUsage::default();
-        assert_eq!(usage.compute_units_used, 0.0);
+        assert!((usage.compute_units_used - 0.0).abs() < f64::EPSILON);
         assert_eq!(usage.storage_bytes_used, 0);
     }
 
@@ -90,8 +90,8 @@ mod run {
     fn test_quality_metrics_default() {
         let metrics = QualityMetrics::default();
         assert!(metrics.accuracy_score.is_none());
-        assert_eq!(metrics.completeness_score, 1.0);
-        assert_eq!(metrics.reliability_score, 1.0);
+        assert!((metrics.completeness_score - 1.0).abs() < f64::EPSILON);
+        assert!((metrics.reliability_score - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -229,7 +229,7 @@ mod run {
             risk_level: RiskLevel::Low,
         };
 
-        assert_eq!(action.confidence, 0.9);
+        assert!((action.confidence - 0.9).abs() < f64::EPSILON);
         assert!(action.estimated_duration_ms.is_some());
     }
 
@@ -254,7 +254,7 @@ mod run {
             priority_level: PriorityLevel::High,
         };
 
-        assert_eq!(limits.max_cost_per_operation_usd, 1.0);
+        assert!((limits.max_cost_per_operation_usd - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -321,7 +321,7 @@ mod run {
         let parsed: AIFirstResponse<serde_json::Value> = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.success, response.success);
         assert_eq!(parsed.data, response.data);
-        assert_eq!(parsed.confidence_score, 0.9);
+        assert!((parsed.confidence_score - 0.9).abs() < f64::EPSILON);
     }
 
     #[test]

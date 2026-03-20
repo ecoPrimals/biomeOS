@@ -19,8 +19,8 @@ biomeOS uses GitHub Actions for continuous integration and delivery, with two ma
 
 #### **Job 1: Lint & Format Check**
 - Runs `cargo fmt --all -- --check`
-- Runs `cargo clippy --workspace --lib --all-features -- -D warnings`
-- Checks documentation with `cargo doc`
+- Runs `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+- Checks documentation with `cargo doc --workspace --no-deps --all-features` (`RUSTDOCFLAGS=-D warnings`)
 - **Purpose:** Enforce code style and catch common issues
 
 #### **Job 2: Build**
@@ -29,15 +29,16 @@ biomeOS uses GitHub Actions for continuous integration and delivery, with two ma
 - **Purpose:** Ensure cross-platform compatibility
 
 #### **Job 3: Test Suite**
-- Unit tests (`cargo test --workspace --lib`)
-- Integration tests (`cargo test --workspace --test '*'`)
-- Doc tests (`cargo test --workspace --doc`)
+- Unit tests (`cargo test --workspace --lib --all-features`)
+- Integration tests (`cargo test --workspace --test '*' --all-features`)
+- Doc tests (`cargo test --workspace --doc --all-features`)
 - **Purpose:** Validate functionality
 
 #### **Job 4: Code Coverage**
-- Uses `cargo-llvm-cov` for coverage generation
+- Uses `cargo-llvm-cov` for coverage generation (`cargo llvm-cov --workspace --lcov --output-path lcov.info`)
+- Enforces a minimum line coverage threshold (`cargo llvm-cov --workspace --fail-under-lines 75 --no-run`)
 - Uploads to Codecov
-- Archives HTML coverage report
+- Archives HTML coverage report (`cargo llvm-cov --workspace --html`)
 - **Purpose:** Track test coverage trends
 
 #### **Job 5: Security Audit**
@@ -50,7 +51,7 @@ biomeOS uses GitHub Actions for continuous integration and delivery, with two ma
 
 #### **Job 7: File Size Compliance**
 - Reports files exceeding 1000 line guideline
-- **Non-blocking** - informational only
+- **Blocking** when any file exceeds the guideline (job exits with failure)
 - **Purpose:** Encourage maintainable file sizes
 
 **Philosophy:**
@@ -71,11 +72,11 @@ Examples: neural_api_server.rs, orchestrator.rs, executor.rs
 
 **Check 1: TODO/FIXME markers**
 - Scans for technical debt markers
-- **Non-blocking** - informational
+- **Blocking** - fails CI if any are found
 
 **Check 2: panic!() in production**
 - Checks production code (excludes tests)
-- **Non-blocking** - warning only
+- **Blocking** - fails CI if any are found
 
 **Important Notes:**
 - ✅ `panic!()` in **test code is CORRECT** - makes failures immediately obvious
@@ -93,9 +94,9 @@ Examples: neural_api_server.rs, orchestrator.rs, executor.rs
 - **Non-blocking** - informational
 
 #### **Job 10: Release Readiness Check**
-- Runs after all quality checks pass
+- Runs after **lint**, **build**, **test**, **coverage**, and **security** jobs complete (push to `master`/`main` only; does not wait for dependency check, file size, standards, or benchmarks)
 - Generates release notes
-- Validates version consistency
+- Validates version consistency (placeholder step in workflow)
 
 ---
 
@@ -141,16 +142,17 @@ Examples: neural_api_server.rs, orchestrator.rs, executor.rs
 
 biomeOS CI/CD distinguishes between:
 
-**Guidelines (Non-blocking):**
-- File size <1000 lines
-- TODO/FIXME markers
-- panic!() in production
+**Non-blocking or best-effort in `ci.yml`:**
+- Benchmarks job uses `continue-on-error: true` (a failing bench run does not fail the workflow)
+- Codecov upload uses `fail_ci_if_error: false` (upload problems do not fail CI)
 
-**Laws (Blocking):**
-- Zero unsafe code
-- Format compliance
-- Clippy warnings
-- Test failures
+**Blocking (failing job fails the workflow):**
+- Format check, Clippy (all targets), and doc warnings (`-D warnings` on rustdoc)
+- Build (debug and release) and full test suite
+- Coverage below the enforced line threshold (75%) and `cargo audit` / `cargo deny check` failures
+- File size job when any file exceeds the guideline
+- Standards job (TODO/FIXME markers, `panic!()` in production paths, any `unsafe` block)
+- Zero unsafe code remains a hard policy
 
 ### **Modern Rust Patterns**
 
@@ -208,10 +210,11 @@ From Deep Debt Analysis (Jan 30, 2026):
 | Linting | ✅ Enforced | Yes |
 | Tests | ✅ Enforced | Yes |
 | Unsafe Code | ✅ Enforced | Yes |
-| Security Audit | ✅ Monitored | No |
-| Coverage | ✅ Tracked | No |
-| File Size | ℹ️ Informational | No |
-| Benchmarks | ✅ Tracked | No |
+| Dependency policy (`cargo deny`) | ✅ Enforced | Yes |
+| Security Audit | ✅ Enforced | Yes (on `cargo audit` failure) |
+| Coverage | ✅ Enforced | Yes (min. 75% lines) |
+| File Size | ✅ Enforced | Yes (when over guideline) |
+| Benchmarks | ✅ Tracked | No (`continue-on-error`) |
 
 ---
 
@@ -255,7 +258,7 @@ Run the same checks locally before pushing:
 cargo fmt --all -- --check
 
 # Linting
-cargo clippy --workspace --lib --all-features -- -D warnings
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 # Tests
 cargo test --workspace

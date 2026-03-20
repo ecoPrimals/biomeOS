@@ -8,6 +8,7 @@
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 /// Shared beacon verification — single source of truth for Dark Forest token verification
 pub mod beacon_verification;
@@ -274,12 +275,12 @@ fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
     if force_sovereign {
         gate_config = gate_config.force_sovereign();
     }
-    let gate_state = dark_forest_gate::DarkForestGateState::new(gate_config.clone());
+    let gate_state = dark_forest_gate::DarkForestGateState::new(gate_config);
 
     // CORS: restrictive by default
     // Only allow same-origin + the X-Dark-Forest-Token header
     // No permissive CORS — an attacker should learn nothing from preflight
-    let cors = if gate_config.enabled {
+    let cors = if gate_state.config.enabled {
         // Sovereign mode: no CORS at all — only family clients connect,
         // they don't need browser CORS
         CorsLayer::new()
@@ -456,6 +457,196 @@ pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> an
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use axum::body::Body;
+    use biomeos_test_utils::TestEnvGuard;
+    use futures_util::{SinkExt, StreamExt};
+    use http_body_util::BodyExt;
+    use std::sync::OnceLock;
+    use tokio_tungstenite::tungstenite::Message as WsMessage;
+    use tower::ServiceExt;
+
+    fn sovereign_env_lock() -> &'static tokio::sync::Mutex<()> {
+        static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+    }
+
+    #[tokio::test]
+    async fn router_health_returns_json_when_gate_disabled() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app(state);
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/v1/health")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&body).expect("json");
+        assert_eq!(v["status"], "healthy");
+    }
+
+    #[tokio::test]
+    async fn router_readiness_and_liveness_when_gate_disabled() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        for path in ["/api/v1/health/ready", "/api/v1/health/live"] {
+            let app = create_app(state.clone());
+            let response = app
+                .oneshot(
+                    axum::http::Request::builder()
+                        .uri(path)
+                        .body(Body::empty())
+                        .expect("request"),
+                )
+                .await
+                .expect("response");
+            assert_eq!(response.status(), StatusCode::OK, "path {path}");
+        }
+    }
+
+    #[tokio::test]
+    async fn router_topology_forbidden_without_token_when_sovereign() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::remove("BIOMEOS_SOVEREIGN");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app_for_tcp(state);
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/v1/topology")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn router_well_known_bypasses_gate_when_sovereign() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::remove("BIOMEOS_SOVEREIGN");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app_for_tcp(state);
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/.well-known/acme-challenge/token")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_ne!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn router_health_bare_ok_when_sovereign_no_body() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::remove("BIOMEOS_SOVEREIGN");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app_for_tcp(state);
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/v1/health")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes();
+        assert!(body.is_empty());
+    }
+
+    #[tokio::test]
+    async fn events_ws_welcome_and_subscribe_roundtrip() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app(state);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        let server = axum::serve(listener, app);
+        let join = tokio::spawn(async move {
+            server.await.expect("serve");
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let url = format!("ws://{addr}/api/v1/events/ws");
+        let (ws, _) = tokio_tungstenite::connect_async(url.as_str())
+            .await
+            .expect("ws connect");
+        let (mut write, mut read) = ws.split();
+        let welcome = read.next().await.expect("welcome").expect("msg");
+        let WsMessage::Text(text) = welcome else {
+            panic!("expected text welcome");
+        };
+        assert!(text.contains("connection.established"));
+        let sub = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "events.subscribe",
+            "params": { "graph_id": "g1" },
+            "id": 7
+        });
+        write
+            .send(WsMessage::Text(sub.to_string()))
+            .await
+            .expect("send");
+        let reply = read.next().await.expect("reply").expect("ok");
+        let WsMessage::Text(reply_text) = reply else {
+            panic!("expected text reply");
+        };
+        let v: serde_json::Value = serde_json::from_str(&reply_text).expect("json");
+        assert!(v.get("result").is_some());
+        let unsub = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "events.unsubscribe",
+            "params": { "subscription_id": "sub_1" },
+            "id": 8
+        });
+        write
+            .send(WsMessage::Text(unsub.to_string()))
+            .await
+            .expect("unsub");
+        let list = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "events.list_subscriptions",
+            "id": 9
+        });
+        write
+            .send(WsMessage::Text(list.to_string()))
+            .await
+            .expect("list");
+        join.abort();
+    }
+
+    #[test]
+    fn jsonrpc_error_helpers_standard_codes() {
+        let mn = JsonRpcError::method_not_found();
+        assert_eq!(mn.code, -32601);
+        let pe = JsonRpcError::parse_error();
+        assert_eq!(pe.code, -32700);
+    }
 
     #[test]
     fn test_api_error_internal() {

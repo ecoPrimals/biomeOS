@@ -298,10 +298,12 @@ impl VmVerifier {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use crate::error::DeployError;
     use std::io::Write;
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, TempDir};
 
     #[tokio::test]
     async fn test_extract_boot_time() {
@@ -310,6 +312,53 @@ mod tests {
 
         let log2 = "Boot time: 250ms";
         assert_eq!(VmVerifier::extract_boot_time(log2), Some(250));
+    }
+
+    #[test]
+    fn test_extract_boot_time_no_match() {
+        assert_eq!(VmVerifier::extract_boot_time("no timing here\n"), None);
+    }
+
+    #[test]
+    fn test_extract_excerpt_truncates_long_log() {
+        let mut log = String::new();
+        for i in 0..40 {
+            std::fmt::Write::write_fmt(&mut log, format_args!("line {i}\n")).unwrap();
+        }
+        let excerpt = VmVerifier::extract_excerpt(&log);
+        assert!(excerpt.contains("line 39"));
+        assert!(!excerpt.contains("line 0"));
+        assert!(excerpt.lines().count() <= 20);
+    }
+
+    #[test]
+    fn test_verify_result_is_ok_and_summary_branches() {
+        let ok = VerifyResult {
+            boot_success: true,
+            boot_time_ms: Some(10),
+            shell_spawned: true,
+            primal_count: Some(2),
+            primals: vec!["a".into(), "b".into()],
+            log_excerpt: String::new(),
+        };
+        assert!(ok.is_ok());
+        let s = ok.summary();
+        assert!(s.contains("BiomeOS booted successfully"));
+        assert!(s.contains("Shell spawned"));
+        assert!(s.contains("Boot time"));
+
+        let bad = VerifyResult {
+            boot_success: false,
+            boot_time_ms: None,
+            shell_spawned: false,
+            primal_count: None,
+            primals: vec![],
+            log_excerpt: String::new(),
+        };
+        assert!(!bad.is_ok());
+        let s2 = bad.summary();
+        assert!(s2.contains("Boot failed"));
+        assert!(s2.contains("Shell not detected"));
     }
 
     #[tokio::test]
@@ -335,5 +384,110 @@ mod tests {
         assert!(result.boot_success);
         assert!(result.shell_spawned);
         assert_eq!(result.boot_time_ms, Some(123));
+    }
+
+    #[tokio::test]
+    async fn test_verify_boot_detects_shell_started_variant() {
+        let mut log_file = NamedTempFile::new().unwrap();
+        writeln!(log_file, "BiomeOS initialization complete").unwrap();
+        writeln!(log_file, "shell started").unwrap();
+        log_file.flush().unwrap();
+
+        let config = VerifyConfig {
+            serial_log: log_file.path().to_path_buf(),
+            rootfs_dir: None,
+            boot_timeout: 5,
+            expected_boot_message: "BiomeOS initialization complete".to_string(),
+            retry_interval: Duration::ZERO,
+        };
+
+        let verifier = VmVerifier::new(config);
+        let result = verifier.verify_boot().await.unwrap();
+        assert!(result.shell_spawned);
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_log_file_not_found() {
+        let missing = std::path::PathBuf::from("/nonexistent/verify-log-xyz-12345.log");
+        let config = VerifyConfig {
+            serial_log: missing.clone(),
+            rootfs_dir: None,
+            boot_timeout: 1,
+            expected_boot_message: "x".to_string(),
+            retry_interval: Duration::from_millis(10),
+        };
+        let verifier = VmVerifier::new(config);
+        let err = verifier
+            .wait_for_log()
+            .await
+            .expect_err("expected file not found");
+        assert!(
+            matches!(err, DeployError::FileNotFound { ref path } if path == &missing),
+            "got {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_boot_propagates_file_not_found_when_log_never_appears() {
+        let missing = std::path::PathBuf::from("/nonexistent/verify-boot-missing-xyz.log");
+        let config = VerifyConfig {
+            serial_log: missing.clone(),
+            rootfs_dir: None,
+            boot_timeout: 1,
+            expected_boot_message: "never appears".to_string(),
+            retry_interval: Duration::from_millis(50),
+        };
+        let verifier = VmVerifier::new(config);
+        let err = verifier.verify_boot().await.expect_err("expected error");
+        assert!(
+            matches!(err, DeployError::FileNotFound { ref path } if path == &missing),
+            "got {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_check_primals_missing_bin_dir_returns_empty() {
+        let tmp = TempDir::new().unwrap();
+        let config = VerifyConfig {
+            serial_log: tmp.path().join("unused.log"),
+            rootfs_dir: Some(tmp.path().to_path_buf()),
+            boot_timeout: 5,
+            expected_boot_message: String::new(),
+            retry_interval: Duration::ZERO,
+        };
+        let verifier = VmVerifier::new(config);
+        let (count, names) = verifier
+            .check_primals(tmp.path())
+            .await
+            .expect("check_primals");
+        assert_eq!(count, 0);
+        assert!(names.is_empty());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_check_primals_lists_executable_files() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = TempDir::new().unwrap();
+        let bin_dir = tmp.path().join("usr/local/bin");
+        std::fs::create_dir_all(&bin_dir).unwrap();
+        let p = bin_dir.join("test-primal-verify");
+        std::fs::write(&p, b"#! /bin/sh\nexit 0\n").unwrap();
+        let mut perms = std::fs::metadata(&p).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&p, perms).unwrap();
+
+        let config = VerifyConfig {
+            serial_log: tmp.path().join("unused.log"),
+            rootfs_dir: Some(tmp.path().to_path_buf()),
+            boot_timeout: 5,
+            expected_boot_message: String::new(),
+            retry_interval: Duration::ZERO,
+        };
+        let verifier = VmVerifier::new(config);
+        let (count, names) = verifier.check_primals(tmp.path()).await.unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(names, vec!["test-primal-verify".to_string()]);
     }
 }

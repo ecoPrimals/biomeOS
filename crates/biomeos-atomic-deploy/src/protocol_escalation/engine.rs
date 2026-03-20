@@ -8,12 +8,9 @@
 
 #![deny(unsafe_code)]
 
-use serde_json::{Value, json};
-use std::path::PathBuf;
+use serde_json::Value;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
 use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tokio::time::interval;
@@ -21,8 +18,9 @@ use tracing::{debug, error, info, warn};
 
 use crate::living_graph::{ConnectionState, LivingGraph, PrimalHealth, ProtocolMode};
 
-use super::config::{EscalationConfig, EscalationResult, TarpcEndpoint};
+use super::config::{EscalationConfig, EscalationResult};
 use super::metrics;
+use super::rpc;
 
 /// Protocol Escalation Manager
 pub struct ProtocolEscalationManager {
@@ -205,7 +203,7 @@ impl ProtocolEscalationManager {
 
         let previous_mode = conn.protocol;
 
-        let tarpc_info = match self.query_tarpc_endpoint(to).await {
+        let tarpc_info = match rpc::query_tarpc_endpoint(&self.graph, to).await {
             Ok(info) => info,
             Err(e) => {
                 return Ok(EscalationResult {
@@ -234,7 +232,7 @@ impl ProtocolEscalationManager {
 
         let tarpc_socket = tarpc_info.socket.clone();
 
-        if let Err(e) = self.notify_escalation(from, to, &tarpc_info).await {
+        if let Err(e) = rpc::notify_escalation(&self.graph, from, to, &tarpc_info).await {
             return Ok(EscalationResult {
                 from: from.to_string(),
                 to: to.to_string(),
@@ -250,7 +248,7 @@ impl ProtocolEscalationManager {
             .update_connection_protocol(from, to, ProtocolMode::Tarpc)
             .await;
 
-        if let Err(e) = self.verify_tarpc_connection(from, to).await {
+        if let Err(e) = rpc::verify_tarpc_connection(&self.graph, from, to).await {
             warn!(
                 "⚠️ tarpc verification failed (will fall back on first real failure): {}",
                 e
@@ -268,128 +266,6 @@ impl ProtocolEscalationManager {
             success: true,
             message: format!("Successfully escalated {from} → {to} to tarpc"),
         })
-    }
-
-    async fn query_tarpc_endpoint(&self, primal: &str) -> Result<TarpcEndpoint, String> {
-        let state = self
-            .graph
-            .get_primal_state(primal)
-            .await
-            .ok_or_else(|| format!("Primal not found: {primal}"))?;
-
-        if let Some(socket) = &state.tarpc_socket {
-            return Ok(TarpcEndpoint {
-                available: true,
-                socket: Some(socket.clone()),
-                services: state.capabilities.clone(),
-            });
-        }
-
-        let request = json!({
-            "jsonrpc": "2.0",
-            "method": "rpc.tarpc_endpoint",
-            "params": {},
-            "id": self.graph.next_request_id(),
-        });
-
-        match self.send_json_rpc(&state.json_rpc_socket, &request).await {
-            Ok(response) => {
-                if let Some(result) = response.get("result") {
-                    let endpoint: TarpcEndpoint = serde_json::from_value(result.clone())
-                        .map_err(|e| format!("Invalid tarpc endpoint response: {e}"))?;
-                    Ok(endpoint)
-                } else if let Some(_error) = response.get("error") {
-                    debug!("Primal {} doesn't support tarpc: {:?}", primal, _error);
-                    Ok(TarpcEndpoint {
-                        available: false,
-                        socket: None,
-                        services: vec![],
-                    })
-                } else {
-                    Err("Invalid JSON-RPC response".to_string())
-                }
-            }
-            Err(e) => {
-                debug!("Failed to query {} for tarpc endpoint: {}", primal, e);
-                Ok(TarpcEndpoint {
-                    available: false,
-                    socket: None,
-                    services: vec![],
-                })
-            }
-        }
-    }
-
-    async fn notify_escalation(
-        &self,
-        from: &str,
-        to: &str,
-        tarpc_info: &TarpcEndpoint,
-    ) -> Result<(), String> {
-        let from_state = self
-            .graph
-            .get_primal_state(from)
-            .await
-            .ok_or_else(|| format!("Source primal not found: {from}"))?;
-
-        let request = json!({
-            "jsonrpc": "2.0",
-            "method": "rpc.escalate_to",
-            "params": {
-                "target": to,
-                "tarpc_socket": tarpc_info.socket,
-                "services": tarpc_info.services,
-            },
-            "id": self.graph.next_request_id(),
-        });
-
-        let response = self
-            .send_json_rpc(&from_state.json_rpc_socket, &request)
-            .await?;
-
-        if response.get("error").is_some() {
-            let error = response
-                .get("error")
-                .and_then(|e| e.get("message"))
-                .and_then(|m| m.as_str())
-                .unwrap_or("Unknown error");
-            return Err(format!("Escalation notification failed: {error}"));
-        }
-
-        Ok(())
-    }
-
-    async fn verify_tarpc_connection(&self, _from: &str, to: &str) -> Result<(), String> {
-        let state = self
-            .graph
-            .get_primal_state(to)
-            .await
-            .ok_or_else(|| format!("Primal not found: {to}"))?;
-
-        let tarpc_socket = state
-            .tarpc_socket
-            .as_ref()
-            .ok_or_else(|| format!("No tarpc socket for {to}"))?;
-
-        if !tarpc_socket.exists() {
-            return Err(format!(
-                "tarpc socket does not exist: {}",
-                tarpc_socket.display()
-            ));
-        }
-
-        let client = crate::tarpc_client::connect_tarpc_health(tarpc_socket)
-            .await
-            .map_err(|e| format!("tarpc connect failed: {e}"))?;
-
-        let ctx = tarpc::context::current();
-        client
-            .health_check(ctx)
-            .await
-            .map_err(|e| format!("tarpc health_check failed: {e}"))?;
-
-        debug!("tarpc verification passed: {} → {}", _from, to);
-        Ok(())
     }
 
     /// Fallback a connection to JSON-RPC
@@ -412,7 +288,7 @@ impl ProtocolEscalationManager {
 
         let previous_mode = conn.protocol;
 
-        if let Err(e) = self.notify_fallback(from, to, reason).await {
+        if let Err(e) = rpc::notify_fallback(&self.graph, from, to, reason).await {
             warn!("Failed to notify source primal of fallback: {}", e);
         }
 
@@ -429,70 +305,6 @@ impl ProtocolEscalationManager {
             success: true,
             message: format!("Fell back to JSON-RPC: {reason}"),
         })
-    }
-
-    async fn notify_fallback(&self, from: &str, to: &str, reason: &str) -> Result<(), String> {
-        let from_state = self
-            .graph
-            .get_primal_state(from)
-            .await
-            .ok_or_else(|| format!("Source primal not found: {from}"))?;
-
-        let request = json!({
-            "jsonrpc": "2.0",
-            "method": "rpc.fallback_to_json_rpc",
-            "params": {
-                "target": to,
-                "reason": reason,
-            },
-            "id": self.graph.next_request_id(),
-        });
-
-        let response = self
-            .send_json_rpc(&from_state.json_rpc_socket, &request)
-            .await?;
-
-        if response.get("error").is_some() {
-            let error = response
-                .get("error")
-                .and_then(|e| e.get("message"))
-                .and_then(|m| m.as_str())
-                .unwrap_or("Unknown error");
-            return Err(format!("Fallback notification failed: {error}"));
-        }
-
-        Ok(())
-    }
-
-    async fn send_json_rpc(&self, socket_path: &PathBuf, request: &Value) -> Result<Value, String> {
-        let mut stream = UnixStream::connect(socket_path)
-            .await
-            .map_err(|e| format!("Failed to connect to {}: {}", socket_path.display(), e))?;
-
-        let request_str = serde_json::to_string(request)
-            .map_err(|e| format!("Failed to serialize request: {e}"))?;
-
-        stream
-            .write_all(request_str.as_bytes())
-            .await
-            .map_err(|e| format!("Failed to write request: {e}"))?;
-        stream
-            .write_all(b"\n")
-            .await
-            .map_err(|e| format!("Failed to write newline: {e}"))?;
-
-        let mut reader = BufReader::new(stream);
-        let mut response_line = String::new();
-
-        match tokio::time::timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
-            .await
-        {
-            Ok(Ok(_)) => {}
-            Ok(Err(e)) => return Err(format!("Failed to read response: {e}")),
-            Err(_) => return Err("Response timeout (>5s)".to_string()),
-        }
-
-        serde_json::from_str(&response_line).map_err(|e| format!("Failed to parse response: {e}"))
     }
 
     /// Get protocol status for all connections (for JSON-RPC API)

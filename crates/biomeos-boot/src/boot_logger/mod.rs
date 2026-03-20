@@ -80,6 +80,16 @@ impl BootLogger {
         })
     }
 
+    /// Test-only constructor to exercise logging without `/dev/ttyS0`.
+    #[cfg(test)]
+    pub(crate) fn new_for_test(serial: Option<SerialChannel>) -> Self {
+        Self {
+            serial,
+            start_time: SystemTime::UNIX_EPOCH,
+            log_count: 0,
+        }
+    }
+
     /// Log a message with level
     ///
     /// Writes to all available output channels simultaneously.
@@ -164,6 +174,7 @@ pub struct BootLoggerStats {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_log_level_debug_format() {
@@ -225,7 +236,7 @@ mod tests {
     #[test]
     fn test_log_message_format() {
         // Test the expected log message format
-        let timestamp = 1234567890_u64;
+        let timestamp = 1_234_567_890_u64;
         let level = LogLevel::Info;
         let msg = "Test message";
 
@@ -283,8 +294,7 @@ mod tests {
     #[test]
     fn test_boot_logger_new_may_fail_without_serial() {
         let result = BootLogger::new();
-        if result.is_ok() {
-            let mut logger = result.unwrap();
+        if let Ok(mut logger) = result {
             logger.info("test");
             logger.warning("warn");
             logger.error("err");
@@ -294,5 +304,80 @@ mod tests {
             let stats = logger.stats();
             assert!(stats.log_count >= 5);
         }
+    }
+
+    #[test]
+    fn test_boot_logger_new_for_test_with_serial_writes_and_stats() {
+        let tmp = NamedTempFile::new().expect("temp file");
+        let serial = SerialChannel::open_path(tmp.path()).expect("open temp as serial");
+        let mut logger = BootLogger::new_for_test(Some(serial));
+        logger.log(LogLevel::Info, "direct log");
+        logger.info("info");
+        logger.warning("warn");
+        logger.error("err");
+        logger.critical("crit");
+        logger.checkpoint(BootStage::FilesystemMount);
+        logger.flush();
+        let stats = logger.stats();
+        assert_eq!(stats.log_count, 6);
+        assert!(stats.serial_active);
+        assert!(stats.uptime_ms > 0);
+    }
+
+    #[test]
+    fn test_boot_logger_new_for_test_without_serial_counts_only() {
+        let mut logger = BootLogger::new_for_test(None);
+        logger.info("no serial");
+        let stats = logger.stats();
+        assert_eq!(stats.log_count, 1);
+        assert!(!stats.serial_active);
+    }
+
+    #[test]
+    fn test_boot_stage_remaining_variants_format() {
+        let s = format!("{:?}", BootStage::FilesystemMount);
+        assert!(s.contains("Filesystem") || s.contains("Mount"));
+    }
+
+    #[test]
+    fn test_boot_logger_log_all_log_levels_including_debug_and_emergency() {
+        let tmp = NamedTempFile::new().expect("temp file");
+        let serial = SerialChannel::open_path(tmp.path()).expect("open temp");
+        let mut logger = BootLogger::new_for_test(Some(serial));
+        logger.log(LogLevel::Debug, "dbg");
+        logger.log(LogLevel::Emergency, "emg");
+        let stats = logger.stats();
+        assert_eq!(stats.log_count, 2);
+    }
+
+    #[test]
+    fn test_boot_checkpoint_all_boot_stages() {
+        let tmp = NamedTempFile::new().expect("temp file");
+        let serial = SerialChannel::open_path(tmp.path()).expect("open");
+        let mut logger = BootLogger::new_for_test(Some(serial));
+        for stage in [
+            BootStage::GrubHandoff,
+            BootStage::KernelLoad,
+            BootStage::InitramfsMount,
+            BootStage::InitStart,
+            BootStage::FilesystemMount,
+            BootStage::HardwareDetection,
+            BootStage::NetworkInit,
+            BootStage::BiomeOSCoreStart,
+            BootStage::Complete,
+        ] {
+            logger.checkpoint(stage);
+        }
+        assert_eq!(logger.stats().log_count, 9);
+    }
+
+    #[test]
+    fn test_boot_logger_stats_uptime_when_elapsed_ok() {
+        let mut logger = BootLogger::new_for_test(None);
+        logger.info("tick");
+        let s = logger.stats();
+        assert_eq!(s.log_count, 1);
+        // new_for_test uses UNIX_EPOCH; elapsed since epoch is large
+        assert!(s.uptime_ms > 0);
     }
 }

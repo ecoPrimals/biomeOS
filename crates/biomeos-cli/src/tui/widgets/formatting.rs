@@ -507,7 +507,7 @@ mod tests {
             metadata: PrimalMetadata {
                 name: name.to_string(),
                 version: "1.0".to_string(),
-                description: "".to_string(),
+                description: String::new(),
                 uptime: Duration::ZERO,
                 resource_usage: ResourceUsage {
                     cpu_percent: cpu,
@@ -717,7 +717,7 @@ mod tests {
 
     #[test]
     fn test_widget_renderer_construction() {
-        let _renderer = crate::tui::widgets::WidgetRenderer;
+        let _ = crate::tui::widgets::WidgetRenderer;
     }
 
     #[test]

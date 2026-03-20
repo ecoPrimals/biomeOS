@@ -347,12 +347,10 @@ impl BearDogClient {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::{MockJsonRpcServer, TestEnvGuard};
 
     #[test]
     fn test_beardog_client_creation() {
@@ -467,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_invalid_endpoint_empty() {
-        let result = BearDogClient::with_endpoint("".to_string());
+        let result = BearDogClient::with_endpoint(String::new());
         assert!(result.is_err());
     }
 
@@ -486,7 +484,7 @@ mod tests {
     fn test_lineage_verification_response_not_member() {
         let resp = LineageVerificationResponse {
             is_family_member: false,
-            parent_seed_hash: "".to_string(),
+            parent_seed_hash: String::new(),
             relationship: "unknown".to_string(),
         };
         let display = resp.to_string();
@@ -517,5 +515,216 @@ mod tests {
         let result = client.health_check().await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("deprecated"));
+    }
+
+    #[tokio::test]
+    async fn test_health_check_ok_status_via_mock_unix() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("beardog-health.sock");
+        let _srv = MockJsonRpcServer::spawn_echo_success(
+            &sock,
+            serde_json::json!({ "status": "healthy" }),
+        )
+        .await;
+        let client =
+            BearDogClient::with_endpoint(format!("unix://{}", sock.display())).expect("client");
+        assert!(client.is_available().await);
+        client.health_check().await.expect("healthy");
+    }
+
+    #[tokio::test]
+    async fn test_health_check_ok_status_short() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("beardog-ok.sock");
+        let _srv =
+            MockJsonRpcServer::spawn_echo_success(&sock, serde_json::json!({ "status": "ok" }))
+                .await;
+        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        client.health_check().await.expect("ok");
+    }
+
+    #[tokio::test]
+    async fn test_health_check_unhealthy_status() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("bd-bad.sock");
+        let _srv = MockJsonRpcServer::spawn_echo_success(
+            &sock,
+            serde_json::json!({ "status": "degraded" }),
+        )
+        .await;
+        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let e = client.health_check().await.expect_err("unhealthy");
+        assert!(e.to_string().contains("unhealthy") || format!("{e:#}").contains("unhealthy"));
+    }
+
+    #[tokio::test]
+    async fn test_verify_same_family_via_mock() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("bd-verify.sock");
+        let _srv = MockJsonRpcServer::spawn_echo_success(
+            &sock,
+            serde_json::json!({
+                "is_family_member": true,
+                "parent_seed_hash": "ph",
+                "relationship": "child"
+            }),
+        )
+        .await;
+        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let r = client
+            .verify_same_family("f1", "sh", "n1")
+            .await
+            .expect("verify");
+        assert!(r.is_family_member);
+        assert_eq!(r.relationship, "child");
+    }
+
+    #[tokio::test]
+    async fn test_derive_subfed_key_via_mock() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("bd-derive.sock");
+        let _srv = MockJsonRpcServer::spawn_echo_success(
+            &sock,
+            serde_json::json!({
+                "key_ref": "ref1",
+                "algorithm": "AES-256-GCM",
+                "created_at": "2026-01-01T00:00:00Z"
+            }),
+        )
+        .await;
+        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let r = client
+            .derive_subfed_key(KeyDerivationRequest {
+                parent_family: "p".to_string(),
+                subfed_name: "s".to_string(),
+                purpose: "enc".to_string(),
+            })
+            .await
+            .expect("derive");
+        assert_eq!(r.key_ref, "ref1");
+    }
+
+    #[tokio::test]
+    async fn test_encrypt_decrypt_roundtrip_via_mock() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("bd-enc.sock");
+        use base64::Engine;
+        let enc = base64::engine::general_purpose::STANDARD.encode(b"hello");
+        let _srv = MockJsonRpcServer::spawn(&sock, move |line| {
+            let v: serde_json::Value = serde_json::from_str(line.trim()).expect("json");
+            let id = v.get("id").cloned().unwrap_or(serde_json::Value::Null);
+            let method = v["method"].as_str().unwrap_or("");
+            let result = if method == "encryption.encrypt" {
+                serde_json::json!({
+                    "encrypted_data": "e",
+                    "nonce": "n",
+                    "tag": "t"
+                })
+            } else if method == "encryption.decrypt" {
+                serde_json::json!({ "data": enc })
+            } else {
+                serde_json::json!(null)
+            };
+            format!(
+                r#"{{"jsonrpc":"2.0","id":{},"result":{}}}"#,
+                serde_json::to_string(&id).unwrap(),
+                serde_json::to_string(&result).unwrap()
+            )
+        })
+        .await;
+        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let e = client
+            .encrypt_data(b"hello", "kref")
+            .await
+            .expect("encrypt");
+        assert_eq!(e.nonce, "n");
+        let plain = client
+            .decrypt_data(&e.encrypted_data, &e.nonce, &e.tag, "kref")
+            .await
+            .expect("decrypt");
+        assert_eq!(plain.as_ref(), b"hello");
+    }
+
+    #[tokio::test]
+    async fn test_decrypt_invalid_base64_fails() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("bd-dec-bad.sock");
+        let _srv = MockJsonRpcServer::spawn_echo_success(
+            &sock,
+            serde_json::json!({ "data": "!!!not-base64!!!" }),
+        )
+        .await;
+        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let r = client.decrypt_data("x", "n", "t", "k").await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_http_encrypt_deprecated() {
+        let c = BearDogClient::with_endpoint("http://localhost:1".to_string()).unwrap();
+        let r = c.encrypt_data(b"x", "k").await;
+        assert!(r.is_err());
+        assert!(r.unwrap_err().to_string().contains("deprecated"));
+    }
+
+    #[tokio::test]
+    async fn test_health_check_no_status_field_ok() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("bd-h-empty.sock");
+        let _srv = MockJsonRpcServer::spawn_echo_success(&sock, serde_json::json!({})).await;
+        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        client.health_check().await.expect("ok without status");
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_from_discovery_unix_socket_via_env() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("beardog-discovery.sock");
+        let _l = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
+        let ep = format!("unix://{}", sock.display());
+        let _g = TestEnvGuard::set("PRIMAL_BEARDOG_ENDPOINT", &ep);
+        let client = BearDogClient::from_discovery()
+            .await
+            .expect("from discovery");
+        assert!(client.is_available().await);
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_from_discovery_udp_not_supported() {
+        let _g = TestEnvGuard::set("PRIMAL_BEARDOG_ENDPOINT", "udp://127.0.0.1:9");
+        let r = BearDogClient::from_discovery().await;
+        assert!(r.is_err(), "expected UDP endpoint to fail");
+        let err = r.err().expect("err");
+        let s = format!("{err:#}");
+        assert!(s.contains("UDP") || err.to_string().contains("UDP"), "{s}");
+    }
+
+    #[tokio::test]
+    async fn test_verify_same_family_http_deprecated() {
+        let c = BearDogClient::with_endpoint("http://localhost:1".to_string()).unwrap();
+        let r = c.verify_same_family("f", "s", "n").await;
+        assert!(r.unwrap_err().to_string().contains("deprecated"));
+    }
+
+    #[tokio::test]
+    async fn test_derive_subfed_key_http_deprecated() {
+        let c = BearDogClient::with_endpoint("https://localhost:1".to_string()).unwrap();
+        let r = c
+            .derive_subfed_key(KeyDerivationRequest {
+                parent_family: "p".to_string(),
+                subfed_name: "s".to_string(),
+                purpose: "e".to_string(),
+            })
+            .await;
+        assert!(r.unwrap_err().to_string().contains("deprecated"));
+    }
+
+    #[tokio::test]
+    async fn test_decrypt_data_http_deprecated() {
+        let c = BearDogClient::with_endpoint("http://localhost:2".to_string()).unwrap();
+        let r = c.decrypt_data("e", "n", "t", "k").await;
+        assert!(r.unwrap_err().to_string().contains("deprecated"));
     }
 }

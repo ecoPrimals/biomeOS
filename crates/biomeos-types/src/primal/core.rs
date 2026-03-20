@@ -206,6 +206,7 @@ pub struct PrimalMetadata {
     pub additional: HashMap<String, serde_json::Value>,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -318,14 +319,14 @@ mod tests {
         let rr = ResourceRequirements {
             cpu: Some(4),
             memory: Some(8192),
-            disk: Some(102400),
+            disk: Some(102_400),
             network: Some(1000),
             gpu: Some(1),
             additional: vec![("custom".to_string(), "value".to_string())],
         };
         assert_eq!(rr.cpu, Some(4));
         assert_eq!(rr.memory, Some(8192));
-        assert_eq!(rr.disk, Some(102400));
+        assert_eq!(rr.disk, Some(102_400));
         assert_eq!(rr.network, Some(1000));
         assert_eq!(rr.gpu, Some(1));
         assert_eq!(rr.additional.len(), 1);

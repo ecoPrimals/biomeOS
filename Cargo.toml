@@ -230,7 +230,7 @@ tempfile = "3.0"
 tracing-test = "0.2"
 wiremock = "0.6"
 rand = "0.8"
-biomeos-test-utils = { path = "crates/biomeos-test-utils" }
+biomeos-test-utils = { path = "crates/biomeos-test-utils", version = "0.1.0" }
 
 # Demo binaries disabled - require extensive type alignment beyond core unification scope
 # These can be updated in a future iteration focused on demo and example alignment

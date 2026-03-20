@@ -139,6 +139,7 @@ pub fn f64_f32(v: f64) -> Result<f32, CastError> {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,43 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
-#!/usr/bin/env rust-script
-//! ```cargo
-//! [dependencies]
-//! clap = { version = "4.4", features = ["derive"] }
-//! tokio = { version = "1", features = ["full"] }
-//! anyhow = "1.0"
-//! serde = { version = "1.0", features = ["derive"] }
-//! toml = "0.8"
-//! walkdir = "2.4"
-//! sha2 = "0.10"
-//! ```
-
-/// # biomeOS Primal Harvest System
-///
-/// Modern Rust-based primal binary harvesting system.
-/// Evolves toward NUCLEUS (automated primal management).
-///
-/// Features:
-/// - Harvest from local phase1/ directories
-/// - Future: Pull from GitHub/repos
-/// - Clean old versions
-/// - Store in plasmidBin/
-/// - Verify binary integrity
-/// - Track versions and provenance
-///
-/// Usage:
-///   biomeos-harvest local --primal songbird
-///   biomeos-harvest github --repo ecoPrimals/songbird --version v3.20.0
-///   biomeos-harvest clean --keep-latest 2
-///   biomeos-harvest list
+//! # biomeOS Primal Harvest System
+//!
+//! Modern Rust-based primal binary harvesting system.
+//! Evolves toward NUCLEUS (automated primal management).
+//!
+//! Features:
+//! - Harvest from local phase1/ directories
+//! - Future: Pull from GitHub/repos
+//! - Clean old versions
+//! - Store in plasmidBin/
+//! - Verify binary integrity
+//! - Track versions and provenance
+//!
+//! Usage:
+//!   biomeos-harvest local --primal songbird
+//!   biomeos-harvest github --repo ecoPrimals/songbird --version v3.20.0
+//!   biomeos-harvest clean --keep-latest 2
+//!   biomeos-harvest list
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::SystemTime;
 use walkdir::WalkDir;
 
 #[derive(Parser)]
@@ -284,9 +274,138 @@ impl HarvestSystem {
 
     /// Clean old primal versions
     fn clean_old_versions(&self, primal: &str, keep_latest: usize) -> Result<()> {
-        // For now, just remove the old binary
-        // Future: Track versions and keep N latest
+        let binary_name = self.get_binary_name(primal);
         println!("  🧹 Cleaning old versions of {}...", primal);
+
+        let mut entries = self.collect_primal_version_artifacts(&binary_name)?;
+        if entries.is_empty() {
+            return Ok(());
+        }
+
+        entries.sort_by(|a, b| b.1.cmp(&a.1));
+
+        if keep_latest >= entries.len() {
+            return Ok(());
+        }
+
+        for (path, _) in entries.into_iter().skip(keep_latest) {
+            self.remove_primal_version_artifact(&path)?;
+            println!("     Removed {}", path.display());
+        }
+
+        Ok(())
+    }
+
+    /// True if `file_name` in plasmidBin (or primals/) is a version artifact for this binary
+    /// (exact name, or a prefixed variant like `songbird-1.0.0`, excluding `.toml` manifests).
+    fn is_version_artifact_name(&self, binary_name: &str, file_name: &str) -> bool {
+        if file_name.ends_with(".toml") {
+            return false;
+        }
+        if file_name == binary_name {
+            return true;
+        }
+        for sep in [".", "-", "@"] {
+            let prefix = format!("{binary_name}{sep}");
+            if file_name.starts_with(&prefix) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Collect (path, modified time) for every on-disk version of this primal.
+    ///
+    /// Covers: flat `plasmidBin/`, `plasmidBin/primals/` (files and `primals/{binary}/` children),
+    /// and `plasmidBin/archive/{binary}/` version slots. Uses [`std::fs::metadata`] mtime for ordering.
+    fn collect_primal_version_artifacts(&self, binary_name: &str) -> Result<Vec<(PathBuf, SystemTime)>> {
+        let mut out = Vec::new();
+        let mut seen = HashSet::new();
+
+        let mut insert = |path: PathBuf| -> Result<()> {
+            if !seen.insert(path.clone()) {
+                return Ok(());
+            }
+            let mtime = fs::metadata(&path)
+                .with_context(|| format!("stat {}", path.display()))?
+                .modified()
+                .unwrap_or_else(|_| SystemTime::UNIX_EPOCH);
+            out.push((path, mtime));
+            Ok(())
+        };
+
+        self.push_version_files_in_dir(&self.plasmid_bin, binary_name, &mut insert)?;
+
+        let primals = self.plasmid_bin.join("primals");
+        if primals.is_dir() {
+            self.push_version_files_in_dir(&primals, binary_name, &mut insert)?;
+
+            let nested = primals.join(binary_name);
+            if nested.is_dir() {
+                for entry in fs::read_dir(&nested)
+                    .with_context(|| format!("read_dir {}", nested.display()))?
+                {
+                    let entry = entry.with_context(|| format!("read_dir entry {}", nested.display()))?;
+                    insert(entry.path())?;
+                }
+            }
+        }
+
+        let archive_slot = self.plasmid_bin.join("archive").join(binary_name);
+        if archive_slot.is_dir() {
+            for entry in fs::read_dir(&archive_slot)
+                .with_context(|| format!("read_dir {}", archive_slot.display()))?
+            {
+                let entry =
+                    entry.with_context(|| format!("read_dir entry {}", archive_slot.display()))?;
+                insert(entry.path())?;
+            }
+        }
+
+        Ok(out)
+    }
+
+    fn push_version_files_in_dir(
+        &self,
+        dir: &Path,
+        binary_name: &str,
+        insert: &mut impl FnMut(PathBuf) -> Result<()>,
+    ) -> Result<()> {
+        if !dir.is_dir() {
+            return Ok(());
+        }
+        for entry in fs::read_dir(dir).with_context(|| format!("read_dir {}", dir.display()))? {
+            let entry = entry.with_context(|| format!("read_dir entry {}", dir.display()))?;
+            let path = entry.path();
+            let file_name = entry.file_name();
+            let Some(fname) = file_name.to_str() else {
+                continue;
+            };
+            let meta = entry
+                .metadata()
+                .with_context(|| format!("metadata {}", path.display()))?;
+            if meta.is_file() && self.is_version_artifact_name(binary_name, fname) {
+                insert(path)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn remove_primal_version_artifact(&self, path: &Path) -> Result<()> {
+        let meta = fs::metadata(path).with_context(|| format!("stat {}", path.display()))?;
+        if meta.is_dir() {
+            fs::remove_dir_all(path).with_context(|| format!("remove_dir_all {}", path.display()))?;
+        } else {
+            fs::remove_file(path).with_context(|| format!("remove_file {}", path.display()))?;
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                let manifest = path.with_file_name(format!("{name}.manifest.toml"));
+                if manifest.exists() {
+                    fs::remove_file(&manifest).with_context(|| {
+                        format!("remove_file manifest {}", manifest.display())
+                    })?;
+                }
+            }
+        }
         Ok(())
     }
 
@@ -377,6 +496,18 @@ fn main() -> Result<()> {
                 system.clean_old_versions(&p, keep_latest)?;
             } else {
                 println!("🧹 Cleaning all primals (keep {} latest)", keep_latest);
+                for primal in [
+                    "songbird",
+                    "beardog",
+                    "toadstool",
+                    "nestgate",
+                    "squirrel",
+                    "petalTongue",
+                ] {
+                    if let Err(e) = system.clean_old_versions(primal, keep_latest) {
+                        eprintln!("  ⚠️  Failed to clean {}: {}", primal, e);
+                    }
+                }
             }
         }
         Commands::List { verbose } => {

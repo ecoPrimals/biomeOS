@@ -44,7 +44,7 @@ rustix = { version = "0.38", features = ["fs"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils" }
+biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio-test = "0.4"
 tempfile = "3.0"
 serial_test = "3.2"

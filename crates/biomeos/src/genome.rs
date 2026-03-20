@@ -262,10 +262,9 @@ pub(crate) async fn handle_genome_command(command: GenomeCommand) -> Result<()> 
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
-
     use super::*;
 
     #[test]
@@ -356,7 +355,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_genome_build_manifest_only() {
-        use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+        use biomeos_genomebin_v3::GenomeBin;
 
         let temp = tempfile::tempdir().expect("temp dir");
         let output = temp.path().join("out.genome");
@@ -404,7 +403,7 @@ mod tests {
         let content = std::fs::read_to_string(&output).expect("read output");
         let genome = GenomeBin::from_json(&content).expect("parse output");
         assert_eq!(genome.manifest.name, "primal");
-        assert!(genome.manifest.architectures.len() >= 1);
+        assert!(!genome.manifest.architectures.is_empty());
     }
 
     #[tokio::test]

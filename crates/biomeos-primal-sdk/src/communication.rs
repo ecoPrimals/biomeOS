@@ -215,7 +215,14 @@ mod tests {
         let request =
             JsonRpcRequest::new("echo", serde_json::json!({"nested": {"a": 1, "b": [2, 3]}}));
         let json = serde_json::to_string(&request).unwrap();
-        assert!(request.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0) > 0);
+        assert!(
+            request
+                .id
+                .as_ref()
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)
+                > 0
+        );
         assert!(json.contains("nested"));
     }
 
@@ -258,7 +265,7 @@ mod tests {
             discovered_via: DiscoveryMethod::TmpFallback,
             is_healthy: true,
         };
-        let client = PrimalClient::new(primal.clone());
+        let client = PrimalClient::new(primal);
         assert_eq!(client.primal().name, "test-primal");
         assert_eq!(client.primal().socket_path, PathBuf::from("/tmp/test.sock"));
     }

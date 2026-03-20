@@ -655,7 +655,7 @@ mod tests {
             node_id: "node-1".into(),
             session_started: Utc::now() - chrono::Duration::days(60),
             archival_reason: ArchivalReason::GracefulShutdown,
-            fossil_path: fossil_path.clone(),
+            fossil_path,
             issue_count: 0,
             encrypted: false,
         }];
@@ -857,6 +857,21 @@ mod tests {
     }
 
     #[test]
+    fn test_format_fossil_detail_crash_reason() {
+        let fossil = FossilIndexEntry {
+            node_id: "node-crash".into(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::Crash { exit_code: 137 },
+            fossil_path: PathBuf::from("/tmp/crash-fossil"),
+            issue_count: 3,
+            encrypted: false,
+        };
+        let lines = format_fossil_detail(&fossil);
+        assert!(lines.iter().any(|l| l.contains("Crash")));
+        assert!(lines.iter().any(|l| l.contains("node-crash")));
+    }
+
+    #[test]
     fn test_format_fossil_detail_all_archival_reasons() {
         for reason in [
             ArchivalReason::GracefulShutdown,
@@ -893,5 +908,288 @@ mod tests {
         let result = scan_old_logs(temp.path());
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_filter_sessions_empty_input() {
+        let sessions: Vec<ActiveLogSession> = vec![];
+        assert!(filter_sessions(&sessions, None).is_empty());
+        assert!(filter_sessions(&sessions, Some("x")).is_empty());
+    }
+
+    #[test]
+    fn test_format_fossil_detail_redeployment_reboot() {
+        for reason in [ArchivalReason::Redeployment, ArchivalReason::Reboot] {
+            let fossil = FossilIndexEntry {
+                node_id: "n".into(),
+                session_started: Utc::now(),
+                archival_reason: reason,
+                fossil_path: PathBuf::from("/tmp/f"),
+                issue_count: 0,
+                encrypted: false,
+            };
+            let lines = format_fossil_detail(&fossil);
+            assert!(lines.iter().any(|l| l.contains("Node: n")));
+        }
+    }
+
+    #[test]
+    fn test_format_session_display_log_closed_no_pid() {
+        let mut session = ActiveLogSession::new("n".into(), "d".into());
+        session.add_log_file(LogFile {
+            primal: "p".into(),
+            path: PathBuf::from("/tmp/p.log"),
+            pid: None,
+            size_bytes: 4096,
+            last_modified: Utc::now(),
+        });
+        let lines = format_session_display(&session);
+        assert!(lines.iter().any(|l| l.contains("closed")));
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("4 KB") || l.contains("3 KB"))
+        );
+    }
+
+    #[test]
+    fn test_compute_cleanup_plan_exactly_at_cutoff() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let p = temp.path().join("f");
+        std::fs::write(&p, b"x").expect("write");
+        let t = Utc::now() - chrono::Duration::days(30);
+        let fossils = vec![FossilIndexEntry {
+            node_id: "n".into(),
+            session_started: t,
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: p,
+            issue_count: 0,
+            encrypted: false,
+        }];
+        let plan = compute_cleanup_plan(&fossils, t);
+        assert_eq!(plan.count, 0, "session_started < cutoff is strict");
+    }
+
+    #[test]
+    fn test_compute_cleanup_plan_just_before_cutoff() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let p = temp.path().join("f2");
+        std::fs::write(&p, b"x").expect("write");
+        let old = Utc::now() - chrono::Duration::days(31);
+        let cutoff = Utc::now() - chrono::Duration::days(30);
+        let fossils = vec![FossilIndexEntry {
+            node_id: "n".into(),
+            session_started: old,
+            archival_reason: ArchivalReason::AutomaticRotation,
+            fossil_path: p,
+            issue_count: 1,
+            encrypted: true,
+        }];
+        let plan = compute_cleanup_plan(&fossils, cutoff);
+        assert_eq!(plan.count, 1);
+    }
+
+    #[tokio::test]
+    async fn test_run_fossil_with_show_zero_invalid() {
+        let args = FossilArgs {
+            action: FossilAction::Fossil {
+                node: None,
+                limit: 10,
+                show: Some(0),
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_fossil_with_node_filter_no_index() {
+        let args = FossilArgs {
+            action: FossilAction::Fossil {
+                node: Some("node-abc".into()),
+                limit: 5,
+                show: None,
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_clean_not_dry_run_no_index() {
+        let args = FossilArgs {
+            action: FossilAction::Clean {
+                older_than: 1,
+                dry_run: false,
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_err() || result.is_ok());
+    }
+
+    #[test]
+    fn test_scan_old_logs_read_dir_error_unlikely() {
+        // Non-directory path that exists as file — read_dir fails
+        let temp = tempfile::tempdir().expect("temp dir");
+        let f = temp.path().join("not-a-dir");
+        std::fs::write(&f, b"x").expect("write");
+        let result = scan_old_logs(&f);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_format_fossil_detail_issue_zero() {
+        let fossil = FossilIndexEntry {
+            node_id: "z".into(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: PathBuf::from("/tmp/z"),
+            issue_count: 0,
+            encrypted: false,
+        };
+        let lines = format_fossil_detail(&fossil);
+        assert!(lines.iter().any(|l| l.contains("Issues: 0")));
+    }
+
+    #[test]
+    fn test_compute_cleanup_plan_zero_byte_file_freed_zero() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let p = temp.path().join("empty-fossil");
+        std::fs::write(&p, []).expect("empty");
+        let fossils = vec![FossilIndexEntry {
+            node_id: "n".into(),
+            session_started: Utc::now() - chrono::Duration::days(90),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: p,
+            issue_count: 0,
+            encrypted: false,
+        }];
+        let plan = compute_cleanup_plan(&fossils, Utc::now() - chrono::Duration::days(30));
+        assert_eq!(plan.count, 1);
+        assert_eq!(plan.freed_bytes, 0);
+    }
+
+    #[test]
+    fn test_format_session_display_zero_kb_log() {
+        let mut session = ActiveLogSession::new("n".into(), "d".into());
+        session.add_log_file(LogFile {
+            primal: "tiny".into(),
+            path: PathBuf::from("/tmp/tiny.log"),
+            pid: Some(1),
+            size_bytes: 0,
+            last_modified: Utc::now(),
+        });
+        let lines = format_session_display(&session);
+        assert!(lines.iter().any(|l| l.contains("0 KB")));
+    }
+
+    #[test]
+    fn test_filter_sessions_filter_empty_string_matches_all() {
+        let sessions = vec![ActiveLogSession::new("a".into(), "d".into())];
+        let filtered = filter_sessions(&sessions, Some(""));
+        assert_eq!(filtered.len(), 1);
+    }
+
+    #[test]
+    fn test_format_session_display_duration_hours_only() {
+        use chrono::Duration as ChronoDuration;
+        let mut session = ActiveLogSession::new("dur-node".into(), "deploy-1".into());
+        session.started_at = Utc::now() - ChronoDuration::hours(3);
+        let lines = format_session_display(&session);
+        assert!(lines.iter().any(|l| l.contains("3h")));
+    }
+
+    #[test]
+    fn test_format_fossil_detail_long_path_display() {
+        let long = PathBuf::from("/var/biomeos/fossils/").join("a".repeat(80));
+        let fossil = FossilIndexEntry {
+            node_id: "n".into(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::AutomaticRotation,
+            fossil_path: long.clone(),
+            issue_count: 99,
+            encrypted: true,
+        };
+        let lines = format_fossil_detail(&fossil);
+        assert!(lines.iter().any(|l| l.contains(&fossil.node_id)));
+        assert!(lines.iter().any(|l| l.contains("Issues: 99")));
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains(long.to_string_lossy().as_ref()))
+        );
+    }
+
+    #[test]
+    fn test_compute_cleanup_plan_multiple_fossils_accumulates_bytes() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let p1 = temp.path().join("f1");
+        let p2 = temp.path().join("f2");
+        std::fs::write(&p1, vec![0u8; 100]).expect("write");
+        std::fs::write(&p2, vec![0u8; 200]).expect("write");
+        let old = Utc::now() - chrono::Duration::days(100);
+        let fossils = vec![
+            FossilIndexEntry {
+                node_id: "a".into(),
+                session_started: old,
+                archival_reason: ArchivalReason::GracefulShutdown,
+                fossil_path: p1,
+                issue_count: 0,
+                encrypted: false,
+            },
+            FossilIndexEntry {
+                node_id: "b".into(),
+                session_started: old,
+                archival_reason: ArchivalReason::Manual,
+                fossil_path: p2,
+                issue_count: 1,
+                encrypted: false,
+            },
+        ];
+        let plan = compute_cleanup_plan(&fossils, Utc::now() - chrono::Duration::days(30));
+        assert_eq!(plan.count, 2);
+        assert_eq!(plan.freed_bytes, 300);
+    }
+
+    #[test]
+    fn test_cleanup_plan_clone() {
+        let a = CleanupPlan {
+            to_remove: vec![PathBuf::from("/x")],
+            freed_bytes: 10,
+            count: 1,
+        };
+        let b = a.clone();
+        assert_eq!(b.count, a.count);
+        assert_eq!(b.freed_bytes, a.freed_bytes);
+    }
+
+    #[test]
+    fn test_format_session_display_many_pids() {
+        let mut session = ActiveLogSession::new("pid-node".into(), "d".into());
+        for p in [1u32, 2, 3, 4, 5] {
+            session.add_process(p);
+        }
+        let lines = format_session_display(&session);
+        assert!(lines.iter().any(|l| l.contains("PIDs:")));
+        assert!(lines.iter().any(|l| l.contains('5')));
+    }
+
+    #[test]
+    fn test_filter_sessions_overlapping_substrings() {
+        let sessions = vec![
+            ActiveLogSession::new("alpha-node".into(), "d".into()),
+            ActiveLogSession::new("alphabet-extra".into(), "d".into()),
+        ];
+        let filtered = filter_sessions(&sessions, Some("alpha"));
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn test_scan_old_logs_subdirectory_ignored() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        std::fs::create_dir_all(temp.path().join("nested")).expect("dir");
+        std::fs::write(temp.path().join("top.log"), b"x").expect("write");
+        let logs = scan_old_logs(temp.path()).expect("scan");
+        assert_eq!(logs.len(), 1);
     }
 }

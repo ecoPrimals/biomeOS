@@ -160,14 +160,10 @@ pub(crate) fn parse_chimera_id_from_yaml(content: &str) -> Option<String> {
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
-#[expect(
-    clippy::await_holding_lock,
-    reason = "lock held briefly across await in CLI context"
-)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::io::Write;
-    use std::sync::Mutex;
     use tempfile::tempdir;
 
     struct RestoreCwd(std::path::PathBuf);
@@ -176,8 +172,6 @@ mod tests {
             let _ = std::env::set_current_dir(&self.0);
         }
     }
-
-    static CWD_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_parse_chimera_id_from_yaml() {
@@ -222,14 +216,14 @@ chimera:
     #[test]
     fn test_parse_chimera_id_from_yaml_empty_value() {
         let yaml = "chimera:\n  id: \n  name: Test";
-        assert_eq!(parse_chimera_id_from_yaml(yaml), Some("".to_string()));
+        assert_eq!(parse_chimera_id_from_yaml(yaml), Some(String::new()));
     }
 
     #[test]
     fn test_parse_chimera_id_from_yaml_whitespace_only() {
         // "id:   " -> nth(1)="   ", trim gives "" (whitespace trimmed)
         let yaml = "chimera:\n  id:   \n  name: Test";
-        assert_eq!(parse_chimera_id_from_yaml(yaml), Some("".to_string()));
+        assert_eq!(parse_chimera_id_from_yaml(yaml), Some(String::new()));
     }
 
     #[test]
@@ -268,9 +262,9 @@ chimera:
 
     #[test]
     fn test_parse_chimera_id_from_yaml_multiple_id_lines_takes_first() {
-        let yaml = r#"id: first
+        let yaml = r"id: first
 other: stuff
-id: second"#;
+id: second";
         assert_eq!(parse_chimera_id_from_yaml(yaml), Some("first".to_string()));
     }
 
@@ -286,6 +280,84 @@ id: second"#;
         assert!(content.contains("chimera:"));
         assert!(content.contains("components:"));
         assert!(content.contains("fusion:"));
+    }
+
+    /// Rich definition: modules, fusion bindings, API endpoint (covers `handle_chimera_show` branches).
+    fn create_test_chimera_yaml_rich(dir: &Path, id: &str) -> std::path::PathBuf {
+        let yaml = format!(
+            r#"
+chimera:
+  id: {id}
+  name: Rich {id}
+  version: "1.0.0"
+  description: |
+    Line one
+    Line two
+
+components:
+  beardog:
+    source: primals/beardog
+    version: ">=1.0.0"
+    modules:
+      - name: mod_a
+        description: Module A
+
+fusion:
+  bindings:
+    api_bridge:
+      provider: beardog.api
+      consumers: [songbird.events]
+  api:
+    endpoints:
+      - name: ping
+        params: ["x"]
+        returns: "bool"
+"#
+        );
+        let path = dir
+            .join("chimeras")
+            .join("definitions")
+            .join(format!("{id}.yaml"));
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let mut file = std::fs::File::create(&path).unwrap();
+        file.write_all(yaml.as_bytes()).unwrap();
+        path
+    }
+
+    /// Chimera whose component uses `array:` so registry summary reports `uses_arrays`.
+    fn create_test_chimera_yaml_with_array(dir: &Path, id: &str) -> std::path::PathBuf {
+        let yaml = format!(
+            r#"
+chimera:
+  id: {id}
+  name: Array {id}
+  version: "1.0.0"
+  description: arrays
+
+components:
+  beardog:
+    source: primals/beardog
+    version: ">=1.0.0"
+    array:
+      enabled: true
+      min: 2
+      max: 8
+    modules: []
+
+fusion:
+  bindings: {{}}
+  api:
+    endpoints: []
+"#
+        );
+        let path = dir
+            .join("chimeras")
+            .join("definitions")
+            .join(format!("{id}.yaml"));
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let mut file = std::fs::File::create(&path).unwrap();
+        file.write_all(yaml.as_bytes()).unwrap();
+        path
     }
 
     fn create_test_chimera_yaml(dir: &Path, id: &str) -> std::path::PathBuf {
@@ -327,9 +399,9 @@ fusion:
     }
 
     #[tokio::test]
-    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    #[serial]
     async fn test_handle_chimera_list_with_definitions() {
-        let _guard = CWD_TEST_LOCK.lock().unwrap();
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
         let _restore = RestoreCwd(std::env::current_dir().unwrap());
         std::env::set_current_dir(temp.path()).unwrap();
@@ -341,9 +413,9 @@ fusion:
     }
 
     #[tokio::test]
-    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    #[serial]
     async fn test_handle_chimera_show_not_found() {
-        let _guard = CWD_TEST_LOCK.lock().unwrap();
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
         let defs_dir = temp.path().join("chimeras/definitions");
         std::fs::create_dir_all(&defs_dir).unwrap();
@@ -355,9 +427,9 @@ fusion:
     }
 
     #[tokio::test]
-    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    #[serial]
     async fn test_handle_chimera_show_found() {
-        let _guard = CWD_TEST_LOCK.lock().unwrap();
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
         let _restore = RestoreCwd(std::env::current_dir().unwrap());
         std::env::set_current_dir(temp.path()).unwrap();
@@ -369,9 +441,9 @@ fusion:
     }
 
     #[tokio::test]
-    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    #[serial]
     async fn test_handle_chimera_show_missing_definitions_dir() {
-        let _guard = CWD_TEST_LOCK.lock().unwrap();
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
         let _restore = RestoreCwd(std::env::current_dir().unwrap());
         std::env::set_current_dir(temp.path()).unwrap();
@@ -382,9 +454,9 @@ fusion:
     }
 
     #[tokio::test]
-    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    #[serial]
     async fn test_handle_chimera_build_not_found() {
-        let _guard = CWD_TEST_LOCK.lock().unwrap();
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
         let defs_dir = temp.path().join("chimeras/definitions");
         std::fs::create_dir_all(&defs_dir).unwrap();
@@ -399,9 +471,9 @@ fusion:
     }
 
     #[tokio::test]
-    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    #[serial]
     async fn test_handle_chimera_build_missing_primals() {
-        let _guard = CWD_TEST_LOCK.lock().unwrap();
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
         let _restore = RestoreCwd(std::env::current_dir().unwrap());
         std::env::set_current_dir(temp.path()).unwrap();
@@ -415,12 +487,120 @@ fusion:
 
     #[test]
     fn test_parse_chimera_id_from_yaml_with_spaces() {
-        let yaml = r#"chimera:
+        let yaml = r"chimera:
   id:   spaced-id
-  name: Test"#;
+  name: Test";
         assert_eq!(
             parse_chimera_id_from_yaml(yaml),
             Some("spaced-id".to_string())
         );
+    }
+
+    /// Invalid YAML files are skipped with a warning; valid definitions still load.
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_chimera_list_skips_invalid_yaml_keeps_valid() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        let temp = tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        std::fs::write(
+            "chimeras/definitions/broken.yaml",
+            "this: is: not: valid: [[[\n",
+        )
+        .unwrap();
+        create_test_chimera_yaml(temp.path(), "still-loads");
+
+        let result = handle_chimera_list().await;
+        assert!(result.is_ok());
+    }
+
+    /// Empty definitions directory: registry loads successfully with zero chimeras.
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_chimera_list_empty_definitions_dir() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        let temp = tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("chimeras/definitions").unwrap();
+
+        let result = handle_chimera_list().await;
+        assert!(result.is_ok());
+    }
+
+    /// Only invalid YAML files: registry is empty; list still succeeds.
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_chimera_list_only_invalid_yaml() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        let temp = tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        std::fs::write(
+            "chimeras/definitions/broken-only.yaml",
+            "this: is: not: valid: [[[\n",
+        )
+        .unwrap();
+
+        let result = handle_chimera_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_chimera_show_rich_fusion_and_modules() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        let temp = tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        create_test_chimera_yaml_rich(temp.path(), "rich-ch");
+
+        let result = handle_chimera_show("rich-ch").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_chimera_list_shows_uses_arrays_icon() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        let temp = tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        create_test_chimera_yaml_with_array(temp.path(), "arr-ch");
+
+        let result = handle_chimera_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_chimera_id_from_yaml_splits_on_first_colon_only() {
+        let yaml = "id: value:with:colons";
+        assert_eq!(parse_chimera_id_from_yaml(yaml), Some("value".to_string()));
+    }
+
+    #[test]
+    fn test_parse_chimera_id_from_yaml_comment_like() {
+        let yaml = "  id: my-id  # note";
+        assert_eq!(
+            parse_chimera_id_from_yaml(yaml),
+            Some("my-id  # note".to_string())
+        );
+    }
+
+    #[test]
+    fn test_chimera_registry_loads_multiple_ids() {
+        let temp = tempdir().unwrap();
+        create_test_chimera_yaml(temp.path(), "a");
+        create_test_chimera_yaml(temp.path(), "b");
+        let defs = temp.path().join("chimeras/definitions");
+        let reg = ChimeraRegistry::from_directory(&defs).unwrap();
+        assert!(reg.get("a").is_some());
+        assert!(reg.get("b").is_some());
+        assert!(reg.len() >= 2);
     }
 }

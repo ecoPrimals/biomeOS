@@ -506,7 +506,7 @@ impl MetricsCollector {
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -521,7 +521,7 @@ mod tests {
         // Record a successful execution
         let result = GraphResult {
             success: true,
-            node_results: Default::default(),
+            node_results: HashMap::default(),
             errors: vec![],
             duration_ms: 100,
         };
@@ -538,7 +538,7 @@ mod tests {
         let metrics = metrics.unwrap();
         assert_eq!(metrics.total_executions, 1);
         assert_eq!(metrics.successful_executions, 1);
-        assert_eq!(metrics.success_rate, 1.0);
+        assert!((metrics.success_rate - 1.0).abs() < f64::EPSILON);
     }
 
     #[tokio::test(start_paused = true)]
@@ -552,13 +552,18 @@ mod tests {
         for i in 0..5 {
             let result = GraphResult {
                 success: i % 2 == 0, // Alternate success/failure
-                node_results: Default::default(),
+                node_results: HashMap::default(),
                 errors: vec![],
                 duration_ms: (i + 1) * 100,
             };
 
             collector
-                .record_execution("multi_graph", &result, (i + 1) * 100, Some(1000 + i as i64))
+                .record_execution(
+                    "multi_graph",
+                    &result,
+                    (i + 1) * 100,
+                    Some(1000 + i64::try_from(i).unwrap_or(i64::MAX)),
+                )
                 .await
                 .unwrap();
             tokio::time::advance(tokio::time::Duration::from_millis(2)).await;
@@ -595,7 +600,7 @@ mod tests {
         for graph in &["graph_a", "graph_b", "graph_c"] {
             let result = GraphResult {
                 success: true,
-                node_results: Default::default(),
+                node_results: HashMap::default(),
                 errors: vec![],
                 duration_ms: 100,
             };
@@ -622,7 +627,7 @@ mod tests {
         // Add some data
         let result = GraphResult {
             success: true,
-            node_results: Default::default(),
+            node_results: HashMap::default(),
             errors: vec![],
             duration_ms: 100,
         };
@@ -694,6 +699,132 @@ mod tests {
         let json = serde_json::to_string(&m).unwrap();
         let restored: NodeMetricsAggregate = serde_json::from_str(&json).unwrap();
         assert_eq!(m.node_id, restored.node_id);
-        assert_eq!(m.success_rate, restored.success_rate);
+        assert!((m.success_rate - restored.success_rate).abs() < f64::EPSILON);
+    }
+
+    #[tokio::test]
+    async fn test_record_node_execution_and_get_node_metrics() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_node.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        let params = NodeExecutionParams {
+            execution_id: 42,
+            graph_name: "g1",
+            node_id: "n1",
+            primal_id: "p1",
+            operation: "op",
+            success: true,
+            duration_ms: 50,
+            error: None,
+        };
+        collector.record_node_execution(params).await.unwrap();
+
+        let params_fail = NodeExecutionParams {
+            execution_id: 42,
+            graph_name: "g1",
+            node_id: "n1",
+            primal_id: "p1",
+            operation: "op",
+            success: false,
+            duration_ms: 10,
+            error: Some("boom"),
+        };
+        collector.record_node_execution(params_fail).await.unwrap();
+
+        let agg = collector
+            .get_node_metrics("g1", "n1")
+            .await
+            .unwrap()
+            .expect("node metrics");
+        assert_eq!(agg.total_executions, 2);
+        assert_eq!(agg.successful_executions, 1);
+        assert!((agg.avg_duration_ms - 30.0).abs() < f64::EPSILON);
+        assert!((agg.success_rate - 0.5).abs() < f64::EPSILON);
+
+        let none = collector.get_node_metrics("g1", "missing").await.unwrap();
+        assert!(none.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_recent_executions_sorted_and_limit() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_recent.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        for id in [100i64, 300, 200] {
+            let result = GraphResult {
+                success: true,
+                node_results: HashMap::default(),
+                errors: vec![],
+                duration_ms: 10,
+            };
+            collector
+                .record_execution("rg", &result, 10, Some(id))
+                .await
+                .unwrap();
+        }
+
+        let recent = collector.get_recent_executions("rg", 2).await.unwrap();
+        assert_eq!(recent.len(), 2);
+        assert_eq!(recent[0].id, 300);
+        assert_eq!(recent[1].id, 200);
+
+        let all = collector.get_recent_executions("rg", 10).await.unwrap();
+        assert_eq!(all.len(), 3);
+        assert_eq!(all[0].id, 300);
+    }
+
+    #[tokio::test]
+    async fn test_graph_metrics_failed_executions_and_min_max() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_minmax.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        let ok = GraphResult {
+            success: true,
+            node_results: HashMap::default(),
+            errors: vec![],
+            duration_ms: 100,
+        };
+        collector
+            .record_execution("mm", &ok, 10, Some(1))
+            .await
+            .unwrap();
+
+        let bad = GraphResult {
+            success: false,
+            node_results: HashMap::default(),
+            errors: vec!["e".to_string()],
+            duration_ms: 0,
+        };
+        collector
+            .record_execution("mm", &bad, 1000, Some(2))
+            .await
+            .unwrap();
+
+        let m = collector
+            .get_graph_metrics("mm")
+            .await
+            .unwrap()
+            .expect("metrics");
+        assert_eq!(m.total_executions, 2);
+        assert_eq!(m.successful_executions, 1);
+        assert_eq!(m.failed_executions, 1);
+        assert_eq!(m.min_duration_ms, 10);
+        assert_eq!(m.max_duration_ms, 1000);
+        assert!((m.success_rate - 0.5).abs() < f64::EPSILON);
+    }
+
+    #[tokio::test]
+    async fn test_get_recent_executions_unknown_graph_empty() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_empty_recent.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+        let v = collector
+            .get_recent_executions("no_such_graph", 5)
+            .await
+            .unwrap();
+        assert!(v.is_empty());
     }
 }

@@ -35,6 +35,20 @@ async fn test_suggest_optimizations_graph_not_found() {
 }
 
 #[tokio::test]
+async fn test_suggest_optimizations_missing_graph_id() {
+    let temp = tempdir().expect("tempdir");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"min_samples": 3}));
+    let err = handler
+        .suggest_optimizations(&params)
+        .await
+        .expect_err("should fail");
+    assert!(err.to_string().contains("Missing graph_id"));
+}
+
+#[serial_test::serial]
+#[tokio::test]
 async fn test_suggest_optimizations_with_min_samples() {
     let temp = tempdir().expect("tempdir");
     let path = temp.path().join("opt_graph.toml");

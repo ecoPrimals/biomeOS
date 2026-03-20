@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 // =============================================================================
 // Fractal Compute Tests - Isomorphic Interface Validation
 // =============================================================================
@@ -18,7 +20,7 @@ async fn test_binary_tree_structure() {
             memory_mb: 32768,
             gpu_count: 0,
             gpu_memory_mb: 0,
-            disk_mb: 100000,
+            disk_mb: 100_000,
         })
         .build()
         .await

@@ -191,6 +191,7 @@ impl Default for SystemLimits {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -160,19 +160,19 @@ mod tests {
                 let (reader, mut writer) = tokio::io::split(stream);
                 let mut reader = BufReader::new(reader);
                 let mut line = String::new();
-                if reader.read_line(&mut line).await.is_ok() {
-                    if let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line) {
-                        let response = JsonRpcResponse {
-                            jsonrpc: "2.0".to_string(),
-                            result: Some(auth_response),
-                            error: None,
-                            id: req.id.clone().unwrap_or(serde_json::Value::Null),
-                        };
-                        let _ = writer
-                            .write_all(serde_json::to_string(&response).unwrap().as_bytes())
-                            .await;
-                        let _ = writer.write_all(b"\n").await;
-                    }
+                if reader.read_line(&mut line).await.is_ok()
+                    && let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line)
+                {
+                    let response = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: Some(auth_response),
+                        error: None,
+                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
+                    };
+                    let _ = writer
+                        .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                        .await;
+                    let _ = writer.write_all(b"\n").await;
                 }
             }
         });
@@ -197,19 +197,19 @@ mod tests {
                 let (reader, mut writer) = tokio::io::split(stream);
                 let mut reader = BufReader::new(reader);
                 let mut line = String::new();
-                if reader.read_line(&mut line).await.is_ok() {
-                    if let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line) {
-                        let response = JsonRpcResponse {
-                            jsonrpc: "2.0".to_string(),
-                            result: Some(serde_json::json!({"user_id": user_id})),
-                            error: None,
-                            id: req.id.clone().unwrap_or(serde_json::Value::Null),
-                        };
-                        let _ = writer
-                            .write_all(serde_json::to_string(&response).unwrap().as_bytes())
-                            .await;
-                        let _ = writer.write_all(b"\n").await;
-                    }
+                if reader.read_line(&mut line).await.is_ok()
+                    && let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line)
+                {
+                    let response = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: Some(serde_json::json!({"user_id": user_id})),
+                        error: None,
+                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
+                    };
+                    let _ = writer
+                        .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                        .await;
+                    let _ = writer.write_all(b"\n").await;
                 }
             }
         });
@@ -269,7 +269,7 @@ mod tests {
 
         match result {
             AuthorizationResult::Denied(r) => assert_eq!(r, reason),
-            _ => panic!("Expected Denied result"),
+            AuthorizationResult::Authorized => panic!("Expected Denied result"),
         }
     }
 

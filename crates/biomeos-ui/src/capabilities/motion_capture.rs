@@ -225,7 +225,7 @@ mod tests {
                 .tracked_devices
                 .contains(&TrackedDeviceType::Tool)
         );
-        assert_eq!(adapter.config().prediction_ms, 5.0);
+        assert!((adapter.config().prediction_ms - 5.0).abs() < f64::EPSILON);
     }
 
     #[test]

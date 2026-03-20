@@ -345,6 +345,7 @@ pub enum StunExtensionError {
     Json(#[from] serde_json::Error),
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

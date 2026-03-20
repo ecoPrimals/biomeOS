@@ -156,7 +156,7 @@ mod tests {
         std::fs::write(&log_path, "hello world").expect("write");
         let mut log_file = LogFile {
             primal: "test".into(),
-            path: log_path.clone(),
+            path: log_path,
             pid: None,
             size_bytes: 0,
             last_modified: Utc::now(),

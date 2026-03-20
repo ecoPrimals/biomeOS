@@ -7,6 +7,7 @@
 //!
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 //!
 //! ## Architectural Principle: Composability
 //!

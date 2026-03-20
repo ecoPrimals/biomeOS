@@ -24,6 +24,8 @@
 //!
 //! Total: 25 comprehensive integration tests
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use anyhow::Result;
 use biomeos_federation::beardog_client::BearDogClient;
 use biomeos_types::identifiers::FamilyId;
@@ -58,10 +60,17 @@ fn test_seed_hash(input: &str) -> String {
     hasher.update(input.as_bytes());
     let hash_bytes = hasher.finalize();
     // Convert to hex string manually
-    let hex_string = hash_bytes
+    const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let hex_string: String = hash_bytes
         .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>();
+        .flat_map(|&b| {
+            [
+                HEX_DIGITS[(b >> 4) as usize],
+                HEX_DIGITS[(b & 0xf) as usize],
+            ]
+        })
+        .map(char::from)
+        .collect();
     format!("sha256:{hex_string}")
 }
 
@@ -199,7 +208,7 @@ async fn test_tampered_seed_hash_rejection() {
 
         // Tamper by changing one character
         let tampered_hashes = vec![
-            valid_hash.replace("a", "b"), // Change one hex digit
+            valid_hash.replace('a', "b"), // Change one hex digit
             format!("{}x", &valid_hash[..valid_hash.len() - 1]), // Change last char
             format!("sha256:0{}", &valid_hash[7..]), // Prepend 0
         ];
@@ -613,14 +622,8 @@ async fn test_invalid_endpoint_format() {
         // Client creation may succeed (validation happens at connection time)
         // Or it may fail early - both are acceptable behaviors
         // The important thing is that it doesn't panic
-        match result {
-            Ok(_) => {
-                // Validation will happen at connection time - this is fine
-            }
-            Err(_) => {
-                // Early validation caught the issue - also fine
-            }
-        }
+        // Creation may succeed (validation at connect) or fail early — both OK; must not panic
+        drop(result);
     }
 }
 

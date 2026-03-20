@@ -407,7 +407,7 @@ mod tests {
     #[test]
     fn test_identity_response_empty_encryption_tag() {
         let resp = IdentityResponse {
-            encryption_tag: "".to_string(),
+            encryption_tag: String::new(),
             capabilities: vec![],
             family_id: "fam".to_string(),
             identity_attestations: None,
@@ -465,5 +465,32 @@ mod tests {
         let back: TrustEvaluationRequest = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(back.peer_id, "p1");
         assert_eq!(back.peer_tags.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_evaluate_trust_provider_unavailable_returns_internal_error() {
+        use crate::AppState;
+        use std::sync::Arc;
+
+        let state = Arc::new(AppState::builder().build_with_defaults().expect("state"));
+        let req = TrustEvaluationRequest {
+            peer_id: "peer-x".to_string(),
+            peer_tags: vec!["t".to_string()],
+        };
+        let result = evaluate_trust(axum::extract::State(state), axum::Json(req)).await;
+        assert!(
+            result.is_err(),
+            "expected error when security provider unavailable"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_identity_provider_unavailable_returns_internal_error() {
+        use crate::AppState;
+        use std::sync::Arc;
+
+        let state = Arc::new(AppState::builder().build_with_defaults().expect("state"));
+        let result = get_identity(axum::extract::State(state)).await;
+        assert!(result.is_err());
     }
 }

@@ -149,6 +149,7 @@ impl ByobManager {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,7 +205,7 @@ mod tests {
             .unwrap();
 
         let stored = manager.get_team_config("team-strict").unwrap();
-        assert_eq!(stored.resource_limits.max_cpu_percent, 50.0);
+        assert!((stored.resource_limits.max_cpu_percent - 50.0).abs() < f64::EPSILON);
         assert_eq!(stored.resource_limits.max_memory_mb, 1024);
     }
 
@@ -220,7 +221,7 @@ mod tests {
             .unwrap();
 
         let stored = manager.get_team_config("team-complete").unwrap();
-        assert_eq!(stored.resource_limits.max_cpu_percent, 25.0);
+        assert!((stored.resource_limits.max_cpu_percent - 25.0).abs() < f64::EPSILON);
         assert_eq!(stored.resource_limits.max_memory_mb, 512);
     }
 
@@ -291,7 +292,7 @@ mod tests {
         let json = serde_json::to_string(&limits).unwrap();
         let deserialized: ResourceLimits = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(limits.max_cpu_percent, deserialized.max_cpu_percent);
+        assert!((limits.max_cpu_percent - deserialized.max_cpu_percent).abs() < f64::EPSILON);
         assert_eq!(limits.max_memory_mb, deserialized.max_memory_mb);
     }
 

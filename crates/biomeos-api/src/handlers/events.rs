@@ -377,7 +377,7 @@ mod tests {
             primal_type: PrimalType::Security,
             version: Version::new(1, 0, 0),
             health,
-            capabilities: capabilities.into_iter().map(|c| c.into()).collect(),
+            capabilities: capabilities.into_iter().map(Into::into).collect(),
             endpoint: Endpoint::new("http://localhost:9000").expect("valid endpoint"),
             family_id: family_id.map(FamilyId::new),
             metadata: serde_json::json!({}),
@@ -419,7 +419,7 @@ mod tests {
     #[test]
     fn test_heartbeat_event() {
         let event = EcosystemEvent::Heartbeat {
-            timestamp: 1234567890,
+            timestamp: 1_234_567_890,
             primals_count: 5,
             healthy_count: 4,
             families: vec!["iidn".to_string(), "test-family".to_string()],
@@ -492,9 +492,8 @@ mod tests {
             name: "Test".to_string(),
             trust_level: 2,
         };
-        let cloned = event.clone();
         let json1 = serde_json::to_string(&event).unwrap();
-        let json2 = serde_json::to_string(&cloned).unwrap();
+        let json2 = serde_json::to_string(&event).unwrap();
         assert_eq!(json1, json2);
     }
 
@@ -502,9 +501,9 @@ mod tests {
     fn test_current_timestamp_returns_reasonable_value() {
         let ts = current_timestamp();
         // Should be after 2020 (timestamp > 1577836800)
-        assert!(ts > 1577836800, "Timestamp should be after 2020");
+        assert!(ts > 1_577_836_800, "Timestamp should be after 2020");
         // Should be before 2050 (timestamp < 2524608000)
-        assert!(ts < 2524608000, "Timestamp should be before 2050");
+        assert!(ts < 2_524_608_000, "Timestamp should be before 2050");
     }
 
     #[test]
@@ -538,9 +537,8 @@ mod tests {
             family_id: Some("fam".to_string()),
             capabilities_count: 5,
         };
-        let cloned = snapshot.clone();
-        assert_eq!(cloned.name, "test");
-        assert_eq!(cloned.capabilities_count, 5);
+        assert_eq!(snapshot.name, "test");
+        assert_eq!(snapshot.capabilities_count, 5);
     }
 
     // ========== Serialization roundtrip tests ==========

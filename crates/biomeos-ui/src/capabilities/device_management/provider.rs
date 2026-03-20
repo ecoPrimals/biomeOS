@@ -439,7 +439,7 @@ mod tests {
 
     #[test]
     fn test_get_builtin_templates() {
-        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let _provider = DeviceManagementProvider::new("/tmp/test.sock");
         let templates = DeviceManagementProvider::get_builtin_templates();
         assert_eq!(templates.len(), 2);
         assert!(templates.iter().any(|t| t.id == "tower"));

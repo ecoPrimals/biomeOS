@@ -26,6 +26,7 @@
 mod config;
 mod engine;
 mod metrics;
+mod rpc;
 
 pub use config::{EscalationConfig, EscalationResult, TarpcEndpoint};
 pub use engine::ProtocolEscalationManager;

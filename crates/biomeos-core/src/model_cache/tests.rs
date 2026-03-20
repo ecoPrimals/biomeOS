@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Model cache tests
 
 use std::path::PathBuf;
@@ -9,7 +11,6 @@ use super::cache::ModelCache;
 use super::types::{ModelEntry, ModelFile, ModelResolution};
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod run {
     use super::*;
     use tempfile::TempDir;

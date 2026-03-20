@@ -627,7 +627,7 @@ mod tests {
             gates,
             snapshot_at: "2026-02-11T20:00:00Z".to_string(),
             family_id: "test_cf7e".to_string(),
-            collective: Default::default(),
+            collective: biomeos_core::plasmodium::CollectiveCapabilities::default(),
         }
     }
 

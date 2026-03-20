@@ -333,12 +333,10 @@ pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
 
     #[test]
     fn test_discovery_query_capability() {
@@ -511,5 +509,169 @@ mod tests {
         };
         let json = serde_json::to_string(&primal).unwrap();
         assert!(json.contains("beardog"));
+    }
+
+    #[test]
+    fn test_discovery_method_enum_roundtrip() {
+        for m in [
+            DiscoveryMethod::Environment("K".to_string()),
+            DiscoveryMethod::XdgRuntime,
+            DiscoveryMethod::RunUser,
+            DiscoveryMethod::AndroidData,
+            DiscoveryMethod::TmpFallback,
+            DiscoveryMethod::NeuralApi,
+        ] {
+            let json = serde_json::to_string(&m).unwrap();
+            let _: DiscoveryMethod = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_find_by_capability_errors_when_empty_socket_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
+        let err = PrimalDiscovery::find_by_capability(PrimalCapability::encryption())
+            .await
+            .expect_err("should fail");
+        assert!(err.to_string().contains("No primal"));
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_discover_primal_resolves_under_biomeos_socket_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
+        let sock = tmp.path().join("songbird-fam.sock");
+        let listener = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
+        let discovery = PrimalDiscovery::new("fam");
+        let p = discovery.discover_primal("songbird").await.expect("primal");
+        assert_eq!(p.name, "songbird");
+        assert_eq!(p.socket_path, sock);
+        drop(listener);
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_discover_alt_socket_name_without_family_suffix() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
+        let sock = tmp.path().join("toadstool.sock");
+        let listener = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
+        let discovery = PrimalDiscovery::new("fam");
+        let p = discovery
+            .discover_primal("toadstool")
+            .await
+            .expect("primal");
+        assert_eq!(p.socket_path, sock);
+        drop(listener);
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_discover_respects_limit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
+        let sock = tmp.path().join("beardog-x.sock");
+        let listener = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
+        let discovery = PrimalDiscovery::new("x");
+        let mut q = DiscoveryQuery::capability(PrimalCapability::encryption());
+        q.limit = Some(0);
+        let v = discovery.discover(&q).await.expect("discover");
+        assert!(v.is_empty());
+        drop(listener);
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_discover_by_capability_taxonomy_empty_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
+        let discovery = PrimalDiscovery::new("x");
+        let names = discovery
+            .discover_by_capability("encryption")
+            .await
+            .expect("ok");
+        assert!(names.is_empty());
+    }
+
+    #[test]
+    fn test_providers_for_capability_registry_alias() {
+        let p = providers_for_capability(&PrimalCapability::new("registry", "r", "1"));
+        assert!(!p.is_empty());
+    }
+
+    #[test]
+    fn test_providers_for_capability_http_alias() {
+        let p = providers_for_capability(&PrimalCapability::new("http", "h", "1"));
+        assert!(!p.is_empty());
+    }
+
+    #[test]
+    fn test_providers_for_capability_crypto_alias() {
+        let p = providers_for_capability(&PrimalCapability::new("crypto", "c", "1"));
+        assert!(!p.is_empty());
+    }
+
+    #[test]
+    fn test_providers_for_capability_networking_alias() {
+        let p = providers_for_capability(&PrimalCapability::new("networking", "n", "1"));
+        assert!(!p.is_empty());
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_discover_query_by_name_only() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
+        let sock = tmp.path().join("beardog-fam.sock");
+        let _l = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
+        let discovery = PrimalDiscovery::new("fam");
+        let mut q = DiscoveryQuery::primal("beardog");
+        q.limit = Some(5);
+        let v = discovery.discover(&q).await.expect("discover");
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].name, "beardog");
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_discover_healthy_only_skips_dead_socket_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
+        let sock = tmp.path().join("beardog-fam.sock");
+        std::fs::write(&sock, b"not-a-socket").expect("w");
+        let discovery = PrimalDiscovery::new("fam");
+        let q = DiscoveryQuery::capability(PrimalCapability::encryption());
+        let v = discovery.discover(&q).await.expect("discover");
+        assert!(v.is_empty());
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_discover_capability_unhealthy_included_when_not_healthy_only() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
+        let sock = tmp.path().join("beardog-fam.sock");
+        std::fs::write(&sock, b"stale").expect("w");
+        let discovery = PrimalDiscovery::new("fam");
+        let mut q = DiscoveryQuery::capability(PrimalCapability::encryption());
+        q.healthy_only = false;
+        let v = discovery.discover(&q).await.expect("discover");
+        assert!(v.iter().any(|p| !p.is_healthy));
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_discovered_via_run_user_style_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let run = tmp.path().join("run/user/1000/biomeos");
+        std::fs::create_dir_all(&run).expect("d");
+        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", run.to_str().unwrap());
+        let sock = run.join("songbird-x.sock");
+        let _l = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
+        let discovery = PrimalDiscovery::new("x");
+        let p = discovery.discover_primal("songbird").await.expect("p");
+        assert!(matches!(p.discovered_via, DiscoveryMethod::XdgRuntime));
     }
 }

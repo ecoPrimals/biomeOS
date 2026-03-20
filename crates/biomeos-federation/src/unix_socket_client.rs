@@ -101,6 +101,7 @@ impl UnixSocketClient {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,7 +113,14 @@ mod tests {
         assert_eq!(request.jsonrpc, "2.0");
         assert_eq!(request.method.as_ref(), "test.method");
         assert_eq!(request.params.as_ref().unwrap()["key"], "value");
-        assert!(request.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0) > 0);
+        assert!(
+            request
+                .id
+                .as_ref()
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)
+                > 0
+        );
     }
 
     #[test]

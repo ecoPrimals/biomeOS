@@ -251,7 +251,7 @@ fn display_custom_variant() {
         "custom:my-cap"
     );
     assert_eq!(
-        format!("{}", CapabilityTaxonomy::Custom("".to_string())),
+        format!("{}", CapabilityTaxonomy::Custom(String::new())),
         "custom:"
     );
 }

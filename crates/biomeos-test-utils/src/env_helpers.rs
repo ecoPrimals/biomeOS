@@ -3,48 +3,71 @@
 
 //! Environment variable helpers for testing.
 //!
-//! Rust 2024 edition makes `std::env::set_var` and `std::env::remove_var` unsafe
-//! because they are not thread-safe. These helpers centralize the unsafe calls
-//! with documented safety invariants, keeping `#![forbid(unsafe_code)]` on all
-//! other crates.
+//! # Rust 2024 and `unsafe`
 //!
-//! Production code should never mutate process-global env vars. Configuration
-//! should flow through typed structs and `Command::env()` for child processes.
+//! The 2024 edition marks [`std::env::set_var`] and [`std::env::remove_var`] as `unsafe` because
+//! mutating the process environment is not synchronized with other threads that may read it via
+//! [`std::env::var`] or OS APIs. There is no fully safe alternative for in-process mutation; the
+//! intended pattern for production code is to avoid globals and pass configuration explicitly or
+//! use [`std::process::Command::env`] for subprocesses.
+//!
+//! This module is **test-only** (see crate root: `biomeos-test-utils` must not ship in production
+//! paths). The [`TestEnvGuard`] RAII type captures the previous value before changing the variable
+//! and restores it on drop, limiting test pollution. Callers that run tests in parallel must still
+//! avoid concurrent reads/writes of the **same** key unless those tests are serialized (e.g.
+//! `serial_test`)—that is a Rust/platform contract, not something this crate can enforce.
+//!
+//! All `unsafe` is confined to thin wrappers around the two `std::env` calls below; the rest of the
+//! workspace keeps `#![deny(unsafe_code)]` via narrowly scoped `#[allow(unsafe_code)]` here.
 
 use std::ffi::OsStr;
 
-/// Set an environment variable for testing.
+/// Sets `key` to `value` in the process environment (test-only).
 ///
-/// # Safety contract
+/// Prefer [`TestEnvGuard::set`] when you need automatic restoration after a scope.
 ///
-/// Callers must ensure no other thread is concurrently reading this env var
-/// via `std::env::var`. In practice, tests that manipulate env vars should
-/// use `#[serial_test::serial]` or equivalent serialization.
+/// # Caller contract
+///
+/// No other thread may read `key` concurrently while this runs. In practice, use per-key guards
+/// and avoid sharing keys across parallel tests, or serialize tests that touch the same key.
 #[allow(unsafe_code)]
 pub fn set_test_env<K: AsRef<OsStr>, V: AsRef<OsStr>>(key: K, value: V) {
-    // SAFETY: Test-only function. Callers accept the thread-safety contract.
-    unsafe { std::env::set_var(key, value) }
+    // SAFETY: Required by Rust 2024 for `set_var`. This crate is test-only; callers must ensure no
+    // concurrent `std::env::var`/OS reads of `key` on other threads (see module docs). The call
+    // only forwards to libc/OS env update; invariants are process-global ordering, not pointer
+    // validity—`AsRef<OsStr>` arguments are valid for the duration of the call.
+    unsafe {
+        std::env::set_var(key, value);
+    }
 }
 
-/// Remove an environment variable for testing.
+/// Removes `key` from the process environment (test-only).
 ///
-/// See [`set_test_env`] for safety contract.
+/// Prefer [`TestEnvGuard::remove`] when you need automatic restoration after a scope.
+///
+/// See [`set_test_env`] for the caller contract.
 #[allow(unsafe_code)]
 pub fn remove_test_env<K: AsRef<OsStr>>(key: K) {
-    // SAFETY: Test-only function. Callers accept the thread-safety contract.
-    unsafe { std::env::remove_var(key) }
+    // SAFETY: Same as [`set_test_env`], but for `remove_var`. Test-only; no concurrent readers of
+    // `key` on other threads.
+    unsafe {
+        std::env::remove_var(key);
+    }
 }
 
-/// RAII guard that restores an env var to its original value on drop.
+/// RAII guard that restores an environment variable to its captured value on [`Drop`].
 ///
-/// Use this to avoid test pollution when tests run concurrently.
+/// Construct with [`TestEnvGuard::set`], [`TestEnvGuard::remove`], or [`TestEnvGuard::new`].
+/// Restoration uses [`set_test_env`] / [`remove_test_env`], so the same thread-safety contract
+/// applies when the guard is dropped (typically at end of test scope, single-threaded relative to
+/// that key).
 pub struct TestEnvGuard {
     key: String,
     original: Option<String>,
 }
 
 impl TestEnvGuard {
-    /// Capture the current value and optionally set a new one.
+    /// Captures the current value of `key`, then sets it to `new_value` or removes it if `None`.
     #[must_use]
     pub fn new(key: &str, new_value: Option<&str>) -> Self {
         let original = std::env::var(key).ok();
@@ -58,13 +81,13 @@ impl TestEnvGuard {
         }
     }
 
-    /// Set the env var and capture the original for restoration.
+    /// Sets `key` to `value` and restores the previous value (if any) on drop.
     #[must_use]
     pub fn set(key: &str, value: &str) -> Self {
         Self::new(key, Some(value))
     }
 
-    /// Remove the env var and capture the original for restoration.
+    /// Removes `key` and restores the previous value (if any) on drop.
     #[must_use]
     pub fn remove(key: &str) -> Self {
         Self::new(key, None)

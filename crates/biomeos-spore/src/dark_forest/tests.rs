@@ -19,7 +19,7 @@ mod run {
         let beacon = BeaconPlaintext {
             family_hash: "abc123def456".to_string(),
             node_id: "tower1".to_string(),
-            timestamp: 1234567890,
+            timestamp: 1_234_567_890,
             socket_path: "/tmp/beardog.sock".to_string(),
             capabilities_hash: "cap_hash_def456".to_string(),
             lineage_mode: Some("genesis".to_string()),
@@ -30,7 +30,7 @@ mod run {
 
         assert_eq!(parsed.family_hash, "abc123def456");
         assert_eq!(parsed.node_id, "tower1");
-        assert_eq!(parsed.timestamp, 1234567890);
+        assert_eq!(parsed.timestamp, 1_234_567_890);
         assert_eq!(parsed.socket_path, "/tmp/beardog.sock");
         assert_eq!(parsed.capabilities_hash, "cap_hash_def456");
         assert_eq!(parsed.lineage_mode, Some("genesis".to_string()));
@@ -130,8 +130,8 @@ mod run {
         };
 
         let cloned = beacon.clone();
-        assert_eq!(cloned.version, 2);
-        assert_eq!(cloned.ciphertext, "ct");
+        assert_eq!(cloned.version, beacon.version);
+        assert_eq!(cloned.ciphertext, beacon.ciphertext);
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod run {
         let beacon = BeaconPlaintext {
             family_hash: "fam123".to_string(),
             node_id: "tower1".to_string(),
-            timestamp: 1700000000,
+            timestamp: 1_700_000_000,
             socket_path: "/run/user/1000/biomeos/beardog.sock".to_string(),
             capabilities_hash: "cap456".to_string(),
             lineage_mode: Some("genesis".to_string()),
@@ -217,7 +217,7 @@ mod run {
 
         assert_eq!(decoded.family_hash, "fam123");
         assert_eq!(decoded.node_id, "tower1");
-        assert_eq!(decoded.timestamp, 1700000000);
+        assert_eq!(decoded.timestamp, 1_700_000_000);
     }
 
     #[test]

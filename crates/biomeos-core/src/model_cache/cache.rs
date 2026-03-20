@@ -868,4 +868,16 @@ mod tests {
             .unwrap();
         assert_eq!(cache.get_model("hf/default").unwrap().format, "huggingface");
     }
+
+    #[tokio::test]
+    async fn test_corrupt_manifest_json_falls_back_to_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path()).unwrap();
+        std::fs::write(tmp.path().join("manifest.json"), "{ not valid json").unwrap();
+        let cache = ModelCache::with_cache_dir(tmp.path().to_path_buf())
+            .await
+            .unwrap();
+        assert!(!cache.has_model("any"));
+        assert!(cache.list_models().is_empty());
+    }
 }

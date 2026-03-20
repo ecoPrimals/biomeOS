@@ -33,11 +33,14 @@ impl SerialChannel {
     /// - Permission denied (need to be root or in dialout group)
     /// - Device is already open exclusively
     pub fn new() -> Result<Self> {
-        let path = "/dev/ttyS0";
+        Self::open_path(Path::new("/dev/ttyS0"))
+    }
 
-        if !Path::new(path).exists() {
+    /// Open a writable device path (used by tests with a regular file; production uses [`Self::new`].
+    pub(crate) fn open_path(path: &Path) -> Result<Self> {
+        if !path.exists() {
             return Err(BootError::DeviceNotFound {
-                device: path.to_string(),
+                device: path.display().to_string(),
             });
         }
 
@@ -46,7 +49,7 @@ impl SerialChannel {
                 .write(true)
                 .open(path)
                 .map_err(|e| BootError::DeviceOpen {
-                    device: path.to_string(),
+                    device: path.display().to_string(),
                     error: e.to_string(),
                 })?;
 
@@ -93,8 +96,10 @@ impl SerialChannel {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_serial_availability() {
@@ -114,5 +119,35 @@ mod tests {
                 Err(e) => println!("Serial channel failed (expected in test): {e:?}"),
             }
         }
+    }
+
+    #[test]
+    fn test_open_path_missing_device() {
+        let result = SerialChannel::open_path(Path::new("/nonexistent/ttyS0-serial-test"));
+        assert!(matches!(result, Err(BootError::DeviceNotFound { .. })));
+    }
+
+    #[test]
+    fn test_write_and_flush_roundtrip_on_temp_file() {
+        let tmp = NamedTempFile::new().expect("temp file");
+        let path = tmp.path().to_path_buf();
+
+        let mut channel = SerialChannel::open_path(&path).expect("open temp file");
+        channel.write(b"boot> ").expect("write");
+        channel.flush().expect("flush");
+
+        let buf = std::fs::read(&path).expect("read back");
+        assert_eq!(buf, b"boot> ");
+    }
+
+    #[test]
+    fn test_device_not_found_preserves_path_display() {
+        let p = "/no/such/serial";
+        let result = SerialChannel::open_path(Path::new(p));
+        let err = result.err().expect("should err");
+        assert!(
+            format!("{err:?}").contains("no/such") || err.to_string().contains("no/such"),
+            "{err:?}"
+        );
     }
 }

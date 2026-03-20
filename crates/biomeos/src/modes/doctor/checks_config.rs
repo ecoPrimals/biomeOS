@@ -204,7 +204,7 @@ mod tests {
         assert!(check.details.iter().any(|d| d.contains("Modes:")));
         assert!(check.details.iter().any(|d| d.contains("UniBin")));
         if let Some(size_detail) = check.details.iter().find(|d| d.starts_with("Size:")) {
-            assert!(size_detail.contains("M"));
+            assert!(size_detail.contains('M'));
         }
     }
 

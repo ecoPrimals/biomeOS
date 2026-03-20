@@ -179,8 +179,8 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v2.54)
-**Updated**: March 19, 2026
-**Tests**: 6,169 passing, fully concurrent, zero sleeps/serial (~84% line coverage, llvm-cov verified)
+**Status**: Production Ready (v2.55)
+**Updated**: March 20, 2026
+**Tests**: 6,760 passing, ~89% region coverage (llvm-cov verified)
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

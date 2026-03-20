@@ -417,7 +417,7 @@ mod tests {
     #[test]
     fn test_manifest_validation_empty_name() {
         let mut manifest = BiomeManifest::default();
-        manifest.metadata.name = "".to_string();
+        manifest.metadata.name = String::new();
         assert!(BiomeManifestProcessor::validate(&manifest).is_err());
     }
 
@@ -488,7 +488,7 @@ mod tests {
         manifest.metadata.name = "test".to_string();
         manifest.dependencies = vec![
             biomeos_types::manifest::manifest_extensions::BiomeDependency {
-                name: "".to_string(),
+                name: String::new(),
                 version: None,
                 optional: false,
                 source: biomeos_types::manifest::manifest_extensions::DependencySource::Local {
@@ -505,7 +505,7 @@ mod tests {
         let mut manifest = BiomeManifest::default();
         manifest.metadata.name = "test".to_string();
         manifest.networks.insert(
-            "".to_string(),
+            String::new(),
             biomeos_types::manifest::networking_core::NetworkSpec::default(),
         );
         let result = BiomeManifestProcessor::validate(&manifest);

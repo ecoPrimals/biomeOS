@@ -67,7 +67,7 @@ criterion = { workspace = true }
 ureq = { workspace = true }
 
 # Test utilities
-biomeos-test-utils = { path = "../biomeos-test-utils" }
+biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 serde_json = { workspace = true }
 tracing-test = "0.2"
 serial_test = "3.2"

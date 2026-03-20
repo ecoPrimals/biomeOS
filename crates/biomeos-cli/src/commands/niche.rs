@@ -226,6 +226,7 @@ pub async fn handle_primal_list() -> anyhow::Result<()> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_parse_niche_yaml_info() {
@@ -328,5 +329,262 @@ niche:
     async fn test_handle_primal_list_nonexistent_dir() {
         let result = handle_primal_list().await;
         assert!(result.is_ok());
+    }
+
+    struct RestoreCwd(std::path::PathBuf);
+    impl Drop for RestoreCwd {
+        fn drop(&mut self) {
+            let _ = std::env::set_current_dir(&self.0);
+        }
+    }
+
+    /// Reset cwd when a prior test left it pointing at a deleted temp directory.
+    fn reset_process_cwd() {
+        let _ = std::env::set_current_dir("/");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_niche_list_with_yaml_template() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        reset_process_cwd();
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("niches/templates").unwrap();
+        std::fs::write(
+            "niches/templates/demo.yaml",
+            r#"
+niche:
+  name: "Demo Niche"
+  category: "development"
+  description: "Test template"
+"#,
+        )
+        .unwrap();
+
+        let result = handle_niche_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_niche_show_existing_template() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        reset_process_cwd();
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("niches/templates").unwrap();
+        std::fs::write(
+            "niches/templates/my-niche.yaml",
+            r#"
+niche:
+  name: "Shown Niche"
+  category: "gaming"
+  description: "Line one"
+organisms:
+  - id: a
+    primal: beardog
+customization:
+  - id: theme
+    name: Theme
+resources:
+  cpu: 2
+"#,
+        )
+        .unwrap();
+
+        let result = handle_niche_show("my-niche").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "cwd-sensitive: run with --ignored --test-threads=1"]
+    async fn test_handle_primal_list_with_binaries() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        reset_process_cwd();
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("bin/primals").unwrap();
+        std::fs::write("bin/primals/beardog-1.0.0", b"x").unwrap();
+        std::fs::write("bin/primals/beardog-1.0.1", b"y").unwrap();
+        std::fs::write("bin/primals/songbird-2", b"z").unwrap();
+
+        let result = handle_primal_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_category_line_before_name() {
+        let yaml = "category: gaming\nname: Later Name\n";
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(category, "gaming");
+        assert_eq!(name, "Later Name");
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_name_with_primal_substring() {
+        let yaml = "primal:\n  name: ignore\nniche:\n  name: Real\n  category: federation\n";
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(name, "ignore");
+        assert_eq!(category, "federation");
+    }
+
+    #[test]
+    fn test_category_to_icon_exhaustive_known() {
+        assert_eq!(category_to_icon("gaming"), "🎮");
+        assert_eq!(category_to_icon("ai_research"), "🧠");
+        assert_eq!(category_to_icon("development"), "💻");
+        assert_eq!(category_to_icon("federation"), "🌐");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_niche_list_empty_templates_dir() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        reset_process_cwd();
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("niches/templates").unwrap();
+
+        let result = handle_niche_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_primal_list_skips_dotfiles() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        reset_process_cwd();
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("bin/primals").unwrap();
+        std::fs::write("bin/primals/.hidden", b"x").unwrap();
+        std::fs::write("bin/primals/tower-1", b"y").unwrap();
+
+        let result = handle_primal_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_features_line() {
+        let yaml = "features:\n  - gpu\nname: \"Feat Niche\"\n  category: gaming\n";
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(name, "Feat Niche");
+        assert_eq!(category, "gaming");
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_description_only_name_line() {
+        let yaml = "description: \"No name line\"\ncategory: federation\n";
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(name, "Unknown");
+        assert_eq!(category, "federation");
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_quoted_category() {
+        let yaml = "category: \"ai_research\"\nname: \"Lab\"\n";
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(category, "ai_research");
+        assert_eq!(name, "Lab");
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "cwd-sensitive: run with --ignored --test-threads=1"]
+    async fn test_handle_niche_list_skips_non_yaml() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        reset_process_cwd();
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("niches/templates").unwrap();
+        std::fs::write("niches/templates/readme.txt", "not yaml").unwrap();
+        std::fs::write(
+            "niches/templates/only.yaml",
+            r#"niche:
+  name: "Only"
+  category: "development"
+"#,
+        )
+        .unwrap();
+
+        let result = handle_niche_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_niche_show_all_sections() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        reset_process_cwd();
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("niches/templates").unwrap();
+        std::fs::write(
+            "niches/templates/full.yaml",
+            r#"
+niche:
+  name: "Full"
+  description: "desc"
+  category: "federation"
+  features:
+    - a
+organisms:
+  - id: o1
+    primal: beardog
+  # comment skip
+customization:
+  - id: c1
+    name: Custom
+resources:
+  mem: 1Gi
+"#,
+        )
+        .unwrap();
+
+        let result = handle_niche_show("full").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handle_primal_list_many_binaries_same_primal() {
+        let _guard = crate::CWD_TEST_LOCK.lock().await;
+        reset_process_cwd();
+        let temp = tempfile::tempdir().unwrap();
+        let _restore = RestoreCwd(std::env::current_dir().unwrap());
+        std::env::set_current_dir(temp.path()).unwrap();
+        std::fs::create_dir_all("bin/primals").unwrap();
+        for i in 0..5 {
+            std::fs::write(format!("bin/primals/tower-{i}"), b"x").unwrap();
+        }
+
+        let result = handle_primal_list().await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_first_name_wins() {
+        let yaml = "name: First\nname: Second\n";
+        let (name, _) = parse_niche_yaml_info(yaml);
+        assert_eq!(name, "First");
+    }
+
+    #[test]
+    fn test_category_to_icon_exhaustive_default() {
+        assert_eq!(category_to_icon("anything_else"), "🌿");
+    }
+
+    #[test]
+    fn test_primal_to_icon_case_sensitive_constants() {
+        assert_eq!(primal_to_icon("Beardog"), "📦");
     }
 }

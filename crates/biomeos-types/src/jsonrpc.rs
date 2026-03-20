@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn test_jsonrpc_response_error() {
         let err = JsonRpcError::method_not_found();
-        let resp = JsonRpcResponse::error(serde_json::json!(1), err.clone());
+        let resp = JsonRpcResponse::error(serde_json::json!(1), err);
         assert!(resp.result.is_none());
         assert!(resp.error.is_some());
         assert_eq!(resp.error.as_ref().unwrap().code, -32601);

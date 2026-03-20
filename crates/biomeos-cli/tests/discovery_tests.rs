@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for biomeos-cli discovery commands
 //!
 //! EVOLVED (Jan 28, 2026): Concurrency-First Design
@@ -43,7 +45,7 @@ impl MockPrimalServer {
 
         let listener = UnixListener::bind(&socket_path).expect("Failed to bind socket");
         let name = primal_name.to_string();
-        let caps: Vec<String> = capabilities.into_iter().map(|s| s.to_string()).collect();
+        let caps: Vec<String> = capabilities.into_iter().map(str::to_string).collect();
         let caps_clone = caps.clone();
 
         let handle = tokio::spawn(async move {
@@ -81,8 +83,14 @@ impl MockPrimalServer {
 
         while reader.read_line(&mut line).await? > 0 {
             let request: serde_json::Value = serde_json::from_str(line.trim())?;
-            let method = request.get("method").and_then(|m| m.as_str()).unwrap_or("");
-            let id = request.get("id").and_then(|i| i.as_u64()).unwrap_or(0);
+            let method = request
+                .get("method")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            let id = request
+                .get("id")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
 
             let response = match method {
                 "primal.capabilities" | "discovery.capabilities" => json!({
@@ -274,7 +282,7 @@ async fn test_discovery_filtering() -> Result<()> {
             if let Some(result) = response.get("result") {
                 if result
                     .get("found")
-                    .and_then(|f| f.as_bool())
+                    .and_then(serde_json::Value::as_bool)
                     .unwrap_or(false)
                 {
                     security_primals.push(result.clone());
@@ -360,7 +368,10 @@ async fn test_discovery_federation() -> Result<()> {
         let entry = entry?;
         let filename = entry.file_name().to_string_lossy().to_string();
 
-        if filename.ends_with(".sock") {
+        if std::path::Path::new(&filename)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+        {
             // Extract family from filename pattern: {primal}-{family}.sock
             if let Some(family) = filename
                 .strip_suffix(".sock")

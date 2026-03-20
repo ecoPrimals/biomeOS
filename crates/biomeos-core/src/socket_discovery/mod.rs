@@ -68,6 +68,7 @@ mod strategy;
 mod transport;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod engine_tests;
 
 // Re-export primary types
@@ -132,6 +133,7 @@ pub async fn discover_endpoint_by_capability(capability: &str) -> Option<Transpo
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_test_utils::{remove_test_env, set_test_env};

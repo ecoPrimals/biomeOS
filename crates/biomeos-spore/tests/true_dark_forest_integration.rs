@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! TRUE Dark Forest Integration Tests
 //!
 //! Comprehensive end-to-end testing of A++ security features:
@@ -288,7 +290,7 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
 
     // Test 4: Size consistency
     println!("\n📊 Test 4: Verify size consistency");
-    let sizes: Vec<usize> = beacons.iter().map(|b| b.len()).collect();
+    let sizes: Vec<usize> = beacons.iter().map(bytes::Bytes::len).collect();
     let min_size = sizes.iter().min().unwrap();
     let max_size = sizes.iter().max().unwrap();
     let size_variance = max_size - min_size;

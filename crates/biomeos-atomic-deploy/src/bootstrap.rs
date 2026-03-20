@@ -448,4 +448,63 @@ mod tests {
         assert_eq!(capabilities.len(), 5);
         assert!(capabilities.iter().all(|c| !c.is_empty()));
     }
+
+    #[tokio::test]
+    async fn test_transition_to_coordinated_tower_sockets_present() {
+        use biomeos_test_utils::TestEnvGuard;
+
+        let tmp = TempDir::new().expect("temp");
+        let _xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", tmp.path().to_str().expect("utf8"));
+
+        let family_id = "bootstrap-coord-fam";
+        let security_provider = biomeos_types::env_config::security_provider()
+            .or_else(|| {
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                    "security",
+                )
+                .map(String::from)
+            })
+            .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
+        let network_provider = biomeos_types::env_config::network_provider()
+            .or_else(|| {
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                    "discovery",
+                )
+                .map(String::from)
+            })
+            .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
+
+        let mut nucleation = SocketNucleation::new(SocketStrategy::default());
+        let beardog_socket = nucleation.assign_socket(&security_provider, family_id);
+        let songbird_socket = nucleation.assign_socket(&network_provider, family_id);
+        std::fs::File::create(&beardog_socket).expect("touch beardog");
+        std::fs::File::create(&songbird_socket).expect("touch songbird");
+
+        let result = transition_to_coordinated(family_id).await;
+        assert!(
+            result.is_ok(),
+            "transition should complete when sockets exist: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_register_self_in_registry_socket_path_used() {
+        let temp_dir = TempDir::new().expect("temp");
+        let socket_path = temp_dir.path().join("registry-path.sock");
+        std::fs::File::create(&socket_path).expect("placeholder");
+
+        let router = Arc::new(NeuralRouter::new("path-family"));
+        let mode = RwLock::new(BiomeOsMode::Bootstrap);
+
+        register_self_in_registry(&router, "path-family", &socket_path, &mode)
+            .await
+            .expect("register");
+
+        let p = router
+            .get_capability_providers("ecosystem.nucleation")
+            .await
+            .expect("providers");
+        assert_eq!(p[0].socket_path, socket_path);
+    }
 }

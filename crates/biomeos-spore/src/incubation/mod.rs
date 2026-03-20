@@ -615,7 +615,7 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().unwrap();
         let spore_path = temp_dir.path();
         std::fs::create_dir_all(spore_path).unwrap();
-        std::fs::write(spore_path.join(".family.seed"), &[0u8; 32]).unwrap();
+        std::fs::write(spore_path.join(".family.seed"), [0u8; 32]).unwrap();
         std::fs::write(
             spore_path.join("tower.toml"),
             r#"[meta]
@@ -634,5 +634,66 @@ family = "test-family"
     async fn test_list_local_nodes_empty() {
         let result = list_local_nodes().await;
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_incubate_end_to_end_and_list_local_nodes() {
+        use biomeos_test_utils::TestEnvGuard;
+
+        let temp_home = tempfile::tempdir().expect("temp home");
+        let _home_guard = TestEnvGuard::set("HOME", temp_home.path().to_str().expect("utf8 path"));
+
+        let spore_root = tempfile::tempdir().expect("spore root");
+        std::fs::write(spore_root.path().join(".family.seed"), [11u8; 32]).expect("seed");
+        std::fs::write(
+            spore_root.path().join("tower.toml"),
+            r#"[meta]
+node_id = "e2e-incubate-spore"
+[tower]
+family = "fam-e2e-incubate"
+"#,
+        )
+        .expect("tower");
+
+        let incubator = SporeIncubator::new(spore_root.path()).expect("incubator");
+        let node = incubator
+            .incubate(Some("e2e-test-host"), false)
+            .await
+            .expect("incubate");
+
+        assert!(node.node_id.contains("e2e-incubate-spore"));
+        assert!(node.local_config_path.join("node.toml").exists());
+        assert!(node.local_config_path.join(".deployed.seed").exists());
+        assert!(node.local_config_path.join("entropy.json").exists());
+
+        let listed = list_local_nodes().await.expect("list");
+        assert!(
+            listed.iter().any(|c| c.node.node_id == node.node_id),
+            "deployed-nodes scan should find incubated node"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_list_local_nodes_skips_invalid_node_toml() {
+        use biomeos_test_utils::TestEnvGuard;
+
+        let temp_home = tempfile::tempdir().expect("temp home");
+        let _home_guard = TestEnvGuard::set("HOME", temp_home.path().to_str().expect("utf8 path"));
+
+        let nodes_dir = temp_home
+            .path()
+            .join(".config")
+            .join("biomeos")
+            .join("deployed-nodes");
+        let bad = nodes_dir.join("bad-entry");
+        std::fs::create_dir_all(&bad).expect("mkdir");
+        std::fs::write(bad.join("node.toml"), "not valid toml {{{").expect("bad toml");
+
+        let listed = list_local_nodes().await.expect("list");
+        assert!(
+            listed.is_empty(),
+            "invalid node.toml should be skipped, got {} entries",
+            listed.len()
+        );
     }
 }

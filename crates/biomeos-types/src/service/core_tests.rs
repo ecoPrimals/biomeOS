@@ -301,7 +301,7 @@ fn test_scaling_policy_and_metrics_serde() {
     };
     let json = serde_json::to_string(&metric).unwrap();
     let deserialized: ScalingMetric = serde_json::from_str(&json).unwrap();
-    assert_eq!(metric.target_value, deserialized.target_value);
+    assert!((metric.target_value - deserialized.target_value).abs() < f64::EPSILON);
 }
 
 #[test]

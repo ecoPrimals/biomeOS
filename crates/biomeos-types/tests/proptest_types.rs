@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Property-based tests for biomeos-types.
 //!
 //! Tests roundtrip serialization, identifier validation, and primal name constants.
@@ -33,7 +35,7 @@ proptest! {
             "[a-zA-Z0-9_.-]{0,64}".prop_map(|s| serde_json::json!(s)),
         ],
     ) {
-        let req = JsonRpcRequest::new(&method, params.clone());
+        let req = JsonRpcRequest::new(&method, params);
         let json = serde_json::to_string(&req).expect("serialize");
         let parsed: JsonRpcRequest = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(req.method.as_ref(), parsed.method.as_ref());

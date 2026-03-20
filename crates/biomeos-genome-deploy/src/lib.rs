@@ -745,4 +745,106 @@ mod tests {
         assert!(!macos_supports);
         assert!(!windows_supports);
     }
+
+    #[test]
+    fn test_default_install_dir_linux_user_uses_dot_local() {
+        let temp = TempDir::new().expect("temp dir");
+        let genome_path = temp.path().join("primal.genome");
+        let mut f = File::create(&genome_path).expect("create");
+        f.write_all(b"x").expect("write");
+        let deployer = GenomeDeployer::new(&genome_path).expect("deployer");
+        if deployer.platform != Platform::Linux {
+            return;
+        }
+        let p = deployer.default_install_dir("myprimal");
+        let s = p.to_string_lossy();
+        assert!(
+            s.contains(".local/myprimal") || s.contains("/opt/myprimal"),
+            "unexpected install dir: {s}"
+        );
+    }
+
+    #[test]
+    fn test_extract_archive_wrong_arch_fails() {
+        let temp = TempDir::new().expect("temp dir");
+        let genome_path = temp.path().join("wrongarch.genome");
+        write_genome_bin_with_arch_dir(&genome_path, "definitely_not_a_real_arch_triple");
+        let install = temp.path().join("out");
+        std::fs::create_dir_all(&install).expect("install");
+        let deployer = GenomeDeployer::new(&genome_path)
+            .expect("deployer")
+            .with_install_dir(&install);
+        let err = deployer
+            .deploy()
+            .expect_err("deploy should fail when arch dir missing");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("No binaries") || msg.contains("architecture"),
+            "unexpected: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_deploy_full_success_with_stub_binary() {
+        let temp = TempDir::new().expect("temp dir");
+        let genome_path = temp.path().join("stub.genome");
+        let arch = Architecture::detect().expect("arch").as_str();
+        write_genome_bin_with_arch_dir(&genome_path, arch);
+        let install = temp.path().join("install");
+        std::fs::create_dir_all(&install).expect("install");
+        let deployer = GenomeDeployer::new(&genome_path)
+            .expect("deployer")
+            .with_install_dir(&install);
+        deployer.deploy().expect("deploy");
+        let binary = install.join("stub");
+        assert!(binary.exists(), "stub binary should be installed");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&binary)
+                .expect("meta")
+                .permissions()
+                .mode();
+            assert!(mode & 0o111 != 0, "binary should be executable");
+        }
+    }
+
+    /// Minimal genomeBin: marker + gzipped tar with `{arch}/stub` executable script.
+    fn write_genome_bin_with_arch_dir(path: &std::path::Path, arch_dir: &str) {
+        use flate2::Compression;
+        use flate2::write::GzEncoder;
+        use std::io::Write;
+        use tar::{Builder, Header};
+
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        {
+            let mut tar = Builder::new(&mut encoder);
+            let script =
+                b"#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo \"stub 1.0.0\"; fi\nexit 0\n";
+            let mut header = Header::new_gnu();
+            let inner_path = format!("{arch_dir}/stub");
+            header.set_path(&inner_path).expect("path");
+            header.set_size(script.len() as u64);
+            header.set_mode(0o755);
+            header.set_cksum();
+            tar.append(&header, &script[..]).expect("append");
+            tar.finish().expect("finish");
+        }
+        let compressed = encoder.finish().expect("gz finish");
+        let mut f = File::create(path).expect("create genome");
+        f.write_all(b"stub-genome-header\n__ARCHIVE_START__\n")
+            .expect("marker");
+        f.write_all(&compressed).expect("gz");
+    }
+
+    #[test]
+    fn test_verify_installation_skips_version_when_binary_nonzero() {
+        let temp = TempDir::new().expect("temp dir");
+        let install = temp.path().join("verify");
+        std::fs::create_dir_all(&install).expect("dir");
+        let primal = install.join("verifybin");
+        std::fs::write(&primal, b"not executable").expect("file");
+        let r = GenomeDeployer::verify_installation(&install, "verifybin");
+        assert!(r.is_ok());
+    }
 }

@@ -59,3 +59,22 @@ name = "Node 1"
         .expect_err("should fail");
     assert!(err.to_string().contains("not Pipeline"));
 }
+
+#[tokio::test]
+async fn test_execute_pipeline_invalid_deployment_graph_toml() {
+    let temp = tempdir().expect("tempdir");
+    let path = temp.path().join("bad_pipe.toml");
+    std::fs::write(&path, "[[[broken").expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let params = Some(json!({"graph_id": "bad_pipe"}));
+    let err = handler
+        .execute_pipeline(&params)
+        .await
+        .expect_err("should fail");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("parse") || msg.contains("Failed") || msg.contains("TOML"),
+        "unexpected: {msg}"
+    );
+}

@@ -26,14 +26,12 @@ mod tests {
     #[tokio::test]
     async fn test_suggestion_manager_creation() {
         let manager = AISuggestionManager::new("test_family".to_string());
-        assert_eq!(manager._family_id, "test_family");
+        assert_eq!(manager.family_id, "test_family");
         assert!(manager.active_suggestions.is_empty());
     }
 
     #[tokio::test]
     async fn test_local_suggestions_unassigned_device() {
-        let manager = AISuggestionManager::new("test_family".to_string());
-
         let context = SuggestionContext {
             assignments: HashMap::new(),
             available_devices: vec![DeviceInfo {
@@ -64,8 +62,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_suggestions_overloaded_primal() {
-        let manager = AISuggestionManager::new("test_family".to_string());
-
         let context = SuggestionContext {
             assignments: HashMap::new(),
             available_devices: vec![],
@@ -91,8 +87,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_suggestions_device_already_assigned() {
-        let manager = AISuggestionManager::new("test_family".to_string());
-
         let context = SuggestionContext {
             assignments: HashMap::new(),
             available_devices: vec![DeviceInfo {
@@ -122,8 +116,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_suggestions_no_compatible_primal() {
-        let manager = AISuggestionManager::new("test_family".to_string());
-
         let context = SuggestionContext {
             assignments: HashMap::new(),
             available_devices: vec![DeviceInfo {
@@ -153,8 +145,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_suggestions_load_boundary_0_8() {
-        let manager = AISuggestionManager::new("test_family".to_string());
-
         let context = SuggestionContext {
             assignments: HashMap::new(),
             available_devices: vec![],
@@ -180,8 +170,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_suggestions_load_below_threshold() {
-        let manager = AISuggestionManager::new("test_family".to_string());
-
         let context = SuggestionContext {
             assignments: HashMap::new(),
             available_devices: vec![],
@@ -206,8 +194,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_suggestions_primal_no_load_info() {
-        let manager = AISuggestionManager::new("test_family".to_string());
-
         let context = SuggestionContext {
             assignments: HashMap::new(),
             available_devices: vec![],
@@ -439,7 +425,11 @@ mod tests {
             risk_level: "low".to_string(),
         };
 
-        assert_eq!(impact.performance_improvement, Some(25.5));
+        assert!(
+            impact
+                .performance_improvement
+                .is_some_and(|v| (v - 25.5).abs() < f32::EPSILON)
+        );
         assert_eq!(impact.cost_change, Some("-10%".to_string()));
         assert_eq!(impact.affected_primals.len(), 2);
         assert_eq!(impact.risk_level, "low");
@@ -704,7 +694,7 @@ mod tests {
         };
 
         assert_eq!(suggestion.id, "complete_test");
-        assert_eq!(suggestion.confidence, 0.88);
+        assert!((suggestion.confidence - 0.88).abs() < f32::EPSILON);
         assert!(suggestion.confidence > 0.5);
         assert_eq!(suggestion.impact.affected_primals.len(), 2);
 
@@ -712,7 +702,7 @@ mod tests {
         let json = serde_json::to_string(&suggestion).unwrap();
         let deserialized: AISuggestion = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.id, "complete_test");
-        assert_eq!(deserialized.confidence, 0.88);
+        assert!((deserialized.confidence - 0.88).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -742,7 +732,7 @@ mod tests {
         };
 
         assert_eq!(primal.name, "TestPrimal");
-        assert_eq!(primal.load, Some(0.65));
+        assert!(primal.load.is_some_and(|v| (v - 0.65).abs() < f32::EPSILON));
         assert!(primal.load.unwrap() < 0.8); // Not overloaded
     }
 

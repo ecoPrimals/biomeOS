@@ -44,9 +44,10 @@ tokio-util = { version = "0.7", features = ["codec"] }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils" }
+biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio-test = { workspace = true }
 tempfile = "3.8"
+serial_test = "3.2"
 
 [features]
 default = []

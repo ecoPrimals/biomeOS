@@ -292,6 +292,7 @@ impl GenomeBin {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -341,7 +342,7 @@ mod tests {
         compressed.verify().expect("verify should succeed");
 
         // Tampered data should fail
-        let mut tampered = compressed.clone();
+        let mut tampered = compressed;
         tampered.checksum[0] ^= 0xff;
         tampered
             .verify()

@@ -515,8 +515,11 @@ mod tests {
         assert!(!result);
     }
 
+    static SHARE_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     #[tokio::test]
     async fn test_share_with_family_no_beardog_fails() {
+        let _guard = SHARE_ENV_LOCK.lock().await;
         remove_test_env("BEARDOG_ENDPOINT");
         remove_test_env("SONGBIRD_ENDPOINT");
         let observer = MinimalObserver::family_federation(
@@ -531,6 +534,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_share_with_family_beardog_but_no_songbird_fails() {
+        let _guard = SHARE_ENV_LOCK.lock().await;
         set_test_env("BEARDOG_ENDPOINT", "/tmp/beardog.sock");
         remove_test_env("SONGBIRD_ENDPOINT");
         let observer = MinimalObserver::family_federation(

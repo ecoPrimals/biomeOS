@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for biomeOS API contracts and component interactions
 //!
 //! Modern integration test suite that validates how different components of biomeOS

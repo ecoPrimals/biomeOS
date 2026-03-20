@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! E2E Tests for the Provenance Trio (rhizoCrypt + LoamSpine + sweetGrass)
 //!
 //! Validates the complete RootPulse commit workflow:
@@ -41,8 +43,7 @@ struct ProvenanceTrioFixture {
 impl ProvenanceTrioFixture {
     fn new(family_id: &str) -> Self {
         let socket_dir = std::env::var("XDG_RUNTIME_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("/tmp"))
+            .map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from)
             .join("biomeos");
 
         std::fs::create_dir_all(&socket_dir).ok();
@@ -221,8 +222,7 @@ fn test_provenance_trio_deploy_graph_parses() {
         .filter(|n| {
             n.operation
                 .as_ref()
-                .map(|o| o.name == "primal.launch")
-                .unwrap_or(false)
+                .is_some_and(|o| o.name == "primal.launch")
         })
         .map(|n| n.id.as_str())
         .collect();
@@ -432,6 +432,7 @@ async fn test_trio_capabilities_registered() {
 //          via Neural API graph execution
 // ═══════════════════════════════════════════════════════════════════════════════
 
+#[allow(clippy::too_many_lines)]
 #[tokio::test]
 #[ignore = "Requires running primals - use for integration testing"]
 async fn test_rootpulse_commit_e2e() {

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Health Module Tests
 //!
 //! Comprehensive tests for the health monitoring system.
@@ -16,8 +18,8 @@ mod health_tests {
 
     #[test]
     fn test_health_score_calculation() {
-        assert_eq!(Health::healthy().score(), 1.0);
-        assert_eq!(Health::unhealthy(vec![]).score(), 0.0);
+        assert!((Health::healthy().score() - 1.0).abs() < f64::EPSILON);
+        assert!((Health::unhealthy(vec![]).score() - 0.0).abs() < f64::EPSILON);
         assert!(Health::degraded(vec![]).score() > 0.5);
         assert!(Health::critical(vec![], vec![]).score() < 0.5);
     }
@@ -187,7 +189,7 @@ mod health_tests {
             operator: ThresholdOperator::GreaterThan,
             action: ThresholdAction::MarkDegraded,
         };
-        assert_eq!(threshold.value, 80.0);
+        assert!((threshold.value - 80.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -502,7 +504,11 @@ mod health_tests {
                 packets_out_per_sec: 5.0,
             }),
         };
-        assert_eq!(metrics.cpu_usage, Some(0.65));
+        assert!(
+            metrics
+                .cpu_usage
+                .is_some_and(|v| (v - 0.65).abs() < f64::EPSILON)
+        );
         assert!(metrics.network_io.is_some());
     }
 

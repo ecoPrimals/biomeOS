@@ -120,10 +120,10 @@ family = "test"
         let temp = TempDir::new().unwrap();
         fs::write(
             temp.path().join("tower.toml"),
-            r#"
+            r"
 [meta]
 node_id = 42
-"#,
+",
         )
         .unwrap();
 

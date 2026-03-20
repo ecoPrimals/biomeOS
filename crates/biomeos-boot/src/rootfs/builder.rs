@@ -407,8 +407,8 @@ impl RootFsBuilder {
     }
 }
 
-#[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
@@ -430,7 +430,7 @@ mod tests {
     #[test]
     fn test_builder_new() {
         let config = test_config();
-        let builder = RootFsBuilder::new(config.clone());
+        let builder = RootFsBuilder::new(config);
         assert_eq!(builder.config.size, "1G");
         assert_eq!(builder.config.hostname, "test-biomeos");
     }
@@ -639,5 +639,172 @@ mod tests {
                 assert!(root.join(dir).exists(), "{} should exist", dir);
             }
         }
+    }
+
+    #[test]
+    fn test_root_fs_config_fields() {
+        let c = RootFsConfig {
+            size: "2G".to_string(),
+            output: PathBuf::from("/tmp/out.qcow2"),
+            primals_dir: Some(PathBuf::from("/p")),
+            services_dir: Some(PathBuf::from("/s")),
+            mount_point: Some(PathBuf::from("/mnt")),
+            fs_type: "xfs".to_string(),
+            dns_servers: Some(vec!["8.8.8.8".to_string()]),
+            nbd_device: None,
+            hostname: "h".to_string(),
+        };
+        assert_eq!(c.fs_type, "xfs");
+        assert_eq!(c.size, "2G");
+    }
+
+    #[test]
+    fn test_configure_system_empty_hostname_still_writes() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc")).expect("create etc");
+        let config = RootFsConfig {
+            hostname: String::new(),
+            dns_servers: Some(vec![]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        builder.configure_system(root).expect("configure_system");
+        let h = std::fs::read_to_string(root.join("etc/hostname")).expect("read");
+        assert_eq!(h.trim(), "");
+    }
+
+    #[test]
+    fn test_install_primals_skips_subdirectories() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        let primals_dir = temp.path().join("primals");
+        std::fs::create_dir_all(&primals_dir).expect("create primals");
+        std::fs::create_dir_all(primals_dir.join("subdir")).expect("subdir");
+        std::fs::write(primals_dir.join("exec-only"), b"x").expect("file");
+
+        let config = RootFsConfig {
+            primals_dir: Some(primals_dir.clone()),
+            dns_servers: Some(vec![]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        let rt = tokio::runtime::Runtime::new().expect("runtime");
+        rt.block_on(async {
+            builder
+                .install_primals(root, &primals_dir)
+                .await
+                .expect("install_primals");
+        });
+        assert!(root.join("usr/local/bin/exec-only").exists());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_install_services_replaces_stale_symlink_target() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let services_dir = temp.path().join("services");
+        std::fs::create_dir_all(&services_dir).expect("create services");
+        std::fs::write(
+            services_dir.join("replace.service"),
+            "[Unit]\nDescription=R\n[Service]\nExecStart=/bin/true\n",
+        )
+        .expect("write");
+
+        let root = temp.path().join("root");
+        let systemd_dir = root.join("etc/systemd/system");
+        let wants = systemd_dir.join("multi-user.target.wants");
+        std::fs::create_dir_all(&wants).expect("create");
+        let unit = systemd_dir.join("replace.service");
+        std::fs::write(&unit, "old content").expect("old unit");
+        let wrong = wants.join("replace.service");
+        std::os::unix::fs::symlink("/dev/null", &wrong).expect("wrong link");
+
+        RootFsBuilder::install_services(&root, &services_dir).expect("install_services");
+        assert!(wrong.exists());
+        let new_content = std::fs::read_to_string(&unit).expect("read unit");
+        assert!(new_content.contains("Description=R"));
+    }
+
+    #[test]
+    fn test_builder_exposes_config() {
+        let b = RootFsBuilder::new(test_config());
+        assert_eq!(b.config.hostname, "test-biomeos");
+    }
+
+    #[test]
+    fn test_discover_system_dns_reads_resolv_conf() {
+        let servers = RootFsBuilder::discover_system_dns();
+        match servers {
+            Ok(v) => {
+                if std::path::Path::new("/etc/resolv.conf").exists() {
+                    assert!(
+                        v.iter().all(|s| !s.is_empty()),
+                        "nameservers should be non-empty strings when parsed"
+                    );
+                }
+            }
+            Err(e) => {
+                assert!(
+                    e.to_string().contains("resolv") || e.to_string().contains("Failed"),
+                    "unexpected error: {e}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_configure_dns_system_branch_via_none_config() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc")).expect("create etc");
+        let config = RootFsConfig {
+            dns_servers: None,
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        let r = builder.configure_dns(root);
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn test_configure_dns_single_nameserver() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc")).expect("create etc");
+        let config = RootFsConfig {
+            dns_servers: Some(vec!["1.1.1.1".to_string()]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        builder.configure_dns(root).expect("dns");
+        let c = std::fs::read_to_string(root.join("etc/resolv.conf")).expect("read");
+        assert_eq!(c.lines().count(), 1);
+        assert!(c.contains("1.1.1.1"));
+    }
+
+    #[test]
+    fn test_root_fs_config_mount_point_optional() {
+        let c = RootFsConfig {
+            mount_point: Some(PathBuf::from("/mnt/rootfs")),
+            ..test_config()
+        };
+        assert_eq!(
+            c.mount_point
+                .as_ref()
+                .map(|p| p.to_string_lossy().to_string()),
+            Some("/mnt/rootfs".to_string())
+        );
+    }
+
+    #[test]
+    fn test_install_services_path_is_file_errors() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let not_a_dir = temp.path().join("file-not-dir");
+        std::fs::write(&not_a_dir, b"x").expect("write");
+        let root = temp.path().join("root");
+        std::fs::create_dir_all(&root).expect("root");
+        let result = RootFsBuilder::install_services(&root, &not_a_dir);
+        assert!(result.is_err());
     }
 }

@@ -7,8 +7,17 @@
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use super::*;
+
+/// Serialize tests that mutate `XDG_RUNTIME_DIR` or Songbird-related env vars (parallel runs race).
+/// Tokio mutex so async tests can hold the guard across `.await` without blocking the executor.
+static DISCOVERY_ENV_MUTEX: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+
+fn discovery_env_lock() -> &'static tokio::sync::Mutex<()> {
+    DISCOVERY_ENV_MUTEX.get_or_init(|| tokio::sync::Mutex::new(()))
+}
 
 #[test]
 fn test_endpoint_parsing_unix() {
@@ -118,7 +127,7 @@ fn test_primal_endpoint_clone() {
     let ep = PrimalEndpoint::Http {
         url: "http://x".into(),
     };
-    let cloned = ep.clone();
+    let cloned = ep;
     assert!(matches!(cloned, PrimalEndpoint::Http { .. }));
 }
 
@@ -151,7 +160,7 @@ fn test_discovered_primal_clone() {
         endpoints: vec![],
         metadata: HashMap::new(),
     };
-    let cloned = dp.clone();
+    let cloned = dp;
     assert_eq!(cloned.name, "x");
 }
 
@@ -355,11 +364,31 @@ fn test_discover_songbird_socket_not_found() {
 }
 
 #[test]
-fn test_discover_songbird_socket_from_env() {
-    let _guard = biomeos_test_utils::TestEnvGuard::set("SONGBIRD_SOCKET", "/tmp/test-sb.sock");
-    let result = PrimalDiscovery::discover_songbird_socket();
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "/tmp/test-sb.sock");
+fn test_discover_songbird_socket_from_env_vars() {
+    tokio::runtime::Runtime::new()
+        .expect("runtime")
+        .block_on(async {
+            let _lock = discovery_env_lock().lock().await;
+            {
+                let _sb = biomeos_test_utils::TestEnvGuard::remove("SONGBIRD_SOCKET");
+                let _ds = biomeos_test_utils::TestEnvGuard::set(
+                    "DISCOVERY_SOCKET",
+                    "/tmp/discovery-via-env.sock",
+                );
+                assert_eq!(
+                    PrimalDiscovery::discover_songbird_socket().unwrap(),
+                    "/tmp/discovery-via-env.sock"
+                );
+            }
+            {
+                let _sb =
+                    biomeos_test_utils::TestEnvGuard::set("SONGBIRD_SOCKET", "/tmp/test-sb.sock");
+                assert_eq!(
+                    PrimalDiscovery::discover_songbird_socket().unwrap(),
+                    "/tmp/test-sb.sock"
+                );
+            }
+        });
 }
 
 #[test]
@@ -371,4 +400,121 @@ fn test_parse_endpoint_empty() {
 fn test_parse_endpoint_udp_ipv6() {
     let ep = PrimalDiscovery::parse_endpoint("udp://[::1]:8080");
     assert!(ep.is_some());
+}
+
+#[tokio::test]
+async fn test_discover_includes_primal_from_env_endpoint() {
+    let _lock = discovery_env_lock().lock().await;
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xdg = dir.path().join("xdg-run");
+    // SystemPaths::get_runtime_dir() uses $XDG_RUNTIME_DIR/biomeos
+    let runtime = xdg.join(biomeos_types::primal_names::BIOMEOS);
+    std::fs::create_dir_all(&runtime).expect("mkdir");
+    let _rt =
+        biomeos_test_utils::TestEnvGuard::set("XDG_RUNTIME_DIR", xdg.to_string_lossy().as_ref());
+    let _e = biomeos_test_utils::TestEnvGuard::set(
+        "PRIMAL_CLI_COVERAGE_TEST_ENDPOINT",
+        "unix:///tmp/cli-coverage-primal.sock",
+    );
+    let mut pd = PrimalDiscovery::new();
+    let list = pd.discover().await.expect("discover");
+    let names: Vec<_> = list.iter().map(|p| p.name.as_str()).collect();
+    assert!(
+        names.contains(&"cli_coverage_test"),
+        "expected env-derived primal name, got {names:?}"
+    );
+    let p = pd.get("cli_coverage_test").expect("inserted");
+    assert_eq!(
+        p.metadata.get("discovered_via").map(String::as_str),
+        Some("environment")
+    );
+    assert!(matches!(
+        &p.endpoints[0],
+        PrimalEndpoint::UnixSocket { path } if path == &PathBuf::from("/tmp/cli-coverage-primal.sock")
+    ));
+}
+
+#[tokio::test]
+async fn test_discover_unix_socket_mock_primal_jsonrpc() {
+    let _lock = discovery_env_lock().lock().await;
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xdg = dir.path().join("runtime");
+    let runtime = xdg.join(biomeos_types::primal_names::BIOMEOS);
+    std::fs::create_dir_all(&runtime).expect("mkdir");
+    let _xdg =
+        biomeos_test_utils::TestEnvGuard::set("XDG_RUNTIME_DIR", xdg.to_string_lossy().as_ref());
+
+    let sock_path = runtime.join("mockprimal.sock");
+    let listener = tokio::net::UnixListener::bind(&sock_path).expect("bind mock primal");
+
+    let response = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": null,
+        "result": {
+            "name": "mockprimal",
+            "primal_type": "test",
+            "capabilities": ["storage", "compute"]
+        }
+    });
+    let response_line = serde_json::to_string(&response).expect("serialize") + "\n";
+
+    tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.expect("accept");
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let (mut read_half, mut write_half) = stream.into_split();
+        let mut buf = vec![0u8; 8192];
+        let _n = read_half.read(&mut buf).await.expect("read req");
+        write_half
+            .write_all(response_line.as_bytes())
+            .await
+            .expect("write");
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+    let mut pd = PrimalDiscovery::new();
+    pd.discover().await.expect("discover");
+
+    let p = pd.get("mockprimal").expect("mock primal registered");
+    assert_eq!(p.primal_type, "test");
+    assert!(p.capabilities.has(&Capability::Custom("storage".into())));
+    assert_eq!(
+        p.metadata.get("discovered_via").map(String::as_str),
+        Some("unix_socket")
+    );
+}
+
+#[tokio::test]
+async fn test_discover_songbird_jsonrpc_error_path() {
+    let _lock = discovery_env_lock().lock().await;
+    let dir = tempfile::tempdir().expect("tempdir");
+    let sock_path = dir.path().join("songbird-err.sock");
+    let listener = tokio::net::UnixListener::bind(&sock_path).expect("bind");
+
+    let line = r#"{"jsonrpc":"2.0","id":1,"error":{"message":"no peers"}}"#.to_string() + "\n";
+    tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.expect("accept");
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        let (read_half, mut write_half) = stream.into_split();
+        let mut reader = BufReader::new(read_half);
+        let mut req = String::new();
+        reader.read_line(&mut req).await.expect("read");
+        write_half.write_all(line.as_bytes()).await.expect("write");
+    });
+
+    let _sock_guard = biomeos_test_utils::TestEnvGuard::set(
+        "SONGBIRD_SOCKET",
+        sock_path.to_string_lossy().as_ref(),
+    );
+
+    let mut pd = PrimalDiscovery::new();
+    let err = pd
+        .discover_via_songbird()
+        .await
+        .expect_err("songbird should return error");
+    let msg = format!("{err}");
+    assert!(
+        msg.contains("Songbird discovery failed") || msg.contains("no peers"),
+        "got: {msg}"
+    );
 }

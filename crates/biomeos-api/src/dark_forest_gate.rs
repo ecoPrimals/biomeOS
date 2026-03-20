@@ -328,7 +328,7 @@ mod tests {
             neural_api_socket: None,
             family_id: "test_family".to_string(),
         };
-        let state = DarkForestGateState::new(config.clone());
+        let state = DarkForestGateState::new(config);
         assert!(state.config.enabled);
     }
 
@@ -508,6 +508,7 @@ mod tests {
             family_id: "test".to_string(),
         };
         let state = DarkForestGateState::new(config);
-        let _cloned = state.clone(); // Should compile — DarkForestGateState: Clone
+        let state2 = state.clone();
+        assert_eq!(state.config.family_id, state2.config.family_id);
     }
 }

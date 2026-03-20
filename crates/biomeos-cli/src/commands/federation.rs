@@ -336,7 +336,7 @@ pub(crate) fn truncate(s: &str, max: usize) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_federation::capability::{Capability, CapabilitySet};
@@ -499,5 +499,76 @@ mod tests {
     #[test]
     fn test_truncate_unicode() {
         assert_eq!(truncate("hello", 2), "...");
+    }
+
+    #[test]
+    fn test_default_federation_config_dir_contains_federation() {
+        let p = default_federation_config_dir();
+        assert!(
+            p.to_string_lossy().contains("federation"),
+            "unexpected path: {}",
+            p.display()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_federation_list_subfeds_empty_dir() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let args = ListSubfedsArgs {
+            config_dir: dir.path().to_path_buf(),
+            family: None,
+            detailed: false,
+        };
+        handle_federation_list_subfeds(&args).await.expect("list");
+    }
+
+    #[tokio::test]
+    async fn test_handle_federation_create_list_and_check_access() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let create = CreateSubfedArgs {
+            name: "cli-sf-test".to_string(),
+            parent_family: "parent-fam-1894".to_string(),
+            members: "node-a,node-b".to_string(),
+            capabilities: "storage,compute".to_string(),
+            isolation: "low".to_string(),
+            config_dir: dir.path().to_path_buf(),
+        };
+        handle_federation_create_subfed(&create)
+            .await
+            .expect("create subfed");
+
+        let list = ListSubfedsArgs {
+            config_dir: dir.path().to_path_buf(),
+            family: None,
+            detailed: true,
+        };
+        handle_federation_list_subfeds(&list).await.expect("list");
+
+        let join = JoinSubfedArgs {
+            name: "cli-sf-test".to_string(),
+            node: "node-c".to_string(),
+            config_dir: dir.path().to_path_buf(),
+        };
+        handle_federation_join_subfed(&join).await.expect("join");
+
+        let check = CheckAccessArgs {
+            node: "node-xyz".to_string(),
+            capability: "storage".to_string(),
+            subfed: Some("cli-sf-test".to_string()),
+            config_dir: dir.path().to_path_buf(),
+        };
+        handle_federation_check_access(&check)
+            .await
+            .expect("check specific");
+
+        let check_all = CheckAccessArgs {
+            node: "node-a".to_string(),
+            capability: "storage".to_string(),
+            subfed: None,
+            config_dir: dir.path().to_path_buf(),
+        };
+        handle_federation_check_access(&check_all)
+            .await
+            .expect("check all");
     }
 }

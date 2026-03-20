@@ -59,7 +59,7 @@ mod derivation_tests {
             family_id: "1894e909e454".to_string(),
             generation: 1,
             derived_seed: "dGVzdHNlZWQ=".to_string(),
-            derived_at: 1738726800,
+            derived_at: 1_738_726_800,
             derivation_method: "Blake3-Lineage-KDF".to_string(),
             lineage_certificate: None,
         }
@@ -402,7 +402,7 @@ mod derivation_tests {
             .verify_lineage_proof(&sample_lineage(), "peer", "proof-str")
             .await;
 
-        assert_eq!(result.expect("verify"), true);
+        assert!(result.expect("verify"));
     }
 
     #[tokio::test]
@@ -419,7 +419,7 @@ mod derivation_tests {
             .verify_lineage_proof(&sample_lineage(), "peer", "bad-proof")
             .await;
 
-        assert_eq!(result.expect("verify"), false);
+        assert!(!result.expect("verify"));
     }
 
     #[tokio::test]
@@ -433,6 +433,6 @@ mod derivation_tests {
             .verify_lineage_proof(&sample_lineage(), "peer", "proof")
             .await;
 
-        assert_eq!(result.expect("defaults to false"), false);
+        assert!(!result.expect("defaults to false"));
     }
 }

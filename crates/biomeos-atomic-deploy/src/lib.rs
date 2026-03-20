@@ -40,6 +40,7 @@
 #![allow(clippy::ignored_unit_patterns)] // Ok(()) matching
 #![allow(clippy::match_same_arms)] // Grouped match arms
 #![forbid(unsafe_code)] // No unsafe code in deployment
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 //! # Architecture
 //!

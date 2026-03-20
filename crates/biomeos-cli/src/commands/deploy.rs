@@ -249,7 +249,7 @@ mod tests {
         let result = HashMap::new();
         let lines = format_deployment_result(&result, false);
         assert!(lines[0].contains("Creation Results"));
-        assert!(lines.last().is_some_and(|l| l.is_empty()));
+        assert!(lines.last().is_some_and(String::is_empty));
     }
 
     #[test]

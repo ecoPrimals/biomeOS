@@ -309,7 +309,7 @@ impl PrimalDiscovery {
             .collect()
     }
 
-    async fn discover_via_songbird(&mut self) -> FederationResult<()> {
+    pub(crate) async fn discover_via_songbird(&mut self) -> FederationResult<()> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
 

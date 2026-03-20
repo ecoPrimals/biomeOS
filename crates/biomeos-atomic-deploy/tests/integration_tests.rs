@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for biomeos-atomic-deploy
 //!
 //! End-to-end deployment testing
@@ -32,7 +34,7 @@ fn test_deployment_config_round_trip() {
     let temp_dir = TempDir::new().unwrap();
     let seed_path = temp_dir.path().join("test.seed");
 
-    let config = DeploymentConfig::test_config(seed_path.clone());
+    let config = DeploymentConfig::test_config(seed_path);
 
     // JSON round-trip
     let json = serde_json::to_string(&config).unwrap();

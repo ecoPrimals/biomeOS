@@ -268,9 +268,25 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
+impl NeuralApiServer {
+    /// Exercise [`NeuralApiServer::load_translations_on_startup`] in unit tests (private otherwise).
+    pub(crate) async fn test_load_translations_on_startup(&self) -> Result<()> {
+        self.load_translations_on_startup().await
+    }
+}
+
+#[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
+
+    #[test]
+    #[serial_test::serial]
+    fn test_is_explicit_coordinated_mode_reads_biomeos_mode_env() {
+        let _guard = TestEnvGuard::set("BIOMEOS_MODE", "join");
+        assert!(is_explicit_coordinated_mode());
+    }
 
     #[test]
     fn test_is_explicit_coordinated_mode_str_coordinated() {
@@ -365,5 +381,63 @@ mod tests {
         // "join" is valid; "joiner" would not match (different string)
         assert!(is_explicit_coordinated_mode_str("join"));
         assert!(!is_explicit_coordinated_mode_str("joiner"));
+    }
+
+    #[tokio::test]
+    async fn test_load_translations_on_startup_defaults_only() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("neural-api.sock");
+        let server = NeuralApiServer::new(temp.path(), "test-fam", sock);
+        server
+            .test_load_translations_on_startup()
+            .await
+            .expect("load translations");
+    }
+
+    #[tokio::test]
+    async fn test_load_translations_on_startup_with_tower_atomic_graph() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let graph_toml = r#"
+[graph]
+id = "tower_atomic_bootstrap"
+version = "1.0.0"
+description = "Test graph for translations"
+
+[[nodes]]
+id = "log1"
+[nodes.operation]
+name = "log.info"
+[nodes.config]
+message = "test"
+"#;
+        std::fs::write(temp.path().join("tower_atomic_bootstrap.toml"), graph_toml)
+            .expect("write graph");
+        let sock = temp.path().join("neural-api.sock");
+        let server = NeuralApiServer::new(temp.path(), "test-fam", sock);
+        server
+            .test_load_translations_on_startup()
+            .await
+            .expect("load translations with graph");
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_numeric_not_explicit() {
+        assert!(!is_explicit_coordinated_mode_str("123"));
+    }
+
+    #[tokio::test]
+    async fn test_load_translations_graph_parse_warn_branch_still_ok() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            temp.path().join("tower_atomic_bootstrap.toml"),
+            "[[[ not valid graph",
+        )
+        .expect("write");
+        let sock = temp.path().join("neural-api.sock");
+        let server = NeuralApiServer::new(temp.path(), "test-fam", sock);
+        server
+            .test_load_translations_on_startup()
+            .await
+            .expect("startup load tolerates bad graph file");
     }
 }

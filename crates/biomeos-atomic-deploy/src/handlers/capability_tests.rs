@@ -5,8 +5,10 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use biomeos_test_utils::MockJsonRpcServer;
 use serde_json::json;
 use std::sync::Arc;
+use tempfile::tempdir;
 use tokio::sync::RwLock;
 
 use crate::capability_translation::CapabilityTranslationRegistry;
@@ -434,4 +436,167 @@ async fn test_list_includes_cost_estimates() {
         assert!(first.get("operation_dependencies").is_some());
         assert!(first.get("locality").is_some());
     }
+}
+
+#[tokio::test]
+async fn test_register_semantic_mappings_non_object_skipped() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "capability": "crypto",
+        "primal": "beardog",
+        "socket": "/tmp/x.sock",
+        "semantic_mappings": []
+    }));
+    handler.register(&params).await.unwrap();
+    let tr = handler.list_translations().await.unwrap();
+    assert_eq!(tr["count"], 0);
+}
+
+#[tokio::test]
+async fn test_register_semantic_mappings_ignores_non_string_values() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "capability": "crypto",
+        "primal": "beardog",
+        "socket": "/tmp/x.sock",
+        "semantic_mappings": { "op1": 123, "op2": "real.method" }
+    }));
+    handler.register(&params).await.unwrap();
+    let tr = handler.list_translations().await.unwrap();
+    assert_eq!(tr["count"], 1);
+}
+
+#[tokio::test]
+async fn test_route_success_via_mock_socket() {
+    let dir = tempdir().expect("tempdir");
+    let sock = dir.path().join("route-test.sock");
+    let _server =
+        MockJsonRpcServer::spawn_echo_success(&sock, json!({ "echo": true, "method": "pong" }))
+            .await;
+
+    let handler = make_handler();
+    let reg = Some(json!({
+        "capability": "mesh",
+        "primal": "songbird",
+        "socket": sock.to_str().unwrap(),
+        "source": "test"
+    }));
+    handler.register(&reg).await.expect("register");
+
+    let params = Some(json!({
+        "capability": "mesh",
+        "method": "any.method",
+        "params": { "a": 1 }
+    }));
+    let result = handler.route(&params).await.expect("route");
+    assert_eq!(result["echo"], true);
+
+    let metrics = handler.get_metrics().await.expect("metrics");
+    assert_eq!(metrics["total_requests"], 1);
+    let m0 = &metrics["metrics"].as_array().expect("arr")[0];
+    assert_eq!(m0["success"], true);
+}
+
+#[tokio::test]
+async fn test_call_uses_translation_when_present() {
+    let dir = tempdir().expect("tempdir");
+    let sock = dir.path().join("call-tr.sock");
+    let _server = MockJsonRpcServer::spawn_echo_success(&sock, json!({ "hashed": "abc" })).await;
+
+    let handler = make_handler();
+    let reg = Some(json!({
+        "capability": "crypto",
+        "primal": "beardog",
+        "socket": sock.to_str().unwrap(),
+        "source": "test",
+        "semantic_mappings": { "sha256": "crypto.blake3_hash" }
+    }));
+    handler.register(&reg).await.expect("reg");
+
+    let params = Some(json!({
+        "capability": "crypto",
+        "operation": "sha256",
+        "args": { "data": "x" }
+    }));
+    let out = handler.call(&params).await.expect("call");
+    assert_eq!(out["hashed"], "abc");
+}
+
+#[tokio::test]
+async fn test_call_direct_without_translation_warn_path() {
+    let dir = tempdir().expect("tempdir");
+    let sock = dir.path().join("call-direct.sock");
+    let _server = MockJsonRpcServer::spawn_echo_success(&sock, json!({ "direct": true })).await;
+
+    let handler = make_handler();
+    let reg = Some(json!({
+        "capability": "custom",
+        "primal": "p",
+        "socket": sock.to_str().unwrap(),
+        "source": "test"
+    }));
+    handler.register(&reg).await.expect("register");
+
+    let params = Some(json!({
+        "capability": "custom",
+        "operation": "custom.op",
+        "args": {}
+    }));
+    let out = handler.call(&params).await.expect("call");
+    assert_eq!(out["direct"], true);
+}
+
+#[tokio::test]
+async fn test_discover_missing_capability_field() {
+    let handler = make_handler();
+    let params = Some(json!({}));
+    let err = handler.discover(&params).await.unwrap_err();
+    assert!(err.to_string().contains("capability") || err.to_string().contains("Missing"));
+}
+
+#[tokio::test]
+async fn test_route_missing_capability_field() {
+    let handler = make_handler();
+    let params = Some(json!({ "method": "x", "params": {} }));
+    assert!(handler.route(&params).await.is_err());
+}
+
+#[tokio::test]
+async fn test_list_details_compute_locality_and_costs() {
+    let handler = make_handler();
+    handler
+        .register(&Some(json!({
+            "capability": "compute",
+            "primal": "t",
+            "socket": "/tmp/c.sock"
+        })))
+        .await
+        .unwrap();
+    handler
+        .register(&Some(json!({
+            "capability": "relay",
+            "primal": "r",
+            "socket": "/tmp/r.sock"
+        })))
+        .await
+        .unwrap();
+    let list = handler.list().await.unwrap();
+    let details = list["details"].as_array().unwrap();
+    let compute = details
+        .iter()
+        .find(|d| d["capability"] == "compute")
+        .expect("compute entry");
+    assert_eq!(compute["locality"], "local");
+    let relay = details
+        .iter()
+        .find(|d| d["capability"] == "relay")
+        .expect("relay");
+    assert_eq!(relay["locality"], "mesh");
+}
+
+#[tokio::test]
+async fn test_discover_translations_missing_capability_field() {
+    let handler = make_handler();
+    let err = handler.discover_translations(&Some(json!({}))).await;
+    assert!(err.is_err());
 }

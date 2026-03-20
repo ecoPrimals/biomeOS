@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Semantic Layer Integration Tests
 //!
 //! Tests for capability translation, runtime discovery, and semantic method routing
@@ -67,7 +69,10 @@ impl MockPrimalServer {
                                 }
 
                                 // Send response
-                                let id = req.get("id").and_then(|i| i.as_u64()).unwrap_or(1);
+                                let id = req
+                                    .get("id")
+                                    .and_then(serde_json::Value::as_u64)
+                                    .unwrap_or(1);
                                 let rpc_response = json!({
                                     "jsonrpc": "2.0",
                                     "result": response,
@@ -395,7 +400,10 @@ async fn test_registry_error_handling() {
                 if let Ok(n) = socket.read(&mut buf).await {
                     let request = String::from_utf8_lossy(&buf[..n]);
                     if let Ok(req) = serde_json::from_str::<serde_json::Value>(&request) {
-                        let id = req.get("id").and_then(|i| i.as_u64()).unwrap_or(1);
+                        let id = req
+                            .get("id")
+                            .and_then(serde_json::Value::as_u64)
+                            .unwrap_or(1);
                         // Return error response
                         let error_response = json!({
                             "jsonrpc": "2.0",

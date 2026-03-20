@@ -490,7 +490,9 @@ mod tests {
 
     use super::*;
     use crate::events::GraphEventBroadcaster;
-    use crate::graph::{CoordinationPattern, DeploymentGraph, GraphDefinition, GraphId};
+    use crate::graph::{
+        CoordinationPattern, DeploymentGraph, GraphDefinition, GraphId, GraphMetadata,
+    };
     use crate::node::{GraphNode, NodeId};
 
     fn make_pipeline_graph(nodes: Vec<GraphNode>) -> DeploymentGraph {
@@ -500,7 +502,7 @@ mod tests {
                 name: "Test Pipeline".to_string(),
                 version: "1.0.0".to_string(),
                 description: "Test streaming pipeline".to_string(),
-                metadata: Default::default(),
+                metadata: GraphMetadata::default(),
                 coordination: CoordinationPattern::Pipeline,
                 tick: None,
                 env: HashMap::new(),
@@ -514,14 +516,14 @@ mod tests {
         GraphNode {
             id: NodeId::new(id).unwrap(),
             name: id.to_string(),
-            node_type: Default::default(),
+            node_type: crate::node::NodeType::default(),
             capability: Some(format!("test.{id}")),
             required: true,
             order: 0,
             depends_on: depends_on.into_iter().map(String::from).collect(),
             condition: None,
-            config: Default::default(),
-            params: Default::default(),
+            config: crate::node::NodeConfig::default(),
+            params: crate::node::NodeParams::default(),
             feedback_to: None,
             budget_ms: None,
             fallback: None,

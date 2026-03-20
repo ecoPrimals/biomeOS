@@ -111,7 +111,6 @@ fn test_types_serialization_roundtrip() {
 
 #[test]
 fn test_get_builtin_templates() {
-    let provider = DeviceManagementProvider::new("/tmp/test.sock");
     let templates = DeviceManagementProvider::get_builtin_templates();
 
     assert_eq!(templates.len(), 2);

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Unit tests for security configuration types.
 
 use super::*;
@@ -351,7 +353,7 @@ fn test_audit_destination_debug() {
 #[test]
 fn test_security_config_clone() {
     let original = SecurityConfig::default();
-    let cloned = original.clone();
+    let cloned = original;
     assert!(!cloned.csrf.enabled);
 }
 
@@ -365,7 +367,7 @@ fn test_complex_config_clone() {
         issuer: Some("test".to_string()),
         audience: Some(vec!["api".to_string()]),
     };
-    let cloned = original.clone();
+    let cloned = original;
     assert_eq!(cloned.secret, "secret");
     assert!(matches!(cloned.algorithm, JwtAlgorithm::RS256));
 }

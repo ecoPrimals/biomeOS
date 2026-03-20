@@ -95,7 +95,7 @@ pub type SquirrelClient = PrimalClient;
 ///
 /// DEEP DEBT EVOLUTION (Feb 7, 2026): Replaced fixed-field struct with
 /// `HashMap<Arc<str>, PrimalClient>`. This allows ANY primal to be discovered
-/// at runtime without code changes. Arc<str> keys enable zero-copy sharing.
+/// at runtime without code changes. `Arc<str>` keys enable zero-copy sharing.
 #[derive(Debug, Clone, Default)]
 pub struct PrimalConnections {
     /// Dynamic registry of discovered primals (name → client)

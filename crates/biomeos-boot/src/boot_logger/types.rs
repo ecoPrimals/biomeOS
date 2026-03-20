@@ -75,9 +75,8 @@ impl std::fmt::Display for BootStage {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
-
     use super::*;
 
     #[test]

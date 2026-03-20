@@ -675,7 +675,7 @@ mod tests {
         let result = LiveService::new().await;
         assert!(result.is_ok());
         let service = result.unwrap();
-        assert!(service.config.metadata.version.len() > 0);
+        assert!(!service.config.metadata.version.is_empty());
     }
 
     #[tokio::test]
@@ -712,7 +712,10 @@ mod tests {
     async fn test_live_service_health_check() {
         let service = LiveService::new().await.expect("new");
         let result = service.health_check().await.expect("health check");
-        assert!(result.overall_healthy || !result.overall_healthy);
+        assert_eq!(
+            result.overall_healthy,
+            matches!(result.system_status.health_status, Health::Healthy)
+        );
     }
 
     #[tokio::test]

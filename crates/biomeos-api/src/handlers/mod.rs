@@ -10,6 +10,7 @@ pub mod genome; // GenomeBin build/compose/verify
 pub mod genome_dist; // Genome distribution API (wateringHole/genomeBin)
 pub mod health; // Health check endpoints
 /// Live discovery handlers; pub for discovery routes and future REST API.
+#[allow(dead_code)]
 pub mod live_discovery;
 pub mod livespores; // LiveSpore USB device discovery
 pub mod rendezvous; // Dark Forest rendezvous for Pixel-USB handshake

@@ -839,6 +839,78 @@ mod tests {
     }
 
     #[test]
+    fn test_determine_health_from_metrics_critical_memory() {
+        let metrics = ResourceMetrics {
+            cpu_usage: Some(0.5),
+            memory_usage: Some(0.96),
+            disk_usage: Some(0.5),
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Critical { .. }));
+    }
+
+    #[test]
+    fn test_determine_health_from_metrics_critical_disk() {
+        let metrics = ResourceMetrics {
+            cpu_usage: Some(0.5),
+            memory_usage: Some(0.5),
+            disk_usage: Some(0.96),
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Critical { .. }));
+    }
+
+    #[test]
+    fn test_determine_health_from_metrics_degraded_disk() {
+        let metrics = ResourceMetrics {
+            cpu_usage: Some(0.5),
+            memory_usage: Some(0.5),
+            disk_usage: Some(0.85),
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Degraded { .. }));
+    }
+
+    #[test]
+    fn test_determine_health_from_metrics_none_fields_treated_as_zero() {
+        let metrics = ResourceMetrics {
+            cpu_usage: None,
+            memory_usage: None,
+            disk_usage: None,
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Healthy));
+    }
+
+    #[test]
+    fn test_determine_health_from_metrics_degraded_memory_only() {
+        let metrics = ResourceMetrics {
+            cpu_usage: Some(0.1),
+            memory_usage: Some(0.85),
+            disk_usage: Some(0.1),
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Degraded { .. }));
+    }
+
+    #[test]
+    fn test_determine_health_from_metrics_degraded_cpu_and_memory() {
+        let metrics = ResourceMetrics {
+            cpu_usage: Some(0.75),
+            memory_usage: Some(0.85),
+            disk_usage: Some(0.1),
+            network_io: None,
+        };
+        let health = SystemInspector::determine_health_from_metrics(&metrics);
+        assert!(matches!(health, Health::Degraded { .. }));
+    }
+
+    #[test]
     fn test_calculate_uptime_percentage_long() {
         let info = SystemInfo {
             hostname: "test".to_string(),

@@ -241,8 +241,8 @@ pub struct FederationStatus {
     pub vm_health: Vec<VmHealth>,
 }
 
-#[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::health::{HealthStatus, VmHealth};
@@ -279,7 +279,7 @@ mod tests {
     fn test_federation_config_construction() {
         let topology = sample_topology();
         let config = FederationConfig {
-            topology: topology.clone(),
+            topology,
             enable_kvm: true,
             health_check_timeout: 60,
             wait_for_healthy: false,
@@ -462,5 +462,32 @@ mod tests {
         assert_eq!(qemu_config.cpus, vm.cpus);
         assert_eq!(qemu_config.disk_image, vm.disk_image);
         assert_eq!(qemu_config.mac_address, vm.mac_address);
+    }
+
+    #[test]
+    fn test_federation_status_clone_and_debug() {
+        let s = FederationStatus {
+            name: "fed".to_string(),
+            total_vms: 1,
+            running_vms: 0,
+            vm_health: vec![],
+        };
+        let c = s.clone();
+        assert_eq!(c.name, "fed");
+        let d = format!("{s:?}");
+        assert!(d.contains("FederationStatus"));
+    }
+
+    #[test]
+    fn test_federation_config_wait_for_healthy_flag() {
+        let topology = sample_topology();
+        let cfg = FederationConfig {
+            topology,
+            enable_kvm: true,
+            health_check_timeout: 120,
+            wait_for_healthy: true,
+        };
+        assert!(cfg.wait_for_healthy);
+        assert_eq!(cfg.health_check_timeout, 120);
     }
 }

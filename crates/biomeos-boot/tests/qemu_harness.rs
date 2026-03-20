@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! QEMU Test Harness
 //!
 //! Automated testing framework for booting BiomeOS in QEMU
@@ -104,13 +106,8 @@ fn test_qemu_boot_iso() -> Result<()> {
     // Find latest ISO
     let dist_dir = project_root.join("dist");
     let iso = std::fs::read_dir(&dist_dir)?
-        .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path()
-                .extension()
-                .map(|ext| ext == "iso")
-                .unwrap_or(false)
-        })
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "iso"))
         .max_by_key(|e| {
             e.metadata()
                 .and_then(|m| m.modified())
@@ -152,13 +149,8 @@ fn test_qemu_boot_with_disk() -> Result<()> {
     // Find latest ISO
     let dist_dir = project_root.join("dist");
     let iso = std::fs::read_dir(&dist_dir)?
-        .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path()
-                .extension()
-                .map(|ext| ext == "iso")
-                .unwrap_or(false)
-        })
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "iso"))
         .max_by_key(|e| {
             e.metadata()
                 .and_then(|m| m.modified())

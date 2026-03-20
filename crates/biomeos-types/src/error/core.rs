@@ -672,7 +672,7 @@ mod tests {
             message: "failed".to_string(),
             field: Some("x".to_string()),
             rule: Some("required".to_string()),
-            errors: validation_errors.clone(),
+            errors: validation_errors,
             ai_context: default_ai_context(),
         };
         match &err {

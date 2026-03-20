@@ -112,6 +112,27 @@ pub struct DiscoveryLayer {
     _paths: SystemPaths,
 }
 
+#[cfg(test)]
+impl DiscoveryLayer {
+    /// Construct with a known Songbird socket (skips filesystem discovery; tests only).
+    #[must_use]
+    pub fn from_songbird_socket_for_test(songbird_socket: String, paths: SystemPaths) -> Self {
+        Self {
+            songbird_socket: Some(songbird_socket),
+            _paths: paths,
+        }
+    }
+
+    /// Construct with no socket to exercise `songbird_socket()` error paths (tests only).
+    #[must_use]
+    pub fn with_no_socket_for_test(paths: SystemPaths) -> Self {
+        Self {
+            songbird_socket: None,
+            _paths: paths,
+        }
+    }
+}
+
 impl DiscoveryLayer {
     /// Create a new discovery layer
     ///
@@ -323,6 +344,35 @@ impl PhysicalDiscovery for DiscoveryLayer {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_types::JsonRpcResponse;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
+
+    fn spawn_one_shot_jsonrpc_server(
+        socket_path: impl AsRef<std::path::Path>,
+        result_payload: serde_json::Value,
+    ) {
+        let socket_path = socket_path.as_ref().to_path_buf();
+        let listener = UnixListener::bind(&socket_path).expect("bind mock songbird socket");
+        tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.expect("accept");
+            let mut reader = BufReader::new(stream);
+            let mut line = String::new();
+            reader
+                .read_line(&mut line)
+                .await
+                .expect("read jsonrpc line");
+            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse request");
+            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
+            let response = JsonRpcResponse::success(id, result_payload);
+            let mut stream = reader.into_inner();
+            let body = serde_json::to_string(&response).expect("serialize response");
+            stream
+                .write_all(format!("{body}\n").as_bytes())
+                .await
+                .expect("write response");
+        });
+    }
 
     /// Test discovery request creation with taxonomy
     #[test]
@@ -412,5 +462,152 @@ mod tests {
         let cap = CapabilityTaxonomy::Discovery;
         let s = cap.to_string();
         assert!(!s.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_capability_success_via_mock_songbird() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("songbird-mock.sock");
+        let primal_json = serde_json::json!([{
+            "primal": "beardog",
+            "node_id": "n1",
+            "family_id": "fam",
+            "capabilities": ["encryption"],
+            "endpoints": [],
+            "signature": "sig",
+            "timestamp": "2026-01-01T00:00:00Z"
+        }]);
+        spawn_one_shot_jsonrpc_server(sock.clone(), serde_json::json!({ "primals": primal_json }));
+
+        let paths =
+            SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
+        let layer =
+            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+
+        let req = DiscoveryRequest::new(CapabilityTaxonomy::Encryption);
+        let out = layer
+            .discover_by_capability(&req)
+            .await
+            .expect("discover_by_capability");
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].primal, "beardog");
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_capability_missing_primals_field() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("songbird-mock.sock");
+        spawn_one_shot_jsonrpc_server(sock.clone(), serde_json::json!({ "wrong": [] }));
+
+        let paths =
+            SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
+        let layer =
+            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+
+        let req = DiscoveryRequest::new(CapabilityTaxonomy::Discovery);
+        let err = layer
+            .discover_by_capability(&req)
+            .await
+            .expect_err("expected invalid response");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("primals") || msg.contains("Invalid") || msg.contains("response"),
+            "{msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_family_missing_primals_field() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("songbird-mock.sock");
+        spawn_one_shot_jsonrpc_server(sock.clone(), serde_json::json!({}));
+
+        let paths =
+            SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
+        let layer =
+            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+
+        let err = layer
+            .discover_by_family("fam-1")
+            .await
+            .expect_err("expected missing primals");
+        assert!(err.to_string().contains("primals") || err.to_string().contains("response"));
+    }
+
+    #[tokio::test]
+    async fn test_discovery_layer_no_socket_returns_error() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let paths =
+            SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
+        let layer = DiscoveryLayer::with_no_socket_for_test(paths);
+
+        let req = DiscoveryRequest::new(CapabilityTaxonomy::Discovery);
+        let err = layer
+            .discover_by_capability(&req)
+            .await
+            .expect_err("expected socket error");
+        assert!(err.to_string().contains("Songbird") || err.to_string().contains("socket"));
+    }
+
+    #[tokio::test]
+    async fn test_discover_jsonrpc_error_from_songbird() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("songbird-mock.sock");
+        let listener = UnixListener::bind(&sock).expect("bind");
+        tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.expect("accept");
+            let mut reader = BufReader::new(stream);
+            let mut line = String::new();
+            reader.read_line(&mut line).await.expect("read");
+            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
+            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
+            let err = biomeos_types::JsonRpcError::method_not_found();
+            let response = JsonRpcResponse::error(id, err);
+            let mut stream = reader.into_inner();
+            let body = serde_json::to_string(&response).expect("serialize");
+            stream
+                .write_all(format!("{body}\n").as_bytes())
+                .await
+                .expect("write");
+        });
+
+        let paths =
+            SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
+        let layer =
+            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+
+        let req = DiscoveryRequest::new(CapabilityTaxonomy::P2PFederation);
+        let err = layer
+            .discover_by_capability(&req)
+            .await
+            .expect_err("jsonrpc error");
+        assert!(
+            err.to_string().contains("JSON-RPC") || err.to_string().contains("jsonrpc"),
+            "{}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_announce_capabilities_via_mock() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("songbird-mock.sock");
+        spawn_one_shot_jsonrpc_server(sock.clone(), serde_json::json!({ "ok": true }));
+
+        let paths =
+            SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
+        let layer =
+            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+
+        let info = DiscoveredPrimal {
+            primal: "test".to_string(),
+            node_id: "n".to_string(),
+            family_id: "f".to_string(),
+            capabilities: vec![],
+            endpoints: vec![],
+            signature: "s".to_string(),
+            timestamp: "t".to_string(),
+        };
+        layer.announce(&info).await.expect("announce");
     }
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Neural API Client tests
 
 mod client_tests {
@@ -26,8 +28,7 @@ mod client_tests {
             }
             if let Ok((mut stream, _)) = listener.accept().await {
                 let mut buf = vec![0u8; 4096];
-                let n = stream.read(&mut buf).await.expect("read request");
-                let _request = &buf[..n];
+                let _ = stream.read(&mut buf).await.expect("read request");
 
                 let response_line = format!("{response_json}\n");
                 stream

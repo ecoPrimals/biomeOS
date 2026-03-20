@@ -108,7 +108,10 @@ mod tests {
             result.get("method").and_then(|v| v.as_str()),
             Some("CapabilityBased")
         );
-        assert_eq!(result.get("count").and_then(|v| v.as_u64()), Some(0));
+        assert_eq!(
+            result.get("count").and_then(serde_json::Value::as_u64),
+            Some(0)
+        );
         assert!(result.contains_key("endpoints"));
         assert!(result.contains_key("timestamp"));
     }
@@ -117,7 +120,10 @@ mod tests {
     fn test_build_discovery_result_with_endpoints() {
         let endpoints = vec!["http://a".to_string(), "http://b".to_string()];
         let result = build_discovery_result("Multicast", &endpoints);
-        assert_eq!(result.get("count").and_then(|v| v.as_u64()), Some(2));
+        assert_eq!(
+            result.get("count").and_then(serde_json::Value::as_u64),
+            Some(2)
+        );
         let eps = result.get("endpoints").and_then(|v| v.as_array()).unwrap();
         assert_eq!(eps.len(), 2);
     }
@@ -197,7 +203,7 @@ mod tests {
     async fn test_handle_discover_capability_based_empty_caps_fails() {
         let result = handle_discover(
             None,
-            Some("".to_string()),
+            Some(String::new()),
             DiscoveryMethod::CapabilityBased,
             None,
             false,

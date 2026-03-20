@@ -353,8 +353,8 @@ mod tests {
     fn test_meeting_record_serde_roundtrip() {
         let record = MeetingRecord {
             node_name: "alice-laptop".to_string(),
-            first_met: 1234567890,
-            last_seen: 1234567899,
+            first_met: 1_234_567_890,
+            last_seen: 1_234_567_899,
             endpoints: vec!["192.168.1.100:9900".to_string()],
             capabilities_hint: vec!["compute".to_string()],
             notes: "Met at conference".to_string(),
@@ -369,7 +369,7 @@ mod tests {
 
         let restored: MeetingRecord = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(restored.node_name, "alice-laptop");
-        assert_eq!(restored.first_met, 1234567890);
+        assert_eq!(restored.first_met, 1_234_567_890);
         assert_eq!(restored.visibility, MeetingVisibility::Mutual);
     }
 
@@ -387,7 +387,7 @@ mod tests {
             seed_file: "test.seed".into(),
         };
         let cloned = record.clone();
-        assert_eq!(cloned.node_name, "test");
+        assert_eq!(cloned.node_name, record.node_name);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -486,7 +486,7 @@ mod tests {
             seed_file: "s".into(),
         };
         let c = m.clone();
-        assert_eq!(c.cluster_id, "cl");
+        assert_eq!(c.cluster_id, m.cluster_id);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -524,7 +524,7 @@ mod tests {
         let ts1 = current_timestamp();
         let ts2 = current_timestamp();
 
-        assert!(ts1 > 1577836800); // Jan 1, 2020
+        assert!(ts1 > 1_577_836_800); // Jan 1, 2020
         assert!(ts2 >= ts1);
     }
 

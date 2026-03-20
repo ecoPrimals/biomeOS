@@ -367,7 +367,7 @@ mod tests {
     use super::*;
     use crate::universal_biomeos_manager::{PrimalInfo, UniversalBiomeOSManager};
     use biomeos_primal_sdk::PrimalCapability;
-    use biomeos_types::{BiomeOSConfig, Health, PrimalType};
+    use biomeos_types::{Health, PrimalType};
     use std::collections::HashMap;
 
     fn test_primal_info(id: &str, name: &str, endpoint: &str) -> PrimalInfo {
@@ -456,7 +456,10 @@ mod tests {
             result.get("status").and_then(|v| v.as_str()),
             Some("planned")
         );
-        assert_eq!(result.get("dry_run").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            result.get("dry_run").and_then(serde_json::Value::as_bool),
+            Some(true)
+        );
         assert!(result.contains_key("execution_plan"));
     }
 

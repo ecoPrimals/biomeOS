@@ -184,6 +184,7 @@ fn default_registry_version() -> String {
     "1.0".to_owned()
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,8 +210,7 @@ mod tests {
             host: Arc::from("127.0.0.1"),
             port: 9100,
         };
-        let socket =
-            DiscoveredSocket::from_endpoint(endpoint.clone(), DiscoveryMethod::TcpFallback);
+        let socket = DiscoveredSocket::from_endpoint(endpoint, DiscoveryMethod::TcpFallback);
 
         assert!(matches!(
             socket.endpoint,

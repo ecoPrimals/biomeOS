@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for primal adapter pattern
 
 use super::*;
@@ -116,7 +118,7 @@ async fn test_primal_capabilities_default() {
 async fn test_port_config_methods() {
     let env_var = PortConfigMethod::EnvVar("PORT".to_string());
     let cli_flag = PortConfigMethod::CliFlag("--port".to_string());
-    let multiple = PortConfigMethod::Multiple(vec![env_var.clone(), cli_flag.clone()]);
+    let multiple = PortConfigMethod::Multiple(vec![env_var, cli_flag]);
 
     // Just verify they can be created
     match multiple {

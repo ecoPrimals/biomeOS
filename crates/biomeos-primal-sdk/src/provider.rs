@@ -321,6 +321,7 @@ async fn send_jsonrpc_uds(
     serde_json::from_slice(&buf).context("parsing JSON-RPC response")
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,7 +344,7 @@ mod tests {
 
     #[async_trait]
     impl Provider for MockProvider {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "mock"
         }
 
@@ -413,8 +414,7 @@ mod tests {
             primal: "airspring".into(),
             socket: "/run/user/1000/biomeos/airspring-abc.sock".into(),
             source: "startup".into(),
-            semantic_mappings: [("et0".into(), "science.et0_fao56".into())]
-                .into_iter()
+            semantic_mappings: std::iter::once(("et0".into(), "science.et0_fao56".into()))
                 .collect(),
         };
         let json = serde_json::to_string(&reg).unwrap();

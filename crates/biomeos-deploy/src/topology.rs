@@ -141,8 +141,8 @@ impl Topology {
     }
 }
 
-#[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -194,7 +194,7 @@ mod tests {
             metadata: TopologyMetadata {
                 name: "test".to_string(),
                 version: "1.0".to_string(),
-                description: "".to_string(),
+                description: String::new(),
             },
             network: NetworkTopology {
                 bridge_name: "br0".to_string(),
@@ -234,7 +234,7 @@ mod tests {
             metadata: TopologyMetadata {
                 name: "test".to_string(),
                 version: "1.0".to_string(),
-                description: "".to_string(),
+                description: String::new(),
             },
             network: NetworkTopology {
                 bridge_name: "br0".to_string(),
@@ -274,7 +274,7 @@ mod tests {
             metadata: TopologyMetadata {
                 name: "test".to_string(),
                 version: "1.0".to_string(),
-                description: "".to_string(),
+                description: String::new(),
             },
             network: NetworkTopology {
                 bridge_name: "br0".to_string(),
@@ -314,7 +314,7 @@ mod tests {
             metadata: TopologyMetadata {
                 name: "test".to_string(),
                 version: "1.0".to_string(),
-                description: "".to_string(),
+                description: String::new(),
             },
             network: NetworkTopology {
                 bridge_name: "br0".to_string(),

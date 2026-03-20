@@ -375,6 +375,7 @@ impl BiomeOSConfigBuilder {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -477,7 +478,7 @@ mod tests {
             .with_port(9999)
             .with_bind_address("192.168.1.1")
             .build();
-        let config = BiomeOSConfigBuilder::from_config(base.clone()).build();
+        let config = BiomeOSConfigBuilder::from_config(base).build();
         assert_eq!(config.network.port, 9999);
         assert_eq!(config.network.bind_address, "192.168.1.1");
     }

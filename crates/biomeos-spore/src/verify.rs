@@ -346,9 +346,9 @@ mod tests {
             message: Some("32 bytes OK".to_string()),
         };
         let cloned = check.clone();
-        assert_eq!(cloned.name, "Family seed");
-        assert!(cloned.passed);
-        assert_eq!(cloned.message, Some("32 bytes OK".to_string()));
+        assert_eq!(cloned.name, check.name);
+        assert_eq!(cloned.passed, check.passed);
+        assert_eq!(cloned.message, check.message);
     }
 
     // ========== SporeVerification Tests ==========

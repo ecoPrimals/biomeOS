@@ -30,6 +30,7 @@ use biomeos_spore::DarkForestBeacon;
 use std::time::Instant;
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing
     tracing_subscriber::fmt()
@@ -153,8 +154,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "   - capabilities: {}",
                 decrypted["capabilities"]
                     .as_array()
-                    .map(|v| format!("{v:?}"))
-                    .unwrap_or_else(|| "[]".to_string())
+                    .map_or_else(|| "[]".to_string(), |v| format!("{v:?}"))
             );
             println!(
                 "   - lineage_mode: {}",
@@ -182,19 +182,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🔓 Attempting to decrypt random noise (different family)...");
     let start = Instant::now();
-    match beacon_mgr
+    if beacon_mgr
         .try_decrypt_pure_noise_beacon(&random_noise)
         .await?
+        .is_some()
     {
-        Some(_) => {
-            println!("❌ UNEXPECTED: Random noise should NOT decrypt");
-        }
-        None => {
-            let duration = start.elapsed();
-            println!("✅ SILENT FAILURE (different family/noise) in {duration:?}");
-            println!("   Result: None (indistinguishable from noise)");
-            println!("   No error logs, no exceptions - true Dark Forest");
-        }
+        println!("❌ UNEXPECTED: Random noise should NOT decrypt");
+    } else {
+        let duration = start.elapsed();
+        println!("✅ SILENT FAILURE (different family/noise) in {duration:?}");
+        println!("   Result: None (indistinguishable from noise)");
+        println!("   No error logs, no exceptions - true Dark Forest");
     }
     println!();
 

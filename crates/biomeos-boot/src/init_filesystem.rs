@@ -144,9 +144,10 @@ impl Default for FilesystemManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use crate::init_error::BootError;
 
     #[test]
     fn test_filesystem_manager_creation() {
@@ -185,5 +186,54 @@ mod tests {
         let paths = mgr.mounted_filesystems();
         assert_eq!(paths.len(), 1);
         assert_eq!(paths[0], Path::new("/proc"));
+    }
+
+    #[tokio::test]
+    async fn mount_if_needed_skips_when_already_tracked() {
+        let mut mgr = FilesystemManager::new();
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let target = tmp.path().join("already-tracked");
+        mgr.mounted.insert(target.clone());
+        let r = mgr
+            .mount_if_needed(&target, "proc", "proc", MountFlags::empty())
+            .await;
+        assert!(r.is_ok());
+        assert!(mgr.is_mounted(&target));
+    }
+
+    #[tokio::test]
+    async fn mount_if_needed_directory_creation_fails_when_parent_is_file() {
+        let mut mgr = FilesystemManager::new();
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let file_path = tmp.path().join("not_a_directory");
+        std::fs::write(&file_path, b"x").expect("write file");
+        let nested = file_path.join("mountpoint");
+        let r = mgr
+            .mount_if_needed(&nested, "proc", "proc", MountFlags::empty())
+            .await;
+        assert!(
+            matches!(r, Err(BootError::DirectoryCreation { .. })),
+            "expected DirectoryCreation, got {r:?}"
+        );
+    }
+
+    /// Invalid fstype should fail the mount syscall (not EBUSY), covering the `Err(e)` branch.
+    #[tokio::test]
+    async fn mount_if_needed_mount_failed_for_nonsense_fstype() {
+        let mut mgr = FilesystemManager::new();
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let target = tmp.path().join("mnt-invalid-fstype");
+        let r = mgr
+            .mount_if_needed(
+                &target,
+                "none",
+                "biomeos_test_not_a_fstype_xyz",
+                MountFlags::empty(),
+            )
+            .await;
+        assert!(
+            matches!(r, Err(BootError::MountFailed { .. })),
+            "expected MountFailed, got {r:?}"
+        );
     }
 }

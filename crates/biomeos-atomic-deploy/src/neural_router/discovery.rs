@@ -381,6 +381,7 @@ impl NeuralRouter {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+    use super::super::AtomicType;
     use super::*;
     use std::path::PathBuf;
 
@@ -436,5 +437,138 @@ mod tests {
             err.contains("not found") || err.contains("does not exist"),
             "expected socket not found, got: {err}"
         );
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_category_empty_registry_security() {
+        let router = NeuralRouter::new("empty-reg");
+        let err = router.discover_capability("security").await.unwrap_err();
+        assert!(
+            err.to_string().contains("No primals") || err.to_string().contains("not registered"),
+            "got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_unknown_category_string() {
+        let router = NeuralRouter::new("x");
+        let err = router
+            .discover_capability("totally_unknown_capability_xyz")
+            .await
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("not registered") || err.to_string().contains("does not map"),
+            "got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_http_alias_requires_registry() {
+        let router = NeuralRouter::new("http-test");
+        let err = router.discover_capability("http.get").await.unwrap_err();
+        assert!(!err.to_string().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_ai_category_empty_registry() {
+        let router = NeuralRouter::new("ai-test");
+        let err = router
+            .discover_capability("ai.text_generation")
+            .await
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("No primals") || err.to_string().contains("not registered")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_registered_sets_primary_socket() {
+        let router = NeuralRouter::new("ps");
+        let sock = std::path::PathBuf::from("/tmp/neural-discovery-unit.sock");
+        router
+            .register_capability("storage", "nest", &sock, "t")
+            .await
+            .unwrap();
+        let atomic = router.discover_capability("storage").await.unwrap();
+        assert_eq!(atomic.primary_socket, sock);
+        assert_eq!(atomic.primals.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_discover_tower_atomic_via_secure_http_alias() {
+        let router = NeuralRouter::new("tower-fam");
+        router
+            .register_capability(
+                "security",
+                "beardog",
+                PathBuf::from("/tmp/tower-security.sock"),
+                "t",
+            )
+            .await
+            .unwrap();
+        router
+            .register_capability(
+                "discovery",
+                "songbird",
+                PathBuf::from("/tmp/tower-discovery.sock"),
+                "t",
+            )
+            .await
+            .unwrap();
+        let atomic = router.discover_capability("http.get").await.expect("tower");
+        assert_eq!(atomic.capability.as_ref(), "secure_http");
+        assert_eq!(atomic.primals.len(), 2);
+        assert!(matches!(atomic.atomic_type, Some(AtomicType::Tower)));
+    }
+
+    #[tokio::test]
+    async fn test_discover_nest_atomic_requires_storage() {
+        let router = NeuralRouter::new("nest-fam");
+        router
+            .register_capability("security", "bd", PathBuf::from("/tmp/nest-bd.sock"), "t")
+            .await
+            .unwrap();
+        router
+            .register_capability("discovery", "sb", PathBuf::from("/tmp/nest-sb.sock"), "t")
+            .await
+            .unwrap();
+        let err = router
+            .discover_capability("secure_storage")
+            .await
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("storage") || err.to_string().contains("not found"),
+            "{}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_category_discovery_unknown_maps_error() {
+        let router = NeuralRouter::new("cat-reg");
+        router
+            .register_capability(
+                "discovery.meta",
+                "songbird",
+                PathBuf::from("/tmp/discovery-meta.sock"),
+                "t",
+            )
+            .await
+            .unwrap();
+        let atomic = router
+            .discover_capability("discovery")
+            .await
+            .expect("discovery");
+        assert!(
+            atomic.primals.iter().any(|p| p.name.as_ref() == "songbird"),
+            "{atomic:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_http_post_alias() {
+        let router = NeuralRouter::new("http-post");
+        let err = router.discover_capability("http.post").await.unwrap_err();
+        assert!(!err.to_string().is_empty());
     }
 }

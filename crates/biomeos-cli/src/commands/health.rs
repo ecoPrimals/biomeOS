@@ -499,10 +499,10 @@ mod tests {
 
     #[test]
     fn test_compute_memory_percent() {
-        assert_eq!(compute_memory_percent(0, 0), 0.0);
-        assert_eq!(compute_memory_percent(512, 1024), 50.0);
-        assert_eq!(compute_memory_percent(256, 1024), 25.0);
-        assert_eq!(compute_memory_percent(1024, 1024), 100.0);
+        assert!((compute_memory_percent(0, 0) - 0.0).abs() < f64::EPSILON);
+        assert!((compute_memory_percent(512, 1024) - 50.0).abs() < f64::EPSILON);
+        assert!((compute_memory_percent(256, 1024) - 25.0).abs() < f64::EPSILON);
+        assert!((compute_memory_percent(1024, 1024) - 100.0).abs() < f64::EPSILON);
         let p = compute_memory_percent(1, 3);
         assert!((p - 33.333).abs() < 0.001, "expected ~33.333, got {p}");
     }
@@ -588,7 +588,7 @@ mod tests {
         let output = format_scan_results(&results, "summary").unwrap();
         assert!(output.contains("System Scan Summary"));
         assert!(output.contains("Issues found"));
-        assert!(output.contains("5"));
+        assert!(output.contains('5'));
         assert!(output.contains("Services scanned"));
         assert!(output.contains("10"));
     }
@@ -662,8 +662,8 @@ mod tests {
             "system_metrics".to_string(),
             serde_json::json!({
                 "cpu_usage": 25,
-                "memory_usage": {"used_bytes": 1073741824_i64, "total_bytes": 4294967296_i64},
-                "disk_usage": {"used_bytes": 5368709120_i64},
+                "memory_usage": {"used_bytes": 1_073_741_824_i64, "total_bytes": 4_294_967_296_i64},
+                "disk_usage": {"used_bytes": 5_368_709_120_i64},
                 "network": {"bytes_sent": 1000, "bytes_received": 2000}
             }),
         );
@@ -780,5 +780,154 @@ mod tests {
         )
         .await;
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_format_health_summary_services_unknown_status() {
+        let mut results = HashMap::new();
+        results.insert(
+            "services".to_string(),
+            serde_json::json!({
+                "svc": { "status": null }
+            }),
+        );
+        let lines = format_health_summary(&results, false);
+        assert!(lines.iter().any(|l| l.contains("svc")));
+    }
+
+    #[test]
+    fn test_format_health_summary_detailed_metrics_nested() {
+        let mut results = HashMap::new();
+        results.insert(
+            "services".to_string(),
+            serde_json::json!({
+                "svc": {
+                    "status": "Healthy",
+                    "metrics": {
+                        "cpu_usage": 10,
+                        "memory_usage": { "used_bytes": 100, "total_bytes": 0 },
+                        "disk_usage": { "used_bytes": 500 },
+                        "network": { "bytes_sent": 1, "bytes_received": 2 }
+                    }
+                }
+            }),
+        );
+        let lines = format_health_summary(&results, true);
+        assert!(lines.iter().any(|l| l.contains("CPU Usage")));
+        assert!(lines.iter().any(|l| l.contains("Disk Usage")));
+    }
+
+    #[test]
+    fn test_format_probe_results_diagnostics_non_object() {
+        let mut results = HashMap::new();
+        results.insert(
+            "diagnostics".to_string(),
+            serde_json::json!("raw diagnostic string"),
+        );
+        let lines = format_probe_results("svc", &results);
+        assert!(lines.iter().any(|l| l.contains("raw diagnostic")));
+    }
+
+    #[test]
+    fn test_format_scan_results_unknown_format_uses_default() {
+        let mut results = HashMap::new();
+        results.insert("k".to_string(), serde_json::json!(1));
+        let out = format_scan_results(&results, "yaml").unwrap();
+        assert!(out.contains("System Scan Results"));
+    }
+
+    #[test]
+    fn test_format_scan_default_many_keys() {
+        let mut results = HashMap::new();
+        results.insert("a".to_string(), serde_json::json!(1));
+        results.insert("b".to_string(), serde_json::json!(2));
+        let out = format_scan_results(&results, "unknown").unwrap();
+        assert!(out.contains('a'), "expected key 'a' in: {out}");
+        assert!(out.contains('b'), "expected key 'b' in: {out}");
+        assert!(out.contains("2 items"));
+    }
+
+    #[test]
+    fn test_compute_memory_percent_one_byte() {
+        let p = compute_memory_percent(1, 1024);
+        assert!((p - (100.0 / 1024.0)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_status_to_icon_edge() {
+        assert_eq!(status_to_icon("RandomStatus"), "🔹");
+    }
+
+    #[test]
+    fn test_format_health_summary_overall_non_string() {
+        let mut results = HashMap::new();
+        results.insert("overall_status".to_string(), serde_json::json!([]));
+        let lines = format_health_summary(&results, false);
+        assert!(!lines.is_empty());
+    }
+
+    #[test]
+    fn test_format_probe_results_connectivity_unreachable() {
+        let mut results = HashMap::new();
+        results.insert(
+            "connectivity".to_string(),
+            serde_json::json!({ "reachable": false }),
+        );
+        let lines = format_probe_results("svc", &results);
+        assert!(lines.iter().any(|l| l.contains('❌')));
+    }
+
+    #[test]
+    fn test_format_health_summary_service_issues_non_array() {
+        let mut results = HashMap::new();
+        results.insert(
+            "services".to_string(),
+            serde_json::json!({
+                "svc": { "status": "Healthy", "issues": "not-array" }
+            }),
+        );
+        let lines = format_health_summary(&results, true);
+        assert!(lines.iter().any(|l| l.contains("svc")));
+    }
+
+    #[test]
+    fn test_format_health_metrics_memory_partial_no_total() {
+        let mut results = HashMap::new();
+        results.insert(
+            "system_metrics".to_string(),
+            serde_json::json!({
+                "memory_usage": { "used_bytes": 100 }
+            }),
+        );
+        let lines = format_health_summary(&results, false);
+        assert!(
+            !lines
+                .iter()
+                .any(|l| l.contains("Memory:") && l.contains("GB"))
+        );
+    }
+
+    #[test]
+    fn test_format_health_metrics_network_partial() {
+        let mut results = HashMap::new();
+        results.insert(
+            "system_metrics".to_string(),
+            serde_json::json!({
+                "network": { "bytes_sent": 10 }
+            }),
+        );
+        let lines = format_health_summary(&results, false);
+        assert!(!lines.iter().any(|l| l.contains('↑') && l.contains('↓')));
+    }
+
+    #[test]
+    fn test_format_probe_results_connectivity_endpoints_non_array() {
+        let mut results = HashMap::new();
+        results.insert(
+            "connectivity".to_string(),
+            serde_json::json!({ "endpoints": "not-array" }),
+        );
+        let lines = format_probe_results("svc", &results);
+        assert!(lines.iter().any(|l| l.contains("Connectivity")));
     }
 }

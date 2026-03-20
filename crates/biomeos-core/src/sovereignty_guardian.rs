@@ -770,7 +770,7 @@ mod tests {
 
         assert_eq!(report.total_entities, 0);
         assert_eq!(report.total_violations, 0);
-        assert_eq!(report.compliance_score, 100.0);
+        assert!((report.compliance_score - 100.0).abs() < f64::EPSILON);
     }
 
     #[test]

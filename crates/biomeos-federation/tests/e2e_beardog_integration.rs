@@ -52,38 +52,32 @@ async fn beardog_available() -> Option<BearDogClient> {
     })
     .await;
 
-    match result {
-        Ok(client) => client,
-        Err(_) => {
-            println!("⚠️  BearDog availability check timed out");
-            None
-        }
-    }
+    result.unwrap_or_else(|_| {
+        println!("⚠️  BearDog availability check timed out");
+        None
+    })
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_beardog_discovery() {
     println!("\n🔍 Testing BearDog discovery...");
 
-    match beardog_available().await {
-        Some(client) => {
-            println!("✅ BearDog discovered and available");
+    if let Some(client) = beardog_available().await {
+        println!("✅ BearDog discovered and available");
 
-            // Try health check with timeout
-            let health_result =
-                tokio::time::timeout(Duration::from_secs(2), client.health_check()).await;
+        // Try health check with timeout
+        let health_result =
+            tokio::time::timeout(Duration::from_secs(2), client.health_check()).await;
 
-            match health_result {
-                Ok(Ok(())) => println!("✅ BearDog health check passed"),
-                Ok(Err(e)) => println!("⚠️  BearDog health check failed: {e}"),
-                Err(_) => println!("⚠️  BearDog health check timed out"),
-            }
+        match health_result {
+            Ok(Ok(())) => println!("✅ BearDog health check passed"),
+            Ok(Err(e)) => println!("⚠️  BearDog health check failed: {e}"),
+            Err(_) => println!("⚠️  BearDog health check timed out"),
         }
-        None => {
-            println!("⚠️  BearDog not found - skipping integration tests");
-            println!("   To run these tests, start BearDog with:");
-            println!("   ./plasmidBin/beardog server --socket /tmp/beardog-test_family.sock");
-        }
+    } else {
+        println!("⚠️  BearDog not found - skipping integration tests");
+        println!("   To run these tests, start BearDog with:");
+        println!("   ./plasmidBin/beardog server --socket /tmp/beardog-test_family.sock");
     }
 }
 
@@ -91,12 +85,9 @@ async fn test_beardog_discovery() {
 async fn test_beardog_lineage_verification() {
     println!("\n🧬 Testing genetic lineage verification...");
 
-    let client = match beardog_available().await {
-        Some(c) => c,
-        None => {
-            println!("⚠️  BearDog not available - skipping test");
-            return;
-        }
+    let Some(client) = beardog_available().await else {
+        println!("⚠️  BearDog not available - skipping test");
+        return;
     };
 
     // Test with sample data - with timeout
@@ -128,12 +119,9 @@ async fn test_beardog_lineage_verification() {
 async fn test_beardog_key_derivation() {
     println!("\n🔑 Testing sub-federation key derivation...");
 
-    let client = match beardog_available().await {
-        Some(c) => c,
-        None => {
-            println!("⚠️  BearDog not available - skipping test");
-            return;
-        }
+    let Some(client) = beardog_available().await else {
+        println!("⚠️  BearDog not available - skipping test");
+        return;
     };
 
     use biomeos_federation::beardog_client::KeyDerivationRequest;
@@ -168,12 +156,9 @@ async fn test_beardog_key_derivation() {
 async fn test_beardog_with_real_seed() {
     println!("\n🌱 Testing lineage verification with real seed...");
 
-    let client = match beardog_available().await {
-        Some(c) => c,
-        None => {
-            println!("⚠️  BearDog not available - skipping test");
-            return;
-        }
+    let Some(client) = beardog_available().await else {
+        println!("⚠️  BearDog not available - skipping test");
+        return;
     };
 
     // Try to load a real seed from a spore
@@ -181,8 +166,7 @@ async fn test_beardog_with_real_seed() {
 
     let possible_spore_paths = vec![
         std::env::var("BIOMEOS_SPORE_PATH")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("./test-spore/biomeOS")),
+            .map_or_else(|_| PathBuf::from("./test-spore/biomeOS"), PathBuf::from),
     ];
 
     for spore_path in possible_spore_paths {
@@ -231,12 +215,9 @@ async fn test_beardog_with_real_seed() {
 async fn test_beardog_full_workflow() {
     println!("\n🔄 Testing full BearDog integration workflow...");
 
-    let client = match beardog_available().await {
-        Some(c) => c,
-        None => {
-            println!("⚠️  BearDog not available - skipping test");
-            return;
-        }
+    let Some(client) = beardog_available().await else {
+        println!("⚠️  BearDog not available - skipping test");
+        return;
     };
 
     println!("\n1️⃣  Health Check");

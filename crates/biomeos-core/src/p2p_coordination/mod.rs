@@ -407,6 +407,7 @@ use socket_providers::{SocketDiscoveryProvider, SocketRoutingProvider, SocketSec
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
     use std::time::SystemTime;
 
     /// Mock security provider for testing
@@ -417,7 +418,7 @@ mod tests {
             &self,
             node_a: &str,
             node_b: &str,
-            proof: &LineageProof,
+            _proof: &LineageProof,
         ) -> Result<TunnelRequest> {
             Ok(TunnelRequest {
                 id: format!("tunnel-{node_a}-{node_b}"),
@@ -518,8 +519,8 @@ mod tests {
     impl RoutingProvider for MockRoutingProvider {
         async fn request_relay(
             &self,
-            requester: &str,
-            target: &str,
+            _requester: &str,
+            _target: &str,
             lineage: LineageInfo,
         ) -> Result<RelayOffer> {
             Ok(RelayOffer {
@@ -748,5 +749,223 @@ mod tests {
             compute_status_impl(&security, &transport),
             HealthStatus::Unhealthy
         );
+    }
+
+    #[test]
+    fn test_compute_status_security_healthy_transport_degraded() {
+        let security = TunnelHealth {
+            encryption_status: HealthStatus::Healthy,
+            forward_secrecy: true,
+            last_key_rotation: None,
+            status: HealthStatus::Healthy,
+        };
+        let transport = TransportHealth {
+            connection_status: HealthStatus::Degraded,
+            latency_ms: Some(500),
+            packet_loss: None,
+            status: HealthStatus::Degraded,
+        };
+        assert_eq!(
+            compute_status_impl(&security, &transport),
+            HealthStatus::Degraded
+        );
+    }
+
+    #[tokio::test]
+    async fn test_monitor_tunnel_security_provider_error_message() {
+        struct BadSec;
+        #[async_trait::async_trait]
+        impl SecurityProvider for BadSec {
+            async fn request_tunnel(
+                &self,
+                _: &str,
+                _: &str,
+                _: &LineageProof,
+            ) -> Result<TunnelRequest> {
+                anyhow::bail!("skip")
+            }
+            async fn check_tunnel_health(&self, _: &str) -> Result<TunnelHealth> {
+                anyhow::bail!("security-down")
+            }
+            async fn generate_broadcast_keys(&self, _: &str) -> Result<BroadcastKeys> {
+                anyhow::bail!("skip")
+            }
+            async fn verify_lineage(&self, _: &str, _: &str) -> Result<LineageInfo> {
+                anyhow::bail!("skip")
+            }
+        }
+        let coordinator =
+            P2PCoordinator::new(Arc::new(BadSec), Arc::new(MockDiscoveryProvider), None);
+        let err = coordinator
+            .monitor_tunnel("tid")
+            .await
+            .expect_err("security should fail");
+        let chain = format!("{err:#}");
+        assert!(chain.contains("security-down"), "got {chain}");
+    }
+
+    #[tokio::test]
+    async fn test_monitor_tunnel_discovery_provider_error_message() {
+        struct BadDisc;
+        #[async_trait::async_trait]
+        impl DiscoveryProvider for BadDisc {
+            async fn register_transport(&self, _: &TransportEndpoint) -> Result<()> {
+                Ok(())
+            }
+            async fn enable_encrypted_mode(&self, _: EncryptedDiscoveryConfig) -> Result<()> {
+                Ok(())
+            }
+            async fn check_transport_health(&self, _: &str) -> Result<TransportHealth> {
+                anyhow::bail!("transport-down")
+            }
+            async fn test_encrypted_broadcast(&self) -> Result<BroadcastTest> {
+                anyhow::bail!("skip")
+            }
+        }
+        let coordinator =
+            P2PCoordinator::new(Arc::new(MockSecurityProvider), Arc::new(BadDisc), None);
+        let err = coordinator
+            .monitor_tunnel("tid")
+            .await
+            .expect_err("transport should fail");
+        let chain = format!("{err:#}");
+        assert!(chain.contains("transport-down"), "got {chain}");
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_new_from_discovery_strict_without_sockets_fails() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let _sock = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", temp.path().to_str().expect("utf8"));
+        let _strict = TestEnvGuard::set("BIOMEOS_STRICT_DISCOVERY", "1");
+        let result = P2PCoordinator::new_from_discovery().await;
+        let err = result.err().expect("expected empty socket dir to fail");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("security") || msg.contains("registry"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn test_compute_status_security_degraded_transport_unhealthy() {
+        let security = TunnelHealth {
+            encryption_status: HealthStatus::Degraded,
+            forward_secrecy: true,
+            last_key_rotation: None,
+            status: HealthStatus::Degraded,
+        };
+        let transport = TransportHealth {
+            connection_status: HealthStatus::Unhealthy,
+            latency_ms: None,
+            packet_loss: None,
+            status: HealthStatus::Unhealthy,
+        };
+        assert_eq!(
+            compute_status_impl(&security, &transport),
+            HealthStatus::Degraded
+        );
+    }
+
+    #[test]
+    fn test_compute_status_security_unhealthy_transport_degraded() {
+        let security = TunnelHealth {
+            encryption_status: HealthStatus::Unhealthy,
+            forward_secrecy: false,
+            last_key_rotation: None,
+            status: HealthStatus::Unhealthy,
+        };
+        let transport = TransportHealth {
+            connection_status: HealthStatus::Degraded,
+            latency_ms: Some(1),
+            packet_loss: None,
+            status: HealthStatus::Degraded,
+        };
+        assert_eq!(
+            compute_status_impl(&security, &transport),
+            HealthStatus::Degraded
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_secure_tunnel_propagates_btsp_error() {
+        struct FailSec;
+        #[async_trait::async_trait]
+        impl SecurityProvider for FailSec {
+            async fn request_tunnel(
+                &self,
+                _: &str,
+                _: &str,
+                _: &LineageProof,
+            ) -> Result<TunnelRequest> {
+                anyhow::bail!("tunnel-request-fail")
+            }
+            async fn check_tunnel_health(&self, _: &str) -> Result<TunnelHealth> {
+                anyhow::bail!("skip")
+            }
+            async fn generate_broadcast_keys(&self, _: &str) -> Result<BroadcastKeys> {
+                anyhow::bail!("skip")
+            }
+            async fn verify_lineage(&self, _: &str, _: &str) -> Result<LineageInfo> {
+                anyhow::bail!("skip")
+            }
+        }
+        let coordinator =
+            P2PCoordinator::new(Arc::new(FailSec), Arc::new(MockDiscoveryProvider), None);
+        let proof = LineageProof {
+            lineage_id: "x".to_string(),
+            depth: 0,
+            proof: bytes::Bytes::new(),
+            timestamp: std::time::SystemTime::now(),
+        };
+        let err = coordinator
+            .create_secure_tunnel("a", "b", proof)
+            .await
+            .expect_err("tunnel");
+        let chain = format!("{err:#}");
+        assert!(chain.contains("tunnel-request-fail"), "{chain}");
+    }
+
+    #[tokio::test]
+    async fn test_enable_encrypted_discovery_propagates_error() {
+        struct FailKeys;
+        #[async_trait::async_trait]
+        impl SecurityProvider for FailKeys {
+            async fn request_tunnel(
+                &self,
+                _: &str,
+                _: &str,
+                _: &LineageProof,
+            ) -> Result<TunnelRequest> {
+                anyhow::bail!("skip")
+            }
+            async fn check_tunnel_health(&self, _: &str) -> Result<TunnelHealth> {
+                anyhow::bail!("skip")
+            }
+            async fn generate_broadcast_keys(&self, _: &str) -> Result<BroadcastKeys> {
+                anyhow::bail!("keys-fail")
+            }
+            async fn verify_lineage(&self, _: &str, _: &str) -> Result<LineageInfo> {
+                anyhow::bail!("skip")
+            }
+        }
+        let coordinator =
+            P2PCoordinator::new(Arc::new(FailKeys), Arc::new(MockDiscoveryProvider), None);
+        let err = coordinator
+            .enable_encrypted_discovery("fam")
+            .await
+            .expect_err("enc");
+        assert!(format!("{err:#}").contains("keys-fail"));
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_new_from_discovery_non_strict_empty_dir_errors() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let _sock = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", temp.path().to_str().expect("utf8"));
+        let _strict = TestEnvGuard::remove("BIOMEOS_STRICT_DISCOVERY");
+        let result = P2PCoordinator::new_from_discovery().await;
+        let err = result.err().expect("expected empty socket dir");
+        assert!(err.to_string().contains("security") || err.to_string().contains("No security"));
     }
 }

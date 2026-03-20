@@ -2,6 +2,7 @@
 // Copyright 2025 ecoPrimals Project
 
 #![cfg_attr(not(test), forbid(unsafe_code))]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 //! biomeOS Universal Nucleus & Orchestrator
 //!
@@ -16,6 +17,9 @@
 //! - verify-lineage: Lineage verification
 //! - doctor: Health diagnostics
 //! - version: Version information
+
+#[cfg(test)]
+pub(crate) static CWD_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};

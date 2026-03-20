@@ -39,10 +39,11 @@ toml = "0.8"  # For Neural API graph parsing
 # neural-api-client = { path = "../neural-api-client" }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils" }
+biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tempfile = "3.8"
 tokio-test = "0.4"
 rand = "0.8"
+serial_test = "3"
 
 
 [lints]

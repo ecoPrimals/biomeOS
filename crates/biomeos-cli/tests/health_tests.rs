@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for biomeos-cli health commands
 //!
 //! EVOLVED (Jan 28, 2026): Concurrency-First Design
@@ -38,7 +40,7 @@ impl MockPrimalServer {
 
         let listener = UnixListener::bind(&socket_path).expect("Failed to bind socket");
         let name = primal_name.to_string();
-        let caps: Vec<String> = capabilities.into_iter().map(|s| s.to_string()).collect();
+        let caps: Vec<String> = capabilities.into_iter().map(str::to_string).collect();
 
         let socket_path_clone = socket_path.clone();
         let handle = tokio::spawn(async move {
@@ -74,8 +76,14 @@ impl MockPrimalServer {
 
         while reader.read_line(&mut line).await? > 0 {
             let request: serde_json::Value = serde_json::from_str(line.trim())?;
-            let method = request.get("method").and_then(|m| m.as_str()).unwrap_or("");
-            let id = request.get("id").and_then(|i| i.as_u64()).unwrap_or(0);
+            let method = request
+                .get("method")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            let id = request
+                .get("id")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
 
             let response = match method {
                 "health.ping" => json!({
@@ -181,7 +189,10 @@ async fn test_health_command_detailed() -> Result<()> {
     assert!(response.get("result").is_some());
     let result = response.get("result").unwrap();
 
-    assert_eq!(result.get("healthy").and_then(|h| h.as_bool()), Some(true));
+    assert_eq!(
+        result.get("healthy").and_then(serde_json::Value::as_bool),
+        Some(true)
+    );
     assert_eq!(
         result.get("primal").and_then(|p| p.as_str()),
         Some("beardog")

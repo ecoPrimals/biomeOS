@@ -239,11 +239,11 @@ mod tests {
         let result = format_table(&data);
         assert!(result.contains("name"), "Table should have name header");
         assert!(result.contains("value"), "Table should have value header");
-        assert!(result.contains("a"), "Table should contain first row name");
-        assert!(result.contains("b"), "Table should contain second row name");
-        assert!(result.contains("x"), "Table should contain first row value");
+        assert!(result.contains('a'), "Table should contain first row name");
+        assert!(result.contains('b'), "Table should contain second row name");
+        assert!(result.contains('x'), "Table should contain first row value");
         assert!(
-            result.contains("y"),
+            result.contains('y'),
             "Table should contain second row value"
         );
     }

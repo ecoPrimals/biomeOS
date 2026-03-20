@@ -302,7 +302,7 @@ mod tests {
             status: DeviceStatus::Available,
         };
 
-        state.add_device(device.clone());
+        state.add_device(device);
         assert_eq!(state.devices.len(), 1);
         assert_eq!(state.get_device("gpu0").unwrap().id, "gpu0");
         assert_eq!(state.get_device("gpu0").unwrap().device_type, "gpu");
@@ -324,7 +324,7 @@ mod tests {
             },
         };
 
-        state.add_primal(primal.clone());
+        state.add_primal(primal);
         assert_eq!(state.primals.len(), 1);
         assert_eq!(state.get_primal("beardog-1").unwrap().name, "beardog");
         assert_eq!(
@@ -343,7 +343,7 @@ mod tests {
             status: AssignmentStatus::Active,
         };
 
-        state.add_assignment(assignment.clone());
+        state.add_assignment(assignment);
         assert_eq!(state.assignments.len(), 1);
         let retrieved = state.get_assignment("gpu0").unwrap();
         assert_eq!(retrieved.primal_id, "toadstool-1");
@@ -360,7 +360,7 @@ mod tests {
             message: "Service started".to_string(),
         };
 
-        state.add_log(log.clone());
+        state.add_log(log);
         assert_eq!(state.logs.len(), 1);
         assert_eq!(state.logs.front().unwrap().source, "beardog");
         assert_eq!(state.logs.front().unwrap().level, LogLevel::Info);
@@ -523,7 +523,7 @@ mod tests {
 
         assert_eq!(health.status, "healthy");
         assert_eq!(health.uptime, 7200);
-        assert_eq!(health.cpu_usage, 25.5);
+        assert!((health.cpu_usage - 25.5).abs() < f32::EPSILON);
         assert_eq!(health.memory_usage, 1024);
     }
 

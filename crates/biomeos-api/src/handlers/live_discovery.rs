@@ -6,11 +6,6 @@
 //! Provides capability-based runtime discovery utilities used by API handlers
 //! and future REST routes. Functions are `pub` for cross-module use.
 
-#![expect(
-    dead_code,
-    reason = "Discovery utilities reserved for upcoming REST API routes"
-)]
-
 // =============================================================================
 // Live Primal Discovery - Capability-Based Dynamic Discovery
 // =============================================================================
@@ -690,7 +685,7 @@ mod tests {
             endpoint: "/tmp/test.sock".to_string(),
             family_id: None,
         };
-        assert!(info.capabilities.iter().any(|c| c == &"crypto.encrypt"));
+        assert!(info.capabilities.iter().any(|c| c == "crypto.encrypt"));
         assert!(
             info.capabilities
                 .iter()
@@ -717,5 +712,170 @@ mod tests {
         let json = serde_json::to_string(&attestation).expect("serialize");
         assert!(json.contains("crypto.verify"));
         assert!(json.contains("jwt"));
+    }
+
+    #[tokio::test]
+    async fn test_discover_all_primals_socket_dir_exists_no_socks() {
+        use biomeos_test_utils::{remove_test_env, set_test_env};
+        let temp = tempfile::tempdir().expect("tempdir");
+        let p = temp.path().to_string_lossy();
+        set_test_env("BIOMEOS_SOCKET_DIR", p.as_ref());
+        let primals = discover_all_primals().await;
+        assert!(primals.is_empty());
+        remove_test_env("BIOMEOS_SOCKET_DIR");
+    }
+
+    /// Covers `send_rpc_request` success path and `discover_primal` field mapping.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_discover_primal_health_check_success_unix() {
+        use std::io::{Read, Write};
+        use std::os::unix::net::UnixListener;
+        use std::sync::mpsc;
+        use std::thread;
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock_path = temp.path().join("live-disc.sock");
+        let sock_str = sock_path.to_str().expect("utf8 path").to_string();
+
+        let (tx, rx) = mpsc::channel();
+        let path_for_server = sock_path.clone();
+        thread::spawn(move || {
+            let listener = UnixListener::bind(&path_for_server).expect("bind");
+            tx.send(()).expect("ready");
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buf = vec![0u8; 8192];
+            let _ = stream.read(&mut buf);
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": {
+                    "name": "unix-test-primal",
+                    "version": "3.0.0",
+                    "status": "ok",
+                    "capabilities": ["discovery", "http.get"],
+                    "family_id": "fam-x"
+                },
+                "id": 1
+            });
+            let s = serde_json::to_string(&body).expect("json");
+            stream.write_all(s.as_bytes()).expect("write");
+            stream.flush().ok();
+        });
+
+        rx.recv().expect("server listening");
+        let info = discover_primal(&sock_str).await.expect("discover primal");
+        assert_eq!(info.name, "unix-test-primal");
+        assert_eq!(info.version, "3.0.0");
+        assert_eq!(info.health, "ok");
+        assert_eq!(info.primal_type, "discovery");
+        assert_eq!(info.family_id.as_deref(), Some("fam-x"));
+        assert!(info.id.contains("unix-test-primal"));
+    }
+
+    /// `primal_name` fallback when `name` is absent.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_discover_primal_uses_primal_name_field_unix() {
+        use std::io::{Read, Write};
+        use std::os::unix::net::UnixListener;
+        use std::sync::mpsc;
+        use std::thread;
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock_path = temp.path().join("primal-name.sock");
+        let sock_str = sock_path.to_str().expect("utf8").to_string();
+
+        let (tx, rx) = mpsc::channel();
+        let path_for_server = sock_path.clone();
+        thread::spawn(move || {
+            let listener = UnixListener::bind(&path_for_server).expect("bind");
+            tx.send(()).expect("ready");
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buf = vec![0u8; 8192];
+            let _ = stream.read(&mut buf);
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": {
+                    "primal_name": "only-primal-name",
+                    "version": "0.0.1"
+                },
+                "id": 1
+            });
+            let s = serde_json::to_string(&body).expect("json");
+            stream.write_all(s.as_bytes()).expect("write");
+            stream.flush().ok();
+        });
+
+        rx.recv().expect("ready");
+        let info = discover_primal(&sock_str).await.expect("discover");
+        assert_eq!(info.name, "only-primal-name");
+        assert!(info.capabilities.contains(&"primal".to_string()));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_discover_primal_jsonrpc_error_unix() {
+        use std::io::{Read, Write};
+        use std::os::unix::net::UnixListener;
+        use std::sync::mpsc;
+        use std::thread;
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock_path = temp.path().join("rpc-err.sock");
+        let sock_str = sock_path.to_str().expect("utf8").to_string();
+
+        let (tx, rx) = mpsc::channel();
+        let path_for_server = sock_path.clone();
+        thread::spawn(move || {
+            let listener = UnixListener::bind(&path_for_server).expect("bind");
+            tx.send(()).expect("ready");
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buf = vec![0u8; 8192];
+            let _ = stream.read(&mut buf);
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "error": {"code": -32000, "message": "method unavailable"},
+                "id": 1
+            });
+            let s = serde_json::to_string(&body).expect("json");
+            stream.write_all(s.as_bytes()).expect("write");
+            stream.flush().ok();
+        });
+
+        rx.recv().expect("ready");
+        let err = discover_primal(&sock_str).await.expect_err("rpc error");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("RPC error") && msg.contains("method unavailable"),
+            "{msg}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_discover_primal_malformed_json_response_unix() {
+        use std::io::{Read, Write};
+        use std::os::unix::net::UnixListener;
+        use std::sync::mpsc;
+        use std::thread;
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock_path = temp.path().join("bad-json.sock");
+        let sock_str = sock_path.to_str().expect("utf8").to_string();
+
+        let (tx, rx) = mpsc::channel();
+        let path_for_server = sock_path.clone();
+        thread::spawn(move || {
+            let listener = UnixListener::bind(&path_for_server).expect("bind");
+            tx.send(()).expect("ready");
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buf = vec![0u8; 8192];
+            let _ = stream.read(&mut buf);
+            stream.write_all(b"NOT JSON").expect("write");
+            stream.flush().ok();
+        });
+
+        rx.recv().expect("ready");
+        assert!(discover_primal(&sock_str).await.is_err());
     }
 }

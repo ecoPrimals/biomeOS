@@ -445,8 +445,9 @@ impl PathwayLearner {
 #[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;
-    use crate::graph::{DeploymentGraph, GraphDefinition, GraphId};
-    use crate::node::{GraphNode, NodeConfig, NodeId};
+    use crate::graph::{DeploymentGraph, GraphDefinition, GraphId, GraphMetadata};
+    use crate::node::{GraphNode, NodeConfig, NodeId, NodeParams, NodeType};
+    use std::collections::HashMap;
 
     fn test_graph_id(id: &str) -> GraphId {
         GraphId::new(id).unwrap()
@@ -465,10 +466,10 @@ mod tests {
                 description: "test".to_string(),
                 coordination: crate::graph::CoordinationPattern::Sequential,
                 tick: None,
-                metadata: Default::default(),
-                env: Default::default(),
+                metadata: GraphMetadata::default(),
+                env: HashMap::default(),
                 nodes,
-                outputs: Default::default(),
+                outputs: HashMap::default(),
             },
         }
     }
@@ -477,7 +478,7 @@ mod tests {
         GraphNode {
             id: test_node_id(id),
             name: id.to_string(),
-            node_type: Default::default(),
+            node_type: NodeType::default(),
             capability: Some(format!("test.{id}")),
             required: true,
             order: 0,
@@ -488,9 +489,9 @@ mod tests {
                 skip_if: None,
                 retry_count: None,
                 timeout_secs: None,
-                extra: Default::default(),
+                extra: HashMap::default(),
             },
-            params: Default::default(),
+            params: NodeParams::default(),
             feedback_to: None,
             budget_ms: None,
             fallback: None,

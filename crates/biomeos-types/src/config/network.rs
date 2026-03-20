@@ -271,6 +271,7 @@ impl Default for HttpConfig {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -506,14 +507,14 @@ mod tests {
     #[test]
     fn test_network_config_clone() {
         let original = NetworkConfig::default();
-        let cloned = original.clone();
+        let cloned = original;
         assert_eq!(cloned.port, 8080);
     }
 
     #[test]
     fn test_http_config_clone() {
         let original = HttpConfig::default();
-        let cloned = original.clone();
+        let cloned = original;
         assert!(cloned.http2);
     }
 

@@ -370,10 +370,9 @@ pub(super) struct ExecutionResult {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
-    use super::*;
     use crate::universal_biomeos_manager::{PrimalInfo, UniversalBiomeOSManager};
     use biomeos_primal_sdk::PrimalCapability;
-    use biomeos_types::{BiomeOSConfig, Health, PrimalType};
+    use biomeos_types::{Health, PrimalType};
     use std::collections::HashMap;
 
     fn test_primal_info(id: &str, name: &str, endpoint: &str) -> PrimalInfo {

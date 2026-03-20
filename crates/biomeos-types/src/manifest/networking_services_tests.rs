@@ -49,7 +49,7 @@ fn ipam_spec_roundtrip() {
             gateway: Some("10.0.0.1".into()),
             aux_addresses: HashMap::new(),
         }],
-        options: [("foo".into(), "bar".into())].into_iter().collect(),
+        options: std::iter::once(("foo".into(), "bar".into())).collect(),
     };
     roundtrip_json(&spec);
 }
@@ -60,9 +60,7 @@ fn ipam_config_spec_roundtrip() {
         subnet: "172.16.0.0/16".into(),
         ip_range: None,
         gateway: None,
-        aux_addresses: [("host1".into(), "172.16.0.2".into())]
-            .into_iter()
-            .collect(),
+        aux_addresses: std::iter::once(("host1".into(), "172.16.0.2".into())).collect(),
     };
     roundtrip_json(&spec);
 }
@@ -178,12 +176,13 @@ fn minimal_struct_construction() {
         config: vec![],
         options: HashMap::new(),
     };
-    let _mesh_config = ServiceMeshConfig {
+    let mesh_config = ServiceMeshConfig {
         mtls_enabled: false,
         telemetry: None,
         ingress: None,
         egress: None,
     };
+    assert!(!mesh_config.mtls_enabled);
 }
 
 #[test]
@@ -201,9 +200,7 @@ fn complex_nested_service_mesh_spec_roundtrip() {
             ingress: Some(MeshIngressSpec {
                 gateways: vec![GatewaySpec {
                     name: "gateway".into(),
-                    selector: [("app".into(), "istio-ingress".into())]
-                        .into_iter()
-                        .collect(),
+                    selector: std::iter::once(("app".into(), "istio-ingress".into())).collect(),
                     servers: vec![ServerSpec {
                         port: PortSpec {
                             number: 443,

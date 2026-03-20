@@ -491,7 +491,7 @@ mod tests {
             version: "0.9.0".to_string(),
             arch: "x86_64-linux-musl".to_string(),
             sha256: "abc123".to_string(),
-            size: 1234567,
+            size: 1_234_567,
         };
         let json = serde_json::to_string(&resp).expect("serialize");
         assert!(json.contains("abc123"));

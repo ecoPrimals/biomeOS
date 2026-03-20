@@ -114,6 +114,7 @@ pub(crate) async fn get_disk_usage() -> BiomeResult<f64> {
     Ok(total_usage / disks.len() as f64)
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,6 +174,6 @@ mod tests {
         let json = serde_json::to_string(&info).expect("serialization should succeed");
         let deserialized: DiskInfo =
             serde_json::from_str(&json).expect("deserialization should succeed");
-        assert_eq!(deserialized.usage_percent, 0.0);
+        assert!((deserialized.usage_percent - 0.0).abs() < f64::EPSILON);
     }
 }

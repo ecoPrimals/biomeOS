@@ -99,8 +99,6 @@ mod tests {
 
     #[test]
     fn test_key_mappings() {
-        let handler = EventHandler::new();
-
         // Test quit keys
         assert_eq!(
             EventHandler::handle_key_event(KeyCode::Char('q')),

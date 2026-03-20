@@ -264,9 +264,29 @@ impl IdentityLayer for IdentityLayerImpl {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::discovery::DiscoveredPrimal;
+    use biomeos_test_utils::ready_signal;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    fn sample_proof() -> IdentityProof {
+        IdentityProof {
+            primal_name: "beardog".to_string(),
+            node_id: "n1".to_string(),
+            family_id: "fam".to_string(),
+            version: "1.0".to_string(),
+            process_id: 1,
+            socket_path: "/tmp/x.sock".to_string(),
+            owner_uid: 1000,
+            owner_gid: 1000,
+            started_at: "2026-01-01".to_string(),
+            challenge: "c".to_string(),
+            signature: "sig".to_string(),
+        }
+    }
 
     #[test]
     fn test_generate_challenge() {
@@ -342,11 +362,183 @@ mod tests {
         };
         let verification = IdentityVerification {
             verified: true,
-            proof: proof.clone(),
+            proof,
             message: "OK".to_string(),
         };
         assert!(verification.verified);
         assert_eq!(verification.message, "OK");
         assert_eq!(verification.proof.primal_name, "test");
+    }
+
+    #[tokio::test]
+    async fn test_verify_identity_no_endpoints() {
+        let layer = IdentityLayerImpl {
+            beardog_socket: Some("/tmp/bd.sock".into()),
+        };
+        let discovered = DiscoveredPrimal {
+            primal: "p".into(),
+            node_id: "n".into(),
+            family_id: "f".into(),
+            capabilities: vec![],
+            endpoints: vec![],
+            signature: String::new(),
+            timestamp: String::new(),
+        };
+        let r = layer.verify_identity(&discovered).await;
+        assert!(r.is_err());
+        let msg = r.unwrap_err().to_string();
+        assert!(
+            msg.contains("endpoint") || msg.contains("No endpoints"),
+            "{msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_proof_fails_when_not_verified() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("bd.sock");
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let listener = tokio::net::UnixListener::bind(&sock).expect("bind");
+        ready_tx.signal();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let _ = stream.read(&mut buf).await;
+                let response = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {"verified": false, "message": "bad"},
+                    "id": 1
+                });
+                let _ = stream
+                    .write_all(
+                        format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes(),
+                    )
+                    .await;
+            }
+        });
+        ready_rx.wait().await.unwrap();
+
+        let layer = IdentityLayerImpl {
+            beardog_socket: Some(sock.to_string_lossy().into_owned()),
+        };
+        let r = layer.verify_proof(&sample_proof()).await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_verify_proof_success() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("bd2.sock");
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let listener = tokio::net::UnixListener::bind(&sock).expect("bind");
+        ready_tx.signal();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let _ = stream.read(&mut buf).await;
+                let response = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {"verified": true, "message": "ok"},
+                    "id": 1
+                });
+                let _ = stream
+                    .write_all(
+                        format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes(),
+                    )
+                    .await;
+            }
+        });
+        ready_rx.wait().await.unwrap();
+
+        let layer = IdentityLayerImpl {
+            beardog_socket: Some(sock.to_string_lossy().into_owned()),
+        };
+        let r = layer.verify_proof(&sample_proof()).await;
+        assert!(r.is_ok());
+        assert!(r.unwrap().verified);
+    }
+
+    #[tokio::test]
+    async fn test_verify_proof_missing_verified_field() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("bd3.sock");
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let listener = tokio::net::UnixListener::bind(&sock).expect("bind");
+        ready_tx.signal();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let _ = stream.read(&mut buf).await;
+                let response = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {"message": "oops"},
+                    "id": 1
+                });
+                let _ = stream
+                    .write_all(
+                        format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes(),
+                    )
+                    .await;
+            }
+        });
+        ready_rx.wait().await.unwrap();
+
+        let layer = IdentityLayerImpl {
+            beardog_socket: Some(sock.to_string_lossy().into_owned()),
+        };
+        let r = layer.verify_proof(&sample_proof()).await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_request_proof_parses_identity_proof() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let primal_sock = temp.path().join("primal.sock");
+        let proof = sample_proof();
+        let proof_json = serde_json::to_value(&proof).unwrap();
+
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let listener = tokio::net::UnixListener::bind(&primal_sock).expect("bind");
+        ready_tx.signal();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let _ = stream.read(&mut buf).await;
+                let response = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": proof_json,
+                    "id": 1
+                });
+                let _ = stream
+                    .write_all(
+                        format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes(),
+                    )
+                    .await;
+            }
+        });
+        ready_rx.wait().await.unwrap();
+
+        let layer = IdentityLayerImpl {
+            beardog_socket: Some("/unused".into()),
+        };
+        let r = layer
+            .request_proof(primal_sock.to_str().unwrap(), "nonce")
+            .await;
+        assert!(r.is_ok());
+        assert_eq!(r.unwrap().primal_name, "beardog");
+    }
+
+    #[tokio::test]
+    async fn test_identity_layer_new_with_beardog_socket_env() {
+        let _guard = biomeos_test_utils::TestEnvGuard::set(
+            "BEARDOG_SOCKET",
+            "/tmp/nonexistent-but-env-ok.sock",
+        );
+        let layer = IdentityLayerImpl::new().await;
+        assert!(layer.is_ok());
+        assert_eq!(
+            layer.unwrap().beardog_socket.as_deref(),
+            Some("/tmp/nonexistent-but-env-ok.sock")
+        );
     }
 }

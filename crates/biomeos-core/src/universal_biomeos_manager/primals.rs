@@ -179,13 +179,14 @@ impl UniversalBiomeOSManager {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use biomeos_types::PrimalType;
     use biomeos_types::paths::SystemPaths;
     use chrono::Utc;
+    use std::collections::HashMap;
 
     fn test_primal(id: &str, name: &str, health: biomeos_types::Health) -> PrimalInfo {
         let paths = SystemPaths::default();
@@ -199,7 +200,7 @@ mod tests {
             health,
             last_seen: Utc::now(),
             discovered_at: Utc::now(),
-            metadata: Default::default(),
+            metadata: HashMap::default(),
         }
     }
 

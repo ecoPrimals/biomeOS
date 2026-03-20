@@ -121,7 +121,7 @@ fn test_cli_parse_neural_api_with_opts() {
             assert_eq!(graphs_dir, &PathBuf::from("/tmp/graphs"));
             assert_eq!(family_id.as_deref(), Some("fam1"));
             assert_eq!(
-                socket.as_ref().map(|p| p.as_path()),
+                socket.as_ref().map(PathBuf::as_path),
                 Some(std::path::Path::new("/tmp/api.sock"))
             );
         }
@@ -196,7 +196,7 @@ fn test_cli_parse_api_with_port_and_socket() {
         } => {
             assert_eq!(*port, Some(8080));
             assert_eq!(
-                socket.as_ref().map(|p| p.as_path()),
+                socket.as_ref().map(PathBuf::as_path),
                 Some(std::path::Path::new("/tmp/api.sock"))
             );
             assert!(!*unix_only);
@@ -352,7 +352,7 @@ fn test_cli_parse_genome_verify() {
     match &cli.mode {
         Mode::Genome { command } => match command {
             GenomeCommand::Verify(args) => {
-                assert_eq!(args.path, PathBuf::from("/path/to/genome.genome"))
+                assert_eq!(args.path, PathBuf::from("/path/to/genome.genome"));
             }
             _ => panic!("expected Verify subcommand"),
         },
@@ -371,7 +371,7 @@ fn test_cli_parse_model_cache_resolve() {
     match &cli.mode {
         Mode::ModelCache { command } => match command {
             ModelCacheCommand::Resolve { model_id } => {
-                assert_eq!(model_id, "TinyLlama/TinyLlama-1.1B")
+                assert_eq!(model_id, "TinyLlama/TinyLlama-1.1B");
             }
             _ => panic!("expected Resolve subcommand"),
         },
@@ -544,7 +544,7 @@ fn test_cli_help_contains_biomeos() {
 
 #[test]
 fn test_cli_version_output() {
-    let version = Cli::command().render_version().to_string();
+    let version = Cli::command().render_version();
     assert!(!version.is_empty());
     assert!(version.contains('.'), "Version should have semver format");
 }

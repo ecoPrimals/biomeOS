@@ -569,8 +569,11 @@ mod tests {
                 let mut line = String::new();
                 let _ = reader.read_line(&mut line).await;
                 let req: serde_json::Value =
-                    serde_json::from_str(line.trim()).unwrap_or(serde_json::json!({}));
-                let id = req.get("id").and_then(|v| v.as_u64()).unwrap_or(1);
+                    serde_json::from_str(line.trim()).unwrap_or_else(|_| serde_json::json!({}));
+                let id = req
+                    .get("id")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(1);
                 let response = serde_json::json!({
                     "jsonrpc": "2.0",
                     "result": [{"id": "gpu-0", "name": "Test GPU"}],

@@ -338,6 +338,7 @@ impl DeploymentGraph {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -633,6 +634,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::literal_string_with_formatting_args)]
     fn test_resolve_env_with_default_pattern_in_graph_env() {
         let toml_str = r#"
             [graph]

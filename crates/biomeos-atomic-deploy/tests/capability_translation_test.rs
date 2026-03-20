@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Tests for capability translation socket communication
 //!
 //! **Concurrency-First Design**: Tests use proper synchronization (oneshot channels)
@@ -218,7 +220,7 @@ async fn test_concurrent_socket_connections() {
                         let id = serde_json::from_str::<serde_json::Value>(&request)
                             .ok()
                             .and_then(|v| v.get("id").cloned())
-                            .unwrap_or(serde_json::json!(1));
+                            .unwrap_or_else(|| serde_json::json!(1));
 
                         let response = serde_json::json!({
                             "jsonrpc": "2.0",

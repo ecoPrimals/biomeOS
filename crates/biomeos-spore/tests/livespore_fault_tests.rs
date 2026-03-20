@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Fault Injection Tests for LiveSpore Deployments
 //!
 //! Tests that verify LiveSpore resilience under various failure conditions:
@@ -265,7 +267,7 @@ fn test_very_long_path() {
 
     // Either it succeeds or fails gracefully
     match result {
-        Ok(_) => {
+        Ok(()) => {
             // Successfully created deep path
             fixture.write_file(&deep_path, "test");
         }
@@ -324,11 +326,11 @@ fn test_config_missing_required_fields() {
     // Valid TOML but missing required fields
     fixture.write_file(
         "biomeOS/tower.toml",
-        r#"
+        r"
 [tower]
 # Missing family_id and node_id
 concurrent_startup = true
-"#,
+",
     );
 
     let content = std::fs::read_to_string(fixture.spore_path.join("biomeOS/tower.toml")).unwrap();

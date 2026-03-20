@@ -231,6 +231,7 @@ pub struct PrimalComplianceCheck {
     pub agpl_license: bool,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

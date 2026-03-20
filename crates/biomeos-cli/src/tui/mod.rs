@@ -11,6 +11,7 @@
 
 pub mod dashboard;
 pub mod events;
+pub mod primal_ecosystem;
 pub mod types;
 pub mod widgets;
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Fault injection testing - Simulate specific failure modes
 //!
 //! These tests inject faults at specific points to ensure robust error handling.
@@ -288,7 +290,7 @@ async fn test_empty_primals_directory() {
         Ok(_) => {
             let spore_primals = mount_point.join("biomeOS/primals");
             let primal_count = std::fs::read_dir(&spore_primals)
-                .map(|entries| entries.count())
+                .map(Iterator::count)
                 .unwrap_or(0);
             println!("✅ Spore created with {primal_count} primals (may use fallback discovery)");
         }

@@ -144,7 +144,7 @@ fn test_capability_custom_variants() {
     let mut set = CapabilitySet::new();
     set.add(cap1.clone());
     set.add(cap2.clone());
-    set.add(cap3.clone());
+    set.add(cap3);
 
     assert!(set.has(&cap1));
     assert!(set.has(&cap2));

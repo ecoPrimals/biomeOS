@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Sovereign Security Pen Tests
 //!
 //! These tests verify the Dark Forest gate cannot be bypassed.
@@ -145,9 +147,10 @@ fn assert_no_info_leak(headers: &axum::http::HeaderMap, context: &str) {
     if let Some(ct) = headers.get("content-type") {
         let ct_str = ct.to_str().unwrap_or("");
         // For empty bodies, there should be no content-type, or it should be generic
-        if ct_str.contains("application/json") {
-            panic!("Content-Type 'application/json' on rejection leaks API info for {context}");
-        }
+        assert!(
+            !ct_str.contains("application/json"),
+            "Content-Type 'application/json' on rejection leaks API info for {context}"
+        );
     }
 }
 
@@ -445,20 +448,16 @@ async fn pentest_invalid_tokens_rejected() {
             .header("X-Dark-Forest-Token", *token)
             .body(Body::empty());
 
-        match build_result {
-            Ok(request) => {
-                // If HTTP layer accepts it, our gate must still reject
-                let response = app.clone().oneshot(request).await.unwrap();
-                assert_dark_forest_rejection(
-                    response,
-                    &format!("invalid header token: {:?}", &token[..token.len().min(20)]),
-                )
-                .await;
-            }
-            Err(_) => {
-                // HTTP layer rejected the header value — good, never reaches our code
-            }
+        if let Ok(request) = build_result {
+            // If HTTP layer accepts it, our gate must still reject
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_dark_forest_rejection(
+                response,
+                &format!("invalid header token: {:?}", &token[..token.len().min(20)]),
+            )
+            .await;
         }
+        // Else: HTTP layer rejected the header value — good, never reaches our code
     }
 }
 

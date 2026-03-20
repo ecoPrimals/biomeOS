@@ -360,6 +360,7 @@ fn resolve_var(s: &str, env: &HashMap<String, String>) -> String {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -488,8 +489,7 @@ mod tests {
         params.insert("a", "one");
         params.insert("b", "two");
 
-        let collected: Vec<_> = params.iter().collect();
-        assert_eq!(collected.len(), 2);
+        assert_eq!(params.iter().count(), 2);
     }
 
     #[test]
@@ -501,7 +501,10 @@ mod tests {
         let json = params.to_json();
         assert!(json.is_object());
         assert_eq!(json.get("key").and_then(|v| v.as_str()), Some("value"));
-        assert_eq!(json.get("num").and_then(|v| v.as_i64()), Some(99));
+        assert_eq!(
+            json.get("num").and_then(serde_json::Value::as_i64),
+            Some(99)
+        );
     }
 
     #[test]

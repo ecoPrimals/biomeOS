@@ -271,4 +271,45 @@ mod tests {
         let result = handle_node_list_local(&args).await;
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn test_list_local_args_default_detailed() {
+        let args = ListLocalArgs {
+            spore_id: None,
+            detailed: false,
+        };
+        assert!(!args.detailed);
+    }
+
+    #[test]
+    fn test_incubate_args_spore_path_only() {
+        let args = IncubateArgs {
+            spore: PathBuf::from("/media/usb/spore"),
+            computer_name: None,
+            deploy_local: false,
+        };
+        assert_eq!(args.spore, PathBuf::from("/media/usb/spore"));
+        assert!(args.computer_name.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_handle_node_list_local_detailed_flag_no_nodes() {
+        let args = ListLocalArgs {
+            spore_id: None,
+            detailed: true,
+        };
+        let result = handle_node_list_local(&args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_spore_incubate_empty_path_component() {
+        let args = IncubateArgs {
+            spore: PathBuf::from(""),
+            computer_name: None,
+            deploy_local: false,
+        };
+        let result = handle_spore_incubate(&args).await;
+        assert!(result.is_err());
+    }
 }

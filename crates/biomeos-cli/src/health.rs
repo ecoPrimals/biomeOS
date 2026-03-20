@@ -327,7 +327,10 @@ mod tests {
     fn test_calculate_health_score_perfect() {
         let health = system_health(50.0, 50.0, 50.0);
         let score = HealthUtils::calculate_health_score(&health);
-        assert_eq!(score, 100.0, "Perfect resource usage should score 100");
+        assert!(
+            (score - 100.0).abs() < f64::EPSILON,
+            "Perfect resource usage should score 100"
+        );
     }
 
     #[test]
@@ -367,12 +370,12 @@ mod tests {
         // At exactly 75% memory, no deduction
         let health = system_health(50.0, 75.0, 50.0);
         let score = HealthUtils::calculate_health_score(&health);
-        assert_eq!(score, 100.0);
+        assert!((score - 100.0).abs() < f64::EPSILON);
 
         // At exactly 85% disk, no deduction
         let health2 = system_health(50.0, 50.0, 85.0);
         let score2 = HealthUtils::calculate_health_score(&health2);
-        assert_eq!(score2, 100.0);
+        assert!((score2 - 100.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -387,14 +390,14 @@ mod tests {
     fn test_calculate_health_score_zero_usage() {
         let health = system_health(0.0, 0.0, 0.0);
         let score = HealthUtils::calculate_health_score(&health);
-        assert_eq!(score, 100.0);
+        assert!((score - 100.0).abs() < f64::EPSILON);
     }
 
     #[test]
     fn test_calculate_health_score_just_under_thresholds() {
         let health = system_health(74.9, 74.9, 84.9);
         let score = HealthUtils::calculate_health_score(&health);
-        assert_eq!(score, 100.0);
+        assert!((score - 100.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -417,7 +420,7 @@ mod tests {
             disk_usage: 40.0,
             network_status: "Degraded".to_string(),
         };
-        assert_eq!(health.cpu_usage, 25.0);
+        assert!((health.cpu_usage - 25.0).abs() < f64::EPSILON);
         assert_eq!(health.network_status, "Degraded");
     }
 
@@ -515,6 +518,8 @@ mod tests {
         let result = HealthUtils::comprehensive_health_report(&manager).await;
         assert!(result.is_ok());
         let report = result.unwrap();
-        assert_eq!(report.system.cpu_usage, report.system.cpu_usage);
+        assert!((0.0..=100.0).contains(&report.system.cpu_usage));
+        assert!((0.0..=100.0).contains(&report.system.memory_usage));
+        assert!((0.0..=100.0).contains(&report.system.disk_usage));
     }
 }

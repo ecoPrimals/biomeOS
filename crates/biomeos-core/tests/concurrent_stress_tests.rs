@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Concurrent stress tests for biomeOS
 //!
 //! **Purpose**: Validate that our concurrent evolution is production-ready
@@ -125,11 +127,10 @@ async fn stress_concurrent_message_passing() {
 
     // Verify each sender sent all messages
     for sender_id in 0..NUM_SENDERS {
-        let sender_messages: Vec<_> = received.iter().filter(|(id, _)| *id == sender_id).collect();
+        let sender_count = received.iter().filter(|(id, _)| *id == sender_id).count();
 
         assert_eq!(
-            sender_messages.len(),
-            MESSAGES_PER_SENDER,
+            sender_count, MESSAGES_PER_SENDER,
             "Sender {sender_id} should send all messages"
         );
     }
@@ -323,9 +324,7 @@ async fn stress_exponential_backoff() {
                 delay_ms = (delay_ms * 2).min(max_delay_ms);
                 attempts += 1;
 
-                if attempts > 20 {
-                    panic!("Poller {poller_id} took too long");
-                }
+                assert!(attempts <= 20, "Poller {poller_id} took too long");
             }
         });
     }

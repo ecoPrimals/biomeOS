@@ -18,6 +18,7 @@ pub mod universal_biomeos_manager;
 // Atomic client - Pure Rust, Tower-based Unix socket communication (ecoBin!)
 pub mod atomic_client;
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod atomic_client_tests;
 pub mod atomic_primal_client;
 
@@ -28,6 +29,7 @@ pub mod primal_adapter;
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod capability_registry_tests;
 /// Wave-based concurrent primal startup
 pub mod concurrent_startup;
@@ -164,6 +166,7 @@ pub use config_builder::BiomeOSConfigBuilder;
 // Build information now centralized in biomeos-types constants module
 pub use biomeos_types::BUILD_INFO;
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

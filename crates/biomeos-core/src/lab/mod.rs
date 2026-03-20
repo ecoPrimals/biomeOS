@@ -244,7 +244,7 @@ impl TestResult {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -286,7 +286,7 @@ mod tests {
             test_name: "unit-test".to_string(),
             success: true,
             stdout: "ok".to_string(),
-            stderr: "".to_string(),
+            stderr: String::new(),
         };
         assert!(result.passed());
         assert_eq!(result.output(), "ok");
@@ -298,7 +298,7 @@ mod tests {
         let result = TestResult {
             test_name: "fail-test".to_string(),
             success: false,
-            stdout: "".to_string(),
+            stdout: String::new(),
             stderr: "assertion failed".to_string(),
         };
         assert!(!result.passed());
@@ -317,5 +317,138 @@ mod tests {
         let cloned = result.clone();
         assert_eq!(cloned.test_name, result.test_name);
         assert_eq!(cloned.success, result.success);
+    }
+
+    #[cfg(unix)]
+    fn write_executable_script(path: &std::path::Path, body: &str) {
+        use std::io::Write;
+        use std::os::unix::fs::PermissionsExt;
+        let mut f = std::fs::File::create(path).expect("create script");
+        f.write_all(body.as_bytes()).expect("write script");
+        f.sync_all().expect("sync script");
+        drop(f);
+        let mut perms = std::fs::metadata(path).expect("meta").permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(path, perms).expect("chmod");
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn create_lab_success_with_stub_script() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("benchscale");
+        let scripts = root.join("scripts");
+        std::fs::create_dir_all(&scripts).expect("scripts dir");
+        write_executable_script(&scripts.join("create-lab.sh"), "#!/bin/sh\nexit 0\n");
+        write_executable_script(&scripts.join("deploy-to-lab.sh"), "#!/bin/sh\nexit 0\n");
+        write_executable_script(&scripts.join("run-tests.sh"), "#!/bin/sh\nexit 0\n");
+        write_executable_script(&scripts.join("destroy-lab.sh"), "#!/bin/sh\nexit 0\n");
+
+        let mgr = LabManager::with_path(root);
+        let handle = mgr
+            .create_lab("simple", "lab-stub")
+            .await
+            .expect("create_lab");
+        assert_eq!(handle.name(), "lab-stub");
+        assert_eq!(handle.topology(), "simple");
+
+        mgr.deploy_to_lab("lab-stub", "manifest.toml")
+            .await
+            .expect("deploy");
+
+        let tr = mgr.run_test("lab-stub", "smoke").await.expect("run_test");
+        assert!(tr.passed());
+
+        mgr.destroy_lab("lab-stub").await.expect("destroy");
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn create_lab_failure_propagates_stderr() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("benchscale");
+        let scripts = root.join("scripts");
+        std::fs::create_dir_all(&scripts).expect("scripts dir");
+        write_executable_script(
+            &scripts.join("create-lab.sh"),
+            "#!/bin/sh\necho boom >&2\nexit 1\n",
+        );
+
+        let mgr = LabManager::with_path(root);
+        let err = mgr
+            .create_lab("t", "bad-lab")
+            .await
+            .expect_err("should fail");
+        assert!(
+            err.to_string().contains("boom") || err.to_string().contains("Failed to create lab"),
+            "{err}"
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn run_test_failure_returns_result_not_error() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("benchscale");
+        let scripts = root.join("scripts");
+        std::fs::create_dir_all(&scripts).expect("scripts dir");
+        write_executable_script(&scripts.join("create-lab.sh"), "#!/bin/sh\nexit 0\n");
+        write_executable_script(
+            &scripts.join("run-tests.sh"),
+            "#!/bin/sh\necho fail >&2\nexit 1\n",
+        );
+        write_executable_script(&scripts.join("destroy-lab.sh"), "#!/bin/sh\nexit 0\n");
+
+        let mgr = LabManager::with_path(root);
+        mgr.create_lab("t", "fail-lab").await.expect("create");
+        let tr = mgr.run_test("fail-lab", "t1").await.expect("run_test");
+        assert!(!tr.passed());
+        assert!(!tr.stderr.is_empty() || !tr.success);
+        mgr.destroy_lab("fail-lab").await.expect("destroy");
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn destroy_lab_failure_returns_error() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("benchscale");
+        let scripts = root.join("scripts");
+        std::fs::create_dir_all(&scripts).expect("scripts dir");
+        write_executable_script(&scripts.join("create-lab.sh"), "#!/bin/sh\nexit 0\n");
+        write_executable_script(
+            &scripts.join("destroy-lab.sh"),
+            "#!/bin/sh\necho nope >&2\nexit 1\n",
+        );
+
+        let mgr = LabManager::with_path(root);
+        mgr.create_lab("t", "doom-lab").await.expect("create");
+        let err = mgr
+            .destroy_lab("doom-lab")
+            .await
+            .expect_err("destroy fails");
+        assert!(
+            err.to_string().contains("nope") || err.to_string().contains("Failed to destroy"),
+            "{err}"
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn lab_handle_deploy_and_run_test_delegate() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("benchscale");
+        let scripts = root.join("scripts");
+        std::fs::create_dir_all(&scripts).expect("scripts dir");
+        write_executable_script(&scripts.join("create-lab.sh"), "#!/bin/sh\nexit 0\n");
+        write_executable_script(&scripts.join("deploy-to-lab.sh"), "#!/bin/sh\nexit 0\n");
+        write_executable_script(&scripts.join("run-tests.sh"), "#!/bin/sh\nexit 0\n");
+        write_executable_script(&scripts.join("destroy-lab.sh"), "#!/bin/sh\nexit 0\n");
+
+        let mgr = LabManager::with_path(root);
+        let h = mgr.create_lab("topo", "h1").await.expect("create");
+        h.deploy("m.toml").await.expect("handle deploy");
+        let tr = h.run_test("unit").await.expect("handle run_test");
+        assert!(tr.passed());
+        h.destroy().await.expect("handle destroy");
     }
 }

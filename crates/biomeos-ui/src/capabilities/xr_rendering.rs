@@ -205,7 +205,7 @@ mod tests {
             fov_degrees: 110,
             color_format: "rgba16f".to_string(),
         };
-        let adapter = StereoRenderAdapter::new(config.clone());
+        let adapter = StereoRenderAdapter::new(config);
         assert_eq!(adapter.config().refresh_hz, 120);
         assert_eq!(adapter.config().eye_resolution, (1440, 1600));
     }

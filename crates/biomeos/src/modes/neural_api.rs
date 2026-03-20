@@ -153,8 +153,8 @@ mod tests {
         };
         let s = format!("{config:?}");
         assert!(s.contains("NeuralApiConfig"));
-        assert!(s.contains("g"));
-        assert!(s.contains("f"));
+        assert!(s.contains('g'));
+        assert!(s.contains('f'));
     }
 
     #[test]

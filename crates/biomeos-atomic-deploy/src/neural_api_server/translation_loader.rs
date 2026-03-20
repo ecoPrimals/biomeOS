@@ -290,7 +290,7 @@ mod tests {
         let graph = crate::neural_graph::Graph {
             id: "empty".to_string(),
             version: "1.0".to_string(),
-            description: "".to_string(),
+            description: String::new(),
             nodes: vec![],
             config: crate::neural_graph::GraphConfig::default(),
             coordination: None,
@@ -322,7 +322,7 @@ mod tests {
         let graph = crate::neural_graph::Graph {
             id: "test".to_string(),
             version: "1.0".to_string(),
-            description: "".to_string(),
+            description: String::new(),
             nodes: vec![node],
             config: crate::neural_graph::GraphConfig::default(),
             coordination: None,

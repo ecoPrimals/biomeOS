@@ -168,7 +168,7 @@ mod tests {
     async fn test_new_with_config() {
         let config = BiomeOSConfig::default();
         let manager = UniversalBiomeOSManager::new(config).await.expect("new");
-        assert!(manager.get_config().metadata.version.len() > 0);
+        assert!(!manager.get_config().metadata.version.is_empty());
     }
 
     #[tokio::test]

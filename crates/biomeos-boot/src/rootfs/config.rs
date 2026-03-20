@@ -52,6 +52,7 @@ impl Default for RootFsConfig {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,7 +86,7 @@ mod tests {
         };
         assert_eq!(config.size, "16G");
         assert_eq!(config.fs_type, "xfs");
-        assert_eq!(config.dns_servers.as_ref().map(Vec::len).unwrap_or(0), 2);
+        assert_eq!(config.dns_servers.as_ref().map_or(0, Vec::len), 2);
         assert_eq!(config.nbd_device.as_deref(), Some("/dev/nbd1"));
         assert_eq!(config.hostname, "custom-host");
     }

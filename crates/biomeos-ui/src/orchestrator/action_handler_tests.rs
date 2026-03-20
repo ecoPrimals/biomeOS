@@ -409,6 +409,7 @@ async fn test_handle_assign_device_songbird_validation_invalid() {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn test_handle_assign_device_toadstool_insufficient_capacity() {
     let temp = tempfile::tempdir().expect("temp dir");
     let beardog_path = temp.path().join("beardog.sock");
@@ -427,7 +428,8 @@ async fn test_handle_assign_device_toadstool_insufficient_capacity() {
     let s1 = tokio::spawn(async move {
         let l = tokio::net::UnixListener::bind(&bp).expect("bind");
         if bind_count1.fetch_add(1, Ordering::SeqCst) == 2 {
-            if let Some(mut tx) = ready_tx1.lock().unwrap().take() {
+            let mut guard = ready_tx1.lock().unwrap();
+            if let Some(mut tx) = guard.take() {
                 tx.signal();
             }
         }
@@ -452,7 +454,8 @@ async fn test_handle_assign_device_toadstool_insufficient_capacity() {
     let s2 = tokio::spawn(async move {
         let l = tokio::net::UnixListener::bind(&sp).expect("bind");
         if bind_count2.fetch_add(1, Ordering::SeqCst) == 2 {
-            if let Some(mut tx) = ready_tx2.lock().unwrap().take() {
+            let mut guard = ready_tx2.lock().unwrap();
+            if let Some(mut tx) = guard.take() {
                 tx.signal();
             }
         }
@@ -469,7 +472,8 @@ async fn test_handle_assign_device_toadstool_insufficient_capacity() {
     let s3 = tokio::spawn(async move {
         let l = tokio::net::UnixListener::bind(&tp).expect("bind");
         if bind_count3.fetch_add(1, Ordering::SeqCst) == 2 {
-            if let Some(mut tx) = ready_tx3.lock().unwrap().take() {
+            let mut guard = ready_tx3.lock().unwrap();
+            if let Some(mut tx) = guard.take() {
                 tx.signal();
             }
         }

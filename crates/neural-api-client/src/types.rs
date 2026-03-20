@@ -110,6 +110,7 @@ pub struct RoutingMetric {
     pub error: Option<String>,
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -119,9 +120,7 @@ mod tests {
     fn test_http_response_serialize_deserialize() {
         let resp = HttpResponse {
             status: 200,
-            headers: [("content-type".into(), "application/json".into())]
-                .into_iter()
-                .collect(),
+            headers: std::iter::once(("content-type".into(), "application/json".into())).collect(),
             body: Bytes::from(r#"{"result":"ok"}"#),
         };
         let json = serde_json::to_string(&resp).expect("serialize");

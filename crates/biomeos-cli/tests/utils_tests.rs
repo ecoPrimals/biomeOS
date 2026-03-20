@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for biomeos-cli command utilities
 //!
 //! Tests utility functions used across commands.
@@ -9,7 +11,7 @@
 fn test_parse_capabilities() {
     // Test parsing capability strings
     let caps = "compute,storage,network";
-    let parsed: Vec<&str> = caps.split(',').map(|s| s.trim()).collect();
+    let parsed: Vec<&str> = caps.split(',').map(str::trim).collect();
 
     assert_eq!(parsed.len(), 3);
     assert_eq!(parsed[0], "compute");
@@ -21,7 +23,7 @@ fn test_parse_capabilities() {
 fn test_parse_capabilities_with_spaces() {
     // Test parsing with extra whitespace
     let caps = " compute , storage , network ";
-    let parsed: Vec<&str> = caps.split(',').map(|s| s.trim()).collect();
+    let parsed: Vec<&str> = caps.split(',').map(str::trim).collect();
 
     assert_eq!(parsed.len(), 3);
     assert_eq!(parsed[0], "compute");

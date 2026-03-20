@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for JSON-RPC WebSocket server
 //!
 //! Tests the full WebSocket lifecycle including:
@@ -68,35 +70,30 @@ async fn test_websocket_connection() -> Result<()> {
 
     let url = ws_test_url();
 
-    match connect_async(&url).await {
-        Ok((ws_stream, _)) => {
-            let (mut write, mut read) = ws_stream.split();
+    let Ok((ws_stream, _)) = connect_async(&url).await else {
+        eprintln!("WebSocket server not running, skipping test");
+        return Ok(());
+    };
+    let (mut write, mut read) = ws_stream.split();
 
-            // Send a health check request
-            let request = json!({
-                "jsonrpc": "2.0",
-                "method": "events.list_subscriptions",
-                "params": {},
-                "id": 1
-            });
+    // Send a health check request
+    let request = json!({
+        "jsonrpc": "2.0",
+        "method": "events.list_subscriptions",
+        "params": {},
+        "id": 1
+    });
 
-            write.send(Message::Text(request.to_string())).await?;
+    write.send(Message::Text(request.to_string())).await?;
 
-            // Read response
-            if let Some(Ok(Message::Text(text))) = read.next().await {
-                let response: JsonRpcResponse = serde_json::from_str(&text)?;
-                assert_eq!(response.jsonrpc, "2.0");
-                assert!(response.result.is_some());
-            }
-
-            Ok(())
-        }
-        Err(_) => {
-            // Server not running, skip test
-            eprintln!("WebSocket server not running, skipping test");
-            Ok(())
-        }
+    // Read response
+    if let Some(Ok(Message::Text(text))) = read.next().await {
+        let response: JsonRpcResponse = serde_json::from_str(&text)?;
+        assert_eq!(response.jsonrpc, "2.0");
+        assert!(response.result.is_some());
     }
+
+    Ok(())
 }
 
 /// Test: JSON-RPC 2.0 error codes
@@ -104,44 +101,40 @@ async fn test_websocket_connection() -> Result<()> {
 async fn test_json_rpc_error_codes() -> Result<()> {
     let url = ws_test_url();
 
-    match connect_async(&url).await {
-        Ok((ws_stream, _)) => {
-            let (mut write, mut read) = ws_stream.split();
+    let Ok((ws_stream, _)) = connect_async(&url).await else {
+        eprintln!("WebSocket server not running, skipping test");
+        return Ok(());
+    };
+    let (mut write, mut read) = ws_stream.split();
 
-            // Test invalid JSON (parse error -32700)
-            write.send(Message::Text("not json".to_string())).await?;
+    // Test invalid JSON (parse error -32700)
+    write.send(Message::Text("not json".to_string())).await?;
 
-            if let Some(Ok(Message::Text(text))) = read.next().await {
-                let response: JsonRpcResponse = serde_json::from_str(&text)?;
-                if let Some(error) = response.error {
-                    assert_eq!(error.code, -32700);
-                }
-            }
-
-            // Test method not found (-32601)
-            let request = json!({
-                "jsonrpc": "2.0",
-                "method": "invalid.method",
-                "params": {},
-                "id": 1
-            });
-
-            write.send(Message::Text(request.to_string())).await?;
-
-            if let Some(Ok(Message::Text(text))) = read.next().await {
-                let response: JsonRpcResponse = serde_json::from_str(&text)?;
-                if let Some(error) = response.error {
-                    assert_eq!(error.code, -32601);
-                }
-            }
-
-            Ok(())
-        }
-        Err(_) => {
-            eprintln!("WebSocket server not running, skipping test");
-            Ok(())
+    if let Some(Ok(Message::Text(text))) = read.next().await {
+        let response: JsonRpcResponse = serde_json::from_str(&text)?;
+        if let Some(error) = response.error {
+            assert_eq!(error.code, -32700);
         }
     }
+
+    // Test method not found (-32601)
+    let request = json!({
+        "jsonrpc": "2.0",
+        "method": "invalid.method",
+        "params": {},
+        "id": 1
+    });
+
+    write.send(Message::Text(request.to_string())).await?;
+
+    if let Some(Ok(Message::Text(text))) = read.next().await {
+        let response: JsonRpcResponse = serde_json::from_str(&text)?;
+        if let Some(error) = response.error {
+            assert_eq!(error.code, -32601);
+        }
+    }
+
+    Ok(())
 }
 
 /// Test: Subscription management
@@ -149,80 +142,76 @@ async fn test_json_rpc_error_codes() -> Result<()> {
 async fn test_subscription_management() -> Result<()> {
     let url = ws_test_url();
 
-    match connect_async(&url).await {
-        Ok((ws_stream, _)) => {
-            let (mut write, mut read) = ws_stream.split();
+    let Ok((ws_stream, _)) = connect_async(&url).await else {
+        eprintln!("WebSocket server not running, skipping test");
+        return Ok(());
+    };
+    let (mut write, mut read) = ws_stream.split();
 
-            // Subscribe to events
-            let subscribe_request = json!({
-                "jsonrpc": "2.0",
-                "method": "events.subscribe",
-                "params": {
-                    "graph_id": "test_graph"
-                },
-                "id": 1
-            });
+    // Subscribe to events
+    let subscribe_request = json!({
+        "jsonrpc": "2.0",
+        "method": "events.subscribe",
+        "params": {
+            "graph_id": "test_graph"
+        },
+        "id": 1
+    });
 
-            write
-                .send(Message::Text(subscribe_request.to_string()))
-                .await?;
+    write
+        .send(Message::Text(subscribe_request.to_string()))
+        .await?;
 
-            // Read subscription response
-            let mut subscription_id = String::new();
-            if let Some(Ok(Message::Text(text))) = read.next().await {
-                let response: JsonRpcResponse = serde_json::from_str(&text)?;
-                if let Some(result) = response.result {
-                    subscription_id = result["subscription_id"].as_str().unwrap_or("").to_string();
-                    assert!(!subscription_id.is_empty());
-                }
-            }
-
-            // List subscriptions
-            let list_request = json!({
-                "jsonrpc": "2.0",
-                "method": "events.list_subscriptions",
-                "params": {},
-                "id": 2
-            });
-
-            write.send(Message::Text(list_request.to_string())).await?;
-
-            if let Some(Ok(Message::Text(text))) = read.next().await {
-                let response: JsonRpcResponse = serde_json::from_str(&text)?;
-                if let Some(result) = response.result {
-                    let count = result["count"].as_u64().unwrap_or(0);
-                    assert!(count >= 1);
-                }
-            }
-
-            // Unsubscribe
-            let unsubscribe_request = json!({
-                "jsonrpc": "2.0",
-                "method": "events.unsubscribe",
-                "params": {
-                    "subscription_id": subscription_id
-                },
-                "id": 3
-            });
-
-            write
-                .send(Message::Text(unsubscribe_request.to_string()))
-                .await?;
-
-            if let Some(Ok(Message::Text(text))) = read.next().await {
-                let response: JsonRpcResponse = serde_json::from_str(&text)?;
-                if let Some(result) = response.result {
-                    assert!(result["success"].as_bool().unwrap_or(false));
-                }
-            }
-
-            Ok(())
-        }
-        Err(_) => {
-            eprintln!("WebSocket server not running, skipping test");
-            Ok(())
+    // Read subscription response
+    let mut subscription_id = String::new();
+    if let Some(Ok(Message::Text(text))) = read.next().await {
+        let response: JsonRpcResponse = serde_json::from_str(&text)?;
+        if let Some(result) = response.result {
+            subscription_id = result["subscription_id"].as_str().unwrap_or("").to_string();
+            assert!(!subscription_id.is_empty());
         }
     }
+
+    // List subscriptions
+    let list_request = json!({
+        "jsonrpc": "2.0",
+        "method": "events.list_subscriptions",
+        "params": {},
+        "id": 2
+    });
+
+    write.send(Message::Text(list_request.to_string())).await?;
+
+    if let Some(Ok(Message::Text(text))) = read.next().await {
+        let response: JsonRpcResponse = serde_json::from_str(&text)?;
+        if let Some(result) = response.result {
+            let count = result["count"].as_u64().unwrap_or(0);
+            assert!(count >= 1);
+        }
+    }
+
+    // Unsubscribe
+    let unsubscribe_request = json!({
+        "jsonrpc": "2.0",
+        "method": "events.unsubscribe",
+        "params": {
+            "subscription_id": subscription_id
+        },
+        "id": 3
+    });
+
+    write
+        .send(Message::Text(unsubscribe_request.to_string()))
+        .await?;
+
+    if let Some(Ok(Message::Text(text))) = read.next().await {
+        let response: JsonRpcResponse = serde_json::from_str(&text)?;
+        if let Some(result) = response.result {
+            assert!(result["success"].as_bool().unwrap_or(false));
+        }
+    }
+
+    Ok(())
 }
 
 /// Test: Event filtering
@@ -230,43 +219,39 @@ async fn test_subscription_management() -> Result<()> {
 async fn test_event_filtering() -> Result<()> {
     let url = ws_test_url();
 
-    match connect_async(&url).await {
-        Ok((ws_stream, _)) => {
-            let (mut write, mut read) = ws_stream.split();
+    let Ok((ws_stream, _)) = connect_async(&url).await else {
+        eprintln!("WebSocket server not running, skipping test");
+        return Ok(());
+    };
+    let (mut write, mut read) = ws_stream.split();
 
-            // Subscribe with filter
-            let subscribe_request = json!({
-                "jsonrpc": "2.0",
-                "method": "events.subscribe",
-                "params": {
-                    "graph_id": "test_graph",
-                    "event_types": ["NodeStarted", "NodeCompleted"],
-                    "node_filter": "node1"
-                },
-                "id": 1
-            });
+    // Subscribe with filter
+    let subscribe_request = json!({
+        "jsonrpc": "2.0",
+        "method": "events.subscribe",
+        "params": {
+            "graph_id": "test_graph",
+            "event_types": ["NodeStarted", "NodeCompleted"],
+            "node_filter": "node1"
+        },
+        "id": 1
+    });
 
-            write
-                .send(Message::Text(subscribe_request.to_string()))
-                .await?;
+    write
+        .send(Message::Text(subscribe_request.to_string()))
+        .await?;
 
-            // Read subscription confirmation
-            if let Some(Ok(Message::Text(text))) = read.next().await {
-                let response: JsonRpcResponse = serde_json::from_str(&text)?;
-                assert!(response.result.is_some());
-            }
-
-            // Wait for events (if any)
-            // In a real test, we'd trigger graph execution to generate events
-            sleep(Duration::from_millis(100)).await;
-
-            Ok(())
-        }
-        Err(_) => {
-            eprintln!("WebSocket server not running, skipping test");
-            Ok(())
-        }
+    // Read subscription confirmation
+    if let Some(Ok(Message::Text(text))) = read.next().await {
+        let response: JsonRpcResponse = serde_json::from_str(&text)?;
+        assert!(response.result.is_some());
     }
+
+    // Wait for events (if any)
+    // In a real test, we'd trigger graph execution to generate events
+    sleep(Duration::from_millis(100)).await;
+
+    Ok(())
 }
 
 /// Test: Concurrent subscriptions
@@ -321,34 +306,30 @@ async fn test_concurrent_subscriptions() -> Result<()> {
 async fn test_invalid_params() -> Result<()> {
     let url = ws_test_url();
 
-    match connect_async(&url).await {
-        Ok((ws_stream, _)) => {
-            let (mut write, mut read) = ws_stream.split();
+    let Ok((ws_stream, _)) = connect_async(&url).await else {
+        eprintln!("WebSocket server not running, skipping test");
+        return Ok(());
+    };
+    let (mut write, mut read) = ws_stream.split();
 
-            // Send invalid params
-            let request = json!({
-                "jsonrpc": "2.0",
-                "method": "events.subscribe",
-                "params": "not an object",
-                "id": 1
-            });
+    // Send invalid params
+    let request = json!({
+        "jsonrpc": "2.0",
+        "method": "events.subscribe",
+        "params": "not an object",
+        "id": 1
+    });
 
-            write.send(Message::Text(request.to_string())).await?;
+    write.send(Message::Text(request.to_string())).await?;
 
-            if let Some(Ok(Message::Text(text))) = read.next().await {
-                let response: JsonRpcResponse = serde_json::from_str(&text)?;
-                if let Some(error) = response.error {
-                    assert_eq!(error.code, -32602); // Invalid params
-                }
-            }
-
-            Ok(())
-        }
-        Err(_) => {
-            eprintln!("WebSocket server not running, skipping test");
-            Ok(())
+    if let Some(Ok(Message::Text(text))) = read.next().await {
+        let response: JsonRpcResponse = serde_json::from_str(&text)?;
+        if let Some(error) = response.error {
+            assert_eq!(error.code, -32602); // Invalid params
         }
     }
+
+    Ok(())
 }
 
 /// Mock test: GraphEventBroadcaster integration
@@ -382,40 +363,36 @@ async fn test_event_broadcaster_integration() {
 async fn test_connection_cleanup() -> Result<()> {
     let url = ws_test_url();
 
-    match connect_async(&url).await {
-        Ok((ws_stream, _)) => {
-            let (mut write, mut read) = ws_stream.split();
+    let Ok((ws_stream, _)) = connect_async(&url).await else {
+        eprintln!("WebSocket server not running, skipping test");
+        return Ok(());
+    };
+    let (mut write, mut read) = ws_stream.split();
 
-            // Create subscription
-            let request = json!({
-                "jsonrpc": "2.0",
-                "method": "events.subscribe",
-                "params": {},
-                "id": 1
-            });
+    // Create subscription
+    let request = json!({
+        "jsonrpc": "2.0",
+        "method": "events.subscribe",
+        "params": {},
+        "id": 1
+    });
 
-            write.send(Message::Text(request.to_string())).await?;
+    write.send(Message::Text(request.to_string())).await?;
 
-            // Read response
-            if let Some(Ok(Message::Text(_))) = read.next().await {
-                // Connection established
-            }
-
-            // Close connection
-            // Note: ws_stream was consumed by split(), so we only drop write and read
-            drop(write);
-            drop(read);
-
-            // Subscriptions should be cleaned up automatically
-            // (In a real test, we'd verify this by checking server state)
-
-            Ok(())
-        }
-        Err(_) => {
-            eprintln!("WebSocket server not running, skipping test");
-            Ok(())
-        }
+    // Read response
+    if let Some(Ok(Message::Text(_))) = read.next().await {
+        // Connection established
     }
+
+    // Close connection
+    // Note: ws_stream was consumed by split(), so we only drop write and read
+    drop(write);
+    drop(read);
+
+    // Subscriptions should be cleaned up automatically
+    // (In a real test, we'd verify this by checking server state)
+
+    Ok(())
 }
 
 /// Performance test: High-frequency events

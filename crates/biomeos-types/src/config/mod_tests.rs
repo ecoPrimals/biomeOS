@@ -13,8 +13,9 @@
 //! - File I/O
 //! - Environment-specific configuration
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod config_tests {
     use crate::config::*;
     use biomeos_test_utils::{remove_test_env, set_test_env};

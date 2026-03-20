@@ -44,7 +44,7 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       
-      - name: Run clippy (lib only)
+      - name: Run clippy (all targets)
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       
       - name: Check documentation
@@ -138,8 +138,8 @@ jobs:
       - name: Generate coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
       
-      - name: Enforce coverage threshold (75% minimum)
-        run: cargo llvm-cov --workspace --fail-under-lines 75 --no-run
+      - name: Enforce coverage threshold (85% minimum)
+        run: cargo llvm-cov --workspace --fail-under-lines 85 --no-run
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

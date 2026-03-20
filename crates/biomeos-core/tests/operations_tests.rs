@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-#![allow(clippy::collapsible_if)]
+#![allow(clippy::collapsible_if, clippy::unwrap_used, clippy::expect_used)]
 // Copyright 2025 ecoPrimals Project
 
 //! Comprehensive tests for operations module
@@ -218,7 +218,9 @@ async fn test_service_scaling_real_http_success() {
 
     // target_replicas should be set
     assert!(scale_result.contains_key("target_replicas"));
-    let target = scale_result.get("target_replicas").and_then(|v| v.as_u64());
+    let target = scale_result
+        .get("target_replicas")
+        .and_then(serde_json::Value::as_u64);
     assert_eq!(target, Some(3));
 }
 

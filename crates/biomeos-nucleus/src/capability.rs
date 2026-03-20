@@ -125,6 +125,7 @@ impl CapabilityLayer for CapabilityLayerImpl {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -155,12 +156,7 @@ mod tests {
         ];
 
         // All expected capabilities are present
-        let missing: Vec<_> = expected
-            .iter()
-            .filter(|cap| !actual.contains(cap))
-            .collect();
-
-        assert!(missing.is_empty());
+        assert!(expected.iter().all(|cap| actual.contains(cap)));
     }
 
     #[test]

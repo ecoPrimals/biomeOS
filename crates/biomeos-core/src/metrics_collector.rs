@@ -220,6 +220,7 @@ fn pairs(primals: &[String]) -> Vec<(String, String)> {
     out
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -237,7 +238,7 @@ mod tests {
             .collect();
         GraphExecutionMetrics {
             graph_id: graph_id.to_string(),
-            primals_invoked: primals.iter().map(|s| s.to_string()).collect(),
+            primals_invoked: primals.iter().map(ToString::to_string).collect(),
             latencies: latencies_map,
             success,
             total_duration: Duration::from_millis(total_ms),

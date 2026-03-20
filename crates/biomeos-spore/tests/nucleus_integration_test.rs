@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Integration tests for plasmidBin deployment
 //!
 //! Tests the complete pipeline from plasmidBin/ to spore creation.
@@ -96,9 +98,9 @@ async fn test_version_tracking() {
     // Create VERSION.txt with UniBin-compliant names
     std::fs::write(
         plasmid_bin.join("VERSION.txt"),
-        r#"tower: git:abc123
+        r"tower: git:abc123
 beardog: git:def456
-songbird: git:ghi789"#,
+songbird: git:ghi789",
     )
     .unwrap();
 

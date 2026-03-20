@@ -465,9 +465,9 @@ mod tests {
 
     #[test]
     fn test_health_percentage() {
-        assert_eq!(health_percentage(0, 0), 0.0);
-        assert_eq!(health_percentage(5, 10), 50.0);
-        assert_eq!(health_percentage(10, 10), 100.0);
+        assert!((health_percentage(0, 0) - 0.0).abs() < f64::EPSILON);
+        assert!((health_percentage(5, 10) - 50.0).abs() < f64::EPSILON);
+        assert!((health_percentage(10, 10) - 100.0).abs() < f64::EPSILON);
         let p = health_percentage(1, 3);
         assert!((p - 33.333).abs() < 0.001, "expected ~33.33, got {p}");
     }
@@ -696,7 +696,12 @@ mod tests {
         manager.register_primal(degraded).await.expect("register");
 
         let result = manager.quick_system_scan().await.expect("scan");
-        assert_eq!(result.get("issues_count").and_then(|v| v.as_u64()), Some(1));
+        assert_eq!(
+            result
+                .get("issues_count")
+                .and_then(serde_json::Value::as_u64),
+            Some(1)
+        );
     }
 
     #[tokio::test]

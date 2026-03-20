@@ -5,15 +5,16 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use super::build::build_genome;
-use super::retrieval::get_genome_info;
-use super::state::GenomeState;
-use super::types::{BinarySpec, BuildRequest};
+use super::build::{build_genome, compose_genome, create_genome};
+use super::retrieval::{download_genome, get_genome_info, list_genomes};
+use super::state::{GenomeState, genome_state};
+use super::types::{BinarySpec, BuildRequest, ComposeRequest, CreateGenomeRequest};
+use axum::Json;
 use axum::extract::Path;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+use biomeos_genomebin_v3::{Arch, GenomeBin, GenomeManifest};
 
 #[test]
 fn test_genome_state_default_storage_dir() {
@@ -68,6 +69,65 @@ async fn test_get_genome_info_not_found() {
 }
 
 #[tokio::test]
+async fn test_get_genome_info_success_after_save() {
+    let id = format!("retrieval-info-{}", uuid::Uuid::new_v4());
+    let manifest = GenomeManifest::new("retrieval-test").version("2.1.0");
+    let mut genome = GenomeBin::with_manifest(manifest);
+    genome.add_binary_bytes(Arch::X86_64, b"payload");
+    genome_state()
+        .save_genome(&id, &genome)
+        .await
+        .expect("save");
+
+    let Json(info) = get_genome_info(Path(id.clone())).await.expect("ok");
+    assert_eq!(info.name, "retrieval-test");
+    assert_eq!(info.version, "2.1.0");
+    assert!(
+        !info.architectures.is_empty(),
+        "expected at least one arch key in genome"
+    );
+}
+
+#[tokio::test]
+async fn test_list_genomes_includes_saved_genome() {
+    let id = format!("retrieval-list-{}", uuid::Uuid::new_v4());
+    let manifest = GenomeManifest::new("list-me").version("0.0.2");
+    let mut genome = GenomeBin::with_manifest(manifest);
+    genome.add_binary_bytes(Arch::Aarch64, b"p");
+    genome_state()
+        .save_genome(&id, &genome)
+        .await
+        .expect("save");
+
+    let Json(list) = list_genomes().await.expect("list ok");
+    let found = list.genomes.iter().find(|g| g.id == id);
+    assert!(found.is_some(), "genome {id} not in list");
+    let g = found.expect("found");
+    assert_eq!(g.name, "list-me");
+    assert_eq!(g.version, "0.0.2");
+    assert!(g.architectures.iter().any(|a| a == "aarch64"));
+}
+
+#[tokio::test]
+async fn test_download_genome_success_returns_url_and_size() {
+    let id = format!("retrieval-dl-{}", uuid::Uuid::new_v4());
+    let manifest = GenomeManifest::new("dl-test").version("1.0.0");
+    let mut genome = GenomeBin::with_manifest(manifest);
+    genome.add_binary_bytes(Arch::X86_64, b"z");
+    genome_state()
+        .save_genome(&id, &genome)
+        .await
+        .expect("save");
+
+    let path = genome_state().genome_path(&id);
+    assert!(path.exists(), "genome file should exist on disk");
+
+    let Json(dl) = download_genome(Path(id)).await.expect("download ok");
+    assert!(dl.url.contains("/data"));
+    assert!(dl.size > 0, "expected non-zero file size, got {}", dl.size);
+}
+
+#[tokio::test]
 async fn test_build_genome_invalid_arch() {
     let req = BuildRequest {
         name: "test".to_string(),
@@ -83,6 +143,109 @@ async fn test_build_genome_invalid_arch() {
         matches!(result, Err(axum::http::StatusCode::BAD_REQUEST)),
         "got: {result:?}"
     );
+}
+
+#[tokio::test]
+async fn test_build_genome_binary_file_missing() {
+    let req = BuildRequest {
+        name: format!("test-missing-bin-{}", uuid::Uuid::new_v4()),
+        version: Some("0.0.1".to_string()),
+        description: None,
+        binaries: vec![BinarySpec {
+            arch: "x86_64".to_string(),
+            path: PathBuf::from("/nonexistent/path/to/binary-xyz-12345"),
+        }],
+    };
+    let result = build_genome(axum::Json(req)).await;
+    assert!(
+        matches!(result, Err(axum::http::StatusCode::NOT_FOUND)),
+        "got: {result:?}"
+    );
+}
+
+#[tokio::test]
+async fn test_build_genome_success_saves_to_state() {
+    let temp = TempDir::new().expect("tempdir");
+    let bin_path = temp.path().join("fake-primal.bin");
+    std::fs::write(&bin_path, b"ELF\x00fake-binary-for-test").expect("write fake bin");
+
+    let name = format!("handler-build-{}", uuid::Uuid::new_v4());
+    let req = BuildRequest {
+        name: name.clone(),
+        version: Some("1.2.3".to_string()),
+        description: Some("test build".to_string()),
+        binaries: vec![BinarySpec {
+            arch: "x86_64".to_string(),
+            path: bin_path,
+        }],
+    };
+
+    let result = build_genome(axum::Json(req)).await.expect("build ok");
+    assert!(result.success);
+    assert_eq!(result.genome_id, format!("{name}-1.2.3"));
+    assert!(result.message.contains("architectures"));
+}
+
+#[tokio::test]
+async fn test_create_genome_handler_success() {
+    let name = format!("handler-create-{}", uuid::Uuid::new_v4());
+    let req = CreateGenomeRequest {
+        name: name.clone(),
+        version: None,
+        description: None,
+    };
+    let result = create_genome(axum::Json(req)).await.expect("create ok");
+    assert!(result.success);
+    assert_eq!(result.genome_id, format!("{name}-0.1.0"));
+}
+
+#[tokio::test]
+async fn test_compose_genome_missing_source_returns_not_found() {
+    let req = ComposeRequest {
+        name: format!("composed-{}", uuid::Uuid::new_v4()),
+        nucleus_type: "ORCHESTRATOR".to_string(),
+        genomes: vec![
+            "definitely-no-such-genome-aaa".to_string(),
+            "definitely-no-such-genome-bbb".to_string(),
+        ],
+    };
+    let result = compose_genome(axum::Json(req)).await;
+    assert!(
+        matches!(result, Err(axum::http::StatusCode::NOT_FOUND)),
+        "got: {result:?}"
+    );
+}
+
+#[tokio::test]
+async fn test_compose_genome_success_embeds_binaries() {
+    let id_a = format!("compose-a-{}", uuid::Uuid::new_v4());
+    let id_b = format!("compose-b-{}", uuid::Uuid::new_v4());
+
+    let mut g_a = GenomeBin::new("ga");
+    g_a.add_binary_bytes(biomeos_genomebin_v3::Arch::X86_64, b"bin-a");
+    genome_state()
+        .save_genome(&id_a, &g_a)
+        .await
+        .expect("save a");
+
+    let mut g_b = GenomeBin::new("gb");
+    g_b.add_binary_bytes(biomeos_genomebin_v3::Arch::Aarch64, b"bin-b");
+    genome_state()
+        .save_genome(&id_b, &g_b)
+        .await
+        .expect("save b");
+
+    let out_name = format!("composed-out-{}", uuid::Uuid::new_v4());
+    let req = ComposeRequest {
+        name: out_name.clone(),
+        nucleus_type: "TEST".to_string(),
+        genomes: vec![id_a, id_b],
+    };
+
+    let result = compose_genome(axum::Json(req)).await.expect("compose ok");
+    assert!(result.success);
+    assert_eq!(result.genome_id, format!("{out_name}-composed"));
+    assert!(result.embedded_count >= 1);
 }
 
 #[test]
@@ -200,7 +363,6 @@ async fn test_verify_genome_not_found() {
 // Retrieval handler tests
 #[tokio::test]
 async fn test_download_genome_not_found() {
-    use super::retrieval::download_genome;
     use axum::extract::Path;
 
     let result = download_genome(Path("nonexistent-download-xyz".to_string())).await;
@@ -212,8 +374,6 @@ async fn test_download_genome_not_found() {
 
 #[tokio::test]
 async fn test_list_genomes_uses_global_state() {
-    use super::retrieval::list_genomes;
-
     let result = list_genomes().await;
     assert!(result.is_ok(), "list_genomes should not panic");
     let json = result.unwrap();

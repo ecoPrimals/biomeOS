@@ -286,7 +286,7 @@ fn test_topology_changed_event() {
 #[test]
 fn test_heartbeat_event() {
     let event = RealTimeEvent::Heartbeat {
-        timestamp: 1705329600,
+        timestamp: 1_705_329_600,
         primals_count: 12,
         healthy_count: 11,
     };
@@ -465,7 +465,8 @@ async fn test_process_events_handler_error_continues() {
             p.fetch_add(1, Ordering::SeqCst);
             if matches!(event, RealTimeEvent::Heartbeat { .. }) {
                 e.store(true, Ordering::SeqCst);
-                if let Some(sender) = tx_clone.blocking_lock().take() {
+                let value = tx_clone.blocking_lock().take();
+                if let Some(sender) = value {
                     let _ = sender.send(());
                 }
                 Err(anyhow::anyhow!("simulated handler error"))
@@ -516,7 +517,8 @@ async fn test_process_events_receives_and_processes() {
     let _handle = tokio::spawn(async move {
         h.process_events(move |_| {
             ec.fetch_add(1, Ordering::SeqCst);
-            if let Some(sender) = tx_clone.blocking_lock().take() {
+            let value = tx_clone.blocking_lock().take();
+            if let Some(sender) = value {
                 let _ = sender.send(());
             }
             Ok(())

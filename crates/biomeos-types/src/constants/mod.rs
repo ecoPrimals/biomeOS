@@ -11,7 +11,15 @@
 //! - Version information
 //! - Network configurations
 
+#![forbid(unsafe_code)]
+
 use std::time::Duration;
+
+pub mod env_vars;
+pub mod network;
+
+pub mod capabilities;
+pub mod capability;
 
 /// Version and build information
 pub mod version {
@@ -249,146 +257,6 @@ pub mod ports {
     pub const TCP_PORT_SCAN_START: u16 = 9100;
 }
 
-/// Network configuration constants
-///
-/// **DESIGN PRINCIPLE**: These are FALLBACK defaults only.
-/// Production systems MUST use environment variables or capability discovery.
-pub mod network {
-    use super::env_vars;
-    use std::env;
-
-    /// Default HTTP port (fallback only)
-    pub const DEFAULT_HTTP_PORT: u16 = super::ports::HTTP_BRIDGE;
-
-    /// Default HTTPS port (fallback only)
-    pub const DEFAULT_HTTPS_PORT: u16 = 8443;
-
-    /// Default WebSocket port (fallback only)
-    pub const DEFAULT_WS_PORT: u16 = 8081;
-
-    /// Default MCP port (fallback only)
-    pub const DEFAULT_MCP_PORT: u16 = super::ports::API_DEFAULT;
-
-    /// Default discovery port (fallback only)
-    pub const DEFAULT_DISCOVERY_PORT: u16 = super::ports::WEBSOCKET;
-
-    /// Default BearDog (security) port (fallback only)
-    pub const DEFAULT_BEARDOG_PORT: u16 = super::ports::NEURAL_API;
-
-    /// Default Songbird (universal adapter) port (fallback only)
-    pub const DEFAULT_SONGBIRD_PORT: u16 = super::ports::API_DEFAULT;
-
-    /// Default broadcast discovery port (fallback only)
-    pub const DEFAULT_BROADCAST_DISCOVERY_PORT: u16 = 9199;
-
-    /// Default dev server port (common Flask/alternative HTTP fallback)
-    pub const DEFAULT_DEV_PORT: u16 = 5000;
-
-    /// Get HTTP port from environment or fallback to default
-    ///
-    /// Checks `HTTP_PORT` environment variable first.
-    #[must_use]
-    pub fn http_port() -> u16 {
-        env::var(env_vars::HTTP_PORT)
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_HTTP_PORT)
-    }
-
-    /// Get HTTPS port from environment or fallback to default
-    ///
-    /// Checks `HTTPS_PORT` environment variable first.
-    #[must_use]
-    pub fn https_port() -> u16 {
-        env::var(env_vars::HTTPS_PORT)
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_HTTPS_PORT)
-    }
-
-    /// Get WebSocket port from environment or fallback to default
-    ///
-    /// Checks `WEBSOCKET_PORT` environment variable first.
-    #[must_use]
-    pub fn websocket_port() -> u16 {
-        env::var(env_vars::WEBSOCKET_PORT)
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_WS_PORT)
-    }
-
-    /// Get MCP port from environment or fallback to default
-    ///
-    /// Checks `MCP_PORT` or `MCP_WEBSOCKET_PORT` environment variable first.
-    #[must_use]
-    pub fn mcp_port() -> u16 {
-        env::var(env_vars::MCP_WEBSOCKET_PORT)
-            .or_else(|_| env::var("MCP_PORT"))
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_MCP_PORT)
-    }
-
-    /// Get discovery port from environment or fallback to default
-    ///
-    /// Checks `DISCOVERY_PORT` environment variable first.
-    #[must_use]
-    pub fn discovery_port() -> u16 {
-        env::var("DISCOVERY_PORT")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_DISCOVERY_PORT)
-    }
-
-    /// Get BearDog port from environment or fallback to default
-    ///
-    /// Checks `BEARDOG_PORT` environment variable first.
-    #[must_use]
-    pub fn beardog_port() -> u16 {
-        env::var(env_vars::BEARDOG_PORT)
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_BEARDOG_PORT)
-    }
-
-    /// Get Songbird port from environment or fallback to default
-    ///
-    /// Checks `SONGBIRD_PORT` or `MCP_PORT` environment variable first.
-    #[must_use]
-    pub fn songbird_port() -> u16 {
-        env::var(env_vars::SONGBIRD_PORT)
-            .or_else(|_| env::var(env_vars::MCP_WEBSOCKET_PORT))
-            .or_else(|_| env::var("MCP_PORT"))
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_SONGBIRD_PORT)
-    }
-
-    /// Link local address range
-    pub const LINK_LOCAL_RANGE: &str = "169.254.0.0/16";
-
-    /// Multicast address range
-    pub const MULTICAST_RANGE: &str = "224.0.0.0/4";
-
-    /// Private Class A network
-    pub const PRIVATE_CLASS_A: &str = "10.0.0.0/8";
-
-    /// Private Class B network
-    pub const PRIVATE_CLASS_B: &str = "172.16.0.0/12";
-
-    /// Private Class C network
-    pub const PRIVATE_CLASS_C: &str = "192.168.0.0/16";
-
-    /// Default MCP subprotocol
-    pub const DEFAULT_MCP_SUBPROTOCOL: &str = "mcp";
-
-    /// Default user agent
-    pub const DEFAULT_USER_AGENT: &str = "biomeOS/1.0";
-
-    /// Default content type
-    pub const DEFAULT_CONTENT_TYPE: &str = "application/json";
-}
-
 /// Security and authentication constants
 pub mod security {
     use super::Duration;
@@ -477,6 +345,16 @@ pub mod files {
     pub const DEFAULT_NEURAL_METRICS_DB: &str = "neural_api_metrics.redb";
 }
 
+/// Runtime Unix socket basename rules for discovery scans
+///
+/// **WateringHole**: These name *infrastructure* IPC endpoints (orchestration, not primals).
+/// Primal atomic sockets use `{instance}-{family_id}.sock` and are discovered by suffix match,
+/// not by enumerating primal names.
+pub mod runtime_ipc {
+    /// Neural API control-plane socket: `{NEURAL_API_BASENAME_PREFIX}{family_id}.sock`
+    pub const NEURAL_API_BASENAME_PREFIX: &str = "neural-api-";
+}
+
 /// Event system constants
 pub mod events {
     /// Plugin initialized event
@@ -507,202 +385,6 @@ pub mod events {
     pub const CUSTOM_EVENT: &str = "custom.event";
 }
 
-/// Capability domain constants for discovery
-///
-/// **WateringHole standard**: No hardcoded primal names, capability-based discovery.
-/// A primal should only know about itself and discover others at runtime via capabilities.
-///
-/// Use these constants when querying for primals by what they do, not by name.
-/// Primal names (beardog, songbird, etc.) are implementation details discovered at runtime.
-///
-/// # Example
-/// ```
-/// use biomeos_types::constants::capability;
-///
-/// // Use capability constants for discovery (not primal names)
-/// assert_eq!(capability::CRYPTO, "crypto");
-/// assert_eq!(capability::STORAGE, "storage");
-/// assert_eq!(capability::MESH_NETWORKING, "mesh_networking");
-/// ```
-pub mod capability {
-    /// Crypto/security capability (family seed, signing, encryption)
-    pub const CRYPTO: &str = "crypto";
-
-    /// Family seed and lineage operations
-    pub const FAMILY_SEED: &str = "crypto.family_seed";
-
-    /// Mesh networking / P2P relay
-    pub const MESH_NETWORKING: &str = "mesh_networking";
-
-    /// TLS and secure transport
-    pub const TLS: &str = "tls";
-
-    /// Storage and data persistence
-    pub const STORAGE: &str = "storage";
-
-    /// Gateway / NAT traversal
-    pub const GATEWAY: &str = "gateway";
-
-    /// NAT traversal (hole punch, STUN, relay)
-    pub const NAT_TRAVERSAL: &str = "nat_traversal";
-
-    /// Caching capability
-    pub const CACHING: &str = "caching";
-
-    /// Visualization / UI rendering
-    pub const VISUALIZATION: &str = "visualization";
-
-    /// Graph database
-    pub const GRAPH_DATABASE: &str = "graph_database";
-
-    /// Persistence / durable storage
-    pub const PERSISTENCE: &str = "persistence";
-
-    /// GPU compute acceleration
-    pub const GPU_COMPUTE: &str = "gpu_compute";
-
-    /// Cryptographic signing
-    pub const SIGNING: &str = "crypto.sign";
-
-    /// Encryption/decryption
-    pub const ENCRYPTION: &str = "crypto.encrypt";
-}
-
-/// Capability constants for discovery
-///
-/// **DESIGN PRINCIPLE**: Query by capability, not by primal name.
-///
-/// These constants are used for capability-based discovery through the
-/// universal adapter. No primal should hardcode knowledge of
-/// other primals by name.
-///
-/// # Example
-/// ```
-/// use biomeos_types::constants::capabilities;
-///
-/// // Query by capability, not by name
-/// let compute_capability = capabilities::COMPUTE;
-/// let storage_capability = capabilities::STORAGE;
-/// let security_capability = capabilities::SECURITY;
-///
-/// assert_eq!(compute_capability, "compute");
-/// assert_eq!(storage_capability, "storage");
-/// assert_eq!(security_capability, "security");
-/// ```
-pub mod capabilities {
-    /// Compute and execution capability (e.g., ToadStool)
-    pub const COMPUTE: &str = "compute";
-
-    /// Storage and persistence capability (e.g., NestGate)
-    pub const STORAGE: &str = "storage";
-
-    /// Security and cryptography capability (e.g., BearDog)
-    pub const SECURITY: &str = "security";
-
-    /// AI and intelligence capability (e.g., Squirrel)
-    pub const AI: &str = "ai";
-
-    /// Discovery and service mesh capability (e.g., Songbird)
-    pub const DISCOVERY: &str = "discovery";
-
-    /// Orchestration capability (e.g., BiomeOS, Songbird)
-    pub const ORCHESTRATION: &str = "orchestration";
-
-    /// UI and visualization capability (e.g., PetalTongue)
-    pub const VISUALIZATION: &str = "visualization";
-
-    /// Networking capability
-    pub const NETWORKING: &str = "networking";
-
-    /// Monitoring and observability capability
-    pub const MONITORING: &str = "monitoring";
-
-    /// Data processing capability
-    pub const DATA_PROCESSING: &str = "data-processing";
-
-    // =====================================================================
-    // Spring capability domains — registered by springs at runtime.
-    // =====================================================================
-
-    /// Ecology and agriculture capability (airSpring)
-    pub const ECOLOGY: &str = "ecology";
-
-    /// Life science, analytical chemistry, microbial ecology (wetSpring)
-    pub const SCIENCE: &str = "science";
-
-    /// Medical, PK/PD, microbiome, biosignal (healthSpring)
-    pub const MEDICAL: &str = "medical";
-
-    /// Game science, HCI, procedural content (ludoSpring)
-    pub const GAME: &str = "game";
-
-    /// Computational physics, nuclear EOS, GPU compute (hotSpring)
-    pub const PHYSICS: &str = "physics";
-
-    /// Measurement, signal processing, inverse problems (groundSpring)
-    pub const MEASUREMENT: &str = "measurement";
-
-    /// Machine learning, surrogates, isomorphic patterns (neuralSpring)
-    pub const LEARNING: &str = "learning";
-}
-
-/// Environment variable names
-pub mod env_vars {
-    /// Bind address environment variable
-    pub const BIND_ADDRESS: &str = "BIND_ADDRESS";
-
-    /// HTTP port environment variable
-    pub const HTTP_PORT: &str = "HTTP_PORT";
-
-    /// WebSocket port environment variable
-    pub const WEBSOCKET_PORT: &str = "WEBSOCKET_PORT";
-
-    /// HTTPS port environment variable
-    pub const HTTPS_PORT: &str = "HTTPS_PORT";
-
-    /// MCP WebSocket port environment variable
-    pub const MCP_WEBSOCKET_PORT: &str = "MCP_WEBSOCKET_PORT";
-
-    /// BearDog endpoint URL environment variable
-    pub const BEARDOG_ENDPOINT: &str = "BEARDOG_ENDPOINT";
-
-    /// BearDog port environment variable
-    pub const BEARDOG_PORT: &str = "BEARDOG_PORT";
-
-    /// Songbird endpoint URL environment variable
-    pub const SONGBIRD_ENDPOINT: &str = "SONGBIRD_ENDPOINT";
-
-    /// Songbird port environment variable
-    pub const SONGBIRD_PORT: &str = "SONGBIRD_PORT";
-
-    /// Connection timeout environment variable
-    pub const CONNECTION_TIMEOUT: &str = "CONNECTION_TIMEOUT";
-
-    /// Request timeout environment variable
-    pub const REQUEST_TIMEOUT: &str = "REQUEST_TIMEOUT";
-
-    /// Operation timeout environment variable
-    pub const OPERATION_TIMEOUT: &str = "OPERATION_TIMEOUT";
-
-    /// Database timeout environment variable
-    pub const DATABASE_TIMEOUT: &str = "DATABASE_TIMEOUT";
-
-    /// Heartbeat interval environment variable
-    pub const HEARTBEAT_INTERVAL: &str = "HEARTBEAT_INTERVAL";
-
-    /// Maximum connections environment variable
-    pub const MAX_CONNECTIONS: &str = "MAX_CONNECTIONS";
-
-    /// Buffer size environment variable
-    pub const BUFFER_SIZE: &str = "BUFFER_SIZE";
-
-    /// Service mesh maximum services environment variable
-    pub const SERVICE_MESH_MAX_SERVICES: &str = "SERVICE_MESH_MAX_SERVICES";
-
-    /// Maximum message size environment variable
-    pub const MAX_MESSAGE_SIZE: &str = "MAX_MESSAGE_SIZE";
-}
-
 /// Re-export commonly used constants at module level
 pub use endpoints::DEFAULT_LOCALHOST;
 pub use limits::{DEFAULT_BUFFER_SIZE, DEFAULT_MAX_CONNECTIONS};
@@ -719,8 +401,6 @@ mod tests {
 
     #[test]
     fn test_version_constants() {
-        // Version constants are compile-time validated
-        // VERSION is a const &str, checked at compile time
         assert_eq!(version::TYPES_VERSION, version::VERSION);
         assert_eq!(version::API_VERSION, "biomeOS/v1");
         assert_eq!(version::MCP_PROTOCOL_VERSION, "1.0");
@@ -800,6 +480,11 @@ mod tests {
         assert_eq!(files::DEFAULT_CONFIG_FILE, "biome.yaml");
         assert_eq!(files::DEFAULT_RULES_DIR, ".rules");
         assert_eq!(files::DEFAULT_HISTORY_FILE, "command_history.json");
+    }
+
+    #[test]
+    fn test_runtime_ipc_neural_api_basename_prefix() {
+        assert_eq!(runtime_ipc::NEURAL_API_BASENAME_PREFIX, "neural-api-");
     }
 
     #[test]

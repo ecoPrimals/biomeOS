@@ -418,6 +418,6 @@ mod tests {
         let info = futures::executor::block_on(svc.version(tarpc::context::current()));
         assert!(info.protocols.contains(&"jsonrpc".to_string()));
         assert!(info.protocols.contains(&"tarpc".to_string()));
-        assert!(info.version.len() > 0);
+        assert!(!info.version.is_empty());
     }
 }

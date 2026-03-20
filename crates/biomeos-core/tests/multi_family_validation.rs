@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Multi-family validation tests
 //!
 //! These tests prove that the biomeOS infrastructure works deterministically
@@ -31,8 +33,8 @@ mod multi_family_tests {
         let family_id = FamilyId::new("test-family-alpha");
         let seed = create_test_seed(b"test-seed-1234567890123456789012345");
 
-        let creds = FamilyCredentials::new(family_id.clone(), seed)
-            .expect("Should create valid credentials");
+        let creds =
+            FamilyCredentials::new(family_id, seed).expect("Should create valid credentials");
 
         assert_eq!(creds.family_id().to_string(), "test-family-alpha");
         assert!(!creds.seed_ref().is_empty());
@@ -61,7 +63,7 @@ mod multi_family_tests {
         let mut seen_ids = std::collections::HashSet::new();
         let mut seen_seeds = std::collections::HashSet::new();
 
-        for (family_id, seed) in families.iter() {
+        for (family_id, seed) in &families {
             let creds = FamilyCredentials::new(family_id.clone(), seed.clone())
                 .expect("Should create valid credentials");
 
@@ -145,7 +147,7 @@ mod multi_family_tests {
         // Verify isolation: each family is independent
         let mut created_families = Vec::new();
 
-        for family in families.iter() {
+        for family in &families {
             // Check family has members
             assert!(!family.members.is_empty(), "Family should have members");
 

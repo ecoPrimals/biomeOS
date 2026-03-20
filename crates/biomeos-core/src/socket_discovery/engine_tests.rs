@@ -13,8 +13,6 @@
 //! - Manifest and registry discovery
 //! - XDG and family tmp path discovery
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
-
 use super::engine::SocketDiscovery;
 use super::result::{DiscoveredSocket, DiscoveryMethod};
 use super::strategy::DiscoveryStrategy;
@@ -82,7 +80,7 @@ fn test_socket_discovery_new() {
 #[test]
 fn test_socket_discovery_with_strategy() {
     let strategy = DiscoveryStrategy::android();
-    let discovery = SocketDiscovery::with_strategy("test", strategy.clone());
+    let discovery = SocketDiscovery::with_strategy("test", strategy);
     assert_eq!(discovery.family_id.as_str(), "test");
     assert!(!discovery.strategy.use_xdg_runtime);
     assert!(discovery.strategy.try_abstract_sockets);
@@ -676,4 +674,402 @@ async fn test_discover_capability_via_registry_fails_gracefully() {
         .discover_capability("nonexistent-capability")
         .await;
     assert!(result.is_none());
+}
+
+#[tokio::test]
+async fn test_xdg_override_nonexistent_skips_xdg_discovery() {
+    let bogus = PathBuf::from("/nonexistent/xdg/override/path/012345");
+    let discovery = SocketDiscovery::new("test").with_xdg_override(&bogus);
+    let result = discovery.discover_primal("any-primal").await;
+    assert!(result.is_none());
+}
+
+#[tokio::test]
+async fn test_temp_dir_override_used_for_family_tmp_discovery() {
+    let temp_dir = TempDir::new().unwrap();
+    let socket_path = temp_dir.path().join("override-primal-ovr.sock");
+    std::fs::File::create(&socket_path).unwrap();
+
+    let discovery = SocketDiscovery::new("ovr").with_temp_dir_override(temp_dir.path());
+    let result = discovery.discover_primal("override-primal").await;
+    assert!(
+        result.is_some(),
+        "family tmp discovery should see socket under temp dir override"
+    );
+}
+
+#[tokio::test]
+async fn test_discover_endpoint_via_env_generic_endpoint_unix() {
+    let temp_dir = TempDir::new().unwrap();
+    let socket_path = temp_dir.path().join("via-endpoint.sock");
+    std::fs::File::create(&socket_path).unwrap();
+
+    let env_overrides: HashMap<String, String> = [(
+        "MY_PRIMAL_ENDPOINT".to_string(),
+        socket_path.to_string_lossy().to_string(),
+    )]
+    .into();
+    let discovery = SocketDiscovery::new("test");
+    let result = discovery
+        .discover_endpoint_via_env_with("my-primal", Some(&env_overrides))
+        .await;
+
+    assert!(result.is_some());
+    if let Some(TransportEndpoint::UnixSocket { path }) = result {
+        assert_eq!(path, socket_path);
+    } else {
+        panic!("expected Unix endpoint from MY_PRIMAL_ENDPOINT");
+    }
+}
+
+#[tokio::test]
+async fn test_discover_endpoint_via_env_tcp_prefix_fallback() {
+    let env_overrides: HashMap<String, String> =
+        [("BEARDOG_TCP".to_string(), "127.0.0.1:19100".to_string())].into();
+    let discovery = SocketDiscovery::new("test");
+    let result = discovery
+        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
+        .await;
+
+    assert!(result.is_some());
+    if let Some(TransportEndpoint::TcpSocket { host, port }) = result {
+        assert_eq!(host.as_ref(), "127.0.0.1");
+        assert_eq!(port, 19100);
+    }
+}
+
+#[tokio::test]
+async fn test_clear_cache_idempotent() {
+    let discovery = SocketDiscovery::new("test");
+    discovery.clear_cache().await;
+    discovery.clear_cache().await;
+}
+
+#[tokio::test]
+async fn test_verify_unix_socket_connects_to_bound_listener() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("verify-live.sock");
+    let _listener = tokio::net::UnixListener::bind(&path).expect("bind unix listener");
+    let discovery = SocketDiscovery::new("test");
+    assert!(
+        discovery.verify_unix_socket(&path).await,
+        "listener should accept verify_unix_socket probe"
+    );
+}
+
+#[tokio::test]
+async fn test_discover_primal_second_call_uses_cache_marker() {
+    let temp_dir = TempDir::new().unwrap();
+    let socket_path = temp_dir.path().join("cache-mark-fam.sock");
+    std::fs::File::create(&socket_path).unwrap();
+    let discovery = SocketDiscovery::new("fam").with_temp_dir_override(temp_dir.path());
+    let first = discovery
+        .discover_primal("cache-mark")
+        .await
+        .expect("first discovery");
+    assert_ne!(first.discovered_via, DiscoveryMethod::Cached);
+    let second = discovery
+        .discover_primal("cache-mark")
+        .await
+        .expect("second discovery");
+    assert_eq!(second.discovered_via, DiscoveryMethod::Cached);
+}
+
+#[tokio::test]
+async fn test_discover_via_manifest_invalid_json_skipped() {
+    let temp_dir = TempDir::new().unwrap();
+    let manifest_dir = temp_dir.path().join("ecoPrimals").join("manifests");
+    std::fs::create_dir_all(&manifest_dir).unwrap();
+    std::fs::write(manifest_dir.join("bad-json-primal.json"), "{ not json").unwrap();
+    let discovery = SocketDiscovery::new("test").with_temp_dir_override(temp_dir.path());
+    assert!(discovery.discover_primal("bad-json-primal").await.is_none());
+}
+
+#[tokio::test]
+async fn test_discover_via_manifest_valid_json_dead_socket() {
+    use super::result::PrimalManifest;
+    use std::sync::Arc;
+
+    let temp_dir = TempDir::new().unwrap();
+    let manifest_dir = temp_dir.path().join("ecoPrimals").join("manifests");
+    std::fs::create_dir_all(&manifest_dir).unwrap();
+    let dead_sock = temp_dir.path().join("dead.sock");
+    std::fs::File::create(&dead_sock).unwrap();
+    let manifest = PrimalManifest {
+        primal: Arc::from("dead-sock-primal"),
+        socket: Arc::from(dead_sock.to_string_lossy().as_ref()),
+        capabilities: vec![],
+        pid: None,
+    };
+    std::fs::write(
+        manifest_dir.join("dead-sock-primal.json"),
+        serde_json::to_string(&manifest).unwrap(),
+    )
+    .unwrap();
+    let discovery = SocketDiscovery::new("test").with_temp_dir_override(temp_dir.path());
+    assert!(
+        discovery
+            .discover_primal("dead-sock-primal")
+            .await
+            .is_none()
+    );
+}
+
+#[tokio::test]
+async fn test_discover_capability_socket_tmp_only() {
+    let temp_dir = TempDir::new().unwrap();
+    let bogus = PathBuf::from("/nonexistent/xdg/for-cap-sock");
+    let cap_sock = temp_dir.path().join("custom-cap.sock");
+    let _listener = tokio::net::UnixListener::bind(&cap_sock).expect("bind cap sock");
+    let discovery = SocketDiscovery::new("test")
+        .with_xdg_override(&bogus)
+        .with_temp_dir_override(temp_dir.path());
+    let result = discovery.discover_capability("custom-cap").await;
+    assert!(result.is_some());
+}
+
+#[tokio::test]
+async fn test_discover_endpoint_via_env_unix_missing_file_skipped() {
+    let env_overrides: HashMap<String, String> = [(
+        "FOO_SOCKET".to_string(),
+        "/nonexistent/path/to/missing.sock".to_string(),
+    )]
+    .into();
+    let discovery = SocketDiscovery::new("test");
+    let result = discovery
+        .discover_endpoint_via_env_with("foo", Some(&env_overrides))
+        .await;
+    assert!(result.is_none());
+}
+
+#[tokio::test]
+async fn test_discover_with_fallback_uses_cache_for_endpoint_key() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("fb-cache-fam.sock");
+    let _listener = tokio::net::UnixListener::bind(&path).expect("bind for fallback cache");
+    let discovery = SocketDiscovery::new("fam").with_temp_dir_override(temp_dir.path());
+    assert!(discovery.discover_with_fallback("fb-cache").await.is_some());
+    assert!(discovery.discover_with_fallback("fb-cache").await.is_some());
+}
+
+#[test]
+fn test_discovery_strategy_cross_device_host() {
+    let s = DiscoveryStrategy::cross_device();
+    assert_eq!(s.tcp_fallback_host.as_ref(), "0.0.0.0");
+    assert!(!s.use_xdg_runtime);
+}
+
+#[test]
+fn test_discovery_strategy_android_disables_xdg() {
+    let s = DiscoveryStrategy::android();
+    assert!(!s.use_xdg_runtime);
+    assert!(s.try_abstract_sockets);
+}
+
+#[tokio::test]
+async fn test_check_cache_miss_unknown_key() {
+    let discovery = SocketDiscovery::new("test");
+    assert!(discovery.check_cache("no-such-key").await.is_none());
+}
+
+#[tokio::test]
+async fn test_verify_tcp_connection_refused_fast() {
+    let discovery = SocketDiscovery::new("test");
+    assert!(!discovery.verify_tcp_connection("127.0.0.1", 59998).await);
+}
+
+#[tokio::test]
+async fn test_discover_primal_all_strategies_off_returns_none() {
+    let strategy = DiscoveryStrategy {
+        check_env_hints: false,
+        use_xdg_runtime: false,
+        use_family_tmp: false,
+        query_registry: false,
+        enable_tcp_fallback: false,
+        enable_cache: false,
+        ..DiscoveryStrategy::default()
+    };
+    let temp = TempDir::new().unwrap();
+    let discovery =
+        SocketDiscovery::with_strategy("test", strategy).with_temp_dir_override(temp.path());
+    assert!(discovery.discover_primal("nope").await.is_none());
+}
+
+#[tokio::test]
+async fn test_get_socket_path_none_when_unresolvable() {
+    let strategy = DiscoveryStrategy {
+        check_env_hints: false,
+        use_xdg_runtime: false,
+        use_family_tmp: false,
+        query_registry: false,
+        enable_tcp_fallback: false,
+        ..DiscoveryStrategy::default()
+    };
+    let discovery = SocketDiscovery::with_strategy("test", strategy);
+    assert!(discovery.get_socket_path("gone").await.is_none());
+}
+
+/// `discover_via_xdg` returns when the family-scoped path exists (no connect probe on this branch).
+#[tokio::test]
+async fn test_discover_via_xdg_family_scoped_path_exists_without_connect() {
+    let temp = TempDir::new().unwrap();
+    let biomeos = temp.path().join("biomeos");
+    std::fs::create_dir_all(&biomeos).unwrap();
+    let sock = biomeos.join("xdg-no-verify-fam.sock");
+    std::fs::File::create(&sock).unwrap();
+
+    let discovery = SocketDiscovery::new("fam").with_xdg_override(temp.path());
+    let r = discovery.discover_primal("xdg-no-verify").await;
+    assert!(r.is_some());
+    assert_eq!(r.unwrap().discovered_via, DiscoveryMethod::XdgRuntime);
+}
+
+/// Legacy `{primal}.sock` under XDG when file exists.
+#[tokio::test]
+async fn test_discover_via_xdg_legacy_filename_exists() {
+    let temp = TempDir::new().unwrap();
+    let biomeos = temp.path().join("biomeos");
+    std::fs::create_dir_all(&biomeos).unwrap();
+    let sock = biomeos.join("legacy-only.sock");
+    std::fs::File::create(&sock).unwrap();
+
+    let discovery = SocketDiscovery::new("fam").with_xdg_override(temp.path());
+    let r = discovery.discover_primal("legacy-only").await;
+    assert!(r.is_some());
+}
+
+/// Family tmp branch: `{primal}-{family}.sock` exists → returns without Unix connect.
+#[tokio::test]
+async fn test_discover_via_family_tmp_scoped_exists_without_connect() {
+    let temp = TempDir::new().unwrap();
+    let sock = temp.path().join("tmp-scoped-fam.sock");
+    std::fs::File::create(&sock).unwrap();
+
+    let discovery = SocketDiscovery::new("fam").with_temp_dir_override(temp.path());
+    let r = discovery.discover_primal("tmp-scoped").await;
+    assert!(r.is_some());
+    assert_eq!(r.unwrap().discovered_via, DiscoveryMethod::FamilyTmp);
+}
+
+/// Legacy `{primal}.sock` in family tmp.
+#[tokio::test]
+async fn test_discover_via_family_tmp_legacy_exists() {
+    let temp = TempDir::new().unwrap();
+    let sock = temp.path().join("tmp-legacy.sock");
+    std::fs::File::create(&sock).unwrap();
+
+    let discovery = SocketDiscovery::new("fam").with_temp_dir_override(temp.path());
+    let r = discovery.discover_primal("tmp-legacy").await;
+    assert!(r.is_some());
+}
+
+#[tokio::test]
+async fn test_discover_via_socket_registry_invalid_json_skips() {
+    let temp = TempDir::new().unwrap();
+    let biomeos = temp.path().join("biomeos");
+    std::fs::create_dir_all(&biomeos).unwrap();
+    std::fs::write(biomeos.join("socket-registry.json"), "{ not json").unwrap();
+
+    let discovery = SocketDiscovery::new("test").with_xdg_override(temp.path());
+    assert!(discovery.discover_primal("only-registry").await.is_none());
+}
+
+#[tokio::test]
+async fn test_discover_endpoint_via_env_tcp_non_matching_parse_returns_none() {
+    let env_overrides: HashMap<String, String> =
+        [("FOO_TCP".to_string(), "not-a-tcp-endpoint".to_string())].into();
+    let discovery = SocketDiscovery::new("test");
+    let r = discovery
+        .discover_endpoint_via_env_with("foo", Some(&env_overrides))
+        .await;
+    assert!(r.is_none());
+}
+
+#[tokio::test]
+async fn test_discover_with_fallback_manifest_branch_sets_endpoint() {
+    use super::result::PrimalManifest;
+    use std::sync::Arc;
+
+    let temp = TempDir::new().unwrap();
+    let manifest_dir = temp.path().join("ecoPrimals").join("manifests");
+    std::fs::create_dir_all(&manifest_dir).unwrap();
+    let sock = temp.path().join("fb-manifest.sock");
+    let _listener = tokio::net::UnixListener::bind(&sock).expect("bind");
+
+    let manifest = PrimalManifest {
+        primal: Arc::from("fb-manifest-primal"),
+        socket: Arc::from(sock.to_string_lossy().as_ref()),
+        capabilities: vec![],
+        pid: None,
+    };
+    std::fs::write(
+        manifest_dir.join("fb-manifest-primal.json"),
+        serde_json::to_string(&manifest).unwrap(),
+    )
+    .unwrap();
+
+    let strategy = DiscoveryStrategy {
+        check_env_hints: false,
+        use_xdg_runtime: false,
+        use_family_tmp: false,
+        query_registry: false,
+        enable_tcp_fallback: false,
+        ..Default::default()
+    };
+    let discovery =
+        SocketDiscovery::with_strategy("test", strategy).with_temp_dir_override(temp.path());
+    let ep = discovery.discover_with_fallback("fb-manifest-primal").await;
+    assert!(ep.is_some());
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn test_discover_with_fallback_abstract_path_when_no_match() {
+    let strategy = DiscoveryStrategy {
+        check_env_hints: false,
+        use_xdg_runtime: false,
+        use_family_tmp: false,
+        try_abstract_sockets: true,
+        query_registry: false,
+        enable_tcp_fallback: false,
+        ..Default::default()
+    };
+    let discovery = SocketDiscovery::with_strategy("abstract-miss", strategy);
+    assert!(
+        discovery
+            .discover_with_fallback("no-such-abstract")
+            .await
+            .is_none()
+    );
+}
+
+#[tokio::test]
+async fn test_verify_tcp_connection_accepts_open_port() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    tokio::spawn(async move {
+        let _ = listener.accept().await;
+    });
+    let discovery = SocketDiscovery::new("tcp-verify");
+    assert!(
+        discovery.verify_tcp_connection("127.0.0.1", port).await,
+        "expected successful TCP probe"
+    );
+}
+
+#[tokio::test]
+async fn test_discover_capability_taxonomy_resolve_primal_branch() {
+    let strategy = DiscoveryStrategy {
+        check_env_hints: false,
+        use_xdg_runtime: false,
+        use_family_tmp: false,
+        query_registry: false,
+        enable_tcp_fallback: false,
+        ..Default::default()
+    };
+    let discovery = SocketDiscovery::with_strategy("tax", strategy);
+    let r = discovery.discover_capability("encryption").await;
+    assert!(r.is_none());
 }

@@ -9,6 +9,7 @@
 // Crate-level lint configuration
 #![allow(clippy::doc_markdown)] // Allow technical terms without backticks
 #![forbid(unsafe_code)] // No unsafe code in UI
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 //! ## Network Effect Architecture
 //!
@@ -59,6 +60,8 @@
 
 pub mod actions;
 pub mod capabilities; // ✅ TRUE PRIMAL capability-based architecture!
+/// JSON-RPC device.management Unix server (shared with `device_management_server` binary).
+pub mod device_management_server;
 pub mod events;
 pub mod orchestrator;
 pub mod primal_client; // EVOLVED (Jan 27, 2026): Extracted from orchestrator

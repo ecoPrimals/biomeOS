@@ -376,6 +376,7 @@ impl Default for RetryStrategy {
     }
 }
 
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -386,7 +387,7 @@ mod tests {
         assert_eq!(ctx.category, AIErrorCategory::UserError);
         assert_eq!(ctx.severity, ErrorSeverity::Error);
         assert!(!ctx.requires_human_intervention);
-        assert_eq!(ctx.automation_confidence, 0.5);
+        assert!((ctx.automation_confidence - 0.5).abs() < f64::EPSILON);
         assert!(ctx.automation_hints.is_empty());
         assert!(ctx.suggested_actions.is_empty());
     }
@@ -426,7 +427,7 @@ mod tests {
     fn test_ai_error_context_requires_human() {
         let ctx = AIErrorContext::new(AIErrorCategory::HumanInterventionRequired).requires_human();
         assert!(ctx.requires_human_intervention);
-        assert_eq!(ctx.automation_confidence, 0.0);
+        assert!((ctx.automation_confidence - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -443,10 +444,10 @@ mod tests {
         assert!(s.should_retry);
         assert_eq!(s.max_attempts, 5);
         assert_eq!(s.delay_ms, 200);
-        assert_eq!(s.success_probability, 0.7);
+        assert!((s.success_probability - 0.7).abs() < f64::EPSILON);
         assert!(s.max_retry_time_ms.is_some());
         if let BackoffType::Exponential { base, max_delay_ms } = s.backoff_strategy {
-            assert_eq!(base, 2.0);
+            assert!((base - 2.0).abs() < f64::EPSILON);
             assert_eq!(max_delay_ms, 10000);
         } else {
             panic!("Expected Exponential backoff");
@@ -459,7 +460,7 @@ mod tests {
         assert!(s.should_retry);
         assert_eq!(s.max_attempts, 4);
         assert_eq!(s.delay_ms, 100);
-        assert_eq!(s.success_probability, 0.6);
+        assert!((s.success_probability - 0.6).abs() < f64::EPSILON);
         if let BackoffType::Linear { increment_ms } = s.backoff_strategy {
             assert_eq!(increment_ms, 50);
         } else {
@@ -674,6 +675,6 @@ mod tests {
         let json = serde_json::to_string(&action).expect("serialize");
         let parsed: SuggestedAction = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(parsed.id, action.id);
-        assert_eq!(parsed.confidence, action.confidence);
+        assert!((parsed.confidence - action.confidence).abs() < f64::EPSILON);
     }
 }

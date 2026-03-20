@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 //! Unit tests for sub-federation system
 
 use biomeos_federation::capability::{Capability, CapabilitySet};
@@ -14,7 +16,7 @@ fn test_subfederation_creation() {
     let subfed = SubFederation::new(
         "gaming".to_string(),
         "test_family".to_string(),
-        members.clone(),
+        members,
         caps,
         IsolationLevel::Low,
     );
