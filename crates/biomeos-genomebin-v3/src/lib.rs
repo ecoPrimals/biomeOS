@@ -292,8 +292,11 @@ impl GenomeBin {
     }
 }
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
 

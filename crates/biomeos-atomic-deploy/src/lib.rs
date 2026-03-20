@@ -83,6 +83,8 @@ pub mod neural_executor;
 #[cfg(test)]
 mod neural_executor_async_tests;
 #[cfg(test)]
+mod neural_executor_async_tests2;
+#[cfg(test)]
 mod neural_executor_tests;
 pub mod neural_graph;
 #[cfg(test)]

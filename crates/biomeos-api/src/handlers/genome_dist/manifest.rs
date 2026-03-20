@@ -98,7 +98,7 @@ pub async fn get_manifest() -> Result<Json<DistManifest>, (StatusCode, Json<Dist
     get_manifest_from(genome_bin).await.map(Json)
 }
 
-#[allow(clippy::too_many_lines, reason = "manifest parsing and validation")]
+#[expect(clippy::too_many_lines, reason = "manifest parsing and validation")]
 pub(crate) async fn get_manifest_from(
     genome_bin: impl AsRef<std::path::Path>,
 ) -> Result<DistManifest, (StatusCode, Json<DistError>)> {

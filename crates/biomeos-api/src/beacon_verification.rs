@@ -331,9 +331,17 @@ fn discover_family_scoped_primal_sockets(runtime_dir: &Path, family_id: &str) ->
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_parse_decrypt_result_valid() {
@@ -570,5 +578,124 @@ mod tests {
         let result = verify_dark_forest_token(None, "family", "token").await;
         // Without Neural API socket and no real primal sockets, should be None
         let _ = result;
+    }
+
+    /// Mock Neural API: JSON-RPC `neural_api.route_to_primal` returns a fixed `result` object.
+    #[cfg(unix)]
+    async fn spawn_one_shot_neural_mock(
+        result_json: serde_json::Value,
+    ) -> (tempfile::TempDir, PathBuf) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::UnixListener;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("neural-mock.sock");
+        let listener = UnixListener::bind(&path).expect("bind mock neural");
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept");
+            let mut buf = vec![0u8; 16 * 1024];
+            let _ = stream.read(&mut buf).await;
+            let body = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": result_json
+            });
+            let mut line = serde_json::to_string(&body).expect("serialize response");
+            line.push('\n');
+            stream.write_all(line.as_bytes()).await.expect("write");
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+        (dir, path)
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn test_verify_dark_forest_token_neural_api_success() {
+        let decrypt = serde_json::json!({
+            "success": true,
+            "plaintext": "beacon-plaintext",
+            "family_id": "fam-x"
+        });
+        let (_dir, sock) = spawn_one_shot_neural_mock(decrypt).await;
+        let out =
+            verify_dark_forest_token(Some(sock.to_str().expect("utf8")), "fam-x", "opaque").await;
+        assert!(out.is_some(), "expected neural path to verify");
+        let v = out.expect("verification");
+        assert_eq!(v.plaintext, "beacon-plaintext");
+        assert_eq!(v.family_id, "fam-x");
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn test_verify_dark_forest_token_neural_api_error_falls_back() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::UnixListener;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("neural-mock-err.sock");
+        let listener = UnixListener::bind(&path).expect("bind");
+        let path_clone = path.clone();
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept");
+            let mut buf = vec![0u8; 16 * 1024];
+            let _ = stream.read(&mut buf).await;
+            let body = r#"{"jsonrpc":"2.0","id":1,"error":{"code":-1,"message":"rpc fail"}}"#;
+            stream
+                .write_all(format!("{body}\n").as_bytes())
+                .await
+                .expect("write");
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+
+        let out =
+            verify_dark_forest_token(Some(path_clone.to_str().expect("utf8")), "fam", "tok").await;
+        assert!(out.is_none());
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn test_hash_via_capability_neural_api_returns_hash() {
+        let inner = serde_json::json!({ "hash": "blake3-deadbeef" });
+        let (_dir, sock) = spawn_one_shot_neural_mock(inner).await;
+        let h = hash_via_capability(Some(sock.to_str().expect("utf8")), "fam", "payload").await;
+        assert_eq!(h.as_deref(), Some("blake3-deadbeef"));
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_discover_neural_api_socket_env_existing_file() {
+        use biomeos_test_utils::env_helpers::TestEnvGuard;
+
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("neural-explicit.sock");
+        std::fs::write(&sock, "").expect("touch");
+        let _g = TestEnvGuard::set("NEURAL_API_SOCKET", sock.to_str().expect("utf8"));
+        let got = discover_neural_api_socket("ignored");
+        assert_eq!(got.as_deref(), sock.to_str());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_discover_neural_api_socket_temp_dir_fallback_existing_file() {
+        use biomeos_test_utils::env_helpers::TestEnvGuard;
+        use biomeos_types::constants::runtime_ipc;
+
+        let basename = format!("{}my-tmp-fam.sock", runtime_ipc::NEURAL_API_BASENAME_PREFIX);
+        let sock = std::env::temp_dir().join(&basename);
+        std::fs::write(&sock, "").expect("touch");
+        let _clear = TestEnvGuard::remove("NEURAL_API_SOCKET");
+
+        let got = discover_neural_api_socket("my-tmp-fam");
+        assert_eq!(got.as_deref(), sock.to_str());
+        let _ = std::fs::remove_file(&sock);
+    }
+
+    #[test]
+    fn test_discover_family_scoped_skips_non_sock_extension() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let p = temp.path().join("foo-family-123.txt");
+        std::fs::write(&p, "").expect("write");
+        let providers = discover_family_scoped_primal_sockets(temp.path(), "family-123");
+        assert!(providers.is_empty());
     }
 }

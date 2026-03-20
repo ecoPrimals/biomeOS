@@ -114,7 +114,10 @@ pub(crate) async fn get_disk_usage() -> BiomeResult<f64> {
     Ok(total_usage / disks.len() as f64)
 }
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -18,8 +18,13 @@ pub mod universal_biomeos_manager;
 // Atomic client - Pure Rust, Tower-based Unix socket communication (ecoBin!)
 pub mod atomic_client;
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod atomic_client_tests;
+#[cfg(test)]
+mod atomic_client_tests2;
 pub mod atomic_primal_client;
 
 // Primal adapter pattern (CLI-agnostic integration)
@@ -29,8 +34,17 @@ pub mod primal_adapter;
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod capability_registry_tests;
+#[cfg(test)]
+mod capability_registry_tests2;
 /// Wave-based concurrent primal startup
 pub mod concurrent_startup;
 #[cfg(test)]
@@ -62,6 +76,8 @@ pub mod metrics_collector;
 
 // VM Federation (benchScale + libvirt)
 pub mod vm_federation;
+#[cfg(all(test, unix))]
+mod vm_federation_tests;
 
 // Observability (sovereignty-respecting)
 pub mod observability;
@@ -166,7 +182,10 @@ pub use config_builder::BiomeOSConfigBuilder;
 // Build information now centralized in biomeos-types constants module
 pub use biomeos_types::BUILD_INFO;
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 #[cfg(test)]
 mod tests {
     use super::*;

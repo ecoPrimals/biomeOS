@@ -646,7 +646,7 @@ impl SocketDiscovery {
     }
 
     /// Build socket path with explicit env overrides (for testing without env mutation).
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) fn build_socket_path_with(
         &self,
         primal_name: &str,
@@ -849,7 +849,7 @@ impl SocketDiscovery {
             .unwrap_or_else(std::env::temp_dir)
     }
 
-    #[allow(dead_code)] // Used in engine_tests::test_get_xdg_runtime_dir
+    #[cfg(test)]
     pub(crate) fn get_xdg_runtime_dir() -> Option<PathBuf> {
         env::var("XDG_RUNTIME_DIR")
             .ok()

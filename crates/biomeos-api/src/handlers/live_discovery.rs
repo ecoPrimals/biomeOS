@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "live discovery helpers are pub for future REST routes and cross-module reuse"
+    )
+)]
+
 //! Live Primal Discovery - Capability-Based Dynamic Discovery.
 //!
 //! Provides capability-based runtime discovery utilities used by API handlers
@@ -452,7 +460,14 @@ pub async fn discover_by_type(primal_type: &str) -> Vec<LivePrimalInfo> {
 // - `discover_primal(socket_path)` for querying a specific socket
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
 

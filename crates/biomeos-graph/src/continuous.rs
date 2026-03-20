@@ -259,7 +259,10 @@ impl ContinuousExecutor {
     ///
     /// `cmd_rx` receives [`SessionCommand`]s for pause/resume/stop.
     /// `node_executor` is called for each node on each tick to do actual work.
-    #[allow(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "continuous session loop ties together tick, commands, and node execution"
+    )]
     pub async fn run<F, Fut>(
         &mut self,
         mut cmd_rx: tokio::sync::mpsc::Receiver<SessionCommand>,
@@ -477,7 +480,10 @@ impl ContinuousExecutor {
 // Tests
 // ---------------------------------------------------------------------------
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 #[cfg(test)]
 mod tests {
     use super::*;

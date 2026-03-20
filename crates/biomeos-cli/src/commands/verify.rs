@@ -22,6 +22,15 @@ use clap::{Args, Subcommand};
 use std::path::PathBuf;
 use tracing::info;
 
+/// `plasmidBin` path for spore verification: `BIOMEOS_PLASMID_DIR` if set, else cwd-relative `plasmidBin`.
+fn nucleus_path_for_spore_verify() -> PathBuf {
+    if let Ok(p) = std::env::var("BIOMEOS_PLASMID_DIR") {
+        PathBuf::from(p)
+    } else {
+        PathBuf::from("plasmidBin")
+    }
+}
+
 /// Arguments for verification commands
 #[derive(Args, Debug)]
 pub struct VerifyArgs {
@@ -153,7 +162,7 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     println!();
 
     // Load nucleus manifest
-    let nucleus_path = PathBuf::from("plasmidBin");
+    let nucleus_path = nucleus_path_for_spore_verify();
     if !nucleus_path.exists() {
         println!("❌ Error: plasmidBin not found (required for comparison)");
         println!("   Expected at: {}", nucleus_path.display());
@@ -239,7 +248,7 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
     println!();
 
     // Load nucleus manifest
-    let nucleus_path = PathBuf::from("plasmidBin");
+    let nucleus_path = nucleus_path_for_spore_verify();
     if !nucleus_path.exists() {
         println!("❌ Error: plasmidBin not found (required for comparison)");
         println!("   Expected at: {}", nucleus_path.display());
@@ -332,10 +341,15 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use biomeos_spore::verification::VerificationStatus;
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
+    use serial_test::serial;
 
     #[test]
     fn test_verification_status_display() {
@@ -529,23 +543,65 @@ mod tests {
         assert!(run(args).await.is_ok());
     }
 
-    struct RestoreCwd(std::path::PathBuf);
-    impl Drop for RestoreCwd {
-        fn drop(&mut self) {
-            let _ = std::env::set_current_dir(&self.0);
-        }
+    #[tokio::test]
+    async fn test_run_nucleus_with_manifest_features_prints_features_line() {
+        use biomeos_spore::manifest::{
+            BinaryInfo, BinaryManifest, CompatibilityInfo, ManifestMeta,
+        };
+        use chrono::Utc;
+        use sha2::{Digest, Sha256};
+        use std::collections::HashMap;
+
+        let temp = tempfile::tempdir().unwrap();
+        let pb = minimal_plasmid_bin(temp.path());
+        let tower_path = pb.join("tower/tower");
+        let bytes = std::fs::read(&tower_path).unwrap();
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes);
+        let sha = format!("{:x}", hasher.finalize());
+
+        let mut binaries = HashMap::new();
+        binaries.insert(
+            "tower".to_string(),
+            BinaryInfo {
+                name: "tower".to_string(),
+                version: "9.9.9".to_string(),
+                git_commit: "abc".to_string(),
+                build_date: Utc::now(),
+                sha256: sha,
+                size_bytes: bytes.len() as u64,
+                source_repo: "test".to_string(),
+                features: vec!["feat-a".to_string(), "feat-b".to_string()],
+            },
+        );
+
+        let manifest = BinaryManifest {
+            manifest: ManifestMeta {
+                version: "9.9.9".to_string(),
+                created_at: Utc::now(),
+                pipeline_run: "test".to_string(),
+            },
+            binaries,
+            compatibility: CompatibilityInfo {
+                min_tower_version: "1.0.0".to_string(),
+                min_beardog_version: "0.1.0".to_string(),
+                min_songbird_version: "0.1.0".to_string(),
+            },
+        };
+        manifest.save(pb.join("MANIFEST.toml")).unwrap();
+
+        let args = VerifyArgs {
+            target: VerifyTarget::Nucleus { path: pb },
+        };
+        assert!(run(args).await.is_ok());
     }
 
-    static VERIFY_CWD_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
     #[tokio::test]
+    #[serial]
     async fn test_run_spore_verify_with_matching_plasmid_and_spore() {
-        let _guard = VERIFY_CWD_LOCK.lock().await;
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-
         let pb = minimal_plasmid_bin(temp.path());
+        let _plasmid_guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", pb.to_str().unwrap());
         let spore = temp.path().join("spore-mount");
         std::fs::create_dir_all(spore.join("bin")).unwrap();
         std::fs::create_dir_all(spore.join("primals")).unwrap();
@@ -568,18 +624,14 @@ NODE_ID = "node-test-123"
             },
         };
         assert!(run(args).await.is_ok());
-        let _ = pb;
     }
 
     #[tokio::test]
-    #[ignore = "cwd-sensitive: run with --ignored --test-threads=1"]
+    #[serial]
     async fn test_run_spore_verify_stale_binary() {
-        let _guard = VERIFY_CWD_LOCK.lock().await;
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-
-        let _pb = minimal_plasmid_bin(temp.path());
+        let pb = minimal_plasmid_bin(temp.path());
+        let _plasmid_guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", pb.to_str().unwrap());
         let spore = temp.path().join("spore-stale");
         std::fs::create_dir_all(spore.join("bin")).unwrap();
         std::fs::create_dir_all(spore.join("primals")).unwrap();

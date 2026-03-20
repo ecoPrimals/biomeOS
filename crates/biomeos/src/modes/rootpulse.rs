@@ -254,7 +254,10 @@ async fn send_jsonrpc(
     serde_json::from_str(&response_line).context("Failed to parse Neural API response")
 }
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 #[cfg(test)]
 mod tests {
     use super::*;

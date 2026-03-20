@@ -4,8 +4,10 @@
 //! Unit tests for graph handlers (graph.list, graph.get, graph.save, graph.execute, graph.status).
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::type_complexity)]
 
 mod continuous;
+mod coverage_more;
 mod crud;
 mod execute;
 mod execution_status;
@@ -25,6 +27,18 @@ use tokio::sync::RwLock;
 pub fn make_handler(
     graphs_dir: &std::path::Path,
 ) -> (GraphHandler, Arc<RwLock<HashMap<String, ExecutionStatus>>>) {
+    let (handler, executions, _) = make_handler_with_registry(graphs_dir);
+    (handler, executions)
+}
+
+/// Same as [`make_handler`], but also returns the capability translation registry for setup.
+pub fn make_handler_with_registry(
+    graphs_dir: &std::path::Path,
+) -> (
+    GraphHandler,
+    Arc<RwLock<HashMap<String, ExecutionStatus>>>,
+    Arc<RwLock<CapabilityTranslationRegistry>>,
+) {
     let router = Arc::new(NeuralRouter::new("test-family"));
     let registry = Arc::new(RwLock::new(CapabilityTranslationRegistry::new()));
     let executions = Arc::new(RwLock::new(HashMap::new()));
@@ -33,9 +47,9 @@ pub fn make_handler(
         "test-family",
         executions.clone(),
         router,
-        registry,
+        registry.clone(),
     );
-    (handler, executions)
+    (handler, executions, registry)
 }
 
 /// Minimal valid graph TOML for execute tests (log.info completes quickly).

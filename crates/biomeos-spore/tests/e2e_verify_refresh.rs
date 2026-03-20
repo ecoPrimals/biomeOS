@@ -210,7 +210,10 @@ BEARDOG_NODE_ID = "test-node"
     }
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "e2e test sets up nucleus and exercises full refresh flow"
+)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_e2e_multi_binary_refresh() {
     let temp_dir = TempDir::new().unwrap();

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 20, 2026 (v2.55: Coverage push 83.84%→89.07% region, 90.21% function, 6760 tests, flaky/cwd test hardening)
-**Version**: 2.55
+**Updated**: March 20, 2026 (v2.57: Coverage push — 6,959 tests, 89.84% line / 90.74% function coverage, 0 files >1000 LOC, all flaky mock tests hardened, CWD→env-based discovery complete, test file splits)
+**Version**: 2.57
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,8 +17,8 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 23 crates |
-| **Tests Passing** | 6,760 lib + bin + doc (0 failures, 112 ignored cwd-sensitive — run with `--ignored --test-threads=1`) |
-| **Test Coverage** | ~89% region / 90.21% function (llvm-cov verified) — coverage push across all crates |
+| **Tests Passing** | 6,959 lib + bin + doc (0 failures, ~140 ignored cwd-sensitive — run with `--ignored --test-threads=1`) |
+| **Test Coverage** | 89.84% line / 90.74% function (llvm-cov verified) — library-only ~90.8% (binary entry points account for ~1,771 untestable lines) |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -35,13 +35,15 @@
 | **P2P Sovereign Onion** | PRODUCTION READY |
 | **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 23 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
 | **Ecosystem Absorption (Mar 18)** | IpcErrorPhase + extract_rpc_result (5+ springs), OrExit trait (groundSpring/loamSpine), cast module (airSpring), proptest IPC fuzzing (8 fuzz tests), capability.list cost_estimates+operation_dependencies (Squirrel Pathway Learner), socket-registry.json discovery (Squirrel), MCP tool definitions (healthSpring/airSpring/wetSpring), ValidationSink (rhizoCrypt/airSpring), primal_names::display (neuralSpring), primal capability routing types (relay.authorize, compute.dispatch, model.*, sourDough lifecycle), deny.toml expanded to 15 C-dep bans |
+| **Deep Debt Audit (Mar 20)** | Zero-copy `JsonRpcVersion` marker type (eliminates String alloc per request/response), 5 production files >1000 LOC refactored into submodules (nucleus/client, plasmodium, fossil, monitor, rendering), `#[allow]`→`#[expect(reason)]` migration across workspace, BUILD_TIMESTAMP evolved from hardcoded placeholder to `build.rs`-injected, flaky tests fixed (beardog mock flush+shutdown, spore CWD→env-based `discover_plasmid_dir()`), SPDX header gap closed (692/692), deprecated `capability_from_primal_name`→`bootstrap_capability_hint_for_primal_name`, dead_code→`#[cfg(test)]` |
+| **Coverage Push (Mar 20)** | 6 large test files (1039–1309 LOC) split into domain submodules, `tui/types.rs` split into types/ submodules, 3 remaining `RestoreCwd` patterns evolved to env-based discovery (verify.rs, niche.rs, chimera.rs with `BIOMEOS_NICHE_TEMPLATES_DIR`, `BIOMEOS_CHIMERA_DEFINITIONS_DIR`, etc.), all beardog/federation mock tests hardened against timing races (case-insensitive error matching, flush+shutdown), health.rs/spore.rs test extraction, ~600 new test lines across vm_federation, neural_executor, graph handlers, capability_registry, beacon_verification, family_credentials, deployment_mode, socket discovery, model cache, fossil, monitor, network; coverage pushed from ~89% to 89.84% line / 90.74% function (library-only ~90.8%) |
 | **Capability-First Discovery (Mar 18)** | Capability-named sockets (security.sock, compute.sock), `mcp.tools.list` aggregation (Squirrel alpha.13), Provenance metadata type (primalSpring v0.3.0), capability_registry.toml sync tests, 3 new primals registered (petalTongue, skunkBat, sourDough) |
 | **External C deps** | 0 (nix→rustix, sysinfo→/proc, libc removed, dirs→etcetera, sudo ip→rtnetlink) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, rtnetlink for networking, zero -sys crates, zero shell-outs) |
 | **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |
-| **Files >1000 LOC** | 0 (all under 1000, test modules extracted to separate files) |
-| **JSON-RPC types** | `JSONRPC_VERSION` const + `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
-| **Zero-copy** | `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client, primal SDK IPC); `Arc<str>` for identifiers + `PrimalManifest` + `PrimalConnections` keys + `OptimizationType` graph nodes |
+| **Files >1000 LOC** | 0 (all production AND test files under 1000 lines); nucleus/client, plasmodium, fossil, monitor, rendering, health, spore, all 6 large test files, tui/types all split into submodules |
+| **JSON-RPC types** | `JSONRPC_VERSION` const + zero-alloc `JsonRpcVersion` marker type (was `String`), `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
+| **Zero-copy** | `JsonRpcVersion` (zero-size, zero-alloc serde), `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client, primal SDK IPC); `Arc<str>` for identifiers + `PrimalManifest` + `PrimalConnections` keys + `OptimizationType` graph nodes |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
 | **Dep policy** | `deny.toml` (cargo-deny 0.19) bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
@@ -52,6 +54,7 @@
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
 | **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |
 | **Hardcoded Primals** | 0 in routing code (all via capability-based discovery + `DISCOVERY_PROVIDER`/`SECURITY_PROVIDER` env) |
+| **Hardcoded plasmidBin** | 0 (evolved to `discover_plasmid_dir()` with `BIOMEOS_PLASMID_DIR` env override) |
 | **Hardcoded user paths** | 0 (tools evolved to runtime workspace discovery) |
 | **Production unwrap()** | 0 (all replaced with `expect()` + context) |
 | **Federation** | api.nestgate.io via Cloudflare Tunnel (QUIC, 4x HA) |

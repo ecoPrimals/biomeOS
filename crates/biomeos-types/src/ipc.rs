@@ -168,7 +168,7 @@ impl std::error::Error for RpcExtractionError {}
 #[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;
-    use crate::jsonrpc::{JsonRpcError, JsonRpcResponse};
+    use crate::jsonrpc::{JsonRpcError, JsonRpcResponse, JsonRpcVersion};
 
     #[test]
     fn extract_result_success() {
@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn extract_result_missing_both_fields() {
         let resp = JsonRpcResponse {
-            jsonrpc: "2.0".to_owned(),
+            jsonrpc: JsonRpcVersion,
             result: None,
             error: None,
             id: serde_json::json!(1),

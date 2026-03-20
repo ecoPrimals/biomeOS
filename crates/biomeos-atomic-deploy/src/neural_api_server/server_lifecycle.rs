@@ -276,7 +276,10 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use biomeos_test_utils::TestEnvGuard;
@@ -439,5 +442,48 @@ message = "test"
             .test_load_translations_on_startup()
             .await
             .expect("startup load tolerates bad graph file");
+    }
+
+    /// `load_translations_on_startup` overlays `graphs_dir/../config/capability_registry.toml` when present.
+    #[tokio::test]
+    async fn test_load_translations_on_startup_with_capability_registry_overlay() {
+        let base = tempfile::tempdir().expect("tempdir");
+        let graphs_dir = base.path().join("graphs");
+        std::fs::create_dir_all(&graphs_dir).expect("graphs dir");
+
+        let config_path = graphs_dir.join("../config/capability_registry.toml");
+        std::fs::create_dir_all(config_path.parent().expect("parent")).expect("config dir");
+        std::fs::write(
+            &config_path,
+            r#"
+[translations.crypto]
+"crypto.unit.test_ping" = { provider = "beardog", method = "ping" }
+"#,
+        )
+        .expect("write capability_registry.toml");
+
+        let sock = graphs_dir.join("neural-api.sock");
+        let server = NeuralApiServer::new(&graphs_dir, "test-fam", sock);
+        server
+            .test_load_translations_on_startup()
+            .await
+            .expect("load with overlay");
+    }
+
+    /// Invalid TOML at `graphs_dir/../config/capability_registry.toml` triggers the warn branch.
+    #[tokio::test]
+    async fn test_load_translations_on_startup_capability_registry_toml_parse_error() {
+        let base = tempfile::tempdir().expect("tempdir");
+        let graphs_dir = base.path().join("graphs");
+        std::fs::create_dir_all(&graphs_dir).expect("graphs dir");
+        let config_path = graphs_dir.join("../config/capability_registry.toml");
+        std::fs::create_dir_all(config_path.parent().expect("parent")).expect("config dir");
+        std::fs::write(&config_path, "[[[ not valid toml").expect("write broken toml");
+        let sock = graphs_dir.join("neural-api.sock");
+        let server = NeuralApiServer::new(&graphs_dir, "test-fam", sock);
+        server
+            .test_load_translations_on_startup()
+            .await
+            .expect("startup tolerates bad capability_registry.toml");
     }
 }

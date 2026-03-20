@@ -458,7 +458,7 @@ async fn test_discover_unix_socket_mock_primal_jsonrpc() {
     });
     let response_line = serde_json::to_string(&response).expect("serialize") + "\n";
 
-    tokio::spawn(async move {
+    let mock_handle = tokio::spawn(async move {
         let (stream, _) = listener.accept().await.expect("accept");
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let (mut read_half, mut write_half) = stream.into_split();
@@ -468,12 +468,14 @@ async fn test_discover_unix_socket_mock_primal_jsonrpc() {
             .write_all(response_line.as_bytes())
             .await
             .expect("write");
+        write_half.flush().await.expect("flush response");
+        write_half.shutdown().await.expect("shutdown write half");
     });
-
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     let mut pd = PrimalDiscovery::new();
     pd.discover().await.expect("discover");
+
+    mock_handle.await.expect("mock server completed");
 
     let p = pd.get("mockprimal").expect("mock primal registered");
     assert_eq!(p.primal_type, "test");

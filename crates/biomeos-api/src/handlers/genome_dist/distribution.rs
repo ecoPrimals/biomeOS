@@ -313,7 +313,14 @@ pub(crate) async fn update_livespore_from(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use std::io::Write;
@@ -587,5 +594,32 @@ architectures = ["x86_64-linux-musl"]
         };
         assert_eq!(status, StatusCode::NOT_FOUND);
         assert_eq!(body.code, "BINARY_NOT_FOUND");
+    }
+
+    #[tokio::test]
+    async fn test_update_livespore_copies_manifest_and_checksums_to_target() {
+        let genome_temp = tempfile::tempdir().expect("genome dir");
+        std::fs::write(
+            genome_temp.path().join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("manifest");
+        std::fs::write(genome_temp.path().join("checksums.toml"), "[checksums]\n")
+            .expect("checksums");
+
+        let target = tempfile::tempdir().expect("target");
+        let json = update_livespore_from(
+            genome_temp.path().to_path_buf(),
+            UpdateLiveSporeRequest {
+                target_path: target.path().to_path_buf(),
+                architectures: Some(vec!["x86_64-linux-musl".to_string()]),
+            },
+        )
+        .await
+        .expect("update");
+
+        assert!(json.success);
+        assert!(target.path().join("manifest.toml").exists());
+        assert!(target.path().join("checksums.toml").exists());
     }
 }

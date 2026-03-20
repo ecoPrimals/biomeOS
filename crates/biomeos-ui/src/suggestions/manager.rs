@@ -29,7 +29,10 @@ pub struct AISuggestionManager {
     ai_provider_socket: Option<std::path::PathBuf>,
 
     /// Family ID (for family-scoped AI suggestions)
-    #[allow(dead_code)] // read from tests; future AI RPC context
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "reserved for future AI RPC family-scoped context")
+    )]
     pub(crate) family_id: String,
 
     /// Active suggestions

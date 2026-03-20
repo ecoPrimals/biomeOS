@@ -280,7 +280,7 @@ pub(crate) fn format_nucleus_summary(
 }
 
 /// Run the nucleus startup
-#[allow(clippy::too_many_lines, reason = "nucleus startup flow")]
+#[expect(clippy::too_many_lines, reason = "nucleus startup flow")]
 pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Result<()> {
     let config = resolve_startup_config(&mode, &node_id, family_id.as_deref())?;
     let mode = config.mode;
@@ -700,3 +700,11 @@ pub(crate) fn base64_encode(data: &[u8]) -> String {
 #[cfg(test)]
 #[path = "nucleus_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "nucleus_tests2.rs"]
+mod tests2;
+
+#[cfg(test)]
+#[path = "nucleus_tests3.rs"]
+mod tests3;

@@ -134,7 +134,10 @@ impl UniversalBiomeOSManager {
 
         if let Some(primal) = primal {
             // Probe the endpoint for current health
-            #[allow(clippy::branches_sharing_code)]
+            #[expect(
+                clippy::branches_sharing_code,
+                reason = "Ok and Err branches intentionally duplicate JSON keys with different values"
+            )]
             if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint).await {
                 result.insert("service_name".to_string(), serde_json::json!(primal.name));
                 result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
@@ -416,7 +419,14 @@ impl UniversalBiomeOSManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use crate::universal_biomeos_manager::{PrimalInfo, UniversalBiomeOSManager};

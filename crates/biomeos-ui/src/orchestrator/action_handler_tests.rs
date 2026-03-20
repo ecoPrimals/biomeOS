@@ -409,7 +409,10 @@ async fn test_handle_assign_device_songbird_validation_invalid() {
 }
 
 #[tokio::test]
-#[allow(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "orchestrator test wires mock sockets and full assign-device flow"
+)]
 async fn test_handle_assign_device_toadstool_insufficient_capacity() {
     let temp = tempfile::tempdir().expect("temp dir");
     let beardog_path = temp.path().join("beardog.sock");

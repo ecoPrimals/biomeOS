@@ -104,7 +104,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[allow(clippy::unwrap_used)]
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test assertions use unwrap/expect for clarity"
+    )]
     async fn test_network_configuration() {
         let mut mgr = NetworkManager::new();
         assert!(mgr.configure().await.is_ok());

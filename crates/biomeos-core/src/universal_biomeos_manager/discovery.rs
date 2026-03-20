@@ -455,7 +455,10 @@ impl UniversalBiomeOSManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use crate::universal_biomeos_manager::{PrimalInfo, UniversalBiomeOSManager};
@@ -894,5 +897,27 @@ mod tests {
             .await
             .expect("discover");
         assert!(services.contains_key("same-id"));
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_capability_returns_multiple_matches() {
+        let manager = UniversalBiomeOSManager::with_default_config()
+            .await
+            .expect("manager");
+        manager.initialize().await.expect("init");
+
+        let cap = PrimalCapability::new("compute", "execution", "1.0");
+        for (id, ep) in [("m1", "unix:///a.sock"), ("m2", "unix:///b.sock")] {
+            let primal = test_primal_info(id, "svc", ep, vec![cap.clone()]);
+            manager.register_primal(primal).await.expect("register");
+        }
+
+        let ids = manager
+            .discover_by_capability(&[cap])
+            .await
+            .expect("discover");
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&"m1".to_string()));
+        assert!(ids.contains(&"m2".to_string()));
     }
 }

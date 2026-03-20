@@ -114,7 +114,10 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
 
 #[cfg(test)]
 #[cfg(unix)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use axum::Router;

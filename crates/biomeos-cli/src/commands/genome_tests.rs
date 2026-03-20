@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::get_genome_storage_dir;

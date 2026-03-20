@@ -68,7 +68,9 @@ pub use atomic::{
     ProviderHealthMap, TowerAtomic,
 };
 pub use ipc::{IpcErrorPhase, RpcExtractionError, extract_rpc_error, extract_rpc_result};
-pub use jsonrpc::{JSONRPC_VERSION, JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse};
+pub use jsonrpc::{
+    JSONRPC_VERSION, JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse, JsonRpcVersion,
+};
 pub use mcp::{McpToolDefinition, McpToolManifest};
 pub use or_exit::OrExit;
 pub use provenance::{Provenance, ProvenanceManifest};

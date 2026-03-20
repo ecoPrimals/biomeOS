@@ -11,10 +11,6 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
-/// Serialize tests that mutate process current directory (must be one mutex for the whole crate).
-#[cfg(test)]
-pub(crate) static CWD_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
 /// CLI command implementations
 pub mod commands;
 /// Service discovery utilities

@@ -66,7 +66,10 @@ pub(crate) fn get_memory_usage() -> BiomeResult<f64> {
     Ok(memory_info.usage_percent)
 }
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 #[cfg(test)]
 mod tests {
     use super::*;

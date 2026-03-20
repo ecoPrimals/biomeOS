@@ -492,3 +492,7 @@ async fn show_status_with(cache_dir: &Path, hf_hub_dir: Option<&Path>) -> Result
 #[cfg(test)]
 #[path = "model_cache_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "model_cache_tests2.rs"]
+mod tests2;

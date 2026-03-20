@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: March 20, 2026
-**Status**: Production Ready - 6,760 tests (fully concurrent, zero sleeps/serial), Edition 2024 all 26 crates, ~89% region coverage, Zero Warnings, Zero C deps, scyBorg licensed
+**Status**: Production Ready - 6,959 tests (fully concurrent, zero sleeps/serial), Edition 2024 all 26 crates, 89.84% line / 90.74% function coverage (llvm-cov), Zero Warnings, Zero C deps, scyBorg licensed
 
 ---
 

@@ -337,7 +337,14 @@ impl std::fmt::Debug for FamilyCredentials {
     }
 }
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -489,5 +496,82 @@ mod tests {
                 .to_string()
                 .contains("integrity check failed")
         );
+    }
+
+    #[test]
+    fn test_credentials_error_display_variants() {
+        let invalid = CredentialsError::InvalidCredentials("bad seed".to_string());
+        assert!(invalid.to_string().contains("Invalid credentials"));
+        assert!(invalid.to_string().contains("bad seed"));
+
+        let missing = CredentialsError::MissingCredentials("FAMILY_ID".to_string());
+        assert!(missing.to_string().contains("Missing required credentials"));
+        assert!(missing.to_string().contains("FAMILY_ID"));
+    }
+
+    #[test]
+    fn test_v2_file_rejects_unsupported_version() {
+        let temp = tempfile::NamedTempFile::new().unwrap();
+        let file = r#"{"version":1,"payload":"e30=","hmac":"AAAA"}"#;
+        std::fs::write(temp.path(), file).unwrap();
+        let err = FamilyCredentials::from_encrypted_file(temp.path(), b"").unwrap_err();
+        assert!(err.to_string().contains("Unsupported credential version"));
+    }
+
+    #[test]
+    fn test_v2_file_rejects_invalid_payload_base64() {
+        let temp = tempfile::NamedTempFile::new().unwrap();
+        let file = r#"{"version":2,"payload":"@@@not-base64@@@","hmac":"AAAA"}"#;
+        std::fs::write(temp.path(), file).unwrap();
+        let err = FamilyCredentials::from_encrypted_file(temp.path(), b"").unwrap_err();
+        assert!(
+            err.to_string().contains("base64") || err.to_string().contains("Invalid"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn test_v2_file_rejects_invalid_hmac_base64() {
+        let family_id = FamilyId::new("hmac-b64-test");
+        let seed =
+            SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
+        let creds = FamilyCredentials::new(family_id, seed).unwrap();
+        let temp = tempfile::NamedTempFile::new().unwrap();
+        creds.save_to_file(temp.path()).unwrap();
+        let mut v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(temp.path()).unwrap()).unwrap();
+        v["hmac"] = serde_json::Value::String("not-valid-base64!!!".to_string());
+        std::fs::write(temp.path(), serde_json::to_string(&v).unwrap()).unwrap();
+        let err = FamilyCredentials::from_encrypted_file(temp.path(), b"").unwrap_err();
+        assert!(
+            err.to_string().contains("HMAC") || err.to_string().contains("base64"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn test_family_credentials_rejects_empty_family_id() {
+        let family_id = FamilyId::new("");
+        let seed =
+            SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
+        let err = FamilyCredentials::new(family_id, seed).unwrap_err();
+        assert!(err.to_string().contains("empty") || err.to_string().contains("Family ID"));
+    }
+
+    #[test]
+    fn test_secret_seed_validate_wrong_length_after_decode() {
+        let short_b64 =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, [0u8; 31]);
+        let seed = SecretSeed::new(short_b64).unwrap();
+        let err = seed.validate().unwrap_err();
+        assert!(err.to_string().contains("32") || err.to_string().contains("short"));
+    }
+
+    #[test]
+    fn test_legacy_json_rejects_malformed() {
+        let temp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(temp.path(), "{ not json").unwrap();
+        let err = FamilyCredentials::from_encrypted_file(temp.path(), b"").unwrap_err();
+        assert!(err.to_string().contains("JSON") || err.to_string().contains("Invalid"));
     }
 }

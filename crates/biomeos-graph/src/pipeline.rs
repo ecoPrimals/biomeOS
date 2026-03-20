@@ -173,7 +173,10 @@ impl PipelineExecutor {
     /// `StreamItem::Data(Value::Null)` as its initial trigger. It should
     /// produce the actual stream items by returning them one at a time.
     /// When the source is exhausted, it returns `StreamItem::End`.
-    #[allow(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "pipeline run loop coordinates many nodes and stream states"
+    )]
     pub async fn run<F, Fut>(self, node_executor: F) -> Result<PipelineResult, GraphError>
     where
         F: Fn(String, GraphNode, StreamItem) -> Fut + Send + Sync + 'static,

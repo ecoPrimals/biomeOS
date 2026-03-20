@@ -71,3 +71,17 @@ fn test_extract_session_id_missing_session_id() {
     let err = GraphHandler::extract_session_id(&params).expect_err("should fail");
     assert!(err.to_string().contains("Missing session_id"));
 }
+
+#[test]
+fn test_extract_session_id_session_id_not_a_string() {
+    let params = Some(json!({"session_id": 42}));
+    let err = GraphHandler::extract_session_id(&params).expect_err("should fail");
+    assert!(err.to_string().contains("Missing session_id"));
+}
+
+#[test]
+fn test_extract_session_id_empty_string_is_ok() {
+    let params = Some(json!({"session_id": ""}));
+    let id = GraphHandler::extract_session_id(&params).expect("empty session id allowed");
+    assert!(id.is_empty());
+}

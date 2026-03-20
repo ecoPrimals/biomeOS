@@ -853,6 +853,7 @@ dependencies = [
 name = "biomeos-system"
 version = "0.1.0"
 dependencies = [
+ "biomeos-test-utils",
  "biomeos-types",
  "chrono",
  "hostname 0.3.1",

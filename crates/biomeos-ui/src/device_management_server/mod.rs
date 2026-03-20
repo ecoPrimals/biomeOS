@@ -12,6 +12,7 @@ mod songbird;
 
 use crate::capabilities::device_management::DeviceManagementProvider;
 use anyhow::{Context, Result};
+use biomeos_types::JsonRpcVersion;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -22,7 +23,7 @@ use tracing::{error, info, warn};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct JsonRpcRequest {
-    pub(crate) jsonrpc: String,
+    pub(crate) jsonrpc: JsonRpcVersion,
     pub(crate) method: String,
     pub(crate) params: Option<Value>,
     pub(crate) id: Value,
@@ -30,7 +31,7 @@ pub(crate) struct JsonRpcRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct JsonRpcResponse {
-    pub(crate) jsonrpc: String,
+    pub(crate) jsonrpc: JsonRpcVersion,
     pub(crate) result: Option<Value>,
     pub(crate) error: Option<JsonRpcError>,
     pub(crate) id: Value,
@@ -192,7 +193,7 @@ pub(crate) async fn handle_method(
                 Ok(t) => t,
                 Err(e) => {
                     return JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
+                        jsonrpc: JsonRpcVersion,
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32603,
@@ -207,7 +208,7 @@ pub(crate) async fn handle_method(
             let template_id = params["template_id"].as_str().unwrap_or("");
             let Some(template) = templates.iter().find(|t| t.id == template_id) else {
                 return JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
+                    jsonrpc: JsonRpcVersion,
                     result: None,
                     error: Some(JsonRpcError {
                         code: -32602,
@@ -250,13 +251,13 @@ pub(crate) async fn handle_method(
 
     match result {
         Ok(value) => JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: Some(value),
             error: None,
             id: request.id,
         },
         Err(error) => JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: None,
             error: Some(error),
             id: request.id,
@@ -265,7 +266,14 @@ pub(crate) async fn handle_method(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use tokio::io::AsyncBufReadExt;
@@ -282,7 +290,7 @@ mod tests {
     #[test]
     fn test_json_rpc_response_serialize() {
         let response = JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: Some(json!({"devices": []})),
             error: None,
             id: json!(1),
@@ -296,7 +304,7 @@ mod tests {
     #[test]
     fn test_json_rpc_error_serialize() {
         let response = JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: None,
             error: Some(JsonRpcError {
                 code: -32601,
@@ -317,7 +325,7 @@ mod tests {
             "/tmp/test-device-mgmt.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "unknown_method".to_string(),
             params: None,
             id: json!(1),
@@ -335,7 +343,7 @@ mod tests {
             "/tmp/test-device-mgmt-get-devices.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "get_devices".to_string(),
             params: None,
             id: json!(1),
@@ -351,7 +359,7 @@ mod tests {
             "/tmp/test-device-mgmt-primals.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "get_primals_extended".to_string(),
             params: None,
             id: json!(2),
@@ -369,7 +377,7 @@ mod tests {
             "/tmp/test-device-mgmt-templates.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "get_niche_templates".to_string(),
             params: None,
             id: json!(3),
@@ -388,7 +396,7 @@ mod tests {
             "/tmp/test-device-mgmt-assign.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "assign_device".to_string(),
             params: Some(json!({
                 "device_id": "gpu-0",
@@ -409,7 +417,7 @@ mod tests {
             "/tmp/test-device-mgmt-assign-empty.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "assign_device".to_string(),
             params: None,
             id: json!(5),
@@ -424,7 +432,7 @@ mod tests {
             "/tmp/test-device-mgmt-validate.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "validate_niche".to_string(),
             params: Some(json!({"template_id": "tower"})),
             id: json!(6),
@@ -442,7 +450,7 @@ mod tests {
             "/tmp/test-device-mgmt-validate-nf.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "validate_niche".to_string(),
             params: Some(json!({"template_id": "nonexistent_template"})),
             id: json!(7),
@@ -460,7 +468,7 @@ mod tests {
             "/tmp/test-device-mgmt-deploy.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "deploy_niche".to_string(),
             params: Some(json!({"config": {"template": "tower"}})),
             id: json!(8),
@@ -477,7 +485,7 @@ mod tests {
             "/tmp/test-device-mgmt-deploy-empty.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "deploy_niche".to_string(),
             params: Some(json!({})),
             id: json!(9),
@@ -492,7 +500,7 @@ mod tests {
             "/tmp/test-device-mgmt-struct.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "get_devices".to_string(),
             params: None,
             id: json!("string-id"),
@@ -509,7 +517,7 @@ mod tests {
             "/tmp/test-device-mgmt-err-struct.sock",
         )));
         let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             method: "bogus".to_string(),
             params: None,
             id: json!(null),

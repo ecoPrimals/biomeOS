@@ -107,7 +107,7 @@ Detailed handoffs in `docs/handoffs/`:
 | Metric | Value |
 |--------|-------|
 | TODO markers in Rust source | 0 |
-| TODO in config (deny.toml) | 1 (bincode v1 unmaintained, blocked by tarpc upstream) |
+| TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND | 0 |
 | Unsafe code | 2 (test-only: `env::set_var` in Rust 2024) |
 | Clippy warnings | 0 (entire workspace, pedantic+nursery, all 23 crates via workspace lint inheritance) |

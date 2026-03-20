@@ -157,7 +157,7 @@ pub async fn event_stream(
 }
 
 /// Detect changes in the ecosystem and emit appropriate events
-#[allow(clippy::too_many_lines, reason = "change detection logic")]
+#[expect(clippy::too_many_lines, reason = "change detection logic")]
 async fn detect_and_emit_changes(
     state: Arc<AppState>,
     previous_state: Arc<RwLock<EcosystemState>>,

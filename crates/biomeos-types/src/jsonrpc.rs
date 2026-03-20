@@ -5,18 +5,79 @@
 //!
 //! Shared across all biomeOS crates to avoid duplicating the protocol format.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::sync::Arc;
 
 /// JSON-RPC 2.0 protocol version string.
 pub const JSONRPC_VERSION: &str = "2.0";
 
+/// Zero-allocation JSON-RPC 2.0 version marker.
+///
+/// Always serializes as `"2.0"` and rejects any other value on deserialization.
+/// Eliminates a `String` heap allocation per request/response.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct JsonRpcVersion;
+
+impl Serialize for JsonRpcVersion {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(JSONRPC_VERSION)
+    }
+}
+
+impl<'de> Deserialize<'de> for JsonRpcVersion {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct VersionVisitor;
+
+        impl serde::de::Visitor<'_> for VersionVisitor {
+            type Value = JsonRpcVersion;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "the string \"{JSONRPC_VERSION}\"")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<JsonRpcVersion, E> {
+                if v == JSONRPC_VERSION {
+                    Ok(JsonRpcVersion)
+                } else {
+                    Err(E::custom(format!(
+                        "expected JSON-RPC version \"{JSONRPC_VERSION}\", got \"{v}\""
+                    )))
+                }
+            }
+
+            fn visit_string<E: serde::de::Error>(self, v: String) -> Result<JsonRpcVersion, E> {
+                self.visit_str(&v)
+            }
+        }
+
+        deserializer.deserialize_str(VersionVisitor)
+    }
+}
+
+impl std::fmt::Display for JsonRpcVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(JSONRPC_VERSION)
+    }
+}
+
+impl PartialEq<str> for JsonRpcVersion {
+    fn eq(&self, other: &str) -> bool {
+        other == JSONRPC_VERSION
+    }
+}
+
+impl PartialEq<&str> for JsonRpcVersion {
+    fn eq(&self, other: &&str) -> bool {
+        *other == JSONRPC_VERSION
+    }
+}
+
 /// JSON-RPC 2.0 request.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
-    /// Protocol version (always "2.0").
-    pub jsonrpc: String,
-    /// Method name to invoke. Uses Arc&lt;str&gt; for zero-copy cloning on the hot path.
+    /// Protocol version (always "2.0"). Zero-allocation marker type.
+    pub jsonrpc: JsonRpcVersion,
+    /// Method name to invoke. Uses `Arc<str>` for zero-copy cloning on the hot path.
     pub method: Arc<str>,
     /// Method parameters (optional per JSON-RPC 2.0 spec).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -90,7 +151,7 @@ impl JsonRpcRequest {
         static REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let id = REQUEST_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Self {
-            jsonrpc: JSONRPC_VERSION.to_owned(),
+            jsonrpc: JsonRpcVersion,
             method: Arc::from(method.as_ref()),
             params: Some(params),
             id: Some(serde_json::Value::Number(serde_json::Number::from(id))),
@@ -100,7 +161,7 @@ impl JsonRpcRequest {
     /// Create a notification (no id, no response expected).
     pub fn notification(method: impl AsRef<str>, params: serde_json::Value) -> Self {
         Self {
-            jsonrpc: JSONRPC_VERSION.to_owned(),
+            jsonrpc: JsonRpcVersion,
             method: Arc::from(method.as_ref()),
             params: Some(params),
             id: None,
@@ -111,8 +172,8 @@ impl JsonRpcRequest {
 /// JSON-RPC 2.0 response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcResponse {
-    /// Protocol version (always "2.0").
-    pub jsonrpc: String,
+    /// Protocol version (always "2.0"). Zero-allocation marker type.
+    pub jsonrpc: JsonRpcVersion,
     /// Successful result payload (mutually exclusive with `error`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<serde_json::Value>,
@@ -137,7 +198,7 @@ impl JsonRpcResponse {
     /// ```
     pub fn success(id: serde_json::Value, result: serde_json::Value) -> Self {
         Self {
-            jsonrpc: JSONRPC_VERSION.to_owned(),
+            jsonrpc: JsonRpcVersion,
             result: Some(result),
             error: None,
             id,
@@ -158,7 +219,7 @@ impl JsonRpcResponse {
     /// ```
     pub fn error(id: serde_json::Value, error: JsonRpcError) -> Self {
         Self {
-            jsonrpc: JSONRPC_VERSION.to_owned(),
+            jsonrpc: JsonRpcVersion,
             result: None,
             error: Some(error),
             id,
@@ -240,15 +301,16 @@ mod tests {
     }
 
     #[test]
-    fn test_jsonrpc_version_constant() {
-        assert_eq!(JSONRPC_VERSION, "2.0");
+    fn test_jsonrpc_version_marker_display() {
+        assert_eq!(JsonRpcVersion.to_string(), "2.0");
+        assert!(JsonRpcVersion == "2.0");
     }
 
     #[test]
     fn request_parse_valid() {
         let json = r#"{"jsonrpc":"2.0","method":"test","params":{"a":1},"id":1}"#;
         let req = JsonRpcRequest::parse(json).expect("parse");
-        assert_eq!(req.jsonrpc, "2.0");
+        assert!(req.jsonrpc == "2.0");
         assert_eq!(req.method.as_ref(), "test");
         assert_eq!(req.params, Some(serde_json::json!({"a": 1})));
         assert_eq!(req.id, Some(serde_json::json!(1)));
@@ -258,7 +320,7 @@ mod tests {
     fn test_jsonrpc_request_parse_valid() {
         let json = r#"{"jsonrpc":"2.0","method":"test","params":{"a":1},"id":1}"#;
         let req = JsonRpcRequest::parse(json).unwrap();
-        assert_eq!(req.jsonrpc, "2.0");
+        assert!(req.jsonrpc == "2.0");
         assert_eq!(req.method.as_ref(), "test");
         assert!(req.params.is_some());
         assert!(req.id.is_some());
@@ -283,6 +345,7 @@ mod tests {
         assert_eq!(req.method.as_ref(), "method");
         assert_eq!(req.params, Some(serde_json::json!({"x": 42})));
         assert!(req.id.is_some());
+        assert_eq!(req.jsonrpc, JsonRpcVersion);
     }
 
     #[test]
@@ -301,6 +364,13 @@ mod tests {
     }
 
     #[test]
+    fn test_jsonrpc_version_rejects_wrong_version() {
+        let json = r#"{"jsonrpc":"1.0","method":"test","id":1}"#;
+        let result = JsonRpcRequest::parse(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_jsonrpc_request_parse_invalid_json() {
         let result = JsonRpcRequest::parse("not valid json");
         assert!(result.is_err());
@@ -316,7 +386,7 @@ mod tests {
     #[test]
     fn test_jsonrpc_request_new() {
         let req = JsonRpcRequest::new("method", serde_json::json!({"x": 1}));
-        assert_eq!(req.jsonrpc, "2.0");
+        assert!(req.jsonrpc == "2.0");
         assert_eq!(req.method.as_ref(), "method");
         assert_eq!(req.params, Some(serde_json::json!({"x": 1})));
         assert!(req.id.is_some());
@@ -325,7 +395,7 @@ mod tests {
     #[test]
     fn test_jsonrpc_request_notification() {
         let req = JsonRpcRequest::notification("notify", serde_json::json!({}));
-        assert_eq!(req.jsonrpc, "2.0");
+        assert!(req.jsonrpc == "2.0");
         assert_eq!(req.method.as_ref(), "notify");
         assert!(req.id.is_none());
     }
@@ -344,7 +414,7 @@ mod tests {
     fn test_jsonrpc_response_success() {
         let resp =
             JsonRpcResponse::success(serde_json::json!(1), serde_json::json!({"result": "ok"}));
-        assert_eq!(resp.jsonrpc, "2.0");
+        assert!(resp.jsonrpc == "2.0");
         assert!(resp.result.is_some());
         assert!(resp.error.is_none());
         assert_eq!(resp.id, serde_json::json!(1));

@@ -29,6 +29,8 @@ use tokio_tungstenite::tungstenite::Message;
 
 // Re-export JSON-RPC types and graph types
 pub use biomeos_graph::{GraphEvent, GraphEventBroadcaster};
+#[cfg(test)]
+use biomeos_types::JsonRpcVersion;
 pub use biomeos_types::{JSONRPC_VERSION, JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 /// Subscription filter parameters
@@ -355,7 +357,14 @@ fn test_empty_subscriptions() -> Arc<RwLock<HashMap<String, Subscription>>> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use chrono::Utc;
@@ -461,7 +470,7 @@ mod tests {
     #[test]
     fn test_json_rpc_response_serialization() {
         let response = JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: Some(serde_json::json!({"success": true})),
             error: None,
             id: serde_json::json!(1),
@@ -624,7 +633,7 @@ mod tests {
     #[test]
     fn test_json_rpc_response_error_serialization() {
         let response = JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: None,
             error: Some(JsonRpcError::invalid_params(Some(
                 "missing field".to_string(),
@@ -746,7 +755,8 @@ mod tests {
             GraphEventWebSocketServer::handle_message(req, &subscriptions, &broadcaster, tx).await;
 
         assert!(resp.error.is_some());
-        assert_eq!(resp.error.as_ref().unwrap().code, -32600);
+        // Wrong jsonrpc fails during JsonRpcVersion deserialization → parse_error path.
+        assert_eq!(resp.error.as_ref().unwrap().code, -32700);
     }
 
     #[tokio::test]
@@ -821,5 +831,59 @@ mod tests {
 
         assert!(resp.error.is_some());
         assert_eq!(resp.error.as_ref().unwrap().code, -32602);
+    }
+
+    #[tokio::test]
+    async fn test_handle_message_subscribe_invalid_params_type() {
+        let subscriptions = test_empty_subscriptions();
+        let broadcaster = Arc::new(GraphEventBroadcaster::new(16));
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let req =
+            r#"{"jsonrpc":"2.0","id":1,"method":"events.subscribe","params":{"graph_id":[]}}"#;
+        let resp =
+            GraphEventWebSocketServer::handle_message(req, &subscriptions, &broadcaster, tx).await;
+
+        assert!(resp.error.is_some());
+        assert_eq!(resp.error.as_ref().unwrap().code, -32602);
+    }
+
+    #[tokio::test]
+    async fn test_handle_message_unsubscribe_success() {
+        let subscriptions = test_empty_subscriptions();
+        let broadcaster = Arc::new(GraphEventBroadcaster::new(16));
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let sub_req =
+            r#"{"jsonrpc":"2.0","id":1,"method":"events.subscribe","params":{"graph_id":"g1"}}"#;
+        let sub_resp = GraphEventWebSocketServer::handle_message(
+            sub_req,
+            &subscriptions,
+            &broadcaster,
+            tx.clone(),
+        )
+        .await;
+        let sub_id = sub_resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("subscription_id"))
+            .and_then(|v| v.as_str())
+            .expect("subscription id");
+
+        let unsub = format!(
+            r#"{{"jsonrpc":"2.0","id":2,"method":"events.unsubscribe","params":{{"subscription_id":"{sub_id}"}}}}"#
+        );
+        let unsub_resp =
+            GraphEventWebSocketServer::handle_message(&unsub, &subscriptions, &broadcaster, tx)
+                .await;
+        assert!(unsub_resp.error.is_none());
+        assert_eq!(
+            unsub_resp
+                .result
+                .as_ref()
+                .and_then(|r| r.get("success"))
+                .and_then(serde_json::Value::as_bool),
+            Some(true)
+        );
     }
 }

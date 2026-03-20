@@ -23,8 +23,8 @@ pub mod capability;
 
 /// Version and build information
 pub mod version {
-    /// Build timestamp for debugging
-    pub const BUILD_TIMESTAMP: &str = "2025-01-XX"; // Will be updated by build system
+    /// Build timestamp, injected at compile time by `build.rs`.
+    pub const BUILD_TIMESTAMP: &str = env!("BIOMEOS_BUILD_TIMESTAMP");
 
     /// Unified version constant - single source of truth
     pub const VERSION: &str = env!("CARGO_PKG_VERSION");

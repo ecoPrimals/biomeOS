@@ -407,7 +407,14 @@ impl RootFsBuilder {
     }
 }
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -806,5 +813,27 @@ mod tests {
         std::fs::create_dir_all(&root).expect("root");
         let result = RootFsBuilder::install_services(&root, &not_a_dir);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_configure_dns_three_nameservers_order_preserved() {
+        let temp = tempfile::Builder::new().tempdir().expect("tempdir");
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("etc")).expect("create etc");
+        let config = RootFsConfig {
+            dns_servers: Some(vec![
+                "9.9.9.9".to_string(),
+                "149.112.112.112".to_string(),
+                "1.0.0.1".to_string(),
+            ]),
+            ..test_config()
+        };
+        let builder = RootFsBuilder::new(config);
+        builder.configure_dns(root).expect("configure_dns");
+        let content = std::fs::read_to_string(root.join("etc/resolv.conf")).expect("read");
+        assert_eq!(content.lines().count(), 3);
+        assert!(content.contains("9.9.9.9"));
+        assert!(content.contains("149.112.112.112"));
+        assert!(content.contains("1.0.0.1"));
     }
 }

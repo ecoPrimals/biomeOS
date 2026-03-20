@@ -247,7 +247,10 @@ pub async fn start_default_tarpc_sidecar(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use biomeos_test_utils::ready_signal;

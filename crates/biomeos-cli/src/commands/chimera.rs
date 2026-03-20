@@ -6,12 +6,39 @@
 //! Commands for managing chimera definitions and builds.
 
 use biomeos_chimera::{ChimeraBuilder, ChimeraRegistry};
-use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
+
+/// Chimera definitions directory: `BIOMEOS_CHIMERA_DEFINITIONS_DIR` or `chimeras/definitions` under cwd.
+fn chimera_definitions_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("BIOMEOS_CHIMERA_DEFINITIONS_DIR") {
+        PathBuf::from(p)
+    } else {
+        PathBuf::from("chimeras/definitions")
+    }
+}
+
+/// Chimera build output directory: `BIOMEOS_BIN_CHIMERAS_DIR` or `bin/chimeras` under cwd.
+fn bin_chimeras_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("BIOMEOS_BIN_CHIMERAS_DIR") {
+        PathBuf::from(p)
+    } else {
+        PathBuf::from("bin/chimeras")
+    }
+}
+
+/// Primal binaries directory for chimera build: `BIOMEOS_BIN_PRIMALS_DIR` or `bin/primals` under cwd.
+fn bin_primals_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("BIOMEOS_BIN_PRIMALS_DIR") {
+        PathBuf::from(p)
+    } else {
+        PathBuf::from("bin/primals")
+    }
+}
 
 /// List all available chimera definitions
 pub async fn handle_chimera_list() -> anyhow::Result<()> {
-    let definitions_dir = Path::new("chimeras/definitions");
+    let definitions_dir = chimera_definitions_dir();
 
     if !definitions_dir.exists() {
         println!(
@@ -48,9 +75,9 @@ pub async fn handle_chimera_list() -> anyhow::Result<()> {
 
 /// Show details for a specific chimera
 pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
-    let definitions_dir = Path::new("chimeras/definitions");
+    let definitions_dir = chimera_definitions_dir();
 
-    let registry = ChimeraRegistry::from_directory(definitions_dir)?;
+    let registry = ChimeraRegistry::from_directory(&definitions_dir)?;
 
     if let Some(def) = registry.get(id) {
         println!("🧬 Chimera: {}", def.chimera.id);
@@ -98,16 +125,16 @@ pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
 
 /// Build a chimera
 pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
-    let definitions_dir = Path::new("chimeras/definitions");
-    let registry = ChimeraRegistry::from_directory(definitions_dir)?;
+    let definitions_dir = chimera_definitions_dir();
+    let registry = ChimeraRegistry::from_directory(&definitions_dir)?;
 
     match registry.get(id) {
         Some(def) => {
             println!("🔨 Building chimera: {id}");
 
             let builder = ChimeraBuilder::new(Arc::clone(&def))
-                .output_dir("bin/chimeras")
-                .primals_dir("bin/primals");
+                .output_dir(bin_chimeras_dir())
+                .primals_dir(bin_primals_dir());
 
             // Check primals first
             match builder.check_primals() {
@@ -159,19 +186,17 @@ pub(crate) fn parse_chimera_id_from_yaml(content: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
     use serial_test::serial;
     use std::io::Write;
+    use std::path::Path;
     use tempfile::tempdir;
-
-    struct RestoreCwd(std::path::PathBuf);
-    impl Drop for RestoreCwd {
-        fn drop(&mut self) {
-            let _ = std::env::set_current_dir(&self.0);
-        }
-    }
 
     #[test]
     fn test_parse_chimera_id_from_yaml() {
@@ -392,8 +417,13 @@ fusion:
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_handle_chimera_list_nonexistent_dir() {
-        // When definitions dir doesn't exist, should return Ok (graceful message)
+        let temp = tempdir().unwrap();
+        let missing = temp.path().join("no_chimeras_definitions");
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", missing.to_str().unwrap());
+        assert!(!missing.exists());
         let result = handle_chimera_list().await;
         assert!(result.is_ok());
     }
@@ -401,11 +431,11 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_list_with_definitions() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        let defs = temp.path().join("chimeras/definitions");
+        std::fs::create_dir_all(&defs).unwrap();
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", defs.to_str().unwrap());
         create_test_chimera_yaml(temp.path(), "test-chimera");
 
         let result = handle_chimera_list().await;
@@ -415,12 +445,13 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_show_not_found() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
         let defs_dir = temp.path().join("chimeras/definitions");
         std::fs::create_dir_all(&defs_dir).unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
+        let _def_guard = TestEnvGuard::set(
+            "BIOMEOS_CHIMERA_DEFINITIONS_DIR",
+            defs_dir.to_str().unwrap(),
+        );
 
         let result = handle_chimera_show("nonexistent-chimera").await;
         assert!(result.is_ok());
@@ -429,11 +460,11 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_show_found() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        let defs = temp.path().join("chimeras/definitions");
+        std::fs::create_dir_all(&defs).unwrap();
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", defs.to_str().unwrap());
         create_test_chimera_yaml(temp.path(), "my-chimera");
 
         let result = handle_chimera_show("my-chimera").await;
@@ -443,11 +474,11 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_show_missing_definitions_dir() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        // No chimeras/definitions - from_directory will fail
+        let missing = temp.path().join("chimeras/definitions");
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", missing.to_str().unwrap());
+        assert!(!missing.exists());
 
         let result = handle_chimera_show("any-id").await;
         assert!(result.is_err());
@@ -456,12 +487,13 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_build_not_found() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
         let defs_dir = temp.path().join("chimeras/definitions");
         std::fs::create_dir_all(&defs_dir).unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
+        let _def_guard = TestEnvGuard::set(
+            "BIOMEOS_CHIMERA_DEFINITIONS_DIR",
+            defs_dir.to_str().unwrap(),
+        );
 
         let result = handle_chimera_build("nonexistent").await;
         assert!(
@@ -473,13 +505,16 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_build_missing_primals() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        let defs = temp.path().join("chimeras/definitions");
+        std::fs::create_dir_all(&defs).unwrap();
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", defs.to_str().unwrap());
         create_test_chimera_yaml(temp.path(), "build-test");
-        std::fs::create_dir_all("bin/primals").unwrap();
+        let primals = temp.path().join("bin/primals");
+        std::fs::create_dir_all(&primals).unwrap();
+        let _primals_guard =
+            TestEnvGuard::set("BIOMEOS_BIN_PRIMALS_DIR", primals.to_str().unwrap());
 
         let result = handle_chimera_build("build-test").await;
         assert!(result.is_ok());
@@ -500,16 +535,12 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_list_skips_invalid_yaml_keeps_valid() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("chimeras/definitions").unwrap();
-        std::fs::write(
-            "chimeras/definitions/broken.yaml",
-            "this: is: not: valid: [[[\n",
-        )
-        .unwrap();
+        let defs = temp.path().join("chimeras/definitions");
+        std::fs::create_dir_all(&defs).unwrap();
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", defs.to_str().unwrap());
+        std::fs::write(defs.join("broken.yaml"), "this: is: not: valid: [[[\n").unwrap();
         create_test_chimera_yaml(temp.path(), "still-loads");
 
         let result = handle_chimera_list().await;
@@ -520,11 +551,11 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_list_empty_definitions_dir() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        let defs = temp.path().join("chimeras/definitions");
+        std::fs::create_dir_all(&defs).unwrap();
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", defs.to_str().unwrap());
 
         let result = handle_chimera_list().await;
         assert!(result.is_ok());
@@ -534,16 +565,12 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_list_only_invalid_yaml() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("chimeras/definitions").unwrap();
-        std::fs::write(
-            "chimeras/definitions/broken-only.yaml",
-            "this: is: not: valid: [[[\n",
-        )
-        .unwrap();
+        let defs = temp.path().join("chimeras/definitions");
+        std::fs::create_dir_all(&defs).unwrap();
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", defs.to_str().unwrap());
+        std::fs::write(defs.join("broken-only.yaml"), "this: is: not: valid: [[[\n").unwrap();
 
         let result = handle_chimera_list().await;
         assert!(result.is_ok());
@@ -552,11 +579,11 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_show_rich_fusion_and_modules() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        let defs = temp.path().join("chimeras/definitions");
+        std::fs::create_dir_all(&defs).unwrap();
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", defs.to_str().unwrap());
         create_test_chimera_yaml_rich(temp.path(), "rich-ch");
 
         let result = handle_chimera_show("rich-ch").await;
@@ -566,11 +593,11 @@ fusion:
     #[tokio::test]
     #[serial]
     async fn test_handle_chimera_list_shows_uses_arrays_icon() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
         let temp = tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("chimeras/definitions").unwrap();
+        let defs = temp.path().join("chimeras/definitions");
+        std::fs::create_dir_all(&defs).unwrap();
+        let _def_guard =
+            TestEnvGuard::set("BIOMEOS_CHIMERA_DEFINITIONS_DIR", defs.to_str().unwrap());
         create_test_chimera_yaml_with_array(temp.path(), "arr-ch");
 
         let result = handle_chimera_list().await;

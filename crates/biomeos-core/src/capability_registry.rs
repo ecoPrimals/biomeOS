@@ -471,7 +471,10 @@ impl CapabilityRegistry {
     }
 
     /// Handle a registry request
-    #[allow(clippy::too_many_lines)]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "single match arms enumerate all registry RPC variants"
+    )]
     async fn handle_request(&self, request: RegistryRequest) -> RegistryResponse {
         match request {
             RegistryRequest::Register {

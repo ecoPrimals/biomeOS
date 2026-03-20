@@ -2,7 +2,7 @@
 # biomeOS dependency policy — enforced by `cargo deny check`
 
 [advisories]
-# TODO: bincode v1 unmaintained (RUSTSEC-2025-0141) - pulled in transitively by tarpc (serde-transport-bincode) and tokio-serde (bincode feature); neither supports bincode v2. Upgrade when upstream does.
+# NOTE: bincode v1 unmaintained (RUSTSEC-2025-0141) — pulled in transitively by tarpc (serde-transport-bincode) and tokio-serde (bincode feature); neither supports bincode v2 yet. Upgrade when upstream does.
 ignore = ["RUSTSEC-2025-0141"]
 
 [licenses]

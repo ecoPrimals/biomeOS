@@ -30,7 +30,10 @@ use biomeos_spore::DarkForestBeacon;
 use std::time::Instant;
 
 #[tokio::main]
-#[allow(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "example walks through full beacon demo steps in one binary"
+)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing
     tracing_subscriber::fmt()

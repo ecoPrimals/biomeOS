@@ -268,7 +268,6 @@ pub fn deployment_phase_icon(phase: &DeploymentPhase) -> &'static str {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::tui::types::{

@@ -247,10 +247,8 @@ impl PrimalDiscovery {
             return None;
         };
 
-        // Try to determine capability from name (bootstrap hint when found by path scan).
-        // Deprecated: capability_from_primal_name; no alternative for path-scan bootstrap yet.
-        #[expect(deprecated, reason = "no alternative for path-scan bootstrap yet")]
-        let capability = capability_from_primal_name(name);
+        // Bootstrap hint when a socket is found by path scan (no capability query yet).
+        let capability = bootstrap_capability_hint_for_primal_name(name);
 
         // Quick health check
         let is_healthy = tokio::net::UnixStream::connect(&path).await.is_ok();
@@ -311,6 +309,25 @@ pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
     Vec::new()
 }
 
+/// Bootstrap-only: infer [`PrimalCapability`] from a primal directory/socket name when
+/// discovery found a socket by filesystem path (no capability-first query yet).
+///
+/// Prefer capability-based APIs (`discover_by_capability`, `DiscoveryQuery::capability`) when
+/// the caller can express intent by capability rather than primal name.
+pub(crate) fn bootstrap_capability_hint_for_primal_name(name: &str) -> PrimalCapability {
+    match name.to_lowercase().as_str() {
+        biomeos_types::primal_names::BEARDOG => PrimalCapability::encryption(),
+        biomeos_types::primal_names::SONGBIRD => PrimalCapability::networking(),
+        biomeos_types::primal_names::TOADSTOOL => PrimalCapability::compute(),
+        biomeos_types::primal_names::NESTGATE => PrimalCapability::storage(),
+        biomeos_types::primal_names::SQUIRREL => PrimalCapability::ai(),
+        biomeos_types::primal_names::WETSPRING | biomeos_types::primal_names::NEURALSPRING => {
+            PrimalCapability::science()
+        }
+        _ => PrimalCapability::custom(name),
+    }
+}
+
 /// Infer capability from primal name.
 ///
 /// **DEPRECATED**: Use capability-based discovery instead. Primals should be
@@ -321,19 +338,18 @@ pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
     note = "Use capability-based discovery. Primals are discovered by capability, not name."
 )]
 pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
-    match name.to_lowercase().as_str() {
-        biomeos_types::primal_names::BEARDOG => PrimalCapability::encryption(),
-        biomeos_types::primal_names::SONGBIRD => PrimalCapability::networking(),
-        biomeos_types::primal_names::TOADSTOOL => PrimalCapability::compute(),
-        biomeos_types::primal_names::NESTGATE => PrimalCapability::storage(),
-        biomeos_types::primal_names::SQUIRREL => PrimalCapability::ai(),
-        "wetspring" | "neuralspring" => PrimalCapability::science(),
-        _ => PrimalCapability::custom(name),
-    }
+    bootstrap_capability_hint_for_primal_name(name)
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use biomeos_test_utils::TestEnvGuard;
@@ -413,69 +429,72 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_capability_from_name_beardog() {
         assert_eq!(
-            capability_from_primal_name("beardog").category,
+            bootstrap_capability_hint_for_primal_name("beardog").category,
             "encryption"
         );
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_capability_from_name_songbird() {
         assert_eq!(
-            capability_from_primal_name("songbird").category,
+            bootstrap_capability_hint_for_primal_name("songbird").category,
             "networking"
         );
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_capability_from_name_toadstool() {
-        assert_eq!(capability_from_primal_name("toadstool").category, "compute");
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_capability_from_name_nestgate() {
-        assert_eq!(capability_from_primal_name("nestgate").category, "storage");
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_capability_from_name_squirrel() {
-        assert_eq!(capability_from_primal_name("squirrel").category, "ai");
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_capability_from_name_wetspring() {
-        assert_eq!(capability_from_primal_name("wetspring").category, "science");
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_capability_from_name_neuralspring() {
         assert_eq!(
-            capability_from_primal_name("neuralspring").category,
+            bootstrap_capability_hint_for_primal_name("toadstool").category,
+            "compute"
+        );
+    }
+
+    #[test]
+    fn test_capability_from_name_nestgate() {
+        assert_eq!(
+            bootstrap_capability_hint_for_primal_name("nestgate").category,
+            "storage"
+        );
+    }
+
+    #[test]
+    fn test_capability_from_name_squirrel() {
+        assert_eq!(
+            bootstrap_capability_hint_for_primal_name("squirrel").category,
+            "ai"
+        );
+    }
+
+    #[test]
+    fn test_capability_from_name_wetspring() {
+        assert_eq!(
+            bootstrap_capability_hint_for_primal_name("wetspring").category,
             "science"
         );
     }
 
     #[test]
-    #[allow(deprecated)]
+    fn test_capability_from_name_neuralspring() {
+        assert_eq!(
+            bootstrap_capability_hint_for_primal_name("neuralspring").category,
+            "science"
+        );
+    }
+
+    #[test]
     fn test_capability_from_name_unknown_custom() {
-        let cap = capability_from_primal_name("unknownprimal");
+        let cap = bootstrap_capability_hint_for_primal_name("unknownprimal");
         assert_eq!(cap.category, "custom");
         assert_eq!(cap.name, "unknownprimal");
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_capability_from_name_case_insensitive() {
         assert_eq!(
-            capability_from_primal_name("BEARDOG").category,
+            bootstrap_capability_hint_for_primal_name("BEARDOG").category,
             "encryption"
         );
     }

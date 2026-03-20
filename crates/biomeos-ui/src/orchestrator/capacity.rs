@@ -108,6 +108,7 @@ mod tests {
     use super::*;
     use biomeos_core::atomic_client::{JsonRpcRequest, JsonRpcResponse};
     use biomeos_test_utils::ready_signal;
+    use biomeos_types::JsonRpcVersion;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixListener;
 
@@ -139,7 +140,7 @@ mod tests {
                     && let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line)
                 {
                     let response = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
+                        jsonrpc: JsonRpcVersion,
                         result: Some(capacity_response),
                         error: None,
                         id: req.id.clone().unwrap_or(serde_json::Value::Null),

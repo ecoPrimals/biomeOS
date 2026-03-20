@@ -43,7 +43,10 @@ pub struct ObservabilityConfig {
     pub alerting: Option<AlertingConfig>,
 }
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 #[cfg(test)]
 mod tests {
     use super::*;

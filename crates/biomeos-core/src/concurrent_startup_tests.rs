@@ -592,7 +592,6 @@ fn test_self_dependency_error() {
 
 #[tokio::test]
 async fn test_start_in_waves_linear_chain() {
-    #[allow(clippy::unwrap_used)]
     let primals: Vec<Arc<dyn ManagedPrimal>> = vec![
         Arc::new(MockPrimal::new(
             "beardog",
@@ -625,7 +624,6 @@ async fn test_start_in_waves_linear_chain() {
 
 #[tokio::test]
 async fn test_start_in_waves_single_primal() {
-    #[allow(clippy::unwrap_used)]
     let primals: Vec<Arc<dyn ManagedPrimal>> = vec![Arc::new(MockPrimal::new(
         "solo",
         vec![Capability::Security],
@@ -644,7 +642,6 @@ async fn test_start_in_waves_single_primal() {
 
 #[tokio::test]
 async fn test_start_in_waves_parallel_wave() {
-    #[allow(clippy::unwrap_used)]
     let primals: Vec<Arc<dyn ManagedPrimal>> = vec![
         Arc::new(MockPrimal::new(
             "beardog",

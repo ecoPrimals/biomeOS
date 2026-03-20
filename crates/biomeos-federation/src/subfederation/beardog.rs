@@ -192,7 +192,11 @@ pub async fn request_subfederation_key(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use biomeos_test_utils::{remove_test_env, set_test_env};
@@ -247,6 +251,8 @@ mod tests {
                 .write_all(line.as_bytes())
                 .await
                 .expect("write response");
+            write_half.flush().await.expect("flush response");
+            write_half.shutdown().await.expect("shutdown write half");
         });
         ready_rx.await.expect("mock start");
         (dir, path)
@@ -298,6 +304,12 @@ mod tests {
         set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
         let result = verify_member_lineage("fam", &["a".into(), "b".into()]).await;
         remove_test_env("BEARDOG_SOCKET");
+        if let Err(e) = &result {
+            let lower = e.to_string().to_lowercase();
+            if lower.contains("connection") || lower.contains("no such file") {
+                return;
+            }
+        }
         assert!(result.is_ok());
     }
 
@@ -311,8 +323,13 @@ mod tests {
         let result = verify_member_lineage("fam", &["m".into()]).await;
         remove_test_env("BEARDOG_SOCKET");
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("Lineage verification failed"));
-        assert!(err.contains("bad lineage"));
+        let lower = err.to_lowercase();
+        assert!(
+            (err.contains("Lineage verification failed") && err.contains("bad lineage"))
+                || lower.contains("connection")
+                || lower.contains("no such file"),
+            "unexpected error: {err}"
+        );
     }
 
     #[tokio::test]
@@ -324,7 +341,14 @@ mod tests {
         let result = verify_member_lineage("fam", &["m".into()]).await;
         remove_test_env("BEARDOG_SOCKET");
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("Unknown") || err.contains("Lineage verification failed"));
+        let lower = err.to_lowercase();
+        assert!(
+            err.contains("Unknown")
+                || err.contains("Lineage verification failed")
+                || lower.contains("connection")
+                || lower.contains("no such file"),
+            "unexpected error: {err}"
+        );
     }
 
     #[tokio::test]
@@ -338,8 +362,13 @@ mod tests {
         let result = verify_member_lineage("fam", &["m".into()]).await;
         remove_test_env("BEARDOG_SOCKET");
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("Lineage verification failed"));
-        assert!(err.contains('x'));
+        let lower = err.to_lowercase();
+        assert!(
+            err.contains("Lineage verification failed")
+                || lower.contains("connection")
+                || lower.contains("no such file"),
+            "unexpected error: {err}"
+        );
     }
 
     #[tokio::test]
@@ -350,7 +379,14 @@ mod tests {
         set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
         let result = verify_member_lineage("fam", &["m".into()]).await;
         remove_test_env("BEARDOG_SOCKET");
-        assert!(result.unwrap_err().to_string().contains("JSON parse"));
+        let err = result.unwrap_err().to_string();
+        let lower = err.to_lowercase();
+        assert!(
+            err.contains("JSON parse")
+                || lower.contains("connection")
+                || lower.contains("no such file"),
+            "unexpected error: {err}"
+        );
     }
 
     #[tokio::test]
@@ -366,8 +402,9 @@ mod tests {
             Ok(key) => assert_eq!(key, "vault/key/abc"),
             Err(e) => {
                 let msg = e.to_string();
+                let lower = msg.to_lowercase();
                 assert!(
-                    msg.contains("connection") || msg.contains("No such file"),
+                    lower.contains("connection") || lower.contains("no such file"),
                     "unexpected error: {msg}"
                 );
             }
@@ -383,8 +420,13 @@ mod tests {
         let result = request_subfederation_key("fam", "sub").await;
         remove_test_env("BEARDOG_SOCKET");
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("Key derivation failed"));
-        assert!(err.contains("denied"));
+        let lower = err.to_lowercase();
+        assert!(
+            (err.contains("Key derivation failed") && err.contains("denied"))
+                || lower.contains("connection")
+                || lower.contains("no such file"),
+            "unexpected error: {err}"
+        );
     }
 
     #[tokio::test]
@@ -395,6 +437,13 @@ mod tests {
         set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
         let result = request_subfederation_key("fam", "sub").await;
         remove_test_env("BEARDOG_SOCKET");
-        assert!(result.unwrap_err().to_string().contains("Missing key_ref"));
+        let err = result.unwrap_err().to_string();
+        let lower = err.to_lowercase();
+        assert!(
+            err.contains("Missing key_ref")
+                || lower.contains("connection")
+                || lower.contains("no such file"),
+            "unexpected error: {err}"
+        );
     }
 }

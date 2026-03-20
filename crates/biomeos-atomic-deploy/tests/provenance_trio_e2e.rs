@@ -432,7 +432,10 @@ async fn test_trio_capabilities_registered() {
 //          via Neural API graph execution
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#[allow(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "integration test sequences many Neural API steps"
+)]
 #[tokio::test]
 #[ignore = "Requires running primals - use for integration testing"]
 async fn test_rootpulse_commit_e2e() {

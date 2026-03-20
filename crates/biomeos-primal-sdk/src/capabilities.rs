@@ -366,7 +366,14 @@ fn base64_decode(s: &str) -> Result<Bytes> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
@@ -726,7 +733,7 @@ mod tests {
         let req: JsonRpcRequest = serde_json::from_str(line.trim()).expect("parse request");
         let id = req.id.clone().unwrap_or(serde_json::Value::Null);
         let resp = JsonRpcResponse {
-            jsonrpc: biomeos_types::JSONRPC_VERSION.to_string(),
+            jsonrpc: biomeos_types::JsonRpcVersion,
             result: Some(reply),
             error: None,
             id,
@@ -769,7 +776,7 @@ mod tests {
             let req: JsonRpcRequest = serde_json::from_str(line.trim()).expect("parse");
             let id = req.id.clone().unwrap_or(serde_json::Value::Null);
             let resp = JsonRpcResponse {
-                jsonrpc: biomeos_types::JSONRPC_VERSION.to_string(),
+                jsonrpc: biomeos_types::JsonRpcVersion,
                 result: None,
                 error: Some(biomeos_types::JsonRpcError {
                     code: -32_000,
@@ -864,7 +871,7 @@ mod tests {
             let req: JsonRpcRequest = serde_json::from_str(line.trim()).expect("parse");
             let id = req.id.clone().unwrap_or(serde_json::Value::Null);
             let resp = JsonRpcResponse {
-                jsonrpc: biomeos_types::JSONRPC_VERSION.to_string(),
+                jsonrpc: biomeos_types::JsonRpcVersion,
                 result: Some(serde_json::json!({
                     "primals": [{"name": "beardog"}, {"name": "songbird"}]
                 })),

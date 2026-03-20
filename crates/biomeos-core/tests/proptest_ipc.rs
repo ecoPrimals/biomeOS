@@ -10,7 +10,9 @@
 //! on arbitrary byte sequences.
 
 use biomeos_types::ipc::{extract_rpc_error, extract_rpc_result};
-use biomeos_types::jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse};
+use biomeos_types::jsonrpc::{
+    JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse, JsonRpcVersion,
+};
 use proptest::prelude::*;
 
 proptest! {
@@ -44,7 +46,7 @@ proptest! {
         message in "\\PC{0,256}",
     ) {
         let resp = JsonRpcResponse {
-            jsonrpc: "2.0".to_owned(),
+            jsonrpc: JsonRpcVersion,
             result: if has_result { Some(serde_json::json!({"ok": true})) } else { None },
             error: if has_error {
                 Some(JsonRpcError {
@@ -68,7 +70,7 @@ proptest! {
         message in "\\PC{0,256}",
     ) {
         let resp = JsonRpcResponse {
-            jsonrpc: "2.0".to_owned(),
+            jsonrpc: JsonRpcVersion,
             result: Some(serde_json::json!(null)),
             error: if has_error {
                 Some(JsonRpcError { code, message, data: None })

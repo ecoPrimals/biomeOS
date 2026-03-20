@@ -110,13 +110,19 @@ pub struct RoutingMetric {
     pub error: Option<String>,
 }
 
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test assertions use unwrap/expect for clarity"
+    )]
+    #[expect(
+        clippy::expect_used,
+        reason = "test assertions use unwrap/expect for clarity"
+    )]
     fn test_http_response_serialize_deserialize() {
         let resp = HttpResponse {
             status: 200,
@@ -130,7 +136,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[expect(
+        clippy::unwrap_used,
+        reason = "test assertions use unwrap/expect for clarity"
+    )]
     fn test_http_response_body_str_utf8() {
         let resp = HttpResponse {
             status: 200,
@@ -142,7 +151,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::unwrap_used)]
     fn test_http_response_body_string_lossy() {
         let invalid = vec![0xff, 0xfe, 0xfd];
         let resp = HttpResponse {
@@ -155,7 +163,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[expect(
+        clippy::expect_used,
+        reason = "test assertions use unwrap/expect for clarity"
+    )]
     fn test_capability_info_serialize_deserialize() {
         let info = CapabilityInfo {
             capability: "security".into(),
@@ -176,7 +187,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[expect(
+        clippy::expect_used,
+        reason = "test assertions use unwrap/expect for clarity"
+    )]
     fn test_primal_info_serialize_deserialize() {
         let info = PrimalInfo {
             name: "songbird".into(),
@@ -191,7 +205,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[expect(
+        clippy::expect_used,
+        reason = "test assertions use unwrap/expect for clarity"
+    )]
     fn test_routing_metrics_serialize_deserialize() {
         let metrics = RoutingMetrics {
             total_requests: 42,
@@ -214,7 +231,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[expect(
+        clippy::expect_used,
+        reason = "test assertions use unwrap/expect for clarity"
+    )]
     fn test_routing_metric_with_error_serialize_deserialize() {
         let metric = RoutingMetric {
             request_id: "req-2".into(),

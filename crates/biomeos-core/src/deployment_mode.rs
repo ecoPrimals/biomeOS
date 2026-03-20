@@ -444,7 +444,14 @@ impl HostOS {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use biomeos_test_utils::{remove_test_env, set_test_env};
@@ -735,5 +742,100 @@ mod tests {
         };
         let json = serde_json::to_string(&mode).expect("serialize");
         let _: DeploymentMode = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[test]
+    fn test_is_removable_mount_detects_standard_paths() {
+        use std::path::Path;
+        assert!(DeploymentMode::is_removable_mount(
+            "/dev/loop0",
+            Path::new("/media/usb0")
+        ));
+        assert!(DeploymentMode::is_removable_mount(
+            "/dev/loop0",
+            Path::new("/mnt/data")
+        ));
+        assert!(DeploymentMode::is_removable_mount(
+            "/dev/loop0",
+            Path::new("/run/media/user/volume")
+        ));
+    }
+
+    #[test]
+    fn test_is_removable_mount_sd_without_marker() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        assert!(!DeploymentMode::is_removable_mount("/dev/sda1", tmp.path()));
+    }
+
+    #[test]
+    fn test_is_removable_mount_sd_with_biomeos_marker() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        std::fs::write(tmp.path().join(".biomeos-spore"), b"1").expect("marker");
+        assert!(DeploymentMode::is_removable_mount("/dev/sda1", tmp.path()));
+    }
+
+    #[test]
+    fn test_is_removable_mount_mmcblk_with_marker() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        std::fs::write(tmp.path().join(".biomeos-spore"), b"1").expect("marker");
+        assert!(DeploymentMode::is_removable_mount(
+            "/dev/mmcblk0p1",
+            tmp.path()
+        ));
+    }
+
+    #[test]
+    #[serial]
+    fn test_from_env_string_cold_default_media_when_unset() {
+        remove_test_env("BIOMEOS_MEDIA_PATH");
+        set_test_env("BIOMEOS_DEPLOYMENT_MODE", "cold");
+        let mode = DeploymentMode::from_env_string("cold").expect("cold");
+        remove_test_env("BIOMEOS_DEPLOYMENT_MODE");
+        match mode {
+            DeploymentMode::ColdSpore { media_path, .. } => {
+                assert_eq!(media_path, PathBuf::from("/media/biomeos"));
+            }
+            _ => panic!("expected ColdSpore"),
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_detect_isolation_level_sandboxed_alias() {
+        set_test_env("BIOMEOS_ISOLATION", "sandbox");
+        assert!(matches!(
+            DeploymentMode::detect_isolation_level(),
+            IsolationLevel::Sandboxed
+        ));
+        remove_test_env("BIOMEOS_ISOLATION");
+    }
+
+    #[test]
+    #[serial]
+    fn test_detect_isolation_level_shared_and_full() {
+        set_test_env("BIOMEOS_ISOLATION", "shared");
+        assert!(matches!(
+            DeploymentMode::detect_isolation_level(),
+            IsolationLevel::Shared
+        ));
+        remove_test_env("BIOMEOS_ISOLATION");
+
+        set_test_env("BIOMEOS_ISOLATION", "full");
+        assert!(matches!(
+            DeploymentMode::detect_isolation_level(),
+            IsolationLevel::Full
+        ));
+        remove_test_env("BIOMEOS_ISOLATION");
+    }
+
+    #[test]
+    #[serial]
+    fn test_detect_isolation_level_unknown_falls_back_to_shared() {
+        set_test_env("BIOMEOS_ISOLATION", "not-a-real-level");
+        assert!(matches!(
+            DeploymentMode::detect_isolation_level(),
+            IsolationLevel::Shared
+        ));
+        remove_test_env("BIOMEOS_ISOLATION");
     }
 }

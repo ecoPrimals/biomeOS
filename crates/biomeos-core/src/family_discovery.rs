@@ -288,7 +288,10 @@ pub fn get_family_id_from_env_with(
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use std::io::Write;

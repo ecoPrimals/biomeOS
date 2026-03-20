@@ -219,7 +219,6 @@ pub(crate) fn capability_to_provider_fallback(capability: &str) -> Option<&'stat
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

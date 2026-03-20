@@ -33,7 +33,7 @@
 
 ---
 
-## Specifications (19 active)
+## Specifications (24 active)
 
 See [specs/README.md](specs/README.md) for full index. Key specs:
 
@@ -58,7 +58,9 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
-| BIOMEOS_V254_CONCURRENCY_EVOLUTION_COVERAGE_PUSH_HANDOFF | Sleep elimination, concurrency evolution, 6169 tests, 84% coverage, 0 files >1000 LOC | Mar 19, 2026 |
+| BIOMEOS_V257_COVERAGE_PUSH_FILE_SPLITS_HANDOFF | 6,959 tests, 89.84% line / 90.74% function, 0 files >1000 LOC, CWD evolution, flaky test fixes | Mar 20, 2026 |
+| BIOMEOS_V255_COVERAGE_HARDENING_HANDOFF | Deep debt audit, zero-copy JsonRpcVersion, large file refactoring, #[allow]→#[expect(reason)] | Mar 20, 2026 |
+| BIOMEOS_V254_CONCURRENCY_EVOLUTION_COVERAGE_PUSH_HANDOFF | Sleep elimination, concurrency evolution, 6169 tests, 84% coverage | Mar 19, 2026 |
 | BIOMEOS_V253_COORDINATION_EXTRICATION_HANDOFF | Coordination pattern audit for primalSpring, capability-based validation matrix | Mar 18, 2026 |
 | BIOMEOS_V252_CAPABILITY_FIRST_DISCOVERY_HANDOFF | Capability-named sockets, MCP aggregation, Provenance metadata type | Mar 18, 2026 |
 | BIOMEOS_V251_ECOSYSTEM_ABSORPTION_HANDOFF | IPC resilience, proptest, MCP tools, capability cost/deps, 8 springs absorbed | Mar 18, 2026 |
@@ -118,10 +120,10 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (6,760 tests — 112 ignored cwd-sensitive — use --ignored --test-threads=1 for those)
+# Test (6,959 tests — ~140 ignored cwd-sensitive — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
-# Coverage (~89% region / ~90% function)
+# Coverage (89.84% line / 90.74% function)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -144,6 +146,6 @@ See `ARCHIVE_INDEX.md` in archive for details.
 ---
 
 **Documentation current as of March 20, 2026**
-**Active: 19 specs, handoffs in wateringHole (v2.43–v2.55), 4 scripts**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v2.57), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 6,760 passing, 112 ignored cwd-sensitive (~89% region / ~90% function, llvm-cov) | Clippy: PASS | Docs: Full coverage**
+**Tests: 6,959 passing, ~140 ignored cwd-sensitive (89.84% line / 90.74% function, llvm-cov) | Clippy: PASS | Docs: Full coverage**

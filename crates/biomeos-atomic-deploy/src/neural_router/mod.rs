@@ -12,6 +12,8 @@
 
 mod discovery;
 mod forwarding;
+#[cfg(test)]
+mod forwarding_tests;
 mod types;
 
 use std::collections::HashMap;

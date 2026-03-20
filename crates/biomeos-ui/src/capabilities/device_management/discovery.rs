@@ -499,7 +499,10 @@ pub async fn get_primal_capabilities(socket_path: &str) -> Vec<String> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod discovery_tests {
     use super::*;
 

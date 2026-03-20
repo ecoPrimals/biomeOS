@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.55)
+## Status: Production Ready (v2.57)
 
 | Metric | Value |
 |--------|-------|
@@ -12,25 +12,18 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024 all 26 crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
-| Tests | 6,760 passing (0 failures) — ~89% region coverage (llvm-cov verified) |
+| Tests | 6,959 passing (0 failures) — 89.84% line / 90.74% function coverage (llvm-cov verified) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0 + ORC + CC-BY-SA 4.0) |
-| Ecosystem Absorption | IpcErrorPhase, extract_rpc_result, OrExit, cast module, proptest fuzz, MCP tools, ValidationSink, socket-registry, capability cost/deps |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
 | Neural API | 285+ capability translations, 25 domains, 5 coordination patterns (Sequential, Parallel, ConditionalDag, Pipeline, Continuous) |
-| Coordination | Sequential + Parallel + ConditionalDag + Pipeline (streaming) + Continuous (60Hz tick) |
-| Streaming | PipelineExecutor (mpsc channels), NDJSON streaming client, JSON-RPC 2.0 notifications |
-| Continuous | ContinuousExecutor (60Hz tick), push events, sensor routing |
-| XR/VR | Stereo rendering, motion capture, haptic feedback pipeline |
-| Surgical Domain | Anatomy models, tissue physics, biosignals, pharmacokinetics |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
-| Agents | Plasmodium Agent Model (meld/split/mix routing contexts) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
-| Files >1000 LOC | 0 (test modules extracted to separate files) |
+| Files >1000 LOC | 0 production AND test (all split into domain submodules) |
 
 ---
 

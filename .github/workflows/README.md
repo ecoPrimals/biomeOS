@@ -1,6 +1,6 @@
 # CI/CD Pipeline Documentation
 
-**Last Updated:** January 30, 2026  
+**Last Updated:** March 20, 2026  
 **Status:** Production-ready, comprehensive quality enforcement
 
 ---
@@ -36,7 +36,7 @@ biomeOS uses GitHub Actions for continuous integration and delivery, with two ma
 
 #### **Job 4: Code Coverage**
 - Uses `cargo-llvm-cov` for coverage generation (`cargo llvm-cov --workspace --lcov --output-path lcov.info`)
-- Enforces a minimum line coverage threshold (`cargo llvm-cov --workspace --fail-under-lines 75 --no-run`)
+- Enforces a minimum line coverage threshold (`cargo llvm-cov --workspace --fail-under-lines 85 --no-run`)
 - Uploads to Codecov
 - Archives HTML coverage report (`cargo llvm-cov --workspace --html`)
 - **Purpose:** Track test coverage trends
@@ -149,7 +149,7 @@ biomeOS CI/CD distinguishes between:
 **Blocking (failing job fails the workflow):**
 - Format check, Clippy (all targets), and doc warnings (`-D warnings` on rustdoc)
 - Build (debug and release) and full test suite
-- Coverage below the enforced line threshold (75%) and `cargo audit` / `cargo deny check` failures
+- Coverage below the enforced line threshold (85%) and `cargo audit` / `cargo deny check` failures
 - File size job when any file exceeds the guideline
 - Standards job (TODO/FIXME markers, `panic!()` in production paths, any `unsafe` block)
 - Zero unsafe code remains a hard policy
@@ -193,14 +193,15 @@ From Deep Debt Analysis (Jan 30, 2026):
 
 ## 📈 **Quality Metrics**
 
-### **Current State (Jan 30, 2026)**
+### **Current State (March 20, 2026)**
 
-- **Grade:** A (95/100)
-- **Test Pass Rate:** 100%
-- **Unsafe Code:** 0 blocks (exemplary)
-- **Test Coverage:** ~40% baseline
-- **Clippy Warnings:** 0
+- **Grade:** A++ (100/100)
+- **Test Pass Rate:** 100% (6,959 tests)
+- **Unsafe Code:** 0 blocks
+- **Test Coverage:** 89.84% line / 90.74% function (llvm-cov)
+- **Clippy Warnings:** 0 (pedantic + nursery)
 - **Format Violations:** 0
+- **Files >1000 LOC:** 0
 
 ### **CI/CD Coverage**
 
@@ -212,7 +213,7 @@ From Deep Debt Analysis (Jan 30, 2026):
 | Unsafe Code | ✅ Enforced | Yes |
 | Dependency policy (`cargo deny`) | ✅ Enforced | Yes |
 | Security Audit | ✅ Enforced | Yes (on `cargo audit` failure) |
-| Coverage | ✅ Enforced | Yes (min. 75% lines) |
+| Coverage | ✅ Enforced | Yes (min. 85% lines) |
 | File Size | ✅ Enforced | Yes (when over guideline) |
 | Benchmarks | ✅ Tracked | No (`continue-on-error`) |
 
@@ -301,30 +302,23 @@ Each workflow run archives:
 
 The CI/CD pipeline evolves with the codebase:
 
-**Recent Enhancements (Jan 30, 2026):**
-1. ✅ Added context to file size checks
-2. ✅ Clarified test vs production panic!() distinction
-3. ✅ Enhanced documentation with modern Rust patterns
-4. ✅ Applied deep debt mission learnings
-
-**Future Enhancements:**
-- [ ] Automated dependency updates (Dependabot)
-- [ ] Nightly Rust compatibility checks
-- [ ] Cross-compile testing (ARM, WASM)
-- [ ] Performance regression detection
+**Recent Enhancements (March 20, 2026):**
+1. Coverage threshold raised from 75% to 85% (actual: 89.84%)
+2. File size check is now blocking (0 files over limit)
+3. `#[allow]` migrated to `#[expect(reason)]` workspace-wide
+4. All flaky mock tests hardened (flush + shutdown + case-insensitive matching)
+5. CWD-dependent tests evolved to env-based discovery
 
 ---
 
-## 📚 **References**
+## References
 
-- **Deep Debt Analysis:** `../DEEP_DEBT_PHASE_3_4_COMPLETE.md`
-- **Quality Mission:** `../DEEP_DEBT_QUALITY_MISSION_PROGRESS.md`
-- **Coding Standards:** `../CODEBASE_AUDIT_REPORT.md`
+- **Current Status:** `../CURRENT_STATUS.md`
+- **Contributing:** `../CONTRIBUTING.md`
+- **Standards:** `ecoPrimals/wateringHole/STANDARDS_AND_EXPECTATIONS.md`
 
 ---
 
-**Status:** ✅ **Production-ready CI/CD with comprehensive quality enforcement**
+**Status:** Production-ready CI/CD with comprehensive quality enforcement
 
 **Philosophy:** Guidelines inform, laws enforce. Context matters more than metrics.
-
-🦀✨ **Continuous quality, continuous improvement!** ✨🦀

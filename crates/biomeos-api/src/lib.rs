@@ -20,6 +20,8 @@ mod unix_server;
 mod websocket;
 
 use biomeos_types::JSONRPC_VERSION;
+#[cfg(test)]
+use biomeos_types::JsonRpcVersion;
 pub use state::{AppState, AppStateBuilder, Config};
 pub use websocket::{
     GraphEventWebSocketServer, JsonRpcError, JsonRpcRequest, JsonRpcResponse, SubscriptionFilter,
@@ -454,7 +456,10 @@ pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> an
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use axum::body::Body;
@@ -700,7 +705,7 @@ mod tests {
     #[test]
     fn test_json_rpc_response_success() {
         let response = JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: Some(serde_json::json!({"data": "test"})),
             error: None,
             id: serde_json::json!(1),
@@ -712,7 +717,7 @@ mod tests {
     #[test]
     fn test_json_rpc_response_error() {
         let response = JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: None,
             error: Some(JsonRpcError {
                 code: -32600,
@@ -803,7 +808,7 @@ mod tests {
     #[test]
     fn test_json_rpc_response_serialization_round_trip() {
         let response = JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JsonRpcVersion,
             result: Some(serde_json::json!({"subscription_id": "sub_1"})),
             error: None,
             id: serde_json::json!(42),

@@ -18,7 +18,7 @@
 //! ready before declaring success. We don't just create VMs - we validate they work.
 
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
@@ -51,6 +51,99 @@ pub(crate) fn parse_vm_names_from_list(vm_list: &str, federation_name: &str) -> 
         }
     }
     names
+}
+
+/// Collect 192.168.x.x IPs from virsh `domifaddr` outputs (testable; used by [`VmFederationManager::discover_vm_ips`]).
+/// BenchScale `cargo run --release -- create …` argv (testable without invoking `cargo`).
+pub(crate) fn benchscale_create_argv<'a>(name: &'a str, topology: &'a str) -> [&'a str; 9] {
+    [
+        "run",
+        "--release",
+        "--",
+        "create",
+        name,
+        "--topology",
+        topology,
+        "--backend",
+        "libvirt",
+    ]
+}
+
+/// BenchScale `cargo run --release -- <subcommand> <name>` argv (start/stop/destroy/test).
+pub(crate) fn benchscale_subcommand_argv<'a>(subcommand: &'a str, name: &'a str) -> [&'a str; 5] {
+    ["run", "--release", "--", subcommand, name]
+}
+
+/// Return topology path as UTF-8 for CLI args, or error if the path is not valid Unicode.
+pub(crate) fn topology_path_for_cli(path: &Path) -> Result<&str> {
+    path.to_str()
+        .ok_or_else(|| anyhow::anyhow!("Topology path contains invalid UTF-8"))
+}
+
+pub(crate) fn collect_ips_for_vm_names(
+    vm_names: Vec<String>,
+    mut domifaddr_output: impl FnMut(&str) -> std::io::Result<std::process::Output>,
+) -> Vec<String> {
+    let mut ips = Vec::new();
+    for vm_name in vm_names {
+        if let Ok(ip_output) = domifaddr_output(&vm_name) {
+            let ip_text = String::from_utf8_lossy(&ip_output.stdout);
+            if let Some(ip) = parse_ip_from_domifaddr_output(&ip_text) {
+                debug!("Found VM {} with IP {}", vm_name, ip);
+                ips.push(ip);
+            }
+        }
+    }
+    ips
+}
+
+/// Wait until SSH to `ip` succeeds or limits are hit (testable via `try_ssh`).
+pub(crate) async fn wait_for_vm_ssh_ready(
+    ip: &str,
+    validation_config: &ValidationConfig,
+    start: Instant,
+    mut try_ssh: impl FnMut() -> std::io::Result<std::process::Output>,
+) -> Result<()> {
+    let timeout = validation_config.cloud_init_timeout;
+    let mut attempt = 0u32;
+    loop {
+        if start.elapsed() >= timeout {
+            anyhow::bail!(
+                "Timeout waiting for VM {} after {}s. Cloud-init may have failed.",
+                ip,
+                timeout.as_secs()
+            );
+        }
+
+        attempt += 1;
+        debug!(
+            "SSH attempt {}/{} to {}",
+            attempt, validation_config.ssh_max_retries, ip
+        );
+
+        if let Ok(output) = try_ssh()
+            && output.status.success()
+        {
+            info!("✅ VM {} is SSH-accessible", ip);
+            return Ok(());
+        }
+
+        if attempt >= validation_config.ssh_max_retries {
+            anyhow::bail!("Failed to SSH to {ip} after {attempt} attempts. Check cloud-init logs.");
+        }
+
+        let wait_time = validation_config.ssh_retry_interval * attempt;
+        debug!("Waiting {}s before retry", wait_time.as_secs());
+        tokio::time::sleep(wait_time).await;
+    }
+}
+
+/// Validate a single SSH probe [`std::process::Output`] (testable).
+pub(crate) fn validate_ssh_probe_output(ip: &str, output: &std::process::Output) -> Result<()> {
+    if !output.status.success() {
+        anyhow::bail!("SSH validation failed for {ip}");
+    }
+    Ok(())
 }
 
 /// Configuration for VM validation
@@ -155,21 +248,10 @@ impl VmFederationManager {
 
         // Phase 1: Create VMs via benchScale
         info!("Phase 1/4: Creating VMs via benchScale");
+        let topology = topology_path_for_cli(&self.topology_path)?;
         let output = Command::new("cargo")
             .current_dir(&self.benchscale_root)
-            .args([
-                "run",
-                "--release",
-                "--",
-                "create",
-                name,
-                "--topology",
-                self.topology_path
-                    .to_str()
-                    .ok_or_else(|| anyhow::anyhow!("Topology path contains invalid UTF-8"))?,
-                "--backend",
-                "libvirt",
-            ])
+            .args(benchscale_create_argv(name, topology))
             .output()
             .context("Failed to execute benchscale create")?;
 
@@ -201,7 +283,10 @@ impl VmFederationManager {
     /// Discover IP addresses of VMs in a federation
     ///
     /// Uses virsh to query DHCP leases for federation VMs.
-    #[allow(clippy::unused_self)]
+    #[expect(
+        clippy::unused_self,
+        reason = "instance method for API symmetry with other VM federation helpers"
+    )]
     fn discover_vm_ips(&self, federation_name: &str) -> Result<Vec<String>> {
         // Query libvirt for VMs matching our federation
         let output = Command::new("virsh")
@@ -211,17 +296,9 @@ impl VmFederationManager {
 
         let vm_list = String::from_utf8_lossy(&output.stdout);
         let vm_names = parse_vm_names_from_list(&vm_list, federation_name);
-        let mut ips = Vec::new();
-
-        for vm_name in vm_names {
-            if let Ok(ip_output) = Command::new("virsh").args(["domifaddr", &vm_name]).output() {
-                let ip_text = String::from_utf8_lossy(&ip_output.stdout);
-                if let Some(ip) = parse_ip_from_domifaddr_output(&ip_text) {
-                    debug!("Found VM {} with IP {}", vm_name, ip);
-                    ips.push(ip);
-                }
-            }
-        }
+        let ips = collect_ips_for_vm_names(vm_names, |name| {
+            Command::new("virsh").args(["domifaddr", name]).output()
+        });
 
         if ips.is_empty() {
             anyhow::bail!("No VM IPs found for federation: {federation_name}");
@@ -236,7 +313,6 @@ impl VmFederationManager {
     /// current lack of cloud-init completion checking.
     async fn wait_for_all_vms_ready(&self, vm_ips: &[String]) -> Result<()> {
         let start = Instant::now();
-        let timeout = self.validation_config.cloud_init_timeout;
 
         for (idx, ip) in vm_ips.iter().enumerate() {
             info!(
@@ -246,24 +322,9 @@ impl VmFederationManager {
                 ip
             );
 
-            let mut attempt = 0;
-            loop {
-                if start.elapsed() >= timeout {
-                    anyhow::bail!(
-                        "Timeout waiting for VM {} after {}s. Cloud-init may have failed.",
-                        ip,
-                        timeout.as_secs()
-                    );
-                }
-
-                attempt += 1;
-                debug!(
-                    "SSH attempt {}/{} to {}",
-                    attempt, self.validation_config.ssh_max_retries, ip
-                );
-
-                // Try SSH connection
-                let ssh_test = Command::new("ssh")
+            let ip = ip.clone();
+            wait_for_vm_ssh_ready(&ip, &self.validation_config, start, || {
+                Command::new("ssh")
                     .args([
                         "-o",
                         "ConnectTimeout=5",
@@ -274,26 +335,9 @@ impl VmFederationManager {
                         &format!("biomeos@{ip}"),
                         "echo 'SSH ready'",
                     ])
-                    .output();
-
-                if let Ok(output) = ssh_test
-                    && output.status.success()
-                {
-                    info!("✅ VM {} is SSH-accessible", ip);
-                    break;
-                }
-
-                if attempt >= self.validation_config.ssh_max_retries {
-                    anyhow::bail!(
-                        "Failed to SSH to {ip} after {attempt} attempts. Check cloud-init logs."
-                    );
-                }
-
-                // Exponential backoff: 30s, 60s, 90s, ...
-                let wait_time = self.validation_config.ssh_retry_interval * attempt;
-                debug!("Waiting {}s before retry", wait_time.as_secs());
-                tokio::time::sleep(wait_time).await;
-            }
+                    .output()
+            })
+            .await?;
         }
 
         Ok(())
@@ -314,9 +358,7 @@ impl VmFederationManager {
                 .output()
                 .context(format!("Failed to validate SSH to {ip}"))?;
 
-            if !output.status.success() {
-                anyhow::bail!("SSH validation failed for {ip}");
-            }
+            validate_ssh_probe_output(ip, &output)?;
 
             info!(
                 "✅ VM {} validated: {}",
@@ -334,7 +376,7 @@ impl VmFederationManager {
 
         let output = Command::new("cargo")
             .current_dir(&self.benchscale_root)
-            .args(["run", "--release", "--", "start", name])
+            .args(benchscale_subcommand_argv("start", name))
             .output()
             .context("Failed to execute benchscale start")?;
 
@@ -355,7 +397,7 @@ impl VmFederationManager {
 
         let output = Command::new("cargo")
             .current_dir(&self.benchscale_root)
-            .args(["run", "--release", "--", "test", name])
+            .args(benchscale_subcommand_argv("test", name))
             .output()
             .context("Failed to execute benchscale test")?;
 
@@ -376,7 +418,7 @@ impl VmFederationManager {
 
         let output = Command::new("cargo")
             .current_dir(&self.benchscale_root)
-            .args(["run", "--release", "--", "stop", name])
+            .args(benchscale_subcommand_argv("stop", name))
             .output()
             .context("Failed to execute benchscale stop")?;
 
@@ -397,7 +439,7 @@ impl VmFederationManager {
 
         let output = Command::new("cargo")
             .current_dir(&self.benchscale_root)
-            .args(["run", "--release", "--", "destroy", name])
+            .args(benchscale_subcommand_argv("destroy", name))
             .output()
             .context("Failed to execute benchscale destroy")?;
 
@@ -416,7 +458,7 @@ impl VmFederationManager {
     pub async fn status(&self, name: &str) -> Result<String> {
         let output = Command::new("cargo")
             .current_dir(&self.benchscale_root)
-            .args(["run", "--release", "--", "status", name])
+            .args(benchscale_subcommand_argv("status", name))
             .output()
             .context("Failed to execute benchscale status")?;
 
@@ -425,7 +467,6 @@ impl VmFederationManager {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

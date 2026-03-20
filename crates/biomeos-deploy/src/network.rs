@@ -209,7 +209,14 @@ impl Drop for NetworkBridge {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
 
@@ -393,5 +400,53 @@ mod tests {
         let (ip, p) = parse_cidr("192.168.0.1/8").unwrap();
         assert!(ip.is_ipv4());
         assert_eq!(p, 8);
+    }
+
+    #[tokio::test]
+    async fn test_network_bridge_create_when_loopback_exists_is_noop() {
+        let config = BridgeConfig {
+            name: "lo".to_string(),
+            ip_address: "127.0.0.1/8".to_string(),
+            subnet: "127.0.0.0/8".to_string(),
+        };
+        let mut bridge = NetworkBridge::new(config);
+        assert!(bridge.exists());
+        let r = bridge.create().await;
+        assert!(
+            r.is_ok(),
+            "expected Ok when interface already present: {r:?}"
+        );
+    }
+
+    #[test]
+    fn test_network_bridge_debug_clone_eq_paths() {
+        let c = BridgeConfig {
+            name: "br-dbg".to_string(),
+            ip_address: "10.55.0.1/24".to_string(),
+            subnet: "10.55.0.0/24".to_string(),
+        };
+        let s = format!("{c:?}");
+        assert!(s.contains("br-dbg"));
+        let c2 = c.clone();
+        assert_eq!(c.name, c2.name);
+    }
+
+    #[test]
+    fn test_parse_cidr_empty_string() {
+        let r = parse_cidr("");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn test_parse_cidr_only_slash() {
+        let r = parse_cidr("/");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn test_parse_cidr_double_slash_in_addr() {
+        // `split_once('/')` yields prefix `/24`, which is not a valid `u8`
+        let r = parse_cidr("10.0.0.1//24");
+        assert!(r.is_err());
     }
 }

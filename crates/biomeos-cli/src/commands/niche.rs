@@ -6,7 +6,7 @@
 //! Commands for managing niche (biome) templates and deployments.
 
 use std::fs;
-use std::path::Path;
+use std::path::PathBuf;
 
 /// Map niche category to display icon (testable pure function)
 pub fn category_to_icon(category: &str) -> &'static str {
@@ -53,9 +53,27 @@ pub fn primal_to_icon(primal: &str) -> &'static str {
     }
 }
 
+/// Niche template directory: `BIOMEOS_NICHE_TEMPLATES_DIR` or `niches/templates` under cwd.
+fn niche_templates_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("BIOMEOS_NICHE_TEMPLATES_DIR") {
+        PathBuf::from(p)
+    } else {
+        PathBuf::from("niches/templates")
+    }
+}
+
+/// Installed primal binaries directory: `BIOMEOS_BIN_PRIMALS_DIR` or `bin/primals` under cwd.
+fn bin_primals_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("BIOMEOS_BIN_PRIMALS_DIR") {
+        PathBuf::from(p)
+    } else {
+        PathBuf::from("bin/primals")
+    }
+}
+
 /// List available niche templates
 pub async fn handle_niche_list() -> anyhow::Result<()> {
-    let templates_dir = Path::new("niches/templates");
+    let templates_dir = niche_templates_dir();
 
     if !templates_dir.exists() {
         println!(
@@ -96,7 +114,7 @@ pub async fn handle_niche_list() -> anyhow::Result<()> {
 
 /// Show details for a specific niche template
 pub async fn handle_niche_show(id: &str) -> anyhow::Result<()> {
-    let template_path = Path::new("niches/templates").join(format!("{id}.yaml"));
+    let template_path = niche_templates_dir().join(format!("{id}.yaml"));
 
     if !template_path.exists() {
         println!("❌ Niche template not found: {id}");
@@ -172,7 +190,7 @@ pub async fn handle_niche_show(id: &str) -> anyhow::Result<()> {
 
 /// List installed primal binaries
 pub async fn handle_primal_list() -> anyhow::Result<()> {
-    let primals_dir = Path::new("bin/primals");
+    let primals_dir = bin_primals_dir();
 
     if !primals_dir.exists() {
         println!("❌ Primals directory not found. Run './bin/pull-primals.sh --all'");
@@ -223,9 +241,13 @@ pub async fn handle_primal_list() -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
     use serial_test::serial;
 
     #[test]
@@ -331,29 +353,16 @@ niche:
         assert!(result.is_ok());
     }
 
-    struct RestoreCwd(std::path::PathBuf);
-    impl Drop for RestoreCwd {
-        fn drop(&mut self) {
-            let _ = std::env::set_current_dir(&self.0);
-        }
-    }
-
-    /// Reset cwd when a prior test left it pointing at a deleted temp directory.
-    fn reset_process_cwd() {
-        let _ = std::env::set_current_dir("/");
-    }
-
     #[tokio::test]
     #[serial]
     async fn test_handle_niche_list_with_yaml_template() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
-        reset_process_cwd();
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("niches/templates").unwrap();
+        let templates = temp.path().join("niches/templates");
+        std::fs::create_dir_all(&templates).unwrap();
+        let _templates_guard =
+            TestEnvGuard::set("BIOMEOS_NICHE_TEMPLATES_DIR", templates.to_str().unwrap());
         std::fs::write(
-            "niches/templates/demo.yaml",
+            templates.join("demo.yaml"),
             r#"
 niche:
   name: "Demo Niche"
@@ -370,14 +379,13 @@ niche:
     #[tokio::test]
     #[serial]
     async fn test_handle_niche_show_existing_template() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
-        reset_process_cwd();
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("niches/templates").unwrap();
+        let templates = temp.path().join("niches/templates");
+        std::fs::create_dir_all(&templates).unwrap();
+        let _templates_guard =
+            TestEnvGuard::set("BIOMEOS_NICHE_TEMPLATES_DIR", templates.to_str().unwrap());
         std::fs::write(
-            "niches/templates/my-niche.yaml",
+            templates.join("my-niche.yaml"),
             r#"
 niche:
   name: "Shown Niche"
@@ -401,17 +409,15 @@ resources:
 
     #[tokio::test]
     #[serial]
-    #[ignore = "cwd-sensitive: run with --ignored --test-threads=1"]
     async fn test_handle_primal_list_with_binaries() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
-        reset_process_cwd();
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("bin/primals").unwrap();
-        std::fs::write("bin/primals/beardog-1.0.0", b"x").unwrap();
-        std::fs::write("bin/primals/beardog-1.0.1", b"y").unwrap();
-        std::fs::write("bin/primals/songbird-2", b"z").unwrap();
+        let primals = temp.path().join("bin/primals");
+        std::fs::create_dir_all(&primals).unwrap();
+        let _primals_guard =
+            TestEnvGuard::set("BIOMEOS_BIN_PRIMALS_DIR", primals.to_str().unwrap());
+        std::fs::write(primals.join("beardog-1.0.0"), b"x").unwrap();
+        std::fs::write(primals.join("beardog-1.0.1"), b"y").unwrap();
+        std::fs::write(primals.join("songbird-2"), b"z").unwrap();
 
         let result = handle_primal_list().await;
         assert!(result.is_ok());
@@ -444,12 +450,11 @@ resources:
     #[tokio::test]
     #[serial]
     async fn test_handle_niche_list_empty_templates_dir() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
-        reset_process_cwd();
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("niches/templates").unwrap();
+        let templates = temp.path().join("niches/templates");
+        std::fs::create_dir_all(&templates).unwrap();
+        let _templates_guard =
+            TestEnvGuard::set("BIOMEOS_NICHE_TEMPLATES_DIR", templates.to_str().unwrap());
 
         let result = handle_niche_list().await;
         assert!(result.is_ok());
@@ -458,14 +463,13 @@ resources:
     #[tokio::test]
     #[serial]
     async fn test_handle_primal_list_skips_dotfiles() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
-        reset_process_cwd();
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("bin/primals").unwrap();
-        std::fs::write("bin/primals/.hidden", b"x").unwrap();
-        std::fs::write("bin/primals/tower-1", b"y").unwrap();
+        let primals = temp.path().join("bin/primals");
+        std::fs::create_dir_all(&primals).unwrap();
+        let _primals_guard =
+            TestEnvGuard::set("BIOMEOS_BIN_PRIMALS_DIR", primals.to_str().unwrap());
+        std::fs::write(primals.join(".hidden"), b"x").unwrap();
+        std::fs::write(primals.join("tower-1"), b"y").unwrap();
 
         let result = handle_primal_list().await;
         assert!(result.is_ok());
@@ -497,17 +501,15 @@ resources:
 
     #[tokio::test]
     #[serial]
-    #[ignore = "cwd-sensitive: run with --ignored --test-threads=1"]
     async fn test_handle_niche_list_skips_non_yaml() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
-        reset_process_cwd();
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("niches/templates").unwrap();
-        std::fs::write("niches/templates/readme.txt", "not yaml").unwrap();
+        let templates = temp.path().join("niches/templates");
+        std::fs::create_dir_all(&templates).unwrap();
+        let _templates_guard =
+            TestEnvGuard::set("BIOMEOS_NICHE_TEMPLATES_DIR", templates.to_str().unwrap());
+        std::fs::write(templates.join("readme.txt"), "not yaml").unwrap();
         std::fs::write(
-            "niches/templates/only.yaml",
+            templates.join("only.yaml"),
             r#"niche:
   name: "Only"
   category: "development"
@@ -522,14 +524,13 @@ resources:
     #[tokio::test]
     #[serial]
     async fn test_handle_niche_show_all_sections() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
-        reset_process_cwd();
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("niches/templates").unwrap();
+        let templates = temp.path().join("niches/templates");
+        std::fs::create_dir_all(&templates).unwrap();
+        let _templates_guard =
+            TestEnvGuard::set("BIOMEOS_NICHE_TEMPLATES_DIR", templates.to_str().unwrap());
         std::fs::write(
-            "niches/templates/full.yaml",
+            templates.join("full.yaml"),
             r#"
 niche:
   name: "Full"
@@ -557,14 +558,13 @@ resources:
     #[tokio::test]
     #[serial]
     async fn test_handle_primal_list_many_binaries_same_primal() {
-        let _guard = crate::CWD_TEST_LOCK.lock().await;
-        reset_process_cwd();
         let temp = tempfile::tempdir().unwrap();
-        let _restore = RestoreCwd(std::env::current_dir().unwrap());
-        std::env::set_current_dir(temp.path()).unwrap();
-        std::fs::create_dir_all("bin/primals").unwrap();
+        let primals = temp.path().join("bin/primals");
+        std::fs::create_dir_all(&primals).unwrap();
+        let _primals_guard =
+            TestEnvGuard::set("BIOMEOS_BIN_PRIMALS_DIR", primals.to_str().unwrap());
         for i in 0..5 {
-            std::fs::write(format!("bin/primals/tower-{i}"), b"x").unwrap();
+            std::fs::write(primals.join(format!("tower-{i}")), b"x").unwrap();
         }
 
         let result = handle_primal_list().await;

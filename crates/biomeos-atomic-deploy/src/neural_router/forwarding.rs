@@ -4,6 +4,7 @@
 //! Request forwarding - JSON-RPC and tarpc protocol escalation
 
 use anyhow::{Context, Result};
+use bytes::Bytes;
 use serde_json::Value;
 use std::path::PathBuf;
 use tracing::debug;
@@ -14,6 +15,27 @@ use biomeos_types::tarpc_types::ProtocolPreference;
 use crate::living_graph::ProtocolMode;
 
 use super::NeuralRouter;
+
+/// Decode `security.*` tarpc params that carry raw bytes (base64 string or JSON byte array).
+pub(crate) fn parse_security_bytes_param(params: &Value, key: &str) -> Result<Bytes, String> {
+    let v = params
+        .get(key)
+        .ok_or_else(|| format!("missing param: {key}"))?;
+    if let Some(s) = v.as_str() {
+        use base64::Engine;
+        base64::engine::general_purpose::STANDARD
+            .decode(s)
+            .map(Bytes::from)
+            .map_err(|e| e.to_string())
+    } else if let Some(arr) = v.as_array() {
+        Ok(arr
+            .iter()
+            .filter_map(|x| x.as_u64().map(|u| u as u8))
+            .collect::<Bytes>())
+    } else {
+        Err(format!("param {key} must be base64 string or byte array"))
+    }
+}
 
 impl NeuralRouter {
     /// Forward JSON-RPC request to primal
@@ -81,7 +103,6 @@ impl NeuralRouter {
     ) -> Result<Value, String> {
         use crate::tarpc_client;
         use biomeos_types::tarpc_types::ServiceRegistration;
-        use bytes::Bytes;
         use tarpc::context;
 
         let tarpc_path = biomeos_primal_sdk::tarpc_transport::tarpc_socket_path(socket_path);
@@ -184,29 +205,9 @@ impl NeuralRouter {
                 .await
                 .map_err(|e| format!("tarpc security connect failed: {e}"))?;
 
-            let bytes_from_param = |key: &str| -> Result<Bytes, String> {
-                let v = params
-                    .get(key)
-                    .ok_or_else(|| format!("missing param: {key}"))?;
-                if let Some(s) = v.as_str() {
-                    use base64::Engine;
-                    base64::engine::general_purpose::STANDARD
-                        .decode(s)
-                        .map(Bytes::from)
-                        .map_err(|e| e.to_string())
-                } else if let Some(arr) = v.as_array() {
-                    Ok(arr
-                        .iter()
-                        .filter_map(|x| x.as_u64().map(|u| u as u8))
-                        .collect::<Bytes>())
-                } else {
-                    Err(format!("param {key} must be base64 string or byte array"))
-                }
-            };
-
             match method {
                 "security.sign" | "security_sign" => {
-                    let data = bytes_from_param("data")?;
+                    let data = parse_security_bytes_param(params, "data")?;
                     let result = client
                         .sign(ctx, data)
                         .await
@@ -214,9 +215,9 @@ impl NeuralRouter {
                     return serde_json::to_value(&result).map_err(|e| e.to_string());
                 }
                 "security.verify" | "security_verify" => {
-                    let data = bytes_from_param("data")?;
-                    let signature = bytes_from_param("signature")?;
-                    let public_key = bytes_from_param("public_key")?;
+                    let data = parse_security_bytes_param(params, "data")?;
+                    let signature = parse_security_bytes_param(params, "signature")?;
+                    let public_key = parse_security_bytes_param(params, "public_key")?;
                     let ok = client
                         .verify(ctx, data, signature, public_key)
                         .await
@@ -282,7 +283,14 @@ impl NeuralRouter {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
     use crate::living_graph::{LivingGraph, PrimalProtocolState, ProtocolMode};

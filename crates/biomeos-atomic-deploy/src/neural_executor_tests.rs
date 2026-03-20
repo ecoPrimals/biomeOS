@@ -489,3 +489,26 @@ fn test_env_substitution_special_chars_in_value() {
     let result = GraphExecutor::substitute_env("Path: ${PATH}", &env);
     assert_eq!(result, "Path: /usr/bin:/usr/local/bin");
 }
+
+#[test]
+fn test_topological_sort_depends_on_missing_node_id() {
+    // `ghost` is not in the graph — Kahn's algorithm never schedules nodes blocked on it.
+    let graph = Graph {
+        id: "test".to_string(),
+        version: "1.0".to_string(),
+        description: "missing dep".to_string(),
+        nodes: vec![
+            create_test_node("a", vec!["ghost".to_string()]),
+            create_test_node("b", vec![]),
+        ],
+        config: GraphConfig::default(),
+        coordination: None,
+    };
+    let executor = GraphExecutor::new(graph, HashMap::new());
+    let err = executor.topological_sort().unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("cycle") || msg.contains("unreachable"),
+        "unexpected: {msg}"
+    );
+}

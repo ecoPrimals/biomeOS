@@ -25,7 +25,7 @@ async fn call_toadstool_rpc(method: &str, params: serde_json::Value) -> Result<s
     let mut reader = BufReader::new(reader);
 
     let request = JsonRpcRequest {
-        jsonrpc: "2.0".to_string(),
+        jsonrpc: biomeos_types::JsonRpcVersion,
         method: Arc::from(method),
         params: Some(params),
         id: Some(json!(1)),

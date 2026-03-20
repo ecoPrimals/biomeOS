@@ -121,7 +121,10 @@ pub fn parse_cmdline(cmdline: &str) -> Result<BootParams> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
 

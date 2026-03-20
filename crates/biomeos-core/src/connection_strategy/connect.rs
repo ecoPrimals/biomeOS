@@ -23,7 +23,10 @@ use super::{ConnectionResult, ConnectionTier, NatType, PeerConnectionInfo, PortP
 /// # Returns
 ///
 /// The tier and endpoint of the best connection, or an error if all tiers fail.
-#[allow(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "connection tiers and fallbacks are intentionally sequential in one function"
+)]
 pub async fn connect_to_peer(
     peer_id: &str,
     neural_api_socket: &str,
