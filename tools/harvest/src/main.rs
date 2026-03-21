@@ -30,6 +30,15 @@ use std::process::Command;
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
+const KNOWN_PRIMALS: &[&str] = &[
+    "songbird",
+    "beardog",
+    "toadstool",
+    "nestgate",
+    "squirrel",
+    "petalTongue",
+];
+
 #[derive(Parser)]
 #[command(name = "biomeos-harvest")]
 #[command(about = "biomeOS Primal Harvest System - NUCLEUS Evolution", long_about = None)]
@@ -422,7 +431,10 @@ impl HarvestSystem {
             .filter(|e| !e.path().extension().map_or(false, |ext| ext == "toml"))
         {
             let path = entry.path();
-            let name = path.file_name().unwrap().to_string_lossy();
+            let Some(file_name) = path.file_name() else {
+                continue;
+            };
+            let name = file_name.to_string_lossy();
             
             if verbose {
                 let size = fs::metadata(path)?.len();
@@ -451,14 +463,7 @@ impl HarvestSystem {
         println!("🌾 Harvesting all primals from phase1/...");
         println!();
 
-        let primals = vec![
-            "songbird",
-            "beardog",
-            "toadstool",
-            "nestgate",
-            "squirrel",
-            "petalTongue",  // Note: directory name might be camelCase
-        ];
+        let primals = KNOWN_PRIMALS;
 
         for primal in primals {
             match self.harvest_local(primal, None, clean) {
@@ -496,14 +501,7 @@ fn main() -> Result<()> {
                 system.clean_old_versions(&p, keep_latest)?;
             } else {
                 println!("🧹 Cleaning all primals (keep {} latest)", keep_latest);
-                for primal in [
-                    "songbird",
-                    "beardog",
-                    "toadstool",
-                    "nestgate",
-                    "squirrel",
-                    "petalTongue",
-                ] {
+                for primal in KNOWN_PRIMALS {
                     if let Err(e) = system.clean_old_versions(primal, keep_latest) {
                         eprintln!("  ⚠️  Failed to clean {}: {}", primal, e);
                     }

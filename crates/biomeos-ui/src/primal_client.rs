@@ -240,7 +240,10 @@ impl PrimalConnections {
 }
 
 #[cfg(test)]
-#[allow(deprecated)]
+#[expect(
+    deprecated,
+    reason = "tests exercise deprecated primal-specific accessors"
+)]
 mod tests {
     use super::*;
     use std::path::PathBuf;

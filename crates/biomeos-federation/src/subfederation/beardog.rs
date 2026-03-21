@@ -442,7 +442,8 @@ mod tests {
         assert!(
             err.contains("Missing key_ref")
                 || lower.contains("connection")
-                || lower.contains("no such file"),
+                || lower.contains("no such file")
+                || lower.contains("socket not found"),
             "unexpected error: {err}"
         );
     }

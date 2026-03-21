@@ -174,9 +174,9 @@ async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
 
     manager.initialize().await?;
 
-    #[allow(
+    #[expect(
         clippy::cast_possible_wrap,
-        reason = "days for fossil cleanup is bounded"
+        reason = "days for fossil cleanup is bounded — always positive and small"
     )]
     let cutoff = Utc::now() - Duration::days(older_than as i64);
     println!(

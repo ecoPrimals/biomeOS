@@ -352,7 +352,7 @@ pub async fn deployment_report(node: &GraphNode, context: &ExecutionContext) -> 
 /// Substitute environment variables in a string
 ///
 /// Supports both ${VAR} and $VAR syntax.
-#[allow(
+#[expect(
     clippy::implicit_hasher,
     reason = "default hasher sufficient for env substitution"
 )]

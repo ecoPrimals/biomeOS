@@ -206,17 +206,28 @@ impl FractalBuilder {
                 splits
             }
             ResourceAllocation::Weighted { weights } => {
-                // Weighted split
                 let total_weight: f64 = weights.iter().sum();
+                let scale = |count: usize, ratio: f64| -> usize {
+                    #[expect(
+                        clippy::cast_possible_truncation,
+                        clippy::cast_sign_loss,
+                        clippy::cast_precision_loss,
+                        reason = "resource counts are small positive integers; \
+                                  floor-truncation is intentional for allocation splits"
+                    )]
+                    {
+                        (count as f64 * ratio) as usize
+                    }
+                };
                 let mut splits = Vec::new();
                 for weight in weights {
                     let ratio = weight / total_weight;
                     splits.push(ResourceInfo {
-                        cpu_cores: (resources.cpu_cores as f64 * ratio) as usize,
-                        memory_mb: (resources.memory_mb as f64 * ratio) as usize,
-                        gpu_count: (resources.gpu_count as f64 * ratio) as usize,
-                        gpu_memory_mb: (resources.gpu_memory_mb as f64 * ratio) as usize,
-                        disk_mb: (resources.disk_mb as f64 * ratio) as usize,
+                        cpu_cores: scale(resources.cpu_cores, ratio),
+                        memory_mb: scale(resources.memory_mb, ratio),
+                        gpu_count: scale(resources.gpu_count, ratio),
+                        gpu_memory_mb: scale(resources.gpu_memory_mb, ratio),
+                        disk_mb: scale(resources.disk_mb, ratio),
                     });
                 }
                 splits

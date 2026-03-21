@@ -25,7 +25,7 @@ The biomeOS niche system is **completely universal and agnostic**, designed to w
 
 ### 1. Create YAML File
 
-Create a new file in `templates/niches/your-niche.yaml`:
+Create a new file in `niches/templates/your-niche.yaml`:
 
 ```yaml
 niche:
@@ -149,7 +149,7 @@ primals:
 
 ### Loading Process
 
-1. **Scan Directory** - System scans `templates/niches/` for `*.yaml` files
+1. **Scan Directory** - System scans `niches/templates/` for `*.yaml` files
 2. **Parse YAML** - Each file is parsed into a `NicheDefinition` structure
 3. **Convert to Template** - YAML config is converted to internal `NicheTemplate` format
 4. **Fallback** - If no YAML files found, uses built-in fallback templates
@@ -212,7 +212,7 @@ ui/src/views/byob/
 
 To contribute a new niche:
 
-1. Create your YAML file in `templates/niches/`
+1. Create your YAML file in `niches/templates/`
 2. Test with the biomeOS UI
 3. Submit a pull request with documentation
 4. Community review and integration

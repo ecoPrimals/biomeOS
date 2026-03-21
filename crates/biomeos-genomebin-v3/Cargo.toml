@@ -27,8 +27,8 @@ tracing = { workspace = true }
 # Compression (Pure Rust) - lz4_flex uses 100% Rust
 lz4_flex = "0.11"
 
-# Compression for v4.1 format
-zstd = { version = "0.13", default-features = false }
+# v4.1 format uses lz4_flex for manifest compression (same as binary compression)
+# — keeps the format self-consistent and avoids a separate compression dependency
 
 # Hashing (Pure Rust)
 blake3 = { version = "1.5", features = ["pure"] }

@@ -4,19 +4,20 @@
 
 ---
 
-## Status: Production Ready (v2.62)
+## Status: Production Ready (v2.63)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v3.0 compliant |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all 25 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
-| Tests | ~5,050 passing (0 failures) — 90.28% region / 91.11% function / 90.02% line coverage (llvm-cov verified) |
+| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
+| Tests | ~5,060 passing (0 failures) — 90.26% region / 91.10% function / 89.99% line coverage (llvm-cov verified) |
 | Unsafe Code | 0 in production |
-| Clippy | PASS (0 warnings, pedantic+nursery, all crates via workspace lint inheritance) |
+| C Dependencies | 0 (zstd-sys eliminated, deny.toml enforced bans) |
+| Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
 | Formatting | PASS |
-| License | scyBorg triple-copyleft (AGPL-3.0 + ORC + CC-BY-SA 4.0) |
+| License | scyBorg triple-copyleft (AGPL-3.0-only + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
 | Neural API | 285+ capability translations, 25 domains, 5 coordination patterns (Sequential, Parallel, ConditionalDag, Pipeline, Continuous) |
@@ -241,13 +242,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (6,998 tests)
+### Test (~5,060 tests)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (90.01% line / 90.95% function)
+### Coverage (89.99% line / 91.10% function / 90.26% region)
 
 ```bash
 cargo llvm-cov --workspace
@@ -268,7 +269,7 @@ cargo doc --workspace      # 0 missing_docs warnings
 
 ```
 biomeOS/
-├── crates/                    # Rust workspace (26 crates)
+├── crates/                    # Rust workspace (26 crates, all lint-inherited)
 │   ├── biomeos/               # Main binary (CLI + nucleus modes)
 │   ├── biomeos-core/          # Core orchestration + discovery + plasmodium
 │   ├── biomeos-types/         # Shared types, SystemPaths, capability taxonomy
@@ -335,7 +336,7 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.62)
+**Status**: Production Ready (v2.63)
 **Updated**: March 21, 2026
-**Tests**: ~5,050 passing, 90.28% region / 91.11% function / 90.02% line coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | scyBorg (AGPL-3.0 + ORC + CC-BY-SA)
+**Tests**: ~5,060 passing, 90.26% region / 91.10% function / 89.99% line coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA)

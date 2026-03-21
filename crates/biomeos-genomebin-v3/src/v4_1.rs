@@ -212,8 +212,7 @@ impl GenomeBin {
         let manifest_json =
             serde_json::to_vec(&self.manifest).context("Failed to serialize manifest")?;
 
-        let manifest_compressed =
-            zstd::encode_all(&manifest_json[..], 19).context("Failed to compress manifest")?;
+        let manifest_compressed = lz4_flex::compress_prepend_size(&manifest_json);
 
         tracing::debug!(
             "   Manifest: {} → {} bytes (compressed)",
@@ -243,9 +242,13 @@ impl GenomeBin {
         let mut header = Vec::with_capacity(60);
         header.extend_from_slice(&4u32.to_le_bytes()); // version
         header.extend_from_slice(&manifest_offset_rel.to_le_bytes()); // manifest_offset
-        header.extend_from_slice(&(manifest_compressed.len() as u32).to_le_bytes()); // manifest_size
+        let manifest_size =
+            u32::try_from(manifest_compressed.len()).context("manifest too large for u32")?;
+        header.extend_from_slice(&manifest_size.to_le_bytes()); // manifest_size
         header.extend_from_slice(&binaries_table_offset_rel.to_le_bytes()); // binaries_offset
-        header.extend_from_slice(&(self.binaries.len() as u32).to_le_bytes()); // num_binaries
+        let num_binaries =
+            u32::try_from(self.binaries.len()).context("too many binaries for u32")?;
+        header.extend_from_slice(&num_binaries.to_le_bytes()); // num_binaries
         header.extend_from_slice(&fingerprint); // fingerprint (32 bytes)
 
         // Write header
@@ -273,12 +276,17 @@ impl GenomeBin {
 
             entry.extend_from_slice(&arch_bytes); // architecture (16 bytes)
             entry.extend_from_slice(&binary_offset.to_le_bytes()); // offset (8 bytes)
-            entry.extend_from_slice(&(compressed_bin.data.len() as u32).to_le_bytes()); // compressed_size (4 bytes)
-            entry.extend_from_slice(&(compressed_bin.original_size as u32).to_le_bytes()); // uncompressed_size (4 bytes)
+            let compressed_size = u32::try_from(compressed_bin.data.len())
+                .context("compressed binary too large for u32")?;
+            let uncompressed_size = u32::try_from(compressed_bin.original_size)
+                .context("uncompressed binary too large for u32")?;
+            entry.extend_from_slice(&compressed_size.to_le_bytes()); // compressed_size (4 bytes)
+            entry.extend_from_slice(&uncompressed_size.to_le_bytes()); // uncompressed_size (4 bytes)
             entry.extend_from_slice(&compressed_bin.checksum); // checksum (32 bytes)
 
             file.write_all(&entry)?;
-            binary_offset += compressed_bin.data.len() as u64;
+            binary_offset += u64::try_from(compressed_bin.data.len())
+                .context("binary data length exceeds u64")?;
         }
 
         // Write compressed binaries (MUST use same sorted order as table!)

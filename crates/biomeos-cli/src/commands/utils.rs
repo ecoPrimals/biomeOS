@@ -68,7 +68,7 @@ pub fn parse_capabilities(caps_str: &str) -> Result<Vec<PrimalCapability>> {
 }
 
 /// Display results in a formatted manner
-#[allow(
+#[expect(
     clippy::implicit_hasher,
     reason = "HashMap with default hasher is sufficient for display"
 )]

@@ -2,6 +2,40 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.63 (2026-03-21) — Deep Audit + Idiomatic Rust Evolution
+
+### ecoBin Compliance
+- Eliminated `zstd` C-binding dependency → `lz4_flex::compress_prepend_size` (pure Rust, consistent with binary compression)
+- Removed `zstd` from `biomeos-genomebin-v3/Cargo.toml`; `zstd-sys` already banned in `deny.toml`
+- `cargo deny check` passes clean (0 advisories, 0 bans, 0 license violations)
+
+### Lint Evolution
+- `neural-api-client` promoted to `[workspace.members]` — now inherits pedantic+nursery lints
+- `#[allow]` → `#[expect(reason)]` in 4 files: fossil/handlers, commands/utils, node_handlers, primal_client
+- `#[allow(clippy::cast_possible_wrap)]` → `#[expect]` with specific documented reasons
+- Production `unwrap()` in tools/harvest → safe `let Some(...) else { continue }` pattern
+
+### Numeric Safety
+- `as u32` / `as u64` casts in genomebin-v3 v4.1 → `u32::try_from().context()` with overflow protection
+- Resource allocation float casts documented via `scale()` helper with `#[expect]` in fractal.rs
+
+### IPC Testing
+- 7 new proptest cases: `JsonRpcResponse` success/error roundtrip, `JsonRpcInput` single/batch parse, notification roundtrip
+- Flaky `test_request_subfederation_key_missing_key_ref` assertion expanded for socket-not-found error
+
+### Hardcoding Reduction
+- Hardcoded primal lists in tools/harvest → centralized `KNOWN_PRIMALS` constant
+- LICENSE-ORC fixed: `AGPL-3.0-or-later` → `AGPL-3.0-only` (consistent with LICENSE)
+
+### Quality Gates
+- Tests: ~5,060 passing, 0 deterministic failures
+- Coverage: 90.26% region / 91.10% function / 89.99% line (llvm-cov)
+- Clippy: 0 warnings (pedantic+nursery, 26 workspace crates)
+- Format: clean
+- C deps: 0
+
+---
+
 ## v2.62 (2026-03-21) — Coverage Target: All Three Metrics Above 90%
 
 ### Coverage Push
