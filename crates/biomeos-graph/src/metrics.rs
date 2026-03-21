@@ -902,10 +902,7 @@ mod tests {
             .expect("metrics");
         assert_eq!(m.total_executions, 3);
 
-        let newest = collector
-            .get_recent_executions("last_at", 1)
-            .await
-            .unwrap();
+        let newest = collector.get_recent_executions("last_at", 1).await.unwrap();
         let latest_record = newest.first().expect("one");
         assert_eq!(latest_record.id, 3);
         assert_eq!(m.last_executed_at, latest_record.executed_at);

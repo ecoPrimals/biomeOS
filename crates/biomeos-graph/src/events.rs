@@ -502,6 +502,120 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_broadcast_errors_when_no_subscribers() {
+        let broadcaster = GraphEventBroadcaster::new(10);
+        let event = GraphEvent::GraphResumed {
+            graph_id: "g".to_string(),
+            timestamp: Utc::now(),
+        };
+        match broadcaster.broadcast(event).await {
+            Err(err) => assert!(
+                err.contains("Failed to broadcast"),
+                "unexpected error message: {err}"
+            ),
+            Ok(n) => panic!("expected broadcast failure without subscribers, got Ok({n})"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_event_collector_collect_for_zero_duration_returns_empty_without_traffic() {
+        let broadcaster = GraphEventBroadcaster::new(10);
+        let receiver = broadcaster.subscribe();
+        let mut collector = EventCollector::new(receiver);
+        let events = collector.collect_for(Duration::ZERO).await;
+        assert!(events.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_graph_event_graph_id_and_timestamp_all_variants() {
+        let ts = Utc::now();
+        let cases: Vec<GraphEvent> = vec![
+            GraphEvent::GraphStarted {
+                graph_id: "g".to_string(),
+                graph_name: "n".to_string(),
+                total_nodes: 1,
+                coordination: "c".to_string(),
+                timestamp: ts,
+            },
+            GraphEvent::NodeStarted {
+                graph_id: "g".to_string(),
+                node_id: "n".to_string(),
+                primal: "p".to_string(),
+                operation: "o".to_string(),
+                timestamp: ts,
+            },
+            GraphEvent::NodeCompleted {
+                graph_id: "g".to_string(),
+                node_id: "n".to_string(),
+                duration_ms: 1,
+                output: None,
+                timestamp: ts,
+            },
+            GraphEvent::NodeFailed {
+                graph_id: "g".to_string(),
+                node_id: "n".to_string(),
+                error: "e".to_string(),
+                retry_attempt: 0,
+                will_retry: false,
+                timestamp: ts,
+            },
+            GraphEvent::DecisionMade {
+                graph_id: "g".to_string(),
+                decision_type: "d".to_string(),
+                reasoning: vec![],
+                confidence: 1.0,
+                timestamp: ts,
+            },
+            GraphEvent::GraphPaused {
+                graph_id: "g".to_string(),
+                reason: "r".to_string(),
+                current_node: None,
+                timestamp: ts,
+            },
+            GraphEvent::GraphResumed {
+                graph_id: "g".to_string(),
+                timestamp: ts,
+            },
+            GraphEvent::GraphCompleted {
+                graph_id: "g".to_string(),
+                duration_ms: 1,
+                nodes_executed: 1,
+                nodes_failed: 0,
+                success: true,
+                timestamp: ts,
+            },
+            GraphEvent::GraphCancelled {
+                graph_id: "g".to_string(),
+                reason: "r".to_string(),
+                nodes_completed: 0,
+                timestamp: ts,
+            },
+            GraphEvent::SessionStarted {
+                graph_id: "g".to_string(),
+                target_hz: 1.0,
+                timestamp: ts,
+            },
+            GraphEvent::TickCompleted {
+                graph_id: "g".to_string(),
+                tick: 1,
+                duration_us: 2,
+                budget_overruns: 0,
+                timestamp: ts,
+            },
+            GraphEvent::SessionStateChanged {
+                graph_id: "g".to_string(),
+                new_state: "s".to_string(),
+                tick_at_change: 0,
+                timestamp: ts,
+            },
+        ];
+        for ev in cases {
+            assert_eq!(ev.graph_id(), "g");
+            assert_eq!(ev.timestamp(), ts);
+        }
+    }
+
+    #[tokio::test]
     async fn test_concurrent_broadcasting() {
         let broadcaster = GraphEventBroadcaster::new(1000);
         let receiver = broadcaster.subscribe();

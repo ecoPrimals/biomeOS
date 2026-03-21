@@ -647,10 +647,7 @@ async fn test_call_http_jsonrpc_body_after_lf_only_separator() {
             let mut buf = vec![0u8; 16384];
             let _ = stream.read(&mut buf).await;
             let body = r#"{"jsonrpc":"2.0","result":{"lf_sep":true},"id":1}"#;
-            let response = format!(
-                "HTTP/1.1 200 OK\n\n{}",
-                body
-            );
+            let response = format!("HTTP/1.1 200 OK\n\n{}", body);
             let _ = stream.write_all(response.as_bytes()).await;
         }
     });
@@ -681,7 +678,10 @@ async fn test_call_http_jsonrpc_invalid_body_json_fails() {
     });
     tokio::time::sleep(Duration::from_millis(20)).await;
     let client = AtomicClient::http("127.0.0.1", port).with_timeout(Duration::from_secs(2));
-    let err = client.call("m", json!({})).await.expect_err("bad json body");
+    let err = client
+        .call("m", json!({}))
+        .await
+        .expect_err("bad json body");
     let s = err.to_string();
     assert!(
         s.contains("serialization") || s.contains("parse") || s.contains("JSON"),

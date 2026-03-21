@@ -10,7 +10,7 @@
 use crate::capability_translation::{
     CapabilityTranslation, CapabilityTranslationRegistry, RegistryStats, resolve_primal_socket,
 };
-use biomeos_test_utils::{remove_test_env, set_test_env};
+use biomeos_test_utils::{TestEnvGuard, remove_test_env, set_test_env};
 use std::collections::HashMap;
 
 #[test]
@@ -477,4 +477,37 @@ fn all_core_primals_have_capabilities_in_toml() {
              Add its translations to the config."
         );
     }
+}
+
+/// `BIOMEOS_*_PROVIDER=Ok(value)` path in [`defaults::load_defaults_into`](crate::capability_translation::defaults::load_defaults_into).
+#[test]
+#[serial_test::serial]
+fn test_load_defaults_compute_provider_env_override() {
+    let _g = TestEnvGuard::set("BIOMEOS_COMPUTE_PROVIDER", "songbird");
+    let mut registry = CapabilityTranslationRegistry::new();
+    registry.load_defaults();
+    let t = registry
+        .get_translation("compute.execute")
+        .expect("compute.execute should be registered");
+    assert_eq!(t.provider, "songbird");
+}
+
+/// Strict discovery with unset provider env still resolves defaults via domain tuple (warn path).
+#[test]
+#[serial_test::serial]
+fn test_load_defaults_strict_discovery_unset_providers_use_domain_defaults() {
+    let _strict = TestEnvGuard::set("BIOMEOS_STRICT_DISCOVERY", "1");
+    let _sec = TestEnvGuard::remove("BIOMEOS_SECURITY_PROVIDER");
+    let _net = TestEnvGuard::remove("BIOMEOS_NETWORK_PROVIDER");
+    let _stor = TestEnvGuard::remove("BIOMEOS_STORAGE_PROVIDER");
+    let _comp = TestEnvGuard::remove("BIOMEOS_COMPUTE_PROVIDER");
+    let _ai = TestEnvGuard::remove("BIOMEOS_AI_PROVIDER");
+
+    let mut registry = CapabilityTranslationRegistry::new();
+    let count = registry.load_defaults();
+    assert!(
+        count > 10,
+        "defaults should still register domain translations when strict and env unset"
+    );
+    assert!(registry.has_capability("crypto.encrypt"));
 }

@@ -429,14 +429,8 @@ mod tests {
 
     #[test]
     fn test_classify_spore_type_live_cold_none() {
-        assert_eq!(
-            classify_spore_type(true, false),
-            Some("live".to_string())
-        );
-        assert_eq!(
-            classify_spore_type(false, true),
-            Some("cold".to_string())
-        );
+        assert_eq!(classify_spore_type(true, false), Some("live".to_string()));
+        assert_eq!(classify_spore_type(false, true), Some("cold".to_string()));
         assert_eq!(classify_spore_type(false, false), None);
     }
 

@@ -616,6 +616,41 @@ fn test_get_hostname_uses_hostname_env_when_set() {
 }
 
 #[test]
+fn test_determine_health_not_critical_when_usage_exactly_at_95_percent() {
+    let metrics = ResourceMetrics {
+        cpu_usage: Some(0.95),
+        memory_usage: Some(0.5),
+        disk_usage: Some(0.5),
+        network_io: None,
+    };
+    let health = SystemInspector::determine_health_from_metrics(&metrics);
+    assert!(
+        matches!(health, Health::Degraded { .. }),
+        "strictly above 0.95 is required for Critical"
+    );
+}
+
+#[test]
+fn test_memory_component_health_at_95_percent_is_degraded() {
+    assert!(matches!(
+        SystemInspector::memory_component_health(Some(0.95)),
+        Health::Degraded { .. }
+    ));
+}
+
+#[test]
+fn test_determine_health_critical_requires_strictly_above_95() {
+    let metrics = ResourceMetrics {
+        cpu_usage: Some(0.950_000_000_1),
+        memory_usage: Some(0.1),
+        disk_usage: Some(0.1),
+        network_io: None,
+    };
+    let health = SystemInspector::determine_health_from_metrics(&metrics);
+    assert!(matches!(health, Health::Critical { .. }));
+}
+
+#[test]
 fn test_calculate_uptime_percentage_long() {
     let info = SystemInfo {
         hostname: "test".to_string(),

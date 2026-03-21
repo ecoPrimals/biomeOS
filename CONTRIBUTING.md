@@ -30,7 +30,7 @@ cargo fmt --all -- --check         # 0 diffs
 | **File size** | No file over 1000 lines; refactor at logical boundaries, not arbitrary splits |
 | **TODO/FIXME** | No TODO, FIXME, HACK, or XXX in committed code |
 | **Commented code** | No commented-out code |
-| **License headers** | `// SPDX-License-Identifier: AGPL-3.0-only` + `// Copyright 2025 ecoPrimals Project` on every `.rs` file |
+| **License headers** | `// SPDX-License-Identifier: AGPL-3.0-only` + `// Copyright 2025-2026 ecoPrimals Project` on every `.rs` file |
 
 ## IPC Standards
 

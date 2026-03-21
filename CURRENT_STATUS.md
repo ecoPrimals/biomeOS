@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 20, 2026 (v2.59: Deep debt evolution — 89.62% line / 90.59% function coverage, fossil/tests.rs split to domain submodules (1006→30 index), capability_taxonomy/helpers.rs evolved to taxonomy-driven resolution (zero hardcoded primal names), env_helpers.rs hardened with ENV_MUTEX serialization, realtime_tests.rs expanded (8 new tests), `#[allow]`→`#[expect(reason)]` consistency, Copyright 2025→2025-2026 across 692 files, `representative_for_category()` added to CapabilityTaxonomy)
-**Version**: 2.59
+**Updated**: March 20, 2026 (v2.60: Coverage target achieved — 90.01% line / 90.95% function coverage, `#[allow]`→`#[expect(reason)]` migration complete, deep test coverage across discovery/genome/unix_server/model_cache/socket_discovery/system/graph/websocket/federation, env-var test serialization hardened with `#[serial]` + `TestEnvGuard`, cpu.rs parse helpers extracted for testability, livespores helpers extracted, genome self_replicate covered, flaky tests fixed)
+**Version**: 2.60
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -16,9 +16,9 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
-| **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 23 crates |
-| **Tests Passing** | 6,869 lib + bin + doc (0 failures, ~136 ignored cwd-sensitive — run with `--ignored --test-threads=1`) |
-| **Test Coverage** | 89.62% line overall / 90.59% function (llvm-cov verified) — binary entry points account for ~1,876 lines excluded from library metric |
+| **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 crates |
+| **Tests Passing** | 6,998 lib + bin + doc (0 failures, ~136 ignored cwd-sensitive — run with `--ignored --test-threads=1`) |
+| **Test Coverage** | 90.01% line overall / 90.95% function (llvm-cov verified) — binary entry points account for ~1,876 lines excluded from library metric |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -33,12 +33,12 @@
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
-| **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 23 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
+| **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 26 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
 | **Ecosystem Absorption (Mar 18)** | IpcErrorPhase + extract_rpc_result (5+ springs), OrExit trait (groundSpring/loamSpine), cast module (airSpring), proptest IPC fuzzing (8 fuzz tests), capability.list cost_estimates+operation_dependencies (Squirrel Pathway Learner), socket-registry.json discovery (Squirrel), MCP tool definitions (healthSpring/airSpring/wetSpring), ValidationSink (rhizoCrypt/airSpring), primal_names::display (neuralSpring), primal capability routing types (relay.authorize, compute.dispatch, model.*, sourDough lifecycle), deny.toml expanded to 15 C-dep bans |
 | **Deep Debt Audit (Mar 20)** | Zero-copy `JsonRpcVersion` marker type (eliminates String alloc per request/response), 5 production files >1000 LOC refactored into submodules (nucleus/client, plasmodium, fossil, monitor, rendering), `#[allow]`→`#[expect(reason)]` migration across workspace, BUILD_TIMESTAMP evolved from hardcoded placeholder to `build.rs`-injected, flaky tests fixed (beardog mock flush+shutdown, spore CWD→env-based `discover_plasmid_dir()`), SPDX header gap closed (692/692), deprecated `capability_from_primal_name`→`bootstrap_capability_hint_for_primal_name`, dead_code→`#[cfg(test)]` |
 | **Deep Resilience (Mar 20)** | TOCTOU fix in federation `discover_unix_sockets()` (non-fatal `read_dir`), `SocketNucleation::assign_socket()` ensures parent dir exists, 10 fossil tests serialized (`#[serial]`), 4 large test modules extracted to files (capabilities 946→377, handlers/discovery 908→293, vm_federation 929→470, UBM/discovery 923→462), orphan `biomeos-genome-extract` crate removed, `neural-api-client` identified as non-workspace dep (used by biomeos-api) |
 | **Deep Debt Evolution (Mar 20b)** | `capability_taxonomy/helpers.rs` evolved: hardcoded `match primal_name` → taxonomy-driven `representative_for_category()` + `default_primal_with()` resolution (zero hardcoded primal names in helper), `fossil/tests.rs` split into `format_tests.rs` (pure logic) + `integration_tests.rs` (serial/env) with thin index module (1006→30 lines), `env_helpers.rs` hardened with `static ENV_MUTEX` serializing all env mutations (unsafe still required by Rust 2024 but now mutex-protected), `realtime_tests.rs` expanded with 8 new tests (SSE derivation, event variant coverage, multi-type handler), `#[allow]`→`#[expect(reason)]` consistency pass, `Copyright 2025`→`Copyright 2025-2026` across all 692 .rs files, zero-copy audit confirmed idiomatic clone patterns in circuit-breaker closures and graph algorithms, mock audit confirmed zero production mocks (all `MockDiscovery`/`spawn_*_mock` strictly `#[cfg(test)]`) |
-| **Coverage Push (Mar 20)** | 6 large test files (1039–1309 LOC) split into domain submodules, `tui/types.rs` split into types/ submodules, 3 remaining `RestoreCwd` patterns evolved to env-based discovery (verify.rs, niche.rs, chimera.rs with `BIOMEOS_NICHE_TEMPLATES_DIR`, `BIOMEOS_CHIMERA_DEFINITIONS_DIR`, etc.), all beardog/federation mock tests hardened against timing races (case-insensitive error matching, flush+shutdown), health.rs/spore.rs test extraction, ~600 new test lines across vm_federation, neural_executor, graph handlers, capability_registry, beacon_verification, family_credentials, deployment_mode, socket discovery, model cache, fossil, monitor, network; coverage pushed from ~89% to 89.84% line / 90.74% function (library-only ~90.8%) |
+| **Coverage Push (Mar 20)** | 6 large test files (1039–1309 LOC) split into domain submodules, `tui/types.rs` split into types/ submodules, 3 remaining `RestoreCwd` patterns evolved to env-based discovery (verify.rs, niche.rs, chimera.rs with `BIOMEOS_NICHE_TEMPLATES_DIR`, `BIOMEOS_CHIMERA_DEFINITIONS_DIR`, etc.), all beardog/federation mock tests hardened against timing races (case-insensitive error matching, flush+shutdown), health.rs/spore.rs test extraction, ~600 new test lines across vm_federation, neural_executor, graph handlers, capability_registry, beacon_verification, family_credentials, deployment_mode, socket discovery, model cache, fossil, monitor, network; coverage pushed from ~89% to 90.01% line / 90.95% function (llvm-cov verified, v2.60) |
 | **Capability-First Discovery (Mar 18)** | Capability-named sockets (security.sock, compute.sock), `mcp.tools.list` aggregation (Squirrel alpha.13), Provenance metadata type (primalSpring v0.3.0), capability_registry.toml sync tests, 3 new primals registered (petalTongue, skunkBat, sourDough) |
 | **External C deps** | 0 (nix→rustix, sysinfo→/proc, libc removed, dirs→etcetera, sudo ip→rtnetlink) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, rtnetlink for networking, zero -sys crates, zero shell-outs) |
@@ -809,7 +809,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 2. **ARM64 biomeOS genomeBin** - Blocks Pixel biomeOS deployment
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
-5. **Test coverage (near-complete)** - Function coverage ≥90% achieved (v2.55); region ~89% (llvm-cov) — optional stretch toward 90% region (see Coverage Analysis below)
+5. **Test coverage (near-complete)** - Line and function coverage ≥90% achieved (v2.60); optional stretch toward higher region coverage (see Coverage Analysis below)
 
 ### Low Priority
 1. **API key encryption** - NestGate + BearDog secured storage
@@ -818,7 +818,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Mar 20, 2026)
 
-**Overall**: ~89.07% region / 90.21% function coverage (6,760 tests, 0 failures, 112 ignored cwd-sensitive, 25 doc-tests, 4 proptests)
+**Overall**: ~89% region / 90.01% line / 90.95% function coverage (6,998 tests, 0 failures, 136 ignored cwd-sensitive, 25 doc-tests, 4 proptests)
 
 ### Coverage Distribution
 
@@ -902,7 +902,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (6,760 tests — 112 ignored cwd-sensitive — use --ignored --test-threads=1 for those)
+# Test (6,998 tests — 136 ignored cwd-sensitive — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -924,7 +924,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.55 — coverage push + flaky/cwd test hardening)
+**Status**: Production Ready (v2.60 — coverage target achieved + flaky/cwd test hardening)
 **AI Bridge**: Squirrel -> Songbird -> Cloud/Local AI (validated)
 **Continuous Systems**: ContinuousExecutor (60Hz tick), push events, sensor routing
 **XR/VR**: StereoRenderAdapter, MotionCaptureAdapter, HapticPipeline
@@ -937,7 +937,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A++ (Pure Rust, fully concurrent, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, table-driven routing)
-**Tests**: 6,760 passing, 112 ignored cwd-sensitive (~89% region / 90% function via llvm-cov)
+**Tests**: 6,998 passing, 136 ignored cwd-sensitive (90.01% line / 90.95% function via llvm-cov)
 **Clippy**: PASS (0 warnings, `-D warnings`) | **Format**: PASS (`cargo fmt --check` clean)
 **Docs**: Full coverage (0 missing_docs warnings across all crates)
 **Unsafe Code**: 0 production (test-only env helpers with RAII guards)

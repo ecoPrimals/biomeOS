@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.51–v2.58) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
+| See evolution handoffs (v2.58–v2.60) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -46,7 +46,7 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 | [NEURAL_API_ROUTING_SPECIFICATION.md](specs/NEURAL_API_ROUTING_SPECIFICATION.md) | Capability translation v2.0 |
 | [PRIMAL_DEPLOYMENT_STANDARD.md](specs/PRIMAL_DEPLOYMENT_STANDARD.md) | Deterministic deployment v1.0 |
 
-47 specs archived to `ecoPrimals/archive/biomeos-feb09-2026/specs/`.
+47 specs archived to `ecoPrimals/archive/biomeos-mar14-2026/specs/`.
 
 ---
 
@@ -58,7 +58,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
-| BIOMEOS_V257_COVERAGE_PUSH_FILE_SPLITS_HANDOFF | 6,959 tests, 89.84% line / 90.74% function, 0 files >1000 LOC, CWD evolution, flaky test fixes | Mar 20, 2026 |
+| BIOMEOS_V257_COVERAGE_PUSH_FILE_SPLITS_HANDOFF | 6,998 tests, 90.01% line / 90.95% function, 0 files >1000 LOC, CWD evolution, flaky test fixes | Mar 20, 2026 |
 | BIOMEOS_V255_COVERAGE_HARDENING_HANDOFF | Deep debt audit, zero-copy JsonRpcVersion, large file refactoring, #[allow]→#[expect(reason)] | Mar 20, 2026 |
 | BIOMEOS_V254_CONCURRENCY_EVOLUTION_COVERAGE_PUSH_HANDOFF | Sleep elimination, concurrency evolution, 6169 tests, 84% coverage | Mar 19, 2026 |
 | BIOMEOS_V253_COORDINATION_EXTRICATION_HANDOFF | Coordination pattern audit for primalSpring, capability-based validation matrix | Mar 18, 2026 |
@@ -67,7 +67,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 ### Archived (February 2026)
 
-Earlier handoffs (Feb 7–11, 2026) archived to `ecoPrimals/archive/biomeos-feb09-2026/handoffs/`.
+Earlier handoffs (Feb 7–11, 2026) archived to `ecoPrimals/archive/biomeos-mar14-2026/handoffs/`.
 
 Topics include: relay-assisted coordinated punch, covalent bond evolution, primal evolution (Songbird, NestGate, Squirrel, Toadstool, BearDog), Squirrel-Neural API bridge, Plasmodium over-NUCLEUS, NestGate model cache, Toadstool distributed GPU, Songbird router evolution, sovereign multi-path protocol, Tor integration.
 
@@ -120,10 +120,10 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (6,959 tests — ~140 ignored cwd-sensitive — use --ignored --test-threads=1 for those)
+# Test (6,998 tests — ~136 ignored cwd-sensitive — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
-# Coverage (89.84% line / 90.74% function)
+# Coverage (90.01% line / 90.95% function)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -140,12 +140,12 @@ biomeos nucleus start --mode full --node-id tower1
 
 ## Fossil Archive
 
-Previous docs archived to `ecoPrimals/archive/biomeos-feb09-2026/`.
+Previous docs archived to `ecoPrimals/archive/biomeos-mar14-2026/`.
 See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
 **Documentation current as of March 20, 2026**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v2.57), 4 scripts**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v2.60), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 6,959 passing, ~140 ignored cwd-sensitive (89.84% line / 90.74% function, llvm-cov) | Clippy: PASS | Docs: Full coverage**
+**Tests: 6,998 passing, ~136 ignored cwd-sensitive (90.01% line / 90.95% function, llvm-cov) | Clippy: PASS | Docs: Full coverage**

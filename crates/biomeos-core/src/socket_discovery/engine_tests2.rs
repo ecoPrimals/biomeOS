@@ -815,10 +815,7 @@ async fn test_discover_via_manifest_reads_xdg_manifest_candidate_first() {
     use std::sync::Arc;
 
     let temp = TempDir::new().unwrap();
-    let manifests = temp
-        .path()
-        .join("ecoPrimals")
-        .join("manifests");
+    let manifests = temp.path().join("ecoPrimals").join("manifests");
     std::fs::create_dir_all(&manifests).unwrap();
     let sock = temp.path().join("manifest-xdg.sock");
     let _listener = tokio::net::UnixListener::bind(&sock).expect("bind");
@@ -899,8 +896,7 @@ async fn test_discover_via_xdg_beardog_capability_security_sock() {
         check_env_hints: false,
         ..Default::default()
     };
-    let discovery =
-        SocketDiscovery::with_strategy("bf", strategy).with_xdg_override(temp.path());
+    let discovery = SocketDiscovery::with_strategy("bf", strategy).with_xdg_override(temp.path());
     let r = discovery.discover_primal("beardog").await;
     assert!(r.is_some());
     assert_eq!(r.unwrap().path, cap_sock);

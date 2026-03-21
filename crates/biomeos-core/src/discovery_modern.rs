@@ -494,4 +494,164 @@ mod tests {
         let cap: Capability = "storage.put".into();
         assert_eq!(cap.as_str(), "storage.put");
     }
+
+    /// Source whose [`PrimalDiscovery::discover_all`] fails (covers warn + continue in composite).
+    struct DiscoverAllFails;
+
+    #[async_trait]
+    impl PrimalDiscovery for DiscoverAllFails {
+        async fn discover(&self, _: &Endpoint) -> DiscoveryResult<DiscoveredPrimal> {
+            Err(DiscoveryError::NotFound {
+                endpoint: "none".to_string(),
+            })
+        }
+
+        async fn discover_all(&self) -> DiscoveryResult<Vec<DiscoveredPrimal>> {
+            Err(DiscoveryError::Network("source down".to_string()))
+        }
+
+        async fn check_health(&self, _: &PrimalId) -> DiscoveryResult<HealthStatus> {
+            Err(DiscoveryError::Network("source down".to_string()))
+        }
+    }
+
+    /// [`PrimalDiscovery::discover`] always fails (for chaining tests).
+    struct DiscoverEndpointAlwaysFails;
+
+    #[async_trait]
+    impl PrimalDiscovery for DiscoverEndpointAlwaysFails {
+        async fn discover(&self, _: &Endpoint) -> DiscoveryResult<DiscoveredPrimal> {
+            Err(DiscoveryError::NotFound {
+                endpoint: "none".to_string(),
+            })
+        }
+
+        async fn discover_all(&self) -> DiscoveryResult<Vec<DiscoveredPrimal>> {
+            Ok(vec![])
+        }
+
+        async fn check_health(&self, _: &PrimalId) -> DiscoveryResult<HealthStatus> {
+            Ok(HealthStatus::Unknown)
+        }
+    }
+
+    #[tokio::test]
+    async fn composite_discover_all_skips_failing_source() {
+        let good = MockDiscovery {
+            primals: vec![DiscoveredPrimal {
+                id: PrimalId::new("p-ok").unwrap(),
+                name: "Ok".to_string(),
+                primal_type: PrimalType::Security,
+                version: semver::Version::new(1, 0, 0),
+                health: HealthStatus::Healthy,
+                capabilities: vec![],
+                endpoint: Endpoint::new("http://localhost:9000").unwrap(),
+                family_id: None,
+                metadata: serde_json::Value::Null,
+            }],
+        };
+
+        let composite = CompositeDiscovery::new()
+            .add_source(DiscoverAllFails)
+            .add_source(good);
+
+        let primals = composite.discover_all().await.unwrap();
+        assert_eq!(primals.len(), 1);
+        assert_eq!(primals[0].id.as_str(), "p-ok");
+    }
+
+    #[tokio::test]
+    async fn composite_discover_tries_next_source_on_not_found() {
+        let endpoint = Endpoint::new("http://localhost:7777").unwrap();
+        let primal = DiscoveredPrimal {
+            id: PrimalId::new("found").unwrap(),
+            name: "Found".to_string(),
+            primal_type: PrimalType::Storage,
+            version: semver::Version::new(1, 0, 0),
+            health: HealthStatus::Healthy,
+            capabilities: vec![],
+            endpoint: endpoint.clone(),
+            family_id: None,
+            metadata: serde_json::Value::Null,
+        };
+
+        let second = MockDiscovery {
+            primals: vec![primal.clone()],
+        };
+
+        let composite = CompositeDiscovery::new()
+            .add_source(DiscoverEndpointAlwaysFails)
+            .add_source(second);
+
+        let got = composite.discover(&endpoint).await.unwrap();
+        assert_eq!(got.id, primal.id);
+    }
+
+    #[tokio::test]
+    async fn composite_check_health_returns_unknown_when_all_sources_fail() {
+        let composite = CompositeDiscovery::new().add_source(DiscoverAllFails);
+        let status = composite
+            .check_health(&PrimalId::new("any").unwrap())
+            .await
+            .unwrap();
+        assert_eq!(status, HealthStatus::Unknown);
+    }
+
+    #[tokio::test]
+    async fn primal_discovery_default_get_capabilities_ok_and_not_found() {
+        let id_ok = PrimalId::new("primal1").unwrap();
+        let mock = MockDiscovery {
+            primals: vec![DiscoveredPrimal {
+                id: id_ok.clone(),
+                name: "P1".to_string(),
+                primal_type: PrimalType::Compute,
+                version: semver::Version::new(1, 0, 0),
+                health: HealthStatus::Healthy,
+                capabilities: vec![Capability::new("a.b")],
+                endpoint: Endpoint::new("http://localhost:1").unwrap(),
+                family_id: None,
+                metadata: serde_json::Value::Null,
+            }],
+        };
+
+        let caps = mock.get_capabilities(&id_ok).await.unwrap();
+        assert_eq!(caps.len(), 1);
+        assert_eq!(caps[0].as_str(), "a.b");
+
+        let err = mock
+            .get_capabilities(&PrimalId::new("missing").unwrap())
+            .await
+            .unwrap_err();
+        assert!(matches!(err, DiscoveryError::NotFound { .. }));
+    }
+
+    #[tokio::test]
+    async fn composite_discover_all_deduplicates_by_id_last_wins() {
+        let ep = Endpoint::new("http://localhost:9001").unwrap();
+        let first = DiscoveredPrimal {
+            id: PrimalId::new("same").unwrap(),
+            name: "First".to_string(),
+            primal_type: PrimalType::Security,
+            version: semver::Version::new(1, 0, 0),
+            health: HealthStatus::Healthy,
+            capabilities: vec![],
+            endpoint: ep.clone(),
+            family_id: None,
+            metadata: serde_json::Value::Null,
+        };
+        let mut second = first.clone();
+        second.name = "Second".to_string();
+
+        let a = MockDiscovery {
+            primals: vec![first],
+        };
+        let b = MockDiscovery {
+            primals: vec![second],
+        };
+
+        let composite = CompositeDiscovery::new().add_source(a).add_source(b);
+        let primals = composite.discover_all().await.unwrap();
+        assert_eq!(primals.len(), 1);
+        assert_eq!(primals[0].name, "Second");
+    }
 }

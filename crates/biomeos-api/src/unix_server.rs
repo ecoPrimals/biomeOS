@@ -251,11 +251,13 @@ mod tests {
         let app = Router::new().route("/", get(|| async { "ok" }));
 
         let path = socket_path.clone();
-        let server_handle =
-            tokio::spawn(async move { serve_unix_socket(&path, app, None).await });
+        let server_handle = tokio::spawn(async move { serve_unix_socket(&path, app, None).await });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        assert!(socket_path.exists(), "Socket should be created even without on_ready");
+        assert!(
+            socket_path.exists(),
+            "Socket should be created even without on_ready"
+        );
 
         server_handle.abort();
         let _ = server_handle.await;

@@ -107,10 +107,9 @@ struct CpuJiffies {
     idle: u64,
 }
 
+/// Parse the first `cpu` line from `/proc/stat` (used by [`read_cpu_jiffies`]).
 #[cfg(target_os = "linux")]
-fn read_cpu_jiffies() -> Option<CpuJiffies> {
-    let stat = fs::read_to_string("/proc/stat").ok()?;
-    let line = stat.lines().next()?;
+fn parse_cpu_stat_first_line(line: &str) -> Option<CpuJiffies> {
     // cpu  user nice system idle iowait irq softirq steal guest guest_nice
     let parts: Vec<&str> = line.split_whitespace().collect();
     if parts.len() < 5 || parts[0] != "cpu" {
@@ -134,17 +133,33 @@ fn read_cpu_jiffies() -> Option<CpuJiffies> {
     })
 }
 
+#[cfg(target_os = "linux")]
+fn read_cpu_jiffies() -> Option<CpuJiffies> {
+    let stat = fs::read_to_string("/proc/stat").ok()?;
+    let line = stat.lines().next()?;
+    parse_cpu_stat_first_line(line)
+}
+
+/// Parse `/proc/loadavg` content (first line).
+fn parse_loadavg_proc_content(loadavg_str: &str) -> Option<LoadAverage> {
+    let parts: Vec<&str> = loadavg_str.split_whitespace().collect();
+    if parts.len() >= 3 {
+        Some(LoadAverage {
+            load_1m: parts[0].parse::<f64>().unwrap_or(0.0),
+            load_5m: parts[1].parse::<f64>().unwrap_or(0.0),
+            load_15m: parts[2].parse::<f64>().unwrap_or(0.0),
+        })
+    } else {
+        None
+    }
+}
+
 /// Get load average
 pub(crate) fn get_load_average() -> BiomeResult<LoadAverage> {
     // Try to read from /proc/loadavg on Linux
     if let Ok(loadavg_str) = fs::read_to_string("/proc/loadavg") {
-        let parts: Vec<&str> = loadavg_str.split_whitespace().collect();
-        if parts.len() >= 3 {
-            return Ok(LoadAverage {
-                load_1m: parts[0].parse::<f64>().unwrap_or(0.0),
-                load_5m: parts[1].parse::<f64>().unwrap_or(0.0),
-                load_15m: parts[2].parse::<f64>().unwrap_or(0.0),
-            });
+        if let Some(avg) = parse_loadavg_proc_content(&loadavg_str) {
+            return Ok(avg);
         }
     }
 
@@ -223,5 +238,55 @@ mod tests {
         };
         let cloned = load.clone();
         assert!((load.load_1m - cloned.load_1m).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_parse_loadavg_proc_content_short_line_falls_back_to_none() {
+        assert!(parse_loadavg_proc_content("0.1 0.2").is_none());
+        assert!(parse_loadavg_proc_content("").is_none());
+    }
+
+    #[test]
+    fn test_parse_loadavg_proc_content_parses_three_fields() {
+        let la = parse_loadavg_proc_content("1.5 2.0 3.25 4/512 12345").expect("three fields");
+        assert!((la.load_1m - 1.5).abs() < f64::EPSILON);
+        assert!((la.load_5m - 2.0).abs() < f64::EPSILON);
+        assert!((la.load_15m - 3.25).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_parse_loadavg_proc_content_invalid_floats_use_zero() {
+        let la = parse_loadavg_proc_content("x y z").expect("len >= 3");
+        assert!(la.load_1m.abs() < f64::EPSILON);
+        assert!(la.load_5m.abs() < f64::EPSILON);
+        assert!(la.load_15m.abs() < f64::EPSILON);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_parse_cpu_stat_first_line_rejects_bad_prefix() {
+        assert!(parse_cpu_stat_first_line("cpu0 1 2 3 4 5").is_none());
+        assert!(parse_cpu_stat_first_line("intr 1 2 3").is_none());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_parse_cpu_stat_first_line_requires_five_fields() {
+        assert!(parse_cpu_stat_first_line("cpu 1 2 3").is_none());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_parse_cpu_stat_first_line_accepts_optional_tail_fields() {
+        let j = parse_cpu_stat_first_line("cpu  1 2 3 4 5 6 7 8 9 10 11")
+            .expect("valid aggregate line");
+        assert!(j.total > 0);
+        assert!(j.idle >= 4);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_parse_cpu_stat_first_line_rejects_non_numeric() {
+        assert!(parse_cpu_stat_first_line("cpu  a 2 3 4").is_none());
     }
 }

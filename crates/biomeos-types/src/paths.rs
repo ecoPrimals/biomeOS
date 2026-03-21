@@ -802,22 +802,11 @@ mod tests {
         std::fs::create_dir_all(&home).unwrap();
         let _g_state = TestEnvGuard::remove("XDG_STATE_HOME");
         let _g_home = TestEnvGuard::set("HOME", home.to_str().unwrap());
-        let _g_run = TestEnvGuard::set(
-            "XDG_RUNTIME_DIR",
-            temp.path().join("rt").to_str().unwrap(),
-        );
-        let _g_data = TestEnvGuard::set(
-            "XDG_DATA_HOME",
-            temp.path().join("dh").to_str().unwrap(),
-        );
-        let _g_cfg = TestEnvGuard::set(
-            "XDG_CONFIG_HOME",
-            temp.path().join("ch").to_str().unwrap(),
-        );
-        let _g_cache = TestEnvGuard::set(
-            "XDG_CACHE_HOME",
-            temp.path().join("ca").to_str().unwrap(),
-        );
+        let _g_run = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().join("rt").to_str().unwrap());
+        let _g_data = TestEnvGuard::set("XDG_DATA_HOME", temp.path().join("dh").to_str().unwrap());
+        let _g_cfg = TestEnvGuard::set("XDG_CONFIG_HOME", temp.path().join("ch").to_str().unwrap());
+        let _g_cache =
+            TestEnvGuard::set("XDG_CACHE_HOME", temp.path().join("ca").to_str().unwrap());
         for p in [
             temp.path().join("rt"),
             temp.path().join("dh"),
@@ -828,9 +817,7 @@ mod tests {
         }
 
         let paths = SystemPaths::new().unwrap();
-        let expected = home
-            .join(".local/state")
-            .join(crate::primal_names::BIOMEOS);
+        let expected = home.join(".local/state").join(crate::primal_names::BIOMEOS);
         assert_eq!(paths.state_dir(), &expected);
     }
 }

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#![expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
 
 use super::get_genome_storage_dir;
 use super::*;
 use biomeos_genomebin_v3::{Arch, GenomeBinBuilder};
+use serial_test::serial;
 use std::path::{Path, PathBuf};
 
 #[test]
@@ -64,6 +66,7 @@ fn test_parse_arch_case_sensitive() {
 }
 
 #[test]
+#[serial]
 fn test_get_genome_storage_dir_with_xdg() {
     use biomeos_test_utils::TestEnvGuard;
     let _guard = TestEnvGuard::new("XDG_DATA_HOME", Some("/tmp/xdg_test"));

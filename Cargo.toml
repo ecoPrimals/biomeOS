@@ -64,9 +64,7 @@ members = [
     "crates/biomeos-genomebin-v3",  # NEW: genomeBin v3.0 - TRUE binary isomorphic format
     "crates/biomeos-genome-factory",  # NEW: Genome Factory - Universal genomeBin production
 ]
-exclude = [
-    "validation",  # Independent workspace for validation tools using benchScale
-]
+exclude = []
 
 [workspace.package]
 version = "0.1.0"

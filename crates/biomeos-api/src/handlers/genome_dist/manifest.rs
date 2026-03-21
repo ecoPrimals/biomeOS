@@ -742,12 +742,8 @@ size = 999
     #[serial]
     async fn test_get_checksum_genome_bin_not_configured() {
         let _guard = TestEnvGuard::remove("GENOMEBIN_PATH");
-        let result = get_checksum(Path((
-            "p".to_string(),
-            "v".to_string(),
-            "arch".to_string(),
-        )))
-        .await;
+        let result =
+            get_checksum(Path(("p".to_string(), "v".to_string(), "arch".to_string()))).await;
         let Err((status, body)) = result else {
             panic!("expected Err when genome bin is not discoverable");
         };

@@ -216,10 +216,7 @@ async fn test_model_cache_new_ignores_hf_home_for_default_cache_location() {
     std::fs::create_dir_all(&hf_home).unwrap();
 
     let _g_home = TestEnvGuard::set("HOME", home.to_str().expect("utf8"));
-    let _g_hf = TestEnvGuard::set(
-        "HF_HOME",
-        hf_home.to_str().expect("utf8"),
-    );
+    let _g_hf = TestEnvGuard::set("HF_HOME", hf_home.to_str().expect("utf8"));
 
     ModelCache::new().await.expect("new");
 
@@ -283,10 +280,8 @@ async fn test_register_model_gate_id_fallback_reads_etc_hostname() {
     let _g1 = TestEnvGuard::remove("GATE_ID");
     let _g2 = TestEnvGuard::remove("HOSTNAME");
 
-    let expected = std::fs::read_to_string("/etc/hostname").map_or_else(
-        |_| "unknown".to_string(),
-        |s| s.trim().to_string(),
-    );
+    let expected = std::fs::read_to_string("/etc/hostname")
+        .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string());
 
     let model_dir = tmp.path().join("m");
     std::fs::create_dir_all(&model_dir).unwrap();
@@ -426,7 +421,11 @@ async fn test_register_model_skips_broken_symlink_during_scan() {
     let model_dir = tmp.path().join("with-broken");
     std::fs::create_dir_all(&model_dir).unwrap();
     std::fs::write(model_dir.join("real.safetensors"), b"x").unwrap();
-    symlink(tmp.path().join("nonexistent-target-xyz"), model_dir.join("broken.link")).unwrap();
+    symlink(
+        tmp.path().join("nonexistent-target-xyz"),
+        model_dir.join("broken.link"),
+    )
+    .unwrap();
 
     let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
         .await
@@ -445,10 +444,7 @@ async fn test_register_huggingface_model_resolves_hub_via_home_cache_path() {
     let tmp = TempDir::new().unwrap();
     let home = tmp.path().join("h");
     std::fs::create_dir_all(&home).unwrap();
-    let hf_hub = home
-        .join(".cache")
-        .join("huggingface")
-        .join("hub");
+    let hf_hub = home.join(".cache").join("huggingface").join("hub");
     let model_id = "homecache/FromHome";
     let snap = hf_models_dir(&hf_hub, model_id)
         .join("snapshots")

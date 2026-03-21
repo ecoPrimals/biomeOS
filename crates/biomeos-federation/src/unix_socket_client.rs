@@ -103,10 +103,7 @@ impl UnixSocketClient {
 
 #[cfg(test)]
 mod tests {
-    #![expect(
-        clippy::unwrap_used,
-        reason = "test assertions use unwrap for clarity"
-    )]
+    #![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 
     use super::*;
     use biomeos_types::{JsonRpcResponse, JsonRpcVersion};
@@ -158,7 +155,10 @@ mod tests {
                 let id = req.get("id").cloned().unwrap_or(json!(null));
                 let resp = JsonRpcResponse::success(id, json!({"pong": true}));
                 let body = serde_json::to_string(&resp).unwrap();
-                stream.write_all(format!("{body}\n").as_bytes()).await.unwrap();
+                stream
+                    .write_all(format!("{body}\n").as_bytes())
+                    .await
+                    .unwrap();
             }
         });
 
@@ -185,7 +185,10 @@ mod tests {
                 let err = biomeos_types::JsonRpcError::method_not_found();
                 let resp = JsonRpcResponse::error(id, err);
                 let body = serde_json::to_string(&resp).unwrap();
-                stream.write_all(format!("{body}\n").as_bytes()).await.unwrap();
+                stream
+                    .write_all(format!("{body}\n").as_bytes())
+                    .await
+                    .unwrap();
             }
         });
 
@@ -211,7 +214,10 @@ mod tests {
                 let id = req.get("id").cloned().unwrap_or(json!(null));
                 let resp = JsonRpcResponse::success(id, json!({"answer": 42}));
                 let body = serde_json::to_string(&resp).unwrap();
-                stream.write_all(format!("{body}\n").as_bytes()).await.unwrap();
+                stream
+                    .write_all(format!("{body}\n").as_bytes())
+                    .await
+                    .unwrap();
             }
         });
 
@@ -244,15 +250,15 @@ mod tests {
                     id,
                 };
                 let body = serde_json::to_string(&resp).unwrap();
-                stream.write_all(format!("{body}\n").as_bytes()).await.unwrap();
+                stream
+                    .write_all(format!("{body}\n").as_bytes())
+                    .await
+                    .unwrap();
             }
         });
 
         let client = UnixSocketClient::new(&sock);
-        let err = client
-            .call_method("x", json!({}))
-            .await
-            .unwrap_err();
+        let err = client.call_method("x", json!({})).await.unwrap_err();
         assert!(err.to_string().contains("missing result"));
     }
 

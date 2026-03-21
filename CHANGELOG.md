@@ -30,6 +30,19 @@ All notable changes to biomeOS will be documented in this file.
 - Created wateringHole handoff: `BIOMEOS_V258_DEEP_RESILIENCE_HANDOFF_MAR20_2026.md`
 - Updated wateringHole README.md and BIOMEOS_LEVERAGE_GUIDE.md versions
 
+## v2.60 (2026-03-20) — Coverage Target + Expect Migration + Test Hardening
+
+### Summary
+- Coverage target achieved — **90.01% line / 90.95% function** coverage (from 89.62%), `#[allow]`→`#[expect(reason)]` migration complete, deep test coverage across 15+ files in 8 crates, env-var test serialization hardened, `cpu.rs` / livespores helpers extracted for testability, flaky tests fixed.
+
+### Quality Gates
+- Tests: 6,998 passing, 0 failures, 136 ignored
+- Coverage: 90.01% line / 90.95% function (llvm-cov)
+- Clippy: 0 warnings (pedantic+nursery)
+- Format: clean
+- Workspace crates: 26
+- Files >1000 LOC: 0 production
+
 ## v2.55 (2026-03-20) — Coverage Hardening + Quality Gate Final Push
 
 ### Coverage Push (84% → 89%)

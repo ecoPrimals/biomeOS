@@ -91,9 +91,9 @@ RUST_LOG = "info"
 #[cfg(test)]
 mod config_tests {
     use super::ConfigOps;
+    use crate::SporeConfig;
     use crate::spore::core::spore_for_tests;
     use crate::spore_types::SporeType;
-    use crate::SporeConfig;
     use std::path::PathBuf;
 
     #[tokio::test]

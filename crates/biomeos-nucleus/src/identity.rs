@@ -537,6 +537,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_identity_layer_new_with_beardog_socket_env() {
         let _guard = biomeos_test_utils::TestEnvGuard::set(
             "BEARDOG_SOCKET",
@@ -561,7 +562,9 @@ mod tests {
         let path = tmp.path().to_path_buf();
         let _no_env = biomeos_test_utils::TestEnvGuard::remove("BEARDOG_SOCKET");
         let _uid = biomeos_test_utils::TestEnvGuard::set("UID", "999999999");
-        let layer = IdentityLayerImpl::new().await.expect("discover via /tmp scan");
+        let layer = IdentityLayerImpl::new()
+            .await
+            .expect("discover via /tmp scan");
         assert_eq!(
             layer.beardog_socket.as_deref(),
             Some(path.to_str().expect("utf8"))

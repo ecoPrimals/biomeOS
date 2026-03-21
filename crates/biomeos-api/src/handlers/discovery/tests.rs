@@ -683,8 +683,14 @@ fn test_probe_live_sockets_extracts_primal_name_from_hyphenated_filename() {
     let by_id: std::collections::HashMap<&str, &DiscoveredPrimal> =
         primals.iter().map(|p| (p.name.as_str(), p)).collect();
 
-    assert!(by_id.contains_key("beardog"), "hyphenated name → first segment");
-    assert!(by_id.contains_key("simple"), "unhyphenated name → full stem");
+    assert!(
+        by_id.contains_key("beardog"),
+        "hyphenated name → first segment"
+    );
+    assert!(
+        by_id.contains_key("simple"),
+        "unhyphenated name → full stem"
+    );
 }
 
 #[test]

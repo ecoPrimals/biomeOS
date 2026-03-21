@@ -890,7 +890,12 @@ mod tests {
             .await
             .expect("response");
         assert_eq!(response.status(), StatusCode::OK);
-        assert!(response.headers().get("strict-transport-security").is_some());
+        assert!(
+            response
+                .headers()
+                .get("strict-transport-security")
+                .is_some()
+        );
         assert!(response.headers().get("x-content-type-options").is_some());
         assert!(response.headers().get("content-security-policy").is_some());
         assert!(response.headers().get("x-frame-options").is_some());
@@ -915,7 +920,12 @@ mod tests {
             .await
             .expect("response");
         assert_eq!(response.status(), StatusCode::OK);
-        assert!(response.headers().get("access-control-allow-origin").is_some());
+        assert!(
+            response
+                .headers()
+                .get("access-control-allow-origin")
+                .is_some()
+        );
     }
 
     #[tokio::test]
