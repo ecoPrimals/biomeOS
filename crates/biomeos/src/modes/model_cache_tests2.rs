@@ -7,8 +7,133 @@
 
 use super::*;
 use crate::ModelCacheCommand;
+use biomeos_core::model_cache::{ModelEntry, ModelFile, ModelResolution};
 use biomeos_test_utils::TestEnvGuard;
 use serial_test::serial;
+
+#[test]
+fn nestgate_status_label_connected_when_mesh_registry_active() {
+    assert_eq!(
+        super::nestgate_status_label(false),
+        "connected (mesh registry active)"
+    );
+}
+
+#[test]
+fn print_resolve_model_resolution_local_with_files_branch() {
+    let entry = ModelEntry {
+        model_id: "test/files-branch".to_string(),
+        local_path: std::path::PathBuf::from("/tmp/model"),
+        size_bytes: 2_097_152,
+        source: "test".to_string(),
+        sha256: None,
+        cached_at: "2025-01-01".to_string(),
+        gate_id: "gate-local".to_string(),
+        format: "huggingface".to_string(),
+        files: vec![
+            ModelFile {
+                relative_path: "a.bin".to_string(),
+                size_bytes: 1,
+                sha256: None,
+            },
+            ModelFile {
+                relative_path: "b.bin".to_string(),
+                size_bytes: 2,
+                sha256: None,
+            },
+        ],
+    };
+    super::print_resolve_model_resolution("test/files-branch", &ModelResolution::Local(entry));
+}
+
+#[test]
+fn print_resolve_model_resolution_remote_branch() {
+    let entry = ModelEntry {
+        model_id: "remote/m".to_string(),
+        local_path: std::path::PathBuf::from("/elsewhere"),
+        size_bytes: 1_048_576,
+        source: "mesh".to_string(),
+        sha256: None,
+        cached_at: "2025-01-01".to_string(),
+        gate_id: "remote-gate-7".to_string(),
+        format: "gguf".to_string(),
+        files: vec![],
+    };
+    super::print_resolve_model_resolution("remote/m", &ModelResolution::Remote(entry));
+}
+
+#[tokio::test]
+async fn test_show_status_with_hf_unregistered_models_prints_import_hint() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    let hf_hub = temp.path().join("hf-hub");
+    std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+    std::fs::create_dir_all(hf_hub.join("models--orphan--unregistered")).expect("hf model dir");
+
+    let result = run_with(cache_dir, Some(hf_hub), ModelCacheCommand::Status).await;
+    assert!(
+        result.is_ok(),
+        "status with unregistered HF dirs should succeed: {:?}",
+        result.err()
+    );
+}
+
+#[tokio::test]
+async fn test_import_hf_with_imports_new_models_and_prints_per_model_lines() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    let hf_hub = temp.path().join("hf-hub");
+    std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+    let snap = hf_hub
+        .join("models--import--new-model")
+        .join("snapshots")
+        .join("snap1");
+    std::fs::create_dir_all(&snap).expect("hf layout");
+    std::fs::write(snap.join("config.json"), "{}").expect("config");
+
+    let result = run_with(cache_dir, Some(hf_hub), ModelCacheCommand::ImportHf).await;
+    assert!(
+        result.is_ok(),
+        "import with new HF models should succeed: {:?}",
+        result.err()
+    );
+}
+
+#[tokio::test]
+async fn test_resolve_model_with_local_shows_files_line_when_multiple_files() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let cache_dir = temp.path().join("model-cache");
+    std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+    let model_dir = temp.path().join("multi-file-model");
+    std::fs::create_dir_all(&model_dir).expect("create model dir");
+    std::fs::write(model_dir.join("config.json"), "{}").expect("write config");
+    std::fs::write(model_dir.join("weights.bin"), b"0123456789").expect("write weights");
+
+    run_with(
+        cache_dir.clone(),
+        None,
+        ModelCacheCommand::Register {
+            model_id: "test/multi-file-resolve".to_string(),
+            path: model_dir,
+        },
+    )
+    .await
+    .expect("register");
+
+    let result = run_with(
+        cache_dir,
+        None,
+        ModelCacheCommand::Resolve {
+            model_id: "test/multi-file-resolve".to_string(),
+        },
+    )
+    .await;
+    assert!(
+        result.is_ok(),
+        "resolve local with multiple files should succeed: {:?}",
+        result.err()
+    );
+}
 
 #[tokio::test]
 async fn test_import_hf_with_existing_models_shows_already_cached() {

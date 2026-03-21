@@ -543,3 +543,146 @@ async fn test_try_decrypt_with_met_seeds_success() {
         Some("decrypted_payload")
     );
 }
+
+#[tokio::test]
+async fn test_initialize_new_manifest_uses_default_lineage_when_no_family_seed() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    mock_caller
+        .set_response(
+            "beacon.generate",
+            serde_json::json!({ "beacon_id": "no-family-seed-beacon" }),
+        )
+        .await;
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+    manager.initialize().await.expect("init");
+    let m = manager.manifest.as_ref().expect("manifest");
+    assert_eq!(m.lineage_hint, "0000000000000000");
+}
+
+#[tokio::test]
+async fn test_initialize_beacon_generate_invalid_seed_hex_fails() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    mock_caller
+        .set_response(
+            "beacon.generate",
+            serde_json::json!({
+                "beacon_id": "bad-hex",
+                "seed_hex": "not-hex!!!"
+            }),
+        )
+        .await;
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+    let err = manager.initialize().await.expect_err("invalid hex");
+    assert!(err.to_string().contains("hex") || err.to_string().contains("Invalid"));
+}
+
+#[tokio::test]
+async fn test_initiate_meeting_short_peer_id_uses_full_id_for_seed_filename() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    mock_caller
+        .set_response(
+            "beacon.get_id",
+            serde_json::json!({ "beacon_id": "our-beacon-123" }),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "beacon.get_seed",
+            serde_json::json!({ "seed_hex": "deadbeefcafebabe" }),
+        )
+        .await;
+    mock_caller
+        .set_response("crypto.encrypt", serde_json::json!({ "ciphertext": "enc" }))
+        .await;
+    mock_caller
+        .set_response(
+            "network.beacon_exchange",
+            serde_json::json!({
+                "peer_beacon_id": "short",
+                "peer_encrypted_seed": "peer_enc"
+            }),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "crypto.decrypt",
+            serde_json::json!({ "plaintext": "peer_seed_hex" }),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "crypto.encrypt_with_lineage",
+            serde_json::json!({ "ciphertext": "stored" }),
+        )
+        .await;
+
+    std::fs::create_dir_all(temp_dir.path().join(".beacon_seeds")).unwrap();
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+    manager.set_manifest(BeaconGeneticsManifest::new(
+        BeaconId::from_hex("our-beacon-123"),
+        "lineage",
+    ));
+
+    manager
+        .initiate_meeting("127.0.0.1:1", "peer")
+        .await
+        .expect("meeting");
+    let rec = manager
+        .list_meetings()
+        .into_iter()
+        .find(|(id, _)| id.0 == "short")
+        .expect("record")
+        .1;
+    assert_eq!(rec.seed_file, "short.seed");
+}
+
+#[tokio::test]
+async fn test_initiate_meeting_encrypt_with_lineage_fails() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let mock_caller = Box::new(MockCapabilityCaller::new());
+    mock_caller
+        .set_response(
+            "beacon.get_id",
+            serde_json::json!({ "beacon_id": "our-beacon-123" }),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "beacon.get_seed",
+            serde_json::json!({ "seed_hex": "deadbeefcafebabe" }),
+        )
+        .await;
+    mock_caller
+        .set_response("crypto.encrypt", serde_json::json!({ "ciphertext": "enc" }))
+        .await;
+    mock_caller
+        .set_response(
+            "network.beacon_exchange",
+            serde_json::json!({
+                "peer_beacon_id": "peer-beacon-xyz",
+                "peer_encrypted_seed": "peer_enc"
+            }),
+        )
+        .await;
+    mock_caller
+        .set_response(
+            "crypto.decrypt",
+            serde_json::json!({ "plaintext": "peer_seed_hex" }),
+        )
+        .await;
+
+    let mut manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+    manager.set_manifest(BeaconGeneticsManifest::new(
+        BeaconId::from_hex("our-beacon-123"),
+        "lineage",
+    ));
+
+    let err = manager
+        .initiate_meeting("127.0.0.1:1", "peer")
+        .await
+        .expect_err("encrypt storage");
+    assert!(err.to_string().contains("encrypt_with_lineage"));
+}

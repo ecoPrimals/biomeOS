@@ -626,3 +626,316 @@ async fn test_handle_restart_primal_success() {
     }
     server.abort();
 }
+
+#[tokio::test]
+async fn test_register_assignment_songbird_unreachable_uses_local_id() {
+    let songbird = SongbirdClient::with_socket("songbird", "/nonexistent/songbird-missing.sock");
+    let result = ActionHandler::register_assignment(Some(&songbird), "device-x", "primal-y").await;
+    assert!(result.is_ok());
+    let id = result.unwrap();
+    assert!(id.starts_with("local-"));
+    assert!(id.contains("device-x"));
+}
+
+#[tokio::test]
+async fn test_handle_refresh_mock_sockets_three_sources() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let songbird_path = temp.path().join("songbird.sock");
+    let toad_path = temp.path().join("toadstool.sock");
+    let pt_path = temp.path().join("petaltongue.sock");
+    let sp = songbird_path.clone();
+    let tp = toad_path.clone();
+    let pp = pt_path.clone();
+    let (mut sb_sig, sb_ready) = ready_signal();
+    let (mut toad_sig, toad_ready) = ready_signal();
+    let (mut pt_sig, pt_ready) = ready_signal();
+    let s1 = tokio::spawn(async move {
+        let l = tokio::net::UnixListener::bind(&sp).expect("bind songbird");
+        sb_sig.signal();
+        for method in ["registry.list_devices", "registry.list_primals"] {
+            if let Ok((mut s, _)) = l.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = s.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(req.get("method").and_then(|m| m.as_str()), Some(method));
+                let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                let _ = s.write_all(format!("{resp}\n").as_bytes()).await;
+                let _ = s.flush().await;
+            }
+        }
+    });
+    let s2 = tokio::spawn(async move {
+        let l = tokio::net::UnixListener::bind(&tp).expect("bind toad");
+        toad_sig.signal();
+        if let Ok((mut s, _)) = l.accept().await {
+            let mut buf = vec![0u8; 8192];
+            let n = s.read(&mut buf).await.expect("read");
+            let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+            assert_eq!(
+                req.get("method").and_then(|m| m.as_str()),
+                Some("compute.get_metrics")
+            );
+            let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+            let _ = s.write_all(format!("{resp}\n").as_bytes()).await;
+            let _ = s.flush().await;
+        }
+    });
+    let s3 = tokio::spawn(async move {
+        let l = tokio::net::UnixListener::bind(&pp).expect("bind pt");
+        pt_sig.signal();
+        if let Ok((mut s, _)) = l.accept().await {
+            let mut buf = vec![0u8; 8192];
+            let n = s.read(&mut buf).await.expect("read");
+            let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+            assert_eq!(
+                req.get("method").and_then(|m| m.as_str()),
+                Some("ui.refresh")
+            );
+            let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+            let _ = s.write_all(format!("{resp}\n").as_bytes()).await;
+            let _ = s.flush().await;
+        }
+    });
+    let _ = tokio::join!(sb_ready.wait(), toad_ready.wait(), pt_ready.wait());
+    let mut connections = PrimalConnections::default();
+    connections.add_client(
+        "songbird",
+        SongbirdClient::with_socket("songbird", &songbird_path),
+    );
+    connections.add_client(
+        "toadstool",
+        ToadStoolClient::with_socket("toadstool", &toad_path),
+    );
+    connections.add_client(
+        "petaltongue",
+        PetalTongueClient::with_socket("petaltongue", &pt_path),
+    );
+    let result = ActionHandler::handle_user_action(UserAction::Refresh, "fam", &connections).await;
+    assert!(result.is_ok());
+    let ar = result.unwrap();
+    assert!(ar.is_success());
+    if let ActionResult::Success { message } = &ar {
+        assert!(message.contains("3 sources"));
+    }
+    s1.abort();
+    s2.abort();
+    s3.abort();
+}
+
+#[tokio::test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "mock servers for full assign-device coordination"
+)]
+async fn test_handle_assign_device_all_primals_mocked_success() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let beardog_path = temp.path().join("beardog.sock");
+    let songbird_path = temp.path().join("songbird.sock");
+    let toad_path = temp.path().join("toadstool.sock");
+    let nest_path = temp.path().join("nestgate.sock");
+    let pt_path = temp.path().join("petaltongue.sock");
+    let bp = beardog_path.clone();
+    let sp = songbird_path.clone();
+    let tp = toad_path.clone();
+    let np = nest_path.clone();
+    let pp = pt_path.clone();
+    let (mut bd_sig, bd_ready) = ready_signal();
+    let (mut sb_sig, sb_ready) = ready_signal();
+    let (mut ts_sig, ts_ready) = ready_signal();
+    let (mut ng_sig, ng_ready) = ready_signal();
+    let (mut pt_sig, pt_ready) = ready_signal();
+    let s_bd = tokio::spawn(async move {
+        let l = tokio::net::UnixListener::bind(&bp).expect("bind bd");
+        bd_sig.signal();
+        for (method, body) in [
+            (
+                "auth.get_current_user",
+                serde_json::json!({"user_id":"coord-user"}),
+            ),
+            (
+                "auth.check_device_assignment",
+                serde_json::json!({"authorized":true}),
+            ),
+        ] {
+            if let Ok((mut s, _)) = l.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = s.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(req.get("method").and_then(|m| m.as_str()), Some(method));
+                let resp = serde_json::json!({"jsonrpc":"2.0","result":body,"id":req["id"]});
+                let _ = s.write_all(format!("{resp}\n").as_bytes()).await;
+                let _ = s.flush().await;
+            }
+        }
+    });
+    let s_sb = tokio::spawn(async move {
+        let l = tokio::net::UnixListener::bind(&sp).expect("bind sb");
+        sb_sig.signal();
+        for (method, body) in [
+            (
+                "registry.validate_assignment",
+                serde_json::json!({"valid":true}),
+            ),
+            (
+                "registry.register_assignment",
+                serde_json::json!({"assignment_id":"coord-asg-1"}),
+            ),
+        ] {
+            if let Ok((mut s, _)) = l.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = s.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(req.get("method").and_then(|m| m.as_str()), Some(method));
+                let resp = serde_json::json!({"jsonrpc":"2.0","result":body,"id":req["id"]});
+                let _ = s.write_all(format!("{resp}\n").as_bytes()).await;
+                let _ = s.flush().await;
+            }
+        }
+    });
+    let s_ts = tokio::spawn(async move {
+        let l = tokio::net::UnixListener::bind(&tp).expect("bind ts");
+        ts_sig.signal();
+        if let Ok((mut s, _)) = l.accept().await {
+            let mut buf = vec![0u8; 8192];
+            let n = s.read(&mut buf).await.expect("read");
+            let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+            assert_eq!(
+                req.get("method").and_then(|m| m.as_str()),
+                Some("compute.check_capacity")
+            );
+            let resp =
+                serde_json::json!({"jsonrpc":"2.0","result":{"available":true},"id":req["id"]});
+            let _ = s.write_all(format!("{resp}\n").as_bytes()).await;
+            let _ = s.flush().await;
+        }
+    });
+    let s_ng = tokio::spawn(async move {
+        let l = tokio::net::UnixListener::bind(&np).expect("bind ng");
+        ng_sig.signal();
+        if let Ok((mut s, _)) = l.accept().await {
+            let mut buf = vec![0u8; 8192];
+            let n = s.read(&mut buf).await.expect("read");
+            let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+            assert_eq!(
+                req.get("method").and_then(|m| m.as_str()),
+                Some("storage.store")
+            );
+            let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+            let _ = s.write_all(format!("{resp}\n").as_bytes()).await;
+            let _ = s.flush().await;
+        }
+    });
+    let s_pt = tokio::spawn(async move {
+        let l = tokio::net::UnixListener::bind(&pp).expect("bind pt");
+        pt_sig.signal();
+        if let Ok((mut s, _)) = l.accept().await {
+            let mut buf = vec![0u8; 8192];
+            let n = s.read(&mut buf).await.expect("read");
+            let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+            assert_eq!(
+                req.get("method").and_then(|m| m.as_str()),
+                Some("ui.update_topology")
+            );
+            let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+            let _ = s.write_all(format!("{resp}\n").as_bytes()).await;
+            let _ = s.flush().await;
+        }
+    });
+    let _ = tokio::join!(
+        bd_ready.wait(),
+        sb_ready.wait(),
+        ts_ready.wait(),
+        ng_ready.wait(),
+        pt_ready.wait(),
+    );
+    let mut connections = PrimalConnections::default();
+    connections.add_client(
+        "beardog",
+        BearDogClient::with_socket("beardog", &beardog_path),
+    );
+    connections.add_client(
+        "songbird",
+        SongbirdClient::with_socket("songbird", &songbird_path),
+    );
+    connections.add_client(
+        "toadstool",
+        ToadStoolClient::with_socket("toadstool", &toad_path),
+    );
+    connections.add_client(
+        "nestgate",
+        NestGateClient::with_socket("nestgate", &nest_path),
+    );
+    connections.add_client(
+        "petaltongue",
+        PetalTongueClient::with_socket("petaltongue", &pt_path),
+    );
+    let action = UserAction::AssignDevice {
+        device_id: "gpu-coord".to_string(),
+        primal_id: "toadstool".to_string(),
+    };
+    let result = ActionHandler::handle_user_action(action, "family-coord", &connections).await;
+    assert!(result.is_ok());
+    let ar = result.unwrap();
+    assert!(ar.is_success());
+    if let ActionResult::Success { message } = &ar {
+        assert!(message.contains("gpu-coord"));
+        assert!(message.contains("toadstool"));
+    }
+    s_bd.abort();
+    s_sb.abort();
+    s_ts.abort();
+    s_ng.abort();
+    s_pt.abort();
+}
+
+#[tokio::test]
+async fn test_handle_accept_suggestion_squirrel_mock_ok() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let socket_path = temp.path().join("squirrel.sock");
+    let path = socket_path.clone();
+    let (mut ready_tx, ready_rx) = ready_signal();
+    let server = tokio::spawn(async move {
+        let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+        ready_tx.signal();
+        if let Ok((mut stream, _)) = listener.accept().await {
+            let mut buf = vec![0u8; 4096];
+            let n = stream.read(&mut buf).await.expect("read");
+            let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+            assert_eq!(
+                req.get("method").and_then(|m| m.as_str()),
+                Some("ai.accept_suggestion")
+            );
+            let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+            let _ = stream.write_all(format!("{resp}\n").as_bytes()).await;
+            let _ = stream.flush().await;
+        }
+    });
+    ready_rx.wait().await.unwrap();
+    let mut connections = PrimalConnections::default();
+    connections.add_client(
+        "squirrel",
+        SquirrelClient::with_socket("squirrel", &socket_path),
+    );
+    let action = UserAction::AcceptSuggestion {
+        suggestion_id: "sugg-ok".to_string(),
+    };
+    let result = ActionHandler::handle_user_action(action, "fam-sq", &connections).await;
+    assert!(result.is_ok());
+    assert!(result.unwrap().is_success());
+    server.abort();
+}
+
+#[tokio::test]
+async fn test_handle_dismiss_suggestion_squirrel_mock_err_still_success() {
+    let mut connections = PrimalConnections::default();
+    connections.add_client(
+        "squirrel",
+        SquirrelClient::with_socket("squirrel", "/nonexistent/squirrel.sock"),
+    );
+    let action = UserAction::DismissSuggestion {
+        suggestion_id: "sugg-x".to_string(),
+    };
+    let result = ActionHandler::handle_user_action(action, "fam-sq", &connections).await;
+    assert!(result.is_ok());
+    assert!(result.unwrap().is_success());
+}

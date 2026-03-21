@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tracing::{debug, info, warn};
 
@@ -102,7 +102,13 @@ impl PrimalDiscovery {
         let socket_dir = biomeos_types::paths::SystemPaths::new_lazy()
             .runtime_dir()
             .to_path_buf();
+        self.discover_unix_sockets_in(&socket_dir).await
+    }
 
+    pub(crate) async fn discover_unix_sockets_in(
+        &mut self,
+        socket_dir: &std::path::Path,
+    ) -> FederationResult<()> {
         if !socket_dir.exists() {
             warn!("Socket directory does not exist: {}", socket_dir.display());
             return Ok(());
@@ -110,7 +116,7 @@ impl PrimalDiscovery {
 
         // Non-fatal: directory may vanish between exists() check and read_dir() (TOCTOU),
         // or have restrictive permissions under instrumented builds.
-        let mut entries = match tokio::fs::read_dir(&socket_dir).await {
+        let mut entries = match tokio::fs::read_dir(socket_dir).await {
             Ok(entries) => entries,
             Err(e) => {
                 warn!(
@@ -153,21 +159,31 @@ impl PrimalDiscovery {
             crate::FederationError::DiscoveryError(format!("Failed to serialize request: {e}"))
         })?;
 
-        let (mut read_half, mut write_half) = stream.into_split();
+        let (read_half, mut write_half) = stream.into_split();
         write_half.write_all(&request_bytes).await.map_err(|e| {
             crate::FederationError::DiscoveryError(format!("Failed to write request: {e}"))
         })?;
         write_half.write_all(b"\n").await.ok();
 
-        let mut response_bytes = vec![0u8; 4096];
-        let n = read_half.read(&mut response_bytes).await.map_err(|e| {
+        write_half.flush().await.map_err(|e| {
+            crate::FederationError::DiscoveryError(format!("Failed to flush request: {e}"))
+        })?;
+        write_half.shutdown().await.ok();
+
+        let mut reader = BufReader::new(read_half);
+        let mut response_line = String::new();
+        let n = reader.read_line(&mut response_line).await.map_err(|e| {
             crate::FederationError::DiscoveryError(format!("Failed to read response: {e}"))
         })?;
-
-        response_bytes.truncate(n);
-        let response: serde_json::Value = serde_json::from_slice(&response_bytes).map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to parse response: {e}"))
-        })?;
+        if n == 0 {
+            return Err(crate::FederationError::DiscoveryError(
+                "Empty response from primal".to_string(),
+            ));
+        }
+        let response: serde_json::Value =
+            serde_json::from_str(response_line.trim()).map_err(|e| {
+                crate::FederationError::DiscoveryError(format!("Failed to parse response: {e}"))
+            })?;
 
         let result = response.get("result").ok_or_else(|| {
             crate::FederationError::DiscoveryError("No result in response".to_string())

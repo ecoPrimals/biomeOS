@@ -13,6 +13,48 @@ use std::path::PathBuf;
 
 use crate::ModelCacheCommand;
 
+fn nestgate_status_label(mesh_models_empty: bool) -> &'static str {
+    if mesh_models_empty {
+        "offline (filesystem-only mode)"
+    } else {
+        "connected (mesh registry active)"
+    }
+}
+
+fn print_resolve_model_resolution(model_id: &str, resolution: &ModelResolution) {
+    match resolution {
+        ModelResolution::Local(entry) => {
+            println!("  FOUND (local cache)");
+            println!("    Path:   {}", entry.local_path.display());
+            println!("    Size:   {}", format_size_mb(entry.size_bytes));
+            println!("    Format: {}", entry.format);
+            println!("    Cached: {}", entry.cached_at);
+            println!("    Gate:   {}", entry.gate_id);
+            if !entry.files.is_empty() {
+                println!("    Files:  {}", entry.files.len());
+            }
+        }
+        ModelResolution::Remote(entry) => {
+            println!("  FOUND (remote gate)");
+            println!("    Gate:   {}", entry.gate_id);
+            println!("    Size:   {}", format_size_mb(entry.size_bytes));
+            println!(
+                "    Transfer needed: Use Songbird to fetch from {}",
+                entry.gate_id
+            );
+        }
+        ModelResolution::NotFound => {
+            println!("  NOT FOUND in local cache or mesh.");
+            println!();
+            println!("  To cache this model:");
+            println!(
+                "    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{model_id}')\""
+            );
+            println!("    2. Register: biomeos model-cache import-hf");
+        }
+    }
+}
+
 /// Format bytes as MB string (e.g. "123.4 MB")
 pub(crate) fn format_size_mb(bytes: u64) -> String {
     // u64->f64: precision loss acceptable for size display (exact up to 2^53 bytes)
@@ -258,37 +300,7 @@ async fn resolve_model(model_id: &str) -> Result<()> {
     let cache = ModelCache::new().await?;
     let resolution = cache.resolve(model_id).await;
 
-    match &resolution {
-        ModelResolution::Local(entry) => {
-            println!("  FOUND (local cache)");
-            println!("    Path:   {}", entry.local_path.display());
-            println!("    Size:   {}", format_size_mb(entry.size_bytes));
-            println!("    Format: {}", entry.format);
-            println!("    Cached: {}", entry.cached_at);
-            println!("    Gate:   {}", entry.gate_id);
-            if !entry.files.is_empty() {
-                println!("    Files:  {}", entry.files.len());
-            }
-        }
-        ModelResolution::Remote(entry) => {
-            println!("  FOUND (remote gate)");
-            println!("    Gate:   {}", entry.gate_id);
-            println!("    Size:   {}", format_size_mb(entry.size_bytes));
-            println!(
-                "    Transfer needed: Use Songbird to fetch from {}",
-                entry.gate_id
-            );
-        }
-        ModelResolution::NotFound => {
-            println!("  NOT FOUND in local cache or mesh.");
-            println!();
-            println!("  To cache this model:");
-            println!(
-                "    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{model_id}')\""
-            );
-            println!("    2. Register: biomeos model-cache import-hf");
-        }
-    }
+    print_resolve_model_resolution(model_id, &resolution);
     println!();
 
     Ok(())
@@ -301,37 +313,7 @@ async fn resolve_model_with(cache_dir: &Path, model_id: &str) -> Result<()> {
     let cache = ModelCache::with_cache_dir(cache_dir.to_path_buf()).await?;
     let resolution = cache.resolve(model_id).await;
 
-    match &resolution {
-        ModelResolution::Local(entry) => {
-            println!("  FOUND (local cache)");
-            println!("    Path:   {}", entry.local_path.display());
-            println!("    Size:   {}", format_size_mb(entry.size_bytes));
-            println!("    Format: {}", entry.format);
-            println!("    Cached: {}", entry.cached_at);
-            println!("    Gate:   {}", entry.gate_id);
-            if !entry.files.is_empty() {
-                println!("    Files:  {}", entry.files.len());
-            }
-        }
-        ModelResolution::Remote(entry) => {
-            println!("  FOUND (remote gate)");
-            println!("    Gate:   {}", entry.gate_id);
-            println!("    Size:   {}", format_size_mb(entry.size_bytes));
-            println!(
-                "    Transfer needed: Use Songbird to fetch from {}",
-                entry.gate_id
-            );
-        }
-        ModelResolution::NotFound => {
-            println!("  NOT FOUND in local cache or mesh.");
-            println!();
-            println!("  To cache this model:");
-            println!(
-                "    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{model_id}')\""
-            );
-            println!("    2. Register: biomeos model-cache import-hf");
-        }
-    }
+    print_resolve_model_resolution(model_id, &resolution);
     println!();
 
     Ok(())
@@ -394,11 +376,7 @@ async fn show_status() -> Result<()> {
     println!("    Size:      {}", format_size_gb(total_size));
 
     // Check NestGate connection
-    let nestgate_status = if cache.list_mesh_models().await.is_empty() {
-        "offline (filesystem-only mode)"
-    } else {
-        "connected (mesh registry active)"
-    };
+    let nestgate_status = nestgate_status_label(cache.list_mesh_models().await.is_empty());
     println!("    NestGate:  {nestgate_status}");
 
     // Check HuggingFace cache
@@ -451,11 +429,7 @@ async fn show_status_with(cache_dir: &Path, hf_hub_dir: Option<&Path>) -> Result
     println!("    Models:    {}", models.len());
     println!("    Size:      {}", format_size_gb(total_size));
 
-    let nestgate_status = if cache.list_mesh_models().await.is_empty() {
-        "offline (filesystem-only mode)"
-    } else {
-        "connected (mesh registry active)"
-    };
+    let nestgate_status = nestgate_status_label(cache.list_mesh_models().await.is_empty());
     println!("    NestGate:  {nestgate_status}");
 
     if let Some(hf_path) = hf_hub_dir {

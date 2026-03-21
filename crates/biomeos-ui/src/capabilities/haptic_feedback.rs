@@ -153,7 +153,9 @@ impl Default for HapticPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::ready_signal;
     use biomeos_types::xr::TrackedDeviceType;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     fn mock_devices() -> Vec<HapticDeviceCapabilities> {
         vec![
@@ -376,5 +378,217 @@ mod tests {
         let client =
             crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
         let _ = pipeline.discover(&client).await;
+    }
+
+    #[tokio::test]
+    async fn test_discover_success_from_mock_socket() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let expected = mock_devices();
+        let expected_clone = expected.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(
+                    req.get("method").and_then(|m| m.as_str()),
+                    Some("xr.discover_haptic")
+                );
+                let result = serde_json::to_value(&expected_clone).expect("serialize devices");
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": result,
+                    "id": req["id"]
+                });
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut pipeline = HapticPipeline::new();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let discovered_len = pipeline.discover(&client).await.expect("discover").len();
+        assert!(pipeline.is_active());
+        assert_eq!(discovered_len, expected.len());
+        assert_eq!(pipeline.devices().len(), discovered_len);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_send_command_success_clamps_rumble_caps() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(
+                    req.get("method").and_then(|m| m.as_str()),
+                    Some("xr.send_haptic")
+                );
+                let params = req.get("params").expect("params");
+                assert!(
+                    (params
+                        .get("intensity")
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap()
+                        - 1.0)
+                        .abs()
+                        < 1e-9
+                );
+                assert!(
+                    (params
+                        .get("frequency_hz")
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap()
+                        - 500.0)
+                        .abs()
+                        < 1e-9
+                );
+                let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut pipeline = HapticPipeline::new();
+        pipeline.devices = mock_devices();
+        pipeline.active = true;
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let command = HapticCommand {
+            device: HapticDeviceType::Rumble,
+            target: TrackedDeviceType::RightHand,
+            intensity: 2.0,
+            duration_ms: 100,
+            frequency_hz: Some(800.0),
+            force_vector: None,
+        };
+        pipeline.send_command(&client, command).await.expect("send");
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_send_command_clamps_force_feedback_vector() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                let params = req.get("params").expect("params");
+                let fv = params
+                    .get("force_vector")
+                    .and_then(|v| v.as_array())
+                    .expect("force_vector");
+                assert_eq!(fv.len(), 3);
+                assert!((fv[0].as_f64().unwrap() - 5.0).abs() < 1e-9);
+                assert!((fv[1].as_f64().unwrap() + 5.0).abs() < 1e-9);
+                assert!((fv[2].as_f64().unwrap() - 0.0).abs() < 1e-9);
+                let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut pipeline = HapticPipeline::new();
+        pipeline.devices = vec![HapticDeviceCapabilities {
+            device_type: HapticDeviceType::ForceFeedback,
+            max_force_n: Some(5.0),
+            max_frequency_hz: None,
+            force_dof: 3,
+            update_hz: 1000,
+        }];
+        pipeline.active = true;
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let command = HapticCommand {
+            device: HapticDeviceType::ForceFeedback,
+            target: TrackedDeviceType::LeftHand,
+            intensity: 0.5,
+            duration_ms: 20,
+            frequency_hz: None,
+            force_vector: Some([100.0, -10.0, 0.0]),
+        };
+        pipeline.send_command(&client, command).await.expect("send");
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_stop_all_active_success() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(
+                    req.get("method").and_then(|m| m.as_str()),
+                    Some("xr.stop_haptic")
+                );
+                let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut pipeline = HapticPipeline::new();
+        pipeline.active = true;
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        pipeline.stop_all(&client).await.expect("stop");
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_discover_invalid_payload_returns_err() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": "not-an-array",
+                    "id": req["id"]
+                });
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut pipeline = HapticPipeline::new();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let err = pipeline.discover(&client).await.unwrap_err();
+        assert!(err.to_string().contains("invalid type") || err.to_string().contains("invalid"));
+        server.abort();
     }
 }

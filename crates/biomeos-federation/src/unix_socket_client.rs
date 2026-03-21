@@ -164,8 +164,8 @@ mod tests {
 
         let client = UnixSocketClient::new(&sock);
         let req = JsonRpcRequest::new("ping", json!({}));
-        let out = client.call(req).await.expect("rpc call");
-        assert_eq!(out.result.expect("result")["pong"], true);
+        let out = client.call(req).await.unwrap();
+        assert_eq!(out.result.unwrap()["pong"], true);
     }
 
     #[tokio::test]
@@ -222,10 +222,7 @@ mod tests {
         });
 
         let client = UnixSocketClient::new(&sock);
-        let v = client
-            .call_method("q", json!({}))
-            .await
-            .expect("call_method");
+        let v = client.call_method("q", json!({})).await.unwrap();
         assert_eq!(v["answer"], 42);
     }
 

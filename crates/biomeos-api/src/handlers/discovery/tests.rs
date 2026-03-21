@@ -628,7 +628,7 @@ fn test_probe_live_sockets_with_sock_files_no_runtime() {
     assert_eq!(primals.len(), 2, "should find exactly 2 .sock files");
 
     let mut names: Vec<&str> = primals.iter().map(|p| p.name.as_str()).collect();
-    names.sort();
+    names.sort_unstable();
     assert_eq!(names, vec!["beardog", "songbird"]);
 
     for primal in &primals {

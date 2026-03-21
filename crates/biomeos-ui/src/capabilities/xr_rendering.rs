@@ -177,6 +177,8 @@ impl StereoRenderAdapter {
 )]
 mod tests {
     use super::*;
+    use biomeos_test_utils::ready_signal;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     #[test]
     fn test_supports_stereo() {
@@ -360,5 +362,175 @@ mod tests {
         let result = adapter.end_session(&client).await;
         assert!(result.is_err());
         assert!(adapter.is_session_active());
+    }
+
+    #[tokio::test]
+    async fn test_negotiate_success() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let targets = RenderTargets {
+            left_eye: "L".to_string(),
+            right_eye: "R".to_string(),
+            resolution: (100, 200),
+            refresh_hz: 60,
+        };
+        let targets_val = serde_json::to_value(&targets).expect("targets");
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(
+                    req.get("method").and_then(|m| m.as_str()),
+                    Some("xr.negotiate_stereo")
+                );
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": targets_val,
+                    "id": req["id"]
+                });
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let adapter = StereoRenderAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let got = adapter.negotiate(&client).await.expect("negotiate");
+        assert_eq!(got.left_eye, "L");
+        assert_eq!(got.resolution, (100, 200));
+        assert_eq!(got.refresh_hz, 60);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_negotiate_invalid_result_returns_err() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": "nope",
+                    "id": req["id"]
+                });
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let adapter = StereoRenderAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        assert!(adapter.negotiate(&client).await.is_err());
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_begin_session_success() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(
+                    req.get("method").and_then(|m| m.as_str()),
+                    Some("xr.begin_session")
+                );
+                let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut adapter = StereoRenderAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        adapter.begin_session(&client).await.expect("begin");
+        assert!(adapter.is_session_active());
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_submit_frame_success_after_begin() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            for expect in ["xr.begin_session", "xr.submit_frame"] {
+                if let Ok((mut stream, _)) = listener.accept().await {
+                    let mut buf = vec![0u8; 8192];
+                    let n = stream.read(&mut buf).await.expect("read");
+                    let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                    assert_eq!(req.get("method").and_then(|m| m.as_str()), Some(expect));
+                    let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                    let line = format!("{resp}\n");
+                    stream.write_all(line.as_bytes()).await.expect("write");
+                    stream.flush().await.expect("flush");
+                }
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut adapter = StereoRenderAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        adapter.begin_session(&client).await.expect("begin");
+        adapter
+            .submit_frame(&client, 3, 99_000)
+            .await
+            .expect("submit");
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_end_session_success_clears_active() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            for expect in ["xr.begin_session", "xr.end_session"] {
+                if let Ok((mut stream, _)) = listener.accept().await {
+                    let mut buf = vec![0u8; 8192];
+                    let n = stream.read(&mut buf).await.expect("read");
+                    let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                    assert_eq!(req.get("method").and_then(|m| m.as_str()), Some(expect));
+                    let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                    let line = format!("{resp}\n");
+                    stream.write_all(line.as_bytes()).await.expect("write");
+                    stream.flush().await.expect("flush");
+                }
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut adapter = StereoRenderAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        adapter.begin_session(&client).await.expect("begin");
+        assert!(adapter.is_session_active());
+        adapter.end_session(&client).await.expect("end");
+        assert!(!adapter.is_session_active());
+        server.abort();
     }
 }

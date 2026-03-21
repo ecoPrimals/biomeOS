@@ -532,4 +532,32 @@ mod discovery_tests {
         let nets = discover_network().await.expect("net");
         assert!(!nets.iter().any(|d| d.id == "net-lo"));
     }
+
+    #[test]
+    fn test_human_size_units_and_petabyte_fallback() {
+        assert_eq!(human_size(0), "0.0B");
+        assert_eq!(human_size(100), "100.0B");
+        assert_eq!(human_size(1023), "1023.0B");
+        assert_eq!(human_size(1024), "1.0K");
+        assert_eq!(human_size(1024 * 1024), "1.0M");
+        assert_eq!(human_size(1024_u64.pow(3)), "1.0G");
+        assert_eq!(human_size(1024_u64.pow(4)), "1.0T");
+        // Exhaust K/M/G/T loop → P branch
+        let pb = 1024_u64.pow(5) * 1024;
+        assert!(human_size(pb).ends_with('P'));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_statvfs_info_directory_and_missing_path() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let info = statvfs_info(temp.path().to_str().expect("utf8 path"));
+        assert!(info.is_some());
+        let (size, used, usage) = info.expect("statvfs tempdir");
+        assert!(!size.is_empty());
+        assert!(!used.is_empty());
+        assert!((0.0..=1.0).contains(&usage));
+
+        assert!(statvfs_info("/nonexistent/path/for/statvfs/xxxxxxxx").is_none());
+    }
 }

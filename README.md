@@ -4,15 +4,15 @@
 
 ---
 
-## Status: Production Ready (v2.60)
+## Status: Production Ready (v2.62)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v3.0 compliant |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
-| Tests | 6,998 passing (0 failures) — 90.01% line / 90.95% function coverage (llvm-cov verified) |
+| Code Quality | A++ (Pure Rust, Edition 2024 all 25 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
+| Tests | ~5,050 passing (0 failures) — 90.28% region / 91.11% function / 90.02% line coverage (llvm-cov verified) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, pedantic+nursery, all crates via workspace lint inheritance) |
 | Formatting | PASS |
@@ -335,7 +335,7 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.60)
-**Updated**: March 20, 2026
-**Tests**: 6,998 passing, 90.01% line / 90.95% function coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
+**Status**: Production Ready (v2.62)
+**Updated**: March 21, 2026
+**Tests**: ~5,050 passing, 90.28% region / 91.11% function / 90.02% line coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | scyBorg (AGPL-3.0 + ORC + CC-BY-SA)

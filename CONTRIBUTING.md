@@ -51,6 +51,7 @@ cargo fmt --all -- --check         # 0 diffs
 - Zero external C dependencies — `deny.toml` enforces this
 - Pure Rust: `rustix` for POSIX, `/proc` for metrics, `rtnetlink` for networking
 - No `openssl`, `ring`, `aws-lc-sys`, `native-tls`, `sysinfo`, `libc`, `nix`
+- YAML serde uses `serde_yml` via Cargo package rename: `serde_yaml = { package = "serde_yml", ... }` in workspace deps
 - Cross-compilation must work: `cargo build --target x86_64-unknown-linux-musl`
 
 ## Test Requirements

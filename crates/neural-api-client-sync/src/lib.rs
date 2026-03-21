@@ -310,6 +310,22 @@ fn parse_response(response: &serde_json::Value) -> Result<CallResult, NeuralErro
 )]
 mod tests {
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
+    use serial_test::serial;
+
+    #[cfg(unix)]
+    use std::os::unix::net::UnixListener;
+    #[cfg(unix)]
+    use std::thread;
+
+    /// Avoid `TMPDIR` races when `#[serial]` tier tests repoint the process temp dir.
+    #[cfg(unix)]
+    fn unix_isolated_tempdir(prefix: &str) -> tempfile::TempDir {
+        tempfile::Builder::new()
+            .prefix(prefix)
+            .tempdir_in("/tmp")
+            .expect("temp dir under /tmp")
+    }
 
     #[test]
     fn no_socket_returns_none() {
@@ -340,6 +356,38 @@ mod tests {
         });
         let err = parse_response(&resp).unwrap_err();
         assert!(matches!(err, NeuralError::Rpc { code: -32601, .. }));
+    }
+
+    #[test]
+    fn parse_error_response_missing_code_defaults_to_negative_one() {
+        let resp = serde_json::json!({
+            "jsonrpc": "2.0",
+            "error": { "message": "no code" },
+            "id": 1
+        });
+        let err = parse_response(&resp).unwrap_err();
+        if let NeuralError::Rpc { code, message } = err {
+            assert_eq!(code, -1);
+            assert_eq!(message, "no code");
+        } else {
+            panic!("expected NeuralError::Rpc");
+        }
+    }
+
+    #[test]
+    fn parse_error_response_missing_message_defaults_to_unknown() {
+        let resp = serde_json::json!({
+            "jsonrpc": "2.0",
+            "error": { "code": 42 },
+            "id": 1
+        });
+        let err = parse_response(&resp).unwrap_err();
+        if let NeuralError::Rpc { code, message } = err {
+            assert_eq!(code, 42);
+            assert_eq!(message, "unknown error");
+        } else {
+            panic!("expected NeuralError::Rpc");
+        }
     }
 
     #[test]
@@ -419,6 +467,227 @@ mod tests {
         );
         assert!(bridge.is_some());
         assert_eq!(bridge.unwrap().socket_path(), sock_path.as_path());
+    }
+
+    #[test]
+    #[serial]
+    fn resolve_socket_tier_xdg_runtime_dir() {
+        let family = "neural-tier-xdg-only-7f3a";
+        let temp = tempfile::tempdir().expect("temp dir");
+        let biomeos_dir = temp.path().join("biomeos");
+        std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
+        let expected = biomeos_dir.join(format!("neural-api-{family}.sock"));
+        std::fs::write(&expected, "").expect("placeholder socket path");
+
+        let _neural = TestEnvGuard::remove("NEURAL_API_SOCKET");
+        let _xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().expect("utf8 path"));
+        let bridge = NeuralBridge::discover_with(None, Some(family));
+        assert!(bridge.is_some());
+        assert_eq!(bridge.expect("bridge").socket_path(), expected.as_path());
+    }
+
+    #[test]
+    #[serial]
+    #[cfg(target_os = "linux")]
+    fn resolve_socket_tier_run_user() {
+        let family = "neural-tier-run-user-9c2e";
+        let uid = uid_from_runtime_dir();
+        let run_biomeos = std::path::PathBuf::from(format!("/run/user/{uid}/biomeos"));
+        std::fs::create_dir_all(&run_biomeos).expect("create /run/user/.../biomeos");
+        let expected = run_biomeos.join(format!("neural-api-{family}.sock"));
+        std::fs::write(&expected, "").expect("placeholder socket path");
+
+        let empty_xdg = tempfile::tempdir().expect("empty xdg");
+        let _neural = TestEnvGuard::remove("NEURAL_API_SOCKET");
+        let _xdg = TestEnvGuard::set(
+            "XDG_RUNTIME_DIR",
+            empty_xdg.path().to_str().expect("utf8 path"),
+        );
+
+        let bridge = NeuralBridge::discover_with(None, Some(family));
+        assert!(bridge.is_some());
+        assert_eq!(bridge.expect("bridge").socket_path(), expected.as_path());
+    }
+
+    #[test]
+    #[serial]
+    fn resolve_socket_tier_platform_temp_dir() {
+        let family = "neural-tier-tmpdir-b4d1";
+        let tmp_root = tempfile::tempdir().expect("tmp root");
+        let biomeos_dir = tmp_root.path().join("biomeos");
+        std::fs::create_dir_all(&biomeos_dir).expect("create biomeos under TMPDIR");
+        let expected = biomeos_dir.join(format!("neural-api-{family}.sock"));
+        std::fs::write(&expected, "").expect("placeholder socket path");
+
+        let empty_xdg = tempfile::tempdir().expect("empty xdg");
+        let _neural = TestEnvGuard::remove("NEURAL_API_SOCKET");
+        let _xdg = TestEnvGuard::set(
+            "XDG_RUNTIME_DIR",
+            empty_xdg.path().to_str().expect("utf8 path"),
+        );
+        let _tmpdir = TestEnvGuard::set("TMPDIR", tmp_root.path().to_str().expect("utf8 path"));
+
+        let bridge = NeuralBridge::discover_with(None, Some(family));
+        assert!(bridge.is_some());
+        assert_eq!(bridge.expect("bridge").socket_path(), expected.as_path());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn send_request_round_trip_reads_json_line() {
+        let dir = unix_isolated_tempdir("neural-roundtrip");
+        let sock_path = dir.path().join("neural-roundtrip.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind mock socket");
+
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut line = String::new();
+            BufReader::new(&mut stream)
+                .read_line(&mut line)
+                .expect("read request");
+            assert!(line.contains("ping.method"));
+
+            let response = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": { "pong": true },
+                "id": 1
+            });
+            let mut payload = serde_json::to_string(&response).expect("serialize");
+            payload.push('\n');
+            stream
+                .write_all(payload.as_bytes())
+                .expect("write response");
+            stream.flush().expect("flush");
+        });
+
+        let bridge = NeuralBridge {
+            socket_path: sock_path,
+            timeout: Duration::from_secs(5),
+        };
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "ping.method",
+            "params": {},
+            "id": 1
+        });
+        let parsed = bridge.send_request(&request).expect("send_request");
+        assert_eq!(parsed["result"]["pong"], serde_json::json!(true));
+        server.join().expect("server thread");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn capability_call_success_via_mock_socket() {
+        let dir = unix_isolated_tempdir("neural-cap");
+        let sock_path = dir.path().join("neural-cap.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind mock socket");
+
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut line = String::new();
+            BufReader::new(&mut stream)
+                .read_line(&mut line)
+                .expect("read request");
+            assert!(line.contains("capability.call"));
+
+            let response = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": { "et0": 1.23 },
+                "id": 1
+            });
+            let mut payload = serde_json::to_string(&response).expect("serialize");
+            payload.push('\n');
+            stream
+                .write_all(payload.as_bytes())
+                .expect("write response");
+            stream.flush().expect("flush");
+        });
+
+        let bridge = NeuralBridge {
+            socket_path: sock_path,
+            timeout: Duration::from_secs(5),
+        };
+        let out = bridge
+            .capability_call("ecology", "et0_pm", &serde_json::json!({}))
+            .expect("capability_call");
+        assert!((out.value["et0"].as_f64().unwrap() - 1.23).abs() < f64::EPSILON);
+        server.join().expect("server thread");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn health_check_success_via_mock_socket() {
+        let dir = unix_isolated_tempdir("neural-health");
+        let sock_path = dir.path().join("neural-health.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind mock socket");
+
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut line = String::new();
+            BufReader::new(&mut stream)
+                .read_line(&mut line)
+                .expect("read request");
+            assert!(line.contains("lifecycle.status"));
+
+            let response = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": { "alive": true },
+                "id": 1
+            });
+            let mut payload = serde_json::to_string(&response).expect("serialize");
+            payload.push('\n');
+            stream
+                .write_all(payload.as_bytes())
+                .expect("write response");
+            stream.flush().expect("flush");
+        });
+
+        let bridge = NeuralBridge {
+            socket_path: sock_path,
+            timeout: Duration::from_secs(5),
+        };
+        let value = bridge.health_check().expect("health_check");
+        assert_eq!(value["alive"], serde_json::json!(true));
+        server.join().expect("server thread");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn discover_capability_success_via_mock_socket() {
+        let dir = unix_isolated_tempdir("neural-discover");
+        let sock_path = dir.path().join("neural-discover.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind mock socket");
+
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut line = String::new();
+            BufReader::new(&mut stream)
+                .read_line(&mut line)
+                .expect("read request");
+            assert!(line.contains("capability.discover"));
+
+            let response = serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": { "ops": ["a", "b"] },
+                "id": 1
+            });
+            let mut payload = serde_json::to_string(&response).expect("serialize");
+            payload.push('\n');
+            stream
+                .write_all(payload.as_bytes())
+                .expect("write response");
+            stream.flush().expect("flush");
+        });
+
+        let bridge = NeuralBridge {
+            socket_path: sock_path,
+            timeout: Duration::from_secs(5),
+        };
+        let value = bridge
+            .discover_capability("ecology")
+            .expect("discover_capability");
+        assert_eq!(value["ops"], serde_json::json!(["a", "b"]));
+        server.join().expect("server thread");
     }
 
     #[test]

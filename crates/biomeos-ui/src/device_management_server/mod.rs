@@ -319,6 +319,34 @@ mod tests {
         assert!(json.contains("-32601"));
     }
 
+    #[test]
+    fn test_json_rpc_error_with_data_serialize() {
+        let response = JsonRpcResponse {
+            jsonrpc: JsonRpcVersion,
+            result: None,
+            error: Some(JsonRpcError {
+                code: -32000,
+                message: "App error".to_string(),
+                data: Some(json!({"hint": "retry"})),
+            }),
+            id: json!(2),
+        };
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"hint\""));
+        assert!(json.contains("retry"));
+    }
+
+    #[test]
+    fn test_json_rpc_request_roundtrip_with_params_object() {
+        let json = r#"{"jsonrpc":"2.0","method":"assign_device","params":{"device_id":"a","primal_id":"b"},"id":"rid"}"#;
+        let req: JsonRpcRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.method, "assign_device");
+        let params = req.params.expect("params");
+        assert_eq!(params["device_id"], "a");
+        assert_eq!(params["primal_id"], "b");
+        assert_eq!(req.id, json!("rid"));
+    }
+
     #[tokio::test]
     async fn test_handle_method_unknown_method() {
         let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
@@ -421,6 +449,21 @@ mod tests {
             method: "assign_device".to_string(),
             params: None,
             id: json!(5),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_assign_device_empty_string_ids() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-assign-empty-ids.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: JsonRpcVersion,
+            method: "assign_device".to_string(),
+            params: Some(json!({"device_id":"","primal_id":""})),
+            id: json!(51),
         };
         let response = handle_method(request, &provider).await;
         assert!(response.error.is_some());

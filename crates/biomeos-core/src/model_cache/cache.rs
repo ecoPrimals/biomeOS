@@ -881,4 +881,28 @@ mod tests {
         assert!(!cache.has_model("any"));
         assert!(cache.list_models().is_empty());
     }
+
+    /// Covers `import_huggingface_cache_from` branch where `has_model` is true (skip register).
+    #[tokio::test]
+    async fn test_import_huggingface_skips_models_already_registered() {
+        let tmp = tempfile::tempdir().unwrap();
+        let hf_hub = tmp.path().join("hub");
+        let model_id = "skip/already";
+        let snap = hf_hub
+            .join(format!("models--{}", model_id.replace('/', "--")))
+            .join("snapshots")
+            .join("s1");
+        std::fs::create_dir_all(&snap).unwrap();
+        std::fs::write(snap.join("model.safetensors"), b"w").unwrap();
+
+        let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
+            .await
+            .unwrap();
+        cache
+            .register_huggingface_model_from_hub(model_id, &hf_hub)
+            .await
+            .unwrap();
+        let imported = cache.import_huggingface_cache_from(&hf_hub).await.unwrap();
+        assert!(imported.is_empty());
+    }
 }

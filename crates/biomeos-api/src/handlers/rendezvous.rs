@@ -317,6 +317,60 @@ pub async fn check_peer(
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
+    async fn spawn_neural_api_loopback_mock(
+        family_id: &str,
+    ) -> (tempfile::TempDir, std::path::PathBuf) {
+        use std::time::Duration;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::UnixListener;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock = dir.path().join("neural-rendezvous-mock.sock");
+        let listener = UnixListener::bind(&sock).expect("bind mock neural");
+        let fam = family_id.to_string();
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut stream, _)) = listener.accept().await else {
+                    continue;
+                };
+                let mut buf = vec![0u8; 64 * 1024];
+                let n = match stream.read(&mut buf).await {
+                    Ok(n) if n > 0 => n,
+                    _ => continue,
+                };
+                let line = String::from_utf8_lossy(&buf[..n]);
+                let Ok(v) = serde_json::from_str::<serde_json::Value>(line.trim_end()) else {
+                    continue;
+                };
+                let params = v.get("params").cloned().unwrap_or_default();
+                let inner_method = params.get("method").and_then(|m| m.as_str()).unwrap_or("");
+                let result = if inner_method == "birdsong.decrypt" {
+                    serde_json::json!({
+                        "success": true,
+                        "plaintext": "ok",
+                        "family_id": fam.as_str(),
+                    })
+                } else if inner_method == "crypto.blake3_hash" {
+                    serde_json::json!({ "hash": "node-hash-test" })
+                } else {
+                    serde_json::json!({})
+                };
+                let body = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": v.get("id").clone(),
+                    "result": result,
+                });
+                let mut out = serde_json::to_string(&body).expect("serialize");
+                out.push('\n');
+                let _ = stream.write_all(out.as_bytes()).await;
+                drop(stream);
+            }
+        });
+        tokio::time::sleep(Duration::from_millis(40)).await;
+        (dir, sock)
+    }
+
     // ========== RendezvousState Tests ==========
 
     #[test]
@@ -728,5 +782,78 @@ mod tests {
         };
         assert!(slot.expires_at > slot.created_at);
         assert_eq!(slot.expires_at - slot.created_at, 300);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_post_beacon_accepted_neural_mock() {
+        use biomeos_test_utils::env_helpers::TestEnvGuard;
+        use http_body_util::BodyExt;
+
+        let (_dir, sock) = spawn_neural_api_loopback_mock("fam-rdz-1").await;
+        let _g = TestEnvGuard::set("FAMILY_ID", "fam-rdz-1");
+        let _n = TestEnvGuard::set(
+            "NEURAL_API_SOCKET",
+            sock.to_str().expect("utf8 socket path"),
+        );
+
+        let state = Arc::new(RendezvousState::new(""));
+        let request = RendezvousPostRequest {
+            encrypted_beacon: "beacon-a".to_string(),
+            dark_forest_token: "token-a".to_string(),
+            connection_info: None,
+        };
+
+        let response = post_beacon(axum::extract::State(state), axum::Json(request)).await;
+        let (parts, body) = response.into_response().into_parts();
+        assert_eq!(parts.status, axum::http::StatusCode::OK);
+        let bytes = body.collect().await.expect("body").to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
+        assert_eq!(v["accepted"], true);
+        assert!(v.get("slot_id").is_some());
+        assert_eq!(v["peers_waiting"], 0);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_check_peer_matched_neural_mock() {
+        use biomeos_test_utils::env_helpers::TestEnvGuard;
+        use http_body_util::BodyExt;
+
+        let (_dir, sock) = spawn_neural_api_loopback_mock("fam-rdz-2").await;
+        let _g = TestEnvGuard::set("FAMILY_ID", "fam-rdz-2");
+        let _n = TestEnvGuard::set(
+            "NEURAL_API_SOCKET",
+            sock.to_str().expect("utf8 socket path"),
+        );
+
+        let state = Arc::new(RendezvousState::new(""));
+        let post = post_beacon(
+            axum::extract::State(state.clone()),
+            axum::Json(RendezvousPostRequest {
+                encrypted_beacon: "peer-beacon".to_string(),
+                dark_forest_token: "tok-1".to_string(),
+                connection_info: None,
+            }),
+        )
+        .await;
+        assert_eq!(post.into_response().status(), axum::http::StatusCode::OK);
+
+        let check = check_peer(
+            axum::extract::State(state),
+            axum::Json(RendezvousCheckRequest {
+                dark_forest_token: "tok-2".to_string(),
+            }),
+        )
+        .await;
+        let (parts, body) = check.into_response().into_parts();
+        assert_eq!(parts.status, axum::http::StatusCode::OK);
+        let bytes = body.collect().await.expect("body").to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
+        assert_eq!(v["matched"], true);
+        assert_eq!(v["peer_beacon"].as_str(), Some("peer-beacon"));
+        assert_eq!(v["peers_waiting"], 1);
     }
 }

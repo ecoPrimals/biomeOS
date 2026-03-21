@@ -9,6 +9,10 @@ use std::path::{Path, PathBuf};
 use super::types::{HealthCheck, HealthStatus};
 
 pub(crate) async fn check_binary_health() -> Result<HealthCheck> {
+    Ok(check_binary_health_inner(std::env::current_exe()))
+}
+
+fn check_binary_health_inner(exe_result: Result<PathBuf, std::io::Error>) -> HealthCheck {
     let mut check = HealthCheck {
         name: "Binary Health".to_string(),
         status: HealthStatus::Healthy,
@@ -16,7 +20,7 @@ pub(crate) async fn check_binary_health() -> Result<HealthCheck> {
     };
 
     // Check current binary
-    if let Ok(exe) = std::env::current_exe() {
+    if let Ok(exe) = exe_result {
         check.details.push(format!("Binary: {}", exe.display()));
 
         if let Ok(metadata) = std::fs::metadata(&exe) {
@@ -36,7 +40,7 @@ pub(crate) async fn check_binary_health() -> Result<HealthCheck> {
     check.details.push("Modes: 7/7 available".to_string());
     check.details.push("UniBin: ✅ Compliant".to_string());
 
-    Ok(check)
+    check
 }
 
 pub(crate) async fn check_configuration() -> Result<HealthCheck> {
@@ -262,5 +266,67 @@ mod tests {
         let check = check_configuration_with(&config_dir).await.unwrap();
         assert!(check.details.iter().any(|d| d.contains("config.toml")));
         assert!(check.details.iter().any(|d| d.contains("defaults")));
+    }
+
+    #[tokio::test]
+    async fn test_check_binary_health_inner_current_exe_fails() {
+        let check = check_binary_health_inner(Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "simulated",
+        )));
+        assert_eq!(check.status, HealthStatus::Warning);
+        assert!(
+            check
+                .details
+                .iter()
+                .any(|d| d.contains("Could not determine binary path"))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_check_binary_health_inner_metadata_missing_exe_path() {
+        let temp = tempfile::tempdir().unwrap();
+        let missing_exe = temp.path().join("definitely_not_present");
+        let check = check_binary_health_inner(Ok(missing_exe));
+        assert_eq!(check.status, HealthStatus::Healthy);
+        assert!(check.details.iter().any(|d| d.starts_with("Binary:")));
+        assert!(!check.details.iter().any(|d| d.starts_with("Size:")));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_check_graphs_dir_read_dir_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = tempfile::tempdir().unwrap();
+        let graphs_dir = temp.path().join("graphs");
+        std::fs::create_dir_all(&graphs_dir).unwrap();
+        std::fs::set_permissions(&graphs_dir, std::fs::Permissions::from_mode(0o000))
+            .expect("chmod graphs");
+        let result = check_graphs_dir_at(temp.path()).await;
+        let _ = std::fs::set_permissions(&graphs_dir, std::fs::Permissions::from_mode(0o755));
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_check_graphs_dir_toml_only_in_subdirectory() {
+        let temp = tempfile::tempdir().unwrap();
+        let graphs_dir = temp.path().join("graphs");
+        std::fs::create_dir_all(graphs_dir.join("nested")).unwrap();
+        std::fs::write(graphs_dir.join("nested").join("x.toml"), "a = 1").unwrap();
+        let check = check_graphs_dir_at(temp.path()).await.unwrap();
+        assert_eq!(check.status, HealthStatus::Warning);
+        assert!(check.details.iter().any(|d| d.contains("Graphs found: 0")));
+    }
+
+    #[tokio::test]
+    async fn test_check_configuration_config_path_is_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_dir = temp.path().join("biomeos");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        std::fs::create_dir_all(config_dir.join("config.toml")).unwrap();
+        let check = check_configuration_with(&config_dir).await.unwrap();
+        assert_eq!(check.status, HealthStatus::Healthy);
+        assert!(check.details.iter().any(|d| d.contains("Found")));
     }
 }

@@ -4,7 +4,6 @@
 //! Unit tests for real-time event streaming (WebSocket/SSE).
 
 #![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
-#![expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
 
 use super::{JsonRpcNotification, *};
 use biomeos_test_utils::{remove_test_env, set_test_env};
@@ -812,7 +811,8 @@ async fn test_event_handler_receives_multiple_event_types() {
         h.process_events(move |_| {
             let n = c.fetch_add(1, Ordering::SeqCst);
             if n >= 1 {
-                if let Some(sender) = tx_clone.blocking_lock().take() {
+                let maybe_tx = tx_clone.blocking_lock().take();
+                if let Some(sender) = maybe_tx {
                     let _ = sender.send(());
                 }
             }
@@ -835,4 +835,76 @@ async fn test_event_handler_receives_multiple_event_types() {
         count.load(Ordering::SeqCst) >= 2,
         "should process multiple event types"
     );
+}
+
+#[tokio::test]
+async fn test_process_events_stops_when_broadcast_closed() {
+    let sub = RealTimeEventSubscriber::new("test_family".to_string());
+    let rx = sub.subscribe();
+    drop(sub);
+    let mut handler = RealTimeEventHandler::from_receiver_for_test(rx);
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        handler.process_events(|_| Ok(())),
+    )
+    .await;
+    assert!(
+        result.is_ok(),
+        "process_events should finish when channel is closed"
+    );
+    assert!(result.unwrap().is_ok());
+}
+
+#[test]
+fn test_parse_event_params_event_is_null() {
+    let notification = JsonRpcNotification::for_test(serde_json::json!({
+        "event": null,
+        "type": "heartbeat",
+        "timestamp": 1,
+        "primals_count": 1,
+        "healthy_count": 1
+    }));
+    let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+    assert!(
+        result.is_err(),
+        "explicit null event should not deserialize as RealTimeEvent"
+    );
+}
+
+#[test]
+fn test_parse_event_params_event_wrong_shape() {
+    let notification = JsonRpcNotification::for_test(serde_json::json!({
+        "event": {
+            "type": "heartbeat",
+            "timestamp": "not_a_u64",
+            "primals_count": 1,
+            "healthy_count": 1
+        }
+    }));
+    assert!(RealTimeEventSubscriber::parse_event_for_test(&notification).is_err());
+}
+
+#[test]
+fn test_parse_sse_event_empty_input() {
+    assert!(RealTimeEventSubscriber::parse_sse_event("").is_none());
+}
+
+#[test]
+fn test_parse_sse_event_data_before_event_line() {
+    let sse_text = "data: {\"type\":\"heartbeat\",\"timestamp\":1,\"primals_count\":1,\"healthy_count\":1}\nevent: heartbeat";
+    let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
+    assert!(event.is_some());
+    assert!(matches!(event.unwrap(), RealTimeEvent::Heartbeat { .. }));
+}
+
+#[test]
+fn test_parse_sse_event_valid_json_unknown_variant() {
+    let sse_text = "data: {\"type\":\"not_a_realtime_variant\",\"x\":1}";
+    assert!(RealTimeEventSubscriber::parse_sse_event(sse_text).is_none());
+}
+
+#[test]
+fn test_parse_sse_event_malformed_timestamp_type() {
+    let sse_text = "data: {\"type\":\"heartbeat\",\"timestamp\":\"nan\",\"primals_count\":1,\"healthy_count\":1}";
+    assert!(RealTimeEventSubscriber::parse_sse_event(sse_text).is_none());
 }

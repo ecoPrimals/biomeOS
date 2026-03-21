@@ -283,6 +283,8 @@ mod tests {
         DeviceInfo, Impact, PrimalInfo, SuggestedAction, SuggestionContext, SuggestionFeedback,
         SuggestionType,
     };
+    use std::io::{Read, Write};
+    use std::path::PathBuf;
 
     #[test]
     fn test_new() {
@@ -554,5 +556,92 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(mgr.get_active_suggestions().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_discover_ai_provider_no_sockets_returns_ok() {
+        let mut mgr = AISuggestionManager::new("fam1".to_string());
+        mgr.discover_ai_provider().await.expect("discover");
+        assert!(mgr.ai_provider_socket.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_probe_ai_capability_nonexistent_returns_false() {
+        let result =
+            AISuggestionManager::probe_ai_capability(std::path::Path::new("/tmp/no-such.sock"))
+                .await;
+        assert!(!result);
+    }
+
+    #[tokio::test]
+    async fn test_probe_ai_capability_responding_mock() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("ai_mock.sock");
+        let sock_for_thread = sock_path.clone();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+        let server = std::thread::spawn(move || {
+            let listener = std::os::unix::net::UnixListener::bind(&sock_for_thread).expect("bind");
+            ready_tx.send(()).expect("signal");
+            let Ok((mut stream, _)) = listener.accept() else {
+                return;
+            };
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf);
+            let resp = br#"{"jsonrpc":"2.0","id":1,"result":{"capabilities":["ai"]}}"#;
+            let _ = stream.write_all(resp);
+            let _ = stream.write_all(b"\n");
+        });
+        ready_rx.recv().expect("wait for bind");
+        let result = AISuggestionManager::probe_ai_capability(&sock_path).await;
+        assert!(result, "mock returning ai capability should be detected");
+        let _ = server.join();
+    }
+
+    #[tokio::test]
+    async fn test_probe_ai_capability_non_ai_returns_false() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("non_ai.sock");
+        let sock_for_thread = sock_path.clone();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+        let server = std::thread::spawn(move || {
+            let listener = std::os::unix::net::UnixListener::bind(&sock_for_thread).expect("bind");
+            ready_tx.send(()).expect("signal");
+            let Ok((mut stream, _)) = listener.accept() else {
+                return;
+            };
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf);
+            let resp = br#"{"jsonrpc":"2.0","id":1,"result":{"capabilities":["storage"]}}"#;
+            let _ = stream.write_all(resp);
+            let _ = stream.write_all(b"\n");
+        });
+        ready_rx.recv().expect("wait for bind");
+        let result = AISuggestionManager::probe_ai_capability(&sock_path).await;
+        assert!(!result, "non-AI capability should not match");
+        let _ = server.join();
+    }
+
+    #[tokio::test]
+    async fn test_request_suggestions_with_ai_provider_set() {
+        let mut mgr = AISuggestionManager::new("fam1".to_string());
+        mgr.ai_provider_socket = Some(PathBuf::from("/tmp/biomeos-ui-test-ai.sock"));
+        let ctx = SuggestionContext {
+            assignments: std::collections::HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = mgr.request_suggestions(ctx).await.expect("suggestions");
+        assert!(suggestions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_send_feedback_with_ai_provider_socket() {
+        let mut mgr = AISuggestionManager::new("fam1".to_string());
+        mgr.ai_provider_socket = Some(PathBuf::from("/tmp/biomeos-ui-test-ai.sock"));
+        mgr.send_feedback("any", SuggestionFeedback::Accepted)
+            .await
+            .expect("feedback");
     }
 }

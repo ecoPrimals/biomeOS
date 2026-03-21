@@ -409,7 +409,60 @@ impl ManifestAnalyzer {
 )]
 mod tests {
     use super::*;
+    use biomeos_types::manifest::service::{
+        DependencyCondition, ImagePullPolicy, ImageSpec, PortProtocol, PortSpec, RestartPolicy,
+        ServiceDependency, ServiceMetadata, ServiceSpec,
+    };
+    use biomeos_types::primal::PrimalCapability;
     use tempfile::TempDir;
+
+    fn sample_service_spec(name: &str, empty_name: bool, port: u16) -> ServiceSpec {
+        ServiceSpec {
+            metadata: ServiceMetadata {
+                name: if empty_name {
+                    String::new()
+                } else {
+                    name.to_string()
+                },
+                description: None,
+                version: "1".to_string(),
+                labels: std::collections::HashMap::new(),
+                annotations: std::collections::HashMap::new(),
+                primal_type: None,
+                capabilities: vec![PrimalCapability::new("compute", "gpu", "1.0")],
+            },
+            image: ImageSpec::Container {
+                name: "img".to_string(),
+                tag: "t".to_string(),
+                registry: None,
+                pull_policy: ImagePullPolicy::IfNotPresent,
+                pull_secrets: vec![],
+            },
+            ports: vec![PortSpec {
+                name: "http".to_string(),
+                port,
+                target_port: None,
+                protocol: PortProtocol::Tcp,
+                expose: true,
+                load_balancer: None,
+                health_check: None,
+            }],
+            environment: std::collections::HashMap::new(),
+            volumes: vec![],
+            resources: None,
+            health_checks: vec![],
+            depends_on: vec![ServiceDependency {
+                service: "other".to_string(),
+                condition: DependencyCondition::ServiceStarted,
+                restart: false,
+            }],
+            config: std::collections::HashMap::new(),
+            scaling: None,
+            security: Some(serde_json::json!({ "level": "strict" })),
+            restart_policy: RestartPolicy::Always,
+            deployment: None,
+        }
+    }
 
     #[test]
     fn test_manifest_validation_success() {
@@ -569,5 +622,46 @@ mod tests {
             "/nonexistent/readonly/path/manifest.yaml",
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validation_service_metadata_empty_name_fails() {
+        let mut m = BiomeManifest::default();
+        m.services.insert(
+            "svc".to_string(),
+            sample_service_spec("ignored", true, 8080),
+        );
+        let err = BiomeManifestProcessor::validate(&m).unwrap_err();
+        assert!(err.to_string().contains("svc"));
+    }
+
+    #[test]
+    fn test_validation_service_port_zero_fails() {
+        let mut m = BiomeManifest::default();
+        m.services
+            .insert("web".to_string(), sample_service_spec("web", false, 0));
+        assert!(BiomeManifestProcessor::validate(&m).is_err());
+    }
+
+    #[test]
+    fn test_manifest_analyzer_ports_caps_security_deps() {
+        let cap = PrimalCapability::new("compute", "gpu", "1.0");
+        let cap_dbg = format!("{cap:?}");
+        let mut m = BiomeManifest::default();
+        m.services
+            .insert("api".to_string(), sample_service_spec("api", false, 8443));
+
+        let ports = ManifestAnalyzer::get_exposed_ports(&m);
+        assert_eq!(ports, vec![8443]);
+        let caps = ManifestAnalyzer::get_manifest_capabilities(&m);
+        assert!(caps.iter().any(|c| c.contains("compute")));
+        assert!(ManifestAnalyzer::has_security_requirements(&m));
+        assert!(ManifestAnalyzer::has_security_policies(&m));
+
+        let names = ManifestAnalyzer::get_services_with_capabilities(&m, &[cap_dbg]);
+        assert_eq!(names, vec!["api".to_string()]);
+
+        let g = ManifestAnalyzer::get_dependency_graph(&m);
+        assert_eq!(g.get("api").cloned().unwrap(), vec!["other".to_string()]);
     }
 }

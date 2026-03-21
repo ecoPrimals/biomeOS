@@ -2,6 +2,64 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.62 (2026-03-21) — Coverage Target: All Three Metrics Above 90%
+
+### Coverage Push
+- 80+ new tests across 15 files spanning 8 crates
+- All three llvm-cov metrics now above 90%: 90.28% region / 91.11% function / 90.02% line
+- neural-api-client-sync: full socket round-trip + resolve_socket_with tiers (87.64% → 98.09% line)
+- model_cache: show_status_with mesh/HF branches, resolve_model_with, import_huggingface_with
+- checks_config: check_binary_health_inner extraction + error paths
+- verify_lineage: missing path, invalid UTF-8, empty primals, warning loop
+- XR capabilities: haptic_feedback, motion_capture, xr_rendering — discovery, calibration, sessions
+- action_handler: assignment fallback, refresh sources, Squirrel accept/dismiss
+- device_management: human_size, statvfs, validate_niche, resolve_provider
+- suggestions/manager: probe_ai_capability mock socket tests
+- rendezvous, beacon_genetics, manifest, forwarding: pure logic branch tests
+
+### Env Var Race Fixes
+- `discover_unix_sockets` refactored to `discover_unix_sockets_in(path)` — test no longer depends on XDG_RUNTIME_DIR
+- Flaky AI provider tests replaced with deterministic mock-socket tests
+- `biomeos-spore::incubation` test identified as pre-existing env race (passes in isolation)
+
+### Quality Gates
+- Tests: ~5,050 passing, 0 deterministic failures, ~83 ignored
+- Coverage: 90.28% region / 91.11% function / 90.02% line (llvm-cov)
+- Clippy: 0 warnings (pedantic+nursery)
+- Format: clean
+- Workspace crates: 25 (24 members + root)
+- Files >1000 LOC: 0
+
+## v2.61 (2026-03-21) — Deep Audit Execution
+
+### Deprecated Dependency Evolution
+- `serde_yaml` → `serde_yml` via Cargo package rename (9 Cargo.toml files, zero source changes)
+
+### Smart Refactoring (3 files >1000 LOC)
+- `metrics.rs` (1056 lines) → `metrics/mod.rs` (509) + `metrics/tests.rs` (548)
+- `lib.rs` (1055 lines) → `lib.rs` (424) + `lib_tests.rs` (596)
+- `websocket.rs` (1038 lines) → `websocket.rs` (411) + `websocket_tests.rs` (673)
+
+### Federation Hardening
+- `query_primal_info`: flush + shutdown + BufReader (fixes flaky mock test)
+- `handle_websocket` decomposed via `dispatch_ws_method` (eliminates `too_many_lines`)
+- `create_app_with_transport` decomposed into `register_api_routes` + `apply_security_headers`
+
+### Zero-Copy Improvements
+- WebSocket subscription IDs → `Arc<str>`, filters → `Arc<SubscriptionFilter>`
+
+### Cleanup
+- Unused imports cleaned (verify_lineage.rs)
+- `stable_sort_primitive` lint fixed (discovery/tests.rs)
+- unix_socket_client tests hardened (expect → unwrap under `#[expect]`)
+- realtime_tests.rs Mutex drop ordering fixed
+
+### Quality Gates
+- Tests: ~5,050 passing, 0 failures
+- Coverage: 90.01% region / 90.96% function / 89.78% line (llvm-cov)
+- Clippy: 0 warnings
+- Format: clean
+
 ## v2.58 (2026-03-20) — Deep Resilience + Test Extraction
 
 ### Bugs Fixed

@@ -417,6 +417,34 @@ impl DeviceManagementProvider {
 mod tests {
     use super::*;
     use crate::capabilities::device_management::{templates, types};
+    use biomeos_test_utils::TestEnvGuard;
+    use biomeos_types::CapabilityTaxonomy;
+    use biomeos_types::primal_names;
+    use serial_test::serial;
+
+    #[test]
+    #[serial]
+    fn test_resolve_provider_registry_from_env() {
+        let _g = TestEnvGuard::set("BIOMEOS_REGISTRY_PROVIDER", "custom-registry");
+        let s = resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
+        assert_eq!(s, "custom-registry");
+    }
+
+    #[test]
+    #[serial]
+    fn test_resolve_provider_registry_default_without_env() {
+        let _g = TestEnvGuard::remove("BIOMEOS_REGISTRY_PROVIDER");
+        let s = resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
+        assert_eq!(s, primal_names::SONGBIRD);
+    }
+
+    #[test]
+    #[serial]
+    fn test_resolve_provider_storage_default_without_env() {
+        let _g = TestEnvGuard::remove("BIOMEOS_STORAGE_PROVIDER");
+        let s = resolve_provider("BIOMEOS_STORAGE_PROVIDER", &CapabilityTaxonomy::DataStorage);
+        assert_eq!(s, primal_names::NESTGATE);
+    }
 
     #[test]
     fn test_provider_cache_default() {
@@ -562,5 +590,73 @@ mod tests {
         let template = templates::tower_template();
         let vr = provider.validate_niche(&template).await.unwrap();
         assert!(vr.errors.iter().all(|e| !e.is_empty()));
+    }
+
+    #[tokio::test]
+    async fn test_validate_niche_minimal_template_valid() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let template = types::NicheTemplate {
+            id: "minimal".to_string(),
+            name: "Minimal".to_string(),
+            description: "test".to_string(),
+            required_primals: vec![],
+            optional_primals: vec![],
+            estimated_resources: types::ResourceRequirements {
+                cpu_cores: 1,
+                memory_mb: 1,
+                storage_gb: 1,
+                gpu_required: false,
+                network_bandwidth_mbps: 1,
+            },
+            metadata: serde_json::json!({}),
+        };
+        let vr = provider.validate_niche(&template).await.expect("validate");
+        assert!(vr.valid, "expected valid: {:?}", vr.errors);
+        assert!(vr.errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_validate_niche_optional_role_warning_only() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let mut template = types::NicheTemplate {
+            id: "minimal-opt".to_string(),
+            name: "Minimal".to_string(),
+            description: "test".to_string(),
+            required_primals: vec![],
+            optional_primals: vec![types::PrimalRole {
+                role: "ghost".to_string(),
+                capabilities: vec!["no_such_capability_xyz".to_string()],
+                min_health: 0.5,
+                metadata: serde_json::json!({}),
+            }],
+            estimated_resources: types::ResourceRequirements {
+                cpu_cores: 1,
+                memory_mb: 1,
+                storage_gb: 1,
+                gpu_required: false,
+                network_bandwidth_mbps: 1,
+            },
+            metadata: serde_json::json!({}),
+        };
+        let vr = provider.validate_niche(&template).await.expect("validate");
+        assert!(vr.valid);
+        assert!(
+            vr.warnings.iter().any(|w| w.contains("optional")),
+            "expected optional warning: {:?}",
+            vr.warnings
+        );
+
+        template.optional_primals.clear();
+        let vr2 = provider.validate_niche(&template).await.expect("validate");
+        assert!(vr2.warnings.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_niche_templates_updates_cache() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let _ = provider.get_niche_templates().await.unwrap();
+        let cache = provider.cache.read().await;
+        assert!(cache.last_update.is_some());
+        assert!(!cache.templates.is_empty());
     }
 }

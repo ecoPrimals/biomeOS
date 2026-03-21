@@ -436,13 +436,9 @@ async fn test_discover_includes_primal_from_env_endpoint() {
 
 #[tokio::test]
 async fn test_discover_unix_socket_mock_primal_jsonrpc() {
-    let _lock = discovery_env_lock().lock().await;
     let dir = tempfile::tempdir().expect("tempdir");
-    let xdg = dir.path().join("runtime");
-    let runtime = xdg.join(biomeos_types::primal_names::BIOMEOS);
+    let runtime = dir.path().join("sockets");
     std::fs::create_dir_all(&runtime).expect("mkdir");
-    let _xdg =
-        biomeos_test_utils::TestEnvGuard::set("XDG_RUNTIME_DIR", xdg.to_string_lossy().as_ref());
 
     let sock_path = runtime.join("mockprimal.sock");
     let listener = tokio::net::UnixListener::bind(&sock_path).expect("bind mock primal");
@@ -473,7 +469,9 @@ async fn test_discover_unix_socket_mock_primal_jsonrpc() {
     });
 
     let mut pd = PrimalDiscovery::new();
-    pd.discover().await.expect("discover");
+    pd.discover_unix_sockets_in(&runtime)
+        .await
+        .expect("discover");
 
     mock_handle.await.expect("mock server completed");
 

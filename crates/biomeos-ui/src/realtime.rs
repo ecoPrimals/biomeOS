@@ -395,6 +395,15 @@ impl RealTimeEventHandler {
         }
     }
 
+    /// Test-only: build a handler from an existing receiver (e.g. after dropping the sender).
+    #[cfg(test)]
+    pub(crate) fn from_receiver_for_test(event_rx: broadcast::Receiver<RealTimeEvent>) -> Self {
+        Self {
+            _subscriber: Arc::new(RealTimeEventSubscriber::new("tests".to_string())),
+            event_rx,
+        }
+    }
+
     /// Start processing events
     ///
     /// This runs indefinitely and should be spawned in a task

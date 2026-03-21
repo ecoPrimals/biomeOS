@@ -275,11 +275,7 @@ mod tests {
     )]
 
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
-    use serde_json::json;
-    use serial_test::serial;
     use std::io::Write;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     #[test]
     fn test_lineage_verification_construction() {
@@ -608,5 +604,85 @@ node_id = "test-node-456"
         assert!(debug_str.contains("LineageVerification"));
         assert!(debug_str.contains("valid"));
         assert!(debug_str.contains("d1"));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_path_not_found_returns_error() {
+        let path = PathBuf::from("/nonexistent/verify_lineage_path_xyz_999");
+        let result = verify_lineage(&path, false).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_primals_file_not_directory() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let primals_path = dir.path().join("primals");
+        std::fs::write(&primals_path, b"not-a-directory").expect("create primals file");
+
+        let v = verify_lineage(&dir.path().to_path_buf(), false)
+            .await
+            .expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(!v.details.iter().any(|d| d.contains("Primals directory")));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_manifest_invalid_utf8_skips_parse() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, [0xFFu8, 0xFE, 0xFD]).expect("write invalid utf-8");
+
+        let v = verify_lineage(&dir.path().to_path_buf(), false)
+            .await
+            .expect("verify_lineage should succeed");
+        assert!(v.details.contains(&"Manifest found".to_string()));
+        assert_eq!(v.family_id, None);
+        assert_eq!(v.node_id, None);
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_empty_primals_directory() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        std::fs::create_dir(dir.path().join("primals")).expect("create empty primals");
+
+        let v = verify_lineage(&dir.path().to_path_buf(), false)
+            .await
+            .expect("verify_lineage should succeed");
+        assert!(
+            v.details
+                .iter()
+                .any(|d| d == "Primals directory: 0 binaries"),
+            "Expected zero-binary primals detail, got: {:?}",
+            v.details
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_success_with_warnings_empty_directory() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let result = run(dir.path().to_path_buf(), false).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_single_file_unknown_still_ok() {
+        let file = tempfile::NamedTempFile::new().expect("create temp file");
+        let mut f = file.reopen().expect("reopen");
+        f.write_all(&[0u8; 9]).expect("write 9 bytes");
+        drop(f);
+
+        let result = run(file.path().to_path_buf(), false).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_passes_without_family_or_node_ids() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let seed_path = dir.path().join(".family.seed");
+        std::fs::write(&seed_path, [0u8; 64]).expect("write seed");
+        std::fs::create_dir(dir.path().join("primals")).expect("create primals");
+
+        let result = run(dir.path().to_path_buf(), false).await;
+        assert!(result.is_ok());
     }
 }

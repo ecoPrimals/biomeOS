@@ -147,8 +147,13 @@ mod tests {
 
     #[test]
     fn test_mutex_prevents_poisoning() {
-        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
-        drop(_lock);
-        let _lock2 = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        let lock = ENV_MUTEX
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        drop(lock);
+        let lock2 = ENV_MUTEX
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        drop(lock2);
     }
 }

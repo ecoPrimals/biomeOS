@@ -1,7 +1,7 @@
 # biomeOS Scripts
 
 **Status**: Most scripts are deprecated — deployment is via `biomeos nucleus start` (Pure Rust)  
-**Updated**: March 18, 2026
+**Updated**: March 21, 2026
 
 ---
 
@@ -18,8 +18,8 @@
 
 | Former Script | Replacement |
 |----------------|-------------|
-| `start_nucleus.sh` | `biomeos nucleus start` — archived to `archive/scripts-feb13-2026/` |
-| `build-genome.sh` | `biomeos genome build` — archived to `ecoPrimals/archive/` |
+| `start_nucleus.sh` | `biomeos nucleus start` (shell script removed from tree) |
+| `build-genome.sh` | `biomeos genome build` (shell script removed from tree) |
 | `stop_ecosystem.sh` | `biomeos nucleus stop` / `LifecycleManager::shutdown_all()` |
 | `deploy-*-lineage.sh` | Neural API graph-based deployment (`graphs/*.toml`) |
 | `harvest-primals.sh` | `tools/harvest` (biomeos-harvest binary) — `cargo run -p biomeos-harvest` |

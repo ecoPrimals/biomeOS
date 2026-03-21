@@ -208,6 +208,8 @@ impl MotionCaptureAdapter {
 )]
 mod tests {
     use super::*;
+    use biomeos_test_utils::ready_signal;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     #[test]
     fn test_adapter_defaults() {
@@ -420,5 +422,236 @@ mod tests {
             crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
         let result = adapter.stop_tracking(&client).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_start_tracking_success() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(
+                    req.get("method").and_then(|m| m.as_str()),
+                    Some("xr.start_tracking")
+                );
+                let params = req.get("params").expect("params");
+                assert_eq!(
+                    params.get("backend").and_then(|v| v.as_str()),
+                    Some("openxr")
+                );
+                assert!(params.get("tracked_devices").is_some());
+                let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut adapter = MotionCaptureAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        adapter.start_tracking(&client).await.expect("start");
+        assert!(adapter.is_tracking_active());
+        assert_eq!(adapter.frame_count(), 0);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_poll_frame_success_increments_count() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let frame = TrackingFrame {
+            frame: 7,
+            timestamp_us: 42,
+            devices: std::collections::HashMap::new(),
+            confidence: 0.88,
+        };
+        let frame_val = serde_json::to_value(&frame).expect("frame json");
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(
+                    req.get("method").and_then(|m| m.as_str()),
+                    Some("xr.get_tracking_frame")
+                );
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": frame_val,
+                    "id": req["id"]
+                });
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut adapter = MotionCaptureAdapter::with_defaults();
+        adapter.set_tracking_active_for_test(true);
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let out = adapter.poll_frame(&client).await.expect("poll");
+        let f = out.expect("some frame");
+        assert_eq!(f.frame, 7);
+        assert_eq!(adapter.frame_count(), 1);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_poll_frame_invalid_result_returns_err() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": "bad",
+                    "id": req["id"]
+                });
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut adapter = MotionCaptureAdapter::with_defaults();
+        adapter.set_tracking_active_for_test(true);
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let err = adapter.poll_frame(&client).await.unwrap_err();
+        assert!(!err.to_string().is_empty());
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_calibrate_success() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let cal = CalibrationResult {
+            success: true,
+            residual_mm: 0.12,
+            samples: 64,
+            message: "ok".to_string(),
+        };
+        let cal_val = serde_json::to_value(&cal).expect("cal json");
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                assert_eq!(
+                    req.get("method").and_then(|m| m.as_str()),
+                    Some("xr.calibrate_tracking")
+                );
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": cal_val,
+                    "id": req["id"]
+                });
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let adapter = MotionCaptureAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let out = adapter.calibrate(&client).await.expect("calibrate");
+        assert!(out.success);
+        assert!((out.residual_mm - 0.12).abs() < 1e-9);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_calibrate_failed_branch_logs_path() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let cal = CalibrationResult {
+            success: false,
+            residual_mm: 9.0,
+            samples: 10,
+            message: "fail".to_string(),
+        };
+        let cal_val = serde_json::to_value(&cal).expect("cal json");
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.expect("read");
+                let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": cal_val,
+                    "id": req["id"]
+                });
+                let line = format!("{resp}\n");
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let adapter = MotionCaptureAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let out = adapter.calibrate(&client).await.expect("calibrate");
+        assert!(!out.success);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_stop_tracking_success_after_start() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("petaltongue.sock");
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            ready_tx.signal();
+            for expect_method in ["xr.start_tracking", "xr.stop_tracking"] {
+                if let Ok((mut stream, _)) = listener.accept().await {
+                    let mut buf = vec![0u8; 8192];
+                    let n = stream.read(&mut buf).await.expect("read");
+                    let req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                    assert_eq!(
+                        req.get("method").and_then(|m| m.as_str()),
+                        Some(expect_method)
+                    );
+                    let resp = serde_json::json!({"jsonrpc":"2.0","result":{},"id":req["id"]});
+                    let line = format!("{resp}\n");
+                    stream.write_all(line.as_bytes()).await.expect("write");
+                    stream.flush().await.expect("flush");
+                }
+            }
+        });
+        ready_rx.wait().await.unwrap();
+        let mut adapter = MotionCaptureAdapter::with_defaults();
+        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        adapter.start_tracking(&client).await.expect("start");
+        assert!(adapter.is_tracking_active());
+        adapter.stop_tracking(&client).await.expect("stop");
+        assert!(!adapter.is_tracking_active());
+        server.abort();
     }
 }

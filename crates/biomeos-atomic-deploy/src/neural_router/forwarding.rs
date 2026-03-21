@@ -294,6 +294,7 @@ impl NeuralRouter {
 mod tests {
     use super::*;
     use crate::living_graph::{LivingGraph, PrimalProtocolState, ProtocolMode};
+    use base64::Engine;
     use biomeos_types::tarpc_types::ProtocolPreference;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -304,6 +305,42 @@ mod tests {
 
     fn create_router(family_id: &str) -> NeuralRouter {
         NeuralRouter::new(family_id)
+    }
+
+    #[test]
+    fn test_parse_security_bytes_param_base64_roundtrip() {
+        let params = serde_json::json!({
+            "data": base64::engine::general_purpose::STANDARD.encode(b"hello-bytes"),
+        });
+        let out = parse_security_bytes_param(&params, "data").expect("decode");
+        assert_eq!(out.as_ref(), b"hello-bytes");
+    }
+
+    #[test]
+    fn test_parse_security_bytes_param_byte_array() {
+        let params = serde_json::json!({ "data": [1u64, 2, 3] });
+        let out = parse_security_bytes_param(&params, "data").expect("bytes");
+        assert_eq!(out.as_ref(), &[1u8, 2, 3]);
+    }
+
+    #[test]
+    fn test_parse_security_bytes_param_missing_key() {
+        let err = parse_security_bytes_param(&serde_json::json!({}), "data").unwrap_err();
+        assert!(err.contains("missing param"));
+    }
+
+    #[test]
+    fn test_parse_security_bytes_param_invalid_base64() {
+        let params = serde_json::json!({ "data": "@@@not-base64@@@" });
+        let err = parse_security_bytes_param(&params, "data").unwrap_err();
+        assert!(!err.is_empty());
+    }
+
+    #[test]
+    fn test_parse_security_bytes_param_wrong_json_type() {
+        let params = serde_json::json!({ "data": 42 });
+        let err = parse_security_bytes_param(&params, "data").unwrap_err();
+        assert!(err.contains("base64 string or byte array"));
     }
 
     // --- should_use_tarpc tests ---

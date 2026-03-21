@@ -11,6 +11,8 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
+biomeos-test-utils = { path = "../biomeos-test-utils" }
+serial_test = "3.2"
 tempfile = "3.8"
 
 [lints]
