@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 //
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 // Licensed under the Affero General Public License v3.0.
 // See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -85,5 +85,54 @@ RUST_LOG = "info"
             node_id = self.config.node_id,
             family_id = self.config.family_id,
         )
+    }
+}
+
+#[cfg(test)]
+mod config_tests {
+    use super::ConfigOps;
+    use crate::spore::core::spore_for_tests;
+    use crate::spore_types::SporeType;
+    use crate::SporeConfig;
+    use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_create_tower_config_writes_tower_toml() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let spore = spore_for_tests(
+            dir.path().to_path_buf(),
+            SporeConfig {
+                label: "cfg-test".to_string(),
+                node_id: "node-cfg".to_string(),
+                family_id: "family-cfg".to_string(),
+                spore_type: SporeType::Cold,
+                plasmid_bin_dir: None,
+            },
+        );
+        spore.create_tower_config().await.expect("write tower.toml");
+        let path = dir.path().join("tower.toml");
+        assert!(path.exists(), "tower.toml should exist");
+        let content = std::fs::read_to_string(&path).expect("read");
+        assert!(content.contains("node-cfg"));
+        assert!(content.contains("family-cfg"));
+    }
+
+    #[test]
+    fn test_generate_tower_toml_substitutes_label_node_family() {
+        let spore = spore_for_tests(
+            PathBuf::from("/tmp/spore-test-root"),
+            SporeConfig {
+                label: "spore-lbl".to_string(),
+                node_id: "nid-99".to_string(),
+                family_id: "fam-88".to_string(),
+                spore_type: SporeType::Live,
+                plasmid_bin_dir: None,
+            },
+        );
+        let s = spore.generate_tower_toml();
+        assert!(s.contains("spore-lbl"), "{s}");
+        assert!(s.contains("nid-99"), "{s}");
+        assert!(s.contains("fam-88"), "{s}");
+        assert!(s.contains("BEARDOG_NODE_ID = \"nid-99\""), "{s}");
     }
 }

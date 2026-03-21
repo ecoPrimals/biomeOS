@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 //
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 // Licensed under the Affero General Public License v3.0.
 // See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -240,6 +240,12 @@ impl Spore {
         }
         None
     }
+}
+
+/// Test-only constructor for [`Spore`] (crate tests for [`super::config::ConfigOps`]).
+#[cfg(test)]
+pub(crate) fn spore_for_tests(root_path: PathBuf, config: SporeConfig) -> Spore {
+    Spore { root_path, config }
 }
 
 #[cfg(test)]

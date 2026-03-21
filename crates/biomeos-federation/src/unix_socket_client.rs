@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Unix socket JSON-RPC client for BearDog
 //!
@@ -101,14 +101,18 @@ impl UnixSocketClient {
     }
 }
 
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
 #[cfg(test)]
 mod tests {
+    #![expect(
+        clippy::unwrap_used,
+        reason = "test assertions use unwrap for clarity"
+    )]
+
     use super::*;
+    use biomeos_types::{JsonRpcResponse, JsonRpcVersion};
     use serde_json::json;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
 
     #[test]
     fn test_json_rpc_request_creation() {
@@ -136,5 +140,126 @@ mod tests {
     fn test_socket_availability() {
         let client = UnixSocketClient::new("/tmp/nonexistent.sock");
         assert!(!client.is_available());
+    }
+
+    #[tokio::test]
+    async fn test_call_roundtrip_jsonrpc_success() {
+        let dir = tempfile::tempdir().unwrap();
+        let sock = dir.path().join("fed-rpc.sock");
+        let listener = UnixListener::bind(&sock).unwrap();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut line = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut line)
+                    .await
+                    .unwrap();
+                let req: serde_json::Value = serde_json::from_str(line.trim()).unwrap();
+                let id = req.get("id").cloned().unwrap_or(json!(null));
+                let resp = JsonRpcResponse::success(id, json!({"pong": true}));
+                let body = serde_json::to_string(&resp).unwrap();
+                stream.write_all(format!("{body}\n").as_bytes()).await.unwrap();
+            }
+        });
+
+        let client = UnixSocketClient::new(&sock);
+        let req = JsonRpcRequest::new("ping", json!({}));
+        let out = client.call(req).await.expect("rpc call");
+        assert_eq!(out.result.expect("result")["pong"], true);
+    }
+
+    #[tokio::test]
+    async fn test_call_returns_error_when_jsonrpc_error_field_set() {
+        let dir = tempfile::tempdir().unwrap();
+        let sock = dir.path().join("fed-rpc-err.sock");
+        let listener = UnixListener::bind(&sock).unwrap();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut line = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut line)
+                    .await
+                    .unwrap();
+                let req: serde_json::Value = serde_json::from_str(line.trim()).unwrap();
+                let id = req.get("id").cloned().unwrap_or(json!(null));
+                let err = biomeos_types::JsonRpcError::method_not_found();
+                let resp = JsonRpcResponse::error(id, err);
+                let body = serde_json::to_string(&resp).unwrap();
+                stream.write_all(format!("{body}\n").as_bytes()).await.unwrap();
+            }
+        });
+
+        let client = UnixSocketClient::new(&sock);
+        let req = JsonRpcRequest::new("missing", json!({}));
+        let err = client.call(req).await.unwrap_err();
+        assert!(err.to_string().contains("JSON-RPC error"));
+    }
+
+    #[tokio::test]
+    async fn test_call_method_returns_result_value() {
+        let dir = tempfile::tempdir().unwrap();
+        let sock = dir.path().join("fed-method.sock");
+        let listener = UnixListener::bind(&sock).unwrap();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut line = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut line)
+                    .await
+                    .unwrap();
+                let req: serde_json::Value = serde_json::from_str(line.trim()).unwrap();
+                let id = req.get("id").cloned().unwrap_or(json!(null));
+                let resp = JsonRpcResponse::success(id, json!({"answer": 42}));
+                let body = serde_json::to_string(&resp).unwrap();
+                stream.write_all(format!("{body}\n").as_bytes()).await.unwrap();
+            }
+        });
+
+        let client = UnixSocketClient::new(&sock);
+        let v = client
+            .call_method("q", json!({}))
+            .await
+            .expect("call_method");
+        assert_eq!(v["answer"], 42);
+    }
+
+    #[tokio::test]
+    async fn test_call_method_err_when_result_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let sock = dir.path().join("fed-noresult.sock");
+        let listener = UnixListener::bind(&sock).unwrap();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut line = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut line)
+                    .await
+                    .unwrap();
+                let req: serde_json::Value = serde_json::from_str(line.trim()).unwrap();
+                let id = req.get("id").cloned().unwrap_or(json!(null));
+                let resp = JsonRpcResponse {
+                    jsonrpc: JsonRpcVersion,
+                    result: None,
+                    error: None,
+                    id,
+                };
+                let body = serde_json::to_string(&resp).unwrap();
+                stream.write_all(format!("{body}\n").as_bytes()).await.unwrap();
+            }
+        });
+
+        let client = UnixSocketClient::new(&sock);
+        let err = client
+            .call_method("x", json!({}))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("missing result"));
+    }
+
+    #[tokio::test]
+    async fn test_call_fails_when_socket_missing() {
+        let client = UnixSocketClient::new("/tmp/nonexistent-fed-client.sock");
+        let req = JsonRpcRequest::new("m", json!({}));
+        assert!(client.call(req).await.is_err());
     }
 }

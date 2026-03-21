@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Metrics collection and storage for graph execution (ecoBin compliant).
 //!
@@ -515,6 +515,7 @@ impl MetricsCollector {
     reason = "test assertions use unwrap/expect for clarity"
 )]
 mod tests {
+    use super::prefix_end;
     use super::*;
     use tempfile::tempdir;
 
@@ -833,5 +834,226 @@ mod tests {
             .await
             .unwrap();
         assert!(v.is_empty());
+    }
+
+    #[test]
+    fn test_prefix_end_colon_suffix() {
+        assert_eq!(prefix_end("exec:graph:"), "exec:graph;");
+    }
+
+    #[test]
+    fn test_prefix_end_empty_string() {
+        assert_eq!(prefix_end(""), "");
+    }
+
+    #[test]
+    fn test_prefix_end_unicode_max_scalar() {
+        // Last scalar U+10FFFF: `last + 1` is not a valid `char`; code uses `unwrap_or(U+10FFFF)`.
+        let input = "a\u{10ffff}";
+        let p = prefix_end(input);
+        assert_eq!(p, input);
+    }
+
+    #[tokio::test]
+    async fn test_get_recent_executions_limit_zero_truncates_to_empty() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_recent_limit0.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        let result = GraphResult {
+            success: true,
+            node_results: HashMap::default(),
+            errors: vec![],
+            duration_ms: 1,
+        };
+        collector
+            .record_execution("lim0", &result, 10, Some(1))
+            .await
+            .unwrap();
+
+        let recent = collector.get_recent_executions("lim0", 0).await.unwrap();
+        assert!(recent.is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn test_graph_metrics_last_executed_at_is_most_recent() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_last_exec.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        for id in [1_i64, 2, 3] {
+            let result = GraphResult {
+                success: true,
+                node_results: HashMap::default(),
+                errors: vec![],
+                duration_ms: 5,
+            };
+            collector
+                .record_execution("last_at", &result, 5, Some(id))
+                .await
+                .unwrap();
+            tokio::time::advance(std::time::Duration::from_secs(1)).await;
+        }
+
+        let m = collector
+            .get_graph_metrics("last_at")
+            .await
+            .unwrap()
+            .expect("metrics");
+        assert_eq!(m.total_executions, 3);
+
+        let newest = collector
+            .get_recent_executions("last_at", 1)
+            .await
+            .unwrap();
+        let latest_record = newest.first().expect("one");
+        assert_eq!(latest_record.id, 3);
+        assert_eq!(m.last_executed_at, latest_record.executed_at);
+    }
+
+    #[tokio::test]
+    async fn test_graph_metrics_single_run_min_equals_max_duration() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_min_eq_max.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        let result = GraphResult {
+            success: true,
+            node_results: HashMap::default(),
+            errors: vec![],
+            duration_ms: 42,
+        };
+        collector
+            .record_execution("eq", &result, 42, Some(100))
+            .await
+            .unwrap();
+
+        let m = collector
+            .get_graph_metrics("eq")
+            .await
+            .unwrap()
+            .expect("metrics");
+        assert_eq!(m.min_duration_ms, 42);
+        assert_eq!(m.max_duration_ms, 42);
+        assert!((m.avg_duration_ms - 42.0).abs() < f64::EPSILON);
+    }
+
+    #[tokio::test]
+    async fn test_graph_metrics_all_failures_zero_success_rate() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_all_fail.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        for id in [1_i64, 2] {
+            let result = GraphResult {
+                success: false,
+                node_results: HashMap::default(),
+                errors: vec!["e".to_string()],
+                duration_ms: 10,
+            };
+            collector
+                .record_execution("all_fail", &result, 10, Some(id))
+                .await
+                .unwrap();
+        }
+
+        let m = collector
+            .get_graph_metrics("all_fail")
+            .await
+            .unwrap()
+            .expect("metrics");
+        assert_eq!(m.successful_executions, 0);
+        assert_eq!(m.failed_executions, 2);
+        assert!((m.success_rate - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[tokio::test]
+    async fn test_record_execution_metadata_node_results_and_errors_populated() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metadata_patterns.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        let mut node_results = HashMap::new();
+        node_results.insert(
+            "n1".to_string(),
+            serde_json::json!({ "out": [1, 2, 3], "nested": { "k": "v" } }),
+        );
+        node_results.insert("n2".to_string(), serde_json::json!("plain"));
+
+        let result = GraphResult {
+            success: false,
+            node_results,
+            errors: vec!["root".to_string(), "detail".to_string()],
+            duration_ms: 99,
+        };
+        collector
+            .record_execution("meta_pat", &result, 200, Some(7001))
+            .await
+            .unwrap();
+
+        let recent = collector
+            .get_recent_executions("meta_pat", 1)
+            .await
+            .unwrap();
+        let rec = recent.first().expect("one record");
+        assert!(rec.metadata.contains("n1"));
+        assert!(rec.metadata.contains("nested"));
+        assert!(!rec.success);
+        assert_eq!(rec.duration_ms, 200);
+    }
+
+    #[tokio::test]
+    async fn test_record_node_execution_colon_in_graph_and_node_ids() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("node_colon.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        let params = NodeExecutionParams {
+            execution_id: 9,
+            graph_name: "ns:graph:name",
+            node_id: "node:with:colons",
+            primal_id: "p",
+            operation: "op",
+            success: true,
+            duration_ms: 7,
+            error: None,
+        };
+        collector.record_node_execution(params).await.unwrap();
+
+        let agg = collector
+            .get_node_metrics("ns:graph:name", "node:with:colons")
+            .await
+            .unwrap()
+            .expect("aggregate");
+        assert_eq!(agg.total_executions, 1);
+        assert_eq!(agg.successful_executions, 1);
+    }
+
+    #[tokio::test]
+    async fn test_record_node_execution_error_field_and_failure() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("node_err_field.redb");
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        let params = NodeExecutionParams {
+            execution_id: 11,
+            graph_name: "ge",
+            node_id: "n_err",
+            primal_id: "primal-x",
+            operation: "invoke",
+            success: false,
+            duration_ms: 3,
+            error: Some("node failed hard"),
+        };
+        collector.record_node_execution(params).await.unwrap();
+
+        let agg = collector
+            .get_node_metrics("ge", "n_err")
+            .await
+            .unwrap()
+            .expect("aggregate");
+        assert_eq!(agg.successful_executions, 0);
+        assert_eq!(agg.total_executions, 1);
+        assert!((agg.success_rate - 0.0).abs() < f64::EPSILON);
     }
 }

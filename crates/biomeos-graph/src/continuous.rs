@@ -538,6 +538,23 @@ mod tests {
         );
     }
 
+    /// When real time far exceeds `max_accumulator`, `skipped > 1.0` and the clock logs a clamp warning.
+    #[tokio::test(start_paused = true)]
+    async fn test_tick_clock_clamp_logs_when_skipping_multiple_ticks() {
+        let config = TickConfig {
+            target_hz: 10.0,
+            max_accumulator_ms: 200.0,
+            budget_warning_ms: 4.0,
+        };
+        let mut clock = TickClock::from_config(&config);
+        tokio::time::advance(Duration::from_millis(800)).await;
+        let ticks = clock.advance();
+        assert!(
+            (1..=2).contains(&ticks),
+            "clamped accumulator should yield 1–2 ticks at 10 Hz, got {ticks}"
+        );
+    }
+
     #[tokio::test(start_paused = true)]
     async fn test_tick_clock_reset_accumulator() {
         let mut clock = TickClock::new(60.0);

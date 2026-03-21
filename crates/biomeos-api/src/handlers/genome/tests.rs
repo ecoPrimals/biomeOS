@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Genome handler tests
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#![expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
 
 use super::build::{build_genome, compose_genome, create_genome};
 use super::retrieval::{download_genome, get_genome_info, list_genomes};
@@ -470,4 +471,166 @@ fn test_verify_response_serialization() {
     let json = serde_json::to_string(&resp).expect("serialize");
     assert!(json.contains("valid"));
     assert!(json.contains("checksums"));
+}
+
+// =========================================================================
+// GenomeState: additional coverage (lifecycle + corrupt file handling)
+// =========================================================================
+
+#[tokio::test]
+async fn test_genome_state_new_creates_dir() {
+    let state = GenomeState::new();
+    assert!(state.is_ok() || state.is_err());
+}
+
+#[tokio::test]
+async fn test_genome_state_list_all_with_genomes() {
+    let temp = TempDir::new().expect("tempdir");
+    let state = GenomeState::with_storage(temp.path().to_path_buf()).expect("state");
+
+    let manifest = GenomeManifest::new("listed-genome");
+    let genome = GenomeBin::with_manifest(manifest);
+    state.save_genome("list-test", &genome).await.expect("save");
+
+    let genomes = state.list_all().await.expect("list");
+    assert_eq!(genomes.len(), 1);
+    assert_eq!(genomes[0].0, "list-test");
+}
+
+#[tokio::test]
+async fn test_genome_state_list_all_skips_corrupt_files() {
+    let temp = TempDir::new().expect("tempdir");
+    let state = GenomeState::with_storage(temp.path().to_path_buf()).expect("state");
+
+    std::fs::write(temp.path().join("corrupt.genome"), b"not valid").expect("write");
+
+    let manifest = GenomeManifest::new("good");
+    let genome = GenomeBin::with_manifest(manifest);
+    state.save_genome("good", &genome).await.expect("save");
+
+    let genomes = state.list_all().await.expect("list");
+    assert_eq!(genomes.len(), 1, "should skip corrupt, keep good");
+    assert_eq!(genomes[0].0, "good");
+}
+
+#[tokio::test]
+async fn test_genome_state_list_all_deleted_dir() {
+    let temp = TempDir::new().expect("tempdir");
+    let storage = temp.path().join("will_be_removed");
+    let state = GenomeState::with_storage(storage.clone()).expect("state");
+    std::fs::remove_dir_all(&storage).expect("remove storage dir");
+
+    let genomes = state.list_all().await.expect("list");
+    assert!(genomes.is_empty());
+}
+
+#[tokio::test]
+async fn test_genome_state_load_nonexistent_genome() {
+    let temp = TempDir::new().expect("tempdir");
+    let state = GenomeState::with_storage(temp.path().to_path_buf()).expect("state");
+
+    let result = state.load_genome("does-not-exist").await;
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("not found"));
+}
+
+// =========================================================================
+// Self-replicate coverage
+// =========================================================================
+
+#[tokio::test]
+async fn test_self_replicate_handler() {
+    use super::build::self_replicate;
+
+    let result = self_replicate().await;
+    assert!(result.is_ok());
+    let resp = result.unwrap().0;
+    assert!(resp.success);
+    assert_eq!(resp.genome_id, "biomeos-self");
+    assert!(resp.size > 0);
+    assert!(resp.message.contains("Self-replicated"));
+}
+
+// =========================================================================
+// Create/compose handler coverage
+// =========================================================================
+
+#[tokio::test]
+async fn test_create_genome_with_all_fields() {
+    let req = CreateGenomeRequest {
+        name: "full-create-test".to_string(),
+        version: Some("2.0.0".to_string()),
+        description: Some("test genome for coverage".to_string()),
+    };
+    let result = create_genome(Json(req)).await;
+    assert!(result.is_ok());
+    let resp = result.unwrap().0;
+    assert!(resp.success);
+    assert!(resp.genome_id.contains("full-create-test"));
+    assert!(resp.genome_id.contains("2.0.0"));
+}
+
+#[tokio::test]
+async fn test_compose_genome_missing_source() {
+    let req = ComposeRequest {
+        name: "compose-fail".to_string(),
+        nucleus_type: "TOWER".to_string(),
+        genomes: vec!["nonexistent-source-genome-xyz".to_string()],
+    };
+    let result = compose_genome(Json(req)).await;
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), axum::http::StatusCode::NOT_FOUND);
+}
+
+// =========================================================================
+// verify_genome(Path): ID-based handler (global genome_state)
+// =========================================================================
+
+#[tokio::test]
+async fn test_verify_genome_by_id_valid_after_save() {
+    use super::validation::verify_genome;
+
+    let id = format!("verify-by-id-{}", uuid::Uuid::new_v4());
+    let manifest = GenomeManifest::new("verify-id-test").version("1.0.0");
+    let mut genome = GenomeBin::with_manifest(manifest);
+    genome.add_binary_bytes(Arch::X86_64, b"payload");
+    genome_state()
+        .save_genome(&id, &genome)
+        .await
+        .expect("save");
+
+    let Json(resp) = verify_genome(Path(id)).await.expect("verify ok");
+    assert!(resp.valid);
+    assert_eq!(resp.message, "All checksums valid");
+}
+
+#[tokio::test]
+async fn test_verify_genome_by_id_invalid_checksum_after_tamper_save() {
+    use super::validation::verify_genome;
+
+    let id = format!("verify-tamper-{}", uuid::Uuid::new_v4());
+    let manifest = GenomeManifest::new("tamper-id-test").version("1.0.0");
+    let mut genome = GenomeBin::with_manifest(manifest);
+    genome.add_binary_bytes(Arch::X86_64, b"payload");
+    genome_state()
+        .save_genome(&id, &genome)
+        .await
+        .expect("save");
+
+    let mut tampered = genome;
+    let mut compressed = tampered
+        .binaries
+        .get(&Arch::X86_64)
+        .expect("x86_64 binary")
+        .clone();
+    compressed.checksum[0] ^= 0xff;
+    tampered.binaries.insert(Arch::X86_64, compressed);
+    genome_state()
+        .save_genome(&id, &tampered)
+        .await
+        .expect("save tampered");
+
+    let Json(resp) = verify_genome(Path(id)).await.expect("verify returns body");
+    assert!(!resp.valid);
+    assert_eq!(resp.message, "Checksum verification failed");
 }

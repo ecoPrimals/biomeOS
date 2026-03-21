@@ -1,4 +1,5 @@
 use super::*;
+use serial_test::serial;
 
 #[test]
 fn test_discovered_primal_serialization() {
@@ -605,4 +606,98 @@ fn test_discovered_primal_empty_capabilities() {
     let json = serde_json::to_string(&primal).expect("serialize");
     assert!(json.contains("empty-caps"));
     assert!(json.contains("\"capabilities\":[]"));
+}
+
+#[test]
+#[serial]
+fn test_probe_live_sockets_with_sock_files_no_runtime() {
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
+
+    let temp = tempfile::tempdir().expect("tempdir");
+    let sock_dir = temp.path();
+
+    std::fs::write(sock_dir.join("beardog-family1.sock"), "").expect("write");
+    std::fs::write(sock_dir.join("songbird-family1.sock"), "").expect("write");
+    std::fs::write(sock_dir.join("not-a-socket.txt"), "").expect("write");
+    std::fs::write(sock_dir.join("another.log"), "").expect("write");
+
+    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", sock_dir.to_str().unwrap());
+
+    let primals = probe_live_sockets();
+
+    assert_eq!(primals.len(), 2, "should find exactly 2 .sock files");
+
+    let mut names: Vec<&str> = primals.iter().map(|p| p.name.as_str()).collect();
+    names.sort();
+    assert_eq!(names, vec!["beardog", "songbird"]);
+
+    for primal in &primals {
+        assert_eq!(primal.health, "discovered");
+        assert_eq!(primal.version, "unknown");
+        assert!(primal.capabilities.is_empty());
+        assert_eq!(primal.trust_level, Some(1));
+        assert_eq!(primal.primal_type, "probed");
+        assert!(primal.endpoint.starts_with("unix://"));
+        assert!(primal.id.ends_with("-probed"));
+        assert!(primal.family_id.is_none());
+    }
+}
+
+#[test]
+#[serial]
+fn test_probe_live_sockets_controlled_empty_dir() {
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
+
+    let temp = tempfile::tempdir().expect("tempdir");
+    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", temp.path().to_str().unwrap());
+
+    let primals = probe_live_sockets();
+    assert!(primals.is_empty());
+}
+
+#[test]
+#[serial]
+fn test_probe_live_sockets_nonexistent_override_dir() {
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
+
+    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", "/nonexistent/probe/dir/xyz123");
+
+    let primals = probe_live_sockets();
+    assert!(primals.is_empty());
+}
+
+#[test]
+#[serial]
+fn test_probe_live_sockets_extracts_primal_name_from_hyphenated_filename() {
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
+
+    let temp = tempfile::tempdir().expect("tempdir");
+    std::fs::write(temp.path().join("beardog-family-a.sock"), "").expect("write");
+    std::fs::write(temp.path().join("simple.sock"), "").expect("write");
+
+    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", temp.path().to_str().unwrap());
+
+    let primals = probe_live_sockets();
+    assert_eq!(primals.len(), 2);
+
+    let by_id: std::collections::HashMap<&str, &DiscoveredPrimal> =
+        primals.iter().map(|p| (p.name.as_str(), p)).collect();
+
+    assert!(by_id.contains_key("beardog"), "hyphenated name → first segment");
+    assert!(by_id.contains_key("simple"), "unhyphenated name → full stem");
+}
+
+#[test]
+#[serial]
+fn test_get_socket_dir_respects_primal_socket_env() {
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
+
+    let temp = tempfile::tempdir().expect("tempdir");
+    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", temp.path().to_str().unwrap());
+
+    let dir = get_socket_dir();
+    assert!(
+        dir.starts_with(temp.path().to_str().unwrap()),
+        "socket dir should use PRIMAL_SOCKET override: got {dir}"
+    );
 }

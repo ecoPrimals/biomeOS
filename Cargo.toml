@@ -232,21 +232,6 @@ wiremock = "0.6"
 rand = "0.8"
 biomeos-test-utils = { path = "crates/biomeos-test-utils", version = "0.1.0" }
 
-# Demo binaries disabled - require extensive type alignment beyond core unification scope
-# These can be updated in a future iteration focused on demo and example alignment
-# [[bin]]
-# name = "byob-test"
-# path = "src/bin/byob-test.rs"
-
-# [[bin]]
-# name = "clean_ecosystem_demo"
-# path = "src/bin/clean_ecosystem_demo.rs"
-
-# Archived to archive/legacy_examples_jan_27_2026/
-# [[example]]
-# name = "working_unified_demo"
-# path = "examples/working_unified_demo.rs"
-
 [[example]]
 name = "chimera_registry_demo"
 path = "examples/chimera_registry_demo.rs"

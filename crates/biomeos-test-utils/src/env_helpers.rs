@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Environment variable helpers for testing.
 //!
@@ -7,35 +7,36 @@
 //!
 //! The 2024 edition marks [`std::env::set_var`] and [`std::env::remove_var`] as `unsafe` because
 //! mutating the process environment is not synchronized with other threads that may read it via
-//! [`std::env::var`] or OS APIs. There is no fully safe alternative for in-process mutation; the
-//! intended pattern for production code is to avoid globals and pass configuration explicitly or
-//! use [`std::process::Command::env`] for subprocesses.
+//! [`std::env::var`] or OS APIs. There is **no safe alternative** in `std` for in-process
+//! mutation — this is a fundamental platform constraint, not a design flaw we can evolve away.
 //!
-//! This module is **test-only** (see crate root: `biomeos-test-utils` must not ship in production
-//! paths). The [`TestEnvGuard`] RAII type captures the previous value before changing the variable
-//! and restores it on drop, limiting test pollution. Callers that run tests in parallel must still
-//! avoid concurrent reads/writes of the **same** key unless those tests are serialized (e.g.
-//! `serial_test`)—that is a Rust/platform contract, not something this crate can enforce.
+//! This module is **test-only** (`biomeos-test-utils` never ships in production paths). All
+//! mutations are serialized through [`ENV_MUTEX`] so that concurrent test threads cannot race
+//! on environment writes. The [`TestEnvGuard`] RAII type captures the previous value before
+//! changing the variable and restores it on drop, limiting test pollution.
 //!
-//! All `unsafe` is confined to thin wrappers around the two `std::env` calls below; the rest of the
-//! workspace keeps `#![deny(unsafe_code)]` via narrowly scoped `#[allow(unsafe_code)]` here.
+//! The two `unsafe` blocks below are the **minimum possible surface**: each is a single
+//! `std::env` call guarded by the process-wide mutex. The rest of the workspace keeps
+//! `#![forbid(unsafe_code)]`.
 
 use std::ffi::OsStr;
+use std::sync::Mutex;
+
+/// Process-wide mutex serializing all env mutations, making the `unsafe` blocks sound
+/// even when test threads run concurrently. Tests that read the same key should still
+/// use `#[serial]` to avoid TOCTOU between read and write.
+static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
 /// Sets `key` to `value` in the process environment (test-only).
 ///
 /// Prefer [`TestEnvGuard::set`] when you need automatic restoration after a scope.
-///
-/// # Caller contract
-///
-/// No other thread may read `key` concurrently while this runs. In practice, use per-key guards
-/// and avoid sharing keys across parallel tests, or serialize tests that touch the same key.
 #[allow(unsafe_code)]
 pub fn set_test_env<K: AsRef<OsStr>, V: AsRef<OsStr>>(key: K, value: V) {
-    // SAFETY: Required by Rust 2024 for `set_var`. This crate is test-only; callers must ensure no
-    // concurrent `std::env::var`/OS reads of `key` on other threads (see module docs). The call
-    // only forwards to libc/OS env update; invariants are process-global ordering, not pointer
-    // validity—`AsRef<OsStr>` arguments are valid for the duration of the call.
+    let _lock = ENV_MUTEX
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    // SAFETY: Mutation is serialized by ENV_MUTEX. This crate is test-only; callers
+    // must serialize reads of the same key (e.g. `#[serial]`) to avoid TOCTOU.
     unsafe {
         std::env::set_var(key, value);
     }
@@ -44,12 +45,12 @@ pub fn set_test_env<K: AsRef<OsStr>, V: AsRef<OsStr>>(key: K, value: V) {
 /// Removes `key` from the process environment (test-only).
 ///
 /// Prefer [`TestEnvGuard::remove`] when you need automatic restoration after a scope.
-///
-/// See [`set_test_env`] for the caller contract.
 #[allow(unsafe_code)]
 pub fn remove_test_env<K: AsRef<OsStr>>(key: K) {
-    // SAFETY: Same as [`set_test_env`], but for `remove_var`. Test-only; no concurrent readers of
-    // `key` on other threads.
+    let _lock = ENV_MUTEX
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    // SAFETY: Same as `set_test_env` — serialized by ENV_MUTEX, test-only.
     unsafe {
         std::env::remove_var(key);
     }
@@ -58,9 +59,8 @@ pub fn remove_test_env<K: AsRef<OsStr>>(key: K) {
 /// RAII guard that restores an environment variable to its captured value on [`Drop`].
 ///
 /// Construct with [`TestEnvGuard::set`], [`TestEnvGuard::remove`], or [`TestEnvGuard::new`].
-/// Restoration uses [`set_test_env`] / [`remove_test_env`], so the same thread-safety contract
-/// applies when the guard is dropped (typically at end of test scope, single-threaded relative to
-/// that key).
+/// Restoration uses [`set_test_env`] / [`remove_test_env`], so the same thread-safety
+/// guarantees (mutex-serialized writes) apply when the guard is dropped.
 pub struct TestEnvGuard {
     key: String,
     original: Option<String>,
@@ -130,5 +130,25 @@ mod tests {
             assert_eq!(std::env::var(key).unwrap(), "temporary");
         }
         assert!(std::env::var(key).is_err());
+    }
+
+    #[test]
+    fn test_guard_remove_and_restore() {
+        let key = "BIOMEOS_TEST_GUARD_REMOVE_KEY";
+        set_test_env(key, "original_value");
+
+        {
+            let _guard = TestEnvGuard::remove(key);
+            assert!(std::env::var(key).is_err());
+        }
+        assert_eq!(std::env::var(key).unwrap(), "original_value");
+        remove_test_env(key);
+    }
+
+    #[test]
+    fn test_mutex_prevents_poisoning() {
+        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        drop(_lock);
+        let _lock2 = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
     }
 }

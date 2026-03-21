@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! AI Error Context and Automation Features
 //!
@@ -333,7 +333,10 @@ impl RetryStrategy {
     }
 
     /// Create exponential backoff retry strategy
-    #[allow(clippy::cast_lossless)]
+    #[expect(
+        clippy::cast_lossless,
+        reason = "u32 max_attempts widened to u64 for max_retry_time_ms arithmetic"
+    )]
     pub fn exponential_backoff(
         max_attempts: u32,
         initial_delay_ms: u64,
@@ -354,7 +357,10 @@ impl RetryStrategy {
     }
 
     /// Create linear backoff retry strategy
-    #[allow(clippy::cast_lossless)]
+    #[expect(
+        clippy::cast_lossless,
+        reason = "u32 max_attempts widened to u64 for max_retry_time_ms arithmetic"
+    )]
     pub fn linear_backoff(max_attempts: u32, delay_ms: u64, increment_ms: u64) -> Self {
         Self {
             should_retry: true,

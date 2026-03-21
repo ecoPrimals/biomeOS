@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Unix socket server for biomeOS API
 //!
@@ -175,6 +175,87 @@ mod tests {
         // Should be able to connect (stale was removed, new socket created)
         let result = tokio::net::UnixStream::connect(&socket_path).await;
         assert!(result.is_ok(), "Should connect after stale removal");
+
+        server_handle.abort();
+        let _ = server_handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_serve_unix_socket_handles_http_request() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let socket_path = tmp.path().join("http-test.sock");
+
+        let app = Router::new()
+            .route("/health", get(|| async { "healthy" }))
+            .route("/api/v1/status", get(|| async { "{\"ok\":true}" }));
+
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
+        let server_handle =
+            tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+
+        ready_rx.wait().await.expect("server should signal");
+
+        let stream = tokio::net::UnixStream::connect(&socket_path)
+            .await
+            .expect("connect");
+        let io = hyper_util::rt::TokioIo::new(stream);
+
+        let (mut sender, conn) = hyper::client::conn::http1::handshake(io)
+            .await
+            .expect("handshake");
+        tokio::spawn(conn);
+
+        let req = hyper::Request::builder()
+            .uri("/health")
+            .header("host", "localhost")
+            .body(http_body_util::Empty::<hyper::body::Bytes>::new())
+            .expect("build request");
+
+        let resp = sender.send_request(req).await.expect("send request");
+        assert_eq!(resp.status(), 200);
+
+        use http_body_util::BodyExt;
+        let body = resp.into_body().collect().await.expect("read body");
+        let body_str = String::from_utf8(body.to_bytes().to_vec()).expect("utf8");
+        assert_eq!(body_str, "healthy");
+
+        let stream2 = tokio::net::UnixStream::connect(&socket_path)
+            .await
+            .expect("connect2");
+        let io2 = hyper_util::rt::TokioIo::new(stream2);
+        let (mut sender2, conn2) = hyper::client::conn::http1::handshake(io2)
+            .await
+            .expect("handshake2");
+        tokio::spawn(conn2);
+
+        let req2 = hyper::Request::builder()
+            .uri("/api/v1/status")
+            .header("host", "localhost")
+            .body(http_body_util::Empty::<hyper::body::Bytes>::new())
+            .expect("build request");
+
+        let resp2 = sender2.send_request(req2).await.expect("send request");
+        assert_eq!(resp2.status(), 200);
+
+        server_handle.abort();
+        let _ = server_handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_serve_unix_socket_on_ready_none() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let socket_path = tmp.path().join("no-ready.sock");
+
+        let app = Router::new().route("/", get(|| async { "ok" }));
+
+        let path = socket_path.clone();
+        let server_handle =
+            tokio::spawn(async move { serve_unix_socket(&path, app, None).await });
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert!(socket_path.exists(), "Socket should be created even without on_ready");
 
         server_handle.abort();
         let _ = server_handle.await;

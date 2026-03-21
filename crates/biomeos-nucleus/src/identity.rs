@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Layer 2: Identity Verification
 //!
@@ -277,6 +277,7 @@ mod tests {
     use super::*;
     use crate::discovery::DiscoveredPrimal;
     use biomeos_test_utils::ready_signal;
+    use serial_test::serial;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     fn sample_proof() -> IdentityProof {
@@ -546,6 +547,24 @@ mod tests {
         assert_eq!(
             layer.unwrap().beardog_socket.as_deref(),
             Some("/tmp/nonexistent-but-env-ok.sock")
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_identity_layer_new_scans_tmp_for_beardog_prefixed_sock() {
+        let tmp = tempfile::Builder::new()
+            .prefix("beardog-")
+            .suffix(".sock")
+            .tempfile_in("/tmp")
+            .expect("temp sock in /tmp");
+        let path = tmp.path().to_path_buf();
+        let _no_env = biomeos_test_utils::TestEnvGuard::remove("BEARDOG_SOCKET");
+        let _uid = biomeos_test_utils::TestEnvGuard::set("UID", "999999999");
+        let layer = IdentityLayerImpl::new().await.expect("discover via /tmp scan");
+        assert_eq!(
+            layer.beardog_socket.as_deref(),
+            Some(path.to_str().expect("utf8"))
         );
     }
 }

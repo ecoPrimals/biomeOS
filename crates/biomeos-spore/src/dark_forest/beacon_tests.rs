@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};

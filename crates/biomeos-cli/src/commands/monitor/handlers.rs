@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Monitor / dashboard / logs / exec / scale command handlers.
-
-#[cfg(feature = "deprecated-tui")]
-use crate::tui::BiomeOSDashboard;
 
 use anyhow::Result;
 use std::time::Duration;
@@ -63,33 +60,12 @@ pub async fn handle_monitor(
     Ok(())
 }
 
-/// Handle dashboard command.
-///
-/// The built-in TUI dashboard is deprecated. Use petalTongue for ecosystem visualization.
-/// Enable the `deprecated-tui` feature to use the legacy dashboard.
-#[cfg(feature = "deprecated-tui")]
-pub async fn handle_dashboard(interval: u64, refresh: bool) -> Result<()> {
-    eprintln!(
-        "WARNING: The built-in dashboard is deprecated. Use petalTongue for ecosystem visualization."
-    );
-    let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
-    let mut dashboard = BiomeOSDashboard::new(manager);
-    if refresh {
-        println!("Auto-refresh enabled (interval: {interval}s)");
-    }
-    dashboard.run().await?;
-    Ok(())
-}
-
-/// Handle dashboard command — petalTongue redirect when legacy TUI is not compiled.
-#[cfg(not(feature = "deprecated-tui"))]
+/// Handle dashboard command — redirects to petalTongue (the universal UI primal).
 pub async fn handle_dashboard(_interval: u64, _refresh: bool) -> Result<()> {
-    eprintln!("The built-in TUI dashboard has been deprecated.");
+    eprintln!("The built-in TUI dashboard has been removed.");
     eprintln!("petalTongue is the universal UI primal for the ecoPrimals ecosystem.");
     eprintln!();
     eprintln!("  To launch petalTongue:  biomeos start petaltongue");
-    eprintln!("  Legacy TUI (unsupported):  cargo build -p biomeos-cli --features deprecated-tui");
     Ok(())
 }
 

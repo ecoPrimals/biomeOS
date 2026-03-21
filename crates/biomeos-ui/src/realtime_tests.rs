@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Unit tests for real-time event streaming (WebSocket/SSE).
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+#![expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
 
 use super::{JsonRpcNotification, *};
 use biomeos_test_utils::{remove_test_env, set_test_env};
@@ -699,4 +700,139 @@ async fn test_discover_endpoints_biomeos_api_sse_fallback() {
     let result = subscriber.discover_endpoints().await;
     remove_test_env("BIOMEOS_API_SSE");
     assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_subscribe_sse_derives_ws_url_from_http() {
+    let mut subscriber = RealTimeEventSubscriber::new("family".to_string());
+    subscriber.set_urls_for_test(None, Some("http://host:9000/events".to_string()));
+    let result = subscriber.subscribe_sse().await;
+    assert!(result.is_ok(), "SSE with no WS should gracefully degrade");
+}
+
+#[tokio::test]
+async fn test_subscribe_sse_derives_ws_url_from_https() {
+    let mut subscriber = RealTimeEventSubscriber::new("family".to_string());
+    subscriber.set_urls_for_test(None, Some("https://host:9000/sse".to_string()));
+    let result = subscriber.subscribe_sse().await;
+    assert!(result.is_ok(), "SSE with HTTPS should gracefully degrade");
+}
+
+#[test]
+fn test_parse_event_nested_event_with_extra_fields() {
+    let notification = JsonRpcNotification::for_test(serde_json::json!({
+        "event": {
+            "type": "topology_changed",
+            "nodes": 3,
+            "edges": 5,
+            "change": "node_added"
+        },
+        "extra": "ignored"
+    }));
+    let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+    assert!(result.is_ok());
+    match result.unwrap() {
+        RealTimeEvent::TopologyChanged { nodes, edges, .. } => {
+            assert_eq!(nodes, 3);
+            assert_eq!(edges, 5);
+        }
+        _ => panic!("Expected TopologyChanged"),
+    }
+}
+
+#[test]
+fn test_parse_event_primal_discovered_from_params() {
+    let notification = JsonRpcNotification::for_test(serde_json::json!({
+        "type": "primal_discovered",
+        "primal_id": "p-123",
+        "name": "TestPrimal",
+        "primal_type": "security",
+        "capabilities": ["crypto", "identity"]
+    }));
+    let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+    assert!(result.is_ok());
+    match result.unwrap() {
+        RealTimeEvent::PrimalDiscovered {
+            primal_id,
+            capabilities,
+            ..
+        } => {
+            assert_eq!(primal_id, "p-123");
+            assert_eq!(capabilities.len(), 2);
+        }
+        _ => panic!("Expected PrimalDiscovered"),
+    }
+}
+
+#[test]
+fn test_parse_event_assignment_created_no_user() {
+    let notification = JsonRpcNotification::for_test(serde_json::json!({
+        "type": "assignment_created",
+        "device_id": "gpu-1",
+        "primal_id": "compute-1",
+        "user_id": null
+    }));
+    let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+    assert!(result.is_ok());
+    match result.unwrap() {
+        RealTimeEvent::AssignmentCreated { user_id, .. } => {
+            assert!(user_id.is_none());
+        }
+        _ => panic!("Expected AssignmentCreated"),
+    }
+}
+
+#[test]
+fn test_all_event_variants_deserialize_from_json() {
+    let variants = [
+        r#"{"type":"device_removed","device_id":"d1"}"#,
+        r#"{"type":"assignment_removed","device_id":"d1","primal_id":"p1"}"#,
+        r#"{"type":"health_changed","primal_id":"p1","name":"P","old_health":"unknown","new_health":"healthy"}"#,
+    ];
+    for json in variants {
+        let event: Result<RealTimeEvent, _> = serde_json::from_str(json);
+        assert!(event.is_ok(), "Failed to parse: {json}");
+    }
+}
+
+#[tokio::test]
+async fn test_event_handler_receives_multiple_event_types() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    use tokio::sync::oneshot;
+
+    let subscriber = Arc::new(RealTimeEventSubscriber::new("family".to_string()));
+    let handler = RealTimeEventHandler::new(subscriber.clone());
+    let count = Arc::new(AtomicU32::new(0));
+    let (tx, rx) = oneshot::channel::<()>();
+    let c = count.clone();
+    let tx = Arc::new(tokio::sync::Mutex::new(Some(tx)));
+    let tx_clone = tx.clone();
+    let mut h = handler;
+    let _handle = tokio::spawn(async move {
+        h.process_events(move |_| {
+            let n = c.fetch_add(1, Ordering::SeqCst);
+            if n >= 1 {
+                if let Some(sender) = tx_clone.blocking_lock().take() {
+                    let _ = sender.send(());
+                }
+            }
+            Ok(())
+        })
+        .await
+    });
+
+    subscriber.send_event(RealTimeEvent::DeviceAdded {
+        device_id: "d1".to_string(),
+        device_type: "gpu".to_string(),
+        capabilities: vec![],
+    });
+    subscriber.send_event(RealTimeEvent::DeviceRemoved {
+        device_id: "d1".to_string(),
+    });
+
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(2), rx).await;
+    assert!(
+        count.load(Ordering::SeqCst) >= 2,
+        "should process multiple event types"
+    );
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Runtime Defaults Module
 //!
@@ -91,7 +91,10 @@ pub mod env_vars {
 }
 
 /// Get socket path with explicit environment map (for testing)
-#[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
+#[expect(
+    clippy::implicit_hasher,
+    reason = "HashMap with default hasher is idiomatic for env maps"
+)]
 pub fn socket_path_with(service: &str, env: &HashMap<String, String>) -> Result<PathBuf, String> {
     // 1. Check service-specific environment variable
     let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
@@ -169,7 +172,6 @@ impl RuntimeConfig {
 
     /// Create RuntimeConfig from explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn from_env_with_map(
         env: &HashMap<String, String>,
         socket_dir_override: Option<&str>,
@@ -215,7 +217,6 @@ impl RuntimeConfig {
 
     /// Get Neural API socket path with explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn neural_api_socket_with(&self, env: &HashMap<String, String>) -> PathBuf {
         env.get(env_vars::NEURAL_API_SOCKET).map_or_else(
             || self.socket_dir.join(DEFAULT_NEURAL_API_SOCKET),
@@ -235,7 +236,6 @@ impl RuntimeConfig {
 
     /// Get socket path for any service with explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn service_socket_with(&self, service: &str, env: &HashMap<String, String>) -> PathBuf {
         let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
         if let Some(path) = env.get(&env_var) {
@@ -262,7 +262,6 @@ impl RuntimeConfig {
 
     /// Get HTTP port with explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn http_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("HTTP_PORT")
             .and_then(|v| v.parse().ok())
@@ -277,7 +276,6 @@ impl RuntimeConfig {
 
     /// Get HTTPS port with explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn https_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("HTTPS_PORT")
             .and_then(|v| v.parse().ok())
@@ -292,7 +290,6 @@ impl RuntimeConfig {
 
     /// Get WebSocket port with explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn websocket_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("WEBSOCKET_PORT")
             .and_then(|v| v.parse().ok())
@@ -307,7 +304,6 @@ impl RuntimeConfig {
 
     /// Get MCP port with explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn mcp_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("MCP_WEBSOCKET_PORT")
             .or_else(|| env.get("MCP_PORT"))
@@ -323,7 +319,6 @@ impl RuntimeConfig {
 
     /// Get discovery port with explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn discovery_port_with(env: &HashMap<String, String>) -> u16 {
         env.get("DISCOVERY_PORT")
             .and_then(|v| v.parse().ok())
@@ -341,7 +336,6 @@ impl RuntimeConfig {
 
     /// Get bind address with explicit environment map (for testing)
     #[must_use]
-    #[allow(clippy::implicit_hasher)] // HashMap with default hasher is idiomatic for env maps
     pub fn bind_address_with(env: &HashMap<String, String>) -> String {
         env.get("BIOMEOS_BIND_ADDRESS")
             .or_else(|| env.get("BIND_ADDRESS"))

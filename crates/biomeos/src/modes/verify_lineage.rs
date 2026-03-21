@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Verify lineage mode - Validate genetic lineage
 //!
@@ -269,10 +269,17 @@ async fn verify_cryptographic_lineage(
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![expect(
+        clippy::unwrap_used,
+        reason = "test assertions use unwrap for clarity in unit tests"
+    )]
 
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
+    use serde_json::json;
+    use serial_test::serial;
     use std::io::Write;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     #[test]
     fn test_lineage_verification_construction() {
@@ -601,5 +608,122 @@ node_id = "test-node-456"
         assert!(debug_str.contains("LineageVerification"));
         assert!(debug_str.contains("valid"));
         assert!(debug_str.contains("d1"));
+    }
+
+    #[serial]
+    #[tokio::test]
+    async fn test_verify_lineage_detailed_crypto_lineage_response_success_branches() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            "family_id = \"fam-c\"\nnode_id = \"node-c\"\n",
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(".family.seed"), [0u8; 64]).expect("seed");
+
+        let sock = dir.path().join("mock-lineage-ok.sock");
+        let listener = tokio::net::UnixListener::bind(&sock).expect("bind mock beardog");
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.unwrap_or(0);
+                let line = String::from_utf8_lossy(&buf[..n]);
+                let req: serde_json::Value =
+                    serde_json::from_str(line.trim()).unwrap_or(json!({}));
+                let id = req.get("id").cloned().unwrap_or(json!(null));
+                let response = json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": {
+                        "valid": true,
+                        "generation": 7u64,
+                        "parent_id": "parent-abc"
+                    }
+                });
+                let _ = stream
+                    .write_all(format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes())
+                    .await;
+            }
+        });
+
+        let _sock_guard = TestEnvGuard::set("BEARDOG_SOCKET", sock.to_str().expect("utf8"));
+
+        let v = verify_lineage(&dir.path().to_path_buf(), true)
+            .await
+            .expect("verify_lineage");
+        assert!(v.valid);
+        assert!(v
+            .details
+            .iter()
+            .any(|d| d.contains("Cryptographic lineage verified")));
+        assert!(v.details.iter().any(|d| d.contains("Generation: 7")));
+        assert!(v.details.iter().any(|d| d.contains("parent-abc")));
+    }
+
+    #[serial]
+    #[tokio::test]
+    async fn test_verify_lineage_detailed_crypto_valid_false_includes_reason() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(dir.path().join("manifest.toml"), "family_id = \"f\"\n").expect("manifest");
+        std::fs::write(dir.path().join(".family.seed"), [1u8; 64]).expect("seed");
+
+        let sock = dir.path().join("mock-lineage-fail.sock");
+        let listener = tokio::net::UnixListener::bind(&sock).expect("bind");
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.unwrap_or(0);
+                let line = String::from_utf8_lossy(&buf[..n]);
+                let req: serde_json::Value =
+                    serde_json::from_str(line.trim()).unwrap_or(json!({}));
+                let id = req.get("id").cloned().unwrap_or(json!(null));
+                let response = json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "result": { "valid": false, "reason": "stale merkle proof" }
+                });
+                let _ = stream
+                    .write_all(format!("{}\n", serde_json::to_string(&response).unwrap()).as_bytes())
+                    .await;
+            }
+        });
+
+        let _sock_guard = TestEnvGuard::set("BEARDOG_SOCKET", sock.to_str().expect("utf8"));
+
+        let v = verify_lineage(&dir.path().to_path_buf(), true)
+            .await
+            .expect("verify_lineage");
+        assert!(v.valid);
+        assert!(v.details.iter().any(|d| d.contains("stale merkle proof")));
+    }
+
+    #[serial]
+    #[tokio::test]
+    async fn test_verify_lineage_detailed_crypto_rpc_error_surfaces_in_details() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(dir.path().join("manifest.toml"), "family_id = \"f\"\n").expect("manifest");
+        std::fs::write(dir.path().join(".family.seed"), [2u8; 64]).expect("seed");
+
+        let sock = dir.path().join("mock-lineage-badline.sock");
+        let listener = tokio::net::UnixListener::bind(&sock).expect("bind");
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let _ = stream.write_all(b"not-valid-json{\n").await;
+            }
+        });
+
+        let _sock_guard = TestEnvGuard::set("BEARDOG_SOCKET", sock.to_str().expect("utf8"));
+
+        let v = verify_lineage(&dir.path().to_path_buf(), true)
+            .await
+            .expect("verify_lineage");
+        assert!(v.valid);
+        assert!(
+            v.details
+                .iter()
+                .any(|d| d.contains("BearDog verification call failed")),
+            "details={:?}",
+            v.details
+        );
     }
 }

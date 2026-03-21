@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Genome binary discovery and path resolution.
 //!
@@ -52,6 +52,8 @@ pub fn get_genome_bin_path() -> Option<PathBuf> {
 )]
 mod tests {
     use super::*;
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
+    use serial_test::serial;
     use std::path::{Path, PathBuf};
 
     #[test]
@@ -135,5 +137,21 @@ mod tests {
     fn test_get_genome_bin_path_with_empty_search_paths() {
         let result = get_genome_bin_path_with(None, &[]);
         assert!(result.is_none());
+    }
+
+    /// Exercises [`get_genome_bin_path`] (env + default search paths), not only
+    /// [`get_genome_bin_path_with`].
+    #[test]
+    #[serial]
+    fn test_get_genome_bin_path_wrapper_respects_genomebin_path_env() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        std::fs::write(
+            temp.path().join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("write manifest");
+        let _guard = TestEnvGuard::set("GENOMEBIN_PATH", temp.path().to_str().expect("utf8 path"));
+        let result = get_genome_bin_path();
+        assert_eq!(result, Some(temp.path().to_path_buf()));
     }
 }

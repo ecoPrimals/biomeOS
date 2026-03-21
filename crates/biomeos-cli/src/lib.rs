@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! BiomeOS CLI Library
 //!
@@ -19,10 +19,6 @@ pub mod discovery;
 pub mod formatting;
 /// Health monitoring utilities
 pub mod health;
-/// Legacy TUI dashboard — DEPRECATED in favor of petalTongue (the universal UI primal).
-/// Enable the `deprecated-tui` feature to compile this module.
-#[cfg(feature = "deprecated-tui")]
-pub mod tui;
 
 // Re-export key types and utilities
 pub use discovery::*;

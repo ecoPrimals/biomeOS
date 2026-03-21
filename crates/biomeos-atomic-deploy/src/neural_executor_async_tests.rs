@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Async integration tests for GraphExecutor (split from `neural_executor_tests.rs`).
 //! Branch-coverage tests live in `neural_executor_async_tests2.rs`.

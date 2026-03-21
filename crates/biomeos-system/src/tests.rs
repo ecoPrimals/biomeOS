@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 #![expect(
     clippy::unwrap_used,
@@ -548,6 +548,23 @@ fn test_determine_health_from_metrics_degraded_cpu_and_memory() {
     };
     let health = SystemInspector::determine_health_from_metrics(&metrics);
     assert!(matches!(health, Health::Degraded { .. }));
+}
+
+#[test]
+fn test_cpu_component_health_at_upper_noncritical_before_degraded_band() {
+    // > 0.9 is Critical; exactly 0.9 falls through to the > 0.7 Degraded branch
+    assert!(matches!(
+        SystemInspector::cpu_component_health(Some(0.9)),
+        Health::Degraded { .. }
+    ));
+}
+
+#[test]
+fn test_memory_component_health_at_critical_threshold() {
+    assert!(matches!(
+        SystemInspector::memory_component_health(Some(0.96)),
+        Health::Critical { .. }
+    ));
 }
 
 #[test]

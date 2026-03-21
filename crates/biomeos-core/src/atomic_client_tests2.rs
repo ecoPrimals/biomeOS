@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Continuation of AtomicClient tests (split from `atomic_client_tests.rs`).
 #![expect(
@@ -574,4 +574,117 @@ fn test_is_available_abstract_linux_only() {
         let c = AtomicClient::abstract_socket("abs-name-test");
         assert!(c.is_available());
     }
+}
+
+// ========================================================================
+// Discovery success via env (TCP), try_call serialization, HTTP edge cases
+// ========================================================================
+
+#[tokio::test]
+#[serial_test::serial]
+#[expect(clippy::unwrap_used, reason = "test asserts successful discovery")]
+async fn test_atomic_client_discover_via_tcp_env_succeeds() {
+    use biomeos_test_utils::TestEnvGuard;
+    let _tcp = TestEnvGuard::set("DISCOVERUT_TCP", "127.0.0.1:59996");
+    let client = AtomicClient::discover("discoverut").await.unwrap();
+    assert!(
+        matches!(client.endpoint(), TransportEndpoint::TcpSocket { .. }),
+        "expected TCP from env, got {:?}",
+        client.endpoint()
+    );
+    assert!(!client.endpoint().is_native(), "TCP should be Tier 2");
+}
+
+#[tokio::test]
+#[serial_test::serial]
+#[expect(clippy::unwrap_used, reason = "test asserts successful discovery")]
+async fn test_discover_primal_endpoint_via_tcp_env_succeeds() {
+    use biomeos_test_utils::TestEnvGuard;
+    let _tcp = TestEnvGuard::set("DISCOVERPE_TCP", "127.0.0.1:59995");
+    let ep = discover_primal_endpoint("discoverpe").await.unwrap();
+    assert!(matches!(ep, TransportEndpoint::TcpSocket { .. }));
+}
+
+#[tokio::test]
+async fn test_try_call_jsonrpc_response_invalid_json_serialization() {
+    use biomeos_types::IpcError;
+
+    let temp = tempfile::tempdir().expect("temp dir");
+    let socket_path = temp.path().join("bad_json.sock");
+
+    let (mut ready_tx, ready_rx) = ready_signal();
+    let listener = tokio::net::UnixListener::bind(&socket_path).expect("bind");
+    ready_tx.signal();
+    tokio::spawn(async move {
+        if let Ok((mut stream, _)) = listener.accept().await {
+            let mut buf = vec![0u8; 1024];
+            let _ = stream.read(&mut buf).await;
+            let _ = stream.write_all(b"not json at all\n").await;
+        }
+    });
+
+    ready_rx.wait().await.expect("ready");
+
+    let client = AtomicClient::unix(&socket_path).with_timeout(Duration::from_secs(2));
+    let err = client
+        .try_call("x", json!({}))
+        .await
+        .expect_err("invalid JSON line");
+    assert!(
+        matches!(err, IpcError::Serialization(_)),
+        "expected Serialization, got {err:?}"
+    );
+}
+
+#[tokio::test]
+async fn test_call_http_jsonrpc_body_after_lf_only_separator() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    tokio::spawn(async move {
+        if let Ok((mut stream, _)) = listener.accept().await {
+            let mut buf = vec![0u8; 16384];
+            let _ = stream.read(&mut buf).await;
+            let body = r#"{"jsonrpc":"2.0","result":{"lf_sep":true},"id":1}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\n\n{}",
+                body
+            );
+            let _ = stream.write_all(response.as_bytes()).await;
+        }
+    });
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    let client = AtomicClient::http("127.0.0.1", port);
+    let result = client.call("ping", json!({})).await.expect("http call");
+    assert_eq!(result["lf_sep"], true);
+}
+
+#[tokio::test]
+async fn test_call_http_jsonrpc_invalid_body_json_fails() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
+    let port = listener.local_addr().expect("addr").port();
+    tokio::spawn(async move {
+        if let Ok((mut stream, _)) = listener.accept().await {
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf).await;
+            let body = "not-json";
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            let _ = stream.write_all(response.as_bytes()).await;
+        }
+    });
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    let client = AtomicClient::http("127.0.0.1", port).with_timeout(Duration::from_secs(2));
+    let err = client.call("m", json!({})).await.expect_err("bad json body");
+    let s = err.to_string();
+    assert!(
+        s.contains("serialization") || s.contains("parse") || s.contains("JSON"),
+        "{s}"
+    );
 }

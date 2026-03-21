@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 // crates/biomeos-spore/src/refresh.rs
 //! Spore refresh functionality - Update stale binaries

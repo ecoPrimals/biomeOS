@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! genomeBin Deployment Library
 //!
@@ -203,7 +203,10 @@ impl GenomeDeployer {
         let file_size = file.metadata()?.len();
 
         // Truncation acceptable: f64 mantissa is 52 bits; display-only for human-readable MB
-        #[allow(clippy::cast_precision_loss)]
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "truncation acceptable: f64 mantissa is 52 bits; display-only human-readable MB"
+        )]
         let size_mb = file_size as f64 / 1_048_576.0;
         println!(
             "{}",

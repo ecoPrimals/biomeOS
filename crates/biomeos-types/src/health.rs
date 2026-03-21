@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Unified Health Monitoring System
 //!
@@ -161,7 +161,10 @@ impl Health {
     }
 
     /// Calculate impact score from issues
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "usize issue count cast to f64 for mean impact score"
+    )]
     fn calculate_impact_score(issues: &[HealthIssue]) -> f64 {
         if issues.is_empty() {
             return 0.0;

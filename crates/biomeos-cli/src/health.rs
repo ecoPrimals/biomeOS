@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Health monitoring utilities for CLI
 //!
@@ -231,7 +231,7 @@ impl HealthUtils {
         let mut conditions = Vec::new();
 
         // Check uptime from availability metrics
-        #[allow(clippy::cast_possible_wrap, reason = "uptime hours bounded")]
+        #[expect(clippy::cast_possible_wrap, reason = "uptime hours bounded")]
         let uptime_hours = if let Some(availability) = &health_report.metrics.availability {
             (availability.uptime_seconds / 3600) as i64
         } else {

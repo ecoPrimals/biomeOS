@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 // biomeos-genomebin-v3/src/v4_1.rs
 // genomeBin v4.1 - Multi-Architecture Fat Binary Format

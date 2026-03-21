@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Deployment graph types with compile-time validation.
 //!
@@ -637,7 +637,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::literal_string_with_formatting_args)]
+    #[expect(
+        clippy::literal_string_with_formatting_args,
+        reason = "TOML string embeds ${VAR:-default} env syntax; not a format! placeholder"
+    )]
     fn test_resolve_env_with_default_pattern_in_graph_env() {
         let toml_str = r#"
             [graph]

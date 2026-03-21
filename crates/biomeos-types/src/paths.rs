@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 // =============================================================================
 // System Paths - XDG Base Directory Compliance
@@ -75,7 +75,10 @@ pub type Result<T> = std::result::Result<T, PathError>;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone)]
-#[allow(clippy::struct_field_names)] // dir suffix is XDG convention (runtime_dir, data_dir, etc.)
+#[expect(
+    clippy::struct_field_names,
+    reason = "dir suffix is XDG convention (runtime_dir, data_dir, etc.)"
+)]
 pub struct SystemPaths {
     /// Runtime directory (Unix sockets, PID files)
     /// Default: $XDG_RUNTIME_DIR/biomeos or /tmp/biomeos-$USER/
@@ -321,7 +324,10 @@ impl SystemPaths {
     }
 
     /// Get XDG runtime directory
-    #[allow(clippy::unnecessary_wraps)] // Result required for consistency with other get_*_dir methods
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "Result required for consistency with other get_*_dir methods"
+    )]
     fn get_runtime_dir() -> Result<PathBuf> {
         // 1. Try $XDG_RUNTIME_DIR
         if let Ok(xdg_runtime) = env::var("XDG_RUNTIME_DIR") {
@@ -515,6 +521,8 @@ impl Default for SystemPaths {
 #[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
+    use serial_test::serial;
     use tempfile::tempdir;
 
     #[test]
@@ -742,5 +750,87 @@ mod tests {
         assert!(!paths.config_dir().as_os_str().is_empty());
         assert!(!paths.cache_dir().as_os_str().is_empty());
         assert!(!paths.state_dir().as_os_str().is_empty());
+    }
+
+    /// Covers `get_*_dir` branches that read `XDG_*` env vars.
+    #[test]
+    #[serial]
+    fn test_system_paths_new_respects_all_xdg_env_overrides() {
+        let temp = tempdir().unwrap();
+        let run = temp.path().join("xdg-run");
+        let data = temp.path().join("xdg-data");
+        let cfg = temp.path().join("xdg-cfg");
+        let cache = temp.path().join("xdg-cache");
+        let state = temp.path().join("xdg-state");
+        for p in [&run, &data, &cfg, &cache, &state] {
+            std::fs::create_dir_all(p).unwrap();
+        }
+        let _g_run = TestEnvGuard::set("XDG_RUNTIME_DIR", run.to_str().unwrap());
+        let _g_data = TestEnvGuard::set("XDG_DATA_HOME", data.to_str().unwrap());
+        let _g_cfg = TestEnvGuard::set("XDG_CONFIG_HOME", cfg.to_str().unwrap());
+        let _g_cache = TestEnvGuard::set("XDG_CACHE_HOME", cache.to_str().unwrap());
+        let _g_state = TestEnvGuard::set("XDG_STATE_HOME", state.to_str().unwrap());
+
+        let paths = SystemPaths::new().unwrap();
+        assert!(paths.runtime_dir().starts_with(&run));
+        assert!(paths.data_dir().starts_with(&data));
+        assert!(paths.config_dir().starts_with(&cfg));
+        assert!(paths.cache_dir().starts_with(&cache));
+        assert!(paths.state_dir().starts_with(&state));
+    }
+
+    /// `get_runtime_dir` fallback uses `get_username` (`USER` / `USERNAME`).
+    #[test]
+    #[serial]
+    fn test_runtime_dir_fallback_includes_user_from_env() {
+        let _xdg = TestEnvGuard::remove("XDG_RUNTIME_DIR");
+        let _user = TestEnvGuard::set("USER", "pathstestuser");
+        let paths = SystemPaths::new().unwrap();
+        let s = paths.runtime_dir().to_string_lossy();
+        assert!(
+            s.contains("pathstestuser"),
+            "expected username in fallback runtime path: {s}"
+        );
+    }
+
+    /// `get_state_dir` uses `$HOME/.local/state` when `XDG_STATE_HOME` is unset.
+    #[test]
+    #[serial]
+    fn test_state_dir_prefers_home_local_state_without_xdg_state() {
+        let temp = tempdir().unwrap();
+        let home = temp.path().join("home-branch");
+        std::fs::create_dir_all(&home).unwrap();
+        let _g_state = TestEnvGuard::remove("XDG_STATE_HOME");
+        let _g_home = TestEnvGuard::set("HOME", home.to_str().unwrap());
+        let _g_run = TestEnvGuard::set(
+            "XDG_RUNTIME_DIR",
+            temp.path().join("rt").to_str().unwrap(),
+        );
+        let _g_data = TestEnvGuard::set(
+            "XDG_DATA_HOME",
+            temp.path().join("dh").to_str().unwrap(),
+        );
+        let _g_cfg = TestEnvGuard::set(
+            "XDG_CONFIG_HOME",
+            temp.path().join("ch").to_str().unwrap(),
+        );
+        let _g_cache = TestEnvGuard::set(
+            "XDG_CACHE_HOME",
+            temp.path().join("ca").to_str().unwrap(),
+        );
+        for p in [
+            temp.path().join("rt"),
+            temp.path().join("dh"),
+            temp.path().join("ch"),
+            temp.path().join("ca"),
+        ] {
+            std::fs::create_dir_all(&p).unwrap();
+        }
+
+        let paths = SystemPaths::new().unwrap();
+        let expected = home
+            .join(".local/state")
+            .join(crate::primal_names::BIOMEOS);
+        assert_eq!(paths.state_dir(), &expected);
     }
 }

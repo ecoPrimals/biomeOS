@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 // biomeos-genomebin-v3/src/runtime.rs
 // Runtime extraction and execution
@@ -132,6 +132,8 @@ impl GenomeBin {
 )]
 mod tests {
     use super::*;
+    use biomeos_test_utils::TestEnvGuard;
+    use serial_test::serial;
 
     #[test]
     fn test_default_install_dir() {
@@ -217,5 +219,17 @@ mod tests {
         assert!(child_dir.exists());
         let child_bin = child_dir.join("child");
         assert!(child_bin.exists());
+    }
+
+    #[test]
+    #[serial]
+    fn test_default_install_dir_root_user_uses_opt_on_non_android() {
+        let _user = TestEnvGuard::set("USER", "root");
+        let dir = GenomeBin::default_install_dir().expect("default_install_dir");
+        if std::path::Path::new("/system/build.prop").exists() {
+            assert_eq!(dir, std::path::PathBuf::from("/data/local/tmp"));
+        } else {
+            assert_eq!(dir, std::path::PathBuf::from("/opt"));
+        }
     }
 }

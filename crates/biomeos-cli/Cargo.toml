@@ -34,10 +34,6 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-# HTTP client DEPRECATED: Use atomic_client (Unix sockets) for primal communication
-# reqwest = { version = "0.11", features = ["json"] } # REMOVED - Use Songbird/BearDog
-ratatui = { version = "0.24", optional = true }
-crossterm = { version = "0.27", optional = true }
 chrono = { version = "0.4", features = ["serde"] }
 indicatif = "0.17"
 console = "0.15"
@@ -52,9 +48,6 @@ sha2 = "0.10"
 
 [features]
 default = []
-# DEPRECATED: Legacy TUI dashboard predates petalTongue (the universal UI primal).
-# Enable only for backward compatibility. Use `biomeos-cli dashboard --petaltongue` instead.
-deprecated-tui = ["ratatui", "crossterm"]
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }

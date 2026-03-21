@@ -46,6 +46,7 @@ etcetera = "0.8"  # Pure Rust replacement for dirs
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tempfile = "3.8"
 proptest = "1"
+serial_test = "3.2"
 
 [features]
 default = []

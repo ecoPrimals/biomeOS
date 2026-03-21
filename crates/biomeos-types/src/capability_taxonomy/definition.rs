@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 use super::category::CapabilityCategory;
 use serde::{Deserialize, Serialize};
@@ -645,6 +645,26 @@ impl CapabilityTaxonomy {
     #[must_use]
     pub fn resolve_to_primal(capability: &str) -> Option<&'static str> {
         Self::from_str_flexible(capability).and_then(|cap| cap.default_primal())
+    }
+
+    /// Return one representative variant for a given category.
+    ///
+    /// Used by [`helpers::capabilities_for_primal`] to resolve category → default
+    /// primal without hardcoding primal names outside the taxonomy.
+    #[must_use]
+    pub const fn representative_for_category(
+        category: super::category::CapabilityCategory,
+    ) -> Option<Self> {
+        match category {
+            super::category::CapabilityCategory::Security => Some(Self::Encryption),
+            super::category::CapabilityCategory::Communication => Some(Self::Discovery),
+            super::category::CapabilityCategory::Compute => Some(Self::WorkloadExecution),
+            super::category::CapabilityCategory::Storage => Some(Self::DataStorage),
+            super::category::CapabilityCategory::AI => Some(Self::AiCoordination),
+            super::category::CapabilityCategory::Orchestration => Some(Self::LifecycleManagement),
+            super::category::CapabilityCategory::UserInterface => Some(Self::VisualRendering),
+            super::category::CapabilityCategory::Specialized => None,
+        }
     }
 
     /// Get known primal names from the capability taxonomy.

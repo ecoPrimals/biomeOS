@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 // LiveSpore USB device discovery handler
 
 use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -58,13 +59,49 @@ pub struct LiveSporesResponse {
 }
 
 /// Calculate utilization percentage from available and total space.
-#[cfg(test)]
 pub(crate) fn calculate_utilization(available: u64, total: u64) -> f64 {
     if total == 0 {
         return 0.0;
     }
     let used = total.saturating_sub(available);
     (used as f64 / total as f64) * 100.0
+}
+
+/// Classify spore type from presence of `tower.toml` and `.family.seed`.
+pub(crate) fn classify_spore_type(has_tower: bool, has_genetic_seed: bool) -> Option<String> {
+    if has_tower {
+        Some("live".to_string())
+    } else if has_genetic_seed {
+        Some("cold".to_string())
+    } else {
+        None
+    }
+}
+
+/// Whether a filename in `plasmidBin` should be listed as a primal candidate.
+pub(crate) fn is_primal_filename_candidate(name: &str) -> bool {
+    !name.starts_with('.')
+        && !Path::new(name)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"))
+        && !Path::new(name)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+        && !Path::new(name)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("genome"))
+}
+
+pub(crate) fn genetic_preview_from_seed(seed: &str) -> String {
+    seed.chars().take(16).collect()
+}
+
+pub(crate) fn device_id_from_mount(mount: &Path) -> String {
+    mount
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .to_string()
 }
 
 /// GET /api/v1/livespores - Discover USB devices with LiveSpore capability
@@ -90,7 +127,7 @@ pub async fn get_livespores(
 
                 let genetic_preview = if has_genetic_seed {
                     match tokio::fs::read_to_string(&seed_path).await {
-                        Ok(seed) => Some(seed.chars().take(16).collect()),
+                        Ok(seed) => Some(genetic_preview_from_seed(&seed)),
                         Err(_) => None,
                     }
                 } else {
@@ -108,17 +145,7 @@ pub async fn get_livespores(
                                 // DEEP DEBT EVOLUTION: Accept ANY executable as a primal.
                                 // No hardcoded whitelist — primals self-identify at runtime.
                                 // Skip hidden files and non-executable entries.
-                                if !name.starts_with('.')
-                                    && !std::path::Path::new(name)
-                                        .extension()
-                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"))
-                                    && !std::path::Path::new(name)
-                                        .extension()
-                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
-                                    && !std::path::Path::new(name)
-                                        .extension()
-                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("genome"))
-                                {
+                                if is_primal_filename_candidate(name) {
                                     if let Ok(meta) = entry.metadata().await {
                                         if meta.is_file() {
                                             primals.push(name.to_string());
@@ -132,22 +159,14 @@ pub async fn get_livespores(
 
                 // Detect spore type
                 let config_path = mount_point.join("tower.toml");
-                let spore_type = if tokio::fs::metadata(&config_path).await.is_ok() {
-                    Some("live".to_string())
-                } else if has_genetic_seed {
-                    Some("cold".to_string())
-                } else {
-                    None
-                };
+                let has_tower = tokio::fs::metadata(&config_path).await.is_ok();
+                let spore_type = classify_spore_type(has_tower, has_genetic_seed);
 
                 // Generate device ID from mount point
-                let id = mount_point
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
+                let id = device_id_from_mount(mount_point);
 
-                let utilization = usb_dev.utilization_percent();
+                let utilization =
+                    calculate_utilization(usb_dev.available_space, usb_dev.total_space);
 
                 live_devices.push(LiveSporeDevice {
                     id,
@@ -406,6 +425,45 @@ mod tests {
         // available > total (edge case - should not panic)
         let util = calculate_utilization(2000, 1000);
         assert!((0.0..=100.0).contains(&util));
+    }
+
+    #[test]
+    fn test_classify_spore_type_live_cold_none() {
+        assert_eq!(
+            classify_spore_type(true, false),
+            Some("live".to_string())
+        );
+        assert_eq!(
+            classify_spore_type(false, true),
+            Some("cold".to_string())
+        );
+        assert_eq!(classify_spore_type(false, false), None);
+    }
+
+    #[test]
+    fn test_is_primal_filename_candidate_skips_extensions() {
+        assert!(!is_primal_filename_candidate(".hidden"));
+        assert!(!is_primal_filename_candidate("cfg.toml"));
+        assert!(!is_primal_filename_candidate("data.json"));
+        assert!(!is_primal_filename_candidate("x.genome"));
+        assert!(is_primal_filename_candidate("beardog"));
+    }
+
+    #[test]
+    fn test_genetic_preview_from_seed_truncates() {
+        let s = "abcdefghijklmnopqrstuvwxyz";
+        assert_eq!(genetic_preview_from_seed(s), "abcdefghijklmnop");
+        assert_eq!(genetic_preview_from_seed("short"), "short");
+    }
+
+    #[test]
+    fn test_device_id_from_mount_known_and_fallback() {
+        use std::path::Path;
+        assert_eq!(
+            device_id_from_mount(Path::new("/media/usbstick")),
+            "usbstick"
+        );
+        assert_eq!(device_id_from_mount(Path::new("/")), "unknown");
     }
 
     #[test]

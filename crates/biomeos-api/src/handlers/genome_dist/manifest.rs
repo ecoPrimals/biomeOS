@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Manifest parsing and querying for genome distribution.
 //!
@@ -397,6 +397,8 @@ pub(crate) async fn get_checksum_from(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
+    use serial_test::serial;
 
     #[test]
     fn test_dist_manifest_serialization() {
@@ -710,5 +712,70 @@ size = 999
         };
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(body.code, "CHECKSUMS_READ_ERROR");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_manifest_genome_bin_not_configured() {
+        let _guard = TestEnvGuard::remove("GENOMEBIN_PATH");
+        let result = get_manifest().await;
+        let Err((status, body)) = result else {
+            panic!("expected Err when genome bin is not discoverable");
+        };
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.code, "GENOMEBIN_NOT_FOUND");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_latest_genome_bin_not_configured() {
+        let _guard = TestEnvGuard::remove("GENOMEBIN_PATH");
+        let result = get_latest(Path("any-primal".to_string())).await;
+        let Err((status, body)) = result else {
+            panic!("expected Err when genome bin is not discoverable");
+        };
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.code, "GENOMEBIN_NOT_FOUND");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_checksum_genome_bin_not_configured() {
+        let _guard = TestEnvGuard::remove("GENOMEBIN_PATH");
+        let result = get_checksum(Path((
+            "p".to_string(),
+            "v".to_string(),
+            "arch".to_string(),
+        )))
+        .await;
+        let Err((status, body)) = result else {
+            panic!("expected Err when genome bin is not discoverable");
+        };
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.code, "GENOMEBIN_NOT_FOUND");
+    }
+
+    #[tokio::test]
+    async fn test_get_checksum_from_invalid_toml_checksums() {
+        let temp = tempfile::tempdir().expect("create temp dir");
+        std::fs::write(
+            temp.path().join("manifest.toml"),
+            "[manifest]\nversion = \"1.0\"",
+        )
+        .expect("write manifest");
+        std::fs::write(temp.path().join("checksums.toml"), "invalid toml {{{")
+            .expect("write bad checksums");
+        let result = get_checksum_from(
+            temp.path().to_path_buf(),
+            "beardog".to_string(),
+            "0.9.0".to_string(),
+            "x86_64".to_string(),
+        )
+        .await;
+        let Err((status, body)) = result else {
+            panic!("expected Err for invalid checksums TOML");
+        };
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(body.code, "CHECKSUMS_PARSE_ERROR");
     }
 }

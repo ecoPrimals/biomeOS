@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Modern application state with builder pattern
 //!
@@ -343,7 +343,9 @@ pub enum BuildError {
 mod tests {
     use super::*;
     use biomeos_core::{DiscoveryResult, HealthStatus};
+    use biomeos_test_utils::env_helpers::TestEnvGuard;
     use biomeos_types::PrimalId;
+    use serial_test::serial;
 
     struct MockDiscovery;
 
@@ -401,12 +403,124 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_config_from_env_standalone_mode() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
-        set_test_env("BIOMEOS_STANDALONE_MODE", "true");
+        let _guard = TestEnvGuard::set("BIOMEOS_STANDALONE_MODE", "true");
         let config = Config::from_env();
         assert!(config.standalone_mode);
-        remove_test_env("BIOMEOS_STANDALONE_MODE");
+    }
+
+    /// `BIOMEOS_API_HTTP_BRIDGE=true` enables deprecated HTTP bridge and resolves `bind_addr`
+    /// (from `BIOMEOS_API_BIND_ADDR` or runtime default bind address).
+    #[test]
+    #[serial]
+    fn test_config_from_env_http_bridge_true_uses_default_bind_when_addr_unset() {
+        let _g_bridge = TestEnvGuard::set("BIOMEOS_API_HTTP_BRIDGE", "true");
+        let _g_bind = TestEnvGuard::remove("BIOMEOS_API_BIND_ADDR");
+        // `default_bind_addr()` uses `RuntimeConfig::bind_address()`; default `::1:3000` does not
+        // parse as `SocketAddr` without brackets — use IPv4 so `or_else` resolves to `Some`.
+        let _g_runtime_bind = TestEnvGuard::set("BIOMEOS_BIND_ADDRESS", "127.0.0.1");
+        let config = Config::from_env();
+        assert!(config.enable_http_bridge);
+        let addr = config
+            .bind_addr
+            .expect("bind_addr set when HTTP bridge enabled");
+        assert_eq!(addr.port(), biomeos_types::constants::ports::API_DEFAULT);
+        assert!(addr.ip().is_loopback());
+    }
+
+    #[test]
+    #[serial]
+    fn test_config_from_env_http_bridge_with_explicit_bind_addr() {
+        let _g_bridge = TestEnvGuard::set("BIOMEOS_API_HTTP_BRIDGE", "true");
+        let _g_bind = TestEnvGuard::set("BIOMEOS_API_BIND_ADDR", "127.0.0.1:9876");
+        let config = Config::from_env();
+        assert!(config.enable_http_bridge);
+        let addr = config.bind_addr.expect("bind_addr");
+        assert_eq!(addr.to_string(), "127.0.0.1:9876");
+    }
+
+    #[test]
+    #[serial]
+    fn test_config_from_env_http_bridge_invalid_bind_addr_falls_back_to_default() {
+        let _g_bridge = TestEnvGuard::set("BIOMEOS_API_HTTP_BRIDGE", "true");
+        let _g_bind = TestEnvGuard::set("BIOMEOS_API_BIND_ADDR", "not-a-valid-socket-addr");
+        let _g_runtime_bind = TestEnvGuard::set("BIOMEOS_BIND_ADDRESS", "127.0.0.1");
+        let config = Config::from_env();
+        assert!(config.enable_http_bridge);
+        let addr = config.bind_addr.expect("fallback bind_addr");
+        assert_eq!(addr.port(), biomeos_types::constants::ports::API_DEFAULT);
+        assert!(addr.ip().is_loopback());
+    }
+
+    /// `default_socket_path` returns `BIOMEOS_API_SOCKET` verbatim when set (via `Config::default`).
+    #[test]
+    #[serial]
+    fn test_config_default_respects_biomeos_api_socket() {
+        let _g_sock = TestEnvGuard::set("BIOMEOS_API_SOCKET", "/tmp/biomeos-api-test.sock");
+        let config = Config::default();
+        assert_eq!(
+            config.socket_path,
+            std::path::PathBuf::from("/tmp/biomeos-api-test.sock")
+        );
+    }
+
+    /// Custom `FAMILY_ID` flows into socket discovery (`biomeos-api-{family}.sock`).
+    #[test]
+    #[serial]
+    fn test_config_default_socket_path_uses_family_id_env() {
+        let _g_family = TestEnvGuard::set("FAMILY_ID", "test_family_state");
+        let _g_sock = TestEnvGuard::remove("BIOMEOS_API_SOCKET");
+        let config = Config::default();
+        let name = config.socket_path.file_name().expect("file name");
+        assert!(
+            name.to_string_lossy().contains("test_family_state"),
+            "expected family in socket file name, got {:?}",
+            config.socket_path
+        );
+    }
+
+    /// `BIOMEOS_FAMILY_ID` is used when `FAMILY_ID` is unset.
+    #[test]
+    #[serial]
+    fn test_config_default_socket_path_uses_biomeos_family_id_fallback() {
+        let _g_fid = TestEnvGuard::remove("FAMILY_ID");
+        let _g_bf = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "fallback_family_xyz");
+        let _g_sock = TestEnvGuard::remove("BIOMEOS_API_SOCKET");
+        let config = Config::default();
+        let name = config.socket_path.file_name().expect("file name");
+        assert!(
+            name.to_string_lossy().contains("fallback_family_xyz"),
+            "expected BIOMEOS_FAMILY_ID in socket name, got {:?}",
+            config.socket_path
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn test_config_from_env_invalid_standalone_bool_defaults_false() {
+        let _g = TestEnvGuard::set("BIOMEOS_STANDALONE_MODE", "not-a-bool");
+        let config = Config::from_env();
+        assert!(!config.standalone_mode);
+    }
+
+    #[test]
+    #[serial]
+    fn test_config_from_env_invalid_http_bridge_bool_defaults_false() {
+        let _g = TestEnvGuard::set("BIOMEOS_API_HTTP_BRIDGE", "maybe");
+        let config = Config::from_env();
+        assert!(!config.enable_http_bridge);
+    }
+
+    #[test]
+    #[serial]
+    fn test_config_from_env_biomeos_api_socket_path_overrides_default_socket() {
+        let _g = TestEnvGuard::set("BIOMEOS_API_SOCKET_PATH", "/var/run/biomeos/override.sock");
+        let config = Config::from_env();
+        assert_eq!(
+            config.socket_path,
+            std::path::PathBuf::from("/var/run/biomeos/override.sock")
+        );
     }
 
     #[test]

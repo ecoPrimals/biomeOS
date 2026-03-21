@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Model cache management - NestGate integration and filesystem fallback
 
@@ -70,6 +70,7 @@ impl ModelCache {
 
         let family_id = std::env::var("FAMILY_ID")
             .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+            .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
             .unwrap_or_else(|_| "default".to_string());
 
         let gate_id = std::env::var("GATE_ID")

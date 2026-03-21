@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! biomeOS API Server Library
 //!
@@ -854,5 +854,192 @@ mod tests {
         assert!(filter.graph_id.is_none());
         assert!(filter.event_types.is_none());
         assert!(filter.node_filter.is_none());
+    }
+
+    #[tokio::test]
+    async fn router_unknown_route_returns_404() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app(state);
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/v1/route-that-does-not-exist")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn router_health_includes_security_headers() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app(state);
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/v1/health")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(response.headers().get("strict-transport-security").is_some());
+        assert!(response.headers().get("x-content-type-options").is_some());
+        assert!(response.headers().get("content-security-policy").is_some());
+        assert!(response.headers().get("x-frame-options").is_some());
+        assert!(response.headers().get("referrer-policy").is_some());
+        assert!(response.headers().get("cache-control").is_some());
+    }
+
+    #[tokio::test]
+    async fn router_cors_permissive_reflects_origin_when_gate_disabled() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app(state);
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/v1/health")
+                    .header("origin", "http://localhost:3000")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(response.headers().get("access-control-allow-origin").is_some());
+    }
+
+    #[tokio::test]
+    async fn router_post_body_over_limit_returns_413() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app(state);
+        let oversized = vec![b'x'; 1024 * 1024 + 1];
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .method(axum::http::Method::POST)
+                    .uri("/api/v1/capabilities/discover")
+                    .header(axum::http::header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(oversized))
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[tokio::test]
+    async fn router_events_ws_invalid_json_and_unknown_method() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app(state);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        let server = axum::serve(listener, app);
+        let join = tokio::spawn(async move {
+            server.await.expect("serve");
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let url = format!("ws://{addr}/api/v1/events/ws");
+        let (ws, _) = tokio_tungstenite::connect_async(url.as_str())
+            .await
+            .expect("ws connect");
+        let (mut write, mut read) = ws.split();
+        let _welcome = read.next().await.expect("welcome").expect("msg");
+
+        write
+            .send(WsMessage::Text("not json".into()))
+            .await
+            .expect("send bad json");
+        let parse_reply = read.next().await.expect("parse reply").expect("ok");
+        let WsMessage::Text(parse_text) = parse_reply else {
+            panic!("expected text");
+        };
+        let v: serde_json::Value = serde_json::from_str(&parse_text).expect("json");
+        assert_eq!(v["error"]["code"], -32700);
+
+        let unknown = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 99,
+            "method": "unknown.custom",
+            "params": {}
+        });
+        write
+            .send(WsMessage::Text(unknown.to_string()))
+            .await
+            .expect("send unknown");
+        let method_reply = read.next().await.expect("method reply").expect("ok");
+        let WsMessage::Text(method_text) = method_reply else {
+            panic!("expected text");
+        };
+        let v2: serde_json::Value = serde_json::from_str(&method_text).expect("json");
+        assert_eq!(v2["error"]["code"], -32601);
+
+        join.abort();
+    }
+
+    #[tokio::test]
+    async fn router_events_ws_binary_message_ignored_no_reply() {
+        let _guard = sovereign_env_lock().lock().await;
+        let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
+        let state = AppState::builder().build_with_defaults().expect("state");
+        let app = create_app(state);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        let server = axum::serve(listener, app);
+        let join = tokio::spawn(async move {
+            server.await.expect("serve");
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let url = format!("ws://{addr}/api/v1/events/ws");
+        let (ws, _) = tokio_tungstenite::connect_async(url.as_str())
+            .await
+            .expect("ws connect");
+        let (mut write, mut read) = ws.split();
+        let _welcome = read.next().await.expect("welcome").expect("msg");
+
+        write
+            .send(WsMessage::Binary(vec![1, 2, 3]))
+            .await
+            .expect("binary");
+        let next = tokio::time::timeout(std::time::Duration::from_millis(200), read.next()).await;
+        assert!(
+            next.is_err(),
+            "binary frames are ignored; no JSON-RPC reply expected"
+        );
+
+        let ping = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "events.list_subscriptions",
+        });
+        write
+            .send(WsMessage::Text(ping.to_string()))
+            .await
+            .expect("list");
+        let after = read.next().await.expect("after binary").expect("ok");
+        let WsMessage::Text(t) = after else {
+            panic!("expected text");
+        };
+        let v: serde_json::Value = serde_json::from_str(&t).expect("json");
+        assert!(v.get("result").is_some());
+
+        join.abort();
     }
 }
