@@ -13,6 +13,6 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
-pub use lineage_deriver::LineageDeriver;
+pub use lineage_deriver::{LineageDeriver, has_lineage, load_lineage};
 pub use types::{DerivationParams, DeviceLineage, EnrollmentResult};
 pub use utils::generate_device_entropy;

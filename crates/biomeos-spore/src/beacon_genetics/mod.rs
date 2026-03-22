@@ -58,6 +58,7 @@ mod types;
 pub use capability::{CapabilityCaller, DirectBeardogCaller, NeuralApiCapabilityCaller};
 pub use derivation::{
     DerivationParams, DeviceLineage, EnrollmentResult, LineageDeriver, generate_device_entropy,
+    has_lineage, load_lineage,
 };
 pub use manager::BeaconGeneticsManager;
 pub use types::{

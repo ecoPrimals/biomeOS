@@ -26,6 +26,7 @@
 use anyhow::{Context, Result};
 use biomeos_spore::beacon_genetics::{
     DirectBeardogCaller, LineageDeriver, NeuralApiCapabilityCaller, generate_device_entropy,
+    load_lineage,
 };
 use biomeos_types::Uuid;
 use biomeos_types::primal_names::BEARDOG;
@@ -128,8 +129,7 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
             args.lineage_seed.display()
         );
         warn!("   Use --force to re-enroll");
-        if let Ok(lineage) = LineageDeriver::<DirectBeardogCaller>::load_lineage(&args.lineage_seed)
-        {
+        if let Ok(lineage) = load_lineage(&args.lineage_seed) {
             info!("   Existing enrollment:");
             info!("      Device ID: {}", lineage.device_id);
             info!("      Node ID: {}", lineage.node_id);

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 22, 2026 (v2.66: primalSpring-aligned deep debt evolution — Neural API socket early-bind (fixes exp060 timeout), centralized 5-tier capability discovery in `biomeos-types::capability_discovery`, 5 identity-based discovery callsites evolved to capability-based, genetic/lineage taxonomy fixed (alias, BearDog default, Specialized representative), `capability_sockets.rs` match→taxonomy-driven, niche self-knowledge via `BIOMEOS_SELF_CAPABILITIES`, genetic/lineage translations added to `defaults.rs`, bootstrap registration data-driven, science bootstrap hints use canonical constants)
-**Version**: 2.66
+**Updated**: March 22, 2026 (v2.67: remaining debt cleanup — `load_lineage`/`has_lineage` free functions (no phantom type param), doctor `/5`→dynamic, harvest `petalTongue`→`petaltongue` lowercase, comprehensive debt scan: 0 TODO/FIXME/HACK, 0 unsafe prod, 0 clippy warnings, 0 files >1000 LOC, all `.unwrap()` verified test-only)
+**Version**: 2.67
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---

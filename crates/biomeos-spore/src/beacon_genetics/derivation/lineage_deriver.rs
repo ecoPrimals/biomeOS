@@ -229,44 +229,18 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
         Ok(())
     }
 
-    /// Load existing device lineage from file
+    /// Load existing device lineage from file.
+    ///
+    /// Delegates to the free function [`load_lineage`].
     pub fn load_lineage(lineage_path: &Path) -> SporeResult<DeviceLineage> {
-        let metadata_path = lineage_path.with_extension("json");
-
-        if metadata_path.exists() {
-            let contents = std::fs::read_to_string(&metadata_path).map_err(|e| {
-                SporeError::IoError(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("Failed to read lineage metadata: {e}"),
-                ))
-            })?;
-
-            serde_json::from_str(&contents)
-                .map_err(|e| SporeError::DeserializationError(format!("Invalid JSON: {e}")))
-        } else {
-            let seed_bytes = std::fs::read(lineage_path).map_err(|e| {
-                SporeError::IoError(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("Failed to read lineage seed: {e}"),
-                ))
-            })?;
-
-            Ok(DeviceLineage {
-                device_id: "unknown".to_string(),
-                node_id: "unknown".to_string(),
-                family_id: "unknown".to_string(),
-                generation: 1,
-                derived_seed: BASE64.encode(&seed_bytes),
-                derived_at: 0,
-                derivation_method: "unknown".to_string(),
-                lineage_certificate: None,
-            })
-        }
+        load_lineage(lineage_path)
     }
 
-    /// Check if device has existing lineage
+    /// Check if device has existing lineage.
+    ///
+    /// Delegates to the free function [`has_lineage`].
     pub fn has_lineage(lineage_path: &Path) -> bool {
-        lineage_path.exists()
+        has_lineage(lineage_path)
     }
 
     /// Generate lineage proof for verification
@@ -319,4 +293,47 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             .and_then(|v: &serde_json::Value| v.as_bool())
             .unwrap_or(false))
     }
+}
+
+/// Load existing device lineage from file (caller-agnostic, no generic needed).
+///
+/// Prefer this over `LineageDeriver::<C>::load_lineage()` when you don't have
+/// a `LineageDeriver` instance, to avoid a phantom type parameter.
+pub fn load_lineage(lineage_path: &Path) -> SporeResult<DeviceLineage> {
+    let metadata_path = lineage_path.with_extension("json");
+
+    if metadata_path.exists() {
+        let contents = std::fs::read_to_string(&metadata_path).map_err(|e| {
+            SporeError::IoError(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Failed to read lineage metadata: {e}"),
+            ))
+        })?;
+
+        serde_json::from_str(&contents)
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid JSON: {e}")))
+    } else {
+        let seed_bytes = std::fs::read(lineage_path).map_err(|e| {
+            SporeError::IoError(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Failed to read lineage seed: {e}"),
+            ))
+        })?;
+
+        Ok(DeviceLineage {
+            device_id: "unknown".to_string(),
+            node_id: "unknown".to_string(),
+            family_id: "unknown".to_string(),
+            generation: 1,
+            derived_seed: BASE64.encode(&seed_bytes),
+            derived_at: 0,
+            derivation_method: "unknown".to_string(),
+            lineage_certificate: None,
+        })
+    }
+}
+
+/// Check if device has existing lineage (caller-agnostic).
+pub fn has_lineage(lineage_path: &Path) -> bool {
+    lineage_path.exists()
 }

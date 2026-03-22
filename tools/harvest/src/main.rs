@@ -30,14 +30,18 @@ use std::process::Command;
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
-/// Canonical source of truth: `biomeos-types::primal_names::CORE_PRIMALS`.
+/// Bootstrap-time primal roster for harvest operations.
+///
+/// Canonical source of truth: `biomeos-types::primal_names::CORE_PRIMALS` + UI primal.
+/// This standalone tool does not depend on `biomeos-types` to keep compile times fast.
+/// Keep in sync manually; all names must be lowercase (filesystem convention).
 const KNOWN_PRIMALS: &[&str] = &[
-    "songbird",
     "beardog",
+    "songbird",
     "toadstool",
     "nestgate",
     "squirrel",
-    "petalTongue",
+    "petaltongue",
 ];
 
 #[derive(Parser)]

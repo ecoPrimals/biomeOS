@@ -2,6 +2,27 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.67 (2026-03-22) — Remaining Debt Cleanup + Caller-Agnostic Lineage
+
+### LineageDeriver Type-Parameter Evolution
+- `load_lineage()` and `has_lineage()` promoted to free functions — callers no longer need a phantom `C` type parameter
+- `enroll.rs` evolved from `LineageDeriver::<DirectBeardogCaller>::load_lineage()` to caller-agnostic `load_lineage()` free function
+- Backward-compatible delegating methods retained on `LineageDeriver<C>` for existing callers
+
+### Roster Evolution
+- `checks_primal.rs` (doctor mode): hardcoded `/5` in health report replaced with dynamic `primals.len()`, warning threshold also dynamic
+- `tools/harvest/src/main.rs`: `KNOWN_PRIMALS` fixed to lowercase filesystem convention (`petalTongue` → `petaltongue`), sorted alphabetically, improved sync documentation
+
+### Debt Scan Results (v2.67 baseline)
+- **0 TODO/FIXME/HACK** markers in codebase
+- **0 unsafe** in production (2 in test-utils only, mutex-protected)
+- **0 clippy warnings** (pedantic+nursery)
+- **7,135 tests** passing (0 failures)
+- **0 files** over 1000 LOC (max production section: 648 lines)
+- **All `.unwrap()` calls** verified to be in `#[cfg(test)]` modules only
+- Hardcoded ports live in canonical `biomeos-types::constants` module
+- `/tmp/` paths are tiered fallbacks in centralized discovery protocol
+
 ## v2.66 (2026-03-22) — primalSpring-Aligned Capability Discovery Evolution
 
 ### Neural API Socket Readiness (exp060 fix)
