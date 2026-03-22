@@ -61,7 +61,7 @@ pub enum PrimalEndpoint {
         /// Socket address (ip:port)
         addr: SocketAddr,
     },
-    /// HTTP endpoint (temporary bridge)
+    /// HTTP endpoint (fallback transport per IPC Protocol v3.0 Tier 2)
     Http {
         /// Full URL including scheme
         url: String,
@@ -153,7 +153,7 @@ impl PrimalDiscovery {
             ))
         })?;
 
-        let request = biomeos_types::JsonRpcRequest::new("get_primal_info", serde_json::json!({}));
+        let request = biomeos_types::JsonRpcRequest::new("identity.info", serde_json::json!({}));
 
         let request_bytes = serde_json::to_vec(&request).map_err(|e| {
             crate::FederationError::DiscoveryError(format!("Failed to serialize request: {e}"))
@@ -223,14 +223,10 @@ impl PrimalDiscovery {
         let filename = socket_path
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or("unknown");
+            .unwrap_or_default();
 
-        let socket_name = filename
-            .split('-')
-            .next()
-            .unwrap_or(filename)
-            .trim_end_matches(".sock")
-            .to_string();
+        let base = filename.split('-').next().unwrap_or_default();
+        let socket_name = base.trim_end_matches(".sock").to_string();
 
         let (primal_name, primal_type, capabilities) =
             match self.query_primal_info(socket_path).await {
@@ -272,7 +268,7 @@ impl PrimalDiscovery {
                 let primal_name = key
                     .strip_prefix("PRIMAL_")
                     .and_then(|s| s.strip_suffix("_ENDPOINT"))
-                    .unwrap_or("unknown")
+                    .unwrap_or_default()
                     .to_lowercase();
 
                 if let Some(endpoint) = Self::parse_endpoint(&value) {
@@ -298,13 +294,11 @@ impl PrimalDiscovery {
 
     /// Parse an endpoint string. pub(crate) for tests.
     pub(crate) fn parse_endpoint(s: &str) -> Option<PrimalEndpoint> {
-        if s.starts_with("unix://") {
-            let path = s.strip_prefix("unix://").unwrap_or(s);
+        if let Some(path) = s.strip_prefix("unix://") {
             Some(PrimalEndpoint::UnixSocket {
                 path: PathBuf::from(path),
             })
-        } else if s.starts_with("udp://") {
-            let addr_str = s.strip_prefix("udp://").unwrap_or(s);
+        } else if let Some(addr_str) = s.strip_prefix("udp://") {
             addr_str
                 .parse::<SocketAddr>()
                 .ok()
@@ -388,7 +382,7 @@ impl PrimalDiscovery {
             let msg = error
                 .get("message")
                 .and_then(|m| m.as_str())
-                .unwrap_or("Unknown");
+                .unwrap_or_default();
             return Err(crate::FederationError::DiscoveryError(format!(
                 "Songbird discovery failed: {msg}"
             )));
@@ -406,15 +400,23 @@ impl PrimalDiscovery {
         Ok(())
     }
 
-    /// Find discovery provider socket. pub(crate) for tests.
+    /// Find discovery provider socket by capability (Gate 5.3).
+    ///
+    /// Resolves "discovery" capability → primal name via `CapabilityTaxonomy`,
+    /// then discovers the socket through env vars and XDG paths.
     pub(crate) fn discover_songbird_socket() -> FederationResult<String> {
         use biomeos_types::paths::SystemPaths;
 
-        let provider = std::env::var("DISCOVERY_PROVIDER")
-            .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
+        let provider = std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| {
+            biomeos_types::CapabilityTaxonomy::resolve_to_primal("discovery")
+                .unwrap_or(biomeos_types::primal_names::SONGBIRD)
+                .to_string()
+        });
 
-        if let Ok(socket) =
-            std::env::var("SONGBIRD_SOCKET").or_else(|_| std::env::var("DISCOVERY_SOCKET"))
+        // Capability-first env vars, then identity-based for backward compat
+        if let Ok(socket) = std::env::var("DISCOVERY_PROVIDER_SOCKET")
+            .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
+            .or_else(|_| std::env::var("SONGBIRD_SOCKET"))
         {
             return Ok(socket);
         }
@@ -435,7 +437,7 @@ impl PrimalDiscovery {
 
         Err(crate::FederationError::DiscoveryError(format!(
             "Discovery provider '{provider}' socket not found. \
-             Set SONGBIRD_SOCKET or ensure the discovery provider is running. \
+             Set DISCOVERY_PROVIDER_SOCKET or ensure the discovery provider is running. \
              Checked: XDG runtime dir: {}",
             paths.runtime_dir().display()
         )))
@@ -451,7 +453,7 @@ impl PrimalDiscovery {
         let family_id = peer
             .get("family_id")
             .and_then(|v| v.as_str())
-            .unwrap_or("unknown")
+            .unwrap_or_default()
             .to_string();
 
         let capabilities = peer
@@ -481,7 +483,7 @@ impl PrimalDiscovery {
             }
         }
 
-        let primal_name = node_id.split(':').next().unwrap_or(&node_id).to_string();
+        let primal_name = node_id.split(':').next().unwrap_or_default().to_string();
 
         let mut metadata = HashMap::new();
         metadata.insert("family_id".to_string(), family_id);

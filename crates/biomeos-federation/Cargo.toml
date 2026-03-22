@@ -23,7 +23,8 @@ anyhow = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
-# biomeOS types (SystemPaths, CapabilityTaxonomy)
+# biomeOS types and core (AtomicClient, SystemPaths, CapabilityTaxonomy)
+biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 bytes = "1"
 

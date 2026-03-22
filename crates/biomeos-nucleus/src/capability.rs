@@ -110,7 +110,7 @@ impl CapabilityLayer for CapabilityLayerImpl {
         let params = serde_json::json!({});
 
         let response: serde_json::Value =
-            crate::client::call_unix_socket_rpc(endpoint, "get_capabilities", params).await?;
+            crate::client::call_unix_socket_rpc(endpoint, "capability.list", params).await?;
 
         // Parse capability info
         let cap_info: CapabilityInfo = serde_json::from_value(response)?;

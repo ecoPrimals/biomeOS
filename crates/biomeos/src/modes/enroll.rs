@@ -25,7 +25,7 @@
 
 use anyhow::{Context, Result};
 use biomeos_spore::beacon_genetics::{
-    DirectBeardogCaller, LineageDeriver, generate_device_entropy,
+    DirectBeardogCaller, LineageDeriver, NeuralApiCapabilityCaller, generate_device_entropy,
 };
 use biomeos_types::Uuid;
 use biomeos_types::primal_names::BEARDOG;
@@ -149,36 +149,50 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
 
     validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force)?;
 
-    let beardog_socket = args
-        .beardog_socket
-        .or_else(|| {
-            args.beardog_socket_dir
-                .as_ref()
-                .map_or_else(discover_beardog_socket, |dir| {
-                    discover_beardog_socket_in(Some(dir.as_path()), Some(&args.family_id))
-                })
-        })
-        .context("Could not find BearDog socket. Is BearDog running?")?;
-
-    info!("   BearDog: {}", beardog_socket);
-
-    // Create capability caller (direct to BearDog, not through Neural API)
-    let caller = DirectBeardogCaller::new(&beardog_socket);
-    let deriver = LineageDeriver::new(caller);
-
     // Enroll the device
     info!("📝 Deriving unique device seed...");
 
-    let result = deriver
-        .enroll_device(
-            &args.family_seed,
-            &args.lineage_seed,
-            &args.family_id,
-            &device_id,
-            &args.node_id,
-        )
-        .await
-        .context("Device enrollment failed")?;
+    // Prefer Neural API routing; fall back to direct BearDog for bootstrap
+    let neural_socket = NeuralApiCapabilityCaller::default_socket();
+    let result = if Path::new(&neural_socket).exists() {
+        info!("   Neural API: {} (capability routing)", neural_socket);
+        let caller = NeuralApiCapabilityCaller::new(&neural_socket);
+        LineageDeriver::new(caller)
+            .enroll_device(
+                &args.family_seed,
+                &args.lineage_seed,
+                &args.family_id,
+                &device_id,
+                &args.node_id,
+            )
+            .await
+            .context("Device enrollment failed (via Neural API)")?
+    } else {
+        let beardog_socket = args
+            .beardog_socket
+            .or_else(|| {
+                args.beardog_socket_dir
+                    .as_ref()
+                    .map_or_else(discover_beardog_socket, |dir| {
+                        discover_beardog_socket_in(Some(dir.as_path()), Some(&args.family_id))
+                    })
+            })
+            .context(
+                "Could not find BearDog socket (Neural API not available). Is BearDog running?",
+            )?;
+        info!("   BearDog (direct, bootstrap): {}", beardog_socket);
+        let caller = DirectBeardogCaller::new(&beardog_socket);
+        LineageDeriver::new(caller)
+            .enroll_device(
+                &args.family_seed,
+                &args.lineage_seed,
+                &args.family_id,
+                &device_id,
+                &args.node_id,
+            )
+            .await
+            .context("Device enrollment failed (direct BearDog)")?
+    };
 
     info!("✅ Device enrolled successfully!");
     info!("   Lineage seed: {}", result.seed_path.display());

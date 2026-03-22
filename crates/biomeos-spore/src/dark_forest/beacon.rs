@@ -70,10 +70,25 @@ impl DarkForestBeacon {
         })
     }
 
-    /// Create from a BearDog socket path (backward compatibility / bootstrap)
+    /// Create with Neural API capability routing (preferred for production).
     ///
-    /// Wraps the socket path in a `DirectBeardogCaller`. Prefer `new()` with
-    /// `NeuralApiCapabilityCaller` for production use.
+    /// Routes all crypto operations through the Neural API's capability
+    /// translation layer, enabling primal-agnostic operation.
+    pub async fn from_neural_api<P: AsRef<Path>>(
+        neural_api_socket: &str,
+        seed_path: P,
+        node_id: &str,
+    ) -> SporeResult<Self> {
+        let caller = Arc::new(crate::beacon_genetics::NeuralApiCapabilityCaller::new(
+            neural_api_socket,
+        ));
+        Self::new(caller, seed_path, node_id).await
+    }
+
+    /// Create from a BearDog socket path (bootstrap only).
+    ///
+    /// Wraps the socket path in a `DirectBeardogCaller`. Prefer
+    /// [`from_neural_api`](Self::from_neural_api) for production use.
     pub async fn from_beardog_socket<P: AsRef<Path>>(
         beardog_socket: &str,
         seed_path: P,

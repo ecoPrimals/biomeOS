@@ -201,6 +201,57 @@ impl NeuralApiServer {
                     ),
                     Err(e) => warn!("⚠️  Failed to load capability_registry.toml: {}", e),
                 }
+
+                // Bridge domain providers into the NeuralRouter so capability.call
+                // can discover which primal handles each capability domain.
+                if let Ok(config_content) = std::fs::read_to_string(&config_path) {
+                    if let Ok(config) = config_content.parse::<toml::Value>() {
+                        if let Some(domains) = config.get("domains").and_then(|d| d.as_table()) {
+                            let family_id = biomeos_core::family_discovery::get_family_id();
+                            for (domain_name, domain_cfg) in domains {
+                                let provider = domain_cfg
+                                    .get("provider")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or_default();
+                                if provider.is_empty() || provider == "*" {
+                                    continue;
+                                }
+                                let socket = crate::capability_translation::resolve_primal_socket(
+                                    provider, &family_id,
+                                );
+                                let caps = domain_cfg
+                                    .get("capabilities")
+                                    .and_then(|v| v.as_array())
+                                    .map(|arr| {
+                                        arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>()
+                                    })
+                                    .unwrap_or_default();
+
+                                for cap in caps {
+                                    if let Err(e) = self
+                                        .router
+                                        .register_capability(
+                                            cap,
+                                            provider,
+                                            &socket,
+                                            "config_registry",
+                                        )
+                                        .await
+                                    {
+                                        warn!(
+                                            "⚠️  Failed to register domain capability {} → {}: {}",
+                                            cap, provider, e
+                                        );
+                                    }
+                                }
+                                info!(
+                                    "📝 Registered domain '{}' → {} ({})",
+                                    domain_name, provider, socket
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
 

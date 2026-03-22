@@ -78,7 +78,7 @@ impl AtomicPrimalClient {
 
     /// Health check (ping)
     pub async fn health_check(&self) -> Result<()> {
-        let result = self.client.call("ping", Value::Null).await?;
+        let result = self.client.call("health.ping", Value::Null).await?;
 
         if result.get("status") == Some(&Value::String("ok".to_string())) {
             Ok(())
@@ -89,7 +89,7 @@ impl AtomicPrimalClient {
 
     /// Get primal identity and capabilities
     pub async fn get_identity(&self) -> Result<Value> {
-        self.client.call("get_identity", Value::Null).await
+        self.client.call("identity.get", Value::Null).await
     }
 
     /// Execute a command in the primal (if supported)

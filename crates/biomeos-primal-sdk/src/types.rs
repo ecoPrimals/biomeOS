@@ -406,7 +406,7 @@ mod tests {
     #[test]
     fn test_helpers_capability_discovery_request() {
         let req = helpers::capability_discovery_request();
-        assert_eq!(req.method, "get_capabilities");
+        assert_eq!(req.method, "capability.list");
     }
 
     #[test]
@@ -462,14 +462,14 @@ pub mod helpers {
 
     /// Create a capability discovery request
     pub fn capability_discovery_request() -> PrimalRequest {
-        PrimalRequest::new("get_capabilities")
+        PrimalRequest::new("capability.list")
             .with_priority(RequestPriority::Normal)
             .with_timeout(10000) // 10 second timeout
     }
 
     /// Create a configuration request
     pub fn get_config_request() -> PrimalRequest {
-        PrimalRequest::new("get_configuration").with_priority(RequestPriority::Normal)
+        PrimalRequest::new("config.get").with_priority(RequestPriority::Normal)
     }
 
     /// Create a successful health response

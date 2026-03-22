@@ -112,55 +112,57 @@ impl IdentityLayerImpl {
         format!("{:x}", hasher.finalize())
     }
 
-    /// Discover `BearDog`'s Unix socket
+    /// Discover the security provider's Unix socket by capability (Gate 5.3).
     ///
-    /// **Deep Debt Principle**: Runtime discovery, not hardcoded!
+    /// Uses `CapabilityTaxonomy` to resolve "security" → primal name at runtime,
+    /// avoiding hardcoded primal identities.
     async fn discover_beardog_socket() -> Result<String> {
-        debug!("Discovering BearDog socket (no hardcoded paths)");
+        use biomeos_types::CapabilityTaxonomy;
 
-        // 1. Check environment variable
-        if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
-            debug!(
-                "Found BearDog socket via BEARDOG_SOCKET env var: {}",
-                socket
-            );
+        let security_primal =
+            CapabilityTaxonomy::resolve_to_primal("security").unwrap_or(primal_names::BEARDOG);
+        debug!("Discovering security provider socket (resolved: {security_primal})");
+
+        // 1. Check primal-specific environment variable
+        let env_key = format!("{}_SOCKET", security_primal.to_uppercase());
+        if let Ok(socket) = std::env::var(&env_key) {
+            debug!("Found security socket via {env_key}: {socket}");
+            return Ok(socket);
+        }
+        if let Ok(socket) = std::env::var("SECURITY_PROVIDER_SOCKET") {
+            debug!("Found security socket via SECURITY_PROVIDER_SOCKET: {socket}");
             return Ok(socket);
         }
 
-        // 2. Check XDG runtime directory (standard location)
+        // 2. Check XDG runtime directory (biomeos namespace)
         if let Ok(uid) = std::env::var("UID") {
-            let runtime_path = format!("/run/user/{uid}/biomeos/{}.sock", primal_names::BEARDOG);
+            let runtime_path = format!("/run/user/{uid}/biomeos/{security_primal}.sock");
             if tokio::fs::metadata(&runtime_path).await.is_ok() {
-                debug!(
-                    "Found BearDog socket in XDG runtime directory: {}",
-                    runtime_path
-                );
+                debug!("Found security socket in XDG runtime: {runtime_path}");
                 return Ok(runtime_path);
             }
         }
 
-        // 3. Check tmp directory
-        let mut read_dir = tokio::fs::read_dir("/tmp")
-            .await
-            .map_err(|e| Error::discovery_failed(format!("Failed to read /tmp: {e}"), None))?;
-
-        while let Some(entry) = read_dir.next_entry().await.map_err(|e| {
-            Error::discovery_failed(format!("Failed to read directory entry: {e}"), None)
-        })? {
-            let path = entry.path();
-            if let Some(filename) = path.file_name().and_then(|n| n.to_str())
-                && filename.starts_with(&format!("{}-", primal_names::BEARDOG))
-                && std::path::Path::new(filename)
-                    .extension()
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
-            {
-                debug!("Found BearDog socket: {}", path.display());
-                return Ok(path.to_string_lossy().to_string());
+        // 3. Scan /tmp/biomeos/ for capability-named sockets
+        for dir in &["/tmp/biomeos", "/tmp"] {
+            if let Ok(mut read_dir) = tokio::fs::read_dir(dir).await {
+                while let Ok(Some(entry)) = read_dir.next_entry().await {
+                    let path = entry.path();
+                    if let Some(filename) = path.file_name().and_then(|n| n.to_str())
+                        && filename.starts_with(&format!("{security_primal}-"))
+                        && std::path::Path::new(filename)
+                            .extension()
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+                    {
+                        debug!("Found security socket: {}", path.display());
+                        return Ok(path.to_string_lossy().to_string());
+                    }
+                }
             }
         }
 
         Err(Error::discovery_failed(
-            "Could not discover BearDog socket. Is BearDog running?",
+            "Could not discover security provider socket. Is the security primal running?",
             Some("identity".to_string()),
         ))
     }

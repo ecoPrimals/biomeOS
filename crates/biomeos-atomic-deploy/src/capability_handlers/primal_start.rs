@@ -484,6 +484,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_primal_start_capability_family_id_from_params() {
         let _guard = cwd_lock().lock().await;
         let temp = tempfile::tempdir().expect("temp dir");

@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: March 21, 2026
+**Updated**: March 22, 2026
 
 ---
 
@@ -46,7 +46,7 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 | [NEURAL_API_ROUTING_SPECIFICATION.md](specs/NEURAL_API_ROUTING_SPECIFICATION.md) | Capability translation v2.0 |
 | [PRIMAL_DEPLOYMENT_STANDARD.md](specs/PRIMAL_DEPLOYMENT_STANDARD.md) | Deterministic deployment v1.0 |
 
-47 specs archived to `ecoPrimals/archive/biomeos-mar14-2026/specs/`.
+47 specs archived to `ecoPrimals/archive/` (fossil record).
 
 ---
 

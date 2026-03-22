@@ -137,7 +137,7 @@ impl<'a> RollbackManager<'a> {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        let request = JsonRpcRequest::new("shutdown", serde_json::json!({ "graceful": true }));
+        let request = JsonRpcRequest::new("lifecycle.shutdown", serde_json::json!({ "graceful": true }));
         let request_str = serde_json::to_string(&request)? + "\n";
         writer.write_all(request_str.as_bytes()).await?;
         writer.flush().await?;

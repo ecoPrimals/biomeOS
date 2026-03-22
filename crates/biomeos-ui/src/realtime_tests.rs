@@ -908,3 +908,63 @@ fn test_parse_sse_event_malformed_timestamp_type() {
     let sse_text = "data: {\"type\":\"heartbeat\",\"timestamp\":\"nan\",\"primals_count\":1,\"healthy_count\":1}";
     assert!(RealTimeEventSubscriber::parse_sse_event(sse_text).is_none());
 }
+
+#[tokio::test]
+async fn test_subscribe_websocket_success_path() {
+    use futures_util::{SinkExt, StreamExt};
+    use tokio::net::TcpListener;
+
+    let tcp = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = tcp.local_addr().unwrap();
+    let ws_url = format!("ws://127.0.0.1:{}", addr.port());
+
+    let server = tokio::spawn(async move {
+        let (stream, _) = tcp.accept().await.unwrap();
+        let ws = tokio_tungstenite::accept_async(stream).await.unwrap();
+        let (mut write, mut read) = ws.split();
+
+        if let Some(Ok(msg)) = read.next().await {
+            assert!(msg.is_text(), "expected subscribe JSON-RPC");
+        }
+
+        let notification = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "event.notify",
+            "params": {
+                "event": {
+                    "type": "heartbeat",
+                    "timestamp": 99,
+                    "primals_count": 3,
+                    "healthy_count": 3
+                }
+            }
+        });
+        let _ = write
+            .send(tokio_tungstenite::tungstenite::Message::Text(
+                serde_json::to_string(&notification).unwrap(),
+            ))
+            .await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    });
+
+    let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+    subscriber.set_urls_for_test(Some(ws_url), None);
+
+    let mut rx = subscriber.subscribe();
+
+    subscriber
+        .subscribe_websocket()
+        .await
+        .expect("websocket connection should succeed with local server");
+
+    let event = tokio::time::timeout(std::time::Duration::from_secs(3), rx.recv()).await;
+    assert!(event.is_ok(), "should receive event within timeout");
+    let event = event.unwrap().unwrap();
+    assert!(matches!(
+        event,
+        RealTimeEvent::Heartbeat { timestamp: 99, .. }
+    ));
+
+    server.abort();
+}

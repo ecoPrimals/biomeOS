@@ -2,6 +2,42 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.64 (2026-03-22) — Flaky Test Hardening + Coverage Push + serde_yml Migration
+
+### Test Reliability
+- 3 flaky tests fixed with `#[serial_test::serial]` + `TestEnvGuard` RAII guards:
+  - `nucleation::test_xdg_runtime_strategy` / `test_xdg_runtime_fallback_to_tmp` (env var race)
+  - `capability_registry_tests2::test_registry_socket_heartbeat_unknown_primal` (ready signal timeout under instrumentation)
+  - `capability_handlers::test_primal_start_capability_family_id_from_params` (CWD race under llvm-cov)
+- 6 device management server tests updated: old method names (`get_primals_extended`, `get_niche_templates`, `validate_niche`, `deploy_niche`) → semantic `domain.verb` format (`primal.list`, `niche.list_templates`, `niche.validate`, `niche.deploy`)
+- Songbird error message restored: `unwrap_or_default()` → `unwrap_or("Unknown error")` (empty error messages are not user-friendly)
+
+### Coverage Push
+- 19 new tests across 3 files:
+  - `nucleus_tests4.rs` (14 tests): `detect_ecosystem` (bootstrap, stale socket, live mock socket), `generate_jwt_secret`, `base64_encode` edge cases, `format_nucleus_summary` coordinated label, `NucleusMode::Full` primals, `wait_for_socket` (immediate, timeout, delayed creation)
+  - `cli.rs` (4 tests): `ContextTip::to_colored_string` for all 3 variants, debug formatting
+  - `realtime_tests.rs` (1 test): `subscribe_websocket` full success path with local WebSocket echo server (tokio-tungstenite)
+- Coverage: 90.26% region / 91.14% function / 89.99% line (llvm-cov verified)
+
+### Dependency Evolution
+- **`serde_yaml` → `serde_yml`**: Migrated all remaining deprecated `serde_yaml = "0.9"` dependencies to actively-maintained `serde_yml = "0.0.12"` (drop-in replacement via Cargo package rename)
+  - Updated workspace `[workspace.dependencies]` definition
+  - Updated `biomeos-cli/Cargo.toml` (was pinning its own `serde_yaml = "0.9"`)
+  - Now consistent across all 9 crates that use YAML serialization
+
+### Code Quality
+- Clippy `implicit_clone` lint fixed in `songbird.rs` (`pattern.to_string()` → `(*pattern).clone()`)
+
+### Quality Gates
+- Tests: ~5,060+ passing, 0 deterministic failures
+- Coverage: 90.26% region / 91.14% function / 89.99% line (llvm-cov)
+- Clippy: 0 warnings (pedantic+nursery, 26 workspace crates)
+- Format: clean
+- C deps: 0
+- `cargo deny check`: clean (advisories, bans, licenses, sources all OK)
+
+---
+
 ## v2.63 (2026-03-21) — Deep Audit + Idiomatic Rust Evolution
 
 ### ecoBin Compliance

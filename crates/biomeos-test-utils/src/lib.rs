@@ -25,6 +25,5 @@ pub mod ready_signal;
 pub use env_helpers::{TestEnvGuard, remove_test_env, set_test_env};
 pub use fixtures::{create_test_config, create_test_manifest};
 pub use mock_jsonrpc_server::MockJsonRpcServer;
-/// Re-export commonly used test utilities
 pub use mock_primal::{MockPrimal, MockPrimalBuilder};
 pub use ready_signal::{ReadyReceiver, ReadySender, ready_signal};

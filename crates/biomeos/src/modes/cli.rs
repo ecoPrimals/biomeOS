@@ -228,4 +228,34 @@ mod tests {
         let result = run(CliCommand).await;
         result.expect("run should succeed");
     }
+
+    #[test]
+    fn test_context_tip_colored_string_neural_api() {
+        let s = ContextTip::NeuralApi.to_colored_string();
+        assert!(s.contains("neural-api"));
+    }
+
+    #[test]
+    fn test_context_tip_colored_string_family_seed() {
+        let s = ContextTip::FamilySeed.to_colored_string();
+        assert!(s.contains("spore imprint"));
+    }
+
+    #[test]
+    fn test_context_tip_colored_string_graphs() {
+        let s = ContextTip::Graphs.to_colored_string();
+        assert!(s.contains("graphs/"));
+    }
+
+    #[test]
+    fn test_context_tip_all_variants_debug() {
+        for tip in [
+            ContextTip::FamilySeed,
+            ContextTip::Graphs,
+            ContextTip::NeuralApi,
+        ] {
+            let d = format!("{tip:?}");
+            assert!(!d.is_empty());
+        }
+    }
 }

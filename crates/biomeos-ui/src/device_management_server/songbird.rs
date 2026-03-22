@@ -60,9 +60,10 @@ pub(super) async fn register_with_songbird(socket_path: &str) -> Result<()> {
 
     let response: Value = serde_json::from_str(response_line.trim())?;
 
-    if response.get("error").is_some() {
-        let msg = response["error"]["message"]
-            .as_str()
+    if let Some(err) = response.get("error") {
+        let msg = err
+            .get("message")
+            .and_then(|m| m.as_str())
             .unwrap_or("Unknown error");
         anyhow::bail!("Songbird registration failed: {msg}");
     }
@@ -71,14 +72,23 @@ pub(super) async fn register_with_songbird(socket_path: &str) -> Result<()> {
     Ok(())
 }
 
-/// Discover Songbird socket using XDG-compliant paths
+/// Discover discovery provider socket by capability (Gate 5.3).
+///
+/// Resolves "discovery" capability → primal name via `CapabilityTaxonomy`,
+/// then discovers the socket through env vars, XDG, and fallback paths.
 pub(super) fn discover_songbird_socket() -> Result<String> {
-    if let Ok(socket) = std::env::var("SONGBIRD_SOCKET") {
+    let provider = biomeos_types::CapabilityTaxonomy::resolve_to_primal("discovery")
+        .unwrap_or(biomeos_types::primal_names::SONGBIRD);
+
+    // Capability-first env vars, then identity-based for backward compat
+    if let Ok(socket) =
+        std::env::var("DISCOVERY_PROVIDER_SOCKET").or_else(|_| std::env::var("SONGBIRD_SOCKET"))
+    {
         return Ok(socket);
     }
 
     if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-        let socket = format!("{runtime}/biomeos/songbird.sock");
+        let socket = format!("{runtime}/biomeos/{provider}.sock");
         if std::path::Path::new(&socket).exists() {
             return Ok(socket);
         }
@@ -88,28 +98,32 @@ pub(super) fn discover_songbird_socket() -> Result<String> {
         std::env::var("BIOMEOS_FAMILY_ID").or_else(|_| std::env::var("FAMILY_ID"))
     {
         if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-            let socket = format!("{runtime}/biomeos/songbird-{family_id}.sock");
+            let socket = format!("{runtime}/biomeos/{provider}-{family_id}.sock");
             if std::path::Path::new(&socket).exists() {
                 return Ok(socket);
             }
         }
-        let socket = format!("/tmp/songbird-{family_id}.sock");
+        let socket = format!("/tmp/{provider}-{family_id}.sock");
         if std::path::Path::new(&socket).exists() {
             tracing::warn!("⚠️ Using legacy /tmp path: {}", socket);
             return Ok(socket);
         }
     }
 
-    for pattern in &["/run/biomeos/songbird.sock", "/tmp/songbird.sock"] {
-        if std::path::Path::new(pattern).exists() {
+    for pattern in &[
+        &format!("/tmp/biomeos/{provider}.sock"),
+        &format!("/run/biomeos/{provider}.sock"),
+        &format!("/tmp/{provider}.sock"),
+    ] {
+        if std::path::Path::new(pattern.as_str()).exists() {
             if pattern.starts_with("/tmp") {
                 tracing::warn!("⚠️ Using legacy /tmp path: {}", pattern);
             }
-            return Ok((*pattern).to_string());
+            return Ok((*pattern).clone());
         }
     }
 
-    anyhow::bail!("Songbird socket not found")
+    anyhow::bail!("Discovery provider socket not found")
 }
 
 #[cfg(test)]

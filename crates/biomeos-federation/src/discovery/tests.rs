@@ -277,7 +277,7 @@ fn test_register_songbird_peer_minimal() {
     let dp = pd.get("songbird").expect("should exist");
     assert_eq!(dp.name, "songbird");
     assert!(dp.endpoints.is_empty());
-    assert_eq!(dp.metadata["family_id"], "unknown");
+    assert_eq!(dp.metadata["family_id"], "");
 }
 
 #[test]

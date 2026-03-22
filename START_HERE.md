@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: March 21, 2026
-**Status**: Production Ready (v2.63) - ~5,060 tests (fully concurrent, zero sleeps/serial), Edition 2024 all 26 crates, 90.26% region / 91.10% function / 89.99% line coverage (llvm-cov), Zero Warnings, Zero C deps (enforced), scyBorg licensed
+**Last Updated**: March 22, 2026
+**Status**: Production Ready (v2.64) - ~5,060+ tests (fully concurrent, zero sleeps/serial), Edition 2024 all 26 crates, 90.26% region / 91.14% function / 89.99% line coverage (llvm-cov), Zero Warnings, Zero C deps (enforced), scyBorg licensed
 
 ---
 
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.63)
+**Status**: Production Ready (v2.64)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Neural API**: 285+ semantic translations, 25 capability domains (part of biomeOS)

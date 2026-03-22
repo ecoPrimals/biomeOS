@@ -265,30 +265,26 @@ mod tests {
 }
 
 #[test]
+#[serial_test::serial]
 fn test_xdg_runtime_strategy() {
-    use biomeos_test_utils::set_test_env;
-    // Set up XDG_RUNTIME_DIR for this test
-    set_test_env("XDG_RUNTIME_DIR", "/run/user/1000");
+    let _guard = biomeos_test_utils::TestEnvGuard::set("XDG_RUNTIME_DIR", "/run/user/1000");
 
     let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
     let socket = nucleation.assign_socket("beardog", "test_family");
 
-    // Should create XDG path with biomeos subdirectory
     assert!(socket.to_string_lossy().contains("/run/user/1000/biomeos/"));
     assert!(socket.to_string_lossy().contains("beardog-test_family"));
     assert!(socket.to_string_lossy().ends_with(".sock"));
 }
 
 #[test]
+#[serial_test::serial]
 fn test_xdg_runtime_fallback_to_tmp() {
-    use biomeos_test_utils::remove_test_env;
-    // Temporarily unset XDG_RUNTIME_DIR
-    remove_test_env("XDG_RUNTIME_DIR");
+    let _guard = biomeos_test_utils::TestEnvGuard::remove("XDG_RUNTIME_DIR");
 
     let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
     let socket = nucleation.assign_socket("songbird", "test-family");
 
-    // Should fall back to /tmp with biomeos subdirectory
     assert!(
         socket.to_string_lossy().contains("/tmp/biomeos/")
             || socket.to_string_lossy().contains("songbird-test-family")

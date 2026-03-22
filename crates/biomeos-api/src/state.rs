@@ -65,11 +65,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use thiserror::Error;
 
-/// Default bind address (const to avoid parsing at runtime)
-/// ⚠️ DEPRECATED: Use Unix socket instead! This is for temporary HTTP bridge only.
+/// Default bind address for Tier 2 TCP fallback transport (IPC Protocol v3.0).
 ///
-/// **EVOLVED**: Now reads from environment variables via RuntimeConfig.
-/// Falls back to this constant only for development.
+/// Reads from environment variables via `RuntimeConfig`.
+/// Falls back to constant only for development.
 fn default_bind_addr() -> String {
     use biomeos_types::defaults::RuntimeConfig;
     let config = RuntimeConfig::from_env();

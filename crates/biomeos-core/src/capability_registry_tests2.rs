@@ -561,7 +561,10 @@ async fn test_registry_socket_heartbeat_unknown_primal() {
         let _ = registry_clone.serve_with_ready(ready_tx).await;
     });
 
-    ready_rx.wait().await.expect("ready");
+    tokio::time::timeout(std::time::Duration::from_secs(10), ready_rx.wait())
+        .await
+        .expect("server start timeout")
+        .expect("ready");
 
     let socket_path = runtime_dir.join("biomeos-registry-hb-miss.sock");
     let mut stream = tokio::net::UnixStream::connect(&socket_path)

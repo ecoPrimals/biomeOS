@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 21, 2026 (v2.63: Deep audit + evolution session — `zstd`→`lz4_flex` (C dep eliminated, ecoBin v3.0 pure Rust zstd-sys ban enforced), `neural-api-client` promoted to workspace member (lint inheritance), LICENSE-ORC AGPL consistency fix, `as` casts→`u32::try_from()` in genomebin-v3 headers, `#[allow]`→`#[expect(reason)]` across 4 files, production `.unwrap()`→safe patterns in tools/harvest, hardcoded primal lists centralized, 7 new proptest IPC roundtrip cases, `CompressionLevel::Best`→`lz4_flex::compress_prepend_size`, resource allocation casts documented with `#[expect]`)
-**Version**: 2.63
+**Updated**: March 22, 2026 (v2.64: Flaky test hardening — 3 env/CWD race fixes with `#[serial]`+`TestEnvGuard`, 6 method-name test fixes for `domain.verb` convention, 19 new coverage tests incl. WebSocket success path, `serde_yaml`→`serde_yml` migration across workspace, songbird error message fix, clippy `implicit_clone` fix)
+**Version**: 2.64
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -18,7 +18,7 @@
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
 | **Tests Passing** | ~5,060 lib + bin + doc + proptest (0 deterministic failures, ~83 ignored cwd-sensitive — run with `--ignored --test-threads=1`) |
-| **Test Coverage** | 90.26% region / 91.10% function / 89.99% line (llvm-cov workspace-wide verified) — region and function above 90% target, line at functional 90% |
+| **Test Coverage** | 90.26% region / 91.14% function / 89.99% line (llvm-cov workspace-wide verified) — region and function above 90% target, line at functional 90% |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |

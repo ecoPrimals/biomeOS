@@ -708,3 +708,7 @@ mod tests2;
 #[cfg(test)]
 #[path = "nucleus_tests3.rs"]
 mod tests3;
+
+#[cfg(test)]
+#[path = "nucleus_tests4.rs"]
+mod tests4;

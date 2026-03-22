@@ -135,7 +135,7 @@ pub(crate) async fn handle_method(
     provider: &Arc<RwLock<DeviceManagementProvider>>,
 ) -> JsonRpcResponse {
     let result = match request.method.as_str() {
-        "get_devices" => {
+        "device.list" => {
             let provider_guard = provider.read().await;
             match provider_guard.get_devices().await {
                 Ok(devices) => Ok(json!(devices)),
@@ -146,7 +146,7 @@ pub(crate) async fn handle_method(
                 }),
             }
         }
-        "get_primals_extended" => {
+        "primal.list" => {
             let provider_guard = provider.read().await;
             match provider_guard.get_primals().await {
                 Ok(primals) => Ok(json!(primals)),
@@ -157,7 +157,7 @@ pub(crate) async fn handle_method(
                 }),
             }
         }
-        "get_niche_templates" => {
+        "niche.list_templates" => {
             let provider_guard = provider.read().await;
             match provider_guard.get_niche_templates().await {
                 Ok(templates) => Ok(json!(templates)),
@@ -168,10 +168,16 @@ pub(crate) async fn handle_method(
                 }),
             }
         }
-        "assign_device" => {
+        "device.assign" => {
             let params = request.params.unwrap_or_else(|| json!({}));
-            let device_id = params["device_id"].as_str().unwrap_or("");
-            let primal_id = params["primal_id"].as_str().unwrap_or("");
+            let device_id = params
+                .get("device_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let primal_id = params
+                .get("primal_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
             let provider_guard = provider.read().await;
             match provider_guard
@@ -186,7 +192,7 @@ pub(crate) async fn handle_method(
                 }),
             }
         }
-        "validate_niche" => {
+        "niche.validate" => {
             let params = request.params.unwrap_or_else(|| json!({}));
             let provider_guard = provider.read().await;
             let templates = match provider_guard.get_niche_templates().await {
@@ -228,7 +234,7 @@ pub(crate) async fn handle_method(
                 }),
             }
         }
-        "deploy_niche" => {
+        "niche.deploy" => {
             let params = request.params.unwrap_or_else(|| json!({}));
             let config = params["config"].clone();
 
@@ -280,10 +286,10 @@ mod tests {
 
     #[test]
     fn test_json_rpc_request_deserialize() {
-        let json = r#"{"jsonrpc":"2.0","method":"get_devices","params":null,"id":1}"#;
+        let json = r#"{"jsonrpc":"2.0","method":"device.list","params":null,"id":1}"#;
         let req: JsonRpcRequest = serde_json::from_str(json).unwrap();
         assert_eq!(req.jsonrpc, "2.0");
-        assert_eq!(req.method, "get_devices");
+        assert_eq!(req.method, "device.list");
         assert_eq!(req.id, serde_json::json!(1));
     }
 
@@ -338,9 +344,9 @@ mod tests {
 
     #[test]
     fn test_json_rpc_request_roundtrip_with_params_object() {
-        let json = r#"{"jsonrpc":"2.0","method":"assign_device","params":{"device_id":"a","primal_id":"b"},"id":"rid"}"#;
+        let json = r#"{"jsonrpc":"2.0","method":"device.assign","params":{"device_id":"a","primal_id":"b"},"id":"rid"}"#;
         let req: JsonRpcRequest = serde_json::from_str(json).unwrap();
-        assert_eq!(req.method, "assign_device");
+        assert_eq!(req.method, "device.assign");
         let params = req.params.expect("params");
         assert_eq!(params["device_id"], "a");
         assert_eq!(params["primal_id"], "b");
@@ -372,7 +378,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "get_devices".to_string(),
+            method: "device.list".to_string(),
             params: None,
             id: json!(1),
         };
@@ -388,7 +394,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "get_primals_extended".to_string(),
+            method: "primal.list".to_string(),
             params: None,
             id: json!(2),
         };
@@ -406,7 +412,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "get_niche_templates".to_string(),
+            method: "niche.list_templates".to_string(),
             params: None,
             id: json!(3),
         };
@@ -425,7 +431,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "assign_device".to_string(),
+            method: "device.assign".to_string(),
             params: Some(json!({
                 "device_id": "gpu-0",
                 "primal_id": "toadstool-1"
@@ -446,7 +452,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "assign_device".to_string(),
+            method: "device.assign".to_string(),
             params: None,
             id: json!(5),
         };
@@ -461,7 +467,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "assign_device".to_string(),
+            method: "device.assign".to_string(),
             params: Some(json!({"device_id":"","primal_id":""})),
             id: json!(51),
         };
@@ -476,7 +482,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "validate_niche".to_string(),
+            method: "niche.validate".to_string(),
             params: Some(json!({"template_id": "tower"})),
             id: json!(6),
         };
@@ -494,7 +500,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "validate_niche".to_string(),
+            method: "niche.validate".to_string(),
             params: Some(json!({"template_id": "nonexistent_template"})),
             id: json!(7),
         };
@@ -512,7 +518,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "deploy_niche".to_string(),
+            method: "niche.deploy".to_string(),
             params: Some(json!({"config": {"template": "tower"}})),
             id: json!(8),
         };
@@ -529,7 +535,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "deploy_niche".to_string(),
+            method: "niche.deploy".to_string(),
             params: Some(json!({})),
             id: json!(9),
         };
@@ -544,7 +550,7 @@ mod tests {
         )));
         let request = JsonRpcRequest {
             jsonrpc: JsonRpcVersion,
-            method: "get_devices".to_string(),
+            method: "device.list".to_string(),
             params: None,
             id: json!("string-id"),
         };
@@ -587,7 +593,7 @@ mod tests {
         let (reader, mut writer) = client_stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        let request = r#"{"jsonrpc":"2.0","method":"get_devices","params":null,"id":1}"#;
+        let request = r#"{"jsonrpc":"2.0","method":"device.list","params":null,"id":1}"#;
         writer
             .write_all((request.to_string() + "\n").as_bytes())
             .await

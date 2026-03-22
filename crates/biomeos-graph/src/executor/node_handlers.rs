@@ -101,120 +101,102 @@ pub async fn node_crypto_derive_seed(
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    let security_provider = context
-        .env
-        .get("SECURITY_PROVIDER")
-        .cloned()
-        .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
-    let security_socket = discover_capability_socket(&security_provider, &context.env)?;
+    // Route through Neural API via capability.call (Gate 6.2)
+    let neural_socket = discover_neural_api_socket(&context.env)?;
 
     debug!(
-        "Calling security provider '{security_provider}' for seed derivation: node_id={node_id}, output={output_path}",
+        "Routing crypto.derive_child_seed via Neural API at {neural_socket}: node_id={node_id}, output={output_path}",
     );
 
-    let stream = UnixStream::connect(&security_socket)
-        .await
-        .context(format!(
-            "Failed to connect to security provider '{security_provider}' at {security_socket}"
-        ))?;
-
-    let (reader, mut writer) = stream.into_split();
-    let mut reader = BufReader::new(reader);
-
-    // Prepare JSON-RPC request to BearDog
     let request = JsonRpcRequest::new(
-        "crypto.derive_child_seed",
+        "capability.call",
         serde_json::json!({
-            "parent_seed": parent_seed,
-            "node_id": node_id,
-            "output_path": output_path,
-            "deployment_batch": deployment_batch
+            "capability": "crypto",
+            "operation": "derive_child_seed",
+            "args": {
+                "parent_seed": parent_seed,
+                "node_id": node_id,
+                "output_path": output_path,
+                "deployment_batch": deployment_batch
+            }
         }),
     );
 
-    // Send request
-    let request_str = serde_json::to_string(&request)? + "\n";
-    writer.write_all(request_str.as_bytes()).await?;
-    writer.flush().await?;
+    let response = call_neural_api(&neural_socket, &request)
+        .await
+        .context("capability.call(crypto, derive_child_seed) via Neural API failed")?;
 
-    // Read response
-    let mut response_line = String::new();
-    reader.read_line(&mut response_line).await?;
-
-    // Parse response
-    let response: serde_json::Value = serde_json::from_str(response_line.trim())?;
-
-    // Check for JSON-RPC error
     if let Some(error) = response.get("error") {
         let message = error
             .get("message")
             .and_then(|m| m.as_str())
             .unwrap_or("Unknown error");
-        anyhow::bail!(
-            "Security provider '{security_provider}' seed derivation failed: {message}"
-        );
+        anyhow::bail!("Neural API crypto.derive_child_seed failed: {message}");
     }
 
     response
         .get("result")
         .cloned()
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "Security provider '{security_provider}' returned empty result"
-            )
-        })
+        .ok_or_else(|| anyhow::anyhow!("Neural API returned empty result for crypto.derive_child_seed"))
 }
 
-/// Discover a primal socket by capability name using runtime discovery.
-///
-/// Primals have self-knowledge only; other primals are discovered at runtime
-/// through XDG-compliant paths and environment-based overrides.
+/// Discover the Neural API socket for capability routing.
 ///
 /// Discovery priority:
-/// 1. Explicit `{CAPABILITY}_SOCKET` env var (graph env or process env)
-/// 2. Family-scoped XDG socket (`$XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock`)
-/// 3. Generic XDG socket (`$XDG_RUNTIME_DIR/biomeos/{primal}.sock`)
-fn discover_capability_socket(
-    capability_provider: &str,
-    env: &HashMap<String, String>,
-) -> Result<String> {
+/// 1. `NEURAL_API_SOCKET` from graph env or process env
+/// 2. XDG: `$XDG_RUNTIME_DIR/biomeos/neural-api.sock`
+/// 3. `/run/user/{uid}/biomeos/neural-api.sock`
+/// 4. `/tmp/biomeos/neural-api.sock`
+fn discover_neural_api_socket(env: &HashMap<String, String>) -> Result<String> {
     use biomeos_types::paths::SystemPaths;
 
-    let env_key = format!("{}_SOCKET", capability_provider.to_uppercase());
-
-    // Priority 1: Explicit environment variable
-    if let Some(socket) = env.get(&env_key) {
+    if let Some(socket) = env.get("NEURAL_API_SOCKET") {
         return Ok(socket.clone());
     }
-    if let Ok(socket) = std::env::var(&env_key) {
+    if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {
         return Ok(socket);
     }
 
-    // Priority 2: XDG-compliant socket path via SystemPaths
     let paths = SystemPaths::new_lazy();
-    let family_id = env
-        .get("FAMILY_ID")
-        .cloned()
-        .or_else(|| std::env::var("BIOMEOS_FAMILY_ID").ok())
-        .unwrap_or_else(|| "default".to_string());
-
-    let family_socket =
-        paths.primal_socket(&format!("{capability_provider}-{family_id}"));
-    if family_socket.exists() {
-        return Ok(family_socket.display().to_string());
+    let neural_socket = paths.primal_socket("neural-api");
+    if neural_socket.exists() {
+        return Ok(neural_socket.display().to_string());
     }
 
-    let generic_socket = paths.primal_socket(capability_provider);
-    if generic_socket.exists() {
-        return Ok(generic_socket.display().to_string());
+    // /tmp fallback
+    let tmp_path = "/tmp/biomeos/neural-api.sock";
+    if std::path::Path::new(tmp_path).exists() {
+        return Ok(tmp_path.to_string());
     }
 
     anyhow::bail!(
-        "Socket not found for capability provider '{capability_provider}'. \
-         Set {env_key} or ensure the primal is running. \
-         Checked: {env_key} env, XDG runtime dir: {:?}",
+        "Neural API socket not found. Set NEURAL_API_SOCKET or ensure biomeOS Neural API is running. \
+         Checked: NEURAL_API_SOCKET env, XDG runtime dir: {:?}, /tmp/biomeos/",
         paths.runtime_dir()
     )
+}
+
+/// Send a JSON-RPC request to Neural API and return the parsed response.
+async fn call_neural_api(
+    neural_socket: &str,
+    request: &JsonRpcRequest,
+) -> Result<serde_json::Value> {
+    let stream = UnixStream::connect(neural_socket)
+        .await
+        .context(format!("Failed to connect to Neural API at {neural_socket}"))?;
+
+    let (reader, mut writer) = stream.into_split();
+    let mut reader = BufReader::new(reader);
+
+    let request_str = serde_json::to_string(request)? + "\n";
+    writer.write_all(request_str.as_bytes()).await?;
+    writer.flush().await?;
+
+    let mut response_line = String::new();
+    reader.read_line(&mut response_line).await?;
+
+    let response: serde_json::Value = serde_json::from_str(response_line.trim())?;
+    Ok(response)
 }
 
 /// Node executor: primal.launch
@@ -453,55 +435,43 @@ pub async fn node_lineage_verify(
         .cloned()
         .unwrap_or_else(|| biomeos_core::family_discovery::get_family_id());
 
-    // Discover BearDog for lineage verification
-    let beardog_socket = match discover_beardog_socket(&context.env) {
+    // Route through Neural API via capability.call (Gate 6.2)
+    let neural_socket = match discover_neural_api_socket(&context.env) {
         Ok(socket) => socket,
         Err(e) => {
-            warn!("BearDog not available for lineage verification: {}", e);
-            // Graceful degradation - return success without verification
+            warn!("Neural API not available for lineage verification: {}", e);
             return Ok(serde_json::json!({
                 "verified": true,
                 "siblings_checked": 0,
-                "note": "BearDog unavailable, verification skipped"
+                "note": "Neural API unavailable, verification skipped"
             }));
         }
     };
 
-    // Call BearDog to verify siblings
-    let stream = UnixStream::connect(&beardog_socket).await?;
-    let (reader, mut writer) = stream.into_split();
-    let mut reader = BufReader::new(reader);
-
     let request = JsonRpcRequest::new(
-        "lineage.verify_siblings",
+        "capability.call",
         serde_json::json!({
-            "family_id": family_id,
-            "siblings": siblings
+            "capability": "lineage",
+            "operation": "verify_siblings",
+            "args": {
+                "family_id": family_id,
+                "siblings": siblings
+            }
         }),
     );
-    let request_str = serde_json::to_string(&request)? + "\n";
-    writer.write_all(request_str.as_bytes()).await?;
-    writer.flush().await?;
 
-    let mut response_line = String::new();
-    reader.read_line(&mut response_line).await?;
-
-    let response: serde_json::Value = serde_json::from_str(response_line.trim())?;
-
-    // Return BearDog's response or extract relevant fields
-    if let Some(result) = response.get("result") {
-        Ok(result.clone())
-    } else if let Some(error) = response.get("error") {
-        let msg = error.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown");
-        Ok(serde_json::json!({
-            "verified": false,
-            "error": msg
-        }))
-    } else {
-        Ok(serde_json::json!({
-            "verified": true,
-            "siblings_checked": siblings.len()
-        }))
+    match call_neural_api(&neural_socket, &request).await {
+        Ok(response) => {
+            if let Some(result) = response.get("result") {
+                Ok(result.clone())
+            } else if let Some(error) = response.get("error") {
+                let msg = error.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown");
+                Ok(serde_json::json!({ "verified": false, "error": msg }))
+            } else {
+                Ok(serde_json::json!({ "verified": true, "siblings_checked": siblings.len() }))
+            }
+        }
+        Err(e) => Ok(serde_json::json!({ "verified": false, "error": e.to_string() })),
     }
 }
 

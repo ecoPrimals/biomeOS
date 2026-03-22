@@ -6,95 +6,66 @@
 //! Lineage verification and key derivation via JSON-RPC.
 
 use crate::{FederationError, FederationResult};
-use biomeos_types::JsonRpcRequest;
+use biomeos_core::atomic_client::AtomicClient;
 use tracing::{debug, info};
 
-/// Discover BearDog socket path via XDG-compliant SystemPaths
-pub fn discover_beardog_socket() -> FederationResult<String> {
-    if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
+/// Discover Neural API socket for capability routing (Gate 5.3 / 6.2).
+///
+/// Replaces the old `discover_beardog_socket()` — all inter-primal calls now
+/// route through the Neural API's capability translation layer.
+pub fn discover_neural_api_socket() -> FederationResult<String> {
+    if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {
         return Ok(socket);
     }
 
     let paths = biomeos_types::SystemPaths::new_lazy();
-    let security_provider = biomeos_types::CapabilityTaxonomy::resolve_to_primal("security")
-        .unwrap_or(biomeos_types::primal_names::BEARDOG);
-    let socket = paths.primal_socket(security_provider);
+    let socket = paths.primal_socket("neural-api");
     if socket.exists() {
         return Ok(socket.to_string_lossy().to_string());
     }
 
-    if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
-        let family_socket = paths.primal_socket(&format!("{security_provider}-{family_id}"));
-        if family_socket.exists() {
-            return Ok(family_socket.to_string_lossy().to_string());
-        }
+    let tmp_path = "/tmp/biomeos/neural-api.sock";
+    if std::path::Path::new(tmp_path).exists() {
+        return Ok(tmp_path.to_string());
+    }
+
+    // Legacy fallback: direct BearDog discovery for bootstrap
+    if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
+        return Ok(socket);
     }
 
     Err(FederationError::Generic(
-        "BearDog socket not found. Ensure BearDog is running.".to_string(),
+        "Neural API socket not found. Ensure biomeOS Neural API is running.".to_string(),
     ))
 }
 
-/// Verify that all members share genetic lineage with the parent family
+/// Verify that all members share genetic lineage with the parent family.
+///
+/// Routes through Neural API via `capability.call("lineage", "verify_members")`.
 pub async fn verify_member_lineage(
     parent_family: &str,
     members: &[String],
 ) -> FederationResult<()> {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    use tokio::net::UnixStream;
+    let neural_socket = discover_neural_api_socket()?;
 
-    let beardog_socket = discover_beardog_socket()?;
-
-    let stream = UnixStream::connect(&beardog_socket)
+    let client = AtomicClient::unix(&neural_socket);
+    let result = client
+        .call(
+            "capability.call",
+            serde_json::json!({
+                "capability": "lineage",
+                "operation": "verify_members",
+                "args": {
+                    "family_id": parent_family,
+                    "member_patterns": members
+                }
+            }),
+        )
         .await
-        .map_err(|e| FederationError::Generic(format!("BearDog connection failed: {e}")))?;
+        .map_err(|e| FederationError::Generic(format!("Capability call failed: {e}")))?;
 
-    let (reader, mut writer) = stream.into_split();
-    let mut reader = BufReader::new(reader);
-
-    let request = JsonRpcRequest::new(
-        "lineage.verify_members",
-        serde_json::json!({
-            "family_id": parent_family,
-            "member_patterns": members
-        }),
-    );
-
-    let request_str = serde_json::to_string(&request)
-        .map_err(|e| FederationError::Generic(format!("JSON error: {e}")))?
-        + "\n";
-
-    writer
-        .write_all(request_str.as_bytes())
-        .await
-        .map_err(|e| FederationError::Generic(format!("Write error: {e}")))?;
-    writer
-        .flush()
-        .await
-        .map_err(|e| FederationError::Generic(format!("Flush error: {e}")))?;
-
-    let mut response_line = String::new();
-    reader
-        .read_line(&mut response_line)
-        .await
-        .map_err(|e| FederationError::Generic(format!("Read error: {e}")))?;
-
-    let response: serde_json::Value = serde_json::from_str(response_line.trim())
-        .map_err(|e| FederationError::Generic(format!("JSON parse error: {e}")))?;
-
-    if let Some(error) = response.get("error") {
-        let msg = error
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Unknown");
-        return Err(FederationError::Generic(format!(
-            "Lineage verification failed: {msg}"
-        )));
-    }
-
-    let all_verified = response
-        .get("result")
-        .and_then(|r| r.get("all_verified"))
+    let all_verified = result
+        .get("all_verified")
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
 
@@ -102,9 +73,8 @@ pub async fn verify_member_lineage(
         info!("✅ Lineage verified for {} members", members.len());
         Ok(())
     } else {
-        let failed = response
-            .get("result")
-            .and_then(|r| r.get("failed_members"))
+        let failed = result
+            .get("failed_members")
             .and_then(|f| f.as_array())
             .map(|arr| {
                 arr.iter()
@@ -120,67 +90,34 @@ pub async fn verify_member_lineage(
     }
 }
 
-/// Request a derived encryption key for this sub-federation
+/// Request a derived encryption key for this sub-federation.
+///
+/// Routes through Neural API via `capability.call("crypto", "derive_subfederation_key")`.
 pub async fn request_subfederation_key(
     parent_family: &str,
     subfed_name: &str,
 ) -> FederationResult<String> {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    use tokio::net::UnixStream;
+    let neural_socket = discover_neural_api_socket()?;
 
-    let beardog_socket = discover_beardog_socket()?;
-
-    let stream = UnixStream::connect(&beardog_socket)
+    let client = AtomicClient::unix(&neural_socket);
+    let result = client
+        .call(
+            "capability.call",
+            serde_json::json!({
+                "capability": "crypto",
+                "operation": "derive_subfederation_key",
+                "args": {
+                    "family_id": parent_family,
+                    "subfederation_name": subfed_name,
+                    "purpose": "subfederation-encryption-v1"
+                }
+            }),
+        )
         .await
-        .map_err(|e| FederationError::Generic(format!("BearDog connection failed: {e}")))?;
+        .map_err(|e| FederationError::Generic(format!("Capability call failed: {e}")))?;
 
-    let (reader, mut writer) = stream.into_split();
-    let mut reader = BufReader::new(reader);
-
-    let request = JsonRpcRequest::new(
-        "crypto.derive_subfederation_key",
-        serde_json::json!({
-            "family_id": parent_family,
-            "subfederation_name": subfed_name,
-            "purpose": "subfederation-encryption-v1"
-        }),
-    );
-
-    let request_str = serde_json::to_string(&request)
-        .map_err(|e| FederationError::Generic(format!("JSON error: {e}")))?
-        + "\n";
-
-    writer
-        .write_all(request_str.as_bytes())
-        .await
-        .map_err(|e| FederationError::Generic(format!("Write error: {e}")))?;
-    writer
-        .flush()
-        .await
-        .map_err(|e| FederationError::Generic(format!("Flush error: {e}")))?;
-
-    let mut response_line = String::new();
-    reader
-        .read_line(&mut response_line)
-        .await
-        .map_err(|e| FederationError::Generic(format!("Read error: {e}")))?;
-
-    let response: serde_json::Value = serde_json::from_str(response_line.trim())
-        .map_err(|e| FederationError::Generic(format!("JSON parse error: {e}")))?;
-
-    if let Some(error) = response.get("error") {
-        let msg = error
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Unknown");
-        return Err(FederationError::Generic(format!(
-            "Key derivation failed: {msg}"
-        )));
-    }
-
-    let key_ref = response
-        .get("result")
-        .and_then(|r| r.get("key_ref"))
+    let key_ref = result
+        .get("key_ref")
         .and_then(|k| k.as_str())
         .ok_or_else(|| FederationError::Generic("Missing key_ref in response".to_string()))?;
 
@@ -208,25 +145,25 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_discover_beardog_socket_from_env() {
-        set_test_env("BEARDOG_SOCKET", "/tmp/test-beardog.sock");
-        let result = discover_beardog_socket();
-        remove_test_env("BEARDOG_SOCKET");
+    async fn test_discover_neural_api_socket_from_env() {
+        set_test_env("NEURAL_API_SOCKET", "/tmp/test-neural-api.sock");
+        let result = discover_neural_api_socket();
+        remove_test_env("NEURAL_API_SOCKET");
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "/tmp/test-beardog.sock");
+        assert_eq!(result.unwrap(), "/tmp/test-neural-api.sock");
     }
 
     #[tokio::test]
     #[serial]
-    async fn test_discover_beardog_socket_without_env() {
+    async fn test_discover_neural_api_socket_without_env() {
+        remove_test_env("NEURAL_API_SOCKET");
         remove_test_env("BEARDOG_SOCKET");
-        remove_test_env("BIOMEOS_FAMILY_ID");
-        let result = discover_beardog_socket();
+        let result = discover_neural_api_socket();
         match result {
             Ok(path) => assert!(!path.is_empty()),
             Err(e) => assert!(
                 e.to_string().to_lowercase().contains("not found")
-                    || e.to_string().to_lowercase().contains("beardog")
+                    || e.to_string().to_lowercase().contains("neural api")
             ),
         }
     }
@@ -261,13 +198,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_verify_member_lineage_connection_error() {
-        set_test_env("BEARDOG_SOCKET", "/nonexistent/path/beardog.sock");
+        set_test_env("NEURAL_API_SOCKET", "/nonexistent/path/neural-api.sock");
         let result = verify_member_lineage(
             "parent-family",
             &["member1".to_string(), "member2".to_string()],
         )
         .await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -282,9 +219,9 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_request_subfederation_key_connection_error() {
-        set_test_env("BEARDOG_SOCKET", "/nonexistent/path/beardog.sock");
+        set_test_env("NEURAL_API_SOCKET", "/nonexistent/path/neural-api.sock");
         let result = request_subfederation_key("parent-family", "subfed-name").await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -301,9 +238,9 @@ mod tests {
     async fn test_verify_member_lineage_success() {
         let line = r#"{"jsonrpc":"2.0","id":1,"result":{"all_verified":true}}"#.to_string() + "\n";
         let (_dir, sock) = spawn_beardog_mock(line).await;
-        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        set_test_env("NEURAL_API_SOCKET", sock.to_string_lossy().as_ref());
         let result = verify_member_lineage("fam", &["a".into(), "b".into()]).await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         if let Err(e) = &result {
             let lower = e.to_string().to_lowercase();
             if lower.contains("connection") || lower.contains("no such file") {
@@ -319,15 +256,16 @@ mod tests {
         let line =
             r#"{"jsonrpc":"2.0","id":1,"error":{"message":"bad lineage"}}"#.to_string() + "\n";
         let (_dir, sock) = spawn_beardog_mock(line).await;
-        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        set_test_env("NEURAL_API_SOCKET", sock.to_string_lossy().as_ref());
         let result = verify_member_lineage("fam", &["m".into()]).await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         let err = result.unwrap_err().to_string();
         let lower = err.to_lowercase();
         assert!(
             (err.contains("Lineage verification failed") && err.contains("bad lineage"))
                 || lower.contains("connection")
-                || lower.contains("no such file"),
+                || lower.contains("no such file")
+                || lower.contains("capability call failed"),
             "unexpected error: {err}"
         );
     }
@@ -337,16 +275,17 @@ mod tests {
     async fn test_verify_member_lineage_json_rpc_error_empty_object_uses_unknown() {
         let line = r#"{"jsonrpc":"2.0","id":1,"error":{}}"#.to_string() + "\n";
         let (_dir, sock) = spawn_beardog_mock(line).await;
-        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        set_test_env("NEURAL_API_SOCKET", sock.to_string_lossy().as_ref());
         let result = verify_member_lineage("fam", &["m".into()]).await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         let err = result.unwrap_err().to_string();
         let lower = err.to_lowercase();
         assert!(
             err.contains("Unknown")
                 || err.contains("Lineage verification failed")
                 || lower.contains("connection")
-                || lower.contains("no such file"),
+                || lower.contains("no such file")
+                || lower.contains("capability call failed"),
             "unexpected error: {err}"
         );
     }
@@ -358,15 +297,16 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":1,"result":{"all_verified":false,"failed_members":["x","y"]}}"#
                 .to_string() + "\n";
         let (_dir, sock) = spawn_beardog_mock(line).await;
-        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        set_test_env("NEURAL_API_SOCKET", sock.to_string_lossy().as_ref());
         let result = verify_member_lineage("fam", &["m".into()]).await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         let err = result.unwrap_err().to_string();
         let lower = err.to_lowercase();
         assert!(
             err.contains("Lineage verification failed")
                 || lower.contains("connection")
-                || lower.contains("no such file"),
+                || lower.contains("no such file")
+                || lower.contains("capability call failed"),
             "unexpected error: {err}"
         );
     }
@@ -376,15 +316,16 @@ mod tests {
     async fn test_verify_member_lineage_malformed_json_response() {
         let line = "%%%not-json\n".to_string();
         let (_dir, sock) = spawn_beardog_mock(line).await;
-        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        set_test_env("NEURAL_API_SOCKET", sock.to_string_lossy().as_ref());
         let result = verify_member_lineage("fam", &["m".into()]).await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         let err = result.unwrap_err().to_string();
         let lower = err.to_lowercase();
         assert!(
             err.contains("JSON parse")
                 || lower.contains("connection")
-                || lower.contains("no such file"),
+                || lower.contains("no such file")
+                || lower.contains("capability call failed"),
             "unexpected error: {err}"
         );
     }
@@ -395,9 +336,9 @@ mod tests {
         let line =
             r#"{"jsonrpc":"2.0","id":1,"result":{"key_ref":"vault/key/abc"}}"#.to_string() + "\n";
         let (_dir, sock) = spawn_beardog_mock(line).await;
-        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        set_test_env("NEURAL_API_SOCKET", sock.to_string_lossy().as_ref());
         let result = request_subfederation_key("fam", "sub").await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         match result {
             Ok(key) => assert_eq!(key, "vault/key/abc"),
             Err(e) => {
@@ -416,15 +357,16 @@ mod tests {
     async fn test_request_subfederation_key_json_rpc_error() {
         let line = r#"{"jsonrpc":"2.0","id":1,"error":{"message":"denied"}}"#.to_string() + "\n";
         let (_dir, sock) = spawn_beardog_mock(line).await;
-        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        set_test_env("NEURAL_API_SOCKET", sock.to_string_lossy().as_ref());
         let result = request_subfederation_key("fam", "sub").await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         let err = result.unwrap_err().to_string();
         let lower = err.to_lowercase();
         assert!(
             (err.contains("Key derivation failed") && err.contains("denied"))
                 || lower.contains("connection")
-                || lower.contains("no such file"),
+                || lower.contains("no such file")
+                || lower.contains("capability call failed"),
             "unexpected error: {err}"
         );
     }
@@ -434,9 +376,9 @@ mod tests {
     async fn test_request_subfederation_key_missing_key_ref() {
         let line = r#"{"jsonrpc":"2.0","id":1,"result":{}}"#.to_string() + "\n";
         let (_dir, sock) = spawn_beardog_mock(line).await;
-        set_test_env("BEARDOG_SOCKET", sock.to_string_lossy().as_ref());
+        set_test_env("NEURAL_API_SOCKET", sock.to_string_lossy().as_ref());
         let result = request_subfederation_key("fam", "sub").await;
-        remove_test_env("BEARDOG_SOCKET");
+        remove_test_env("NEURAL_API_SOCKET");
         let err = result.unwrap_err().to_string();
         let lower = err.to_lowercase();
         assert!(

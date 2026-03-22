@@ -622,7 +622,7 @@ impl GraphExecutor {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        let request = JsonRpcRequest::new("shutdown", serde_json::json!({ "graceful": true }));
+        let request = JsonRpcRequest::new("lifecycle.shutdown", serde_json::json!({ "graceful": true }));
         writer.write_all((serde_json::to_string(&request)? + "\n").as_bytes()).await?;
         writer.flush().await?;
 

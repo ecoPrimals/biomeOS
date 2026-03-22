@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.63)
+## Status: Production Ready (v2.64)
 
 | Metric | Value |
 |--------|-------|
@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
-| Tests | ~5,060 passing (0 failures) — 90.26% region / 91.10% function / 89.99% line coverage (llvm-cov verified) |
+| Tests | ~5,060+ passing (0 failures) — 90.26% region / 91.14% function / 89.99% line coverage (llvm-cov verified) |
 | Unsafe Code | 0 in production |
 | C Dependencies | 0 (zstd-sys eliminated, deny.toml enforced bans) |
 | Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
