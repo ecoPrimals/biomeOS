@@ -80,35 +80,28 @@ fn test_nucleus_mode_primals() {
 }
 
 #[test]
-fn test_base64_encode_empty() {
-    assert_eq!(base64_encode(&[]), "");
-}
-
-#[test]
-fn test_base64_encode_single_byte() {
-    let result = base64_encode(&[0x4d]);
-    assert_eq!(result.len(), 4);
-    assert!(result.ends_with("=="));
-}
-
-#[test]
-fn test_base64_encode_three_bytes() {
-    let result = base64_encode(b"Man");
-    assert_eq!(result, "TWFu");
-}
-
-#[test]
-fn test_base64_encode_roundtrip_alphabet() {
-    let data = b"Hello, World!";
-    let encoded = base64_encode(data);
-    assert!(!encoded.is_empty());
-    assert!(encoded.len() <= data.len().div_ceil(3) * 4 + 4);
-    for c in encoded.chars() {
+fn test_generate_jwt_secret_is_valid_base64() {
+    let secret = super::generate_jwt_secret();
+    assert!(!secret.is_empty());
+    for c in secret.chars() {
         assert!(
             c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=',
             "Invalid base64 char: {c:?}"
         );
     }
+}
+
+#[test]
+fn test_generate_jwt_secret_is_unique() {
+    let s1 = super::generate_jwt_secret();
+    let s2 = super::generate_jwt_secret();
+    assert_ne!(s1, s2, "Two consecutive JWT secrets should differ");
+}
+
+#[test]
+fn test_generate_jwt_secret_length() {
+    let secret = super::generate_jwt_secret();
+    assert_eq!(secret.len(), 64, "48 bytes -> 64 base64 chars");
 }
 
 #[test]
@@ -342,16 +335,13 @@ fn test_nucleus_mode_from_str_case_insensitive() {
 }
 
 #[test]
-fn test_base64_encode_two_bytes() {
-    let result = base64_encode(&[0x4d, 0x61]);
-    assert_eq!(result.len(), 4);
-    assert!(result.ends_with('='));
-}
-
-#[test]
-fn test_base64_encode_four_bytes() {
-    let result = base64_encode(&[0x4d, 0x61, 0x6e, 0x21]);
-    assert_eq!(result, "TWFuIQ==");
+fn test_generate_jwt_secret_decodes_to_48_bytes() {
+    use base64::Engine;
+    let secret = super::generate_jwt_secret();
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(&secret)
+        .unwrap();
+    assert_eq!(decoded.len(), 48);
 }
 
 #[test]
@@ -449,14 +439,14 @@ async fn test_detect_ecosystem_bootstrap_when_stale_sockets_only() {
 }
 
 #[test]
-fn test_base64_encode_standard_vectors() {
-    assert_eq!(base64_encode(b""), "");
-    assert_eq!(base64_encode(b"f"), "Zg==");
-    assert_eq!(base64_encode(b"fo"), "Zm8=");
-    assert_eq!(base64_encode(b"foo"), "Zm9v");
-    assert_eq!(base64_encode(b"foob"), "Zm9vYg==");
-    assert_eq!(base64_encode(b"fooba"), "Zm9vYmE=");
-    assert_eq!(base64_encode(b"foobar"), "Zm9vYmFy");
+fn test_generate_jwt_secret_chars_are_base64() {
+    let secret = super::generate_jwt_secret();
+    assert!(
+        secret
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '='),
+        "All chars should be valid base64"
+    );
 }
 
 #[test]

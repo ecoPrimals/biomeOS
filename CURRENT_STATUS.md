@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 22, 2026 (v2.64: Flaky test hardening — 3 env/CWD race fixes with `#[serial]`+`TestEnvGuard`, 6 method-name test fixes for `domain.verb` convention, 19 new coverage tests incl. WebSocket success path, `serde_yaml`→`serde_yml` migration across workspace, songbird error message fix, clippy `implicit_clone` fix)
-**Version**: 2.64
+**Updated**: March 22, 2026 (v2.65: Deep debt execution — tower.rs refactored to testable `tower_orchestration.rs` (20+ tests), `ExecutionContext.env` zero-copy `Arc`, hardcoded primal names evolved to `primal_names::` constants, `manifest.rs` `from_nucleus` now discovers all binaries dynamically, hand-rolled `base64_encode`/`/dev/urandom` evolved to `base64`+`rand` crates, `verify-lineage.rs` evolved to env-based spore discovery, 4 flaky CWD/env race tests fixed (removed process-global `set_current_dir`), CI coverage threshold raised to 90%, 1 previously-ignored test restored)
+**Version**: 2.65
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,8 +17,8 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | ~5,060 lib + bin + doc + proptest (0 deterministic failures, ~83 ignored cwd-sensitive — run with `--ignored --test-threads=1`) |
-| **Test Coverage** | 90.26% region / 91.14% function / 89.99% line (llvm-cov workspace-wide verified) — region and function above 90% target, line at functional 90% |
+| **Tests Passing** | 7,124 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
+| **Test Coverage** | 90.35% region / 91.20% function / 90.41% line (llvm-cov workspace-wide verified) — all three metrics above 90% target |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |

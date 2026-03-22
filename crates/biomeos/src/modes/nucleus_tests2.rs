@@ -108,17 +108,10 @@ fn test_build_primal_command_squirrel_with_custom_ai_providers() {
 }
 
 #[test]
-fn test_base64_encode_single_byte_padding() {
-    let r = super::base64_encode(&[0x41]);
-    assert_eq!(r.len(), 4);
-    assert!(r.ends_with("=="));
-}
-
-#[test]
-fn test_base64_encode_two_byte_padding() {
-    let r = super::base64_encode(&[0x41, 0x42]);
-    assert_eq!(r.len(), 4);
-    assert!(r.ends_with('='));
+fn test_generate_jwt_secret_produces_nonempty_string() {
+    let secret = super::generate_jwt_secret();
+    assert!(!secret.is_empty());
+    assert!(secret.len() > 32, "JWT secret should be substantial");
 }
 
 #[test]

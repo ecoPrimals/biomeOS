@@ -145,7 +145,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 21, 2026**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v2.63), 4 scripts**
+**Documentation current as of March 22, 2026**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v2.65), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: ~5,060 passing, ~83 ignored (90.26% region / 91.10% function / 89.99% line, llvm-cov) | Clippy: PASS | Docs: Full coverage | C deps: 0**
+**Tests: 7,124 passing, ~135 ignored (90.35% region / 91.20% function / 90.41% line, llvm-cov) | Clippy: PASS | Docs: Full coverage | C deps: 0**

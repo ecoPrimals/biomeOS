@@ -252,14 +252,6 @@ mod tests {
     use crate::executor::context::ExecutionContext;
     use crate::neural_graph::{GraphNode, Operation, PrimalSelector};
     use std::collections::HashMap;
-    use std::sync::OnceLock;
-
-    /// Serializes tests that change cwd to avoid races (async-aware to hold across await)
-    static CWD_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
-    fn cwd_lock() -> &'static tokio::sync::Mutex<()> {
-        CWD_LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
-    }
-
     fn create_beardog_stub(temp: &tempfile::TempDir) {
         let bin_path = temp.path().join("beardog");
         #[cfg(unix)]
@@ -400,10 +392,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_primal_start_capability_binary_not_found() {
-        let _guard = cwd_lock().lock().await;
         let temp = tempfile::tempdir().expect("temp dir");
-        let orig = std::env::current_dir().expect("cwd");
-        std::env::set_current_dir(temp.path()).expect("chdir");
 
         let node = make_node(Some("encryption"), "server", None, None);
         let mut env = HashMap::new();
@@ -416,9 +405,6 @@ mod tests {
         let result = primal_start_capability(&node, &ctx)
             .await
             .expect("Binary not found returns Ok with started: false");
-
-        let _ = std::env::set_current_dir(&orig)
-            .or_else(|_| std::env::set_current_dir(std::env::temp_dir()));
 
         assert_eq!(result["started"], false);
         assert_eq!(result["capability"], "encryption");
@@ -433,12 +419,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "env-var BIOMEOS_STRICT_DISCOVERY races with parallel tests — run with --test-threads=1"]
     async fn test_primal_start_capability_mode_default() {
-        let _guard = cwd_lock().lock().await;
         let temp = tempfile::tempdir().expect("temp dir");
-        let orig = std::env::current_dir().expect("cwd");
-        std::env::set_current_dir(temp.path()).expect("chdir");
 
         create_beardog_stub(&temp);
 
@@ -452,18 +434,12 @@ mod tests {
 
         let result = primal_start_capability(&node, &ctx).await.unwrap();
 
-        let _ = std::env::set_current_dir(&orig)
-            .or_else(|_| std::env::set_current_dir(std::env::temp_dir()));
-
         assert_eq!(result["mode"], "server", "Default mode should be server");
     }
 
     #[tokio::test]
     async fn test_primal_start_capability_mode_from_params() {
-        let _guard = cwd_lock().lock().await;
         let temp = tempfile::tempdir().expect("temp dir");
-        let orig = std::env::current_dir().expect("cwd");
-        std::env::set_current_dir(temp.path()).expect("chdir");
 
         create_beardog_stub(&temp);
 
@@ -477,19 +453,12 @@ mod tests {
 
         let result = primal_start_capability(&node, &ctx).await.unwrap();
 
-        let _ = std::env::set_current_dir(&orig)
-            .or_else(|_| std::env::set_current_dir(std::env::temp_dir()));
-
         assert_eq!(result["mode"], "client");
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_primal_start_capability_family_id_from_params() {
-        let _guard = cwd_lock().lock().await;
         let temp = tempfile::tempdir().expect("temp dir");
-        let orig = std::env::current_dir().expect("cwd");
-        std::env::set_current_dir(temp.path()).expect("chdir");
 
         create_beardog_stub(&temp);
 
@@ -507,9 +476,6 @@ mod tests {
         let ctx = ExecutionContext::new(env);
 
         let result = primal_start_capability(&node, &ctx).await.unwrap();
-
-        let _ = std::env::set_current_dir(&orig)
-            .or_else(|_| std::env::set_current_dir(std::env::temp_dir()));
 
         assert_eq!(result["family_id"], "custom_family_123");
     }

@@ -96,26 +96,12 @@ fn test_generate_jwt_secret_is_base64_and_nonempty() {
 }
 
 #[test]
-fn test_base64_encode_empty() {
-    assert_eq!(base64_encode(&[]), "");
-}
-
-#[test]
-fn test_base64_encode_one_byte() {
-    let result = base64_encode(&[0x4d]);
-    assert_eq!(result, "TQ==");
-}
-
-#[test]
-fn test_base64_encode_two_bytes() {
-    let result = base64_encode(&[0x4d, 0x61]);
-    assert_eq!(result, "TWE=");
-}
-
-#[test]
-fn test_base64_encode_three_bytes() {
-    let result = base64_encode(&[0x4d, 0x61, 0x6e]);
-    assert_eq!(result, "TWFu");
+fn test_generate_jwt_secret_returns_valid_base64_string() {
+    use base64::Engine;
+    let secret = super::generate_jwt_secret();
+    let decoded = base64::engine::general_purpose::STANDARD.decode(&secret);
+    assert!(decoded.is_ok(), "JWT secret must be valid base64");
+    assert_eq!(decoded.unwrap().len(), 48);
 }
 
 #[test]

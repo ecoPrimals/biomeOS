@@ -644,6 +644,7 @@ family = "test-family"
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_incubate_end_to_end_and_list_local_nodes() {
         use biomeos_test_utils::TestEnvGuard;
 
@@ -681,6 +682,7 @@ family = "fam-e2e-incubate"
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_list_local_nodes_skips_invalid_node_toml() {
         use biomeos_test_utils::TestEnvGuard;
 

@@ -97,7 +97,7 @@ async fn call_security_provider(
     // Fallback: Direct socket discovery via capability taxonomy
     let provider_name = biomeos_types::capability_taxonomy::CapabilityTaxonomy::Encryption
         .default_primal()
-        .unwrap_or("beardog");
+        .unwrap_or(biomeos_types::primal_names::BEARDOG);
 
     let family_id = biomeos_core::family_discovery::get_family_id();
     let paths = biomeos_types::paths::SystemPaths::new_lazy();

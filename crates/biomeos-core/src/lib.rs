@@ -61,6 +61,8 @@ pub mod retry; // Retry logic and circuit breaker
 pub mod socket_discovery; // Capability-based socket discovery (replaces hardcoded /tmp paths)
 /// Tower middleware configuration (TOML-based)
 pub mod tower_config;
+/// Tower orchestration logic (testable library layer for the tower binary)
+pub mod tower_orchestration;
 
 // P2P coordination (BiomeOS's killer feature!)
 pub mod p2p_coordination;

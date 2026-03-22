@@ -1,23 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Tower CLI - Capability-Based Primal Orchestration
-//!
-//! Modern, idiomatic, platform-agnostic primal management.
-//! Supports config files, auto-discovery, and concurrent startup!
+//! Tower CLI - Thin binary wrapper over `biomeos_core::tower_orchestration`.
 
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
 
-use anyhow::{Context, Result};
-use biomeos_core::{
-    Capability, LogSessionTracker, PrimalBuilder, PrimalHealthMonitor, PrimalMetadata,
-    PrimalOrchestrator, RetryPolicy, TowerConfig, TowerPrimalConfig, create_discovery_orchestrator,
-    create_security_provider, discover_primals, start_in_waves,
-};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
-use tracing::{error, info, warn};
+use tracing::{error, info};
+
+use biomeos_core::tower_orchestration::{self, std_env_lookup};
 
 #[derive(Parser)]
 #[command(name = "tower")]
@@ -46,7 +38,7 @@ enum Commands {
 
     /// Start a tower with primals discovered from environment (legacy)
     Start {
-        /// Security provider binary path (e.g., /path/to/beardog-server)
+        /// Security provider binary path
         #[arg(long, env = "SECURITY_PROVIDER_BINARY")]
         security_binary: Option<String>,
 
@@ -54,7 +46,7 @@ enum Commands {
         #[arg(long, env = "SECURITY_PROVIDER_PORT", default_value = "0")]
         security_port: u16,
 
-        /// Discovery orchestrator binary path (e.g., /path/to/songbird-orchestrator)
+        /// Discovery orchestrator binary path
         #[arg(long, env = "DISCOVERY_ORCHESTRATOR_BINARY")]
         discovery_binary: Option<String>,
 
@@ -83,69 +75,13 @@ enum Commands {
     },
 }
 
-/// Get the path for the tower PID file
-fn get_tower_pid_file() -> PathBuf {
-    // Check XDG runtime dir first
-    if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-        return PathBuf::from(runtime).join("biomeos/tower.pid");
-    }
-
-    // Fall back to family-specific temp
-    let family_id = std::env::var("BIOMEOS_FAMILY_ID")
-        .or_else(|_| std::env::var("FAMILY_ID"))
-        .unwrap_or_else(|_| "default".to_string());
-
-    PathBuf::from(format!("/tmp/biomeos-{family_id}/tower.pid"))
-}
-
-/// Get the socket directory
-fn get_socket_dir() -> PathBuf {
-    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
-        return PathBuf::from(dir);
-    }
-
-    if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-        return PathBuf::from(runtime).join("biomeos/sockets");
-    }
-
-    let family_id = std::env::var("BIOMEOS_FAMILY_ID")
-        .or_else(|_| std::env::var("FAMILY_ID"))
-        .unwrap_or_else(|_| "default".to_string());
-
-    PathBuf::from(format!("/tmp/biomeos-{family_id}/sockets"))
-}
-
-/// Write the PID file for the running tower
-fn write_pid_file() -> Result<()> {
-    let pid_file = get_tower_pid_file();
-
-    // Ensure parent directory exists
-    if let Some(parent) = pid_file.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-
-    let pid = std::process::id();
-    std::fs::write(&pid_file, pid.to_string())?;
-
-    info!("📝 PID file written: {} (PID: {})", pid_file.display(), pid);
-    Ok(())
-}
-
-/// Clean up the PID file on shutdown
-fn cleanup_pid_file() {
-    let pid_file = get_tower_pid_file();
-    if pid_file.exists()
-        && let Err(e) = std::fs::remove_file(&pid_file)
-    {
-        warn!("Failed to remove PID file: {}", e);
-    }
-}
-
 #[tokio::main]
-#[allow(clippy::too_many_lines)]
+#[expect(
+    clippy::too_many_lines,
+    reason = "CLI dispatch — each arm is thin delegation"
+)]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-
     let cli = Cli::parse();
 
     match cli.command {
@@ -153,124 +89,7 @@ async fn main() -> Result<()> {
             config,
             scan,
             concurrent,
-        } => {
-            info!("🚀 Starting tower with modern config-driven orchestration");
-
-            // Load config
-            let tower_config = if config.exists() {
-                info!("📋 Loading configuration from: {}", config.display());
-                TowerConfig::from_file(&config).context("Failed to load tower config")?
-            } else {
-                warn!("⚠️  Config file not found, using defaults");
-                TowerConfig::default_config()
-            };
-
-            // Create health monitor
-            let health_monitor = Arc::new(PrimalHealthMonitor::builder().build());
-
-            // Create retry policy
-            let retry_policy = RetryPolicy::exponential(
-                tower_config.health.recovery_attempts as usize,
-                Duration::from_millis(100),
-            );
-
-            // Create orchestrator
-            let orchestrator = Arc::new(PrimalOrchestrator::new(
-                health_monitor.clone(),
-                retry_policy,
-            ));
-
-            // Collect all primals
-            let mut all_primals: Vec<Arc<dyn biomeos_core::ManagedPrimal>> = Vec::new();
-
-            // Discover from scan directory if specified
-            if let Some(scan_dir) = scan {
-                info!("🔍 Auto-discovering primals from: {}", scan_dir.display());
-                let discovered = discover_primals(&scan_dir).await?;
-                info!("✅ Discovered {} primals", discovered.len());
-
-                for metadata in discovered {
-                    let primal = metadata_to_primal(&metadata)?;
-                    all_primals.push(primal);
-                }
-            }
-
-            // Load primals from config
-            for primal_config in &tower_config.primals {
-                info!(
-                    "📦 Loading primal from config: {}",
-                    primal_config.binary.display()
-                );
-                let primal = config_to_primal(primal_config).await?;
-                all_primals.push(primal);
-            }
-
-            if all_primals.is_empty() {
-                error!("❌ No primals configured or discovered!");
-                error!("💡 Either:");
-                error!("   1. Add [[primals]] sections to {}", config.display());
-                error!("   2. Use --scan ./primals to auto-discover");
-                error!("   3. Ensure config file exists with primal definitions");
-                return Ok(());
-            }
-
-            // Register all primals
-            info!(
-                "📋 Registering {} primals with orchestrator",
-                all_primals.len()
-            );
-            for primal in &all_primals {
-                orchestrator.register(primal.clone()).await;
-            }
-
-            // Start primals - concurrent or sequential
-            if concurrent && tower_config.tower.concurrent_startup {
-                info!("🌊 Starting primals with concurrent wave-based orchestration");
-                start_in_waves(&orchestrator, all_primals.clone()).await?;
-            } else {
-                info!("🔄 Starting primals sequentially");
-                orchestrator.start_all().await?;
-            }
-
-            info!("✅ Tower started successfully!");
-            info!(
-                "🌸 {} primals running with modern idiomatic Rust!",
-                all_primals.len()
-            );
-
-            // Write PID file for stop/status commands
-            if let Err(e) = write_pid_file() {
-                warn!("Failed to write PID file: {}", e);
-            }
-
-            // Start health monitoring
-            tokio::spawn(async move {
-                if let Err(e) = health_monitor.start_monitoring().await {
-                    error!("Health monitoring failed: {}", e);
-                }
-            });
-
-            // Create log session tracker
-            let node_id = std::env::var("NODE_ID")
-                .or_else(|_| std::env::var("BEARDOG_NODE_ID"))
-                .unwrap_or_else(|_| "unknown-node".to_string());
-            let log_tracker = Arc::new(LogSessionTracker::new(node_id));
-
-            // Wait for interrupt
-            tokio::signal::ctrl_c().await?;
-            info!("🛑 Received shutdown signal, stopping tower...");
-
-            // Clean up PID file
-            cleanup_pid_file();
-
-            // Archive logs before stopping
-            if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
-                warn!("Failed to archive log sessions: {}", e);
-            }
-
-            orchestrator.stop_all().await?;
-            info!("✅ Tower stopped gracefully.");
-        }
+        } => tower_orchestration::run_tower(&config, scan, concurrent, &std_env_lookup).await,
 
         Commands::Start {
             security_binary,
@@ -278,446 +97,115 @@ async fn main() -> Result<()> {
             discovery_binary,
             additional,
         } => {
-            info!("🚀 Starting tower with capability-based orchestration...");
-
-            // Create health monitor
-            let health_monitor = Arc::new(PrimalHealthMonitor::builder().build());
-
-            // Create retry policy
-            let retry_policy = RetryPolicy::exponential(3, Duration::from_millis(100));
-
-            // Create orchestrator
-            let orchestrator = PrimalOrchestrator::new(health_monitor.clone(), retry_policy);
-
-            // Register security provider if specified
-            if let Some(security_bin) = security_binary {
-                info!("📦 Registering security provider: {}", security_bin);
-                let security = create_security_provider(security_bin, security_port)?;
-                orchestrator.register(security).await;
-            }
-
-            // Register discovery orchestrator if specified
-            if let Some(discovery_bin) = discovery_binary {
-                info!("📦 Registering discovery orchestrator: {}", discovery_bin);
-                let discovery = create_discovery_orchestrator(discovery_bin)?;
-                orchestrator.register(discovery).await;
-            }
-
-            // Register additional primals
-            if let Some(additional_bins) = additional {
-                for bin_path in additional_bins.split(',') {
-                    let bin_path = bin_path.trim();
-                    if !bin_path.is_empty() {
-                        info!("📦 Registering additional primal: {}", bin_path);
-                        // Auto-discover capabilities from environment
-                        let primal = PrimalBuilder::new()
-                            .binary_path(bin_path.to_string())
-                            .provides(Capability::from_env("PRIMAL_PROVIDES"))
-                            .requires(Capability::from_env("PRIMAL_REQUIRES"))
-                            .build()?;
-                        orchestrator.register(primal).await;
-                    }
-                }
-            }
-
-            // Start all with automatic dependency resolution!
-            info!("🔄 Starting all primals with capability-based resolution...");
-            orchestrator.start_all().await?;
-
-            info!("✅ Tower started successfully!");
-            info!("🌸 All primals running with zero-hardcoded configuration!");
-
-            // Write PID file for stop/status commands
-            if let Err(e) = write_pid_file() {
-                warn!("Failed to write PID file: {}", e);
-            }
-
-            // Start health monitoring
-            tokio::spawn(async move {
-                if let Err(e) = health_monitor.start_monitoring().await {
-                    error!("Health monitoring failed: {}", e);
-                }
-            });
-
-            // Create log session tracker
-            let node_id = std::env::var("NODE_ID")
-                .or_else(|_| std::env::var("BEARDOG_NODE_ID"))
-                .unwrap_or_else(|_| "unknown-node".to_string());
-            let log_tracker = Arc::new(LogSessionTracker::new(node_id));
-
-            // Wait for interrupt
-            tokio::signal::ctrl_c().await?;
-            info!("🛑 Received shutdown signal, stopping tower...");
-
-            // Clean up PID file
-            cleanup_pid_file();
-
-            // Archive logs before stopping
-            if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
-                warn!("Failed to archive log sessions: {}", e);
-            }
-
-            orchestrator.stop_all().await?;
-            info!("✅ Tower stopped gracefully.");
+            tower_orchestration::start_tower_legacy(
+                security_binary,
+                security_port,
+                discovery_binary,
+                additional,
+                &std_env_lookup,
+            )
+            .await
         }
 
         Commands::StartFromEnv => {
-            info!("🌱 Starting tower from PURE ENVIRONMENT (Infant Model)...");
-            info!("📖 Reading configuration from:");
-            info!("   - PRIMAL_PROVIDES (comma-separated capabilities)");
-            info!("   - PRIMAL_REQUIRES (comma-separated capabilities)");
-            info!("   - PRIMAL_BINARY (path to executable)");
-            info!("   - HTTP_PORT (0 = auto-select)");
-
-            // Create orchestrator
-            let health_monitor = Arc::new(PrimalHealthMonitor::builder().build());
-            let retry_policy = RetryPolicy::exponential(3, Duration::from_millis(100));
-            let orchestrator = PrimalOrchestrator::new(health_monitor.clone(), retry_policy);
-
-            // Discover and register primal from environment
+            info!("Starting tower from PURE ENVIRONMENT (Infant Model)...");
             match biomeos_core::GenericManagedPrimal::from_env() {
                 Ok(primal) => {
-                    info!("✅ Discovered primal from environment!");
-                    orchestrator.register(Arc::new(primal)).await;
-
-                    // Start it
+                    info!("Discovered primal from environment");
+                    let health_monitor =
+                        std::sync::Arc::new(biomeos_core::PrimalHealthMonitor::builder().build());
+                    let retry_policy = biomeos_core::RetryPolicy::exponential(
+                        3,
+                        std::time::Duration::from_millis(100),
+                    );
+                    let orchestrator =
+                        biomeos_core::PrimalOrchestrator::new(health_monitor.clone(), retry_policy);
+                    orchestrator.register(std::sync::Arc::new(primal)).await;
                     orchestrator.start_all().await?;
-                    info!("✅ Tower started from environment!");
+                    info!("Tower started from environment");
 
-                    // Write PID file for stop/status commands
-                    if let Err(e) = write_pid_file() {
-                        warn!("Failed to write PID file: {}", e);
+                    let pid_file = tower_orchestration::pid_file_path(&std_env_lookup);
+                    if let Err(e) = tower_orchestration::write_pid_file(&pid_file) {
+                        tracing::warn!("Failed to write PID file: {}", e);
                     }
 
-                    // Start health monitoring
-                    tokio::spawn(async move {
-                        if let Err(e) = health_monitor.start_monitoring().await {
-                            error!("Health monitoring failed: {}", e);
-                        }
-                    });
-
-                    // Create log session tracker
-                    let node_id = std::env::var("NODE_ID")
-                        .or_else(|_| std::env::var("BEARDOG_NODE_ID"))
-                        .unwrap_or_else(|_| "unknown-node".to_string());
-                    let log_tracker = Arc::new(LogSessionTracker::new(node_id));
-
-                    // Wait for interrupt
                     tokio::signal::ctrl_c().await?;
-                    info!("🛑 Stopping tower...");
-
-                    // Clean up PID file
-                    cleanup_pid_file();
-
-                    // Archive logs before stopping
-                    if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
-                        warn!("Failed to archive log sessions: {}", e);
-                    }
-
+                    info!("Stopping tower...");
+                    tower_orchestration::cleanup_pid_file(&pid_file);
                     orchestrator.stop_all().await?;
+                    Ok(())
                 }
                 Err(e) => {
-                    error!("❌ Failed to discover primal from environment: {}", e);
-                    error!("💡 Make sure these are set:");
-                    error!("   export PRIMAL_PROVIDES=security,crypto");
-                    error!("   export PRIMAL_BINARY=/path/to/binary");
-                    error!("   export HTTP_PORT=9000  # or 0 for auto");
-                    return Err(e.into());
+                    error!("Failed to discover primal from environment: {}", e);
+                    error!("Set PRIMAL_PROVIDES, PRIMAL_BINARY, HTTP_PORT");
+                    Err(e.into())
                 }
             }
         }
 
         Commands::Stop => {
-            info!("🛑 Stopping all primals...");
-
-            // Read tower PID file
-            let pid_file = get_tower_pid_file();
-            if !pid_file.exists() {
-                error!(
-                    "❌ No running tower found (PID file not found: {})",
-                    pid_file.display()
-                );
-                error!("💡 The tower may not be running, or was started in a different directory");
-                std::process::exit(1);
-            }
-
-            match std::fs::read_to_string(&pid_file) {
-                Ok(content) => {
-                    let pid: i32 = content.trim().parse().unwrap_or(0);
-                    if pid > 0 {
-                        info!("📡 Sending SIGTERM to tower process (PID: {})", pid);
-
-                        // Send SIGTERM to the tower process
-                        #[cfg(unix)]
-                        {
-                            use std::process::Command;
-                            let status = Command::new("kill")
-                                .args(["-TERM", &pid.to_string()])
-                                .status();
-
-                            match status {
-                                Ok(s) if s.success() => {
-                                    info!("✅ Sent stop signal to tower (PID: {})", pid);
-                                    // Clean up PID file
-                                    let _ = std::fs::remove_file(&pid_file);
-                                }
-                                Ok(_) => {
-                                    warn!("⚠️  Process {} may have already stopped", pid);
-                                    let _ = std::fs::remove_file(&pid_file);
-                                }
-                                Err(e) => {
-                                    error!("❌ Failed to send signal: {}", e);
-                                    std::process::exit(1);
-                                }
-                            }
-                        }
-
-                        #[cfg(not(unix))]
-                        {
-                            error!("❌ Stop command only supported on Unix systems");
-                            std::process::exit(1);
-                        }
-                    } else {
-                        error!("❌ Invalid PID in file: {}", content);
-                        std::process::exit(1);
-                    }
-                }
-                Err(e) => {
-                    error!("❌ Failed to read PID file: {}", e);
-                    std::process::exit(1);
-                }
-            }
+            let pid_file = tower_orchestration::pid_file_path(&std_env_lookup);
+            tower_orchestration::stop_tower(&pid_file)
         }
 
         Commands::Status => {
-            info!("📊 Tower Status:");
-
-            // Check for PID file
-            let pid_file = get_tower_pid_file();
-            if !pid_file.exists() {
-                info!("❌ No running tower found");
-                info!("💡 Start a tower with: tower run --config tower.toml");
-                return Ok(());
-            }
-
-            match std::fs::read_to_string(&pid_file) {
-                Ok(content) => {
-                    let pid: i32 = content.trim().parse().unwrap_or(0);
-                    if pid > 0 {
-                        // Check if process is still running
-                        #[cfg(unix)]
-                        {
-                            use std::process::Command;
-                            let output = Command::new("ps")
-                                .args(["-p", &pid.to_string(), "-o", "pid,command"])
-                                .output();
-
-                            match output {
-                                Ok(out) if out.status.success() => {
-                                    info!("✅ Tower is RUNNING (PID: {})", pid);
-
-                                    // Try to get more details from socket directory
-                                    let socket_dir = get_socket_dir();
-                                    if socket_dir.exists() {
-                                        info!("");
-                                        info!("📂 Socket Directory: {}", socket_dir.display());
-
-                                        if let Ok(entries) = std::fs::read_dir(&socket_dir) {
-                                            let sockets: Vec<_> = entries
-                                                .filter_map(std::result::Result::ok)
-                                                .filter(|e| {
-                                                    e.path()
-                                                        .extension()
-                                                        .is_some_and(|x| x == "sock")
-                                                })
-                                                .collect();
-
-                                            if !sockets.is_empty() {
-                                                info!("🔌 Active Sockets:");
-                                                for socket in sockets {
-                                                    info!(
-                                                        "   • {}",
-                                                        socket.file_name().to_string_lossy()
-                                                    );
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Show family ID if set
-                                    if let Ok(family) = std::env::var("BIOMEOS_FAMILY_ID")
-                                        .or_else(|_| std::env::var("FAMILY_ID"))
-                                    {
-                                        info!("");
-                                        info!("🏠 Family ID: {}", family);
-                                    }
-                                }
-                                _ => {
-                                    info!("❌ Tower process (PID: {}) is not running", pid);
-                                    info!("🧹 Cleaning up stale PID file...");
-                                    let _ = std::fs::remove_file(&pid_file);
-                                }
-                            }
-                        }
-
-                        #[cfg(not(unix))]
-                        {
-                            info!("Tower PID: {} (cannot verify on non-Unix)", pid);
-                        }
-                    } else {
-                        error!("❌ Invalid PID in file");
+            let pid_file = tower_orchestration::pid_file_path(&std_env_lookup);
+            match tower_orchestration::tower_status(&pid_file, &std_env_lookup)? {
+                tower_orchestration::TowerStatusReport::NotRunning => {
+                    info!("No running tower found");
+                    info!("Start with: tower run --config tower.toml");
+                }
+                tower_orchestration::TowerStatusReport::InvalidPid => {
+                    error!("Invalid PID in file");
+                }
+                tower_orchestration::TowerStatusReport::Running {
+                    pid,
+                    socket_dir,
+                    sockets,
+                    family_id,
+                } => {
+                    info!("Tower is RUNNING (PID: {})", pid);
+                    info!("Socket Directory: {}", socket_dir.display());
+                    for s in &sockets {
+                        info!("  Socket: {}", s);
+                    }
+                    if let Some(fam) = family_id {
+                        info!("Family ID: {}", fam);
                     }
                 }
-                Err(e) => {
-                    error!("❌ Failed to read PID file: {}", e);
+                tower_orchestration::TowerStatusReport::Stale { pid } => {
+                    info!("Tower process (PID: {}) is not running, cleaned up", pid);
                 }
             }
+            Ok(())
         }
 
         Commands::Capabilities => {
-            info!("📋 Available Capabilities:");
-            info!("");
-            info!("  🔐 Security     - Crypto, signing, encryption, key management");
-            info!("  🔍 Discovery    - Service discovery, orchestration");
-            info!("  💻 Compute      - Execution, processing, containers");
-            info!("  🧠 AI           - ML inference, neural networks");
-            info!("  💾 Storage      - Content-addressed, distributed storage");
-            info!("  📊 Observability - Metrics, logging, tracing");
-            info!("  🌐 Federation   - Multi-org coordination");
-            info!("  🌍 Network      - NAT traversal, routing, mesh");
-            info!("");
-            info!("💡 Use PRIMAL_PROVIDES and PRIMAL_REQUIRES to declare capabilities!");
-            info!("   Example: export PRIMAL_PROVIDES=security,crypto");
-            info!("   Example: export PRIMAL_REQUIRES=storage");
+            info!("Available Capabilities:");
+            for (name, desc) in tower_orchestration::format_capabilities() {
+                info!("  {name} - {desc}");
+            }
+            info!("Use PRIMAL_PROVIDES and PRIMAL_REQUIRES to declare capabilities");
+            Ok(())
         }
 
         Commands::Discover { directory } => {
-            info!("🔍 Scanning directory for primals: {}", directory.display());
-
-            match discover_primals(&directory).await {
+            info!("Scanning directory for primals: {}", directory.display());
+            match biomeos_core::discover_primals(&directory).await {
                 Ok(primals) => {
-                    info!("✅ Discovered {} primal(s)", primals.len());
-                    info!("");
-
+                    info!("Discovered {} primal(s)", primals.len());
                     for (i, primal) in primals.iter().enumerate() {
-                        info!("📦 Primal #{}", i + 1);
-                        info!("   ID:       {}", primal.id);
-                        info!("   Binary:   {}", primal.binary.display());
-                        info!("   Provides: {:?}", primal.provides);
-                        info!("   Requires: {:?}", primal.requires);
-                        if let Some(version) = &primal.version {
-                            info!("   Version:  {}", version);
-                        }
-                        if let Some(name) = &primal.name {
-                            info!("   Name:     {}", name);
-                        }
-                        info!("");
+                        info!("Primal #{}: {} ({:?})", i + 1, primal.id, primal.binary);
+                        info!("  Provides: {:?}", primal.provides);
+                        info!("  Requires: {:?}", primal.requires);
                     }
-
-                    info!("💡 To use these primals:");
-                    info!("   tower run --scan {}", directory.display());
+                    Ok(())
                 }
                 Err(e) => {
-                    error!("❌ Failed to discover primals: {}", e);
+                    error!("Failed to discover primals: {}", e);
                     std::process::exit(1);
                 }
             }
         }
     }
-
-    Ok(())
-}
-
-// Helper: Convert PrimalMetadata to ManagedPrimal
-fn metadata_to_primal(metadata: &PrimalMetadata) -> Result<Arc<dyn biomeos_core::ManagedPrimal>> {
-    use biomeos_core::PrimalBuilder;
-
-    let provides: Vec<Capability> = metadata
-        .provides
-        .iter()
-        .map(|s| Capability::Custom(s.clone()))
-        .collect();
-
-    let requires: Vec<Capability> = metadata
-        .requires
-        .iter()
-        .map(|s| Capability::Custom(s.clone()))
-        .collect();
-
-    let primal = PrimalBuilder::new()
-        .binary_path(metadata.binary.display().to_string())
-        .provides(provides)
-        .requires(requires)
-        .build()?;
-
-    Ok(primal)
-}
-
-// Helper: Convert TowerConfig PrimalConfig to ManagedPrimal
-async fn config_to_primal(
-    config: &TowerPrimalConfig,
-) -> Result<Arc<dyn biomeos_core::ManagedPrimal>> {
-    use biomeos_core::PrimalBuilder;
-
-    // Auto-discover capabilities if enabled and not specified
-    let (provides_str, requires_str) =
-        if config.auto_discover && config.provides.is_empty() && config.requires.is_empty() {
-            let id = config
-                .id
-                .clone()
-                .or_else(|| {
-                    config
-                        .binary
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(std::string::ToString::to_string)
-                })
-                .unwrap_or_else(|| "unknown".to_string());
-
-            info!("🔍 Auto-discovering capabilities for {}", id);
-            match biomeos_core::query_primal_metadata(&config.binary).await {
-                Ok(metadata) => (metadata.provides, metadata.requires),
-                Err(e) => {
-                    warn!("⚠️  Could not auto-discover capabilities: {}", e);
-                    (config.provides.clone(), config.requires.clone())
-                }
-            }
-        } else {
-            (config.provides.clone(), config.requires.clone())
-        };
-
-    let provides: Vec<Capability> = provides_str
-        .iter()
-        .map(|s| Capability::Custom(s.clone()))
-        .collect();
-
-    let requires: Vec<Capability> = requires_str
-        .iter()
-        .map(|s| Capability::Custom(s.clone()))
-        .collect();
-
-    // CRITICAL FIX: Pass environment variables from config to primal
-    let mut builder = PrimalBuilder::new()
-        .binary_path(config.binary.display().to_string())
-        .provides(provides)
-        .requires(requires);
-
-    // Add all env vars from tower.toml [primals.env] section
-    for (key, value) in &config.env {
-        builder = builder.env_var(key.clone(), value.clone());
-    }
-
-    // Add protocol if specified (tarpc, jsonrpc, or auto-detect)
-    if let Some(protocol) = &config.protocol {
-        builder = builder.env_var("IPC_PROTOCOL".to_string(), protocol.clone());
-    }
-
-    // Add HTTP port if specified
-    if config.http_port > 0 {
-        builder = builder.http_port(config.http_port);
-    }
-
-    let primal = builder.build()?;
-
-    Ok(primal)
 }

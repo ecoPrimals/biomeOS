@@ -11,6 +11,7 @@
 
 use anyhow::{Context, Result};
 use biomeos_core::atomic_client::AtomicClient;
+use biomeos_types::primal_names;
 use serde::Deserialize;
 use serde_json::json;
 use tracing::{debug, info, warn};
@@ -105,7 +106,7 @@ pub async fn fetch_jwt_secret_with_discovery(purpose: &str) -> Result<String> {
     let provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
         .ok()
         .or_else(|| CapabilityTaxonomy::resolve_to_primal("security").map(String::from))
-        .unwrap_or_else(|| "beardog".to_string());
+        .unwrap_or_else(|| primal_names::BEARDOG.to_string());
 
     info!(
         "Discovering security provider '{}' for JWT secret generation...",

@@ -340,6 +340,137 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
     Ok(())
 }
 
+/// Run the genetic lineage verification workflow.
+///
+/// Discovers spore mount points from the environment (`BIOMEOS_SPORE_PATHS`,
+/// or scans `/media/$USER` by default), then verifies genetic relationships
+/// between spores using BearDog's HKDF-SHA256 lineage system.
+pub async fn run_verify_lineage() -> Result<()> {
+    use biomeos_federation::beardog_client::BearDogClient;
+
+    println!("\n  BearDog Genetic Lineage Verifier");
+    println!("===================================\n");
+
+    println!("Discovering BearDog...");
+    let client = BearDogClient::from_discovery().await.map_err(|e| {
+        anyhow::anyhow!("Failed to discover BearDog: {e}. Is beardog-server running?")
+    })?;
+    println!("BearDog found!\n");
+
+    let spore_paths = discover_spore_mounts();
+    if spore_paths.is_empty() {
+        println!("No spore seeds found. Set BIOMEOS_SPORE_PATHS or mount USB spores.");
+        return Ok(());
+    }
+
+    let mut spores = Vec::new();
+    println!("Loading spore seeds...");
+    for (path, node_id) in &spore_paths {
+        let seed_path = PathBuf::from(path).join(".family.seed");
+        if !seed_path.exists() {
+            println!(
+                "  Skipping {node_id}: seed not found at {}",
+                seed_path.display()
+            );
+            continue;
+        }
+        match std::fs::read(&seed_path) {
+            Ok(seed_bytes) => {
+                use sha2::{Digest, Sha256};
+                let seed_hash = format!("{:x}", Sha256::digest(&seed_bytes));
+                println!("  {node_id}: {}...", &seed_hash[..16]);
+                spores.push((node_id.clone(), seed_bytes, seed_hash));
+            }
+            Err(e) => println!("  Failed to read {node_id}: {e}"),
+        }
+    }
+
+    if spores.len() < 2 {
+        println!("Need at least 2 spores to compare (found {})", spores.len());
+        return Ok(());
+    }
+
+    println!("\nVerifying Genetic Relationships\n");
+
+    let mut all_siblings = true;
+    let mut any_siblings = false;
+
+    for i in 0..spores.len() {
+        for j in (i + 1)..spores.len() {
+            let (node_a, _, _) = &spores[i];
+            let (node_b, _, hash_b) = &spores[j];
+
+            println!("Testing: {node_a} <-> {node_b}");
+
+            match client.verify_same_family("nat0", hash_b, node_b).await {
+                Ok(response) => {
+                    if response.is_family_member {
+                        println!("  RELATED: {}", response.relationship);
+                        any_siblings = true;
+                    } else {
+                        println!("  UNRELATED: Different genetic families");
+                        all_siblings = false;
+                    }
+                }
+                Err(e) => {
+                    println!("  Verification failed: {e}");
+                    all_siblings = false;
+                }
+            }
+            println!();
+        }
+    }
+
+    println!("Summary: {} spores tested", spores.len());
+    if all_siblings {
+        println!("  All spores are SIBLINGS (same parent)");
+    } else if any_siblings {
+        println!("  MIXED relationships detected");
+    } else {
+        println!("  Spores are UNRELATED (different parents)");
+    }
+    println!();
+
+    Ok(())
+}
+
+/// Discover spore mount points from `BIOMEOS_SPORE_PATHS` or by scanning
+/// `/media/$USER` for directories containing `.family.seed`.
+fn discover_spore_mounts() -> Vec<(String, String)> {
+    if let Ok(paths) = std::env::var("BIOMEOS_SPORE_PATHS") {
+        return paths
+            .split(',')
+            .filter(|p| !p.trim().is_empty())
+            .enumerate()
+            .map(|(i, p)| {
+                let p = p.trim().to_string();
+                let node_id = PathBuf::from(&p)
+                    .file_name()
+                    .map_or_else(|| format!("node-{i}"), |n| n.to_string_lossy().to_string());
+                (p, node_id)
+            })
+            .collect();
+    }
+
+    let user = std::env::var("USER").unwrap_or_else(|_| "root".to_string());
+    let media_dir = PathBuf::from(format!("/media/{user}"));
+    if !media_dir.exists() {
+        return Vec::new();
+    }
+
+    let mut mounts = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&media_dir) {
+        for entry in entries.flatten() {
+            let biome_path = entry.path().join("biomeOS");
+            if biome_path.join(".family.seed").exists() {
+                let node_id = entry.file_name().to_string_lossy().to_string();
+                mounts.push((biome_path.to_string_lossy().to_string(), node_id));
+            }
+        }
+    }
+    mounts
+}
+
 #[cfg(test)]
 #[expect(
     clippy::unwrap_used,

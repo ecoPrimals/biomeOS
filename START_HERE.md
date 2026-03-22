@@ -175,5 +175,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v3.0 compliant
-**Tests**: ~5,060 passing, 90.26% region / 91.10% function / 89.99% line coverage (llvm-cov) | **Clippy**: PASS | **Docs**: Full coverage | **C deps**: 0
-**Updated**: March 21, 2026
+**Tests**: 7,124 passing, 90.35% region / 91.20% function / 90.41% line coverage (llvm-cov) | **Clippy**: PASS | **Docs**: Full coverage | **C deps**: 0
+**Updated**: March 22, 2026

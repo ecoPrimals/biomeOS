@@ -3,7 +3,17 @@
 
 //! BiomeOS - Universal Operating System
 //!
-//! A capability-based orchestration layer for managing primals and ecosystems
+//! A capability-based orchestration layer for managing primals and ecosystems.
+//!
+//! # Quick Start
+//!
+//! ```
+//! use biomeos::{BiomeOSRuntime, UIMode};
+//!
+//! let rt = BiomeOSRuntime::default();
+//! assert!(rt.sovereignty_enabled);
+//! assert!(matches!(rt.ui_mode, UIMode::Auto));
+//! ```
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]

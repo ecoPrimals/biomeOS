@@ -53,6 +53,7 @@ async fn wait_for_service(url: &str, max_attempts: u32) -> bool {
 
     for attempt in 0..max_attempts {
         let url_clone = url.clone();
+        #[allow(clippy::result_large_err)]
         let result = tokio::task::spawn_blocking(move || {
             ureq::get(&url_clone).timeout(Duration::from_secs(1)).call()
         })

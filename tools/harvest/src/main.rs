@@ -30,6 +30,7 @@ use std::process::Command;
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
+/// Canonical source of truth: `biomeos-types::primal_names::CORE_PRIMALS`.
 const KNOWN_PRIMALS: &[&str] = &[
     "songbird",
     "beardog",

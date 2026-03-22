@@ -6,6 +6,7 @@
 //! Makes deployment deterministic and manageable via graph execution
 
 use anyhow::Result;
+use biomeos_types::primal_names;
 use serde::{Deserialize, Serialize};
 
 pub use crate::orchestrator::DeploymentResult;
@@ -97,7 +98,7 @@ impl AtomicDeploymentGraph {
             dependencies: vec!["deploy_tower_songbird".to_string()],
             config: serde_json::json!({
                 "atomic": "tower",
-                "required_primals": ["beardog", "songbird"]
+                "required_primals": [primal_names::BEARDOG, primal_names::SONGBIRD]
             }),
         });
 

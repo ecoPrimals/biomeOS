@@ -7,6 +7,7 @@
 //! niche deployment (git clone), and remote health checks.
 
 use anyhow::{Context, Result};
+use biomeos_types::primal_names;
 use bytes::Bytes;
 use serde::Deserialize;
 use serde_json::Value;
@@ -51,8 +52,8 @@ impl BiomeOsHttpClient {
     pub fn new() -> Self {
         use crate::nucleation::SocketNucleation;
 
-        let discovery_provider =
-            std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+        let discovery_provider = std::env::var("DISCOVERY_PROVIDER")
+            .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
         let songbird_socket = std::env::var("SONGBIRD_SOCKET")
             .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
             .unwrap_or_else(|_| {

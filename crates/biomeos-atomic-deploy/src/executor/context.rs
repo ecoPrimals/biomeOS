@@ -39,8 +39,8 @@ pub enum NodeStatus {
 /// - Socket path assignment (via nucleation)
 #[derive(Clone)]
 pub struct ExecutionContext {
-    /// Environment variables available to all nodes
-    pub env: HashMap<String, String>,
+    /// Environment variables available to all nodes (`Arc` for zero-copy sharing across tasks)
+    pub env: Arc<HashMap<String, String>>,
     /// Outputs from completed nodes (for dependency resolution)
     pub outputs: Arc<Mutex<HashMap<String, serde_json::Value>>>,
     /// Execution status of all nodes
@@ -94,7 +94,7 @@ impl ExecutionContext {
             );
 
         Self {
-            env,
+            env: Arc::new(env),
             outputs: Arc::new(Mutex::new(HashMap::new())),
             status: Arc::new(Mutex::new(HashMap::new())),
             checkpoint_dir: None,

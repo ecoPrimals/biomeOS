@@ -651,50 +651,14 @@ async fn health_check(socket_path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
-/// Generate a random JWT secret
+/// Generate a random JWT secret using the `rand` crate (no /dev/urandom read).
 fn generate_jwt_secret() -> String {
-    use std::io::Read;
+    use base64::Engine;
+    use rand::RngCore;
+
     let mut bytes = [0u8; 48];
-    if let Ok(mut f) = std::fs::File::open("/dev/urandom") {
-        let _ = f.read_exact(&mut bytes);
-    }
-    base64_encode(&bytes)
-}
-
-/// Simple base64 encoding (no external dependency)
-pub(crate) fn base64_encode(data: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-    let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
-    for chunk in data.chunks(3) {
-        let b0 = u32::from(chunk[0]);
-        let b1 = if chunk.len() > 1 {
-            u32::from(chunk[1])
-        } else {
-            0
-        };
-        let b2 = if chunk.len() > 2 {
-            u32::from(chunk[2])
-        } else {
-            0
-        };
-        let triple = (b0 << 16) | (b1 << 8) | b2;
-
-        let idx = |shift: u32| usize::try_from((triple >> shift) & 0x3F).unwrap_or(0);
-        result.push(char::from(ALPHABET[idx(18)]));
-        result.push(char::from(ALPHABET[idx(12)]));
-        if chunk.len() > 1 {
-            result.push(char::from(ALPHABET[idx(6)]));
-        } else {
-            result.push('=');
-        }
-        if chunk.len() > 2 {
-            result.push(char::from(ALPHABET[idx(0)]));
-        } else {
-            result.push('=');
-        }
-    }
-    result
+    rand::thread_rng().fill_bytes(&mut bytes);
+    base64::engine::general_purpose::STANDARD.encode(bytes)
 }
 
 #[cfg(test)]

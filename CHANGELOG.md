@@ -2,6 +2,40 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.65 (2026-03-22) — Deep Debt Execution + Zero-Copy + Hardcode Evolution
+
+### Architectural Refactoring
+- `tower.rs` (895 lines, 0% coverage) refactored into thin CLI wrapper + testable `tower_orchestration.rs` library module (20+ unit tests covering PID management, socket resolution, status reporting)
+- `verify-lineage.rs` refactored: hardcoded USB paths replaced with `discover_spore_mounts()` (env-based `BIOMEOS_SPORE_PATHS` or dynamic `/media/$USER` scan)
+- `nucleus.rs`: hand-rolled `base64_encode` + `/dev/urandom` evolved to `base64` + `rand` crates (proper CSPRNG)
+
+### Zero-Copy
+- `ExecutionContext.env` wrapped in `Arc<HashMap<String, String>>` — eliminates deep clone on every `tokio::spawn` in graph executor hot path
+- Audited all IPC/forwarding paths: `JsonRpcRequest` params clones are inherent to `serde_json::Value` ownership model; further gains require architectural raw-byte forwarding
+
+### Hardcoded Name Evolution
+- `http_client.rs`, `beardog_jwt_client.rs`, `trust.rs`, `deployment_graph.rs`: inline `"beardog"`/`"songbird"` strings replaced with `primal_names::BEARDOG`/`primal_names::SONGBIRD` constants
+- `manifest.rs` `from_nucleus()`: hardcoded two-binary match (`beardog-server`/`songbird` only) evolved to dynamic discovery — now registers ALL binaries found in primals directory
+- `tools/harvest`: annotated `KNOWN_PRIMALS` with canonical source reference
+
+### Flaky Test Fixes
+- Removed process-global `set_current_dir` from 4 tests in `primal_start.rs` — they already set `BIOMEOS_PLASMID_BIN_DIR` in `ExecutionContext`, making CWD mutation unnecessary and race-prone
+- Added `#[serial_test::serial]` to 2 incubation tests that mutate `HOME` env var
+- Un-ignored `test_primal_start_capability_mode_default` (was `#[ignore]` due to CWD race — no longer needed)
+- Removed dead `CWD_LOCK` infrastructure after all consumers evolved
+
+### CI
+- Coverage enforcement threshold raised from 85% to 90% in `.github/workflows/ci.yml`
+
+### Quality Gates
+- Tests: 7,124 passing, 0 failures (previously 1,034 with 1 flaky failure)
+- Coverage: 90.35% region / 91.20% function / 90.41% line (all three above 90%)
+- Clippy: 0 warnings (pedantic+nursery)
+- Format: clean
+- Net: -617 lines (317 insertions, 934 deletions)
+
+---
+
 ## v2.64 (2026-03-22) — Flaky Test Hardening + Coverage Push + serde_yml Migration
 
 ### Test Reliability

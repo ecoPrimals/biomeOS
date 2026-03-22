@@ -204,34 +204,20 @@ impl BinaryManifest {
                         .unwrap_or("unknown")
                         .to_string();
 
-                    let (key, binary_info) = match file_name.as_str() {
-                        "beardog-server" => (
-                            "beardog".to_string(),
-                            BinaryInfo {
-                                name: "beardog-server".to_string(),
-                                version: "0.15.0".to_string(), // Extracted via --version when running
-                                git_commit: "unknown".to_string(),
-                                build_date: Utc::now(),
-                                sha256,
-                                size_bytes: bytes.len() as u64,
-                                source_repo: "ecoPrimals/phase1/beardog".to_string(),
-                                features: vec!["btsp-api".to_string(), "unix-socket".to_string()],
-                            },
-                        ),
-                        "songbird" => (
-                            "songbird".to_string(),
-                            BinaryInfo {
-                                name: "songbird".to_string(),
-                                version: "3.19.0".to_string(), // Extracted via --version when running
-                                git_commit: "unknown".to_string(),
-                                build_date: Utc::now(),
-                                sha256,
-                                size_bytes: bytes.len() as u64,
-                                source_repo: "ecoPrimals/phase1/songbird".to_string(),
-                                features: vec!["btsp-client".to_string(), "port-free".to_string()],
-                            },
-                        ),
-                        _ => continue, // Skip unknown binaries
+                    let key = file_name
+                        .strip_suffix("-server")
+                        .unwrap_or(&file_name)
+                        .to_string();
+
+                    let binary_info = BinaryInfo {
+                        name: file_name,
+                        version: "unknown".to_string(),
+                        git_commit: "unknown".to_string(),
+                        build_date: Utc::now(),
+                        sha256,
+                        size_bytes: bytes.len() as u64,
+                        source_repo: String::new(),
+                        features: vec![],
                     };
 
                     binaries.insert(key, binary_info);
@@ -485,10 +471,10 @@ mod tests {
 
         let manifest = BinaryManifest::from_nucleus(temp_dir.path()).expect("from_nucleus");
 
-        assert_eq!(manifest.binaries.len(), 2);
+        assert_eq!(manifest.binaries.len(), 3);
         assert!(manifest.binaries.contains_key("beardog"));
         assert!(manifest.binaries.contains_key("songbird"));
-        assert!(!manifest.binaries.contains_key("unknown-primal"));
+        assert!(manifest.binaries.contains_key("unknown-primal"));
     }
 
     // ========== SporeManifest Tests ==========
