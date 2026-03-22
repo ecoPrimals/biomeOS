@@ -112,8 +112,12 @@ capabilities = [
 "network.tls_connect" = { provider = "songbird", method = "tls_connect" }
 
 [translations.discovery]
-"discovery.find_primals" = { provider = "songbird", method = "find_primals" }
-"discovery.announce" = { provider = "songbird", method = "announce_presence" }
+"discovery.find_primals" = { provider = "songbird", method = "discovery.find_primals" }
+"discovery.announce" = { provider = "songbird", method = "discovery.announce" }
+
+[translations.federation]
+"federation.peers" = { provider = "songbird", method = "songbird.federation.peers" }
+"federation.status" = { provider = "songbird", method = "songbird.federation.status" }
 
 # ------------------------------------------------------------------------------
 # Storage Domain (NestGate)
