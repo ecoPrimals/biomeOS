@@ -143,6 +143,7 @@ impl DiscoveryLayer {
     /// Returns an error if:
     /// - System paths cannot be initialized (XDG directories unavailable)
     /// - Songbird socket cannot be discovered (Songbird not running or socket not found)
+    #[expect(clippy::unused_async, reason = "public API contract — callers already .await")]
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Discovery Layer (delegating to Songbird)");
 
@@ -152,7 +153,7 @@ impl DiscoveryLayer {
         })?;
 
         // Discover Songbird socket (no hardcoded paths!)
-        let songbird_socket = Self::discover_songbird_socket(&paths).await?;
+        let songbird_socket = Self::discover_songbird_socket(&paths)?;
 
         Ok(Self {
             songbird_socket: Some(songbird_socket),
@@ -160,70 +161,21 @@ impl DiscoveryLayer {
         })
     }
 
-    /// Discover Songbird's Unix socket
+    /// Discover Songbird's Unix socket via the 5-tier capability discovery protocol.
     ///
-    /// **Deep Debt Evolution**: Uses `SystemPaths`, not hardcoded paths!
-    ///
-    /// Checks in order:
-    /// 1. Environment variable `SONGBIRD_SOCKET`
-    /// 2. XDG runtime directory (`SystemPaths`)
-    /// 3. Scan runtime directory for songbird-*.sock
-    async fn discover_songbird_socket(paths: &SystemPaths) -> Result<String> {
-        debug!("Discovering Songbird socket (XDG-compliant, no hardcoded paths)");
+    /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
+    fn discover_songbird_socket(_paths: &SystemPaths) -> Result<String> {
+        use biomeos_types::capability_discovery;
 
-        // 1. Check environment variable
-        if let Ok(socket) = std::env::var("SONGBIRD_SOCKET") {
-            debug!(
-                "Found Songbird socket via SONGBIRD_SOCKET env var: {}",
-                socket
-            );
-            return Ok(socket);
-        }
+        debug!("Discovering discovery-provider socket (5-tier capability discovery)");
 
-        // 2. Try standard discovery primal socket in runtime directory
-        // Uses CapabilityTaxonomy to resolve the discovery primal name
-        let discovery_primal = CapabilityTaxonomy::Discovery
-            .default_primal()
-            .unwrap_or(primal_names::SONGBIRD);
-        let standard_socket = paths.primal_socket(discovery_primal);
-        if tokio::fs::metadata(&standard_socket).await.is_ok() {
-            debug!(
-                "Found Songbird socket at XDG location: {}",
-                standard_socket.display()
-            );
-            return Ok(standard_socket.to_string_lossy().to_string());
-        }
-
-        // 3. Scan runtime directory for any songbird-*.sock
-        let runtime_dir = paths.runtime_dir();
-        debug!(
-            "Scanning runtime directory for Songbird socket: {}",
-            runtime_dir.display()
-        );
-
-        let mut read_dir = tokio::fs::read_dir(runtime_dir).await.map_err(|e| {
-            Error::discovery_failed(format!("Failed to read runtime dir: {e}"), None)
-        })?;
-
-        while let Some(entry) = read_dir.next_entry().await.map_err(|e| {
-            Error::discovery_failed(format!("Failed to read directory entry: {e}"), None)
-        })? {
-            let path = entry.path();
-            if let Some(filename) = path.file_name().and_then(|n| n.to_str())
-                && filename.starts_with(&format!("{}-", primal_names::SONGBIRD))
-                && std::path::Path::new(filename)
-                    .extension()
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
-            {
-                debug!("Found Songbird socket: {}", path.display());
-                return Ok(path.to_string_lossy().to_string());
-            }
-        }
-
-        Err(Error::discovery_failed(
-            "Could not discover Songbird socket. Is Songbird running?",
-            Some("discovery".to_string()),
-        ))
+        capability_discovery::discover_capability_socket("discovery", &capability_discovery::std_env)
+            .ok_or_else(|| {
+                Error::discovery_failed(
+                    "Could not discover Songbird socket. Is Songbird running?",
+                    Some("discovery".to_string()),
+                )
+            })
     }
 
     /// Get Songbird socket path

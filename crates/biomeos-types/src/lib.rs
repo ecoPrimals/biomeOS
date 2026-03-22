@@ -15,6 +15,8 @@ use std::collections::HashMap;
 pub mod api_schema;
 /// NUCLEUS atomic type definitions (Tower, Node, Nest, Full)
 pub mod atomic;
+/// Capability-first socket discovery (5-tier standard)
+pub mod capability_discovery;
 /// Well-known capability taxonomy for discovery
 pub mod capability_taxonomy;
 /// Type-safe numeric cast helpers (absorbed from airSpring)

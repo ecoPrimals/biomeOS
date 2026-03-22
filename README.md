@@ -4,15 +4,15 @@
 
 ---
 
-## Status: Production Ready (v2.65)
+## Status: Production Ready (v2.66)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v3.0 compliant |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption) |
-| Tests | 7,124 passing (0 failures) — 90.35% region / 91.20% function / 90.41% line coverage (llvm-cov verified, all three above 90%) |
+| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption, primalSpring-aligned) |
+| Tests | 7,135 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
 | Unsafe Code | 0 in production |
 | C Dependencies | 0 (zstd-sys eliminated, deny.toml enforced bans) |
 | Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
@@ -20,11 +20,12 @@
 | License | scyBorg triple-copyleft (AGPL-3.0-only + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 285+ capability translations, 25 domains, 5 coordination patterns (Sequential, Parallel, ConditionalDag, Pipeline, Continuous) |
+| Neural API | 285+ capability translations, 26 domains (genetic/lineage added), 5 coordination patterns |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
 | Files >1000 LOC | 0 production (all split into domain submodules) |
+| Discovery | 5-tier capability-first protocol (centralized in biomeos-types) |
 
 ---
 

@@ -91,11 +91,12 @@ impl IdentityLayerImpl {
     ///
     /// Returns an error if:
     /// - `BearDog` socket cannot be discovered (`BearDog` not running or socket not found)
+    #[expect(clippy::unused_async, reason = "public API contract — callers already .await")]
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Identity Layer (delegating to BearDog)");
 
         // Discover BearDog socket (no hardcoded paths!)
-        let beardog_socket = Self::discover_beardog_socket().await?;
+        let beardog_socket = Self::discover_beardog_socket()?;
 
         Ok(Self {
             beardog_socket: Some(beardog_socket),
@@ -112,59 +113,23 @@ impl IdentityLayerImpl {
         format!("{:x}", hasher.finalize())
     }
 
-    /// Discover the security provider's Unix socket by capability (Gate 5.3).
+    /// Discover the security provider's Unix socket via the 5-tier capability
+    /// discovery protocol.
     ///
-    /// Uses `CapabilityTaxonomy` to resolve "security" → primal name at runtime,
-    /// avoiding hardcoded primal identities.
-    async fn discover_beardog_socket() -> Result<String> {
-        use biomeos_types::CapabilityTaxonomy;
+    /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`]
+    /// so all discovery logic lives in one place.
+    fn discover_beardog_socket() -> Result<String> {
+        use biomeos_types::capability_discovery;
 
-        let security_primal =
-            CapabilityTaxonomy::resolve_to_primal("security").unwrap_or(primal_names::BEARDOG);
-        debug!("Discovering security provider socket (resolved: {security_primal})");
+        debug!("Discovering security provider socket (5-tier capability discovery)");
 
-        // 1. Check primal-specific environment variable
-        let env_key = format!("{}_SOCKET", security_primal.to_uppercase());
-        if let Ok(socket) = std::env::var(&env_key) {
-            debug!("Found security socket via {env_key}: {socket}");
-            return Ok(socket);
-        }
-        if let Ok(socket) = std::env::var("SECURITY_PROVIDER_SOCKET") {
-            debug!("Found security socket via SECURITY_PROVIDER_SOCKET: {socket}");
-            return Ok(socket);
-        }
-
-        // 2. Check XDG runtime directory (biomeos namespace)
-        if let Ok(uid) = std::env::var("UID") {
-            let runtime_path = format!("/run/user/{uid}/biomeos/{security_primal}.sock");
-            if tokio::fs::metadata(&runtime_path).await.is_ok() {
-                debug!("Found security socket in XDG runtime: {runtime_path}");
-                return Ok(runtime_path);
-            }
-        }
-
-        // 3. Scan /tmp/biomeos/ for capability-named sockets
-        for dir in &["/tmp/biomeos", "/tmp"] {
-            if let Ok(mut read_dir) = tokio::fs::read_dir(dir).await {
-                while let Ok(Some(entry)) = read_dir.next_entry().await {
-                    let path = entry.path();
-                    if let Some(filename) = path.file_name().and_then(|n| n.to_str())
-                        && filename.starts_with(&format!("{security_primal}-"))
-                        && std::path::Path::new(filename)
-                            .extension()
-                            .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
-                    {
-                        debug!("Found security socket: {}", path.display());
-                        return Ok(path.to_string_lossy().to_string());
-                    }
-                }
-            }
-        }
-
-        Err(Error::discovery_failed(
-            "Could not discover security provider socket. Is the security primal running?",
-            Some("identity".to_string()),
-        ))
+        capability_discovery::discover_capability_socket("encryption", &capability_discovery::std_env)
+            .ok_or_else(|| {
+                Error::discovery_failed(
+                    "Could not discover security provider socket. Is the security primal running?",
+                    Some("identity".to_string()),
+                )
+            })
     }
 
     /// Get `BearDog` socket path
@@ -555,21 +520,25 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_identity_layer_new_scans_tmp_for_beardog_prefixed_sock() {
-        let tmp = tempfile::Builder::new()
-            .prefix("beardog-")
-            .suffix(".sock")
-            .tempfile_in("/tmp")
-            .expect("temp sock in /tmp");
-        let path = tmp.path().to_path_buf();
+    async fn test_identity_layer_new_discovers_via_xdg_runtime_dir() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let biomeos_dir = tmp.path().join("biomeos");
+        std::fs::create_dir_all(&biomeos_dir).expect("biomeos dir");
+        let sock_path = biomeos_dir.join("beardog.sock");
+        std::fs::write(&sock_path, "").expect("write placeholder socket");
+
         let _no_env = biomeos_test_utils::TestEnvGuard::remove("BEARDOG_SOCKET");
-        let _uid = biomeos_test_utils::TestEnvGuard::set("UID", "999999999");
+        let _no_cap_env = biomeos_test_utils::TestEnvGuard::remove("ENCRYPTION_PROVIDER_SOCKET");
+        let _xdg = biomeos_test_utils::TestEnvGuard::set(
+            "XDG_RUNTIME_DIR",
+            tmp.path().to_str().expect("utf8"),
+        );
         let layer = IdentityLayerImpl::new()
             .await
-            .expect("discover via /tmp scan");
+            .expect("discover via XDG runtime");
         assert_eq!(
             layer.beardog_socket.as_deref(),
-            Some(path.to_str().expect("utf8"))
+            Some(sock_path.to_str().expect("utf8"))
         );
     }
 }

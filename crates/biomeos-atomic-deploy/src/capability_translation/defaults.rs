@@ -49,6 +49,7 @@ pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize
     let storage_provider = resolve_provider("BIOMEOS_STORAGE_PROVIDER", NESTGATE);
     let compute_provider = resolve_provider("BIOMEOS_COMPUTE_PROVIDER", TOADSTOOL);
     let ai_provider = resolve_provider("BIOMEOS_AI_PROVIDER", SQUIRREL);
+    let genetic_provider = resolve_provider("BIOMEOS_GENETIC_PROVIDER", BEARDOG);
 
     let domain_providers: &[DomainProvider] = &[
         // Security domain - cryptographic operations
@@ -147,6 +148,19 @@ pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize
                 ("mcp.call", "mcp_call"),
             ],
         ),
+        // Genetic/Lineage domain — BearDog owns HKDF derivation, lineage proofs,
+        // and sibling verification (aligns with capability_registry.toml)
+        (
+            BEARDOG,
+            "genetic",
+            &[
+                ("genetic.derive", "genetic.derive"),
+                ("genetic.verify_sibling", "genetic.verify_sibling"),
+                ("genetic.lineage_proof", "genetic.lineage_proof"),
+                ("lineage.derive", "genetic.derive"),
+                ("lineage.verify", "genetic.verify_sibling"),
+            ],
+        ),
     ];
 
     // Health domain translations (provider-agnostic, resolved to biomeOS itself)
@@ -169,6 +183,7 @@ pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize
         ("storage", storage_provider),
         ("compute", compute_provider),
         ("ai", ai_provider),
+        ("genetic", genetic_provider),
     ]
     .into_iter()
     .collect();

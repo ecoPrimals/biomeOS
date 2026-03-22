@@ -179,7 +179,7 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v2.65)
+**Status**: Production Ready (v2.66)
 **Updated**: March 22, 2026
 **Tests**: 7,124 passing, 90.35% region / 91.20% function / 90.41% line coverage (llvm-cov verified)
 

@@ -177,6 +177,26 @@ pub const SPRING_PRIMALS: &[&str] = &[
 /// Additional primals — UI, sandbox, compliance.
 pub const AUXILIARY_PRIMALS: &[&str] = &[PETALTONGUE, SKUNKBAT, SOURDOUGH, PRIMALSPRING];
 
+// =========================================================================
+// Niche self-knowledge — capabilities that biomeOS itself provides.
+//
+// Inspired by primalSpring's niche.rs pattern: each primal declares what it
+// provides so self-registration is data-driven, not hardcoded inline.
+// =========================================================================
+
+/// Capabilities that biomeOS provides to the ecosystem.
+///
+/// Used by `register_self_in_registry` to register biomeOS in the Neural API
+/// capability router. Adding a new capability here automatically propagates
+/// to every bootstrap and self-registration callsite.
+pub const BIOMEOS_SELF_CAPABILITIES: &[&str] = &[
+    "primal.germination",
+    "primal.terraria",
+    "ecosystem.coordination",
+    "ecosystem.nucleation",
+    "graph.execution",
+];
+
 /// Check whether a string matches a known primal name (case-insensitive).
 #[must_use]
 pub fn is_known_primal(name: &str) -> bool {

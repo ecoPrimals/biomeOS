@@ -537,7 +537,9 @@ impl CapabilityTaxonomy {
 
             "bluetooth_genesis" | "bluetoothgenesis" => Some(Self::BluetoothGenesis),
             "spore_deployment" | "sporedeployment" | "spore" => Some(Self::SporeDeployment),
-            "genetic_lineage" | "geneticlineage" | "lineage" => Some(Self::GeneticLineage),
+            "genetic_lineage" | "geneticlineage" | "lineage" | "genetic" => {
+                Some(Self::GeneticLineage)
+            }
             "niche_deployment" | "nichedeployment" | "niche" => Some(Self::NicheDeployment),
 
             _ => None,
@@ -565,13 +567,15 @@ impl CapabilityTaxonomy {
         }
 
         match self {
-            // Security capabilities → BearDog
+            // Security capabilities → BearDog (including genetic lineage: BearDog
+            // owns HKDF-SHA256 derivation, lineage proofs, and sibling verification)
             Self::Encryption
             | Self::Identity
             | Self::Trust
             | Self::KeyManagement
             | Self::HardwareSecurity
-            | Self::SecureTunneling => Some(crate::primal_names::BEARDOG),
+            | Self::SecureTunneling
+            | Self::GeneticLineage => Some(crate::primal_names::BEARDOG),
 
             // Discovery & Communication → Songbird
             Self::Discovery
@@ -633,7 +637,6 @@ impl CapabilityTaxonomy {
             | Self::LogAggregation
             | Self::GraphOrchestration
             | Self::SporeDeployment
-            | Self::GeneticLineage
             | Self::NicheDeployment => Some("biomeos"),
         }
     }
@@ -663,7 +666,7 @@ impl CapabilityTaxonomy {
             super::category::CapabilityCategory::AI => Some(Self::AiCoordination),
             super::category::CapabilityCategory::Orchestration => Some(Self::LifecycleManagement),
             super::category::CapabilityCategory::UserInterface => Some(Self::VisualRendering),
-            super::category::CapabilityCategory::Specialized => None,
+            super::category::CapabilityCategory::Specialized => Some(Self::GeneticLineage),
         }
     }
 

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 22, 2026 (v2.65: Deep debt execution — tower.rs refactored to testable `tower_orchestration.rs` (20+ tests), `ExecutionContext.env` zero-copy `Arc`, hardcoded primal names evolved to `primal_names::` constants, `manifest.rs` `from_nucleus` now discovers all binaries dynamically, hand-rolled `base64_encode`/`/dev/urandom` evolved to `base64`+`rand` crates, `verify-lineage.rs` evolved to env-based spore discovery, 4 flaky CWD/env race tests fixed (removed process-global `set_current_dir`), CI coverage threshold raised to 90%, 1 previously-ignored test restored)
-**Version**: 2.65
+**Updated**: March 22, 2026 (v2.66: primalSpring-aligned deep debt evolution — Neural API socket early-bind (fixes exp060 timeout), centralized 5-tier capability discovery in `biomeos-types::capability_discovery`, 5 identity-based discovery callsites evolved to capability-based, genetic/lineage taxonomy fixed (alias, BearDog default, Specialized representative), `capability_sockets.rs` match→taxonomy-driven, niche self-knowledge via `BIOMEOS_SELF_CAPABILITIES`, genetic/lineage translations added to `defaults.rs`, bootstrap registration data-driven, science bootstrap hints use canonical constants)
+**Version**: 2.66
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,8 +17,8 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,124 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
-| **Test Coverage** | 90.35% region / 91.20% function / 90.41% line (llvm-cov workspace-wide verified) — all three metrics above 90% target |
+| **Tests Passing** | 7,135 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
+| **Test Coverage** | 90%+ (llvm-cov workspace-wide verified) — all three metrics above 90% target |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -26,12 +26,12 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 25 domains (+ health cross-cutting), 285+ translations |
+| **Capability Domains** | 26 domains (+ health cross-cutting, genetic/lineage added), 290+ translations |
 | **Deploy Graphs** | 40 (+ 2 Pipeline coordination graphs, all parseable via unified schema) |
 | **Niche Templates** | 20 (+ rootpulse-branch, rootpulse-merge, rootpulse-diff, rootpulse-federate, soil-microbiome) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
-| **Discovery Model** | Dynamic socket scanning + capability taxonomy + manifest fallback |
+| **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
 | **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 26 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |

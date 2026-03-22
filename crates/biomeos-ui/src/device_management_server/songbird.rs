@@ -72,58 +72,14 @@ pub(super) async fn register_with_songbird(socket_path: &str) -> Result<()> {
     Ok(())
 }
 
-/// Discover discovery provider socket by capability (Gate 5.3).
+/// Discover discovery provider socket via the 5-tier capability protocol.
 ///
-/// Resolves "discovery" capability → primal name via `CapabilityTaxonomy`,
-/// then discovers the socket through env vars, XDG, and fallback paths.
+/// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
 pub(super) fn discover_songbird_socket() -> Result<String> {
-    let provider = biomeos_types::CapabilityTaxonomy::resolve_to_primal("discovery")
-        .unwrap_or(biomeos_types::primal_names::SONGBIRD);
+    use biomeos_types::capability_discovery;
 
-    // Capability-first env vars, then identity-based for backward compat
-    if let Ok(socket) =
-        std::env::var("DISCOVERY_PROVIDER_SOCKET").or_else(|_| std::env::var("SONGBIRD_SOCKET"))
-    {
-        return Ok(socket);
-    }
-
-    if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-        let socket = format!("{runtime}/biomeos/{provider}.sock");
-        if std::path::Path::new(&socket).exists() {
-            return Ok(socket);
-        }
-    }
-
-    if let Ok(family_id) =
-        std::env::var("BIOMEOS_FAMILY_ID").or_else(|_| std::env::var("FAMILY_ID"))
-    {
-        if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-            let socket = format!("{runtime}/biomeos/{provider}-{family_id}.sock");
-            if std::path::Path::new(&socket).exists() {
-                return Ok(socket);
-            }
-        }
-        let socket = format!("/tmp/{provider}-{family_id}.sock");
-        if std::path::Path::new(&socket).exists() {
-            tracing::warn!("⚠️ Using legacy /tmp path: {}", socket);
-            return Ok(socket);
-        }
-    }
-
-    for pattern in &[
-        &format!("/tmp/biomeos/{provider}.sock"),
-        &format!("/run/biomeos/{provider}.sock"),
-        &format!("/tmp/{provider}.sock"),
-    ] {
-        if std::path::Path::new(pattern.as_str()).exists() {
-            if pattern.starts_with("/tmp") {
-                tracing::warn!("⚠️ Using legacy /tmp path: {}", pattern);
-            }
-            return Ok((*pattern).clone());
-        }
-    }
-
-    anyhow::bail!("Discovery provider socket not found")
+    capability_discovery::discover_capability_socket("discovery", &capability_discovery::std_env)
+        .context("Discovery provider socket not found. Is Songbird running?")
 }
 
 #[cfg(test)]
@@ -202,12 +158,14 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_discover_songbird_socket_family_legacy_tmp() {
-        let legacy_socket = "/tmp/songbird-testlegacy123.sock";
-        let _ = std::fs::remove_file(legacy_socket);
-        std::fs::File::create(legacy_socket).unwrap();
+    fn test_discover_songbird_socket_family_tmp_biomeos_dir() {
+        let biomeos_dir = "/tmp/biomeos-testlegacy123";
+        let legacy_socket = format!("{biomeos_dir}/songbird.sock");
+        let _ = std::fs::create_dir_all(biomeos_dir);
+        std::fs::File::create(&legacy_socket).unwrap();
 
         let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
+        let _guard_cap = TestEnvGuard::remove("DISCOVERY_PROVIDER_SOCKET");
         let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", "/nonexistent");
         let _guard_fam = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "testlegacy123");
         let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
@@ -216,19 +174,23 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), legacy_socket);
 
-        let _ = std::fs::remove_file(legacy_socket);
+        let _ = std::fs::remove_file(&legacy_socket);
+        let _ = std::fs::remove_dir(biomeos_dir);
     }
 
     #[test]
     #[serial]
-    fn test_discover_songbird_socket_common_pattern_tmp() {
-        let tmp_socket = "/tmp/songbird.sock";
-        let existed = std::path::Path::new(tmp_socket).exists();
+    fn test_discover_songbird_socket_common_pattern_tmp_biomeos_dir() {
+        let biomeos_dir = "/tmp/biomeos";
+        let tmp_socket = format!("{biomeos_dir}/songbird.sock");
+        let _ = std::fs::create_dir_all(biomeos_dir);
+        let existed = std::path::Path::new(&tmp_socket).exists();
         if !existed {
-            std::fs::File::create(tmp_socket).unwrap();
+            std::fs::File::create(&tmp_socket).unwrap();
         }
 
         let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
+        let _guard_cap = TestEnvGuard::remove("DISCOVERY_PROVIDER_SOCKET");
         let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", "/nonexistent");
         let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
         let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
@@ -238,7 +200,7 @@ mod tests {
         assert_eq!(result.unwrap(), tmp_socket);
 
         if !existed {
-            let _ = std::fs::remove_file(tmp_socket);
+            let _ = std::fs::remove_file(&tmp_socket);
         }
     }
 

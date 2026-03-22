@@ -71,8 +71,9 @@ fn resolve_to_primal_orchestration_biomeos() {
     assert_eq!(resolve("log_aggregation"), Some("biomeos"));
     assert_eq!(resolve("graph_orchestration"), Some("biomeos"));
     assert_eq!(resolve("spore_deployment"), Some("biomeos"));
-    assert_eq!(resolve("genetic_lineage"), Some("biomeos"));
     assert_eq!(resolve("niche_deployment"), Some("biomeos"));
+    // genetic_lineage is now owned by BearDog (HKDF derivation, lineage proofs)
+    assert_eq!(resolve("genetic_lineage"), Some("beardog"));
 }
 
 #[test]

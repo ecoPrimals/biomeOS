@@ -302,9 +302,12 @@ pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
             return vec![primal];
         }
     }
-    // Science: taxonomy has no single default; bootstrap hints for wetspring/neuralspring
+    // Science: taxonomy has no single default; bootstrap hints use canonical constants
     if cap.category.eq_ignore_ascii_case("science") || cap.name.eq_ignore_ascii_case("science") {
-        return vec!["wetspring", "neuralspring"];
+        return vec![
+            biomeos_types::primal_names::WETSPRING,
+            biomeos_types::primal_names::NEURALSPRING,
+        ];
     }
     Vec::new()
 }

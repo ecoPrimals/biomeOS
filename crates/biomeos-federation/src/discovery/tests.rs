@@ -372,7 +372,7 @@ fn test_discover_songbird_socket_from_env_vars() {
             {
                 let _sb = biomeos_test_utils::TestEnvGuard::remove("SONGBIRD_SOCKET");
                 let _ds = biomeos_test_utils::TestEnvGuard::set(
-                    "DISCOVERY_SOCKET",
+                    "DISCOVERY_PROVIDER_SOCKET",
                     "/tmp/discovery-via-env.sock",
                 );
                 assert_eq!(

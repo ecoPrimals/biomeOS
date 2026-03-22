@@ -400,47 +400,20 @@ impl PrimalDiscovery {
         Ok(())
     }
 
-    /// Find discovery provider socket by capability (Gate 5.3).
+    /// Find discovery provider socket via the 5-tier capability protocol.
     ///
-    /// Resolves "discovery" capability → primal name via `CapabilityTaxonomy`,
-    /// then discovers the socket through env vars and XDG paths.
+    /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
     pub(crate) fn discover_songbird_socket() -> FederationResult<String> {
-        use biomeos_types::paths::SystemPaths;
+        use biomeos_types::capability_discovery;
 
-        let provider = std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| {
-            biomeos_types::CapabilityTaxonomy::resolve_to_primal("discovery")
-                .unwrap_or(biomeos_types::primal_names::SONGBIRD)
-                .to_string()
-        });
-
-        // Capability-first env vars, then identity-based for backward compat
-        if let Ok(socket) = std::env::var("DISCOVERY_PROVIDER_SOCKET")
-            .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
-            .or_else(|_| std::env::var("SONGBIRD_SOCKET"))
-        {
-            return Ok(socket);
-        }
-
-        let paths = SystemPaths::new_lazy();
-
-        if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
-            let family_socket = paths.primal_socket(&format!("{provider}-{family_id}"));
-            if family_socket.exists() {
-                return Ok(family_socket.display().to_string());
-            }
-        }
-
-        let generic_socket = paths.primal_socket(&provider);
-        if generic_socket.exists() {
-            return Ok(generic_socket.display().to_string());
-        }
-
-        Err(crate::FederationError::DiscoveryError(format!(
-            "Discovery provider '{provider}' socket not found. \
-             Set DISCOVERY_PROVIDER_SOCKET or ensure the discovery provider is running. \
-             Checked: XDG runtime dir: {}",
-            paths.runtime_dir().display()
-        )))
+        capability_discovery::discover_capability_socket("discovery", &capability_discovery::std_env)
+            .ok_or_else(|| {
+                crate::FederationError::DiscoveryError(
+                    "Discovery provider socket not found. \
+                     Set DISCOVERY_PROVIDER_SOCKET or ensure the discovery provider is running."
+                        .to_string(),
+                )
+            })
     }
 
     /// Register a peer discovered via Songbird UDP multicast. pub(crate) for tests.

@@ -46,9 +46,14 @@ pub fn is_explicit_coordinated_mode_with(env_override: Option<&str>) -> bool {
 impl NeuralApiServer {
     /// Start the Neural API server
     ///
-    /// Performs mode detection, bootstrap if needed, and starts accepting connections.
+    /// Binds the socket **first** so external probes (primalSpring, health
+    /// monitors) can connect immediately, then performs mode detection,
+    /// bootstrap, and translation loading before accepting requests.
     pub async fn serve(&self) -> Result<()> {
-        // 1. Detect operating mode
+        // 1. Bind socket EARLY so health probes see us immediately
+        let listener = self.bind_socket().await?;
+
+        // 2. Detect operating mode
         info!("🔍 Detecting biomeOS operating mode...");
         let detected_mode = BiomeOsMode::detect(&self.family_id).await;
         {
@@ -56,7 +61,7 @@ impl NeuralApiServer {
             *mode = detected_mode;
         }
 
-        // 2. Bootstrap if needed
+        // 3. Bootstrap if needed
         if detected_mode == BiomeOsMode::Bootstrap {
             self.handle_bootstrap_mode().await?;
         } else {
@@ -70,13 +75,10 @@ impl NeuralApiServer {
         }
 
         // ALWAYS load semantic translations from Tower Atomic graph
-        // This is ecosystem-wide configuration, not mode-specific
         self.load_translations_on_startup().await?;
 
-        // 3. Setup socket and start listening
-        self.start_listening().await?;
-
-        Ok(())
+        // 4. Accept connections on the already-bound listener
+        self.accept_connections(listener).await
     }
 
     /// Handle bootstrap mode: execute bootstrap sequence and transition to coordinated
@@ -272,17 +274,31 @@ impl NeuralApiServer {
         Ok(())
     }
 
-    /// Setup socket and start accepting connections
-    async fn start_listening(&self) -> Result<()> {
-        // Remove old socket if it exists
+    /// Bind the Unix socket so the path exists for external probes.
+    ///
+    /// Called early in `serve()` before bootstrap or translation loading,
+    /// so that primalSpring and other health monitors can discover the
+    /// socket immediately after the process starts.
+    async fn bind_socket(&self) -> Result<UnixListener> {
         if self.socket_path.exists() {
             std::fs::remove_file(&self.socket_path).context("Failed to remove old socket")?;
         }
 
-        // Create Unix socket listener
         let listener =
             UnixListener::bind(&self.socket_path).context("Failed to bind Unix socket")?;
 
+        info!(
+            "🧠 Neural API socket bound: {}",
+            self.socket_path.display()
+        );
+        info!("   Graphs directory: {}", self.graphs_dir.display());
+        info!("   Family ID: {}", self.family_id);
+
+        Ok(listener)
+    }
+
+    /// Accept connections on a previously-bound listener.
+    async fn accept_connections(&self, listener: UnixListener) -> Result<()> {
         let mode_str = {
             let mode = self.mode.read().await;
             match *mode {
@@ -291,15 +307,8 @@ impl NeuralApiServer {
             }
         };
 
-        info!(
-            "🧠 Neural API server listening on: {}",
-            self.socket_path.display()
-        );
-        info!("   Mode: {}", mode_str);
-        info!("   Graphs directory: {}", self.graphs_dir.display());
-        info!("   Family ID: {}", self.family_id);
+        info!("🧠 Neural API server accepting connections (mode: {})", mode_str);
 
-        // Accept connections
         loop {
             match listener.accept().await {
                 Ok((stream, _addr)) => {

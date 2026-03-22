@@ -2,6 +2,45 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.66 (2026-03-22) — primalSpring-Aligned Capability Discovery Evolution
+
+### Neural API Socket Readiness (exp060 fix)
+- `serve()` now binds the Unix socket **before** mode detection, bootstrap, and translation loading
+- External probes (primalSpring, health monitors) can connect immediately after process start
+- `start_listening()` split into `bind_socket()` + `accept_connections()` for clear lifecycle phases
+
+### Centralized 5-Tier Capability Discovery
+- New `biomeos_types::capability_discovery` module implements the primalSpring 5-tier protocol:
+  1. `{CAPABILITY}_PROVIDER_SOCKET` env override
+  2. `{PRIMAL}_SOCKET` identity env fallback (via taxonomy)
+  3. XDG runtime dir filesystem probe
+  4. `/tmp/biomeos` fallback
+  5. Socket-registry.json file lookup
+- 5 identity-based discovery callsites evolved to delegate to centralized function:
+  - `biomeos-nucleus/identity.rs` (`discover_beardog_socket`)
+  - `biomeos-nucleus/discovery.rs` (`discover_songbird_socket`)
+  - `biomeos-ui/songbird.rs` (`discover_songbird_socket`)
+  - `biomeos-federation/discovery/mod.rs` (`discover_songbird_socket`)
+  - `biomeos/modes/enroll.rs` (`discover_beardog_socket`)
+
+### Taxonomy & Translation Fixes
+- `GeneticLineage` capability default primal moved from `biomeos` to `beardog` (BearDog owns HKDF derivation, lineage proofs, sibling verification)
+- Added `"genetic"` as alias for `GeneticLineage` in `from_str_flexible`
+- `Specialized` category now has `GeneticLineage` as representative variant
+- Genetic/lineage domain translations added to `defaults.rs` (5 semantic→method mappings)
+- `BIOMEOS_GENETIC_PROVIDER` env override wired
+
+### Niche Self-Knowledge (primalSpring pattern adoption)
+- `BIOMEOS_SELF_CAPABILITIES` constant in `primal_names.rs` — biomeOS declares its own capabilities
+- `register_self_in_registry` now data-driven from niche constant (no inline hardcoded vec)
+- `capability_sockets.rs` hardcoded `match` evolved to taxonomy-driven via `capabilities_for_primal()`
+- Science bootstrap hints use canonical constants (`primal_names::WETSPRING`, `NEURALSPRING`)
+
+### Test & Quality
+- 7,135 tests passing (0 failures), up from 7,124
+- Zero clippy warnings (pedantic+nursery)
+- 3 tests updated for new discovery protocol paths
+
 ## v2.65 (2026-03-22) — Deep Debt Execution + Zero-Copy + Hardcode Evolution
 
 ### Architectural Refactoring

@@ -857,7 +857,7 @@ impl SocketDiscovery {
             .filter(|p| p.exists())
     }
 
-    fn capability_socket_names(primal_name: &str) -> Vec<&'static str> {
+    fn capability_socket_names(primal_name: &str) -> Vec<String> {
         super::capability_sockets::names_for_primal(primal_name)
     }
 

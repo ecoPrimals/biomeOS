@@ -46,18 +46,10 @@ pub async fn register_self_in_registry(
     drop(mode_guard);
 
     let primal_name = format!("biomeos-{family_id}");
-    let capabilities = vec![
-        "primal.germination",
-        "primal.terraria",
-        "ecosystem.coordination",
-        "ecosystem.nucleation",
-        "graph.execution",
-    ];
+    let capabilities = biomeos_types::primal_names::BIOMEOS_SELF_CAPABILITIES;
 
-    let cap_count = capabilities.len();
-
-    // Register each capability
-    for capability in capabilities {
+    // Register each capability (data-driven from niche self-knowledge)
+    for &capability in capabilities {
         router
             .register_capability(capability, &primal_name, socket_path, source)
             .await?;
@@ -65,7 +57,7 @@ pub async fn register_self_in_registry(
 
     info!(
         "✅ biomeOS registered {} capabilities in registry",
-        cap_count
+        capabilities.len()
     );
     Ok(())
 }

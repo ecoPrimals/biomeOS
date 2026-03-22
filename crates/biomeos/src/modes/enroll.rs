@@ -214,6 +214,10 @@ fn get_machine_id() -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
+/// Bootstrap-specific BearDog discovery with an explicit socket directory.
+///
+/// Used when the CLI provides `--beardog-socket-dir`, narrowing the search
+/// to a single directory rather than the full 5-tier protocol.
 pub(crate) fn discover_beardog_socket_in(
     socket_dir: Option<&Path>,
     family_id: Option<&str>,
@@ -235,26 +239,11 @@ pub(crate) fn discover_beardog_socket_in(
     None
 }
 
+/// Bootstrap BearDog discovery — delegates to the 5-tier capability protocol.
 fn discover_beardog_socket() -> Option<String> {
-    let socket_dir = std::env::var("XDG_RUNTIME_DIR").ok().map(PathBuf::from);
-    let family_id = std::env::var("FAMILY_ID").ok();
-    if let Some(s) = discover_beardog_socket_in(socket_dir.as_deref(), family_id.as_deref()) {
-        return Some(s);
-    }
+    use biomeos_types::capability_discovery;
 
-    let paths = biomeos_types::paths::SystemPaths::new_lazy();
-    let xdg_socket = paths.primal_socket(BEARDOG);
-    if xdg_socket.exists() {
-        return Some(xdg_socket.to_string_lossy().to_string());
-    }
-
-    let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "family".to_string());
-    let family_socket = paths.primal_socket(&format!("{BEARDOG}-{family_id}"));
-    if family_socket.exists() {
-        return Some(family_socket.to_string_lossy().to_string());
-    }
-
-    None
+    capability_discovery::discover_capability_socket("encryption", &capability_discovery::std_env)
 }
 
 #[cfg(test)]
