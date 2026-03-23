@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: March 22, 2026
-**Status**: Production Ready (v2.64) - ~5,060+ tests (fully concurrent, zero sleeps/serial), Edition 2024 all 26 crates, 90.26% region / 91.14% function / 89.99% line coverage (llvm-cov), Zero Warnings, Zero C deps (enforced), scyBorg licensed
+**Status**: Production Ready (v2.67) — 7,135 tests (0 failures), Edition 2024 all 26 crates, 90%+ coverage (llvm-cov), 0 clippy warnings (pedantic+nursery), 0 C deps, 0 unsafe prod, scyBorg triple-copyleft
 
 ---
 
@@ -14,7 +14,7 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Primals**: Self-contained Rust binaries with specific capabilities
 - **Atomics**: Primal combinations (Tower = BearDog + Songbird)
 - **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
-- **Neural API**: Semantic routing via `capability.call` (285+ translations, 25 domains, part of biomeOS)
+- **Neural API**: Semantic routing via `capability.call` (285+ translations, 26 domains, part of biomeOS)
 - **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 files >1000 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: ~5,060 tests, ~90% line coverage
+8. **Tested**: 7,135 tests (0 failures), 90%+ coverage
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns
 
 ---
@@ -162,18 +162,18 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 | **Universal IPC v3.0** | Multi-transport (Unix/Abstract/TCP/HTTP) |
 | **PRIMAL_DEPLOYMENT_STANDARD** | Deterministic cross-platform |
 | **Semantic Method Naming** | capability.call routing |
-| **AGPL-3.0-only** | License requirement |
+| **scyBorg Triple-Copyleft** | AGPL-3.0-only + ORC + CC-BY-SA 4.0 |
 | **XDG Base Directory** | All paths via SystemPaths |
 
 ---
 
-**Status**: Production Ready (v2.64)
+**Status**: Production Ready (v2.67)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
-**Neural API**: 285+ semantic translations, 25 capability domains (part of biomeOS)
+**Neural API**: 285+ semantic translations, 26 capability domains (part of biomeOS)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v3.0 compliant
-**Tests**: 7,124 passing, 90.35% region / 91.20% function / 90.41% line coverage (llvm-cov) | **Clippy**: PASS | **Docs**: Full coverage | **C deps**: 0
+**Tests**: 7,135 passing, 90%+ coverage (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 production
 **Updated**: March 22, 2026

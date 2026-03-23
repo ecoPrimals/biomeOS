@@ -1,9 +1,9 @@
 # Contributing to biomeOS
 
-**License**: AGPL-3.0-only (code), ORC (mechanics), CC-BY-SA 4.0 (creative content)
+**License**: scyBorg triple-copyleft — AGPL-3.0-only (code), ORC (operational/mechanics), CC-BY-SA 4.0 (documentation/creative)
 
 All contributions must comply with the ecoPrimals wateringHole standards.
-See `ecoPrimals/wateringHole/STANDARDS_AND_EXPECTATIONS.md` for the full standard.
+See `ecoPrimals/wateringHole/STANDARDS_AND_EXPECTATIONS.md` (monorepo-relative) for the full standard.
 
 ---
 

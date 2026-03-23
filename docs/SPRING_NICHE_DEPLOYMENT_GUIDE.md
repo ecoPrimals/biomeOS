@@ -24,10 +24,10 @@ with concrete file paths and validation commands.
 
 ## Prerequisites
 
-- Rust toolchain (stable, edition 2021)
+- Rust toolchain (stable, edition 2024)
 - biomeOS workspace checked out
-- `#![forbid(unsafe_code)]` in all crate roots
-- AGPL-3.0-only license header on every source file
+- `#![forbid(unsafe_code)]` in production crate roots (test-utils may use guarded unsafe)
+- scyBorg triple-copyleft license headers (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
 
 ---
 
@@ -266,7 +266,7 @@ These graphs coordinate multi-spring computations through biomeOS's graph engine
 | 9 | Cross-Spring Time Series v1 support | Recommended |
 | 10 | No hardcoded primal names in production code | Yes |
 | 11 | `#![forbid(unsafe_code)]` | Yes |
-| 12 | AGPL-3.0-only license | Yes |
+| 12 | scyBorg triple-copyleft license | Yes |
 | 13 | Neural API registration (`capability.register`) | Yes |
 | 14 | Clean SIGTERM shutdown | Yes |
 
@@ -287,6 +287,8 @@ These graphs coordinate multi-spring computations through biomeOS's graph engine
 ---
 
 ## Related Documents
+
+Paths relative to the `ecoPrimals/` monorepo root:
 
 - `wateringHole/SPRING_AS_NICHE_DEPLOYMENT_STANDARD.md` — Full standard
 - `wateringHole/SPRING_AS_PROVIDER_PATTERN.md` — Registration pattern

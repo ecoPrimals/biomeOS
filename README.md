@@ -229,7 +229,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 | Universal IPC v3.0 | Multi-transport (Unix/Abstract/TCP/HTTP JSON-RPC) |
 | PRIMAL_DEPLOYMENT_STANDARD v1.0 | Deterministic behavior |
 | Semantic Method Naming | capability.call routing |
-| AGPL-3.0-only License | Compliant |
+| scyBorg Triple-Copyleft | AGPL-3.0-only + ORC + CC-BY-SA 4.0 |
 | Evolved Genetic Model v2.0 | Mitochondrial + Nuclear |
 | XDG Base Directory | SystemPaths (all paths XDG-compliant) |
 
@@ -243,7 +243,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (~7,124 tests)
+### Test (~7,135 tests)
 
 ```bash
 cargo test --workspace
@@ -317,7 +317,7 @@ biomeOS/
 
 ## License
 
-AGPL-3.0-only
+scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC-BY-SA 4.0** (documentation)
 
 ---
 
@@ -337,7 +337,7 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.65)
+**Status**: Production Ready (v2.67)
 **Updated**: March 22, 2026
-**Tests**: 7,124 passing, 90.35% region / 91.20% function / 90.41% line coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Capability-based discovery | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA)
+**Tests**: 7,135 passing, 90%+ coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production
+**Architecture**: JSON-RPC primary + tarpc binary escalation | 5-tier capability discovery | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)

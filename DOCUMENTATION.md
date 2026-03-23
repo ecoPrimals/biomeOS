@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.58–v2.63) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v2.67) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,12 +58,16 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
-| BIOMEOS_V257_COVERAGE_PUSH_FILE_SPLITS_HANDOFF | 6,998 tests, 90.01% line / 90.95% function, 0 files >1000 LOC, CWD evolution, flaky test fixes | Mar 20, 2026 |
-| BIOMEOS_V255_COVERAGE_HARDENING_HANDOFF | Deep debt audit, zero-copy JsonRpcVersion, large file refactoring, #[allow]→#[expect(reason)] | Mar 20, 2026 |
-| BIOMEOS_V254_CONCURRENCY_EVOLUTION_COVERAGE_PUSH_HANDOFF | Sleep elimination, concurrency evolution, 6169 tests, 84% coverage | Mar 19, 2026 |
-| BIOMEOS_V253_COORDINATION_EXTRICATION_HANDOFF | Coordination pattern audit for primalSpring, capability-based validation matrix | Mar 18, 2026 |
-| BIOMEOS_V252_CAPABILITY_FIRST_DISCOVERY_HANDOFF | Capability-named sockets, MCP aggregation, Provenance metadata type | Mar 18, 2026 |
-| BIOMEOS_V251_ECOSYSTEM_ABSORPTION_HANDOFF | IPC resilience, proptest, MCP tools, capability cost/deps, 8 springs absorbed | Mar 18, 2026 |
+| BIOMEOS_V267_REMAINING_DEBT_CLEANUP | Caller-agnostic lineage, roster evolution, comprehensive debt scan (0 TODO/FIXME/HACK) | Mar 22, 2026 |
+| BIOMEOS_V266_PRIMALSPRING_ALIGNED_CAPABILITY_DISCOVERY | 5-tier centralized discovery, GeneticLineage→BearDog, niche self-knowledge, Neural API early-bind | Mar 22, 2026 |
+| BIOMEOS_V265_DEEP_DEBT_EXECUTION_ZERO_COPY | Tower refactored, zero-copy, hardcode evolution, flaky test fixes | Mar 22, 2026 |
+| BIOMEOS_V264_FLAKY_TEST_HARDENING_COVERAGE_SERDE_YML | serde_yml migration, large file refactoring, flaky test hardening, 7,135 tests | Mar 22, 2026 |
+| BIOMEOS_V257_COVERAGE_PUSH_FILE_SPLITS | 6,998 tests, 90%+ coverage, 0 files >1000 LOC, CWD evolution | Mar 20, 2026 |
+| BIOMEOS_V255_COVERAGE_HARDENING | Deep debt audit, zero-copy JsonRpcVersion, large file refactoring | Mar 20, 2026 |
+| BIOMEOS_V254_CONCURRENCY_EVOLUTION_COVERAGE_PUSH | Sleep elimination, concurrency evolution, 6,169 tests | Mar 19, 2026 |
+| BIOMEOS_V253_COORDINATION_EXTRICATION | Coordination pattern audit for primalSpring | Mar 18, 2026 |
+| BIOMEOS_V252_CAPABILITY_FIRST_DISCOVERY | Capability-named sockets, MCP aggregation, Provenance metadata type | Mar 18, 2026 |
+| BIOMEOS_V251_ECOSYSTEM_ABSORPTION | IPC resilience, proptest, MCP tools, capability cost/deps, 8 springs absorbed | Mar 18, 2026 |
 
 ### Archived (February 2026)
 
@@ -120,10 +124,10 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (~5,060 tests — ~83 ignored cwd-sensitive — use --ignored --test-threads=1 for those)
+# Test (7,135 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
-# Coverage (90.01% line / 90.95% function)
+# Coverage (90%+ all metrics, llvm-cov verified)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -148,4 +152,4 @@ See `ARCHIVE_INDEX.md` in archive for details.
 **Documentation current as of March 22, 2026**
 **Active: 24 specs, handoffs in wateringHole (v2.43–v2.67), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 7,124 passing, ~135 ignored (90.35% region / 91.20% function / 90.41% line, llvm-cov) | Clippy: PASS | Docs: Full coverage | C deps: 0**
+**Tests: 7,135 passing (0 failures), ~135 ignored | 90%+ coverage (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery) | Docs: Full coverage | C deps: 0 | Unsafe: 0 production**
