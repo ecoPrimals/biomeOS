@@ -163,16 +163,18 @@ fn discover_neural_api_socket(env: &HashMap<String, String>) -> Result<String> {
         return Ok(neural_socket.display().to_string());
     }
 
-    // /tmp fallback
-    let tmp_path = "/tmp/biomeos/neural-api.sock";
-    if std::path::Path::new(tmp_path).exists() {
-        return Ok(tmp_path.to_string());
+    // Tier 4: /tmp fallback (PRIMAL_IPC_PROTOCOL.md standard)
+    let tmp_socket = std::path::PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE)
+        .join("neural-api.sock");
+    if tmp_socket.exists() {
+        return Ok(tmp_socket.display().to_string());
     }
 
     anyhow::bail!(
         "Neural API socket not found. Set NEURAL_API_SOCKET or ensure biomeOS Neural API is running. \
-         Checked: NEURAL_API_SOCKET env, XDG runtime dir: {:?}, /tmp/biomeos/",
-        paths.runtime_dir()
+         Checked: NEURAL_API_SOCKET env, XDG runtime dir: {:?}, fallback: {}",
+        paths.runtime_dir(),
+        biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE,
     )
 }
 

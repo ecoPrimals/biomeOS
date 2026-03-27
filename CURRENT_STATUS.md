@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 22, 2026 (v2.67: remaining debt cleanup — `load_lineage`/`has_lineage` free functions (no phantom type param), doctor `/5`→dynamic, harvest `petalTongue`→`petaltongue` lowercase, comprehensive debt scan: 0 TODO/FIXME/HACK, 0 unsafe prod, 0 clippy warnings, 0 files >1000 LOC, all `.unwrap()` verified test-only)
-**Version**: 2.67
+**Updated**: March 27, 2026 (v2.68: deep audit against wateringHole standards — formatting regression fixed (10 diffs across 5 files), blocking-in-async `probe_live_sockets` evolved to native async (eliminated `Handle::block_on` + `thread::scope`), hardcoded `/tmp/biomeos` paths centralized to `constants::runtime_paths::FALLBACK_RUNTIME_BASE` + `fallback_runtime_dir()` helper (capability_discovery, tower_orchestration, node_handlers, beardog subfederation), hardcoded IPs `"127.0.0.1"`/`"0.0.0.0"` evolved to `endpoints::DEFAULT_LOCALHOST`/`PRODUCTION_BIND_ADDRESS` (strategy.rs, stun_extension, federation config, NetworkConfig, system/network), license reconciled `AGPL-3.0-or-later`→`AGPL-3.0-only` in LICENSE-CC-BY-SA, stale llvm-cov profdata cleaned, full dep audit (blake3+cc acceptable, tokio-process 0.2 legacy noted, bincode v1 blocked by tarpc), zero production mocks confirmed, zero TODO/FIXME/HACK confirmed)
+**Version**: 2.68
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -247,6 +247,25 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 ---
 
 ## Completed Evolution Items (biomeOS Team)
+
+### Deep Audit + Hardcoding Evolution — v2.68 (Mar 27, 2026)
+
+Comprehensive audit against all wateringHole standards + systematic evolution execution:
+
+| Category | Change |
+|----------|--------|
+| **Formatting** | `cargo fmt --check` regression fixed (10 diffs across 5 files: `checks_primal.rs`, `server_lifecycle.rs`, `discovery/mod.rs`, `discovery.rs`, `identity.rs`, `capability_discovery.rs`) |
+| **Blocking-in-async** | `probe_live_sockets()` evolved from `Handle::block_on` + `std::thread::scope` hack to native `async fn` with `.await` — eliminates potential deadlock in single-threaded runtime |
+| **Hardcoded `/tmp`** | 4 production sites centralized: `capability_discovery.rs` tier 4, `tower_orchestration.rs` pid/socket fallbacks, `node_handlers.rs` Neural API fallback, `subfederation/beardog.rs` Neural API fallback → all use `constants::runtime_paths::FALLBACK_RUNTIME_BASE` + `fallback_runtime_dir()` helper |
+| **Hardcoded IPs** | 6 production sites evolved: `strategy.rs` TCP fallback (2×), `stun_extension.rs`, `federation/config.rs`, `config/network.rs`, `system/network.rs` → all use `endpoints::DEFAULT_LOCALHOST` / `PRODUCTION_BIND_ADDRESS` constants |
+| **New constants** | `biomeos-types::constants::runtime_paths` module: `FALLBACK_RUNTIME_BASE`, `SOCKET_SUBDIR`, `BIOMEOS_SUBDIR`, `fallback_runtime_dir(family_id)` |
+| **License** | `LICENSE-CC-BY-SA` reconciled: `AGPL-3.0-or-later` → `AGPL-3.0-only` (matches Cargo.toml + SPDX headers) |
+| **llvm-cov** | Stale profdata cleaned (529 spurious warnings from old `phase2/biomeOS/` paths) |
+| **Dep audit** | `blake3`+`cc` acceptable (perf-critical genome hashing), `tokio-process` 0.2 legacy identified in `biomeos-deploy`, `bincode` v1 RUSTSEC-2025-0141 documented (blocked by tarpc) |
+| **Mock audit** | Zero production mocks confirmed (274 hits all test-gated: `#[cfg(test)]`, `*_tests.rs`, `biomeos-test-utils`) |
+| **Tests** | 6 discovery probe tests evolved to `#[tokio::test] async fn` (from sync `#[test]`) |
+| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all 26 workspace crates) |
+| **Formatting** | PASS (`cargo fmt --check` clean after all changes) |
 
 ### Coverage push + flaky/cwd test hardening — v2.55 (Mar 20, 2026)
 
@@ -905,7 +924,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (~5,060 tests — ~83 ignored cwd-sensitive — use --ignored --test-threads=1 for those)
+# Test (7,135+ tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -927,7 +946,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.63 — deep audit + ecoBin evolution + all coverage metrics ~90%)
+**Status**: Production Ready (v2.68 — deep audit + hardcoding evolution + wateringHole compliance)
 **AI Bridge**: Squirrel -> Songbird -> Cloud/Local AI (validated)
 **Continuous Systems**: ContinuousExecutor (60Hz tick), push events, sensor routing
 **XR/VR**: StereoRenderAdapter, MotionCaptureAdapter, HapticPipeline

@@ -406,14 +406,17 @@ impl PrimalDiscovery {
     pub(crate) fn discover_songbird_socket() -> FederationResult<String> {
         use biomeos_types::capability_discovery;
 
-        capability_discovery::discover_capability_socket("discovery", &capability_discovery::std_env)
-            .ok_or_else(|| {
-                crate::FederationError::DiscoveryError(
-                    "Discovery provider socket not found. \
+        capability_discovery::discover_capability_socket(
+            "discovery",
+            &capability_discovery::std_env,
+        )
+        .ok_or_else(|| {
+            crate::FederationError::DiscoveryError(
+                "Discovery provider socket not found. \
                      Set DISCOVERY_PROVIDER_SOCKET or ensure the discovery provider is running."
-                        .to_string(),
-                )
-            })
+                    .to_string(),
+            )
+        })
     }
 
     /// Register a peer discovered via Songbird UDP multicast. pub(crate) for tests.

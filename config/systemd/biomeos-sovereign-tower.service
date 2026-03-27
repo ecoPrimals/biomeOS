@@ -7,11 +7,11 @@ Before=biomeos-beacon-dns.service
 
 [Service]
 Type=forking
-ExecStart=%h/Development/ecoPrimals/phase2/biomeOS/target/release/biomeos nucleus start tower
+ExecStart=%h/Development/ecoPrimals/primals/biomeOS/target/release/biomeos nucleus start tower
 # Evolved standard v2 environment
 Environment=FAMILY_ID=1894e909e454
 Environment=NODE_ID=gate
-Environment=BIOMEOS_ROOT=%h/Development/ecoPrimals/phase2/biomeOS
+Environment=BIOMEOS_ROOT=%h/Development/ecoPrimals/primals/biomeOS
 Environment=BIOMEOS_BIND_ALL=true
 Environment=BIOMEOS_SOVEREIGN=true
 Environment=BIOMEOS_DARK_FOREST=true

@@ -35,7 +35,7 @@ use crate::neural_graph::GraphNode;
 /// 2. `BIOMEOS_PLASMID_BIN_DIR` environment variable (biomeOS-local)
 /// 3. `./plasmidBin` directory (current directory)
 /// 4. `../plasmidBin` directory (parent directory)
-/// 5. `../../plasmidBin` directory (reaches ecosystem root from phase2/biomeOS/)
+/// 5. `../../plasmidBin` directory (reaches ecosystem root from primals/biomeOS/)
 ///
 /// # Binary Patterns
 ///

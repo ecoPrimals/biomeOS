@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.68 (2026-03-27) — Deep Audit + Hardcoding Evolution
+
+### Blocking-in-Async Evolution
+- `probe_live_sockets()` evolved from `Handle::block_on` + `std::thread::scope` to native `async fn`
+- Eliminates potential deadlock in single-threaded runtime; 6 tests evolved to `#[tokio::test] async`
+
+### Hardcoded Path Centralization
+- New `biomeos-types::constants::runtime_paths` module: `FALLBACK_RUNTIME_BASE`, `BIOMEOS_SUBDIR`, `SOCKET_SUBDIR`, `fallback_runtime_dir()`
+- 4 production `/tmp/biomeos` sites centralized: `capability_discovery.rs`, `tower_orchestration.rs`, `node_handlers.rs`, `subfederation/beardog.rs`
+- 6 production IP literals evolved: `"127.0.0.1"` → `endpoints::DEFAULT_LOCALHOST`, `"0.0.0.0"` → `endpoints::PRODUCTION_BIND_ADDRESS`
+
+### License Reconciliation
+- `LICENSE-CC-BY-SA`: `AGPL-3.0-or-later` → `AGPL-3.0-only` (matches Cargo.toml + SPDX headers)
+
+### Formatting Regression Fixed
+- 10 `rustfmt` diffs across 5 files fixed (likely caused by rustfmt version drift)
+
+### Debris Cleanup
+- Stale llvm-cov profdata cleaned (529 spurious warnings from old `phase2/` paths)
+- `config/systemd/` services evolved from `phase2/biomeOS` → `primals/biomeOS`
+- CHANGELOG duplicate v1.28/v1.29 section removed (already present earlier in file)
+
+### Audit Confirmations
+- Zero production mocks (274 hits all test-gated)
+- Zero `todo!()`/`unimplemented!()`/TODO/FIXME/HACK
+- `blake3`+`cc` dep acceptable (perf-critical genome hashing)
+- `tokio-process` 0.2 legacy in `biomeos-deploy` noted for future evolution
+
 ## v2.67 (2026-03-22) — Remaining Debt Cleanup + Caller-Agnostic Lineage
 
 ### LineageDeriver Type-Parameter Evolution
@@ -2170,62 +2198,3 @@ BirdSong Discovery → USB Songbird (discovered peer)
 ---
 
 For detailed session reports, see `docs/archive/`.
-
-## v1.28 - 2026-02-12 (LiveSpore Conversion)
-
-### Spore Ecosystem Evolution
-- **ColdSpore vs LiveSpore**: Documented and implemented two spore types
-  - ColdSpore: Data-only USB (requires host OS)
-  - LiveSpore: Bootable USB (self-contained with Alpine Linux)
-- **Temporal Siblings**: Implemented genetic model for same-generation siblings born at different times
-- **LiveSpore Conversion Script**: Created `scripts/create_livespore.sh` for USB conversion
-
-### USB Conversions
-- **BEA6-BBCE** → ColdSpore (reference, older sibling)
-- **biomeOS1** → ColdSpore (reference, older sibling)
-- **BEA6-BBCE1** → LiveSpore "livespore-alpha" (bootable, younger sibling)
-- **biomeOS21** → LiveSpore "livespore-beta" (bootable, younger sibling)
-
-### Genetic Verification
-- All 4 spores share same mito beacon: `8ff3b864a4bc589a...`
-- Each spore has unique lineage seed for individual identity
-- Family tree: Tower (Gen 0) → 4 siblings (Gen 1)
-- LiveSpores can hear ColdSpores' BirdSong (same family)
-
-### Architecture
-- Updated GENOME_DISTRIBUTION_ARCHITECTURE.md with spore type documentation
-- Alpine Linux base for LiveSpores (~200MB total)
-- syslinux bootloader (BIOS-compatible)
-- Auto-start NUCLEUS on boot
-
-## v1.29 - 2026-02-13 (NUC Federation & Binary Evolution)
-
-### Multi-Computer Federation
-- **NUC Integration**: Deployed NUCLEUS to second computer (Ryzen 5 6600H, 28GB RAM)
-- **SSH Access**: Configured passwordless SSH (`ssh nuc`)
-- **Gen 2 Deployment**: NUC is grandchild of Tower via livespore-alpha
-- **All 5 Primals**: BearDog, Songbird, Toadstool, Squirrel, NestGate verified
-
-### Binary Format Evolution
-- **Discovery**: Non-PIE musl binaries segfault on ASLR systems
-- **Root Cause**: LiveSpore NestGate was `statically linked` (not PIE)
-- **Solution**: Replaced with PIE-enabled `dynamically linked` binary
-- **Spec Added**: `specs/BINARY_BUILD_TARGETS_SPEC.md`
-
-### Documentation Updates
-- **Handoff**: `NUC_FEDERATION_BINARY_EVOLUTION_FEB13_2026.md`
-- **Status**: Updated to v2.25 with NUC federation details
-- **Specs README**: Added BINARY_BUILD_TARGETS_SPEC
-
-### Archived (Deprecated)
-- `scripts/beacon_dns_updater.sh` → Cloudflare Tunnel
-- `scripts/setup_coturn.sh` → Songbird relay (WIP)
-- `scripts/validate_beacon_discovery.sh` → `biomeos doctor`
-- `scripts/genomeBin-hardened-template.sh` → `biomeos genome`
-
-### Covalent Bond Status
-```
-Tower (192.168.1.144) ←──SSH──→ NUC (192.168.1.190)
-      │                              │
-      └── Family: 8ff3b864a4bc589a ──┘
-```

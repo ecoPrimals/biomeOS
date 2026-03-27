@@ -114,7 +114,7 @@ impl Default for FederationConfig {
         // Configure network settings for federation
         base_config.network.http_port = 8443;
         base_config.network.https_enabled = true;
-        base_config.network.bind_address = "0.0.0.0".to_string();
+        base_config.network.bind_address = biomeos_types::constants::endpoints::PRODUCTION_BIND_ADDRESS.to_string();
         
         // Configure resource limits for federation workloads
         base_config.resources.max_cpu_cores = Some(16);

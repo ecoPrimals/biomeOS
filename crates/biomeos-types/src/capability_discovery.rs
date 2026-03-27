@@ -65,12 +65,8 @@ pub fn discover_capability_socket(
         }
     }
 
-    // Tier 4: /tmp fallback
-    let tmp_dir = if family_id.is_empty() {
-        PathBuf::from("/tmp/biomeos")
-    } else {
-        PathBuf::from(format!("/tmp/biomeos-{family_id}"))
-    };
+    // Tier 4: /tmp fallback (PRIMAL_IPC_PROTOCOL.md standard tier)
+    let tmp_dir = crate::constants::runtime_paths::fallback_runtime_dir(&family_id);
     if let Some(found) = probe_socket_dir(&tmp_dir, capability, primal, &family_id) {
         return Some(found);
     }
@@ -94,9 +90,7 @@ fn probe_socket_dir(
     family_id: &str,
 ) -> Option<String> {
     let candidates = build_socket_candidates(dir, capability, primal, family_id);
-    candidates
-        .into_iter()
-        .find(|p| Path::new(p).exists())
+    candidates.into_iter().find(|p| Path::new(p).exists())
 }
 
 /// Build candidate socket paths in priority order.
@@ -109,7 +103,11 @@ fn build_socket_candidates(
     let mut candidates = Vec::with_capacity(6);
 
     // Capability-named sockets first (primalSpring standard)
-    candidates.push(dir.join(format!("{capability}.sock")).to_string_lossy().to_string());
+    candidates.push(
+        dir.join(format!("{capability}.sock"))
+            .to_string_lossy()
+            .to_string(),
+    );
     if !family_id.is_empty() {
         candidates.push(
             dir.join(format!("{capability}-{family_id}.sock"))

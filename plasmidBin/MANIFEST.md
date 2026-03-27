@@ -48,12 +48,12 @@ plasmidBin/
 ./scripts/harvest-primals.sh
 
 # Or manually copy
-cp /path/to/ecoPrimals/phase1/beardog/target/release/beardog-server plasmidBin/primals/
-cp /path/to/ecoPrimals/phase1/songbird/target/release/songbird plasmidBin/primals/
-cp /path/to/ecoPrimals/phase1/toadstool/target/release/toadstool plasmidBin/primals/
-cp /path/to/ecoPrimals/phase1/nestgate/target/release/nestgate plasmidBin/primals/
-cp /path/to/ecoPrimals/phase2/petalTongue/target/release/petal-tongue plasmidBin/primals/
-cp /path/to/ecoPrimals/phase2/petalTongue/target/release/petal-tongue-headless plasmidBin/primals/
+cp /path/to/ecoPrimals/primals/beardog/target/release/beardog-server plasmidBin/primals/
+cp /path/to/ecoPrimals/primals/songbird/target/release/songbird plasmidBin/primals/
+cp /path/to/ecoPrimals/primals/toadstool/target/release/toadstool plasmidBin/primals/
+cp /path/to/ecoPrimals/primals/nestgate/target/release/nestgate plasmidBin/primals/
+cp /path/to/ecoPrimals/primals/petalTongue/target/release/petal-tongue plasmidBin/primals/
+cp /path/to/ecoPrimals/primals/petalTongue/target/release/petal-tongue-headless plasmidBin/primals/
 ```
 
 ### **2. Create Spores** (from plasmidBin)

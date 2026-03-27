@@ -143,7 +143,10 @@ impl DiscoveryLayer {
     /// Returns an error if:
     /// - System paths cannot be initialized (XDG directories unavailable)
     /// - Songbird socket cannot be discovered (Songbird not running or socket not found)
-    #[expect(clippy::unused_async, reason = "public API contract — callers already .await")]
+    #[expect(
+        clippy::unused_async,
+        reason = "public API contract — callers already .await"
+    )]
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Discovery Layer (delegating to Songbird)");
 
@@ -169,13 +172,16 @@ impl DiscoveryLayer {
 
         debug!("Discovering discovery-provider socket (5-tier capability discovery)");
 
-        capability_discovery::discover_capability_socket("discovery", &capability_discovery::std_env)
-            .ok_or_else(|| {
-                Error::discovery_failed(
-                    "Could not discover Songbird socket. Is Songbird running?",
-                    Some("discovery".to_string()),
-                )
-            })
+        capability_discovery::discover_capability_socket(
+            "discovery",
+            &capability_discovery::std_env,
+        )
+        .ok_or_else(|| {
+            Error::discovery_failed(
+                "Could not discover Songbird socket. Is Songbird running?",
+                Some("discovery".to_string()),
+            )
+        })
     }
 
     /// Get Songbird socket path

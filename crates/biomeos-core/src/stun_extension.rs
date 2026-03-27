@@ -57,7 +57,11 @@ use std::time::Duration;
 /// Default STUN address when no self-hosted address is configured or discoverable.
 /// Overridable via `BIOMEOS_STUN_FALLBACK_ADDRESS` environment variable.
 fn default_stun_fallback() -> String {
-    format!("127.0.0.1:{}", ports::STUN)
+    format!(
+        "{}:{}",
+        biomeos_types::constants::endpoints::DEFAULT_LOCALHOST,
+        ports::STUN
+    )
 }
 
 /// Configuration for the optional STUN extension

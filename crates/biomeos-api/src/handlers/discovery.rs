@@ -128,7 +128,7 @@ pub async fn get_discovered_primals(
             // not fabricated data). Only reports primals that are actually running.
             if state.is_standalone_mode() {
                 info!("   Falling back to socket probe discovery (standalone mode)");
-                let probed = probe_live_sockets();
+                let probed = probe_live_sockets().await;
                 return Ok(Json(DiscoveredPrimalsResponse {
                     count: probed.len(),
                     mode: "socket_probe".to_string(),
@@ -145,20 +145,16 @@ pub async fn get_discovered_primals(
     }
 }
 
-/// Probe live sockets to discover actually running primals
+/// Probe live sockets to discover actually running primals.
 ///
-/// DEEP DEBT EVOLUTION (Feb 7, 2026):
-/// Replaced fabricated standalone data with real socket probing.
-/// This function scans the socket directory for `.sock` files and
-/// pings each one to verify the primal is actually running.
-///
-/// # Deep Debt Principles
+/// Scans the socket directory for `.sock` files and pings each one via
+/// async JSON-RPC to verify the primal is actually running.
 ///
 /// 1. **No fabricated data**: Only reports primals that respond to health checks
 /// 2. **Self-knowledge only**: Discovers by socket presence, not hardcoded names
 /// 3. **Capability-based**: Reads capabilities from primal's own response
 /// 4. **Environment-aware**: Uses 5-tier socket resolution
-fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
+async fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
     let socket_dir = get_socket_dir();
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -167,7 +163,6 @@ fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
 
     let mut primals = Vec::new();
 
-    // Scan socket directory for .sock files
     let dir = match std::fs::read_dir(&socket_dir) {
         Ok(d) => d,
         Err(e) => {
@@ -182,7 +177,6 @@ fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
             continue;
         }
 
-        // Check if it's a Unix socket (not a regular file)
         if !path.exists() {
             continue;
         }
@@ -193,46 +187,36 @@ fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
             .map(|s| s.to_string_lossy().to_string())
             .unwrap_or_default();
 
-        // Try to ping the primal via its socket
         let client = biomeos_core::AtomicClient::unix(&socket_path)
             .with_timeout(std::time::Duration::from_secs(2));
 
-        // Use a runtime handle if available, otherwise report as discovered-but-unchecked
-        let (health, capabilities, version) = match tokio::runtime::Handle::try_current() {
-            Ok(handle) => {
-                // We're in an async context — use block_in_place to avoid nesting
-                match std::thread::scope(|_| {
-                    handle.block_on(async { client.call("health", serde_json::json!({})).await })
-                }) {
-                    Ok(result) => {
-                        let h = result
-                            .get("status")
-                            .and_then(|s| s.as_str())
-                            .unwrap_or("unknown")
-                            .to_string();
-                        let caps = result
-                            .get("capabilities")
-                            .and_then(|c| c.as_array())
-                            .map(|arr| {
-                                arr.iter()
-                                    .filter_map(|v| v.as_str().map(String::from))
-                                    .collect()
-                            })
-                            .unwrap_or_default();
-                        let v = result
-                            .get("version")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("unknown")
-                            .to_string();
-                        (h, caps, v)
-                    }
-                    Err(_) => ("unreachable".to_string(), vec![], "unknown".to_string()),
+        let (health, capabilities, version) =
+            match client.call("health", serde_json::json!({})).await {
+                Ok(result) => {
+                    let h = result
+                        .get("status")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+                    let caps = result
+                        .get("capabilities")
+                        .and_then(|c| c.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let v = result
+                        .get("version")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+                    (h, caps, v)
                 }
-            }
-            Err(_) => ("discovered".to_string(), vec![], "unknown".to_string()),
-        };
+                Err(_) => ("unreachable".to_string(), vec![], "unknown".to_string()),
+            };
 
-        // Extract primal name from socket filename (e.g., "beardog-family" → "beardog")
         let primal_name = file_name
             .split('-')
             .next()
@@ -242,14 +226,14 @@ fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
         primals.push(DiscoveredPrimal {
             id: format!("{primal_name}-probed"),
             name: primal_name.clone(),
-            primal_type: "probed".to_string(), // Unknown until primal self-reports
+            primal_type: "probed".to_string(),
             version,
             health,
             capabilities,
             endpoint: format!("unix://{socket_path}"),
             last_seen: now,
-            trust_level: Some(1), // Discovered, not yet verified
-            family_id: None,      // Unknown until lineage check
+            trust_level: Some(1),
+            family_id: None,
             allowed_capabilities: None,
             denied_capabilities: None,
         });
@@ -260,31 +244,28 @@ fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
     primals
 }
 
-/// Get socket directory using 5-tier resolution via SocketDiscovery
+/// Get socket directory using 5-tier resolution via `SocketDiscovery`.
 ///
 /// Delegates to `biomeos_core::socket_discovery::SocketDiscovery` which implements
-/// the full PRIMAL_DEPLOYMENT_STANDARD.md hierarchy:
-/// 1. BIOMEOS_SOCKET_DIR environment variable
-/// 2. XDG_RUNTIME_DIR/biomeos
-/// 3. /run/user/{uid}/biomeos
-/// 4. /data/local/tmp/biomeos (Android)
-/// 5. /tmp/biomeos (fallback)
+/// the full `PRIMAL_DEPLOYMENT_STANDARD.md` hierarchy:
+/// 1. `BIOMEOS_SOCKET_DIR` environment variable
+/// 2. `XDG_RUNTIME_DIR/biomeos`
+/// 3. `/run/user/{uid}/biomeos`
+/// 4. `/data/local/tmp/biomeos` (Android)
+/// 5. `/tmp/biomeos` (fallback)
 fn get_socket_dir() -> String {
     use biomeos_core::socket_discovery::SocketDiscovery;
+    use biomeos_types::constants::runtime_paths;
 
-    // Get family ID from environment or use default
     let family_id = std::env::var("FAMILY_ID")
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
         .unwrap_or_else(|_| biomeos_core::family_discovery::get_family_id());
 
     let discovery = SocketDiscovery::new(family_id);
-
-    // Build path for a dummy primal to get the directory
     let socket_path = discovery.build_socket_path("_discovery_probe");
 
-    // Extract directory from path
     socket_path.parent().map_or_else(
-        || "/tmp/biomeos".to_string(),
+        || runtime_paths::FALLBACK_RUNTIME_BASE.to_string(),
         |p| p.to_string_lossy().to_string(),
     )
 }

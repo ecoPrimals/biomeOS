@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: March 22, 2026
+**Updated**: March 27, 2026
 
 ---
 
@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v2.67) | [wateringHole/handoffs/](../../wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v2.68) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,6 +58,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V268_DEEP_AUDIT_HARDCODING_EVOLUTION | Blocking-in-async fix, `/tmp` + IP centralization, license reconciliation, phase2 path cleanup | Mar 27, 2026 |
 | BIOMEOS_V267_REMAINING_DEBT_CLEANUP | Caller-agnostic lineage, roster evolution, comprehensive debt scan (0 TODO/FIXME/HACK) | Mar 22, 2026 |
 | BIOMEOS_V266_PRIMALSPRING_ALIGNED_CAPABILITY_DISCOVERY | 5-tier centralized discovery, GeneticLineage→BearDog, niche self-knowledge, Neural API early-bind | Mar 22, 2026 |
 | BIOMEOS_V265_DEEP_DEBT_EXECUTION_ZERO_COPY | Tower refactored, zero-copy, hardcode evolution, flaky test fixes | Mar 22, 2026 |
@@ -149,7 +150,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 22, 2026**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v2.67), 4 scripts**
+**Documentation current as of March 27, 2026**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v2.68), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 7,135 passing (0 failures), ~135 ignored | 90%+ coverage (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery) | Docs: Full coverage | C deps: 0 | Unsafe: 0 production**
+**Tests: 7,135+ passing (0 failures), ~135 ignored | 90%+ coverage (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery) | Docs: Full coverage | C deps: 0 | Unsafe: 0 production**

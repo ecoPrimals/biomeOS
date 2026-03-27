@@ -25,17 +25,21 @@ use crate::{
 ///
 /// Precedence:
 /// 1. `$XDG_RUNTIME_DIR/biomeos/tower.pid`
-/// 2. `/tmp/biomeos-{family_id}/tower.pid`
+/// 2. `/tmp/biomeos-{family_id}/tower.pid` (tier 4 fallback)
 pub fn pid_file_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
+    use biomeos_types::constants::runtime_paths;
+
     if let Some(runtime) = env("XDG_RUNTIME_DIR") {
-        return PathBuf::from(runtime).join("biomeos/tower.pid");
+        return PathBuf::from(runtime)
+            .join(runtime_paths::BIOMEOS_SUBDIR)
+            .join("tower.pid");
     }
 
     let family_id = env("BIOMEOS_FAMILY_ID")
         .or_else(|| env("FAMILY_ID"))
         .unwrap_or_else(|| "default".to_string());
 
-    PathBuf::from(format!("/tmp/biomeos-{family_id}/tower.pid"))
+    runtime_paths::fallback_runtime_dir(&family_id).join("tower.pid")
 }
 
 /// Resolve the socket directory from the environment.
@@ -43,21 +47,25 @@ pub fn pid_file_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
 /// Precedence:
 /// 1. `$BIOMEOS_SOCKET_DIR`
 /// 2. `$XDG_RUNTIME_DIR/biomeos/sockets`
-/// 3. `/tmp/biomeos-{family_id}/sockets`
+/// 3. `/tmp/biomeos-{family_id}/sockets` (tier 4 fallback)
 pub fn socket_dir_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
+    use biomeos_types::constants::runtime_paths;
+
     if let Some(dir) = env("BIOMEOS_SOCKET_DIR") {
         return PathBuf::from(dir);
     }
 
     if let Some(runtime) = env("XDG_RUNTIME_DIR") {
-        return PathBuf::from(runtime).join("biomeos/sockets");
+        return PathBuf::from(runtime)
+            .join(runtime_paths::BIOMEOS_SUBDIR)
+            .join(runtime_paths::SOCKET_SUBDIR);
     }
 
     let family_id = env("BIOMEOS_FAMILY_ID")
         .or_else(|| env("FAMILY_ID"))
         .unwrap_or_else(|| "default".to_string());
 
-    PathBuf::from(format!("/tmp/biomeos-{family_id}/sockets"))
+    runtime_paths::fallback_runtime_dir(&family_id).join(runtime_paths::SOCKET_SUBDIR)
 }
 
 /// Write a PID file for the running tower process.

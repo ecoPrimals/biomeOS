@@ -287,10 +287,7 @@ impl NeuralApiServer {
         let listener =
             UnixListener::bind(&self.socket_path).context("Failed to bind Unix socket")?;
 
-        info!(
-            "🧠 Neural API socket bound: {}",
-            self.socket_path.display()
-        );
+        info!("🧠 Neural API socket bound: {}", self.socket_path.display());
         info!("   Graphs directory: {}", self.graphs_dir.display());
         info!("   Family ID: {}", self.family_id);
 
@@ -307,7 +304,10 @@ impl NeuralApiServer {
             }
         };
 
-        info!("🧠 Neural API server accepting connections (mode: {})", mode_str);
+        info!(
+            "🧠 Neural API server accepting connections (mode: {})",
+            mode_str
+        );
 
         loop {
             match listener.accept().await {

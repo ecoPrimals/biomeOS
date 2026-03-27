@@ -91,7 +91,10 @@ impl IdentityLayerImpl {
     ///
     /// Returns an error if:
     /// - `BearDog` socket cannot be discovered (`BearDog` not running or socket not found)
-    #[expect(clippy::unused_async, reason = "public API contract — callers already .await")]
+    #[expect(
+        clippy::unused_async,
+        reason = "public API contract — callers already .await"
+    )]
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Identity Layer (delegating to BearDog)");
 
@@ -123,13 +126,16 @@ impl IdentityLayerImpl {
 
         debug!("Discovering security provider socket (5-tier capability discovery)");
 
-        capability_discovery::discover_capability_socket("encryption", &capability_discovery::std_env)
-            .ok_or_else(|| {
-                Error::discovery_failed(
-                    "Could not discover security provider socket. Is the security primal running?",
-                    Some("identity".to_string()),
-                )
-            })
+        capability_discovery::discover_capability_socket(
+            "encryption",
+            &capability_discovery::std_env,
+        )
+        .ok_or_else(|| {
+            Error::discovery_failed(
+                "Could not discover security provider socket. Is the security primal running?",
+                Some("identity".to_string()),
+            )
+        })
     }
 
     /// Get `BearDog` socket path

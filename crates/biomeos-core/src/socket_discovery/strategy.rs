@@ -55,7 +55,7 @@ impl Default for DiscoveryStrategy {
             query_registry: true,
             enable_tcp_fallback: true, // Universal IPC v3.0: always try TCP
             tcp_port_start: ports::TCP_PORT_SCAN_START, // Default port range for primals
-            tcp_fallback_host: Arc::from("127.0.0.1"),
+            tcp_fallback_host: Arc::from(biomeos_types::constants::endpoints::DEFAULT_LOCALHOST),
             scan_sockets: false, // Expensive, disabled by default
             enable_cache: true,
             cache_ttl_secs: 60,
@@ -74,7 +74,7 @@ impl DiscoveryStrategy {
             query_registry: true,
             enable_tcp_fallback: true,
             tcp_port_start: ports::TCP_PORT_SCAN_START,
-            tcp_fallback_host: Arc::from("127.0.0.1"),
+            tcp_fallback_host: Arc::from(biomeos_types::constants::endpoints::DEFAULT_LOCALHOST),
             scan_sockets: false,
             enable_cache: true,
             cache_ttl_secs: 60,

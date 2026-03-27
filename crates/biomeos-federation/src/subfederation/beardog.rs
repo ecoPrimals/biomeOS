@@ -24,9 +24,11 @@ pub fn discover_neural_api_socket() -> FederationResult<String> {
         return Ok(socket.to_string_lossy().to_string());
     }
 
-    let tmp_path = "/tmp/biomeos/neural-api.sock";
-    if std::path::Path::new(tmp_path).exists() {
-        return Ok(tmp_path.to_string());
+    let tmp_socket =
+        std::path::PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE)
+            .join("neural-api.sock");
+    if tmp_socket.exists() {
+        return Ok(tmp_socket.to_string_lossy().to_string());
     }
 
     // Legacy fallback: direct BearDog discovery for bootstrap

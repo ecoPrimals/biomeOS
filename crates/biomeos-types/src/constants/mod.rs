@@ -287,6 +287,37 @@ pub mod security {
     // 1 hour
 }
 
+/// Filesystem path constants for the 5-tier socket discovery standard.
+///
+/// These define the standardized base paths used when XDG runtime directories
+/// are unavailable (tier 4 of the PRIMAL_IPC_PROTOCOL.md discovery chain).
+pub mod runtime_paths {
+    /// Base path for the `/tmp` fallback tier in socket discovery.
+    ///
+    /// Used as tier 4 when `$XDG_RUNTIME_DIR` is not set. Family-scoped
+    /// variants append `-{family_id}` (e.g., `/tmp/biomeos-nat0`).
+    pub const FALLBACK_RUNTIME_BASE: &str = "/tmp/biomeos";
+
+    /// Socket directory name under the runtime base.
+    pub const SOCKET_SUBDIR: &str = "sockets";
+
+    /// biomeOS subdirectory name under `$XDG_RUNTIME_DIR`.
+    pub const BIOMEOS_SUBDIR: &str = "biomeos";
+
+    /// Build the family-scoped `/tmp` fallback path.
+    ///
+    /// Returns `/tmp/biomeos` when `family_id` is empty,
+    /// or `/tmp/biomeos-{family_id}` otherwise.
+    #[must_use]
+    pub fn fallback_runtime_dir(family_id: &str) -> std::path::PathBuf {
+        if family_id.is_empty() {
+            std::path::PathBuf::from(FALLBACK_RUNTIME_BASE)
+        } else {
+            std::path::PathBuf::from(format!("{FALLBACK_RUNTIME_BASE}-{family_id}"))
+        }
+    }
+}
+
 /// File and data constants
 pub mod files {
     /// Default charset for encoding

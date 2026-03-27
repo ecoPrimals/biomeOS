@@ -2,7 +2,7 @@
 
 **Pure Rust client for capability-based primal routing**
 
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 
 ---
 
@@ -29,7 +29,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-neural-api-client = { path = "../../phase2/biomeOS/crates/neural-api-client" }
+neural-api-client = { path = "../../primals/biomeOS/crates/neural-api-client" }
 ```
 
 ## 🚀 Quick Start
@@ -374,7 +374,7 @@ This library follows strict principles:
 
 ## 📄 License
 
-Dual-licensed under MIT or Apache-2.0
+AGPL-3.0-only (scyBorg provenance trio)
 
 ---
 

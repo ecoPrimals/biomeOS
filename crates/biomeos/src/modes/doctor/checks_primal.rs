@@ -60,9 +60,9 @@ pub(crate) async fn check_primal_discovery_with(
     }
 
     let expected = primals.len();
-    check
-        .details
-        .push(format!("Total: {found_count}/{expected} primals discovered"));
+    check.details.push(format!(
+        "Total: {found_count}/{expected} primals discovered"
+    ));
 
     if found_count < expected / 2 {
         check.status = HealthStatus::Warning;
