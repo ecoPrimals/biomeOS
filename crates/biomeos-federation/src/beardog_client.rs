@@ -79,13 +79,14 @@ impl std::fmt::Display for LineageVerificationResponse {
 }
 
 /// BearDog client for cryptographic operations
+#[derive(Debug)]
 pub struct BearDogClient {
     endpoint: BearDogEndpoint,
 }
 
+#[derive(Debug)]
 enum BearDogEndpoint {
     UnixSocket(PathBuf),
-    Http(String),
 }
 
 impl BearDogClient {
@@ -107,9 +108,10 @@ impl BearDogClient {
 
         let endpoint = match &beardog.endpoints[0] {
             PrimalEndpoint::UnixSocket { path } => BearDogEndpoint::UnixSocket(path.clone()),
-            PrimalEndpoint::Http { url } => BearDogEndpoint::Http(url.clone()),
-            PrimalEndpoint::Udp { .. } => {
-                return Err(anyhow::anyhow!("BearDog UDP endpoint not supported yet"));
+            other => {
+                return Err(anyhow::anyhow!(
+                    "BearDog only supports Unix sockets, found: {other:?}"
+                ));
             }
         };
 
@@ -117,72 +119,56 @@ impl BearDogClient {
     }
 
     /// Create a BearDog client with explicit endpoint
-    pub fn with_endpoint(endpoint: String) -> Result<Self> {
-        let endpoint = if endpoint.starts_with("unix://") {
-            let path = endpoint.strip_prefix("unix://").unwrap_or(&endpoint);
-            BearDogEndpoint::UnixSocket(PathBuf::from(path))
-        } else if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
-            BearDogEndpoint::Http(endpoint)
+    pub fn with_endpoint(endpoint: impl AsRef<str>) -> Result<Self> {
+        let endpoint = endpoint.as_ref();
+        let path = if let Some(stripped) = endpoint.strip_prefix("unix://") {
+            stripped
+        } else if endpoint.starts_with('/') {
+            endpoint
         } else {
-            return Err(anyhow::anyhow!("Invalid endpoint format: {endpoint}"));
+            return Err(anyhow::anyhow!(
+                "BearDog only supports Unix sockets (unix:// or absolute path), got: {endpoint}"
+            ));
         };
 
-        Ok(Self { endpoint })
+        Ok(Self {
+            endpoint: BearDogEndpoint::UnixSocket(PathBuf::from(path)),
+        })
     }
 
     /// Check if BearDog is available
     pub async fn is_available(&self) -> bool {
-        match &self.endpoint {
-            BearDogEndpoint::UnixSocket(path) => path.exists(),
-            BearDogEndpoint::Http(_) => {
-                // Try a health check
-                self.health_check().await.is_ok()
-            }
-        }
+        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        path.exists()
     }
 
     /// Health check
     pub async fn health_check(&self) -> Result<()> {
-        match &self.endpoint {
-            BearDogEndpoint::UnixSocket(path) => {
-                // Complete implementation: JSON-RPC health check over Unix socket
-                let client = UnixSocketClient::new(path);
+        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let client = UnixSocketClient::new(path);
 
-                // First check if socket exists
-                if !client.is_available() {
-                    return Err(anyhow::anyhow!(
-                        "BearDog Unix socket not found: {}",
-                        path.display()
-                    ));
-                }
+        if !client.is_available() {
+            return Err(anyhow::anyhow!(
+                "BearDog Unix socket not found: {}",
+                path.display()
+            ));
+        }
 
-                // Call health.check method
-                let result = client
-                    .call_method("health.check", serde_json::json!({}))
-                    .await
-                    .context("Unix socket health check failed")?;
+        let result = client
+            .call_method("health.check", serde_json::json!({}))
+            .await
+            .context("Unix socket health check failed")?;
 
-                // Check if response indicates healthy status
-                if let Some(status) = result.get("status").and_then(|v| v.as_str()) {
-                    if status == "healthy" || status == "ok" {
-                        Ok(())
-                    } else {
-                        Err(anyhow::anyhow!(
-                            "BearDog reports unhealthy status: {status}"
-                        ))
-                    }
-                } else {
-                    // If no status field, successful response means healthy
-                    Ok(())
-                }
-            }
-            BearDogEndpoint::Http(_url) => {
-                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
-                // HTTP has been moved to Songbird (Concentrated Gap strategy)
+        if let Some(status) = result.get("status").and_then(|v| v.as_str()) {
+            if status == "healthy" || status == "ok" {
+                Ok(())
+            } else {
                 Err(anyhow::anyhow!(
-                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
+                    "BearDog reports unhealthy status: {status}"
                 ))
             }
+        } else {
+            Ok(())
         }
     }
 
@@ -193,40 +179,31 @@ impl BearDogClient {
         seed_hash: &str,
         node_id: &str,
     ) -> Result<LineageVerificationResponse> {
-        match &self.endpoint {
-            BearDogEndpoint::UnixSocket(path) => {
-                let client = UnixSocketClient::new(path);
+        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let client = UnixSocketClient::new(path);
 
-                let params = json!({
-                    "family_id": family_id,
-                    "seed_hash": seed_hash,
-                    "node_id": node_id,
-                });
+        let params = json!({
+            "family_id": family_id,
+            "seed_hash": seed_hash,
+            "node_id": node_id,
+        });
 
-                let result = client
-                    .call_method("federation.verify_family_member", params)
-                    .await
-                    .context("Failed to call federation.verify_family_member")?;
+        let result = client
+            .call_method("federation.verify_family_member", params)
+            .await
+            .context("Failed to call federation.verify_family_member")?;
 
-                Ok(LineageVerificationResponse {
-                    is_family_member: result["is_family_member"].as_bool().unwrap_or(false),
-                    parent_seed_hash: result["parent_seed_hash"]
-                        .as_str()
-                        .unwrap_or("")
-                        .to_string(),
-                    relationship: result["relationship"]
-                        .as_str()
-                        .unwrap_or("unknown")
-                        .to_string(),
-                })
-            }
-            BearDogEndpoint::Http(_url) => {
-                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
-                Err(anyhow::anyhow!(
-                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
-                ))
-            }
-        }
+        Ok(LineageVerificationResponse {
+            is_family_member: result["is_family_member"].as_bool().unwrap_or(false),
+            parent_seed_hash: result["parent_seed_hash"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
+            relationship: result["relationship"]
+                .as_str()
+                .unwrap_or("unknown")
+                .to_string(),
+        })
     }
 
     /// Derive a sub-federation encryption key
@@ -234,74 +211,56 @@ impl BearDogClient {
         &self,
         request: KeyDerivationRequest,
     ) -> Result<KeyDerivationResponse> {
-        match &self.endpoint {
-            BearDogEndpoint::UnixSocket(path) => {
-                let client = UnixSocketClient::new(path);
+        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let client = UnixSocketClient::new(path);
 
-                let params = json!({
-                    "parent_family": request.parent_family,
-                    "subfed_name": request.subfed_name,
-                    "purpose": request.purpose,
-                    "derivation_info": format!("{}-{}", request.subfed_name, chrono::Utc::now().format("%Y-%m-%d")),
-                });
+        let params = json!({
+            "parent_family": request.parent_family,
+            "subfed_name": request.subfed_name,
+            "purpose": request.purpose,
+            "derivation_info": format!("{}-{}", request.subfed_name, chrono::Utc::now().format("%Y-%m-%d")),
+        });
 
-                let result = client
-                    .call_method("federation.derive_subfed_key", params)
-                    .await
-                    .context("Failed to call federation.derive_subfed_key")?;
+        let result = client
+            .call_method("federation.derive_subfed_key", params)
+            .await
+            .context("Failed to call federation.derive_subfed_key")?;
 
-                Ok(KeyDerivationResponse {
-                    key_ref: result["key_ref"].as_str().unwrap_or("").to_string(),
-                    algorithm: result["algorithm"]
-                        .as_str()
-                        .unwrap_or("AES-256-GCM")
-                        .to_string(),
-                    created_at: result["created_at"].as_str().unwrap_or("").to_string(),
-                })
-            }
-            BearDogEndpoint::Http(_url) => {
-                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
-                Err(anyhow::anyhow!(
-                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
-                ))
-            }
-        }
+        Ok(KeyDerivationResponse {
+            key_ref: result["key_ref"].as_str().unwrap_or("").to_string(),
+            algorithm: result["algorithm"]
+                .as_str()
+                .unwrap_or("AES-256-GCM")
+                .to_string(),
+            created_at: result["created_at"].as_str().unwrap_or("").to_string(),
+        })
     }
 
     /// Encrypt data using BearDog's HSM
     pub async fn encrypt_data(&self, data: &[u8], key_ref: &str) -> Result<EncryptResponse> {
-        match &self.endpoint {
-            BearDogEndpoint::UnixSocket(path) => {
-                let client = UnixSocketClient::new(path);
+        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let client = UnixSocketClient::new(path);
 
-                use base64::Engine;
-                let engine = base64::engine::general_purpose::STANDARD;
-                let data_b64 = engine.encode(data);
+        use base64::Engine;
+        let engine = base64::engine::general_purpose::STANDARD;
+        let data_b64 = engine.encode(data);
 
-                let params = json!({
-                    "data": data_b64,
-                    "key_ref": key_ref,
-                    "algorithm": "AES-256-GCM",
-                });
+        let params = json!({
+            "data": data_b64,
+            "key_ref": key_ref,
+            "algorithm": "AES-256-GCM",
+        });
 
-                let result = client
-                    .call_method("encryption.encrypt", params)
-                    .await
-                    .context("Failed to call encryption.encrypt")?;
+        let result = client
+            .call_method("encryption.encrypt", params)
+            .await
+            .context("Failed to call encryption.encrypt")?;
 
-                Ok(EncryptResponse {
-                    encrypted_data: result["encrypted_data"].as_str().unwrap_or("").to_string(),
-                    nonce: result["nonce"].as_str().unwrap_or("").to_string(),
-                    tag: result["tag"].as_str().unwrap_or("").to_string(),
-                })
-            }
-            BearDogEndpoint::Http(_url) => {
-                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
-                Err(anyhow::anyhow!(
-                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
-                ))
-            }
-        }
+        Ok(EncryptResponse {
+            encrypted_data: result["encrypted_data"].as_str().unwrap_or("").to_string(),
+            nonce: result["nonce"].as_str().unwrap_or("").to_string(),
+            tag: result["tag"].as_str().unwrap_or("").to_string(),
+        })
     }
 
     /// Decrypt data using BearDog's HSM
@@ -312,37 +271,28 @@ impl BearDogClient {
         tag: &str,
         key_ref: &str,
     ) -> Result<Bytes> {
-        match &self.endpoint {
-            BearDogEndpoint::UnixSocket(path) => {
-                let client = UnixSocketClient::new(path);
+        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let client = UnixSocketClient::new(path);
 
-                let params = json!({
-                    "encrypted_data": encrypted_data,
-                    "nonce": nonce,
-                    "tag": tag,
-                    "key_ref": key_ref,
-                });
+        let params = json!({
+            "encrypted_data": encrypted_data,
+            "nonce": nonce,
+            "tag": tag,
+            "key_ref": key_ref,
+        });
 
-                let result = client
-                    .call_method("encryption.decrypt", params)
-                    .await
-                    .context("Failed to call encryption.decrypt")?;
+        let result = client
+            .call_method("encryption.decrypt", params)
+            .await
+            .context("Failed to call encryption.decrypt")?;
 
-                use base64::Engine;
-                let engine = base64::engine::general_purpose::STANDARD;
-                let data_b64 = result["data"].as_str().unwrap_or("");
-                let data = engine
-                    .decode(data_b64)
-                    .context("Failed to decode decrypted data")?;
-                Ok(Bytes::from(data))
-            }
-            BearDogEndpoint::Http(_url) => {
-                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
-                Err(anyhow::anyhow!(
-                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
-                ))
-            }
-        }
+        use base64::Engine;
+        let engine = base64::engine::general_purpose::STANDARD;
+        let data_b64 = result["data"].as_str().unwrap_or("");
+        let data = engine
+            .decode(data_b64)
+            .context("Failed to decode decrypted data")?;
+        Ok(Bytes::from(data))
     }
 }
 
@@ -360,23 +310,28 @@ mod tests {
     use biomeos_test_utils::{MockJsonRpcServer, TestEnvGuard};
 
     #[test]
-    fn test_beardog_client_creation() {
-        let client = BearDogClient::with_endpoint("http://localhost:9000".to_string())
-            .expect("http endpoint should parse");
-        assert!(matches!(client.endpoint, BearDogEndpoint::Http(_)));
-
-        let client = BearDogClient::with_endpoint("unix:///tmp/beardog.sock".to_string())
+    fn test_beardog_client_creation_unix() {
+        let client = BearDogClient::with_endpoint("unix:///tmp/beardog.sock")
             .expect("unix endpoint should parse");
         assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
+    }
 
-        let client = BearDogClient::with_endpoint("https://localhost:9000".to_string())
-            .expect("https endpoint should parse");
-        assert!(matches!(client.endpoint, BearDogEndpoint::Http(_)));
+    #[test]
+    fn test_beardog_client_creation_absolute_path() {
+        let client = BearDogClient::with_endpoint("/run/beardog/beardog.sock")
+            .expect("absolute path should parse");
+        assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
+    }
+
+    #[test]
+    fn test_http_endpoint_rejected() {
+        let result = BearDogClient::with_endpoint("http://localhost:9000");
+        assert!(result.is_err(), "HTTP endpoints should be rejected");
     }
 
     #[test]
     fn test_invalid_endpoint() {
-        let result = BearDogClient::with_endpoint("invalid://endpoint".to_string());
+        let result = BearDogClient::with_endpoint("invalid://endpoint");
         assert!(result.is_err(), "invalid scheme should fail");
     }
 
@@ -459,14 +414,13 @@ mod tests {
     #[test]
     fn test_with_endpoint_unix_path() {
         let client =
-            BearDogClient::with_endpoint("unix:///run/user/1000/biomeos/beardog.sock".to_string())
-                .unwrap();
+            BearDogClient::with_endpoint("unix:///run/user/1000/biomeos/beardog.sock").unwrap();
         assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
     }
 
     #[test]
     fn test_invalid_endpoint_ftp() {
-        let result = BearDogClient::with_endpoint("ftp://localhost/path".to_string());
+        let result = BearDogClient::with_endpoint("ftp://localhost/path");
         assert!(result.is_err());
     }
 
@@ -502,26 +456,28 @@ mod tests {
     #[tokio::test]
     async fn test_beardog_is_available_unix_nonexistent() {
         let client =
-            BearDogClient::with_endpoint("unix:///nonexistent/beardog/socket.sock".to_string())
-                .unwrap();
+            BearDogClient::with_endpoint("unix:///nonexistent/beardog/socket.sock").unwrap();
         assert!(!client.is_available().await);
     }
 
     #[tokio::test]
     async fn test_beardog_health_check_unix_nonexistent() {
-        let client =
-            BearDogClient::with_endpoint("unix:///nonexistent/socket.sock".to_string()).unwrap();
+        let client = BearDogClient::with_endpoint("unix:///nonexistent/socket.sock").unwrap();
         let result = client.health_check().await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
     }
 
-    #[tokio::test]
-    async fn test_beardog_http_deprecated() {
-        let client = BearDogClient::with_endpoint("http://localhost:9000".to_string()).unwrap();
-        let result = client.health_check().await;
+    #[test]
+    fn test_beardog_http_rejected_at_construction() {
+        let result = BearDogClient::with_endpoint("http://localhost:9000");
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("deprecated"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("only supports Unix sockets")
+        );
     }
 
     #[tokio::test]
@@ -666,12 +622,15 @@ mod tests {
         assert!(r.is_err());
     }
 
-    #[tokio::test]
-    async fn test_http_encrypt_deprecated() {
-        let c = BearDogClient::with_endpoint("http://localhost:1".to_string()).unwrap();
-        let r = c.encrypt_data(b"x", "k").await;
+    #[test]
+    fn test_http_encrypt_rejected_at_construction() {
+        let r = BearDogClient::with_endpoint("http://localhost:1");
         assert!(r.is_err());
-        assert!(r.unwrap_err().to_string().contains("deprecated"));
+        assert!(
+            r.unwrap_err()
+                .to_string()
+                .contains("only supports Unix sockets")
+        );
     }
 
     #[tokio::test]
@@ -703,35 +662,19 @@ mod tests {
         let _g = TestEnvGuard::set("PRIMAL_BEARDOG_ENDPOINT", "udp://127.0.0.1:9");
         let r = BearDogClient::from_discovery().await;
         assert!(r.is_err(), "expected UDP endpoint to fail");
-        let err = r.err().expect("err");
-        let s = format!("{err:#}");
-        assert!(s.contains("UDP") || err.to_string().contains("UDP"), "{s}");
+        let err = r.unwrap_err();
+        let s = err.to_string().to_lowercase();
+        assert!(s.contains("udp") || s.contains("unix sockets"), "{s}");
     }
 
-    #[tokio::test]
-    async fn test_verify_same_family_http_deprecated() {
-        let c = BearDogClient::with_endpoint("http://localhost:1".to_string()).unwrap();
-        let r = c.verify_same_family("f", "s", "n").await;
-        assert!(r.unwrap_err().to_string().contains("deprecated"));
-    }
-
-    #[tokio::test]
-    async fn test_derive_subfed_key_http_deprecated() {
-        let c = BearDogClient::with_endpoint("https://localhost:1".to_string()).unwrap();
-        let r = c
-            .derive_subfed_key(KeyDerivationRequest {
-                parent_family: "p".to_string(),
-                subfed_name: "s".to_string(),
-                purpose: "e".to_string(),
-            })
-            .await;
-        assert!(r.unwrap_err().to_string().contains("deprecated"));
-    }
-
-    #[tokio::test]
-    async fn test_decrypt_data_http_deprecated() {
-        let c = BearDogClient::with_endpoint("http://localhost:2".to_string()).unwrap();
-        let r = c.decrypt_data("e", "n", "t", "k").await;
-        assert!(r.unwrap_err().to_string().contains("deprecated"));
+    #[test]
+    fn test_https_rejected_at_construction() {
+        let r = BearDogClient::with_endpoint("https://localhost:1");
+        assert!(r.is_err());
+        assert!(
+            r.unwrap_err()
+                .to_string()
+                .contains("only supports Unix sockets")
+        );
     }
 }

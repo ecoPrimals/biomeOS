@@ -159,11 +159,7 @@ impl FractalBuilder {
                 };
 
                 let child = self
-                    .build_node_recursive(
-                        child_config,
-                        child_resources[i],
-                        current_depth + 1,
-                    )
+                    .build_node_recursive(child_config, child_resources[i], current_depth + 1)
                     .await?;
 
                 children.push(child);

@@ -34,7 +34,7 @@ async fn beardog_available() -> Option<BearDogClient> {
         ];
 
         for endpoint in endpoints {
-            if let Ok(client) = BearDogClient::with_endpoint(endpoint.to_string()) {
+            if let Ok(client) = BearDogClient::with_endpoint(endpoint) {
                 // Quick availability check with its own timeout
                 let available =
                     tokio::time::timeout(Duration::from_millis(500), client.is_available())

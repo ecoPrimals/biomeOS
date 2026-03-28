@@ -360,9 +360,8 @@ mod tests {
             }],
             metadata: HashMap::new(),
         };
-        let beardog =
-            BearDogClient::with_endpoint("unix:///tmp/biomeos-unused-beardog-socket".to_string())
-                .expect("endpoint");
+        let beardog = BearDogClient::with_endpoint("unix:///tmp/biomeos-unused-beardog-socket")
+            .expect("endpoint");
         let proof = layer2_identity_verification(&beardog, &primal)
             .await
             .expect("layer2");
@@ -405,8 +404,7 @@ mod tests {
         });
 
         let primal = test_primal_with_socket(sock_path_clone);
-        let beardog =
-            BearDogClient::with_endpoint("unix:///tmp/unused".to_string()).expect("endpoint");
+        let beardog = BearDogClient::with_endpoint("unix:///tmp/unused").expect("endpoint");
         let proof = layer2_identity_verification(&beardog, &primal)
             .await
             .expect("layer2");
@@ -425,8 +423,7 @@ mod tests {
         std::fs::write(&sock_path, b"").expect("placeholder path");
 
         let primal = test_primal_with_socket(sock_path);
-        let beardog =
-            BearDogClient::with_endpoint("unix:///tmp/unused".to_string()).expect("endpoint");
+        let beardog = BearDogClient::with_endpoint("unix:///tmp/unused").expect("endpoint");
         let proof = layer2_identity_verification(&beardog, &primal)
             .await
             .expect("layer2");
