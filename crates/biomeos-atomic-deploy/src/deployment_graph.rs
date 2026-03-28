@@ -25,6 +25,7 @@ pub struct DeploymentGraphNode {
 }
 
 /// Atomic deployment graph for Neural API
+#[derive(Debug, Serialize)]
 pub struct AtomicDeploymentGraph {
     nodes: Vec<DeploymentGraphNode>,
 }
@@ -149,11 +150,9 @@ impl AtomicDeploymentGraph {
 
     /// Export graph to TOML for Neural API
     ///
-    /// Note: Not currently used - Neural API loads graphs directly from TOML files
-    /// Future: Could be useful for programmatic graph generation
+    /// Enables programmatic graph generation alongside the static `graphs/*.toml` catalog.
     pub fn to_toml(&self) -> Result<String> {
-        // Not implemented - use direct TOML files instead (graphs/*.toml)
-        anyhow::bail!("Programmatic TOML export not implemented - use direct TOML files")
+        toml::to_string_pretty(self).map_err(|e| anyhow::anyhow!("TOML serialization failed: {e}"))
     }
 
     /// Get execution order (topological sort)
@@ -167,6 +166,7 @@ impl AtomicDeploymentGraph {
 }
 
 #[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;
     use std::path::PathBuf;
@@ -186,5 +186,38 @@ mod tests {
                 .iter()
                 .any(|n| n.id == "verify_lineage_recognition")
         );
+    }
+
+    #[test]
+    fn test_to_toml_roundtrip() {
+        let graph = AtomicDeploymentGraph::full_nucleus_deployment(
+            PathBuf::from("/tmp/test.seed"),
+            "family-abc",
+        );
+
+        let toml_str = graph.to_toml().unwrap();
+        assert!(toml_str.contains("verify_usb_seed"));
+        assert!(toml_str.contains("crypto.derive_seed"));
+        assert!(toml_str.contains("family-abc"));
+
+        let parsed: toml::Value = toml::from_str(&toml_str).unwrap();
+        let nodes = parsed.get("nodes").unwrap().as_array().unwrap();
+        assert_eq!(nodes.len(), graph.nodes.len());
+    }
+
+    #[test]
+    fn test_to_toml_preserves_node_structure() {
+        let graph =
+            AtomicDeploymentGraph::full_nucleus_deployment(PathBuf::from("/seed"), "test-id");
+
+        let toml_str = graph.to_toml().unwrap();
+        let parsed: toml::Value = toml::from_str(&toml_str).unwrap();
+        let first = &parsed["nodes"].as_array().unwrap()[0];
+        assert_eq!(first["id"].as_str().unwrap(), "verify_usb_seed");
+        assert_eq!(
+            first["node_type"].as_str().unwrap(),
+            "filesystem.check_exists"
+        );
+        assert!(first["dependencies"].as_array().unwrap().is_empty());
     }
 }

@@ -13,6 +13,8 @@
 mod discovery;
 mod forwarding;
 #[cfg(test)]
+mod forwarding_routing_tests;
+#[cfg(test)]
 mod forwarding_tests;
 mod types;
 

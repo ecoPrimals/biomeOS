@@ -62,6 +62,14 @@ pub struct FusionEndpoint {
     /// Return type description
     #[serde(default)]
     pub returns: String,
+
+    /// JSON-RPC capability to forward to (e.g., "network.connect")
+    ///
+    /// When set, codegen emits IPC forwarding via `capability.call` instead of
+    /// a stub error. This is the primal-native pattern: chimeras route to
+    /// capabilities discovered at runtime rather than containing business logic.
+    #[serde(default)]
+    pub capability: Option<String>,
 }
 
 impl Fusion {
@@ -183,6 +191,7 @@ impl FusionEndpoint {
             description: String::new(),
             params: Vec::new(),
             returns: String::new(),
+            capability: None,
         }
     }
 
@@ -204,6 +213,13 @@ impl FusionEndpoint {
     #[must_use]
     pub fn with_returns(mut self, returns: impl Into<String>) -> Self {
         self.returns = returns.into();
+        self
+    }
+
+    /// Map to a JSON-RPC capability for IPC forwarding
+    #[must_use]
+    pub fn with_capability(mut self, capability: impl Into<String>) -> Self {
+        self.capability = Some(capability.into());
         self
     }
 }

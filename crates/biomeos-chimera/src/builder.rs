@@ -264,43 +264,64 @@ impl ComponentInstance {
 ",
         );
 
-        // API endpoints
-        if !def.fusion.api.endpoints.is_empty() {
-            code.push_str("\n/// Unified API endpoints\n");
-            code.push_str("pub mod api {\n");
-
-            for endpoint in &def.fusion.api.endpoints {
-                writeln!(code, "    /// {}", endpoint.description)
-                    .expect("write to String cannot fail");
-                write!(code, "    pub async fn {}(", endpoint.name)
-                    .expect("write to String cannot fail");
-
-                // Parameters
-                let params: Vec<String> = endpoint
-                    .params
-                    .iter()
-                    .map(|p| format!("{p}: &str"))
-                    .collect();
-                code.push_str(&params.join(", "));
-
-                let return_type = if endpoint.returns.is_empty() {
-                    "()"
-                } else {
-                    &endpoint.returns
-                };
-                writeln!(
-                    code,
-                    ") -> Result<{return_type}, Box<dyn std::error::Error>> {{"
-                )
-                .expect("write to String cannot fail");
-                code.push_str("        Err(\"Fusion logic not implemented\".into())\n");
-                code.push_str("    }\n\n");
-            }
-
-            code.push_str("}\n");
-        }
+        self.generate_api_endpoints(&mut code);
 
         code
+    }
+
+    /// Generate `pub mod api { ... }` with capability-forwarding endpoint stubs.
+    #[expect(clippy::expect_used, reason = "write to String cannot fail")]
+    fn generate_api_endpoints(&self, code: &mut String) {
+        let endpoints = &self.definition.fusion.api.endpoints;
+        if endpoints.is_empty() {
+            return;
+        }
+
+        code.push_str("\n/// Unified API endpoints\n");
+        code.push_str("pub mod api {\n");
+
+        for endpoint in endpoints {
+            writeln!(code, "    /// {}", endpoint.description)
+                .expect("write to String cannot fail");
+            write!(code, "    pub async fn {}(", endpoint.name)
+                .expect("write to String cannot fail");
+
+            let params: Vec<String> = endpoint
+                .params
+                .iter()
+                .map(|p| format!("{p}: &str"))
+                .collect();
+            code.push_str(&params.join(", "));
+
+            let return_type = if endpoint.returns.is_empty() {
+                "()"
+            } else {
+                &endpoint.returns
+            };
+            writeln!(
+                code,
+                ") -> Result<{return_type}, Box<dyn std::error::Error>> {{"
+            )
+            .expect("write to String cannot fail");
+            if let Some(cap) = &endpoint.capability {
+                writeln!(
+                    code,
+                    "        crate::ipc::capability_call(\"{cap}\", &[{}]).await",
+                    endpoint
+                        .params
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                )
+                .expect("write to String cannot fail");
+            } else {
+                code.push_str("        Err(\"Fusion logic not implemented — set 'capability' in chimera definition to enable IPC forwarding\".into())\n");
+            }
+            code.push_str("    }\n\n");
+        }
+
+        code.push_str("}\n");
     }
 
     /// Write a shell launcher script

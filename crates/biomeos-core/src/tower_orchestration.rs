@@ -611,7 +611,10 @@ mod tests {
         write_pid_file(&pid_path).unwrap();
 
         let pid = read_pid(&pid_path).unwrap();
-        #[allow(clippy::cast_possible_wrap)]
+        #[expect(
+            clippy::cast_possible_wrap,
+            reason = "PID fits i32 on all supported platforms"
+        )]
         let expected = std::process::id() as i32;
         assert_eq!(pid, expected);
     }
