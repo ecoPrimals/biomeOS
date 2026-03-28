@@ -3,9 +3,9 @@
 
 //! Capability Domain Mappings
 //!
-//! Provides fallback resolution when the capability registry
-//! does not have a registered provider. These mappings are loaded from
-//! configuration in production (config/capability_registry.toml).
+//! Two-tier resolution: runtime `CapabilityRegistry` loaded from
+//! `config/capability_registry.toml`, with a compiled-in const fallback
+//! (`CAPABILITY_DOMAINS`) for zero-config environments.
 //!
 //! # Design Principle
 //!
@@ -15,6 +15,8 @@
 use biomeos_types::primal_names::{
     BEARDOG, LOAMSPINE, NESTGATE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
 };
+use std::collections::HashMap;
+use std::path::Path;
 
 /// Capability domain configuration
 /// Loaded from config/capability_registry.toml in production
@@ -194,19 +196,90 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
 ];
 
-/// Resolve capability to provider using domain mappings
+/// Config-driven capability → provider registry.
 ///
-/// Returns the provider primal name if found, None otherwise.
-/// This is a fallback when the capability registry doesn't have a match.
+/// Loads `[domains.*]` sections from `config/capability_registry.toml`.
+/// Falls back to the compiled-in `CAPABILITY_DOMAINS` const for capabilities
+/// not found in the config.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct CapabilityRegistry {
+    /// capability name → provider primal name (from TOML config)
+    config_map: HashMap<String, String>,
+}
+
+impl CapabilityRegistry {
+    /// Load domain mappings from the capability registry TOML.
+    ///
+    /// Parses every `[domains.*]` section looking for `provider` and
+    /// `capabilities` keys, building a reverse index.
+    pub fn from_toml(path: &Path) -> anyhow::Result<Self> {
+        let content = std::fs::read_to_string(path)?;
+        let table: toml::Table = content.parse()?;
+        let mut config_map = HashMap::new();
+
+        if let Some(domains) = table.get("domains").and_then(|v| v.as_table()) {
+            for (_domain_name, domain_value) in domains {
+                if let Some(domain_table) = domain_value.as_table() {
+                    let provider = domain_table
+                        .get("provider")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default();
+                    if provider.is_empty() || provider == "*" {
+                        continue;
+                    }
+                    if let Some(caps) = domain_table.get("capabilities").and_then(|v| v.as_array())
+                    {
+                        for cap in caps {
+                            if let Some(cap_str) = cap.as_str() {
+                                config_map
+                                    .insert(cap_str.to_string(), provider.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(Self { config_map })
+    }
+
+    /// Resolve a capability to its provider.
+    ///
+    /// 1. Exact match in config
+    /// 2. Prefix match in config (e.g. `crypto.encrypt` → `crypto`)
+    /// 3. Compiled-in fallback table
+    pub fn resolve(&self, capability: &str) -> Option<String> {
+        if let Some(provider) = self.config_map.get(capability) {
+            return Some(provider.clone());
+        }
+
+        if let Some(prefix) = capability.split('.').next() {
+            if let Some(provider) = self.config_map.get(prefix) {
+                return Some(provider.clone());
+            }
+        }
+
+        capability_to_provider_fallback(capability).map(str::to_string)
+    }
+
+    /// Number of config-loaded entries (excludes compiled-in fallback).
+    #[cfg(test)]
+    pub fn config_entry_count(&self) -> usize {
+        self.config_map.len()
+    }
+}
+
+/// Resolve capability to provider using the compiled-in domain table.
+///
+/// This is the lowest-priority fallback when neither the neural-api router
+/// nor the TOML config have a match. Prefer `CapabilityRegistry::resolve`.
 pub(crate) fn capability_to_provider_fallback(capability: &str) -> Option<&'static str> {
-    // Check each domain for matching capability
     for domain in CAPABILITY_DOMAINS {
         if domain.capabilities.contains(&capability) {
             return Some(domain.provider);
         }
     }
 
-    // Try prefix matching (e.g., "crypto.encrypt" matches "crypto" domain)
     if let Some(prefix) = capability.split('.').next() {
         for domain in CAPABILITY_DOMAINS {
             if domain.capabilities.contains(&prefix) {
@@ -626,5 +699,100 @@ mod tests {
             capability_to_provider_fallback("sensor_stream"),
             Some("petaltongue")
         );
+    }
+
+    #[test]
+    fn test_capability_registry_from_toml() {
+        let toml_content = r#"
+[metadata]
+version = "1.0.0"
+
+[domains.security]
+provider = "beardog"
+capabilities = ["crypto", "encryption", "security"]
+
+[domains.network]
+provider = "songbird"
+capabilities = ["discovery", "http"]
+"#;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test_registry.toml");
+        std::fs::write(&path, toml_content).unwrap();
+
+        let registry = CapabilityRegistry::from_toml(&path).unwrap();
+        assert_eq!(registry.config_entry_count(), 5);
+        assert_eq!(registry.resolve("crypto"), Some("beardog".into()));
+        assert_eq!(registry.resolve("discovery"), Some("songbird".into()));
+        assert_eq!(
+            registry.resolve("crypto.encrypt"),
+            Some("beardog".into())
+        );
+    }
+
+    #[test]
+    fn test_capability_registry_falls_back_to_const() {
+        let registry = CapabilityRegistry::default();
+        assert_eq!(registry.config_entry_count(), 0);
+        assert_eq!(registry.resolve("security"), Some("beardog".into()));
+        assert_eq!(registry.resolve("storage"), Some("nestgate".into()));
+        assert_eq!(registry.resolve("unknown"), None);
+    }
+
+    #[test]
+    fn test_capability_registry_skips_wildcard_provider() {
+        let toml_content = r#"
+[domains.health]
+provider = "*"
+capabilities = ["health.liveness", "health.readiness"]
+
+[domains.storage]
+provider = "nestgate"
+capabilities = ["storage"]
+"#;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("wildcard.toml");
+        std::fs::write(&path, toml_content).unwrap();
+
+        let registry = CapabilityRegistry::from_toml(&path).unwrap();
+        assert_eq!(registry.config_entry_count(), 1);
+        assert_eq!(registry.resolve("storage"), Some("nestgate".into()));
+    }
+
+    #[test]
+    fn test_capability_registry_config_overrides_const() {
+        let toml_content = r#"
+[domains.security]
+provider = "custom-sec-primal"
+capabilities = ["security"]
+"#;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("override.toml");
+        std::fs::write(&path, toml_content).unwrap();
+
+        let registry = CapabilityRegistry::from_toml(&path).unwrap();
+        assert_eq!(
+            registry.resolve("security"),
+            Some("custom-sec-primal".into()),
+        );
+    }
+
+    #[test]
+    fn test_capability_registry_from_real_config() {
+        let config_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../config/capability_registry.toml");
+        if !config_path.exists() {
+            eprintln!("Skipping: config/capability_registry.toml not found");
+            return;
+        }
+
+        let registry = CapabilityRegistry::from_toml(&config_path).unwrap();
+        assert!(
+            registry.config_entry_count() > 40,
+            "Real config should have 40+ capability entries, got {}",
+            registry.config_entry_count()
+        );
+        assert_eq!(registry.resolve("crypto"), Some("beardog".into()));
+        assert_eq!(registry.resolve("ecology"), Some("airspring".into()));
+        assert_eq!(registry.resolve("game"), Some("ludospring".into()));
     }
 }

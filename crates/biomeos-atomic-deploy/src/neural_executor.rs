@@ -25,13 +25,11 @@
 
 use anyhow::{Context, Result};
 use biomeos_graph::metrics::{GraphResult, MetricsCollector, NodeExecutionParams};
-use biomeos_types::JsonRpcRequest;
-use serde::Serialize;
 use std::collections::{HashMap, VecDeque};
-use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
+use crate::capability_domains::CapabilityRegistry;
 use crate::gate_registry::GateRegistry;
 use crate::neural_graph::{Graph, GraphNode};
 
@@ -47,6 +45,7 @@ pub struct GraphExecutor {
     pub(crate) max_parallelism: usize,
     metrics: Option<MetricsCollector>,
     gate_registry: Arc<GateRegistry>,
+    pub(crate) capability_registry: Arc<CapabilityRegistry>,
 }
 
 impl GraphExecutor {
@@ -59,6 +58,7 @@ impl GraphExecutor {
             max_parallelism: 3,
             metrics: None,
             gate_registry,
+            capability_registry: Arc::new(CapabilityRegistry::default()),
         }
     }
 
@@ -75,6 +75,7 @@ impl GraphExecutor {
             max_parallelism: 3,
             metrics: None,
             gate_registry,
+            capability_registry: Arc::new(CapabilityRegistry::default()),
         }
     }
 
@@ -85,6 +86,13 @@ impl GraphExecutor {
     #[must_use]
     pub fn with_metrics(mut self, metrics: MetricsCollector) -> Self {
         self.metrics = Some(metrics);
+        self
+    }
+
+    /// Set a TOML-loaded capability registry (overrides compiled-in fallback).
+    #[must_use]
+    pub(crate) fn with_capability_registry(mut self, registry: CapabilityRegistry) -> Self {
+        self.capability_registry = Arc::new(registry);
         self
     }
 
@@ -188,10 +196,11 @@ impl GraphExecutor {
             let context = self.context.clone();
             let permit = semaphore.clone().acquire_owned().await?;
             let gate_reg = self.gate_registry.clone();
+            let cap_reg = self.capability_registry.clone();
 
             let handle = tokio::spawn(async move {
                 let node_start = std::time::Instant::now();
-                let result = Self::execute_node(&node, &context, &gate_reg).await;
+                let result = Self::execute_node(&node, &context, &gate_reg, &cap_reg).await;
                 let duration_ms = node_start.elapsed().as_millis() as u64;
                 drop(permit);
                 (node.id.clone(), result, duration_ms)
@@ -282,8 +291,8 @@ impl GraphExecutor {
         node: &GraphNode,
         context: &ExecutionContext,
         gate_registry: &GateRegistry,
+        capability_registry: &CapabilityRegistry,
     ) -> Result<serde_json::Value> {
-        // Check for cross-gate forwarding
         if let Some(ref gate) = node.gate {
             if let Some(remote_endpoint) = gate_registry.resolve(gate) {
                 return Self::forward_to_remote_gate(node, remote_endpoint.clone(), gate).await;
@@ -292,7 +301,6 @@ impl GraphExecutor {
 
         use crate::executor::node_handlers;
 
-        // Determine node type (new format or legacy)
         let node_type_str = if let Some(ref operation) = node.operation {
             operation.name.as_str()
         } else if let Some(ref node_type) = node.node_type {
@@ -306,56 +314,32 @@ impl GraphExecutor {
             node.id, node_type_str
         );
 
-        // Mark as running
         context.set_status(&node.id, NodeStatus::Running).await;
 
-        // Execute based on node type - delegate to shared handlers
         let result = match node_type_str {
-            // Filesystem operations
             "filesystem.check_exists" => {
                 node_handlers::filesystem_check_exists(node, context).await
             }
-
-            // Crypto operations
             "crypto.derive_child_seed" => node_handlers::crypto_derive_seed(node, context).await,
-
-            // Primal lifecycle
             "primal.launch" => node_handlers::primal_launch(node, context).await,
             "primal_start" | "start" => {
                 crate::capability_handlers::primal_start_capability(node, context).await
             }
-
-            // Health checks
             "health_check" | "health.check" | "health.check_atomic" => {
                 node_handlers::health_check(node, context).await
             }
             "health.check_all" => Self::node_health_check_all(node, context).await,
-
-            // Verification
             "verification" => Self::node_verification(node, context).await,
             "lineage.verify_siblings" => node_handlers::lineage_verify(node, context).await,
-
-            // Reporting
             "report.deployment_success" => node_handlers::deployment_report(node, context).await,
-
-            // Logging
             "log.info" => node_handlers::log_info(node, context).await,
             "log.warn" => node_handlers::log_warn(node, context).await,
             "log.error" => node_handlers::log_error(node, context).await,
-
-            // RPC call (NEW - Feb 6, 2026)
-            // Allows graph nodes to call arbitrary methods on primals
             "rpc_call" => Self::node_rpc_call(node, context).await,
-
-            // Capability call (NEW - Mar 1, 2026)
-            // Routes through neural-api capability.call for semantic resolution.
-            // Falls back to direct primal RPC if neural-api is unavailable.
-            "capability_call" => Self::node_capability_call(node, context).await,
-
-            // Capability registration for deployment graphs
+            "capability_call" => {
+                Self::node_capability_call_with_registry(node, context, capability_registry).await
+            }
             "register_capabilities" => node_handlers::register_capabilities(node, context).await,
-
-            // Unknown
             _ => {
                 warn!("Unknown node type: {}, skipping", node_type_str);
                 Ok(serde_json::json!({"skipped": true}))
@@ -531,427 +515,6 @@ impl GraphExecutor {
         Ok(())
     }
 }
-
-// =============================================================================
-// Phase 2 Node Executors: verification
-// =============================================================================
-
-impl GraphExecutor {
-    /// Node executor: verification
-    /// Verifies primal health by checking sockets and optionally querying via JSON-RPC
-    async fn node_verification(
-        node: &GraphNode,
-        context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        let check_sockets = node
-            .config
-            .get("check_sockets")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true);
-
-        let check_health = node
-            .config
-            .get("check_health")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false); // Default false for Phase 2 (JSON-RPC query is expensive)
-
-        info!("   Verifying ecosystem...");
-
-        if check_sockets {
-            // Get socket directory
-            let _socket_dir = context
-                .env
-                .get("SOCKET_DIR")
-                .ok_or_else(|| anyhow::anyhow!("SOCKET_DIR not set"))?;
-
-            // Check that sockets exist for all dependencies
-            let mut verified = Vec::new();
-            for dep_id in &node.dependencies {
-                // Get socket path from previous node output
-                if let Some(dep_output) = context.get_output(dep_id).await {
-                    if let Some(socket) = dep_output.get("socket").and_then(|v| v.as_str()) {
-                        let socket_path = std::path::PathBuf::from(socket);
-                        if socket_path.exists() {
-                            info!("      ✅ {} socket exists", dep_id);
-                            verified.push(dep_id.clone());
-                        } else {
-                            anyhow::bail!("Socket not found for {dep_id}: {socket}");
-                        }
-                    }
-                }
-            }
-
-            info!("   ✅ Verified {} primals", verified.len());
-
-            Ok(serde_json::json!({
-                "verified_count": verified.len(),
-                "verified_primals": verified,
-                "check_sockets": true,
-                "check_health": check_health
-            }))
-        } else {
-            Ok(serde_json::json!({
-                "verified_count": 0,
-                "check_sockets": false
-            }))
-        }
-    }
-
-    /// Node executor: health.check_all
-    /// Checks health of all primals by scanning socket directory
-    async fn node_health_check_all(
-        _node: &GraphNode,
-        context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        let socket_dir = context
-            .env
-            .get("SOCKET_DIR")
-            .ok_or_else(|| anyhow::anyhow!("SOCKET_DIR not set"))?;
-
-        info!("   Checking health of all primals in {}", socket_dir);
-
-        let socket_dir = PathBuf::from(socket_dir);
-        let mut healthy_primals = Vec::new();
-
-        if !socket_dir.exists() {
-            warn!(
-                "   Socket directory does not exist: {}",
-                socket_dir.display()
-            );
-            return Ok(serde_json::json!({
-                "healthy_count": 0,
-                "primals": []
-            }));
-        }
-
-        // Scan for .sock files
-        let entries = std::fs::read_dir(&socket_dir)?;
-        for entry in entries {
-            let entry = entry?;
-            let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("sock") {
-                if let Some(primal_name) = path.file_stem().and_then(|s| s.to_str()) {
-                    healthy_primals.push(primal_name.to_string());
-                }
-            }
-        }
-
-        info!("   ✅ Found {} healthy primals", healthy_primals.len());
-
-        Ok(serde_json::json!({
-            "healthy_count": healthy_primals.len(),
-            "primals": healthy_primals
-        }))
-    }
-
-    // DEEP DEBT EVOLUTION (Feb 7, 2026): Removed legacy `request_jwt_secret_from_beardog`
-    // and `generate_jwt_secret` functions. These are now properly implemented in the
-    // `beardog_jwt_client` module with better separation of concerns:
-    //   - `crate::beardog_jwt_client::provision_jwt_secret()` for JWT provisioning
-    //   - `crate::beardog_jwt_client::generate_secure_random_jwt()` for fallback
-
-    /// Node executor: rpc_call
-    /// Makes a JSON-RPC call to a target primal, protected by a per-primal circuit breaker.
-    ///
-    /// The circuit breaker prevents cascade failures: after 5 consecutive RPC
-    /// failures to a primal, subsequent calls fail fast for 30 s before retrying.
-    async fn node_rpc_call(
-        node: &GraphNode,
-        context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        use std::time::Duration;
-
-        let target = node
-            .config
-            .get("target")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("rpc_call requires 'target' config (primal name)"))?;
-
-        let method = node
-            .config
-            .get("method")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("rpc_call requires 'method' config"))?;
-
-        let params = node
-            .config
-            .get("params")
-            .cloned()
-            .unwrap_or_else(|| serde_json::json!({}));
-
-        let params_str = serde_json::to_string(&params)?;
-        let params_expanded = crate::executor::substitute_env(&params_str, context.env());
-        let params: serde_json::Value = serde_json::from_str(&params_expanded)?;
-
-        info!("   📞 RPC call to {}: {}({:?})", target, method, params);
-
-        let socket_path = context.get_socket_path(target).await;
-        let breaker = context.get_circuit_breaker(target).await;
-
-        let target_owned = target.to_string();
-        let method_owned = method.to_string();
-
-        breaker
-            .execute(|| {
-                let socket_path = socket_path.clone();
-                let target = target_owned.clone();
-                let method = method_owned.clone();
-                let params = params.clone();
-
-                async move {
-                    let request = JsonRpcRequest::new(&method, params);
-
-                    let stream = tokio::time::timeout(
-                        Duration::from_secs(10),
-                        tokio::net::UnixStream::connect(&socket_path),
-                    )
-                    .await
-                    .context(format!("Timeout connecting to {target} at {socket_path}"))?
-                    .context(format!("Failed to connect to {target} at {socket_path}"))?;
-
-                    let (read_half, mut write_half) = stream.into_split();
-
-                    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-                    let request_json = serde_json::to_string(&request)?;
-                    write_half.write_all(request_json.as_bytes()).await?;
-                    write_half.write_all(b"\n").await?;
-                    write_half.flush().await?;
-
-                    let mut reader = BufReader::new(read_half);
-                    let mut response_line = String::new();
-                    tokio::time::timeout(
-                        Duration::from_secs(30),
-                        reader.read_line(&mut response_line),
-                    )
-                    .await
-                    .context(format!("Timeout waiting for {target} response"))?
-                    .context(format!("Failed to read response from {target}"))?;
-
-                    let response: serde_json::Value = serde_json::from_str(&response_line)
-                        .context(format!("Invalid JSON response from {target}"))?;
-
-                    if let Some(error) = response.get("error") {
-                        let error_msg = error
-                            .get("message")
-                            .and_then(|m| m.as_str())
-                            .unwrap_or("Unknown error");
-                        anyhow::bail!("RPC error from {target}: {error_msg}");
-                    }
-
-                    let result = response
-                        .get("result")
-                        .cloned()
-                        .unwrap_or(serde_json::Value::Null);
-
-                    info!("   ✅ RPC call successful: {} → {:?}", method, result);
-
-                    Ok(serde_json::json!({
-                        "target": target,
-                        "method": method,
-                        "result": result,
-                        "success": true
-                    }))
-                }
-            })
-            .await
-    }
-
-    /// Node executor: capability_call
-    /// Routes semantic capability calls through the neural-api or directly to primals.
-    ///
-    /// Graph nodes specify a `capability` (e.g. "ecology.et0_fao56") and `params`.
-    /// This handler:
-    /// 1. Tries routing via the neural-api `capability.call` JSON-RPC method
-    /// 2. Falls back to direct primal socket resolution via `capability_domains`
-    ///
-    /// NEW (Mar 1, 2026) — Enables science pipeline graphs (science_pipeline.toml,
-    /// neuralspring_spectral_pipeline.toml, airspring_ecology_pipeline.toml)
-    async fn node_capability_call(
-        node: &GraphNode,
-        context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        use std::time::Duration;
-
-        let capability = node
-            .config
-            .get("capability")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("capability_call requires 'capability' config"))?;
-
-        let params = node
-            .config
-            .get("params")
-            .cloned()
-            .unwrap_or_else(|| serde_json::json!({}));
-
-        let params_str = serde_json::to_string(&params)?;
-        let params_expanded = crate::executor::substitute_env(&params_str, context.env());
-        let params: serde_json::Value = serde_json::from_str(&params_expanded)?;
-
-        info!("   🔬 Capability call: {}({:?})", capability, params);
-
-        let timeout_ms = node
-            .config
-            .get("timeout_ms")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(30_000);
-
-        // Split capability into (domain, operation) for capability.call semantics
-        let (cap_domain, cap_operation) = Self::split_capability(capability);
-
-        // Strategy 1: Route via neural-api capability.call
-        let neural_api_socket = context.get_socket_path("neural-api").await;
-        let neural_api_path = std::path::PathBuf::from(&neural_api_socket);
-
-        if neural_api_path.exists() {
-            let request = JsonRpcRequest::new(
-                "capability.call",
-                serde_json::json!({
-                    "capability": &cap_domain,
-                    "operation": &cap_operation,
-                    "args": params,
-                }),
-            );
-
-            match tokio::time::timeout(
-                Duration::from_millis(timeout_ms),
-                Self::send_jsonrpc_async(&neural_api_socket, &request),
-            )
-            .await
-            {
-                Ok(Ok(response)) => {
-                    if let Some(error) = response.get("error") {
-                        let msg = error
-                            .get("message")
-                            .and_then(|m| m.as_str())
-                            .unwrap_or("unknown");
-                        warn!(
-                            "   ⚠️ capability.call({}) via neural-api failed: {}, trying direct",
-                            capability, msg
-                        );
-                    } else {
-                        let result = response
-                            .get("result")
-                            .cloned()
-                            .unwrap_or(serde_json::Value::Null);
-                        info!(
-                            "   ✅ Capability call via neural-api: {} → success",
-                            capability
-                        );
-                        return Ok(serde_json::json!({
-                            "capability": capability,
-                            "routed_via": "neural-api",
-                            "result": result,
-                            "success": true,
-                        }));
-                    }
-                }
-                Ok(Err(e)) => {
-                    warn!(
-                        "   ⚠️ neural-api unreachable for {}: {}, trying direct",
-                        capability, e
-                    );
-                }
-                Err(_) => {
-                    warn!(
-                        "   ⚠️ neural-api timeout for {} ({}ms), trying direct",
-                        capability, timeout_ms
-                    );
-                }
-            }
-        }
-
-        // Strategy 2: Direct primal resolution via capability domains (circuit-breaker protected)
-        let provider = crate::capability_domains::capability_to_provider_fallback(capability)
-            .or_else(|| crate::capability_domains::capability_to_provider_fallback(&cap_domain));
-
-        let provider = provider.ok_or_else(|| {
-            anyhow::anyhow!(
-                "No provider found for capability '{capability}' (neither neural-api nor fallback)"
-            )
-        })?;
-
-        info!(
-            "   📞 Direct capability call: {} → {} ({})",
-            capability, provider, cap_operation
-        );
-
-        let socket_path = context.get_socket_path(provider).await;
-        let breaker = context.get_circuit_breaker(provider).await;
-
-        let cap_owned = capability.to_string();
-        let provider_owned = provider.to_string();
-
-        breaker
-            .execute(|| {
-                let socket_path = socket_path.clone();
-                let cap = cap_owned.clone();
-                let provider = provider_owned.clone();
-                let params = params.clone();
-
-                async move {
-                    let request = JsonRpcRequest::new(&cap, params);
-
-                    let response = tokio::time::timeout(
-                        Duration::from_millis(timeout_ms),
-                        Self::send_jsonrpc_async(&socket_path, &request),
-                    )
-                    .await
-                    .context(format!("Timeout on capability call: {cap}"))?
-                    .context(format!(
-                        "Failed capability call {cap} → {provider} at {socket_path}"
-                    ))?;
-
-                    if let Some(error) = response.get("error") {
-                        let msg = error
-                            .get("message")
-                            .and_then(|m| m.as_str())
-                            .unwrap_or("unknown");
-                        anyhow::bail!("Capability call {cap} failed: {msg}");
-                    }
-
-                    let result = response
-                        .get("result")
-                        .cloned()
-                        .unwrap_or(serde_json::Value::Null);
-
-                    info!("   ✅ Direct capability call: {} → success", cap);
-
-                    Ok(serde_json::json!({
-                        "capability": cap,
-                        "routed_via": provider,
-                        "result": result,
-                        "success": true,
-                    }))
-                }
-            })
-            .await
-    }
-
-    /// Helper: send a JSON-RPC request over a Unix socket and return the response.
-    async fn send_jsonrpc_async(
-        socket_path: &str,
-        request: &impl Serialize,
-    ) -> Result<serde_json::Value> {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
-
-        let stream = UnixStream::connect(socket_path)
-            .await
-            .context(format!("Connecting to {socket_path}"))?;
-
-        let (read_half, mut write_half) = stream.into_split();
-
-        let payload = serde_json::to_string(request)?;
-        write_half.write_all(payload.as_bytes()).await?;
-        write_half.write_all(b"\n").await?;
-        write_half.flush().await?;
-
-        let mut reader = BufReader::new(read_half);
-        let mut line = String::new();
-        reader.read_line(&mut line).await?;
-
-        serde_json::from_str(line.trim()).context("Invalid JSON response")
-    }
-}
-// Tests are in neural_executor_tests.rs to keep this file under 1000 lines
+// Node executor implementations (verification, health_check_all, rpc_call,
+// capability_call, send_jsonrpc_async) live in neural_executor_node_impls.rs.
+// Tests are in neural_executor_tests.rs.

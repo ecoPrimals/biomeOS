@@ -82,7 +82,7 @@ impl PrimalLauncher {
         // Extract socket path from env
         let socket_env_key = self.socket_env_key(primal_name);
         let socket_path = env
-            .get(socket_env_key)
+            .get(&socket_env_key)
             .ok_or_else(|| anyhow::anyhow!("Socket path not provided for {primal_name}"))?
             .clone();
 
@@ -152,15 +152,9 @@ impl PrimalLauncher {
         )
     }
 
-    /// Get socket environment variable key for a primal
-    fn socket_env_key(&self, primal_name: &str) -> &'static str {
-        match primal_name {
-            "beardog-server" => "BEARDOG_SOCKET",
-            "songbird-orchestrator" => "SONGBIRD_SOCKET",
-            "toadstool" => "TOADSTOOL_SOCKET",
-            "nestgate" => "NESTGATE_SOCKET",
-            _ => "PRIMAL_SOCKET",
-        }
+    /// Get socket environment variable key for a primal.
+    fn socket_env_key(&self, primal_name: &str) -> String {
+        biomeos_types::defaults::env_vars::socket_env_key(primal_name)
     }
 
     /// Wait for socket to appear
@@ -199,7 +193,7 @@ mod tests {
         );
         assert_eq!(launcher.socket_env_key("toadstool"), "TOADSTOOL_SOCKET");
         assert_eq!(launcher.socket_env_key("nestgate"), "NESTGATE_SOCKET");
-        assert_eq!(launcher.socket_env_key("unknown"), "PRIMAL_SOCKET");
+        assert_eq!(launcher.socket_env_key("unknown"), "UNKNOWN_SOCKET");
     }
 
     #[test]

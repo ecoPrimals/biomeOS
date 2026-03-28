@@ -57,8 +57,6 @@ biomeos-manifest = { path = "../biomeos-manifest", version = "0.1.0" }
 biomeos-nucleus = { path = "../biomeos-nucleus", version = "0.1.0" }
 
 [dev-dependencies]
-# Testing framework
-mockall = { workspace = true }
 tokio-test = "0.4"
 wiremock = "0.6" 
 tempfile = { workspace = true }

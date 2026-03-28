@@ -283,7 +283,14 @@ impl GraphHandler {
                 env.entry(k.clone()).or_insert_with(|| v.clone());
             }
 
-            let mut executor = GraphExecutor::new(graph.clone(), env);
+            let capability_registry = {
+                let config_path = std::path::PathBuf::from("config/capability_registry.toml");
+                crate::capability_domains::CapabilityRegistry::from_toml(&config_path)
+                    .unwrap_or_default()
+            };
+
+            let mut executor = GraphExecutor::new(graph.clone(), env)
+                .with_capability_registry(capability_registry);
             if let Ok(m) = metrics {
                 executor = executor.with_metrics(m);
             }

@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.74 (2026-03-28) — Deep Debt Evolution
+
+### Rust 2024 lint idiom
+- `#![allow(clippy::doc_markdown)]` → `#[expect]` with reason in `biomeos-ui/src/lib.rs`
+
+### Dependencies
+- Removed unused `mockall` dependency from workspace and `biomeos-core` dev-dependencies
+
+### Convention-based socket env keys
+- Evolved orchestrator.rs + primal_launcher.rs hardcoded primal→socket-env match to convention-based `socket_env_key()` utility in `biomeos-types::defaults::env_vars` — derives env var name from primal process name instead of maintaining a match table
+
+### Neural executor refactor
+- Smart refactor `neural_executor.rs` from 957→533 lines — extracted verification, health_check_all, rpc_call, capability_call, and send_jsonrpc_async to `neural_executor_node_impls.rs` (418 lines)
+
+### Config-driven CapabilityRegistry
+- Config-driven `CapabilityRegistry` in `capability_domains.rs` — loads `[domains.*]` from `config/capability_registry.toml` at runtime, falls back to compiled-in `CAPABILITY_DOMAINS` const. Wired into `GraphExecutor` and graph handler.
+
+### Metrics
+- Tests: 7,186 → **7,192** (+6 new: CapabilityRegistry from_toml, fallback to const, wildcard skip, config override, real config parse)
+
+---
+
 ## v2.73 (2026-03-28) — Cross-Gate Deployment Evolution
 
 ### `route.register` Batch API (P2)

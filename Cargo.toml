@@ -134,7 +134,6 @@ config = "0.14"
 dotenvy = "0.15"
 
 # Testing
-mockall = "0.12"
 tempfile = "3.8"
 criterion = "0.5"
 temp-env = "0.3"

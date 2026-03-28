@@ -88,6 +88,27 @@ pub mod env_vars {
 
     /// Discovery registry socket environment variable
     pub const DISCOVERY_REGISTRY_SOCKET: &str = "DISCOVERY_REGISTRY_SOCKET";
+
+    /// Derive the socket environment variable name from a primal process name.
+    ///
+    /// Strips common suffixes (`-server`, `-orchestrator`), uppercases, replaces
+    /// hyphens with underscores, and appends `_SOCKET`.
+    ///
+    /// ```
+    /// # use biomeos_types::defaults::env_vars::socket_env_key;
+    /// assert_eq!(socket_env_key("beardog-server"), "BEARDOG_SOCKET");
+    /// assert_eq!(socket_env_key("songbird-orchestrator"), "SONGBIRD_SOCKET");
+    /// assert_eq!(socket_env_key("toadstool"), "TOADSTOOL_SOCKET");
+    /// assert_eq!(socket_env_key("nestgate"), "NESTGATE_SOCKET");
+    /// assert_eq!(socket_env_key("my-custom-primal"), "MY_CUSTOM_PRIMAL_SOCKET");
+    /// ```
+    pub fn socket_env_key(primal_name: &str) -> String {
+        let base = primal_name
+            .strip_suffix("-server")
+            .or_else(|| primal_name.strip_suffix("-orchestrator"))
+            .unwrap_or(primal_name);
+        format!("{}_SOCKET", base.to_uppercase().replace('-', "_"))
+    }
 }
 
 /// Get socket path with explicit environment map (for testing)

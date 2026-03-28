@@ -6,9 +6,8 @@
 //! This crate implements the orchestration layer for `biomeOS`'s interactive UI,
 //! coordinating between multiple primals to create an emergent network effect.
 
-// Crate-level lint configuration
-#![allow(clippy::doc_markdown)] // Allow technical terms without backticks
-#![forbid(unsafe_code)] // No unsafe code in UI
+#![expect(clippy::doc_markdown, reason = "primal names and biomeOS terms are domain vocabulary, not code references")]
+#![forbid(unsafe_code)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 //! ## Network Effect Architecture

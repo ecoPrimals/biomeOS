@@ -295,16 +295,8 @@ impl DeploymentOrchestrator {
             atomic_type.node_id().to_string(),
         );
 
-        // Primal-specific socket env vars
-        let socket_env = match primal_name {
-            "beardog-server" => "BEARDOG_SOCKET",
-            "songbird-orchestrator" => "SONGBIRD_SOCKET",
-            "toadstool" => "TOADSTOOL_SOCKET",
-            "nestgate" => "NESTGATE_SOCKET",
-            _ => return Err(anyhow::anyhow!("Unknown primal: {primal_name}")),
-        };
-
-        env.insert(socket_env.to_string(), socket_path.display().to_string());
+        let socket_env = biomeos_types::defaults::env_vars::socket_env_key(primal_name);
+        env.insert(socket_env, socket_path.display().to_string());
 
         // For Songbird, set security provider (BearDog)
         if primal_name == "songbird-orchestrator" {
