@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
 **Updated**: March 28, 2026 (v2.76: deep debt — engine refactor, convention-based socket env, unused dep cleanup)
-**Version**: 2.75
+**Version**: 2.76
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -791,7 +791,7 @@ Tower (pop-os, x86_64):
   CPU:    24 cores (i9-14900)
   AI:     Ollama (phi3, llama3.2, tinyllama)
   Primals: BearDog, Songbird, NestGate, Toadstool, Squirrel
-  biomeOS: Neural API capability routing (280+ translations + agent routing)
+  biomeOS: Neural API capability routing (290+ translations + agent routing)
 
 gate2 (pop-os, x86_64):
   GPU:    RTX 3090 (24 GB VRAM)
@@ -844,7 +844,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Mar 20, 2026)
 
-**Overall**: 90.28% region / 91.11% function / 90.02% line coverage (workspace-wide llvm-cov verified, 0 test failures, ~136 ignored cwd-sensitive, 25 doc-tests, 4 proptests)
+**Overall**: 90.28% region / 91.11% function / 90.02% line coverage (workspace-wide llvm-cov verified, 0 test failures, ~135 ignored cwd-sensitive, 25 doc-tests, 4 proptests)
 
 ### Coverage Distribution
 

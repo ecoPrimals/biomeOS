@@ -14,7 +14,7 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Primals**: Self-contained Rust binaries with specific capabilities
 - **Atomics**: Primal combinations (Tower = BearDog + Songbird)
 - **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
-- **Neural API**: Semantic routing via `capability.call` (285+ translations, 26 domains, part of biomeOS)
+- **Neural API**: Semantic routing via `capability.call` (290+ translations, 26 domains, part of biomeOS)
 - **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
@@ -71,7 +71,7 @@ echo '{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":
 |  Layer 3: AI Bridge                                          |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Layer 2: Neural API (285+ semantic translations)            |
+|  Layer 2: Neural API (290+ semantic translations)            |
 |  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Layer 1: Atomics                                            |
@@ -170,7 +170,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Status**: Production Ready (v2.76)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
-**Neural API**: 285+ semantic translations, 26 capability domains (part of biomeOS)
+**Neural API**: 290+ semantic translations, 26 capability domains (part of biomeOS)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)

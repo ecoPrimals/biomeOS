@@ -20,7 +20,7 @@
 | License | scyBorg triple-copyleft (AGPL-3.0-only + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 285+ capability translations, 26 domains (genetic/lineage added), 5 coordination patterns |
+| Neural API | 290+ capability translations, 26 domains (genetic/lineage added), 5 coordination patterns |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
@@ -39,7 +39,7 @@
 |  AI Bridge                                                   |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Neural API (285+ translations, 5 coordination patterns)     |
+|  Neural API (290+ translations, 5 coordination patterns)     |
 |  graph.execute   -> Sequential / Parallel / ConditionalDag   |
 |  graph.execute_pipeline -> Pipeline (streaming mpsc channels) |
 |  graph.start_continuous -> Continuous (60Hz tick loop)        |
@@ -125,7 +125,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"Name the largest 
 
 ## Neural API - Semantic Routing
 
-285+ capability translations enable primals to compose without knowing each other:
+290+ capability translations enable primals to compose without knowing each other:
 
 ```
 Squirrel -> capability.call("http", "request", ...) -> Neural API

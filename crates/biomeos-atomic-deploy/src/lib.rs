@@ -164,7 +164,7 @@ pub use health_check::{HealthChecker, HealthStatus};
 pub use orchestrator::{AtomicType, DeploymentConfig, DeploymentOrchestrator};
 pub use primal_coordinator::{CoordinationStatus, DeploymentGuide, PrimalCoordinator}; // NEW
 pub use primal_discovery::{DiscoveredPrimal, PrimalDiscovery}; // NEW
-pub use primal_launcher::{PrimalInstance, PrimalLauncher}; // LEGACY
+pub use primal_launcher::{PrimalInstance, PrimalLauncher};
 
 // Neural API exports - types from executor module, re-exported via neural_executor
 pub use executor::{
