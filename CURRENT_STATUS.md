@@ -1,6 +1,6 @@
 # biomeOS - Current Status
 
-**Updated**: March 28, 2026 (v2.71: deep debt resolution + standards compliance — `CONTEXT.md` created, README footer standardized, `forwarding.rs` refactored under 1000 LOC, `to_toml()` stub evolved to real serialization, chimera codegen evolved to capability-based IPC forwarding, `#[allow]` → `#[expect]` migration, comprehensive audit: 0 mocks in production, 0 unwraps in production types, 0 files >1000 LOC)
+**Updated**: March 28, 2026 (v2.71: multi-transport IPC evolution + deep debt resolution + zero-copy optimizations + BearDog client dead code removal)
 **Version**: 2.71
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
@@ -57,7 +57,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 285+ capability translations, JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations, circuit-breaker protected RPC |
+| **Neural API** | 290+ capability translations, JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations, circuit-breaker protected RPC |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
 | **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |
@@ -225,7 +225,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 
 ### 5. Neural API - Semantic Capability Routing
 
-- 280+ capability translations across 24 domains
+- 290+ capability translations across 26 domains
 - `capability.call` routes semantic names to provider-specific methods
 - `proxy_http` delegates HTTPS through Songbird + BearDog TLS
 - Capability domains: crypto, security, http, mesh, stun, relay, onion, compute, storage, ai, inference, ephemeral_workspace (rhizoCrypt), permanent_storage (LoamSpine), attribution (sweetGrass), game, medical
@@ -927,7 +927,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,135+ tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
+# Test (7,167 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -949,22 +949,10 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.68 — deep audit + hardcoding evolution + wateringHole compliance)
-**AI Bridge**: Squirrel -> Songbird -> Cloud/Local AI (validated)
-**Continuous Systems**: ContinuousExecutor (60Hz tick), push events, sensor routing
-**XR/VR**: StereoRenderAdapter, MotionCaptureAdapter, HapticPipeline
-**Surgical Domain**: SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams
-**Plasmodium**: HTTP JSON-RPC collective (runtime port, SSH deprecated)
-**Neural API**: 285+ translations, proxy_http, capability.call, compute.hardware.*
-**NAT Traversal**: 4-tier strategy orchestrator (LAN/punch/coordinated/relay)
-**Lifecycle**: Deep health monitoring, auto-resurrection
-**Genetic Model**: Evolved (Mitochondrial + Nuclear, Blake3-Lineage-KDF enrollment)
-**IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
-**Security**: A++ (Two-seed Dark Forest)
-**Code Quality**: A++ (Pure Rust, fully concurrent, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, table-driven routing)
-**Tests**: All passing, 0 failures, ~136 ignored cwd-sensitive (90.28% region / 91.11% function / 90.02% line via llvm-cov workspace)
-**Clippy**: PASS (0 warnings, `-D warnings`) | **Format**: PASS (`cargo fmt --check` clean)
-**Docs**: Full coverage (0 missing_docs warnings across all crates)
-**Unsafe Code**: 0 production (test-only env helpers with RAII guards)
-**External C deps**: 0 (nix→rustix, sysinfo→/proc, libc removed, sudo ip→rtnetlink, pure Rust)
+**Status**: Production Ready (v2.71 — multi-transport IPC + deep debt resolution + zero-copy + BearDog cleanup)
+**Tests**: 7,167 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
+**Clippy**: PASS (0 warnings, pedantic+nursery) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production | **C deps**: 0
+**IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation
+**Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, graph coordination
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage)
 **Bypasses**: 0 active (all 6 evolved)

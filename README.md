@@ -244,7 +244,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (~7,135 tests)
+### Test (7,167 tests)
 
 ```bash
 cargo test --workspace

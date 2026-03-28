@@ -2,6 +2,41 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.71 (2026-03-28) — Multi-Transport IPC + Deep Debt Resolution
+
+### Multi-Transport IPC Evolution (P0)
+- Neural router evolved from Unix-socket-only to universal transport
+- `RegisteredCapability.socket_path: PathBuf` → `RegisteredCapability.endpoint: TransportEndpoint`
+- `forward_request` routes via `AtomicClient::from_endpoint()` (Unix/abstract/TCP/HTTP)
+- Health checks evolved from `Path::exists()` to `AtomicClient`-based probing
+- `capability.register` JSON-RPC handler parses transport strings
+- `TransportEndpoint` gains `Serialize`/`Deserialize`
+
+### Deep Debt Resolution
+- `forwarding.rs` refactored: 1001 → 357 LOC (integration tests extracted)
+- `deployment_graph.to_toml()` stub evolved to real `toml::to_string_pretty()`
+- Chimera codegen: stub error → capability-based IPC forwarding pattern
+- `CONTEXT.md` created per PUBLIC_SURFACE_STANDARD
+- README "Part of ecoPrimals" footer + version reconciliation
+
+### Zero-Copy + Clone Audit
+- `ResourceInfo`: added `Copy` derive, 6 redundant `.clone()` eliminated
+- `neural_executor.rs`: redundant String + Value clones removed
+- `#[allow(unsafe_code)]` → `#[expect(unsafe_code, reason)]` (last `#[allow]` eliminated)
+- Fractal "not yet implemented" stub → architectural constraint message
+
+### BearDog Client Cleanup
+- Removed dead `BearDogEndpoint::Http` variant (73 lines of deprecated error stubs)
+- `with_endpoint()`: `String` → `impl AsRef<str>`, rejects HTTP at construction
+- Added `#[derive(Debug)]` to `BearDogClient`/`BearDogEndpoint`
+
+### Metrics
+- Tests: 7,167 passing (0 failures)
+- Clippy: 0 warnings (pedantic + nursery)
+- Files >1000 LOC: 0
+- `#[allow()]` in production: 0
+- `TODO`/`FIXME`/`HACK`: 0
+
 ## v2.68 (2026-03-27) — Deep Audit + Hardcoding Evolution
 
 ### Blocking-in-Async Evolution
