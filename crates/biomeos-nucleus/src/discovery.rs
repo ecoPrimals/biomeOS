@@ -227,19 +227,18 @@ impl PhysicalDiscovery for DiscoveryLayer {
             "family_id": request.family,
         });
 
-        let response: serde_json::Value = self
+        let mut response: serde_json::Value = self
             .call_songbird_rpc("discover_by_capability", params)
             .await?;
 
-        // Parse response
-        let primals: Vec<DiscoveredPrimal> = serde_json::from_value(
-            response
-                .get("primals")
-                .ok_or_else(|| {
-                    Error::invalid_response(primal_names::SONGBIRD, "Missing 'primals' field")
-                })?
-                .clone(),
-        )?;
+        if response.get("primals").is_none() {
+            return Err(Error::invalid_response(
+                primal_names::SONGBIRD,
+                "Missing 'primals' field",
+            ));
+        }
+        let primals: Vec<DiscoveredPrimal> =
+            serde_json::from_value(response["primals"].take())?;
 
         info!(
             count = primals.len(),
@@ -257,18 +256,17 @@ impl PhysicalDiscovery for DiscoveryLayer {
             "family_id": family_id,
         });
 
-        let response: serde_json::Value =
+        let mut response: serde_json::Value =
             self.call_songbird_rpc("discover_by_family", params).await?;
 
-        // Parse response
-        let primals: Vec<DiscoveredPrimal> = serde_json::from_value(
-            response
-                .get("primals")
-                .ok_or_else(|| {
-                    Error::invalid_response(primal_names::SONGBIRD, "Missing 'primals' field")
-                })?
-                .clone(),
-        )?;
+        if response.get("primals").is_none() {
+            return Err(Error::invalid_response(
+                primal_names::SONGBIRD,
+                "Missing 'primals' field",
+            ));
+        }
+        let primals: Vec<DiscoveredPrimal> =
+            serde_json::from_value(response["primals"].take())?;
 
         info!(
             count = primals.len(),

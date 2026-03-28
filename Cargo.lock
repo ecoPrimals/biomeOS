@@ -631,7 +631,7 @@ name = "biomeos-federation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.21.7",
+ "base64 0.22.1",
  "biomeos-core",
  "biomeos-test-utils",
  "biomeos-types",
@@ -770,7 +770,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.21.7",
+ "base64 0.22.1",
  "biomeos-test-utils",
  "biomeos-types",
  "bytes 1.11.1",
@@ -895,7 +895,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.21.7",
+ "base64 0.22.1",
  "biomeos-test-utils",
  "bytes 1.11.1",
  "chrono",
@@ -944,7 +944,7 @@ name = "biomeos-unibin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.21.7",
+ "base64 0.22.1",
  "biomeos-api",
  "biomeos-atomic-deploy",
  "biomeos-core",

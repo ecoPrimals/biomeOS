@@ -85,7 +85,8 @@ impl BiomeOSConfigBuilder {
         let mut builder = Self::new();
         builder.config.system.environment = Environment::Production;
         builder.config.system.organization_scale = OrganizationScale::Enterprise;
-        builder.config.network.bind_address = "0.0.0.0".to_string();
+        builder.config.network.bind_address =
+            biomeos_types::constants::endpoints::production_bind_address();
 
         // Enable multiple discovery methods for production
         builder.config.discovery.methods = vec![
@@ -120,7 +121,7 @@ impl BiomeOSConfigBuilder {
         builder.config.network.port = std::env::var("BIOMEOS_TEST_PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .unwrap_or(8083);
+            .unwrap_or(ports::TEST_DEFAULT);
 
         // Use static discovery for testing
         builder.config.discovery.methods = vec![DiscoveryMethod::Dns];

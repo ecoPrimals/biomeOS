@@ -12,7 +12,7 @@ biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 # Async runtime
-tokio = { version = "1", features = ["full"] }
+tokio = { workspace = true }
 tokio-stream = "0.1"
 
 # WebSocket client for real-time events (Pure Rust)

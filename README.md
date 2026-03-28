@@ -4,15 +4,15 @@
 
 ---
 
-## Status: Production Ready (v2.68)
+## Status: Production Ready (v2.69)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v3.0 compliant |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy, ecosystem absorption, primalSpring-aligned) |
-| Tests | 7,135 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
+| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy evolved, ecosystem absorption, primalSpring-aligned) |
+| Tests | 7,160 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
 | Unsafe Code | 0 in production |
 | C Dependencies | 0 (zstd-sys eliminated, deny.toml enforced bans) |
 | Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
@@ -26,6 +26,7 @@
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
 | Files >1000 LOC | 0 production (all split into domain submodules) |
 | Discovery | 5-tier capability-first protocol (centralized in biomeos-types) |
+| Dep Governance | tokio, base64, serde, serde_json — all workspace-unified; cargo deny clean |
 
 ---
 

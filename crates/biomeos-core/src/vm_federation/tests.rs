@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025-2026 ecoPrimals Project
+
+#![expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+
 use super::*;
 
 #[test]
@@ -431,6 +439,138 @@ fn test_parse_ip_rejects_line_with_192_168_substring_in_wrong_token() {
         parse_ip_from_domifaddr_output("note: 192.168 is reserved  garbage"),
         None
     );
+}
+
+#[test]
+fn test_benchscale_create_argv() {
+    let argv = benchscale_create_argv("my-fed", "/tmp/topology.yaml");
+    assert_eq!(argv[0], "run");
+    assert_eq!(argv[3], "create");
+    assert_eq!(argv[4], "my-fed");
+    assert_eq!(argv[6], "/tmp/topology.yaml");
+    assert_eq!(argv.len(), 9);
+}
+
+#[test]
+fn test_benchscale_subcommand_argv() {
+    for cmd in ["start", "stop", "destroy", "test", "status"] {
+        let argv = benchscale_subcommand_argv(cmd, "fed1");
+        assert_eq!(argv[3], cmd);
+        assert_eq!(argv[4], "fed1");
+        assert_eq!(argv.len(), 5);
+    }
+}
+
+#[test]
+fn test_topology_path_for_cli_valid() {
+    let path = Path::new("/tmp/topology.yaml");
+    assert_eq!(topology_path_for_cli(path).unwrap(), "/tmp/topology.yaml");
+}
+
+#[test]
+fn test_validate_ssh_probe_output_success() {
+    use std::os::unix::process::ExitStatusExt;
+    let output = std::process::Output {
+        status: std::process::ExitStatus::from_raw(0),
+        stdout: b"hostname\n".to_vec(),
+        stderr: vec![],
+    };
+    assert!(validate_ssh_probe_output("10.0.0.1", &output).is_ok());
+}
+
+#[test]
+fn test_validate_ssh_probe_output_failure() {
+    use std::os::unix::process::ExitStatusExt;
+    // exit code 1 in wait status encoding (1 << 8 = 256)
+    let output = std::process::Output {
+        status: std::process::ExitStatus::from_raw(256),
+        stdout: vec![],
+        stderr: b"Connection refused\n".to_vec(),
+    };
+    let result = validate_ssh_probe_output("10.0.0.1", &output);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("10.0.0.1"));
+}
+
+#[test]
+fn test_collect_ips_for_vm_names_with_mock() {
+    let ips = collect_ips_for_vm_names(vec!["vm1".to_string(), "vm2".to_string()], |name| {
+        let ip = if name == "vm1" {
+            "vnet0  xx  ipv4  192.168.1.10/24\n"
+        } else {
+            "vnet0  xx  ipv4  192.168.1.20/24\n"
+        };
+        Ok(std::process::Output {
+            status: std::process::ExitStatus::default(),
+            stdout: ip.as_bytes().to_vec(),
+            stderr: vec![],
+        })
+    });
+    assert_eq!(ips, vec!["192.168.1.10", "192.168.1.20"]);
+}
+
+#[test]
+fn test_collect_ips_for_vm_names_io_error_skips() {
+    let ips = collect_ips_for_vm_names(vec!["vm1".to_string()], |_| {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "virsh not found",
+        ))
+    });
+    assert!(ips.is_empty());
+}
+
+#[test]
+fn test_collect_ips_for_vm_names_no_ip_skips() {
+    let ips = collect_ips_for_vm_names(vec!["vm1".to_string()], |_| {
+        Ok(std::process::Output {
+            status: std::process::ExitStatus::default(),
+            stdout: b"no ip here\n".to_vec(),
+            stderr: vec![],
+        })
+    });
+    assert!(ips.is_empty());
+}
+
+#[tokio::test]
+async fn test_wait_for_vm_ssh_ready_immediate_success() {
+    use std::os::unix::process::ExitStatusExt;
+    let config = ValidationConfig {
+        cloud_init_timeout: Duration::from_secs(10),
+        ssh_timeout: Duration::from_secs(5),
+        ssh_retry_interval: Duration::from_millis(10),
+        ssh_max_retries: 3,
+    };
+    let start = Instant::now();
+    let result = wait_for_vm_ssh_ready("10.0.0.1", &config, start, || {
+        Ok(std::process::Output {
+            status: std::process::ExitStatus::from_raw(0),
+            stdout: b"SSH ready\n".to_vec(),
+            stderr: vec![],
+        })
+    })
+    .await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_wait_for_vm_ssh_ready_max_retries_exceeded() {
+    let config = ValidationConfig {
+        cloud_init_timeout: Duration::from_secs(60),
+        ssh_timeout: Duration::from_secs(5),
+        ssh_retry_interval: Duration::from_millis(1),
+        ssh_max_retries: 2,
+    };
+    let start = Instant::now();
+    let result = wait_for_vm_ssh_ready("10.0.0.1", &config, start, || {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::ConnectionRefused,
+            "refused",
+        ))
+    })
+    .await;
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("10.0.0.1"));
 }
 
 #[tokio::test]

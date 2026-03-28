@@ -183,7 +183,7 @@ impl Provider for BiomeosProvider {
 
         let request = self.build_request(operation, &params);
 
-        let response = send_jsonrpc_uds(&self.neural_api_socket, &request)
+        let mut response = send_jsonrpc_uds(&self.neural_api_socket, &request)
             .await
             .map_err(ProviderError::Transport)?;
 
@@ -194,7 +194,7 @@ impl Provider for BiomeosProvider {
             });
         }
 
-        Ok(response["result"].clone())
+        Ok(response["result"].take())
     }
 }
 

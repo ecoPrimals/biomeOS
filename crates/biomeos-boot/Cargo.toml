@@ -8,7 +8,7 @@ license = "AGPL-3.0-only"
 
 [dependencies]
 # Core async runtime
-tokio = { version = "1", features = ["full"] }
+tokio = { workspace = true }
 anyhow = "1"
 thiserror = "1"
 

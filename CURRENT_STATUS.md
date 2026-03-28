@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 27, 2026 (v2.68: deep audit against wateringHole standards — formatting regression fixed (10 diffs across 5 files), blocking-in-async `probe_live_sockets` evolved to native async (eliminated `Handle::block_on` + `thread::scope`), hardcoded `/tmp/biomeos` paths centralized to `constants::runtime_paths::FALLBACK_RUNTIME_BASE` + `fallback_runtime_dir()` helper (capability_discovery, tower_orchestration, node_handlers, beardog subfederation), hardcoded IPs `"127.0.0.1"`/`"0.0.0.0"` evolved to `endpoints::DEFAULT_LOCALHOST`/`PRODUCTION_BIND_ADDRESS` (strategy.rs, stun_extension, federation config, NetworkConfig, system/network), license reconciled `AGPL-3.0-or-later`→`AGPL-3.0-only` in LICENSE-CC-BY-SA, stale llvm-cov profdata cleaned, full dep audit (blake3+cc acceptable, tokio-process 0.2 legacy noted, bincode v1 blocked by tarpc), zero production mocks confirmed, zero TODO/FIXME/HACK confirmed)
-**Version**: 2.68
+**Updated**: March 28, 2026 (v2.69: zero-copy evolution — `Value::take()` replaces `.clone()` on Songbird discovery + provider hot paths, tokio workspace unification (11 crates migrated from hardcoded versions to `workspace = true`), base64 unified to 0.22 across all crates, `deny.toml` cleaned (unused license allowances removed), 25 new tests (vm_federation helpers, trust ordering, constants/network env paths), SPDX headers on 7 test modules, rustdoc warnings fixed, test port + production bind address centralized to constants)
+**Version**: 2.69
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,135 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
+| **Tests Passing** | 7,160 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
 | **Test Coverage** | 90%+ (llvm-cov workspace-wide verified) — all three metrics above 90% target |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -34,6 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **Zero-Copy + Dep Governance (Mar 28)** | `Value::take()` zero-copy evolution on Songbird discovery + provider hot paths (eliminates JSON subtree duplication), tokio workspace unification (11 crates: biomeos-types, biomeos-system, neural-api-client, biomeos-api, biomeos-deploy, biomeos-cli, biomeos-boot, biomeos-atomic-deploy, biomeos-ui, root biomeos deps+dev-deps), base64 0.21→0.22 unified, `deny.toml` cleaned (MPL-2.0/Unicode-DFS-2016/Zlib unused allowances removed), 25 new tests (vm_federation: benchscale_create_argv, subcommand_argv, topology_path_for_cli, validate_ssh_probe success+failure, collect_ips_for_vm_names mock/error/empty, wait_for_vm_ssh_ready success+retry-exceeded; trust: all-variant serde, copy semantics, comprehensive ord; constants: 14 env-driven port/bind/path tests), SPDX headers on 7 test modules, 2 rustdoc warnings fixed, test port `ports::TEST_DEFAULT` + `endpoints::production_bind_address()` centralized |
 | **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 26 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
 | **Ecosystem Absorption (Mar 18)** | IpcErrorPhase + extract_rpc_result (5+ springs), OrExit trait (groundSpring/loamSpine), cast module (airSpring), proptest IPC fuzzing (8 fuzz tests), capability.list cost_estimates+operation_dependencies (Squirrel Pathway Learner), socket-registry.json discovery (Squirrel), MCP tool definitions (healthSpring/airSpring/wetSpring), ValidationSink (rhizoCrypt/airSpring), primal_names::display (neuralSpring), primal capability routing types (relay.authorize, compute.dispatch, model.*, sourDough lifecycle), deny.toml expanded to 15 C-dep bans |
 | **Deep Debt Audit (Mar 20)** | Zero-copy `JsonRpcVersion` marker type (eliminates String alloc per request/response), 5 production files >1000 LOC refactored into submodules (nucleus/client, plasmodium, fossil, monitor, rendering), `#[allow]`→`#[expect(reason)]` migration across workspace, BUILD_TIMESTAMP evolved from hardcoded placeholder to `build.rs`-injected, flaky tests fixed (beardog mock flush+shutdown, spore CWD→env-based `discover_plasmid_dir()`), SPDX header gap closed (692/692), deprecated `capability_from_primal_name`→`bootstrap_capability_hint_for_primal_name`, dead_code→`#[cfg(test)]` |
@@ -48,7 +49,7 @@
 | **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |
 | **Files >1000 LOC** | 0 (all production AND test files under 1000 lines, max 949); metrics.rs→metrics/, lib.rs→lib+lib_tests, websocket.rs→websocket+websocket_tests, plus earlier splits: nucleus/client, plasmodium, fossil, monitor, rendering, health, spore, all 6 large test files, tui/types, fossil/tests |
 | **JSON-RPC types** | `JSONRPC_VERSION` const + zero-alloc `JsonRpcVersion` marker type (was `String`), `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
-| **Zero-copy** | `JsonRpcVersion` (zero-size, zero-alloc serde), `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client, primal SDK IPC); `Arc<str>` for identifiers + `PrimalManifest` + `PrimalConnections` keys + `OptimizationType` graph nodes + WebSocket subscription IDs; `Arc<SubscriptionFilter>` for subscriptions |
+| **Zero-copy** | `JsonRpcVersion` (zero-size, zero-alloc serde), `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client, primal SDK IPC); `Arc<str>` for identifiers + `PrimalManifest` + `PrimalConnections` keys + `OptimizationType` graph nodes + WebSocket subscription IDs; `Arc<SubscriptionFilter>` for subscriptions; `Value::take()` on Songbird discovery + provider hot paths (eliminates subtree clone) |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
 | **Dep policy** | `deny.toml` (cargo-deny 0.19) bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys; `serde_yaml`→`serde_yml` (deprecated dep evolved via Cargo package rename) |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |

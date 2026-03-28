@@ -9,7 +9,7 @@ anyhow = "1.0"
 bytes = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.35", features = ["full", "test-util"] }
+tokio = { workspace = true, features = ["test-util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }  # For binaries
 thiserror = "1.0"
@@ -19,7 +19,7 @@ rustix = { version = "0.38", features = ["process"] }
 # System metrics: pure Rust via /proc (ecoBin v3)
 regex = "1.11"  # For socket pattern matching
 rand = "0.8"  # For JWT secret generation
-base64 = "0.22"  # For JWT secret encoding
+base64 = { workspace = true }  # For JWT secret encoding
 
 # biomeOS crates
 biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }

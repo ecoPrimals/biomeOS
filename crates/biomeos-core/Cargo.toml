@@ -37,7 +37,7 @@ toml = "0.8"
 # Utilities
 bytes = { workspace = true }
 itertools = { workspace = true }
-base64 = "0.22"
+base64 = { workspace = true }
 sha2 = "0.10"
 hmac = "0.12"
 semver = { version = "1.0", features = ["serde"] }

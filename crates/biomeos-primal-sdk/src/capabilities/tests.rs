@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025-2026 ecoPrimals Project
+
 use super::*;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use serial_test::serial;

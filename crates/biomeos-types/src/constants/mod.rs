@@ -255,6 +255,9 @@ pub mod ports {
 
     /// Default TCP port scan start for socket discovery
     pub const TCP_PORT_SCAN_START: u16 = 9100;
+
+    /// Default port for test environments (avoids colliding with dev/production ports)
+    pub const TEST_DEFAULT: u16 = 8083;
 }
 
 /// Security and authentication constants
@@ -619,5 +622,92 @@ mod tests {
         assert_eq!(capability::GPU_COMPUTE, "gpu_compute");
         assert_eq!(capability::SIGNING, "crypto.sign");
         assert_eq!(capability::ENCRYPTION, "crypto.encrypt");
+    }
+
+    #[test]
+    fn test_network_http_port_from_env() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set(env_vars::HTTP_PORT, "9999");
+        assert_eq!(network::http_port(), 9999);
+    }
+
+    #[test]
+    fn test_network_http_port_invalid_env_falls_back() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set(env_vars::HTTP_PORT, "not_a_number");
+        assert_eq!(network::http_port(), network::DEFAULT_HTTP_PORT);
+    }
+
+    #[test]
+    fn test_network_https_port_from_env() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set(env_vars::HTTPS_PORT, "4443");
+        assert_eq!(network::https_port(), 4443);
+    }
+
+    #[test]
+    fn test_network_websocket_port_from_env() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set(env_vars::WEBSOCKET_PORT, "7777");
+        assert_eq!(network::websocket_port(), 7777);
+    }
+
+    #[test]
+    fn test_network_mcp_port_from_env() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set(env_vars::MCP_WEBSOCKET_PORT, "5555");
+        assert_eq!(network::mcp_port(), 5555);
+    }
+
+    #[test]
+    fn test_network_discovery_port_from_env() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set("DISCOVERY_PORT", "6666");
+        assert_eq!(network::discovery_port(), 6666);
+    }
+
+    #[test]
+    fn test_network_beardog_port_from_env() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set(env_vars::BEARDOG_PORT, "9001");
+        assert_eq!(network::beardog_port(), 9001);
+    }
+
+    #[test]
+    fn test_network_songbird_port_from_env() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set(env_vars::SONGBIRD_PORT, "3333");
+        assert_eq!(network::songbird_port(), 3333);
+    }
+
+    #[test]
+    fn test_endpoints_bind_address_from_env() {
+        use biomeos_test_utils::TestEnvGuard;
+        let _g = TestEnvGuard::set(env_vars::BIND_ADDRESS, "10.0.0.1");
+        assert_eq!(endpoints::bind_address(), "10.0.0.1");
+        assert_eq!(endpoints::production_bind_address(), "10.0.0.1");
+    }
+
+    #[test]
+    fn test_ports_test_default() {
+        assert_eq!(ports::TEST_DEFAULT, 8083);
+    }
+
+    #[test]
+    fn test_runtime_paths_fallback_dir() {
+        let default = runtime_paths::fallback_runtime_dir("");
+        assert_eq!(default, std::path::PathBuf::from("/tmp/biomeos"));
+
+        let family = runtime_paths::fallback_runtime_dir("abc123");
+        assert_eq!(family, std::path::PathBuf::from("/tmp/biomeos-abc123"));
+    }
+
+    #[test]
+    fn test_network_remaining_constants() {
+        assert_eq!(network::MULTICAST_RANGE, "224.0.0.0/4");
+        assert_eq!(network::DEFAULT_USER_AGENT, "biomeOS/1.0");
+        assert_eq!(network::DEFAULT_CONTENT_TYPE, "application/json");
+        assert_eq!(network::DEFAULT_DEV_PORT, 5000);
+        assert_eq!(network::DEFAULT_BROADCAST_DISCOVERY_PORT, 9199);
     }
 }

@@ -652,7 +652,7 @@ impl CapabilityTaxonomy {
 
     /// Return one representative variant for a given category.
     ///
-    /// Used by [`helpers::capabilities_for_primal`] to resolve category → default
+    /// Used by [`super::capabilities_for_primal`] to resolve category → default
     /// primal without hardcoding primal names outside the taxonomy.
     #[must_use]
     pub const fn representative_for_category(

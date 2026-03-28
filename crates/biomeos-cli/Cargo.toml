@@ -27,7 +27,7 @@ biomeos-manifest = { path = "../biomeos-manifest", version = "0.1.0" }
 biomeos-genome-factory = { path = "../biomeos-genome-factory", version = "1.0.0" }
 biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 clap = { version = "4.4", features = ["derive", "color"] }
-tokio = { version = "1.0", features = ["full"] }
+tokio = { workspace = true }
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -42,7 +42,7 @@ comfy-table = "7.0"
 humantime = "2.1"
 # sysinfo removed (ecoBin v3): use biomeos-system pure /proc metrics
 uuid = { version = "1.0", features = ["v4"] }
-base64 = "0.22"
+base64 = { workspace = true }
 sha2 = "0.10"
 # dirs removed — pure Rust via $HOME env resolution
 
@@ -55,7 +55,7 @@ serial_test = "3.2"
 toml = { workspace = true }
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
 # reqwest = { workspace = true }  # REMOVED: CLI uses atomic_client for Pure Rust # For testing/benchmarking only
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true }
 tempfile = { workspace = true }
 
 [lints]

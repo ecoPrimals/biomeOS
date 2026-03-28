@@ -106,4 +106,44 @@ mod tests {
         let restored: TrustLevel = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(original, restored);
     }
+
+    #[test]
+    fn test_trust_level_serde_all_variants() {
+        for level in [
+            TrustLevel::Unknown,
+            TrustLevel::Basic,
+            TrustLevel::Elevated,
+            TrustLevel::High,
+            TrustLevel::Highest,
+        ] {
+            let json = serde_json::to_string(&level).expect("serialize");
+            let back: TrustLevel = serde_json::from_str(&json).expect("deserialize");
+            assert_eq!(level, back);
+        }
+    }
+
+    #[test]
+    fn test_trust_level_copy_semantics() {
+        let a = TrustLevel::High;
+        let b = a;
+        let c = a;
+        assert_eq!(a, b);
+        assert_eq!(b, c);
+    }
+
+    #[test]
+    fn test_trust_level_ord_comprehensive() {
+        let levels = [
+            TrustLevel::Unknown,
+            TrustLevel::Basic,
+            TrustLevel::Elevated,
+            TrustLevel::High,
+            TrustLevel::Highest,
+        ];
+        for (i, a) in levels.iter().enumerate() {
+            for (j, b) in levels.iter().enumerate() {
+                assert_eq!(a.cmp(b), i.cmp(&j));
+            }
+        }
+    }
 }

@@ -11,7 +11,7 @@
 //! mutation — this is a fundamental platform constraint, not a design flaw we can evolve away.
 //!
 //! This module is **test-only** (`biomeos-test-utils` never ships in production paths). All
-//! mutations are serialized through [`ENV_MUTEX`] so that concurrent test threads cannot race
+//! mutations are serialized through `ENV_MUTEX` so that concurrent test threads cannot race
 //! on environment writes. The [`TestEnvGuard`] RAII type captures the previous value before
 //! changing the variable and restores it on drop, limiting test pollution.
 //!
