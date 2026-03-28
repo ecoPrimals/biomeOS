@@ -198,7 +198,7 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
         NESTGATE => {
             // NestGate upstream bug: socket_only has inverted semantics.
             // Upstream uses `enable_http = config.socket_only` (should be `!config.socket_only`).
-            // Handoff: docs/handoffs/NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md Bug 1.
+            // Ref: wateringHole/handoffs/NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md Bug 1.
             // Compatibility: we want socket-only (no HTTP). With the bug, passing --socket-only
             // enables HTTP. So we omit --socket-only to achieve socket-only mode.
             cmd.arg("daemon")
@@ -226,7 +226,7 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
                 .env("SQUIRREL_SOCKET", socket_path.as_os_str())
                 .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket);
             // AI_DEFAULT_MODEL: Squirrel reads this at startup for default model override.
-            // Handoff: docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md Item 1.
+            // Ref: wateringHole/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md Item 1.
             if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
                 cmd.env("AI_DEFAULT_MODEL", model);
             }

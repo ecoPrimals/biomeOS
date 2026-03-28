@@ -52,7 +52,7 @@ See Section 8 for full Plasmodium agent architecture.
 
 ## 2. Per-Primal Evolution Summary
 
-Detailed handoffs in `docs/handoffs/`:
+Detailed handoffs in `ecoPrimals/infra/wateringHole/handoffs/`:
 
 | Primal | Handoff | Priority Items |
 |--------|---------|----------------|

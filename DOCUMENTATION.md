@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: March 27, 2026
+**Updated**: March 28, 2026
 
 ---
 
@@ -155,7 +155,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 27, 2026**
+**Documentation current as of March 28, 2026**
 **Active: 24 specs, handoffs in wateringHole (v2.43–v2.74), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Tests: 7,192 passing (0 failures), ~135 ignored | 90%+ coverage (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery) | Docs: Full coverage | C deps: 0 | Unsafe: 0 production**

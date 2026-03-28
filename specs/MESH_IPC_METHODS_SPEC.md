@@ -2,7 +2,7 @@
 
 **Created**: February 6, 2026  
 **Status**: SPECIFICATION - Ready for Implementation  
-**Related**: `docs/handoffs/SOVEREIGN_BEACON_MESH_HANDOFF_FEB06_2026.md`
+**Related**: `wateringHole/handoffs/SOVEREIGN_BEACON_MESH_HANDOFF_FEB06_2026.md`
 
 ---
 

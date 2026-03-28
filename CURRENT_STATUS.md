@@ -927,7 +927,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,186 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
+# Test (7,192 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -949,8 +949,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.73 — cross-gate deployment evolution + route.register batch API + ARM64 cross-compilation)
-**Tests**: 7,186 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
+**Status**: Production Ready (v2.74 — deep debt evolution: config-driven capabilities, smart refactor, convention-based env)
+**Tests**: 7,192 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation
 **Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, graph coordination
