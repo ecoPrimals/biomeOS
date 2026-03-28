@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v2.71) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v2.72) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,6 +58,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V272_ARM64_CROSS_COMPILATION | ARM64 cross-compilation (`aarch64-unknown-linux-musl`), 9.6 MB static binary, all 6 genomeBins ARM64-ready | Mar 28, 2026 |
 | BIOMEOS_V271_DEEP_DEBT_MULTI_TRANSPORT_EVOLUTION | Multi-transport IPC, deep debt resolution, zero-copy optimizations, BearDog client cleanup, 7,167 tests | Mar 28, 2026 |
 | BIOMEOS_V270_MULTI_TRANSPORT_IPC_EVOLUTION | Neural router Unix→universal transport, TransportEndpoint Serialize/Deserialize, P0/P1 gaps resolved | Mar 28, 2026 |
 | BIOMEOS_V269_ZEROCOPY_TOKIO_COVERAGE_EVOLUTION | Zero-copy Value::take(), tokio workspace unification, base64 upgrade, deny.toml cleanup | Mar 28, 2026 |
@@ -154,6 +155,6 @@ See `ARCHIVE_INDEX.md` in archive for details.
 ---
 
 **Documentation current as of March 27, 2026**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v2.71), 4 scripts**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v2.72), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Tests: 7,167 passing (0 failures), ~135 ignored | 90%+ coverage (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery) | Docs: Full coverage | C deps: 0 | Unsafe: 0 production**

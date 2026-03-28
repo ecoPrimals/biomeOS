@@ -2,6 +2,19 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.72 (2026-03-28) — ARM64 Cross-Compilation
+
+### ARM64 genomeBin
+- Cross-compiled biomeOS orchestrator for `aarch64-unknown-linux-musl` (static, fully linked)
+- `.cargo/config.toml` added with `relocation-model=static`, `target-feature=+crt-static`, `link-arg=-static`
+- Linker: `aarch64-linux-gnu-gcc` (same approach as NestGate musl fix)
+- Binary stripped to **9.6 MB** via `aarch64-linux-gnu-strip`
+- Deployed to `livespore-usb/aarch64/primals/biomeos` and `pixel8a-deploy/primals/biomeos`
+- Cargo aliases added: `build-arm64`, `build-x64`, `build-all-arches`
+- **All 6 genomeBin components now have ARM64 binaries** — last remaining material gap closed
+
+---
+
 ## v2.71 (2026-03-28) — Multi-Transport IPC + Deep Debt Resolution
 
 ### Multi-Transport IPC Evolution (P0)

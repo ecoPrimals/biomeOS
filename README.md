@@ -218,7 +218,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 | Toadstool | Compute, GPU | Operational | GPU job queue |
 | NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
 | Squirrel | AI Orchestration | Operational | Ollama native adapter |
-| biomeOS | System Orchestrator + Neural API | Evolved | ARM64 genomeBin |
+| biomeOS | System Orchestrator + Neural API | Evolved | ✅ ARM64 built (9.6 MB static musl) |
 
 ---
 

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 28, 2026 (v2.71: multi-transport IPC evolution + deep debt resolution + zero-copy optimizations + BearDog client dead code removal)
-**Version**: 2.71
+**Updated**: March 28, 2026 (v2.72: ARM64 cross-compilation + multi-transport IPC evolution + deep debt resolution + zero-copy optimizations + BearDog client dead code removal)
+**Version**: 2.72
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -761,7 +761,7 @@ covalent bond transport.
 | Area | Current | Target |
 |------|---------|--------|
 | ~~**Graph-based deploy**~~ | ~~Manual nohup~~ | ✅ Graphs validated: `nucleus_complete`, `ecosystem_full_bootstrap`, `gate2_nucleus` |
-| **ARM64 biomeOS** | Not built | Cross-compile to aarch64 |
+| **ARM64 biomeOS** | ✅ Built | `aarch64-unknown-linux-musl` static, 9.6 MB stripped |
 | ~~**Plasmodium agents**~~ | ~~HTTP JSON-RPC collective~~ | ✅ Neural API agent routing (Meld/Split/Mix) |
 | **biomeOS on gate2** | Tower only | Deploy biomeOS to gate2 for cross-gate capability routing |
 | **Model orchestration** | List/resolve only | Schedule inference, route to best GPU gate |
@@ -812,7 +812,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 | **toadstool** | complete | 8.9 MB | Yes | Yes |
 | **nestgate** | complete | 5.6 MB | Yes | Yes |
 | **squirrel** | complete | 4.3 MB | Yes | Yes |
-| **biomeOS** | complete | 3.9 MB | Yes | Pending |
+| **biomeOS** | complete | 9.6 MB | Yes | Yes |
 
 ---
 
@@ -831,7 +831,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ### Medium Priority (biomeOS Team)
 1. ~~**Validate graph-based NUCLEUS deployment**~~ - ✅ Graphs validated: `nucleus_complete`, `ecosystem_full_bootstrap`, `gate2_nucleus`
-2. **ARM64 biomeOS genomeBin** - Blocks Pixel biomeOS deployment
+2. ~~**ARM64 biomeOS genomeBin**~~ - ✅ Built (`aarch64-unknown-linux-musl`, 9.6 MB stripped, static)
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
 5. **Test coverage** - ✅ All three metrics ~90% (v2.63): 90.26% region / 91.10% function / 89.99% line |
@@ -949,7 +949,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.71 — multi-transport IPC + deep debt resolution + zero-copy + BearDog cleanup)
+**Status**: Production Ready (v2.72 — ARM64 cross-compilation + multi-transport IPC + deep debt resolution + zero-copy + BearDog cleanup)
 **Tests**: 7,167 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation
