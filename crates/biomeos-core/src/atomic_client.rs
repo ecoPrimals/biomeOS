@@ -100,6 +100,14 @@ pub use biomeos_graph::StreamItem;
 ///
 /// let result = client.call("generate_entropy", json!({ "bytes": 32 })).await?;
 /// ```
+///
+/// Constructing a client for a known Unix socket (compiles; needs a running primal to connect):
+///
+/// ```no_run
+/// use biomeos_core::AtomicClient;
+///
+/// let _client = AtomicClient::unix("/tmp/biomeos-example.sock");
+/// ```
 #[derive(Debug, Clone)]
 pub struct AtomicClient {
     /// Transport endpoint (Unix, Abstract, or TCP)

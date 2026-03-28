@@ -210,24 +210,7 @@ impl UniversalBiomeOSManager {
                     serde_json::json!("Service scaled successfully"),
                 );
 
-                // Legacy code - depends on ClientRegistry
-                // Query ToadStool for actual replica count (if available)
-                // Future: Restore via UniversalPrimalClient discovery
                 let current_replicas = serde_json::json!("unknown");
-                /* Legacy code commented out:
-                let current_replicas = if let Ok(toadstool) = self.clients().toadstool().await {
-                    match toadstool.get_service_replicas(service).await {
-                        Ok(count) => serde_json::json!(count),
-                        Err(e) => {
-                            tracing::warn!("Failed to get replica count from ToadStool: {}", e);
-                            serde_json::json!("unknown")
-                        }
-                    }
-                } else {
-                    tracing::debug!("ToadStool not available - replica count unknown");
-                    serde_json::json!("unknown")
-                };
-                */
 
                 result.insert("current_replicas".to_string(), current_replicas);
                 result.insert(

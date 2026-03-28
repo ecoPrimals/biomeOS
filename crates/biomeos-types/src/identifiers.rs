@@ -46,10 +46,15 @@ use std::sync::Arc;
 /// # Examples
 ///
 /// ```
-/// use biomeos_types::identifiers::PrimalId;
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use biomeos_types::identifiers::{IdError, PrimalId};
 ///
-/// let id = PrimalId::new("beardog-local").unwrap();
+/// let id = PrimalId::new("beardog-local")?;
 /// assert_eq!(id.as_str(), "beardog-local");
+/// assert!(PrimalId::new("bad id").is_err());
+/// assert!(matches!(PrimalId::new(""), Err(IdError::Empty)));
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PrimalId(Arc<str>);

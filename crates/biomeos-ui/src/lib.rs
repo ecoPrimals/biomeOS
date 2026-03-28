@@ -6,7 +6,10 @@
 //! This crate implements the orchestration layer for `biomeOS`'s interactive UI,
 //! coordinating between multiple primals to create an emergent network effect.
 
-#![expect(clippy::doc_markdown, reason = "primal names and biomeOS terms are domain vocabulary, not code references")]
+#![expect(
+    clippy::doc_markdown,
+    reason = "primal names and biomeOS terms are domain vocabulary, not code references"
+)]
 #![forbid(unsafe_code)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 

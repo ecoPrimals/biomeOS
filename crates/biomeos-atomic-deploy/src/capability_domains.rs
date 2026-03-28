@@ -231,8 +231,7 @@ impl CapabilityRegistry {
                     {
                         for cap in caps {
                             if let Some(cap_str) = cap.as_str() {
-                                config_map
-                                    .insert(cap_str.to_string(), provider.to_string());
+                                config_map.insert(cap_str.to_string(), provider.to_string());
                             }
                         }
                     }
@@ -723,10 +722,7 @@ capabilities = ["discovery", "http"]
         assert_eq!(registry.config_entry_count(), 5);
         assert_eq!(registry.resolve("crypto"), Some("beardog".into()));
         assert_eq!(registry.resolve("discovery"), Some("songbird".into()));
-        assert_eq!(
-            registry.resolve("crypto.encrypt"),
-            Some("beardog".into())
-        );
+        assert_eq!(registry.resolve("crypto.encrypt"), Some("beardog".into()));
     }
 
     #[test]

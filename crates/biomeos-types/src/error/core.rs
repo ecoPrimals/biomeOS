@@ -74,6 +74,18 @@ impl IpcError {
 /// comprehensive error system that supports both human and AI interaction.
 ///
 /// Note: AIErrorContext is boxed to reduce enum size (clippy::result_large_err).
+///
+/// # Examples
+///
+/// ```
+/// use biomeos_types::BiomeError;
+/// use std::error::Error;
+///
+/// let err = BiomeError::config_error("missing key", Some("network.port"));
+/// let as_dyn: &(dyn Error + 'static) = &err;
+/// let same = as_dyn.downcast_ref::<BiomeError>().expect("BiomeError");
+/// assert!(same.to_string().contains("Configuration"));
+/// ```
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 pub enum BiomeError {
     /// Configuration error with context

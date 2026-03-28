@@ -141,11 +141,11 @@ pub mod living_graph; // NEW: Runtime protocol state tracking
 pub mod mode;
 pub mod neural_api_server; // Refactored into submodules: rpc, connection, routing, proxy, translation_loader, server_lifecycle
 pub mod neural_executor;
-mod neural_executor_node_impls;
 #[cfg(test)]
 mod neural_executor_async_tests;
 #[cfg(test)]
 mod neural_executor_async_tests2;
+mod neural_executor_node_impls;
 #[cfg(test)]
 mod neural_executor_tests;
 pub mod neural_graph;

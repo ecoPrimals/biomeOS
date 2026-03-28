@@ -107,30 +107,37 @@ fn test_registry_response_not_found_status() {
 }
 
 // ── Socket server integration tests ────────────────────────────────────────
+//
+// All tests use `CapabilityRegistry::with_socket_path` to inject an explicit
+// temp-dir socket, avoiding env-var races with `XDG_RUNTIME_DIR`.
 
-#[tokio::test]
-async fn test_registry_serve_and_register_via_socket() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-
+fn make_registry(name: &str) -> (tempfile::TempDir, std::path::PathBuf, CapabilityRegistry) {
     let temp = tempfile::tempdir().expect("temp dir");
     let runtime_dir = temp.path().join("biomeos");
     std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
+    let socket_path = runtime_dir.join(format!("biomeos-registry-{name}.sock"));
+    let registry = CapabilityRegistry::with_socket_path(name.to_string(), socket_path.clone());
+    (temp, socket_path, registry)
+}
 
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
+#[tokio::test]
+async fn test_registry_serve_and_register_via_socket() {
+    use biomeos_test_utils::ready_signal;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let registry = CapabilityRegistry::new("socket-test".to_string());
-    let socket_path = runtime_dir.join("biomeos-registry-socket-test.sock");
+    let (_temp, socket_path, registry) = make_registry("socket-test");
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
 
     let serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx
-        .wait()
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
         .await
+        .expect("server startup timed out")
         .expect("server should signal readiness");
 
     let mut stream = tokio::net::UnixStream::connect(&socket_path)
@@ -165,29 +172,24 @@ async fn test_registry_serve_and_register_via_socket() {
 
 #[tokio::test]
 async fn test_registry_serve_parse_error_continues() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::AsyncWriteExt;
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("parse-test".to_string());
+    let (_temp, socket_path, registry) = make_registry("parse-test");
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
 
     let _serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx
-        .wait()
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
         .await
+        .expect("server startup timed out")
         .expect("server should signal readiness");
 
-    let socket_path = runtime_dir.join("biomeos-registry-parse-test.sock");
     if socket_path.exists() {
         let mut stream = tokio::net::UnixStream::connect(&socket_path)
             .await
@@ -199,16 +201,10 @@ async fn test_registry_serve_parse_error_continues() {
 
 #[tokio::test]
 async fn test_registry_serve_get_provider_via_socket() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("get-provider-test".to_string());
+    let (_temp, socket_path, registry) = make_registry("get-provider-test");
 
     let primal_id = PrimalId::new("beardog-get-test").unwrap();
     registry
@@ -228,15 +224,16 @@ async fn test_registry_serve_get_provider_via_socket() {
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
     let _serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx
-        .wait()
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
         .await
+        .expect("server startup timed out")
         .expect("server should signal readiness");
 
-    let socket_path = runtime_dir.join("biomeos-registry-get-provider-test.sock");
     if socket_path.exists() {
         let mut stream = tokio::net::UnixStream::connect(&socket_path)
             .await
@@ -262,31 +259,25 @@ async fn test_registry_serve_get_provider_via_socket() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_registry_socket_register_invalid_primal_id() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("invalid-id-socket".to_string());
+    let (_temp, socket_path, registry) = make_registry("invalid-id-socket");
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
 
     let serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx
-        .wait()
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
         .await
+        .expect("server startup timed out")
         .expect("server should signal readiness");
 
-    let socket_path = runtime_dir.join("biomeos-registry-invalid-id-socket.sock");
     let mut stream = tokio::net::UnixStream::connect(&socket_path)
         .await
         .expect("connect to registry socket");
@@ -319,31 +310,25 @@ async fn test_registry_socket_register_invalid_primal_id() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_registry_socket_heartbeat_invalid_primal_id() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("hb-invalid-socket".to_string());
+    let (_temp, socket_path, registry) = make_registry("hb-invalid-socket");
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
 
     let serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx
-        .wait()
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
         .await
+        .expect("server startup timed out")
         .expect("server should signal readiness");
 
-    let socket_path = runtime_dir.join("biomeos-registry-hb-invalid-socket.sock");
     let mut stream = tokio::net::UnixStream::connect(&socket_path)
         .await
         .expect("connect");
@@ -368,18 +353,11 @@ async fn test_registry_socket_heartbeat_invalid_primal_id() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_registry_socket_list_primals_via_socket() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("list-socket".to_string());
+    let (_temp, socket_path, registry) = make_registry("list-socket");
     let pid = PrimalId::new("list-a").unwrap();
     registry
         .register(
@@ -398,12 +376,16 @@ async fn test_registry_socket_list_primals_via_socket() {
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
     let serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx.wait().await.expect("ready");
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
+        .await
+        .expect("server startup timed out")
+        .expect("ready");
 
-    let socket_path = runtime_dir.join("biomeos-registry-list-socket.sock");
     let mut stream = tokio::net::UnixStream::connect(&socket_path)
         .await
         .expect("connect");
@@ -429,18 +411,11 @@ async fn test_registry_socket_list_primals_via_socket() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_registry_socket_unregister_via_socket() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("unreg-socket".to_string());
+    let (_temp, socket_path, registry) = make_registry("unreg-socket");
     let pid = PrimalId::new("unreg-primal").unwrap();
     registry
         .register(
@@ -459,12 +434,16 @@ async fn test_registry_socket_unregister_via_socket() {
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
     let serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx.wait().await.expect("ready");
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
+        .await
+        .expect("server startup timed out")
+        .expect("ready");
 
-    let socket_path = runtime_dir.join("biomeos-registry-unreg-socket.sock");
     let mut stream = tokio::net::UnixStream::connect(&socket_path)
         .await
         .expect("connect");
@@ -497,27 +476,24 @@ async fn test_registry_socket_unregister_via_socket() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_registry_socket_get_provider_not_found() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("nf-socket".to_string());
+    let (_temp, socket_path, registry) = make_registry("nf-socket");
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
     let serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx.wait().await.expect("ready");
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
+        .await
+        .expect("server startup timed out")
+        .expect("ready");
 
-    let socket_path = runtime_dir.join("biomeos-registry-nf-socket.sock");
     let mut stream = tokio::net::UnixStream::connect(&socket_path)
         .await
         .expect("connect");
@@ -543,30 +519,24 @@ async fn test_registry_socket_get_provider_not_found() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_registry_socket_heartbeat_unknown_primal() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("hb-miss".to_string());
+    let (_temp, socket_path, registry) = make_registry("hb-miss");
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
     let serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    tokio::time::timeout(std::time::Duration::from_secs(10), ready_rx.wait())
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
         .await
-        .expect("server start timeout")
+        .expect("server startup timed out")
         .expect("ready");
 
-    let socket_path = runtime_dir.join("biomeos-registry-hb-miss.sock");
     let mut stream = tokio::net::UnixStream::connect(&socket_path)
         .await
         .expect("connect");
@@ -592,27 +562,24 @@ async fn test_registry_socket_heartbeat_unknown_primal() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_registry_socket_malformed_line_then_valid_request() {
-    use biomeos_test_utils::{TestEnvGuard, ready_signal};
+    use biomeos_test_utils::ready_signal;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-    let temp = tempfile::tempdir().expect("temp dir");
-    let runtime_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");
-
-    let _guard = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-
-    let registry = CapabilityRegistry::new("malformed-line".to_string());
+    let (_temp, socket_path, registry) = make_registry("malformed-line");
     let registry_clone = registry.clone();
     let (ready_tx, ready_rx) = ready_signal();
     let serve_handle = tokio::spawn(async move {
-        let _ = registry_clone.serve_with_ready(ready_tx).await;
+        if let Err(e) = registry_clone.serve_with_ready(ready_tx).await {
+            panic!("serve_with_ready failed: {e}");
+        }
     });
 
-    ready_rx.wait().await.expect("ready");
+    tokio::time::timeout(std::time::Duration::from_secs(5), ready_rx.wait())
+        .await
+        .expect("server startup timed out")
+        .expect("ready");
 
-    let socket_path = runtime_dir.join("biomeos-registry-malformed-line.sock");
     let mut stream = tokio::net::UnixStream::connect(&socket_path)
         .await
         .expect("connect");

@@ -368,9 +368,7 @@ impl NeuralApiServer {
             Route::InferenceSchedule => {
                 dispatch(self.inference_handler.schedule(params).await, &id)
             }
-            Route::InferenceGates => {
-                dispatch(self.inference_handler.gates(params).await, &id)
-            }
+            Route::InferenceGates => dispatch(self.inference_handler.gates(params).await, &id),
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, &id),
             // Mesh & NAT (capability.call sugar)

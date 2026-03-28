@@ -41,7 +41,7 @@
 ### **Phase 1: Prepare Genetic Family**
 
 ```bash
-cd /home/eastgate/Development/ecoPrimals/primals/biomeOS
+cd "$BIOMEOS_REPO"  # e.g. ~/Development/ecoPrimals/primals/biomeOS
 
 # Create genetic family seed for basement HPC (32 random bytes)
 openssl rand -hex 16 > .family.seed

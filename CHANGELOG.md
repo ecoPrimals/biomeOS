@@ -2,6 +2,26 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.77 (2026-03-28) — Deep Audit + DI Evolution + Cleanup
+
+### Evolved
+- **CapabilityRegistry DI**: New `with_socket_path()` constructor enables explicit socket injection. All 10 socket-based tests in `capability_registry_tests2` evolved from `XDG_RUNTIME_DIR` env-var mutation to DI — eliminates parallel test race conditions permanently.
+- **Infallible error handling**: `biomeos-federation` `Capability::from_str` / `from_tags` evolved from `.expect("infallible")` to `match never {}` exhaustive pattern.
+- **Hardcoded primal names**: `trust.rs`, `beardog.rs`, `primal_spawner.rs`, `orchestrator.rs` — string literals replaced with `primal_names::*` constants.
+
+### Removed
+- Commented-out legacy code in `universal_biomeos_manager/{ai,runtime,service}.rs` — ToadStool `ClientRegistry` blocks removed (git history preserves intent).
+
+### Fixed
+- Stale `exclude = ["validation"]` in root `Cargo.toml` → accurate `["tools", "tools/harvest"]`.
+- `deployments/basement-hpc/README.md`: hardcoded `/home/eastgate/...` → `$BIOMEOS_REPO`.
+
+### Added
+- Doc-tests on `identifiers.rs`, `error/core.rs`, `paths.rs`, `config/mod.rs`, `transport.rs`, `atomic_client.rs`, `capability.rs`.
+
+### Metrics
+- **7,209 tests**, 0 failures, 135 ignored, 0 Clippy warnings
+
 ## v2.76 (2026-03-28) — Deep Debt: Engine Refactor + Convention-Based Socket Env
 
 ### Refactored

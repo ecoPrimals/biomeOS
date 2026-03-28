@@ -155,8 +155,7 @@ impl NeuralApiServer {
         let protocol_handler = ProtocolHandler::new(living_graph.clone(), escalation_manager);
 
         let gate_registry = Arc::new(crate::gate_registry::GateRegistry::new());
-        let inference_handler =
-            InferenceHandler::new(router.clone(), gate_registry);
+        let inference_handler = InferenceHandler::new(router.clone(), gate_registry);
 
         Self {
             graphs_dir,

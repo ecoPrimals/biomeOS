@@ -41,6 +41,19 @@ mod mod_tests;
 /// This is the master configuration structure that unifies all configuration
 /// aspects of the biomeOS ecosystem. It provides a single source of truth
 /// for all system, network, security, and operational configurations.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use biomeos_types::BiomeOSConfig;
+///
+/// let mut cfg = BiomeOSConfig::default();
+/// cfg.metadata.name = "edge-node".to_string();
+/// cfg.validate()?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BiomeOSConfig {
     /// Configuration metadata

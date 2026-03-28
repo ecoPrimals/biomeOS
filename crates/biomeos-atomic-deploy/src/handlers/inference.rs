@@ -136,7 +136,11 @@ impl InferenceHandler {
         let forced_gate = params.get("gate").and_then(|v| v.as_str());
         let extra_params = params.get("params").cloned().unwrap_or(json!({}));
 
-        info!("🧠 Scheduling inference: model={}, prompt_len={}", model, prompt.len());
+        info!(
+            "🧠 Scheduling inference: model={}, prompt_len={}",
+            model,
+            prompt.len()
+        );
 
         let target_gate = if let Some(gate) = forced_gate {
             debug!("   Gate forced: {}", gate);
@@ -164,7 +168,10 @@ impl InferenceHandler {
         };
 
         let latency_ms = start.elapsed().as_millis();
-        info!("   ✓ Inference completed in {}ms on gate '{}'", latency_ms, target_gate);
+        info!(
+            "   ✓ Inference completed in {}ms on gate '{}'",
+            latency_ms, target_gate
+        );
 
         Ok(json!({
             "result": result,
@@ -284,16 +291,10 @@ impl InferenceHandler {
     }
 
     async fn call_local_ai(&self, params: &Value) -> Result<Value> {
-        let capability = params["args"]["capability"]
-            .as_str()
-            .unwrap_or("ai");
+        let capability = params["args"]["capability"].as_str().unwrap_or("ai");
         let atomic = self.router.discover_capability(capability).await?;
         self.router
-            .forward_request(
-                &atomic.primary_endpoint,
-                "query_ai",
-                &params["args"],
-            )
+            .forward_request(&atomic.primary_endpoint, "query_ai", &params["args"])
             .await
     }
 

@@ -329,9 +329,9 @@ impl GraphExecutor {
         }
 
         // Strategy 2: Config-driven resolution via CapabilityRegistry
-        let provider = capability_registry.resolve(capability).or_else(|| {
-            capability_registry.resolve(&cap_domain)
-        });
+        let provider = capability_registry
+            .resolve(capability)
+            .or_else(|| capability_registry.resolve(&cap_domain));
 
         let provider = provider.ok_or_else(|| {
             anyhow::anyhow!(

@@ -194,15 +194,17 @@ pub struct CapabilityRegistry {
 }
 
 impl CapabilityRegistry {
-    /// Create a new capability registry
+    /// Create a new capability registry with XDG-resolved socket path.
     pub fn new(family_id: String) -> Self {
-        // Use SystemPaths for XDG-compliant socket path
-        // Using new_lazy() to avoid panicking - directories created on demand
         let paths = SystemPaths::new_lazy();
         let socket_path = paths
             .runtime_dir()
             .join(format!("biomeos-registry-{family_id}.sock"));
+        Self::with_socket_path(family_id, socket_path)
+    }
 
+    /// Create a registry with an explicit socket path (useful for tests).
+    pub fn with_socket_path(family_id: String, socket_path: PathBuf) -> Self {
         info!("🔧 Creating biomeOS capability registry");
         info!("   Family: {}", family_id);
         info!("   Socket: {:?}", socket_path);
@@ -353,6 +355,19 @@ impl CapabilityRegistry {
         &self,
         on_ready: Option<Box<dyn FnOnce() + Send>>,
     ) -> Result<(), BiomeError> {
+        // Ensure socket parent directory exists (defense-in-depth for
+        // concurrent test setups where the dir may not yet be created).
+        if let Some(parent) = self.socket_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                BiomeError::resource_error(
+                    format!("Failed to create socket directory: {e}"),
+                    "registry_socket",
+                    None::<String>,
+                    None::<String>,
+                )
+            })?;
+        }
+
         // Remove existing socket if present
         if self.socket_path.exists() {
             std::fs::remove_file(&self.socket_path).map_err(|e| {
@@ -368,7 +383,10 @@ impl CapabilityRegistry {
         // Create Unix listener
         let listener = UnixListener::bind(&self.socket_path).map_err(|e| {
             BiomeError::resource_error(
-                format!("Failed to bind Unix socket: {e}"),
+                format!(
+                    "Failed to bind Unix socket at {}: {e}",
+                    self.socket_path.display()
+                ),
                 "registry_socket",
                 None::<String>,
                 None::<String>,

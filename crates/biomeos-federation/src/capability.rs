@@ -11,6 +11,17 @@ use std::collections::HashSet;
 use std::fmt;
 
 /// A capability that can be granted to nodes in a sub-federation
+///
+/// # Examples
+///
+/// ```
+/// use biomeos_federation::Capability;
+/// use std::str::FromStr;
+///
+/// let cap: Capability = "storage".parse().unwrap();
+/// assert_eq!(cap, Capability::Storage);
+/// assert_eq!(Capability::from_str("custom:relay"), Capability::Custom("relay".into()));
+/// ```
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Capability {
@@ -76,8 +87,10 @@ impl Capability {
         reason = "custom builder pattern intentionally differs from std trait"
     )]
     pub fn from_str(s: &str) -> Self {
-        // Use the FromStr trait implementation (Err = Infallible)
-        s.parse().expect("Capability::FromStr is infallible")
+        match s.parse() {
+            Ok(cap) => cap,
+            Err(never) => match never {},
+        }
     }
 }
 
@@ -134,6 +147,17 @@ impl From<&str> for Capability {
 }
 
 /// A set of capabilities
+///
+/// # Examples
+///
+/// ```
+/// use biomeos_federation::capability::{Capability, CapabilitySet};
+///
+/// let mut set = CapabilitySet::from_vec(vec![Capability::Storage, Capability::Compute]);
+/// assert!(set.has(&Capability::Storage));
+/// let required = CapabilitySet::from_vec(vec![Capability::Storage]);
+/// assert!(set.has_all(&required));
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapabilitySet {
     capabilities: HashSet<Capability>,
@@ -161,7 +185,10 @@ impl CapabilitySet {
     pub fn from_tags(tags: &[String]) -> Self {
         let caps: Vec<Capability> = tags
             .iter()
-            .map(|tag| tag.parse().expect("Capability::FromStr is infallible"))
+            .map(|tag| match tag.parse() {
+                Ok(cap) => cap,
+                Err(never) => match never {},
+            })
             .collect();
         Self::from_vec(caps)
     }

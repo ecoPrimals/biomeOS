@@ -159,6 +159,21 @@ impl SystemPaths {
     /// Create SystemPaths with custom base directories
     ///
     /// Use this for testing or custom deployments
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use biomeos_types::paths::SystemPaths;
+    /// use std::fs;
+    ///
+    /// let base = std::env::temp_dir().join(format!("biomeos-paths-{}", std::process::id()));
+    /// fs::create_dir_all(&base)?;
+    /// let paths = SystemPaths::with_base(&base)?;
+    /// assert!(paths.primal_socket("beardog").ends_with("beardog.sock"));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn with_base(base: impl AsRef<Path>) -> Result<Self> {
         let base = base.as_ref();
         let runtime_dir = base.join("runtime");

@@ -713,9 +713,11 @@ capability = "test"
 fn test_cross_gate_tower_toml_parses_and_wires_registry() {
     use crate::gate_registry::GateRegistry;
 
-    let toml_content =
-        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../graphs/cross_gate_tower.toml"))
-            .expect("graphs/cross_gate_tower.toml should exist");
+    let toml_content = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../graphs/cross_gate_tower.toml"
+    ))
+    .expect("graphs/cross_gate_tower.toml should exist");
     let graph = Graph::from_toml_str(&toml_content).unwrap();
 
     assert_eq!(graph.id, "cross_gate_tower");
@@ -750,9 +752,11 @@ fn test_cross_gate_tower_toml_parses_and_wires_registry() {
 
 #[test]
 fn test_cross_gate_tower_toml_route_register_nodes() {
-    let toml_content =
-        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../graphs/cross_gate_tower.toml"))
-            .expect("graphs/cross_gate_tower.toml should exist");
+    let toml_content = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../graphs/cross_gate_tower.toml"
+    ))
+    .expect("graphs/cross_gate_tower.toml should exist");
     let graph = Graph::from_toml_str(&toml_content).unwrap();
 
     let register_nodes: Vec<_> = graph
@@ -791,9 +795,11 @@ fn test_cross_gate_tower_toml_route_register_nodes() {
 
 #[test]
 fn test_cross_gate_pixel_toml_parses_and_wires_registry() {
-    let toml_content =
-        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../graphs/cross_gate_pixel.toml"))
-            .expect("graphs/cross_gate_pixel.toml should exist");
+    let toml_content = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../graphs/cross_gate_pixel.toml"
+    ))
+    .expect("graphs/cross_gate_pixel.toml should exist");
     let graph = Graph::from_toml_str(&toml_content).unwrap();
 
     assert_eq!(graph.id, "cross_gate_pixel");

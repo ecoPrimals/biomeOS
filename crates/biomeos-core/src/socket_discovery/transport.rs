@@ -14,6 +14,15 @@ use std::sync::Arc;
 /// Implements the Universal IPC Standard v3.0 transport tiers:
 /// - **Tier 1 (Native)**: `UnixSocket`, `AbstractSocket` - highest performance
 /// - **Tier 2 (Universal)**: `TcpSocket` - cross-device, WASM compatible
+///
+/// # Examples
+///
+/// ```
+/// use biomeos_core::TransportEndpoint;
+///
+/// let ep = TransportEndpoint::parse("127.0.0.1:9100").expect("host:port");
+/// assert_eq!(ep.to_string(), "tcp://127.0.0.1:9100");
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "transport", content = "address")]
 pub enum TransportEndpoint {

@@ -58,14 +58,14 @@ impl BiomeOsHttpClient {
             primal_names::SONGBIRD,
         ))
         .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
-            .unwrap_or_else(|_| {
-                let family_id = biomeos_core::family_discovery::get_family_id();
-                let mut nucleation = SocketNucleation::default();
-                nucleation
-                    .assign_socket(&discovery_provider, &family_id)
-                    .to_string_lossy()
-                    .into_owned()
-            });
+        .unwrap_or_else(|_| {
+            let family_id = biomeos_core::family_discovery::get_family_id();
+            let mut nucleation = SocketNucleation::default();
+            nucleation
+                .assign_socket(&discovery_provider, &family_id)
+                .to_string_lossy()
+                .into_owned()
+        });
 
         info!("🌐 biomeOS HTTP client initialized (via Tower Atomic)");
         debug!("   Songbird socket: {}", songbird_socket);

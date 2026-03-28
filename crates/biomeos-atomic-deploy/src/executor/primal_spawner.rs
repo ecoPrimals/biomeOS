@@ -204,7 +204,7 @@ pub async fn spawn_primal_process(
     }
 
     // AI_DEFAULT_MODEL: Squirrel reads at startup for default model override (Bypass 4 evolution)
-    if primal_name.eq_ignore_ascii_case("squirrel") {
+    if primal_name.eq_ignore_ascii_case(biomeos_types::primal_names::SQUIRREL) {
         if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
             cmd.env("AI_DEFAULT_MODEL", &model);
         }

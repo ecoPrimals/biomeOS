@@ -328,10 +328,7 @@ impl Graph {
             })
             .unwrap_or_default();
 
-        let gate = table
-            .get("gate")
-            .and_then(|v| v.as_str())
-            .map(String::from);
+        let gate = table.get("gate").and_then(|v| v.as_str()).map(String::from);
 
         Ok(GraphNode {
             id,

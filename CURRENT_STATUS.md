@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 28, 2026 (v2.76: deep debt — engine refactor, convention-based socket env, unused dep cleanup)
-**Version**: 2.76
+**Updated**: March 28, 2026 (v2.77: deep audit + DI evolution, commented-code cleanup, Cargo.toml hygiene)
+**Version**: 2.77
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,202 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
+| **Tests Passing** | 7,209 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
 | **Test Coverage** | 90%+ (llvm-cov workspace-wide verified) — all three metrics above 90% target |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -250,6 +250,19 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 ---
 
 ## Completed Evolution Items (biomeOS Team)
+
+### Deep Audit + DI Evolution + Cleanup — v2.77 (Mar 28, 2026)
+
+| Category | Change |
+|----------|--------|
+| **Flaky test fix** | `capability_registry_tests2` socket tests evolved from env-var (`XDG_RUNTIME_DIR`) mutation to `CapabilityRegistry::with_socket_path()` dependency injection — eliminates parallel test races permanently |
+| **Commented code cleanup** | Removed legacy `/* ... */` blocks from `universal_biomeos_manager/{ai,runtime,service}.rs` (ToadStool `ClientRegistry` references); git history preserves intent |
+| **Cargo.toml hygiene** | Stale `exclude = ["validation"]` → accurate `exclude = ["tools", "tools/harvest"]`; commented showcase members preserved as fossil record |
+| **Infallible error handling** | `biomeos-federation` `Capability::from_str` / `from_tags`: `.expect()` → `match never {}` exhaustive match on `Infallible` |
+| **Hardcoded primal names** | `trust.rs`, `beardog.rs`, `primal_spawner.rs`, `orchestrator.rs`: string literals → `primal_names::*` constants |
+| **Doc-tests** | New doctests on `identifiers.rs`, `error/core.rs`, `paths.rs`, `config/mod.rs`, `transport.rs`, `atomic_client.rs`, `capability.rs` |
+| **Deployments doc** | `basement-hpc/README.md`: hardcoded `/home/eastgate/...` → `$BIOMEOS_REPO` |
+| **Tests** | 7,209 passing (0 failures), 135 ignored, 0 Clippy warnings |
 
 ### Deep Audit + Hardcoding Evolution — v2.68 (Mar 27, 2026)
 
@@ -950,8 +963,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.76 — deep debt: engine refactor, convention-based socket env, unused dep cleanup)
-**Tests**: 7,202 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
+**Status**: Production Ready (v2.77 — deep audit + DI evolution, commented-code cleanup, Cargo.toml hygiene)
+**Tests**: 7,209 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation
 **Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, graph coordination

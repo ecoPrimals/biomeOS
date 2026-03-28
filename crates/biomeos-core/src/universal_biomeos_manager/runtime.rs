@@ -137,48 +137,13 @@ impl UniversalBiomeOSManager {
             result.insert("health".to_string(), serde_json::json!(primal.health));
             result.insert("last_seen".to_string(), serde_json::json!(primal.last_seen));
 
-            // Legacy code - depends on ClientRegistry
-            // Future: Restore resource metrics via UniversalPrimalClient
             result.insert(
                 "resources".to_string(),
                 serde_json::json!({
-                    "status": "unavailable",
-                    "message": "Legacy ToadStool integration commented out"
+                    "status": "pending",
+                    "message": "Resource metrics via capability.call(compute.metrics) — future evolution"
                 }),
             );
-
-            /* Legacy code commented out:
-            // Query ToadStool for real resource metrics (if available)
-            if let Ok(toadstool) = self.clients().toadstool().await {
-                match toadstool.get_resource_usage(service).await {
-                    Ok(metrics) => {
-                        result.insert(
-                            "resources".to_string(),
-                            serde_json::json!({
-                                "cpu_percent": metrics.cpu_percent,
-                                "memory_mb": metrics.memory_mb,
-                                "network_io": {
-                                    "bytes_in": metrics.network_io.bytes_in,
-                                    "bytes_out": metrics.network_io.bytes_out
-                                },
-                                "timestamp": metrics.timestamp
-                            }),
-                        );
-                    }
-                    Err(e) => {
-                        tracing::warn!(
-                            "Failed to get metrics from ToadStool for {}: {}",
-                            service,
-                            e
-                        );
-                        result.insert("resources".to_string(), serde_json::json!("unavailable"));
-                    }
-                }
-            } else {
-                tracing::debug!("ToadStool not available - resource metrics unavailable");
-                result.insert("resources".to_string(), serde_json::json!("unavailable"));
-            }
-            */ // End legacy code
         } else {
             result.insert(
                 "error".to_string(),

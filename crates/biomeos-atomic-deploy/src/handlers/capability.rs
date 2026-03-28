@@ -262,10 +262,8 @@ impl CapabilityHandler {
             .and_then(|v| v.as_str())
             .unwrap_or("route.register");
 
-        let endpoint =
-            biomeos_core::TransportEndpoint::parse(transport_str).with_context(|| {
-                format!("Failed to parse transport endpoint: {transport_str}")
-            })?;
+        let endpoint = biomeos_core::TransportEndpoint::parse(transport_str)
+            .with_context(|| format!("Failed to parse transport endpoint: {transport_str}"))?;
 
         let source_tag = match gate {
             Some(g) => format!("{source}@{g}"),
@@ -282,9 +280,9 @@ impl CapabilityHandler {
 
         let mut registered = Vec::with_capacity(capabilities.len());
         for cap_value in capabilities {
-            let cap = cap_value.as_str().with_context(|| {
-                format!("Each capability must be a string, got: {cap_value}")
-            })?;
+            let cap = cap_value
+                .as_str()
+                .with_context(|| format!("Each capability must be a string, got: {cap_value}"))?;
 
             self.router
                 .register_capability(cap, primal_name, endpoint.clone(), &source_tag)
