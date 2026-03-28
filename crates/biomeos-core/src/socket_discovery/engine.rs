@@ -5,17 +5,18 @@
 //!
 //! The main discovery engine implementing capability-based socket discovery
 //! with multi-transport support per Universal IPC Standard v3.0.
+//!
+//! Transport probe implementations (env hints, XDG, abstract sockets, TCP,
+//! manifests, registry) are in `engine_probes.rs`.
 
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::net::{TcpStream, UnixStream};
 
 use biomeos_types::identifiers::FamilyId;
-use biomeos_types::primal_names;
 use tokio::sync::RwLock;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, warn};
 
 use super::neural_api;
 use super::path_builder;
@@ -24,9 +25,9 @@ use super::strategy::DiscoveryStrategy;
 use super::transport::TransportEndpoint;
 
 /// Cached socket entry
-struct CachedSocket {
-    socket: DiscoveredSocket,
-    cached_at: tokio::time::Instant,
+pub(super) struct CachedSocket {
+    pub(super) socket: DiscoveredSocket,
+    pub(super) cached_at: tokio::time::Instant,
 }
 
 /// Socket discovery engine
@@ -40,7 +41,7 @@ pub struct SocketDiscovery {
     pub(crate) strategy: DiscoveryStrategy,
 
     /// Discovery cache
-    cache: Arc<RwLock<HashMap<Arc<str>, CachedSocket>>>,
+    pub(super) cache: Arc<RwLock<HashMap<Arc<str>, CachedSocket>>>,
 
     /// Neural API socket (for capability registry queries)
     pub(crate) neural_api_socket: Option<PathBuf>,
@@ -96,21 +97,19 @@ impl SocketDiscovery {
     }
 
     // ========================================================================
-    // DISCOVERY METHODS
+    // PUBLIC DISCOVERY API
     // ========================================================================
 
     /// Discover socket for a primal by name
     pub async fn discover_primal(&self, primal_name: &str) -> Option<DiscoveredSocket> {
         let cache_key = format!("primal:{primal_name}");
 
-        // 1. Check cache
         if self.strategy.enable_cache
             && let Some(cached) = self.check_cache(&cache_key).await
         {
             return Some(cached);
         }
 
-        // 2. Environment hint
         if self.strategy.check_env_hints
             && let Some(socket) = self.discover_via_env_hint(primal_name).await
         {
@@ -118,7 +117,6 @@ impl SocketDiscovery {
             return Some(socket);
         }
 
-        // 3. XDG runtime dir
         if self.strategy.use_xdg_runtime
             && let Some(socket) = self.discover_via_xdg(primal_name).await
         {
@@ -126,7 +124,6 @@ impl SocketDiscovery {
             return Some(socket);
         }
 
-        // 4. Family-scoped /tmp
         if self.strategy.use_family_tmp
             && let Some(socket) = self.discover_via_family_tmp(primal_name).await
         {
@@ -134,19 +131,16 @@ impl SocketDiscovery {
             return Some(socket);
         }
 
-        // 5. Filesystem manifest
         if let Some(socket) = self.discover_via_manifest(primal_name).await {
             self.cache_socket(&cache_key, &socket).await;
             return Some(socket);
         }
 
-        // 6. Socket registry (Squirrel writes, everyone reads)
         if let Some(socket) = self.discover_via_socket_registry(primal_name).await {
             self.cache_socket(&cache_key, &socket).await;
             return Some(socket);
         }
 
-        // 7. Capability registry (Neural API query)
         if self.strategy.query_registry
             && let Some(socket) = self.discover_via_registry_by_name(primal_name).await
         {
@@ -171,13 +165,11 @@ impl SocketDiscovery {
             return Some(cached);
         }
 
-        // Try capability-named socket on filesystem first
         if let Some(socket) = self.discover_capability_socket(capability).await {
             self.cache_socket(&cache_key, &socket).await;
             return Some(socket);
         }
 
-        // Fall through to taxonomy-based primal resolution
         if let Some(primal) =
             biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(capability)
         {
@@ -207,28 +199,21 @@ impl SocketDiscovery {
         self.discover_primal(primal_name).await.map(|s| s.path)
     }
 
-    // ========================================================================
-    // MULTI-TRANSPORT DISCOVERY WITH FALLBACK
-    // ========================================================================
-
     /// Discover primal with automatic Tier 1 → Tier 2 fallback
     ///
     /// **Universal IPC Standard v3.0**: Implements graceful transport fallback.
     pub async fn discover_with_fallback(&self, primal_name: &str) -> Option<TransportEndpoint> {
         let cache_key = format!("endpoint:{primal_name}");
 
-        // 1. Check cache
         if self.strategy.enable_cache
             && let Some(cached) = self.check_cache(&cache_key).await
         {
             return Some(cached.endpoint);
         }
 
-        // 2. Try environment hint
         if self.strategy.check_env_hints
             && let Some(endpoint) = self.discover_endpoint_via_env(primal_name).await
         {
-            trace!("Discovered {} via environment: {}", primal_name, endpoint);
             let socket = DiscoveredSocket::from_endpoint(
                 endpoint.clone(),
                 DiscoveryMethod::EnvironmentHint(Arc::from(format!(
@@ -243,7 +228,6 @@ impl SocketDiscovery {
 
         // === TIER 1: Native Transports ===
 
-        // 3. Try Unix socket (XDG)
         if self.strategy.use_xdg_runtime
             && let Some(path) = self.try_unix_socket_xdg(primal_name).await
         {
@@ -255,7 +239,6 @@ impl SocketDiscovery {
             return Some(endpoint);
         }
 
-        // 4. Try abstract socket (Linux/Android only)
         #[cfg(target_os = "linux")]
         if self.strategy.try_abstract_sockets
             && let Some(name) = self.try_abstract_socket(primal_name).await
@@ -270,7 +253,6 @@ impl SocketDiscovery {
             return Some(endpoint);
         }
 
-        // 5. Try Unix socket (family /tmp)
         if self.strategy.use_family_tmp
             && let Some(path) = self.try_unix_socket_tmp(primal_name).await
         {
@@ -282,13 +264,11 @@ impl SocketDiscovery {
             return Some(endpoint);
         }
 
-        // 6. Filesystem manifest
         if let Some(socket) = self.discover_via_manifest(primal_name).await {
             self.cache_socket(&cache_key, &socket).await;
             return Some(socket.endpoint);
         }
 
-        // 7. Query capability registry
         if self.strategy.query_registry
             && let Some(socket) = self.discover_via_registry_by_name(primal_name).await
         {
@@ -298,7 +278,6 @@ impl SocketDiscovery {
 
         // === TIER 2: Universal Fallback ===
 
-        // 7. Try TCP fallback
         if self.strategy.enable_tcp_fallback
             && let Some((host, port)) = self.try_tcp_fallback(primal_name).await
         {
@@ -324,319 +303,8 @@ impl SocketDiscovery {
     }
 
     // ========================================================================
-    // TRANSPORT-SPECIFIC DISCOVERY HELPERS
+    // PATH BUILDING
     // ========================================================================
-
-    pub(crate) async fn discover_endpoint_via_env(
-        &self,
-        primal_name: &str,
-    ) -> Option<TransportEndpoint> {
-        self.discover_endpoint_via_env_with(primal_name, None).await
-    }
-
-    /// Discover endpoint via env with explicit overrides (for testing without env mutation).
-    pub(crate) async fn discover_endpoint_via_env_with(
-        &self,
-        primal_name: &str,
-        env_overrides: Option<&HashMap<String, String>>,
-    ) -> Option<TransportEndpoint> {
-        let prefix = primal_name.to_uppercase().replace('-', "_");
-        let get_env = |key: &str| {
-            env_overrides
-                .and_then(|m| m.get(key).cloned())
-                .or_else(|| env::var(key).ok())
-        };
-
-        // Check TCP first
-        if let Some(tcp) = get_env(&format!("{prefix}_TCP")) {
-            if let Some(endpoint) = TransportEndpoint::parse(&tcp)
-                && matches!(endpoint, TransportEndpoint::TcpSocket { .. })
-            {
-                return Some(endpoint);
-            }
-            if let Some(endpoint) = TransportEndpoint::parse(&format!("tcp://{tcp}")) {
-                return Some(endpoint);
-            }
-        }
-
-        // Check generic endpoint
-        if let Some(endpoint_str) = get_env(&format!("{prefix}_ENDPOINT"))
-            && let Some(endpoint) = TransportEndpoint::parse(&endpoint_str)
-        {
-            return Some(endpoint);
-        }
-
-        // Check socket
-        for var_name in [
-            format!("{prefix}_SOCKET"),
-            format!("{prefix}_SOCKET_PATH"),
-            format!("BIOMEOS_{prefix}_SOCKET"),
-        ] {
-            if let Some(value) = get_env(&var_name)
-                && let Some(endpoint) = TransportEndpoint::parse(&value)
-            {
-                if let TransportEndpoint::UnixSocket { ref path } = endpoint {
-                    if path.exists() {
-                        return Some(endpoint);
-                    }
-                } else {
-                    return Some(endpoint);
-                }
-            }
-        }
-
-        None
-    }
-
-    async fn try_unix_socket_xdg(&self, primal_name: &str) -> Option<PathBuf> {
-        let runtime_dir = self.xdg_runtime_dir()?;
-        let biomeos_dir = runtime_dir.join(primal_names::BIOMEOS);
-
-        let socket_path =
-            biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
-        if self.verify_unix_socket(&socket_path).await {
-            return Some(socket_path);
-        }
-
-        let legacy_path = biomeos_dir.join(format!("{primal_name}.sock"));
-        if self.verify_unix_socket(&legacy_path).await {
-            return Some(legacy_path);
-        }
-
-        None
-    }
-
-    async fn try_unix_socket_tmp(&self, primal_name: &str) -> Option<PathBuf> {
-        let temp_dir = self.temp_dir();
-
-        let socket_path =
-            temp_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
-        if self.verify_unix_socket(&socket_path).await {
-            return Some(socket_path);
-        }
-
-        let legacy_path = temp_dir.join(format!("{primal_name}.sock"));
-        if self.verify_unix_socket(&legacy_path).await {
-            return Some(legacy_path);
-        }
-
-        None
-    }
-
-    /// Discover a primal via filesystem manifest.
-    ///
-    /// Primals write a JSON manifest at startup so neighbours can discover
-    /// them without the neural-api. Checked locations (highest priority first):
-    ///
-    /// 1. `$XDG_RUNTIME_DIR/ecoPrimals/manifests/{primal}.json`
-    /// 2. `/tmp/ecoPrimals/manifests/{primal}.json`
-    async fn discover_via_manifest(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        use super::result::PrimalManifest;
-
-        let manifest_name = format!("{primal_name}.json");
-
-        let mut candidates = Vec::new();
-        if let Some(xdg) = self.xdg_runtime_dir() {
-            candidates.push(xdg.join("ecoPrimals/manifests").join(&manifest_name));
-        }
-        candidates.push(
-            self.temp_dir()
-                .join("ecoPrimals/manifests")
-                .join(&manifest_name),
-        );
-
-        for path in candidates {
-            if let Ok(contents) = tokio::fs::read_to_string(&path).await {
-                match serde_json::from_str::<PrimalManifest>(&contents) {
-                    Ok(manifest) => {
-                        let socket_path = PathBuf::from(manifest.socket.as_ref());
-                        if self.verify_unix_socket(&socket_path).await {
-                            debug!(
-                                "Discovered {} via manifest at {}",
-                                primal_name,
-                                path.display()
-                            );
-                            return Some(
-                                DiscoveredSocket::from_unix_path(
-                                    socket_path,
-                                    DiscoveryMethod::Manifest,
-                                )
-                                .with_primal_name(primal_name)
-                                .with_capabilities(manifest.capabilities),
-                            );
-                        }
-                        trace!(
-                            "Manifest for {} found but socket not connectable: {}",
-                            primal_name,
-                            manifest.socket.as_ref()
-                        );
-                    }
-                    Err(e) => {
-                        trace!("Invalid manifest at {}: {}", path.display(), e);
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
-    /// Discover a primal via the centralized socket registry.
-    ///
-    /// Absorbed from Squirrel's `SocketRegistryDiscovery` pattern. Squirrel
-    /// writes a `socket-registry.json` file; biomeOS reads it as a fallback
-    /// discovery source between per-primal manifests and Neural API queries.
-    ///
-    /// Checked at `$XDG_RUNTIME_DIR/biomeos/socket-registry.json`.
-    async fn discover_via_socket_registry(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        use super::result::SocketRegistry;
-
-        let registry_path = self
-            .xdg_runtime_dir()?
-            .join(primal_names::BIOMEOS)
-            .join("socket-registry.json");
-
-        let contents = tokio::fs::read_to_string(&registry_path).await.ok()?;
-        let registry: SocketRegistry = serde_json::from_str(&contents).ok()?;
-
-        for entry in &registry.entries {
-            if entry.primal.eq_ignore_ascii_case(primal_name) {
-                let socket_path = PathBuf::from(&entry.socket);
-                if self.verify_unix_socket(&socket_path).await {
-                    debug!(
-                        "Discovered {} via socket-registry at {}",
-                        primal_name,
-                        registry_path.display()
-                    );
-                    return Some(
-                        DiscoveredSocket::from_unix_path(
-                            socket_path,
-                            DiscoveryMethod::SocketRegistry,
-                        )
-                        .with_primal_name(primal_name)
-                        .with_capabilities(entry.capabilities.clone()),
-                    );
-                }
-            }
-        }
-
-        None
-    }
-
-    pub(crate) async fn verify_unix_socket(&self, path: &Path) -> bool {
-        if !path.exists() {
-            return false;
-        }
-
-        match tokio::time::timeout(
-            std::time::Duration::from_millis(500),
-            UnixStream::connect(path),
-        )
-        .await
-        {
-            Ok(Ok(_)) => true,
-            Ok(Err(e)) => {
-                trace!(
-                    "Unix socket exists but connection failed: {} - {}",
-                    path.display(),
-                    e
-                );
-                false
-            }
-            Err(_) => {
-                trace!("Unix socket connection timed out: {}", path.display());
-                false
-            }
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    async fn try_abstract_socket(&self, primal_name: &str) -> Option<String> {
-        use std::os::linux::net::SocketAddrExt;
-        use std::os::unix::net::SocketAddr;
-
-        let abstract_name = format!("biomeos_{}_{}", primal_name, self.family_id.as_str());
-
-        let addr = match SocketAddr::from_abstract_name(&abstract_name) {
-            Ok(addr) => addr,
-            Err(e) => {
-                trace!("Failed to create abstract socket addr: {}", e);
-                return None;
-            }
-        };
-
-        match std::os::unix::net::UnixStream::connect_addr(&addr) {
-            Ok(_) => {
-                debug!(
-                    "Abstract socket available for {}: @{}",
-                    primal_name, abstract_name
-                );
-                Some(abstract_name)
-            }
-            Err(e) => {
-                trace!(
-                    "Abstract socket not available for {}: @{} - {}",
-                    primal_name, abstract_name, e
-                );
-                None
-            }
-        }
-    }
-
-    async fn try_tcp_fallback(&self, primal_name: &str) -> Option<(Arc<str>, u16)> {
-        let host = &self.strategy.tcp_fallback_host;
-        let prefix = primal_name.to_uppercase().replace('-', "_");
-
-        if let Ok(tcp_env) = env::var(format!("{prefix}_TCP")) {
-            if let Some(TransportEndpoint::TcpSocket { host: h, port: p }) =
-                TransportEndpoint::parse(&tcp_env)
-                && self.verify_tcp_connection(h.as_ref(), p).await
-            {
-                return Some((h, p));
-            }
-            if let Ok(port) = tcp_env.parse::<u16>()
-                && self.verify_tcp_connection(host.as_ref(), port).await
-            {
-                return Some((Arc::clone(host), port));
-            }
-        }
-
-        let port = self.calculate_primal_port(primal_name);
-        if self.verify_tcp_connection(host.as_ref(), port).await {
-            return Some((Arc::clone(host), port));
-        }
-
-        None
-    }
-
-    pub(crate) fn calculate_primal_port(&self, primal_name: &str) -> u16 {
-        let hash: u32 = primal_name.bytes().map(|b| b as u32).sum();
-        let offset = (hash % 100) as u16;
-        self.strategy.tcp_port_start + offset
-    }
-
-    pub(crate) async fn verify_tcp_connection(&self, host: &str, port: u16) -> bool {
-        let addr = format!("{host}:{port}");
-        match tokio::time::timeout(
-            std::time::Duration::from_millis(500),
-            TcpStream::connect(&addr),
-        )
-        .await
-        {
-            Ok(Ok(_)) => {
-                trace!("TCP connection verified: {}", addr);
-                true
-            }
-            Ok(Err(e)) => {
-                trace!("TCP connection failed: {} - {}", addr, e);
-                false
-            }
-            Err(_) => {
-                trace!("TCP connection timed out: {}", addr);
-                false
-            }
-        }
-    }
 
     /// Build deterministic socket path for a primal
     ///
@@ -662,175 +330,30 @@ impl SocketDiscovery {
     }
 
     // ========================================================================
-    // DISCOVERY IMPLEMENTATIONS
-    // ========================================================================
-
-    /// Try to discover a capability-named socket on the filesystem.
-    ///
-    /// Checks `$XDG_RUNTIME_DIR/biomeos/{capability}.sock` and the temp dir.
-    async fn discover_capability_socket(&self, capability: &str) -> Option<DiscoveredSocket> {
-        let sock_name = format!("{capability}.sock");
-
-        if let Some(runtime_dir) = self.xdg_runtime_dir() {
-            let path = runtime_dir.join(primal_names::BIOMEOS).join(&sock_name);
-            if self.verify_unix_socket(&path).await {
-                debug!("Discovered capability '{}' via XDG socket", capability);
-                return Some(DiscoveredSocket::from_unix_path(
-                    path,
-                    DiscoveryMethod::XdgRuntime,
-                ));
-            }
-        }
-
-        let tmp_path = self.temp_dir().join(&sock_name);
-        if self.verify_unix_socket(&tmp_path).await {
-            debug!("Discovered capability '{}' via tmp socket", capability);
-            return Some(DiscoveredSocket::from_unix_path(
-                tmp_path,
-                DiscoveryMethod::FamilyTmp,
-            ));
-        }
-
-        None
-    }
-
-    pub(crate) async fn discover_via_env_hint(
-        &self,
-        primal_name: &str,
-    ) -> Option<DiscoveredSocket> {
-        self.discover_via_env_hint_with(primal_name, None).await
-    }
-
-    /// Discover via env hint with explicit overrides (for testing without env mutation).
-    pub(crate) async fn discover_via_env_hint_with(
-        &self,
-        primal_name: &str,
-        env_overrides: Option<&HashMap<String, String>>,
-    ) -> Option<DiscoveredSocket> {
-        let env_patterns = vec![
-            format!("{}_SOCKET", primal_name.to_uppercase().replace('-', "_")),
-            format!(
-                "{}_SOCKET_PATH",
-                primal_name.to_uppercase().replace('-', "_")
-            ),
-            format!(
-                "BIOMEOS_{}_SOCKET",
-                primal_name.to_uppercase().replace('-', "_")
-            ),
-        ];
-
-        let get_env = |key: &str| {
-            env_overrides
-                .and_then(|m| m.get(key).cloned())
-                .or_else(|| env::var(key).ok())
-        };
-
-        for env_var in env_patterns {
-            if let Some(path_str) = get_env(&env_var) {
-                let path = PathBuf::from(&path_str);
-                if path.exists() {
-                    debug!("Discovered {} via env hint: {}", primal_name, env_var);
-                    return Some(
-                        DiscoveredSocket::from_unix_path(
-                            path,
-                            DiscoveryMethod::EnvironmentHint(Arc::from(env_var.as_str())),
-                        )
-                        .with_primal_name(primal_name),
-                    );
-                }
-            }
-        }
-
-        None
-    }
-
-    async fn discover_via_xdg(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        let runtime_dir = self.xdg_runtime_dir()?;
-        let biomeos_dir = runtime_dir.join(primal_names::BIOMEOS);
-
-        // Capability-first: try capability-named sockets before primal-named ones.
-        // Absorbed from Squirrel alpha.13 — primals discover capabilities, not identities.
-        for cap_name in Self::capability_socket_names(primal_name) {
-            let cap_path = biomeos_dir.join(format!("{cap_name}.sock"));
-            if self.verify_unix_socket(&cap_path).await {
-                debug!(
-                    "Discovered {} via capability socket {}.sock (XDG)",
-                    primal_name, cap_name
-                );
-                return Some(
-                    DiscoveredSocket::from_unix_path(cap_path, DiscoveryMethod::XdgRuntime)
-                        .with_primal_name(primal_name),
-                );
-            }
-        }
-
-        let socket_path =
-            biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
-        if socket_path.exists() {
-            debug!("Discovered {} via XDG runtime", primal_name);
-            return Some(
-                DiscoveredSocket::from_unix_path(socket_path, DiscoveryMethod::XdgRuntime)
-                    .with_primal_name(primal_name),
-            );
-        }
-
-        let legacy_path = biomeos_dir.join(format!("{primal_name}.sock"));
-        if legacy_path.exists() {
-            debug!("Discovered {} via XDG runtime (legacy)", primal_name);
-            return Some(
-                DiscoveredSocket::from_unix_path(legacy_path, DiscoveryMethod::XdgRuntime)
-                    .with_primal_name(primal_name),
-            );
-        }
-
-        None
-    }
-
-    async fn discover_via_family_tmp(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        let temp_dir = self.temp_dir();
-
-        for cap_name in Self::capability_socket_names(primal_name) {
-            let cap_path = temp_dir.join(format!("{cap_name}.sock"));
-            if self.verify_unix_socket(&cap_path).await {
-                debug!(
-                    "Discovered {} via capability socket {}.sock (tmp)",
-                    primal_name, cap_name
-                );
-                return Some(
-                    DiscoveredSocket::from_unix_path(cap_path, DiscoveryMethod::FamilyTmp)
-                        .with_primal_name(primal_name),
-                );
-            }
-        }
-
-        let socket_path =
-            temp_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
-        if socket_path.exists() {
-            debug!("Discovered {} via family temp dir", primal_name);
-            return Some(
-                DiscoveredSocket::from_unix_path(socket_path, DiscoveryMethod::FamilyTmp)
-                    .with_primal_name(primal_name),
-            );
-        }
-
-        let legacy_path = temp_dir.join(format!("{primal_name}.sock"));
-        if legacy_path.exists() {
-            debug!("Discovered {} via temp dir (legacy)", primal_name);
-            return Some(
-                DiscoveredSocket::from_unix_path(legacy_path, DiscoveryMethod::FamilyTmp)
-                    .with_primal_name(primal_name),
-            );
-        }
-
-        None
-    }
-
-    // ========================================================================
     // HELPERS
     // ========================================================================
 
+    pub(super) fn capability_socket_names(primal_name: &str) -> Vec<String> {
+        super::capability_sockets::names_for_primal(primal_name)
+    }
+
+    pub(crate) fn get_neural_api_socket(&self) -> Option<PathBuf> {
+        self.get_neural_api_socket_with(None)
+    }
+
+    pub(crate) fn get_neural_api_socket_with(
+        &self,
+        neural_api_env_override: Option<&Path>,
+    ) -> Option<PathBuf> {
+        neural_api::resolve_neural_api_socket(
+            self.family_id.as_str(),
+            self.neural_api_socket.as_ref(),
+            neural_api_env_override,
+        )
+    }
+
     /// Get XDG runtime dir: override if set, else env var.
-    fn xdg_runtime_dir(&self) -> Option<PathBuf> {
+    pub(super) fn xdg_runtime_dir(&self) -> Option<PathBuf> {
         self.xdg_runtime_dir_override
             .clone()
             .filter(|p| p.exists())
@@ -843,7 +366,7 @@ impl SocketDiscovery {
     }
 
     /// Get temp dir: override if set, else std::env::temp_dir().
-    fn temp_dir(&self) -> PathBuf {
+    pub(super) fn temp_dir(&self) -> PathBuf {
         self.temp_dir_override
             .clone()
             .unwrap_or_else(std::env::temp_dir)
@@ -857,25 +380,9 @@ impl SocketDiscovery {
             .filter(|p| p.exists())
     }
 
-    fn capability_socket_names(primal_name: &str) -> Vec<String> {
-        super::capability_sockets::names_for_primal(primal_name)
-    }
-
-    pub(crate) fn get_neural_api_socket(&self) -> Option<PathBuf> {
-        self.get_neural_api_socket_with(None)
-    }
-
-    /// Get neural API socket with explicit env override (for testing without env mutation).
-    pub(crate) fn get_neural_api_socket_with(
-        &self,
-        neural_api_env_override: Option<&Path>,
-    ) -> Option<PathBuf> {
-        neural_api::resolve_neural_api_socket(
-            self.family_id.as_str(),
-            self.neural_api_socket.as_ref(),
-            neural_api_env_override,
-        )
-    }
+    // ========================================================================
+    // CACHE
+    // ========================================================================
 
     /// Check cache for a socket
     pub(crate) async fn check_cache(&self, key: &str) -> Option<DiscoveredSocket> {

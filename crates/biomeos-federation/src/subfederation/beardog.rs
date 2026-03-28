@@ -32,7 +32,9 @@ pub fn discover_neural_api_socket() -> FederationResult<String> {
     }
 
     // Legacy fallback: direct BearDog discovery for bootstrap
-    if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
+    if let Ok(socket) =
+        std::env::var(biomeos_types::defaults::env_vars::socket_env_key("beardog"))
+    {
         return Ok(socket);
     }
 

@@ -106,8 +106,10 @@ async fn call_security_provider(
         .to_string_lossy()
         .to_string();
 
-    // Check env override (bootstrap scenarios)
-    let socket_path = std::env::var("BEARDOG_SOCKET").unwrap_or(socket_path);
+    // Check env override (bootstrap scenarios) — convention-based env key
+    let socket_path =
+        std::env::var(biomeos_types::defaults::env_vars::socket_env_key("beardog"))
+            .unwrap_or(socket_path);
 
     debug!(
         "📡 Calling security provider at {}: {}",

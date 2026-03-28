@@ -1,6 +1,6 @@
 # biomeOS - Current Status
 
-**Updated**: March 28, 2026 (v2.75: cross-gate federation graphs, inference scheduling, Pixel deployment)
+**Updated**: March 28, 2026 (v2.76: deep debt — engine refactor, convention-based socket env, unused dep cleanup)
 **Version**: 2.75
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
@@ -950,7 +950,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.75 — cross-gate federation graphs, inference scheduling, Pixel deployment)
+**Status**: Production Ready (v2.76 — deep debt: engine refactor, convention-based socket env, unused dep cleanup)
 **Tests**: 7,202 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation

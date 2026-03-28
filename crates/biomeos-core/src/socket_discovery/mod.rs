@@ -60,6 +60,7 @@
 
 mod capability_sockets;
 mod engine;
+mod engine_probes;
 mod neural_api;
 mod path_builder;
 mod registry_queries;

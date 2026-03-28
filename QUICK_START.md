@@ -179,7 +179,7 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v2.75)
+**Status**: Production Ready (v2.76)
 **Updated**: March 28, 2026
 **Tests**: 7,202 passing (0 failures), 90%+ coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings) | **C deps**: 0 | **Unsafe**: 0 production
 

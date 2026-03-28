@@ -54,8 +54,10 @@ impl BiomeOsHttpClient {
 
         let discovery_provider = std::env::var("DISCOVERY_PROVIDER")
             .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
-        let songbird_socket = std::env::var("SONGBIRD_SOCKET")
-            .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
+        let songbird_socket = std::env::var(biomeos_types::defaults::env_vars::socket_env_key(
+            primal_names::SONGBIRD,
+        ))
+        .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
             .unwrap_or_else(|_| {
                 let family_id = biomeos_core::family_discovery::get_family_id();
                 let mut nucleation = SocketNucleation::default();

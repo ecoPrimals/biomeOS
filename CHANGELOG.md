@@ -2,6 +2,22 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.76 (2026-03-28) — Deep Debt: Engine Refactor + Convention-Based Socket Env
+
+### Refactored
+- **socket_discovery/engine.rs** (916→423+497 lines): Extracted transport probes, filesystem discovery, manifest/registry sources, and transport verification into `engine_probes.rs`. Public API orchestration stays in `engine.rs`.
+- **nucleus.rs**: Evolved hardcoded per-primal `.env("BEARDOG_SOCKET", ...)` / `.env("TOADSTOOL_SOCKET", ...)` / `.env("SQUIRREL_SOCKET", ...)` to convention-based `socket_env_key()`. Every primal now gets its self-socket env key via the same derivation rule.
+- **trust.rs, http_client.rs, beardog.rs**: Replaced literal `"BEARDOG_SOCKET"` / `"SONGBIRD_SOCKET"` env var reads with `socket_env_key()` calls.
+
+### Removed
+- Unused workspace dependencies `rfd` (native file dialogs, C deps) and `image` (unused by any member crate).
+
+### Improved
+- **biomeos-test-utils**: Documented `#![allow(clippy::expect_used, clippy::unwrap_used)]` with reason — `#![expect]` not applicable since non-test surface has zero unwrap/expect calls.
+
+### Metrics
+- **7,202 tests**, 0 failures, 0 Clippy warnings
+
 ## v2.75 (2026-03-28) — Cross-Gate Federation Graphs + Inference Scheduling
 
 ### Cross-gate deployment graphs

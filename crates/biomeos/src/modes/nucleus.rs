@@ -21,6 +21,7 @@
 //!   Tower).
 
 use anyhow::{Context, Result};
+use biomeos_types::defaults::env_vars::socket_env_key;
 use biomeos_types::primal_names::{self, BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -184,6 +185,10 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
         .join(format!("{}-{}.sock", config.name, config.family_id));
     let mut cmd = std::process::Command::new(config.binary);
 
+    // Convention: every primal gets its own socket env key via socket_env_key()
+    let self_socket_key = socket_env_key(config.name);
+    cmd.env(&self_socket_key, socket_path.as_os_str());
+
     match config.name {
         SONGBIRD => {
             let security_socket =
@@ -193,7 +198,7 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
                 .arg(&socket_path)
                 .env("SONGBIRD_SECURITY_PROVIDER", &security_socket)
                 .env("BIOMEOS_SECURITY_SOCKET", &security_socket)
-                .env("BEARDOG_SOCKET", &security_socket);
+                .env(socket_env_key(BEARDOG), &security_socket);
         }
         NESTGATE => {
             // NestGate upstream bug: socket_only has inverted semantics.
@@ -210,20 +215,14 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
             cmd.arg("server")
                 .arg("--socket")
                 .arg(socket_path.as_os_str())
-                .env("TOADSTOOL_SOCKET", socket_path.as_os_str())
                 .env("TOADSTOOL_FAMILY_ID", config.family_id);
         }
         SQUIRREL => {
-            // Squirrel discovers Songbird's HTTP bridge via capability discovery.
-            // BIOMEOS_DISCOVERY_SOCKET points to Songbird; Squirrel calls
-            // discover_capabilities("http_bridge") to get the HTTP bridge socket.
-            // No HTTP_REQUEST_PROVIDER_SOCKET env var — capability-based discovery only.
             let discovery_socket =
                 socket_path_for_capability(config.socket_dir, config.family_id, "discovery");
             cmd.arg("server")
                 .arg("--socket")
                 .arg(socket_path.as_os_str())
-                .env("SQUIRREL_SOCKET", socket_path.as_os_str())
                 .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket);
             // AI_DEFAULT_MODEL: Squirrel reads this at startup for default model override.
             // Ref: wateringHole/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md Item 1.
