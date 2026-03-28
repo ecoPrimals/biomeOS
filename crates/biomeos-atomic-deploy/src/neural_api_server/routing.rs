@@ -59,6 +59,7 @@ enum Route {
     ProtocolStartMonitoring,
     ProtocolStopMonitoring,
     GraphProtocolMap,
+    BatchRouteRegister,
     CapabilityRegister,
     CapabilityDiscover,
     CapabilityList,
@@ -143,6 +144,8 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("protocol.start_monitoring", Route::ProtocolStartMonitoring),
     ("protocol.stop_monitoring", Route::ProtocolStopMonitoring),
     ("graph.protocol_map", Route::GraphProtocolMap),
+    // Route (batch capability registration)
+    ("route.register", Route::BatchRouteRegister),
     // Capability
     ("capability.register", Route::CapabilityRegister),
     ("capability.discover", Route::CapabilityDiscover),
@@ -319,6 +322,10 @@ impl NeuralApiServer {
                 dispatch(self.protocol_handler.stop_monitoring().await, &id)
             }
             Route::GraphProtocolMap => dispatch(self.protocol_handler.protocol_map().await, &id),
+            // Route (batch capability registration)
+            Route::BatchRouteRegister => {
+                dispatch(self.capability_handler.register_route(params).await, &id)
+            }
             // Capability
             Route::CapabilityRegister => {
                 dispatch(self.capability_handler.register(params).await, &id)

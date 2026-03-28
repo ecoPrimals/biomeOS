@@ -81,6 +81,13 @@ pub struct GraphNode {
     /// Semantic operation names this node depends on beyond structural `depends_on`.
     #[serde(default)]
     pub operation_dependencies: Vec<String>,
+
+    /// Target gate for cross-gate deployment.
+    /// Absent or `"local"` means execute on this biomeOS instance.
+    /// Any other value (e.g., `"gate2"`) is resolved via the graph's gate registry
+    /// to a remote biomeOS Neural API endpoint.
+    #[serde(default)]
+    pub gate: Option<String>,
 }
 
 fn default_true() -> bool {

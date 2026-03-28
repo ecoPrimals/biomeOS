@@ -497,6 +497,7 @@ mod tests {
             fallback: None,
             cost_estimate_ms: None,
             operation_dependencies: Vec::new(),
+            gate: None,
         }
     }
 

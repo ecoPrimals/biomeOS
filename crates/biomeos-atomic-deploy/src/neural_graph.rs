@@ -24,6 +24,10 @@ pub struct Graph {
     /// Populated from `[graph]`.coordination when loading DeploymentGraph format.
     #[serde(default)]
     pub coordination: Option<String>,
+    /// Environment variables defined in `[graph.env]`.
+    /// Used for gate endpoint definitions and variable substitution.
+    #[serde(default)]
+    pub env: HashMap<String, String>,
 }
 
 impl Graph {
@@ -160,6 +164,16 @@ impl Graph {
             .and_then(|v| v.as_str())
             .map(String::from);
 
+        let env: HashMap<String, String> = graph_table
+            .get("env")
+            .and_then(|v| v.as_table())
+            .map(|t| {
+                t.iter()
+                    .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+                    .collect()
+            })
+            .unwrap_or_default();
+
         Ok(Self {
             id,
             version,
@@ -167,6 +181,7 @@ impl Graph {
             nodes,
             config,
             coordination,
+            env,
         })
     }
 
@@ -313,6 +328,11 @@ impl Graph {
             })
             .unwrap_or_default();
 
+        let gate = table
+            .get("gate")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
         Ok(GraphNode {
             id,
             primal: None,
@@ -330,6 +350,7 @@ impl Graph {
             fallback,
             cost_estimate_ms,
             operation_dependencies,
+            gate,
         })
     }
 }
@@ -413,6 +434,12 @@ pub struct GraphNode {
     /// Declared operation dependencies for Pathway Learner cost analysis.
     #[serde(default)]
     pub operation_dependencies: Vec<String>,
+
+    /// Target gate for cross-gate deployment.
+    /// Absent or `"local"` means execute on this biomeOS instance.
+    /// Any other value is resolved via the graph's gate registry to a remote endpoint.
+    #[serde(default)]
+    pub gate: Option<String>,
 }
 
 impl GraphNode {

@@ -73,6 +73,7 @@ fn test_graph_executor_creation() {
         nodes: vec![],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let env = HashMap::new();
     let executor = GraphExecutor::new(graph, env);
@@ -99,6 +100,7 @@ fn test_topological_sort_simple() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
 
     let env = HashMap::new();
@@ -123,6 +125,7 @@ fn test_topological_sort_parallel() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
 
     let env = HashMap::new();
@@ -148,6 +151,7 @@ fn test_topological_sort_cycle_detection() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
 
     let env = HashMap::new();
@@ -166,6 +170,7 @@ fn test_topological_sort_empty_graph() {
         nodes: vec![],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
 
     let env = HashMap::new();
@@ -188,6 +193,7 @@ fn test_topological_sort_complex_dependencies() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
 
     let env = HashMap::new();
@@ -212,6 +218,7 @@ async fn test_execution_context_with_nucleation() {
         nodes: vec![],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let env = HashMap::new();
     let nucleation = Arc::new(tokio::sync::RwLock::new(SocketNucleation::default()));
@@ -239,6 +246,7 @@ fn test_topological_sort_single_node() {
         nodes: vec![create_test_node("solo", vec![])],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -261,6 +269,7 @@ fn test_topological_sort_deep_chain() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -287,6 +296,7 @@ fn test_topological_sort_wide_graph() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -316,6 +326,7 @@ fn test_topological_sort_diamond_with_tail() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -390,6 +401,7 @@ fn test_executor_with_custom_env() {
         nodes: vec![],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
 
     let executor = GraphExecutor::new(graph, env);
@@ -406,6 +418,7 @@ fn test_topological_sort_self_cycle() {
         nodes: vec![create_test_node("a", vec!["a".to_string()])],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -425,6 +438,7 @@ fn test_topological_sort_three_node_cycle() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -456,6 +470,7 @@ fn test_topological_sort_unreachable_node() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -503,6 +518,7 @@ fn test_topological_sort_depends_on_missing_node_id() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let err = executor.topological_sort().unwrap_err();

@@ -32,6 +32,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
+use crate::gate_registry::GateRegistry;
 use crate::neural_graph::{Graph, GraphNode};
 
 // Re-export from executor module (single source of truth)
@@ -45,16 +46,19 @@ pub struct GraphExecutor {
     context: ExecutionContext,
     pub(crate) max_parallelism: usize,
     metrics: Option<MetricsCollector>,
+    gate_registry: Arc<GateRegistry>,
 }
 
 impl GraphExecutor {
     /// Create new graph executor
     pub fn new(graph: Graph, env: HashMap<String, String>) -> Self {
+        let gate_registry = Arc::new(GateRegistry::from_graph_env(&env));
         Self {
             graph,
             context: ExecutionContext::new(env),
             max_parallelism: 3,
             metrics: None,
+            gate_registry,
         }
     }
 
@@ -64,11 +68,13 @@ impl GraphExecutor {
         env: HashMap<String, String>,
         nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>,
     ) -> Self {
+        let gate_registry = Arc::new(GateRegistry::from_graph_env(&env));
         Self {
             graph,
             context: ExecutionContext::new(env).with_nucleation(nucleation),
             max_parallelism: 3,
             metrics: None,
+            gate_registry,
         }
     }
 
@@ -79,6 +85,13 @@ impl GraphExecutor {
     #[must_use]
     pub fn with_metrics(mut self, metrics: MetricsCollector) -> Self {
         self.metrics = Some(metrics);
+        self
+    }
+
+    /// Set a custom gate registry (overrides env-derived registry).
+    #[must_use]
+    pub fn with_gate_registry(mut self, registry: GateRegistry) -> Self {
+        self.gate_registry = Arc::new(registry);
         self
     }
 
@@ -174,10 +187,11 @@ impl GraphExecutor {
 
             let context = self.context.clone();
             let permit = semaphore.clone().acquire_owned().await?;
+            let gate_reg = self.gate_registry.clone();
 
             let handle = tokio::spawn(async move {
                 let node_start = std::time::Instant::now();
-                let result = Self::execute_node(&node, &context).await;
+                let result = Self::execute_node(&node, &context, &gate_reg).await;
                 let duration_ms = node_start.elapsed().as_millis() as u64;
                 drop(permit);
                 (node.id.clone(), result, duration_ms)
@@ -262,11 +276,20 @@ impl GraphExecutor {
     /// Execute a single node
     ///
     /// Delegates to shared handlers in `executor::node_handlers` for consistency
-    /// and to avoid code duplication.
+    /// and to avoid code duplication. If the node has a remote `gate`, forwards
+    /// execution to the remote biomeOS Neural API via `AtomicClient`.
     async fn execute_node(
         node: &GraphNode,
         context: &ExecutionContext,
+        gate_registry: &GateRegistry,
     ) -> Result<serde_json::Value> {
+        // Check for cross-gate forwarding
+        if let Some(ref gate) = node.gate {
+            if let Some(remote_endpoint) = gate_registry.resolve(gate) {
+                return Self::forward_to_remote_gate(node, remote_endpoint.clone(), gate).await;
+            }
+        }
+
         use crate::executor::node_handlers;
 
         // Determine node type (new format or legacy)
@@ -340,6 +363,65 @@ impl GraphExecutor {
         };
 
         result.context(format!("Node execution failed: {}", node.id))
+    }
+
+    /// Forward a node's execution to a remote biomeOS Neural API via cross-gate routing.
+    ///
+    /// Wraps the node as a single-node `graph.execute` request and sends it to the
+    /// remote biomeOS instance. The remote biomeOS handles the actual primal start,
+    /// capability call, etc. — this gate only orchestrates.
+    async fn forward_to_remote_gate(
+        node: &GraphNode,
+        endpoint: biomeos_core::TransportEndpoint,
+        gate: &str,
+    ) -> Result<serde_json::Value> {
+        info!(
+            "🌉 Forwarding node {} to gate '{}' @ {}",
+            node.id,
+            gate,
+            endpoint.display_string()
+        );
+
+        let client = biomeos_core::AtomicClient::from_endpoint(endpoint);
+
+        let operation_name = node
+            .operation
+            .as_ref()
+            .map(|op| op.name.as_str())
+            .or(node.node_type.as_deref())
+            .unwrap_or("capability_call");
+
+        let operation_params: serde_json::Value = node
+            .operation
+            .as_ref()
+            .map(|op| serde_json::to_value(&op.params).unwrap_or_default())
+            .unwrap_or_default();
+
+        let request_params = serde_json::json!({
+            "graph_id": format!("cross_gate_{}_{}", gate, node.id),
+            "nodes": [{
+                "id": node.id,
+                "operation": {
+                    "name": operation_name,
+                    "params": operation_params,
+                },
+                "capabilities": node.capabilities,
+                "depends_on": [],
+            }]
+        });
+
+        let result = client
+            .call("graph.execute", request_params)
+            .await
+            .with_context(|| {
+                format!(
+                    "Cross-gate execution failed for node '{}' on gate '{}'",
+                    node.id, gate
+                )
+            })?;
+
+        info!("   ✓ Node {} completed on gate '{}'", node.id, gate);
+        Ok(result)
     }
 
     /// Split capability string into (domain, operation) for capability.call semantics.

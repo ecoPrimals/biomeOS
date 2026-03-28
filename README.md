@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
-| Tests | 7,167 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
+| Tests | 7,186 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
 | Unsafe Code | 0 in production |
 | C Dependencies | 0 (zstd-sys eliminated, deny.toml enforced bans) |
 | Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
@@ -244,7 +244,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,167 tests)
+### Test (7,186 tests)
 
 ```bash
 cargo test --workspace
@@ -340,7 +340,7 @@ scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC
 
 **Status**: Production Ready (v2.71)
 **Updated**: March 28, 2026
-**Tests**: 7,167 passing, 90%+ coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production
+**Tests**: 7,186 passing, 90%+ coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | 5-tier capability discovery | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
 
 ---

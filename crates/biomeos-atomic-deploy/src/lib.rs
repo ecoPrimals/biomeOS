@@ -118,6 +118,7 @@ pub mod beardog_jwt_client; // NEW: BearDog JWT integration for orchestrator
 pub mod bootstrap; // NEW: Bootstrap sequence execution and mode transitions
 pub mod deployment_graph;
 pub mod executor; // Shared executor module (types, context, handlers, spawner)
+pub mod gate_registry; // Cross-gate deployment: gate name → remote biomeOS endpoint
 pub mod health_check;
 pub mod orchestrator;
 pub mod primal_communication;

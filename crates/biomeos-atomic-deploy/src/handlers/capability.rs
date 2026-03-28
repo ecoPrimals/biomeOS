@@ -10,6 +10,7 @@
 //! - `capability.list` - List all known capabilities
 //! - `capability.providers` - Get providers for a capability
 //! - `capability.call` - Semantic capability invocation
+//! - `route.register` - Batch-register all capabilities for a remote primal
 //!
 //! # Architecture
 //!
@@ -225,6 +226,79 @@ impl CapabilityHandler {
             "capability": capability,
             "primal": primal_name,
             "socket": socket_path
+        }))
+    }
+
+    /// Batch-register all capabilities for a remote primal in one call.
+    ///
+    /// JSON-RPC method: `route.register`
+    ///
+    /// # Parameters
+    /// - `primal`: Primal name (e.g., "beardog")
+    /// - `transport`: Transport endpoint string (e.g., "tcp://192.168.1.100:9001")
+    /// - `capabilities`: Array of capability names to register
+    /// - `gate`: Gate label (optional, stored as source metadata)
+    /// - `source`: Registration source (optional, defaults to "route.register")
+    pub async fn register_route(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+
+        let primal_name = params["primal"]
+            .as_str()
+            .context("Missing 'primal' field")?;
+        let transport_str = params["transport"]
+            .as_str()
+            .context("Missing 'transport' field")?;
+        let capabilities = params["capabilities"]
+            .as_array()
+            .context("Missing or invalid 'capabilities' array")?;
+
+        if capabilities.is_empty() {
+            anyhow::bail!("'capabilities' array must not be empty");
+        }
+
+        let gate = params.get("gate").and_then(|v| v.as_str());
+        let source = params
+            .get("source")
+            .and_then(|v| v.as_str())
+            .unwrap_or("route.register");
+
+        let endpoint =
+            biomeos_core::TransportEndpoint::parse(transport_str).with_context(|| {
+                format!("Failed to parse transport endpoint: {transport_str}")
+            })?;
+
+        let source_tag = match gate {
+            Some(g) => format!("{source}@{g}"),
+            None => source.to_owned(),
+        };
+
+        info!(
+            "📝 route.register: {} capabilities for {} @ {}{}",
+            capabilities.len(),
+            primal_name,
+            transport_str,
+            gate.map(|g| format!(" (gate: {g})")).unwrap_or_default()
+        );
+
+        let mut registered = Vec::with_capacity(capabilities.len());
+        for cap_value in capabilities {
+            let cap = cap_value.as_str().with_context(|| {
+                format!("Each capability must be a string, got: {cap_value}")
+            })?;
+
+            self.router
+                .register_capability(cap, primal_name, endpoint.clone(), &source_tag)
+                .await?;
+
+            registered.push(cap);
+        }
+
+        Ok(json!({
+            "registered": registered.len(),
+            "primal": primal_name,
+            "gate": gate,
+            "endpoint": transport_str,
+            "capabilities": registered
         }))
     }
 

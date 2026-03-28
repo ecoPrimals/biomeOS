@@ -29,6 +29,7 @@ async fn test_execute_verification_socket_dir_missing() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let env = HashMap::from([("FAMILY_ID".to_string(), "test".to_string())]);
 
@@ -59,6 +60,7 @@ async fn test_execute_rpc_call_missing_target() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -93,6 +95,7 @@ async fn test_execute_rpc_call_missing_method() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -122,6 +125,7 @@ async fn test_execute_health_check_atomic_alias() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -150,6 +154,7 @@ async fn test_execute_health_check_plain_alias() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -176,6 +181,7 @@ async fn test_execute_report_deployment_success() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -202,6 +208,7 @@ async fn test_execute_register_capabilities_node() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -229,6 +236,7 @@ async fn test_execute_node_type_legacy_primal_launch_string() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -263,6 +271,7 @@ async fn test_execute_capability_call_missing_capability_key() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -292,6 +301,7 @@ async fn test_execute_lineage_verify_siblings() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -315,6 +325,7 @@ async fn test_execute_start_alias_node_type() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -344,6 +355,7 @@ async fn test_execute_health_check_all_missing_socket_dir() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let env = HashMap::from([("FAMILY_ID".to_string(), "test".to_string())]);
 
@@ -382,6 +394,7 @@ async fn test_execute_two_phase_second_fails_without_rollback() {
             ..GraphConfig::default()
         },
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -414,6 +427,7 @@ async fn test_execute_crypto_derive_child_seed_deterministic_fallback() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test-family-xyz".to_string());
@@ -449,6 +463,7 @@ async fn test_execute_verification_check_sockets_true_no_deps() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -479,6 +494,7 @@ async fn test_execute_health_dot_check_requires_primal_name() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -506,6 +522,7 @@ async fn test_execute_node_type_crypto_derive_without_operation() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "fam-nt".to_string());
@@ -540,6 +557,7 @@ async fn test_execute_capability_call_with_timeout_ms_config() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -570,6 +588,7 @@ fn test_topological_sort_includes_all_node_ids() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let ex = GraphExecutor::new(graph, HashMap::new());
     let phases = ex.topological_sort().expect("sort");
@@ -619,6 +638,7 @@ fn test_topological_sort_empty_graph() {
         nodes: vec![],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let ex = GraphExecutor::new(graph, HashMap::new());
     let phases = ex.topological_sort().expect("sort");
@@ -637,6 +657,7 @@ fn test_topological_sort_cycle_fails() {
         ],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let ex = GraphExecutor::new(graph, HashMap::new());
     let err = ex.topological_sort().expect_err("cycle");
@@ -652,6 +673,7 @@ async fn test_execute_empty_graph_succeeds() {
         nodes: vec![],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -683,6 +705,7 @@ async fn test_execute_optional_rpc_missing_target_skipped() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -723,6 +746,7 @@ async fn test_execute_with_metrics_collector() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -752,6 +776,7 @@ async fn test_execute_health_check_all_nonexistent_socket_dir() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -783,6 +808,7 @@ async fn test_execute_verification_check_sockets_false_without_socket_dir() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     // Intentionally no SOCKET_DIR — branch when check_sockets is false
     let mut env = HashMap::new();
@@ -809,6 +835,7 @@ async fn test_execute_unknown_operation_yields_skipped_success() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -843,6 +870,7 @@ async fn test_execute_metrics_with_failing_phase_still_produces_report() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());

@@ -278,6 +278,11 @@ impl GraphHandler {
                 });
             let metrics = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path).await;
 
+            // Merge graph-defined env (e.g. gate endpoints) into executor env
+            for (k, v) in &graph.env {
+                env.entry(k.clone()).or_insert_with(|| v.clone());
+            }
+
             let mut executor = GraphExecutor::new(graph.clone(), env);
             if let Ok(m) = metrics {
                 executor = executor.with_metrics(m);

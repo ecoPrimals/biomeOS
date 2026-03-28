@@ -555,3 +555,156 @@ primal = "toadstool"
     assert_eq!(node.cost_estimate_ms, Some(500));
     assert_eq!(node.operation_dependencies, vec!["model.load"]);
 }
+
+// ─── Cross-gate graph tests ──────────────────────────────────────────
+
+#[test]
+fn test_cross_gate_graph_parses_gate_field() {
+    let toml = r#"
+[graph]
+id = "cross_gate_tower"
+version = "1.0.0"
+description = "Deploy across Tower + gate2"
+coordination = "Sequential"
+
+[graph.env]
+gate2 = "tcp://192.168.1.132:9001"
+
+[[graph.nodes]]
+id = "beardog"
+name = "BearDog local"
+capability = "crypto"
+gate = "local"
+
+[graph.nodes.config]
+primal = "beardog"
+
+[[graph.nodes]]
+id = "nestgate_remote"
+name = "NestGate on gate2"
+capability = "http"
+gate = "gate2"
+
+[graph.nodes.config]
+primal = "nestgate"
+"#;
+    let graph = Graph::from_toml_str(toml).unwrap();
+
+    assert_eq!(graph.nodes.len(), 2);
+    assert_eq!(graph.nodes[0].gate.as_deref(), Some("local"));
+    assert_eq!(graph.nodes[1].gate.as_deref(), Some("gate2"));
+}
+
+#[test]
+fn test_cross_gate_graph_parses_env_section() {
+    let toml = r#"
+[graph]
+id = "env_test"
+version = "1.0.0"
+description = "Tests [graph.env] parsing"
+
+[graph.env]
+gate2 = "tcp://192.168.1.132:9001"
+pixel = "@biomeos-pixel"
+RUST_LOG = "info"
+
+[[graph.nodes]]
+id = "dummy"
+name = "Dummy"
+capability = "test"
+"#;
+    let graph = Graph::from_toml_str(toml).unwrap();
+
+    assert_eq!(graph.env.len(), 3);
+    assert_eq!(graph.env.get("gate2").unwrap(), "tcp://192.168.1.132:9001");
+    assert_eq!(graph.env.get("pixel").unwrap(), "@biomeos-pixel");
+    assert_eq!(graph.env.get("RUST_LOG").unwrap(), "info");
+}
+
+#[test]
+fn test_cross_gate_graph_no_gate_defaults_to_none() {
+    let toml = r#"
+[graph]
+id = "no_gate"
+version = "1.0.0"
+description = "Node without gate field"
+
+[[graph.nodes]]
+id = "local_only"
+name = "Local"
+capability = "test"
+"#;
+    let graph = Graph::from_toml_str(toml).unwrap();
+    assert!(graph.nodes[0].gate.is_none());
+}
+
+#[test]
+fn test_gate_registry_from_graph_env() {
+    use crate::gate_registry::GateRegistry;
+
+    let toml = r#"
+[graph]
+id = "gate_reg_test"
+version = "1.0.0"
+description = "Gate registry from graph env"
+
+[graph.env]
+gate2 = "tcp://192.168.1.132:9001"
+pixel = "@biomeos-pixel"
+RUST_LOG = "info"
+
+[[graph.nodes]]
+id = "dummy"
+name = "Dummy"
+capability = "test"
+"#;
+    let graph = Graph::from_toml_str(toml).unwrap();
+    let registry = GateRegistry::from_graph_env(&graph.env);
+
+    assert_eq!(registry.len(), 2);
+    assert!(registry.is_remote("gate2"));
+    assert!(registry.is_remote("pixel"));
+    assert!(!registry.is_remote("RUST_LOG"));
+}
+
+#[test]
+fn test_cross_gate_graph_neural_format_with_gate() {
+    let toml = r#"
+[graph]
+id = "neural_gate_test"
+version = "1.0.0"
+description = "Neural-format graph with gate"
+
+[[nodes]]
+id = "remote_beardog"
+gate = "gate2"
+capabilities = ["crypto", "security"]
+
+[nodes.operation]
+name = "start"
+"#;
+    let graph = Graph::from_toml_str(toml).unwrap();
+    assert_eq!(graph.nodes[0].gate.as_deref(), Some("gate2"));
+}
+
+#[test]
+fn test_cross_gate_graph_empty_env_produces_empty_registry() {
+    use crate::gate_registry::GateRegistry;
+
+    let graph = Graph::from_toml_str(
+        r#"
+[graph]
+id = "no_env"
+version = "1.0.0"
+description = "No env section"
+
+[[graph.nodes]]
+id = "n"
+name = "N"
+capability = "test"
+"#,
+    )
+    .unwrap();
+    let registry = GateRegistry::from_graph_env(&graph.env);
+    assert!(registry.is_empty());
+}

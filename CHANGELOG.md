@@ -2,6 +2,38 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.73 (2026-03-28) — Cross-Gate Deployment Evolution
+
+### `route.register` Batch API (P2)
+- New JSON-RPC method `route.register` for batch-registering all capabilities for a remote primal in one call
+- Accepts `primal`, `transport`, `capabilities[]`, optional `gate` metadata and `source`
+- Parses transport once via `TransportEndpoint::parse()`, loops registration — eliminates N individual `capability.register` calls
+- Gate label stored in source tag (e.g., `route.register@gate2`) for provenance
+
+### Cross-Gate Graph Schema
+- Added `gate: Option<String>` to both `biomeos_graph::GraphNode` (deployment schema) and `neural_graph::GraphNode` (execution schema)
+- `gate = "local"` or absent = execute locally (fully backward compatible)
+- `gate = "gate2"` = forward to remote biomeOS Neural API
+- `[graph.env]` section now parsed into `Graph.env: HashMap<String, String>` for gate endpoint definitions
+
+### GateRegistry
+- New `gate_registry` module: maps gate names to `TransportEndpoint` for remote biomeOS instances
+- `GateRegistry::from_graph_env()` auto-discovers gate endpoints from `[graph.env]` entries that parse as transport strings
+- `resolve()` returns `None` for `"local"` — clean separation of local vs remote execution
+
+### Cross-Gate Executor Forwarding
+- `GraphExecutor` gains `gate_registry: Arc<GateRegistry>` field, built from graph env at construction
+- `execute_node` checks `node.gate` before local dispatch — remote nodes forwarded via `AtomicClient::from_endpoint()` as `graph.execute` JSON-RPC calls to the remote biomeOS
+- Graph handler merges `[graph.env]` into executor env before construction
+
+### Metrics
+- Tests: 7,167 → **7,186** (+19 new: 6 route.register, 7 gate_registry, 6 cross-gate graph parsing)
+- Neural API methods: +1 (`route.register`)
+- New module: `gate_registry.rs`
+- 0 clippy warnings, 0 failures
+
+---
+
 ## v2.72 (2026-03-28) — ARM64 Cross-Compilation
 
 ### ARM64 genomeBin

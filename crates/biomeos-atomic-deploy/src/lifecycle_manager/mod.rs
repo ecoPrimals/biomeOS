@@ -418,6 +418,7 @@ mod tests {
             nodes: vec![test_graph_node("beardog", vec![])],
             config: GraphConfig::default(),
             coordination: None,
+            env: HashMap::new(),
         };
 
         manager.store_deployment_graph("tower-graph", graph).await;

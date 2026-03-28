@@ -30,6 +30,7 @@ async fn test_execute_node_unknown_type() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -60,6 +61,7 @@ async fn test_execute_node_explicit_unknown_type() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -96,6 +98,7 @@ async fn test_execute_filesystem_check_exists() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -132,6 +135,7 @@ async fn test_execute_log_warn_node() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -165,6 +169,7 @@ async fn test_execute_log_error_node() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -195,6 +200,7 @@ async fn test_execute_node_failure_reports_error() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -232,6 +238,7 @@ async fn test_execute_rollback_on_failure() {
         nodes: vec![node],
         config,
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -316,6 +323,7 @@ async fn test_execute_verification_check_sockets_false() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -345,6 +353,7 @@ async fn test_execute_health_check_all_no_socket_dir() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -378,6 +387,7 @@ async fn test_execute_health_check_all_with_temp_dir() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -419,6 +429,7 @@ async fn test_execute_rpc_call_connection_refused() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -469,6 +480,7 @@ async fn test_execute_log_info_node() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -508,6 +520,7 @@ async fn test_execute_optional_node_failure_skipped() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -550,6 +563,7 @@ async fn test_execute_capability_call_no_provider() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -592,6 +606,7 @@ async fn test_executor_with_metrics() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -642,6 +657,7 @@ async fn test_execute_rpc_call_params_env_substitution() {
         nodes: vec![node],
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -687,6 +703,7 @@ async fn test_execute_parallel_nodes_with_max_parallelism_one() {
         nodes,
         config: GraphConfig::default(),
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -726,6 +743,7 @@ async fn test_execute_failure_without_rollback_flag() {
         nodes: vec![node],
         config,
         coordination: None,
+        env: HashMap::new(),
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 28, 2026 (v2.72: ARM64 cross-compilation + multi-transport IPC evolution + deep debt resolution + zero-copy optimizations + BearDog client dead code removal)
-**Version**: 2.72
+**Updated**: March 28, 2026 (v2.73: cross-gate deployment evolution + route.register batch API + ARM64 cross-compilation)
+**Version**: 2.73
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,167 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
+| **Tests Passing** | 7,186 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
 | **Test Coverage** | 90%+ (llvm-cov workspace-wide verified) — all three metrics above 90% target |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -927,7 +927,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,167 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
+# Test (7,186 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -949,8 +949,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.72 — ARM64 cross-compilation + multi-transport IPC + deep debt resolution + zero-copy + BearDog cleanup)
-**Tests**: 7,167 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
+**Status**: Production Ready (v2.73 — cross-gate deployment evolution + route.register batch API + ARM64 cross-compilation)
+**Tests**: 7,186 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation
 **Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, graph coordination

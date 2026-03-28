@@ -299,6 +299,7 @@ mod tests {
             nodes: vec![],
             config: crate::neural_graph::GraphConfig::default(),
             coordination: None,
+            env: HashMap::new(),
         };
         server
             .load_translations_from_graph(&graph)
@@ -331,6 +332,7 @@ mod tests {
             nodes: vec![node],
             config: crate::neural_graph::GraphConfig::default(),
             coordination: None,
+            env: HashMap::new(),
         };
         server
             .load_translations_from_graph(&graph)
