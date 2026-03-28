@@ -9,6 +9,7 @@
 //! discovery, semantic translation, and HTTP proxying.
 
 use biomeos_atomic_deploy::neural_router::{NeuralRouter, RoutingMetrics};
+use biomeos_core::TransportEndpoint;
 use serde_json::json;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -54,7 +55,7 @@ async fn test_register_capability() {
 
     // Test registering a capability
     router
-        .register_capability(
+        .register_capability_unix(
             "secure_http",
             "songbird",
             PathBuf::from("/run/user/1000/songbird-test.sock"),
@@ -74,7 +75,7 @@ async fn test_get_capability_providers() {
 
     // Register a capability
     router
-        .register_capability(
+        .register_capability_unix(
             "crypto",
             "beardog",
             PathBuf::from("/run/user/1000/beardog-test.sock"),
@@ -174,13 +175,13 @@ async fn test_forward_request() {
     let router = create_test_router();
 
     // Test forward_request with test socket
-    let socket_path = PathBuf::from("/tmp/test-nonexistent.sock");
+    let ep = TransportEndpoint::UnixSocket {
+        path: PathBuf::from("/tmp/test-nonexistent.sock"),
+    };
     let params = json!({"test": "data"});
 
     // Should handle request (will fail on socket connection)
-    let result = router
-        .forward_request(&socket_path, "test.method", &params)
-        .await;
+    let result = router.forward_request(&ep, "test.method", &params).await;
 
     // Should fail gracefully (socket doesn't exist)
     assert!(result.is_err());
@@ -192,7 +193,7 @@ async fn test_invalidate_cache() {
 
     // Register a capability (populates cache)
     router
-        .register_capability(
+        .register_capability_unix(
             "test_cap",
             "test_primal",
             PathBuf::from("/tmp/test.sock"),
@@ -215,7 +216,7 @@ async fn test_multiple_providers_same_capability() {
 
     // Register multiple providers for same capability
     router
-        .register_capability(
+        .register_capability_unix(
             "storage",
             "toadstool1",
             PathBuf::from("/run/user/1000/toadstool1.sock"),
@@ -225,7 +226,7 @@ async fn test_multiple_providers_same_capability() {
         .unwrap();
 
     router
-        .register_capability(
+        .register_capability_unix(
             "storage",
             "toadstool2",
             PathBuf::from("/run/user/1000/toadstool2.sock"),
@@ -283,7 +284,7 @@ async fn test_capability_registration_overwrites() {
 
     // Register capability
     router
-        .register_capability(
+        .register_capability_unix(
             "test_cap",
             "primal1",
             PathBuf::from("/tmp/primal1.sock"),
@@ -294,7 +295,7 @@ async fn test_capability_registration_overwrites() {
 
     // Register again with different socket
     router
-        .register_capability(
+        .register_capability_unix(
             "test_cap",
             "primal1",
             PathBuf::from("/tmp/primal1-new.sock"),

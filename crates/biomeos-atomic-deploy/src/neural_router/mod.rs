@@ -24,6 +24,7 @@ use tokio::time::Duration;
 use tracing::{debug, info};
 
 use crate::living_graph::LivingGraph;
+use biomeos_core::TransportEndpoint;
 use biomeos_types::tarpc_types::ProtocolPreference;
 
 pub use types::{
@@ -80,22 +81,28 @@ impl NeuralRouter {
         self
     }
 
-    /// Register a capability
+    /// Register a capability with a transport endpoint
     pub async fn register_capability(
         &self,
         capability: impl Into<String>,
         primal_name: impl Into<String>,
-        socket_path: impl Into<PathBuf>,
+        endpoint: TransportEndpoint,
         source: impl Into<String>,
     ) -> anyhow::Result<()> {
         let capability = capability.into();
         let primal_name = primal_name.into();
-        let socket_path = socket_path.into();
+
+        info!(
+            "✅ Registered capability: {} → {} @ {}",
+            capability,
+            primal_name,
+            endpoint.display_string()
+        );
 
         let registration = RegisteredCapability {
             capability: Arc::from(capability.as_str()),
             primal_name: Arc::from(primal_name.as_str()),
-            socket_path,
+            endpoint,
             registered_at: chrono::Utc::now(),
             source: Arc::from(source.into().as_str()),
         };
@@ -106,9 +113,22 @@ impl NeuralRouter {
             .or_default()
             .push(registration);
 
-        info!("✅ Registered capability: {} → {}", capability, primal_name);
-
         Ok(())
+    }
+
+    /// Convenience: register a capability bound to a Unix socket path
+    pub async fn register_capability_unix(
+        &self,
+        capability: impl Into<String>,
+        primal_name: impl Into<String>,
+        socket_path: impl Into<PathBuf>,
+        source: impl Into<String>,
+    ) -> anyhow::Result<()> {
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: socket_path.into(),
+        };
+        self.register_capability(capability, primal_name, endpoint, source)
+            .await
     }
 
     /// List all registered capabilities

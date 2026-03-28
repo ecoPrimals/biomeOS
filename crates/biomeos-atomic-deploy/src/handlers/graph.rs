@@ -354,7 +354,7 @@ impl GraphHandler {
             // Register each capability
             for capability in &node.capabilities {
                 if let Err(e) = router
-                    .register_capability(
+                    .register_capability_unix(
                         capability,
                         &primal_name,
                         PathBuf::from(&socket_path),
@@ -618,10 +618,13 @@ impl GraphHandler {
                     // Try translation registry first
                     let registry = translation_registry.read().await;
                     if let Some(translation) = registry.get_translation(&capability) {
-                        let socket = PathBuf::from(&translation.socket);
+                        let ep = biomeos_core::TransportEndpoint::parse(&translation.socket)
+                            .unwrap_or_else(|| biomeos_core::TransportEndpoint::UnixSocket {
+                                path: PathBuf::from(&translation.socket),
+                            });
                         let method = translation.actual_method.clone();
                         drop(registry);
-                        match router.forward_request(&socket, &method, &call_params).await {
+                        match router.forward_request(&ep, &method, &call_params).await {
                             Ok(result) => StreamItem::Data(result),
                             Err(e) => {
                                 debug!("Pipeline node '{}' capability call failed: {}", node_id, e);
@@ -638,7 +641,7 @@ impl GraphHandler {
                             Ok(discovered) => {
                                 match router
                                     .forward_request(
-                                        &discovered.primary_socket,
+                                        &discovered.primary_endpoint,
                                         &capability,
                                         &call_params,
                                     )

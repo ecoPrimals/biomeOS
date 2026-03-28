@@ -232,7 +232,7 @@ impl NeuralApiServer {
                                 for cap in caps {
                                     if let Err(e) = self
                                         .router
-                                        .register_capability(
+                                        .register_capability_unix(
                                             cap,
                                             provider,
                                             &socket,

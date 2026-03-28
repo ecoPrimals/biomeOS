@@ -4,12 +4,12 @@
 //! Capability-based primal discovery
 
 use anyhow::{Context, Result, anyhow};
-use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 use crate::capability_domains::capability_to_provider_fallback;
 use crate::nucleation::SocketNucleation;
+use biomeos_core::TransportEndpoint;
 use biomeos_core::atomic_client::AtomicClient;
 
 use super::NeuralRouter;
@@ -59,11 +59,10 @@ impl NeuralRouter {
 
         let mut primals = Vec::new();
         for provider in &matching_providers {
-            let socket_str = provider.socket_path.to_string_lossy();
-            let healthy = Self::check_primal_health(&socket_str).await;
+            let healthy = Self::check_endpoint_health(&provider.endpoint).await;
             primals.push(DiscoveredPrimal {
                 name: provider.primal_name.clone(),
-                socket_path: provider.socket_path.clone(),
+                endpoint: provider.endpoint.clone(),
                 capabilities: vec![category.to_string()],
                 healthy,
                 last_check: chrono::Utc::now(),
@@ -74,7 +73,7 @@ impl NeuralRouter {
             capability: Arc::from(capability),
             primals,
             atomic_type: None,
-            primary_socket: primary.socket_path.clone(),
+            primary_endpoint: primary.endpoint.clone(),
         })
     }
 
@@ -92,11 +91,10 @@ impl NeuralRouter {
 
                 let mut primals = Vec::new();
                 for provider in &providers {
-                    let socket_str = provider.socket_path.to_string_lossy();
-                    let healthy = Self::check_primal_health(&socket_str).await;
+                    let healthy = Self::check_endpoint_health(&provider.endpoint).await;
                     primals.push(DiscoveredPrimal {
                         name: provider.primal_name.clone(),
-                        socket_path: provider.socket_path.clone(),
+                        endpoint: provider.endpoint.clone(),
                         capabilities: vec![capability.to_string()],
                         healthy,
                         last_check: chrono::Utc::now(),
@@ -107,7 +105,7 @@ impl NeuralRouter {
                     capability: Arc::from(capability),
                     primals,
                     atomic_type: None,
-                    primary_socket: primary.socket_path.clone(),
+                    primary_endpoint: primary.endpoint.clone(),
                 });
             }
         }
@@ -164,11 +162,12 @@ impl NeuralRouter {
             security_primal.name, discovery_primal.name
         );
 
+        let primary = discovery_primal.endpoint.clone();
         Ok(DiscoveredAtomic {
             capability: Arc::from("secure_http"),
-            primals: vec![security_primal.clone(), discovery_primal.clone()],
+            primals: vec![security_primal, discovery_primal],
             atomic_type: Some(AtomicType::Tower),
-            primary_socket: discovery_primal.socket_path,
+            primary_endpoint: primary,
         })
     }
 
@@ -183,19 +182,20 @@ impl NeuralRouter {
             .await
             .context("Nest Atomic requires a primal with 'storage' capability")?;
 
+        let primary = storage_primal.endpoint.clone();
         let mut primals = tower.primals;
-        primals.push(storage_primal.clone());
+        primals.push(storage_primal);
 
         info!(
             "   ✅ Nest Atomic discovered: Tower + {} (storage)",
-            storage_primal.name
+            primals.last().map_or("?", |p| p.name.as_ref())
         );
 
         Ok(DiscoveredAtomic {
             capability: Arc::from("secure_storage"),
             primals,
             atomic_type: Some(AtomicType::Nest),
-            primary_socket: storage_primal.socket_path,
+            primary_endpoint: primary,
         })
     }
 
@@ -210,19 +210,20 @@ impl NeuralRouter {
             .await
             .context("Node Atomic requires a primal with 'compute' capability")?;
 
+        let primary = compute_primal.endpoint.clone();
         let mut primals = tower.primals;
-        primals.push(compute_primal.clone());
+        primals.push(compute_primal);
 
         info!(
             "   ✅ Node Atomic discovered: Tower + {} (compute)",
-            compute_primal.name
+            primals.last().map_or("?", |p| p.name.as_ref())
         );
 
         Ok(DiscoveredAtomic {
             capability: Arc::from("secure_compute"),
             primals,
             atomic_type: Some(AtomicType::Node),
-            primary_socket: compute_primal.socket_path,
+            primary_endpoint: primary,
         })
     }
 
@@ -237,11 +238,11 @@ impl NeuralRouter {
                     provider.primal_name, capability
                 );
 
-                let healthy = self.quick_health_check(&provider.socket_path).await;
+                let healthy = self.quick_health_check(&provider.endpoint).await;
 
                 return Ok(DiscoveredPrimal {
                     name: provider.primal_name.clone(),
-                    socket_path: provider.socket_path.clone(),
+                    endpoint: provider.endpoint.clone(),
                     capabilities: vec![capability.to_string()],
                     healthy,
                     last_check: chrono::Utc::now(),
@@ -288,11 +289,14 @@ impl NeuralRouter {
             ));
         }
 
-        let healthy = self.quick_health_check(&socket_path).await;
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: socket_path.clone(),
+        };
+        let healthy = self.quick_health_check(&endpoint).await;
 
         let primal = DiscoveredPrimal {
             name: Arc::from(primal_name),
-            socket_path,
+            endpoint: endpoint.clone(),
             capabilities: vec![],
             healthy,
             last_check: chrono::Utc::now(),
@@ -306,18 +310,22 @@ impl NeuralRouter {
         debug!(
             "   ✅ Discovered: {} @ {} (healthy: {})",
             primal_name,
-            primal.socket_path.display(),
+            endpoint.display_string(),
             healthy
         );
 
         Ok(primal)
     }
 
-    /// Quick health check via AtomicClient
-    async fn quick_health_check(&self, socket_path: &PathBuf) -> bool {
+    /// Transport-aware health check via `AtomicClient`
+    ///
+    /// Works for all transport tiers: Unix, abstract, TCP, HTTP.
+    /// No filesystem assumption — abstract sockets and TCP endpoints are probed
+    /// via an actual JSON-RPC `health.check` call.
+    async fn quick_health_check(&self, endpoint: &TransportEndpoint) -> bool {
         let health_timeout = std::time::Duration::from_millis(500);
 
-        let client = AtomicClient::unix(socket_path).with_timeout(health_timeout);
+        let client = AtomicClient::from_endpoint(endpoint.clone()).with_timeout(health_timeout);
 
         match client.call("health.check", serde_json::json!({})).await {
             Ok(response) => response
@@ -325,53 +333,37 @@ impl NeuralRouter {
                 .and_then(|h| h.as_bool())
                 .unwrap_or(true),
             Err(_) => {
-                debug!("   ⚠️ Health check failed for {}", socket_path.display());
+                debug!(
+                    "   ⚠️ Health check failed for {}",
+                    endpoint.display_string()
+                );
                 false
             }
         }
     }
 
-    /// Check if a primal is healthy via JSON-RPC health.check call
-    async fn check_primal_health(socket_path: &str) -> bool {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
+    /// Transport-aware health check (static, for use without `&self`)
+    ///
+    /// Uses `AtomicClient::from_endpoint` which handles all transports
+    /// correctly. No `Path::exists()` guard — abstract sockets and TCP
+    /// endpoints are probed via connection attempt + JSON-RPC call.
+    async fn check_endpoint_health(endpoint: &TransportEndpoint) -> bool {
         use tokio::time::{Duration, timeout};
 
-        if !std::path::Path::new(socket_path).exists() {
-            return false;
-        }
+        let probe = async {
+            let client =
+                AtomicClient::from_endpoint(endpoint.clone()).with_timeout(Duration::from_secs(2));
 
-        let health_check = async {
-            let stream = UnixStream::connect(socket_path).await?;
-            let (read_half, mut write_half) = stream.into_split();
-
-            let request = serde_json::json!({
-                "jsonrpc": "2.0",
-                "method": "health.check",
-                "params": {},
-                "id": 1
-            });
-
-            write_half.write_all(request.to_string().as_bytes()).await?;
-            write_half.write_all(b"\n").await?;
-            write_half.flush().await?;
-
-            let mut reader = BufReader::new(read_half);
-            let mut response_line = String::new();
-            reader.read_line(&mut response_line).await?;
-
-            let response: serde_json::Value = serde_json::from_str(&response_line)?;
-
+            let response = client.call("health.check", serde_json::json!({})).await?;
             Ok::<bool, anyhow::Error>(
                 response
-                    .get("result")
-                    .and_then(|r| r.get("healthy"))
+                    .get("healthy")
                     .and_then(|h| h.as_bool())
                     .unwrap_or(false),
             )
         };
 
-        match timeout(Duration::from_secs(2), health_check).await {
+        match timeout(Duration::from_secs(3), probe).await {
             Ok(Ok(healthy)) => healthy,
             _ => false,
         }
@@ -391,6 +383,12 @@ mod tests {
     use super::super::AtomicType;
     use super::*;
     use std::path::PathBuf;
+
+    fn unix_endpoint(path: &str) -> TransportEndpoint {
+        TransportEndpoint::UnixSocket {
+            path: PathBuf::from(path),
+        }
+    }
 
     #[tokio::test]
     async fn test_discover_capability_unregistered() {
@@ -415,7 +413,7 @@ mod tests {
             .register_capability(
                 "security",
                 "beardog",
-                PathBuf::from("/tmp/beardog-test.sock"),
+                unix_endpoint("/tmp/beardog-test.sock"),
                 "test",
             )
             .await
@@ -489,15 +487,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_discover_registered_sets_primary_socket() {
+    async fn test_discover_registered_sets_primary_endpoint() {
         let router = NeuralRouter::new("ps");
-        let sock = std::path::PathBuf::from("/tmp/neural-discovery-unit.sock");
+        let ep = unix_endpoint("/tmp/neural-discovery-unit.sock");
         router
-            .register_capability("storage", "nest", &sock, "t")
+            .register_capability("storage", "nest", ep.clone(), "t")
             .await
             .unwrap();
         let atomic = router.discover_capability("storage").await.unwrap();
-        assert_eq!(atomic.primary_socket, sock);
+        assert_eq!(atomic.primary_endpoint, ep);
         assert_eq!(atomic.primals.len(), 1);
     }
 
@@ -508,7 +506,7 @@ mod tests {
             .register_capability(
                 "security",
                 "beardog",
-                PathBuf::from("/tmp/tower-security.sock"),
+                unix_endpoint("/tmp/tower-security.sock"),
                 "t",
             )
             .await
@@ -517,7 +515,7 @@ mod tests {
             .register_capability(
                 "discovery",
                 "songbird",
-                PathBuf::from("/tmp/tower-discovery.sock"),
+                unix_endpoint("/tmp/tower-discovery.sock"),
                 "t",
             )
             .await
@@ -532,11 +530,11 @@ mod tests {
     async fn test_discover_nest_atomic_requires_storage() {
         let router = NeuralRouter::new("nest-fam");
         router
-            .register_capability("security", "bd", PathBuf::from("/tmp/nest-bd.sock"), "t")
+            .register_capability("security", "bd", unix_endpoint("/tmp/nest-bd.sock"), "t")
             .await
             .unwrap();
         router
-            .register_capability("discovery", "sb", PathBuf::from("/tmp/nest-sb.sock"), "t")
+            .register_capability("discovery", "sb", unix_endpoint("/tmp/nest-sb.sock"), "t")
             .await
             .unwrap();
         let err = router
@@ -557,7 +555,7 @@ mod tests {
             .register_capability(
                 "discovery.meta",
                 "songbird",
-                PathBuf::from("/tmp/discovery-meta.sock"),
+                unix_endpoint("/tmp/discovery-meta.sock"),
                 "t",
             )
             .await
@@ -577,5 +575,60 @@ mod tests {
         let router = NeuralRouter::new("http-post");
         let err = router.discover_capability("http.post").await.unwrap_err();
         assert!(!err.to_string().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_register_capability_tcp_endpoint() {
+        let router = NeuralRouter::new("tcp-test");
+        let ep = TransportEndpoint::TcpSocket {
+            host: Arc::from("192.168.1.100"),
+            port: 9001,
+        };
+        router
+            .register_capability("crypto.sign", "beardog", ep.clone(), "cross-gate")
+            .await
+            .unwrap();
+        let providers = router
+            .get_capability_providers("crypto.sign")
+            .await
+            .unwrap();
+        assert_eq!(providers.len(), 1);
+        assert_eq!(providers[0].endpoint, ep);
+        assert_eq!(providers[0].primal_name.as_ref(), "beardog");
+    }
+
+    #[tokio::test]
+    async fn test_register_capability_abstract_socket() {
+        let router = NeuralRouter::new("abstract-test");
+        let ep = TransportEndpoint::AbstractSocket {
+            name: Arc::from("biomeos_squirrel_abc123"),
+        };
+        router
+            .register_capability("storage.put", "squirrel", ep.clone(), "primal_announcement")
+            .await
+            .unwrap();
+        let providers = router
+            .get_capability_providers("storage.put")
+            .await
+            .unwrap();
+        assert_eq!(providers[0].endpoint, ep);
+    }
+
+    #[tokio::test]
+    async fn test_register_capability_http_endpoint() {
+        let router = NeuralRouter::new("http-ep-test");
+        let ep = TransportEndpoint::HttpJsonRpc {
+            host: Arc::from("songbird.local"),
+            port: 8080,
+        };
+        router
+            .register_capability("discovery.mesh", "songbird", ep.clone(), "beacon")
+            .await
+            .unwrap();
+        let providers = router
+            .get_capability_providers("discovery.mesh")
+            .await
+            .unwrap();
+        assert_eq!(providers[0].endpoint, ep);
     }
 }

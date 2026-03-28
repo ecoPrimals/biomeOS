@@ -5,6 +5,7 @@
 //!
 //! Defines the transport endpoint abstraction for multi-transport IPC.
 
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -13,7 +14,8 @@ use std::sync::Arc;
 /// Implements the Universal IPC Standard v3.0 transport tiers:
 /// - **Tier 1 (Native)**: `UnixSocket`, `AbstractSocket` - highest performance
 /// - **Tier 2 (Universal)**: `TcpSocket` - cross-device, WASM compatible
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "transport", content = "address")]
 pub enum TransportEndpoint {
     /// Unix domain socket (Tier 1 - Linux, macOS)
     UnixSocket {

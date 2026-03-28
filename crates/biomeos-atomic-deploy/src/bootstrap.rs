@@ -51,7 +51,7 @@ pub async fn register_self_in_registry(
     // Register each capability (data-driven from niche self-knowledge)
     for &capability in capabilities {
         router
-            .register_capability(capability, &primal_name, socket_path, source)
+            .register_capability_unix(capability, &primal_name, socket_path, source)
             .await?;
     }
 
@@ -504,6 +504,9 @@ mod tests {
             .get_capability_providers("ecosystem.nucleation")
             .await
             .expect("providers");
-        assert_eq!(p[0].socket_path, socket_path);
+        assert_eq!(
+            p[0].endpoint,
+            biomeos_core::TransportEndpoint::UnixSocket { path: socket_path }
+        );
     }
 }

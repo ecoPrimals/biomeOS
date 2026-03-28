@@ -140,13 +140,13 @@ impl TopologyHandler {
                 // Avoid duplicates
                 if !primals
                     .iter()
-                    .any(|p| p["socket_path"] == provider.socket_path.display().to_string())
+                    .any(|p| p["socket_path"] == provider.endpoint.display_string())
                 {
                     primals.push(json!({
                         "id": format!("{}-{}", provider.primal_name, self.family_id),
                         "primal_type": provider.primal_name,
-                        "socket_path": provider.socket_path.display().to_string(),
-                        "health": "healthy", // Socket exists = healthy for now
+                        "socket_path": provider.endpoint.display_string(),
+                        "health": "healthy",
                         "capabilities": [cap],
                         "resource_usage": null
                     }));
@@ -540,7 +540,7 @@ mod tests {
     async fn test_topology_get_with_registered_capabilities() {
         let router = Arc::new(NeuralRouter::new("test-family"));
         router
-            .register_capability(
+            .register_capability_unix(
                 "security",
                 "beardog",
                 "/tmp/beardog-test-family.sock",
@@ -549,7 +549,7 @@ mod tests {
             .await
             .expect("register security");
         router
-            .register_capability(
+            .register_capability_unix(
                 "discovery",
                 "songbird",
                 "/tmp/songbird-test-family.sock",
@@ -645,15 +645,15 @@ mod tests {
     async fn test_get_proprioception_with_full_capabilities() {
         let router = Arc::new(NeuralRouter::new("test-family"));
         router
-            .register_capability("security", "beardog", "/tmp/beardog-test.sock", "test")
+            .register_capability_unix("security", "beardog", "/tmp/beardog-test.sock", "test")
             .await
             .expect("register");
         router
-            .register_capability("discovery", "songbird", "/tmp/songbird-test.sock", "test")
+            .register_capability_unix("discovery", "songbird", "/tmp/songbird-test.sock", "test")
             .await
             .expect("register");
         router
-            .register_capability("compute", "toadstool", "/tmp/toadstool-test.sock", "test")
+            .register_capability_unix("compute", "toadstool", "/tmp/toadstool-test.sock", "test")
             .await
             .expect("register");
 
@@ -679,7 +679,7 @@ mod tests {
     async fn test_get_proprioception_capability_via_primal_type() {
         let router = Arc::new(NeuralRouter::new("test-family"));
         router
-            .register_capability("other", "beardog", "/tmp/beardog-test.sock", "test")
+            .register_capability_unix("other", "beardog", "/tmp/beardog-test.sock", "test")
             .await
             .expect("register");
 

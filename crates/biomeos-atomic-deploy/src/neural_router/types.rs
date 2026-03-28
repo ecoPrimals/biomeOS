@@ -3,18 +3,18 @@
 
 //! Neural Router types
 
+use biomeos_core::TransportEndpoint;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Discovered primal with socket and capabilities
+/// Discovered primal with endpoint and capabilities
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveredPrimal {
     /// Primal name (e.g., "beardog", "songbird"). Uses Arc&lt;str&gt; for zero-copy cloning.
     pub name: Arc<str>,
 
-    /// Unix socket path
-    pub socket_path: PathBuf,
+    /// Transport endpoint (Unix socket, abstract socket, TCP, or HTTP)
+    pub endpoint: TransportEndpoint,
 
     /// Capabilities this primal provides
     pub capabilities: Vec<String>,
@@ -51,8 +51,8 @@ pub struct DiscoveredAtomic {
     /// Atomic type (if applicable)
     pub atomic_type: Option<AtomicType>,
 
-    /// Primary primal to route to
-    pub primary_socket: PathBuf,
+    /// Primary endpoint to route to
+    pub primary_endpoint: TransportEndpoint,
 }
 
 /// Metrics for a routing operation
@@ -92,8 +92,8 @@ pub struct RegisteredCapability {
     /// Primal that provides it
     pub primal_name: Arc<str>,
 
-    /// Socket path
-    pub socket_path: PathBuf,
+    /// Transport endpoint (Unix socket, abstract socket, TCP, or HTTP)
+    pub endpoint: TransportEndpoint,
 
     /// When it was registered
     pub registered_at: chrono::DateTime<chrono::Utc>,

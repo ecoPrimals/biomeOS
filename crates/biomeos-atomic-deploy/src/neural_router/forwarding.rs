@@ -6,9 +6,9 @@
 use anyhow::{Context, Result};
 use bytes::Bytes;
 use serde_json::Value;
-use std::path::PathBuf;
 use tracing::debug;
 
+use biomeos_core::TransportEndpoint;
 use biomeos_core::atomic_client::AtomicClient;
 use biomeos_types::tarpc_types::ProtocolPreference;
 
@@ -38,30 +38,32 @@ pub(crate) fn parse_security_bytes_param(params: &Value, key: &str) -> Result<By
 }
 
 impl NeuralRouter {
-    /// Forward JSON-RPC request to primal
+    /// Forward JSON-RPC request to primal via any transport
     ///
-    /// **Pure Rust**: Async I/O, no unsafe code, idiomatic error handling
+    /// **Universal IPC v3.0**: Routes through Unix, abstract, TCP, or HTTP
+    /// based on the endpoint's transport type.
     ///
     /// **JSON-RPC AND tarpc first**: Checks protocol availability and preferences.
     pub async fn forward_request(
         &self,
-        socket_path: &PathBuf,
+        endpoint: &TransportEndpoint,
         method: &str,
         params: &Value,
     ) -> Result<Value> {
         let start = std::time::Instant::now();
 
-        // Determine protocol based on preference and availability
-        let use_tarpc = self.should_use_tarpc(socket_path).await;
+        let use_tarpc = self.should_use_tarpc(endpoint).await;
 
         if use_tarpc {
-            match self.forward_via_tarpc(socket_path, method, params).await {
-                Ok(response) => return Ok(response),
-                Err(e) => {
-                    debug!(
-                        "tarpc forwarding failed for {}, falling back to JSON-RPC: {e}",
-                        socket_path.display()
-                    );
+            if let TransportEndpoint::UnixSocket { path } = endpoint {
+                match self.forward_via_tarpc(path, method, params).await {
+                    Ok(response) => return Ok(response),
+                    Err(e) => {
+                        debug!(
+                            "tarpc forwarding failed for {}, falling back to JSON-RPC: {e}",
+                            endpoint.display_string()
+                        );
+                    }
                 }
             }
         }
@@ -69,29 +71,43 @@ impl NeuralRouter {
         debug!(
             "   → Forwarding via JSON-RPC: {} to {}",
             method,
-            socket_path.display()
+            endpoint.display_string()
         );
 
-        let client = AtomicClient::unix(socket_path).with_timeout(self.request_timeout);
+        let client =
+            AtomicClient::from_endpoint(endpoint.clone()).with_timeout(self.request_timeout);
 
         let result = client.call(method, params.clone()).await.context(format!(
             "Failed to forward {} to {}",
             method,
-            socket_path.display()
+            endpoint.display_string()
         ))?;
 
         let latency = start.elapsed().as_millis() as u64;
         debug!("   ✓ Forwarded successfully in {}ms", latency);
 
         if let Some(graph) = &self.living_graph {
-            if let Some(primal_name) = socket_path.file_stem().and_then(|s| s.to_str()) {
+            let primal_label = self.primal_label_for_endpoint(endpoint);
+            if let Some(label) = primal_label {
                 graph
-                    .record_request("neural-api", primal_name, latency * 1000, true)
+                    .record_request("neural-api", &label, latency * 1000, true)
                     .await;
             }
         }
 
         Ok(result)
+    }
+
+    /// Extract a human-readable primal label from an endpoint for metrics
+    fn primal_label_for_endpoint(&self, endpoint: &TransportEndpoint) -> Option<String> {
+        match endpoint {
+            TransportEndpoint::UnixSocket { path } => {
+                path.file_stem().and_then(|s| s.to_str()).map(String::from)
+            }
+            TransportEndpoint::AbstractSocket { name } => Some(name.to_string()),
+            TransportEndpoint::TcpSocket { host, port } => Some(format!("{host}:{port}")),
+            TransportEndpoint::HttpJsonRpc { host, port } => Some(format!("{host}:{port}")),
+        }
     }
 
     /// Forward a request via tarpc binary protocol for high-performance primal communication.
@@ -257,24 +273,32 @@ impl NeuralRouter {
         ))
     }
 
-    /// Check if tarpc should be used for this request
-    pub(super) async fn should_use_tarpc(&self, socket_path: &std::path::Path) -> bool {
+    /// Check if tarpc should be used for this request.
+    ///
+    /// tarpc escalation is only available for Unix socket endpoints (tarpc uses
+    /// a sibling `.tarpc.sock` file).
+    pub(super) async fn should_use_tarpc(&self, endpoint: &TransportEndpoint) -> bool {
         match self.protocol_preference {
-            ProtocolPreference::JsonRpcOnly => return false,
+            ProtocolPreference::JsonRpcOnly | ProtocolPreference::PreferJsonRpc => return false,
             ProtocolPreference::TarpcOnly => return true,
-            ProtocolPreference::PreferJsonRpc => return false,
             ProtocolPreference::PreferTarpc | ProtocolPreference::Auto => {}
         }
 
-        if let Some(graph) = &self.living_graph {
-            if let Some(primal_name) = socket_path.file_stem().and_then(|s| s.to_str()) {
-                if let Some(state) = graph.get_primal_state(primal_name).await {
-                    return state.tarpc_available()
-                        && matches!(
-                            state.current_mode,
-                            ProtocolMode::Tarpc | ProtocolMode::Hybrid
-                        );
-                }
+        let primal_name = match endpoint {
+            TransportEndpoint::UnixSocket { path } => {
+                path.file_stem().and_then(|s| s.to_str()).map(String::from)
+            }
+            TransportEndpoint::AbstractSocket { name } => Some(name.to_string()),
+            _ => None,
+        };
+
+        if let (Some(graph), Some(name)) = (&self.living_graph, primal_name) {
+            if let Some(state) = graph.get_primal_state(&name).await {
+                return state.tarpc_available()
+                    && matches!(
+                        state.current_mode,
+                        ProtocolMode::Tarpc | ProtocolMode::Hybrid
+                    );
             }
         }
 
@@ -305,6 +329,12 @@ mod tests {
 
     fn create_router(family_id: &str) -> NeuralRouter {
         NeuralRouter::new(family_id)
+    }
+
+    fn unix_ep(path: &std::path::Path) -> TransportEndpoint {
+        TransportEndpoint::UnixSocket {
+            path: path.to_path_buf(),
+        }
     }
 
     #[test]
@@ -349,32 +379,31 @@ mod tests {
     async fn test_should_use_tarpc_jsonrpc_only_returns_false() {
         let router =
             create_router("test").with_protocol_preference(ProtocolPreference::JsonRpcOnly);
-        let path = PathBuf::from("/tmp/test-primal.sock");
-        assert!(!router.should_use_tarpc(&path).await);
+        let ep = unix_ep(&PathBuf::from("/tmp/test-primal.sock"));
+        assert!(!router.should_use_tarpc(&ep).await);
     }
 
     #[tokio::test]
     async fn test_should_use_tarpc_tarpc_only_returns_true() {
         let router = create_router("test").with_protocol_preference(ProtocolPreference::TarpcOnly);
-        let path = PathBuf::from("/tmp/test-primal.sock");
-        assert!(router.should_use_tarpc(&path).await);
+        let ep = unix_ep(&PathBuf::from("/tmp/test-primal.sock"));
+        assert!(router.should_use_tarpc(&ep).await);
     }
 
     #[tokio::test]
     async fn test_should_use_tarpc_prefer_jsonrpc_returns_false() {
         let router =
             create_router("test").with_protocol_preference(ProtocolPreference::PreferJsonRpc);
-        let path = PathBuf::from("/tmp/test-primal.sock");
-        assert!(!router.should_use_tarpc(&path).await);
+        let ep = unix_ep(&PathBuf::from("/tmp/test-primal.sock"));
+        assert!(!router.should_use_tarpc(&ep).await);
     }
 
     #[tokio::test]
     async fn test_should_use_tarpc_prefer_tarpc_no_graph_returns_false() {
         let router =
             create_router("test").with_protocol_preference(ProtocolPreference::PreferTarpc);
-        let path = PathBuf::from("/tmp/test-primal.sock");
-        // No living graph, so falls through to false
-        assert!(!router.should_use_tarpc(&path).await);
+        let ep = unix_ep(&PathBuf::from("/tmp/test-primal.sock"));
+        assert!(!router.should_use_tarpc(&ep).await);
     }
 
     #[tokio::test]
@@ -395,7 +424,7 @@ mod tests {
             .with_protocol_preference(ProtocolPreference::Auto)
             .with_living_graph(graph);
 
-        assert!(router.should_use_tarpc(&json_sock).await);
+        assert!(router.should_use_tarpc(&unix_ep(&json_sock)).await);
     }
 
     #[tokio::test]
@@ -409,15 +438,13 @@ mod tests {
         let state = PrimalProtocolState::new("beardog", json_sock.clone())
             .with_tarpc_socket(tarpc_sock)
             .with_capabilities(vec!["security".to_string()]);
-        // Default mode is JsonRpc - not Tarpc or Hybrid
         graph.register_primal(state).await;
 
         let router = create_router("test")
             .with_protocol_preference(ProtocolPreference::Auto)
             .with_living_graph(graph);
 
-        // JsonRpc mode -> returns false (only Tarpc or Hybrid use tarpc)
-        assert!(!router.should_use_tarpc(&json_sock).await);
+        assert!(!router.should_use_tarpc(&unix_ep(&json_sock)).await);
     }
 
     #[tokio::test]
@@ -438,7 +465,7 @@ mod tests {
             .with_protocol_preference(ProtocolPreference::Auto)
             .with_living_graph(graph);
 
-        assert!(router.should_use_tarpc(&json_sock).await);
+        assert!(router.should_use_tarpc(&unix_ep(&json_sock)).await);
     }
 
     #[tokio::test]
@@ -459,14 +486,13 @@ mod tests {
             .with_protocol_preference(ProtocolPreference::Auto)
             .with_living_graph(graph);
 
-        assert!(router.should_use_tarpc(&json_sock).await);
+        assert!(router.should_use_tarpc(&unix_ep(&json_sock)).await);
     }
 
     #[tokio::test]
     async fn test_should_use_tarpc_auto_with_graph_no_tarpc_socket_returns_false() {
         let temp = TempDir::new().expect("temp dir");
         let json_sock = temp.path().join("beardog.sock");
-        // No tarpc socket - tarpc_available() is false
         let graph = Arc::new(LivingGraph::new("test"));
         let state = PrimalProtocolState::new("beardog", json_sock.clone());
         graph.register_primal(state).await;
@@ -475,7 +501,7 @@ mod tests {
             .with_protocol_preference(ProtocolPreference::Auto)
             .with_living_graph(graph);
 
-        assert!(!router.should_use_tarpc(&json_sock).await);
+        assert!(!router.should_use_tarpc(&unix_ep(&json_sock)).await);
     }
 
     // --- forward_via_tarpc error path tests ---
@@ -485,7 +511,6 @@ mod tests {
         let router = create_router("test");
         let temp = TempDir::new().expect("temp dir");
         let socket_path = temp.path().join("nonexistent.sock");
-        // No socket file - tarpc path won't exist
         let result = router
             .forward_via_tarpc(&socket_path, "health.check", &serde_json::json!({}))
             .await;
@@ -496,7 +521,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_forward_via_tarpc_discovery_method_requires_tarpc_server() {
-        // discovery.* methods require a real tarpc server; without one we get connect error
         let router = create_router("test");
         let temp = TempDir::new().expect("temp dir");
         let socket_path = temp.path().join("primal.sock");
@@ -520,7 +544,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_forward_via_tarpc_security_method_requires_tarpc_server() {
-        // security.* methods require a real tarpc server; without one we get connect error
         let router = create_router("test");
         let temp = TempDir::new().expect("temp dir");
         let socket_path = temp.path().join("primal.sock");
@@ -606,7 +629,11 @@ mod tests {
             create_router("test").with_protocol_preference(ProtocolPreference::JsonRpcOnly);
 
         let result = router
-            .forward_request(&socket_path, "health.check", &serde_json::json!({}))
+            .forward_request(
+                &unix_ep(&socket_path),
+                "health.check",
+                &serde_json::json!({}),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -624,7 +651,11 @@ mod tests {
             create_router("test").with_protocol_preference(ProtocolPreference::JsonRpcOnly);
 
         let result = router
-            .forward_request(&socket_path, "health.check", &serde_json::json!({}))
+            .forward_request(
+                &unix_ep(&socket_path),
+                "health.check",
+                &serde_json::json!({}),
+            )
             .await;
 
         assert!(result.is_err());
@@ -639,7 +670,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_forward_request_tarpc_fallback_to_jsonrpc() {
-        // When tarpc is preferred but fails (no tarpc socket), should fall back to JSON-RPC
         let temp = TempDir::new().expect("temp dir");
         let socket_path = temp.path().join("test-primal.sock");
         let rpc_response = serde_json::json!({
@@ -654,10 +684,13 @@ mod tests {
 
         let router =
             create_router("test").with_protocol_preference(ProtocolPreference::PreferTarpc);
-        // No tarpc socket - will try tarpc, fail, fall back to JSON-RPC
 
         let result = router
-            .forward_request(&socket_path, "some.method", &serde_json::json!({}))
+            .forward_request(
+                &unix_ep(&socket_path),
+                "some.method",
+                &serde_json::json!({}),
+            )
             .await;
 
         assert!(result.is_ok());
@@ -675,7 +708,6 @@ mod tests {
         tokio::spawn(async move {
             let listener = UnixListener::bind(&path).expect("bind");
             if let Ok((_, _)) = listener.accept().await {
-                // Accepted but never send a response — client should hit request_timeout
                 tokio::time::sleep(Duration::from_secs(120)).await;
             }
         });
@@ -687,7 +719,11 @@ mod tests {
         router.request_timeout = Duration::from_millis(200);
 
         let result = router
-            .forward_request(&socket_path, "health.check", &serde_json::json!({}))
+            .forward_request(
+                &unix_ep(&socket_path),
+                "health.check",
+                &serde_json::json!({}),
+            )
             .await;
 
         assert!(result.is_err(), "expected timeout error, got {result:?}");
@@ -716,7 +752,7 @@ mod tests {
             .with_living_graph(graph);
 
         let result = router
-            .forward_request(&socket_path, "any.method", &serde_json::json!({}))
+            .forward_request(&unix_ep(&socket_path), "any.method", &serde_json::json!({}))
             .await;
 
         assert!(result.is_ok());
@@ -755,7 +791,11 @@ mod tests {
         let router = create_router("test").with_protocol_preference(ProtocolPreference::TarpcOnly);
 
         let result = router
-            .forward_request(&socket_path, "health.check", &serde_json::json!({}))
+            .forward_request(
+                &unix_ep(&socket_path),
+                "health.check",
+                &serde_json::json!({}),
+            )
             .await;
 
         assert!(result.is_err());
@@ -883,7 +923,7 @@ mod tests {
             .with_protocol_preference(ProtocolPreference::Auto)
             .with_living_graph(graph);
 
-        assert!(!router.should_use_tarpc(&json_sock).await);
+        assert!(!router.should_use_tarpc(&unix_ep(&json_sock)).await);
     }
 
     #[tokio::test]
@@ -904,9 +944,58 @@ mod tests {
             create_router("test").with_protocol_preference(ProtocolPreference::JsonRpcOnly);
 
         let result = router
-            .forward_request(&socket_path, "bad.method", &serde_json::json!({}))
+            .forward_request(&unix_ep(&socket_path), "bad.method", &serde_json::json!({}))
             .await;
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_should_use_tarpc_tcp_endpoint_with_auto_no_graph() {
+        let router = create_router("test").with_protocol_preference(ProtocolPreference::Auto);
+        let ep = TransportEndpoint::TcpSocket {
+            host: Arc::from("192.168.1.100"),
+            port: 9001,
+        };
+        assert!(!router.should_use_tarpc(&ep).await);
+    }
+
+    #[tokio::test]
+    async fn test_primal_label_for_endpoint_variants() {
+        let router = create_router("test");
+
+        let unix = TransportEndpoint::UnixSocket {
+            path: PathBuf::from("/tmp/beardog.sock"),
+        };
+        assert_eq!(
+            router.primal_label_for_endpoint(&unix),
+            Some("beardog".to_string())
+        );
+
+        let tcp = TransportEndpoint::TcpSocket {
+            host: Arc::from("192.168.1.100"),
+            port: 9001,
+        };
+        assert_eq!(
+            router.primal_label_for_endpoint(&tcp),
+            Some("192.168.1.100:9001".to_string())
+        );
+
+        let abs = TransportEndpoint::AbstractSocket {
+            name: Arc::from("squirrel_abc"),
+        };
+        assert_eq!(
+            router.primal_label_for_endpoint(&abs),
+            Some("squirrel_abc".to_string())
+        );
+
+        let http = TransportEndpoint::HttpJsonRpc {
+            host: Arc::from("songbird.local"),
+            port: 8080,
+        };
+        assert_eq!(
+            router.primal_label_for_endpoint(&http),
+            Some("songbird.local:8080".to_string())
+        );
     }
 }

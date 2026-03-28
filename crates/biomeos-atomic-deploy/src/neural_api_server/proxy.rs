@@ -58,7 +58,7 @@ impl NeuralApiServer {
 
         let result = self
             .router
-            .forward_request(&atomic.primary_socket, "http.request", &http_params)
+            .forward_request(&atomic.primary_endpoint, "http.request", &http_params)
             .await?;
 
         // Log metrics

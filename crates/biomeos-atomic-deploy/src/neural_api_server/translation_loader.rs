@@ -119,7 +119,12 @@ impl NeuralApiServer {
                     );
                     if let Err(e) = self
                         .router
-                        .register_capability(capability, primal, &socket_path, "graph_translation")
+                        .register_capability_unix(
+                            capability,
+                            primal,
+                            &socket_path,
+                            "graph_translation",
+                        )
                         .await
                     {
                         warn!("Failed to register capability {}: {}", capability, e);

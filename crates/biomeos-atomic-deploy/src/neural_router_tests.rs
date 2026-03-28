@@ -7,12 +7,19 @@
 //! Tests cover router creation, capability registration, metrics, discovery, and serialization.
 
 use super::neural_router::*;
+use biomeos_core::TransportEndpoint;
 use biomeos_types::tarpc_types::ProtocolPreference;
 use std::fs;
 use std::os::unix::net::UnixListener;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tempfile::TempDir;
+
+fn unix_ep(path: &std::path::Path) -> TransportEndpoint {
+    TransportEndpoint::UnixSocket {
+        path: path.to_path_buf(),
+    }
+}
 
 #[test]
 fn test_router_creation() {
@@ -35,7 +42,7 @@ async fn test_capability_registration() {
 
     // Register a capability
     router
-        .register_capability("http.request", "songbird", &socket_path, "manual")
+        .register_capability_unix("http.request", "songbird", &socket_path, "manual")
         .await
         .unwrap();
 
@@ -46,7 +53,7 @@ async fn test_capability_registration() {
     assert_eq!(providers.len(), 1);
     assert_eq!(providers[0].capability.as_ref(), "http.request");
     assert_eq!(providers[0].primal_name.as_ref(), "songbird");
-    assert_eq!(providers[0].socket_path, socket_path);
+    assert_eq!(providers[0].endpoint, unix_ep(&socket_path));
     assert_eq!(providers[0].source.as_ref(), "manual");
 }
 
@@ -57,7 +64,7 @@ async fn test_multiple_capability_providers() {
 
     // Register multiple providers for same capability
     router
-        .register_capability(
+        .register_capability_unix(
             "security",
             "beardog1",
             temp_dir.path().join("beardog1.sock"),
@@ -66,7 +73,7 @@ async fn test_multiple_capability_providers() {
         .await
         .unwrap();
     router
-        .register_capability(
+        .register_capability_unix(
             "security",
             "beardog2",
             temp_dir.path().join("beardog2.sock"),
@@ -87,11 +94,11 @@ async fn test_list_capabilities() {
     let temp_dir = TempDir::new().unwrap();
 
     router
-        .register_capability("cap1", "primal1", temp_dir.path().join("p1.sock"), "test")
+        .register_capability_unix("cap1", "primal1", temp_dir.path().join("p1.sock"), "test")
         .await
         .unwrap();
     router
-        .register_capability("cap2", "primal2", temp_dir.path().join("p2.sock"), "test")
+        .register_capability_unix("cap2", "primal2", temp_dir.path().join("p2.sock"), "test")
         .await
         .unwrap();
 
@@ -222,7 +229,7 @@ async fn test_discover_capability_registered() {
 
     // Register capability
     router
-        .register_capability("test.capability", "test-primal", &socket_path, "test")
+        .register_capability_unix("test.capability", "test-primal", &socket_path, "test")
         .await
         .unwrap();
 
@@ -247,7 +254,7 @@ async fn test_discover_by_capability_category_security() {
 
     // Register security capability
     router
-        .register_capability("security", "beardog", &socket_path, "test")
+        .register_capability_unix("security", "beardog", &socket_path, "test")
         .await
         .unwrap();
 
@@ -277,7 +284,7 @@ async fn test_atomic_type_serialization() {
 async fn test_discovered_primal_serialization() {
     let primal = DiscoveredPrimal {
         name: Arc::from("test-primal"),
-        socket_path: PathBuf::from("/tmp/test.sock"),
+        endpoint: unix_ep(&PathBuf::from("/tmp/test.sock")),
         capabilities: vec!["test".to_string()],
         healthy: true,
         last_check: chrono::Utc::now(),
@@ -286,7 +293,7 @@ async fn test_discovered_primal_serialization() {
     let serialized = serde_json::to_string(&primal).unwrap();
     let deserialized: DiscoveredPrimal = serde_json::from_str(&serialized).unwrap();
     assert_eq!(primal.name.as_ref(), deserialized.name.as_ref());
-    assert_eq!(primal.socket_path, deserialized.socket_path);
+    assert_eq!(primal.endpoint, deserialized.endpoint);
 }
 
 #[tokio::test]
@@ -313,7 +320,7 @@ async fn test_registered_capability_serialization() {
     let cap = RegisteredCapability {
         capability: Arc::from("test"),
         primal_name: Arc::from("primal"),
-        socket_path: PathBuf::from("/tmp/test.sock"),
+        endpoint: unix_ep(&PathBuf::from("/tmp/test.sock")),
         registered_at: chrono::Utc::now(),
         source: Arc::from("test"),
     };

@@ -82,12 +82,12 @@ impl CapabilityHandler {
             "primals": atomic.primals.iter().map(|p| {
                 json!({
                     "name": p.name,
-                    "socket": p.socket_path,
+                    "endpoint": p.endpoint.display_string(),
                     "healthy": p.healthy,
                     "capabilities": p.capabilities
                 })
             }).collect::<Vec<_>>(),
-            "primary_socket": atomic.primary_socket
+            "primary_endpoint": atomic.primary_endpoint.display_string()
         }))
     }
 
@@ -117,10 +117,10 @@ impl CapabilityHandler {
         // Discover primal(s) for this capability
         let atomic = self.router.discover_capability(capability).await?;
 
-        // Forward request
+        // Forward request via transport-aware routing
         let result = self
             .router
-            .forward_request(&atomic.primary_socket, method, rpc_params)
+            .forward_request(&atomic.primary_endpoint, method, rpc_params)
             .await?;
 
         // Log metrics
@@ -198,9 +198,15 @@ impl CapabilityHandler {
             capability, primal_name, source
         );
 
-        // Register the capability in the router
+        // Register via transport-aware endpoint (parse or default to Unix socket)
+        let endpoint = biomeos_core::TransportEndpoint::parse(socket_path).unwrap_or_else(|| {
+            biomeos_core::TransportEndpoint::UnixSocket {
+                path: PathBuf::from(socket_path),
+            }
+        });
+
         self.router
-            .register_capability(capability, primal_name, PathBuf::from(socket_path), source)
+            .register_capability(capability, primal_name, endpoint, source)
             .await?;
 
         // Register semantic mappings if provided
@@ -281,7 +287,7 @@ impl CapabilityHandler {
                 .map(|p| {
                     json!({
                         "primal": p.primal_name,
-                        "socket": p.socket_path.display().to_string(),
+                        "endpoint": p.endpoint.display_string(),
                         "source": p.source,
                         "registered_at": p.registered_at.to_rfc3339()
                     })
@@ -413,7 +419,7 @@ impl CapabilityHandler {
             "providers": providers.iter().map(|p| {
                 json!({
                     "primal": p.primal_name,
-                    "socket": p.socket_path.display().to_string(),
+                    "endpoint": p.endpoint.display_string(),
                     "source": p.source,
                     "registered_at": p.registered_at.to_rfc3339()
                 })
@@ -496,7 +502,7 @@ impl CapabilityHandler {
                 // Forward request
                 let result = self
                     .router
-                    .forward_request(&atomic.primary_socket, &method, &args)
+                    .forward_request(&atomic.primary_endpoint, &method, &args)
                     .await?;
 
                 let latency = start.elapsed().as_millis();
@@ -518,7 +524,7 @@ impl CapabilityHandler {
                 let atomic = self.router.discover_capability(capability).await?;
 
                 self.router
-                    .forward_request(&atomic.primary_socket, &semantic_name, &args)
+                    .forward_request(&atomic.primary_endpoint, &semantic_name, &args)
                     .await
             }
         }

@@ -237,8 +237,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
                 "Missing 'primals' field",
             ));
         }
-        let primals: Vec<DiscoveredPrimal> =
-            serde_json::from_value(response["primals"].take())?;
+        let primals: Vec<DiscoveredPrimal> = serde_json::from_value(response["primals"].take())?;
 
         info!(
             count = primals.len(),
@@ -265,8 +264,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
                 "Missing 'primals' field",
             ));
         }
-        let primals: Vec<DiscoveredPrimal> =
-            serde_json::from_value(response["primals"].take())?;
+        let primals: Vec<DiscoveredPrimal> = serde_json::from_value(response["primals"].take())?;
 
         info!(
             count = primals.len(),
