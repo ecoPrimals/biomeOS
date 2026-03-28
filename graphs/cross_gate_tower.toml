@@ -1,0 +1,244 @@
+# Cross-Gate Tower Deployment Graph
+# =============================================================================
+#
+# First two-biomeOS federation graph. Deploys BearDog + Songbird locally
+# (Eastgate/Tower) and BearDog + Songbird on gate2 (EPYC 9274F, RTX 3090),
+# then batch-registers gate2's capabilities on the local biomeOS and validates
+# cross-gate capability routing end-to-end.
+#
+# This graph exercises:
+#   - gate = "gate2" on nodes → forward_to_remote_gate()
+#   - [graph.env] gate2 endpoint → GateRegistry::from_graph_env()
+#   - route.register for batch capability cross-registration
+#   - Cross-gate capability.call verification
+#
+# Prerequisites:
+#   - Both gates enrolled (shared .family.seed)
+#   - biomeOS running on gate2 at tcp://192.168.1.132:9001
+#   - genomeBin deployed to gate2
+#
+# Usage:
+#   biomeos atomic deploy graphs/cross_gate_tower.toml \
+#     --env FAMILY_ID=cf7e8729 \
+#     --env NODE_ID=tower \
+#     --env XDG_RUNTIME_DIR=/run/user/1000
+#
+# =============================================================================
+
+[graph]
+id = "cross_gate_tower"
+version = "1.0.0"
+description = "Cross-gate Tower: BearDog + Songbird on Eastgate and gate2 with federation"
+coordination = "Sequential"
+
+[graph.env]
+gate2 = "tcp://192.168.1.132:9001"
+
+# =============================================================================
+# PHASE 1: LOCAL TOWER (Eastgate)
+# =============================================================================
+
+# 1.1: BearDog local — crypto foundation on Eastgate
+[[nodes]]
+id = "local_beardog"
+output = "beardog_started"
+capabilities = ["crypto", "tls_crypto", "genetic", "security", "beacon"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# 1.2: Songbird local — network + mesh on Eastgate
+[[nodes]]
+id = "local_songbird"
+depends_on = ["local_beardog"]
+output = "songbird_started"
+capabilities = ["http", "discovery", "secure_http", "mesh", "onion", "relay", "stun", "punch"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+CRYPTO_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+SONGBIRD_MESH_ENABLED = "true"
+RUST_LOG = "songbird=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# PHASE 2: REMOTE TOWER (gate2) — via forward_to_remote_gate()
+# =============================================================================
+
+# 2.1: BearDog on gate2 — forwarded to gate2's biomeOS Neural API
+[[nodes]]
+id = "gate2_beardog"
+depends_on = ["local_beardog"]
+gate = "gate2"
+output = "gate2_beardog_started"
+capabilities = ["crypto", "tls_crypto", "genetic", "security", "beacon"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# 2.2: Songbird on gate2 — forwarded to gate2's biomeOS Neural API
+[[nodes]]
+id = "gate2_songbird"
+depends_on = ["gate2_beardog"]
+gate = "gate2"
+output = "gate2_songbird_started"
+capabilities = ["http", "discovery", "secure_http", "mesh", "onion", "relay", "stun", "punch"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+SONGBIRD_MESH_ENABLED = "true"
+BIOMEOS_BIND_ALL = "true"
+RUST_LOG = "songbird=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# PHASE 3: CROSS-REGISTRATION — batch-register gate2's primals on Eastgate
+# =============================================================================
+
+# 3.1: Register gate2's crypto capabilities on local biomeOS
+[[nodes]]
+id = "register_gate2_crypto"
+depends_on = ["gate2_beardog", "local_songbird"]
+output = "gate2_crypto_registered"
+
+[nodes.operation]
+name = "rpc_call"
+
+[nodes.operation.params]
+method = "route.register"
+params = { primal = "beardog", transport = "tcp://192.168.1.132:9001", capabilities = ["crypto.sign", "crypto.verify", "crypto.encrypt", "crypto.decrypt", "crypto.hash", "crypto.generate_keypair"], gate = "gate2", source = "cross_gate_tower" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# 3.2: Register gate2's network capabilities on local biomeOS
+[[nodes]]
+id = "register_gate2_network"
+depends_on = ["gate2_songbird", "local_songbird"]
+output = "gate2_network_registered"
+
+[nodes.operation]
+name = "rpc_call"
+
+[nodes.operation.params]
+method = "route.register"
+params = { primal = "songbird", transport = "tcp://192.168.1.132:9001", capabilities = ["http.request", "discovery.announce", "discovery.query", "mesh.status", "mesh.peers"], gate = "gate2", source = "cross_gate_tower" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# PHASE 4: VALIDATION — verify cross-gate capability routing
+# =============================================================================
+
+# 4.1: Health check both gates
+[[nodes]]
+id = "validate_federation"
+depends_on = ["register_gate2_crypto", "register_gate2_network"]
+output = "federation_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_capability_routing = true
+timeout_seconds = 20
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# 4.2: Cross-gate capability call — verify crypto.hash routes to gate2
+[[nodes]]
+id = "verify_cross_gate_crypto"
+depends_on = ["validate_federation"]
+output = "cross_gate_verified"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "crypto.hash"
+params = { data = "cross-gate-validation-test" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+#
+# Cross-Gate Tower Deployment Order:
+#   Phase 1 (local):
+#     1. BearDog (Eastgate crypto)
+#     2. Songbird (Eastgate network + mesh)
+#   Phase 2 (remote — forwarded via AtomicClient to gate2's biomeOS):
+#     3. BearDog on gate2 (gate2 crypto — same family lineage)
+#     4. Songbird on gate2 (gate2 network — discovers Eastgate mesh)
+#   Phase 3 (cross-registration):
+#     5. route.register gate2's crypto on Eastgate's biomeOS
+#     6. route.register gate2's network on Eastgate's biomeOS
+#   Phase 4 (validation):
+#     7. Health check both gates
+#     8. Cross-gate capability.call (crypto.hash → gate2)
+#
+# After deployment:
+#   - Both gates have full Tower capability (BearDog + Songbird)
+#   - Eastgate can route capability.call to gate2 primals via registered endpoints
+#   - gate2 can be extended with Nest (NestGate + Toadstool + Squirrel)
+#   - Use `graphs/gate2_nucleus.toml` on gate2 for the remaining NUCLEUS primals
+#
+# =============================================================================

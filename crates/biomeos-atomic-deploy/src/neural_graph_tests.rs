@@ -708,3 +708,108 @@ capability = "test"
     let registry = GateRegistry::from_graph_env(&graph.env);
     assert!(registry.is_empty());
 }
+
+#[test]
+fn test_cross_gate_tower_toml_parses_and_wires_registry() {
+    use crate::gate_registry::GateRegistry;
+
+    let toml_content =
+        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../graphs/cross_gate_tower.toml"))
+            .expect("graphs/cross_gate_tower.toml should exist");
+    let graph = Graph::from_toml_str(&toml_content).unwrap();
+
+    assert_eq!(graph.id, "cross_gate_tower");
+
+    let local_nodes: Vec<_> = graph.nodes.iter().filter(|n| n.gate.is_none()).collect();
+    let remote_nodes: Vec<_> = graph
+        .nodes
+        .iter()
+        .filter(|n| n.gate.as_deref() == Some("gate2"))
+        .collect();
+    assert!(
+        local_nodes.len() >= 2,
+        "should have at least 2 local nodes (beardog + songbird)"
+    );
+    assert!(
+        remote_nodes.len() >= 2,
+        "should have at least 2 gate2 nodes"
+    );
+
+    let registry = GateRegistry::from_graph_env(&graph.env);
+    assert!(registry.is_remote("gate2"), "gate2 should be in registry");
+    assert!(!registry.is_remote("local"), "local should not resolve");
+
+    for node in &remote_nodes {
+        assert!(
+            node.id.starts_with("gate2_"),
+            "remote node id should be prefixed: {}",
+            node.id
+        );
+    }
+}
+
+#[test]
+fn test_cross_gate_tower_toml_route_register_nodes() {
+    let toml_content =
+        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../graphs/cross_gate_tower.toml"))
+            .expect("graphs/cross_gate_tower.toml should exist");
+    let graph = Graph::from_toml_str(&toml_content).unwrap();
+
+    let register_nodes: Vec<_> = graph
+        .nodes
+        .iter()
+        .filter(|n| {
+            n.operation
+                .as_ref()
+                .and_then(|op| op.params.get("method"))
+                .and_then(|m| m.as_str())
+                == Some("route.register")
+        })
+        .collect();
+
+    assert!(
+        register_nodes.len() >= 2,
+        "should have route.register nodes for crypto + network"
+    );
+
+    for node in &register_nodes {
+        let params = node
+            .operation
+            .as_ref()
+            .and_then(|op| op.params.get("params"))
+            .expect("route.register node should have params");
+        assert!(
+            params.get("gate").is_some(),
+            "route.register should include gate tag"
+        );
+        assert!(
+            params.get("capabilities").is_some(),
+            "route.register should include capabilities array"
+        );
+    }
+}
+
+#[test]
+fn test_cross_gate_pixel_toml_parses_and_wires_registry() {
+    let toml_content =
+        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../graphs/cross_gate_pixel.toml"))
+            .expect("graphs/cross_gate_pixel.toml should exist");
+    let graph = Graph::from_toml_str(&toml_content).unwrap();
+
+    assert_eq!(graph.id, "cross_gate_pixel");
+
+    let pixel_nodes: Vec<_> = graph
+        .nodes
+        .iter()
+        .filter(|n| n.gate.as_deref() == Some("pixel"))
+        .collect();
+    assert!(
+        pixel_nodes.len() >= 2,
+        "should have at least 2 pixel-targeted nodes"
+    );
+
+    assert!(
+        graph.env.contains_key("pixel"),
+        "graph.env should contain pixel endpoint"
+    );
+}

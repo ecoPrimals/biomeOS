@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 28, 2026 (v2.74: deep debt evolution — config-driven capabilities, smart refactor, convention-based env)
-**Version**: 2.74
+**Updated**: March 28, 2026 (v2.75: cross-gate federation graphs, inference scheduling, Pixel deployment)
+**Version**: 2.75
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,192 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
+| **Tests Passing** | 7,202 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
 | **Test Coverage** | 90%+ (llvm-cov workspace-wide verified) — all three metrics above 90% target |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -760,11 +760,12 @@ covalent bond transport.
 
 | Area | Current | Target |
 |------|---------|--------|
-| ~~**Graph-based deploy**~~ | ~~Manual nohup~~ | ✅ Graphs validated: `nucleus_complete`, `ecosystem_full_bootstrap`, `gate2_nucleus` |
-| **ARM64 biomeOS** | ✅ Built | `aarch64-unknown-linux-musl` static, 9.6 MB stripped |
+| ~~**Graph-based deploy**~~ | ~~Manual nohup~~ | ✅ Graphs validated: `nucleus_complete`, `ecosystem_full_bootstrap`, `gate2_nucleus`, `cross_gate_tower`, `cross_gate_pixel` |
+| ~~**ARM64 biomeOS**~~ | ~~Not built~~ | ✅ `aarch64-unknown-linux-musl` static, 9.6 MB stripped |
 | ~~**Plasmodium agents**~~ | ~~HTTP JSON-RPC collective~~ | ✅ Neural API agent routing (Meld/Split/Mix) |
-| **biomeOS on gate2** | Tower only | Deploy biomeOS to gate2 for cross-gate capability routing |
-| **Model orchestration** | List/resolve only | Schedule inference, route to best GPU gate |
+| ~~**Model orchestration**~~ | ~~List/resolve only~~ | ✅ `inference.schedule` + `inference.gates` — VRAM-aware gate routing |
+| **biomeOS on gate2** | Graphs ready | Deploy biomeOS to gate2 and validate `cross_gate_tower.toml` end-to-end |
+| **Pixel biomeOS** | Graphs ready | Deploy ARM64 biomeOS on Pixel via ADB, validate `cross_gate_pixel.toml` |
 
 ---
 
@@ -927,7 +928,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,192 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
+# Test (7,202 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -949,8 +950,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.74 — deep debt evolution: config-driven capabilities, smart refactor, convention-based env)
-**Tests**: 7,192 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
+**Status**: Production Ready (v2.75 — cross-gate federation graphs, inference scheduling, Pixel deployment)
+**Tests**: 7,202 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation
 **Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, graph coordination

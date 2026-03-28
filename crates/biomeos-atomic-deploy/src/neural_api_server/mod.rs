@@ -35,8 +35,8 @@ pub use rpc::{
 
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::handlers::{
-    CapabilityHandler, GraphHandler, LifecycleHandler, NicheHandler, ProtocolHandler,
-    TopologyHandler,
+    CapabilityHandler, GraphHandler, InferenceHandler, LifecycleHandler, NicheHandler,
+    ProtocolHandler, TopologyHandler,
 };
 use crate::living_graph::LivingGraph;
 use crate::mode::BiomeOsMode;
@@ -90,6 +90,9 @@ pub struct NeuralApiServer {
 
     /// Protocol escalation handler (JSON-RPC → tarpc)
     pub(super) protocol_handler: ProtocolHandler,
+
+    /// Inference scheduling handler (cross-gate model routing)
+    pub(super) inference_handler: InferenceHandler,
 
     /// Plasmodium agent registry (meld/split/mix routing contexts)
     pub(super) agent_registry: agents::AgentRegistry,
@@ -151,6 +154,10 @@ impl NeuralApiServer {
 
         let protocol_handler = ProtocolHandler::new(living_graph.clone(), escalation_manager);
 
+        let gate_registry = Arc::new(crate::gate_registry::GateRegistry::new());
+        let inference_handler =
+            InferenceHandler::new(router.clone(), gate_registry);
+
         Self {
             graphs_dir,
             family_id: family_id_str,
@@ -167,6 +174,7 @@ impl NeuralApiServer {
             niche_handler,
             lifecycle_handler,
             protocol_handler,
+            inference_handler,
             agent_registry: agents::AgentRegistry::new(),
         }
     }

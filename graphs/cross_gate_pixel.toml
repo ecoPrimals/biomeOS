@@ -1,0 +1,193 @@
+# Cross-Gate Pixel Deployment Graph
+# =============================================================================
+#
+# Deploys a Tower Atomic (BearDog + Songbird) on the Pixel 8a via cross-gate
+# routing, then registers the Pixel's capabilities on Eastgate's biomeOS.
+#
+# The Pixel runs biomeOS natively (ARM64 musl binary, 9.6MB, v2.72+) with its
+# Neural API accessible via abstract Unix socket or TCP (when on same LAN).
+#
+# This graph exercises:
+#   - gate = "pixel" on nodes → forward_to_remote_gate()
+#   - Abstract socket transport: @biomeos-pixel
+#   - TCP fallback for cross-network: tcp://192.168.1.XXX:9001
+#   - route.register for Pixel capability cross-registration
+#
+# Prerequisites:
+#   - biomeOS ARM64 deployed on Pixel via ADB:
+#       adb push plasmidBin/stable/aarch64/biomeos /data/local/tmp/biomeos
+#   - biomeOS running on Pixel:
+#       adb shell /data/local/tmp/biomeos nucleus start --family-id ${FAMILY_ID}
+#   - Pixel and Eastgate on same LAN (or Songbird mesh relay available)
+#
+# Usage:
+#   biomeos atomic deploy graphs/cross_gate_pixel.toml \
+#     --env FAMILY_ID=cf7e8729 \
+#     --env PIXEL_ENDPOINT=tcp://192.168.1.150:9001 \
+#     --env XDG_RUNTIME_DIR=/run/user/1000
+#
+# =============================================================================
+
+[graph]
+id = "cross_gate_pixel"
+version = "1.0.0"
+description = "Cross-gate Pixel: Tower Atomic on Pixel 8a with federation to Eastgate"
+coordination = "Sequential"
+
+[graph.env]
+pixel = "${PIXEL_ENDPOINT}"
+
+# =============================================================================
+# PHASE 1: LOCAL TOWER (Eastgate) — assumed already running
+# =============================================================================
+
+# 1.1: Verify local Tower is healthy
+[[nodes]]
+id = "verify_local"
+output = "local_verified"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+timeout_seconds = 10
+
+[nodes.constraints]
+timeout_ms = 15000
+
+# =============================================================================
+# PHASE 2: PIXEL TOWER — forwarded to Pixel's biomeOS
+# =============================================================================
+
+# 2.1: BearDog on Pixel (same family lineage)
+[[nodes]]
+id = "pixel_beardog"
+depends_on = ["verify_local"]
+gate = "pixel"
+output = "pixel_beardog_started"
+capabilities = ["crypto", "tls_crypto", "genetic", "security", "beacon"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog=info"
+
+[nodes.constraints]
+timeout_ms = 45000
+
+# 2.2: Songbird on Pixel (mesh + discovery)
+[[nodes]]
+id = "pixel_songbird"
+depends_on = ["pixel_beardog"]
+gate = "pixel"
+output = "pixel_songbird_started"
+capabilities = ["http", "discovery", "mesh", "relay", "stun", "punch"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+SONGBIRD_MESH_ENABLED = "true"
+BIOMEOS_BIND_ALL = "true"
+RUST_LOG = "songbird=info"
+
+[nodes.constraints]
+timeout_ms = 45000
+
+# =============================================================================
+# PHASE 3: CROSS-REGISTRATION
+# =============================================================================
+
+# 3.1: Register Pixel's crypto on Eastgate
+[[nodes]]
+id = "register_pixel_crypto"
+depends_on = ["pixel_beardog"]
+output = "pixel_crypto_registered"
+
+[nodes.operation]
+name = "rpc_call"
+
+[nodes.operation.params]
+method = "route.register"
+params = { primal = "beardog", transport = "${PIXEL_ENDPOINT}", capabilities = ["crypto.sign", "crypto.verify", "crypto.encrypt", "crypto.decrypt", "crypto.hash"], gate = "pixel", source = "cross_gate_pixel" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# 3.2: Register Pixel's network on Eastgate
+[[nodes]]
+id = "register_pixel_network"
+depends_on = ["pixel_songbird"]
+output = "pixel_network_registered"
+
+[nodes.operation]
+name = "rpc_call"
+
+[nodes.operation.params]
+method = "route.register"
+params = { primal = "songbird", transport = "${PIXEL_ENDPOINT}", capabilities = ["http.request", "discovery.announce", "mesh.status", "stun.discover", "punch.request"], gate = "pixel", source = "cross_gate_pixel" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# PHASE 4: VALIDATION
+# =============================================================================
+
+# 4.1: Verify Pixel federation
+[[nodes]]
+id = "validate_pixel_federation"
+depends_on = ["register_pixel_crypto", "register_pixel_network"]
+output = "pixel_federation_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_capability_routing = true
+timeout_seconds = 20
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+#
+# Cross-Gate Pixel Deployment:
+#   Phase 1: Verify Eastgate Tower is healthy
+#   Phase 2: Deploy BearDog + Songbird on Pixel via forward_to_remote_gate()
+#   Phase 3: route.register Pixel capabilities on Eastgate
+#   Phase 4: Validate federation health
+#
+# Pixel capabilities after deployment:
+#   crypto.* → Pixel:BearDog (mobile crypto, same family lineage)
+#   mesh.*   → Pixel:Songbird (mobile mesh node, NAT traversal, relay)
+#
+# Mobile-specific notes:
+#   - Pixel has limited RAM (~8GB) — Tower Atomic only, no Nest or Node
+#   - Abstract sockets preferred on Android (no filesystem socket cleanup)
+#   - Battery: BearDog idle ~2MB RSS, Songbird idle ~4MB RSS
+#   - biomeOS orchestrator on Pixel: ~3MB RSS (musl static)
+#
+# =============================================================================

@@ -79,6 +79,11 @@ impl GateRegistry {
         registry
     }
 
+    /// Names of all registered gates.
+    pub fn gate_names(&self) -> Vec<String> {
+        self.gates.keys().cloned().collect()
+    }
+
     /// Iterate over all registered gates.
     pub fn iter(&self) -> impl Iterator<Item = (&str, &TransportEndpoint)> {
         self.gates.iter().map(|(k, v)| (k.as_str(), v))

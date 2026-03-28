@@ -10,6 +10,7 @@
 //! - `niche`: Niche template deployment
 //! - `lifecycle`: Primal lifecycle management (resurrection, apoptosis)
 //! - `protocol`: Protocol escalation (JSON-RPC → tarpc)
+//! - `inference`: Cross-gate model scheduling and GPU routing
 //!
 //! # Architecture
 //!
@@ -20,7 +21,8 @@
 //!   ├── TopologyHandler   (primals, metrics)
 //!   ├── NicheHandler      (templates)
 //!   ├── LifecycleHandler  (resurrection, apoptosis)
-//!   └── ProtocolHandler   (escalation, fallback, metrics)
+//!   ├── ProtocolHandler   (escalation, fallback, metrics)
+//!   └── InferenceHandler  (model scheduling, GPU gate routing)
 //! ```
 //!
 //! # Capability-Based Design
@@ -35,6 +37,7 @@ mod capability_tests;
 pub mod graph;
 #[cfg(test)]
 mod graph_tests;
+pub mod inference;
 pub mod lifecycle;
 pub mod niche;
 pub mod protocol;
@@ -42,6 +45,7 @@ pub mod topology;
 
 pub use capability::CapabilityHandler;
 pub use graph::{ExecutionStatus, GraphHandler};
+pub use inference::InferenceHandler;
 pub use lifecycle::LifecycleHandler;
 pub use niche::NicheHandler;
 pub use protocol::ProtocolHandler;

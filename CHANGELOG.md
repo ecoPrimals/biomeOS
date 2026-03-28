@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.75 (2026-03-28) — Cross-Gate Federation Graphs + Inference Scheduling
+
+### Cross-gate deployment graphs
+- New `graphs/cross_gate_tower.toml`: first real cross-gate deployment graph exercising `gate = "gate2"`, `[graph.env]` gate endpoints, `route.register` batch registration, and `forward_to_remote_gate()` validation
+- New `graphs/cross_gate_pixel.toml`: ARM64 Pixel cross-gate Tower deployment with abstract socket + TCP transport, `route.register` for mobile capabilities
+- 3 new integration tests: `cross_gate_tower_toml_parses_and_wires_registry`, `cross_gate_tower_toml_route_register_nodes`, `cross_gate_pixel_toml_parses_and_wires_registry`
+
+### Inference scheduling (model orchestration)
+- New `handlers/inference.rs`: `InferenceHandler` with VRAM-aware GPU gate scheduling
+- `inference.schedule` JSON-RPC method: accepts model + prompt, probes gates for `compute.capabilities`, selects best gate by VRAM, forwards `ai.query` via `capability.call`
+- `inference.gates` JSON-RPC method: lists all registered gates with GPU capabilities and availability
+- VRAM estimation heuristics: model name parsing (70b→40GB, 7b→6GB, etc.) + size hints (large/small/mini)
+- `GateRegistry::gate_names()` added for gate enumeration
+- 7 new tests (VRAM estimation, gate listing, construction, prompt validation)
+- Wired into `NeuralApiServer` routing table: `inference.schedule`, `inference.gates`
+
+### Stale reference cleanup
+- `nucleus.rs`: `docs/handoffs/` → `wateringHole/handoffs/` (2 code comments)
+- `specs/EVOLUTION_ROADMAP.md`, `specs/MESH_IPC_METHODS_SPEC.md`: updated handoff paths
+- CHANGELOG fossil references preserved (historical record)
+
+### Metrics
+- Tests: 7,192 → **7,202** (+10 new: 3 cross-gate graph parsing, 7 inference handler)
+
 ## v2.74 (2026-03-28) — Deep Debt Evolution
 
 ### Rust 2024 lint idiom

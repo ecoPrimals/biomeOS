@@ -72,6 +72,8 @@ enum Route {
     McpToolsList,
     Agent,
     ProxyHttp,
+    InferenceSchedule,
+    InferenceGates,
     MeshCapabilityCall,
 }
 
@@ -169,6 +171,9 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
         "capability.list_translations",
         Route::CapabilityListTranslations,
     ),
+    // Inference scheduling (cross-gate model orchestration)
+    ("inference.schedule", Route::InferenceSchedule),
+    ("inference.gates", Route::InferenceGates),
     // MCP tool discovery (Squirrel alpha.13 aggregation)
     ("mcp.tools.list", Route::McpToolsList),
     ("mcp.tools_list", Route::McpToolsList),
@@ -359,6 +364,13 @@ impl NeuralApiServer {
                 .await,
                 &id,
             ),
+            // Inference scheduling
+            Route::InferenceSchedule => {
+                dispatch(self.inference_handler.schedule(params).await, &id)
+            }
+            Route::InferenceGates => {
+                dispatch(self.inference_handler.gates(params).await, &id)
+            }
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, &id),
             // Mesh & NAT (capability.call sugar)
