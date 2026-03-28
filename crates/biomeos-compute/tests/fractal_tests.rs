@@ -276,7 +276,7 @@ async fn test_leaf_node_direct() {
     };
 
     let leaf: std::sync::Arc<dyn ComputeNode> =
-        std::sync::Arc::new(LeafNode::new(config, resources.clone()));
+        std::sync::Arc::new(LeafNode::new(config, resources));
 
     // Verify it's a leaf
     assert!(leaf.is_leaf());

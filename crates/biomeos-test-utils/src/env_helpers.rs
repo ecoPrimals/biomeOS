@@ -30,7 +30,10 @@ static ENV_MUTEX: Mutex<()> = Mutex::new(());
 /// Sets `key` to `value` in the process environment (test-only).
 ///
 /// Prefer [`TestEnvGuard::set`] when you need automatic restoration after a scope.
-#[allow(unsafe_code)]
+#[expect(
+    unsafe_code,
+    reason = "Rust 2024 requires unsafe for env mutation; serialized by ENV_MUTEX"
+)]
 pub fn set_test_env<K: AsRef<OsStr>, V: AsRef<OsStr>>(key: K, value: V) {
     let _lock = ENV_MUTEX
         .lock()
@@ -45,7 +48,10 @@ pub fn set_test_env<K: AsRef<OsStr>, V: AsRef<OsStr>>(key: K, value: V) {
 /// Removes `key` from the process environment (test-only).
 ///
 /// Prefer [`TestEnvGuard::remove`] when you need automatic restoration after a scope.
-#[allow(unsafe_code)]
+#[expect(
+    unsafe_code,
+    reason = "Rust 2024 requires unsafe for env mutation; serialized by ENV_MUTEX"
+)]
 pub fn remove_test_env<K: AsRef<OsStr>>(key: K) {
     let _lock = ENV_MUTEX
         .lock()

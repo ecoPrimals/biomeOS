@@ -109,7 +109,7 @@ impl FractalBuilder {
         };
 
         let root = self
-            .build_node_recursive(root_config, self.base_resources.clone(), 0)
+            .build_node_recursive(root_config, self.base_resources, 0)
             .await?;
 
         info!(
@@ -161,7 +161,7 @@ impl FractalBuilder {
                 let child = self
                     .build_node_recursive(
                         child_config,
-                        child_resources[i].clone(),
+                        child_resources[i],
                         current_depth + 1,
                     )
                     .await?;
@@ -285,7 +285,7 @@ impl ComputeNode for LeafNode {
     }
 
     async fn get_resources(&self) -> Result<ResourceInfo> {
-        Ok(self.resources.clone())
+        Ok(self.resources)
     }
 
     async fn get_capacity(&self) -> Result<CapacityInfo> {
@@ -293,8 +293,8 @@ impl ComputeNode for LeafNode {
         Ok(CapacityInfo {
             max_concurrent_workloads: 4,
             available_slots: 4 - workloads.len(),
-            total_resources: self.resources.clone(),
-            available_resources: self.resources.clone(), // Simplified
+            total_resources: self.resources,
+            available_resources: self.resources,
         })
     }
 
@@ -396,7 +396,7 @@ impl ComputeNode for LeafNode {
             total_nodes: 1,
             total_workloads_active: self.get_utilization().await?.active_workloads,
             total_workloads_completed: self.get_metrics().await?.workloads_completed,
-            aggregate_resources: self.resources.clone(),
+            aggregate_resources: self.resources,
             aggregate_utilization: self.get_utilization().await?,
         })
     }
@@ -585,7 +585,10 @@ impl ComputeNode for ParentNode {
     }
 
     async fn spawn_sub_node(&self, _config: NodeConfig) -> Result<Arc<dyn ComputeNode>> {
-        anyhow::bail!("Dynamic sub-node spawning not yet implemented")
+        anyhow::bail!(
+            "ParentNode children are immutable after construction — \
+             use ParentNodeBuilder to define topology at creation time"
+        )
     }
 
     async fn get_children(&self) -> Result<Vec<Arc<dyn ComputeNode>>> {
@@ -670,7 +673,7 @@ impl ComputeNode for ParentNode {
             total_nodes,
             total_workloads_active: total_active,
             total_workloads_completed: total_completed,
-            aggregate_resources: aggregate_resources.clone(),
+            aggregate_resources,
             aggregate_utilization: self.get_utilization().await?,
         })
     }

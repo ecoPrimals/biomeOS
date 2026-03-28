@@ -411,8 +411,6 @@ impl GraphExecutor {
 
             for _ in 0..phase_size {
                 if let Some(node_id) = queue.pop_front() {
-                    current_phase.push(node_id.clone());
-
                     if let Some(dependents) = graph_map.get(&node_id) {
                         for dependent in dependents {
                             if let Some(degree) = in_degree.get_mut(dependent) {
@@ -423,6 +421,7 @@ impl GraphExecutor {
                             }
                         }
                     }
+                    current_phase.push(node_id);
                 }
             }
 
@@ -618,7 +617,7 @@ impl GraphExecutor {
                 let params = params.clone();
 
                 async move {
-                    let request = JsonRpcRequest::new(&method, params.clone());
+                    let request = JsonRpcRequest::new(&method, params);
 
                     let stream = tokio::time::timeout(
                         Duration::from_secs(10),

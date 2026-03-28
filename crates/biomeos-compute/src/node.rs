@@ -279,7 +279,7 @@ pub struct WorkloadInfo {
 }
 
 /// Resource information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ResourceInfo {
     /// Number of CPU cores
     pub cpu_cores: usize,
