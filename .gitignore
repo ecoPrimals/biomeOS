@@ -1,42 +1,80 @@
 
-*~
-/coverage/
-# Coverage
-# EXCEPT: Keep structure and version manifest
-# IDE
-.idea/
-*.iso
-*.log
-*.pdb
-plasmidBin/archive/**/*
-!plasmidBin/archive/.gitkeep
-!plasmidBin/MANIFEST.md
-plasmidBin/neural-api-server
-plasmidBin/beardog-server
-plasmidBin/primals/*
-!plasmidBin/primals/.gitkeep
-# PlasmidBin - Stable deployment binaries (not tracked in git)
-plasmidBin/tower/*
-!plasmidBin/tower/.gitkeep
-!plasmidBin/VERSION.txt
-*.profdata
-*.profraw
-*.qcow2
-**/*.rs.bk
-# Rust build artifacts
-*.swo
-*.swp
+# ── Rust build artifacts ─────────────────────────────────────────────────────
 /target/
 target/
+**/*.rs.bk
 
-# Local binary directories (not tracked)
-primals/
-bin/
-vm-images/*.img
-vm-testing/*.qcow2
+# ── IDE / editor ─────────────────────────────────────────────────────────────
+.idea/
 .vscode/
+*~
+*.swo
+*.swp
 
-# Sensitive files (TRUE ecoBin v2.0 security)
+# ── Coverage / profiling ─────────────────────────────────────────────────────
+/coverage/
+*.profdata
+*.profraw
+*.pdb
+*.log
+
+# ── Binary artifacts (never commit — distribute via ecoPrimals/plasmidBin) ──
+*.iso
+*.qcow2
+*.genome
+*.tar.gz
+dist/
+vm-testing/
+vm-images/
+base-spore/
+primalBins/
+
+# ── Primal ELF binaries (all belong in ecoPrimals/plasmidBin repo) ───────────
+primals/
+bin/tower
+
+# plasmidBin local cache: keep directory structure, ignore all binaries
+plasmidBin/beardog
+plasmidBin/beardog-server
+plasmidBin/nestgate
+plasmidBin/songbird
+plasmidBin/squirrel
+plasmidBin/toadstool
+plasmidBin/toadstool-cli
+plasmidBin/petal-tongue
+plasmidBin/petal-tongue-headless
+plasmidBin/neural-api-server
+plasmidBin/optimized/
+plasmidBin/stable/
+plasmidBin/static/
+plasmidBin/biomeOS/
+plasmidBin/archive/**/*
+!plasmidBin/archive/.gitkeep
+plasmidBin/primals/*
+!plasmidBin/primals/.gitkeep
+plasmidBin/tower/*
+!plasmidBin/tower/.gitkeep
+!plasmidBin/MANIFEST.md
+!plasmidBin/VERSION.txt
+
+# ── Deployment dirs: keep configs/scripts/graphs, ignore binaries ────────────
+livespore-usb/plasmidBin/
+livespore-usb/primals/
+livespore-usb/*/primals/
+livespore-usb/x86_64/data/
+
+pixel8a-deploy/primals/
+pixel8a-deploy/neural-api-server
+pixel8a-deploy/beardog
+pixel8a-deploy/songbird
+pixel8a-deploy/squirrel
+pixel8a-deploy/nestgate
+pixel8a-deploy/toadstool
+
+# ── Generated visualizations (keep .dot/.json/.svg source) ───────────────────
+visualizations/*.png
+
+# ── Sensitive files ──────────────────────────────────────────────────────────
 *.key
 *.pem
 *.env
@@ -45,7 +83,7 @@ vm-testing/*.qcow2
 secrets/
 certs/
 
-# Identity and seed files (never commit — recursive across all subdirs)
+# ── Identity and seed files (never commit) ───────────────────────────────────
 **/.family.seed
 **/.lineage.seed
 **/.lineage.json
@@ -54,37 +92,18 @@ certs/
 **/.device.identity
 .project-status
 
-# Runtime data (generated at runtime, not source)
+# ── Runtime data ─────────────────────────────────────────────────────────────
 data/
 tmp-cloud-init/
 audit.log
 command_history.json
 command_journal.json
 
-# Primal binaries (ELF/Mach-O - use genomeBin for distribution)
-validation/primals/
-base-spore/primals/
-base-spore/.family.seed
-
-# Archive (fossil record lives in ecoPrimals/archive/)
+# ── Archive (fossil record lives in ecoPrimals/archive/) ─────────────────────
 archive/
 cloudflared
 *.bak*/
-plasmidBin/optimized/
-plasmidBin/stable/
-plasmidBin/static/
-plasmidBin/biomeOS/
 
-# Genome and binary files (distribute via genomeBin, not git)
-*.genome
-
-# Primal ELF binaries in deployment dirs
-livespore-usb/plasmidBin/
-pixel8a-deploy/beardog
-pixel8a-deploy/songbird
-pixel8a-deploy/squirrel
-pixel8a-deploy/nestgate
-pixel8a-deploy/toadstool
-
+# ── Chimera build artifacts ──────────────────────────────────────────────────
 chimeras/**/Cargo.lock
 chimeras/**/target/
