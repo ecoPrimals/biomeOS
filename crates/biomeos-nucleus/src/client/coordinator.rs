@@ -214,16 +214,16 @@ impl NucleusClient {
     }
 }
 
-/// NUCLEUS Client Builder (for customization)
+/// NUCLEUS Client Builder (for customization).
 pub struct NucleusClientBuilder {
-    // Future: Allow custom layer implementations
+    _private: (),
 }
 
 impl NucleusClientBuilder {
     /// Create a new builder
     #[must_use]
     pub fn new() -> Self {
-        Self {}
+        Self { _private: () }
     }
 
     /// Build the client

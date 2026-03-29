@@ -187,16 +187,18 @@ impl ExecutionContext {
         self
     }
 
-    /// Save checkpoint to disk
+    /// Save checkpoint to disk (completed node statuses and outputs).
     pub async fn save_checkpoint(&self) -> Result<()> {
         if let Some(ref checkpoint_dir) = self.checkpoint_dir {
             std::fs::create_dir_all(checkpoint_dir)?;
 
             let statuses = self.status.lock().await;
+            let outputs = self.outputs.lock().await;
             let checkpoint_path = checkpoint_dir.join("execution_state.json");
 
             let checkpoint_data = serde_json::json!({
                 "statuses": *statuses,
+                "outputs": *outputs,
                 "family_id": self.family_id.as_ref(),
             });
 
@@ -208,7 +210,7 @@ impl ExecutionContext {
         Ok(())
     }
 
-    /// Load checkpoint from disk
+    /// Load checkpoint from disk into `status` and `outputs`.
     pub async fn load_checkpoint(&self) -> Result<()> {
         if let Some(ref checkpoint_dir) = self.checkpoint_dir {
             let checkpoint_path = checkpoint_dir.join("execution_state.json");
@@ -223,6 +225,14 @@ impl ExecutionContext {
 
                     let mut status_map = self.status.lock().await;
                     *status_map = loaded_statuses;
+                }
+
+                if let Some(outputs) = checkpoint.get("outputs") {
+                    let loaded_outputs: HashMap<String, serde_json::Value> =
+                        serde_json::from_value(outputs.clone())?;
+
+                    let mut out_map = self.outputs.lock().await;
+                    *out_map = loaded_outputs;
                 }
             }
         }
@@ -350,6 +360,8 @@ mod tests {
         )
         .await;
         ctx.set_status("songbird", NodeStatus::Running).await;
+        ctx.set_output("beardog", serde_json::json!({"socket": "/tmp/x.sock"}))
+            .await;
 
         // Save checkpoint
         ctx.save_checkpoint().await.unwrap();
@@ -371,6 +383,10 @@ mod tests {
             Some(&NodeStatus::Completed(serde_json::json!({"pid": 123})))
         );
         assert_eq!(loaded.get("songbird"), Some(&NodeStatus::Running));
+        assert_eq!(
+            ctx2.get_output("beardog").await,
+            Some(serde_json::json!({"socket": "/tmp/x.sock"}))
+        );
     }
 
     #[tokio::test]

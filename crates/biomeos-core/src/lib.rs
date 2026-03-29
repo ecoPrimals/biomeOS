@@ -108,9 +108,7 @@ pub mod integration;
 pub mod log_session;
 
 // Re-export the main manager and types for easy access
-pub use universal_biomeos_manager::{
-    GeneticAccessKey, PrimalInfo, PrimalStatistics, UniversalBiomeOSManager,
-};
+pub use universal_biomeos_manager::{PrimalInfo, PrimalStatistics, UniversalBiomeOSManager};
 
 // Re-export atomic client (Universal IPC v3.0 - Multi-Transport)
 pub use atomic_client::{AtomicClient, JsonRpcRequest, JsonRpcResponse, discover_primal_endpoint};

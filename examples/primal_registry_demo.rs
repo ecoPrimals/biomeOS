@@ -7,7 +7,7 @@
 //! 1. Discover primal binaries from local USB (../phase1bins/)
 //! 2. List available primals and versions
 //! 3. Deploy primals to targets
-//! 4. (Future) Pull updates from GitHub
+//! 4. Pull updates from GitHub releases
 
 use biomeos_core::primal_registry::PrimalRegistry;
 use tracing::info;

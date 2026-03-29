@@ -325,17 +325,22 @@ struct HardwareInfo {
     total_memory_gb: usize,
 }
 
-/// Configure network interfaces
+/// Configure network interfaces.
+///
+/// biomeOS relies on the host's existing network stack; the init binary only
+/// verifies reachability. Interface management, DHCP, and DNS are delegated
+/// to Songbird via `discovery.*` capabilities once the ecosystem is running.
 async fn configure_network() -> Result<()> {
-    info!("🌐 Configuring network...");
+    info!("🌐 Verifying network connectivity...");
 
-    // This is a placeholder - full network configuration would:
-    // 1. Detect network interfaces
-    // 2. Configure DHCP or static IP
-    // 3. Set up DNS
-    // 4. Start mDNS for service discovery
+    let loopback_ok = std::net::TcpListener::bind("127.0.0.1:0").is_ok();
+    if loopback_ok {
+        info!("✅ Loopback interface available");
+    } else {
+        tracing::warn!("⚠️  Loopback interface not bindable — IPC may be limited to Unix sockets");
+    }
 
-    info!("✅ Network configuration complete");
+    info!("✅ Network verification complete");
     Ok(())
 }
 

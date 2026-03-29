@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: March 28, 2026
-**Status**: Production Ready (v2.76) — 7,202 tests (0 failures), Edition 2024 all 26 crates, 90%+ coverage (llvm-cov), 0 clippy warnings (pedantic+nursery), 0 C deps, 0 unsafe prod, scyBorg triple-copyleft
+**Last Updated**: March 29, 2026
+**Status**: Production Ready (v2.78) — 7,204 tests (0 failures), Edition 2024 all 26 crates, 90%+ coverage (llvm-cov), 0 clippy warnings (pedantic+nursery), 0 C deps, 0 unsafe prod, 0 blocking debt, scyBorg triple-copyleft
 
 ---
 
@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 files >1000 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 7,202 tests (0 failures), 90%+ coverage
+8. **Tested**: 7,204 tests (0 failures), 90%+ coverage
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns
 
 ---
@@ -167,13 +167,13 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.76)
-**AI Bridge**: Local + Cloud AI validated
+**Status**: Production Ready (v2.78 — zero blocking debt)
+**AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Neural API**: 290+ semantic translations, 26 capability domains (part of biomeOS)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v3.0 compliant
-**Tests**: 7,202 passing, 90%+ coverage (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 production
-**Updated**: March 28, 2026
+**Tests**: 7,204 passing, 90%+ coverage (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 production | **Blocking debt**: 0
+**Updated**: March 29, 2026

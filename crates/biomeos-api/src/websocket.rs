@@ -91,7 +91,7 @@ pub(crate) struct Subscription {
     /// Subscription ID (used in list_subscriptions and event notifications)
     id: Arc<str>,
     filter: Arc<SubscriptionFilter>,
-    /// Channel sender (held to keep subscription alive; future: event forwarding)
+    /// Channel sender (held to keep subscription alive; events forwarded on graph state changes).
     _sender: tokio::sync::mpsc::UnboundedSender<GraphEvent>,
 }
 

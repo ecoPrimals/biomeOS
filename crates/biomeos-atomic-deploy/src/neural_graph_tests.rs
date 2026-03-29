@@ -722,14 +722,14 @@ fn test_cross_gate_tower_toml_parses_and_wires_registry() {
 
     assert_eq!(graph.id, "cross_gate_tower");
 
-    let local_nodes: Vec<_> = graph.nodes.iter().filter(|n| n.gate.is_none()).collect();
+    let local_node_count = graph.nodes.iter().filter(|n| n.gate.is_none()).count();
     let remote_nodes: Vec<_> = graph
         .nodes
         .iter()
         .filter(|n| n.gate.as_deref() == Some("gate2"))
         .collect();
     assert!(
-        local_nodes.len() >= 2,
+        local_node_count >= 2,
         "should have at least 2 local nodes (beardog + songbird)"
     );
     assert!(
@@ -804,13 +804,13 @@ fn test_cross_gate_pixel_toml_parses_and_wires_registry() {
 
     assert_eq!(graph.id, "cross_gate_pixel");
 
-    let pixel_nodes: Vec<_> = graph
+    let pixel_node_count = graph
         .nodes
         .iter()
         .filter(|n| n.gate.as_deref() == Some("pixel"))
-        .collect();
+        .count();
     assert!(
-        pixel_nodes.len() >= 2,
+        pixel_node_count >= 2,
         "should have at least 2 pixel-targeted nodes"
     );
 

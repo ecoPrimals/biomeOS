@@ -284,9 +284,10 @@ impl UniversalBiomeOSManager {
         Ok(result)
     }
 
-    /// Create service integration
+    /// Create service integration.
     ///
-    /// Future: Integrate with Toadstool for service provisioning
+    /// Service provisioning is delegated to ToadStool via `compute.*` capability
+    /// routing when available; this provides a local fallback.
     pub(super) async fn create_service_integration(
         &self,
         name: &str,

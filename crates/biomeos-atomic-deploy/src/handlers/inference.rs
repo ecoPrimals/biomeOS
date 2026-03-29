@@ -335,19 +335,13 @@ mod tests {
     #[test]
     fn test_estimate_vram_7b() {
         let vram = InferenceHandler::estimate_vram_requirement("mistral-7b-instruct");
-        assert!(vram >= 4.0 && vram <= 8.0);
+        assert!((4.0..=8.0).contains(&vram));
     }
 
     #[test]
     fn test_estimate_vram_api_model() {
-        assert_eq!(
-            InferenceHandler::estimate_vram_requirement("gpt-4-turbo"),
-            0.0
-        );
-        assert_eq!(
-            InferenceHandler::estimate_vram_requirement("claude-3-opus"),
-            0.0
-        );
+        assert!(InferenceHandler::estimate_vram_requirement("gpt-4-turbo").abs() < f64::EPSILON,);
+        assert!(InferenceHandler::estimate_vram_requirement("claude-3-opus").abs() < f64::EPSILON,);
     }
 
     #[test]

@@ -153,6 +153,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("capability.discover", Route::CapabilityDiscover),
     ("neural_api.discover_capability", Route::CapabilityDiscover),
     ("capability.list", Route::CapabilityList),
+    ("capabilities.list", Route::CapabilityList),
     ("capability.providers", Route::CapabilityProviders),
     ("capability.route", Route::CapabilityResolve),
     ("neural_api.route_to_primal", Route::CapabilityResolve),

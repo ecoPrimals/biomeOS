@@ -138,8 +138,8 @@ impl PrimalCoordinator {
             );
         }
 
-        // Future: Could implement capability sharing, trust establishment, etc.
-        // For now, just verify they're all responsive
+        // Capability sharing and trust establishment happen via the Neural API
+        // when primals register with `lifecycle.register` + `capability.register`.
 
         Ok(())
     }

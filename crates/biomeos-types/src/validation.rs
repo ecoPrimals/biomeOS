@@ -143,7 +143,8 @@ impl ValidationSink for StderrSink {
             ValidationSeverity::Warning => self.warning_count += 1,
             ValidationSeverity::Info => {}
         }
-        eprintln!("{finding}");
+        use std::io::Write;
+        let _ = writeln!(std::io::stderr(), "{finding}");
     }
 }
 

@@ -102,16 +102,10 @@ impl DiscoveryUtils {
         })
     }
 
-    /// Find services near a geographical location
+    /// Find services near a geographical location.
     ///
-    /// REMOVED: Mock implementation
-    /// BiomeOS should NOT implement geolocation - that's Songbird's job
-    ///
-    /// Future: Delegate to Songbird via UniversalPrimalClient
-    /// ```rust,ignore
-    /// let songbird = manager.discover_primal("discovery").await?;
-    /// songbird.query_services_by_location(latitude, longitude, radius_km).await
-    /// ```
+    /// Geolocation is a Songbird capability, not biomeOS. Callers should route
+    /// `discovery.locate` to Songbird via the Neural API.
     pub async fn discover_by_location(
         _manager: &UniversalBiomeOSManager,
         _latitude: f64,

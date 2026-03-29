@@ -66,12 +66,15 @@ impl CapabilityHandler {
     /// JSON-RPC method: `capability.discover`
     ///
     /// # Parameters
-    /// - `capability`: The capability to discover (e.g., "crypto", "http")
+    /// - `capability` or `domain`: The capability to discover (e.g., "crypto", "http").
+    ///   Accepts both parameter names for cross-primal compatibility (primalSpring sends
+    ///   `domain` over TCP, `capability` over Unix socket).
     pub async fn discover(&self, params: &Option<Value>) -> Result<Value> {
         let params = params.as_ref().context("Missing parameters")?;
         let capability = params["capability"]
             .as_str()
-            .context("Missing capability")?;
+            .or_else(|| params["domain"].as_str())
+            .context("Missing 'capability' or 'domain' parameter")?;
 
         info!("🔍 Discover capability: {}", capability);
 

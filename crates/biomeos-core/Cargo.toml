@@ -42,6 +42,10 @@ sha2 = "0.10"
 hmac = "0.12"
 semver = { version = "1.0", features = ["serde"] }
 url = "2.5"
+# HTTP(S) for primal registry: hyper for http://; HTTPS uses curl subprocess (avoids rustls→ring per ecoBin policy)
+hyper = { workspace = true }
+hyper-util = { version = "0.1", features = ["tokio", "client", "client-legacy", "http1"] }
+http-body-util = "0.1"
 zeroize = { version = "1.7", features = ["derive"] }
 rand = "0.8"
 hostname = "0.4"

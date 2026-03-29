@@ -1,3 +1,6 @@
+[workspace.lints.rust]
+unsafe_code = "deny"
+
 [workspace.lints.clippy]
 # Deny unwrap/expect in production code to enforce proper error handling
 unwrap_used = "deny"

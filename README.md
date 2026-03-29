@@ -4,29 +4,30 @@
 
 ---
 
-## Status: Production Ready (v2.77)
+## Status: Production Ready (v2.78)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v3.0 compliant |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt audit, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
-| Tests | 7,209 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
-| Unsafe Code | 0 in production |
-| C Dependencies | 0 (zstd-sys eliminated, deny.toml enforced bans) |
+| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, zero warnings, full doc coverage, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
+| Tests | 7,204 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
+| Unsafe Code | 0 in production (workspace `deny`, test-only `expect` override) |
+| C Dependencies | 0 (blake3 pure, deny.toml enforced bans) |
 | Clippy | PASS (0 warnings, pedantic+nursery, all 26 crates via workspace lint inheritance) |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0-only + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI |
-| AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 290+ capability translations, 26 domains (genetic/lineage added), 5 coordination patterns |
+| AI Bridge | Capability-routed to Squirrel (tag-in at runtime; biomeOS runs without AI primal) |
+| Neural API | 290+ capability translations, 26 domains, 5 coordination patterns |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
-| Files >1000 LOC | 0 production (all split into domain submodules) |
-| Discovery | 5-tier capability-first protocol (centralized in biomeos-types) |
-| Dep Governance | tokio, base64, serde, serde_json — all workspace-unified; cargo deny clean |
+| Files >1000 LOC | 0 (all under 1000 after smart domain extraction) |
+| Discovery | 5-tier capability-first + DNS-SD mDNS (RFC 6762) |
+| Blocking Debt | 0 (graph rollback, DNS discovery, remote acquisition, federation manifest — all resolved) |
+| Dep Governance | tokio, base64, serde, serde_json — workspace-unified; tokio-process removed; cargo deny clean |
 
 ---
 
@@ -244,7 +245,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,209 tests)
+### Test (7,204 tests)
 
 ```bash
 cargo test --workspace
@@ -338,10 +339,10 @@ scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC
 
 ---
 
-**Status**: Production Ready (v2.77)
-**Updated**: March 28, 2026
-**Tests**: 7,209 passing, 90%+ coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | 5-tier capability discovery | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
+**Status**: Production Ready (v2.78)
+**Updated**: March 29, 2026
+**Tests**: 7,204 passing, 90%+ coverage (llvm-cov verified) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production | **Blocking debt**: 0
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | 5-tier capability discovery + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
 
 ---
 

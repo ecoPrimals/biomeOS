@@ -419,10 +419,12 @@ impl UniversalBiomeOSManager {
 
     /// Discover services via DNS
     ///
-    /// Future: Implement DNS-SD (Service Discovery) or SRV record lookups
+    /// DNS-SD over mDNS (`_biomeos._tcp.local`), with bounded LAN TCP fallback and
+    /// `health.liveness` verification (newline-delimited JSON-RPC).
     pub async fn discover_via_dns(&self) -> Result<HashMap<String, serde_json::Value>> {
-        tracing::info!("🌐 DNS-based discovery not yet implemented");
-        Ok(HashMap::new())
+        tracing::info!("🌐 DNS-SD discovery (mDNS _biomeos._tcp.local)");
+        let map = dns_sd::discover_dns_sd_services().await;
+        Ok(map)
     }
 
     /// Discover services by capabilities
@@ -453,6 +455,9 @@ impl UniversalBiomeOSManager {
         Ok(services)
     }
 }
+
+/// DNS-SD over mDNS (RFC 6762) plus bounded LAN TCP fallback.
+mod dns_sd;
 
 #[cfg(test)]
 #[expect(

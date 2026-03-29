@@ -275,12 +275,11 @@ impl UniversalBiomeOSManager {
                         }),
                     );
 
-                    // Performance metrics - Future: Track actual metrics via health monitor
                     result.insert(
                         "performance".to_string(),
                         serde_json::json!({
                             "avg_latency_ms": probe_duration,
-                            "throughput_rps": 100, // Future: compute from request counters
+                            "throughput_rps": null,
                             "error_rate_percent": 0.0
                         }),
                     );

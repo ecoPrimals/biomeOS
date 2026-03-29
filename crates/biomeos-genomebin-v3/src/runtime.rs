@@ -93,13 +93,15 @@ impl GenomeBin {
         }
     }
 
-    /// Run in-place without full extraction (basic implementation)
+    /// Run in-place without full extraction.
     ///
-    /// Note: Full zero-copy mmap implementation is future enhancement
+    /// Extracts to a temporary directory for execution. A zero-copy `mmap` path
+    /// can be added when the binary format supports direct execution from the
+    /// archive (requires ELF section alignment guarantees).
     pub fn run_in_place(&self, args: &[String]) -> Result<()> {
         tracing::info!("Running {} in-place", self.manifest.name);
 
-        // For now: Extract to temp directory, execute, cleanup
+        // Extract to temp directory, execute, cleanup
         let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
 
         let binary_path = self

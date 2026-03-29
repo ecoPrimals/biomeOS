@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: March 28, 2026 (v2.77: deep audit + DI evolution, commented-code cleanup, Cargo.toml hygiene)
-**Version**: 2.77
-**Status**: PRODUCTION READY - Multi-Computer Federation Validated
+**Updated**: March 29, 2026 (v2.78: blocking debt resolved, AI routing evolved, smart refactoring, primalSpring compat)
+**Version**: 2.78
+**Status**: PRODUCTION READY - Multi-Computer Federation Validated - Zero Blocking Debt
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,209 lib + bin + doc + proptest (0 failures, ~135 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
+| **Tests Passing** | 7,204 lib + bin + doc + proptest (0 failures, ~134 ignored hardware-dependent — run with `--ignored --test-threads=1`) |
 | **Test Coverage** | 90%+ (llvm-cov workspace-wide verified) — all three metrics above 90% target |
 | **Unsafe Code** | 0 production (test-only env helpers with RAII guards) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -941,7 +941,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,202 tests — ~135 ignored hardware-dependent — use --ignored --test-threads=1 for those)
+# Test (7,204 tests — ~134 ignored hardware-dependent — use --ignored --test-threads=1 for those)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -963,8 +963,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.77 — deep audit + DI evolution, commented-code cleanup, Cargo.toml hygiene)
-**Tests**: 7,209 passing, 0 failures, ~135 ignored cwd-sensitive (90%+ llvm-cov verified)
+**Status**: Production Ready (v2.78 — blocking debt resolved, AI routing evolved, smart refactoring, primalSpring compat)
+**Tests**: 7,204 passing, 0 failures, ~134 ignored hardware-dependent (90%+ llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation
 **Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, graph coordination

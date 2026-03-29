@@ -37,4 +37,4 @@ pub use core::{PrimalInfo, UniversalBiomeOSManager};
 pub use primals::PrimalStatistics;
 
 // Re-export from ai module
-pub use ai::{AIRecommendation, GeneticAccessKey, Priority};
+pub use ai::AiAvailability;

@@ -11,11 +11,14 @@
 //!
 //! This is the foundation for BiomeOS as a "PopOS/Windows bootloader" for primals.
 
+mod remote;
+
 use anyhow::Result;
 use biomeos_types::CapabilityTaxonomy; // Phase 1 enum (not PrimalCapability struct!)
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 /// Primal binary metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,9 +137,59 @@ impl PrimalRegistry {
         tracing::info!("Fetching primal binaries from GitHub: {}", org);
 
         for repo in repos {
-            // Future: Implement GitHub API integration using `octocrab` crate
-            // Would fetch releases, check latest versions, download binaries
-            tracing::info!("Would fetch from: {}/{}", org, repo);
+            let release = match remote::github_latest_release(org, repo).await {
+                Ok(r) => r,
+                Err(e) => {
+                    tracing::warn!(
+                        "Skipping {}/{}: could not load latest release: {}",
+                        org,
+                        repo,
+                        e
+                    );
+                    continue;
+                }
+            };
+
+            let tag = release.tag_name.clone();
+            for asset in &release.assets {
+                if remote::is_skippable_non_binary_asset(&asset.name) {
+                    continue;
+                }
+                if !remote::asset_matches_platform(&asset.name) {
+                    tracing::debug!(
+                        "Skipping asset (platform mismatch): {} in {}/{}",
+                        asset.name,
+                        org,
+                        repo
+                    );
+                    continue;
+                }
+
+                let primal_name = Self::detect_primal_name(&asset.name);
+                let version = tag.trim_start_matches('v').to_string();
+                let binary = PrimalBinary {
+                    name: primal_name.clone(),
+                    version,
+                    path: BinaryLocation::GitHub {
+                        org: org.to_string(),
+                        repo: (*repo).to_string(),
+                        tag: tag.clone(),
+                        asset: asset.name.clone(),
+                    },
+                    checksum: None,
+                    metadata: Self::default_metadata(&primal_name),
+                };
+
+                tracing::info!(
+                    "Registered primal candidate {} v{} from {}/{} (asset {})",
+                    binary.name,
+                    binary.version,
+                    org,
+                    repo,
+                    asset.name
+                );
+                self.binaries.entry(primal_name).or_default().push(binary);
+            }
         }
 
         Ok(())
@@ -154,8 +207,8 @@ impl PrimalRegistry {
     pub fn get_latest(&self, name: &str) -> Option<&PrimalBinary> {
         self.binaries.get(name).and_then(|versions| {
             versions.iter().max_by(|a, b| {
-                // Simple lexicographic version comparison
-                // Future: use `semver` crate for proper semantic versioning
+                // Lexicographic comparison: sufficient for CalVer/SemVer with
+                // consistent zero-padding. Avoids a `semver` crate dependency.
                 a.version.cmp(&b.version)
             })
         })
@@ -307,22 +360,50 @@ impl PrimalRegistry {
                 tag,
                 asset,
             } => {
-                // Download from GitHub
                 tracing::info!(
-                    "Would download from GitHub: {}/{} @ {} ({})",
+                    "Downloading from GitHub: {}/{} @ {} ({})",
                     org,
                     repo,
                     tag,
                     asset
                 );
-                // Future: Implement actual GitHub release asset download using octocrab/reqwest
-                Err(anyhow::anyhow!("GitHub download not yet implemented"))
+                let release = remote::github_release_for_tag(org, repo, tag).await?;
+                let gh_asset = release
+                    .assets
+                    .iter()
+                    .find(|a| a.name == *asset)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Asset {:?} not found in release {} for {}/{}",
+                            asset,
+                            tag,
+                            org,
+                            repo
+                        )
+                    })?;
+                let dest = remote::cached_download_path(
+                    &gh_asset.browser_download_url,
+                    org,
+                    repo,
+                    tag,
+                    asset,
+                )?;
+                remote::download_url_to_path_with_verify(
+                    &gh_asset.browser_download_url,
+                    &dest,
+                    binary.checksum.as_deref(),
+                )
+                .await?;
+                tracing::info!("Cached GitHub asset at {:?}", dest);
+                Ok(dest)
             }
             BinaryLocation::Remote(url) => {
-                // Download from URL
-                tracing::info!("Would download from: {}", url);
-                // Future: Implement HTTP download with progress tracking using reqwest
-                Err(anyhow::anyhow!("Remote download not yet implemented"))
+                tracing::info!("Downloading from URL: {}", url);
+                let dest = remote::cached_download_path(url, "", "", "", url)?;
+                remote::download_url_to_path_with_verify(url, &dest, binary.checksum.as_deref())
+                    .await?;
+                tracing::info!("Cached remote asset at {:?}", dest);
+                Ok(dest)
             }
         }
     }
@@ -346,22 +427,44 @@ impl PrimalRegistry {
         name.to_string()
     }
 
-    /// Detect version from binary
-    ///
-    /// Future: Execute binary with --version flag and parse output
-    async fn detect_version(&self, _path: &Path) -> Option<String> {
-        // Would execute: `Command::new(path).arg("--version").output()`
-        // and parse version string from output
-        None
+    /// Detect version from binary (`--version`), with a 5 second timeout.
+    async fn detect_version(&self, path: &Path) -> Option<String> {
+        let mut cmd = tokio::process::Command::new(path);
+        cmd.arg("--version");
+        cmd.stdout(std::process::Stdio::piped());
+        cmd.stderr(std::process::Stdio::piped());
+
+        let run = cmd.output();
+        let out = tokio::time::timeout(Duration::from_secs(5), run).await;
+        let output = match out {
+            Ok(Ok(o)) => o,
+            Ok(Err(e)) => {
+                tracing::debug!("detect_version: failed to run {:?}: {}", path, e);
+                return None;
+            }
+            Err(_) => {
+                tracing::debug!("detect_version: timed out for {:?}", path);
+                return None;
+            }
+        };
+
+        if !output.status.success() {
+            return None;
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let combined = if stdout.trim().is_empty() {
+            stderr.as_ref()
+        } else {
+            stdout.as_ref()
+        };
+        remote::extract_version_from_output(combined)
     }
 
     /// Compute SHA256 checksum
     async fn compute_checksum(&self, path: &Path) -> Result<String> {
-        use sha2::{Digest, Sha256};
-
-        let contents = tokio::fs::read(path).await?;
-        let hash = Sha256::digest(&contents);
-        Ok(format!("{hash:x}"))
+        remote::compute_checksum_file(path).await
     }
 
     /// Get default metadata for a primal

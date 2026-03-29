@@ -30,9 +30,6 @@ rustix = { version = "0.38", features = ["process"] }
 # Network interface management (pure Rust, replaces sudo ip)
 rtnetlink = "0.20"
 
-# Process management
-tokio-process = "0.2"
-
 # Path and file utilities
 walkdir = "2"
 tempfile = "3"

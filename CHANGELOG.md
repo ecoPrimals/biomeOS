@@ -2,6 +2,41 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.78 (2026-03-29) — Blocking Debt Resolved + AI Routing Evolution + Smart Refactoring
+
+### Blocking Debt Resolved (all 4)
+- **B-1 Graph rollback**: Real checkpoint/restore with reverse topological lifecycle.stop + capability.unregister — replaces former no-op
+- **B-2 DNS discovery**: mDNS/DNS-SD (RFC 6762) over `_biomeos._tcp.local` with SRV/TXT parsing, health probes, and LAN fallback
+- **B-3 Remote primal acquisition**: GitHub releases (curl subprocess) + HTTP downloads (hyper pure Rust) + SHA256 verification + XDG cache
+- **B-4 Federation manifest deployment**: YAML manifest parsing, topology validation (acyclic trust graph), per-gate JSON-RPC `federation.configure` + `federation.join`
+
+### Evolved
+- **AI module**: Removed embedded intent classifier / recommendation engine (565→395 lines). AI capabilities now route to Squirrel via `capability.discover { domain: "ai" }` at runtime — biomeOS deployable with ecoBins alone, users tag in AI primal on demand
+- **capability.discover**: Accepts both `capability` and `domain` parameter names for primalSpring cross-transport compatibility
+- **Health check (S-2)**: Deploy-graph health path evolved from socket-existence to real JSON-RPC `health.liveness` probes with 3s timeout
+- **Harvest tool (S-3)**: GitHub acquisition implemented — curl + asset matching + SHA256 checksum + manifest provenance
+- **capabilities.list**: Added canonical route alias alongside `capability.list` per SEMANTIC_METHOD_NAMING_STANDARD
+- **boot/init.rs network config**: Replaced placeholder with loopback verification; network management delegated to Songbird
+- **blake3 ecoBin compliance**: Platypus chimera evolved to `blake3 { features = ["pure"] }` — zero C code paths
+- **All `Future:` comments**: Evolved to either real implementations or documented architectural delegation
+
+### Refactored
+- **discovery.rs** (1128→467 lines): Extracted `dns_sd` module into `discovery/dns_sd.rs` (663 lines)
+- **primal_registry/mod.rs** (1150→823 lines): Extracted remote acquisition into `primal_registry/remote.rs` (337 lines)
+- Zero files over 1000 LOC in workspace
+
+### Removed
+- **tokio-process 0.2**: Dead dependency (listed but never imported) removed from biomeos-deploy
+- **Embedded AI types**: `AIRecommendation`, `Priority`, `QueryIntent`, `AIAction`, `AIResponse` — AI policy belongs in Squirrel, not biomeOS
+- **GeneticAccessKey String alias**: Consolidated to single struct definition in types.rs
+
+### Added
+- `SECURITY.md`: Vulnerability disclosure policy, supported versions, security design principles
+- `unsafe_code = "deny"` at workspace level (overridable by `#[expect]` in test-only env helpers)
+
+### Metrics
+- **7,204 tests**, 0 failures, 134 ignored, 0 Clippy warnings, 0 files >1000 LOC, 0 blocking debt
+
 ## v2.77 (2026-03-28) — Deep Audit + DI Evolution + Cleanup
 
 ### Evolved

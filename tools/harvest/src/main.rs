@@ -8,7 +8,7 @@
 //!
 //! Features:
 //! - Harvest from local phase1/ directories
-//! - Future: Pull from GitHub/repos
+//! - Pull from GitHub releases
 //! - Clean old versions
 //! - Store in plasmidBin/
 //! - Verify binary integrity
@@ -225,6 +225,142 @@ impl HarvestSystem {
         println!("     Binary: {}", binary_name);
         println!("     Size: {} KB", fs::metadata(&dest_binary)?.len() / 1024);
 
+        Ok(())
+    }
+
+    /// Harvest primal binary from a GitHub release.
+    ///
+    /// Uses `curl` for HTTPS (zero C-dep: subprocess, not linked) and the GitHub
+    /// Releases API. Supports `GITHUB_TOKEN` for authenticated requests.
+    fn harvest_github(&self, repo: &str, version: &str, arch: &str) -> Result<()> {
+        println!("🌐 Harvesting from GitHub: {} @ {} ({})", repo, version, arch);
+
+        let primal = repo
+            .rsplit('/')
+            .next()
+            .unwrap_or(repo)
+            .trim_start_matches("eco-")
+            .to_lowercase();
+        let binary_name = self.get_binary_name(&primal);
+
+        let tag = if version.starts_with('v') {
+            version.to_string()
+        } else {
+            format!("v{version}")
+        };
+
+        let api_url = format!(
+            "https://api.github.com/repos/{repo}/releases/tags/{tag}"
+        );
+        let release_json = self.curl_fetch_json(&api_url)?;
+
+        let assets = release_json
+            .get("assets")
+            .and_then(|a| a.as_array())
+            .ok_or_else(|| anyhow::anyhow!("No assets array in GitHub release response"))?;
+
+        let matching_asset = assets.iter().find(|a| {
+            let name = a.get("name").and_then(|n| n.as_str()).unwrap_or("");
+            name.contains(arch) && (name.contains(&binary_name) || name.contains(&primal))
+                && !name.ends_with(".sha256")
+                && !name.ends_with(".sig")
+                && !name.ends_with(".toml")
+        });
+
+        let asset = matching_asset.ok_or_else(|| {
+            let available: Vec<&str> = assets
+                .iter()
+                .filter_map(|a| a.get("name").and_then(|n| n.as_str()))
+                .collect();
+            anyhow::anyhow!(
+                "No asset matching arch '{}' and primal '{}' in release {}. Available: {:?}",
+                arch,
+                primal,
+                tag,
+                available
+            )
+        })?;
+
+        let download_url = asset
+            .get("browser_download_url")
+            .and_then(|u| u.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Asset missing browser_download_url"))?;
+
+        let asset_name = asset
+            .get("name")
+            .and_then(|n| n.as_str())
+            .unwrap_or(&binary_name);
+
+        println!("  📥 Downloading: {}", asset_name);
+        let dest_binary = self.plasmid_bin.join(&binary_name);
+        self.curl_download(&download_url, &dest_binary)?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&dest_binary)?.permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&dest_binary, perms)?;
+        }
+
+        let sha256 = self.calculate_sha256(&dest_binary)?;
+
+        let manifest = PrimalManifest {
+            name: primal.clone(),
+            version: tag.clone(),
+            source: HarvestSource::GitHub {
+                repo: repo.to_string(),
+                tag,
+            },
+            binary_path: dest_binary.clone(),
+            sha256,
+            harvested_at: chrono::Utc::now().to_rfc3339(),
+        };
+        self.save_manifest(&manifest)?;
+
+        let size_kb = fs::metadata(&dest_binary)?.len() / 1024;
+        println!("  ✅ Harvested {} from GitHub to plasmidBin/", primal);
+        println!("     Binary: {}", binary_name);
+        println!("     Size: {} KB", size_kb);
+        Ok(())
+    }
+
+    /// Fetch JSON from HTTPS URL via curl subprocess.
+    fn curl_fetch_json(&self, url: &str) -> Result<serde_json::Value> {
+        let mut cmd = Command::new("curl");
+        cmd.args(["-sSfL", "-H", "Accept: application/vnd.github+json", url]);
+        if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+            cmd.args(["-H", &format!("Authorization: Bearer {token}")]);
+        }
+        cmd.arg("-H").arg("User-Agent: biomeos-harvest/0.1");
+        let output = cmd
+            .output()
+            .context("curl not found — install curl for GitHub harvesting")?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("curl failed for {url}: {stderr}");
+        }
+        serde_json::from_slice(&output.stdout)
+            .context("Invalid JSON from GitHub API")
+    }
+
+    /// Download a file via curl subprocess.
+    fn curl_download(&self, url: &str, dest: &Path) -> Result<()> {
+        let mut cmd = Command::new("curl");
+        cmd.args(["-sSfL", "-o"]);
+        cmd.arg(dest);
+        cmd.arg(url);
+        if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+            cmd.args(["-H", &format!("Authorization: Bearer {token}")]);
+        }
+        cmd.arg("-H").arg("User-Agent: biomeos-harvest/0.1");
+        let output = cmd
+            .output()
+            .context("curl not found — install curl for GitHub harvesting")?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("Download failed for {url}: {stderr}");
+        }
         Ok(())
     }
 
@@ -494,12 +630,7 @@ fn main() -> Result<()> {
             system.harvest_local(&primal, source, clean)?;
         }
         Commands::GitHub { repo, version, arch } => {
-            println!("🚧 GitHub harvesting not yet implemented");
-            println!("   Repo: {}", repo);
-            println!("   Version: {}", version);
-            println!("   Arch: {}", arch);
-            println!();
-            println!("   Coming soon: NUCLEUS will handle GitHub releases!");
+            system.harvest_github(&repo, &version, &arch)?;
         }
         Commands::Clean { keep_latest, primal } => {
             if let Some(p) = primal {

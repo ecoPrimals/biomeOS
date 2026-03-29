@@ -1,10 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! AI and Partnership Operations
+//! AI Capability Routing
 //!
-//! Handles AI-powered assistance, partnership access, and specialized modes
-//! like grandma safe mode.
+//! biomeOS does not embed AI logic. All AI capabilities are provided by
+//! **Squirrel** (the AI/MCP bridge primal) discovered at runtime via
+//! `capability.discover { domain: "ai" }`.
+//!
+//! This module exposes thin routing methods that:
+//! 1. Attempt to discover Squirrel via the capability registry.
+//! 2. Forward the request as a JSON-RPC `ai.*` capability call.
+//! 3. Return a structured "unavailable" response when no AI primal is present,
+//!    allowing biomeOS to be fully deployable with ecoBins alone.
+//!
+//! A user can "tag in" an AI primal at any point — deploying Squirrel into
+//! the ecosystem enables agentic deployment assistance without restarting
+//! biomeOS.
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -12,343 +23,207 @@ use std::collections::HashMap;
 
 use super::core::UniversalBiomeOSManager;
 
-/// Genetic access key type (legacy)
-pub type GeneticAccessKey = String;
+/// AI primal availability status.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AiAvailability {
+    /// An AI primal (Squirrel) is registered and healthy.
+    Available,
+    /// No AI primal is currently discovered in the ecosystem.
+    Unavailable,
+}
 
 impl UniversalBiomeOSManager {
-    /// AI-powered biome management assistance
+    /// AI-powered biome management assistance.
+    ///
+    /// Delegates to the Squirrel AI primal when available. Returns a
+    /// structured "no AI primal available" response otherwise, so callers
+    /// always get a valid JSON-RPC result.
     pub async fn ai_assist(
         &self,
         query: &str,
         context: Option<String>,
     ) -> Result<HashMap<String, serde_json::Value>> {
-        tracing::info!("🤖 Processing AI assistance request: {}", query);
+        tracing::info!("Processing AI assistance request");
 
         let mut result = HashMap::new();
         result.insert("query".to_string(), serde_json::json!(query));
         result.insert("context".to_string(), serde_json::json!(context));
-
-        // Future: Integrate with actual AI service (Toadstool or external LLM)
-        let ai_response = self.process_ai_query(query, context.as_deref()).await?;
-
-        result.insert(
-            "response".to_string(),
-            serde_json::json!(ai_response.response),
-        );
-        result.insert(
-            "confidence".to_string(),
-            serde_json::json!(ai_response.confidence),
-        );
-        result.insert(
-            "suggestions".to_string(),
-            serde_json::json!(ai_response.suggestions),
-        );
-        result.insert(
-            "actions".to_string(),
-            serde_json::json!(ai_response.actions),
-        );
-        result.insert("status".to_string(), serde_json::json!("success"));
         result.insert(
             "timestamp".to_string(),
             serde_json::json!(chrono::Utc::now()),
         );
 
-        tracing::info!(
-            "✅ AI assistance completed with confidence: {}",
-            ai_response.confidence
-        );
+        let (availability, provider_info) = self.probe_ai_primal().await;
+
+        match availability {
+            AiAvailability::Available => {
+                tracing::info!(provider = %provider_info.name, "AI primal available — forwarding query");
+
+                let params = serde_json::json!({
+                    "query": query,
+                    "context": context,
+                });
+
+                match self
+                    .send_capability_call(&provider_info, "ai.assist", params)
+                    .await
+                {
+                    Ok(response) => {
+                        result.insert("status".to_string(), serde_json::json!("success"));
+                        result.insert("source".to_string(), serde_json::json!(provider_info.name));
+                        result.insert("response".to_string(), response);
+                    }
+                    Err(e) => {
+                        tracing::warn!(error = %e, "AI capability call failed — degrading gracefully");
+                        Self::fill_unavailable_response(&mut result, query);
+                    }
+                }
+            }
+            AiAvailability::Unavailable => {
+                Self::fill_unavailable_response(&mut result, query);
+            }
+        }
+
         Ok(result)
     }
 
-    /// Initialize partnership access
-    pub async fn initialize_partnership_access(&self, _key: GeneticAccessKey) -> Result<()> {
-        tracing::info!("🤝 Initializing partnership access");
-
-        // Partnership access initialization logic would go here
-        // This would involve:
-        // - Validating the genetic access key
-        // - Setting up secure communication channels
-        // - Establishing trust relationships
-        // - Configuring partnership-specific permissions
-
-        tracing::info!("✅ Partnership access initialized successfully");
-        Ok(())
-    }
-
-    /// Initialize grandma safe mode
-    pub async fn initialize_grandma_safe(&self) -> Result<()> {
-        tracing::info!("👵 Initializing grandma safe mode");
-
-        // Grandma safe mode initialization:
-        // - Simplified UI configurations
-        // - Enhanced safety checks
-        // - Automatic backup systems
-        // - User-friendly error messages
-        // - Restricted access to advanced features
-
-        tracing::info!("✅ Grandma safe mode initialized");
-        Ok(())
-    }
-
-    /// Get AI capabilities and status
+    /// Check whether an AI primal is present in the ecosystem.
     pub async fn get_ai_status(&self) -> Result<HashMap<String, serde_json::Value>> {
-        let mut result = HashMap::new();
+        let (availability, provider_info) = self.probe_ai_primal().await;
+        let is_available = availability == AiAvailability::Available;
 
-        result.insert("ai_enabled".to_string(), serde_json::json!(true));
-        result.insert("version".to_string(), serde_json::json!("1.0.0"));
+        let mut result = HashMap::new();
+        result.insert("ai_available".to_string(), serde_json::json!(is_available));
+        result.insert("availability".to_string(), serde_json::json!(availability));
         result.insert(
-            "capabilities".to_string(),
-            serde_json::json!([
-                "natural_language_processing",
-                "system_optimization",
-                "troubleshooting_assistance",
-                "configuration_guidance",
-                "deployment_planning"
-            ]),
+            "provider".to_string(),
+            serde_json::json!(if is_available {
+                provider_info.name.as_str()
+            } else {
+                "none"
+            }),
         );
-        result.insert("status".to_string(), serde_json::json!("ready"));
         result.insert(
-            "models_loaded".to_string(),
-            serde_json::json!(["biome-assistant-v1"]),
+            "deploy_hint".to_string(),
+            serde_json::json!(
+                "Deploy Squirrel into the ecosystem to enable AI-assisted operations. \
+                 Use `biomeos deploy --graph tower_ai.toml` or register Squirrel via \
+                 `lifecycle.register`."
+            ),
         );
 
         Ok(result)
     }
 
-    /// Process AI query with natural language understanding
-    async fn process_ai_query(&self, query: &str, context: Option<&str>) -> Result<AIResponse> {
-        tracing::debug!("Processing AI query: {} (context: {:?})", query, context);
-
-        // Analyze query intent
-        let intent = self.analyze_query_intent(query).await;
-
-        // Generate response based on intent and system state
-        let response = match intent {
-            QueryIntent::HealthCheck => {
-                let health = self.get_system_health().await;
-                AIResponse {
-                    response: format!("System health is currently: {:?}. All registered primals are being monitored.", health.health),
-                    confidence: 0.95,
-                    suggestions: vec![
-                        "Run 'biomeos health --detailed' for more information".to_string(),
-                        "Check individual service health with 'biomeos probe <service>'".to_string(),
-                    ],
-                    actions: vec![
-                        AIAction {
-                            name: "detailed_health_check".to_string(),
-                            description: "Run comprehensive health check".to_string(),
-                            command: Some("biomeos health --detailed".to_string()),
-                        }
-                    ],
-                }
-            }
-            QueryIntent::ServiceDiscovery => {
-                let primals = self.get_registered_primals().await;
-                AIResponse {
-                    response: format!("Found {} registered services. Use discovery commands to find more services in your network.", primals.len()),
-                    confidence: 0.90,
-                    suggestions: vec![
-                        "Run 'biomeos discover' to find network services".to_string(),
-                        "Use 'biomeos discover --capabilities <cap>' for specific capabilities".to_string(),
-                    ],
-                    actions: vec![
-                        AIAction {
-                            name: "network_discovery".to_string(),
-                            description: "Discover services on network".to_string(),
-                            command: Some("biomeos discover".to_string()),
-                        }
-                    ],
-                }
-            }
-            QueryIntent::Deployment => {
-                AIResponse {
-                    response: "For deployment, you'll need a biome manifest file. I can help you create one or deploy an existing manifest.".to_string(),
-                    confidence: 0.85,
-                    suggestions: vec![
-                        "Create a manifest with 'biomeos create <name>'".to_string(),
-                        "Deploy with 'biomeos deploy --manifest <file>'".to_string(),
-                        "Validate first with 'biomeos deploy --validate-only'".to_string(),
-                    ],
-                    actions: vec![
-                        AIAction {
-                            name: "create_manifest".to_string(),
-                            description: "Create new biome manifest".to_string(),
-                            command: Some("biomeos create".to_string()),
-                        }
-                    ],
-                }
-            }
-            QueryIntent::Troubleshooting => {
-                AIResponse {
-                    response: "I can help troubleshoot issues. Common commands include health checks, log analysis, and service probing.".to_string(),
-                    confidence: 0.80,
-                    suggestions: vec![
-                        "Check system health: 'biomeos health'".to_string(),
-                        "View service logs: 'biomeos logs <service>'".to_string(),
-                        "Probe specific service: 'biomeos probe <service>'".to_string(),
-                    ],
-                    actions: vec![
-                        AIAction {
-                            name: "diagnostic_scan".to_string(),
-                            description: "Run diagnostic scan".to_string(),
-                            command: Some("biomeos scan".to_string()),
-                        }
-                    ],
-                }
-            }
-            QueryIntent::General => {
-                AIResponse {
-                    response: self.generate_general_response(query, context).await,
-                    confidence: 0.70,
-                    suggestions: vec![
-                        "Try 'biomeos --help' for available commands".to_string(),
-                        "Use 'biomeos status' for system overview".to_string(),
-                    ],
-                    actions: vec![],
-                }
-            }
-        };
-
-        Ok(response)
-    }
-
-    /// Analyze query intent using simple keyword matching
-    async fn analyze_query_intent(&self, query: &str) -> QueryIntent {
-        let query_lower = query.to_lowercase();
-
-        if query_lower.contains("health")
-            || query_lower.contains("status")
-            || query_lower.contains("check")
-        {
-            QueryIntent::HealthCheck
-        } else if query_lower.contains("discover")
-            || query_lower.contains("find")
-            || query_lower.contains("service")
-        {
-            QueryIntent::ServiceDiscovery
-        } else if query_lower.contains("deploy")
-            || query_lower.contains("create")
-            || query_lower.contains("manifest")
-        {
-            QueryIntent::Deployment
-        } else if query_lower.contains("error")
-            || query_lower.contains("problem")
-            || query_lower.contains("issue")
-            || query_lower.contains("troubleshoot")
-        {
-            QueryIntent::Troubleshooting
-        } else {
-            QueryIntent::General
-        }
-    }
-
-    /// Generate general response for unmatched queries
-    async fn generate_general_response(&self, query: &str, _context: Option<&str>) -> String {
-        // This would be enhanced with actual AI/ML processing
-        format!(
-            "I understand you're asking about '{query}'. BiomeOS provides comprehensive ecosystem management. \
-             Key areas include service discovery, health monitoring, deployment management, and system orchestration. \
-             What specific aspect would you like help with?"
-        )
-    }
-
-    /// Get AI recommendations for system improvements
-    pub async fn get_ai_recommendations(&self) -> Result<Vec<AIRecommendation>> {
+    /// Probe the capability registry for an AI primal.
+    ///
+    /// Returns the availability status and, when available, the provider info
+    /// (name + endpoint) for immediate IPC.
+    async fn probe_ai_primal(&self) -> (AiAvailability, AiProviderInfo) {
         let primals = self.get_registered_primals().await;
-        let mut recommendations = Vec::new();
 
-        // Analyze current system state and generate recommendations
-        if primals.is_empty() {
-            recommendations.push(AIRecommendation {
-                title: "No Services Discovered".to_string(),
-                description: "Consider running service discovery to find available primals"
-                    .to_string(),
-                priority: Priority::High,
-                category: "Discovery".to_string(),
-                action: Some("biomeos discover".to_string()),
-                estimated_impact: "Enable full system functionality".to_string(),
-            });
+        for primal in &primals {
+            let has_ai = primal
+                .capabilities
+                .iter()
+                .any(|c| c.category == "ai" || c.name.starts_with("ai"));
+            if has_ai {
+                return (
+                    AiAvailability::Available,
+                    AiProviderInfo {
+                        name: primal.name.clone(),
+                        endpoint: primal.endpoint.clone(),
+                    },
+                );
+            }
         }
 
-        if primals.len() < 3 {
-            recommendations.push(AIRecommendation {
-                title: "Limited Service Ecosystem".to_string(),
-                description: "Your biome could benefit from additional services for redundancy"
-                    .to_string(),
-                priority: Priority::Medium,
-                category: "Architecture".to_string(),
-                action: Some("biomeos create --template comprehensive".to_string()),
-                estimated_impact: "Improved reliability and capabilities".to_string(),
-            });
-        }
+        (AiAvailability::Unavailable, AiProviderInfo::none())
+    }
 
-        // Always include general optimization recommendation
-        recommendations.push(AIRecommendation {
-            title: "Enable AI Monitoring".to_string(),
-            description: "Continuous AI monitoring can proactively identify issues".to_string(),
-            priority: Priority::Low,
-            category: "Optimization".to_string(),
-            action: Some("biomeos monitor --ai-enabled".to_string()),
-            estimated_impact: "Proactive issue prevention".to_string(),
+    /// Forward a JSON-RPC capability call to a specific provider.
+    async fn send_capability_call(
+        &self,
+        provider: &AiProviderInfo,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value> {
+        tracing::debug!(method, provider = %provider.name, "Routing capability call");
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": 1
         });
 
-        Ok(recommendations)
+        let socket_path = std::path::Path::new(&provider.endpoint);
+
+        if !socket_path.exists() {
+            anyhow::bail!(
+                "Endpoint '{}' for primal '{}' is not a reachable socket",
+                provider.endpoint,
+                provider.name
+            );
+        }
+
+        // Unix socket IPC — newline-delimited JSON-RPC
+        let stream = tokio::net::UnixStream::connect(socket_path).await?;
+        let (reader, mut writer) = tokio::io::split(stream);
+
+        let mut payload = serde_json::to_vec(&request)?;
+        payload.push(b'\n');
+
+        use tokio::io::AsyncWriteExt;
+        writer.write_all(&payload).await?;
+        writer.shutdown().await?;
+
+        use tokio::io::AsyncBufReadExt;
+        let mut buf_reader = tokio::io::BufReader::new(reader);
+        let mut line = String::new();
+        buf_reader.read_line(&mut line).await?;
+
+        let response: serde_json::Value = serde_json::from_str(line.trim())?;
+
+        if let Some(r) = response.get("result") {
+            Ok(r.clone())
+        } else if let Some(e) = response.get("error") {
+            anyhow::bail!("Provider returned error: {e}")
+        } else {
+            Ok(response)
+        }
+    }
+
+    /// Populate the response map when no AI primal is available.
+    fn fill_unavailable_response(result: &mut HashMap<String, serde_json::Value>, query: &str) {
+        result.insert("status".to_string(), serde_json::json!("no_ai_primal"));
+        result.insert("source".to_string(), serde_json::json!("biomeos"));
+        result.insert(
+            "response".to_string(),
+            serde_json::json!(format!(
+                "No AI primal is currently deployed. Your query '{query}' requires an AI \
+                 capability provider (Squirrel). Deploy one with \
+                 `biomeos deploy --graph tower_ai.toml` or use `biomeos --help` for \
+                 available non-AI commands."
+            )),
+        );
     }
 }
 
-/// AI Response structure
+/// Minimal info needed to route to an AI provider.
 #[derive(Debug, Clone)]
-struct AIResponse {
-    response: String,
-    confidence: f64,
-    suggestions: Vec<String>,
-    actions: Vec<AIAction>,
-}
-
-/// AI Action that can be taken
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct AIAction {
+struct AiProviderInfo {
     name: String,
-    description: String,
-    command: Option<String>,
+    endpoint: String,
 }
 
-/// Query intent classification
-#[derive(Debug, Clone, PartialEq)]
-enum QueryIntent {
-    HealthCheck,
-    ServiceDiscovery,
-    Deployment,
-    Troubleshooting,
-    General,
-}
-
-/// AI Recommendation
-#[derive(Debug, Clone)]
-pub struct AIRecommendation {
-    /// Short title for the recommendation
-    pub title: String,
-    /// Detailed description of what to do and why
-    pub description: String,
-    /// How important this recommendation is
-    pub priority: Priority,
-    /// Category (e.g. "performance", "security", "reliability")
-    pub category: String,
-    /// Specific command or action to take
-    pub action: Option<String>,
-    /// Expected improvement if recommendation is followed
-    pub estimated_impact: String,
-}
-
-/// Recommendation priority
-#[derive(Debug, Clone)]
-pub enum Priority {
-    /// Should be addressed immediately
-    High,
-    /// Should be addressed soon
-    Medium,
-    /// Can be addressed when convenient
-    Low,
+impl AiProviderInfo {
+    fn none() -> Self {
+        Self {
+            name: String::new(),
+            endpoint: String::new(),
+        }
+    }
 }
 
 #[expect(
@@ -368,164 +243,86 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ai_assist_health_query() {
+    async fn test_ai_assist_without_ai_primal() {
         let manager = test_manager().await;
         let result = manager
             .ai_assist("what is the system health?", None)
             .await
-            .expect("ai_assist should succeed");
-        assert!(result.contains_key("response"));
-        assert!(result.contains_key("confidence"));
-        assert!(result.contains_key("suggestions"));
-        assert!(result.contains_key("actions"));
+            .expect("ai_assist should succeed even without AI primal");
+
         assert_eq!(
             result.get("status").and_then(|v| v.as_str()),
-            Some("success")
+            Some("no_ai_primal"),
+            "Without Squirrel deployed, status should be no_ai_primal"
         );
-        let response = result
-            .get("response")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        assert!(response.to_lowercase().contains("health"));
+        assert_eq!(
+            result.get("source").and_then(|v| v.as_str()),
+            Some("biomeos")
+        );
+        assert!(result.contains_key("response"));
+        assert!(result.contains_key("query"));
+        assert!(result.contains_key("timestamp"));
     }
 
     #[tokio::test]
-    async fn test_ai_assist_discovery_query() {
+    async fn test_ai_assist_with_context() {
         let manager = test_manager().await;
         let result = manager
-            .ai_assist("how do I discover services?", Some("context".to_string()))
+            .ai_assist("deploy my graph", Some("tower context".to_string()))
             .await
             .expect("ai_assist should succeed");
-        assert!(result.contains_key("context"));
+
         assert_eq!(
             result.get("query").and_then(|v| v.as_str()),
-            Some("how do I discover services?")
+            Some("deploy my graph")
+        );
+        assert_eq!(
+            result.get("context").and_then(|v| v.as_str()),
+            Some("tower context")
         );
     }
 
     #[tokio::test]
-    async fn test_ai_assist_deployment_query() {
-        let manager = test_manager().await;
-        let result = manager
-            .ai_assist("I want to deploy a manifest", None)
-            .await
-            .expect("ai_assist should succeed");
-        let response = result
-            .get("response")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        assert!(
-            response.to_lowercase().contains("manifest")
-                || response.to_lowercase().contains("deploy")
-        );
-    }
-
-    #[tokio::test]
-    async fn test_ai_assist_troubleshooting_query() {
-        let manager = test_manager().await;
-        let result = manager
-            .ai_assist("I have an error and need to troubleshoot", None)
-            .await
-            .expect("ai_assist should succeed");
-        let response = result
-            .get("response")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        assert!(
-            response.to_lowercase().contains("troubleshoot")
-                || response.to_lowercase().contains("help")
-        );
-    }
-
-    #[tokio::test]
-    async fn test_ai_assist_general_query() {
-        let manager = test_manager().await;
-        let result = manager
-            .ai_assist("tell me about biomeos", None)
-            .await
-            .expect("ai_assist should succeed");
-        assert!(
-            result
-                .get("confidence")
-                .and_then(serde_json::Value::as_f64)
-                .unwrap_or(0.0)
-                <= 1.0
-        );
-    }
-
-    #[tokio::test]
-    async fn test_initialize_partnership_access() {
-        let manager = test_manager().await;
-        manager
-            .initialize_partnership_access("test-key".to_string())
-            .await
-            .expect("initialize_partnership_access should succeed");
-    }
-
-    #[tokio::test]
-    async fn test_initialize_grandma_safe() {
-        let manager = test_manager().await;
-        manager
-            .initialize_grandma_safe()
-            .await
-            .expect("initialize_grandma_safe should succeed");
-    }
-
-    #[tokio::test]
-    async fn test_get_ai_status() {
+    async fn test_get_ai_status_no_provider() {
         let manager = test_manager().await;
         let status = manager
             .get_ai_status()
             .await
             .expect("get_ai_status should succeed");
+
         assert_eq!(
             status
-                .get("ai_enabled")
+                .get("ai_available")
                 .and_then(serde_json::Value::as_bool),
-            Some(true)
+            Some(false),
+            "Without AI primal, ai_available should be false"
         );
-        assert_eq!(status.get("status").and_then(|v| v.as_str()), Some("ready"));
-        assert!(status.contains_key("capabilities"));
+        assert_eq!(
+            status.get("provider").and_then(|v| v.as_str()),
+            Some("none")
+        );
+        assert!(status.contains_key("deploy_hint"));
     }
 
     #[tokio::test]
-    async fn test_get_ai_recommendations_empty_primals() {
-        let manager = test_manager().await;
-        let recs = manager
-            .get_ai_recommendations()
-            .await
-            .expect("get_ai_recommendations should succeed");
-        assert!(!recs.is_empty());
-        let discovery_rec = recs
-            .iter()
-            .find(|r| r.title.contains("No Services") || r.title.contains("Discover"));
-        assert!(
-            discovery_rec.is_some(),
-            "Should recommend discovery when no primals"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_get_ai_recommendations_with_primals() {
-        use crate::universal_biomeos_manager::PrimalInfo;
+    async fn test_get_ai_status_with_provider() {
         use biomeos_primal_sdk::PrimalType;
-        use biomeos_types::Health;
+        use biomeos_types::{Health, PrimalCapability};
 
         let manager = test_manager().await;
-        let mut registry = manager.registered_primals().write().await;
-        for i in 0..5 {
+        {
+            let mut registry = manager.registered_primals().write().await;
             registry.insert(
-                format!("primal-{i}"),
-                PrimalInfo {
-                    id: format!("primal-{i}"),
-                    name: format!("primal-{i}"),
-                    primal_type: PrimalType::from_discovered(
-                        "test",
-                        format!("primal-{i}"),
-                        "1.0.0",
-                    ),
-                    endpoint: format!("/tmp/primal-{i}.sock"),
-                    capabilities: vec![],
+                "squirrel".to_string(),
+                super::super::core::PrimalInfo {
+                    id: "squirrel".to_string(),
+                    name: "squirrel".to_string(),
+                    primal_type: PrimalType::from_discovered("ai", "squirrel".to_string(), "1.0.0"),
+                    endpoint: "/tmp/squirrel-test.sock".to_string(),
+                    capabilities: vec![
+                        PrimalCapability::new("ai", "assist", "1.0"),
+                        PrimalCapability::new("ai", "query", "1.0"),
+                    ],
                     health: Health::Healthy,
                     last_seen: chrono::Utc::now(),
                     discovered_at: chrono::Utc::now(),
@@ -533,38 +330,65 @@ mod tests {
                 },
             );
         }
-        drop(registry);
 
-        let recs = manager
-            .get_ai_recommendations()
+        let status = manager
+            .get_ai_status()
             .await
-            .expect("get_ai_recommendations should succeed");
-        assert!(!recs.is_empty());
-        let opt_rec = recs.iter().find(|r| r.title.contains("AI Monitoring"));
-        assert!(
-            opt_rec.is_some(),
-            "Should include optimization recommendation"
+            .expect("get_ai_status should succeed");
+
+        assert_eq!(
+            status
+                .get("ai_available")
+                .and_then(serde_json::Value::as_bool),
+            Some(true),
+            "With Squirrel registered, ai_available should be true"
+        );
+        assert_eq!(
+            status.get("provider").and_then(|v| v.as_str()),
+            Some("squirrel")
         );
     }
 
-    #[test]
-    fn test_ai_recommendation_structure() {
-        let rec = AIRecommendation {
-            title: "Test".to_string(),
-            description: "Test desc".to_string(),
-            priority: Priority::High,
-            category: "test".to_string(),
-            action: Some("biomeos test".to_string()),
-            estimated_impact: "impact".to_string(),
-        };
-        assert_eq!(rec.title, "Test");
-        assert!(matches!(rec.priority, Priority::High));
+    #[tokio::test]
+    async fn test_probe_ai_primal_empty_ecosystem() {
+        let manager = test_manager().await;
+        let (availability, _provider) = manager.probe_ai_primal().await;
+        assert_eq!(availability, AiAvailability::Unavailable);
+    }
+
+    #[tokio::test]
+    async fn test_ai_availability_serialization() {
+        let available =
+            serde_json::to_string(&AiAvailability::Available).expect("serialize Available");
+        assert_eq!(available, "\"Available\"");
+
+        let unavailable =
+            serde_json::to_string(&AiAvailability::Unavailable).expect("serialize Unavailable");
+        assert_eq!(unavailable, "\"Unavailable\"");
+
+        let roundtrip: AiAvailability =
+            serde_json::from_str(&available).expect("deserialize Available");
+        assert_eq!(roundtrip, AiAvailability::Available);
     }
 
     #[test]
-    fn test_priority_variants() {
-        let _ = Priority::High;
-        let _ = Priority::Medium;
-        let _ = Priority::Low;
+    fn test_fill_unavailable_response() {
+        let mut result = HashMap::new();
+        UniversalBiomeOSManager::fill_unavailable_response(&mut result, "test query");
+
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("no_ai_primal")
+        );
+        assert_eq!(
+            result.get("source").and_then(|v| v.as_str()),
+            Some("biomeos")
+        );
+        let response = result
+            .get("response")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        assert!(response.contains("test query"));
+        assert!(response.contains("Squirrel"));
     }
 }

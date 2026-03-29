@@ -77,11 +77,16 @@ impl GraphExecutor {
     }
 
     /// Node executor: health.check_all
-    /// Checks health of all primals by scanning socket directory
+    ///
+    /// Discovers primals by scanning the socket directory, then verifies each
+    /// with a `health.liveness` JSON-RPC probe. Socket existence alone is
+    /// insufficient — a dead primal can leave a stale socket file.
     pub(crate) async fn node_health_check_all(
         _node: &GraphNode,
         context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
+        use std::time::Duration;
+
         let socket_dir = context
             .env
             .get("SOCKET_DIR")
@@ -91,6 +96,7 @@ impl GraphExecutor {
 
         let socket_dir = PathBuf::from(socket_dir);
         let mut healthy_primals = Vec::new();
+        let mut unhealthy_primals = Vec::new();
 
         if !socket_dir.exists() {
             warn!(
@@ -99,26 +105,78 @@ impl GraphExecutor {
             );
             return Ok(serde_json::json!({
                 "healthy_count": 0,
-                "primals": []
+                "unhealthy_count": 0,
+                "primals": [],
+                "unhealthy": []
             }));
         }
 
         let entries = std::fs::read_dir(&socket_dir)?;
+        let mut sockets = Vec::new();
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("sock") {
                 if let Some(primal_name) = path.file_stem().and_then(|s| s.to_str()) {
-                    healthy_primals.push(primal_name.to_string());
+                    sockets.push((primal_name.to_string(), path));
                 }
             }
         }
 
-        info!("   ✅ Found {} healthy primals", healthy_primals.len());
+        for (primal_name, socket_path) in &sockets {
+            let probe_request = JsonRpcRequest::new("health.liveness", serde_json::json!({}));
+            let socket_str = socket_path.to_string_lossy().to_string();
+
+            let probe_result = tokio::time::timeout(
+                Duration::from_secs(3),
+                Self::send_jsonrpc_async(&socket_str, &probe_request),
+            )
+            .await;
+
+            match probe_result {
+                Ok(Ok(response)) => {
+                    let is_alive = response
+                        .get("result")
+                        .and_then(|r| r.get("status"))
+                        .and_then(|s| s.as_str())
+                        .is_some_and(|s| s == "alive" || s == "healthy" || s == "ok");
+
+                    let has_result =
+                        response.get("result").is_some() && response.get("error").is_none();
+
+                    if is_alive || has_result {
+                        healthy_primals.push(primal_name.clone());
+                    } else {
+                        warn!(
+                            "   ⚠️ {} has socket but liveness probe returned error",
+                            primal_name
+                        );
+                        unhealthy_primals.push(primal_name.clone());
+                    }
+                }
+                Ok(Err(e)) => {
+                    warn!("   ⚠️ {} has socket but probe failed: {}", primal_name, e);
+                    unhealthy_primals.push(primal_name.clone());
+                }
+                Err(_) => {
+                    warn!("   ⚠️ {} has socket but probe timed out (3s)", primal_name);
+                    unhealthy_primals.push(primal_name.clone());
+                }
+            }
+        }
+
+        info!(
+            "   ✅ {} healthy, {} unhealthy out of {} sockets",
+            healthy_primals.len(),
+            unhealthy_primals.len(),
+            sockets.len()
+        );
 
         Ok(serde_json::json!({
             "healthy_count": healthy_primals.len(),
-            "primals": healthy_primals
+            "unhealthy_count": unhealthy_primals.len(),
+            "primals": healthy_primals,
+            "unhealthy": unhealthy_primals
         }))
     }
 

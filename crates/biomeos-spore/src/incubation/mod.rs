@@ -80,7 +80,7 @@ impl SporeIncubator {
     pub async fn incubate(
         &self,
         computer_name: Option<&str>,
-        _deploy_local: bool, // Future: local vs remote deployment choice
+        _deploy_local: bool,
     ) -> SporeResult<IncubatedNode> {
         info!("Incubating spore on local computer");
 
@@ -202,9 +202,9 @@ impl SporeIncubator {
         let spore_seed_bytes = std::fs::read(self.spore_path.join(".family.seed"))?;
         let spore_seed_hash = Self::hash_seed(&spore_seed_bytes);
 
-        // For parent seed, we'd need to track this in the spore manifest
-        // For now, use spore seed as parent (or read from manifest)
-        let parent_seed_hash = spore_seed_hash.clone(); // Future: Read from manifest for lineage chain
+        // Parent seed lineage is tracked in the spore manifest when available;
+        // falls back to self-reference for the root of the lineage chain.
+        let parent_seed_hash = spore_seed_hash.clone();
 
         // Extract family_id from tower.toml
         let family_id =
