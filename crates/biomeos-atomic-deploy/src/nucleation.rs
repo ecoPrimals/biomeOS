@@ -34,7 +34,7 @@ impl Default for SocketNucleation {
 
 impl SocketNucleation {
     /// Create new socket nucleation coordinator
-    #[must_use] 
+    #[must_use]
     pub fn new(strategy: SocketStrategy) -> Self {
         Self {
             strategy,
@@ -90,7 +90,7 @@ impl SocketNucleation {
     }
 
     /// Get all assigned sockets
-    #[must_use] 
+    #[must_use]
     pub const fn assignments(&self) -> &HashMap<String, PathBuf> {
         &self.assignments
     }
@@ -116,7 +116,7 @@ impl SocketNucleation {
     ///
     /// **Capability-based**: Uses the taxonomy to determine if a primal holds
     /// family-specific state (e.g., key material) rather than hardcoding names.
-    #[must_use] 
+    #[must_use]
     pub fn can_share(primal: &str) -> bool {
         use biomeos_types::capability_taxonomy::CapabilityTaxonomy;
 

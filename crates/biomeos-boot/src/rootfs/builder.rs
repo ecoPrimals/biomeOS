@@ -23,7 +23,7 @@ pub struct RootFsBuilder {
 
 impl RootFsBuilder {
     /// Create a new root filesystem builder
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: RootFsConfig) -> Self {
         Self { config }
     }

@@ -105,7 +105,7 @@ pub enum LifecycleResponse {
 
 impl LifecycleRequest {
     /// Create new request
-    #[must_use] 
+    #[must_use]
     pub fn new(transition: LifecycleTransition, reason: TransitionReason) -> Self {
         Self {
             transition,
@@ -116,14 +116,14 @@ impl LifecycleRequest {
     }
 
     /// Set urgency
-    #[must_use] 
+    #[must_use]
     pub const fn with_urgency(mut self, urgency: Urgency) -> Self {
         self.urgency = urgency;
         self
     }
 
     /// Set requestor
-    #[must_use] 
+    #[must_use]
     pub fn with_requestor(mut self, requestor: String) -> Self {
         self.requestor = requestor;
         self
@@ -132,13 +132,13 @@ impl LifecycleRequest {
 
 impl LifecycleResponse {
     /// Check if request was successful
-    #[must_use] 
+    #[must_use]
     pub const fn is_success(&self) -> bool {
         matches!(self, Self::Accepted)
     }
 
     /// Check if we should retry
-    #[must_use] 
+    #[must_use]
     pub const fn should_retry(&self) -> bool {
         matches!(self, Self::Deferred { .. })
     }

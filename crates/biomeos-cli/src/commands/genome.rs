@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use biomeos_genomebin_v3::{Arch, GenomeBin, GenomeBinBuilder, GenomeBinComposer};
 
 /// Extract genome name from binary path (defaults to "genome" if unparseable)
-#[must_use] 
+#[must_use]
 pub fn extract_genome_name_from_path(path: &std::path::Path) -> String {
     path.file_stem()
         .and_then(|s| s.to_str())

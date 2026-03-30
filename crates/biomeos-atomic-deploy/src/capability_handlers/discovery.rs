@@ -230,8 +230,8 @@ mod tests {
         let primals = known_primal_names();
         assert_eq!(
             primals.len(),
-            5,
-            "Should have exactly 5 core primals when not in strict mode"
+            7,
+            "Should have exactly 7 core primals when not in strict mode"
         );
     }
 

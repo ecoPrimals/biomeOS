@@ -79,13 +79,13 @@ pub enum Health {
 
 impl Health {
     /// Create a healthy status
-    #[must_use] 
+    #[must_use]
     pub const fn healthy() -> Self {
         Self::Healthy
     }
 
     /// Create a degraded status with issues
-    #[must_use] 
+    #[must_use]
     pub fn degraded(issues: Vec<HealthIssue>) -> Self {
         let impact_score = Self::calculate_impact_score(&issues);
         Self::Degraded {
@@ -95,7 +95,7 @@ impl Health {
     }
 
     /// Create a critical status
-    #[must_use] 
+    #[must_use]
     pub const fn critical(issues: Vec<HealthIssue>, affected_capabilities: Vec<String>) -> Self {
         Self::Critical {
             issues,
@@ -104,7 +104,7 @@ impl Health {
     }
 
     /// Create an unhealthy status
-    #[must_use] 
+    #[must_use]
     pub fn unhealthy(issues: Vec<HealthIssue>) -> Self {
         Self::Unhealthy {
             issues,
@@ -121,31 +121,31 @@ impl Health {
     }
 
     /// Check if the system is healthy
-    #[must_use] 
+    #[must_use]
     pub const fn is_healthy(&self) -> bool {
         matches!(self, Self::Healthy)
     }
 
     /// Check if the system is operational (healthy or degraded)
-    #[must_use] 
+    #[must_use]
     pub const fn is_operational(&self) -> bool {
         matches!(self, Self::Healthy | Self::Degraded { .. })
     }
 
     /// Check if the system is in a terminal state (unhealthy, critical)
-    #[must_use] 
+    #[must_use]
     pub const fn is_terminal(&self) -> bool {
         matches!(self, Self::Unhealthy { .. } | Self::Critical { .. })
     }
 
     /// Check if the system is in transition (starting, stopping)
-    #[must_use] 
+    #[must_use]
     pub const fn is_transitioning(&self) -> bool {
         matches!(self, Self::Starting { .. } | Self::Stopping { .. })
     }
 
     /// Get the health score (0.0 = unhealthy, 1.0 = healthy)
-    #[must_use] 
+    #[must_use]
     pub fn score(&self) -> f64 {
         match self {
             Self::Healthy => 1.0,
@@ -160,7 +160,7 @@ impl Health {
     }
 
     /// Get all issues affecting this health status
-    #[must_use] 
+    #[must_use]
     pub fn issues(&self) -> Vec<&HealthIssue> {
         match self {
             Self::Degraded { issues, .. }
@@ -275,7 +275,7 @@ pub enum HealthIssueSeverity {
 
 impl HealthIssueSeverity {
     /// Get the impact score for this severity (0.0-1.0)
-    #[must_use] 
+    #[must_use]
     pub const fn impact_score(&self) -> f64 {
         match self {
             Self::Low => 0.1,

@@ -63,35 +63,35 @@ impl FractalBuilder {
     }
 
     /// Set topology
-    #[must_use] 
+    #[must_use]
     pub const fn topology(mut self, topology: NodeTopology) -> Self {
         self.topology = topology;
         self
     }
 
     /// Set depth
-    #[must_use] 
+    #[must_use]
     pub const fn depth(mut self, depth: usize) -> Self {
         self.depth = depth;
         self
     }
 
     /// Set resource type
-    #[must_use] 
+    #[must_use]
     pub const fn resource_type(mut self, resource_type: ResourceType) -> Self {
         self.resource_type = resource_type;
         self
     }
 
     /// Set resource allocation strategy
-    #[must_use] 
+    #[must_use]
     pub fn resource_allocation(mut self, allocation: ResourceAllocation) -> Self {
         self.resource_allocation = allocation;
         self
     }
 
     /// Set base resources
-    #[must_use] 
+    #[must_use]
     pub const fn resources(mut self, resources: ResourceInfo) -> Self {
         self.base_resources = resources;
         self
@@ -254,7 +254,7 @@ pub struct LeafNode {
 
 impl LeafNode {
     /// Create a new leaf node with the given configuration and resources
-    #[must_use] 
+    #[must_use]
     pub fn new(config: NodeConfig, resources: ResourceInfo) -> Self {
         Self {
             config,
@@ -422,7 +422,7 @@ pub struct ParentNode {
 
 impl ParentNode {
     /// Create a new parent node with the given configuration, resources, and children
-    #[must_use] 
+    #[must_use]
     pub fn new(
         config: NodeConfig,
         resources: ResourceInfo,

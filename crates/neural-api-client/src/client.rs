@@ -48,7 +48,7 @@ impl NeuralApiClient {
     }
 
     /// Discover socket path from family ID
-    #[must_use] 
+    #[must_use]
     pub fn discover_socket(family_id: &str) -> PathBuf {
         if let Ok(paths) = biomeos_types::SystemPaths::new() {
             paths.primal_socket(&format!("neural-api-{family_id}"))
@@ -60,14 +60,14 @@ impl NeuralApiClient {
     }
 
     /// Set request timeout
-    #[must_use] 
+    #[must_use]
     pub const fn with_request_timeout(mut self, timeout: Duration) -> Self {
         self.request_timeout = timeout;
         self
     }
 
     /// Set connection timeout
-    #[must_use] 
+    #[must_use]
     pub const fn with_connection_timeout(mut self, timeout: Duration) -> Self {
         self.connection_timeout = timeout;
         self

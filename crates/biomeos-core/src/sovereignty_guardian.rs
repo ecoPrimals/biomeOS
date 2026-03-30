@@ -232,7 +232,7 @@ pub enum ActionOutcome {
 
 impl SovereigntyGuardian {
     /// Create a new sovereignty guardian with default policies
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             policies: SovereigntyPolicies::default(),
@@ -242,7 +242,7 @@ impl SovereigntyGuardian {
     }
 
     /// Create sovereignty guardian with custom policies
-    #[must_use] 
+    #[must_use]
     pub fn with_policies(policies: SovereigntyPolicies) -> Self {
         Self {
             policies,
@@ -577,17 +577,14 @@ impl SovereigntyGuardian {
             entity: entity.to_string(),
             outcome: ActionOutcome::Failure(description),
             context: HashMap::from([
-                (
-                    "violation_type".to_string(),
-                    format!("{violation_type:?}"),
-                ),
+                ("violation_type".to_string(), format!("{violation_type:?}")),
                 ("severity".to_string(), format!("{severity:?}")),
             ]),
         });
     }
 
     /// Get violation history for an entity
-    #[must_use] 
+    #[must_use]
     pub fn get_violations(&self, entity: &str) -> Vec<&SovereigntyViolation> {
         self.violations
             .get(entity)
@@ -596,7 +593,7 @@ impl SovereigntyGuardian {
     }
 
     /// Get full audit trail
-    #[must_use] 
+    #[must_use]
     pub fn get_audit_trail(&self) -> &[SovereigntyAuditEntry] {
         &self.audit_log
     }

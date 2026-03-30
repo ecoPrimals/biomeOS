@@ -109,13 +109,13 @@ impl PrimalId {
     }
 
     /// Get the inner string reference
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// Convert into owned String
-    #[must_use] 
+    #[must_use]
     pub fn into_string(self) -> String {
         self.0.to_string()
     }
@@ -201,7 +201,7 @@ impl FamilyId {
     /// Checks for existing family configuration in:
     /// - `$XDG_CONFIG_HOME/biomeos/family.txt`
     /// - `~/.config/biomeos/family.txt`
-    #[must_use] 
+    #[must_use]
     pub fn discover_local() -> Option<Self> {
         use crate::paths::SystemPaths;
 
@@ -216,7 +216,7 @@ impl FamilyId {
     /// Generate a new random family ID
     ///
     /// Uses a memorable name generator for human-friendly IDs
-    #[must_use] 
+    #[must_use]
     pub fn generate() -> Self {
         use uuid::Uuid;
         // Generate memorable ID: first 8 chars of UUID
@@ -230,7 +230,7 @@ impl FamilyId {
     /// 1. Environment variable (`BIOMEOS_FAMILY_ID`)
     /// 2. Local config file
     /// 3. Generate new ID
-    #[must_use] 
+    #[must_use]
     pub fn get_or_create() -> Self {
         Self::get_or_create_with(None)
     }
@@ -250,13 +250,13 @@ impl FamilyId {
     }
 
     /// Get the inner string reference
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// Convert into owned String
-    #[must_use] 
+    #[must_use]
     pub fn into_string(self) -> String {
         self.0.to_string()
     }
@@ -327,13 +327,13 @@ impl Endpoint {
     }
 
     /// Get the underlying URL
-    #[must_use] 
+    #[must_use]
     pub const fn url(&self) -> &url::Url {
         &self.0
     }
 
     /// Get the URL as a string
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
@@ -380,7 +380,7 @@ impl TowerId {
     }
 
     /// Get the inner string reference
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -424,19 +424,19 @@ pub struct SessionId(uuid::Uuid);
 
 impl SessionId {
     /// Create a new random session ID
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self(uuid::Uuid::new_v4())
     }
 
     /// Create from existing UUID
-    #[must_use] 
+    #[must_use]
     pub const fn from_uuid(id: uuid::Uuid) -> Self {
         Self(id)
     }
 
     /// Get the underlying UUID
-    #[must_use] 
+    #[must_use]
     pub const fn uuid(&self) -> &uuid::Uuid {
         &self.0
     }

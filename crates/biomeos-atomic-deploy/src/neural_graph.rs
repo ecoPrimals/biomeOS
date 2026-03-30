@@ -441,7 +441,7 @@ pub struct GraphNode {
 
 impl GraphNode {
     /// Whether this node is optional (failure won't abort the graph).
-    #[must_use] 
+    #[must_use]
     pub fn is_optional(&self) -> bool {
         self.fallback.as_deref() == Some("skip")
     }

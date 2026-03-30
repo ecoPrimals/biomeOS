@@ -50,7 +50,7 @@ pub struct SubscriptionFilter {
 
 impl SubscriptionFilter {
     /// Check if an event matches this filter
-    #[must_use] 
+    #[must_use]
     pub fn matches(&self, event: &GraphEvent) -> bool {
         // Check graph_id filter
         if let Some(ref filter_graph_id) = self.graph_id {
@@ -110,7 +110,7 @@ pub struct GraphEventWebSocketServer {
 
 impl GraphEventWebSocketServer {
     /// Create a new WebSocket server
-    #[must_use] 
+    #[must_use]
     pub fn new(bind_addr: SocketAddr, event_broadcaster: Arc<GraphEventBroadcaster>) -> Self {
         Self {
             subscriptions: Arc::new(RwLock::new(HashMap::new())),

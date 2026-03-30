@@ -30,7 +30,7 @@ pub struct ShellManager;
 
 impl ShellManager {
     /// Creates a new shell manager
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }

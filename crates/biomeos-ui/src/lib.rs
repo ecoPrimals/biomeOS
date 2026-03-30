@@ -45,7 +45,7 @@
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
 //!     // Create the orchestrator (connects to all primals)
-//!     let mut orchestrator = InteractiveUIOrchestrator::new("1894e909e454").await?;
+//!     let mut orchestrator = InteractiveUIOrchestrator::new("1894e909e454")?;
 //!     
 //!     // Start the UI (launches petalTongue and syncs state)
 //!     orchestrator.start().await?;

@@ -78,7 +78,7 @@ impl std::str::FromStr for Capability {
 
 impl Capability {
     /// Load from environment variable (comma-separated)
-    #[must_use] 
+    #[must_use]
     pub fn from_env(var_name: &str) -> Vec<Self> {
         std::env::var(var_name)
             .ok()
@@ -169,9 +169,9 @@ impl PrimalConfig {
             .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
             .unwrap_or_else(|| "unknown".to_string());
 
-        let hostname = hostname::get()
-            .ok()
-            .and_then(|h| h.to_str().map(String::from))
+        let hostname = gethostname::gethostname()
+            .to_str()
+            .map(String::from)
             .unwrap_or_else(|| "unknown".to_string());
 
         // Create unique ID: binary@hostname-random
@@ -185,7 +185,7 @@ impl PrimalConfig {
     }
 
     /// Create config for a specific primal type (for manual construction)
-    #[must_use] 
+    #[must_use]
     pub fn for_capability(provides: Vec<Capability>, requires: Vec<Capability>) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),

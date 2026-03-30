@@ -94,7 +94,7 @@ impl GenomeFactory {
     }
 
     /// Check if self-genomeBin exists
-    #[must_use] 
+    #[must_use]
     pub fn has_self_genome(&self) -> bool {
         self.genome_exists("biomeos-self")
     }

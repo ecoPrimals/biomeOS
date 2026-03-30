@@ -73,7 +73,7 @@ pub struct EventBroadcaster {
 
 impl EventBroadcaster {
     /// Create a new event broadcaster
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         let (tx, _) = broadcast::channel(1000);
         Self { tx }
@@ -86,7 +86,7 @@ impl EventBroadcaster {
     }
 
     /// Subscribe to events
-    #[must_use] 
+    #[must_use]
     pub fn subscribe(&self) -> EventStream {
         self.tx.subscribe()
     }

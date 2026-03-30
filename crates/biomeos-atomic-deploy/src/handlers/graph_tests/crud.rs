@@ -80,7 +80,10 @@ async fn test_list_nonexistent_directory() {
     let bad_path = temp.path().join("nonexistent_subdir");
     let (handler, _) = make_handler(&bad_path);
 
-    let result = handler.list().await.expect("list should succeed even with missing dirs");
+    let result = handler
+        .list()
+        .await
+        .expect("list should succeed even with missing dirs");
     assert!(result.as_array().expect("array").is_empty());
 }
 
@@ -290,8 +293,14 @@ async fn test_save_overwrites_existing() {
             "rollback_on_failure": true
         }
     });
-    handler.save(&Some(graph_value.clone())).await.expect("save first");
-    handler.save(&Some(graph_value)).await.expect("save overwrite");
+    handler
+        .save(&Some(graph_value.clone()))
+        .await
+        .expect("save first");
+    handler
+        .save(&Some(graph_value))
+        .await
+        .expect("save overwrite");
 
     let runtime_dir = temp.path().parent().expect("parent").join("runtime_graphs");
     let path = runtime_dir.join("overwrite.toml");
@@ -327,7 +336,10 @@ async fn test_save_persists_file() {
 
     let runtime_dir = temp.path().parent().expect("parent").join("runtime_graphs");
     let path = runtime_dir.join("roundtrip_graph.toml");
-    assert!(path.exists(), "saved graph file should exist in runtime_graphs/");
+    assert!(
+        path.exists(),
+        "saved graph file should exist in runtime_graphs/"
+    );
     let content = std::fs::read_to_string(&path).expect("read file");
     assert!(content.contains("roundtrip_graph"));
     assert!(content.contains("1.0.0"));

@@ -137,7 +137,7 @@ pub struct WorkloadId(pub Uuid);
 
 impl WorkloadId {
     /// Create a new random workload identifier
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }

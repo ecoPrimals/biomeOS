@@ -58,13 +58,13 @@ pub enum IpcError {
 
 impl IpcError {
     /// Whether this error is a method-not-found (-32601) — caller may want to try another primal
-    #[must_use] 
+    #[must_use]
     pub const fn is_method_not_found(&self) -> bool {
         matches!(self, Self::JsonRpcError { code: -32601, .. })
     }
 
     /// Whether this error is a timeout — caller may want to retry
-    #[must_use] 
+    #[must_use]
     pub const fn is_timeout(&self) -> bool {
         matches!(self, Self::Timeout { .. })
     }

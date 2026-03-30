@@ -145,7 +145,7 @@ impl PipelineExecutor {
     ///
     /// Validates that the graph forms a linear chain (each node depends on
     /// at most one predecessor, and there's exactly one source node).
-    #[must_use] 
+    #[must_use]
     pub fn new(graph: DeploymentGraph, broadcaster: GraphEventBroadcaster) -> Self {
         let node_order = Self::compute_linear_order(&graph);
         Self {

@@ -83,7 +83,7 @@ struct SensorBusStats {
 
 impl SensorEventBus {
     /// Create a new sensor event bus with the given buffer capacity.
-    #[must_use] 
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         let (sender, _) = broadcast::channel(capacity);
         Self {
@@ -109,13 +109,13 @@ impl SensorEventBus {
     }
 
     /// Subscribe to all sensor events.
-    #[must_use] 
+    #[must_use]
     pub fn subscribe(&self) -> broadcast::Receiver<SensorEvent> {
         self.sender.subscribe()
     }
 
     /// Get the number of active subscribers.
-    #[must_use] 
+    #[must_use]
     pub fn subscriber_count(&self) -> usize {
         self.sender.receiver_count()
     }
@@ -138,7 +138,7 @@ pub struct SensorCollector {
 
 impl SensorCollector {
     /// Create a collector from a bus subscription.
-    #[must_use] 
+    #[must_use]
     pub const fn new(receiver: broadcast::Receiver<SensorEvent>) -> Self {
         Self {
             receiver,
@@ -147,7 +147,7 @@ impl SensorCollector {
     }
 
     /// Create a collector that only captures events from specific sources.
-    #[must_use] 
+    #[must_use]
     pub const fn with_filter(
         receiver: broadcast::Receiver<SensorEvent>,
         sources: Vec<SensorSource>,
@@ -197,7 +197,7 @@ impl SensorCollector {
 ///
 /// This is a convenience function that creates a collector, drains events,
 /// and returns them as a JSON payload for the continuous executor.
-#[must_use] 
+#[must_use]
 pub fn collect_sensor_input(bus: &SensorEventBus, sources: &[SensorSource]) -> serde_json::Value {
     let rx = bus.subscribe();
     let mut collector = if sources.is_empty() {

@@ -196,7 +196,7 @@ impl PrimalRegistry {
     }
 
     /// Get all available versions of a primal
-    #[must_use] 
+    #[must_use]
     pub fn get_primal_versions(&self, name: &str) -> Vec<&PrimalBinary> {
         self.binaries
             .get(name)
@@ -205,7 +205,7 @@ impl PrimalRegistry {
     }
 
     /// Get latest version of a primal
-    #[must_use] 
+    #[must_use]
     pub fn get_latest(&self, name: &str) -> Option<&PrimalBinary> {
         self.binaries.get(name).and_then(|versions| {
             versions.iter().max_by(|a, b| {
@@ -217,7 +217,7 @@ impl PrimalRegistry {
     }
 
     /// Get all available primals
-    #[must_use] 
+    #[must_use]
     pub fn list_primals(&self) -> Vec<String> {
         self.binaries.keys().cloned().collect()
     }
@@ -291,7 +291,7 @@ impl PrimalRegistry {
     ///
     /// Returns the primal with the highest version number that provides
     /// the requested capability.
-    #[must_use] 
+    #[must_use]
     pub fn get_best_for_capability(
         &self,
         capability: &CapabilityTaxonomy,

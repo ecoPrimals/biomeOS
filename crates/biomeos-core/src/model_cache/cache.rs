@@ -102,12 +102,13 @@ impl ModelCache {
     }
 
     fn default_cache_dir() -> Result<PathBuf> {
-        let home = std::env::var("HOME").context("HOME not set")?;
-        Ok(PathBuf::from(home).join(".biomeos").join("model-cache"))
+        Ok(biomeos_types::SystemPaths::new_lazy()
+            .cache_dir()
+            .join("models"))
     }
 
     /// Check if a model is cached locally
-    #[must_use] 
+    #[must_use]
     pub fn has_model(&self, model_id: &str) -> bool {
         if let Some(entry) = self.manifest.models.get(model_id) {
             entry.local_path.exists()
@@ -117,7 +118,7 @@ impl ModelCache {
     }
 
     /// Get the local path for a cached model
-    #[must_use] 
+    #[must_use]
     pub fn get_model_path(&self, model_id: &str) -> Option<&Path> {
         self.manifest
             .models
@@ -127,7 +128,7 @@ impl ModelCache {
     }
 
     /// Get full model entry with metadata
-    #[must_use] 
+    #[must_use]
     pub fn get_model(&self, model_id: &str) -> Option<&ModelEntry> {
         self.manifest
             .models
@@ -136,7 +137,7 @@ impl ModelCache {
     }
 
     /// List all cached models
-    #[must_use] 
+    #[must_use]
     pub fn list_models(&self) -> Vec<&ModelEntry> {
         self.manifest
             .models

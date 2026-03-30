@@ -37,7 +37,7 @@ pub struct Federation {
 
 impl Federation {
     /// Create a new federation manager
-    #[must_use] 
+    #[must_use]
     pub fn new(config: FederationConfig) -> Self {
         Self {
             config,
@@ -219,7 +219,7 @@ impl Federation {
     }
 
     /// Get VM by name
-    #[must_use] 
+    #[must_use]
     pub fn get_vm(&self, name: &str) -> Option<&QemuInstance> {
         self.vms.get(name)
     }

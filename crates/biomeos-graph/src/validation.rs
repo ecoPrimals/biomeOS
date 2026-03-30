@@ -27,7 +27,7 @@ impl Default for GraphValidator {
 
 impl GraphValidator {
     /// Create a new validator with default known namespaces.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         let mut known_namespaces = HashSet::new();
 

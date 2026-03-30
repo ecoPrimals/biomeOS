@@ -174,7 +174,7 @@ impl TowerConfig {
     }
 
     /// Create default configuration
-    #[must_use] 
+    #[must_use]
     pub fn default_config() -> Self {
         Self {
             tower: TowerMeta::default(),
@@ -185,13 +185,13 @@ impl TowerConfig {
     }
 
     /// Get health check interval as Duration
-    #[must_use] 
+    #[must_use]
     pub const fn health_interval(&self) -> Duration {
         Duration::from_secs(self.health.interval_secs)
     }
 
     /// Get health check timeout as Duration
-    #[must_use] 
+    #[must_use]
     pub const fn health_timeout(&self) -> Duration {
         Duration::from_secs(self.health.timeout_secs)
     }

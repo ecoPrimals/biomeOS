@@ -73,7 +73,7 @@ impl PrimalClient {
     }
 
     /// Create client for a discovered primal
-    #[must_use] 
+    #[must_use]
     pub const fn new(primal: DiscoveredPrimal) -> Self {
         Self {
             primal,
@@ -82,7 +82,7 @@ impl PrimalClient {
     }
 
     /// Set request timeout
-    #[must_use] 
+    #[must_use]
     pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
@@ -144,7 +144,7 @@ impl PrimalClient {
     }
 
     /// Get primal information
-    #[must_use] 
+    #[must_use]
     pub const fn primal(&self) -> &DiscoveredPrimal {
         &self.primal
     }

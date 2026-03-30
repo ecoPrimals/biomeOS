@@ -53,7 +53,7 @@ impl CapabilityClient {
     }
 
     /// Set request timeout
-    #[must_use] 
+    #[must_use]
     pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self

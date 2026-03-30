@@ -102,7 +102,7 @@ pub mod env_vars {
     /// assert_eq!(socket_env_key("nestgate"), "NESTGATE_SOCKET");
     /// assert_eq!(socket_env_key("my-custom-primal"), "MY_CUSTOM_PRIMAL_SOCKET");
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn socket_env_key(primal_name: &str) -> String {
         let base = primal_name
             .strip_suffix("-server")

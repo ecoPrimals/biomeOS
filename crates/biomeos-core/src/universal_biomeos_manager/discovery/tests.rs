@@ -70,8 +70,7 @@ async fn test_primal_discovery_service_initialize() {
 
 #[tokio::test]
 async fn test_discover_registry() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let endpoints = manager
@@ -83,8 +82,7 @@ async fn test_discover_registry() {
 
 #[tokio::test]
 async fn test_discover_network_scan() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let endpoints = manager
@@ -96,8 +94,7 @@ async fn test_discover_network_scan() {
 
 #[tokio::test]
 async fn test_discover() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let endpoints = manager.discover().await.expect("discover");
@@ -136,8 +133,7 @@ async fn test_discover_with_registry_config() {
 
 #[tokio::test]
 async fn test_discover_by_capability_empty() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let caps = vec![PrimalCapability::new("compute", "execution", "1.0")];
@@ -150,8 +146,7 @@ async fn test_discover_by_capability_empty() {
 
 #[tokio::test]
 async fn test_discover_by_capability_matching() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let primal = test_primal_info(
@@ -173,8 +168,7 @@ async fn test_discover_by_capability_matching() {
 
 #[tokio::test]
 async fn test_discover_by_capability_no_match() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let primal = test_primal_info(
@@ -195,8 +189,7 @@ async fn test_discover_by_capability_no_match() {
 
 #[tokio::test]
 async fn test_discover_via_multicast() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let endpoints = manager.discover_via_multicast().expect("discover");
@@ -205,8 +198,7 @@ async fn test_discover_via_multicast() {
 
 #[tokio::test]
 async fn test_discover_orchestration_services() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let endpoints = manager
@@ -218,8 +210,7 @@ async fn test_discover_orchestration_services() {
 
 #[tokio::test]
 async fn test_discover_multicast() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let endpoints = manager.discover_multicast().await.expect("discover");
@@ -228,8 +219,7 @@ async fn test_discover_multicast() {
 
 #[tokio::test]
 async fn test_discover_all_services() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let services = manager.discover_all_services().await.expect("discover");
@@ -238,8 +228,7 @@ async fn test_discover_all_services() {
 
 #[tokio::test]
 async fn test_discover_from_registry() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let services = manager
@@ -251,8 +240,7 @@ async fn test_discover_from_registry() {
 
 #[tokio::test]
 async fn test_discover_via_dns() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let services = manager.discover_via_dns().await.expect("discover");
@@ -261,8 +249,7 @@ async fn test_discover_via_dns() {
 
 #[tokio::test]
 async fn test_discover_by_capabilities() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let primal = test_primal_info(
@@ -333,8 +320,7 @@ async fn test_primal_discovery_service_discover_orchestration_empty() {
 
 #[tokio::test]
 async fn test_discover_all_services_empty_without_registry_hits() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
     let map = manager.discover_all_services().await.expect("all");
     assert!(map.is_empty());
@@ -342,8 +328,7 @@ async fn test_discover_all_services_empty_without_registry_hits() {
 
 #[tokio::test]
 async fn test_discover_from_registry_empty_endpoints() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
     let map = manager
         .discover_from_registry("http://registry.test:8500")
@@ -354,8 +339,7 @@ async fn test_discover_from_registry_empty_endpoints() {
 
 #[tokio::test]
 async fn test_discover_by_capabilities_registered_mismatch_endpoints() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
     let primal = test_primal_info(
         "dcb-1",
@@ -400,8 +384,7 @@ fn test_probe_result_clone() {
 
 #[tokio::test]
 async fn test_discover_by_capabilities_populates_when_endpoint_matches_id() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let primal = test_primal_info(
@@ -422,8 +405,7 @@ async fn test_discover_by_capabilities_populates_when_endpoint_matches_id() {
 
 #[tokio::test]
 async fn test_discover_by_capability_returns_multiple_matches() {
-    let manager = UniversalBiomeOSManager::with_default_config()
-        .expect("manager");
+    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
     manager.initialize().expect("init");
 
     let cap = PrimalCapability::new("compute", "execution", "1.0");

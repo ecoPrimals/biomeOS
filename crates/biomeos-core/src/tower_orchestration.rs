@@ -513,7 +513,7 @@ fn list_active_sockets(socket_dir: &Path) -> Vec<String> {
 }
 
 /// Format the list of known capabilities for display.
-#[must_use] 
+#[must_use]
 pub fn format_capabilities() -> Vec<(&'static str, &'static str)> {
     vec![
         ("Security", "Crypto, signing, encryption, key management"),
@@ -528,7 +528,7 @@ pub fn format_capabilities() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Standard environment lookup that delegates to `std::env::var`.
-#[must_use] 
+#[must_use]
 pub fn std_env_lookup(key: &str) -> Option<String> {
     std::env::var(key).ok()
 }

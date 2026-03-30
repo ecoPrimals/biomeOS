@@ -37,9 +37,7 @@ async fn test_complete_system_lifecycle() -> Result<()> {
         .build();
 
     let manager = PerformanceTestUtils::assert_performance_bounds(
-        async {
-            UniversalBiomeOSManager::new(config).expect("System initialization")
-        },
+        async { UniversalBiomeOSManager::new(config).expect("System initialization") },
         200, // System should initialize quickly
         "System initialization",
     )

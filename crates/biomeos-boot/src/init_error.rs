@@ -171,7 +171,7 @@ impl BootError {
     }
 
     /// Check if error is recoverable
-    #[must_use] 
+    #[must_use]
     pub const fn is_recoverable(&self) -> bool {
         matches!(
             self,
@@ -180,7 +180,7 @@ impl BootError {
     }
 
     /// Get error severity
-    #[must_use] 
+    #[must_use]
     pub const fn severity(&self) -> ErrorSeverity {
         match self {
             Self::NotPid1(_) | Self::InitAlreadyRunning => ErrorSeverity::Fatal,

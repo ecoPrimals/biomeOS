@@ -31,12 +31,9 @@ pub enum IsolationLevel {
 
 impl IsolationLevel {
     /// Check if this isolation level allows auto-approval
-    #[must_use] 
+    #[must_use]
     pub const fn allows_auto_approval(&self) -> bool {
-        matches!(
-            self,
-            Self::None | Self::Low | Self::Medium
-        )
+        matches!(self, Self::None | Self::Low | Self::Medium)
     }
 }
 
@@ -100,7 +97,7 @@ impl SubFederation {
     }
 
     /// Check if a node is a member of this sub-federation
-    #[must_use] 
+    #[must_use]
     pub fn is_member(&self, node_id: &str) -> bool {
         self.members.iter().any(|pattern| {
             if pattern.contains('*') {

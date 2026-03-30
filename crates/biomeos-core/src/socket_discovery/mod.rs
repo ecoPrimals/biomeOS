@@ -105,7 +105,7 @@ pub async fn discover_socket(primal_name: &str) -> Option<PathBuf> {
 /// Build socket path for a primal (convenience function)
 ///
 /// Deterministic path building for primals to register their own sockets.
-#[must_use] 
+#[must_use]
 pub fn build_socket(primal_name: &str, family_id: &str) -> PathBuf {
     let discovery = SocketDiscovery::new(family_id);
     discovery.build_socket_path(primal_name)

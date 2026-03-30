@@ -70,7 +70,10 @@ pub(crate) const fn benchscale_create_argv<'a>(name: &'a str, topology: &'a str)
 }
 
 /// `BenchScale` `cargo run --release -- <subcommand> <name>` argv (start/stop/destroy/test).
-pub(crate) const fn benchscale_subcommand_argv<'a>(subcommand: &'a str, name: &'a str) -> [&'a str; 5] {
+pub(crate) const fn benchscale_subcommand_argv<'a>(
+    subcommand: &'a str,
+    name: &'a str,
+) -> [&'a str; 5] {
     ["run", "--release", "--", subcommand, name]
 }
 

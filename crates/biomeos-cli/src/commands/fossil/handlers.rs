@@ -71,11 +71,7 @@ fn handle_active(node_filter: Option<String>) -> Result<()> {
     Ok(())
 }
 
-fn handle_fossil(
-    node_filter: Option<String>,
-    limit: usize,
-    show: Option<usize>,
-) -> Result<()> {
+fn handle_fossil(node_filter: Option<String>, limit: usize, show: Option<usize>) -> Result<()> {
     let config = cli_log_config();
     let index_path = config.fossil_dir.join("index.toml");
 

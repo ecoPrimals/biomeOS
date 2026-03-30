@@ -55,7 +55,7 @@ pub struct RollbackState {
 
 impl RollbackState {
     /// Create a new empty rollback state
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             spawned_pids: Vec::new(),

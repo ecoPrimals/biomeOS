@@ -4,11 +4,11 @@
 
 ---
 
-## Status: Production Ready (v2.79)
+## Status: Production Ready (v2.80)
 
 | Metric | Value |
 |--------|-------|
-| Primals | 6/6 ecoBin v3.0 compliant |
+| Primals | 7/7 ecoBin v3.0 compliant (+ barraCuda, coralReef) |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
@@ -27,7 +27,7 @@
 | Files >1000 LOC | 0 (all under 1000 after smart domain extraction) |
 | Discovery | Auto-discovery via XDG sockets + `topology.rescan` + `capability.register` + DNS-SD mDNS |
 | Blocking Debt | 0 (primal auto-discovery, continuous executor, nucleus/runtime graph separation — all resolved) |
-| Dep Governance | tokio, base64, serde, serde_json — workspace-unified; pure Rust stack (rustix, etcetera, ureq) |
+| Dep Governance | tokio, base64, serde, serde_json, gethostname — workspace-unified; serde_yml replaced with serde_yaml_ng; hostname consolidated to gethostname; 11 unused workspace deps removed; pure Rust stack (rustix, etcetera, ureq) |
 | TODO/FIXME/HACK | 0 in production code |
 
 ---
@@ -52,7 +52,9 @@
 |  |  Tower   |  |   Node   |  |   Nest   |  | Squirrel |     |
 |  | BearDog  |  |  Tower + |  |  Tower + |  |   AI     |     |
 |  | Songbird |  | Toadstool|  | NestGate |  |          |     |
-|  +----------+  +----------+  +----------+  +----------+     |
+|  +----------+  | barraCuda|  +----------+  +----------+     |
+|                | coralReef|                                  |
+|                +----------+                                  |
 +-------------------------------------------------------------+
 |  Primals (evolve independently via capability.call)          |
 +-------------------------------------------------------------+
@@ -63,7 +65,7 @@
 | Atomic | Primals | Capabilities |
 |--------|---------|--------------|
 | Tower | BearDog + Songbird | Crypto, TLS, HTTP, Discovery |
-| Node | Tower + Toadstool | + Compute, GPU |
+| Node | Tower + Toadstool + barraCuda + coralReef | + Compute, GPU, Math/Tensor/Stats, Shaders |
 | Nest | Tower + NestGate | + Storage, Persistence |
 | Full | All + Squirrel | + AI Orchestration, Neural API |
 
@@ -217,7 +219,9 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 |--------|---------|--------|----------------|
 | BearDog | Crypto, Genetics | Reference | Stable |
 | Songbird | HTTP, TLS, Discovery, Mesh | 90% | Mesh state fix, UDP discovery fix |
-| Toadstool | Compute, GPU | Operational | GPU job queue |
+| Toadstool | Compute, GPU dispatch | Operational | GPU job queue |
+| barraCuda | GPU Math, Tensors, Stats, Noise, Activation, RNG | Operational | Shader interop |
+| coralReef | Shader compilation, WGSL, SPIR-V | Operational | Pipeline caching |
 | NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
 | Squirrel | AI Orchestration | Operational | Ollama native adapter |
 | biomeOS | System Orchestrator + Neural API | Evolved | ✅ ARM64 built (9.6 MB static musl) |
@@ -340,7 +344,7 @@ scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC
 
 ---
 
-**Status**: Production Ready (v2.79)
+**Status**: Production Ready (v2.80)
 **Updated**: March 30, 2026
 **Tests**: 5,700+ passing, 90%+ coverage (llvm-cov verified) | **Clippy**: pedantic+nursery via workspace lints | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Auto-discovery + capability-first routing + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)

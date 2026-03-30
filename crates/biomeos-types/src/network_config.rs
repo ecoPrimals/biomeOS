@@ -140,7 +140,7 @@ impl NetworkConfig {
     ///
     /// For production, override defaults via environment.
     /// For development, defaults work out of the box.
-    #[must_use] 
+    #[must_use]
     pub fn from_env() -> Self {
         let env: HashMap<String, String> = env::vars().collect();
         Self::from_env_with(&env)
@@ -150,7 +150,7 @@ impl NetworkConfig {
     ///
     /// Use this in tests to avoid env-var races. Pass a `HashMap` with the
     /// variables you need; missing vars use defaults.
-    #[must_use] 
+    #[must_use]
     pub fn from_env_with(env: &HashMap<String, String>) -> Self {
         let bind_all = env
             .get(env_vars::BIND_ALL)
@@ -202,7 +202,7 @@ impl NetworkConfig {
     }
 
     /// Create with explicit bind address
-    #[must_use] 
+    #[must_use]
     pub fn with_bind_address(bind_address: IpAddr) -> Self {
         let mut config = Self::from_env();
         config.bind_address = bind_address;
@@ -211,13 +211,13 @@ impl NetworkConfig {
     }
 
     /// Create for local-only binding (127.0.0.1)
-    #[must_use] 
+    #[must_use]
     pub fn localhost() -> Self {
         Self::with_bind_address(IpAddr::V4(Ipv4Addr::LOCALHOST))
     }
 
     /// Create for all-interfaces binding (`[::]` dual-stack IPv6+IPv4)
-    #[must_use] 
+    #[must_use]
     pub fn all_interfaces() -> Self {
         Self::with_bind_address(IpAddr::V6(Ipv6Addr::UNSPECIFIED))
     }
@@ -227,49 +227,49 @@ impl NetworkConfig {
     // =========================================================================
 
     /// Get the bind address for services
-    #[must_use] 
+    #[must_use]
     pub const fn bind_address(&self) -> IpAddr {
         self.bind_address
     }
 
     /// Get bind address as string
-    #[must_use] 
+    #[must_use]
     pub fn bind_address_string(&self) -> String {
         self.bind_address.to_string()
     }
 
     /// Get socket address for a port
-    #[must_use] 
+    #[must_use]
     pub const fn socket_addr(&self, port: u16) -> SocketAddr {
         SocketAddr::new(self.bind_address, port)
     }
 
     /// Get HTTP socket address
-    #[must_use] 
+    #[must_use]
     pub const fn http_socket(&self) -> SocketAddr {
         self.socket_addr(self.ports.http)
     }
 
     /// Get HTTPS socket address
-    #[must_use] 
+    #[must_use]
     pub const fn https_socket(&self) -> SocketAddr {
         self.socket_addr(self.ports.https)
     }
 
     /// Get WebSocket socket address
-    #[must_use] 
+    #[must_use]
     pub const fn websocket_socket(&self) -> SocketAddr {
         self.socket_addr(self.ports.websocket)
     }
 
     /// Get discovery socket address
-    #[must_use] 
+    #[must_use]
     pub const fn discovery_socket(&self) -> SocketAddr {
         self.socket_addr(self.ports.discovery)
     }
 
     /// Get relay socket address
-    #[must_use] 
+    #[must_use]
     pub const fn relay_socket(&self) -> SocketAddr {
         self.socket_addr(self.ports.relay)
     }
@@ -279,43 +279,43 @@ impl NetworkConfig {
     // =========================================================================
 
     /// Get port configuration
-    #[must_use] 
+    #[must_use]
     pub const fn ports(&self) -> &PortConfig {
         &self.ports
     }
 
     /// Get HTTP port
-    #[must_use] 
+    #[must_use]
     pub const fn http_port(&self) -> u16 {
         self.ports.http
     }
 
     /// Get HTTPS port
-    #[must_use] 
+    #[must_use]
     pub const fn https_port(&self) -> u16 {
         self.ports.https
     }
 
     /// Get WebSocket port
-    #[must_use] 
+    #[must_use]
     pub const fn websocket_port(&self) -> u16 {
         self.ports.websocket
     }
 
     /// Get discovery port
-    #[must_use] 
+    #[must_use]
     pub const fn discovery_port(&self) -> u16 {
         self.ports.discovery
     }
 
     /// Get relay port
-    #[must_use] 
+    #[must_use]
     pub const fn relay_port(&self) -> u16 {
         self.ports.relay
     }
 
     /// Get STUN port
-    #[must_use] 
+    #[must_use]
     pub const fn stun_port(&self) -> u16 {
         self.ports.stun
     }
@@ -330,7 +330,7 @@ impl NetworkConfig {
     /// 1. Self-hosted STUN (if configured)
     /// 2. Custom STUN servers (from env)
     /// 3. Public STUN servers (if allowed)
-    #[must_use] 
+    #[must_use]
     pub fn stun_servers(&self) -> Vec<String> {
         let mut servers = Vec::new();
 
@@ -351,13 +351,13 @@ impl NetworkConfig {
     }
 
     /// Get self-hosted STUN server (if configured)
-    #[must_use] 
+    #[must_use]
     pub fn self_hosted_stun(&self) -> Option<&str> {
         self.self_hosted_stun.as_deref()
     }
 
     /// Check if public STUN fallback is allowed
-    #[must_use] 
+    #[must_use]
     pub const fn allows_public_stun(&self) -> bool {
         self.allow_public_stun
     }
@@ -408,25 +408,25 @@ impl Default for NetworkConfig {
 /// Get bind address from environment (convenience function)
 ///
 /// Use this when you just need the bind address without full `NetworkConfig`.
-#[must_use] 
+#[must_use]
 pub fn bind_address() -> IpAddr {
     NetworkConfig::from_env().bind_address()
 }
 
 /// Get bind address as string (convenience function)
-#[must_use] 
+#[must_use]
 pub fn bind_address_string() -> String {
     NetworkConfig::from_env().bind_address_string()
 }
 
 /// Get socket address for a port (convenience function)
-#[must_use] 
+#[must_use]
 pub fn socket_addr(port: u16) -> SocketAddr {
     NetworkConfig::from_env().socket_addr(port)
 }
 
 /// Get STUN servers in priority order (convenience function)
-#[must_use] 
+#[must_use]
 pub fn stun_servers() -> Vec<String> {
     NetworkConfig::from_env().stun_servers()
 }

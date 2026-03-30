@@ -70,7 +70,7 @@ pub struct PlasmodiumAgent {
 
 impl PlasmodiumAgent {
     /// Create a new agent for a single local gate
-    #[must_use] 
+    #[must_use]
     pub fn local(name: &str, family_id: &str, gate_id: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -95,7 +95,7 @@ impl PlasmodiumAgent {
     }
 
     /// Resolve a capability to the best available route
-    #[must_use] 
+    #[must_use]
     pub fn resolve(&self, capability_domain: &str) -> Option<&CapabilityRoute> {
         self.routing_table
             .get(capability_domain)

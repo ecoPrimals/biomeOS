@@ -29,7 +29,7 @@ pub struct LifecycleHandler {
 
 impl LifecycleHandler {
     /// Create a new lifecycle handler
-    #[must_use] 
+    #[must_use]
     pub fn new(family_id: &str) -> Self {
         Self {
             manager: Arc::new(RwLock::new(LifecycleManager::new(family_id))),

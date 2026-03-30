@@ -30,8 +30,12 @@ pub struct DiskInfo {
 /// Get disk information via /proc/mounts + rustix statvfs (pure Rust).
 #[cfg(target_os = "linux")]
 pub fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
-    let mounts = fs::read_to_string("/proc/mounts")
-        .map_err(|e| biomeos_types::BiomeError::internal_error(format!("Failed to read /proc/mounts: {e}"), None::<String>))?;
+    let mounts = fs::read_to_string("/proc/mounts").map_err(|e| {
+        biomeos_types::BiomeError::internal_error(
+            format!("Failed to read /proc/mounts: {e}"),
+            None::<String>,
+        )
+    })?;
     let mut result = Vec::new();
 
     for line in mounts.lines() {
@@ -105,7 +109,11 @@ pub(crate) fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
             let total_gb = total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
             let used_gb = used_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
             let available_gb = available_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-            let usage_percent = if total_gb > 0.0 { used_gb / total_gb } else { 0.0 };
+            let usage_percent = if total_gb > 0.0 {
+                used_gb / total_gb
+            } else {
+                0.0
+            };
 
             Ok(vec![DiskInfo {
                 device: "root".to_string(),

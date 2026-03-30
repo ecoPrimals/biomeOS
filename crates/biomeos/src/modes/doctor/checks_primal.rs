@@ -258,7 +258,7 @@ mod tests {
             check
                 .details
                 .iter()
-                .any(|d| d.contains("1/5") || d.contains("2/5"))
+                .any(|d| d.contains("1/7") || d.contains("2/7"))
         );
     }
 
@@ -282,6 +282,6 @@ mod tests {
             .iter()
             .find(|d| d.contains("primals discovered"))
             .expect("total line");
-        assert!(total_detail.contains("/5"));
+        assert!(total_detail.contains("/7"));
     }
 }

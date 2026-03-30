@@ -53,7 +53,7 @@ pub struct ProbeResult {
 
 impl PrimalDiscoveryService {
     /// Create new discovery service
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: Arc<BiomeOSConfig>) -> Self {
         Self { _config: config }
     }
@@ -106,10 +106,7 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
-    pub fn discover_orchestration(
-        &self,
-        _orchestration_url: &str,
-    ) -> Result<Vec<DiscoveryResult>> {
+    pub fn discover_orchestration(&self, _orchestration_url: &str) -> Result<Vec<DiscoveryResult>> {
         // This method is deprecated - use ClientRegistry and Songbird for discovery
         tracing::debug!("discover_orchestration called - using ClientRegistry instead");
         Ok(vec![])
@@ -131,9 +128,7 @@ use super::core::UniversalBiomeOSManager;
 impl UniversalBiomeOSManager {
     /// Discover primals in registry using unified configuration system
     pub async fn discover_registry(&self, registry_url: &str) -> Result<Vec<String>> {
-        let results = self
-            .discovery_service
-            .discover_registry(registry_url)?;
+        let results = self.discovery_service.discover_registry(registry_url)?;
         let mut endpoints = Vec::new();
 
         for result in results {

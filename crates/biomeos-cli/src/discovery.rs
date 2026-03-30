@@ -219,7 +219,8 @@ mod tests {
     #[tokio::test]
     async fn test_discover_by_location_returns_err() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).expect("manager creation should succeed");
+        let manager =
+            UniversalBiomeOSManager::new(config).expect("manager creation should succeed");
         let result = DiscoveryUtils::discover_by_location(&manager, 0.0, 0.0, 100.0);
         assert!(result.is_err(), "Geolocation discovery should return error");
         let err = result.unwrap_err();

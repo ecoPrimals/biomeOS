@@ -25,7 +25,7 @@ impl NeuralApiServer {
     ///
     /// # Returns
     /// Resolved `family_id` string
-    #[must_use] 
+    #[must_use]
     pub fn extract_family_id_from_node<'a>(&'a self, node: &'a GraphNode) -> &'a str {
         let family_id_raw = if let Some(operation) = &node.operation {
             operation

@@ -29,7 +29,7 @@ pub struct DiscoveryConfig {
 
 impl DiscoveryConfig {
     /// Capture configuration from environment variables.
-    #[must_use] 
+    #[must_use]
     pub fn from_env() -> Self {
         Self {
             registry_provider: std::env::var("BIOMEOS_REGISTRY_PROVIDER").ok(),
@@ -39,7 +39,7 @@ impl DiscoveryConfig {
 }
 
 /// Resolve a capability to its provider primal name at runtime.
-#[must_use] 
+#[must_use]
 pub fn resolve_capability_provider(
     env_var: &str,
     capability: &CapabilityTaxonomy,

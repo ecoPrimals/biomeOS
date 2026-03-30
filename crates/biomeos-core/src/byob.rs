@@ -59,7 +59,7 @@ pub struct ByobManager {
 
 impl ByobManager {
     /// Create new BYOB manager
-    #[must_use] 
+    #[must_use]
     pub fn new(config: BiomeOSConfig) -> Self {
         Self {
             config,
@@ -130,7 +130,7 @@ impl ByobManager {
     }
 
     /// Get team configuration
-    #[must_use] 
+    #[must_use]
     pub fn get_team_config(&self, team_id: &str) -> Option<&ByobTeamConfig> {
         self.teams.get(team_id)
     }
@@ -141,13 +141,13 @@ impl ByobManager {
     }
 
     /// Get system configuration for validation
-    #[must_use] 
+    #[must_use]
     pub const fn get_system_config(&self) -> &BiomeOSConfig {
         &self.config
     }
 
     /// Get the number of configured teams
-    #[must_use] 
+    #[must_use]
     pub fn get_team_count(&self) -> usize {
         self.teams.len()
     }

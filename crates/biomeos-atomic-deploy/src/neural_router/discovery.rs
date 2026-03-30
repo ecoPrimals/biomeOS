@@ -22,9 +22,12 @@ impl NeuralRouter {
             "crypto_sign" | "crypto.sign" | "crypto" | "security" | "encryption" => "security",
             "discovery" => "discovery",
             "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" => "ai",
+            "math" | "tensor" | "stats" | "noise" | "activation" | "rng" => "math",
+            "shader" | "wgsl" | "spirv" => "shader",
+            "compute" | "workload" | "orchestration" => "compute",
             _ => {
                 return Err(anyhow!(
-                    "Capability '{capability}' does not map to a known category (security, discovery, ai)"
+                    "Capability '{capability}' does not map to a known category"
                 ));
             }
         };
@@ -117,11 +120,10 @@ impl NeuralRouter {
             }
             "secure_storage" => self.discover_nest_atomic().await,
             "secure_compute" => self.discover_node_atomic().await,
-            "crypto_sign" | "crypto.sign" | "crypto" | "security" | "encryption" => {
-                self.discover_by_capability_category(capability).await
-            }
-            "discovery" => self.discover_by_capability_category(capability).await,
-            "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" => {
+            "crypto_sign" | "crypto.sign" | "crypto" | "security" | "encryption" | "discovery"
+            | "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" | "math"
+            | "tensor" | "stats" | "noise" | "activation" | "rng" | "shader" | "wgsl" | "spirv"
+            | "compute" | "workload" | "orchestration" => {
                 self.discover_by_capability_category(capability).await
             }
             _ => Err(anyhow!(

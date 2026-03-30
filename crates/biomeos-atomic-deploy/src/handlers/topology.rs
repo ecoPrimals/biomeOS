@@ -167,50 +167,64 @@ impl TopologyHandler {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
 
-        let stream = match tokio::time::timeout(
-            std::time::Duration::from_millis(500),
-            UnixStream::connect(socket_path),
-        )
-        .await
-        {
-            Ok(Ok(s)) => s,
-            _ => return Ok(vec![]),
-        };
+        // Try both method names — some primals implement "capabilities.list",
+        // others implement "capability.list". Both are valid per the route table.
+        for method_name in ["capabilities.list", "capability.list"] {
+            let stream = match tokio::time::timeout(
+                std::time::Duration::from_millis(500),
+                UnixStream::connect(socket_path),
+            )
+            .await
+            {
+                Ok(Ok(s)) => s,
+                _ => return Ok(vec![]),
+            };
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "capability.list",
-            "id": 1
-        });
-        let request_line = serde_json::to_string(&request)? + "\n";
+            let request = serde_json::json!({
+                "jsonrpc": "2.0",
+                "method": method_name,
+                "id": 1
+            });
+            let request_line = serde_json::to_string(&request)? + "\n";
 
-        let mut reader = BufReader::new(stream);
-        let stream_mut = reader.get_mut();
-        if stream_mut.write_all(request_line.as_bytes()).await.is_err() {
-            return Ok(vec![]);
+            let mut reader = BufReader::new(stream);
+            let stream_mut = reader.get_mut();
+            if stream_mut.write_all(request_line.as_bytes()).await.is_err() {
+                continue;
+            }
+            let _ = stream_mut.flush().await;
+
+            let mut response_line = String::new();
+            match tokio::time::timeout(
+                std::time::Duration::from_millis(500),
+                reader.read_line(&mut response_line),
+            )
+            .await
+            {
+                Ok(Ok(n)) if n > 0 => {}
+                _ => continue,
+            }
+
+            let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
+
+            if resp["error"]["code"].as_i64() == Some(-32601) {
+                continue;
+            }
+
+            if let Some(caps) = resp["result"]["capabilities"].as_array() {
+                return Ok(caps
+                    .iter()
+                    .filter_map(|c| c.as_str().map(String::from))
+                    .collect());
+            }
+            if let Some(caps) = resp["result"].as_array() {
+                return Ok(caps
+                    .iter()
+                    .filter_map(|c| c.as_str().map(String::from))
+                    .collect());
+            }
         }
-        let _ = stream_mut.flush().await;
-
-        let mut response_line = String::new();
-        match tokio::time::timeout(
-            std::time::Duration::from_millis(500),
-            reader.read_line(&mut response_line),
-        )
-        .await
-        {
-            Ok(Ok(n)) if n > 0 => {}
-            _ => return Ok(vec![]),
-        }
-
-        let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
-        if let Some(caps) = resp["result"]["capabilities"].as_array() {
-            Ok(caps
-                .iter()
-                .filter_map(|c| c.as_str().map(String::from))
-                .collect())
-        } else {
-            Ok(vec![])
-        }
+        Ok(vec![])
     }
 
     /// Get XDG-compliant socket directories for primal discovery
@@ -221,7 +235,7 @@ impl TopologyHandler {
     /// 1. XDG runtime directory: `$XDG_RUNTIME_DIR/biomeos/`
     /// 2. User runtime fallback: `/tmp/biomeos-$USER/`
     /// 3. Legacy compatibility: `/tmp/` (for existing deployments)
-    #[must_use] 
+    #[must_use]
     pub fn get_socket_directories() -> Vec<PathBuf> {
         let mut dirs = Vec::new();
 

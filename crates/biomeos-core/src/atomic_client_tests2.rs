@@ -412,9 +412,7 @@ async fn test_call_http_malformed_no_separator_fails() {
 async fn test_call_stream_http_yields_transport_error() {
     use biomeos_graph::StreamItem;
     let client = AtomicClient::http("127.0.0.1", 59997).with_timeout(Duration::from_millis(200));
-    let mut rx = client
-        .call_stream("stream", json!({}))
-        .expect("receiver");
+    let mut rx = client.call_stream("stream", json!({})).expect("receiver");
     let first = rx.recv().await.expect("event");
     assert!(
         matches!(first, StreamItem::Error { .. }),

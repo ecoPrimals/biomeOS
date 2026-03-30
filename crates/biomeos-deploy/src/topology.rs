@@ -131,13 +131,13 @@ impl Topology {
     }
 
     /// Get VM by name
-    #[must_use] 
+    #[must_use]
     pub fn get_vm(&self, name: &str) -> Option<&VmTopology> {
         self.vms.iter().find(|vm| vm.name == name)
     }
 
     /// Get number of VMs
-    #[must_use] 
+    #[must_use]
     pub const fn vm_count(&self) -> usize {
         self.vms.len()
     }

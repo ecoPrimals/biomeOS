@@ -75,21 +75,13 @@ pub fn cached_download_path(
 }
 
 pub async fn github_latest_release(org: &str, repo: &str) -> Result<GitHubRelease> {
-    let api_url = format!(
-        "https://api.github.com/repos/{org}/{repo}/releases/latest"
-    );
+    let api_url = format!("https://api.github.com/repos/{org}/{repo}/releases/latest");
     github_api_get(&api_url).await
 }
 
-pub async fn github_release_for_tag(
-    org: &str,
-    repo: &str,
-    tag: &str,
-) -> Result<GitHubRelease> {
+pub async fn github_release_for_tag(org: &str, repo: &str, tag: &str) -> Result<GitHubRelease> {
     let enc = percent_encode_github_tag(tag);
-    let api_url = format!(
-        "https://api.github.com/repos/{org}/{repo}/releases/tags/{enc}"
-    );
+    let api_url = format!("https://api.github.com/repos/{org}/{repo}/releases/tags/{enc}");
     github_api_get(&api_url).await
 }
 
@@ -123,15 +115,12 @@ async fn curl_fetch_https(url: &str) -> Result<Vec<u8>> {
         .arg("Accept: application/vnd.github+json");
     if let Ok(token) = std::env::var("GITHUB_TOKEN") {
         if !token.is_empty() {
-            cmd.arg("-H")
-                .arg(format!("Authorization: Bearer {token}"));
+            cmd.arg("-H").arg(format!("Authorization: Bearer {token}"));
         }
     }
     cmd.arg(url);
     let output = cmd.output().await.map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to run curl for HTTPS (install curl or set PATH): {e}"
-        )
+        anyhow::anyhow!("Failed to run curl for HTTPS (install curl or set PATH): {e}")
     })?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -153,15 +142,12 @@ async fn curl_download_to_file(url: &str, dest: &Path) -> Result<()> {
         .arg("User-Agent: biomeos-primal-registry/0.1");
     if let Ok(token) = std::env::var("GITHUB_TOKEN") {
         if !token.is_empty() {
-            cmd.arg("-H")
-                .arg(format!("Authorization: Bearer {token}"));
+            cmd.arg("-H").arg(format!("Authorization: Bearer {token}"));
         }
     }
     cmd.arg("-o").arg(dest.as_os_str()).arg(url);
     let status = cmd.status().await.map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to run curl for download (install curl or set PATH): {e}"
-        )
+        anyhow::anyhow!("Failed to run curl for download (install curl or set PATH): {e}")
     })?;
     if !status.success() {
         return Err(anyhow::anyhow!(

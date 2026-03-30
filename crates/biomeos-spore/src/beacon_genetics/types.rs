@@ -27,7 +27,7 @@ use crate::error::{SporeError, SporeResult};
 pub type Timestamp = u64;
 
 /// Get current Unix timestamp
-#[must_use] 
+#[must_use]
 pub fn current_timestamp() -> Timestamp {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -45,13 +45,13 @@ pub struct BeaconId(pub String);
 
 impl BeaconId {
     /// Create from hex string
-    #[must_use] 
+    #[must_use]
     pub fn from_hex(hex: &str) -> Self {
         Self(hex.to_string())
     }
 
     /// Get short display form (first 8 chars)
-    #[must_use] 
+    #[must_use]
     pub fn short(&self) -> &str {
         if self.0.len() >= 8 {
             &self.0[..8]
@@ -222,7 +222,7 @@ pub struct BeaconGeneticsManifest {
 
 impl BeaconGeneticsManifest {
     /// Create new empty manifest
-    #[must_use] 
+    #[must_use]
     pub fn new(own_beacon_id: BeaconId, lineage_hint: &str) -> Self {
         Self {
             version: "2.0.0".to_string(),
@@ -262,7 +262,7 @@ impl BeaconGeneticsManifest {
     }
 
     /// Get meeting by beacon ID
-    #[must_use] 
+    #[must_use]
     pub fn get_meeting(&self, beacon_id: &BeaconId) -> Option<&MeetingRecord> {
         self.meetings.get(&beacon_id.0)
     }
@@ -273,7 +273,7 @@ impl BeaconGeneticsManifest {
     }
 
     /// List all known beacon IDs
-    #[must_use] 
+    #[must_use]
     pub fn known_beacon_ids(&self) -> Vec<BeaconId> {
         self.meetings.keys().map(|k| BeaconId(k.clone())).collect()
     }

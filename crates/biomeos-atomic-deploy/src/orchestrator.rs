@@ -37,7 +37,7 @@ pub enum AtomicType {
 
 impl AtomicType {
     /// Get the node ID for this atomic
-    #[must_use] 
+    #[must_use]
     pub const fn node_id(&self) -> &'static str {
         match self {
             Self::Tower => "tower",
@@ -50,7 +50,7 @@ impl AtomicType {
     ///
     /// Evolution: migrate to capability-based requirements resolved via
     /// Neural API discovery rather than fixed primal role names.
-    #[must_use] 
+    #[must_use]
     pub fn required_primals(&self) -> Vec<&'static str> {
         match self {
             Self::Tower => vec![BEARDOG_SERVER_ROLE, SONGBIRD_ORCHESTRATOR_ROLE],
@@ -396,13 +396,13 @@ impl DeploymentResult {
     }
 
     /// Check if deployment was successful
-    #[must_use] 
+    #[must_use]
     pub const fn is_success(&self) -> bool {
         self.success_count == 3 && self.errors.is_empty()
     }
 
     /// Get all running primal instances
-    #[must_use] 
+    #[must_use]
     pub fn all_instances(&self) -> Vec<&PrimalInstance> {
         let mut instances = Vec::new();
 

@@ -37,10 +37,7 @@ async fn main() -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
-    let lab = match lab_manager
-        .create_lab("simple-lan", "biomeos-experiment-01")
-        .await
-    {
+    let lab = match lab_manager.create_lab("simple-lan", "biomeos-experiment-01") {
         Ok(lab) => {
             println!("✅ Lab created successfully!");
             println!("   Name:     {}", lab.name());
@@ -67,7 +64,7 @@ async fn main() -> Result<()> {
     println!();
 
     // Use a simple manifest (or skip if binaries not available)
-    match lab.deploy("templates/p2p-secure-mesh.biome.yaml").await {
+    match lab.deploy("templates/p2p-secure-mesh.biome.yaml") {
         Ok(_) => {
             println!("✅ Primals deployed successfully!");
             println!();
@@ -85,7 +82,7 @@ async fn main() -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
-    let test_result = lab.run_test("btsp-tunnels").await?;
+    let test_result = lab.run_test("btsp-tunnels")?;
 
     // Step 4: Verify results
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -119,7 +116,7 @@ async fn main() -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
-    lab.destroy().await?;
+    lab.destroy()?;
     println!("✅ Lab destroyed successfully!");
     println!();
 

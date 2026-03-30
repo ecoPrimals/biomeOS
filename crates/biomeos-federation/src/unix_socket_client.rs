@@ -29,7 +29,7 @@ impl UnixSocketClient {
     }
 
     /// Check if the socket exists
-    #[must_use] 
+    #[must_use]
     pub fn is_available(&self) -> bool {
         self.socket_path.exists()
     }

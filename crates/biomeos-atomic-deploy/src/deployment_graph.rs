@@ -159,7 +159,7 @@ impl AtomicDeploymentGraph {
     ///
     /// Note: Simplified implementation - returns nodes in declaration order
     /// Neural API's `GraphExecutor` handles proper topological sorting
-    #[must_use] 
+    #[must_use]
     pub fn execution_order(&self) -> Vec<&DeploymentGraphNode> {
         // Neural API handles topological sort - this is a simplified version
         self.nodes.iter().collect()

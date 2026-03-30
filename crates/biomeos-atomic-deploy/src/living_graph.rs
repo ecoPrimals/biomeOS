@@ -142,21 +142,21 @@ impl PrimalProtocolState {
     }
 
     /// Set the tarpc socket path
-    #[must_use] 
+    #[must_use]
     pub fn with_tarpc_socket(mut self, socket: PathBuf) -> Self {
         self.tarpc_socket = Some(socket);
         self
     }
 
     /// Set capabilities
-    #[must_use] 
+    #[must_use]
     pub fn with_capabilities(mut self, capabilities: Vec<String>) -> Self {
         self.capabilities = capabilities;
         self
     }
 
     /// Check if tarpc is available for this primal
-    #[must_use] 
+    #[must_use]
     pub const fn tarpc_available(&self) -> bool {
         self.tarpc_socket.is_some()
     }
@@ -224,7 +224,7 @@ impl ConnectionMetrics {
     }
 
     /// Get error rate (0.0 - 1.0)
-    #[must_use] 
+    #[must_use]
     pub fn error_rate(&self) -> f64 {
         if self.request_count == 0 {
             0.0
@@ -533,7 +533,7 @@ pub struct ProtocolSummary {
 
 impl ProtocolSummary {
     /// Total number of connections
-    #[must_use] 
+    #[must_use]
     pub const fn total(&self) -> usize {
         self.json_rpc + self.tarpc + self.hybrid + self.degraded
     }

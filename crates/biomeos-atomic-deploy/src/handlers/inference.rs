@@ -53,7 +53,7 @@ pub struct InferenceHandler {
 
 impl InferenceHandler {
     /// Create a new inference handler with access to routing and gate registry.
-    #[must_use] 
+    #[must_use]
     pub const fn new(router: Arc<NeuralRouter>, gate_registry: Arc<GateRegistry>) -> Self {
         Self {
             router,

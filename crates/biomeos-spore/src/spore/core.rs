@@ -213,13 +213,13 @@ impl Spore {
     }
 
     /// Get the root path of this spore
-    #[must_use] 
+    #[must_use]
     pub fn root_path(&self) -> &Path {
         &self.root_path
     }
 
     /// Get the spore configuration
-    #[must_use] 
+    #[must_use]
     pub const fn config(&self) -> &SporeConfig {
         &self.config
     }

@@ -214,7 +214,7 @@ pub enum PrimalState {
 
 impl PrimalAdapter {
     /// Create a new adapter with default capabilities
-    #[must_use] 
+    #[must_use]
     pub fn new(name: String, binary: PathBuf) -> Self {
         Self {
             name,
@@ -348,7 +348,7 @@ impl Default for LifecycleCapabilities {
 
 impl PrimalInterface {
     /// Check if this is a known interface
-    #[must_use] 
+    #[must_use]
     pub const fn is_known(&self) -> bool {
         !matches!(self, Self::Unknown { .. })
     }

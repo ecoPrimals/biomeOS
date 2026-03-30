@@ -35,7 +35,7 @@ pub enum Architecture {
 
 impl Architecture {
     /// Detects the current system architecture
-    #[must_use] 
+    #[must_use]
     pub const fn detect() -> Self {
         #[cfg(target_arch = "x86_64")]
         return Self::X86_64;
@@ -55,7 +55,7 @@ impl Architecture {
     }
 
     /// Returns the architecture as a string
-    #[must_use] 
+    #[must_use]
     pub const fn as_str(&self) -> &str {
         match self {
             Self::X86_64 => "x86_64",

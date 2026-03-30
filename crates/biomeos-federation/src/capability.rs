@@ -86,7 +86,7 @@ impl Capability {
         clippy::should_implement_trait,
         reason = "custom builder pattern intentionally differs from std trait"
     )]
-    #[must_use] 
+    #[must_use]
     pub fn from_str(s: &str) -> Self {
         match s.parse() {
             Ok(cap) => cap,
@@ -166,7 +166,7 @@ pub struct CapabilitySet {
 
 impl CapabilitySet {
     /// Create an empty capability set
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             capabilities: HashSet::new(),
@@ -174,7 +174,7 @@ impl CapabilitySet {
     }
 
     /// Create a capability set from a vector
-    #[must_use] 
+    #[must_use]
     pub fn from_vec(caps: Vec<Capability>) -> Self {
         Self {
             capabilities: caps.into_iter().collect(),
@@ -185,7 +185,7 @@ impl CapabilitySet {
     ///
     /// Parses each tag as a capability using the `FromStr` trait.
     /// Unknown tags are treated as Custom capabilities.
-    #[must_use] 
+    #[must_use]
     pub fn from_tags(tags: &[String]) -> Self {
         let caps: Vec<Capability> = tags
             .iter()
@@ -208,25 +208,25 @@ impl CapabilitySet {
     }
 
     /// Check if a capability is present
-    #[must_use] 
+    #[must_use]
     pub fn has(&self, cap: &Capability) -> bool {
         self.capabilities.contains(cap)
     }
 
     /// Check if all capabilities from another set are present
-    #[must_use] 
+    #[must_use]
     pub fn has_all(&self, other: &Self) -> bool {
         other.capabilities.iter().all(|cap| self.has(cap))
     }
 
     /// Get all capabilities
-    #[must_use] 
+    #[must_use]
     pub fn all(&self) -> Vec<&Capability> {
         self.capabilities.iter().collect()
     }
 
     /// Check if set is empty
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.capabilities.is_empty()
     }
@@ -239,19 +239,19 @@ impl CapabilitySet {
     }
 
     /// Create a read-only capability set
-    #[must_use] 
+    #[must_use]
     pub fn read_only() -> Self {
         Self::from_vec(vec![Capability::ReadOnly, Capability::Discovery])
     }
 
     /// Create a compute-only capability set
-    #[must_use] 
+    #[must_use]
     pub fn compute_only() -> Self {
         Self::from_vec(vec![Capability::Compute, Capability::Discovery])
     }
 
     /// Create a full access capability set
-    #[must_use] 
+    #[must_use]
     pub fn full_access() -> Self {
         Self::from_vec(vec![
             Capability::Storage,

@@ -35,7 +35,7 @@ pub enum BootMode {
 
 impl BootMode {
     /// Returns a human-readable description
-    #[must_use] 
+    #[must_use]
     pub const fn description(&self) -> &str {
         match self {
             Self::Standard { .. } => "Standard (load biome.yaml)",
@@ -47,7 +47,7 @@ impl BootMode {
     }
 
     /// Checks if this is an interactive mode requiring user input
-    #[must_use] 
+    #[must_use]
     pub const fn is_interactive(&self) -> bool {
         matches!(self, Self::Install { .. } | Self::Recovery)
     }

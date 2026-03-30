@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.80 (2026-03-30) — Deep Debt Completion + Dependency Governance + Smart Refactoring
+
+### Path Centralization (Hardcoded → SystemPaths)
+- `beacon_genetics/capability.rs`: Replaced manual XDG/UID/temp fallback in `NeuralApiCapabilityCaller::default_socket()` and `DirectBeardogCaller::default_socket()` with `SystemPaths::new_lazy().primal_socket()`
+- `primal-sdk/discovery.rs`: Replaced 5-tier socket resolution (incl. `/proc/self` UID and Android paths) with `SystemPaths::new_lazy().runtime_dir()` + `BIOMEOS_SOCKET_DIR` override
+- `model_cache/cache.rs`: Replaced hardcoded `$HOME/.biomeos/model-cache` with `SystemPaths::new_lazy().cache_dir().join("models")` — XDG-compliant
+
+### Smart Refactoring
+- **`graph.rs` (953 LOC) → 4 focused modules**: `graph/mod.rs` (types, CRUD, status), `graph/execute.rs` (sequential execution, capability registration), `graph/continuous.rs` (session lifecycle), `graph/pipeline.rs` (streaming execution)
+- Cohesive files (`sovereignty_guardian.rs` 898 LOC, `continuous.rs` 845 LOC) left as-is — smart refactoring, not mechanical splitting
+- All files under 1000 LOC (largest: 970, a test file)
+
+### Dependency Governance
+- **11 unused workspace deps removed**: `tower-http`, `bincode`, `tungstenite`, `tokio-tungstenite`, `dotenvy`, `temp-env`, `mdbook`, `validator`, `num_cpus`, `env_logger`, `regex`
+- **hostname consolidated**: `hostname` crate (0.3 + 0.4) fully replaced by `gethostname` (0.5) via workspace dep — single hostname resolution crate
+- **Code duplication eliminated**: `discover_primal_endpoint()` (40 LOC duplicate of `AtomicClient::discover()`) → 3-line delegation
+
+### Doctest Fixes
+- Fixed `.await` on synchronous functions in doctests: `primal_adapter/mod.rs`, `biomeos-ui/src/lib.rs`
+
+### Verified
+- 0 test failures across entire workspace
+- `cargo fmt --check` clean
+- `cargo clippy --workspace --all-targets` 0 errors
+- `cargo audit` 0 vulnerabilities (3 transitive unmaintained warnings — upstream only)
+- `hostname` crate fully eliminated from dependency tree
+
 ## v2.79 (2026-03-30) — ludoSpring V35 Gap Resolution + Deep Debt Evolution
 
 ### P0: Primal Auto-Discovery (ludoSpring V35 blocker)

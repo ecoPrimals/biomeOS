@@ -49,7 +49,7 @@ pub struct HealthMonitor {
 
 impl HealthMonitor {
     /// Create new health monitor with Arc-wrapped config for zero-copy sharing
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: Arc<BiomeOSConfig>) -> Self {
         Self { _config: config }
     }
@@ -541,8 +541,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_manager_get_system_health() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
         let report = manager.get_system_health();
         assert_eq!(report.subject.id, "system");
@@ -551,8 +550,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_manager_probe_endpoint() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
         // probe_endpoint uses discovery_service which returns Ok with default values
         let result = manager.probe_endpoint("unix:///tmp/test.sock");
@@ -563,8 +561,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_service_health_found_reachable() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let primal = test_primal_info(
@@ -587,8 +584,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_service_health_not_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager
@@ -604,8 +600,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_system_health() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager
@@ -621,8 +616,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_system_health_with_primals() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("p1", "svc1", "unix:///a.sock", Health::Healthy);
@@ -636,8 +630,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_probe_service_health_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("probe-1", "probe-svc", "unix:///x.sock", Health::Healthy);
@@ -652,8 +645,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_probe_service_health_not_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager
@@ -665,8 +657,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_quick_system_scan() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager.quick_system_scan().await.expect("scan");
@@ -680,8 +671,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_quick_system_scan_with_issues() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let degraded = test_primal_info(
@@ -706,8 +696,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_comprehensive_system_scan() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager.comprehensive_system_scan().await.expect("scan");

@@ -36,7 +36,7 @@ pub struct IdentityProof {
 
 impl IdentityProof {
     /// Returns true if this proof has not been cryptographically verified
-    #[must_use] 
+    #[must_use]
     pub fn is_unverified(&self) -> bool {
         self.signature == UNVERIFIED_SIGNATURE
     }

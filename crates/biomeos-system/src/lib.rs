@@ -165,10 +165,8 @@ impl SystemInspector {
     fn get_hostname() -> BiomeResult<String> {
         if let Ok(hostname) = std::env::var("HOSTNAME") {
             Ok(hostname)
-        } else if let Ok(hostname) = hostname::get() {
-            Ok(hostname.to_string_lossy().to_string())
         } else {
-            Ok("unknown".to_string())
+            Ok(gethostname::gethostname().to_string_lossy().to_string())
         }
     }
 
@@ -347,7 +345,7 @@ pub struct SystemMonitor {
 
 impl SystemMonitor {
     /// Create a new system monitor
-    #[must_use] 
+    #[must_use]
     pub const fn new(monitoring_interval: std::time::Duration) -> Self {
         Self {
             monitoring_interval,

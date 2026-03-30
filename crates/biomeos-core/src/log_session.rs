@@ -37,7 +37,7 @@ pub struct LogSessionTracker {
 
 impl LogSessionTracker {
     /// Create a new log session tracker
-    #[must_use] 
+    #[must_use]
     pub fn new(node_id: String) -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),

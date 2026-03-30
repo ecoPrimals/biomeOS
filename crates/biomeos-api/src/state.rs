@@ -86,37 +86,37 @@ pub struct AppState {
 
 impl AppState {
     /// Create a new builder
-    #[must_use] 
+    #[must_use]
     pub fn builder() -> AppStateBuilder {
         AppStateBuilder::default()
     }
 
     /// Get the discovery service
-    #[must_use] 
+    #[must_use]
     pub fn discovery(&self) -> &dyn PrimalDiscovery {
         &*self.discovery
     }
 
     /// Get the genome factory state
-    #[must_use] 
+    #[must_use]
     pub fn genome(&self) -> &GenomeState {
         &self.genome
     }
 
     /// Get the configuration
-    #[must_use] 
+    #[must_use]
     pub const fn config(&self) -> &Config {
         &self.config
     }
 
     /// Check if standalone mode is enabled (graceful degradation)
-    #[must_use] 
+    #[must_use]
     pub const fn is_standalone_mode(&self) -> bool {
         self.config.standalone_mode
     }
 
     /// Get the graph event broadcaster for push-based event streaming
-    #[must_use] 
+    #[must_use]
     pub fn event_broadcaster(&self) -> &biomeos_graph::GraphEventBroadcaster {
         &self.event_broadcaster
     }
@@ -260,14 +260,14 @@ impl AppStateBuilder {
     }
 
     /// Set the configuration
-    #[must_use] 
+    #[must_use]
     pub fn config(mut self, config: Config) -> Self {
         self.config = Some(config);
         self
     }
 
     /// Load config from environment
-    #[must_use] 
+    #[must_use]
     pub fn config_from_env(mut self) -> Self {
         self.config = Some(Config::from_env());
         self

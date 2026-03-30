@@ -353,7 +353,7 @@ impl DiscoveryBootstrap {
     }
 
     /// Get the service name being searched for
-    #[must_use] 
+    #[must_use]
     pub fn service_name(&self) -> &str {
         &self.service_name
     }

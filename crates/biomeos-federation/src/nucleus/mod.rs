@@ -294,7 +294,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Get a primal by selection criteria
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, criteria: SelectionCriteria) -> Option<&VerifiedPrimal> {
         match criteria {
             SelectionCriteria::ByCapability(cap) => {
@@ -343,7 +343,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Get all instances of a primal by name
-    #[must_use] 
+    #[must_use]
     pub fn get_all(&self, name: &str) -> Vec<&VerifiedPrimal> {
         self.verified_primals
             .get(name)
@@ -352,7 +352,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Get all verified primals
-    #[must_use] 
+    #[must_use]
     pub fn all(&self) -> Vec<VerifiedPrimal> {
         self.verified_primals
             .values()
@@ -361,7 +361,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Get primals with a specific capability
-    #[must_use] 
+    #[must_use]
     pub fn with_capability(&self, cap: &Capability) -> Vec<&VerifiedPrimal> {
         self.verified_primals
             .values()
@@ -383,7 +383,7 @@ impl SecureNucleusDiscovery {
     /// This method is only available in test builds and allows
     /// injecting verified primals directly into the registry for testing.
     #[doc(hidden)]
-    #[must_use] 
+    #[must_use]
     pub fn inject_primal_for_testing(mut self, primal: VerifiedPrimal) -> Self {
         self.verified_primals
             .entry(primal.name.clone())

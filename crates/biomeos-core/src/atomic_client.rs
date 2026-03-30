@@ -227,7 +227,7 @@ impl AtomicClient {
     /// Create an atomic client from a transport endpoint
     ///
     /// **Universal IPC v3.0**: Use this with discovered endpoints.
-    #[must_use] 
+    #[must_use]
     pub fn from_endpoint(endpoint: TransportEndpoint) -> Self {
         let socket_path = match &endpoint {
             TransportEndpoint::UnixSocket { path } => path.clone(),
@@ -323,7 +323,7 @@ impl AtomicClient {
     }
 
     /// Set the request timeout
-    #[must_use] 
+    #[must_use]
     pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
@@ -334,7 +334,7 @@ impl AtomicClient {
     /// For Unix sockets: checks if the socket file exists
     /// For TCP: returns true (availability checked on connect)
     /// For Abstract: returns true (availability checked on connect)
-    #[must_use] 
+    #[must_use]
     pub fn is_available(&self) -> bool {
         match &self.endpoint {
             TransportEndpoint::UnixSocket { path } => path.exists(),
@@ -345,7 +345,7 @@ impl AtomicClient {
     }
 
     /// Get the transport endpoint
-    #[must_use] 
+    #[must_use]
     pub const fn endpoint(&self) -> &TransportEndpoint {
         &self.endpoint
     }
@@ -775,75 +775,18 @@ impl AtomicClient {
     /// Get the socket path for this client (legacy compatibility)
     ///
     /// Returns empty path for non-Unix transports.
-    #[must_use] 
+    #[must_use]
     pub fn socket_path(&self) -> &Path {
         &self.socket_path
     }
 }
 
-/// Discover primal endpoint by name using platform-agnostic discovery
+/// Discover primal endpoint by name using platform-agnostic discovery.
 ///
-/// **Universal IPC v3.0**: Uses `SocketDiscovery` with automatic fallback.
-///
-/// This replaces hardcoded paths with capability-based discovery that:
-/// - Respects environment variables (e.g., `BEARDOG_SOCKET`, `BEARDOG_TCP`)
-/// - Uses `XDG_RUNTIME_DIR` when available
-/// - Tries abstract sockets on Linux/Android
-/// - Falls back to TCP if native IPC unavailable
-///
-/// # Arguments
-/// * `primal_name` - Name of the primal to discover
-///
-/// # Returns
-/// Transport endpoint ready for connection
-///
-/// # Discovery Order (Universal IPC v3.0)
-/// 1. Environment hints (SOCKET, TCP, ENDPOINT)
-/// 2. Unix socket (XDG runtime dir)
-/// 3. Abstract socket (Linux/Android)
-/// 4. Unix socket (/tmp)
-/// 5. Capability registry
-/// 6. TCP fallback
+/// Delegates to [`AtomicClient::discover`], returning just the endpoint.
 pub async fn discover_primal_endpoint(primal_name: &str) -> Result<TransportEndpoint> {
-    // Get family_id from environment
-    let family_id = std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("NODE_FAMILY_ID"))
-        .unwrap_or_else(|_| {
-            trace!("No FAMILY_ID set, using 'default' for discovery");
-            "default".to_string()
-        });
-
-    // Use SocketDiscovery with automatic fallback
-    let discovery = SocketDiscovery::new(&family_id);
-
-    match discovery.discover_with_fallback(primal_name).await {
-        Some(endpoint) => {
-            debug!(
-                "Discovered {} via {}: {}",
-                primal_name,
-                if endpoint.is_native() {
-                    "Tier 1"
-                } else {
-                    "Tier 2"
-                },
-                endpoint
-            );
-            Ok(endpoint)
-        }
-        None => {
-            anyhow::bail!(
-                "Primal '{}' not found via any transport. Try:\n\
-                 1. Set {}_SOCKET=/path/to/{}.sock (Unix)\n\
-                 2. Set {}_TCP=host:port (TCP)\n\
-                 3. Ensure primal is running in family: {}",
-                primal_name,
-                primal_name.to_uppercase(),
-                primal_name,
-                primal_name.to_uppercase(),
-                family_id
-            )
-        }
-    }
+    let client = AtomicClient::discover(primal_name).await?;
+    Ok(client.endpoint().clone())
 }
 
 // Tests are in atomic_client_tests.rs to keep this file under 1000 lines

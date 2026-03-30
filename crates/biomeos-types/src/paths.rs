@@ -202,7 +202,7 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the runtime directory
-    #[must_use] 
+    #[must_use]
     pub fn runtime_dir(&self) -> &Path {
         &self.runtime_dir
     }
@@ -210,19 +210,19 @@ impl SystemPaths {
     /// Get Unix socket path for a primal
     ///
     /// Example: `beardog-main` → `$XDG_RUNTIME_DIR/biomeos/beardog-main.sock`
-    #[must_use] 
+    #[must_use]
     pub fn primal_socket(&self, primal_id: &str) -> PathBuf {
         self.runtime_dir.join(format!("{primal_id}.sock"))
     }
 
     /// Get PID file path
-    #[must_use] 
+    #[must_use]
     pub fn pid_file(&self, service_name: &str) -> PathBuf {
         self.runtime_dir.join(format!("{service_name}.pid"))
     }
 
     /// Get lock file path
-    #[must_use] 
+    #[must_use]
     pub fn lock_file(&self, name: &str) -> PathBuf {
         self.runtime_dir.join(format!("{name}.lock"))
     }
@@ -232,31 +232,31 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the data directory
-    #[must_use] 
+    #[must_use]
     pub fn data_dir(&self) -> &Path {
         &self.data_dir
     }
 
     /// Get database file path
-    #[must_use] 
+    #[must_use]
     pub fn database(&self, name: &str) -> PathBuf {
         self.data_dir.join(format!("{name}.db"))
     }
 
     /// Get metrics database path
-    #[must_use] 
+    #[must_use]
     pub fn metrics_db(&self) -> PathBuf {
         self.data_dir.join("metrics.db")
     }
 
     /// Get spore storage directory
-    #[must_use] 
+    #[must_use]
     pub fn spore_dir(&self) -> PathBuf {
         self.data_dir.join("spores")
     }
 
     /// Get genetic seed file path
-    #[must_use] 
+    #[must_use]
     pub fn genetic_seed(&self, family_id: &str) -> PathBuf {
         self.data_dir
             .join("seeds")
@@ -268,25 +268,25 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the config directory
-    #[must_use] 
+    #[must_use]
     pub fn config_dir(&self) -> &Path {
         &self.config_dir
     }
 
     /// Get main biomeOS config file
-    #[must_use] 
+    #[must_use]
     pub fn main_config(&self) -> PathBuf {
         self.config_dir.join("biomeos.toml")
     }
 
     /// Get niche manifest directory
-    #[must_use] 
+    #[must_use]
     pub fn niche_dir(&self) -> PathBuf {
         self.config_dir.join("niches")
     }
 
     /// Get graph definitions directory
-    #[must_use] 
+    #[must_use]
     pub fn graph_dir(&self) -> PathBuf {
         self.config_dir.join("graphs")
     }
@@ -296,19 +296,19 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the cache directory
-    #[must_use] 
+    #[must_use]
     pub fn cache_dir(&self) -> &Path {
         &self.cache_dir
     }
 
     /// Get temporary workspace
-    #[must_use] 
+    #[must_use]
     pub fn temp_workspace(&self, name: &str) -> PathBuf {
         self.cache_dir.join("workspace").join(name)
     }
 
     /// Get download cache
-    #[must_use] 
+    #[must_use]
     pub fn download_cache(&self) -> PathBuf {
         self.cache_dir.join("downloads")
     }
@@ -318,13 +318,13 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the state directory
-    #[must_use] 
+    #[must_use]
     pub fn state_dir(&self) -> &Path {
         &self.state_dir
     }
 
     /// Get log file path
-    #[must_use] 
+    #[must_use]
     pub fn log_file(&self, service_name: &str) -> PathBuf {
         self.state_dir
             .join("logs")
@@ -332,13 +332,13 @@ impl SystemPaths {
     }
 
     /// Get fossil record directory
-    #[must_use] 
+    #[must_use]
     pub fn fossil_record_dir(&self) -> PathBuf {
         self.state_dir.join("fossil-record")
     }
 
     /// Get audit log path
-    #[must_use] 
+    #[must_use]
     pub fn audit_log(&self) -> PathBuf {
         self.state_dir.join("audit.log")
     }
@@ -469,7 +469,7 @@ impl SystemPaths {
     /// Note: This will use fallback paths (e.g., /tmp) if XDG paths cannot
     /// be determined. For stricter path requirements, use `new()` which
     /// returns a `Result`.
-    #[must_use] 
+    #[must_use]
     pub fn new_lazy() -> Self {
         // Compute paths with fallbacks - these operations cannot fail
         let runtime_dir =

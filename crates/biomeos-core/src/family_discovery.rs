@@ -118,7 +118,7 @@ impl Default for FamilyDiscoveryConfig {
 /// 2. `BIOMEOS_FAMILY_ID` env var
 /// 3. .family.seed file in configured paths
 /// 4. Default (if allowed)
-#[must_use] 
+#[must_use]
 pub fn discover_family() -> Option<DiscoveredFamily> {
     discover_family_with_config(&FamilyDiscoveryConfig::default())
 }
@@ -248,19 +248,19 @@ fn read_family_seed(path: &Path) -> Option<DiscoveredFamily> {
 }
 
 /// Get family ID string, falling back to default if not found
-#[must_use] 
+#[must_use]
 pub fn get_family_id() -> String {
     discover_family().map_or_else(|| "default".to_string(), |f| f.id)
 }
 
 /// Get family ID with custom configuration
-#[must_use] 
+#[must_use]
 pub fn get_family_id_with_config(config: &FamilyDiscoveryConfig) -> String {
     discover_family_with_config(config).map_or_else(|| "default".to_string(), |f| f.id)
 }
 
 /// Get family ID from environment or default
-#[must_use] 
+#[must_use]
 pub fn get_family_id_from_env() -> String {
     get_family_id_from_env_with(None, None, false)
 }

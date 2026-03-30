@@ -25,10 +25,10 @@
 //! let mut adapter = discover_primal_interface(Path::new("./squirrel-bin")).await?;
 //!
 //! // Start the primal using discovered interface
-//! adapter.start(9010).await?;
+//! adapter.start(9010)?;
 //!
 //! // Check health
-//! if adapter.check_health().await? {
+//! if adapter.check_health()? {
 //!     println!("Primal is healthy!");
 //! }
 //! # Ok(())

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 30, 2026 (v2.79: ludoSpring V35 gap resolution, primal auto-discovery, continuous executor wired, deep debt evolution)
-**Version**: 2.79
+**Updated**: March 30, 2026 (v2.80: deep debt completion, SystemPaths centralization, graph.rs smart refactor, 11 unused deps removed, hostname consolidated, doctest fixes)
+**Version**: 2.80
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated - Zero Blocking Debt - Primal Composition Enabled
 
 ---
@@ -10,7 +10,7 @@
 
 | Metric | Status |
 |--------|--------|
-| **genomeBins** | 6/6 components ready (5 primals + orchestrator) |
+| **genomeBins** | 7/7 components ready (7 primals + orchestrator; barraCuda + coralReef added) |
 | **Cross-Arch** | x86_64 + aarch64 (USB + Pixel) |
 | **IPC Standard** | Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) |
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |

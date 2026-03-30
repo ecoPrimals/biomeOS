@@ -53,7 +53,7 @@ impl AdapterCache {
     }
 
     /// Check if adapter is cached
-    #[must_use] 
+    #[must_use]
     pub fn exists(&self, primal_name: &str) -> bool {
         self.cache_path(primal_name).exists()
     }

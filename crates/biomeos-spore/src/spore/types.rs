@@ -32,7 +32,7 @@ pub struct SporeConfig {
 }
 
 /// Returns the default family ID from `FAMILY_ID` env var or `"default"`
-#[must_use] 
+#[must_use]
 pub fn default_family_id() -> String {
     default_family_id_with(None, false)
 }

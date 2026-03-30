@@ -76,13 +76,13 @@ pub struct VerifyResult {
 
 impl VerifyResult {
     /// Check if verification passed
-    #[must_use] 
+    #[must_use]
     pub const fn is_ok(&self) -> bool {
         self.boot_success
     }
 
     /// Get a human-readable summary
-    #[must_use] 
+    #[must_use]
     pub fn summary(&self) -> String {
         use std::fmt::Write;
         let mut summary = String::new();
@@ -138,7 +138,7 @@ impl Default for VmVerifier {
 
 impl VmVerifier {
     /// Create a new verifier
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: VerifyConfig) -> Self {
         Self { config }
     }

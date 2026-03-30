@@ -239,7 +239,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
     /// Check if device has existing lineage.
     ///
     /// Delegates to the free function [`has_lineage`].
-    #[must_use] 
+    #[must_use]
     pub fn has_lineage(lineage_path: &Path) -> bool {
         has_lineage(lineage_path)
     }
@@ -335,7 +335,7 @@ pub fn load_lineage(lineage_path: &Path) -> SporeResult<DeviceLineage> {
 }
 
 /// Check if device has existing lineage (caller-agnostic).
-#[must_use] 
+#[must_use]
 pub fn has_lineage(lineage_path: &Path) -> bool {
     lineage_path.exists()
 }

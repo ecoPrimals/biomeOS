@@ -61,13 +61,13 @@ pub enum NatType {
 
 impl NatType {
     /// Whether this NAT type is symmetric (requiring relay-assisted punch)
-    #[must_use] 
+    #[must_use]
     pub const fn is_symmetric(&self) -> bool {
         matches!(self, Self::Symmetric)
     }
 
     /// Whether direct hole punching is likely to succeed
-    #[must_use] 
+    #[must_use]
     pub const fn supports_direct_punch(&self) -> bool {
         matches!(
             self,
@@ -76,7 +76,7 @@ impl NatType {
     }
 
     /// Parse from a STUN detection result string
-    #[must_use] 
+    #[must_use]
     pub fn from_detection(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "none" | "public" | "open" => Self::None,
@@ -114,7 +114,7 @@ pub enum PortPattern {
 
 impl PortPattern {
     /// Whether the pattern is predictable enough for coordinated punch
-    #[must_use] 
+    #[must_use]
     pub fn is_predictable(&self) -> bool {
         matches!(
             self,

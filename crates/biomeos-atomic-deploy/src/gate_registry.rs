@@ -18,7 +18,7 @@ pub struct GateRegistry {
 
 impl GateRegistry {
     /// Create an empty gate registry.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -32,7 +32,7 @@ impl GateRegistry {
     ///
     /// Returns `None` for unknown gates and for `"local"` (which means
     /// execute on the current biomeOS instance).
-    #[must_use] 
+    #[must_use]
     pub fn resolve(&self, gate: &str) -> Option<&TransportEndpoint> {
         if gate == "local" {
             return None;
@@ -41,19 +41,19 @@ impl GateRegistry {
     }
 
     /// Whether a gate name refers to a remote biomeOS instance.
-    #[must_use] 
+    #[must_use]
     pub fn is_remote(&self, gate: &str) -> bool {
         gate != "local" && self.gates.contains_key(gate)
     }
 
     /// Number of registered gates (excluding "local").
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.gates.len()
     }
 
     /// Whether the registry has no gates.
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.gates.is_empty()
     }
@@ -85,7 +85,7 @@ impl GateRegistry {
     }
 
     /// Names of all registered gates.
-    #[must_use] 
+    #[must_use]
     pub fn gate_names(&self) -> Vec<String> {
         self.gates.keys().cloned().collect()
     }

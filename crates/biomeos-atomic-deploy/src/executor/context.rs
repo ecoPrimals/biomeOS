@@ -84,7 +84,7 @@ impl ExecutionContext {
     /// env.insert("FAMILY_ID".to_string(), "test_family".to_string());
     /// let ctx = ExecutionContext::new(env);
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn new(env: HashMap<String, String>) -> Self {
         let family_id = env
             .get("FAMILY_ID")
@@ -148,7 +148,7 @@ impl ExecutionContext {
     }
 
     /// Get environment variables
-    #[must_use] 
+    #[must_use]
     pub fn env(&self) -> &HashMap<String, String> {
         &self.env
     }
@@ -184,7 +184,7 @@ impl ExecutionContext {
     }
 
     /// Set checkpoint directory
-    #[must_use] 
+    #[must_use]
     pub fn with_checkpoint_dir(mut self, dir: PathBuf) -> Self {
         self.checkpoint_dir = Some(dir);
         self

@@ -285,9 +285,7 @@ async fn test_graph_metrics_failed_executions_and_min_max() {
         errors: vec![],
         duration_ms: 100,
     };
-    collector
-        .record_execution("mm", &ok, 10, Some(1))
-        .unwrap();
+    collector.record_execution("mm", &ok, 10, Some(1)).unwrap();
 
     let bad = GraphResult {
         success: false,
@@ -299,10 +297,7 @@ async fn test_graph_metrics_failed_executions_and_min_max() {
         .record_execution("mm", &bad, 1000, Some(2))
         .unwrap();
 
-    let m = collector
-        .get_graph_metrics("mm")
-        .unwrap()
-        .expect("metrics");
+    let m = collector.get_graph_metrics("mm").unwrap().expect("metrics");
     assert_eq!(m.total_executions, 2);
     assert_eq!(m.successful_executions, 1);
     assert_eq!(m.failed_executions, 1);
@@ -316,9 +311,7 @@ async fn test_get_recent_executions_unknown_graph_empty() {
     let dir = tempdir().unwrap();
     let db_path = dir.path().join("metrics_empty_recent.redb");
     let collector = MetricsCollector::new(&db_path).unwrap();
-    let v = collector
-        .get_recent_executions("no_such_graph", 5)
-        .unwrap();
+    let v = collector.get_recent_executions("no_such_graph", 5).unwrap();
     assert!(v.is_empty());
 }
 
@@ -407,10 +400,7 @@ async fn test_graph_metrics_single_run_min_equals_max_duration() {
         .record_execution("eq", &result, 42, Some(100))
         .unwrap();
 
-    let m = collector
-        .get_graph_metrics("eq")
-        .unwrap()
-        .expect("metrics");
+    let m = collector.get_graph_metrics("eq").unwrap().expect("metrics");
     assert_eq!(m.min_duration_ms, 42);
     assert_eq!(m.max_duration_ms, 42);
     assert!((m.avg_duration_ms - 42.0).abs() < f64::EPSILON);
@@ -466,9 +456,7 @@ async fn test_record_execution_metadata_node_results_and_errors_populated() {
         .record_execution("meta_pat", &result, 200, Some(7001))
         .unwrap();
 
-    let recent = collector
-        .get_recent_executions("meta_pat", 1)
-        .unwrap();
+    let recent = collector.get_recent_executions("meta_pat", 1).unwrap();
     let rec = recent.first().expect("one record");
     assert!(rec.metadata.contains("n1"));
     assert!(rec.metadata.contains("nested"));

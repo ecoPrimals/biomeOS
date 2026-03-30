@@ -130,19 +130,19 @@ impl UniversalBiomeOSManager {
     }
 
     /// Get manager configuration
-    #[must_use] 
+    #[must_use]
     pub fn get_config(&self) -> &BiomeOSConfig {
         &self.config
     }
 
     /// Get discovery service reference
-    #[must_use] 
+    #[must_use]
     pub const fn discovery_service(&self) -> &Arc<PrimalDiscoveryService> {
         &self.discovery_service
     }
 
     /// Get registered primals reference
-    #[must_use] 
+    #[must_use]
     pub const fn registered_primals(&self) -> &Arc<RwLock<HashMap<String, PrimalInfo>>> {
         &self.registered_primals
     }
@@ -179,16 +179,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_with_default_config() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("with_default_config");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("with_default_config");
         let config = manager.get_config();
         assert!(!config.metadata.version.is_empty());
     }
 
     #[tokio::test]
     async fn test_initialize() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("initialize");
     }
 
@@ -202,16 +200,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_discovery_service_accessor() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         let discovery = manager.discovery_service();
         assert!(std::mem::size_of_val(discovery) > 0);
     }
 
     #[tokio::test]
     async fn test_registered_primals_accessor() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         let primals = manager.registered_primals();
         let count = primals.read().await.len();
         assert_eq!(count, 0);
@@ -219,8 +215,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_shutdown() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.shutdown().expect("shutdown");
     }
 

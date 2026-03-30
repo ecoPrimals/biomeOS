@@ -167,7 +167,7 @@ impl DeploymentMode {
     /// let socket_prefix = mode.socket_prefix();
     /// println!("Sockets will be created in: {}", socket_prefix.display());
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn socket_prefix(&self) -> PathBuf {
         match self {
             Self::ColdSpore { media_path, .. } => media_path.join("runtime"),
@@ -190,7 +190,7 @@ impl DeploymentMode {
     }
 
     /// Get a human-readable description of the deployment mode
-    #[must_use] 
+    #[must_use]
     pub fn description(&self) -> String {
         match self {
             Self::ColdSpore {
@@ -434,7 +434,7 @@ impl DeploymentMode {
 
 impl HostOS {
     /// Get a short name for the host OS
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> String {
         match self {
             Self::Linux { distro } => format!("Linux ({distro})"),

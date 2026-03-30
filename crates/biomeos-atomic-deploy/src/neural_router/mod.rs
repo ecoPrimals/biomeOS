@@ -78,7 +78,7 @@ impl NeuralRouter {
     }
 
     /// Set protocol preference override
-    #[must_use] 
+    #[must_use]
     pub const fn with_protocol_preference(mut self, preference: ProtocolPreference) -> Self {
         self.protocol_preference = preference;
         self

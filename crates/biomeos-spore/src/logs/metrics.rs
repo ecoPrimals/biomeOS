@@ -60,7 +60,7 @@ pub struct LogMetrics {
 
 impl LogMetrics {
     /// Create empty metrics.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             total_lines: 0,

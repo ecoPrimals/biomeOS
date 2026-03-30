@@ -363,8 +363,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_service_logs_service_not_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager
@@ -376,8 +375,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_exec_in_service_service_not_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager
@@ -393,8 +391,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_monitor_service_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("mon-1", "monitor-svc", "unix:///tmp/mon.sock");
@@ -414,8 +411,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_monitor_service_not_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager
@@ -427,8 +423,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_monitor_service_by_id() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("id-1", "by-id-svc", "unix:///tmp/id.sock");
@@ -443,8 +438,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_monitor_system() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager.monitor_system().await.expect("monitor");
@@ -460,8 +454,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_monitor_system_with_primals() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("sys-1", "sys-svc", "unix:///tmp/sys.sock");
@@ -478,8 +471,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_system_status() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let result = manager.get_system_status().await.expect("status");
@@ -495,8 +487,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_system_status_with_primals() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("stat-1", "stat-svc", "unix:///tmp/stat.sock");

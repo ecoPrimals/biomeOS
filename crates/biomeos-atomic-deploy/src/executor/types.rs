@@ -69,7 +69,7 @@ impl ExecutionReport {
     }
 
     /// Mark as successful
-    #[must_use] 
+    #[must_use]
     pub const fn mark_success(mut self) -> Self {
         self.success = true;
         self
@@ -83,7 +83,7 @@ impl ExecutionReport {
     }
 
     /// Set duration
-    #[must_use] 
+    #[must_use]
     pub const fn with_duration(mut self, duration_ms: u64) -> Self {
         self.duration_ms = duration_ms;
         self
@@ -95,27 +95,27 @@ impl ExecutionReport {
     }
 
     /// Set phases executed (explicit override)
-    #[must_use] 
+    #[must_use]
     pub const fn with_phases(mut self, phases: usize) -> Self {
         self.phases_executed = Some(phases);
         self
     }
 
     /// Set nodes executed (explicit override)
-    #[must_use] 
+    #[must_use]
     pub const fn with_nodes(mut self, nodes: usize) -> Self {
         self.nodes_executed = Some(nodes);
         self
     }
 
     /// Get total phases (from results or explicit)
-    #[must_use] 
+    #[must_use]
     pub fn total_phases(&self) -> usize {
         self.phases_executed.unwrap_or(self.phase_results.len())
     }
 
     /// Get total nodes (from results or explicit)
-    #[must_use] 
+    #[must_use]
     pub fn total_nodes(&self) -> usize {
         self.nodes_executed
             .unwrap_or_else(|| self.phase_results.iter().map(|p| p.total).sum())
@@ -139,7 +139,7 @@ pub struct PhaseResult {
 
 impl PhaseResult {
     /// Create new phase result
-    #[must_use] 
+    #[must_use]
     pub const fn new(total_nodes: usize) -> Self {
         Self {
             completed: 0,
@@ -151,7 +151,7 @@ impl PhaseResult {
     }
 
     /// Check if phase succeeded (no failures)
-    #[must_use] 
+    #[must_use]
     pub const fn is_success(&self) -> bool {
         self.failed == 0
     }

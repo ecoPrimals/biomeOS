@@ -35,7 +35,7 @@ pub struct PrimalHealthMonitor {
 
 impl PrimalHealthMonitor {
     /// Create a new builder for configuring the health monitor
-    #[must_use] 
+    #[must_use]
     pub const fn builder() -> PrimalHealthMonitorBuilder {
         PrimalHealthMonitorBuilder {
             interval: std::time::Duration::from_secs(30),
@@ -185,14 +185,14 @@ pub struct PrimalHealthMonitorBuilder {
 
 impl PrimalHealthMonitorBuilder {
     /// Set the health check interval.
-    #[must_use] 
+    #[must_use]
     pub const fn interval(mut self, interval: std::time::Duration) -> Self {
         self.interval = interval;
         self
     }
 
     /// Build the health monitor with the configured interval
-    #[must_use] 
+    #[must_use]
     pub fn build(self) -> PrimalHealthMonitor {
         PrimalHealthMonitor {
             primals: Arc::new(RwLock::new(HashMap::new())),

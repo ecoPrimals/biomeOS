@@ -18,7 +18,7 @@ pub struct FilesystemManager {
 
 impl FilesystemManager {
     /// Creates a new filesystem manager
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             mounted: HashSet::new(),

@@ -87,9 +87,7 @@ impl MockJsonRpcServer {
                 .ok()
                 .and_then(|v| v.get("id").cloned())
                 .unwrap_or(serde_json::Value::Null);
-            format!(
-                r#"{{"jsonrpc":"2.0","id":{id},"error":{{"code":{code},"message":"{msg}"}}}}"#
-            )
+            format!(r#"{{"jsonrpc":"2.0","id":{id},"error":{{"code":{code},"message":"{msg}"}}}}"#)
         })
         .await
     }
@@ -107,7 +105,7 @@ impl Drop for MockJsonRpcServer {
 }
 
 /// Convenience: create a `(ReadySender, ReadyReceiver)` pair for custom server setups.
-#[must_use] 
+#[must_use]
 pub fn server_ready_signal() -> (ReadySender, ReadyReceiver) {
     ready_signal()
 }

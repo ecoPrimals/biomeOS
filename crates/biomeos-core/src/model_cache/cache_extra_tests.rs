@@ -182,27 +182,27 @@ async fn test_model_cache_new_creates_default_cache_under_home() {
     let home = tmp.path().to_str().expect("temp path utf-8");
     let _g_home = TestEnvGuard::set("HOME", home);
     let _g_hf = TestEnvGuard::remove("HF_HOME");
+    let _g_xdg = TestEnvGuard::remove("XDG_CACHE_HOME");
 
     ModelCache::new().await.expect("new with HOME");
 
-    let cache_dir = tmp.path().join(".biomeos").join("model-cache");
+    let cache_dir = tmp.path().join(".cache").join("biomeos").join("models");
     assert!(
         cache_dir.is_dir(),
-        "expected default cache dir at {{HOME}}/.biomeos/model-cache"
+        "expected default cache dir at {{HOME}}/.cache/biomeos/models, got none"
     );
 }
 
 #[tokio::test]
 #[serial]
-async fn test_model_cache_new_err_when_home_unset() {
-    let _g = TestEnvGuard::remove("HOME");
-    let Err(err) = ModelCache::new().await else {
-        panic!("expected Err when HOME is unset");
-    };
-    let msg = format!("{err:#}");
+async fn test_model_cache_new_succeeds_even_without_home() {
+    let _g_home = TestEnvGuard::remove("HOME");
+    let _g_xdg = TestEnvGuard::remove("XDG_CACHE_HOME");
+    // SystemPaths::new_lazy() never fails — falls back to /tmp/biomeos-cache/models
+    let result = ModelCache::new().await;
     assert!(
-        msg.contains("HOME"),
-        "expected HOME context in error, got: {msg}"
+        result.is_ok(),
+        "ModelCache::new() should succeed with fallback paths"
     );
 }
 
@@ -217,12 +217,13 @@ async fn test_model_cache_new_ignores_hf_home_for_default_cache_location() {
 
     let _g_home = TestEnvGuard::set("HOME", home.to_str().expect("utf8"));
     let _g_hf = TestEnvGuard::set("HF_HOME", hf_home.to_str().expect("utf8"));
+    let _g_xdg = TestEnvGuard::remove("XDG_CACHE_HOME");
 
     ModelCache::new().await.expect("new");
 
-    assert!(home.join(".biomeos/model-cache").is_dir());
+    assert!(home.join(".cache/biomeos/models").is_dir());
     assert!(
-        !hf_home.join(".biomeos").exists(),
+        !hf_home.join("biomeos").exists(),
         "HF_HOME must not relocate the model-cache root used by ModelCache::new"
     );
 }

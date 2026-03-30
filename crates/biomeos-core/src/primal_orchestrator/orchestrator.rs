@@ -39,7 +39,7 @@ pub struct PrimalOrchestrator {
 
 impl PrimalOrchestrator {
     /// Create a new orchestrator
-    #[must_use] 
+    #[must_use]
     pub fn new(health_monitor: Arc<PrimalHealthMonitor>, retry_policy: RetryPolicy) -> Self {
         Self {
             primals: Arc::new(RwLock::new(HashMap::new())),

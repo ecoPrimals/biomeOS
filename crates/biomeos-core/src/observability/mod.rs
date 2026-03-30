@@ -233,7 +233,7 @@ impl MinimalObserver {
     }
 
     /// Get local metrics (always safe, never exported)
-    #[must_use] 
+    #[must_use]
     pub fn get_local_metrics(&self) -> LocalMetrics {
         self.metrics
             .read()
@@ -243,13 +243,13 @@ impl MinimalObserver {
     }
 
     /// Get observability mode
-    #[must_use] 
+    #[must_use]
     pub const fn mode(&self) -> ObservabilityMode {
         self.mode
     }
 
     /// Check if family sharing is enabled
-    #[must_use] 
+    #[must_use]
     pub fn is_family_sharing_enabled(&self) -> bool {
         self.family_share.as_ref().is_some_and(|f| f.enabled)
     }

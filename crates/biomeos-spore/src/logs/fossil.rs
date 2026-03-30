@@ -49,7 +49,7 @@ pub struct FossilRecord {
 
 impl FossilRecord {
     /// Create a fossil record from an active session
-    #[must_use] 
+    #[must_use]
     pub fn from_active_session(session: &ActiveLogSession, reason: ArchivalReason) -> Self {
         Self {
             node_id: session.node_id.clone(),
@@ -65,13 +65,13 @@ impl FossilRecord {
     }
 
     /// Get session duration
-    #[must_use] 
+    #[must_use]
     pub fn duration(&self) -> chrono::Duration {
         self.session_ended - self.session_started
     }
 
     /// Count issues by severity
-    #[must_use] 
+    #[must_use]
     pub fn issue_count(&self, severity: Option<IssueSeverity>) -> usize {
         match severity {
             Some(sev) => self.issues.iter().filter(|i| i.severity == sev).count(),
@@ -117,7 +117,7 @@ pub struct FossilIndex {
 
 impl FossilIndex {
     /// Create a new empty index
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             fossils: Vec::new(),
@@ -132,7 +132,7 @@ impl FossilIndex {
     }
 
     /// Find fossils by node ID
-    #[must_use] 
+    #[must_use]
     pub fn find_by_node(&self, node_id: &str) -> Vec<&FossilIndexEntry> {
         self.fossils
             .iter()

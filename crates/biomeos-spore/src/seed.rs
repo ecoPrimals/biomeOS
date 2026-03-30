@@ -226,7 +226,7 @@ impl FamilySeed {
     ///
     /// This path should be passed to `BearDog` via the
     /// `BEARDOG_FAMILY_SEED_FILE` environment variable.
-    #[must_use] 
+    #[must_use]
     pub fn file_path(&self) -> &Path {
         &self.file_path
     }

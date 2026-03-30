@@ -54,7 +54,7 @@ pub(crate) fn parse_cidr(cidr: &str) -> Result<(IpAddr, u8)> {
 
 impl NetworkBridge {
     /// Create a new network bridge manager
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: BridgeConfig) -> Self {
         Self {
             config,
@@ -63,7 +63,7 @@ impl NetworkBridge {
     }
 
     /// Check if bridge exists (pure Rust via /sys/class/net/)
-    #[must_use] 
+    #[must_use]
     pub fn exists(&self) -> bool {
         std::path::Path::new(&format!("/sys/class/net/{}", self.config.name)).exists()
     }
@@ -194,7 +194,7 @@ impl NetworkBridge {
     }
 
     /// Get bridge name
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.config.name
     }

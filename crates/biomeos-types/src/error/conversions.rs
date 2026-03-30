@@ -138,7 +138,7 @@ impl BiomeError {
     }
 
     /// Get the error category
-    #[must_use] 
+    #[must_use]
     pub fn category(&self) -> &AIErrorCategory {
         match self {
             Self::Configuration { ai_context, .. }
@@ -159,7 +159,7 @@ impl BiomeError {
     }
 
     /// Get the error severity
-    #[must_use] 
+    #[must_use]
     pub fn severity(&self) -> &ErrorSeverity {
         match self {
             Self::Configuration { ai_context, .. }
@@ -180,7 +180,7 @@ impl BiomeError {
     }
 
     /// Check if automatic retry is recommended
-    #[must_use] 
+    #[must_use]
     pub fn should_retry(&self) -> bool {
         match self {
             Self::Configuration { ai_context, .. }
@@ -201,7 +201,7 @@ impl BiomeError {
     }
 
     /// Get the AI error context
-    #[must_use] 
+    #[must_use]
     pub fn ai_context(&self) -> &AIErrorContext {
         match self {
             Self::Configuration { ai_context, .. }
@@ -222,7 +222,7 @@ impl BiomeError {
     }
 
     /// Get suggested actions for automation
-    #[must_use] 
+    #[must_use]
     pub fn suggested_actions(&self) -> &[super::ai_context::SuggestedAction] {
         &self.ai_context().suggested_actions
     }

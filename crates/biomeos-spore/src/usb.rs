@@ -28,13 +28,13 @@ pub struct UsbDevice {
 
 impl UsbDevice {
     /// Check if device has sufficient space for a spore
-    #[must_use] 
+    #[must_use]
     pub const fn has_sufficient_space(&self, required_bytes: u64) -> bool {
         self.available_space >= required_bytes
     }
 
     /// Get space utilization as a percentage
-    #[must_use] 
+    #[must_use]
     pub fn utilization_percent(&self) -> f64 {
         if self.total_space == 0 {
             0.0

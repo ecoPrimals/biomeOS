@@ -74,7 +74,7 @@ pub struct DiscoveryQuery {
 
 impl DiscoveryQuery {
     /// Create query for capability
-    #[must_use] 
+    #[must_use]
     pub fn capability(cap: PrimalCapability) -> Self {
         Self {
             capability: Some(cap),
@@ -182,46 +182,14 @@ impl PrimalDiscovery {
         Ok(discovered)
     }
 
-    /// 5-tier socket directory resolution per `PRIMAL_DEPLOYMENT_STANDARD`
+    /// Socket directory resolution: explicit override → `SystemPaths` (XDG-compliant).
     fn resolve_socket_dir() -> PathBuf {
-        // Tier 1: Explicit override
+        // Explicit override takes priority
         if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
             return PathBuf::from(dir);
         }
 
-        // Tier 2: XDG runtime directory
-        if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
-            return PathBuf::from(xdg).join("biomeos");
-        }
-
-        // Tier 3: Linux /run/user (get UID from environment or /proc)
-        if let Ok(uid) = std::env::var("UID") {
-            let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
-            if run_user.parent().is_some_and(std::path::Path::exists) {
-                return run_user;
-            }
-        }
-
-        // Also try /proc/self as fallback for UID
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::MetadataExt;
-            if let Ok(meta) = std::fs::metadata("/proc/self") {
-                let uid = meta.uid();
-                let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
-                if run_user.parent().is_some_and(std::path::Path::exists) {
-                    return run_user;
-                }
-            }
-        }
-
-        // Tier 4: Android
-        let android = PathBuf::from("/data/local/tmp/biomeos");
-        if android.parent().is_some_and(std::path::Path::exists) {
-            return android;
-        }
-
-        // Tier 5: Fallback — XDG-compliant via SystemPaths
+        // SystemPaths handles XDG_RUNTIME_DIR → /run/user/$UID → tmp fallback
         biomeos_types::SystemPaths::new_lazy()
             .runtime_dir()
             .to_path_buf()
@@ -281,7 +249,7 @@ impl PrimalDiscovery {
 ///
 /// Uses `biomeos_types::CapabilityTaxonomy` for capability→primal resolution.
 /// Returns bootstrap hints only; in sovereign mode, primals self-register at runtime.
-#[must_use] 
+#[must_use]
 pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
     // Try category first (e.g., "encryption", "security", "compute")
     for key in [cap.category.as_str(), cap.name.as_str()] {
@@ -342,7 +310,7 @@ pub(crate) fn bootstrap_capability_hint_for_primal_name(name: &str) -> PrimalCap
     since = "0.1.0",
     note = "Use capability-based discovery. Primals are discovered by capability, not name."
 )]
-#[must_use] 
+#[must_use]
 pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
     bootstrap_capability_hint_for_primal_name(name)
 }

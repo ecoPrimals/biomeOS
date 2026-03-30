@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
 
     // Check status first
     println!("📊 Checking current status...");
-    match manager.status(federation_name).await {
+    match manager.status(federation_name) {
         Ok(status) => {
             println!("{status}");
             if status.contains("not found") || status.contains("does not exist") {
@@ -54,7 +54,7 @@ async fn main() -> Result<()> {
 
     // Start VMs
     println!("Step 2: Starting VMs...");
-    manager.start(federation_name).await?;
+    manager.start(federation_name)?;
     println!("✅ Started");
     println!();
 
@@ -65,13 +65,13 @@ async fn main() -> Result<()> {
 
     // Run tests
     println!("Step 3: Running tests...");
-    manager.test(federation_name).await?;
+    manager.test(federation_name)?;
     println!("✅ Tests complete");
     println!();
 
     // Check final status
     println!("Step 4: Final status...");
-    let final_status = manager.status(federation_name).await?;
+    let final_status = manager.status(federation_name)?;
     println!("{final_status}");
     println!();
 

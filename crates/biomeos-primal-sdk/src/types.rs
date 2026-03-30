@@ -220,21 +220,21 @@ impl PrimalRequest {
     }
 
     /// Set request payload
-    #[must_use] 
+    #[must_use]
     pub fn with_payload(mut self, payload: serde_json::Value) -> Self {
         self.payload = payload;
         self
     }
 
     /// Set request priority
-    #[must_use] 
+    #[must_use]
     pub const fn with_priority(mut self, priority: RequestPriority) -> Self {
         self.priority = priority;
         self
     }
 
     /// Set request timeout
-    #[must_use] 
+    #[must_use]
     pub const fn with_timeout(mut self, timeout_ms: u64) -> Self {
         self.timeout_ms = Some(timeout_ms);
         self
@@ -253,7 +253,7 @@ impl PrimalRequest {
     }
 
     /// Set correlation ID for request tracing
-    #[must_use] 
+    #[must_use]
     pub const fn with_correlation_id(mut self, correlation_id: uuid::Uuid) -> Self {
         self.correlation_id = Some(correlation_id);
         self
@@ -262,7 +262,7 @@ impl PrimalRequest {
 
 impl PrimalResponse {
     /// Create a successful response
-    #[must_use] 
+    #[must_use]
     pub fn success(request_id: uuid::Uuid, payload: serde_json::Value) -> Self {
         Self {
             request_id,
@@ -274,7 +274,7 @@ impl PrimalResponse {
     }
 
     /// Create an error response
-    #[must_use] 
+    #[must_use]
     pub fn error(request_id: uuid::Uuid, error: BiomeError) -> Self {
         Self {
             request_id,
@@ -286,7 +286,7 @@ impl PrimalResponse {
     }
 
     /// Create an accepted response
-    #[must_use] 
+    #[must_use]
     pub fn accepted(request_id: uuid::Uuid) -> Self {
         Self {
             request_id,
@@ -297,7 +297,7 @@ impl PrimalResponse {
     }
 
     /// Set processing time
-    #[must_use] 
+    #[must_use]
     pub const fn with_processing_time(mut self, processing_time_ms: u64) -> Self {
         self.processing_time_ms = processing_time_ms;
         self
@@ -462,7 +462,7 @@ pub mod helpers {
     use super::{PrimalRequest, PrimalResponse, RequestPriority};
 
     /// Create a health check request
-    #[must_use] 
+    #[must_use]
     pub fn health_check_request() -> PrimalRequest {
         PrimalRequest::new("health_check")
             .with_priority(RequestPriority::High)
@@ -470,7 +470,7 @@ pub mod helpers {
     }
 
     /// Create a capability discovery request
-    #[must_use] 
+    #[must_use]
     pub fn capability_discovery_request() -> PrimalRequest {
         PrimalRequest::new("capability.list")
             .with_priority(RequestPriority::Normal)
@@ -478,13 +478,13 @@ pub mod helpers {
     }
 
     /// Create a configuration request
-    #[must_use] 
+    #[must_use]
     pub fn get_config_request() -> PrimalRequest {
         PrimalRequest::new("config.get").with_priority(RequestPriority::Normal)
     }
 
     /// Create a successful health response
-    #[must_use] 
+    #[must_use]
     pub fn healthy_response(request_id: uuid::Uuid) -> PrimalResponse {
         PrimalResponse::success(
             request_id,
@@ -493,7 +493,7 @@ pub mod helpers {
     }
 
     /// Create a degraded health response with issues
-    #[must_use] 
+    #[must_use]
     pub fn degraded_response(request_id: uuid::Uuid, issues: &[String]) -> PrimalResponse {
         PrimalResponse::success(
             request_id,
@@ -506,7 +506,7 @@ pub mod helpers {
     }
 
     /// Create a critical health response
-    #[must_use] 
+    #[must_use]
     pub fn critical_response(request_id: uuid::Uuid, critical_issues: &[String]) -> PrimalResponse {
         PrimalResponse::success(
             request_id,

@@ -18,7 +18,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Serialization for manifests and configs
 serde = { version = "1", features = ["derive"] }
-serde_yaml = { package = "serde_yml", version = "0.0.12" }
+serde_yaml.workspace = true
 toml = "0.8"
 
 # System interaction (pure Rust via rustix)

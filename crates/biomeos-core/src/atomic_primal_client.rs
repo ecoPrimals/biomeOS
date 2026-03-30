@@ -124,25 +124,25 @@ impl AtomicPrimalClient {
     }
 
     /// Get the primal name
-    #[must_use] 
+    #[must_use]
     pub fn primal_name(&self) -> &str {
         &self.primal_name
     }
 
     /// Get direct access to the atomic client
-    #[must_use] 
+    #[must_use]
     pub const fn atomic_client(&self) -> &AtomicClient {
         &self.client
     }
 
     /// Get the transport endpoint
-    #[must_use] 
+    #[must_use]
     pub fn endpoint(&self) -> &TransportEndpoint {
         self.client.endpoint()
     }
 
     /// Check if the primal is available
-    #[must_use] 
+    #[must_use]
     pub fn is_available(&self) -> bool {
         self.client.is_available()
     }

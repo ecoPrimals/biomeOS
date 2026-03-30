@@ -268,9 +268,11 @@ fn known_primals_returns_core_primals() {
     assert!(primals.contains(&"beardog"));
     assert!(primals.contains(&"songbird"));
     assert!(primals.contains(&"toadstool"));
+    assert!(primals.contains(&"barracuda"));
+    assert!(primals.contains(&"coralreef"));
     assert!(primals.contains(&"nestgate"));
     assert!(primals.contains(&"squirrel"));
-    assert_eq!(primals.len(), 5);
+    assert_eq!(primals.len(), 7);
 }
 
 #[test]

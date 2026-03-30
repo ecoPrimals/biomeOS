@@ -29,19 +29,19 @@ pub enum SporeType {
 
 impl SporeType {
     /// Check if this spore type requires execution environment
-    #[must_use] 
+    #[must_use]
     pub const fn requires_execution_env(&self) -> bool {
         matches!(self, Self::Live)
     }
 
     /// Check if this spore type is for storage/archival
-    #[must_use] 
+    #[must_use]
     pub const fn is_archival(&self) -> bool {
         matches!(self, Self::Cold)
     }
 
     /// Get human-readable description
-    #[must_use] 
+    #[must_use]
     pub const fn description(&self) -> &'static str {
         match self {
             Self::Cold => "Genetic material only (storage/archive)",
@@ -50,7 +50,7 @@ impl SporeType {
     }
 
     /// Get emoji representation
-    #[must_use] 
+    #[must_use]
     pub const fn emoji(&self) -> &'static str {
         match self {
             Self::Cold => "❄️",

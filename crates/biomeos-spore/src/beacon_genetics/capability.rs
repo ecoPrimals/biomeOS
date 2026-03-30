@@ -66,27 +66,21 @@ pub struct NeuralApiCapabilityCaller {
 
 impl NeuralApiCapabilityCaller {
     /// Create new caller
-    #[must_use] 
+    #[must_use]
     pub fn new(neural_api_socket: &str) -> Self {
         Self {
             neural_api_socket: neural_api_socket.to_string(),
         }
     }
 
-    /// Get default neuralAPI socket path
-    #[must_use] 
+    /// Get default neuralAPI socket path via `SystemPaths` (XDG-compliant).
+    #[must_use]
     pub fn default_socket() -> String {
-        // XDG-compliant path
-        if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
-            format!("{runtime_dir}/biomeos/neural-api.sock")
-        } else if let Ok(uid) = std::env::var("UID") {
-            format!("/run/user/{uid}/biomeos/neural-api.sock")
-        } else {
-            std::env::temp_dir()
-                .join("biomeos/neural-api.sock")
-                .to_string_lossy()
-                .to_string()
-        }
+        let paths = biomeos_types::paths::SystemPaths::new_lazy();
+        paths
+            .primal_socket("neural-api")
+            .to_string_lossy()
+            .to_string()
     }
 }
 
@@ -150,27 +144,21 @@ impl DirectBeardogCaller {
     ///
     /// # Arguments
     /// * `endpoint` - Either a Unix socket path or "tcp:host:port"
-    #[must_use] 
+    #[must_use]
     pub fn new(endpoint: &str) -> Self {
         Self {
             beardog_endpoint: endpoint.to_string(),
         }
     }
 
-    /// Get default `BearDog` socket path
-    #[must_use] 
+    /// Get default `BearDog` socket path via `SystemPaths` (XDG-compliant).
+    #[must_use]
     pub fn default_socket() -> String {
-        // XDG-compliant path
-        if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
-            format!("{runtime_dir}/biomeos/beardog.sock")
-        } else if let Ok(uid) = std::env::var("UID") {
-            format!("/run/user/{uid}/biomeos/beardog.sock")
-        } else {
-            std::env::temp_dir()
-                .join("biomeos/beardog.sock")
-                .to_string_lossy()
-                .to_string()
-        }
+        let paths = biomeos_types::paths::SystemPaths::new_lazy();
+        paths
+            .primal_socket(biomeos_types::primal_names::BEARDOG)
+            .to_string_lossy()
+            .to_string()
     }
 
     /// Translate semantic capability name to `BearDog` method

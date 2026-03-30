@@ -146,7 +146,7 @@ impl BootLogger {
     }
 
     /// Get statistics
-    #[must_use] 
+    #[must_use]
     pub fn stats(&self) -> BootLoggerStats {
         BootLoggerStats {
             log_count: self.log_count,

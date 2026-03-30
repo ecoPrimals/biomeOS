@@ -90,7 +90,7 @@ impl SerialChannel {
     /// Check if serial device is available
     ///
     /// Returns true if `/dev/ttyS0` exists and is accessible.
-    #[must_use] 
+    #[must_use]
     pub fn available() -> bool {
         Path::new("/dev/ttyS0").exists()
     }

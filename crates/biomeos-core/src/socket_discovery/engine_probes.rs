@@ -24,10 +24,7 @@ impl super::engine::SocketDiscovery {
     // ENVIRONMENT HINT DISCOVERY
     // ========================================================================
 
-    pub(crate) fn discover_via_env_hint(
-        &self,
-        primal_name: &str,
-    ) -> Option<DiscoveredSocket> {
+    pub(crate) fn discover_via_env_hint(&self, primal_name: &str) -> Option<DiscoveredSocket> {
         self.discover_via_env_hint_with(primal_name, None)
     }
 
@@ -73,10 +70,7 @@ impl super::engine::SocketDiscovery {
         None
     }
 
-    pub(crate) fn discover_endpoint_via_env(
-        &self,
-        primal_name: &str,
-    ) -> Option<TransportEndpoint> {
+    pub(crate) fn discover_endpoint_via_env(&self, primal_name: &str) -> Option<TransportEndpoint> {
         self.discover_endpoint_via_env_with(primal_name, None)
     }
 

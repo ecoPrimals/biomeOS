@@ -37,7 +37,7 @@ impl GenomeBinComposer {
     }
 
     /// Add genomeBin to composition
-    #[must_use] 
+    #[must_use]
     pub fn add_genome(mut self, genome: GenomeBin) -> Self {
         self.genomes.push(genome);
         self

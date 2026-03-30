@@ -51,7 +51,7 @@ pub struct GraphExecutor {
 
 impl GraphExecutor {
     /// Create new graph executor
-    #[must_use] 
+    #[must_use]
     pub fn new(graph: Graph, env: HashMap<String, String>) -> Self {
         let gate_registry = Arc::new(GateRegistry::from_graph_env(&env));
         Self {
@@ -162,12 +162,9 @@ impl GraphExecutor {
                 errors: vec![],
                 duration_ms: report.duration_ms,
             };
-            if let Err(e) = collector.record_execution(
-                &self.graph.id,
-                &graph_result,
-                report.duration_ms,
-                None,
-            ) {
+            if let Err(e) =
+                collector.record_execution(&self.graph.id, &graph_result, report.duration_ms, None)
+            {
                 warn!("Failed to record graph metrics: {e}");
             }
         }

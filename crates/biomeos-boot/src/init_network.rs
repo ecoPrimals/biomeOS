@@ -16,7 +16,7 @@ pub struct NetworkManager {
 
 impl NetworkManager {
     /// Creates a new network manager
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { configured: false }
     }
@@ -48,7 +48,7 @@ impl NetworkManager {
     }
 
     /// Checks if network is configured
-    #[must_use] 
+    #[must_use]
     pub const fn is_configured(&self) -> bool {
         self.configured
     }

@@ -16,6 +16,11 @@ use tracing::{debug, error, info, warn};
 use super::NeuralApiServer;
 use crate::mode::BiomeOsMode;
 
+/// Bundled bootstrap graph TOML, compiled into the binary so biomeOS can
+/// load capability translations even when the filesystem copy is absent.
+const BUNDLED_BOOTSTRAP_GRAPH: &str =
+    include_str!("../../../../graphs/tower_atomic_bootstrap.toml");
+
 /// Check if mode string indicates explicit coordinated mode
 #[must_use]
 pub fn is_explicit_coordinated_mode_str(mode: &str) -> bool {
@@ -260,19 +265,21 @@ impl NeuralApiServer {
             }
         }
 
-        // 3. Load translations from Tower Atomic graph
+        // 3. Load translations from Tower Atomic graph (filesystem or bundled)
         info!("📝 Loading semantic translations from Tower Atomic graph...");
         let bootstrap_graph_path = self.graphs_dir.join("tower_atomic_bootstrap.toml");
-        if bootstrap_graph_path.exists() {
-            match crate::neural_graph::Graph::from_toml_file(&bootstrap_graph_path) {
-                Ok(graph) => match self.load_translations_from_graph(&graph).await {
-                    Ok(_) => info!("✅ Semantic translations loaded from graph"),
-                    Err(e) => warn!("⚠️  Failed to load translations: {}", e),
-                },
-                Err(e) => warn!("⚠️  Failed to parse graph: {}", e),
-            }
+        let graph_result = if bootstrap_graph_path.exists() {
+            crate::neural_graph::Graph::from_toml_file(&bootstrap_graph_path)
         } else {
-            debug!("   No Tower Atomic graph found (will use direct method names)");
+            info!("   Filesystem graph not found — using bundled bootstrap graph");
+            crate::neural_graph::Graph::from_toml_str(BUNDLED_BOOTSTRAP_GRAPH)
+        };
+        match graph_result {
+            Ok(graph) => match self.load_translations_from_graph(&graph).await {
+                Ok(_) => info!("✅ Semantic translations loaded from graph"),
+                Err(e) => warn!("⚠️  Failed to load translations: {}", e),
+            },
+            Err(e) => warn!("⚠️  Failed to parse bootstrap graph: {}", e),
         }
         Ok(())
     }
@@ -408,9 +415,14 @@ impl NeuralApiServer {
 
         // Handle multiple capability response formats (Format A/B/C/D from primalSpring)
         if let Some(caps) = resp["result"]["capabilities"].as_array() {
-            return caps.iter().filter_map(|c| {
-                c.as_str().map(String::from).or_else(|| c["name"].as_str().map(String::from))
-            }).collect();
+            return caps
+                .iter()
+                .filter_map(|c| {
+                    c.as_str()
+                        .map(String::from)
+                        .or_else(|| c["name"].as_str().map(String::from))
+                })
+                .collect();
         }
         if let Some(caps) = resp["result"].as_array() {
             return caps

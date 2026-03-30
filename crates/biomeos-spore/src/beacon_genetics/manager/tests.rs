@@ -87,9 +87,7 @@ async fn test_sync_with_lineage_peer_same_lineage() {
         },
     );
 
-    let result = manager
-        .sync_with_lineage_peer(&remote_manifest)
-        .unwrap();
+    let result = manager.sync_with_lineage_peer(&remote_manifest).unwrap();
 
     assert_eq!(result.added, 1);
     assert_eq!(result.updated, 0);

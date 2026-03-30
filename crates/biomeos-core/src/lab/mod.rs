@@ -35,7 +35,7 @@ pub struct LabManager {
 
 impl LabManager {
     /// Create a new lab manager
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         // Default to ../benchscale/ directory (parallel to biomeOS)
         // Get current directory and find workspace root
@@ -58,7 +58,7 @@ impl LabManager {
     }
 
     /// Create a new lab manager with custom benchScale path
-    #[must_use] 
+    #[must_use]
     pub const fn with_path(benchscale_root: PathBuf) -> Self {
         Self { benchscale_root }
     }
@@ -190,13 +190,13 @@ pub struct LabHandle {
 
 impl LabHandle {
     /// Get lab name
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
     /// Get topology name
-    #[must_use] 
+    #[must_use]
     pub fn topology(&self) -> &str {
         &self.topology
     }
@@ -232,19 +232,19 @@ pub struct TestResult {
 
 impl TestResult {
     /// Check if test passed
-    #[must_use] 
+    #[must_use]
     pub const fn passed(&self) -> bool {
         self.success
     }
 
     /// Get test output
-    #[must_use] 
+    #[must_use]
     pub fn output(&self) -> &str {
         &self.stdout
     }
 
     /// Get test errors (if any)
-    #[must_use] 
+    #[must_use]
     pub fn errors(&self) -> &str {
         &self.stderr
     }
@@ -355,9 +355,7 @@ mod tests {
         write_executable_script(&scripts.join("destroy-lab.sh"), "#!/bin/sh\nexit 0\n");
 
         let mgr = LabManager::with_path(root);
-        let handle = mgr
-            .create_lab("simple", "lab-stub")
-            .expect("create_lab");
+        let handle = mgr.create_lab("simple", "lab-stub").expect("create_lab");
         assert_eq!(handle.name(), "lab-stub");
         assert_eq!(handle.topology(), "simple");
 
@@ -383,9 +381,7 @@ mod tests {
         );
 
         let mgr = LabManager::with_path(root);
-        let err = mgr
-            .create_lab("t", "bad-lab")
-            .expect_err("should fail");
+        let err = mgr.create_lab("t", "bad-lab").expect_err("should fail");
         assert!(
             err.to_string().contains("boom") || err.to_string().contains("Failed to create lab"),
             "{err}"
@@ -429,9 +425,7 @@ mod tests {
 
         let mgr = LabManager::with_path(root);
         mgr.create_lab("t", "doom-lab").expect("create");
-        let err = mgr
-            .destroy_lab("doom-lab")
-            .expect_err("destroy fails");
+        let err = mgr.destroy_lab("doom-lab").expect_err("destroy fails");
         assert!(
             err.to_string().contains("nope") || err.to_string().contains("Failed to destroy"),
             "{err}"

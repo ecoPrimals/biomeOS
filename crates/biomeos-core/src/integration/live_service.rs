@@ -510,7 +510,7 @@ pub struct InterfaceStatus {
 }
 
 /// Create default (zero) resource metrics
-#[must_use] 
+#[must_use]
 pub const fn default_resource_metrics() -> biomeos_types::ResourceMetrics {
     biomeos_types::ResourceMetrics {
         cpu_usage: Some(0.0),

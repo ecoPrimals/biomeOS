@@ -32,7 +32,7 @@ pub struct DiscoveredSocket {
 
 impl DiscoveredSocket {
     /// Create from a Unix socket path (convenience constructor)
-    #[must_use] 
+    #[must_use]
     pub fn from_unix_path(path: PathBuf, via: DiscoveryMethod) -> Self {
         Self {
             endpoint: TransportEndpoint::UnixSocket { path: path.clone() },
@@ -44,7 +44,7 @@ impl DiscoveredSocket {
     }
 
     /// Create from a transport endpoint
-    #[must_use] 
+    #[must_use]
     pub fn from_endpoint(endpoint: TransportEndpoint, via: DiscoveryMethod) -> Self {
         let path = match &endpoint {
             TransportEndpoint::UnixSocket { path } => path.clone(),
@@ -66,7 +66,7 @@ impl DiscoveredSocket {
     }
 
     /// Set capabilities
-    #[must_use] 
+    #[must_use]
     pub fn with_capabilities(mut self, caps: Vec<String>) -> Self {
         self.capabilities = caps;
         self

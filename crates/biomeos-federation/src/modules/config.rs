@@ -14,6 +14,20 @@ use std::fs;
 use std::path::PathBuf;
 use tracing::{error, warn};
 
+/// Resolve the ecoPrimals install prefix from `$ECOPRIMAL_PREFIX` or default `/opt/ecoprimal`.
+fn ecoprimal_prefix() -> PathBuf {
+    std::env::var("ECOPRIMAL_PREFIX")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("/opt/ecoprimal"))
+}
+
+/// Resolve the ecoPrimals config directory from `$ECOPRIMAL_CONFIG_DIR` or default `/etc/ecoprimal`.
+fn ecoprimal_config_dir() -> PathBuf {
+    std::env::var("ECOPRIMAL_CONFIG_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("/etc/ecoprimal"))
+}
+
 // Use unified configuration types from biomeos-types
 pub use biomeos_types::{
     BiomeOSConfig,
@@ -112,7 +126,7 @@ impl Default for FederationConfig {
         base_config.system.organization_scale = OrganizationScale::Enterprise;
         
         // Configure network settings for federation
-        base_config.network.http_port = 8443;
+        base_config.network.http_port = biomeos_types::constants::DEFAULT_HTTPS_PORT;
         base_config.network.https_enabled = true;
         base_config.network.bind_address = biomeos_types::constants::endpoints::PRODUCTION_BIND_ADDRESS.to_string();
         
@@ -138,7 +152,7 @@ impl Default for FederationConfig {
             federation: FederationSettings {
                 name: "tower-federation".to_string(),
                 domain: "federation.local".to_string(),
-                port: 8443,
+                port: biomeos_types::constants::DEFAULT_HTTPS_PORT,
                 ssl_enabled: true,
                 features: FederationFeatures {
                     distributed_deployment: true,
@@ -147,15 +161,15 @@ impl Default for FederationConfig {
                 },
             },
             tower: TowerConfig {
-                deployment_path: PathBuf::from("/opt/ecoprimal/deployments"),
-                backup_path: PathBuf::from("/opt/ecoprimal/backups"),
+                deployment_path: ecoprimal_prefix().join("deployments"),
+                backup_path: ecoprimal_prefix().join("backups"),
             },
             manifests: ManifestSettings {
                 template_dirs: vec![
-                    PathBuf::from("/etc/ecoprimal/manifests/templates"),
-                    PathBuf::from("/opt/ecoprimal/manifests/templates"),
+                    ecoprimal_config_dir().join("manifests/templates"),
+                    ecoprimal_prefix().join("manifests/templates"),
                 ],
-                custom_dir: Some(PathBuf::from("/etc/ecoprimal/manifests/custom")),
+                custom_dir: Some(ecoprimal_config_dir().join("manifests/custom")),
             },
         }
     }
@@ -172,7 +186,7 @@ impl FederationConfig {
     
     /// Get the effective HTTP port (federation port or base config port)
     pub fn effective_http_port(&self) -> u16 {
-        if self.federation.port != 8443 {
+        if self.federation.port != biomeos_types::constants::DEFAULT_HTTPS_PORT {
             self.federation.port
         } else {
             self.base.network.http_port

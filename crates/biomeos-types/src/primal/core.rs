@@ -69,19 +69,19 @@ impl PrimalType {
     }
 
     /// Check if this primal provides a specific category
-    #[must_use] 
+    #[must_use]
     pub fn is_category(&self, category: &str) -> bool {
         self.category == category
     }
 
     /// Check if this primal has a specific name
-    #[must_use] 
+    #[must_use]
     pub fn is_name(&self, name: &str) -> bool {
         self.name == name
     }
 
     /// Get the full identifier string
-    #[must_use] 
+    #[must_use]
     pub fn identifier(&self) -> String {
         format!("{}:{}:{}", self.category, self.name, self.version)
     }

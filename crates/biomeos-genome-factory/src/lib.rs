@@ -63,19 +63,19 @@ impl GenomeFactory {
     }
 
     /// Get storage directory
-    #[must_use] 
+    #[must_use]
     pub const fn storage_dir(&self) -> &PathBuf {
         &self.storage_dir
     }
 
     /// Get path for a specific genome
-    #[must_use] 
+    #[must_use]
     pub fn genome_path(&self, name: &str) -> PathBuf {
         self.storage_dir.join(format!("{name}.genome"))
     }
 
     /// Check if genome exists
-    #[must_use] 
+    #[must_use]
     pub fn genome_exists(&self, name: &str) -> bool {
         self.genome_path(name).exists()
     }

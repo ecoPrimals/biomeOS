@@ -45,7 +45,7 @@ pub struct HealthChecker {
 
 impl HealthChecker {
     /// Create new health checker
-    #[must_use] 
+    #[must_use]
     pub const fn new(runtime_dir: PathBuf) -> Self {
         Self {
             runtime_dir,
@@ -54,7 +54,7 @@ impl HealthChecker {
     }
 
     /// Create with XDG-compliant default runtime directory
-    #[must_use] 
+    #[must_use]
     pub fn new_default() -> Self {
         let runtime_dir = biomeos_types::paths::SystemPaths::new_lazy()
             .runtime_dir()
@@ -63,7 +63,7 @@ impl HealthChecker {
     }
 
     /// Create with custom timeout
-    #[must_use] 
+    #[must_use]
     pub const fn with_timeout(runtime_dir: PathBuf, rpc_timeout: Duration) -> Self {
         Self {
             runtime_dir,

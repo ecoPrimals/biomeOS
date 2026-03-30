@@ -270,7 +270,7 @@ impl Default for AIErrorContext {
 
 impl AIErrorContext {
     /// Create new AI error context
-    #[must_use] 
+    #[must_use]
     pub fn new(category: AIErrorCategory) -> Self {
         Self {
             error_id: Uuid::new_v4(),
@@ -289,7 +289,7 @@ impl AIErrorContext {
     }
 
     /// Create with retry strategy
-    #[must_use] 
+    #[must_use]
     pub fn with_retry(category: AIErrorCategory, retry_strategy: RetryStrategy) -> Self {
         Self {
             retry_strategy,
@@ -322,7 +322,7 @@ impl AIErrorContext {
 
 impl RetryStrategy {
     /// Create default retry strategy (no retry)
-    #[must_use] 
+    #[must_use]
     pub const fn no_retry() -> Self {
         Self {
             should_retry: false,
@@ -340,7 +340,7 @@ impl RetryStrategy {
         clippy::cast_lossless,
         reason = "u32 max_attempts widened to u64 for max_retry_time_ms arithmetic"
     )]
-    #[must_use] 
+    #[must_use]
     pub const fn exponential_backoff(
         max_attempts: u32,
         initial_delay_ms: u64,
@@ -365,7 +365,7 @@ impl RetryStrategy {
         clippy::cast_lossless,
         reason = "u32 max_attempts widened to u64 for max_retry_time_ms arithmetic"
     )]
-    #[must_use] 
+    #[must_use]
     pub const fn linear_backoff(max_attempts: u32, delay_ms: u64, increment_ms: u64) -> Self {
         Self {
             should_retry: true,

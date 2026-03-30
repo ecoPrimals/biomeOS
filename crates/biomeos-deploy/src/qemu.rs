@@ -49,7 +49,7 @@ pub struct QemuInstance {
 
 impl QemuInstance {
     /// Create a new QEMU instance
-    #[must_use] 
+    #[must_use]
     pub fn new(config: QemuConfig) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -59,13 +59,13 @@ impl QemuInstance {
     }
 
     /// Get instance ID
-    #[must_use] 
+    #[must_use]
     pub const fn id(&self) -> &Uuid {
         &self.id
     }
 
     /// Get VM name
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.config.name
     }
@@ -212,7 +212,7 @@ impl QemuInstance {
     }
 
     /// Get serial log path
-    #[must_use] 
+    #[must_use]
     pub const fn serial_log_path(&self) -> &PathBuf {
         &self.config.serial_log
     }

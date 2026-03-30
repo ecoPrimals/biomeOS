@@ -181,7 +181,7 @@ pub enum GraphEvent {
 
 impl GraphEvent {
     /// Get the graph ID for this event
-    #[must_use] 
+    #[must_use]
     pub fn graph_id(&self) -> &str {
         match self {
             Self::GraphStarted { graph_id, .. }
@@ -200,7 +200,7 @@ impl GraphEvent {
     }
 
     /// Get the timestamp for this event
-    #[must_use] 
+    #[must_use]
     pub const fn timestamp(&self) -> DateTime<Utc> {
         match self {
             Self::GraphStarted { timestamp, .. }
@@ -240,7 +240,7 @@ impl GraphEventBroadcaster {
     ///
     /// Capacity determines how many events can be buffered per subscriber.
     /// If a subscriber falls behind, older events will be dropped.
-    #[must_use] 
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         let (sender, _) = broadcast::channel(capacity);
 
@@ -254,7 +254,7 @@ impl GraphEventBroadcaster {
     ///
     /// Returns a receiver that will receive all future events.
     /// Each subscriber is independent and can consume events at their own pace.
-    #[must_use] 
+    #[must_use]
     pub fn subscribe(&self) -> broadcast::Receiver<GraphEvent> {
         let receiver = self.sender.subscribe();
 
@@ -293,7 +293,7 @@ impl GraphEventBroadcaster {
     }
 
     /// Get the number of active subscribers
-    #[must_use] 
+    #[must_use]
     pub fn subscriber_count(&self) -> usize {
         self.sender.receiver_count()
     }
@@ -309,7 +309,7 @@ pub struct EventCollector {
 
 impl EventCollector {
     /// Create a new event collector from a receiver
-    #[must_use] 
+    #[must_use]
     pub const fn new(receiver: broadcast::Receiver<GraphEvent>) -> Self {
         Self {
             receiver,
@@ -355,7 +355,7 @@ impl EventCollector {
     }
 
     /// Get all collected events
-    #[must_use] 
+    #[must_use]
     pub fn events(&self) -> &[GraphEvent] {
         &self.events
     }

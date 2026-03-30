@@ -131,11 +131,7 @@ impl BootableMediaBuilder {
     }
 
     /// Create boot directory structure
-    fn create_boot_structure(
-        &self,
-        kernel: &KernelManager,
-        initramfs: &Path,
-    ) -> Result<PathBuf> {
+    fn create_boot_structure(&self, kernel: &KernelManager, initramfs: &Path) -> Result<PathBuf> {
         info!("📁 Creating boot structure...");
 
         let boot_dir = self.work_dir.join("boot-root");

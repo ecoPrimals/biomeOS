@@ -128,13 +128,13 @@ pub enum HealthStatus {
 
 impl HealthStatus {
     /// Check if the primal is operational (healthy or degraded)
-    #[must_use] 
+    #[must_use]
     pub const fn is_operational(self) -> bool {
         matches!(self, Self::Healthy | Self::Degraded)
     }
 
     /// Check if the primal is fully healthy
-    #[must_use] 
+    #[must_use]
     pub const fn is_healthy(self) -> bool {
         matches!(self, Self::Healthy)
     }
@@ -181,7 +181,7 @@ impl Capability {
     }
 
     /// Get the capability name
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -258,7 +258,7 @@ pub struct CompositeDiscovery {
 
 impl CompositeDiscovery {
     /// Create a new composite discovery
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             sources: Vec::new(),
@@ -272,7 +272,7 @@ impl CompositeDiscovery {
     }
 
     /// Add a boxed discovery source
-    #[must_use] 
+    #[must_use]
     pub fn add_boxed_source(mut self, source: Box<dyn PrimalDiscovery>) -> Self {
         self.sources.push(source);
         self

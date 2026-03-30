@@ -307,13 +307,13 @@ impl InteractiveUIOrchestrator {
     }
 
     /// Get a reference to the UI state
-    #[must_use] 
+    #[must_use]
     pub const fn state(&self) -> &Arc<RwLock<UIState>> {
         &self.state
     }
 
     /// Get a reference to the event broadcaster
-    #[must_use] 
+    #[must_use]
     pub const fn events(&self) -> &EventBroadcaster {
         &self.events
     }

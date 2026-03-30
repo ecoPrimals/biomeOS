@@ -49,7 +49,7 @@ pub struct TickClock {
 
 impl TickClock {
     /// Create a clock from a [`TickConfig`].
-    #[must_use] 
+    #[must_use]
     pub fn from_config(config: &TickConfig) -> Self {
         let tick_duration = Duration::from_secs_f64(1.0 / config.target_hz);
         let max_accumulator = Duration::from_secs_f64(config.max_accumulator_ms / 1000.0);
@@ -63,7 +63,7 @@ impl TickClock {
     }
 
     /// Create a clock for a given target Hz.
-    #[must_use] 
+    #[must_use]
     pub fn new(target_hz: f64) -> Self {
         Self::from_config(&TickConfig {
             target_hz,
@@ -109,19 +109,19 @@ impl TickClock {
     }
 
     /// Current tick count.
-    #[must_use] 
+    #[must_use]
     pub const fn tick_count(&self) -> u64 {
         self.tick_count
     }
 
     /// Duration of one tick.
-    #[must_use] 
+    #[must_use]
     pub const fn tick_duration(&self) -> Duration {
         self.tick_duration
     }
 
     /// Target Hz this clock was configured for.
-    #[must_use] 
+    #[must_use]
     pub fn target_hz(&self) -> f64 {
         1.0 / self.tick_duration.as_secs_f64()
     }
@@ -217,7 +217,7 @@ impl ContinuousExecutor {
     ///
     /// The graph's `tick` config is used for clock parameters.
     /// Falls back to 60 Hz defaults if no tick config is present.
-    #[must_use] 
+    #[must_use]
     pub fn new(graph: DeploymentGraph, broadcaster: GraphEventBroadcaster) -> Self {
         let tick_config = Arc::new(graph.definition.tick.clone().unwrap_or_default());
 
@@ -252,13 +252,13 @@ impl ContinuousExecutor {
     }
 
     /// Subscribe to session state changes.
-    #[must_use] 
+    #[must_use]
     pub fn state_receiver(&self) -> watch::Receiver<SessionState> {
         self.state_rx.clone()
     }
 
     /// Current session state.
-    #[must_use] 
+    #[must_use]
     pub fn state(&self) -> SessionState {
         *self.state_rx.borrow()
     }

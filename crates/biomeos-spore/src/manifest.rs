@@ -259,7 +259,7 @@ impl SporeManifest {
     }
 
     /// Create a new spore manifest
-    #[must_use] 
+    #[must_use]
     pub fn new(
         node_id: String,
         family_id: String,

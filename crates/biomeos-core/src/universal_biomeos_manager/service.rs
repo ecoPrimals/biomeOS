@@ -430,8 +430,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_service_dry_run() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let result = manager
@@ -452,8 +451,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_service_dry_run_with_config_path() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let config_path = std::path::PathBuf::from("/tmp/test-config.yaml");
@@ -474,8 +472,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_service_non_dry_run_no_compute_primal() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
         // No primals registered, discover_by_capability returns empty
         let result = manager
@@ -491,8 +488,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_service_with_registered_compute_primal() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("compute-1", "toadstool", "unix:///tmp/toadstool.sock");
@@ -512,8 +508,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_service_status_found_by_name() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("svc-1", "my-service", "unix:///run/svc.sock");
@@ -535,8 +530,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_service_status_found_by_id() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("svc-42", "other-service", "unix:///run/other.sock");
@@ -554,8 +548,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_service_status_not_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let result = manager
@@ -574,8 +567,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_scale_service_not_found() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let result = manager.scale_service("nonexistent", Some(3), false).await;
@@ -585,8 +577,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_scale_service_must_specify_replicas_or_auto() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("svc-1", "scale-test", "unix:///tmp/scale.sock");
@@ -604,8 +595,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_enable_auto_scaling() {
-        let manager = UniversalBiomeOSManager::with_default_config()
-            .expect("manager creation");
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager creation");
         manager.initialize().expect("init");
 
         let primal = test_primal_info("auto-1", "auto-scale-svc", "unix:///tmp/auto.sock");

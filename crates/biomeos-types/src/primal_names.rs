@@ -21,6 +21,12 @@ pub const SONGBIRD: &str = "songbird";
 /// `ToadStool` — Node atomic: compute and GPU dispatch.
 pub const TOADSTOOL: &str = "toadstool";
 
+/// barraCuda — GPU math, tensors, statistics, noise, activation, RNG.
+pub const BARRACUDA: &str = "barracuda";
+
+/// coralReef — Shader compilation, WGSL, GPU resource management.
+pub const CORALREEF: &str = "coralreef";
+
 /// `NestGate` — Nest atomic: storage and persistence.
 pub const NESTGATE: &str = "nestgate";
 
@@ -93,6 +99,10 @@ pub mod display {
     pub const SONGBIRD: &str = "SongBird";
     /// `ToadStool` display name.
     pub const TOADSTOOL: &str = "ToadStool";
+    /// barraCuda display name.
+    pub const BARRACUDA: &str = "barraCuda";
+    /// coralReef display name.
+    pub const CORALREEF: &str = "coralReef";
     /// `NestGate` display name.
     pub const NESTGATE: &str = "NestGate";
     /// Squirrel display name.
@@ -135,6 +145,8 @@ pub mod display {
             super::BEARDOG => Some(BEARDOG),
             super::SONGBIRD => Some(SONGBIRD),
             super::TOADSTOOL => Some(TOADSTOOL),
+            super::BARRACUDA => Some(BARRACUDA),
+            super::CORALREEF => Some(CORALREEF),
             super::NESTGATE => Some(NESTGATE),
             super::SQUIRREL => Some(SQUIRREL),
             super::LOAMSPINE => Some(LOAMSPINE),
@@ -158,7 +170,9 @@ pub mod display {
 }
 
 /// All bootstrap-time primal names (Tower + Node + Nest core).
-pub const CORE_PRIMALS: &[&str] = &[BEARDOG, SONGBIRD, TOADSTOOL, NESTGATE, SQUIRREL];
+pub const CORE_PRIMALS: &[&str] = &[
+    BEARDOG, SONGBIRD, TOADSTOOL, BARRACUDA, CORALREEF, NESTGATE, SQUIRREL,
+];
 
 /// Provenance trio primals.
 pub const PROVENANCE_PRIMALS: &[&str] = &[LOAMSPINE, RHIZOCRYPT, SWEETGRASS];
@@ -259,7 +273,15 @@ mod tests {
     fn is_known_primal_unknown() {
         assert!(!is_known_primal(""));
         assert!(!is_known_primal("unknown"));
-        assert!(!is_known_primal("barracuda"));
+        assert!(!is_known_primal("notaprimal"));
+    }
+
+    #[test]
+    fn is_known_primal_gpu() {
+        assert!(is_known_primal("barracuda"));
+        assert!(is_known_primal("barraCuda"));
+        assert!(is_known_primal("coralreef"));
+        assert!(is_known_primal("coralReef"));
     }
 
     #[test]
@@ -277,7 +299,7 @@ mod tests {
 
     #[test]
     fn core_primals_count() {
-        assert_eq!(CORE_PRIMALS.len(), 5);
+        assert_eq!(CORE_PRIMALS.len(), 7);
     }
 
     #[test]
@@ -318,6 +340,8 @@ mod tests {
         assert_eq!(display::for_id("beardog"), Some("BearDog"));
         assert_eq!(display::for_id("songbird"), Some("SongBird"));
         assert_eq!(display::for_id("toadstool"), Some("ToadStool"));
+        assert_eq!(display::for_id("barracuda"), Some("barraCuda"));
+        assert_eq!(display::for_id("coralreef"), Some("coralReef"));
         assert_eq!(display::for_id("nestgate"), Some("NestGate"));
         assert_eq!(display::for_id("squirrel"), Some("Squirrel"));
     }

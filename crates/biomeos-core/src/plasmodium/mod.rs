@@ -62,7 +62,7 @@ impl Default for Plasmodium {
 
 impl Plasmodium {
     /// Create a new Plasmodium query engine
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         let family_id = std::env::var("FAMILY_ID")
             .or_else(|_| std::env::var("NODE_FAMILY_ID"))

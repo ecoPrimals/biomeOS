@@ -41,7 +41,7 @@ pub struct AISuggestionManager {
 
 impl AISuggestionManager {
     /// Create a new AI suggestion manager
-    #[must_use] 
+    #[must_use]
     pub fn new(family_id: String) -> Self {
         Self {
             ai_provider_socket: None,
@@ -138,10 +138,7 @@ impl AISuggestionManager {
     }
 
     /// Request suggestions based on current context
-    pub fn request_suggestions(
-        &mut self,
-        context: SuggestionContext,
-    ) -> Result<Vec<AISuggestion>> {
+    pub fn request_suggestions(&mut self, context: SuggestionContext) -> Result<Vec<AISuggestion>> {
         info!("🤖 Requesting AI suggestions...");
 
         if self.ai_provider_socket.is_none() {
@@ -191,7 +188,7 @@ impl AISuggestionManager {
     }
 
     /// Get active suggestions
-    #[must_use] 
+    #[must_use]
     pub fn get_active_suggestions(&self) -> Vec<&AISuggestion> {
         self.active_suggestions.values().collect()
     }
@@ -438,7 +435,8 @@ mod tests {
                 },
             },
         );
-        mgr.send_feedback("s1", SuggestionFeedback::Accepted).unwrap();
+        mgr.send_feedback("s1", SuggestionFeedback::Accepted)
+            .unwrap();
         assert!(mgr.get_active_suggestions().is_empty());
     }
 
@@ -551,7 +549,8 @@ mod tests {
                 },
             },
         );
-        mgr.send_feedback("s3", SuggestionFeedback::Dismissed).unwrap();
+        mgr.send_feedback("s3", SuggestionFeedback::Dismissed)
+            .unwrap();
         assert_eq!(mgr.get_active_suggestions().len(), 1);
     }
 

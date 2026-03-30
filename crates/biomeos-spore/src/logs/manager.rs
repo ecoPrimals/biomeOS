@@ -24,7 +24,7 @@ pub struct LogManager {
 
 impl LogManager {
     /// Create a new log manager
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: LogConfig) -> Self {
         Self { config }
     }
@@ -131,11 +131,7 @@ impl LogManager {
     }
 
     /// Update the fossil index with a new entry
-    fn update_fossil_index(
-        &self,
-        fossil: &FossilRecord,
-        fossil_path: &Path,
-    ) -> SporeResult<()> {
+    fn update_fossil_index(&self, fossil: &FossilRecord, fossil_path: &Path) -> SporeResult<()> {
         let index_path = self.config.fossil_dir.join("index.toml");
 
         let mut index = if index_path.exists() {
@@ -195,7 +191,7 @@ pub struct SporeLogManager {
 
 impl SporeLogManager {
     /// Create a new spore log manager
-    #[must_use] 
+    #[must_use]
     pub const fn new(spore_root: PathBuf) -> Self {
         Self { spore_root }
     }

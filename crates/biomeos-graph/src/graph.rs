@@ -140,7 +140,7 @@ impl GraphId {
     }
 
     /// Get the ID as a string slice.
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -210,25 +210,25 @@ pub enum GraphCategory {
 
 impl DeploymentGraph {
     /// Get the graph ID.
-    #[must_use] 
+    #[must_use]
     pub const fn id(&self) -> &GraphId {
         &self.definition.id
     }
 
     /// Get the graph name.
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.definition.name
     }
 
     /// Get all nodes in the graph.
-    #[must_use] 
+    #[must_use]
     pub fn nodes(&self) -> &[GraphNode] {
         &self.definition.nodes
     }
 
     /// Get nodes in topological order (respecting dependencies).
-    #[must_use] 
+    #[must_use]
     pub fn nodes_in_order(&self) -> Vec<&GraphNode> {
         // Simple topological sort using Kahn's algorithm
         let mut result = Vec::new();
@@ -270,7 +270,7 @@ impl DeploymentGraph {
     }
 
     /// Get environment variables with defaults resolved.
-    #[must_use] 
+    #[must_use]
     pub const fn env(&self) -> &HashMap<String, String> {
         &self.definition.env
     }
@@ -284,7 +284,7 @@ impl DeploymentGraph {
     /// Note: This resolves against system env first, then graph defaults.
     /// Graph env values like `"${VAR:-default}"` are treated as default specs,
     /// not literal values.
-    #[must_use] 
+    #[must_use]
     pub fn resolve_env(&self, value: &str) -> String {
         let mut result = value.to_string();
         let mut iterations = 0;

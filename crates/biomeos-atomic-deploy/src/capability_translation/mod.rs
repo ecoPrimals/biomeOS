@@ -77,7 +77,7 @@ pub struct CapabilityTranslationRegistry {
 
 impl CapabilityTranslationRegistry {
     /// Create new empty registry
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             translations: HashMap::new(),
@@ -129,19 +129,19 @@ impl CapabilityTranslationRegistry {
     }
 
     /// Get translation for a semantic capability
-    #[must_use] 
+    #[must_use]
     pub fn get_translation(&self, semantic: &str) -> Option<&CapabilityTranslation> {
         self.translations.get(semantic)
     }
 
     /// Check if capability is available
-    #[must_use] 
+    #[must_use]
     pub fn has_capability(&self, semantic: &str) -> bool {
         self.translations.contains_key(semantic)
     }
 
     /// List all capabilities provided by a specific provider
-    #[must_use] 
+    #[must_use]
     pub fn provider_capabilities(&self, provider: &str) -> Vec<String> {
         self.provider_capabilities
             .get(provider)
@@ -150,7 +150,7 @@ impl CapabilityTranslationRegistry {
     }
 
     /// List all translations
-    #[must_use] 
+    #[must_use]
     pub fn list_all(&self) -> Vec<&CapabilityTranslation> {
         self.translations.values().collect()
     }
@@ -160,7 +160,7 @@ impl CapabilityTranslationRegistry {
     /// Returns `(semantic_name, actual_method)` pairs for all translations
     /// whose semantic name starts with the given prefix (e.g. `"crypto"` matches
     /// `"crypto.sha256"`, `"crypto.sign"`).
-    #[must_use] 
+    #[must_use]
     pub fn list_translations(&self, domain: &str) -> Option<Vec<(String, String)>> {
         let prefix = format!("{domain}.");
         let matches: Vec<(String, String)> = self
@@ -238,7 +238,7 @@ impl CapabilityTranslationRegistry {
     }
 
     /// Get statistics about the registry
-    #[must_use] 
+    #[must_use]
     pub fn stats(&self) -> RegistryStats {
         RegistryStats {
             total_translations: self.translations.len(),

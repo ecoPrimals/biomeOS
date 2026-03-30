@@ -323,6 +323,81 @@ family_id = "${FAMILY_ID}"
 "ai.local_inference" = "resources.estimate"  # Estimate before running
 "ai.local_execute" = "resources.validate_availability"  # Validate resources
 
+# barraCuda GPU Math/Tensor/Stats (optional - started separately)
+[[nodes]]
+id = "register_barracuda"
+output = "barracuda_registered"
+capabilities = ["math", "tensor", "stats", "noise", "activation", "rng"]
+
+[nodes.primal]
+by_capability = "math"
+
+[nodes.operation]
+name = "register_only"
+
+[nodes.operation.params]
+family_id = "${FAMILY_ID}"
+
+[nodes.capabilities_provided]
+# Core math operations
+"math.sigmoid" = "math.sigmoid"
+"math.log2" = "math.log2"
+"math.relu" = "math.relu"
+"math.tanh" = "math.tanh"
+"math.softmax" = "math.softmax"
+# Statistics
+"stats.mean" = "stats.mean"
+"stats.std_dev" = "stats.std_dev"
+"stats.weighted_mean" = "stats.weighted_mean"
+"stats.variance" = "stats.variance"
+"stats.median" = "stats.median"
+# Noise generation
+"noise.perlin2d" = "noise.perlin2d"
+"noise.perlin3d" = "noise.perlin3d"
+"noise.simplex2d" = "noise.simplex2d"
+"noise.simplex3d" = "noise.simplex3d"
+# RNG
+"rng.uniform" = "rng.uniform"
+"rng.normal" = "rng.normal"
+"rng.seed" = "rng.seed"
+# Tensor operations
+"tensor.create" = "tensor.create"
+"tensor.matmul" = "tensor.matmul"
+"tensor.add" = "tensor.add"
+"tensor.scale" = "tensor.scale"
+"tensor.clamp" = "tensor.clamp"
+"tensor.reduce" = "tensor.reduce"
+"tensor.sigmoid" = "tensor.sigmoid"
+"tensor.transpose" = "tensor.transpose"
+# Activation functions (HCI models)
+"activation.fitts" = "activation.fitts"
+"activation.hick" = "activation.hick"
+"activation.steering" = "activation.steering"
+
+# coralReef Shader Compilation (optional - started separately)
+[[nodes]]
+id = "register_coralreef"
+output = "coralreef_registered"
+capabilities = ["shader", "wgsl", "spirv"]
+
+[nodes.primal]
+by_capability = "shader"
+
+[nodes.operation]
+name = "register_only"
+
+[nodes.operation.params]
+family_id = "${FAMILY_ID}"
+
+[nodes.capabilities_provided]
+"shader.compile.wgsl" = "shader.compile.wgsl"
+"shader.compile.spirv" = "shader.compile.spirv"
+"shader.validate" = "shader.validate"
+"shader.optimize" = "shader.optimize"
+"shader.list" = "shader.list"
+"wgsl.parse" = "wgsl.parse"
+"wgsl.validate" = "wgsl.validate"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SOVEREIGN ONION SERVICE INITIALIZATION (Feb 6, 2026)
 # ═══════════════════════════════════════════════════════════════════════════════

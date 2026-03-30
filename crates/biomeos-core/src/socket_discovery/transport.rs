@@ -64,7 +64,7 @@ pub enum TransportEndpoint {
 
 impl TransportEndpoint {
     /// Get the tier level (1 = native, 2 = universal)
-    #[must_use] 
+    #[must_use]
     pub const fn tier(&self) -> u8 {
         match self {
             Self::UnixSocket { .. } | Self::AbstractSocket { .. } => 1,
@@ -73,13 +73,13 @@ impl TransportEndpoint {
     }
 
     /// Check if this is a Tier 1 (native) transport
-    #[must_use] 
+    #[must_use]
     pub fn is_native(&self) -> bool {
         self.tier() == 1
     }
 
     /// Get a display string for logging
-    #[must_use] 
+    #[must_use]
     pub fn display_string(&self) -> String {
         match self {
             Self::UnixSocket { path } => format!("unix://{}", path.display()),
@@ -95,7 +95,7 @@ impl TransportEndpoint {
     /// - `/path/to/socket.sock` → `UnixSocket`
     /// - `@abstract_name` → `AbstractSocket`  
     /// - `host:port` or `tcp://host:port` → `TcpSocket`
-    #[must_use] 
+    #[must_use]
     pub fn parse(value: &str) -> Option<Self> {
         let value = value.trim();
 

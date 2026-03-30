@@ -13,7 +13,8 @@
 //! The mapping is SEMANTIC → PROVIDER (not implementation-specific).
 
 use biomeos_types::primal_names::{
-    BEARDOG, LOAMSPINE, NESTGATE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
+    BARRACUDA, BEARDOG, CORALREEF, LOAMSPINE, NESTGATE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS,
+    TOADSTOOL,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -61,6 +62,16 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     CapabilityDomain {
         provider: TOADSTOOL,
         capabilities: &["compute", "execution", "parsing", "hardware_learning"],
+    },
+    // GPU math/tensor/stats domain (barraCuda)
+    CapabilityDomain {
+        provider: BARRACUDA,
+        capabilities: &["math", "tensor", "stats", "noise", "activation", "rng"],
+    },
+    // Shader compilation domain (coralReef)
+    CapabilityDomain {
+        provider: CORALREEF,
+        capabilities: &["shader", "wgsl", "spirv"],
     },
     // AI domain (Squirrel)
     CapabilityDomain {

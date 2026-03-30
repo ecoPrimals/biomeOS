@@ -145,15 +145,15 @@ async fn run_experiment(
     test: &str,
 ) -> Result<bool> {
     println!("Creating lab: {name} ({topology})");
-    let lab = manager.create_lab(topology, name).await?;
+    let lab = manager.create_lab(topology, name)?;
     println!("✅ Lab created");
 
     // Deploy (may fail without binaries, that's OK)
-    let _ = lab.deploy("templates/p2p-secure-mesh.biome.yaml").await;
+    let _ = lab.deploy("templates/p2p-secure-mesh.biome.yaml");
     println!("✅ Deploy attempted");
 
     println!("Running test: {test}");
-    let result = lab.run_test(test).await?;
+    let result = lab.run_test(test)?;
     let success = result.passed();
     println!(
         "{} Test {}",
@@ -162,7 +162,7 @@ async fn run_experiment(
     );
 
     println!("Cleaning up...");
-    lab.destroy().await?;
+    lab.destroy()?;
     println!("✅ Lab destroyed");
 
     Ok(success)

@@ -398,13 +398,13 @@ impl KernelManager {
     }
 
     /// Get the kernel image path
-    #[must_use] 
+    #[must_use]
     pub fn kernel_path(&self) -> &Path {
         &self.kernel_path
     }
 
     /// Get the initramfs image path
-    #[must_use] 
+    #[must_use]
     pub fn initramfs_path(&self) -> &Path {
         &self.initramfs_path
     }

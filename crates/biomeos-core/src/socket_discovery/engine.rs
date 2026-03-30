@@ -79,7 +79,7 @@ impl SocketDiscovery {
     }
 
     /// Set Neural API socket for registry queries
-    #[must_use] 
+    #[must_use]
     pub fn with_neural_api(mut self, socket: PathBuf) -> Self {
         self.neural_api_socket = Some(socket);
         self
@@ -310,7 +310,7 @@ impl SocketDiscovery {
     /// Build deterministic socket path for a primal
     ///
     /// Implements 5-tier socket resolution per `PRIMAL_DEPLOYMENT_STANDARD`.
-    #[must_use] 
+    #[must_use]
     pub fn build_socket_path(&self, primal_name: &str) -> PathBuf {
         path_builder::build_socket_path(primal_name, self.family_id.as_str(), None, None)
     }

@@ -9,8 +9,10 @@ use biomeos_spore::manifest::BinaryManifest;
 use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
 
 /// Map verification status to (icon, text) for display (testable pure function)
-#[must_use] 
-pub const fn verification_status_display(status: &VerificationStatus) -> (&'static str, &'static str) {
+#[must_use]
+pub const fn verification_status_display(
+    status: &VerificationStatus,
+) -> (&'static str, &'static str) {
     match status {
         VerificationStatus::Fresh => ("✅", "Fresh"),
         VerificationStatus::Stale => ("⚠️ ", "Stale"),

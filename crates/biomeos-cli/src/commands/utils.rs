@@ -14,7 +14,7 @@ use std::time::Duration;
 
 /// Create a spinner with biomeOS styling
 #[expect(clippy::expect_used, reason = "static template string is always valid")]
-#[must_use] 
+#[must_use]
 pub fn create_spinner(message: &str) -> ProgressBar {
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(
@@ -114,7 +114,7 @@ pub fn display_results(
 }
 
 /// Format duration for display
-#[must_use] 
+#[must_use]
 pub fn format_duration(duration: Duration) -> String {
     let secs = duration.as_secs();
     if secs < 60 {
@@ -127,7 +127,7 @@ pub fn format_duration(duration: Duration) -> String {
 }
 
 /// Format bytes for display
-#[must_use] 
+#[must_use]
 pub fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;

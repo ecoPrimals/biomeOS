@@ -416,9 +416,9 @@ mod error_handling_tests {
         // Health checks
         for _ in 0..5 {
             let manager_clone = manager.clone();
-            handles.push(tokio::spawn(async move {
-                manager_clone.get_system_health()
-            }));
+            handles.push(tokio::spawn(
+                async move { manager_clone.get_system_health() },
+            ));
         }
 
         // Discovery operations

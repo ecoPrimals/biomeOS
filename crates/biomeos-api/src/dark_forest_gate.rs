@@ -85,7 +85,7 @@ impl DarkForestGateConfig {
     /// to explicitly disable it (development/testing only).
     ///
     /// Socket resolution uses shared `beacon_verification::discover_neural_api_socket()`
-    #[must_use] 
+    #[must_use]
     pub fn from_env() -> Self {
         // DEFAULT: true — the system is closed unless explicitly opened
         let enabled = env::var("BIOMEOS_SOVEREIGN")
@@ -107,7 +107,7 @@ impl DarkForestGateConfig {
     }
 
     /// Force sovereign mode ON (used when binding to TCP)
-    #[must_use] 
+    #[must_use]
     pub const fn force_sovereign(mut self) -> Self {
         self.enabled = true;
         self
