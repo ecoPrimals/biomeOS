@@ -192,7 +192,7 @@ pub async fn self_replicate() -> Result<Json<SelfReplicateResponse>, StatusCode>
 }
 
 /// Parse architecture string for genome build (testable pure function)
-pub(crate) fn parse_arch_for_build(arch: &str) -> Result<Arch, &'static str> {
+pub fn parse_arch_for_build(arch: &str) -> Result<Arch, &'static str> {
     match arch {
         "x86_64" => Ok(Arch::X86_64),
         "aarch64" => Ok(Arch::Aarch64),

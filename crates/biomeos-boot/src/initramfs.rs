@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Initramfs Builder
+//! `BiomeOS` Initramfs Builder
 //!
 //! Pure Rust initramfs generation. No shell scripts, no external dependencies.
-//! Creates a minimal boot environment with BiomeOS binaries.
+//! Creates a minimal boot environment with `BiomeOS` binaries.
 
 use anyhow::{Context, Result};
 use flate2::Compression;
@@ -53,7 +53,7 @@ impl InitramfsBuilder {
         })
     }
 
-    /// Add BiomeOS core binaries
+    /// Add `BiomeOS` core binaries
     pub fn add_biomeos_binaries(&mut self, project_root: &Path) -> Result<()> {
         info!("📦 Adding BiomeOS binaries...");
 
@@ -398,11 +398,13 @@ impl KernelManager {
     }
 
     /// Get the kernel image path
+    #[must_use] 
     pub fn kernel_path(&self) -> &Path {
         &self.kernel_path
     }
 
     /// Get the initramfs image path
+    #[must_use] 
     pub fn initramfs_path(&self) -> &Path {
         &self.initramfs_path
     }

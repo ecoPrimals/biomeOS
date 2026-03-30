@@ -3,8 +3,8 @@
 
 //! Storage Specifications
 //!
-//! This module contains storage-related manifest types including VolumeSpec,
-//! SecretSpec, ConfigSpec, and storage configuration.
+//! This module contains storage-related manifest types including `VolumeSpec`,
+//! `SecretSpec`, `ConfigSpec`, and storage configuration.
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -148,7 +148,7 @@ pub enum VolumeType {
         fs_type: Option<String>,
     },
 
-    /// Ephemeral (boxed to reduce enum size - clippy::large_enum_variant)
+    /// Ephemeral (boxed to reduce enum size - `clippy::large_enum_variant`)
     Ephemeral {
         /// Volume claim template (boxed to reduce enum size)
         volume_claim_template: Box<PersistentVolumeClaimTemplate>,
@@ -610,7 +610,7 @@ pub enum SecretProvider {
         /// GCP project ID
         project_id: String,
     },
-    /// HashiCorp Vault
+    /// `HashiCorp` Vault
     Vault {
         /// Vault server address
         address: String,

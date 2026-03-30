@@ -3,7 +3,7 @@
 
 //! Unified Configuration System
 //!
-//! This module provides comprehensive configuration management for BiomeOS,
+//! This module provides comprehensive configuration management for `BiomeOS`,
 //! supporting all system components with proper validation and inheritance.
 
 use chrono::{DateTime, Utc};

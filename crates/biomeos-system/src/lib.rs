@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS System Information and Monitoring
+//! `BiomeOS` System Information and Monitoring
 //!
 //! This crate provides comprehensive system information gathering, health monitoring,
-//! and resource metrics for the BiomeOS ecosystem.
+//! and resource metrics for the `BiomeOS` ecosystem.
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
@@ -38,8 +38,8 @@ impl SystemInspector {
         let kernel_info = Self::get_kernel_info()?;
         let cpu_info = cpu::get_cpu_info()?;
         let memory_info = memory::get_memory_info()?;
-        let disk_info = disk::get_disk_info().await?;
-        let network_info = network::get_network_info().await?;
+        let disk_info = disk::get_disk_info()?;
+        let network_info = network::get_network_info()?;
         let uptime = uptime::get_uptime()?;
         let load_average = cpu::get_load_average()?;
 
@@ -60,7 +60,7 @@ impl SystemInspector {
     pub async fn get_resource_usage() -> BiomeResult<ResourceMetrics> {
         let cpu_usage = cpu::get_cpu_usage().await?;
         let memory_usage = memory::get_memory_usage()?;
-        let disk_usage = disk::get_disk_usage().await?;
+        let disk_usage = disk::get_disk_usage()?;
         let network_io = network::get_network_io().await?;
 
         Ok(ResourceMetrics {
@@ -336,7 +336,7 @@ pub struct KernelInfo {
     pub name: String,
     /// Kernel version string
     pub version: String,
-    /// Machine architecture (e.g. "x86_64")
+    /// Machine architecture (e.g. "`x86_64`")
     pub architecture: String,
 }
 
@@ -347,7 +347,8 @@ pub struct SystemMonitor {
 
 impl SystemMonitor {
     /// Create a new system monitor
-    pub fn new(monitoring_interval: std::time::Duration) -> Self {
+    #[must_use] 
+    pub const fn new(monitoring_interval: std::time::Duration) -> Self {
         Self {
             monitoring_interval,
         }

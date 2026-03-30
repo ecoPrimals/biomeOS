@@ -3,7 +3,7 @@
 
 //! Core Error Types
 //!
-//! This module contains the main BiomeError enum and core error types
+//! This module contains the main `BiomeError` enum and core error types
 //! that form the foundation of the unified error handling system.
 
 use serde::{Deserialize, Serialize};
@@ -58,12 +58,14 @@ pub enum IpcError {
 
 impl IpcError {
     /// Whether this error is a method-not-found (-32601) — caller may want to try another primal
-    pub fn is_method_not_found(&self) -> bool {
+    #[must_use] 
+    pub const fn is_method_not_found(&self) -> bool {
         matches!(self, Self::JsonRpcError { code: -32601, .. })
     }
 
     /// Whether this error is a timeout — caller may want to retry
-    pub fn is_timeout(&self) -> bool {
+    #[must_use] 
+    pub const fn is_timeout(&self) -> bool {
         matches!(self, Self::Timeout { .. })
     }
 }
@@ -73,7 +75,7 @@ impl IpcError {
 /// This consolidates all error types from across the ecosystem into a single,
 /// comprehensive error system that supports both human and AI interaction.
 ///
-/// Note: AIErrorContext is boxed to reduce enum size (clippy::result_large_err).
+/// Note: `AIErrorContext` is boxed to reduce enum size (`clippy::result_large_err`).
 ///
 /// # Examples
 ///

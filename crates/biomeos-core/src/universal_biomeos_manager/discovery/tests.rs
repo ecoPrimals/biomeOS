@@ -65,15 +65,14 @@ fn test_primal_discovery_service_new() {
 async fn test_primal_discovery_service_initialize() {
     let config = Arc::new(BiomeOSConfig::default());
     let service = PrimalDiscoveryService::new(config);
-    service.initialize().await.expect("initialize");
+    service.initialize().expect("initialize");
 }
 
 #[tokio::test]
 async fn test_discover_registry() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let endpoints = manager
         .discover_registry("http://registry.test:8500")
@@ -85,9 +84,8 @@ async fn test_discover_registry() {
 #[tokio::test]
 async fn test_discover_network_scan() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let endpoints = manager
         .discover_network_scan()
@@ -99,9 +97,8 @@ async fn test_discover_network_scan() {
 #[tokio::test]
 async fn test_discover() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let endpoints = manager.discover().await.expect("discover");
     assert!(endpoints.is_empty());
@@ -129,8 +126,8 @@ async fn test_discover_with_registry_config() {
         ..Default::default()
     };
 
-    let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
-    manager.initialize().await.expect("init");
+    let manager = UniversalBiomeOSManager::new(config).expect("manager");
+    manager.initialize().expect("init");
 
     let endpoints = manager.discover().await.expect("discover");
     // Registry discovery returns empty — delegates to ClientRegistry/Songbird at runtime
@@ -140,9 +137,8 @@ async fn test_discover_with_registry_config() {
 #[tokio::test]
 async fn test_discover_by_capability_empty() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let caps = vec![PrimalCapability::new("compute", "execution", "1.0")];
     let ids = manager
@@ -155,9 +151,8 @@ async fn test_discover_by_capability_empty() {
 #[tokio::test]
 async fn test_discover_by_capability_matching() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let primal = test_primal_info(
         "cap-1",
@@ -179,9 +174,8 @@ async fn test_discover_by_capability_matching() {
 #[tokio::test]
 async fn test_discover_by_capability_no_match() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let primal = test_primal_info(
         "cap-2",
@@ -202,20 +196,18 @@ async fn test_discover_by_capability_no_match() {
 #[tokio::test]
 async fn test_discover_via_multicast() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
-    let endpoints = manager.discover_via_multicast().await.expect("discover");
+    let endpoints = manager.discover_via_multicast().expect("discover");
     assert!(endpoints.is_empty());
 }
 
 #[tokio::test]
 async fn test_discover_orchestration_services() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let endpoints = manager
         .discover_orchestration_services("http://registry.test:8500")
@@ -227,9 +219,8 @@ async fn test_discover_orchestration_services() {
 #[tokio::test]
 async fn test_discover_multicast() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let endpoints = manager.discover_multicast().await.expect("discover");
     assert!(endpoints.is_empty());
@@ -238,9 +229,8 @@ async fn test_discover_multicast() {
 #[tokio::test]
 async fn test_discover_all_services() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let services = manager.discover_all_services().await.expect("discover");
     assert!(services.is_empty());
@@ -249,9 +239,8 @@ async fn test_discover_all_services() {
 #[tokio::test]
 async fn test_discover_from_registry() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let services = manager
         .discover_from_registry("http://registry.test:8500")
@@ -263,9 +252,8 @@ async fn test_discover_from_registry() {
 #[tokio::test]
 async fn test_discover_via_dns() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let services = manager.discover_via_dns().await.expect("discover");
     assert!(services.is_empty());
@@ -274,9 +262,8 @@ async fn test_discover_via_dns() {
 #[tokio::test]
 async fn test_discover_by_capabilities() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let primal = test_primal_info(
         "cb-1",
@@ -302,7 +289,6 @@ async fn test_probe_endpoint() {
     let service = PrimalDiscoveryService::new(config);
     let result = service
         .probe_endpoint("unix:///tmp/test.sock")
-        .await
         .expect("probe");
     assert_eq!(result.name, "unknown");
     assert_eq!(result.version, "1.0.0");
@@ -315,7 +301,6 @@ async fn test_primal_discovery_service_discover_registry_returns_empty() {
     let service = PrimalDiscoveryService::new(config);
     let v = service
         .discover_registry("http://example.invalid:9/registry")
-        .await
         .expect("registry");
     assert!(v.is_empty());
 }
@@ -324,7 +309,7 @@ async fn test_primal_discovery_service_discover_registry_returns_empty() {
 async fn test_primal_discovery_service_discover_network_scan_empty() {
     let config = Arc::new(BiomeOSConfig::default());
     let service = PrimalDiscoveryService::new(config);
-    let v = service.discover_network_scan().await.expect("scan");
+    let v = service.discover_network_scan().expect("scan");
     assert!(v.is_empty());
 }
 
@@ -332,7 +317,7 @@ async fn test_primal_discovery_service_discover_network_scan_empty() {
 async fn test_primal_discovery_service_discover_multicast_empty() {
     let config = Arc::new(BiomeOSConfig::default());
     let service = PrimalDiscoveryService::new(config);
-    let v = service.discover_multicast().await.expect("multicast");
+    let v = service.discover_multicast().expect("multicast");
     assert!(v.is_empty());
 }
 
@@ -342,7 +327,6 @@ async fn test_primal_discovery_service_discover_orchestration_empty() {
     let service = PrimalDiscoveryService::new(config);
     let v = service
         .discover_orchestration("http://x.test/registry")
-        .await
         .expect("orch");
     assert!(v.is_empty());
 }
@@ -350,9 +334,8 @@ async fn test_primal_discovery_service_discover_orchestration_empty() {
 #[tokio::test]
 async fn test_discover_all_services_empty_without_registry_hits() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
     let map = manager.discover_all_services().await.expect("all");
     assert!(map.is_empty());
 }
@@ -360,9 +343,8 @@ async fn test_discover_all_services_empty_without_registry_hits() {
 #[tokio::test]
 async fn test_discover_from_registry_empty_endpoints() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
     let map = manager
         .discover_from_registry("http://registry.test:8500")
         .await
@@ -373,9 +355,8 @@ async fn test_discover_from_registry_empty_endpoints() {
 #[tokio::test]
 async fn test_discover_by_capabilities_registered_mismatch_endpoints() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
     let primal = test_primal_info(
         "dcb-1",
         "dcb",
@@ -420,9 +401,8 @@ fn test_probe_result_clone() {
 #[tokio::test]
 async fn test_discover_by_capabilities_populates_when_endpoint_matches_id() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let primal = test_primal_info(
         "same-id",
@@ -443,9 +423,8 @@ async fn test_discover_by_capabilities_populates_when_endpoint_matches_id() {
 #[tokio::test]
 async fn test_discover_by_capability_returns_multiple_matches() {
     let manager = UniversalBiomeOSManager::with_default_config()
-        .await
         .expect("manager");
-    manager.initialize().await.expect("init");
+    manager.initialize().expect("init");
 
     let cap = PrimalCapability::new("compute", "execution", "1.0");
     for (id, ep) in [("m1", "unix:///a.sock"), ("m2", "unix:///b.sock")] {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Device lineage deriver - orchestrates derivation via BearDog
+//! Device lineage deriver - orchestrates derivation via `BearDog`
 
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use std::path::Path;
@@ -12,14 +12,14 @@ use crate::error::{SporeError, SporeResult};
 
 use crate::beacon_genetics::capability::CapabilityCaller;
 
-/// Device lineage deriver - orchestrates derivation via BearDog
+/// Device lineage deriver - orchestrates derivation via `BearDog`
 pub struct LineageDeriver<C: CapabilityCaller> {
     caller: C,
 }
 
 impl<C: CapabilityCaller> LineageDeriver<C> {
     /// Create new lineage deriver with capability caller
-    pub fn new(caller: C) -> Self {
+    pub const fn new(caller: C) -> Self {
         Self { caller }
     }
 
@@ -239,6 +239,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
     /// Check if device has existing lineage.
     ///
     /// Delegates to the free function [`has_lineage`].
+    #[must_use] 
     pub fn has_lineage(lineage_path: &Path) -> bool {
         has_lineage(lineage_path)
     }
@@ -334,6 +335,7 @@ pub fn load_lineage(lineage_path: &Path) -> SporeResult<DeviceLineage> {
 }
 
 /// Check if device has existing lineage (caller-agnostic).
+#[must_use] 
 pub fn has_lineage(lineage_path: &Path) -> bool {
     lineage_path.exists()
 }

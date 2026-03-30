@@ -255,7 +255,6 @@ async fn test_call_stream_connection_refused() {
 
     let mut rx = client
         .call_stream("stream_method", Value::Null)
-        .await
         .expect("call_stream returns receiver");
 
     let item = rx.recv().await;
@@ -415,7 +414,6 @@ async fn test_call_stream_http_yields_transport_error() {
     let client = AtomicClient::http("127.0.0.1", 59997).with_timeout(Duration::from_millis(200));
     let mut rx = client
         .call_stream("stream", json!({}))
-        .await
         .expect("receiver");
     let first = rx.recv().await.expect("event");
     assert!(
@@ -448,7 +446,7 @@ async fn test_call_stream_unix_jsonrpc_single_line_wrapped() {
     });
     ready_rx.wait().await.expect("ready");
     let client = AtomicClient::unix(&socket_path).with_timeout(Duration::from_secs(2));
-    let mut rx = client.call_stream("m", json!({})).await.expect("stream");
+    let mut rx = client.call_stream("m", json!({})).expect("stream");
     let mut saw_data = false;
     while let Some(item) = rx.recv().await {
         if matches!(item, StreamItem::Data(_)) {
@@ -543,7 +541,7 @@ async fn test_call_stream_unix_raw_non_json_line_becomes_string_data() {
     });
     ready_rx.wait().await.expect("ready");
     let client = AtomicClient::unix(&socket_path).with_timeout(Duration::from_secs(2));
-    let mut rx = client.call_stream("m", json!({})).await.expect("stream");
+    let mut rx = client.call_stream("m", json!({})).expect("stream");
     let mut saw_plain = false;
     while let Some(item) = rx.recv().await {
         if let StreamItem::Data(v) = &item {

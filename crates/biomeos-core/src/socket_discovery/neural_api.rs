@@ -31,7 +31,7 @@ pub fn resolve_neural_api_socket(
 
     let temp_dir = std::env::temp_dir();
     let standard_locations = vec![
-        temp_dir.join(format!("neural-api-{}.sock", family_id)),
+        temp_dir.join(format!("neural-api-{family_id}.sock")),
         temp_dir.join("neural-api.sock"),
     ];
     standard_locations.into_iter().find(|path| path.exists())

@@ -13,7 +13,7 @@ use biomeos_types::BiomeManifest;
 
 impl UniversalBiomeOSManager {
     /// Validate a biome manifest (delegated to Toadstool parser)
-    pub async fn validate_manifest(&self, manifest_content: &str) -> Result<BiomeManifest> {
+    pub fn validate_manifest(&self, manifest_content: &str) -> Result<BiomeManifest> {
         tracing::info!("🔍 Validating biome manifest");
 
         // Parse the manifest content
@@ -38,11 +38,11 @@ impl UniversalBiomeOSManager {
     }
 
     /// Deploy a biome manifest (delegated to Toadstool execution)
-    pub async fn deploy_manifest(&self, manifest_content: &str) -> Result<String> {
+    pub fn deploy_manifest(&self, manifest_content: &str) -> Result<String> {
         tracing::info!("🚀 Deploying biome manifest");
 
         // First validate the manifest
-        let manifest = self.validate_manifest(manifest_content).await?;
+        let manifest = self.validate_manifest(manifest_content)?;
 
         // In Universal Adapter architecture, this would:
         // 1. Delegate parsing to Toadstool
@@ -62,8 +62,8 @@ impl UniversalBiomeOSManager {
 
     /// Validate manifest integration.
     ///
-    /// Validation delegates to ToadStool via `compute.validate` when available.
-    pub(super) async fn validate_manifest_integration(
+    /// Validation delegates to `ToadStool` via `compute.validate` when available.
+    pub(super) fn validate_manifest_integration(
         &self,
         manifest_path: &str,
     ) -> Result<String> {
@@ -76,8 +76,8 @@ impl UniversalBiomeOSManager {
 
     /// Deploy via ecosystem integration.
     ///
-    /// Compute orchestration routes to ToadStool via `compute.*` capabilities.
-    pub(super) async fn deploy_via_ecosystem_integration(
+    /// Compute orchestration routes to `ToadStool` via `compute.*` capabilities.
+    pub(super) fn deploy_via_ecosystem_integration(
         &self,
         manifest_path: &str,
     ) -> Result<String> {
@@ -101,10 +101,8 @@ mod tests {
     };
     use std::collections::HashMap;
 
-    async fn test_manager() -> UniversalBiomeOSManager {
-        UniversalBiomeOSManager::new(BiomeOSConfig::default())
-            .await
-            .expect("create test manager")
+    fn test_manager() -> UniversalBiomeOSManager {
+        UniversalBiomeOSManager::new(BiomeOSConfig::default()).expect("create test manager")
     }
 
     fn valid_manifest_yaml() -> String {
@@ -144,10 +142,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_manifest_success() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let manifest = manager
             .validate_manifest(&valid_manifest_yaml())
-            .await
             .expect("validate_manifest should succeed for valid manifest");
         assert_eq!(manifest.metadata.name, "test-biome");
         assert!(!manifest.services.is_empty());
@@ -155,7 +152,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_manifest_empty_name_fails() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let mut manifest = BiomeManifestTemplates::web_application("test", "nginx");
         manifest.services.insert(
             "web".to_string(),
@@ -193,19 +190,17 @@ mod tests {
         let yaml = serde_yaml::to_string(&manifest).expect("serialize");
         let err = manager
             .validate_manifest(&yaml)
-            .await
             .expect_err("empty name should fail");
         assert!(err.to_string().contains("name") || err.to_string().contains("empty"));
     }
 
     #[tokio::test]
     async fn test_validate_manifest_empty_services_fails() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let manifest = BiomeManifestTemplates::web_application("test", "nginx");
         let yaml = BiomeManifestProcessor::save_to_yaml(&manifest).expect("serialize");
         let err = manager
             .validate_manifest(&yaml)
-            .await
             .expect_err("empty services should fail");
         assert!(
             err.to_string().contains("service") || err.to_string().contains("one"),
@@ -215,20 +210,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_manifest_invalid_yaml_fails() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let err = manager
             .validate_manifest("invalid: yaml: [")
-            .await
             .expect_err("invalid YAML should fail");
         assert!(err.to_string().contains("parse") || err.to_string().contains("manifest"));
     }
 
     #[tokio::test]
     async fn test_deploy_manifest_success() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let deployment_id = manager
             .deploy_manifest(&valid_manifest_yaml())
-            .await
             .expect("deploy_manifest should succeed");
         // UUID format
         assert!(!deployment_id.is_empty());
@@ -237,10 +230,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_deploy_manifest_validates_first() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let err = manager
             .deploy_manifest("metadata:\n  name: \"\"\nservices: {}")
-            .await
             .expect_err("deploy should fail on invalid manifest");
         assert!(!err.to_string().is_empty());
     }

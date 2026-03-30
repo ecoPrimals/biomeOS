@@ -2,6 +2,45 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.79 (2026-03-30) — ludoSpring V35 Gap Resolution + Deep Debt Evolution
+
+### P0: Primal Auto-Discovery (ludoSpring V35 blocker)
+- **Auto-discovery at startup**: biomeOS scans `$XDG_RUNTIME_DIR/biomeos/` for Unix sockets, probes each via `capabilities.list` JSON-RPC, registers discovered capabilities with the Neural Router
+- **`topology.rescan`**: On-demand re-discovery method for existing-system adaptation — deploy biomeOS into a running environment and rescan
+- **Three convergent registration paths**: startup auto-discovery, `capability.register`/`route.register` (manual/programmatic), `topology.rescan` (on-demand). All converge at the same `NeuralRouter`
+
+### P2: Nucleus vs. Runtime Graph Separation
+- **Nucleus graphs**: Built-in graphs (bootstrap, health, routing) in `graphs/` directory — compiled into the deployment
+- **Runtime graphs**: Consumer-deployed compositions via `graph.save` API → `runtime_graphs/` directory
+- **`resolve_graph_path`**: All graph operations (`execute`, `get`, `list`, `start_continuous`, `execute_pipeline`, `suggest_optimizations`) search runtime first, then nucleus
+- **`graph.list`**: Returns tier metadata (`"runtime"` vs `"nucleus"`) for each graph
+
+### P2: Continuous Executor Wiring
+- **Real capability routing**: Node executor extracts `capability` from `GraphNode`, resolves domain via `NeuralRouter::get_capability_providers`, forwards JSON-RPC request via `router.forward_request`
+- **Graceful degradation**: Optional nodes (`!node.required`) marked `"degraded"` on failure; required nodes propagate errors. Nodes without capability marked `"passthrough"`, without provider marked `"skipped"`
+
+### P3: Health Endpoints (SEMANTIC_METHOD_NAMING_STANDARD compliance)
+- **`health.check`**: Detailed status including mode, capability count, family ID, version
+- **`health.liveness`**: Minimal probe confirming process is alive
+- **`health.readiness`**: Bootstrap-aware readiness (checks capability registration)
+
+### Deep Debt Evolution
+- **`unused_async` cleanup**: 66→24 warnings — converted unnecessarily-async functions to sync across all workspace crates (`UniversalBiomeOSManager`, `PrimalDiscoveryService`, `MetricsCollector`, boot/deploy/federation helpers)
+- **`#[allow()]` → `#[expect()]`**: All instances migrated with documented `reason` attributes per Rust 2024 idiom
+- **disk.rs placeholder evolved**: Non-Linux fallback now uses `rustix::fs::statvfs` for real disk metrics (pure Rust, works on macOS/BSD)
+- **Silent error evolved**: `unwrap_or_default()` on `/proc/mounts` → proper `BiomeError::internal_error` propagation
+- **Clippy pedantic auto-fix**: `doc_markdown`, `must_use_candidate`, `format!` string, `unnecessary_struct_repetition` — bulk-fixed across workspace (1804→1127 warnings)
+
+### Verified
+- 0 `TODO`/`FIXME`/`HACK`/`XXX` in production code
+- 0 `todo!()`/`unimplemented!()` macros
+- 0 production mocks (all mock/stub references in test code only)
+- All hardcoded primal names in `primal_names.rs` constants or test assertions
+- All ports env-driven with defaults
+- Pure Rust dependency stack (rustix, etcetera, ureq — 0 C dependencies)
+- Unsafe code: 2 instances in test-utils only (Rust 2024 `set_var` requirement, mutex-protected)
+- All files under 1000 LOC
+
 ## v2.78 (2026-03-29) — Blocking Debt Resolved + AI Routing Evolution + Smart Refactoring
 
 ### Blocking Debt Resolved (all 4)

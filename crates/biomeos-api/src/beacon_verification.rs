@@ -37,7 +37,7 @@ use tracing::{debug, warn};
 /// Result of a successful beacon verification
 #[derive(Debug, Clone)]
 pub struct BeaconVerification {
-    /// Family ID from decryption result (or local family_id)
+    /// Family ID from decryption result (or local `family_id`)
     pub family_id: String,
     /// Decrypted plaintext (for lineage hashing)
     pub plaintext: String,
@@ -149,6 +149,7 @@ async fn try_blake3_hash(socket_path: &Path, encoded_data: &str) -> Option<Strin
 /// 1. `NEURAL_API_SOCKET` environment variable
 /// 2. XDG runtime dir: `{NEURAL_API_BASENAME_PREFIX}{family_id}.sock`
 /// 3. `/tmp` fallback: same basename under the temp dir
+#[must_use] 
 pub fn discover_neural_api_socket(family_id: &str) -> Option<String> {
     // 1. Explicit env var
     if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {

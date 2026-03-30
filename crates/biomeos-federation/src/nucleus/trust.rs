@@ -3,7 +3,7 @@
 
 //! Layer 4: Trust Evaluation
 //!
-//! Trust/attestation logic via BearDog lineage verification.
+//! Trust/attestation logic via `BearDog` lineage verification.
 
 use super::verification::IdentityProof;
 use crate::FederationResult;
@@ -26,8 +26,8 @@ pub enum TrustLevel {
     Highest = 4,
 }
 
-/// Layer 4: Trust Evaluation via BearDog
-pub(crate) async fn layer4_trust_evaluation(
+/// Layer 4: Trust Evaluation via `BearDog`
+pub async fn layer4_trust_evaluation(
     beardog: &BearDogClient,
     identity_proof: &IdentityProof,
     family_id: Option<&str>,

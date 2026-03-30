@@ -4,8 +4,8 @@
 //! Node executor implementations for `GraphExecutor`.
 //!
 //! Extracted from `neural_executor.rs` for maintainability. Contains the
-//! heavyweight node handlers: verification, health_check_all, rpc_call,
-//! and capability_call — plus the `send_jsonrpc_async` helper.
+//! heavyweight node handlers: verification, `health_check_all`, `rpc_call`,
+//! and `capability_call` — plus the `send_jsonrpc_async` helper.
 
 use anyhow::{Context, Result};
 use biomeos_types::JsonRpcRequest;
@@ -76,7 +76,7 @@ impl GraphExecutor {
         }
     }
 
-    /// Node executor: health.check_all
+    /// Node executor: `health.check_all`
     ///
     /// Discovers primals by scanning the socket directory, then verifies each
     /// with a `health.liveness` JSON-RPC probe. Socket existence alone is
@@ -180,7 +180,7 @@ impl GraphExecutor {
         }))
     }
 
-    /// Node executor: rpc_call
+    /// Node executor: `rpc_call`
     /// Makes a JSON-RPC call to a target primal, protected by a per-primal circuit breaker.
     ///
     /// The circuit breaker prevents cascade failures: after 5 consecutive RPC
@@ -286,7 +286,7 @@ impl GraphExecutor {
             .await
     }
 
-    /// Node executor: capability_call with config-driven registry.
+    /// Node executor: `capability_call` with config-driven registry.
     ///
     /// Routes semantic capability calls through the neural-api first, then falls
     /// back to direct primal resolution using the `CapabilityRegistry` (which

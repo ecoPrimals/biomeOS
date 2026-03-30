@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Bootable Media Creator
+//! `BiomeOS` Bootable Media Creator
 //!
 //! Pure Rust implementation of bootable USB/ISO creation.
 //! Clean architecture with modern idiomatic patterns.
@@ -46,7 +46,7 @@ impl BootableMediaBuilder {
     }
 
     /// Build complete bootable media (USB or ISO)
-    pub async fn build(&self, target: BootTarget) -> Result<PathBuf> {
+    pub fn build(&self, target: BootTarget) -> Result<PathBuf> {
         info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         info!("BiomeOS Bootable Media Builder - Pure Rust");
         info!("Target: {:?}", target);
@@ -54,30 +54,30 @@ impl BootableMediaBuilder {
         info!("");
 
         // Step 1: Build BiomeOS binaries
-        self.build_biomeos_binaries().await?;
+        self.build_biomeos_binaries()?;
 
         // Step 2: Create initramfs
-        let initramfs_path = self.build_initramfs().await?;
+        let initramfs_path = self.build_initramfs()?;
 
         // Step 3: Get/detect kernel
         let kernel = KernelManager::detect_or_custom(None)?;
 
         // Step 4: Create bootable structure
-        let boot_dir = self.create_boot_structure(&kernel, &initramfs_path).await?;
+        let boot_dir = self.create_boot_structure(&kernel, &initramfs_path)?;
 
         // Step 5: Add BiomeOS data
-        self.add_biomeos_data(&boot_dir).await?;
+        self.add_biomeos_data(&boot_dir)?;
 
         // Step 6: Create bootable image with GRUB
-        let image_path = self.create_bootable_image(&boot_dir, target).await?;
+        let image_path = self.create_bootable_image(&boot_dir, target)?;
 
         Self::print_success_message(&image_path, target)?;
 
         Ok(image_path)
     }
 
-    /// Build BiomeOS binaries
-    async fn build_biomeos_binaries(&self) -> Result<()> {
+    /// Build `BiomeOS` binaries
+    fn build_biomeos_binaries(&self) -> Result<()> {
         info!("🔨 Building BiomeOS binaries...");
 
         let status = Command::new("cargo")
@@ -97,8 +97,8 @@ impl BootableMediaBuilder {
         Ok(())
     }
 
-    /// Build initramfs with BiomeOS
-    async fn build_initramfs(&self) -> Result<PathBuf> {
+    /// Build initramfs with `BiomeOS`
+    fn build_initramfs(&self) -> Result<PathBuf> {
         info!("📦 Building initramfs...");
 
         let mut builder = InitramfsBuilder::new(&self.work_dir)?;
@@ -131,7 +131,7 @@ impl BootableMediaBuilder {
     }
 
     /// Create boot directory structure
-    async fn create_boot_structure(
+    fn create_boot_structure(
         &self,
         kernel: &KernelManager,
         initramfs: &Path,
@@ -223,8 +223,8 @@ impl BootableMediaBuilder {
         Ok(())
     }
 
-    /// Add BiomeOS data (primals, configs, templates)
-    async fn add_biomeos_data(&self, boot_dir: &Path) -> Result<()> {
+    /// Add `BiomeOS` data (primals, configs, templates)
+    fn add_biomeos_data(&self, boot_dir: &Path) -> Result<()> {
         info!("📋 Adding BiomeOS data...");
 
         // Create BiomeOS directory structure
@@ -285,30 +285,30 @@ impl BootableMediaBuilder {
     }
 
     /// Create bootable image using grub-mkrescue (clean, simple approach)
-    async fn create_bootable_image(&self, boot_dir: &Path, _target: BootTarget) -> Result<PathBuf> {
+    fn create_bootable_image(&self, boot_dir: &Path, _target: BootTarget) -> Result<PathBuf> {
         info!("💿 Creating bootable image with GRUB...");
 
         let timestamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
         let output = self.output_dir.join(format!("biomeos-{timestamp}.iso"));
 
         // Try grub-mkrescue first (clean, modern approach)
-        if let Ok(path) = self.create_with_grub_mkrescue(boot_dir, &output).await {
+        if let Ok(path) = self.create_with_grub_mkrescue(boot_dir, &output) {
             return Ok(path);
         }
 
         // Fallback to xorriso if grub-mkrescue not available
         warn!("grub-mkrescue not found, trying xorriso...");
-        if let Ok(path) = self.create_with_xorriso(boot_dir, &output).await {
+        if let Ok(path) = self.create_with_xorriso(boot_dir, &output) {
             return Ok(path);
         }
 
         // Final fallback: create tar.gz (not bootable but preserves data)
         warn!("No ISO tools found - creating tar.gz archive");
-        self.create_archive_fallback(boot_dir, &output).await
+        self.create_archive_fallback(boot_dir, &output)
     }
 
     /// Create bootable ISO with grub-mkrescue (preferred method)
-    async fn create_with_grub_mkrescue(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
+    fn create_with_grub_mkrescue(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
         info!("Using grub-mkrescue (GRUB built-in)...");
 
         let status = Command::new("grub-mkrescue")
@@ -327,7 +327,7 @@ impl BootableMediaBuilder {
     }
 
     /// Create bootable ISO with xorriso (fallback method)
-    async fn create_with_xorriso(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
+    fn create_with_xorriso(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
         info!("Using xorriso (fallback)...");
 
         // Note: This requires GRUB files to be present in boot_dir
@@ -356,7 +356,7 @@ impl BootableMediaBuilder {
     }
 
     /// Create tar.gz archive as final fallback
-    async fn create_archive_fallback(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
+    fn create_archive_fallback(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
         use flate2::Compression;
         use flate2::write::GzEncoder;
         use tar::Builder;
@@ -487,8 +487,7 @@ mod tests {
         std::fs::write(boot_dir.join("test.txt"), "boot content").expect("write");
 
         let output = temp.path().join("dist/test.iso");
-        let rt = tokio::runtime::Runtime::new().expect("runtime");
-        let result = rt.block_on(builder.create_archive_fallback(&boot_dir, &output));
+        let result = builder.create_archive_fallback(&boot_dir, &output);
         let path = result.expect("create_archive_fallback should succeed");
         assert!(path.exists());
         assert!(path.extension().is_some_and(|e| e == "gz"));
@@ -648,7 +647,6 @@ mod tests {
         let km = KernelManager::detect_or_custom(Some(kernel_path)).expect("kernel mgr");
         let boot_dir = builder
             .create_boot_structure(&km, &initramfs)
-            .await
             .expect("boot structure");
         assert!(boot_dir.join("boot/vmlinuz").exists());
         assert!(boot_dir.join("boot/initramfs.img").exists());
@@ -667,7 +665,7 @@ mod tests {
         let builder = BootableMediaBuilder::new(project_root).expect("builder");
         let boot_dir = temp.path().join("boot-root");
         std::fs::create_dir_all(&boot_dir).expect("boot");
-        builder.add_biomeos_data(&boot_dir).await.expect("add data");
+        builder.add_biomeos_data(&boot_dir).expect("add data");
         assert!(boot_dir.join("biomeos/primals/p.bin").exists());
         assert!(boot_dir.join("biomeos/templates/hello.txt").exists());
     }
@@ -681,7 +679,6 @@ mod tests {
         std::fs::create_dir_all(&boot_dir).expect("boot");
         builder
             .add_biomeos_data(&boot_dir)
-            .await
             .expect("ok without phase1");
         assert!(boot_dir.join("biomeos/primals").exists());
     }
@@ -695,7 +692,6 @@ mod tests {
         std::fs::write(boot_dir.join("boot/grub/grub.cfg"), b"# test").expect("cfg");
         let path = builder
             .create_bootable_image(&boot_dir, BootTarget::Iso)
-            .await
             .expect("image");
         assert!(path.exists());
     }
@@ -707,7 +703,7 @@ mod tests {
         let boot_dir = temp.path().join("br2");
         std::fs::create_dir_all(&boot_dir).expect("create");
         let out = temp.path().join("out.iso");
-        let r = builder.create_with_grub_mkrescue(&boot_dir, &out).await;
+        let r = builder.create_with_grub_mkrescue(&boot_dir, &out);
         let grub_ok = std::process::Command::new("grub-mkrescue")
             .arg("--help")
             .status()
@@ -727,7 +723,7 @@ mod tests {
         let boot_dir = temp.path().join("br3");
         std::fs::create_dir_all(&boot_dir).expect("create");
         let out = temp.path().join("out-xor.iso");
-        let r = builder.create_with_xorriso(&boot_dir, &out).await;
+        let r = builder.create_with_xorriso(&boot_dir, &out);
         let xor_ok = std::process::Command::new("xorriso")
             .arg("-version")
             .status()
@@ -749,7 +745,7 @@ mod tests {
         std::fs::write(&kernel_path, b"k").expect("k");
         let km = KernelManager::detect_or_custom(Some(kernel_path)).expect("km");
         let bad_init = temp.path().join("missing-initramfs.img");
-        let r = builder.create_boot_structure(&km, &bad_init).await;
+        let r = builder.create_boot_structure(&km, &bad_init);
         assert!(r.is_err());
     }
 
@@ -762,7 +758,7 @@ mod tests {
         std::fs::write(tr.join("biomeos-init"), b"#!fake").expect("init bin");
         std::fs::write(tr.join("biome"), b"#!fake").expect("biome bin");
         let builder = BootableMediaBuilder::new(project_root).expect("new");
-        let path = builder.build_initramfs().await.expect("initramfs build");
+        let path = builder.build_initramfs().expect("initramfs build");
         assert!(path.exists());
         assert!(path.extension().is_some_and(|e| e == "img"));
     }
@@ -775,7 +771,7 @@ mod tests {
         let builder = BootableMediaBuilder::new(project_root).expect("builder");
         let boot_dir = temp.path().join("boot-root");
         std::fs::create_dir_all(&boot_dir).expect("boot");
-        builder.add_biomeos_data(&boot_dir).await.expect("add data");
+        builder.add_biomeos_data(&boot_dir).expect("add data");
         assert!(boot_dir.join("biomeos/primals").exists());
     }
 
@@ -787,7 +783,7 @@ mod tests {
         let builder = BootableMediaBuilder::new(project_root).expect("builder");
         let boot_dir = temp.path().join("br");
         std::fs::create_dir_all(&boot_dir).expect("boot");
-        builder.add_biomeos_data(&boot_dir).await.expect("ok");
+        builder.add_biomeos_data(&boot_dir).expect("ok");
         assert!(boot_dir.join("biomeos/templates").exists());
     }
 
@@ -799,7 +795,7 @@ mod tests {
         let km = KernelManager::detect_or_custom(Some(missing_kernel.clone())).expect("km");
         let initramfs = temp.path().join("ir.img");
         std::fs::write(&initramfs, b"x").expect("init");
-        let r = builder.create_boot_structure(&km, &initramfs).await;
+        let r = builder.create_boot_structure(&km, &initramfs);
         assert!(r.is_err());
     }
 
@@ -823,7 +819,7 @@ mod tests {
         let blocker = temp.path().join("blocker");
         std::fs::write(&blocker, b"x").expect("file");
         let out = blocker.join("nested.iso");
-        let r = builder.create_archive_fallback(&boot_dir, &out).await;
+        let r = builder.create_archive_fallback(&boot_dir, &out);
         assert!(r.is_err());
     }
 }

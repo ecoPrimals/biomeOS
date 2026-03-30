@@ -270,6 +270,7 @@ impl Default for AIErrorContext {
 
 impl AIErrorContext {
     /// Create new AI error context
+    #[must_use] 
     pub fn new(category: AIErrorCategory) -> Self {
         Self {
             error_id: Uuid::new_v4(),
@@ -288,6 +289,7 @@ impl AIErrorContext {
     }
 
     /// Create with retry strategy
+    #[must_use] 
     pub fn with_retry(category: AIErrorCategory, retry_strategy: RetryStrategy) -> Self {
         Self {
             retry_strategy,
@@ -304,14 +306,14 @@ impl AIErrorContext {
 
     /// Set severity
     #[must_use]
-    pub fn with_severity(mut self, severity: ErrorSeverity) -> Self {
+    pub const fn with_severity(mut self, severity: ErrorSeverity) -> Self {
         self.severity = severity;
         self
     }
 
     /// Set human intervention requirement
     #[must_use]
-    pub fn requires_human(mut self) -> Self {
+    pub const fn requires_human(mut self) -> Self {
         self.requires_human_intervention = true;
         self.automation_confidence = 0.0;
         self
@@ -320,7 +322,8 @@ impl AIErrorContext {
 
 impl RetryStrategy {
     /// Create default retry strategy (no retry)
-    pub fn no_retry() -> Self {
+    #[must_use] 
+    pub const fn no_retry() -> Self {
         Self {
             should_retry: false,
             delay_ms: 0,
@@ -337,7 +340,8 @@ impl RetryStrategy {
         clippy::cast_lossless,
         reason = "u32 max_attempts widened to u64 for max_retry_time_ms arithmetic"
     )]
-    pub fn exponential_backoff(
+    #[must_use] 
+    pub const fn exponential_backoff(
         max_attempts: u32,
         initial_delay_ms: u64,
         max_delay_ms: u64,
@@ -361,7 +365,8 @@ impl RetryStrategy {
         clippy::cast_lossless,
         reason = "u32 max_attempts widened to u64 for max_retry_time_ms arithmetic"
     )]
-    pub fn linear_backoff(max_attempts: u32, delay_ms: u64, increment_ms: u64) -> Self {
+    #[must_use] 
+    pub const fn linear_backoff(max_attempts: u32, delay_ms: u64, increment_ms: u64) -> Self {
         Self {
             should_retry: true,
             delay_ms,

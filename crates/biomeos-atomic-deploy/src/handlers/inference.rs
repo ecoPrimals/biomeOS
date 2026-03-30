@@ -53,7 +53,8 @@ pub struct InferenceHandler {
 
 impl InferenceHandler {
     /// Create a new inference handler with access to routing and gate registry.
-    pub fn new(router: Arc<NeuralRouter>, gate_registry: Arc<GateRegistry>) -> Self {
+    #[must_use] 
+    pub const fn new(router: Arc<NeuralRouter>, gate_registry: Arc<GateRegistry>) -> Self {
         Self {
             router,
             gate_registry,
@@ -118,7 +119,7 @@ impl InferenceHandler {
     /// - `model`: Model name or size hint (e.g., "llama-3-70b", "small", "large")
     /// - `prompt`: The inference prompt
     /// - `gate` (optional): Force a specific gate (bypasses scheduling)
-    /// - `params` (optional): Additional model parameters (temperature, max_tokens, etc.)
+    /// - `params` (optional): Additional model parameters (temperature, `max_tokens`, etc.)
     pub async fn schedule(&self, params: &Option<Value>) -> Result<Value> {
         let start = std::time::Instant::now();
         let params = params.as_ref().context("Missing parameters")?;

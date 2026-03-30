@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Model cache management - NestGate integration and filesystem fallback
+//! Model cache management - `NestGate` integration and filesystem fallback
 
 use anyhow::{Context, Result};
 use serde_json::json;
@@ -30,13 +30,13 @@ pub struct ModelCache {
 }
 
 impl ModelCache {
-    /// Create a new ModelCache with automatic NestGate discovery
+    /// Create a new `ModelCache` with automatic `NestGate` discovery
     pub async fn new() -> Result<Self> {
         let cache_dir = Self::default_cache_dir()?;
         Self::with_cache_dir(cache_dir).await
     }
 
-    /// Create a ModelCache with a specific cache directory
+    /// Create a `ModelCache` with a specific cache directory
     pub async fn with_cache_dir(cache_dir: PathBuf) -> Result<Self> {
         fs::create_dir_all(&cache_dir)
             .await
@@ -107,6 +107,7 @@ impl ModelCache {
     }
 
     /// Check if a model is cached locally
+    #[must_use] 
     pub fn has_model(&self, model_id: &str) -> bool {
         if let Some(entry) = self.manifest.models.get(model_id) {
             entry.local_path.exists()
@@ -116,6 +117,7 @@ impl ModelCache {
     }
 
     /// Get the local path for a cached model
+    #[must_use] 
     pub fn get_model_path(&self, model_id: &str) -> Option<&Path> {
         self.manifest
             .models
@@ -125,6 +127,7 @@ impl ModelCache {
     }
 
     /// Get full model entry with metadata
+    #[must_use] 
     pub fn get_model(&self, model_id: &str) -> Option<&ModelEntry> {
         self.manifest
             .models
@@ -133,6 +136,7 @@ impl ModelCache {
     }
 
     /// List all cached models
+    #[must_use] 
     pub fn list_models(&self) -> Vec<&ModelEntry> {
         self.manifest
             .models
@@ -183,14 +187,14 @@ impl ModelCache {
         Ok(())
     }
 
-    /// Register a model with the HuggingFace cache path
+    /// Register a model with the `HuggingFace` cache path
     pub async fn register_huggingface_model(&mut self, model_id: &str) -> Result<PathBuf> {
         let hf_hub = Self::huggingface_hub_dir()?;
         self.register_huggingface_model_from_hub(model_id, &hf_hub)
             .await
     }
 
-    /// Register a model from a specific HuggingFace hub directory
+    /// Register a model from a specific `HuggingFace` hub directory
     pub async fn register_huggingface_model_from_hub(
         &mut self,
         model_id: &str,
@@ -214,13 +218,13 @@ impl ModelCache {
         Ok(snapshot_dir)
     }
 
-    /// Import all HuggingFace models from the default cache
+    /// Import all `HuggingFace` models from the default cache
     pub async fn import_huggingface_cache(&mut self) -> Result<Vec<String>> {
         let hf_hub = Self::huggingface_hub_dir()?;
         self.import_huggingface_cache_from(&hf_hub).await
     }
 
-    /// Import all HuggingFace models from a specific hub directory
+    /// Import all `HuggingFace` models from a specific hub directory
     pub async fn import_huggingface_cache_from(&mut self, hf_hub: &Path) -> Result<Vec<String>> {
         if !hf_hub.exists() {
             return Ok(vec![]);
@@ -260,7 +264,7 @@ impl ModelCache {
         Ok(imported)
     }
 
-    /// Check the mesh (NestGate) for a model available on another gate
+    /// Check the mesh (`NestGate`) for a model available on another gate
     pub async fn find_on_mesh(&self, model_id: &str) -> Option<ModelEntry> {
         let client = self.nestgate.as_ref()?;
         let key = format!("model-cache:{model_id}");

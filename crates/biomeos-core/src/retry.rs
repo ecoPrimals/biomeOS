@@ -78,7 +78,8 @@ pub struct RetryPolicy {
 
 impl RetryPolicy {
     /// Create a new retry policy with exponential backoff
-    pub fn exponential(max_attempts: usize, initial_delay: Duration) -> Self {
+    #[must_use] 
+    pub const fn exponential(max_attempts: usize, initial_delay: Duration) -> Self {
         Self {
             max_attempts,
             initial_delay,
@@ -89,7 +90,8 @@ impl RetryPolicy {
     }
 
     /// Create a new retry policy with fixed delays
-    pub fn fixed(max_attempts: usize, delay: Duration) -> Self {
+    #[must_use] 
+    pub const fn fixed(max_attempts: usize, delay: Duration) -> Self {
         Self {
             max_attempts,
             initial_delay: delay,
@@ -100,7 +102,8 @@ impl RetryPolicy {
     }
 
     /// Create a new retry policy with no retries
-    pub fn no_retry() -> Self {
+    #[must_use] 
+    pub const fn no_retry() -> Self {
         Self {
             max_attempts: 1,
             initial_delay: Duration::from_secs(0),
@@ -111,19 +114,22 @@ impl RetryPolicy {
     }
 
     /// Builder: Set maximum delay
-    pub fn with_max_delay(mut self, max_delay: Duration) -> Self {
+    #[must_use] 
+    pub const fn with_max_delay(mut self, max_delay: Duration) -> Self {
         self.max_delay = max_delay;
         self
     }
 
     /// Builder: Set backoff multiplier
-    pub fn with_multiplier(mut self, multiplier: f64) -> Self {
+    #[must_use] 
+    pub const fn with_multiplier(mut self, multiplier: f64) -> Self {
         self.multiplier = multiplier;
         self
     }
 
     /// Builder: Enable/disable jitter
-    pub fn with_jitter(mut self, jitter: bool) -> Self {
+    #[must_use] 
+    pub const fn with_jitter(mut self, jitter: bool) -> Self {
         self.jitter = jitter;
         self
     }
@@ -244,6 +250,7 @@ pub struct CircuitBreaker {
 
 impl CircuitBreaker {
     /// Create a new circuit breaker
+    #[must_use] 
     pub fn new(failure_threshold: usize, timeout: Duration) -> Self {
         Self {
             state: Arc::new(RwLock::new(CircuitState::Closed)),
@@ -256,7 +263,8 @@ impl CircuitBreaker {
     }
 
     /// Builder: Set success threshold for half-open → closed transition
-    pub fn with_success_threshold(mut self, threshold: usize) -> Self {
+    #[must_use] 
+    pub const fn with_success_threshold(mut self, threshold: usize) -> Self {
         self.success_threshold = threshold;
         self
     }

@@ -8,7 +8,7 @@
 //!
 //! ## Deep Debt Evolution (Feb 11, 2026)
 //!
-//! - Removed direct `AtomicClient::unix()` calls to BearDog
+//! - Removed direct `AtomicClient::unix()` calls to `BearDog`
 //! - Uses shared `beacon_verification` module (Neural API → socket fallback)
 //! - Single source of truth for decrypt validation (`success && !plaintext.is_empty()`)
 //! - No hardcoded primal names or socket paths
@@ -27,7 +27,7 @@
 //!
 //! ## Security Model
 //!
-//! - Tower verifies family membership via shared beacon_verification module
+//! - Tower verifies family membership via shared `beacon_verification` module
 //! - Tower does NOT store plaintext — only encrypted beacon blobs
 //! - Rendezvous slots expire after 5 minutes
 //! - Only same-lineage nodes can be paired
@@ -66,7 +66,7 @@ struct RendezvousSlot {
 /// All verification routed through `beacon_verification` module.
 #[derive(Clone)]
 pub struct RendezvousState {
-    /// Active rendezvous slots: lineage_hash → Vec<RendezvousSlot>
+    /// Active rendezvous slots: `lineage_hash` → Vec<RendezvousSlot>
     slots: Arc<RwLock<HashMap<String, Vec<RendezvousSlot>>>>,
     /// Family ID for beacon decryption context
     family_id: String,
@@ -122,7 +122,7 @@ impl RendezvousState {
     /// Hash a node identity via shared crypto routing
     ///
     /// Deep Debt Evolution: Uses `beacon_verification::hash_via_capability()`
-    /// instead of direct BearDog socket calls.
+    /// instead of direct `BearDog` socket calls.
     async fn hash_node_identity(&self, token: &str, epoch: u64) -> String {
         let data = format!("{}:{}", token, epoch / 300);
 
@@ -193,7 +193,7 @@ pub struct RendezvousCheckResponse {
 /// POST /api/v1/rendezvous/beacon — Post an encrypted beacon for rendezvous
 ///
 /// The Pixel or USB posts their Dark Forest beacon here.
-/// Tower verifies family membership via beacon_verification, then stores
+/// Tower verifies family membership via `beacon_verification`, then stores
 /// the beacon in an ephemeral slot. If a matching family member is already
 /// waiting, returns their beacon immediately.
 pub async fn post_beacon(

@@ -6,22 +6,22 @@
 //! Network-Universal Coordinated Lifecycle & Ecosystem Unification System
 //!
 //! This module provides secure, 5-layer primal discovery that delegates
-//! cryptographic and communication responsibilities to BearDog and Songbird.
+//! cryptographic and communication responsibilities to `BearDog` and Songbird.
 //!
 //! ## Core Principle: Delegate, Don't Reimplement!
 //!
 //! | Capability | Primal | What It Provides |
 //! |------------|--------|------------------|
-//! | **Crypto & Identity** | 🐻 BearDog | Signatures, verification, trust evaluation |
+//! | **Crypto & Identity** | 🐻 `BearDog` | Signatures, verification, trust evaluation |
 //! | **Discovery & Comms** | 🐦 Songbird | UDP multicast, registry, routing |
 //! | **Coordination** | 🌱 biomeOS | Orchestrates protocol, no reimplementation |
 //!
 //! ## 5-Layer Protocol
 //!
 //! 1. **Physical Discovery** (Songbird) - UDP multicast, socket scanning
-//! 2. **Identity Verification** (BearDog) - Ed25519 challenge-response
+//! 2. **Identity Verification** (`BearDog`) - Ed25519 challenge-response
 //! 3. **Capability Verification** (biomeOS) - Query primal, validate capabilities
-//! 4. **Trust Evaluation** (BearDog) - Genetic lineage, trust level
+//! 4. **Trust Evaluation** (`BearDog`) - Genetic lineage, trust level
 //! 5. **Registration** (biomeOS) - Add to verified primal registry
 
 mod discovery;
@@ -55,7 +55,7 @@ pub struct VerifiedPrimal {
     /// Node ID (e.g., "node-alpha")
     pub node_id: String,
 
-    /// Family ID (e.g., "test_family")
+    /// Family ID (e.g., "`test_family`")
     pub family_id: Option<String>,
 
     /// Connection endpoints
@@ -64,7 +64,7 @@ pub struct VerifiedPrimal {
     /// Verified capabilities (queried from primal, not inferred)
     pub capabilities: CapabilitySet,
 
-    /// Identity proof from BearDog
+    /// Identity proof from `BearDog`
     pub identity_proof: IdentityProof,
 
     /// Trust level
@@ -107,7 +107,7 @@ pub struct SecureNucleusDiscovery {
     /// Songbird client (for Layer 1: Physical Discovery)
     songbird: Option<UnixSocketClient>,
 
-    /// BearDog client (for Layer 2 & 4: Identity & Trust)
+    /// `BearDog` client (for Layer 2 & 4: Identity & Trust)
     beardog: Option<BearDogClient>,
 
     /// Verified primals (multiple instances per name possible)
@@ -133,7 +133,7 @@ impl SecureNucleusDiscovery {
         }
     }
 
-    /// Create with Songbird and BearDog clients (delegated discovery)
+    /// Create with Songbird and `BearDog` clients (delegated discovery)
     pub fn with_clients(
         songbird: Option<UnixSocketClient>,
         beardog: Option<BearDogClient>,
@@ -198,13 +198,13 @@ impl SecureNucleusDiscovery {
 
     /// Discover primals using secure 5-layer protocol
     ///
-    /// **Requires**: Songbird and BearDog must be available
+    /// **Requires**: Songbird and `BearDog` must be available
     ///
     /// ## Layers:
     /// 1. Physical Discovery (Songbird)
-    /// 2. Identity Verification (BearDog)
+    /// 2. Identity Verification (`BearDog`)
     /// 3. Capability Verification (biomeOS)
-    /// 4. Trust Evaluation (BearDog)
+    /// 4. Trust Evaluation (`BearDog`)
     /// 5. Registration (biomeOS)
     pub async fn discover_secure(&mut self) -> FederationResult<Vec<VerifiedPrimal>> {
         info!("🔒 Starting secure 5-layer discovery");
@@ -294,6 +294,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Get a primal by selection criteria
+    #[must_use] 
     pub fn get(&self, criteria: SelectionCriteria) -> Option<&VerifiedPrimal> {
         match criteria {
             SelectionCriteria::ByCapability(cap) => {
@@ -342,6 +343,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Get all instances of a primal by name
+    #[must_use] 
     pub fn get_all(&self, name: &str) -> Vec<&VerifiedPrimal> {
         self.verified_primals
             .get(name)
@@ -350,6 +352,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Get all verified primals
+    #[must_use] 
     pub fn all(&self) -> Vec<VerifiedPrimal> {
         self.verified_primals
             .values()
@@ -358,6 +361,7 @@ impl SecureNucleusDiscovery {
     }
 
     /// Get primals with a specific capability
+    #[must_use] 
     pub fn with_capability(&self, cap: &Capability) -> Vec<&VerifiedPrimal> {
         self.verified_primals
             .values()
@@ -379,6 +383,7 @@ impl SecureNucleusDiscovery {
     /// This method is only available in test builds and allows
     /// injecting verified primals directly into the registry for testing.
     #[doc(hidden)]
+    #[must_use] 
     pub fn inject_primal_for_testing(mut self, primal: VerifiedPrimal) -> Self {
         self.verified_primals
             .entry(primal.name.clone())

@@ -24,12 +24,12 @@ impl BiomeOsMode {
     /// Detect which mode biomeOS should operate in
     ///
     /// Priority:
-    /// 1. BIOMEOS_MODE environment variable (explicit override)
+    /// 1. `BIOMEOS_MODE` environment variable (explicit override)
     /// 2. Auto-detect based on Tower Atomic presence
     ///
     /// Returns:
-    /// - Bootstrap if Tower Atomic does not exist (or BIOMEOS_MODE=bootstrap)
-    /// - Coordinated if Tower Atomic exists (or BIOMEOS_MODE=coordinated)
+    /// - Bootstrap if Tower Atomic does not exist (or `BIOMEOS_MODE=bootstrap`)
+    /// - Coordinated if Tower Atomic exists (or `BIOMEOS_MODE=coordinated`)
     pub async fn detect(family_id: &str) -> Self {
         info!("🔍 Detecting biomeOS operating mode...");
 

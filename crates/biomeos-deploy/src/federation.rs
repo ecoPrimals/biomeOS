@@ -37,6 +37,7 @@ pub struct Federation {
 
 impl Federation {
     /// Create a new federation manager
+    #[must_use] 
     pub fn new(config: FederationConfig) -> Self {
         Self {
             config,
@@ -56,7 +57,7 @@ impl Federation {
         self.setup_network().await?;
 
         // Step 2: Prepare disk images (backing images)
-        self.prepare_disks().await?;
+        self.prepare_disks()?;
 
         // Step 3: Start all VMs
         self.start_vms().await?;
@@ -90,7 +91,7 @@ impl Federation {
     }
 
     /// Prepare disk images (create backing images)
-    async fn prepare_disks(&self) -> Result<()> {
+    fn prepare_disks(&self) -> Result<()> {
         info!("📦 Preparing disk images...");
 
         for vm in &self.config.topology.vms {
@@ -120,7 +121,7 @@ impl Federation {
         for vm_topology in &self.config.topology.vms {
             let qemu_config = self.vm_topology_to_qemu_config(vm_topology)?;
             let mut vm = QemuInstance::new(qemu_config);
-            vm.start().await?;
+            vm.start()?;
             self.vms.insert(vm_topology.name.clone(), vm);
         }
 
@@ -218,6 +219,7 @@ impl Federation {
     }
 
     /// Get VM by name
+    #[must_use] 
     pub fn get_vm(&self, name: &str) -> Option<&QemuInstance> {
         self.vms.get(name)
     }

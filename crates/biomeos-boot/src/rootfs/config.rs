@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-/// Configuration for building a BiomeOS root filesystem
+/// Configuration for building a `BiomeOS` root filesystem
 #[derive(Debug, Clone)]
 pub struct RootFsConfig {
     /// Size of the root filesystem (e.g., "8G")

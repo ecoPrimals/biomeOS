@@ -24,7 +24,7 @@ use crate::neural_graph::GraphNode;
 /// Discover binary path for a primal using capability-based discovery
 ///
 /// **TRUE PRIMAL Principle**: No hardcoded paths! Discovery is:
-/// 1. Environment-driven (BIOMEOS_PLASMID_BIN_DIR)
+/// 1. Environment-driven (`BIOMEOS_PLASMID_BIN_DIR`)
 /// 2. Architecture-aware (auto-detect from target triple)
 /// 3. Pattern-based (multiple search patterns)
 /// 4. Gracefully degrading (try multiple locations)
@@ -40,8 +40,8 @@ use crate::neural_graph::GraphNode;
 /// # Binary Patterns
 ///
 /// For each base directory, tries these patterns:
-/// - `{primal}_{arch}_{os}_musl/{primal}` (e.g., beardog_x86_64_linux_musl/beardog)
-/// - `{primal}_{arch}_{os}/{primal}` (e.g., beardog_x86_64_linux/beardog)
+/// - `{primal}_{arch}_{os}_musl/{primal}` (e.g., `beardog_x86_64_linux_musl/beardog`)
+/// - `{primal}_{arch}_{os}/{primal}` (e.g., `beardog_x86_64_linux/beardog`)
 /// - `primals/{primal}/{primal}` (e.g., primals/beardog/beardog)
 /// - `{primal}/{primal}` (e.g., beardog/beardog)
 /// - `{primal}` (e.g., beardog)
@@ -230,7 +230,7 @@ pub async fn spawn_primal_process(
     Ok(child)
 }
 
-/// Data-driven primal launch profile (loaded from config/primal_launch_profiles.toml)
+/// Data-driven primal launch profile (loaded from `config/primal_launch_profiles.toml`)
 #[derive(Debug, Clone, serde::Deserialize)]
 struct LaunchProfile {
     socket_flag: Option<String>,
@@ -276,7 +276,7 @@ fn load_launch_profiles() -> LaunchProfilesConfig {
 /// Primals not listed in the config inherit the `[default]` profile.
 /// New primals can be onboarded by adding a TOML entry — no code changes needed.
 ///
-/// Pub(crate) for reuse by capability_handlers::primal_start (capability-based, no hardcoded names).
+/// Pub(crate) for reuse by `capability_handlers::primal_start` (capability-based, no hardcoded names).
 pub(crate) async fn configure_primal_sockets(
     cmd: &mut Command,
     primal_name: &str,
@@ -381,9 +381,7 @@ pub async fn wait_for_socket_with_poll_interval(
     }
 
     anyhow::bail!(
-        "Socket did not become available: {} (timeout after {} attempts)",
-        socket_path,
-        timeout_attempts
+        "Socket did not become available: {socket_path} (timeout after {timeout_attempts} attempts)"
     )
 }
 

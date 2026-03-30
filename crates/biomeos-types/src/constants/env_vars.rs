@@ -18,10 +18,10 @@ pub const HTTPS_PORT: &str = "HTTPS_PORT";
 /// MCP WebSocket port environment variable
 pub const MCP_WEBSOCKET_PORT: &str = "MCP_WEBSOCKET_PORT";
 
-/// BearDog endpoint URL environment variable
+/// `BearDog` endpoint URL environment variable
 pub const BEARDOG_ENDPOINT: &str = "BEARDOG_ENDPOINT";
 
-/// BearDog port environment variable
+/// `BearDog` port environment variable
 pub const BEARDOG_PORT: &str = "BEARDOG_PORT";
 
 /// Songbird endpoint URL environment variable

@@ -30,7 +30,7 @@ pub struct ProtocolEscalationManager {
     config: EscalationConfig,
     /// Running state
     running: Arc<RwLock<bool>>,
-    /// Last check timestamp per connection (tokio::time::Instant for test determinism)
+    /// Last check timestamp per connection (`tokio::time::Instant` for test determinism)
     last_check: RwLock<std::collections::HashMap<String, Instant>>,
 }
 
@@ -51,12 +51,12 @@ impl ProtocolEscalationManager {
     }
 
     /// Get the living graph
-    pub fn graph(&self) -> &Arc<LivingGraph> {
+    pub const fn graph(&self) -> &Arc<LivingGraph> {
         &self.graph
     }
 
     /// Get the configuration
-    pub fn config(&self) -> &EscalationConfig {
+    pub const fn config(&self) -> &EscalationConfig {
         &self.config
     }
 

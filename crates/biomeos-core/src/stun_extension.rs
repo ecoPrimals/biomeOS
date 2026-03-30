@@ -141,7 +141,7 @@ impl StunExtension {
 
     /// Create with custom config
     #[must_use]
-    pub fn with_config(config: StunExtensionConfig) -> Self {
+    pub const fn with_config(config: StunExtensionConfig) -> Self {
         Self {
             config,
             self_hosted_available: None,
@@ -301,13 +301,13 @@ impl StunExtension {
     }
 
     /// Clear cached availability status (forces re-check)
-    pub fn clear_cache(&mut self) {
+    pub const fn clear_cache(&mut self) {
         self.self_hosted_available = None;
     }
 
     /// Get current configuration
     #[must_use]
-    pub fn config(&self) -> &StunExtensionConfig {
+    pub const fn config(&self) -> &StunExtensionConfig {
         &self.config
     }
 

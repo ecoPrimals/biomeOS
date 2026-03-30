@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Boot Parameter Parsing for BiomeOS Init
+//! Boot Parameter Parsing for `BiomeOS` Init
 //!
 //! Parses kernel command-line parameters to determine boot mode.
 
@@ -35,7 +35,8 @@ pub enum BootMode {
 
 impl BootMode {
     /// Returns a human-readable description
-    pub fn description(&self) -> &str {
+    #[must_use] 
+    pub const fn description(&self) -> &str {
         match self {
             Self::Standard { .. } => "Standard (load biome.yaml)",
             Self::Discovery => "Discovery (scan network)",
@@ -46,7 +47,8 @@ impl BootMode {
     }
 
     /// Checks if this is an interactive mode requiring user input
-    pub fn is_interactive(&self) -> bool {
+    #[must_use] 
+    pub const fn is_interactive(&self) -> bool {
         matches!(self, Self::Install { .. } | Self::Recovery)
     }
 }

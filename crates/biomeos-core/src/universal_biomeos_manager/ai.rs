@@ -218,7 +218,7 @@ struct AiProviderInfo {
 }
 
 impl AiProviderInfo {
-    fn none() -> Self {
+    const fn none() -> Self {
         Self {
             name: String::new(),
             endpoint: String::new(),
@@ -236,15 +236,13 @@ mod tests {
     use crate::universal_biomeos_manager::UniversalBiomeOSManager;
     use biomeos_types::BiomeOSConfig;
 
-    async fn test_manager() -> UniversalBiomeOSManager {
-        UniversalBiomeOSManager::new(BiomeOSConfig::default())
-            .await
-            .expect("create test manager")
+    fn test_manager() -> UniversalBiomeOSManager {
+        UniversalBiomeOSManager::new(BiomeOSConfig::default()).expect("create test manager")
     }
 
     #[tokio::test]
     async fn test_ai_assist_without_ai_primal() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let result = manager
             .ai_assist("what is the system health?", None)
             .await
@@ -266,7 +264,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ai_assist_with_context() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let result = manager
             .ai_assist("deploy my graph", Some("tower context".to_string()))
             .await
@@ -284,7 +282,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_ai_status_no_provider() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let status = manager
             .get_ai_status()
             .await
@@ -309,7 +307,7 @@ mod tests {
         use biomeos_primal_sdk::PrimalType;
         use biomeos_types::{Health, PrimalCapability};
 
-        let manager = test_manager().await;
+        let manager = test_manager();
         {
             let mut registry = manager.registered_primals().write().await;
             registry.insert(
@@ -351,7 +349,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_probe_ai_primal_empty_ecosystem() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let (availability, _provider) = manager.probe_ai_primal().await;
         assert_eq!(availability, AiAvailability::Unavailable);
     }

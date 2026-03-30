@@ -11,7 +11,7 @@ use tracing::{error, info};
 
 use crate::{ApiError, state::AppState};
 
-/// LiveSpore USB device information
+/// `LiveSpore` USB device information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiveSporeDevice {
     /// Device ID (derived from mount point)
@@ -45,7 +45,7 @@ pub struct LiveSporeDevice {
     pub spore_type: Option<String>,
 }
 
-/// LiveSpore discovery response
+/// `LiveSpore` discovery response
 #[derive(Debug, Serialize)]
 pub struct LiveSporesResponse {
     /// Discovered USB devices
@@ -59,7 +59,7 @@ pub struct LiveSporesResponse {
 }
 
 /// Calculate utilization percentage from available and total space.
-pub(crate) fn calculate_utilization(available: u64, total: u64) -> f64 {
+pub fn calculate_utilization(available: u64, total: u64) -> f64 {
     if total == 0 {
         return 0.0;
     }
@@ -68,7 +68,7 @@ pub(crate) fn calculate_utilization(available: u64, total: u64) -> f64 {
 }
 
 /// Classify spore type from presence of `tower.toml` and `.family.seed`.
-pub(crate) fn classify_spore_type(has_tower: bool, has_genetic_seed: bool) -> Option<String> {
+pub fn classify_spore_type(has_tower: bool, has_genetic_seed: bool) -> Option<String> {
     if has_tower {
         Some("live".to_string())
     } else if has_genetic_seed {
@@ -79,7 +79,7 @@ pub(crate) fn classify_spore_type(has_tower: bool, has_genetic_seed: bool) -> Op
 }
 
 /// Whether a filename in `plasmidBin` should be listed as a primal candidate.
-pub(crate) fn is_primal_filename_candidate(name: &str) -> bool {
+pub fn is_primal_filename_candidate(name: &str) -> bool {
     !name.starts_with('.')
         && !Path::new(name)
             .extension()
@@ -92,11 +92,11 @@ pub(crate) fn is_primal_filename_candidate(name: &str) -> bool {
             .is_some_and(|ext| ext.eq_ignore_ascii_case("genome"))
 }
 
-pub(crate) fn genetic_preview_from_seed(seed: &str) -> String {
+pub fn genetic_preview_from_seed(seed: &str) -> String {
     seed.chars().take(16).collect()
 }
 
-pub(crate) fn device_id_from_mount(mount: &Path) -> String {
+pub fn device_id_from_mount(mount: &Path) -> String {
     mount
         .file_name()
         .and_then(|n| n.to_str())
@@ -104,7 +104,7 @@ pub(crate) fn device_id_from_mount(mount: &Path) -> String {
         .to_string()
 }
 
-/// GET /api/v1/livespores - Discover USB devices with LiveSpore capability
+/// GET /api/v1/livespores - Discover USB devices with `LiveSpore` capability
 pub async fn get_livespores(
     State(_state): State<Arc<AppState>>,
 ) -> Result<Json<LiveSporesResponse>, ApiError> {

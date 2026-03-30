@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-//! Synchronous Neural API client for biomeOS — zero-tokio, std + serde_json only.
+//! Synchronous Neural API client for biomeOS — zero-tokio, std + `serde_json` only.
 //!
 //! Minimal synchronous JSON-RPC 2.0 client that talks to the biomeOS Neural API.
 //! Zero external dependencies beyond `std` + `serde_json`.

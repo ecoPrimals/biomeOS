@@ -89,7 +89,6 @@ async fn test_sync_with_lineage_peer_same_lineage() {
 
     let result = manager
         .sync_with_lineage_peer(&remote_manifest)
-        .await
         .unwrap();
 
     assert_eq!(result.added, 1);
@@ -108,7 +107,7 @@ async fn test_sync_with_different_lineage_fails() {
         "lineage_a",
     ));
     let remote_manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("remote456"), "lineage_b");
-    let result = manager.sync_with_lineage_peer(&remote_manifest).await;
+    let result = manager.sync_with_lineage_peer(&remote_manifest);
     assert!(result.is_err());
     assert!(
         result
@@ -472,7 +471,6 @@ async fn test_sync_with_lineage_peer_updates_existing() {
 
     let result = manager
         .sync_with_lineage_peer(&remote_manifest)
-        .await
         .expect("sync");
 
     assert_eq!(result.added, 0);

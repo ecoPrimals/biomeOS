@@ -3,7 +3,7 @@
 
 //! Unified Manifest System
 //!
-//! This module provides comprehensive manifest management for BiomeOS,
+//! This module provides comprehensive manifest management for `BiomeOS`,
 //! supporting service definitions, lifecycle management, and configuration.
 
 pub mod core;

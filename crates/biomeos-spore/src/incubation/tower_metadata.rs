@@ -12,7 +12,7 @@ use crate::error::SporeResult;
 
 /// Extract spore ID from spore path or config
 ///
-/// Tries to read from tower.toml meta.node_id, falls back to directory name.
+/// Tries to read from tower.toml `meta.node_id`, falls back to directory name.
 pub fn extract_spore_id(spore_path: &Path) -> SporeResult<String> {
     let tower_toml_path = spore_path.join("tower.toml");
 
@@ -37,9 +37,9 @@ pub fn extract_spore_id(spore_path: &Path) -> SporeResult<String> {
         .to_string())
 }
 
-/// Extract family_id from tower.toml
+/// Extract `family_id` from tower.toml
 ///
-/// Tries tower.family first, then meta.family_id, falls back to "unknown".
+/// Tries tower.family first, then `meta.family_id`, falls back to "unknown".
 pub fn extract_family_id(spore_path: &Path) -> Result<String, anyhow::Error> {
     let tower_toml_path = spore_path.join("tower.toml");
     let content = std::fs::read_to_string(&tower_toml_path)?;

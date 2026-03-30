@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Primal lifecycle state and ManagedPrimal trait
+//! Primal lifecycle state and `ManagedPrimal` trait
 
 use std::time::Duration;
 
@@ -63,7 +63,7 @@ pub trait ManagedPrimal: Send + Sync {
 }
 
 /// Internal record for a registered primal
-pub(crate) struct PrimalRecord {
+pub struct PrimalRecord {
     pub primal: std::sync::Arc<dyn ManagedPrimal>,
     pub state: PrimalState,
 }

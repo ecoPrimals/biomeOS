@@ -24,14 +24,14 @@ impl super::engine::SocketDiscovery {
     // ENVIRONMENT HINT DISCOVERY
     // ========================================================================
 
-    pub(crate) async fn discover_via_env_hint(
+    pub(crate) fn discover_via_env_hint(
         &self,
         primal_name: &str,
     ) -> Option<DiscoveredSocket> {
-        self.discover_via_env_hint_with(primal_name, None).await
+        self.discover_via_env_hint_with(primal_name, None)
     }
 
-    pub(crate) async fn discover_via_env_hint_with(
+    pub(crate) fn discover_via_env_hint_with(
         &self,
         primal_name: &str,
         env_overrides: Option<&HashMap<String, String>>,
@@ -73,14 +73,14 @@ impl super::engine::SocketDiscovery {
         None
     }
 
-    pub(crate) async fn discover_endpoint_via_env(
+    pub(crate) fn discover_endpoint_via_env(
         &self,
         primal_name: &str,
     ) -> Option<TransportEndpoint> {
-        self.discover_endpoint_via_env_with(primal_name, None).await
+        self.discover_endpoint_via_env_with(primal_name, None)
     }
 
-    pub(crate) async fn discover_endpoint_via_env_with(
+    pub(crate) fn discover_endpoint_via_env_with(
         &self,
         primal_name: &str,
         env_overrides: Option<&HashMap<String, String>>,
@@ -381,7 +381,7 @@ impl super::engine::SocketDiscovery {
     }
 
     #[cfg(target_os = "linux")]
-    pub(super) async fn try_abstract_socket(&self, primal_name: &str) -> Option<String> {
+    pub(super) fn try_abstract_socket(&self, primal_name: &str) -> Option<String> {
         use std::os::linux::net::SocketAddrExt;
         use std::os::unix::net::SocketAddr;
 
@@ -440,7 +440,7 @@ impl super::engine::SocketDiscovery {
     }
 
     pub(crate) fn calculate_primal_port(&self, primal_name: &str) -> u16 {
-        let hash: u32 = primal_name.bytes().map(|b| b as u32).sum();
+        let hash: u32 = primal_name.bytes().map(|b| u32::from(b)).sum();
         let offset = (hash % 100) as u16;
         self.strategy.tcp_port_start + offset
     }

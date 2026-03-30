@@ -116,7 +116,7 @@ pub trait DiscoveryRpc {
     async fn protocols() -> Vec<ProtocolInfo>;
 }
 
-/// Security service - implemented by BearDog
+/// Security service - implemented by `BearDog`
 ///
 /// Binary payloads use `bytes::Bytes` for zero-copy passing between layers.
 #[tarpc::service]

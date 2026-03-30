@@ -65,7 +65,7 @@ const BARE_OK_PATHS: &[&str] = &[
 ///
 /// Routes verification through Tower Atomic stack:
 /// - Prefers Neural API socket for `capability.call` semantic routing
-/// - Falls back to direct AtomicClient if Neural API socket not found
+/// - Falls back to direct `AtomicClient` if Neural API socket not found
 #[derive(Debug, Clone)]
 pub struct DarkForestGateConfig {
     /// Whether the gate is enabled (sovereign mode)
@@ -85,6 +85,7 @@ impl DarkForestGateConfig {
     /// to explicitly disable it (development/testing only).
     ///
     /// Socket resolution uses shared `beacon_verification::discover_neural_api_socket()`
+    #[must_use] 
     pub fn from_env() -> Self {
         // DEFAULT: true — the system is closed unless explicitly opened
         let enabled = env::var("BIOMEOS_SOVEREIGN")
@@ -106,7 +107,8 @@ impl DarkForestGateConfig {
     }
 
     /// Force sovereign mode ON (used when binding to TCP)
-    pub fn force_sovereign(mut self) -> Self {
+    #[must_use] 
+    pub const fn force_sovereign(mut self) -> Self {
         self.enabled = true;
         self
     }
@@ -117,7 +119,7 @@ impl DarkForestGateConfig {
 pub struct DarkForestGateState {
     /// Gate configuration
     pub config: DarkForestGateConfig,
-    /// Cache of recently verified tokens (token_hash → expiry_timestamp)
+    /// Cache of recently verified tokens (`token_hash` → `expiry_timestamp`)
     verified_cache: Arc<RwLock<std::collections::HashMap<String, u64>>>,
 }
 

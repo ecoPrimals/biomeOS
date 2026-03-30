@@ -163,7 +163,7 @@ async fn capabilities_handler(State(mock): State<MockPrimal>) -> impl IntoRespon
     Json(mock.capabilities)
 }
 
-/// Builder for MockPrimal
+/// Builder for `MockPrimal`
 pub struct MockPrimalBuilder {
     name: String,
     port: Option<u16>,
@@ -201,7 +201,7 @@ impl MockPrimalBuilder {
         self
     }
 
-    /// Build the MockPrimal (not started yet)
+    /// Build the `MockPrimal` (not started yet)
     #[must_use]
     pub fn build(self) -> MockPrimal {
         let port = self.port.unwrap_or(0);

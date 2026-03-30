@@ -3,7 +3,7 @@
 
 //! Primal Communication Module
 //!
-//! **Universal IPC v3.0**: Uses AtomicClient for multi-transport support.
+//! **Universal IPC v3.0**: Uses `AtomicClient` for multi-transport support.
 //!
 //! Pure Rust JSON-RPC for primal health verification and secure tunnel
 //! establishment. Follows Deep Debt principles:
@@ -101,13 +101,13 @@ pub async fn verify_primal_health_with_discovery(primal_name: &str) -> Result<Ve
     Ok(capabilities)
 }
 
-/// Establish a BTSP (BearDog Transport Security Protocol) tunnel (Universal IPC v3.0)
+/// Establish a BTSP (`BearDog` Transport Security Protocol) tunnel (Universal IPC v3.0)
 ///
 /// This creates a cryptographically secured channel for inter-primal
 /// communication. The tunnel is authenticated using family lineage.
 ///
 /// # Arguments
-/// * `beardog_socket` - Path to BearDog's Unix socket
+/// * `beardog_socket` - Path to `BearDog`'s Unix socket
 /// * `family_id` - The family identifier for lineage authentication
 ///
 /// # Returns
@@ -140,7 +140,7 @@ pub async fn establish_btsp_tunnel(beardog_socket: &Path, family_id: &str) -> Re
 
 /// Establish a BTSP tunnel using auto-discovery (Universal IPC v3.0)
 ///
-/// Uses `AtomicClient::discover()` to find BearDog automatically.
+/// Uses `AtomicClient::discover()` to find `BearDog` automatically.
 pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<String> {
     // Discover security provider with automatic transport fallback
     // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded

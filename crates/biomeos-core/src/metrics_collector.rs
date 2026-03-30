@@ -21,7 +21,7 @@ pub struct GraphExecutionMetrics {
     pub graph_id: String,
     /// Primal IDs invoked during this execution.
     pub primals_invoked: Vec<String>,
-    /// Per-primal latencies (primal_id -> duration).
+    /// Per-primal latencies (`primal_id` -> duration).
     pub latencies: HashMap<String, Duration>,
     /// Whether the execution succeeded.
     pub success: bool,
@@ -46,7 +46,7 @@ pub struct PrimalStats {
     pub min_latency: Duration,
     /// Maximum observed latency.
     pub max_latency: Duration,
-    /// Recent latency samples for p95 (capped at MAX_LATENCY_SAMPLES).
+    /// Recent latency samples for p95 (capped at `MAX_LATENCY_SAMPLES`).
     pub latency_samples: Vec<Duration>,
 }
 

@@ -3,8 +3,8 @@
 
 //! Spore type definitions
 //!
-//! ColdSpore: Storage/archive format (genetic material only)
-//! LiveSpore: Deployment-ready format (with execution environment)
+//! `ColdSpore`: Storage/archive format (genetic material only)
+//! `LiveSpore`: Deployment-ready format (with execution environment)
 
 use serde::{Deserialize, Serialize};
 
@@ -29,28 +29,32 @@ pub enum SporeType {
 
 impl SporeType {
     /// Check if this spore type requires execution environment
-    pub fn requires_execution_env(&self) -> bool {
-        matches!(self, SporeType::Live)
+    #[must_use] 
+    pub const fn requires_execution_env(&self) -> bool {
+        matches!(self, Self::Live)
     }
 
     /// Check if this spore type is for storage/archival
-    pub fn is_archival(&self) -> bool {
-        matches!(self, SporeType::Cold)
+    #[must_use] 
+    pub const fn is_archival(&self) -> bool {
+        matches!(self, Self::Cold)
     }
 
     /// Get human-readable description
-    pub fn description(&self) -> &'static str {
+    #[must_use] 
+    pub const fn description(&self) -> &'static str {
         match self {
-            SporeType::Cold => "Genetic material only (storage/archive)",
-            SporeType::Live => "Deployment-ready (executable)",
+            Self::Cold => "Genetic material only (storage/archive)",
+            Self::Live => "Deployment-ready (executable)",
         }
     }
 
     /// Get emoji representation
-    pub fn emoji(&self) -> &'static str {
+    #[must_use] 
+    pub const fn emoji(&self) -> &'static str {
         match self {
-            SporeType::Cold => "❄️",
-            SporeType::Live => "🌱",
+            Self::Cold => "❄️",
+            Self::Live => "🌱",
         }
     }
 }
@@ -58,8 +62,8 @@ impl SporeType {
 impl std::fmt::Display for SporeType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SporeType::Cold => write!(f, "ColdSpore"),
-            SporeType::Live => write!(f, "LiveSpore"),
+            Self::Cold => write!(f, "ColdSpore"),
+            Self::Live => write!(f, "LiveSpore"),
         }
     }
 }

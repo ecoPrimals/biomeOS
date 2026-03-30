@@ -40,8 +40,8 @@ async fn test_system_initialization() -> Result<()> {
     info!("🚀 Testing system initialization");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
-    let health_report = manager.get_system_health().await;
+    let manager = UniversalBiomeOSManager::new(config)?;
+    let health_report = manager.get_system_health();
 
     info!("System health: {:?}", health_report.health);
     assert!(is_valid_health(&health_report.health));
@@ -57,7 +57,7 @@ async fn test_primal_discovery() -> Result<()> {
     info!("🔍 Testing primal discovery");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Test discovery
     let discovered = manager.discover().await?;
@@ -74,16 +74,16 @@ async fn test_health_monitoring() -> Result<()> {
     info!("💚 Testing health monitoring");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Get initial health status
-    let initial_health = manager.get_system_health().await;
+    let initial_health = manager.get_system_health();
     info!("Initial system health: {:?}", initial_health.health);
 
     // Wait a bit and check again
     sleep(Duration::from_secs(1)).await;
 
-    let updated_health = manager.get_system_health().await;
+    let updated_health = manager.get_system_health();
     info!("Updated system health: {:?}", updated_health.health);
 
     // Verify health status is valid
@@ -131,17 +131,17 @@ async fn test_continuous_health_checks() -> Result<()> {
     info!("🔄 Testing continuous health checks");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Perform multiple health checks
     for i in 0..5 {
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         info!("Health check {}: {:?}", i + 1, health.health);
         assert!(is_valid_health(&health.health));
         sleep(Duration::from_millis(200)).await;
     }
 
-    let final_health = manager.get_system_health().await;
+    let final_health = manager.get_system_health();
     info!("Final system health: {:?}", final_health.health);
     assert!(is_valid_health(&final_health.health));
 
@@ -156,17 +156,17 @@ async fn test_manager_state_management() -> Result<()> {
     info!("📊 Testing manager state management");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Get initial health
-    let initial_health = manager.get_system_health().await;
+    let initial_health = manager.get_system_health();
     info!("Initial health: {:?}", initial_health.health);
 
     // Verify health is valid
     assert!(is_valid_health(&initial_health.health));
 
     // Get final health
-    let final_health = manager.get_system_health().await;
+    let final_health = manager.get_system_health();
     info!("Final health: {:?}", final_health.health);
 
     info!("✅ Manager state management test passed");

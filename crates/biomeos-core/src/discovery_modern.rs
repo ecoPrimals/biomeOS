@@ -128,12 +128,14 @@ pub enum HealthStatus {
 
 impl HealthStatus {
     /// Check if the primal is operational (healthy or degraded)
-    pub fn is_operational(self) -> bool {
+    #[must_use] 
+    pub const fn is_operational(self) -> bool {
         matches!(self, Self::Healthy | Self::Degraded)
     }
 
     /// Check if the primal is fully healthy
-    pub fn is_healthy(self) -> bool {
+    #[must_use] 
+    pub const fn is_healthy(self) -> bool {
         matches!(self, Self::Healthy)
     }
 }
@@ -142,25 +144,25 @@ impl HealthStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PrimalType {
-    /// Security and trust management (e.g., BearDog)
+    /// Security and trust management (e.g., `BearDog`)
     Security,
 
     /// Orchestration and federation (e.g., Songbird)
     Orchestration,
 
-    /// Storage and persistence (e.g., NestGate)
+    /// Storage and persistence (e.g., `NestGate`)
     Storage,
 
     /// Compute and processing (e.g., Squirrel)
     Compute,
 
-    /// AI and machine learning (e.g., WolfPack)
+    /// AI and machine learning (e.g., `WolfPack`)
     Ai,
 
     /// Tower coordinator
     Tower,
 
-    /// Visualization and UI (e.g., PetalTongue)
+    /// Visualization and UI (e.g., `PetalTongue`)
     Visualization,
 
     /// Custom primal type
@@ -179,6 +181,7 @@ impl Capability {
     }
 
     /// Get the capability name
+    #[must_use] 
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -255,6 +258,7 @@ pub struct CompositeDiscovery {
 
 impl CompositeDiscovery {
     /// Create a new composite discovery
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             sources: Vec::new(),
@@ -268,6 +272,7 @@ impl CompositeDiscovery {
     }
 
     /// Add a boxed discovery source
+    #[must_use] 
     pub fn add_boxed_source(mut self, source: Box<dyn PrimalDiscovery>) -> Self {
         self.sources.push(source);
         self

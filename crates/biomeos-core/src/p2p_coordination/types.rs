@@ -193,7 +193,7 @@ pub enum DiscoveryMode {
     /// Plaintext discovery (trusted LAN)
     Plaintext,
 
-    /// Encrypted discovery (BirdSong mode)
+    /// Encrypted discovery (`BirdSong` mode)
     Encrypted,
 }
 

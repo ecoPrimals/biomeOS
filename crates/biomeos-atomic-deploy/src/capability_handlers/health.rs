@@ -16,11 +16,11 @@ use crate::neural_graph::GraphNode;
 
 use super::discovery::{known_primal_names, resolve_capability_to_primal};
 
-/// Call primal health endpoint via JSON-RPC using AtomicClient
+/// Call primal health endpoint via JSON-RPC using `AtomicClient`
 ///
-/// Uses Universal IPC v3.0 AtomicClient for multi-transport support.
+/// Uses Universal IPC v3.0 `AtomicClient` for multi-transport support.
 /// This enables Unix sockets, abstract sockets (Android), and TCP fallback.
-pub(crate) async fn call_primal_health(socket_path: &str) -> Result<bool> {
+pub async fn call_primal_health(socket_path: &str) -> Result<bool> {
     use biomeos_core::atomic_client::AtomicClient;
 
     // Create AtomicClient from socket path (supports Unix sockets)

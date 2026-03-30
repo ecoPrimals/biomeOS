@@ -19,11 +19,9 @@ use wiremock::{
 /// Helper to create a test manager with registered primals
 async fn setup_test_manager() -> (UniversalBiomeOSManager, MockServer) {
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config)
-        .await
-        .expect("Failed to create manager");
+    let manager = UniversalBiomeOSManager::new(config).expect("Failed to create manager");
 
-    manager.initialize().await.expect("Failed to initialize");
+    manager.initialize().expect("Failed to initialize");
 
     // Create mock server
     let mock_server = MockServer::start().await;
@@ -334,10 +332,8 @@ async fn test_concurrent_operations() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_service_not_found() {
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config)
-        .await
-        .expect("Failed to create manager");
-    manager.initialize().await.expect("Failed to initialize");
+    let manager = UniversalBiomeOSManager::new(config).expect("Failed to create manager");
+    manager.initialize().expect("Failed to initialize");
 
     // Try to fetch logs from non-existent service
     let result = manager

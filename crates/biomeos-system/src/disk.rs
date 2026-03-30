@@ -29,8 +29,9 @@ pub struct DiskInfo {
 
 /// Get disk information via /proc/mounts + rustix statvfs (pure Rust).
 #[cfg(target_os = "linux")]
-pub(crate) async fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
-    let mounts = fs::read_to_string("/proc/mounts").unwrap_or_default();
+pub fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
+    let mounts = fs::read_to_string("/proc/mounts")
+        .map_err(|e| biomeos_types::BiomeError::internal_error(format!("Failed to read /proc/mounts: {e}"), None::<String>))?;
     let mut result = Vec::new();
 
     for line in mounts.lines() {
@@ -89,23 +90,48 @@ pub(crate) async fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
     Ok(result)
 }
 
-/// Non-Linux fallback (returns minimal placeholder).
+/// Non-Linux fallback — queries the root mount via `statvfs` (rustix, pure Rust).
+///
+/// Without `/proc/mounts` we cannot enumerate all mount points, so we probe
+/// the root filesystem only. This gives meaningful results on macOS/BSD.
 #[cfg(not(target_os = "linux"))]
-pub(crate) async fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
-    Ok(vec![DiskInfo {
-        device: "unknown".to_string(),
-        mount_point: "/".to_string(),
-        filesystem: "unknown".to_string(),
-        total_gb: 0.0,
-        used_gb: 0.0,
-        available_gb: 0.0,
-        usage_percent: 0.0,
-    }])
+pub(crate) fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
+    match rustix::fs::statvfs(Path::new("/")) {
+        Ok(st) => {
+            let total_bytes = st.f_blocks.saturating_mul(st.f_frsize);
+            let available_bytes = st.f_bavail.saturating_mul(st.f_frsize);
+            let used_bytes = total_bytes.saturating_sub(available_bytes);
+
+            let total_gb = total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let used_gb = used_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let available_gb = available_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let usage_percent = if total_gb > 0.0 { used_gb / total_gb } else { 0.0 };
+
+            Ok(vec![DiskInfo {
+                device: "root".to_string(),
+                mount_point: "/".to_string(),
+                filesystem: "unknown".to_string(),
+                total_gb,
+                used_gb,
+                available_gb,
+                usage_percent,
+            }])
+        }
+        Err(_) => Ok(vec![DiskInfo {
+            device: "unknown".to_string(),
+            mount_point: "/".to_string(),
+            filesystem: "unknown".to_string(),
+            total_gb: 0.0,
+            used_gb: 0.0,
+            available_gb: 0.0,
+            usage_percent: 0.0,
+        }]),
+    }
 }
 
 /// Get current disk usage (average across all disks)
-pub(crate) async fn get_disk_usage() -> BiomeResult<f64> {
-    let disks = get_disk_info().await?;
+pub fn get_disk_usage() -> BiomeResult<f64> {
+    let disks = get_disk_info()?;
     if disks.is_empty() {
         return Ok(0.0);
     }
@@ -122,9 +148,9 @@ pub(crate) async fn get_disk_usage() -> BiomeResult<f64> {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_disk_info() {
-        let disk_info = get_disk_info().await.expect("get_disk_info should succeed");
+    #[test]
+    fn test_disk_info() {
+        let disk_info = get_disk_info().expect("get_disk_info should succeed");
 
         assert!(!disk_info.is_empty(), "should have at least one disk");
         for disk in &disk_info {

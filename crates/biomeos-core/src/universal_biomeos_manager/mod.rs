@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Universal BiomeOS Manager - Modular Architecture
+//! Universal `BiomeOS` Manager - Modular Architecture
 //!
 //! Split into focused modules for better maintainability and compliance
 //! with the 2000-line file size limit.

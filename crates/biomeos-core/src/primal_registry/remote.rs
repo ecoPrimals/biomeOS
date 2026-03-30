@@ -14,19 +14,19 @@ use std::path::{Path, PathBuf};
 
 /// GitHub API: release payload (subset).
 #[derive(Debug, Deserialize)]
-pub(crate) struct GitHubRelease {
+pub struct GitHubRelease {
     pub(crate) tag_name: String,
     pub(crate) assets: Vec<GitHubAsset>,
 }
 
 /// GitHub API: release asset (subset).
 #[derive(Debug, Deserialize)]
-pub(crate) struct GitHubAsset {
+pub struct GitHubAsset {
     pub(crate) name: String,
     pub(crate) browser_download_url: String,
 }
 
-pub(crate) fn registry_cache_dir() -> Result<PathBuf> {
+pub fn registry_cache_dir() -> Result<PathBuf> {
     if let Ok(dir) = std::env::var("BIOMEOS_REGISTRY_DIR") {
         return Ok(PathBuf::from(dir));
     }
@@ -34,7 +34,7 @@ pub(crate) fn registry_cache_dir() -> Result<PathBuf> {
     Ok(paths.data_dir().join("registry"))
 }
 
-pub(crate) fn sanitize_cache_component(s: &str) -> String {
+pub fn sanitize_cache_component(s: &str) -> String {
     s.chars()
         .map(|c| {
             if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' {
@@ -46,7 +46,7 @@ pub(crate) fn sanitize_cache_component(s: &str) -> String {
         .collect()
 }
 
-pub(crate) fn cached_download_path(
+pub fn cached_download_path(
     url: &str,
     org: &str,
     repo: &str,
@@ -74,23 +74,21 @@ pub(crate) fn cached_download_path(
     Ok(base.join(name))
 }
 
-pub(crate) async fn github_latest_release(org: &str, repo: &str) -> Result<GitHubRelease> {
+pub async fn github_latest_release(org: &str, repo: &str) -> Result<GitHubRelease> {
     let api_url = format!(
-        "https://api.github.com/repos/{}/{}/releases/latest",
-        org, repo
+        "https://api.github.com/repos/{org}/{repo}/releases/latest"
     );
     github_api_get(&api_url).await
 }
 
-pub(crate) async fn github_release_for_tag(
+pub async fn github_release_for_tag(
     org: &str,
     repo: &str,
     tag: &str,
 ) -> Result<GitHubRelease> {
     let enc = percent_encode_github_tag(tag);
     let api_url = format!(
-        "https://api.github.com/repos/{}/{}/releases/tags/{}",
-        org, repo, enc
+        "https://api.github.com/repos/{org}/{repo}/releases/tags/{enc}"
     );
     github_api_get(&api_url).await
 }
@@ -101,7 +99,7 @@ fn percent_encode_github_tag(tag: &str) -> String {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
                 (b as char).to_string()
             }
-            _ => format!("%{:02X}", b),
+            _ => format!("%{b:02X}"),
         })
         .collect()
 }
@@ -109,7 +107,7 @@ fn percent_encode_github_tag(tag: &str) -> String {
 async fn github_api_get(api_url: &str) -> Result<GitHubRelease> {
     let body = curl_fetch_https(api_url).await?;
     let release: GitHubRelease = serde_json::from_slice(&body)
-        .map_err(|e| anyhow::anyhow!("Failed to parse GitHub API JSON from {}: {}", api_url, e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to parse GitHub API JSON from {api_url}: {e}"))?;
     Ok(release)
 }
 
@@ -126,19 +124,18 @@ async fn curl_fetch_https(url: &str) -> Result<Vec<u8>> {
     if let Ok(token) = std::env::var("GITHUB_TOKEN") {
         if !token.is_empty() {
             cmd.arg("-H")
-                .arg(format!("Authorization: Bearer {}", token));
+                .arg(format!("Authorization: Bearer {token}"));
         }
     }
     cmd.arg(url);
     let output = cmd.output().await.map_err(|e| {
         anyhow::anyhow!(
-            "Failed to run curl for HTTPS (install curl or set PATH): {}",
-            e
+            "Failed to run curl for HTTPS (install curl or set PATH): {e}"
         )
     })?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow::anyhow!("curl HTTPS request failed: {}", stderr));
+        return Err(anyhow::anyhow!("curl HTTPS request failed: {stderr}"));
     }
     Ok(output.stdout)
 }
@@ -157,14 +154,13 @@ async fn curl_download_to_file(url: &str, dest: &Path) -> Result<()> {
     if let Ok(token) = std::env::var("GITHUB_TOKEN") {
         if !token.is_empty() {
             cmd.arg("-H")
-                .arg(format!("Authorization: Bearer {}", token));
+                .arg(format!("Authorization: Bearer {token}"));
         }
     }
     cmd.arg("-o").arg(dest.as_os_str()).arg(url);
     let status = cmd.status().await.map_err(|e| {
         anyhow::anyhow!(
-            "Failed to run curl for download (install curl or set PATH): {}",
-            e
+            "Failed to run curl for download (install curl or set PATH): {e}"
         )
     })?;
     if !status.success() {
@@ -180,11 +176,11 @@ async fn http_get_bytes(url: &str) -> Result<Vec<u8>> {
     let client = Client::builder(TokioExecutor::new()).build_http::<Empty<Bytes>>();
     let uri = url
         .parse::<hyper::Uri>()
-        .map_err(|e| anyhow::anyhow!("invalid URL: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("invalid URL: {e}"))?;
     let res = client
         .get(uri)
         .await
-        .map_err(|e| anyhow::anyhow!("HTTP client error: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("HTTP client error: {e}"))?;
     if !res.status().is_success() {
         return Err(anyhow::anyhow!("HTTP {}", res.status()));
     }
@@ -192,11 +188,11 @@ async fn http_get_bytes(url: &str) -> Result<Vec<u8>> {
     let collected = body
         .collect()
         .await
-        .map_err(|e| anyhow::anyhow!("read body: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("read body: {e}"))?;
     Ok(collected.to_bytes().to_vec())
 }
 
-pub(crate) async fn download_url_to_path_with_verify(
+pub async fn download_url_to_path_with_verify(
     url: &str,
     dest: &Path,
     checksum_hex: Option<&str>,
@@ -212,7 +208,7 @@ pub(crate) async fn download_url_to_path_with_verify(
             tokio::fs::write(dest, &bytes).await?;
         }
         other => {
-            return Err(anyhow::anyhow!("unsupported URL scheme: {}", other));
+            return Err(anyhow::anyhow!("unsupported URL scheme: {other}"));
         }
     }
     set_executable_unix(dest)?;
@@ -245,22 +241,20 @@ async fn verify_checksum_optional(path: &Path, expected: Option<&str>) -> Result
     let actual = compute_checksum_file(path).await?;
     if actual != exp {
         return Err(anyhow::anyhow!(
-            "SHA256 mismatch: expected {}, got {}",
-            exp,
-            actual
+            "SHA256 mismatch: expected {exp}, got {actual}"
         ));
     }
     Ok(())
 }
 
-pub(crate) async fn compute_checksum_file(path: &Path) -> Result<String> {
+pub async fn compute_checksum_file(path: &Path) -> Result<String> {
     use sha2::{Digest, Sha256};
     let contents = tokio::fs::read(path).await?;
     let hash = Sha256::digest(&contents);
     Ok(format!("{hash:x}"))
 }
 
-pub(crate) fn is_skippable_non_binary_asset(name: &str) -> bool {
+pub fn is_skippable_non_binary_asset(name: &str) -> bool {
     let n = name.to_lowercase();
     let ext_matches = |ext: &str| {
         std::path::Path::new(&n)
@@ -277,7 +271,7 @@ pub(crate) fn is_skippable_non_binary_asset(name: &str) -> bool {
         || ext_matches("yaml")
 }
 
-pub(crate) fn asset_matches_platform(name: &str) -> bool {
+pub fn asset_matches_platform(name: &str) -> bool {
     let n = name.to_lowercase();
     let os = std::env::consts::OS;
     let arch = std::env::consts::ARCH;
@@ -316,7 +310,7 @@ pub(crate) fn asset_matches_platform(name: &str) -> bool {
     }
 }
 
-pub(crate) fn extract_version_from_output(text: &str) -> Option<String> {
+pub fn extract_version_from_output(text: &str) -> Option<String> {
     let line = text.lines().next()?.trim();
     if line.is_empty() {
         return None;

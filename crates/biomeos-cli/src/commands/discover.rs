@@ -13,7 +13,7 @@ use std::collections::HashMap;
 
 use super::utils::{create_spinner, display_results, parse_capabilities};
 
-/// Builds the discovery result HashMap from method and raw result.
+/// Builds the discovery result `HashMap` from method and raw result.
 pub(crate) fn build_discovery_result(method: &str, result: &[String]) -> HashMap<String, Value> {
     let mut map = HashMap::new();
     map.insert("method".to_string(), serde_json::json!(method));
@@ -54,7 +54,7 @@ pub async fn handle_discover(
     let spinner = create_spinner("🔍 Discovering services...");
 
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     let discovery_result = match method {
         DiscoveryMethod::CapabilityBased => {
@@ -62,16 +62,14 @@ pub async fn handle_discover(
                 let parsed_caps = parse_capabilities(&caps_str)?;
                 manager.discover_by_capability(&parsed_caps).await?
             } else if let Some(target_endpoint) = endpoint {
-                // Targeted discovery at specific endpoint
                 manager
                     .probe_endpoint(&target_endpoint)
-                    .await
                     .map(|_| vec![target_endpoint])?
             } else {
                 manager.discover().await?
             }
         }
-        DiscoveryMethod::Multicast => manager.discover_via_multicast().await?,
+        DiscoveryMethod::Multicast => manager.discover_via_multicast()?,
         DiscoveryMethod::RegistryBased => {
             if let Some(url) = registry {
                 manager.discover_registry(&url).await?
@@ -91,7 +89,7 @@ pub async fn handle_discover(
     spinner.finish_with_message("✅ Discovery completed!");
 
     let result = build_discovery_result(&format!("{method:?}"), &discovery_result);
-    display_results("Discovery Results", &result, detailed).await?;
+    display_results("Discovery Results", &result, detailed)?;
 
     Ok(())
 }

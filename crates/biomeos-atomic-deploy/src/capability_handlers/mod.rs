@@ -4,7 +4,7 @@
 //! Capability-based primal handlers
 //!
 //! This module contains the handlers for capability-based primal operations,
-//! extracted from neural_executor for better organization and maintainability.
+//! extracted from `neural_executor` for better organization and maintainability.
 //!
 //! ## Deep Debt Principles
 //!

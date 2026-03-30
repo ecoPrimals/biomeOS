@@ -86,11 +86,13 @@ impl GenomeManifest {
     }
 
     /// Check if has specific capability
+    #[must_use] 
     pub fn has_capability(&self, capability: &str) -> bool {
         self.capabilities.iter().any(|c| c == capability)
     }
 
     /// Check if supports architecture
+    #[must_use] 
     pub fn supports_arch(&self, arch: Arch) -> bool {
         self.architectures.contains(&arch)
     }

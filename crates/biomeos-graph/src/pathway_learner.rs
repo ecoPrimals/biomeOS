@@ -131,7 +131,7 @@ pub struct PathwayLearner {
 impl PathwayLearner {
     /// Create a new Pathway Learner backed by the given metrics collector.
     #[must_use]
-    pub fn new(metrics: MetricsCollector, min_samples: u64) -> Self {
+    pub const fn new(metrics: MetricsCollector, min_samples: u64) -> Self {
         Self {
             metrics,
             min_samples,
@@ -194,7 +194,7 @@ impl PathwayLearner {
 
         for node in &graph.definition.nodes {
             let nid = node.id.as_str();
-            if let Ok(Some(m)) = self.metrics.get_node_metrics(graph_id, nid).await {
+            if let Ok(Some(m)) = self.metrics.get_node_metrics(graph_id, nid) {
                 out.insert(nid.to_string(), m);
             }
         }
@@ -635,9 +635,7 @@ mod tests {
         ]);
 
         let dir = tempfile::tempdir().unwrap();
-        let metrics = MetricsCollector::new(dir.path().join("test.redb"))
-            .await
-            .unwrap();
+        let metrics = MetricsCollector::new(dir.path().join("test.redb")).unwrap();
         let learner = PathwayLearner::new(metrics, 1000);
 
         let analysis = learner.analyze(&graph).await;
@@ -762,10 +760,7 @@ mod tests {
 
     fn make_test_learner(min_samples: u64) -> PathwayLearner {
         let dir = tempfile::tempdir().unwrap();
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let metrics = rt
-            .block_on(MetricsCollector::new(dir.path().join("test-metrics.redb")))
-            .unwrap();
+        let metrics = MetricsCollector::new(dir.path().join("test-metrics.redb")).unwrap();
         // Leak the tempdir so it lives long enough for the test.
         std::mem::forget(dir);
         PathwayLearner::new(metrics, min_samples)

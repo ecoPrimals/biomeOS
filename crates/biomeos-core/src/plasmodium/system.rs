@@ -12,7 +12,7 @@ use super::types::{ComputeInfo, GpuInfo};
 ///
 /// Pure Rust: reads `/proc/driver/nvidia/gpus/` for GPU info,
 /// `/proc/meminfo` for RAM, `/proc/cpuinfo` for CPU cores.
-pub(crate) async fn query_local_compute(local_gate_id: &str) -> ComputeInfo {
+pub async fn query_local_compute(local_gate_id: &str) -> ComputeInfo {
     let mut gpus = Vec::new();
 
     // Read NVIDIA GPU info from /proc/driver/nvidia/gpus/ (pure Rust, no nvidia-smi)
@@ -53,7 +53,7 @@ pub(crate) async fn query_local_compute(local_gate_id: &str) -> ComputeInfo {
 }
 
 /// Read system load from `/proc/loadavg`, normalized to [0.0, 1.0] by CPU count.
-pub(crate) fn get_system_load() -> f64 {
+pub fn get_system_load() -> f64 {
     std::fs::read_to_string("/proc/loadavg")
         .ok()
         .and_then(|s| {
@@ -72,7 +72,7 @@ pub(crate) fn get_system_load() -> f64 {
 }
 
 /// Read total system RAM from `/proc/meminfo`, in gigabytes.
-pub(crate) fn get_system_ram_gb() -> u64 {
+pub fn get_system_ram_gb() -> u64 {
     std::fs::read_to_string("/proc/meminfo")
         .ok()
         .and_then(|s| {
@@ -88,7 +88,7 @@ pub(crate) fn get_system_ram_gb() -> u64 {
 }
 
 /// CPU core count from `/proc/cpuinfo` (no external dependency).
-pub(crate) fn num_cpus() -> usize {
+pub fn num_cpus() -> usize {
     std::fs::read_to_string("/proc/cpuinfo")
         .ok()
         .map_or(1, |s| {

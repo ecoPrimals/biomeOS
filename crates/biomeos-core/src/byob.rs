@@ -59,6 +59,7 @@ pub struct ByobManager {
 
 impl ByobManager {
     /// Create new BYOB manager
+    #[must_use] 
     pub fn new(config: BiomeOSConfig) -> Self {
         Self {
             config,
@@ -67,7 +68,7 @@ impl ByobManager {
     }
 
     /// Configure team isolation
-    pub async fn configure_team(&mut self, team_id: String, config: ByobTeamConfig) -> Result<()> {
+    pub fn configure_team(&mut self, team_id: String, config: ByobTeamConfig) -> Result<()> {
         Self::validate_team_config(&team_id, &config)?;
 
         // Apply isolation settings
@@ -108,7 +109,7 @@ impl ByobManager {
     }
 
     /// Apply isolation settings to configuration
-    fn apply_isolation_settings(mut config: ByobTeamConfig) -> Result<ByobTeamConfig> {
+    const fn apply_isolation_settings(mut config: ByobTeamConfig) -> Result<ByobTeamConfig> {
         // Apply isolation logic based on self.config
         match config.isolation_level {
             IsolationLevel::Complete => {
@@ -129,6 +130,7 @@ impl ByobManager {
     }
 
     /// Get team configuration
+    #[must_use] 
     pub fn get_team_config(&self, team_id: &str) -> Option<&ByobTeamConfig> {
         self.teams.get(team_id)
     }
@@ -139,11 +141,13 @@ impl ByobManager {
     }
 
     /// Get system configuration for validation
-    pub fn get_system_config(&self) -> &BiomeOSConfig {
+    #[must_use] 
+    pub const fn get_system_config(&self) -> &BiomeOSConfig {
         &self.config
     }
 
     /// Get the number of configured teams
+    #[must_use] 
     pub fn get_team_count(&self) -> usize {
         self.teams.len()
     }
@@ -188,9 +192,7 @@ mod tests {
         let mut manager = ByobManager::new(config);
 
         let team_config = create_test_team_config("team-1", IsolationLevel::Basic);
-        let result = manager
-            .configure_team("team-1".to_string(), team_config)
-            .await;
+        let result = manager.configure_team("team-1".to_string(), team_config);
 
         assert!(result.is_ok());
         assert_eq!(manager.get_team_count(), 1);
@@ -204,7 +206,6 @@ mod tests {
         let team_config = create_test_team_config("team-strict", IsolationLevel::Strict);
         manager
             .configure_team("team-strict".to_string(), team_config)
-            .await
             .unwrap();
 
         let stored = manager.get_team_config("team-strict").unwrap();
@@ -220,7 +221,6 @@ mod tests {
         let team_config = create_test_team_config("team-complete", IsolationLevel::Complete);
         manager
             .configure_team("team-complete".to_string(), team_config)
-            .await
             .unwrap();
 
         let stored = manager.get_team_config("team-complete").unwrap();
@@ -244,7 +244,6 @@ mod tests {
         let team_config = create_test_team_config("team-to-remove", IsolationLevel::Basic);
         manager
             .configure_team("team-to-remove".to_string(), team_config)
-            .await
             .unwrap();
         assert_eq!(manager.get_team_count(), 1);
 
@@ -319,7 +318,7 @@ mod tests {
         let mut manager = ByobManager::new(config);
         let team_config = create_test_team_config("t", IsolationLevel::Basic);
 
-        let result = manager.configure_team(String::new(), team_config).await;
+        let result = manager.configure_team(String::new(), team_config);
 
         assert!(result.is_err());
         assert!(
@@ -337,9 +336,7 @@ mod tests {
         let mut team_config = create_test_team_config("team-bad-cpu", IsolationLevel::Basic);
         team_config.resource_limits.max_cpu_percent = 0.0;
 
-        let result = manager
-            .configure_team("team-bad-cpu".to_string(), team_config)
-            .await;
+        let result = manager.configure_team("team-bad-cpu".to_string(), team_config);
 
         assert!(result.is_err());
         assert!(
@@ -357,9 +354,7 @@ mod tests {
         let mut team_config = create_test_team_config("team-over-cpu", IsolationLevel::Basic);
         team_config.resource_limits.max_cpu_percent = 150.0;
 
-        let result = manager
-            .configure_team("team-over-cpu".to_string(), team_config)
-            .await;
+        let result = manager.configure_team("team-over-cpu".to_string(), team_config);
 
         assert!(result.is_err());
         assert!(
@@ -377,9 +372,7 @@ mod tests {
         let mut team_config = create_test_team_config("team-bad-mem", IsolationLevel::Basic);
         team_config.resource_limits.max_memory_mb = 0;
 
-        let result = manager
-            .configure_team("team-bad-mem".to_string(), team_config)
-            .await;
+        let result = manager.configure_team("team-bad-mem".to_string(), team_config);
 
         assert!(result.is_err());
         assert!(
@@ -397,9 +390,7 @@ mod tests {
         let mut team_config = create_test_team_config("team-bad-disk", IsolationLevel::Basic);
         team_config.resource_limits.max_disk_mb = 0;
 
-        let result = manager
-            .configure_team("team-bad-disk".to_string(), team_config)
-            .await;
+        let result = manager.configure_team("team-bad-disk".to_string(), team_config);
 
         assert!(result.is_err());
         assert!(

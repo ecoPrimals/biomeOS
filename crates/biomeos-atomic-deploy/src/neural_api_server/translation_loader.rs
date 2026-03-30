@@ -15,16 +15,17 @@ use crate::capability_domains::capability_to_provider_fallback;
 use crate::neural_graph::{Graph, GraphNode};
 
 impl NeuralApiServer {
-    /// Extract family_id from node operation params with ${VAR} substitution support
+    /// Extract `family_id` from node operation params with ${VAR} substitution support
     ///
-    /// Helper function to extract and resolve family_id from a graph node.
-    /// Supports ${FAMILY_ID} substitution for isomorphic deployment.
+    /// Helper function to extract and resolve `family_id` from a graph node.
+    /// Supports ${`FAMILY_ID`} substitution for isomorphic deployment.
     ///
     /// # Arguments
-    /// * `node` - Graph node to extract family_id from
+    /// * `node` - Graph node to extract `family_id` from
     ///
     /// # Returns
-    /// Resolved family_id string
+    /// Resolved `family_id` string
+    #[must_use] 
     pub fn extract_family_id_from_node<'a>(&'a self, node: &'a GraphNode) -> &'a str {
         let family_id_raw = if let Some(operation) = &node.operation {
             operation

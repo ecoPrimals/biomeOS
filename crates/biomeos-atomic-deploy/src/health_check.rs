@@ -3,12 +3,12 @@
 
 //! Health checking for deployed primals
 //!
-//! **Universal IPC v3.0**: Uses AtomicClient for multi-transport health checks.
+//! **Universal IPC v3.0**: Uses `AtomicClient` for multi-transport health checks.
 //!
 //! Provides multi-level health checking:
 //! - Level 1: Socket existence check (fast)
 //! - Level 2: Socket type validation (fast)
-//! - Level 3: JSON-RPC ping via AtomicClient (deep, validates primal is responding)
+//! - Level 3: JSON-RPC ping via `AtomicClient` (deep, validates primal is responding)
 
 use anyhow::{Context, Result};
 use biomeos_core::atomic_client::AtomicClient;
@@ -45,7 +45,8 @@ pub struct HealthChecker {
 
 impl HealthChecker {
     /// Create new health checker
-    pub fn new(runtime_dir: PathBuf) -> Self {
+    #[must_use] 
+    pub const fn new(runtime_dir: PathBuf) -> Self {
         Self {
             runtime_dir,
             rpc_timeout: Duration::from_secs(5),
@@ -53,6 +54,7 @@ impl HealthChecker {
     }
 
     /// Create with XDG-compliant default runtime directory
+    #[must_use] 
     pub fn new_default() -> Self {
         let runtime_dir = biomeos_types::paths::SystemPaths::new_lazy()
             .runtime_dir()
@@ -61,7 +63,8 @@ impl HealthChecker {
     }
 
     /// Create with custom timeout
-    pub fn with_timeout(runtime_dir: PathBuf, rpc_timeout: Duration) -> Self {
+    #[must_use] 
+    pub const fn with_timeout(runtime_dir: PathBuf, rpc_timeout: Duration) -> Self {
         Self {
             runtime_dir,
             rpc_timeout,
@@ -171,7 +174,7 @@ impl HealthChecker {
         }
     }
 
-    /// Send a JSON-RPC ping to a primal via AtomicClient (Universal IPC v3.0)
+    /// Send a JSON-RPC ping to a primal via `AtomicClient` (Universal IPC v3.0)
     ///
     /// Uses `AtomicClient` with configurable timeout for health checks.
     async fn rpc_ping(&self, socket_path: &Path, method: &str) -> Result<serde_json::Value> {

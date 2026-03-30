@@ -14,6 +14,7 @@ use std::time::Duration;
 
 /// Create a spinner with biomeOS styling
 #[expect(clippy::expect_used, reason = "static template string is always valid")]
+#[must_use] 
 pub fn create_spinner(message: &str) -> ProgressBar {
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(
@@ -27,7 +28,7 @@ pub fn create_spinner(message: &str) -> ProgressBar {
     spinner
 }
 
-/// Parse comma-separated capabilities string into PrimalCapability vector
+/// Parse comma-separated capabilities string into `PrimalCapability` vector
 pub fn parse_capabilities(caps_str: &str) -> Result<Vec<PrimalCapability>> {
     let mut capabilities = Vec::new();
 
@@ -72,7 +73,7 @@ pub fn parse_capabilities(caps_str: &str) -> Result<Vec<PrimalCapability>> {
     clippy::implicit_hasher,
     reason = "HashMap with default hasher is sufficient for display"
 )]
-pub async fn display_results(
+pub fn display_results(
     title: &str,
     results: &HashMap<String, Value>,
     show_details: bool,
@@ -113,6 +114,7 @@ pub async fn display_results(
 }
 
 /// Format duration for display
+#[must_use] 
 pub fn format_duration(duration: Duration) -> String {
     let secs = duration.as_secs();
     if secs < 60 {
@@ -125,6 +127,7 @@ pub fn format_duration(duration: Duration) -> String {
 }
 
 /// Format bytes for display
+#[must_use] 
 pub fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;

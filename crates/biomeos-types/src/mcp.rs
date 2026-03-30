@@ -18,7 +18,7 @@ pub struct JsonSchema {
     pub schema_type: String,
     /// Property definitions for object types.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub properties: HashMap<String, JsonSchema>,
+    pub properties: HashMap<String, Self>,
     /// Required property names for object types.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required: Vec<String>,
@@ -27,7 +27,7 @@ pub struct JsonSchema {
     pub description: Option<String>,
     /// Items schema for array types.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub items: Option<Box<JsonSchema>>,
+    pub items: Option<Box<Self>>,
     /// Enum of allowed values.
     #[serde(rename = "enum", default, skip_serializing_if = "Vec::is_empty")]
     pub enum_values: Vec<serde_json::Value>,
@@ -42,7 +42,7 @@ pub struct JsonSchema {
 /// route AI requests to the correct primal method.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct McpToolDefinition {
-    /// Unique tool name (e.g. "ecology.calculate_et0").
+    /// Unique tool name (e.g. "`ecology.calculate_et0`").
     pub name: String,
     /// Human-readable description for AI context.
     pub description: String,
@@ -86,7 +86,7 @@ impl McpToolManifest {
 
     /// Number of tools in this manifest.
     #[must_use]
-    pub fn tool_count(&self) -> usize {
+    pub const fn tool_count(&self) -> usize {
         self.tools.len()
     }
 

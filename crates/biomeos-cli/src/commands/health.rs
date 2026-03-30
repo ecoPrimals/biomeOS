@@ -258,7 +258,7 @@ fn format_scan_summary(results: &HashMap<String, Value>) -> String {
 }
 
 fn format_scan_default(results: &HashMap<String, Value>) -> String {
-    // display_results is async and does IO - we need a sync version for format
+    // display_results is sync; this helper mirrors its layout for scan summaries
     // The "default" format uses display_results which prints. We'll build a similar
     // structure that can be printed line by line.
     let mut lines = Vec::new();
@@ -298,7 +298,7 @@ pub async fn handle_health(
 
     // Legacy health check
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     if continuous {
         println!("🔄 Starting continuous health monitoring (interval: {interval}s)");
@@ -330,12 +330,12 @@ async fn handle_graph_health_check(
         println!("Press Ctrl+C to stop");
 
         loop {
-            perform_graph_health_check(&niche).await?;
+            perform_graph_health_check(&niche)?;
             tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
             println!("\n{}", "─".repeat(80));
         }
     } else {
-        perform_graph_health_check(&niche).await?;
+        perform_graph_health_check(&niche)?;
     }
 
     Ok(())
@@ -343,8 +343,8 @@ async fn handle_graph_health_check(
 
 /// Perform a single graph-based health check
 ///
-/// ⚠️ DEPRECATED: This uses the old graph_deployment module.
-async fn perform_graph_health_check(_niche_path: &std::path::Path) -> Result<()> {
+/// ⚠️ DEPRECATED: This uses the old `graph_deployment` module.
+fn perform_graph_health_check(_niche_path: &std::path::Path) -> Result<()> {
     println!("⚠️  DEPRECATED: Graph-based health checks via CLI are deprecated.");
     println!("📖 Please use:");
     println!("  • biomeos-api health endpoints");
@@ -358,7 +358,7 @@ pub async fn handle_probe(service: String, timeout: u64) -> Result<()> {
     let spinner = create_spinner(&format!("🔍 Probing service '{service}'..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     let probe_result = manager.probe_service_health(&service, timeout).await?;
 
@@ -375,7 +375,7 @@ pub async fn handle_scan(quick: bool, output_format: String) -> Result<()> {
     let spinner = create_spinner(&format!("🔬 {scan_type} system scan..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     let scan_result = if quick {
         manager.quick_system_scan().await?
@@ -385,7 +385,7 @@ pub async fn handle_scan(quick: bool, output_format: String) -> Result<()> {
 
     spinner.finish_with_message("✅ Scan completed");
 
-    display_scan_results(&scan_result, &output_format).await?;
+    display_scan_results(&scan_result, &output_format)?;
 
     Ok(())
 }
@@ -399,7 +399,7 @@ pub async fn handle_status(
     let spinner = create_spinner("📊 Gathering status information...");
 
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     let status_result = match service {
         Some(service_name) => manager.get_service_status(&service_name).await?,
@@ -408,7 +408,7 @@ pub async fn handle_status(
 
     spinner.finish_with_message("✅ Status collected");
 
-    display_status_results(&status_result, &format, show_metrics).await?;
+    display_status_results(&status_result, &format, show_metrics)?;
 
     Ok(())
 }
@@ -448,14 +448,14 @@ fn display_probe_results(service: &str, results: &HashMap<String, Value>) {
 }
 
 /// Display scan results (thin wrapper)
-async fn display_scan_results(results: &HashMap<String, Value>, format: &str) -> Result<()> {
+fn display_scan_results(results: &HashMap<String, Value>, format: &str) -> Result<()> {
     let output = format_scan_results(results, format)?;
     println!("{output}");
     Ok(())
 }
 
 /// Display status results
-async fn display_status_results(
+fn display_status_results(
     results: &HashMap<String, Value>,
     format: &str,
     show_metrics: bool,
@@ -470,7 +470,7 @@ async fn display_status_results(
             }
         }
         _ => {
-            display_results("Status Report", results, show_metrics).await?;
+            display_results("Status Report", results, show_metrics)?;
         }
     }
 

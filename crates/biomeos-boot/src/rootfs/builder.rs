@@ -15,7 +15,7 @@ use super::config::RootFsConfig;
 use super::dns::parse_resolv_conf;
 use super::nbd::NbdGuard;
 
-/// Builder for BiomeOS root filesystems
+/// Builder for `BiomeOS` root filesystems
 pub struct RootFsBuilder {
     /// Configuration
     pub(crate) config: RootFsConfig,
@@ -23,7 +23,8 @@ pub struct RootFsBuilder {
 
 impl RootFsBuilder {
     /// Create a new root filesystem builder
-    pub fn new(config: RootFsConfig) -> Self {
+    #[must_use] 
+    pub const fn new(config: RootFsConfig) -> Self {
         Self { config }
     }
 
@@ -39,10 +40,10 @@ impl RootFsBuilder {
         let mount_point = self.mount_image()?;
 
         Self::install_base_system(&mount_point)?;
-        self.install_biomeos(&mount_point).await?;
+        self.install_biomeos(&mount_point)?;
 
         if let Some(primals_dir) = &self.config.primals_dir {
-            self.install_primals(&mount_point, primals_dir).await?;
+            self.install_primals(&mount_point, primals_dir)?;
         }
 
         if let Some(services_dir) = &self.config.services_dir {
@@ -203,7 +204,7 @@ impl RootFsBuilder {
         Ok(())
     }
 
-    /// Install BusyBox for minimal Linux userspace
+    /// Install `BusyBox` for minimal Linux userspace
     fn install_busybox(root: &Path) -> Result<()> {
         let busybox_path = which::which("busybox")
             .context("BusyBox not found - install with: apt install busybox-static")?;
@@ -223,18 +224,18 @@ impl RootFsBuilder {
         Ok(())
     }
 
-    /// Install BiomeOS core components
-    async fn install_biomeos(&self, root: &Path) -> Result<()> {
+    /// Install `BiomeOS` core components
+    fn install_biomeos(&self, root: &Path) -> Result<()> {
         info!("🦀 Installing BiomeOS components...");
 
-        self.install_biomeos_init(root).await?;
+        self.install_biomeos_init(root)?;
 
         info!("  ✓ BiomeOS init installed");
         Ok(())
     }
 
     /// Install biomeos-init as PID 1
-    async fn install_biomeos_init(&self, root: &Path) -> Result<()> {
+    fn install_biomeos_init(&self, root: &Path) -> Result<()> {
         let init_binary = PathBuf::from("target/release/biomeos-init");
 
         if !init_binary.exists() {
@@ -264,7 +265,7 @@ impl RootFsBuilder {
     }
 
     /// Install primal binaries
-    pub(crate) async fn install_primals(&self, root: &Path, primals_dir: &Path) -> Result<()> {
+    pub(crate) fn install_primals(&self, root: &Path, primals_dir: &Path) -> Result<()> {
         info!("🔧 Installing primal binaries...");
 
         if !primals_dir.exists() {
@@ -511,7 +512,6 @@ mod tests {
         let builder = RootFsBuilder::new(config);
         builder
             .install_primals(root, &primals_dir)
-            .await
             .expect("install_primals");
 
         let target = root.join("usr/local/bin");
@@ -533,7 +533,6 @@ mod tests {
         let builder = RootFsBuilder::new(config);
         builder
             .install_primals(root, Path::new("/nonexistent/path"))
-            .await
             .expect("install_primals");
     }
 
@@ -696,13 +695,9 @@ mod tests {
             ..test_config()
         };
         let builder = RootFsBuilder::new(config);
-        let rt = tokio::runtime::Runtime::new().expect("runtime");
-        rt.block_on(async {
-            builder
-                .install_primals(root, &primals_dir)
-                .await
-                .expect("install_primals");
-        });
+        builder
+            .install_primals(root, &primals_dir)
+            .expect("install_primals");
         assert!(root.join("usr/local/bin/exec-only").exists());
     }
 

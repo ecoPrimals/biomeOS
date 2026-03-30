@@ -193,7 +193,7 @@ impl Spore {
     ///
     /// EVOLVED (Jan 27, 2026): XDG-compliant family resolution
     ///
-    /// Uses centralized family discovery from biomeos_core.
+    /// Uses centralized family discovery from `biomeos_core`.
     fn resolve_family_id() -> String {
         // Delegate to centralized family discovery
         // This ensures consistent discovery across the entire codebase

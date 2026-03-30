@@ -100,7 +100,7 @@ impl ConsoleWriter {
 }
 
 impl Default for ConsoleWriter {
-    /// Create a default ConsoleWriter
+    /// Create a default `ConsoleWriter`
     ///
     /// Note: `ConsoleWriter::new()` is infallible in practice - it handles
     /// /dev/console unavailability gracefully with `.ok()`. The `io::Result`

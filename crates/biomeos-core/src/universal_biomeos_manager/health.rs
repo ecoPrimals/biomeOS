@@ -13,7 +13,7 @@ use super::core::UniversalBiomeOSManager;
 use biomeos_types::{BiomeOSConfig, Health, HealthReport};
 
 /// Map Health enum to display string (testable pure function)
-pub(crate) fn health_to_status_string(health: &Health) -> &'static str {
+pub(crate) const fn health_to_status_string(health: &Health) -> &'static str {
     match health {
         Health::Healthy => "Healthy",
         Health::Degraded { .. } => "Degraded",
@@ -23,7 +23,7 @@ pub(crate) fn health_to_status_string(health: &Health) -> &'static str {
 }
 
 /// Map Health to quick scan status ("ok" or "issue")
-pub(crate) fn health_to_quick_status(health: &Health) -> &'static str {
+pub(crate) const fn health_to_quick_status(health: &Health) -> &'static str {
     match health {
         Health::Healthy => "ok",
         _ => "issue",
@@ -49,12 +49,13 @@ pub struct HealthMonitor {
 
 impl HealthMonitor {
     /// Create new health monitor with Arc-wrapped config for zero-copy sharing
-    pub fn new(config: Arc<BiomeOSConfig>) -> Self {
+    #[must_use] 
+    pub const fn new(config: Arc<BiomeOSConfig>) -> Self {
         Self { _config: config }
     }
 
     /// Get system health report
-    pub async fn get_system_health(&self) -> HealthReport {
+    pub fn get_system_health(&self) -> HealthReport {
         use biomeos_types::health::HealthMetrics;
         use biomeos_types::{HealthSubject, HealthSubjectType};
         use uuid::Uuid;
@@ -85,19 +86,19 @@ impl HealthMonitor {
 
 impl UniversalBiomeOSManager {
     /// Get system health using unified health system
-    pub async fn get_system_health(&self) -> HealthReport {
+    pub fn get_system_health(&self) -> HealthReport {
         tracing::debug!("🏥 Getting system health");
 
         // Delegate to the dedicated health monitor - use Arc::clone for cheap reference counting
         let health_monitor = HealthMonitor::new(Arc::clone(&self.config));
-        health_monitor.get_system_health().await
+        health_monitor.get_system_health()
     }
 
     /// Probe a specific endpoint using unified configuration system
-    pub async fn probe_endpoint(&self, endpoint: &str) -> Result<String> {
+    pub fn probe_endpoint(&self, endpoint: &str) -> Result<String> {
         tracing::debug!("🔍 Probing endpoint: {}", endpoint);
 
-        match self.discovery_service.probe_endpoint(endpoint).await {
+        match self.discovery_service.probe_endpoint(endpoint) {
             Ok(probe_result) => {
                 tracing::info!(
                     "✅ Successfully probed endpoint {}: {} v{}",
@@ -138,7 +139,7 @@ impl UniversalBiomeOSManager {
                 clippy::branches_sharing_code,
                 reason = "Ok and Err branches intentionally duplicate JSON keys with different values"
             )]
-            if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint).await {
+            if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint) {
                 result.insert("service_name".to_string(), serde_json::json!(primal.name));
                 result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
                 result.insert("health".to_string(), serde_json::json!(primal.health));
@@ -175,7 +176,7 @@ impl UniversalBiomeOSManager {
         tracing::info!("🏥 Checking system-wide health");
 
         let mut result = HashMap::new();
-        let health_report = self.get_system_health().await;
+        let health_report = self.get_system_health();
 
         // System overall health
         result.insert(
@@ -262,7 +263,7 @@ impl UniversalBiomeOSManager {
             let probe_start = std::time::Instant::now();
 
             // Basic connectivity test
-            match self.probe_endpoint(&primal.endpoint).await {
+            match self.probe_endpoint(&primal.endpoint) {
                 Ok(probe_info) => {
                     let probe_duration = probe_start.elapsed().as_millis();
 
@@ -392,7 +393,7 @@ impl UniversalBiomeOSManager {
             });
 
             // Try to probe the endpoint
-            if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint).await {
+            if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint) {
                 service_info["probe_status"] = serde_json::json!("reachable");
                 service_info["probe_info"] = serde_json::json!(probe_info);
             } else {
@@ -407,7 +408,7 @@ impl UniversalBiomeOSManager {
         result.insert("services".to_string(), serde_json::json!(service_details));
 
         // System health report
-        let health_report = self.get_system_health().await;
+        let health_report = self.get_system_health();
         result.insert(
             "system_health".to_string(),
             serde_json::json!(health_report),
@@ -492,7 +493,7 @@ mod tests {
     async fn test_health_monitor_get_system_health() {
         let config = Arc::new(BiomeOSConfig::default());
         let monitor = HealthMonitor::new(config);
-        let report = monitor.get_system_health().await;
+        let report = monitor.get_system_health();
         assert_eq!(report.subject.id, "system");
         assert!(matches!(report.health, Health::Healthy));
     }
@@ -541,10 +542,9 @@ mod tests {
     #[tokio::test]
     async fn test_manager_get_system_health() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
-        let report = manager.get_system_health().await;
+        manager.initialize().expect("init");
+        let report = manager.get_system_health();
         assert_eq!(report.subject.id, "system");
         assert!(matches!(report.health, Health::Healthy));
     }
@@ -552,11 +552,10 @@ mod tests {
     #[tokio::test]
     async fn test_manager_probe_endpoint() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
         // probe_endpoint uses discovery_service which returns Ok with default values
-        let result = manager.probe_endpoint("unix:///tmp/test.sock").await;
+        let result = manager.probe_endpoint("unix:///tmp/test.sock");
         assert!(result.is_ok());
         let s = result.unwrap();
         assert!(s.contains("unknown") || s.contains("1.0.0"));
@@ -565,9 +564,8 @@ mod tests {
     #[tokio::test]
     async fn test_check_service_health_found_reachable() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal_info(
             "health-1",
@@ -590,9 +588,8 @@ mod tests {
     #[tokio::test]
     async fn test_check_service_health_not_found() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager
             .check_service_health("nonexistent")
@@ -608,9 +605,8 @@ mod tests {
     #[tokio::test]
     async fn test_check_system_health() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager
             .check_system_health()
@@ -626,9 +622,8 @@ mod tests {
     #[tokio::test]
     async fn test_check_system_health_with_primals() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal_info("p1", "svc1", "unix:///a.sock", Health::Healthy);
         manager.register_primal(primal).await.expect("register");
@@ -642,9 +637,8 @@ mod tests {
     #[tokio::test]
     async fn test_probe_service_health_found() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal_info("probe-1", "probe-svc", "unix:///x.sock", Health::Healthy);
         manager.register_primal(primal).await.expect("register");
@@ -659,9 +653,8 @@ mod tests {
     #[tokio::test]
     async fn test_probe_service_health_not_found() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager
             .probe_service_health("nonexistent", 5)
@@ -673,9 +666,8 @@ mod tests {
     #[tokio::test]
     async fn test_quick_system_scan() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager.quick_system_scan().await.expect("scan");
         assert_eq!(
@@ -689,9 +681,8 @@ mod tests {
     #[tokio::test]
     async fn test_quick_system_scan_with_issues() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let degraded = test_primal_info(
             "d1",
@@ -716,9 +707,8 @@ mod tests {
     #[tokio::test]
     async fn test_comprehensive_system_scan() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager.comprehensive_system_scan().await.expect("scan");
         assert_eq!(

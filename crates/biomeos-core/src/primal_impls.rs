@@ -311,6 +311,7 @@ pub struct PrimalBuilder {
 
 impl PrimalBuilder {
     /// Create a new builder with default values
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             id: None,
@@ -323,36 +324,42 @@ impl PrimalBuilder {
     }
 
     /// Set the primal identifier
+    #[must_use] 
     pub fn id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
 
     /// Set the path to the primal binary
+    #[must_use] 
     pub fn binary_path(mut self, path: String) -> Self {
         self.binary_path = Some(path);
         self
     }
 
     /// Set the capabilities this primal provides
+    #[must_use] 
     pub fn provides(mut self, capabilities: Vec<Capability>) -> Self {
         self.provides = capabilities;
         self
     }
 
     /// Set the capabilities this primal requires
+    #[must_use] 
     pub fn requires(mut self, capabilities: Vec<Capability>) -> Self {
         self.requires = capabilities;
         self
     }
 
     /// Set the HTTP port (temporary bridge)
-    pub fn http_port(mut self, port: u16) -> Self {
+    #[must_use] 
+    pub const fn http_port(mut self, port: u16) -> Self {
         self.http_port = port;
         self
     }
 
     /// Add an environment variable for the primal process
+    #[must_use] 
     pub fn env_var(mut self, key: String, value: String) -> Self {
         self.env_vars.insert(key, value);
         self

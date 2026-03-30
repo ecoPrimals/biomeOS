@@ -25,7 +25,7 @@ mod initialization_tests {
         let manager = TestManagerFactory::create_default().await?;
 
         // Verify manager was created successfully
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         TestAssertions::assert_system_healthy(&health);
 
         Ok(())
@@ -44,7 +44,7 @@ mod initialization_tests {
         let manager = TestManagerFactory::create_with_config(config).await?;
 
         // Verify manager initialized with custom config
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         TestAssertions::assert_system_healthy(&health);
 
         Ok(())
@@ -220,7 +220,7 @@ mod discovery_tests {
         let manager = TestManagerFactory::create_default().await?;
 
         // Test probing non-existent endpoint
-        let result = manager.probe_endpoint("http://localhost:99999").await;
+        let result = manager.probe_endpoint("http://localhost:99999");
 
         // Probe should complete without panic (may return error or empty result)
         // The important thing is graceful handling
@@ -334,7 +334,7 @@ mod health_monitoring_tests {
     async fn test_get_system_health_basic() -> Result<()> {
         let manager = TestManagerFactory::create_default().await?;
 
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
 
         // Verify health structure
         TestAssertions::assert_system_healthy(&health);
@@ -350,7 +350,7 @@ mod health_monitoring_tests {
         let manager = TestManagerFactory::create_default().await?;
 
         let _health = PerformanceTestUtils::assert_performance_bounds(
-            async { manager.get_system_health().await },
+            async { manager.get_system_health() },
             50, // Health check should be very fast
             "System health check",
         )
@@ -364,9 +364,9 @@ mod health_monitoring_tests {
         let manager = TestManagerFactory::create_default().await?;
 
         // Get health multiple times
-        let health1 = manager.get_system_health().await;
+        let health1 = manager.get_system_health();
         tokio::time::sleep(Duration::from_millis(10)).await;
-        let health2 = manager.get_system_health().await;
+        let health2 = manager.get_system_health();
 
         // Health score should be valid
         assert!(health1.health.score() >= 0.0);
@@ -417,7 +417,7 @@ mod error_handling_tests {
         for _ in 0..5 {
             let manager_clone = manager.clone();
             handles.push(tokio::spawn(async move {
-                manager_clone.get_system_health().await
+                manager_clone.get_system_health()
             }));
         }
 
@@ -426,7 +426,7 @@ mod error_handling_tests {
             let manager_clone = manager.clone();
             handles.push(tokio::spawn(async move {
                 let _ = manager_clone.discover().await;
-                manager_clone.get_system_health().await
+                manager_clone.get_system_health()
             }));
         }
 

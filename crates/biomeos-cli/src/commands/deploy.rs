@@ -90,7 +90,7 @@ pub async fn handle_deploy(
 ) -> Result<()> {
     // Graph-based deployment (Neural API)
     if use_graph {
-        return handle_graph_deploy(manifest, validate_only, graph_name).await;
+        return handle_graph_deploy(manifest, validate_only, graph_name);
     }
 
     // Legacy deployment
@@ -102,21 +102,21 @@ pub async fn handle_deploy(
     let spinner = create_spinner(&format!("🚀 {action} manifest..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Read and parse the manifest
     let manifest_content = std::fs::read_to_string(&manifest)?;
 
     if validate_only {
-        let validated_manifest = manager.validate_manifest(&manifest_content).await?;
+        let validated_manifest = manager.validate_manifest(&manifest_content)?;
         spinner.finish_with_message("✅ Validation completed");
         println!(
             "🎉 Manifest '{}' is valid!",
             validated_manifest.metadata.name
         );
     } else {
-        let validated_manifest = manager.validate_manifest(&manifest_content).await?;
-        let deployment_id = manager.deploy_manifest(&manifest_content).await?;
+        let validated_manifest = manager.validate_manifest(&manifest_content)?;
+        let deployment_id = manager.deploy_manifest(&manifest_content)?;
         spinner.finish_with_message("✅ Deployment completed");
         println!(
             "🎉 Biome '{}' deployed successfully!",
@@ -130,9 +130,9 @@ pub async fn handle_deploy(
 
 /// Handle graph-based deployment (Neural API)
 ///
-/// ⚠️ DEPRECATED: This function uses the old graph_deployment module.
+/// ⚠️ DEPRECATED: This function uses the old `graph_deployment` module.
 /// Please use `biomeos-atomic-deploy` instead.
-async fn handle_graph_deploy(
+fn handle_graph_deploy(
     _niche_path: PathBuf,
     validate_only: bool,
     _graph_name: Option<String>,
@@ -163,7 +163,7 @@ pub async fn handle_create(
     let spinner = create_spinner(&format!("🏗️  {action} service '{name}'..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Load configuration if provided
     let config_data_str = if let Some(config_path) = &config_path {
@@ -177,7 +177,7 @@ pub async fn handle_create(
     };
 
     let result = if dry_run {
-        manager.plan_service_creation(&config_data_str).await?
+        manager.plan_service_creation(&config_data_str)?
     } else {
         manager
             .create_service(&service_type, &name, config_path, dry_run)
@@ -193,7 +193,7 @@ pub async fn handle_create(
 
 /// Handle direct graph deployment (no niche manifest)
 ///
-/// ⚠️ DEPRECATED: This function uses the old graph_deployment module.
+/// ⚠️ DEPRECATED: This function uses the old `graph_deployment` module.
 /// Please use `biomeos-atomic-deploy` and `launch_primal` instead.
 ///
 /// Migration path:

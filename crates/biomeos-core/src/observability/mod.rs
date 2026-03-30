@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Minimal Observer
+//! `BiomeOS` Minimal Observer
 //!
-//! Sovereignty-respecting observability for BiomeOS.
+//! Sovereignty-respecting observability for `BiomeOS`.
 //!
 //! # Philosophy
 //!
@@ -15,7 +15,7 @@
 //! # Architecture
 //!
 //! Similar to Songbird's compute bridge, this module provides
-//! a sovereignty-respecting bridge between BiomeOS and observability.
+//! a sovereignty-respecting bridge between `BiomeOS` and observability.
 //! It never hardcodes backends or forces external export.
 //!
 //! # Example
@@ -77,7 +77,7 @@ pub struct LocalMetrics {
     /// Number of primals registered
     pub primals_count: usize,
 
-    /// BiomeOS version
+    /// `BiomeOS` version
     pub biomeos_version: String,
 }
 
@@ -113,7 +113,7 @@ pub struct ResourceMetrics {
     pub network_rx_bytes: Option<u64>,
 }
 
-/// Minimal observer for BiomeOS
+/// Minimal observer for `BiomeOS`
 ///
 /// Provides sovereignty-respecting observability:
 /// - Local by default (no network)
@@ -233,6 +233,7 @@ impl MinimalObserver {
     }
 
     /// Get local metrics (always safe, never exported)
+    #[must_use] 
     pub fn get_local_metrics(&self) -> LocalMetrics {
         self.metrics
             .read()
@@ -242,20 +243,22 @@ impl MinimalObserver {
     }
 
     /// Get observability mode
-    pub fn mode(&self) -> ObservabilityMode {
+    #[must_use] 
+    pub const fn mode(&self) -> ObservabilityMode {
         self.mode
     }
 
     /// Check if family sharing is enabled
+    #[must_use] 
     pub fn is_family_sharing_enabled(&self) -> bool {
         self.family_share.as_ref().is_some_and(|f| f.enabled)
     }
 
     /// Share metrics with family (opt-in, lineage-gated)
     ///
-    /// Only works in FamilyFederation mode.
+    /// Only works in `FamilyFederation` mode.
     /// Returns Ok(true) if shared, Ok(false) if not enabled.
-    pub async fn share_with_family(&self) -> Result<bool> {
+    pub fn share_with_family(&self) -> Result<bool> {
         if self.mode != ObservabilityMode::FamilyFederation {
             debug!("📊 Family sharing not enabled (mode: {:?})", self.mode);
             return Ok(false);
@@ -278,13 +281,13 @@ impl MinimalObserver {
         );
 
         // Implement actual sharing via Beardog + Songbird
-        self.share_metrics_securely(&metrics, family).await?;
+        self.share_metrics_securely(&metrics, family)?;
 
         Ok(true)
     }
 
-    /// Share metrics securely via BearDog encryption and Songbird routing
-    async fn share_metrics_securely(
+    /// Share metrics securely via `BearDog` encryption and Songbird routing
+    fn share_metrics_securely(
         &self,
         metrics: &LocalMetrics,
         family: &FamilyObservability,
@@ -507,14 +510,14 @@ mod tests {
     #[tokio::test]
     async fn test_share_with_family_local_only_returns_false() {
         let observer = MinimalObserver::local_only().unwrap();
-        let result = observer.share_with_family().await.unwrap();
+        let result = observer.share_with_family().unwrap();
         assert!(!result);
     }
 
     #[tokio::test]
     async fn test_share_with_family_disabled_returns_false() {
         let observer = MinimalObserver::disabled().unwrap();
-        let result = observer.share_with_family().await.unwrap();
+        let result = observer.share_with_family().unwrap();
         assert!(!result);
     }
 
@@ -530,7 +533,7 @@ mod tests {
             Some("http://localhost:8080".to_string()),
         )
         .unwrap();
-        let result = observer.share_with_family().await;
+        let result = observer.share_with_family();
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("BearDog"));
     }
@@ -545,7 +548,7 @@ mod tests {
             Some("http://localhost:8080".to_string()),
         )
         .unwrap();
-        let result = observer.share_with_family().await;
+        let result = observer.share_with_family();
         remove_test_env("BEARDOG_ENDPOINT");
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Songbird"));

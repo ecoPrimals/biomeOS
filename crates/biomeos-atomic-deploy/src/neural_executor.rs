@@ -51,6 +51,7 @@ pub struct GraphExecutor {
 
 impl GraphExecutor {
     /// Create new graph executor
+    #[must_use] 
     pub fn new(graph: Graph, env: HashMap<String, String>) -> Self {
         let gate_registry = Arc::new(GateRegistry::from_graph_env(&env));
         Self {
@@ -80,10 +81,10 @@ impl GraphExecutor {
         }
     }
 
-    /// Attach a `MetricsCollector` for PathwayLearner integration.
+    /// Attach a `MetricsCollector` for `PathwayLearner` integration.
     ///
     /// When set, the executor records per-node and per-graph execution metrics
-    /// so the PathwayLearner can analyze and suggest optimizations.
+    /// so the `PathwayLearner` can analyze and suggest optimizations.
     #[must_use]
     pub fn with_metrics(mut self, metrics: MetricsCollector) -> Self {
         self.metrics = Some(metrics);
@@ -161,10 +162,12 @@ impl GraphExecutor {
                 errors: vec![],
                 duration_ms: report.duration_ms,
             };
-            if let Err(e) = collector
-                .record_execution(&self.graph.id, &graph_result, report.duration_ms, None)
-                .await
-            {
+            if let Err(e) = collector.record_execution(
+                &self.graph.id,
+                &graph_result,
+                report.duration_ms,
+                None,
+            ) {
                 warn!("Failed to record graph metrics: {e}");
             }
         }
@@ -251,19 +254,16 @@ impl GraphExecutor {
 
             // Record per-node metrics for PathwayLearner
             if let Some(ref collector) = self.metrics {
-                if let Err(e) = collector
-                    .record_node_execution(NodeExecutionParams {
-                        execution_id,
-                        graph_name: &graph_id,
-                        node_id: &node_id,
-                        primal_id: "",
-                        operation: "",
-                        success,
-                        duration_ms,
-                        error: None,
-                    })
-                    .await
-                {
+                if let Err(e) = collector.record_node_execution(NodeExecutionParams {
+                    execution_id,
+                    graph_name: &graph_id,
+                    node_id: &node_id,
+                    primal_id: "",
+                    operation: "",
+                    success,
+                    duration_ms,
+                    error: None,
+                }) {
                     warn!("Failed to record node metrics for {node_id}: {e}");
                 }
             }
@@ -412,7 +412,7 @@ impl GraphExecutor {
     }
 
     /// Split capability string into (domain, operation) for capability.call semantics.
-    /// e.g. "ecology.et0_fao56" -> ("ecology", "et0_fao56"), "single" -> ("single", "execute")
+    /// e.g. "`ecology.et0_fao56`" -> ("ecology", "`et0_fao56`"), "single" -> ("single", "execute")
     pub(crate) fn split_capability(capability: &str) -> (String, String) {
         if let Some(dot_pos) = capability.find('.') {
             (
@@ -525,7 +525,7 @@ impl GraphExecutor {
         self.context.load_checkpoint().await
     }
 
-    fn resolve_node_type(node: &GraphNode) -> &str {
+    const fn resolve_node_type(node: &GraphNode) -> &str {
         if let Some(ref operation) = node.operation {
             let s = operation.name.as_str();
             if !s.is_empty() {

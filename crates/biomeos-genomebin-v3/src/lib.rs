@@ -64,10 +64,10 @@ pub enum Arch {
 impl Arch {
     /// Detect current architecture at runtime
     #[must_use]
-    pub fn detect() -> Self {
+    pub const fn detect() -> Self {
         #[cfg(target_arch = "x86_64")]
         {
-            Arch::X86_64
+            Self::X86_64
         }
         #[cfg(target_arch = "aarch64")]
         {
@@ -94,12 +94,12 @@ impl Arch {
 
     /// Get target triple string for this architecture
     #[must_use]
-    pub fn target_triple(&self) -> &'static str {
+    pub const fn target_triple(&self) -> &'static str {
         match self {
-            Arch::X86_64 => "x86_64-unknown-linux-musl",
-            Arch::Aarch64 => "aarch64-unknown-linux-musl",
-            Arch::Arm => "arm-unknown-linux-musleabi",
-            Arch::Riscv64 => "riscv64gc-unknown-linux-musl",
+            Self::X86_64 => "x86_64-unknown-linux-musl",
+            Self::Aarch64 => "aarch64-unknown-linux-musl",
+            Self::Arm => "arm-unknown-linux-musleabi",
+            Self::Riscv64 => "riscv64gc-unknown-linux-musl",
         }
     }
 }
@@ -107,10 +107,10 @@ impl Arch {
 impl std::fmt::Display for Arch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Arch::X86_64 => write!(f, "x86_64"),
-            Arch::Aarch64 => write!(f, "aarch64"),
-            Arch::Arm => write!(f, "arm"),
-            Arch::Riscv64 => write!(f, "riscv64"),
+            Self::X86_64 => write!(f, "x86_64"),
+            Self::Aarch64 => write!(f, "aarch64"),
+            Self::Arm => write!(f, "arm"),
+            Self::Riscv64 => write!(f, "riscv64"),
         }
     }
 }
@@ -206,7 +206,7 @@ pub struct GenomeBin {
     pub binaries: HashMap<Arch, CompressedBinary>,
     /// Embedded genomeBins (for fractal composition)
     #[serde(default)]
-    pub embedded_genomes: Vec<GenomeBin>,
+    pub embedded_genomes: Vec<Self>,
 }
 
 impl GenomeBin {
@@ -249,7 +249,7 @@ impl GenomeBin {
     }
 
     /// Embed another genomeBin (fractal composition)
-    pub fn embed(&mut self, genome: GenomeBin) -> anyhow::Result<()> {
+    pub fn embed(&mut self, genome: Self) -> anyhow::Result<()> {
         self.embedded_genomes.push(genome);
         Ok(())
     }

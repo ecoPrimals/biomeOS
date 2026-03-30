@@ -8,7 +8,7 @@
 //! backward compatibility for the biomeOS ecosystem.
 //!
 //! Implements the AI-First response format and human-AI collaboration context
-//! as defined in handOff/AI_FIRST_CITIZEN_API_STANDARD.md
+//! as defined in `handOff/AI_FIRST_CITIZEN_API_STANDARD.md`
 
 mod response;
 mod types;

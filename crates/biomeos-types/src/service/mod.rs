@@ -9,7 +9,7 @@
 //!
 //! ## Module Structure
 //!
-//! - `core`: Core service definitions (UniversalService, ServiceMetadata, ServiceSpec)
+//! - `core`: Core service definitions (`UniversalService`, `ServiceMetadata`, `ServiceSpec`)
 //! - `runtime`: Runtime configurations (containers, binaries, WASM, VMs)
 //! - `security`: Security configurations (authentication, authorization, encryption)
 //! - `health`: Health checks, probes, and monitoring

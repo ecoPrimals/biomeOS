@@ -27,7 +27,7 @@ impl MonitoringUtils {
 
         let start_time = std::time::Instant::now();
         for endpoint in endpoints {
-            match manager.probe_endpoint(endpoint).await {
+            match manager.probe_endpoint(endpoint) {
                 Ok(probe_result) => {
                     services.push(ServiceStatus {
                         endpoint: endpoint.clone(),
@@ -50,7 +50,7 @@ impl MonitoringUtils {
             }
         }
 
-        let system_health = manager.get_system_health().await;
+        let system_health = manager.get_system_health();
 
         Ok(MonitoringSnapshot {
             timestamp: chrono::Utc::now(),
@@ -91,7 +91,7 @@ impl MonitoringUtils {
             interval.tick().await;
 
             let measurement_start = std::time::Instant::now();
-            match manager.probe_endpoint(endpoint).await {
+            match manager.probe_endpoint(endpoint) {
                 Ok(_) => {
                     measurements.push(PerformanceMeasurement {
                         timestamp: chrono::Utc::now(),
@@ -127,7 +127,7 @@ impl MonitoringUtils {
 
         for _ in 0..samples {
             interval.tick().await;
-            let health = manager.get_system_health().await;
+            let health = manager.get_system_health();
             snapshots.push(ResourceSnapshot {
                 timestamp: chrono::Utc::now(),
                 cpu_percent: health.metrics.resources

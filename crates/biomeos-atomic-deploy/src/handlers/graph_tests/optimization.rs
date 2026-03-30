@@ -31,7 +31,7 @@ async fn test_suggest_optimizations_graph_not_found() {
         .suggest_optimizations(&params)
         .await
         .expect_err("should fail");
-    assert!(err.to_string().contains("Graph file not found"));
+    assert!(err.to_string().contains("not found"));
 }
 
 #[tokio::test]

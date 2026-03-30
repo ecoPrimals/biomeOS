@@ -19,7 +19,7 @@ use tracing::{debug, warn};
 /// Family seed is NOT hardcoded. It's discovered from the environment
 /// or secure runtime storage. Missing seed results in reduced trust
 /// rather than failure.
-pub(crate) fn load_family_seed_from_storage() -> Bytes {
+pub fn load_family_seed_from_storage() -> Bytes {
     use base64::{Engine, engine::general_purpose::STANDARD};
 
     // Priority 1: Environment variable (for bootstrap/testing)

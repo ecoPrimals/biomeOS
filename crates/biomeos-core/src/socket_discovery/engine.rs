@@ -46,7 +46,7 @@ pub struct SocketDiscovery {
     /// Neural API socket (for capability registry queries)
     pub(crate) neural_api_socket: Option<PathBuf>,
 
-    /// Override for XDG_RUNTIME_DIR (for testing without env mutation)
+    /// Override for `XDG_RUNTIME_DIR` (for testing without env mutation)
     pub(crate) xdg_runtime_dir_override: Option<PathBuf>,
 
     /// Override for temp dir / TMPDIR (for testing without env mutation)
@@ -79,12 +79,13 @@ impl SocketDiscovery {
     }
 
     /// Set Neural API socket for registry queries
+    #[must_use] 
     pub fn with_neural_api(mut self, socket: PathBuf) -> Self {
         self.neural_api_socket = Some(socket);
         self
     }
 
-    /// Set XDG_RUNTIME_DIR override (for testing without env mutation)
+    /// Set `XDG_RUNTIME_DIR` override (for testing without env mutation)
     pub fn with_xdg_override(mut self, path: impl AsRef<Path>) -> Self {
         self.xdg_runtime_dir_override = Some(path.as_ref().to_path_buf());
         self
@@ -111,7 +112,7 @@ impl SocketDiscovery {
         }
 
         if self.strategy.check_env_hints
-            && let Some(socket) = self.discover_via_env_hint(primal_name).await
+            && let Some(socket) = self.discover_via_env_hint(primal_name)
         {
             self.cache_socket(&cache_key, &socket).await;
             return Some(socket);
@@ -212,7 +213,7 @@ impl SocketDiscovery {
         }
 
         if self.strategy.check_env_hints
-            && let Some(endpoint) = self.discover_endpoint_via_env(primal_name).await
+            && let Some(endpoint) = self.discover_endpoint_via_env(primal_name)
         {
             let socket = DiscoveredSocket::from_endpoint(
                 endpoint.clone(),
@@ -241,7 +242,7 @@ impl SocketDiscovery {
 
         #[cfg(target_os = "linux")]
         if self.strategy.try_abstract_sockets
-            && let Some(name) = self.try_abstract_socket(primal_name).await
+            && let Some(name) = self.try_abstract_socket(primal_name)
         {
             let endpoint = TransportEndpoint::AbstractSocket {
                 name: Arc::from(name.as_str()),
@@ -308,7 +309,8 @@ impl SocketDiscovery {
 
     /// Build deterministic socket path for a primal
     ///
-    /// Implements 5-tier socket resolution per PRIMAL_DEPLOYMENT_STANDARD.
+    /// Implements 5-tier socket resolution per `PRIMAL_DEPLOYMENT_STANDARD`.
+    #[must_use] 
     pub fn build_socket_path(&self, primal_name: &str) -> PathBuf {
         path_builder::build_socket_path(primal_name, self.family_id.as_str(), None, None)
     }
@@ -365,7 +367,7 @@ impl SocketDiscovery {
             })
     }
 
-    /// Get temp dir: override if set, else std::env::temp_dir().
+    /// Get temp dir: override if set, else `std::env::temp_dir()`.
     pub(super) fn temp_dir(&self) -> PathBuf {
         self.temp_dir_override
             .clone()

@@ -202,7 +202,7 @@ async fn detect_port_config(binary: &Path) -> PortConfigMethod {
 ///
 /// Tries common stop subcommands to see if the primal supports graceful shutdown.
 /// Returns None if no stop command is found (fallback to SIGTERM).
-pub(crate) async fn discover_stop_command(binary: &Path) -> Option<String> {
+pub async fn discover_stop_command(binary: &Path) -> Option<String> {
     const STOP_COMMANDS: &[&str] = &["stop", "shutdown", "halt", "quit"];
 
     for stop_cmd in STOP_COMMANDS {

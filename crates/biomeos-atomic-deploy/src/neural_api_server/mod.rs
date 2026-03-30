@@ -101,7 +101,7 @@ pub struct NeuralApiServer {
 impl NeuralApiServer {
     /// Create a new Neural API server
     ///
-    /// Mode detection happens on first serve() call
+    /// Mode detection happens on first `serve()` call
     pub fn new(
         graphs_dir: impl Into<PathBuf>,
         family_id: impl Into<String>,

@@ -14,7 +14,7 @@ use super::core::UniversalBiomeOSManager;
 
 impl UniversalBiomeOSManager {
     /// Plan service creation (Universal Adapter coordination)
-    pub async fn plan_service_creation(
+    pub fn plan_service_creation(
         &self,
         config_data: &str,
     ) -> Result<HashMap<String, serde_json::Value>> {
@@ -45,7 +45,7 @@ impl UniversalBiomeOSManager {
     }
 
     /// Deploy a biome from a YAML manifest
-    pub async fn deploy_biome(
+    pub fn deploy_biome(
         &self,
         manifest_path: &Path,
         validate_only: bool,
@@ -64,7 +64,7 @@ impl UniversalBiomeOSManager {
             tracing::info!("🔍 Validation mode - checking manifest without deploying");
 
             // Manifest validation - integration point with Toadstool parser
-            match self.validate_manifest_integration(&path_str).await {
+            match self.validate_manifest_integration(&path_str) {
                 Ok(validation_result) => {
                     result.insert("status".to_string(), serde_json::json!("success"));
                     result.insert(
@@ -86,7 +86,7 @@ impl UniversalBiomeOSManager {
             }
         } else {
             // Deployment integration - delegates to Toadstool for compute orchestration
-            match self.deploy_via_ecosystem_integration(&path_str).await {
+            match self.deploy_via_ecosystem_integration(&path_str) {
                 Ok(deployment_result) => {
                     result.insert("status".to_string(), serde_json::json!("success"));
                     result.insert(
@@ -131,19 +131,16 @@ mod tests {
     use std::path::Path;
     use tempfile::NamedTempFile;
 
-    async fn test_manager() -> UniversalBiomeOSManager {
-        UniversalBiomeOSManager::new(BiomeOSConfig::default())
-            .await
-            .expect("create test manager")
+    fn test_manager() -> UniversalBiomeOSManager {
+        UniversalBiomeOSManager::new(BiomeOSConfig::default()).expect("create test manager")
     }
 
     #[tokio::test]
     async fn test_plan_service_creation() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let config_data = r#"{"service": "test", "replicas": 2}"#;
         let plan = manager
             .plan_service_creation(config_data)
-            .await
             .expect("plan_service_creation should succeed");
         assert_eq!(plan.get("status").and_then(|v| v.as_str()), Some("planned"));
         assert!(plan.contains_key("config"));
@@ -156,22 +153,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_plan_service_creation_invalid_json() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let err = manager
             .plan_service_creation("not valid json {")
-            .await
             .expect_err("invalid JSON should fail");
         assert!(err.to_string().contains("parse"));
     }
 
     #[tokio::test]
     async fn test_deploy_biome_validate_only_success() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let temp = NamedTempFile::new().expect("create temp file");
         let path = temp.path();
         let result = manager
             .deploy_biome(path, true)
-            .await
             .expect("deploy_biome validate_only should succeed");
         assert_eq!(
             result.get("status").and_then(|v| v.as_str()),
@@ -182,12 +177,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_deploy_biome_full_deploy() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let temp = NamedTempFile::new().expect("create temp file");
         let path = temp.path();
         let result = manager
             .deploy_biome(path, false)
-            .await
             .expect("deploy_biome should succeed");
         assert_eq!(
             result.get("status").and_then(|v| v.as_str()),
@@ -198,11 +192,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_deploy_biome_manifest_path_in_result() {
-        let manager = test_manager().await;
+        let manager = test_manager();
         let path = Path::new("/tmp/test-manifest.yaml");
         let result = manager
             .deploy_biome(path, true)
-            .await
             .expect("deploy_biome should succeed");
         assert_eq!(
             result.get("manifest_path").and_then(|v| v.as_str()),

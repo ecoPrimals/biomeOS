@@ -36,7 +36,7 @@ pub enum TrustLevel {
 impl TrustLevel {
     /// Check if this trust level is sufficient
     #[must_use]
-    pub fn is_sufficient(&self, required: &TrustLevel) -> bool {
+    pub const fn is_sufficient(&self, required: &Self) -> bool {
         use TrustLevel::{Known, Trusted, Unknown, Verified};
         matches!(
             (self, required),

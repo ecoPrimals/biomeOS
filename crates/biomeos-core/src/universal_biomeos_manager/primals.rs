@@ -256,9 +256,8 @@ mod tests {
     async fn test_register_and_get_primal() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal("reg-1", "registered", biomeos_types::Health::Healthy);
         manager
@@ -275,9 +274,8 @@ mod tests {
     async fn test_update_primal() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let mut primal = test_primal("upd-1", "original", biomeos_types::Health::Healthy);
         manager
@@ -299,9 +297,8 @@ mod tests {
     async fn test_update_primal_not_found() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal("nonexistent", "x", biomeos_types::Health::Healthy);
         let result = manager.update_primal("nonexistent", primal).await;
@@ -312,9 +309,8 @@ mod tests {
     async fn test_unregister_primal() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal("unreg-1", "toremove", biomeos_types::Health::Healthy);
         manager.register_primal(primal).await.expect("register");
@@ -332,9 +328,8 @@ mod tests {
     async fn test_unregister_primal_not_found() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager.unregister_primal("nonexistent").await;
         assert!(result.is_err());
@@ -344,9 +339,8 @@ mod tests {
     async fn test_get_primal_count_and_healthy() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         manager
             .register_primal(test_primal("c1", "a", biomeos_types::Health::Healthy))
@@ -365,9 +359,8 @@ mod tests {
     async fn test_update_primal_health() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         manager
             .register_primal(test_primal("h1", "healthy", biomeos_types::Health::Healthy))
@@ -390,9 +383,8 @@ mod tests {
     async fn test_clear_all_primals() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         manager
             .register_primal(test_primal("clr1", "x", biomeos_types::Health::Healthy))
@@ -406,9 +398,8 @@ mod tests {
     async fn test_get_primal_statistics() {
         let manager =
             crate::universal_biomeos_manager::UniversalBiomeOSManager::with_default_config()
-                .await
                 .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         manager
             .register_primal(test_primal("s1", "a", biomeos_types::Health::Healthy))

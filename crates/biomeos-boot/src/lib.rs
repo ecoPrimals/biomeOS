@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Boot Infrastructure
+//! `BiomeOS` Boot Infrastructure
 //!
-//! Pure Rust boot system for BiomeOS. Provides:
+//! Pure Rust boot system for `BiomeOS`. Provides:
 //! - PID 1 init system
 //! - Initramfs generation
 //! - Bootable USB/ISO creation

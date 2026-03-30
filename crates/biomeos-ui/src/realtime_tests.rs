@@ -23,7 +23,7 @@ async fn test_discover_endpoints() {
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
 
     // Discover endpoints
-    let result = subscriber.discover_endpoints().await;
+    let result = subscriber.discover_endpoints();
     assert!(result.is_ok());
     // Endpoints come from env vars when set
 }
@@ -405,7 +405,7 @@ async fn test_subscribe_sse_no_websocket_returns_ok() {
 async fn test_discover_endpoints_no_env() {
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
 
-    let result = subscriber.discover_endpoints().await;
+    let result = subscriber.discover_endpoints();
     assert!(result.is_ok());
     // With no env vars, subscribe_websocket should fail
     assert!(subscriber.subscribe_websocket().await.is_err());
@@ -591,7 +591,7 @@ async fn test_subscribe_sse_with_websocket_upgrades_to_websocket() {
 async fn test_discover_endpoints_with_ws_env() {
     set_test_env("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints().await;
+    let result = subscriber.discover_endpoints();
     remove_test_env("BIOMEOS_WS_ENDPOINT");
     assert!(result.is_ok());
     assert!(subscriber.subscribe_websocket().await.is_err());
@@ -601,7 +601,7 @@ async fn test_discover_endpoints_with_ws_env() {
 async fn test_discover_endpoints_with_sse_env() {
     set_test_env("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints().await;
+    let result = subscriber.discover_endpoints();
     remove_test_env("BIOMEOS_SSE_ENDPOINT");
     assert!(result.is_ok());
 }
@@ -611,7 +611,7 @@ async fn test_discover_endpoints_with_both_env_vars() {
     set_test_env("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
     set_test_env("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints().await;
+    let result = subscriber.discover_endpoints();
     remove_test_env("BIOMEOS_WS_ENDPOINT");
     remove_test_env("BIOMEOS_SSE_ENDPOINT");
     assert!(result.is_ok());
@@ -687,7 +687,7 @@ async fn test_subscription_multiple_receivers_independent() {
 async fn test_discover_endpoints_biomeos_api_ws_fallback() {
     set_test_env("BIOMEOS_API_WS", "ws://fallback.example/ws");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints().await;
+    let result = subscriber.discover_endpoints();
     remove_test_env("BIOMEOS_API_WS");
     assert!(result.is_ok());
 }
@@ -696,7 +696,7 @@ async fn test_discover_endpoints_biomeos_api_ws_fallback() {
 async fn test_discover_endpoints_biomeos_api_sse_fallback() {
     set_test_env("BIOMEOS_API_SSE", "http://fallback.example/sse");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints().await;
+    let result = subscriber.discover_endpoints();
     remove_test_env("BIOMEOS_API_SSE");
     assert!(result.is_ok());
 }

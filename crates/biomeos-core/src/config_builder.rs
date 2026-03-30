@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Configuration Builder - REWRITTEN FOR UNIFIED TYPES
+//! `BiomeOS` Configuration Builder - REWRITTEN FOR UNIFIED TYPES
 //!
 //! ✅ MIGRATION COMPLETE: Now uses unified types from biomeos-types
 //!
-//! Provides a flexible builder pattern for creating BiomeOS configurations
+//! Provides a flexible builder pattern for creating `BiomeOS` configurations
 //! with customizable discovery settings and deployment-specific values.
 
 // Import unified types from biomeos-types
@@ -23,7 +23,7 @@ use biomeos_types::{
 use std::time::Duration;
 use tracing::warn;
 
-/// Builder for creating flexible BiomeOS configurations using unified types
+/// Builder for creating flexible `BiomeOS` configurations using unified types
 #[derive(Debug, Clone)]
 pub struct BiomeOSConfigBuilder {
     /// Base configuration to build upon
@@ -38,6 +38,7 @@ impl Default for BiomeOSConfigBuilder {
 
 impl BiomeOSConfigBuilder {
     /// Create a new configuration builder
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             config: BiomeOSConfig::default(),
@@ -45,11 +46,13 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Create a builder from an existing configuration
-    pub fn from_config(config: BiomeOSConfig) -> Self {
+    #[must_use] 
+    pub const fn from_config(config: BiomeOSConfig) -> Self {
         Self { config }
     }
 
     /// Configure for local development
+    #[must_use] 
     pub fn for_local_development() -> Self {
         let mut builder = Self::new();
         builder.config.system.environment = Environment::Development;
@@ -81,6 +84,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Configure for production deployment
+    #[must_use] 
     pub fn for_production() -> Self {
         let mut builder = Self::new();
         builder.config.system.environment = Environment::Production;
@@ -99,6 +103,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Configure for testing environment
+    #[must_use] 
     pub fn for_testing() -> Self {
         let mut builder = Self::new();
         builder.config.system.environment = Environment::Testing;
@@ -130,6 +135,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Configure for registry-based discovery
+    #[must_use] 
     pub fn for_registry_discovery(registry_endpoint: &str) -> Self {
         let mut builder = Self::for_production();
 
@@ -145,36 +151,42 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Set the system environment
+    #[must_use] 
     pub fn with_environment(mut self, environment: Environment) -> Self {
         self.config.system.environment = environment;
         self
     }
 
     /// Set the organization scale
-    pub fn with_organization_scale(mut self, scale: OrganizationScale) -> Self {
+    #[must_use] 
+    pub const fn with_organization_scale(mut self, scale: OrganizationScale) -> Self {
         self.config.system.organization_scale = scale;
         self
     }
 
     /// Set the network bind address
+    #[must_use] 
     pub fn with_bind_address(mut self, address: &str) -> Self {
         self.config.network.bind_address = address.to_string();
         self
     }
 
     /// Set the network port
-    pub fn with_port(mut self, port: u16) -> Self {
+    #[must_use] 
+    pub const fn with_port(mut self, port: u16) -> Self {
         self.config.network.port = port;
         self
     }
 
     /// Set discovery methods
+    #[must_use] 
     pub fn with_discovery_methods(mut self, methods: Vec<DiscoveryMethod>) -> Self {
         self.config.discovery.methods = methods;
         self
     }
 
     /// Add a discovery method
+    #[must_use] 
     pub fn add_discovery_method(mut self, method: DiscoveryMethod) -> Self {
         // Since DiscoveryMethod doesn't implement PartialEq, we'll just add it
         // The unified config system will handle deduplication if needed
@@ -183,6 +195,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Configure registry discovery
+    #[must_use] 
     pub fn with_registry_discovery(mut self, url: &str, auth: Option<(String, String)>) -> Self {
         self.config
             .discovery
@@ -197,11 +210,13 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Configure DNS discovery
+    #[must_use] 
     pub fn with_dns_discovery(self, servers: Vec<String>) -> Self {
         self.with_dns_discovery_domain(servers, String::new())
     }
 
     /// Configure DNS discovery with an explicit domain
+    #[must_use] 
     pub fn with_dns_discovery_domain(mut self, servers: Vec<String>, domain: String) -> Self {
         self.config.discovery.dns = Some(DnsConfig {
             servers,
@@ -212,7 +227,8 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Configure timeouts
-    pub fn with_timeouts(
+    #[must_use] 
+    pub const fn with_timeouts(
         mut self,
         default_request: std::time::Duration,
         connection: std::time::Duration,
@@ -225,18 +241,21 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Set data directory
+    #[must_use] 
     pub fn with_data_dir(mut self, path: &str) -> Self {
         self.config.system.data_dir = std::path::PathBuf::from(path);
         self
     }
 
     /// Set config directory
+    #[must_use] 
     pub fn with_config_dir(mut self, path: &str) -> Self {
         self.config.system.config_dir = std::path::PathBuf::from(path);
         self
     }
 
     /// Enable security features
+    #[must_use] 
     pub fn with_security_enabled(mut self, enabled: bool) -> Self {
         if enabled {
             // Enable authentication with API key as default
@@ -276,6 +295,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Configure TLS
+    #[must_use] 
     pub fn with_tls(mut self, cert_file: &str, key_file: &str) -> Self {
         self.config.network.tls = Some(TlsConfig {
             enabled: true,
@@ -290,25 +310,29 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Enable observability features
-    pub fn with_observability(mut self, enable_metrics: bool, enable_tracing: bool) -> Self {
+    #[must_use] 
+    pub const fn with_observability(mut self, enable_metrics: bool, enable_tracing: bool) -> Self {
         self.config.observability.metrics.enabled = enable_metrics;
         self.config.observability.tracing.enabled = enable_tracing;
         self
     }
 
     /// Enable UI dashboard
-    pub fn with_ui_enabled(mut self, enabled: bool) -> Self {
+    #[must_use] 
+    pub const fn with_ui_enabled(mut self, enabled: bool) -> Self {
         self.config.ui.enabled = enabled;
         self
     }
 
     /// Set UI theme
+    #[must_use] 
     pub fn with_ui_theme(mut self, theme: UITheme) -> Self {
         self.config.ui.theme = theme;
         self
     }
 
     /// Set UI language
+    #[must_use] 
     pub fn with_ui_language(mut self, language: &str) -> Self {
         self.config.ui.language = language.to_string();
         self
@@ -323,18 +347,20 @@ impl BiomeOSConfigBuilder {
         self
     }
 
-    /// Build the final BiomeOS configuration
+    /// Build the final `BiomeOS` configuration
+    #[must_use] 
     pub fn build(self) -> BiomeOSConfig {
         self.config
     }
 
     /// Get a reference to the current configuration
-    pub fn config(&self) -> &BiomeOSConfig {
+    #[must_use] 
+    pub const fn config(&self) -> &BiomeOSConfig {
         &self.config
     }
 
     /// Get a mutable reference to the configuration for advanced customization
-    pub fn config_mut(&mut self) -> &mut BiomeOSConfig {
+    pub const fn config_mut(&mut self) -> &mut BiomeOSConfig {
         &mut self.config
     }
 }
@@ -342,6 +368,7 @@ impl BiomeOSConfigBuilder {
 /// Quick configuration factory functions for common use cases
 impl BiomeOSConfigBuilder {
     /// Create configuration for standard local development with primals
+    #[must_use] 
     pub fn standard_development() -> Self {
         Self::for_local_development()
             .with_discovery_methods(vec![DiscoveryMethod::Dns])
@@ -351,6 +378,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Create configuration for distributed deployment
+    #[must_use] 
     pub fn distributed_deployment() -> Self {
         Self::for_production()
             .with_organization_scale(OrganizationScale::Enterprise)
@@ -359,6 +387,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Create configuration for development with all features enabled
+    #[must_use] 
     pub fn development_full() -> Self {
         Self::for_local_development()
             .with_security_enabled(true)

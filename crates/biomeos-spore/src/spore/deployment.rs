@@ -6,7 +6,7 @@
 
 //! Deployment script generation for spores
 //!
-//! Handles creation of deploy.sh for LiveSpores (bootable spores).
+//! Handles creation of deploy.sh for `LiveSpores` (bootable spores).
 
 use tokio::fs as async_fs;
 use tracing::info;

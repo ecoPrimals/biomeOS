@@ -35,7 +35,8 @@ pub struct PrimalHealthMonitor {
 
 impl PrimalHealthMonitor {
     /// Create a new builder for configuring the health monitor
-    pub fn builder() -> PrimalHealthMonitorBuilder {
+    #[must_use] 
+    pub const fn builder() -> PrimalHealthMonitorBuilder {
         PrimalHealthMonitorBuilder {
             interval: std::time::Duration::from_secs(30),
         }
@@ -44,7 +45,7 @@ impl PrimalHealthMonitor {
     /// Start the health monitoring background task.
     ///
     /// Periodically calls `health.check` on all registered primals.
-    pub async fn start_monitoring(&self) -> anyhow::Result<()> {
+    pub fn start_monitoring(&self) -> anyhow::Result<()> {
         tracing::info!("🏥 Health monitor started (JSON-RPC over Unix sockets)");
 
         self.running
@@ -184,12 +185,14 @@ pub struct PrimalHealthMonitorBuilder {
 
 impl PrimalHealthMonitorBuilder {
     /// Set the health check interval.
-    pub fn interval(mut self, interval: std::time::Duration) -> Self {
+    #[must_use] 
+    pub const fn interval(mut self, interval: std::time::Duration) -> Self {
         self.interval = interval;
         self
     }
 
     /// Build the health monitor with the configured interval
+    #[must_use] 
     pub fn build(self) -> PrimalHealthMonitor {
         PrimalHealthMonitor {
             primals: Arc::new(RwLock::new(HashMap::new())),
@@ -318,7 +321,7 @@ mod tests {
         monitor
             .register_socket(pid("monitored"), "/tmp/monitored.sock")
             .await;
-        let result = monitor.start_monitoring().await;
+        let result = monitor.start_monitoring();
         assert!(result.is_ok());
         monitor.stop();
     }

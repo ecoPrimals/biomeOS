@@ -63,31 +63,36 @@ impl FractalBuilder {
     }
 
     /// Set topology
-    pub fn topology(mut self, topology: NodeTopology) -> Self {
+    #[must_use] 
+    pub const fn topology(mut self, topology: NodeTopology) -> Self {
         self.topology = topology;
         self
     }
 
     /// Set depth
-    pub fn depth(mut self, depth: usize) -> Self {
+    #[must_use] 
+    pub const fn depth(mut self, depth: usize) -> Self {
         self.depth = depth;
         self
     }
 
     /// Set resource type
-    pub fn resource_type(mut self, resource_type: ResourceType) -> Self {
+    #[must_use] 
+    pub const fn resource_type(mut self, resource_type: ResourceType) -> Self {
         self.resource_type = resource_type;
         self
     }
 
     /// Set resource allocation strategy
+    #[must_use] 
     pub fn resource_allocation(mut self, allocation: ResourceAllocation) -> Self {
         self.resource_allocation = allocation;
         self
     }
 
     /// Set base resources
-    pub fn resources(mut self, resources: ResourceInfo) -> Self {
+    #[must_use] 
+    pub const fn resources(mut self, resources: ResourceInfo) -> Self {
         self.base_resources = resources;
         self
     }
@@ -175,7 +180,7 @@ impl FractalBuilder {
     }
 
     /// Get branching factor for topology
-    fn get_branching_factor(&self) -> usize {
+    const fn get_branching_factor(&self) -> usize {
         match self.topology {
             NodeTopology::Leaf => 0,
             NodeTopology::BinaryTree | NodeTopology::Hybrid => 2, // Default for hybrid
@@ -249,6 +254,7 @@ pub struct LeafNode {
 
 impl LeafNode {
     /// Create a new leaf node with the given configuration and resources
+    #[must_use] 
     pub fn new(config: NodeConfig, resources: ResourceInfo) -> Self {
         Self {
             config,
@@ -416,6 +422,7 @@ pub struct ParentNode {
 
 impl ParentNode {
     /// Create a new parent node with the given configuration, resources, and children
+    #[must_use] 
     pub fn new(
         config: NodeConfig,
         resources: ResourceInfo,

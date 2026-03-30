@@ -3,14 +3,14 @@
 
 //! P2P Coordination Module
 //!
-//! BiomeOS coordinates peer-to-peer capabilities across primals in pure Rust.
+//! `BiomeOS` coordinates peer-to-peer capabilities across primals in pure Rust.
 //!
 //! # Architecture
 //!
 //! This module provides **agnostic, capability-based P2P coordination**:
 //! - Discovers primals by capability (not by name)
 //! - Coordinates BTSP tunnels (any security primal + any discovery primal)
-//! - Coordinates BirdSong encryption (any security primal + any discovery primal)
+//! - Coordinates `BirdSong` encryption (any security primal + any discovery primal)
 //! - Coordinates lineage-gated relay (any security primal + any routing primal)
 //!
 //! # Philosophy
@@ -164,7 +164,7 @@ impl P2PCoordinator {
     /// Discover a primal that provides security capabilities
     ///
     /// Uses capability-based discovery to find any primal providing security/encryption.
-    /// Works with BearDog or any compatible security primal.
+    /// Works with `BearDog` or any compatible security primal.
     async fn discover_security_provider() -> Result<Arc<dyn SecurityProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
@@ -327,7 +327,7 @@ impl P2PCoordinator {
         coordinator.create_tunnel(node_a, node_b, proof).await
     }
 
-    /// Enable encrypted discovery (BirdSong mode)
+    /// Enable encrypted discovery (`BirdSong` mode)
     ///
     /// This coordinates:
     /// 1. Security provider generates broadcast keys

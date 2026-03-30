@@ -203,7 +203,7 @@ mod tests {
     #[tokio::test]
     async fn test_manager_creation() {
         let config = BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.unwrap();
+        let manager = UniversalBiomeOSManager::new(config).unwrap();
 
         // Test that manager can be created without panicking
         // Manager is initialized during construction

@@ -689,7 +689,7 @@ pub enum BackoffStrategy {
     },
 }
 
-/// Default implementation for ServiceNetworking
+/// Default implementation for `ServiceNetworking`
 impl Default for ServiceNetworking {
     fn default() -> Self {
         Self {

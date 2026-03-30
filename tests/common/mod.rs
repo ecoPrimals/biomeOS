@@ -148,12 +148,12 @@ impl TestManagerFactory {
     /// Create a manager with default test configuration
     pub async fn create_default() -> Result<UniversalBiomeOSManager> {
         let config = TestConfigBuilder::default().build();
-        UniversalBiomeOSManager::new(config).await
+        UniversalBiomeOSManager::new(config)
     }
 
     /// Create a manager with custom configuration
     pub async fn create_with_config(config: BiomeOSConfig) -> Result<UniversalBiomeOSManager> {
-        UniversalBiomeOSManager::new(config).await
+        UniversalBiomeOSManager::new(config)
     }
 
     /// Create a manager pre-populated with test primals

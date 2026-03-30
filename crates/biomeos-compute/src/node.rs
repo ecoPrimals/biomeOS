@@ -21,7 +21,7 @@ use uuid::Uuid;
 // CORE TRAIT
 // =============================================================================
 
-/// ComputeNode: Isomorphic interface for compute at any scale
+/// `ComputeNode`: Isomorphic interface for compute at any scale
 #[async_trait]
 pub trait ComputeNode: Send + Sync {
     // =========================================================================
@@ -137,6 +137,7 @@ pub struct WorkloadId(pub Uuid);
 
 impl WorkloadId {
     /// Create a new random workload identifier
+    #[must_use] 
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
@@ -295,7 +296,7 @@ pub struct ResourceInfo {
 
 impl ResourceInfo {
     /// Aggregate resources (for parent nodes)
-    pub fn aggregate(&mut self, other: &ResourceInfo) {
+    pub const fn aggregate(&mut self, other: &Self) {
         self.cpu_cores += other.cpu_cores;
         self.memory_mb += other.memory_mb;
         self.gpu_count += other.gpu_count;
@@ -437,7 +438,7 @@ pub struct TreeMetrics {
 // BUILDER PATTERN
 // =============================================================================
 
-/// WorkloadBuilder for fluent API
+/// `WorkloadBuilder` for fluent API
 pub struct WorkloadBuilder {
     workload: Workload,
 }
@@ -457,25 +458,25 @@ impl WorkloadBuilder {
     }
 
     /// Set whether the workload can be parallelized
-    pub fn parallelizable(mut self, parallelizable: bool) -> Self {
+    pub const fn parallelizable(mut self, parallelizable: bool) -> Self {
         self.workload.parallelizable = parallelizable;
         self
     }
 
     /// Set required CPU cores
-    pub fn cpu_cores(mut self, cores: usize) -> Self {
+    pub const fn cpu_cores(mut self, cores: usize) -> Self {
         self.workload.resource_requirements.cpu_cores = Some(cores);
         self
     }
 
     /// Set required memory in megabytes
-    pub fn memory_mb(mut self, mb: usize) -> Self {
+    pub const fn memory_mb(mut self, mb: usize) -> Self {
         self.workload.resource_requirements.memory_mb = Some(mb);
         self
     }
 
     /// Set workload priority
-    pub fn priority(mut self, priority: WorkloadPriority) -> Self {
+    pub const fn priority(mut self, priority: WorkloadPriority) -> Self {
         self.workload.priority = priority;
         self
     }

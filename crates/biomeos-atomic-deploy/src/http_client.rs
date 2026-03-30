@@ -48,7 +48,7 @@ impl BiomeOsHttpClient {
     /// Create new HTTP client
     ///
     /// This delegates all HTTP requests to Songbird (Tower Atomic)
-    /// Uses SocketNucleation for deterministic paths (no hardcoding)
+    /// Uses `SocketNucleation` for deterministic paths (no hardcoding)
     pub fn new() -> Self {
         use crate::nucleation::SocketNucleation;
 

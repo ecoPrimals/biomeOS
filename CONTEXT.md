@@ -23,13 +23,14 @@ multiple gates (devices).
 - **Architecture:** Single binary (UniBin) with multiple operational modes (bootstrap, nucleus, deploy, doctor, continuous, rootpulse)
 - **Communication:** JSON-RPC 2.0 over Unix sockets, abstract sockets, TCP, and HTTP — with tarpc binary protocol escalation for hot paths
 - **License:** AGPL-3.0-only (scyBorg triple-copyleft: AGPL-3.0 + ORC + CC-BY-SA 4.0)
-- **Tests:** 7,204 passing, 0 failures
+- **Tests:** 5,700+ passing, 0 failures
 - **Coverage:** 90%+ line coverage (llvm-cov verified)
-- **Blocking debt:** 0 (graph rollback, DNS discovery, remote acquisition, federation manifest — all resolved)
+- **Blocking debt:** 0 (primal auto-discovery, continuous executor, graph separation — all resolved)
 - **Edition:** Rust 2024 across all workspace crates
 - **Crate count:** 26 workspace crates
-- **Clippy:** 0 warnings (pedantic + nursery lints)
-- **Unsafe:** 0 in production code
+- **Clippy:** pedantic + nursery enabled via workspace lint inheritance
+- **Unsafe:** 0 in production code (2 in test-utils for Rust 2024 `set_var`, mutex-protected)
+- **TODO/FIXME/HACK:** 0 in production code
 
 ## Key Capabilities (JSON-RPC methods)
 
@@ -38,8 +39,8 @@ multiple gates (devices).
 | **Capability routing** | `capability.call`, `capability.register`, `capability.list`, `capability.route` |
 | **Discovery** | `discovery.discover`, `discovery.discover_all`, `discovery.protocols` |
 | **Graph deployment** | `graph.deploy`, `graph.status`, `graph.pipeline`, `graph.continuous` |
-| **Health** | `health.check`, `health.metrics`, `health.version` |
-| **Topology** | `topology.get`, `topology.proprioception` |
+| **Health** | `health.check`, `health.liveness`, `health.readiness` |
+| **Topology** | `topology.get`, `topology.proprioception`, `topology.rescan` |
 | **Lifecycle** | `lifecycle.start`, `lifecycle.stop`, `lifecycle.status` |
 | **Nucleus** | `nucleus start --mode tower|node|nest|full` |
 

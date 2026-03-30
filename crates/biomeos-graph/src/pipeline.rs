@@ -71,7 +71,7 @@ pub enum StreamItem {
 impl StreamItem {
     /// Returns true if this is a data item (not End or Error).
     #[must_use]
-    pub fn is_data(&self) -> bool {
+    pub const fn is_data(&self) -> bool {
         matches!(self, Self::Data(_))
     }
 
@@ -145,6 +145,7 @@ impl PipelineExecutor {
     ///
     /// Validates that the graph forms a linear chain (each node depends on
     /// at most one predecessor, and there's exactly one source node).
+    #[must_use] 
     pub fn new(graph: DeploymentGraph, broadcaster: GraphEventBroadcaster) -> Self {
         let node_order = Self::compute_linear_order(&graph);
         Self {
@@ -157,7 +158,7 @@ impl PipelineExecutor {
 
     /// Set the channel capacity for inter-node streaming.
     #[must_use]
-    pub fn with_channel_capacity(mut self, capacity: usize) -> Self {
+    pub const fn with_channel_capacity(mut self, capacity: usize) -> Self {
         self.channel_capacity = capacity;
         self
     }

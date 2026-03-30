@@ -3,7 +3,7 @@
 
 //! Boot Logger - Production-Grade Boot Observability
 //!
-//! Provides multi-channel logging for BiomeOS boot process, ensuring complete
+//! Provides multi-channel logging for `BiomeOS` boot process, ensuring complete
 //! visibility from kernel handoff through init completion.
 //!
 //! ## Design Philosophy
@@ -146,6 +146,7 @@ impl BootLogger {
     }
 
     /// Get statistics
+    #[must_use] 
     pub fn stats(&self) -> BootLoggerStats {
         BootLoggerStats {
             log_count: self.log_count,

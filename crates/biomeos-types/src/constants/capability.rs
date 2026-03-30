@@ -3,7 +3,7 @@
 
 //! Capability domain constants for discovery
 //!
-//! **WateringHole standard**: No hardcoded primal names, capability-based discovery.
+//! **`WateringHole` standard**: No hardcoded primal names, capability-based discovery.
 //! A primal should only know about itself and discover others at runtime via capabilities.
 //!
 //! Use these constants when querying for primals by what they do, not by name.

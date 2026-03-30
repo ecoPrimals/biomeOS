@@ -311,16 +311,19 @@ impl PrimalDiscovery {
     }
 
     /// Get a discovered primal by name
+    #[must_use] 
     pub fn get(&self, name: &str) -> Option<&DiscoveredPrimal> {
         self.discovered_primals.get(name)
     }
 
     /// Get all discovered primals
+    #[must_use] 
     pub fn all(&self) -> Vec<&DiscoveredPrimal> {
         self.discovered_primals.values().collect()
     }
 
     /// Get primals with a specific capability
+    #[must_use] 
     pub fn with_capability(&self, cap: &Capability) -> Vec<&DiscoveredPrimal> {
         self.discovered_primals
             .values()

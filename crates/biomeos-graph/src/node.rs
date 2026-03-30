@@ -28,7 +28,7 @@ pub struct GraphNode {
     #[serde(rename = "type", default)]
     pub node_type: NodeType,
 
-    /// Capability to invoke (e.g., "crypto.blake3_hash")
+    /// Capability to invoke (e.g., "`crypto.blake3_hash`")
     #[serde(default)]
     pub capability: Option<String>,
 
@@ -90,7 +90,7 @@ pub struct GraphNode {
     pub gate: Option<String>,
 }
 
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 
@@ -118,6 +118,7 @@ impl NodeId {
     }
 
     /// Get the ID as a string slice.
+    #[must_use] 
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -191,16 +192,19 @@ pub struct NodeParams(HashMap<String, ParamValue>);
 
 impl NodeParams {
     /// Create new empty params.
+    #[must_use] 
     pub fn new() -> Self {
         Self(HashMap::new())
     }
 
     /// Get a parameter value.
+    #[must_use] 
     pub fn get(&self, key: &str) -> Option<&ParamValue> {
         self.0.get(key)
     }
 
     /// Get a string parameter.
+    #[must_use] 
     pub fn get_string(&self, key: &str) -> Option<&str> {
         self.0.get(key).and_then(|v| v.as_str())
     }
@@ -226,6 +230,7 @@ impl NodeParams {
     }
 
     /// Convert to JSON for JSON-RPC call.
+    #[must_use] 
     pub fn to_json(&self) -> serde_json::Value {
         serde_json::to_value(&self.0).unwrap_or(serde_json::Value::Null)
     }
@@ -244,13 +249,14 @@ pub enum ParamValue {
     /// Boolean value
     Bool(bool),
     /// Array of values
-    Array(Vec<ParamValue>),
+    Array(Vec<Self>),
     /// Nested object
-    Object(HashMap<String, ParamValue>),
+    Object(HashMap<String, Self>),
 }
 
 impl ParamValue {
     /// Get as string if this is a string.
+    #[must_use] 
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::String(s) => Some(s),
@@ -259,7 +265,8 @@ impl ParamValue {
     }
 
     /// Get as bool if this is a bool.
-    pub fn as_bool(&self) -> Option<bool> {
+    #[must_use] 
+    pub const fn as_bool(&self) -> Option<bool> {
         match self {
             Self::Bool(b) => Some(*b),
             _ => None,
@@ -267,7 +274,8 @@ impl ParamValue {
     }
 
     /// Get as i64 if this is an integer.
-    pub fn as_i64(&self) -> Option<i64> {
+    #[must_use] 
+    pub const fn as_i64(&self) -> Option<i64> {
         match self {
             Self::Integer(i) => Some(*i),
             _ => None,
@@ -275,7 +283,8 @@ impl ParamValue {
     }
 
     /// Get as array if this is an array.
-    pub fn as_array(&self) -> Option<&Vec<ParamValue>> {
+    #[must_use] 
+    pub const fn as_array(&self) -> Option<&Vec<Self>> {
         match self {
             Self::Array(a) => Some(a),
             _ => None,
@@ -309,6 +318,7 @@ impl From<bool> for ParamValue {
 
 impl GraphNode {
     /// Check if this node should be skipped based on condition.
+    #[must_use] 
     pub fn should_skip(&self, env: &HashMap<String, String>) -> bool {
         if let Some(skip_if) = &self.config.skip_if {
             // Simple condition evaluation: "${VAR} == value" or "${VAR} != value"
@@ -319,6 +329,7 @@ impl GraphNode {
     }
 
     /// Check if this node's condition is met.
+    #[must_use] 
     pub fn condition_met(&self, env: &HashMap<String, String>) -> bool {
         if let Some(condition) = &self.condition {
             evaluate_condition(condition, env)
@@ -328,6 +339,7 @@ impl GraphNode {
     }
 
     /// Returns true if this node uses "skip" fallback (tolerates failures).
+    #[must_use] 
     pub fn is_optional(&self) -> bool {
         self.fallback.as_deref() == Some("skip")
     }

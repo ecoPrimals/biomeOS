@@ -4,7 +4,7 @@
 //! Core Primal Types
 //!
 //! This module contains the fundamental primal type definitions including
-//! PrimalType, PrimalMetadata, and basic resource requirements.
+//! `PrimalType`, `PrimalMetadata`, and basic resource requirements.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 /// Universal Primal Type - NO HARDCODED NAMES
 ///
-/// This replaces both the old PrimalType struct and string-based primal_type fields.
+/// This replaces both the old `PrimalType` struct and string-based `primal_type` fields.
 /// It provides a flexible, extensible way to identify and categorize primals.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PrimalType {
@@ -69,23 +69,26 @@ impl PrimalType {
     }
 
     /// Check if this primal provides a specific category
+    #[must_use] 
     pub fn is_category(&self, category: &str) -> bool {
         self.category == category
     }
 
     /// Check if this primal has a specific name
+    #[must_use] 
     pub fn is_name(&self, name: &str) -> bool {
         self.name == name
     }
 
     /// Get the full identifier string
+    #[must_use] 
     pub fn identifier(&self) -> String {
         format!("{}:{}:{}", self.category, self.name, self.version)
     }
 
-    /// Create a PrimalType from discovered service info
+    /// Create a `PrimalType` from discovered service info
     ///
-    /// This is the recommended way to create PrimalType instances from
+    /// This is the recommended way to create `PrimalType` instances from
     /// services discovered through capability-based discovery.
     ///
     /// # Example
@@ -102,9 +105,9 @@ impl PrimalType {
         Self::new(category, name, version)
     }
 
-    /// Create a PrimalType for self-identification
+    /// Create a `PrimalType` for self-identification
     ///
-    /// Uses the PRIMAL_NAME environment variable to identify this primal.
+    /// Uses the `PRIMAL_NAME` environment variable to identify this primal.
     /// Falls back to "unknown" if not set.
     ///
     /// # Example

@@ -7,10 +7,10 @@
 //!
 //! ## Key Concepts
 //!
-//! - **BeaconId**: Public identifier (safe to share)
-//! - **MeetingRecord**: Metadata about a peer meeting (seed stored separately)
-//! - **ClusterMembership**: Cluster beacon membership
-//! - **BeaconGeneticsManifest**: Complete beacon genetics for a node
+//! - **`BeaconId`**: Public identifier (safe to share)
+//! - **`MeetingRecord`**: Metadata about a peer meeting (seed stored separately)
+//! - **`ClusterMembership`**: Cluster beacon membership
+//! - **`BeaconGeneticsManifest`**: Complete beacon genetics for a node
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -27,6 +27,7 @@ use crate::error::{SporeError, SporeResult};
 pub type Timestamp = u64;
 
 /// Get current Unix timestamp
+#[must_use] 
 pub fn current_timestamp() -> Timestamp {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -44,11 +45,13 @@ pub struct BeaconId(pub String);
 
 impl BeaconId {
     /// Create from hex string
+    #[must_use] 
     pub fn from_hex(hex: &str) -> Self {
         Self(hex.to_string())
     }
 
     /// Get short display form (first 8 chars)
+    #[must_use] 
     pub fn short(&self) -> &str {
         if self.0.len() >= 8 {
             &self.0[..8]
@@ -207,7 +210,7 @@ pub struct BeaconGeneticsManifest {
     /// Last sync timestamp
     pub last_sync: Timestamp,
 
-    /// Meetings (beacon_id -> metadata)
+    /// Meetings (`beacon_id` -> metadata)
     pub meetings: HashMap<String, MeetingRecord>,
 
     /// Cluster memberships
@@ -219,6 +222,7 @@ pub struct BeaconGeneticsManifest {
 
 impl BeaconGeneticsManifest {
     /// Create new empty manifest
+    #[must_use] 
     pub fn new(own_beacon_id: BeaconId, lineage_hint: &str) -> Self {
         Self {
             version: "2.0.0".to_string(),
@@ -258,6 +262,7 @@ impl BeaconGeneticsManifest {
     }
 
     /// Get meeting by beacon ID
+    #[must_use] 
     pub fn get_meeting(&self, beacon_id: &BeaconId) -> Option<&MeetingRecord> {
         self.meetings.get(&beacon_id.0)
     }
@@ -268,6 +273,7 @@ impl BeaconGeneticsManifest {
     }
 
     /// List all known beacon IDs
+    #[must_use] 
     pub fn known_beacon_ids(&self) -> Vec<BeaconId> {
         self.meetings.keys().map(|k| BeaconId(k.clone())).collect()
     }

@@ -15,9 +15,9 @@ use uuid::Uuid;
 pub struct DiscoveryUtils;
 
 impl DiscoveryUtils {
-    /// Convert String endpoints from discovery methods to full DiscoveryResult structures
+    /// Convert String endpoints from discovery methods to full `DiscoveryResult` structures
     /// This is a helper function to bridge the new unified discovery API (returning Vec<String>)
-    /// with the CLI's expectation of structured DiscoveryResult data
+    /// with the CLI's expectation of structured `DiscoveryResult` data
     async fn endpoints_to_discovery_results(
         manager: &UniversalBiomeOSManager,
         endpoints: Vec<String>,
@@ -26,7 +26,7 @@ impl DiscoveryUtils {
 
         for endpoint in endpoints {
             // Try to probe the endpoint to get detailed information
-            if let Ok(_probe_result) = manager.probe_endpoint(&endpoint).await {
+            if let Ok(_probe_result) = manager.probe_endpoint(&endpoint) {
                 // Create a DiscoveryResult from the probe result
                 let discovery_result = DiscoveryResult {
                     id: Uuid::new_v4().to_string(),
@@ -84,7 +84,7 @@ impl DiscoveryUtils {
         let mut healthy_services = 0;
         let mut unhealthy_services = 0;
         for service in &all_services {
-            match manager.probe_endpoint(&service.endpoint).await {
+            match manager.probe_endpoint(&service.endpoint) {
                 Ok(_) => healthy_services += 1,
                 Err(_) => unhealthy_services += 1,
             }
@@ -106,7 +106,7 @@ impl DiscoveryUtils {
     ///
     /// Geolocation is a Songbird capability, not biomeOS. Callers should route
     /// `discovery.locate` to Songbird via the Neural API.
-    pub async fn discover_by_location(
+    pub fn discover_by_location(
         _manager: &UniversalBiomeOSManager,
         _latitude: f64,
         _longitude: f64,
@@ -219,10 +219,8 @@ mod tests {
     #[tokio::test]
     async fn test_discover_by_location_returns_err() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config)
-            .await
-            .expect("manager creation should succeed");
-        let result = DiscoveryUtils::discover_by_location(&manager, 0.0, 0.0, 100.0).await;
+        let manager = UniversalBiomeOSManager::new(config).expect("manager creation should succeed");
+        let result = DiscoveryUtils::discover_by_location(&manager, 0.0, 0.0, 100.0);
         assert!(result.is_err(), "Geolocation discovery should return error");
         let err = result.unwrap_err();
         let err_str = err.to_string();
@@ -392,7 +390,7 @@ mod tests {
     #[tokio::test]
     async fn test_discover_by_type() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
         let result = DiscoveryUtils::discover_by_type(&manager, "discovery").await;
         assert!(result.is_ok());
     }
@@ -400,7 +398,7 @@ mod tests {
     #[tokio::test]
     async fn test_comprehensive_discovery() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
         let result = DiscoveryUtils::comprehensive_discovery(&manager).await;
         assert!(result.is_ok());
         let report = result.unwrap();
@@ -410,7 +408,7 @@ mod tests {
     #[tokio::test]
     async fn test_discover_with_filter() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
         let result = DiscoveryUtils::discover_with_filter(&manager, |_| true).await;
         assert!(result.is_ok());
     }
@@ -418,7 +416,7 @@ mod tests {
     #[tokio::test]
     async fn test_discover_with_retry() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
         let caps = vec![PrimalCapability::new("basic", "basic", "1.0")];
         let result =
             DiscoveryUtils::discover_with_retry(&manager, "http://localhost", &caps, 0).await;

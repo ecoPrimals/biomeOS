@@ -10,7 +10,7 @@ use std::time::Duration;
 use crate::commands::utils::format_bytes;
 
 /// Builds system overview display lines (memory, cpu, disk).
-pub(crate) fn format_system_overview(system: &Value) -> Vec<String> {
+pub fn format_system_overview(system: &Value) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(cpu) = system.get("cpu_usage_percent") {
@@ -47,7 +47,7 @@ pub(crate) fn format_system_overview(system: &Value) -> Vec<String> {
 }
 
 /// Builds per-service status lines.
-pub(crate) fn format_service_rows(services: &Value) -> Vec<String> {
+pub fn format_service_rows(services: &Value) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(services_obj) = services.as_object() {
@@ -90,7 +90,7 @@ pub(crate) fn format_service_rows(services: &Value) -> Vec<String> {
 }
 
 /// Builds network activity display lines.
-pub(crate) fn format_network_activity(network: &Value) -> Vec<String> {
+pub fn format_network_activity(network: &Value) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(bytes_in) = network.get("bytes_in_per_sec") {
@@ -111,7 +111,7 @@ pub(crate) fn format_network_activity(network: &Value) -> Vec<String> {
 }
 
 /// Builds alert display rows.
-pub(crate) fn format_alert_rows(alerts: &Value) -> Vec<String> {
+pub fn format_alert_rows(alerts: &Value) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(alerts_arr) = alerts.as_array() {
@@ -134,7 +134,7 @@ pub(crate) fn format_alert_rows(alerts: &Value) -> Vec<String> {
 }
 
 /// Formats a single log entry to a display string.
-pub(crate) fn format_log_entry(entry: &Value) -> String {
+pub fn format_log_entry(entry: &Value) -> String {
     let timestamp = entry
         .get("timestamp")
         .and_then(|t| t.as_str())
@@ -157,7 +157,7 @@ pub(crate) fn format_log_entry(entry: &Value) -> String {
 }
 
 /// Builds exec output display lines.
-pub(crate) fn format_exec_output(results: &HashMap<String, Value>) -> Vec<String> {
+pub fn format_exec_output(results: &HashMap<String, Value>) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(exit_code) = results.get("exit_code") {
@@ -195,7 +195,7 @@ pub(crate) fn format_exec_output(results: &HashMap<String, Value>) -> Vec<String
 }
 
 /// Builds scale operation output display lines.
-pub(crate) fn format_scale_output(results: &HashMap<String, Value>, auto: bool) -> Vec<String> {
+pub fn format_scale_output(results: &HashMap<String, Value>, auto: bool) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(status) = results.get("status") {
@@ -234,14 +234,14 @@ pub(crate) fn format_scale_output(results: &HashMap<String, Value>, auto: bool) 
 }
 
 /// Returns true if monitoring should stop based on elapsed time and optional duration limit.
-pub(crate) fn should_stop_monitoring(elapsed: Duration, duration: Option<Duration>) -> bool {
+pub fn should_stop_monitoring(elapsed: Duration, duration: Option<Duration>) -> bool {
     match duration {
         Some(d) => elapsed >= d,
         None => false,
     }
 }
 /// Get service status icon for display
-pub(crate) fn service_status_icon(status: &str) -> &'static str {
+pub fn service_status_icon(status: &str) -> &'static str {
     match status {
         "running" => "✅",
         "starting" => "🔄",
@@ -253,7 +253,7 @@ pub(crate) fn service_status_icon(status: &str) -> &'static str {
 }
 
 /// Get service health icon for display
-pub(crate) fn service_health_icon(health: &str) -> &'static str {
+pub fn service_health_icon(health: &str) -> &'static str {
     match health {
         "Healthy" => "💚",
         "Degraded" => "💛",
@@ -264,7 +264,7 @@ pub(crate) fn service_health_icon(health: &str) -> &'static str {
 }
 
 /// Get alert severity icon for display
-pub(crate) fn alert_severity_icon(severity: &str) -> &'static str {
+pub fn alert_severity_icon(severity: &str) -> &'static str {
     match severity {
         "critical" => "🔴",
         "warning" => "🟡",
@@ -274,7 +274,7 @@ pub(crate) fn alert_severity_icon(severity: &str) -> &'static str {
 }
 
 /// Get log level icon for display
-pub(crate) fn log_level_icon(level: &str) -> &'static str {
+pub fn log_level_icon(level: &str) -> &'static str {
     match level {
         "error" => "❌",
         "warn" => "⚠️",
@@ -286,7 +286,7 @@ pub(crate) fn log_level_icon(level: &str) -> &'static str {
 }
 
 /// Get scale operation status icon for display
-pub(crate) fn scale_status_icon(status: &str) -> &'static str {
+pub fn scale_status_icon(status: &str) -> &'static str {
     match status {
         "success" => "✅",
         "in_progress" => "🔄",

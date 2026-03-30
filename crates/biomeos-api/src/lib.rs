@@ -62,9 +62,9 @@ pub enum ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
-            ApiError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
-            ApiError::DiscoveryFailed(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg),
-            ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            Self::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            Self::DiscoveryFailed(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg),
+            Self::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
         };
 
         let body = Json(serde_json::json!({
@@ -87,7 +87,7 @@ async fn websocket_handler(
 
 /// Handle WebSocket connection
 ///
-/// EVOLVED (Mar 11, 2026): Push-based graph events from GraphEventBroadcaster.
+/// EVOLVED (Mar 11, 2026): Push-based graph events from `GraphEventBroadcaster`.
 ///
 /// After subscribe, graph events are pushed in real-time as JSON-RPC notifications.
 async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppState>) {

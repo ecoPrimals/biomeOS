@@ -24,6 +24,7 @@ impl Default for GraphLoader {
 
 impl GraphLoader {
     /// Create a new graph loader with default settings.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             validator: GraphValidator::new(),

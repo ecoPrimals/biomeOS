@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Filesystem Management for BiomeOS Init
+//! Filesystem Management for `BiomeOS` Init
 //!
 //! Handles mounting and managing essential filesystems during boot.
 
@@ -18,6 +18,7 @@ pub struct FilesystemManager {
 
 impl FilesystemManager {
     /// Creates a new filesystem manager
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             mounted: HashSet::new(),

@@ -195,6 +195,7 @@ pub struct CapabilityRegistry {
 
 impl CapabilityRegistry {
     /// Create a new capability registry with XDG-resolved socket path.
+    #[must_use] 
     pub fn new(family_id: String) -> Self {
         let paths = SystemPaths::new_lazy();
         let socket_path = paths

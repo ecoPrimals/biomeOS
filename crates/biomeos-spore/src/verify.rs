@@ -34,7 +34,7 @@ pub struct VerificationCheck {
 
 impl VerificationResult {
     /// Create a new empty result
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             valid: true,
             checks: Vec::new(),
@@ -106,7 +106,7 @@ impl SporeVerification {
         }
 
         // Check directory structure
-        Self::check_directory_structure(spore_path, &mut result).await;
+        Self::check_directory_structure(spore_path, &mut result);
 
         // Check family seed
         Self::check_family_seed(spore_path, &mut result).await;
@@ -125,7 +125,7 @@ impl SporeVerification {
         Ok(result)
     }
 
-    async fn check_directory_structure(spore_path: &Path, result: &mut VerificationResult) {
+    fn check_directory_structure(spore_path: &Path, result: &mut VerificationResult) {
         let required_dirs = ["bin", "primals", "secrets", "logs"];
 
         for dir in &required_dirs {

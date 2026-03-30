@@ -84,7 +84,7 @@ pub enum GraphEvent {
     DecisionMade {
         /// Graph execution this decision belongs to
         graph_id: String,
-        /// Type of decision (e.g., "node_selection", "parameter_adjustment")
+        /// Type of decision (e.g., "`node_selection`", "`parameter_adjustment`")
         decision_type: String,
         /// AI reasoning steps that led to the decision
         reasoning: Vec<String>,
@@ -181,38 +181,40 @@ pub enum GraphEvent {
 
 impl GraphEvent {
     /// Get the graph ID for this event
+    #[must_use] 
     pub fn graph_id(&self) -> &str {
         match self {
-            GraphEvent::GraphStarted { graph_id, .. }
-            | GraphEvent::NodeStarted { graph_id, .. }
-            | GraphEvent::NodeCompleted { graph_id, .. }
-            | GraphEvent::NodeFailed { graph_id, .. }
-            | GraphEvent::DecisionMade { graph_id, .. }
-            | GraphEvent::GraphPaused { graph_id, .. }
-            | GraphEvent::GraphResumed { graph_id, .. }
-            | GraphEvent::GraphCompleted { graph_id, .. }
-            | GraphEvent::GraphCancelled { graph_id, .. }
-            | GraphEvent::SessionStarted { graph_id, .. }
-            | GraphEvent::TickCompleted { graph_id, .. }
-            | GraphEvent::SessionStateChanged { graph_id, .. } => graph_id,
+            Self::GraphStarted { graph_id, .. }
+            | Self::NodeStarted { graph_id, .. }
+            | Self::NodeCompleted { graph_id, .. }
+            | Self::NodeFailed { graph_id, .. }
+            | Self::DecisionMade { graph_id, .. }
+            | Self::GraphPaused { graph_id, .. }
+            | Self::GraphResumed { graph_id, .. }
+            | Self::GraphCompleted { graph_id, .. }
+            | Self::GraphCancelled { graph_id, .. }
+            | Self::SessionStarted { graph_id, .. }
+            | Self::TickCompleted { graph_id, .. }
+            | Self::SessionStateChanged { graph_id, .. } => graph_id,
         }
     }
 
     /// Get the timestamp for this event
-    pub fn timestamp(&self) -> DateTime<Utc> {
+    #[must_use] 
+    pub const fn timestamp(&self) -> DateTime<Utc> {
         match self {
-            GraphEvent::GraphStarted { timestamp, .. }
-            | GraphEvent::NodeStarted { timestamp, .. }
-            | GraphEvent::NodeCompleted { timestamp, .. }
-            | GraphEvent::NodeFailed { timestamp, .. }
-            | GraphEvent::DecisionMade { timestamp, .. }
-            | GraphEvent::GraphPaused { timestamp, .. }
-            | GraphEvent::GraphResumed { timestamp, .. }
-            | GraphEvent::GraphCompleted { timestamp, .. }
-            | GraphEvent::GraphCancelled { timestamp, .. }
-            | GraphEvent::SessionStarted { timestamp, .. }
-            | GraphEvent::TickCompleted { timestamp, .. }
-            | GraphEvent::SessionStateChanged { timestamp, .. } => *timestamp,
+            Self::GraphStarted { timestamp, .. }
+            | Self::NodeStarted { timestamp, .. }
+            | Self::NodeCompleted { timestamp, .. }
+            | Self::NodeFailed { timestamp, .. }
+            | Self::DecisionMade { timestamp, .. }
+            | Self::GraphPaused { timestamp, .. }
+            | Self::GraphResumed { timestamp, .. }
+            | Self::GraphCompleted { timestamp, .. }
+            | Self::GraphCancelled { timestamp, .. }
+            | Self::SessionStarted { timestamp, .. }
+            | Self::TickCompleted { timestamp, .. }
+            | Self::SessionStateChanged { timestamp, .. } => *timestamp,
         }
     }
 }
@@ -238,6 +240,7 @@ impl GraphEventBroadcaster {
     ///
     /// Capacity determines how many events can be buffered per subscriber.
     /// If a subscriber falls behind, older events will be dropped.
+    #[must_use] 
     pub fn new(capacity: usize) -> Self {
         let (sender, _) = broadcast::channel(capacity);
 
@@ -251,6 +254,7 @@ impl GraphEventBroadcaster {
     ///
     /// Returns a receiver that will receive all future events.
     /// Each subscriber is independent and can consume events at their own pace.
+    #[must_use] 
     pub fn subscribe(&self) -> broadcast::Receiver<GraphEvent> {
         let receiver = self.sender.subscribe();
 
@@ -289,6 +293,7 @@ impl GraphEventBroadcaster {
     }
 
     /// Get the number of active subscribers
+    #[must_use] 
     pub fn subscriber_count(&self) -> usize {
         self.sender.receiver_count()
     }
@@ -304,7 +309,8 @@ pub struct EventCollector {
 
 impl EventCollector {
     /// Create a new event collector from a receiver
-    pub fn new(receiver: broadcast::Receiver<GraphEvent>) -> Self {
+    #[must_use] 
+    pub const fn new(receiver: broadcast::Receiver<GraphEvent>) -> Self {
         Self {
             receiver,
             events: Vec::new(),
@@ -349,6 +355,7 @@ impl EventCollector {
     }
 
     /// Get all collected events
+    #[must_use] 
     pub fn events(&self) -> &[GraphEvent] {
         &self.events
     }

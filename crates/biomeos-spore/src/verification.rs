@@ -29,11 +29,11 @@ pub enum VerificationStatus {
 impl std::fmt::Display for VerificationStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            VerificationStatus::Fresh => write!(f, "Fresh"),
-            VerificationStatus::Stale => write!(f, "Stale"),
-            VerificationStatus::Modified => write!(f, "Modified"),
-            VerificationStatus::Missing => write!(f, "Missing"),
-            VerificationStatus::Newer => write!(f, "Newer"),
+            Self::Fresh => write!(f, "Fresh"),
+            Self::Stale => write!(f, "Stale"),
+            Self::Modified => write!(f, "Modified"),
+            Self::Missing => write!(f, "Missing"),
+            Self::Newer => write!(f, "Newer"),
         }
     }
 }
@@ -278,7 +278,7 @@ impl SporeVerifier {
             && path.join("primals").exists()
     }
 
-    /// Extract node_id from tower.toml
+    /// Extract `node_id` from tower.toml
     fn extract_node_id_from_tower_toml(spore_path: &Path) -> Result<String> {
         let tower_toml_path = spore_path.join("tower.toml");
         let tower_toml_str = std::fs::read_to_string(&tower_toml_path)

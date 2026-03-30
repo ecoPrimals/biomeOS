@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BearDog client for cryptographic operations
+//! `BearDog` client for cryptographic operations
 //!
-//! This client discovers BearDog via runtime discovery and delegates
-//! all cryptographic operations to BearDog's HSM.
+//! This client discovers `BearDog` via runtime discovery and delegates
+//! all cryptographic operations to `BearDog`'s HSM.
 
 use anyhow::{Context, Result};
 use bytes::Bytes;
@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use crate::discovery::{PrimalDiscovery, PrimalEndpoint};
 use crate::unix_socket_client::UnixSocketClient;
 
-/// Request payload for deriving a sub-federation key via BearDog
+/// Request payload for deriving a sub-federation key via `BearDog`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyDerivationRequest {
     /// Parent family identifier
@@ -78,7 +78,7 @@ impl std::fmt::Display for LineageVerificationResponse {
     }
 }
 
-/// BearDog client for cryptographic operations
+/// `BearDog` client for cryptographic operations
 #[derive(Debug)]
 pub struct BearDogClient {
     endpoint: BearDogEndpoint,
@@ -90,7 +90,7 @@ enum BearDogEndpoint {
 }
 
 impl BearDogClient {
-    /// Create a BearDog client from runtime discovery
+    /// Create a `BearDog` client from runtime discovery
     pub async fn from_discovery() -> Result<Self> {
         let mut discovery = PrimalDiscovery::new();
         discovery
@@ -118,7 +118,7 @@ impl BearDogClient {
         Ok(Self { endpoint })
     }
 
-    /// Create a BearDog client with explicit endpoint
+    /// Create a `BearDog` client with explicit endpoint
     pub fn with_endpoint(endpoint: impl AsRef<str>) -> Result<Self> {
         let endpoint = endpoint.as_ref();
         let path = if let Some(stripped) = endpoint.strip_prefix("unix://") {
@@ -136,8 +136,8 @@ impl BearDogClient {
         })
     }
 
-    /// Check if BearDog is available
-    pub async fn is_available(&self) -> bool {
+    /// Check if `BearDog` is available
+    pub fn is_available(&self) -> bool {
         let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
         path.exists()
     }
@@ -172,7 +172,7 @@ impl BearDogClient {
         }
     }
 
-    /// Verify if a seed is part of a family (BearDog v0.15.2+)
+    /// Verify if a seed is part of a family (`BearDog` v0.15.2+)
     pub async fn verify_same_family(
         &self,
         family_id: &str,
@@ -236,7 +236,7 @@ impl BearDogClient {
         })
     }
 
-    /// Encrypt data using BearDog's HSM
+    /// Encrypt data using `BearDog`'s HSM
     pub async fn encrypt_data(&self, data: &[u8], key_ref: &str) -> Result<EncryptResponse> {
         let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
         let client = UnixSocketClient::new(path);
@@ -263,7 +263,7 @@ impl BearDogClient {
         })
     }
 
-    /// Decrypt data using BearDog's HSM
+    /// Decrypt data using `BearDog`'s HSM
     pub async fn decrypt_data(
         &self,
         encrypted_data: &str,
@@ -457,7 +457,7 @@ mod tests {
     async fn test_beardog_is_available_unix_nonexistent() {
         let client =
             BearDogClient::with_endpoint("unix:///nonexistent/beardog/socket.sock").unwrap();
-        assert!(!client.is_available().await);
+        assert!(!client.is_available());
     }
 
     #[tokio::test]
@@ -491,7 +491,7 @@ mod tests {
         .await;
         let client =
             BearDogClient::with_endpoint(format!("unix://{}", sock.display())).expect("client");
-        assert!(client.is_available().await);
+        assert!(client.is_available());
         client.health_check().await.expect("healthy");
     }
 
@@ -653,7 +653,7 @@ mod tests {
         let client = BearDogClient::from_discovery()
             .await
             .expect("from discovery");
-        assert!(client.is_available().await);
+        assert!(client.is_available());
     }
 
     #[tokio::test]

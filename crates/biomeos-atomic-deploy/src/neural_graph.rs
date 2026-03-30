@@ -21,7 +21,7 @@ pub struct Graph {
     /// Execution configuration (parallelism, timeouts, etc.)
     pub config: GraphConfig,
     /// Coordination pattern (sequential, parallel, continuous, etc.)
-    /// Populated from `[graph]`.coordination when loading DeploymentGraph format.
+    /// Populated from `[graph]`.coordination when loading `DeploymentGraph` format.
     #[serde(default)]
     pub coordination: Option<String>,
     /// Environment variables defined in `[graph.env]`.
@@ -193,13 +193,13 @@ impl Graph {
             .is_some_and(|c| c.eq_ignore_ascii_case("continuous"))
     }
 
-    /// Convert a `[[graph.nodes]]` (DeploymentGraph) node into the neural_graph `GraphNode` schema.
+    /// Convert a `[[graph.nodes]]` (`DeploymentGraph`) node into the `neural_graph` `GraphNode` schema.
     ///
-    /// DeploymentGraph nodes have: id, name, capability, depends_on, feedback_to,
-    /// budget_ms, config.primal, params.*
+    /// `DeploymentGraph` nodes have: id, name, capability, `depends_on`, `feedback_to`,
+    /// `budget_ms`, config.primal, params.*
     ///
-    /// Neural graph nodes have: id, operation.name, operation.params, constraints.timeout_ms,
-    /// depends_on, capabilities, config.*
+    /// Neural graph nodes have: id, operation.name, operation.params, `constraints.timeout_ms`,
+    /// `depends_on`, capabilities, config.*
     fn convert_deployment_node(node_value: &toml::Value) -> anyhow::Result<GraphNode> {
         let table = node_value.as_table().context("Node must be a TOML table")?;
 
@@ -352,7 +352,7 @@ impl Graph {
     }
 }
 
-/// Convert a TOML value to a serde_json Value.
+/// Convert a TOML value to a `serde_json` Value.
 fn toml_value_to_json(v: &toml::Value) -> Option<serde_json::Value> {
     match v {
         toml::Value::String(s) => Some(serde_json::Value::String(s.clone())),
@@ -409,7 +409,7 @@ pub struct GraphNode {
     /// Legacy: node type (prefer primal + operation)
     #[serde(default)]
     pub node_type: Option<String>,
-    /// Legacy: dependency list (alias for depends_on)
+    /// Legacy: dependency list (alias for `depends_on`)
     #[serde(default)]
     pub dependencies: Vec<String>,
     /// Node-specific configuration
@@ -441,6 +441,7 @@ pub struct GraphNode {
 
 impl GraphNode {
     /// Whether this node is optional (failure won't abort the graph).
+    #[must_use] 
     pub fn is_optional(&self) -> bool {
         self.fallback.as_deref() == Some("skip")
     }

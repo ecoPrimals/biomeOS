@@ -39,7 +39,7 @@ impl CapabilityClient {
         }
     }
 
-    /// Discover from environment: NEURAL_API_SOCKET → XDG → fallback
+    /// Discover from environment: `NEURAL_API_SOCKET` → XDG → fallback
     ///
     /// Uses the same 5-tier resolution as the discovery module:
     /// 1. `NEURAL_API_SOCKET` env var (if set and path exists)
@@ -53,7 +53,8 @@ impl CapabilityClient {
     }
 
     /// Set request timeout
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+    #[must_use] 
+    pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
     }
@@ -104,7 +105,7 @@ impl CapabilityClient {
 
     // --- Crypto domain ---
 
-    /// Sign data using the ecosystem's crypto provider (BearDog).
+    /// Sign data using the ecosystem's crypto provider (`BearDog`).
     pub async fn crypto_sign(&self, data: &[u8]) -> Result<Bytes> {
         let args = json!({
             "data": base64_encode(data),
@@ -178,7 +179,7 @@ impl CapabilityClient {
 
     // --- Storage domain ---
 
-    /// Store data via the ecosystem's storage provider (NestGate).
+    /// Store data via the ecosystem's storage provider (`NestGate`).
     pub async fn storage_put(&self, key: &str, value: &[u8]) -> Result<()> {
         let args = json!({
             "key": key,

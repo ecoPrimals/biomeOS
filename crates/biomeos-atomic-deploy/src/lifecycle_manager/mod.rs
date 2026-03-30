@@ -58,7 +58,7 @@ use crate::nucleation::SocketNucleation;
 /// - Resurrects dead primals from deployment graphs
 /// - Coordinates graceful shutdown (apoptosis)
 pub struct LifecycleManager {
-    /// Managed primals (name -> ManagedPrimal)
+    /// Managed primals (name -> `ManagedPrimal`)
     pub(crate) primals: Arc<RwLock<HashMap<String, ManagedPrimal>>>,
 
     /// Family ID

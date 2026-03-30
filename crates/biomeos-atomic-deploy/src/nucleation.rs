@@ -34,6 +34,7 @@ impl Default for SocketNucleation {
 
 impl SocketNucleation {
     /// Create new socket nucleation coordinator
+    #[must_use] 
     pub fn new(strategy: SocketStrategy) -> Self {
         Self {
             strategy,
@@ -89,7 +90,8 @@ impl SocketNucleation {
     }
 
     /// Get all assigned sockets
-    pub fn assignments(&self) -> &HashMap<String, PathBuf> {
+    #[must_use] 
+    pub const fn assignments(&self) -> &HashMap<String, PathBuf> {
         &self.assignments
     }
 
@@ -114,6 +116,7 @@ impl SocketNucleation {
     ///
     /// **Capability-based**: Uses the taxonomy to determine if a primal holds
     /// family-specific state (e.g., key material) rather than hardcoding names.
+    #[must_use] 
     pub fn can_share(primal: &str) -> bool {
         use biomeos_types::capability_taxonomy::CapabilityTaxonomy;
 
@@ -130,9 +133,9 @@ impl SocketNucleation {
 
     /// Plan a multi-family deployment
     ///
-    /// Returns (dedicated_instances, shared_instances):
-    /// - dedicated_instances: primals that need one instance per family
-    /// - shared_instances: primals that can share across families
+    /// Returns (`dedicated_instances`, `shared_instances)`:
+    /// - `dedicated_instances`: primals that need one instance per family
+    /// - `shared_instances`: primals that can share across families
     pub fn plan_multi_family(
         &mut self,
         primals: &[String],
@@ -159,7 +162,7 @@ impl SocketNucleation {
         (dedicated, shared)
     }
 
-    /// Family deterministic path using SystemPaths
+    /// Family deterministic path using `SystemPaths`
     ///
     /// Uses XDG-compliant paths via `SystemPaths` instead of hardcoded `/tmp/`.
     /// Falls back to temp dir if XDG not available.
@@ -171,9 +174,9 @@ impl SocketNucleation {
         paths.primal_socket(&format!("{primal}-{family_id}"))
     }
 
-    /// XDG runtime path using SystemPaths
+    /// XDG runtime path using `SystemPaths`
     ///
-    /// Creates sockets in XDG_RUNTIME_DIR/biomeos/ for proper namespacing
+    /// Creates sockets in `XDG_RUNTIME_DIR/biomeos`/ for proper namespacing
     fn xdg_runtime_path(primal: &str, family_id: &str) -> PathBuf {
         use biomeos_types::paths::SystemPaths;
 

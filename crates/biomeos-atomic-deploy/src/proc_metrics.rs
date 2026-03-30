@@ -6,7 +6,7 @@
 
 use std::fs;
 
-/// Parse /proc/stat cpu line into (total_jiffies, idle_plus_iowait).
+/// Parse /proc/stat cpu line into (`total_jiffies`, `idle_plus_iowait`).
 /// Testable with const fixtures.
 pub fn parse_stat_cpu(s: &str) -> Option<(u64, u64)> {
     let line = s.lines().next()?;
@@ -29,7 +29,7 @@ pub fn parse_stat_cpu(s: &str) -> Option<(u64, u64)> {
     Some((total, idle + iowait))
 }
 
-/// Parse /proc/meminfo into (total_bytes, used_bytes). Used = total - available.
+/// Parse /proc/meminfo into (`total_bytes`, `used_bytes`). Used = total - available.
 /// Testable with const fixtures.
 pub fn parse_meminfo_bytes(s: &str) -> (u64, u64) {
     let mut total_kb = 0u64;
@@ -91,7 +91,7 @@ fn read_cpu_jiffies() -> Option<(u64, u64)> {
     parse_stat_cpu(&stat)
 }
 
-/// (total_bytes, used_bytes) from /proc/meminfo
+/// (`total_bytes`, `used_bytes`) from /proc/meminfo
 pub fn memory_bytes() -> (u64, u64) {
     #[cfg(target_os = "linux")]
     {

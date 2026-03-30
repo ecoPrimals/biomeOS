@@ -15,7 +15,7 @@ mod manager_basic_tests {
     #[tokio::test]
     async fn test_manager_creation_with_config() {
         let config = BiomeOSConfig::default();
-        let result = UniversalBiomeOSManager::new(config).await;
+        let result = UniversalBiomeOSManager::new(config);
         assert!(result.is_ok(), "Manager should create successfully");
     }
 
@@ -23,7 +23,7 @@ mod manager_basic_tests {
     async fn test_manager_drop() {
         let config = BiomeOSConfig::default();
         {
-            let _manager = UniversalBiomeOSManager::new(config).await.unwrap();
+            let _manager = UniversalBiomeOSManager::new(config).unwrap();
         }
         // If we reach here, manager was dropped without panic - test passes
     }

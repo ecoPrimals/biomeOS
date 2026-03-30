@@ -30,6 +30,7 @@ pub struct ActiveLogSession {
 
 impl ActiveLogSession {
     /// Create a new active log session
+    #[must_use] 
     pub fn new(node_id: String, deployment_id: String) -> Self {
         Self {
             node_id,
@@ -53,6 +54,7 @@ impl ActiveLogSession {
     }
 
     /// Check if all processes are still running
+    #[must_use] 
     pub fn is_active(&self) -> bool {
         self.process_pids.iter().any(|&pid| {
             // Check if process exists via /proc
@@ -61,6 +63,7 @@ impl ActiveLogSession {
     }
 
     /// Get session duration
+    #[must_use] 
     pub fn duration(&self) -> chrono::Duration {
         Utc::now() - self.started_at
     }

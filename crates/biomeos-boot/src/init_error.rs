@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Boot Error Types
+//! `BiomeOS` Boot Error Types
 //!
 //! Comprehensive error handling for the boot system with detailed context.
 
@@ -105,7 +105,7 @@ pub enum BootError {
     #[error("failed to detect USB device: {0}")]
     UsbDetection(String),
 
-    /// BiomeOS USB drive not found
+    /// `BiomeOS` USB drive not found
     #[error("BiomeOS USB not found at expected paths")]
     BiomeOsUsbNotFound,
 
@@ -171,7 +171,8 @@ impl BootError {
     }
 
     /// Check if error is recoverable
-    pub fn is_recoverable(&self) -> bool {
+    #[must_use] 
+    pub const fn is_recoverable(&self) -> bool {
         matches!(
             self,
             Self::AlreadyMounted(_) | Self::BiomeOsUsbNotFound | Self::NetworkInterfaceDetection
@@ -179,7 +180,8 @@ impl BootError {
     }
 
     /// Get error severity
-    pub fn severity(&self) -> ErrorSeverity {
+    #[must_use] 
+    pub const fn severity(&self) -> ErrorSeverity {
         match self {
             Self::NotPid1(_) | Self::InitAlreadyRunning => ErrorSeverity::Fatal,
             Self::MountFailed { .. } | Self::DirectoryCreation { .. } => ErrorSeverity::Critical,

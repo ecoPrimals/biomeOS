@@ -16,7 +16,7 @@
 //!
 //! # XDG Compliance (EVOLVED Jan 27, 2026)
 //!
-//! Socket discovery uses SystemPaths for XDG-compliant path resolution:
+//! Socket discovery uses `SystemPaths` for XDG-compliant path resolution:
 //! 1. `$XDG_RUNTIME_DIR/biomeos/` (preferred)
 //! 2. `/tmp/biomeos-$USER/` (fallback)
 //! 3. `/tmp/` (legacy compatibility)
@@ -89,7 +89,7 @@ impl TopologyHandler {
     /// This is the capability-based approach - we don't hardcode primal names,
     /// we discover what's running.
     ///
-    /// EVOLVED (Jan 27, 2026): Uses XDG-compliant socket discovery via SystemPaths
+    /// EVOLVED (Jan 27, 2026): Uses XDG-compliant socket discovery via `SystemPaths`
     async fn discover_active_primals(&self) -> Result<Vec<Value>> {
         let mut primals = Vec::new();
 
@@ -215,13 +215,14 @@ impl TopologyHandler {
 
     /// Get XDG-compliant socket directories for primal discovery
     ///
-    /// EVOLVED (Jan 27, 2026): No more hardcoded `/tmp` - uses SystemPaths
+    /// EVOLVED (Jan 27, 2026): No more hardcoded `/tmp` - uses `SystemPaths`
     ///
     /// # Priority Order
     /// 1. XDG runtime directory: `$XDG_RUNTIME_DIR/biomeos/`
     /// 2. User runtime fallback: `/tmp/biomeos-$USER/`
     /// 3. Legacy compatibility: `/tmp/` (for existing deployments)
-    fn get_socket_directories() -> Vec<PathBuf> {
+    #[must_use] 
+    pub fn get_socket_directories() -> Vec<PathBuf> {
         let mut dirs = Vec::new();
 
         // Priority 1: SystemPaths XDG-compliant runtime directory
@@ -366,7 +367,7 @@ impl TopologyHandler {
             .count();
 
         let health_percentage =
-            ((actual_capabilities as f64 / expected_capabilities as f64) * 100.0).min(100.0);
+            ((actual_capabilities as f64 / f64::from(expected_capabilities)) * 100.0).min(100.0);
 
         let confidence = if has_security && has_discovery && has_compute {
             100.0

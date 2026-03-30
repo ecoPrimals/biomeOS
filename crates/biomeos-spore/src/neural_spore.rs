@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Neural API LiveSpore Evolution
+//! Neural API `LiveSpore` Evolution
 //!
-//! Extends LiveSpore with Neural API graph-based deployment
+//! Extends `LiveSpore` with Neural API graph-based deployment
 //! Adds metrics collection and rollback capabilities
 
 use anyhow::{Context, Result};
@@ -55,6 +55,7 @@ pub struct RollbackState {
 
 impl RollbackState {
     /// Create a new empty rollback state
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             spawned_pids: Vec::new(),
@@ -137,7 +138,7 @@ impl RollbackState {
     }
 }
 
-/// LiveSpore with Neural API support
+/// `LiveSpore` with Neural API support
 pub struct NeuralSpore {
     /// Root path of the spore (e.g. USB mount / biomeOS)
     pub root_path: PathBuf,
@@ -164,7 +165,7 @@ impl NeuralSpore {
         })
     }
 
-    /// Prepare LiveSpore structure
+    /// Prepare `LiveSpore` structure
     pub async fn prepare(&self) -> Result<()> {
         info!(
             "🌱 Preparing Neural LiveSpore at: {}",
@@ -185,7 +186,7 @@ impl NeuralSpore {
         Ok(())
     }
 
-    /// Copy neural graphs to LiveSpore
+    /// Copy neural graphs to `LiveSpore`
     pub async fn install_graphs(&self, source_graphs_dir: &Path) -> Result<()> {
         info!("📊 Installing Neural API graphs...");
 
@@ -214,7 +215,7 @@ impl NeuralSpore {
         Ok(())
     }
 
-    /// Copy primal binaries to LiveSpore
+    /// Copy primal binaries to `LiveSpore`
     pub async fn install_binaries(&self, source_bin_dir: &Path) -> Result<()> {
         info!("🔧 Installing primal binaries...");
 

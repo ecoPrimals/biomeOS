@@ -356,6 +356,7 @@ pub async fn deployment_report(node: &GraphNode, context: &ExecutionContext) -> 
     clippy::implicit_hasher,
     reason = "default hasher sufficient for env substitution"
 )]
+#[must_use] 
 pub fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
     let mut result = s.to_string();
 

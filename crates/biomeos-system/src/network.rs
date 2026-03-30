@@ -88,7 +88,7 @@ pub enum NetworkInterfaceStatus {
 
 /// Get network information via /proc/net/dev + /sys/class/net (pure Rust).
 #[cfg(target_os = "linux")]
-pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
+pub fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
     let content = fs::read_to_string("/proc/net/dev").unwrap_or_default();
     let parsed = parse_net_dev(&content);
     let mut result = Vec::new();
@@ -158,7 +158,7 @@ pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
 
 /// Non-Linux fallback.
 #[cfg(not(target_os = "linux"))]
-pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
+pub(crate) fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
     Ok(vec![NetworkInterface {
         name: "lo".to_string(),
         interface_type: NetworkInterfaceType::Loopback,
@@ -178,13 +178,13 @@ const DEFAULT_NETWORK_SAMPLE_INTERVAL: std::time::Duration = std::time::Duration
 
 /// Get current network I/O via /proc/net/dev (pure Rust).
 #[cfg(target_os = "linux")]
-pub(crate) async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
+pub async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
     get_network_io_with_interval(DEFAULT_NETWORK_SAMPLE_INTERVAL).await
 }
 
 /// Get current network I/O with configurable sample interval.
 #[cfg(target_os = "linux")]
-pub(crate) async fn get_network_io_with_interval(
+pub async fn get_network_io_with_interval(
     sample_interval: std::time::Duration,
 ) -> BiomeResult<NetworkIoMetrics> {
     let content1 = fs::read_to_string("/proc/net/dev").unwrap_or_default();
@@ -231,11 +231,9 @@ pub(crate) async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_network_info() {
-        let network_info = get_network_info()
-            .await
-            .expect("get_network_info should succeed");
+    #[test]
+    fn test_network_info() {
+        let network_info = get_network_info().expect("get_network_info should succeed");
 
         assert!(
             !network_info.is_empty(),

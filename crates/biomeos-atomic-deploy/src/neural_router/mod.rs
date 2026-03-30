@@ -3,7 +3,7 @@
 
 //! Neural API Routing Layer
 //!
-//! **Universal IPC v3.0 + tarpc**: Uses AtomicClient for multi-transport routing
+//! **Universal IPC v3.0 + tarpc**: Uses `AtomicClient` for multi-transport routing
 //! with protocol escalation to tarpc for hot-paths.
 //!
 //! Pure Rust implementation of capability-based primal routing.
@@ -78,7 +78,8 @@ impl NeuralRouter {
     }
 
     /// Set protocol preference override
-    pub fn with_protocol_preference(mut self, preference: ProtocolPreference) -> Self {
+    #[must_use] 
+    pub const fn with_protocol_preference(mut self, preference: ProtocolPreference) -> Self {
         self.protocol_preference = preference;
         self
     }

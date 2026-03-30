@@ -96,7 +96,7 @@ impl GenomeState {
     }
 
     /// List all genomes in storage
-    pub async fn list_all(&self) -> Result<Vec<(String, GenomeBin)>, String> {
+    pub fn list_all(&self) -> Result<Vec<(String, GenomeBin)>, String> {
         let mut genomes = Vec::new();
 
         if !self.storage_dir.exists() {
@@ -130,6 +130,6 @@ impl GenomeState {
 static GENOME_STATE: std::sync::OnceLock<GenomeState> = std::sync::OnceLock::new();
 
 /// Get the global genome state
-pub(crate) fn genome_state() -> &'static GenomeState {
+pub fn genome_state() -> &'static GenomeState {
     GENOME_STATE.get_or_init(GenomeState::default)
 }

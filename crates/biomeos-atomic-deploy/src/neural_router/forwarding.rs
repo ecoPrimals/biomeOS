@@ -17,7 +17,7 @@ use crate::living_graph::ProtocolMode;
 use super::NeuralRouter;
 
 /// Decode `security.*` tarpc params that carry raw bytes (base64 string or JSON byte array).
-pub(crate) fn parse_security_bytes_param(params: &Value, key: &str) -> Result<Bytes, String> {
+pub fn parse_security_bytes_param(params: &Value, key: &str) -> Result<Bytes, String> {
     let v = params
         .get(key)
         .ok_or_else(|| format!("missing param: {key}"))?;

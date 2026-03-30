@@ -3,7 +3,7 @@
 
 //! Genome binary distribution and download logic.
 //!
-//! Handles binary downloads and LiveSpore updates.
+//! Handles binary downloads and `LiveSpore` updates.
 
 use axum::{
     Json,
@@ -23,13 +23,13 @@ use super::discovery;
 use super::error::DistError;
 use super::manifest;
 
-/// Update LiveSpore with all genomes
+/// Update `LiveSpore` with all genomes
 ///
-/// Copies all genome binaries to a target LiveSpore directory.
+/// Copies all genome binaries to a target `LiveSpore` directory.
 /// Used for preparing USB deployment media.
 #[derive(Debug, Deserialize)]
 pub struct UpdateLiveSporeRequest {
-    /// Target LiveSpore directory
+    /// Target `LiveSpore` directory
     pub target_path: PathBuf,
     /// Architectures to include (default: all)
     pub architectures: Option<Vec<String>>,
@@ -81,7 +81,7 @@ pub async fn download_binary(
     download_binary_from(genome_bin, primal, version, arch).await
 }
 
-pub(crate) async fn download_binary_from(
+pub async fn download_binary_from(
     genome_bin: PathBuf,
     primal: String,
     version: String,
@@ -181,7 +181,7 @@ pub(crate) async fn download_binary_from(
         })
 }
 
-/// Update a LiveSpore with all genomes from genomeBin
+/// Update a `LiveSpore` with all genomes from genomeBin
 pub async fn update_livespore(
     Json(req): Json<UpdateLiveSporeRequest>,
 ) -> Result<Json<UpdateLiveSporeResponse>, (StatusCode, Json<DistError>)> {
@@ -200,7 +200,7 @@ pub async fn update_livespore(
     update_livespore_from(genome_bin, req).await
 }
 
-pub(crate) async fn update_livespore_from(
+pub async fn update_livespore_from(
     genome_bin: PathBuf,
     req: UpdateLiveSporeRequest,
 ) -> Result<Json<UpdateLiveSporeResponse>, (StatusCode, Json<DistError>)> {

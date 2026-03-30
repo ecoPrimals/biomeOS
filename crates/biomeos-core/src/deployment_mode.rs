@@ -127,7 +127,7 @@ impl DeploymentMode {
                 .map(|v| v == "true" || v == "1")
                 .unwrap_or(false);
 
-            return Ok(DeploymentMode::ColdSpore {
+            return Ok(Self::ColdSpore {
                 media_path,
                 persistence,
                 host_os,
@@ -136,7 +136,7 @@ impl DeploymentMode {
 
         // 3. Check if installed to root filesystem
         if let Ok((root, boot, version)) = Self::detect_root_installation() {
-            return Ok(DeploymentMode::LiveSpore {
+            return Ok(Self::LiveSpore {
                 root_partition: root,
                 boot_partition: boot,
                 installed_version: version,
@@ -148,7 +148,7 @@ impl DeploymentMode {
         let install_dir = Self::get_install_dir()?;
         let isolation = Self::detect_isolation_level();
 
-        Ok(DeploymentMode::SiblingSpore {
+        Ok(Self::SiblingSpore {
             host_os,
             install_dir,
             isolation,
@@ -167,10 +167,11 @@ impl DeploymentMode {
     /// let socket_prefix = mode.socket_prefix();
     /// println!("Sockets will be created in: {}", socket_prefix.display());
     /// ```
+    #[must_use] 
     pub fn socket_prefix(&self) -> PathBuf {
         match self {
-            DeploymentMode::ColdSpore { media_path, .. } => media_path.join("runtime"),
-            DeploymentMode::LiveSpore { .. } => {
+            Self::ColdSpore { media_path, .. } => media_path.join("runtime"),
+            Self::LiveSpore { .. } => {
                 // EVOLVED: Use XDG_RUNTIME_DIR instead of hardcoded path
                 // This respects the system's runtime directory configuration
                 if let Ok(xdg_runtime) = std::env::var("XDG_RUNTIME_DIR") {
@@ -181,7 +182,7 @@ impl DeploymentMode {
                     PathBuf::from(format!("/run/user/{uid}/biomeos"))
                 }
             }
-            DeploymentMode::SiblingSpore { install_dir, .. } => {
+            Self::SiblingSpore { install_dir, .. } => {
                 // User-space runtime directory
                 install_dir.join("runtime")
             }
@@ -189,9 +190,10 @@ impl DeploymentMode {
     }
 
     /// Get a human-readable description of the deployment mode
+    #[must_use] 
     pub fn description(&self) -> String {
         match self {
-            DeploymentMode::ColdSpore {
+            Self::ColdSpore {
                 media_path,
                 persistence,
                 ..
@@ -202,12 +204,12 @@ impl DeploymentMode {
                     format!("Cold Spore (USB: {}, ephemeral)", media_path.display())
                 }
             }
-            DeploymentMode::LiveSpore {
+            Self::LiveSpore {
                 installed_version, ..
             } => {
                 format!("Live Spore (v{installed_version})")
             }
-            DeploymentMode::SiblingSpore { host_os, .. } => {
+            Self::SiblingSpore { host_os, .. } => {
                 format!("Sibling Spore (on {})", host_os.name())
             }
         }
@@ -225,7 +227,7 @@ impl DeploymentMode {
                     .unwrap_or(false);
                 let host_os = Self::detect_host_os()?;
 
-                Ok(DeploymentMode::ColdSpore {
+                Ok(Self::ColdSpore {
                     media_path,
                     persistence,
                     host_os,
@@ -237,7 +239,7 @@ impl DeploymentMode {
                 let version = std::env::var("BIOMEOS_VERSION")
                     .unwrap_or_else(|_| env!("CARGO_PKG_VERSION").to_string());
 
-                Ok(DeploymentMode::LiveSpore {
+                Ok(Self::LiveSpore {
                     root_partition: root,
                     boot_partition: boot,
                     installed_version: version,
@@ -248,7 +250,7 @@ impl DeploymentMode {
                 let install_dir = Self::get_install_dir()?;
                 let isolation = Self::detect_isolation_level();
 
-                Ok(DeploymentMode::SiblingSpore {
+                Ok(Self::SiblingSpore {
                     host_os,
                     install_dir,
                     isolation,
@@ -432,13 +434,14 @@ impl DeploymentMode {
 
 impl HostOS {
     /// Get a short name for the host OS
+    #[must_use] 
     pub fn name(&self) -> String {
         match self {
-            HostOS::Linux { distro } => format!("Linux ({distro})"),
-            HostOS::MacOS { version } => format!("macOS {version}"),
-            HostOS::Windows { version } => format!("Windows {version}"),
-            HostOS::BSD { variant } => variant.clone(),
-            HostOS::Unknown => "Unknown OS".to_string(),
+            Self::Linux { distro } => format!("Linux ({distro})"),
+            Self::MacOS { version } => format!("macOS {version}"),
+            Self::Windows { version } => format!("Windows {version}"),
+            Self::BSD { variant } => variant.clone(),
+            Self::Unknown => "Unknown OS".to_string(),
         }
     }
 }

@@ -4,7 +4,7 @@
 //! DNS configuration utilities
 
 /// Parse nameserver lines from resolv.conf content (testable)
-pub(crate) fn parse_resolv_conf(content: &str) -> Vec<String> {
+pub fn parse_resolv_conf(content: &str) -> Vec<String> {
     content
         .lines()
         .filter(|line| line.trim().starts_with("nameserver"))

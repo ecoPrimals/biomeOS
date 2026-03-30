@@ -105,11 +105,13 @@ impl PrimalCapability {
     }
 
     /// Get the capability identifier
+    #[must_use] 
     pub fn identifier(&self) -> String {
         format!("{}:{}:{}", self.category, self.name, self.version)
     }
 
     /// Check if this capability matches a requirement
+    #[must_use] 
     pub fn matches(&self, category: &str, name: &str) -> bool {
         self.category == category && self.name == name
     }
@@ -146,11 +148,13 @@ pub struct LatencyCharacteristics {
 
 impl PrimalCapability {
     /// Get display name for UI
+    #[must_use] 
     pub fn display_name(&self) -> String {
         format!("{} {}", self.name, self.version)
     }
 
     /// Get icon based on capability category
+    #[must_use] 
     pub fn icon(&self) -> &'static str {
         match self.category.as_str() {
             "compute" => "💻",
@@ -170,6 +174,7 @@ impl PrimalCapability {
     }
 
     /// Get description based on capability category
+    #[must_use] 
     pub fn description(&self) -> &'static str {
         match self.category.as_str() {
             "compute" => "High-performance computing and processing",
@@ -191,81 +196,97 @@ impl PrimalCapability {
     // Convenience constructors for common capabilities
 
     /// Create a compute capability
+    #[must_use] 
     pub fn compute() -> Self {
         Self::new("compute", "compute", "1.0")
     }
 
     /// Create a storage capability
+    #[must_use] 
     pub fn storage() -> Self {
         Self::new("storage", "storage", "1.0")
     }
 
     /// Create a networking capability
+    #[must_use] 
     pub fn networking() -> Self {
         Self::new("networking", "networking", "1.0")
     }
 
     /// Create a security capability
+    #[must_use] 
     pub fn security() -> Self {
         Self::new("security", "security", "1.0")
     }
 
     /// Create an AI capability
+    #[must_use] 
     pub fn ai() -> Self {
         Self::new("ai", "ai", "1.0")
     }
 
     /// Create a machine learning capability
+    #[must_use] 
     pub fn machine_learning() -> Self {
         Self::new("ml", "machine-learning", "1.0")
     }
 
     /// Create an analytics capability
+    #[must_use] 
     pub fn analytics() -> Self {
         Self::new("analytics", "analytics", "1.0")
     }
 
     /// Create a gaming capability
+    #[must_use] 
     pub fn gaming() -> Self {
         Self::new("gaming", "gaming", "1.0")
     }
 
     /// Create a web development capability
+    #[must_use] 
     pub fn web_development() -> Self {
         Self::new("web", "web-development", "1.0")
     }
 
     /// Create an orchestration capability
+    #[must_use] 
     pub fn orchestration() -> Self {
         Self::new("orchestration", "orchestration", "1.0")
     }
 
     /// Create an authentication capability
+    #[must_use] 
     pub fn authentication() -> Self {
         Self::new("authentication", "authentication", "1.0")
     }
 
     /// Create an encryption capability
+    #[must_use] 
     pub fn encryption() -> Self {
         Self::new("encryption", "encryption", "1.0")
     }
 
     /// Create a data processing capability
+    #[must_use] 
     pub fn data_processing() -> Self {
         Self::new("data", "data-processing", "1.0")
     }
 
     /// Create a service discovery capability
+    #[must_use] 
     pub fn service_discovery() -> Self {
         Self::new("networking", "service-discovery", "1.0")
     }
 
     /// Create a load balancing capability
+    #[must_use] 
     pub fn load_balancing() -> Self {
         Self::new("networking", "load-balancing", "1.0")
     }
 
     /// Create a science capability (wetSpring, neuralSpring, etc.)
+    #[must_use] 
     pub fn science() -> Self {
         Self::new("science", "science", "1.0")
     }

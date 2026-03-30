@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BearDog JWT Client for Neural API
+//! `BearDog` JWT Client for Neural API
 //!
-//! Provides orchestrator-managed JWT secret provisioning from BearDog to primals.
+//! Provides orchestrator-managed JWT secret provisioning from `BearDog` to primals.
 //! This is proper separation of concerns - the orchestrator handles integration,
 //! primals just receive configuration.
 //!
-//! **Universal IPC v3.0**: Uses AtomicClient for multi-transport support.
+//! **Universal IPC v3.0**: Uses `AtomicClient` for multi-transport support.
 
 use anyhow::{Context, Result};
 use biomeos_core::atomic_client::AtomicClient;
@@ -16,7 +16,7 @@ use serde::Deserialize;
 use serde_json::json;
 use tracing::{debug, info, warn};
 
-/// JWT secret result from BearDog
+/// JWT secret result from `BearDog`
 #[derive(Debug, Deserialize)]
 struct JwtSecretResult {
     secret: String,
@@ -30,18 +30,18 @@ struct JwtSecretResult {
     algorithm: String,
 }
 
-/// Fetch JWT secret from BearDog via AtomicClient (Universal IPC v3.0)
+/// Fetch JWT secret from `BearDog` via `AtomicClient` (Universal IPC v3.0)
 ///
 /// **Universal IPC v3.0**: Uses `AtomicClient` with automatic transport fallback.
 /// This supports Unix sockets, abstract sockets (Android), and TCP (cross-device).
 ///
 /// # Arguments
-/// * `socket_path` - Path to BearDog's socket (or use discovery if None)
-/// * `purpose` - Purpose of the JWT secret (e.g., "nestgate_authentication")
+/// * `socket_path` - Path to `BearDog`'s socket (or use discovery if None)
+/// * `purpose` - Purpose of the JWT secret (e.g., "`nestgate_authentication`")
 ///
 /// # Returns
 /// * `Ok(String)` - Base64-encoded JWT secret (512 bits / 88 characters)
-/// * `Err` - If BearDog is unavailable or request fails
+/// * `Err` - If `BearDog` is unavailable or request fails
 pub async fn fetch_jwt_secret_from_beardog(socket_path: &str, purpose: &str) -> Result<String> {
     info!("Fetching JWT secret from BearDog at: {}", socket_path);
     info!("   Purpose: {}", purpose);
@@ -94,7 +94,7 @@ pub async fn fetch_jwt_secret_from_beardog(socket_path: &str, purpose: &str) -> 
 /// 3. "beardog" bootstrap fallback (only when strict discovery is off)
 ///
 /// # Arguments
-/// * `purpose` - Purpose of the JWT secret (e.g., "nestgate_authentication")
+/// * `purpose` - Purpose of the JWT secret (e.g., "`nestgate_authentication`")
 ///
 /// # Returns
 /// * `Ok(String)` - Base64-encoded JWT secret
@@ -151,8 +151,8 @@ pub async fn fetch_jwt_secret_with_discovery(purpose: &str) -> Result<String> {
 
 /// Generate secure random JWT secret as fallback
 ///
-/// This is used when BearDog is unavailable. Still cryptographically secure,
-/// but BearDog is preferred for consistency across NUCLEUS.
+/// This is used when `BearDog` is unavailable. Still cryptographically secure,
+/// but `BearDog` is preferred for consistency across NUCLEUS.
 ///
 /// # Arguments
 /// * `bytes` - Number of random bytes to generate (default: 64 for 512 bits)
@@ -186,10 +186,10 @@ pub fn generate_secure_random_jwt(bytes: usize) -> Result<String> {
 /// Provision JWT secret for a primal (Universal IPC v3.0)
 ///
 /// **Universal IPC v3.0**: Uses automatic discovery if no socket path provided.
-/// Tries BearDog first (preferred), falls back to secure random if unavailable.
+/// Tries `BearDog` first (preferred), falls back to secure random if unavailable.
 ///
 /// # Arguments
-/// * `beardog_socket` - Optional path to BearDog socket (uses discovery if None)
+/// * `beardog_socket` - Optional path to `BearDog` socket (uses discovery if None)
 /// * `purpose` - Purpose of the JWT secret
 ///
 /// # Returns

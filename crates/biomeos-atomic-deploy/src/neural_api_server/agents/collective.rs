@@ -28,6 +28,7 @@ use super::types::{CapabilityRoute, PlasmodiumAgent};
 /// - Local gates get priority 0 (best)
 /// - Remote gates get base priority 10
 /// - Compute routes are further adjusted by VRAM (more VRAM = lower priority number = preferred)
+#[must_use] 
 pub fn agents_from_collective(
     state: &biomeos_core::plasmodium::PlasmodiumState,
 ) -> Vec<PlasmodiumAgent> {

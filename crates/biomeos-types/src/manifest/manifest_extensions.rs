@@ -3,8 +3,8 @@
 
 //! Manifest Extensions and Dependencies
 //!
-//! This module contains manifest extension types including BiomeDependency,
-//! ConfigSpec, SecretSpec, health monitoring, and other extension specifications.
+//! This module contains manifest extension types including `BiomeDependency`,
+//! `ConfigSpec`, `SecretSpec`, health monitoring, and other extension specifications.
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -209,7 +209,7 @@ pub struct MetricsSpec {
 pub enum MetricsFormat {
     /// Prometheus exposition format
     Prometheus,
-    /// OpenMetrics format
+    /// `OpenMetrics` format
     OpenMetrics,
     /// JSON format
     Json,
@@ -394,7 +394,7 @@ pub enum NotificationChannelType {
     Slack,
     /// Generic webhook
     Webhook,
-    /// PagerDuty integration
+    /// `PagerDuty` integration
     PagerDuty,
 }
 

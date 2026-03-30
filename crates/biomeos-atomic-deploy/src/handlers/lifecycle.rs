@@ -29,6 +29,7 @@ pub struct LifecycleHandler {
 
 impl LifecycleHandler {
     /// Create a new lifecycle handler
+    #[must_use] 
     pub fn new(family_id: &str) -> Self {
         Self {
             manager: Arc::new(RwLock::new(LifecycleManager::new(family_id))),
@@ -36,7 +37,7 @@ impl LifecycleHandler {
     }
 
     /// Create with an existing manager
-    pub fn with_manager(manager: Arc<RwLock<LifecycleManager>>) -> Self {
+    pub const fn with_manager(manager: Arc<RwLock<LifecycleManager>>) -> Self {
         Self { manager }
     }
 
@@ -227,7 +228,7 @@ impl LifecycleHandler {
 // ============================================================================
 
 /// Convert lifecycle state to a simple string
-fn state_to_string(state: &LifecycleState) -> &'static str {
+const fn state_to_string(state: &LifecycleState) -> &'static str {
     match state {
         LifecycleState::Germinating => "germinating",
         LifecycleState::Incubating { .. } => "incubating",

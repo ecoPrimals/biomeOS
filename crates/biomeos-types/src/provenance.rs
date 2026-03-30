@@ -114,7 +114,7 @@ impl ProvenanceManifest {
 
     /// Number of recorded absorptions.
     #[must_use]
-    pub fn count(&self) -> usize {
+    pub const fn count(&self) -> usize {
         self.records.len()
     }
 

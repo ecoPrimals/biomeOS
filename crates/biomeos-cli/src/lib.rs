@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS CLI Library
+//! `BiomeOS` CLI Library
 //!
-//! Command-line interface utilities for BiomeOS: discovery, formatting,
+//! Command-line interface utilities for `BiomeOS`: discovery, formatting,
 //! health monitoring, and command handlers. Ecosystem visualization is
 //! provided by petalTongue (the universal UI primal).
 

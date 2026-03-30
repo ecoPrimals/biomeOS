@@ -43,7 +43,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ApiSchemaType {
-    /// OpenAPI specification (v3.x)
+    /// `OpenAPI` specification (v3.x)
     #[serde(rename = "openapi")]
     OpenAPI,
     /// JSON Schema
@@ -63,7 +63,7 @@ pub struct ApiSchemaResponse {
     /// Schema type identifier
     pub schema_type: ApiSchemaType,
 
-    /// Schema version (e.g., "3.1.0" for OpenAPI)
+    /// Schema version (e.g., "3.1.0" for `OpenAPI`)
     pub schema_version: String,
 
     /// The actual schema document
@@ -92,7 +92,7 @@ pub struct PrimalInfo {
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
-/// OpenAPI operation metadata (extracted from spec)
+/// `OpenAPI` operation metadata (extracted from spec)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationMetadata {
     /// Operation ID (e.g., "createBucket")

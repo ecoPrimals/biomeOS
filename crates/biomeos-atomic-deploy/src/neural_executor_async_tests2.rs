@@ -724,9 +724,8 @@ async fn test_execute_optional_rpc_missing_target_skipped() {
 #[tokio::test]
 async fn test_execute_with_metrics_collector() {
     let temp = tempfile::TempDir::new().expect("tempdir");
-    let metrics = MetricsCollector::new(temp.path().join("pathway-metrics.redb"))
-        .await
-        .expect("metrics db");
+    let metrics =
+        MetricsCollector::new(temp.path().join("pathway-metrics.redb")).expect("metrics db");
 
     let mut node = create_test_node("metrics_log", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
@@ -851,9 +850,7 @@ async fn test_execute_unknown_operation_yields_skipped_success() {
 #[tokio::test]
 async fn test_execute_metrics_with_failing_phase_still_produces_report() {
     let temp = tempfile::TempDir::new().expect("tempdir");
-    let metrics = MetricsCollector::new(temp.path().join("metrics.redb"))
-        .await
-        .expect("metrics");
+    let metrics = MetricsCollector::new(temp.path().join("metrics.redb")).expect("metrics");
 
     let mut node = create_test_node("m_fail", vec![]);
     node.operation = Some(crate::neural_graph::Operation {

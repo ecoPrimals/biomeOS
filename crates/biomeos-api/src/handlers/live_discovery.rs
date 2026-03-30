@@ -108,7 +108,7 @@ fn send_rpc_request(
 /// Discover a primal at the given socket path (capability-agnostic)
 ///
 /// This function queries ANY primal via `health.check` and extracts:
-/// - Identity information (name, version, family_id)
+/// - Identity information (name, version, `family_id`)
 /// - Capabilities (what the primal provides)
 /// - Health status
 ///
@@ -344,7 +344,7 @@ fn infer_type_from_name(name: &str) -> String {
     "primal".to_string()
 }
 
-/// Get socket directory via XDG-compliant SystemPaths
+/// Get socket directory via XDG-compliant `SystemPaths`
 ///
 /// Single source of truth: `SystemPaths::new_lazy().runtime_dir()`.
 /// Only falls back to env override if `BIOMEOS_SOCKET_DIR` is explicitly set.

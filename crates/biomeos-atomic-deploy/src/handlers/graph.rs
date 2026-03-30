@@ -17,7 +17,7 @@
 //!
 //! # XDG Compliance (EVOLVED Jan 27, 2026)
 //!
-//! Socket directory is determined via SystemPaths, not hardcoded.
+//! Socket directory is determined via `SystemPaths`, not hardcoded.
 
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::neural_executor::GraphExecutor;
@@ -35,7 +35,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// Execution status tracking.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,15 +67,25 @@ struct ContinuousSession {
 }
 
 /// Graph handler for CRUD and execution operations.
+///
+/// Graphs are split into two tiers:
+/// - **Nucleus graphs** (`graphs_dir`): biomeOS's own bootstrap/health/routing
+///   graphs. Bundled with the binary and loaded at build time. Not writable via API.
+/// - **Runtime graphs** (`runtime_graphs_dir`): Consumer compositions deployed via
+///   `graph.save`. Stored under `$XDG_DATA_HOME/biomeos/graphs/` or a sibling
+///   `runtime_graphs/` directory.
 #[derive(Clone)]
 pub struct GraphHandler {
-    /// Path to graphs directory
+    /// Nucleus graphs directory (read-only, bundled with binary)
     graphs_dir: PathBuf,
+
+    /// Runtime graphs directory (writable via `graph.save`)
+    runtime_graphs_dir: PathBuf,
 
     /// Active executions (transactional)
     executions: Arc<RwLock<HashMap<String, ExecutionStatus>>>,
 
-    /// Active continuous sessions (keyed by session_id)
+    /// Active continuous sessions (keyed by `session_id`)
     continuous_sessions: Arc<RwLock<HashMap<String, ContinuousSession>>>,
 
     /// Family ID
@@ -90,6 +100,10 @@ pub struct GraphHandler {
 
 impl GraphHandler {
     /// Create a new graph handler.
+    ///
+    /// `graphs_dir` is the nucleus graphs directory (bundled / read-only).
+    /// Runtime graphs are stored in a `runtime_graphs` sibling directory,
+    /// created on first `graph.save` if it does not exist.
     pub fn new(
         graphs_dir: impl Into<PathBuf>,
         family_id: impl Into<String>,
@@ -97,8 +111,14 @@ impl GraphHandler {
         router: Arc<NeuralRouter>,
         translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
     ) -> Self {
+        let graphs_dir = graphs_dir.into();
+        let runtime_graphs_dir = graphs_dir.parent().map_or_else(
+            || graphs_dir.join("runtime_graphs"),
+            |parent| parent.join("runtime_graphs"),
+        );
         Self {
-            graphs_dir: graphs_dir.into(),
+            graphs_dir,
+            runtime_graphs_dir,
             family_id: family_id.into(),
             executions,
             continuous_sessions: Arc::new(RwLock::new(HashMap::new())),
@@ -107,31 +127,59 @@ impl GraphHandler {
         }
     }
 
-    /// List all available graphs.
+    /// Resolve a graph ID to a file path, searching runtime graphs first,
+    /// then nucleus graphs. Runtime graphs take precedence so consumers can
+    /// override built-in compositions.
+    fn resolve_graph_path(&self, graph_id: &str) -> Option<PathBuf> {
+        let runtime_path = self.runtime_graphs_dir.join(format!("{graph_id}.toml"));
+        if runtime_path.exists() {
+            return Some(runtime_path);
+        }
+        let nucleus_path = self.graphs_dir.join(format!("{graph_id}.toml"));
+        if nucleus_path.exists() {
+            return Some(nucleus_path);
+        }
+        None
+    }
+
+    /// List all available graphs from both nucleus and runtime directories.
     ///
     /// JSON-RPC method: `graph.list`
+    ///
+    /// Each entry includes a `"tier"` field: `"nucleus"` for built-in graphs,
+    /// `"runtime"` for consumer-deployed graphs.
     pub async fn list(&self) -> Result<Value> {
         let mut graphs = Vec::new();
+        let mut seen_ids = std::collections::HashSet::new();
 
-        let entries =
-            std::fs::read_dir(&self.graphs_dir).context("Failed to read graphs directory")?;
+        for (dir, tier) in [
+            (&self.runtime_graphs_dir, "runtime"),
+            (&self.graphs_dir, "nucleus"),
+        ] {
+            let entries = match std::fs::read_dir(dir) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
 
-        for entry in entries {
-            let entry = entry?;
-            let path = entry.path();
-
-            if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) != Some("toml") {
+                    continue;
+                }
                 if let Ok(graph) = Graph::from_toml_file(&path) {
-                    graphs.push(json!({
-                        "id": graph.id,
-                        "version": graph.version,
-                        "description": graph.description,
-                        "node_count": graph.nodes.len(),
-                        "coordination": graph.coordination.as_deref().unwrap_or("sequential"),
-                        "continuous": graph.is_continuous(),
-                        "estimated_time_ms": null,
-                        "tags": []
-                    }));
+                    if seen_ids.insert(graph.id.clone()) {
+                        graphs.push(json!({
+                            "id": graph.id,
+                            "version": graph.version,
+                            "description": graph.description,
+                            "node_count": graph.nodes.len(),
+                            "coordination": graph.coordination.as_deref().unwrap_or("sequential"),
+                            "continuous": graph.is_continuous(),
+                            "tier": tier,
+                            "estimated_time_ms": null,
+                            "tags": []
+                        }));
+                    }
                 }
             }
         }
@@ -146,7 +194,9 @@ impl GraphHandler {
         let params = params.as_ref().context("Missing parameters")?;
         let graph_id = params["graph_id"].as_str().context("Missing graph_id")?;
 
-        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
+        let graph_path = self.resolve_graph_path(graph_id).with_context(|| {
+            format!("Graph '{graph_id}' not found in nucleus or runtime directories")
+        })?;
         let graph = Graph::from_toml_file(&graph_path).context("Failed to load graph")?;
 
         Ok(serde_json::to_value(graph)?)
@@ -154,22 +204,39 @@ impl GraphHandler {
 
     /// Save a graph.
     ///
+    /// Save a runtime graph (consumer-deployed composition).
+    ///
     /// JSON-RPC method: `graph.save`
+    ///
+    /// Writes to the runtime graphs directory, not the nucleus directory.
+    /// This is the primary API for consumers (ludoSpring, esotericWebb) to
+    /// deploy compositions that biomeOS will execute.
     pub async fn save(&self, params: &Option<Value>) -> Result<Value> {
         let params = params.as_ref().context("Missing parameters")?;
         let graph: Graph =
             serde_json::from_value(params.clone()).context("Failed to parse graph")?;
 
-        let graph_path = self.graphs_dir.join(format!("{}.toml", graph.id));
+        std::fs::create_dir_all(&self.runtime_graphs_dir).with_context(|| {
+            format!(
+                "Failed to create runtime graphs directory: {}",
+                self.runtime_graphs_dir.display()
+            )
+        })?;
+
+        let graph_path = self.runtime_graphs_dir.join(format!("{}.toml", graph.id));
 
         let toml_str =
             toml::to_string_pretty(&graph).context("Failed to serialize graph to TOML")?;
 
         std::fs::write(&graph_path, toml_str).context("Failed to write graph file")?;
 
-        info!("💾 Saved graph: {} to {}", graph.id, graph_path.display());
+        info!(
+            "💾 Saved runtime graph: {} to {}",
+            graph.id,
+            graph_path.display()
+        );
 
-        Ok(json!({"graph_id": graph.id}))
+        Ok(json!({"graph_id": graph.id, "location": "runtime"}))
     }
 
     /// Execute a graph.
@@ -185,15 +252,16 @@ impl GraphHandler {
         let graph_id = params["graph_id"].as_str().context("Missing graph_id")?;
         let family_id_param = params["family_id"].as_str().unwrap_or(&self.family_id);
 
-        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
+        let graph_path = self.resolve_graph_path(graph_id).with_context(|| {
+            format!(
+                "Graph '{graph_id}' not found in nucleus ({}) or runtime ({})",
+                self.graphs_dir.display(),
+                self.runtime_graphs_dir.display()
+            )
+        })?;
 
         info!("🔍 Loading graph: {}", graph_id);
         debug!("   Graph path: {}", graph_path.display());
-
-        if !graph_path.exists() {
-            error!("❌ Graph file not found: {}", graph_path.display());
-            anyhow::bail!("Graph file not found: {}", graph_path.display());
-        }
 
         let graph = Graph::from_toml_file(&graph_path)
             .with_context(|| format!("Failed to load graph from: {}", graph_path.display()))?;
@@ -276,7 +344,7 @@ impl GraphHandler {
                 .unwrap_or_else(|_| {
                     PathBuf::from(DEFAULT_SOCKET_DIR).join(files::DEFAULT_NEURAL_METRICS_DB)
                 });
-            let metrics = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path).await;
+            let metrics = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path);
 
             // Merge graph-defined env (e.g. gate endpoints) into executor env
             for (k, v) in &graph.env {
@@ -489,10 +557,13 @@ impl GraphHandler {
         let params = params.as_ref().context("Missing parameters")?;
         let graph_id = params["graph_id"].as_str().context("Missing graph_id")?;
 
-        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
-        if !graph_path.exists() {
-            anyhow::bail!("Graph file not found: {}", graph_path.display());
-        }
+        let graph_path = self.resolve_graph_path(graph_id).with_context(|| {
+            format!(
+                "Graph '{graph_id}' not found in nucleus ({}) or runtime ({})",
+                self.graphs_dir.display(),
+                self.runtime_graphs_dir.display()
+            )
+        })?;
 
         let toml_str = std::fs::read_to_string(&graph_path)
             .with_context(|| format!("Failed to read: {}", graph_path.display()))?;
@@ -512,16 +583,65 @@ impl GraphHandler {
         let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel::<SessionCommand>(16);
         let state_rx = executor.state_receiver();
         let session_id_log = session_id.clone();
+        let router = self.router.clone();
 
-        // Spawn the continuous loop in the background
+        // Spawn the continuous loop with real capability routing
         tokio::spawn(async move {
             info!("🎮 Starting continuous session: {}", session_id_log);
             executor
-                .run(cmd_rx, |node_id, _params, _feedback| {
-                    let node_id = node_id.to_string();
+                .run(cmd_rx, move |node_id, node, feedback| {
+                    let router = router.clone();
                     Box::pin(async move {
-                        debug!("  tick node: {}", node_id);
-                        Ok(serde_json::json!({"node": node_id, "status": "ok"}))
+                        let capability = match &node.capability {
+                            Some(cap) => cap.clone(),
+                            None => {
+                                debug!("  tick node {} — no capability, passthrough", node_id);
+                                return Ok(json!({"node": node_id, "status": "passthrough"}));
+                            }
+                        };
+
+                        let (domain, operation) = capability.split_once('.').unwrap_or((&capability, "execute"));
+
+                        let providers = router.get_capability_providers(domain).await;
+                        let provider = match providers.and_then(|p| p.into_iter().next()) {
+                            Some(p) => p,
+                            None => {
+                                debug!("  tick node {} — no provider for {}", node_id, domain);
+                                return Ok(json!({
+                                    "node": node_id,
+                                    "status": "skipped",
+                                    "reason": format!("no provider for capability '{domain}'")
+                                }));
+                            }
+                        };
+
+                        let rpc_method = format!("{domain}.{operation}");
+                        let args = feedback.unwrap_or(json!({}));
+                        let rpc_params = json!({
+                            "method": rpc_method,
+                            "params": args,
+                        });
+
+                        match router.forward_request(&provider.endpoint, &rpc_method, &rpc_params).await {
+                            Ok(result) => Ok(json!({
+                                "node": node_id,
+                                "status": "ok",
+                                "primal": provider.primal_name.as_ref(),
+                                "result": result,
+                            })),
+                            Err(e) => {
+                                warn!("  tick node {} ({}) failed: {}", node_id, capability, e);
+                                if !node.required {
+                                    Ok(json!({
+                                        "node": node_id,
+                                        "status": "degraded",
+                                        "error": e.to_string(),
+                                    }))
+                                } else {
+                                    Err(e)
+                                }
+                            }
+                        }
                     })
                 })
                 .await;
@@ -566,10 +686,13 @@ impl GraphHandler {
         let params = params.as_ref().context("Missing parameters")?;
         let graph_id = params["graph_id"].as_str().context("Missing graph_id")?;
 
-        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
-        if !graph_path.exists() {
-            anyhow::bail!("Graph file not found: {}", graph_path.display());
-        }
+        let graph_path = self.resolve_graph_path(graph_id).with_context(|| {
+            format!(
+                "Graph '{graph_id}' not found in nucleus ({}) or runtime ({})",
+                self.graphs_dir.display(),
+                self.runtime_graphs_dir.display()
+            )
+        })?;
 
         let toml_str = std::fs::read_to_string(&graph_path)
             .with_context(|| format!("Failed to read: {}", graph_path.display()))?;
@@ -756,10 +879,9 @@ impl GraphHandler {
 
         let min_samples = params["min_samples"].as_u64().unwrap_or(10);
 
-        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
-        if !graph_path.exists() {
-            anyhow::bail!("Graph file not found: {}", graph_path.display());
-        }
+        let graph_path = self.resolve_graph_path(graph_id).with_context(|| {
+            format!("Graph '{graph_id}' not found in nucleus or runtime directories")
+        })?;
 
         let toml_str = std::fs::read_to_string(&graph_path)
             .with_context(|| format!("Failed to read: {}", graph_path.display()))?;
@@ -774,7 +896,6 @@ impl GraphHandler {
             });
 
         let collector = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path)
-            .await
             .context("Failed to open metrics database")?;
 
         let learner = biomeos_graph::pathway_learner::PathwayLearner::new(collector, min_samples);
@@ -790,7 +911,7 @@ impl GraphHandler {
         Ok(serde_json::to_value(analysis)?)
     }
 
-    /// Extract session_id from params (pure logic, testable).
+    /// Extract `session_id` from params (pure logic, testable).
     pub(crate) fn extract_session_id(params: &Option<Value>) -> Result<String> {
         let params = params.as_ref().context("Missing parameters")?;
         Ok(params["session_id"]

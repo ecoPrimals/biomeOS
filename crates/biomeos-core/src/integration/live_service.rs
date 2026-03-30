@@ -58,7 +58,7 @@ impl LiveService {
     /// Create a new live service instance
     pub async fn new() -> Result<Self> {
         let config = BiomeOSConfig::default();
-        let universal_manager = UniversalBiomeOSManager::new(config.clone()).await?;
+        let universal_manager = UniversalBiomeOSManager::new(config.clone())?;
 
         Ok(Self {
             config,
@@ -71,7 +71,7 @@ impl LiveService {
         info!("Starting BiomeOS Live Service");
 
         // Initialize the manager (this is async)
-        self.universal_manager.initialize().await?;
+        self.universal_manager.initialize()?;
 
         // Start monitoring loops
         self.start_monitoring_loops().await?;
@@ -93,7 +93,7 @@ impl LiveService {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
             loop {
                 interval.tick().await;
-                let health_report = manager_clone.get_system_health().await;
+                let health_report = manager_clone.get_system_health();
                 debug!(
                     "Periodic health check: system={:?}, subject={}",
                     health_report.health, health_report.subject.name
@@ -168,7 +168,7 @@ impl LiveService {
     pub async fn get_system_status(&self) -> Result<SystemStatus> {
         debug!("Getting system status");
 
-        let health_report = self.universal_manager.get_system_health().await;
+        let health_report = self.universal_manager.get_system_health();
 
         // Real uptime from system (/proc/uptime on Linux via biomeos-system)
         let uptime = get_system_uptime().await.unwrap_or_else(|e| {
@@ -510,7 +510,8 @@ pub struct InterfaceStatus {
 }
 
 /// Create default (zero) resource metrics
-pub fn default_resource_metrics() -> biomeos_types::ResourceMetrics {
+#[must_use] 
+pub const fn default_resource_metrics() -> biomeos_types::ResourceMetrics {
     biomeos_types::ResourceMetrics {
         cpu_usage: Some(0.0),
         memory_usage: Some(0.0),

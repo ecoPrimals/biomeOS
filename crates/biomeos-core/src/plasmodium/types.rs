@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 // ─── Core Types ──────────────────────────────────────────────────────────
 
-/// Bond type between gates (from NUCLEUS_BONDING_MODEL)
+/// Bond type between gates (from `NUCLEUS_BONDING_MODEL`)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum BondType {
     /// Shared family seed, genetic trust, zero metering
@@ -23,10 +23,10 @@ pub enum BondType {
 impl std::fmt::Display for BondType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BondType::Covalent => write!(f, "covalent"),
-            BondType::Ionic => write!(f, "ionic"),
-            BondType::Metallic => write!(f, "metallic"),
-            BondType::Weak => write!(f, "weak"),
+            Self::Covalent => write!(f, "covalent"),
+            Self::Ionic => write!(f, "ionic"),
+            Self::Metallic => write!(f, "metallic"),
+            Self::Weak => write!(f, "weak"),
         }
     }
 }

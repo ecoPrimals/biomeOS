@@ -3,7 +3,7 @@
 
 //! Unified Primal Type System
 //!
-//! This module provides a comprehensive primal type system for the BiomeOS ecosystem,
+//! This module provides a comprehensive primal type system for the `BiomeOS` ecosystem,
 //! organizing all primal-related types into logical sub-modules for better maintainability.
 //!
 //! The module is split into:

@@ -11,7 +11,7 @@
 //!
 //! ## Architectural Principle: Composability
 //!
-//! **biomeOS orchestrates. BearDog secures.**
+//! **biomeOS orchestrates. `BearDog` secures.**
 //!
 //! This module handles:
 //! - ✅ File I/O (`.family.seed` management)
@@ -21,10 +21,10 @@
 //! - ✅ USB device orchestration
 //!
 //! This module does NOT handle:
-//! - ❌ Cryptography (BearDog's responsibility)
-//! - ❌ Key derivation (BearDog's responsibility)
-//! - ❌ Family ID extraction (BearDog's responsibility)
-//! - ❌ Genetic lineage verification (BearDog's responsibility)
+//! - ❌ Cryptography (`BearDog`'s responsibility)
+//! - ❌ Key derivation (`BearDog`'s responsibility)
+//! - ❌ Family ID extraction (`BearDog`'s responsibility)
+//! - ❌ Genetic lineage verification (`BearDog`'s responsibility)
 //!
 //! ## Usage
 //!

@@ -41,7 +41,7 @@ pub fn parse_spore_type(s: &str) -> Result<SporeType> {
     }
 }
 
-/// Gathers structure info for paths under a spore root. Returns PathInfo for each.
+/// Gathers structure info for paths under a spore root. Returns `PathInfo` for each.
 pub(crate) fn gather_spore_structure_info(path: &Path) -> Vec<PathInfo> {
     let rel_paths = [
         ".family.seed",

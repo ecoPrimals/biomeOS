@@ -81,28 +81,28 @@ pub type Result<T> = std::result::Result<T, PathError>;
 )]
 pub struct SystemPaths {
     /// Runtime directory (Unix sockets, PID files)
-    /// Default: $XDG_RUNTIME_DIR/biomeos or /tmp/biomeos-$USER/
+    /// Default: $`XDG_RUNTIME_DIR/biomeos` or /tmp/biomeos-$USER/
     runtime_dir: PathBuf,
 
     /// Data directory (persistent state, databases)
-    /// Default: $XDG_DATA_HOME/biomeos or ~/.local/share/biomeos
+    /// Default: $`XDG_DATA_HOME/biomeos` or ~/.local/share/biomeos
     data_dir: PathBuf,
 
     /// Config directory (configuration files)
-    /// Default: $XDG_CONFIG_HOME/biomeos or ~/.config/biomeos
+    /// Default: $`XDG_CONFIG_HOME/biomeos` or ~/.config/biomeos
     config_dir: PathBuf,
 
     /// Cache directory (temporary cached data)
-    /// Default: $XDG_CACHE_HOME/biomeos or ~/.cache/biomeos
+    /// Default: $`XDG_CACHE_HOME/biomeos` or ~/.cache/biomeos
     cache_dir: PathBuf,
 
     /// State directory (logs, history)
-    /// Default: $XDG_STATE_HOME/biomeos or ~/.local/state/biomeos
+    /// Default: $`XDG_STATE_HOME/biomeos` or ~/.local/state/biomeos
     state_dir: PathBuf,
 }
 
 impl SystemPaths {
-    /// Create new SystemPaths with XDG-compliant defaults
+    /// Create new `SystemPaths` with XDG-compliant defaults
     ///
     /// This will create all necessary directories if they don't exist.
     pub fn new() -> Result<Self> {
@@ -128,7 +128,7 @@ impl SystemPaths {
         })
     }
 
-    /// Create SystemPaths with XDG env overrides (for testing without mutating env)
+    /// Create `SystemPaths` with XDG env overrides (for testing without mutating env)
     pub fn new_with_xdg_overrides(
         xdg_runtime_dir: Option<impl AsRef<Path>>,
         xdg_data_home: Option<impl AsRef<Path>>,
@@ -156,7 +156,7 @@ impl SystemPaths {
         })
     }
 
-    /// Create SystemPaths with custom base directories
+    /// Create `SystemPaths` with custom base directories
     ///
     /// Use this for testing or custom deployments
     ///
@@ -202,6 +202,7 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the runtime directory
+    #[must_use] 
     pub fn runtime_dir(&self) -> &Path {
         &self.runtime_dir
     }
@@ -209,16 +210,19 @@ impl SystemPaths {
     /// Get Unix socket path for a primal
     ///
     /// Example: `beardog-main` → `$XDG_RUNTIME_DIR/biomeos/beardog-main.sock`
+    #[must_use] 
     pub fn primal_socket(&self, primal_id: &str) -> PathBuf {
         self.runtime_dir.join(format!("{primal_id}.sock"))
     }
 
     /// Get PID file path
+    #[must_use] 
     pub fn pid_file(&self, service_name: &str) -> PathBuf {
         self.runtime_dir.join(format!("{service_name}.pid"))
     }
 
     /// Get lock file path
+    #[must_use] 
     pub fn lock_file(&self, name: &str) -> PathBuf {
         self.runtime_dir.join(format!("{name}.lock"))
     }
@@ -228,26 +232,31 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the data directory
+    #[must_use] 
     pub fn data_dir(&self) -> &Path {
         &self.data_dir
     }
 
     /// Get database file path
+    #[must_use] 
     pub fn database(&self, name: &str) -> PathBuf {
         self.data_dir.join(format!("{name}.db"))
     }
 
     /// Get metrics database path
+    #[must_use] 
     pub fn metrics_db(&self) -> PathBuf {
         self.data_dir.join("metrics.db")
     }
 
     /// Get spore storage directory
+    #[must_use] 
     pub fn spore_dir(&self) -> PathBuf {
         self.data_dir.join("spores")
     }
 
     /// Get genetic seed file path
+    #[must_use] 
     pub fn genetic_seed(&self, family_id: &str) -> PathBuf {
         self.data_dir
             .join("seeds")
@@ -259,21 +268,25 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the config directory
+    #[must_use] 
     pub fn config_dir(&self) -> &Path {
         &self.config_dir
     }
 
     /// Get main biomeOS config file
+    #[must_use] 
     pub fn main_config(&self) -> PathBuf {
         self.config_dir.join("biomeos.toml")
     }
 
     /// Get niche manifest directory
+    #[must_use] 
     pub fn niche_dir(&self) -> PathBuf {
         self.config_dir.join("niches")
     }
 
     /// Get graph definitions directory
+    #[must_use] 
     pub fn graph_dir(&self) -> PathBuf {
         self.config_dir.join("graphs")
     }
@@ -283,16 +296,19 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the cache directory
+    #[must_use] 
     pub fn cache_dir(&self) -> &Path {
         &self.cache_dir
     }
 
     /// Get temporary workspace
+    #[must_use] 
     pub fn temp_workspace(&self, name: &str) -> PathBuf {
         self.cache_dir.join("workspace").join(name)
     }
 
     /// Get download cache
+    #[must_use] 
     pub fn download_cache(&self) -> PathBuf {
         self.cache_dir.join("downloads")
     }
@@ -302,11 +318,13 @@ impl SystemPaths {
     // =============================================================================
 
     /// Get the state directory
+    #[must_use] 
     pub fn state_dir(&self) -> &Path {
         &self.state_dir
     }
 
     /// Get log file path
+    #[must_use] 
     pub fn log_file(&self, service_name: &str) -> PathBuf {
         self.state_dir
             .join("logs")
@@ -314,11 +332,13 @@ impl SystemPaths {
     }
 
     /// Get fossil record directory
+    #[must_use] 
     pub fn fossil_record_dir(&self) -> PathBuf {
         self.state_dir.join("fossil-record")
     }
 
     /// Get audit log path
+    #[must_use] 
     pub fn audit_log(&self) -> PathBuf {
         self.state_dir.join("audit.log")
     }
@@ -439,7 +459,7 @@ impl SystemPaths {
             .unwrap_or_else(|_| "default".to_string())
     }
 
-    /// Create SystemPaths without creating directories
+    /// Create `SystemPaths` without creating directories
     ///
     /// This is useful for Default implementation and cases where you want
     /// to compute paths but defer directory creation until actually needed.
@@ -449,6 +469,7 @@ impl SystemPaths {
     /// Note: This will use fallback paths (e.g., /tmp) if XDG paths cannot
     /// be determined. For stricter path requirements, use `new()` which
     /// returns a `Result`.
+    #[must_use] 
     pub fn new_lazy() -> Self {
         // Compute paths with fallbacks - these operations cannot fail
         let runtime_dir =
@@ -522,7 +543,7 @@ pub fn safe_uid() -> u32 {
 }
 
 impl Default for SystemPaths {
-    /// Create SystemPaths with lazy directory creation
+    /// Create `SystemPaths` with lazy directory creation
     ///
     /// This implementation uses `new_lazy()` to avoid panicking.
     /// Directories will be created when first accessed. For explicit

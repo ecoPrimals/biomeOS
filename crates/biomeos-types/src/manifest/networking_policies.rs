@@ -3,7 +3,7 @@
 
 //! Network Policy Specifications
 //!
-//! This module contains network policy types including NetworkPolicySpec,
+//! This module contains network policy types including `NetworkPolicySpec`,
 //! ingress/egress rules, and network security policies.
 
 use serde::{Deserialize, Serialize};

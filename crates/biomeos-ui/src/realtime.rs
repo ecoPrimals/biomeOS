@@ -169,6 +169,7 @@ impl RealTimeEventSubscriber {
     /// Create a new real-time event subscriber
     ///
     /// Discovers WebSocket/SSE endpoints via capability-based discovery
+    #[must_use] 
     pub fn new(family_id: String) -> Self {
         let (event_tx, _) = broadcast::channel(100);
 
@@ -183,7 +184,7 @@ impl RealTimeEventSubscriber {
     /// Discover event streaming endpoints
     ///
     /// Queries Songbird for services with "event_streaming" capability
-    pub async fn discover_endpoints(&mut self) -> Result<()> {
+    pub fn discover_endpoints(&mut self) -> Result<()> {
         info!("🔍 Discovering real-time event endpoints...");
 
         // EVOLUTION: Discover from environment, no hardcoded fallbacks
@@ -332,6 +333,7 @@ impl RealTimeEventSubscriber {
     }
 
     /// Get a receiver for events
+    #[must_use] 
     pub fn subscribe(&self) -> broadcast::Receiver<RealTimeEvent> {
         self.event_tx.subscribe()
     }
@@ -386,6 +388,7 @@ pub struct RealTimeEventHandler {
 
 impl RealTimeEventHandler {
     /// Create a new event handler
+    #[must_use] 
     pub fn new(subscriber: Arc<RealTimeEventSubscriber>) -> Self {
         let event_rx = subscriber.subscribe();
 

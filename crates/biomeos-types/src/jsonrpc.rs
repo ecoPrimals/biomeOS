@@ -196,7 +196,8 @@ impl JsonRpcResponse {
     /// assert!(resp.error.is_none());
     /// assert_eq!(resp.id, serde_json::json!(1));
     /// ```
-    pub fn success(id: serde_json::Value, result: serde_json::Value) -> Self {
+    #[must_use] 
+    pub const fn success(id: serde_json::Value, result: serde_json::Value) -> Self {
         Self {
             jsonrpc: JsonRpcVersion,
             result: Some(result),
@@ -217,7 +218,8 @@ impl JsonRpcResponse {
     /// assert!(resp.error.is_some());
     /// assert_eq!(resp.error.as_ref().unwrap().code, -32601);
     /// ```
-    pub fn error(id: serde_json::Value, error: JsonRpcError) -> Self {
+    #[must_use] 
+    pub const fn error(id: serde_json::Value, error: JsonRpcError) -> Self {
         Self {
             jsonrpc: JsonRpcVersion,
             result: None,
@@ -241,6 +243,7 @@ pub struct JsonRpcError {
 
 impl JsonRpcError {
     /// Create a parse error (-32700).
+    #[must_use] 
     pub fn parse_error() -> Self {
         Self {
             code: -32700,
@@ -250,6 +253,7 @@ impl JsonRpcError {
     }
 
     /// Create an invalid request error (-32600).
+    #[must_use] 
     pub fn invalid_request() -> Self {
         Self {
             code: -32600,
@@ -259,6 +263,7 @@ impl JsonRpcError {
     }
 
     /// Create a method not found error (-32601).
+    #[must_use] 
     pub fn method_not_found() -> Self {
         Self {
             code: -32601,
@@ -268,6 +273,7 @@ impl JsonRpcError {
     }
 
     /// Create an invalid params error (-32602).
+    #[must_use] 
     pub fn invalid_params(details: Option<String>) -> Self {
         Self {
             code: -32602,
@@ -277,6 +283,7 @@ impl JsonRpcError {
     }
 
     /// Create an internal error (-32603).
+    #[must_use] 
     pub fn internal_error(details: Option<String>) -> Self {
         Self {
             code: -32603,

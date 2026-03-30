@@ -32,7 +32,7 @@ impl HealthUtils {
     pub async fn comprehensive_health_report(
         manager: &UniversalBiomeOSManager,
     ) -> Result<CLIHealthReport> {
-        let health_report = manager.get_system_health().await;
+        let health_report = manager.get_system_health();
 
         // Convert unified health report to CLI format
         let system_health = SystemHealth {
@@ -66,7 +66,7 @@ impl HealthUtils {
             for endpoint in discovered_endpoints {
                 // Probe each service for detailed health info
                 let start_time = std::time::Instant::now();
-                match manager.probe_endpoint(&endpoint).await {
+                match manager.probe_endpoint(&endpoint) {
                     Ok(probe_result) => {
                         let response_time = start_time.elapsed().as_millis() as u64;
                         services.push(ServiceHealth {
@@ -128,7 +128,7 @@ impl HealthUtils {
     pub async fn analyze_system_health(
         manager: &UniversalBiomeOSManager,
     ) -> Result<HealthAnalysis> {
-        let health_report = manager.get_system_health().await;
+        let health_report = manager.get_system_health();
         let mut issues = Vec::new();
         let mut recommendations = Vec::new();
 
@@ -214,7 +214,7 @@ impl HealthUtils {
     }
 
     /// Get health trend analysis
-    pub async fn health_trend_analysis(_manager: &UniversalBiomeOSManager) -> Result<HealthTrend> {
+    pub fn health_trend_analysis(_manager: &UniversalBiomeOSManager) -> Result<HealthTrend> {
         // In production, this would analyze historical health data
         Ok(HealthTrend {
             trend: "Stable".to_string(),
@@ -227,7 +227,7 @@ impl HealthUtils {
     pub async fn check_health_conditions(
         manager: &UniversalBiomeOSManager,
     ) -> Result<Vec<HealthCondition>> {
-        let health_report = manager.get_system_health().await;
+        let health_report = manager.get_system_health();
         let mut conditions = Vec::new();
 
         // Check uptime from availability metrics
@@ -492,8 +492,8 @@ mod tests {
     #[tokio::test]
     async fn test_health_trend_analysis() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
-        let result = HealthUtils::health_trend_analysis(&manager).await;
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
+        let result = HealthUtils::health_trend_analysis(&manager);
         assert!(result.is_ok());
         let trend = result.unwrap();
         assert_eq!(trend.trend, "Stable");
@@ -503,7 +503,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_health_conditions() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
         let result = HealthUtils::check_health_conditions(&manager).await;
         assert!(result.is_ok());
     }
@@ -511,7 +511,7 @@ mod tests {
     #[tokio::test]
     async fn test_analyze_system_health() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
         let result = HealthUtils::analyze_system_health(&manager).await;
         assert!(result.is_ok());
         let analysis = result.unwrap();
@@ -521,7 +521,7 @@ mod tests {
     #[tokio::test]
     async fn test_comprehensive_health_report() {
         let config = biomeos_types::BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
         let result = HealthUtils::comprehensive_health_report(&manager).await;
         assert!(result.is_ok());
         let report = result.unwrap();

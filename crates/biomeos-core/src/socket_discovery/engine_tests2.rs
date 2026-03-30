@@ -227,9 +227,7 @@ async fn test_discover_endpoint_via_env_generic_endpoint_unix() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("my-primal", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("my-primal", Some(&env_overrides));
 
     assert!(result.is_some());
     if let Some(TransportEndpoint::UnixSocket { path }) = result {
@@ -244,9 +242,7 @@ async fn test_discover_endpoint_via_env_tcp_prefix_fallback() {
     let env_overrides: HashMap<String, String> =
         [("BEARDOG_TCP".to_string(), "127.0.0.1:19100".to_string())].into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("beardog", Some(&env_overrides));
 
     assert!(result.is_some());
     if let Some(TransportEndpoint::TcpSocket { host, port }) = result {
@@ -353,9 +349,7 @@ async fn test_discover_endpoint_via_env_unix_missing_file_skipped() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("foo", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("foo", Some(&env_overrides));
     assert!(result.is_none());
 }
 
@@ -496,9 +490,7 @@ async fn test_discover_endpoint_via_env_tcp_non_matching_parse_returns_none() {
     let env_overrides: HashMap<String, String> =
         [("FOO_TCP".to_string(), "not-a-tcp-endpoint".to_string())].into();
     let discovery = SocketDiscovery::new("test");
-    let r = discovery
-        .discover_endpoint_via_env_with("foo", Some(&env_overrides))
-        .await;
+    let r = discovery.discover_endpoint_via_env_with("foo", Some(&env_overrides));
     assert!(r.is_none());
 }
 
@@ -635,9 +627,7 @@ async fn test_discover_endpoint_via_env_bar_live_unix_listener() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let r = discovery
-        .discover_endpoint_via_env_with("bar", Some(&env_overrides))
-        .await;
+    let r = discovery.discover_endpoint_via_env_with("bar", Some(&env_overrides));
     assert!(r.is_some());
 }
 
@@ -693,9 +683,7 @@ async fn discover_endpoint_via_env_tcp_override_parses() {
     let env_overrides: HashMap<String, String> =
         [("FOO_TCP".to_string(), "127.0.0.1:65534".to_string())].into();
     let discovery = SocketDiscovery::new("test");
-    let r = discovery
-        .discover_endpoint_via_env_with("foo", Some(&env_overrides))
-        .await;
+    let r = discovery.discover_endpoint_via_env_with("foo", Some(&env_overrides));
     assert!(r.is_some());
 }
 

@@ -3,8 +3,8 @@
 
 //! Model Cache - NUCLEUS-integrated model artifact management
 //!
-//! Provides persistent caching for AI model files (HuggingFace, GGUF, safetensors)
-//! across the biomeOS mesh. Uses NestGate for distributed storage when available,
+//! Provides persistent caching for AI model files (`HuggingFace`, GGUF, safetensors)
+//! across the biomeOS mesh. Uses `NestGate` for distributed storage when available,
 //! with graceful fallback to local filesystem.
 
 mod cache;

@@ -12,6 +12,7 @@
 /// 1. `$PRIMAL_SOCKET` environment variable (e.g., `$BEARDOG_SOCKET`)
 /// 2. `SystemPaths::new_lazy().primal_socket()` (XDG-compliant, handles
 ///    `XDG_RUNTIME_DIR`, `/run/user/{uid}`, and `/tmp` fallbacks)
+#[must_use] 
 pub fn resolve_primal_socket(primal: &str, family_id: &str) -> String {
     // 1. Check environment variable override (primal-specific)
     let env_var = format!("{}_SOCKET", primal.to_uppercase());

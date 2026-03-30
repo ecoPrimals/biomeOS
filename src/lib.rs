@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS - Universal Operating System
+//! `BiomeOS` - Universal Operating System
 //!
 //! A capability-based orchestration layer for managing primals and ecosystems.
 //!
@@ -47,7 +47,7 @@ pub enum UIMode {
     Headless,
 }
 
-/// BiomeOS runtime configuration
+/// `BiomeOS` runtime configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[must_use]
 pub struct BiomeOSRuntime {

@@ -19,7 +19,7 @@ pub struct ModelEntry {
     /// Total size in bytes
     pub size_bytes: u64,
 
-    /// Source URL (e.g., HuggingFace hub URL)
+    /// Source URL (e.g., `HuggingFace` hub URL)
     pub source: String,
 
     /// SHA256 of the primary model file (for integrity)
@@ -41,7 +41,7 @@ pub struct ModelEntry {
     pub files: Vec<ModelFile>,
 }
 
-pub(crate) fn default_format() -> String {
+pub fn default_format() -> String {
     "huggingface".to_string()
 }
 
@@ -91,7 +91,7 @@ pub enum ModelResolution {
 impl std::fmt::Display for ModelResolution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ModelResolution::Local(e) => {
+            Self::Local(e) => {
                 write!(
                     f,
                     "LOCAL: {} ({:.1} MB) at {}",
@@ -100,7 +100,7 @@ impl std::fmt::Display for ModelResolution {
                     e.local_path.display()
                 )
             }
-            ModelResolution::Remote(e) => {
+            Self::Remote(e) => {
                 write!(
                     f,
                     "REMOTE: {} ({:.1} MB) on gate '{}'",
@@ -109,7 +109,7 @@ impl std::fmt::Display for ModelResolution {
                     e.gate_id
                 )
             }
-            ModelResolution::NotFound => write!(f, "NOT FOUND"),
+            Self::NotFound => write!(f, "NOT FOUND"),
         }
     }
 }

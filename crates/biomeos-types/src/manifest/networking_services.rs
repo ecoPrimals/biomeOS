@@ -84,7 +84,7 @@ pub enum ServiceMeshType {
     Istio,
     /// Linkerd service mesh
     Linkerd,
-    /// HashiCorp Consul Connect
+    /// `HashiCorp` Consul Connect
     Consul,
     /// Envoy proxy
     Envoy,

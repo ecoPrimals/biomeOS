@@ -130,7 +130,7 @@ impl Error {
 
     /// Create a capability mismatch error
     #[must_use]
-    pub fn capability_mismatch(expected: Vec<String>, actual: Vec<String>) -> Self {
+    pub const fn capability_mismatch(expected: Vec<String>, actual: Vec<String>) -> Self {
         Self::CapabilityMismatch { expected, actual }
     }
 

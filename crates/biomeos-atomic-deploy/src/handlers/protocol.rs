@@ -36,7 +36,7 @@ pub struct ProtocolHandler {
 
 impl ProtocolHandler {
     /// Create a new protocol handler
-    pub fn new(
+    pub const fn new(
         graph: Arc<LivingGraph>,
         escalation_manager: Arc<RwLock<ProtocolEscalationManager>>,
     ) -> Self {
@@ -192,7 +192,7 @@ impl ProtocolHandler {
             .ok_or_else(|| anyhow!("Connection not found: {from} → {to}"))
     }
 
-    /// Handle graph.protocol_map
+    /// Handle `graph.protocol_map`
     ///
     /// Get a full snapshot of the Living Graph including all nodes and edges.
     ///
@@ -248,7 +248,7 @@ impl ProtocolHandler {
         }))
     }
 
-    /// Handle protocol.register_primal
+    /// Handle `protocol.register_primal`
     ///
     /// Register a primal's protocol state in the Living Graph.
     ///
@@ -317,7 +317,7 @@ impl ProtocolHandler {
         }))
     }
 
-    /// Handle protocol.register_connection
+    /// Handle `protocol.register_connection`
     ///
     /// Register a connection between two primals.
     ///
@@ -356,7 +356,7 @@ impl ProtocolHandler {
         }))
     }
 
-    /// Handle protocol.record_request
+    /// Handle `protocol.record_request`
     ///
     /// Record a request on a connection (for metrics).
     ///
@@ -407,7 +407,7 @@ impl ProtocolHandler {
         }))
     }
 
-    /// Handle protocol.start_monitoring
+    /// Handle `protocol.start_monitoring`
     ///
     /// Start the background auto-escalation monitoring loop.
     pub async fn start_monitoring(&self) -> Result<Value> {
@@ -425,7 +425,7 @@ impl ProtocolHandler {
         }))
     }
 
-    /// Handle protocol.stop_monitoring
+    /// Handle `protocol.stop_monitoring`
     ///
     /// Stop the background auto-escalation monitoring loop.
     pub async fn stop_monitoring(&self) -> Result<Value> {

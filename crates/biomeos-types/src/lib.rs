@@ -140,12 +140,12 @@ pub use xr::{
 pub use chrono::{DateTime, Utc};
 pub use uuid::Uuid;
 
-/// Convenience type alias for HashMap used throughout BiomeOS
+/// Convenience type alias for `HashMap` used throughout `BiomeOS`
 pub type BiomeMap<K, V> = HashMap<K, V>;
-/// Convenience type alias for UTC DateTime used throughout BiomeOS
+/// Convenience type alias for UTC `DateTime` used throughout `BiomeOS`
 pub type BiomeDateTime = DateTime<Utc>;
 
-/// Unified build information for the entire BiomeOS ecosystem
+/// Unified build information for the entire `BiomeOS` ecosystem
 pub const BUILD_INFO: &str = concat!("BiomeOS Types v", env!("CARGO_PKG_VERSION"));
 
 // Re-export version constants from constants module

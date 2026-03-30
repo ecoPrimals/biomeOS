@@ -37,11 +37,12 @@ pub enum AtomicType {
 
 impl AtomicType {
     /// Get the node ID for this atomic
-    pub fn node_id(&self) -> &'static str {
+    #[must_use] 
+    pub const fn node_id(&self) -> &'static str {
         match self {
-            AtomicType::Tower => "tower",
-            AtomicType::Node => "node",
-            AtomicType::Nest => "nest",
+            Self::Tower => "tower",
+            Self::Node => "node",
+            Self::Nest => "nest",
         }
     }
 
@@ -49,17 +50,18 @@ impl AtomicType {
     ///
     /// Evolution: migrate to capability-based requirements resolved via
     /// Neural API discovery rather than fixed primal role names.
+    #[must_use] 
     pub fn required_primals(&self) -> Vec<&'static str> {
         match self {
-            AtomicType::Tower => vec![BEARDOG_SERVER_ROLE, SONGBIRD_ORCHESTRATOR_ROLE],
-            AtomicType::Node => {
+            Self::Tower => vec![BEARDOG_SERVER_ROLE, SONGBIRD_ORCHESTRATOR_ROLE],
+            Self::Node => {
                 vec![
                     BEARDOG_SERVER_ROLE,
                     SONGBIRD_ORCHESTRATOR_ROLE,
                     primal_names::TOADSTOOL,
                 ]
             }
-            AtomicType::Nest => {
+            Self::Nest => {
                 vec![
                     BEARDOG_SERVER_ROLE,
                     SONGBIRD_ORCHESTRATOR_ROLE,
@@ -383,7 +385,7 @@ pub struct DeploymentResult {
 }
 
 impl DeploymentResult {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             tower: None,
             node: None,
@@ -394,11 +396,13 @@ impl DeploymentResult {
     }
 
     /// Check if deployment was successful
-    pub fn is_success(&self) -> bool {
+    #[must_use] 
+    pub const fn is_success(&self) -> bool {
         self.success_count == 3 && self.errors.is_empty()
     }
 
     /// Get all running primal instances
+    #[must_use] 
     pub fn all_instances(&self) -> Vec<&PrimalInstance> {
         let mut instances = Vec::new();
 

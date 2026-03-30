@@ -59,7 +59,7 @@ async fn test_start_continuous_graph_not_found() {
         .start_continuous(&params)
         .await
         .expect_err("should fail");
-    assert!(err.to_string().contains("Graph file not found"));
+    assert!(err.to_string().contains("not found"));
 }
 
 #[tokio::test]

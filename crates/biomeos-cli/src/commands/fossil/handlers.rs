@@ -29,8 +29,8 @@ fn cli_log_config() -> LogConfig {
 /// Dispatch fossil subcommand
 pub(super) async fn dispatch(args: FossilArgs) -> Result<()> {
     match args.action {
-        FossilAction::Active { node } => handle_active(node).await,
-        FossilAction::Fossil { node, limit, show } => handle_fossil(node, limit, show).await,
+        FossilAction::Active { node } => handle_active(node),
+        FossilAction::Fossil { node, limit, show } => handle_fossil(node, limit, show),
         FossilAction::Archive { node_id } => handle_archive(node_id).await,
         FossilAction::Clean {
             older_than,
@@ -41,7 +41,7 @@ pub(super) async fn dispatch(args: FossilArgs) -> Result<()> {
     }
 }
 
-async fn handle_active(node_filter: Option<String>) -> Result<()> {
+fn handle_active(node_filter: Option<String>) -> Result<()> {
     let config = cli_log_config();
     let manager = LogManager::new(config);
 
@@ -71,7 +71,7 @@ async fn handle_active(node_filter: Option<String>) -> Result<()> {
     Ok(())
 }
 
-async fn handle_fossil(
+fn handle_fossil(
     node_filter: Option<String>,
     limit: usize,
     show: Option<usize>,

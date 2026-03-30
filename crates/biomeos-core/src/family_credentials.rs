@@ -142,6 +142,7 @@ impl SecretSeed {
     }
 
     /// Get a reference to the seed (temporary use only)
+    #[must_use] 
     pub fn as_str(&self) -> &str {
         &self.seed
     }
@@ -303,11 +304,13 @@ impl FamilyCredentials {
     }
 
     /// Get the family ID
-    pub fn family_id(&self) -> &FamilyId {
+    #[must_use] 
+    pub const fn family_id(&self) -> &FamilyId {
         &self.family_id
     }
 
     /// Get a reference to the seed (temporary use only)
+    #[must_use] 
     pub fn seed_ref(&self) -> &str {
         self.seed.as_str()
     }

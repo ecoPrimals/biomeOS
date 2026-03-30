@@ -590,9 +590,9 @@ async fn test_full_lifecycle() -> Result<()> {
 
     // This would actually create VMs if libvirt is available
     manager.create(name).await?;
-    manager.start(name).await?;
-    manager.test(name).await?;
-    manager.stop(name).await?;
-    manager.destroy(name).await?;
+    manager.start(name)?;
+    manager.test(name)?;
+    manager.stop(name)?;
+    manager.destroy(name)?;
     Ok(())
 }

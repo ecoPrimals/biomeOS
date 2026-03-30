@@ -53,12 +53,13 @@ pub struct ProbeResult {
 
 impl PrimalDiscoveryService {
     /// Create new discovery service
-    pub fn new(config: Arc<BiomeOSConfig>) -> Self {
+    #[must_use] 
+    pub const fn new(config: Arc<BiomeOSConfig>) -> Self {
         Self { _config: config }
     }
 
     /// Initialize the discovery service
-    pub async fn initialize(&self) -> Result<()> {
+    pub fn initialize(&self) -> Result<()> {
         tracing::info!("🚀 Initializing Primal Discovery Service");
         Ok(())
     }
@@ -67,7 +68,7 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
-    pub async fn discover_registry(&self, _registry_url: &str) -> Result<Vec<DiscoveryResult>> {
+    pub fn discover_registry(&self, _registry_url: &str) -> Result<Vec<DiscoveryResult>> {
         // This method is deprecated - discovery now happens through ClientRegistry
         // which uses Songbird for capability-based discovery
         tracing::debug!("discover_registry called - using ClientRegistry instead");
@@ -78,7 +79,7 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
-    pub async fn discover_network_scan(&self) -> Result<Vec<DiscoveryResult>> {
+    pub fn discover_network_scan(&self) -> Result<Vec<DiscoveryResult>> {
         // This method is deprecated - discovery now happens through ClientRegistry
         // which uses Songbird for capability-based discovery
         tracing::debug!("discover_network_scan called - using ClientRegistry instead");
@@ -89,7 +90,7 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if probing fails.
-    pub async fn probe_endpoint(&self, _endpoint: &str) -> Result<ProbeResult> {
+    pub fn probe_endpoint(&self, _endpoint: &str) -> Result<ProbeResult> {
         // This method is deprecated - health checking now happens through
         // PrimalClient::health_check() on individual clients
         tracing::debug!("probe_endpoint called - use PrimalClient::health_check() instead");
@@ -105,7 +106,7 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
-    pub async fn discover_orchestration(
+    pub fn discover_orchestration(
         &self,
         _orchestration_url: &str,
     ) -> Result<Vec<DiscoveryResult>> {
@@ -118,7 +119,7 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
-    pub async fn discover_multicast(&self) -> Result<Vec<DiscoveryResult>> {
+    pub fn discover_multicast(&self) -> Result<Vec<DiscoveryResult>> {
         // This method is deprecated - multicast discovery now handled by DiscoveryBootstrap
         tracing::debug!("discover_multicast called - using DiscoveryBootstrap instead");
         Ok(vec![])
@@ -132,8 +133,7 @@ impl UniversalBiomeOSManager {
     pub async fn discover_registry(&self, registry_url: &str) -> Result<Vec<String>> {
         let results = self
             .discovery_service
-            .discover_registry(registry_url)
-            .await?;
+            .discover_registry(registry_url)?;
         let mut endpoints = Vec::new();
 
         for result in results {
@@ -164,7 +164,7 @@ impl UniversalBiomeOSManager {
     pub async fn discover_network_scan(&self) -> Result<Vec<String>> {
         tracing::info!("🔍 Starting network scan for primals");
 
-        let results = self.discovery_service.discover_network_scan().await?;
+        let results = self.discovery_service.discover_network_scan()?;
         let mut endpoints = Vec::new();
 
         for result in results {
@@ -265,12 +265,12 @@ impl UniversalBiomeOSManager {
     }
 
     /// Discover primals via multicast (delegated to Songbird discovery)
-    pub async fn discover_via_multicast(&self) -> Result<Vec<String>> {
+    pub fn discover_via_multicast(&self) -> Result<Vec<String>> {
         tracing::info!("🔍 Starting multicast discovery via Songbird");
 
         // This delegates to Songbird's multicast discovery capabilities
         // In the Universal Adapter architecture, this would call Songbird's mDNS discovery
-        let results = self.discovery_service.discover_multicast().await?;
+        let results = self.discovery_service.discover_multicast()?;
         let endpoints: Vec<String> = results.iter().map(|r| r.endpoint.clone()).collect();
 
         tracing::info!("✅ Multicast discovery found {} primals", endpoints.len());
@@ -288,8 +288,7 @@ impl UniversalBiomeOSManager {
         let orchestration_url = format!("{registry_url}/api/v1/discovery/services");
         let results = self
             .discovery_service
-            .discover_orchestration(&orchestration_url)
-            .await?;
+            .discover_orchestration(&orchestration_url)?;
         let mut orchestration_endpoints = Vec::new();
 
         for result in &results {
@@ -330,7 +329,7 @@ impl UniversalBiomeOSManager {
     pub async fn discover_multicast(&self) -> Result<Vec<String>> {
         tracing::info!("📡 Starting multicast discovery");
 
-        match self.discovery_service.discover_multicast().await {
+        match self.discovery_service.discover_multicast() {
             Ok(results) => {
                 let mut endpoints = Vec::new();
 

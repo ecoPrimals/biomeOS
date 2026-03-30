@@ -86,31 +86,37 @@ pub struct AppState {
 
 impl AppState {
     /// Create a new builder
+    #[must_use] 
     pub fn builder() -> AppStateBuilder {
         AppStateBuilder::default()
     }
 
     /// Get the discovery service
+    #[must_use] 
     pub fn discovery(&self) -> &dyn PrimalDiscovery {
         &*self.discovery
     }
 
     /// Get the genome factory state
+    #[must_use] 
     pub fn genome(&self) -> &GenomeState {
         &self.genome
     }
 
     /// Get the configuration
-    pub fn config(&self) -> &Config {
+    #[must_use] 
+    pub const fn config(&self) -> &Config {
         &self.config
     }
 
     /// Check if standalone mode is enabled (graceful degradation)
-    pub fn is_standalone_mode(&self) -> bool {
+    #[must_use] 
+    pub const fn is_standalone_mode(&self) -> bool {
         self.config.standalone_mode
     }
 
     /// Get the graph event broadcaster for push-based event streaming
+    #[must_use] 
     pub fn event_broadcaster(&self) -> &biomeos_graph::GraphEventBroadcaster {
         &self.event_broadcaster
     }
@@ -136,12 +142,12 @@ pub struct Config {
     /// Server bind address (DEPRECATED — HTTP bridge only!)
     ///
     /// **DEPRECATED since 0.3.0**: This is only for the temporary HTTP bridge
-    /// to support legacy PetalTongue clients. Will be removed in v0.5.0.
+    /// to support legacy `PetalTongue` clients. Will be removed in v0.5.0.
     pub bind_addr: Option<SocketAddr>,
 
-    /// Enable HTTP bridge (DEPRECATED — for PetalTongue transition)
+    /// Enable HTTP bridge (DEPRECATED — for `PetalTongue` transition)
     ///
-    /// **DEPRECATED since 0.3.0**: Will be removed in v0.5.0 when PetalTongue
+    /// **DEPRECATED since 0.3.0**: Will be removed in v0.5.0 when `PetalTongue`
     /// migrates to Unix socket JSON-RPC.
     pub enable_http_bridge: bool,
 
@@ -171,9 +177,9 @@ impl Default for Config {
 impl Config {
     /// Get default Unix socket path
     ///
-    /// Uses 5-tier socket resolution per PRIMAL_DEPLOYMENT_STANDARD.md:
-    /// 1. Environment variable (BIOMEOS_API_SOCKET)
-    /// 2. XDG_RUNTIME_DIR/biomeos/
+    /// Uses 5-tier socket resolution per `PRIMAL_DEPLOYMENT_STANDARD.md`:
+    /// 1. Environment variable (`BIOMEOS_API_SOCKET`)
+    /// 2. `XDG_RUNTIME_DIR/biomeos`/
     /// 3. /run/user/{uid}/biomeos/
     /// 4. /data/local/tmp/biomeos/ (Android)
     /// 5. /tmp/biomeos/ (fallback)
@@ -232,7 +238,7 @@ impl Config {
     }
 }
 
-/// Builder for AppState
+/// Builder for `AppState`
 #[derive(Default)]
 pub struct AppStateBuilder {
     discovery: Option<Arc<dyn PrimalDiscovery>>,
@@ -254,18 +260,20 @@ impl AppStateBuilder {
     }
 
     /// Set the configuration
+    #[must_use] 
     pub fn config(mut self, config: Config) -> Self {
         self.config = Some(config);
         self
     }
 
     /// Load config from environment
+    #[must_use] 
     pub fn config_from_env(mut self) -> Self {
         self.config = Some(Config::from_env());
         self
     }
 
-    /// Build the AppState
+    /// Build the `AppState`
     pub fn build(self) -> Result<AppState, BuildError> {
         let discovery = self.discovery.ok_or(BuildError::MissingDiscovery)?;
 
@@ -289,8 +297,8 @@ impl AppStateBuilder {
 
     /// Build with default local discovery if none provided
     ///
-    /// NOTE: HTTP-based discovery (create_local_discovery) has been deprecated.
-    /// For live primal discovery, use Unix socket JSON-RPC via live_discovery module.
+    /// NOTE: HTTP-based discovery (`create_local_discovery`) has been deprecated.
+    /// For live primal discovery, use Unix socket JSON-RPC via `live_discovery` module.
     pub fn build_with_defaults(self) -> Result<AppState, BuildError> {
         let discovery = if let Some(d) = self.discovery {
             d

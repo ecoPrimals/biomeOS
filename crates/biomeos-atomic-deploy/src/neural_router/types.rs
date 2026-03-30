@@ -29,13 +29,13 @@ pub struct DiscoveredPrimal {
 /// Atomic type composition
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AtomicType {
-    /// Tower Atomic: BearDog + Songbird (secure communications)
+    /// Tower Atomic: `BearDog` + Songbird (secure communications)
     Tower,
 
-    /// Nest Atomic: Tower + NestGate (secure storage)
+    /// Nest Atomic: Tower + `NestGate` (secure storage)
     Nest,
 
-    /// Node Atomic: Tower + ToadStool (secure compute)
+    /// Node Atomic: Tower + `ToadStool` (secure compute)
     Node,
 }
 
@@ -98,6 +98,6 @@ pub struct RegisteredCapability {
     /// When it was registered
     pub registered_at: chrono::DateTime<chrono::Utc>,
 
-    /// Source of registration (graph, primal_announcement, manual)
+    /// Source of registration (graph, `primal_announcement`, manual)
     pub source: Arc<str>,
 }

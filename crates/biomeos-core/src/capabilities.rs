@@ -44,15 +44,15 @@ pub enum Capability {
 impl fmt::Display for Capability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Capability::Security => write!(f, "security"),
-            Capability::Discovery => write!(f, "discovery"),
-            Capability::Compute => write!(f, "compute"),
-            Capability::AI => write!(f, "ai"),
-            Capability::Storage => write!(f, "storage"),
-            Capability::Observability => write!(f, "observability"),
-            Capability::Federation => write!(f, "federation"),
-            Capability::Network => write!(f, "network"),
-            Capability::Custom(s) => write!(f, "custom:{s}"),
+            Self::Security => write!(f, "security"),
+            Self::Discovery => write!(f, "discovery"),
+            Self::Compute => write!(f, "compute"),
+            Self::AI => write!(f, "ai"),
+            Self::Storage => write!(f, "storage"),
+            Self::Observability => write!(f, "observability"),
+            Self::Federation => write!(f, "federation"),
+            Self::Network => write!(f, "network"),
+            Self::Custom(s) => write!(f, "custom:{s}"),
         }
     }
 }
@@ -60,24 +60,25 @@ impl fmt::Display for Capability {
 impl std::str::FromStr for Capability {
     type Err = std::convert::Infallible;
 
-    /// Parse capability from string (implements FromStr trait)
+    /// Parse capability from string (implements `FromStr` trait)
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
-            "security" => Capability::Security,
-            "discovery" => Capability::Discovery,
-            "compute" => Capability::Compute,
-            "ai" => Capability::AI,
-            "storage" => Capability::Storage,
-            "observability" => Capability::Observability,
-            "federation" => Capability::Federation,
-            "network" => Capability::Network,
-            _ => Capability::Custom(s.to_string()),
+            "security" => Self::Security,
+            "discovery" => Self::Discovery,
+            "compute" => Self::Compute,
+            "ai" => Self::AI,
+            "storage" => Self::Storage,
+            "observability" => Self::Observability,
+            "federation" => Self::Federation,
+            "network" => Self::Network,
+            _ => Self::Custom(s.to_string()),
         })
     }
 }
 
 impl Capability {
     /// Load from environment variable (comma-separated)
+    #[must_use] 
     pub fn from_env(var_name: &str) -> Vec<Self> {
         std::env::var(var_name)
             .ok()
@@ -93,7 +94,7 @@ impl Capability {
 /// Primal configuration loaded from environment
 #[derive(Debug, Clone)]
 pub struct PrimalConfig {
-    /// Unique identifier (from PRIMAL_ID or auto-generated)
+    /// Unique identifier (from `PRIMAL_ID` or auto-generated)
     pub id: String,
 
     /// Binary path (from `PRIMAL_BINARY` or `argv[0]`)
@@ -105,7 +106,7 @@ pub struct PrimalConfig {
     /// Capabilities this primal requires
     pub requires: Vec<Capability>,
 
-    /// HTTP port (0 = auto-select, from HTTP_PORT)
+    /// HTTP port (0 = auto-select, from `HTTP_PORT`)
     pub http_port: u16,
 
     /// Additional environment-specific config
@@ -184,6 +185,7 @@ impl PrimalConfig {
     }
 
     /// Create config for a specific primal type (for manual construction)
+    #[must_use] 
     pub fn for_capability(provides: Vec<Capability>, requires: Vec<Capability>) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),

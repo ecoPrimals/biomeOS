@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
 
     // Initialize the universal manager
     let config = BiomeOSConfig::default();
-    let manager = match UniversalBiomeOSManager::new(config).await {
+    let manager = match UniversalBiomeOSManager::new(config) {
         Ok(manager) => {
             println!("✅ biomeOS Manager initialized successfully");
             manager
@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
                 println!("  🔗 Network endpoint: {endpoint}");
 
                 // Test endpoint probing for each discovered endpoint
-                match manager.probe_endpoint(endpoint).await {
+                match manager.probe_endpoint(endpoint) {
                     Ok(probe_result) => {
                         println!("     Status: {probe_result}");
                     }
@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
 
     // Test health monitoring
     println!("\n🏥 System Health Check:");
-    let health = manager.get_system_health().await;
+    let health = manager.get_system_health();
     println!("  Overall Status: {:?}", health.health);
     println!("  System ID: {}", health.id);
     println!("  Components: {}", health.components.len());

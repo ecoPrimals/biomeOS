@@ -12,22 +12,22 @@
 //!
 //! Set `BIOMEOS_STRICT_DISCOVERY=1` to disable all bootstrap-time name usage.
 
-/// BearDog — Tower atomic: cryptography and identity.
+/// `BearDog` — Tower atomic: cryptography and identity.
 pub const BEARDOG: &str = "beardog";
 
 /// Songbird — Tower atomic: service mesh, HTTP, discovery.
 pub const SONGBIRD: &str = "songbird";
 
-/// ToadStool — Node atomic: compute and GPU dispatch.
+/// `ToadStool` — Node atomic: compute and GPU dispatch.
 pub const TOADSTOOL: &str = "toadstool";
 
-/// NestGate — Nest atomic: storage and persistence.
+/// `NestGate` — Nest atomic: storage and persistence.
 pub const NESTGATE: &str = "nestgate";
 
 /// Squirrel — AI bridge and MCP platform.
 pub const SQUIRREL: &str = "squirrel";
 
-/// LoamSpine — Provenance: permanent content-addressed storage.
+/// `LoamSpine` — Provenance: permanent content-addressed storage.
 pub const LOAMSPINE: &str = "loamspine";
 
 /// rhizoCrypt — Provenance: ephemeral DAG workspace.
@@ -87,17 +87,17 @@ pub const PRIMALSPRING: &str = "primalspring";
 
 /// Human-readable display names keyed by lowercase identifier.
 pub mod display {
-    /// BearDog display name.
+    /// `BearDog` display name.
     pub const BEARDOG: &str = "BearDog";
-    /// SongBird display name.
+    /// `SongBird` display name.
     pub const SONGBIRD: &str = "SongBird";
-    /// ToadStool display name.
+    /// `ToadStool` display name.
     pub const TOADSTOOL: &str = "ToadStool";
-    /// NestGate display name.
+    /// `NestGate` display name.
     pub const NESTGATE: &str = "NestGate";
     /// Squirrel display name.
     pub const SQUIRREL: &str = "Squirrel";
-    /// LoamSpine display name.
+    /// `LoamSpine` display name.
     pub const LOAMSPINE: &str = "LoamSpine";
     /// rhizoCrypt display name.
     pub const RHIZOCRYPT: &str = "rhizoCrypt";

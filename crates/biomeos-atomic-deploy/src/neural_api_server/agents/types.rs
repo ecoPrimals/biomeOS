@@ -50,7 +50,7 @@ pub enum AgentState {
 /// A Plasmodium agent -- a routing context for capability composition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlasmodiumAgent {
-    /// Agent name (e.g., "hpc_coordinator", "local_tower")
+    /// Agent name (e.g., "`hpc_coordinator`", "`local_tower`")
     pub name: String,
 
     /// Family ID this agent serves
@@ -70,6 +70,7 @@ pub struct PlasmodiumAgent {
 
 impl PlasmodiumAgent {
     /// Create a new agent for a single local gate
+    #[must_use] 
     pub fn local(name: &str, family_id: &str, gate_id: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -94,6 +95,7 @@ impl PlasmodiumAgent {
     }
 
     /// Resolve a capability to the best available route
+    #[must_use] 
     pub fn resolve(&self, capability_domain: &str) -> Option<&CapabilityRoute> {
         self.routing_table
             .get(capability_domain)
@@ -101,7 +103,7 @@ impl PlasmodiumAgent {
     }
 
     /// Meld another agent's capabilities into this one
-    pub fn meld(&mut self, other: &PlasmodiumAgent) {
+    pub fn meld(&mut self, other: &Self) {
         // Add the other agent's gates
         for gate in &other.gates {
             if !self.gates.contains(gate) {
@@ -134,13 +136,13 @@ impl PlasmodiumAgent {
     }
 
     /// Split this agent by removing a gate (returns the split-off agent)
-    pub fn split(&mut self, gate_id: &str) -> Option<PlasmodiumAgent> {
+    pub fn split(&mut self, gate_id: &str) -> Option<Self> {
         if !self.gates.contains(&gate_id.to_string()) {
             return None;
         }
 
         // Create a new agent with just the removed gate's capabilities
-        let mut split_agent = PlasmodiumAgent::local(
+        let mut split_agent = Self::local(
             &format!("{}-{}", self.name, gate_id),
             &self.family_id,
             gate_id,

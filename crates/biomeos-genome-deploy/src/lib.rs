@@ -31,9 +31,9 @@ use tar::Archive;
 pub enum Architecture {
     /// x86-64 (AMD64)
     X86_64,
-    /// ARM 64-bit (AArch64)
+    /// ARM 64-bit (`AArch64`)
     Aarch64,
-    /// ARM 32-bit (ARMv7)
+    /// ARM 32-bit (`ARMv7`)
     Armv7,
     /// RISC-V 64-bit
     Riscv64,
@@ -110,7 +110,7 @@ impl Platform {
     }
 }
 
-/// GenomeBin metadata
+/// `GenomeBin` metadata
 #[derive(Debug, Clone)]
 pub struct GenomeMetadata {
     /// Genome name
@@ -123,7 +123,7 @@ pub struct GenomeMetadata {
     pub architectures: Vec<Architecture>,
 }
 
-/// GenomeBin deployer
+/// `GenomeBin` deployer
 #[derive(Debug)]
 pub struct GenomeDeployer {
     genome_path: PathBuf,
@@ -162,7 +162,7 @@ impl GenomeDeployer {
     /// Get default installation directory for current platform
     ///
     /// DEEP DEBT EVOLUTION: Uses $HOME env instead of `dirs` (C-based).
-    /// Root detection via $EUID/$USER instead of nix::Uid.
+    /// Root detection via $EUID/$USER instead of `nix::Uid`.
     pub(crate) fn default_install_dir(&self, primal_name: &str) -> PathBuf {
         let home_dir = || -> PathBuf {
             std::env::var("HOME").map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from)
@@ -210,7 +210,7 @@ impl GenomeDeployer {
         let size_mb = file_size as f64 / 1_048_576.0;
         println!(
             "{}",
-            format!("  Reading {:.1}MB genomeBin...", size_mb).dimmed()
+            format!("  Reading {size_mb:.1}MB genomeBin...").dimmed()
         );
 
         // Safe read — no unsafe, no mmap, no SIGBUS risk

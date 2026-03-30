@@ -3,7 +3,7 @@
 
 //! Dark Forest beacon types
 //!
-//! Plaintext and encrypted beacon structures for the BirdSong Dark Forest
+//! Plaintext and encrypted beacon structures for the `BirdSong` Dark Forest
 //! trust model.
 
 use serde::{Deserialize, Serialize};
@@ -11,13 +11,13 @@ use serde::{Deserialize, Serialize};
 /// Plaintext beacon data (before encryption)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BeaconPlaintext {
-    /// Hash of family_id (not the actual ID)
+    /// Hash of `family_id` (not the actual ID)
     pub family_hash: String,
     /// Node identifier
     pub node_id: String,
     /// Unix timestamp
     pub timestamp: u64,
-    /// BearDog socket path
+    /// `BearDog` socket path
     pub socket_path: String,
     /// Capabilities (hashed)
     pub capabilities_hash: String,

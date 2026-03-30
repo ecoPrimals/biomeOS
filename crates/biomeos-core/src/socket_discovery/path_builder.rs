@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Socket path building - 5-tier resolution per PRIMAL_DEPLOYMENT_STANDARD
+//! Socket path building - 5-tier resolution per `PRIMAL_DEPLOYMENT_STANDARD`
 //!
 //! Extracted from engine.rs to keep files under 1000 lines.
 
@@ -10,8 +10,8 @@ use std::path::{Path, PathBuf};
 
 /// Build deterministic socket path for a primal with explicit overrides.
 ///
-/// Implements 5-tier socket resolution per PRIMAL_DEPLOYMENT_STANDARD:
-/// 1. Explicit override via PRIMAL_SOCKET
+/// Implements 5-tier socket resolution per `PRIMAL_DEPLOYMENT_STANDARD`:
+/// 1. Explicit override via `PRIMAL_SOCKET`
 /// 2. XDG runtime directory
 /// 3. Linux /run/user/$UID/biomeos/
 /// 4. Android /data/local/tmp/biomeos/
@@ -21,14 +21,14 @@ use std::path::{Path, PathBuf};
 /// * `primal_name` - Name of the primal
 /// * `family_id` - Family ID for namespace isolation
 /// * `primal_socket` - Optional explicit socket path/dir override (Tier 1)
-/// * `xdg_runtime_dir` - Optional XDG_RUNTIME_DIR override (Tier 2)
+/// * `xdg_runtime_dir` - Optional `XDG_RUNTIME_DIR` override (Tier 2)
 pub fn build_socket_path(
     primal_name: &str,
     family_id: &str,
     primal_socket: Option<&str>,
     xdg_runtime_dir: Option<&Path>,
 ) -> PathBuf {
-    let socket_name = format!("{}-{}.sock", primal_name, family_id);
+    let socket_name = format!("{primal_name}-{family_id}.sock");
 
     // Tier 1: Explicit override via PRIMAL_SOCKET
     let primal_socket_val = primal_socket

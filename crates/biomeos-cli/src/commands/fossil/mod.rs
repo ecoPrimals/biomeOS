@@ -4,7 +4,7 @@
 //! Fossil log management CLI commands
 //!
 //! This handles the fossil record system for archived logs,
-//! separate from the service log streaming (Commands::Logs)
+//! separate from the service log streaming (`Commands::Logs`)
 
 mod format;
 mod handlers;

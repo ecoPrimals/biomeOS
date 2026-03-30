@@ -25,7 +25,7 @@ pub const DEFAULT_MCP_PORT: u16 = ports::API_DEFAULT;
 /// Default discovery port (fallback only)
 pub const DEFAULT_DISCOVERY_PORT: u16 = ports::WEBSOCKET;
 
-/// Default BearDog (security) port (fallback only)
+/// Default `BearDog` (security) port (fallback only)
 pub const DEFAULT_BEARDOG_PORT: u16 = ports::NEURAL_API;
 
 /// Default Songbird (universal adapter) port (fallback only)
@@ -93,7 +93,7 @@ pub fn discovery_port() -> u16 {
         .unwrap_or(DEFAULT_DISCOVERY_PORT)
 }
 
-/// Get BearDog port from environment or fallback to default
+/// Get `BearDog` port from environment or fallback to default
 ///
 /// Checks `BEARDOG_PORT` environment variable first.
 #[must_use]

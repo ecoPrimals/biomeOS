@@ -249,7 +249,6 @@ mod tests {
                     changes: "Adjusted parameters".to_string(),
                 },
             )
-            .await
             .expect("send_feedback should succeed");
 
         assert_eq!(
@@ -273,7 +272,6 @@ mod tests {
 
         let suggestions = manager
             .request_suggestions(context)
-            .await
             .expect("request_suggestions should succeed");
         assert!(suggestions.is_empty());
         assert!(manager.active_suggestions.is_empty());
@@ -307,9 +305,7 @@ mod tests {
         assert_eq!(manager.active_suggestions.len(), 1);
 
         // Send accepted feedback
-        let result = manager
-            .send_feedback(&suggestion.id, SuggestionFeedback::Accepted)
-            .await;
+        let result = manager.send_feedback(&suggestion.id, SuggestionFeedback::Accepted);
         assert!(result.is_ok());
 
         // Should be removed from active suggestions
@@ -492,7 +488,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.request_suggestions(context).await.unwrap();
+        let suggestions = manager.request_suggestions(context).unwrap();
         assert!(!suggestions.is_empty());
         assert_eq!(
             suggestions[0].suggestion_type,
@@ -525,7 +521,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.request_suggestions(context).await.unwrap();
+        let suggestions = manager.request_suggestions(context).unwrap();
         assert!(!suggestions.is_empty());
         assert_eq!(manager.active_suggestions.len(), suggestions.len());
     }
@@ -590,7 +586,6 @@ mod tests {
 
         manager
             .send_feedback(&suggestion.id, SuggestionFeedback::Accepted)
-            .await
             .unwrap();
         assert_eq!(manager.active_suggestions.len(), 0);
     }
@@ -627,7 +622,6 @@ mod tests {
                     reason: "Too expensive".to_string(),
                 },
             )
-            .await
             .unwrap();
 
         assert_eq!(manager.active_suggestions.len(), 0);
@@ -662,7 +656,6 @@ mod tests {
 
         manager
             .send_feedback(&suggestion.id, SuggestionFeedback::Dismissed)
-            .await
             .unwrap();
 
         // Dismissed feedback should NOT remove the suggestion

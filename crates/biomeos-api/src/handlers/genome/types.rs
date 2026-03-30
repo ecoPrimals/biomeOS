@@ -22,7 +22,7 @@ pub struct BuildRequest {
 /// Binary specification
 #[derive(Debug, Deserialize)]
 pub struct BinarySpec {
-    /// Architecture (x86_64, aarch64, arm, riscv64)
+    /// Architecture (`x86_64`, aarch64, arm, riscv64)
     pub arch: String,
     /// Path to binary file
     pub path: PathBuf,
@@ -50,7 +50,7 @@ pub struct VerifyResponse {
     pub message: String,
 }
 
-/// GenomeBin info response
+/// `GenomeBin` info response
 #[derive(Debug, Serialize)]
 pub struct GenomeInfoResponse {
     pub name: String,

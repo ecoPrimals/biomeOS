@@ -3,13 +3,13 @@
 
 //! Primal binary registry and deployment system
 //!
-//! BiomeOS as a bootable platform needs to:
+//! `BiomeOS` as a bootable platform needs to:
 //! 1. Discover available primal binaries (local USB, remote GitHub)
 //! 2. Manage primal versions
 //! 3. Deploy primals to target nodes
 //! 4. Update primals from registries
 //!
-//! This is the foundation for BiomeOS as a "PopOS/Windows bootloader" for primals.
+//! This is the foundation for `BiomeOS` as a "PopOS/Windows bootloader" for primals.
 
 mod remote;
 
@@ -196,6 +196,7 @@ impl PrimalRegistry {
     }
 
     /// Get all available versions of a primal
+    #[must_use] 
     pub fn get_primal_versions(&self, name: &str) -> Vec<&PrimalBinary> {
         self.binaries
             .get(name)
@@ -204,6 +205,7 @@ impl PrimalRegistry {
     }
 
     /// Get latest version of a primal
+    #[must_use] 
     pub fn get_latest(&self, name: &str) -> Option<&PrimalBinary> {
         self.binaries.get(name).and_then(|versions| {
             versions.iter().max_by(|a, b| {
@@ -215,6 +217,7 @@ impl PrimalRegistry {
     }
 
     /// Get all available primals
+    #[must_use] 
     pub fn list_primals(&self) -> Vec<String> {
         self.binaries.keys().cloned().collect()
     }
@@ -288,6 +291,7 @@ impl PrimalRegistry {
     ///
     /// Returns the primal with the highest version number that provides
     /// the requested capability.
+    #[must_use] 
     pub fn get_best_for_capability(
         &self,
         capability: &CapabilityTaxonomy,
@@ -303,7 +307,7 @@ impl PrimalRegistry {
     /// Helper: Check if a capability string matches (fuzzy match)
     ///
     /// Handles legacy string capabilities that might not exactly match
-    /// the CapabilityTaxonomy enum strings.
+    /// the `CapabilityTaxonomy` enum strings.
     fn capability_matches(legacy_cap: &str, new_cap: &str) -> bool {
         let legacy_lower = legacy_cap.to_lowercase();
         let new_lower = new_cap.to_lowercase();
@@ -374,11 +378,7 @@ impl PrimalRegistry {
                     .find(|a| a.name == *asset)
                     .ok_or_else(|| {
                         anyhow::anyhow!(
-                            "Asset {:?} not found in release {} for {}/{}",
-                            asset,
-                            tag,
-                            org,
-                            repo
+                            "Asset {asset:?} not found in release {tag} for {org}/{repo}"
                         )
                     })?;
                 let dest = remote::cached_download_path(

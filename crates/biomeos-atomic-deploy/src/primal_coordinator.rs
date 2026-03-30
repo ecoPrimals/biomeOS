@@ -52,12 +52,14 @@ pub struct PrimalCoordinator {
 
 impl PrimalCoordinator {
     /// Create new coordinator
-    pub fn new(discovery: PrimalDiscovery) -> Self {
+    #[must_use] 
+    pub const fn new(discovery: PrimalDiscovery) -> Self {
         Self { discovery }
     }
 
     /// Get access to the discovery service
-    pub fn discovery(&self) -> &PrimalDiscovery {
+    #[must_use] 
+    pub const fn discovery(&self) -> &PrimalDiscovery {
         &self.discovery
     }
 
@@ -95,6 +97,7 @@ impl PrimalCoordinator {
     }
 
     /// Generate deployment guide for missing primals
+    #[must_use] 
     pub fn generate_guide(
         &self,
         atomic_name: &str,

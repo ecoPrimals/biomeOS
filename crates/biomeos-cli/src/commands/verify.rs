@@ -9,7 +9,8 @@ use biomeos_spore::manifest::BinaryManifest;
 use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
 
 /// Map verification status to (icon, text) for display (testable pure function)
-pub fn verification_status_display(status: &VerificationStatus) -> (&'static str, &'static str) {
+#[must_use] 
+pub const fn verification_status_display(status: &VerificationStatus) -> (&'static str, &'static str) {
     match status {
         VerificationStatus::Fresh => ("✅", "Fresh"),
         VerificationStatus::Stale => ("⚠️ ", "Stale"),
@@ -68,20 +69,20 @@ pub enum VerifyTarget {
 pub async fn run(args: VerifyArgs) -> Result<()> {
     match args.target {
         VerifyTarget::Nucleus { path } => {
-            verify_nucleus(&path).await?;
+            verify_nucleus(&path)?;
         }
         VerifyTarget::Spore { mount_point } => {
-            verify_single_spore(&mount_point).await?;
+            verify_single_spore(&mount_point)?;
         }
         VerifyTarget::All { verbose } => {
-            verify_all_spores(verbose).await?;
+            verify_all_spores(verbose)?;
         }
     }
 
     Ok(())
 }
 
-async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
+fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
     info!("Verifying plasmidBin at: {}", nucleus_path.display());
 
     println!("╔════════════════════════════════════════════════════════════════╗");
@@ -151,7 +152,7 @@ async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
+fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     info!("Verifying spore at: {}", mount_point.display());
 
     println!("╔════════════════════════════════════════════════════════════════╗");
@@ -237,7 +238,7 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-async fn verify_all_spores(verbose: bool) -> Result<()> {
+fn verify_all_spores(verbose: bool) -> Result<()> {
     info!("Verifying all mounted spores");
 
     println!("╔════════════════════════════════════════════════════════════════╗");
@@ -344,7 +345,7 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
 ///
 /// Discovers spore mount points from the environment (`BIOMEOS_SPORE_PATHS`,
 /// or scans `/media/$USER` by default), then verifies genetic relationships
-/// between spores using BearDog's HKDF-SHA256 lineage system.
+/// between spores using `BearDog`'s HKDF-SHA256 lineage system.
 pub async fn run_verify_lineage() -> Result<()> {
     use biomeos_federation::beardog_client::BearDogClient;
 

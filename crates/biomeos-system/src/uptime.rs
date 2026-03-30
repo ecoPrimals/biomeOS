@@ -11,7 +11,7 @@ use biomeos_types::{BiomeError, BiomeResult};
 ///
 /// Returns an error if /proc/uptime is not available (e.g. on non-Linux)
 /// or cannot be read/parsed.
-pub(crate) fn get_uptime() -> BiomeResult<std::time::Duration> {
+pub fn get_uptime() -> BiomeResult<std::time::Duration> {
     let uptime_str = fs::read_to_string("/proc/uptime").map_err(|e| {
         BiomeError::internal_error(
             format!("Cannot read /proc/uptime: {e}"),

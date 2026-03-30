@@ -160,7 +160,7 @@ impl DiscoveryBootstrap {
 
         // Method 5: Multicast discovery
         tracing::debug!("🔍 Attempting multicast discovery...");
-        if let Ok(endpoint) = self.discover_via_multicast().await {
+        if let Ok(endpoint) = self.discover_via_multicast() {
             tracing::info!("✅ Found universal adapter via multicast: {}", endpoint);
             return Ok(endpoint);
         }
@@ -190,7 +190,7 @@ impl DiscoveryBootstrap {
     /// Uses mDNS (multicast DNS) to discover services advertising themselves
     /// on the local network via `_biomeos._tcp.local`. Without external mDNS
     /// crate dependencies, this uses a socket-based approach: probe known
-    /// localhost ports where BiomeOS services (e.g., Songbird) typically advertise.
+    /// localhost ports where `BiomeOS` services (e.g., Songbird) typically advertise.
     /// Falls back to `MDNS_DISCOVERED_ENDPOINT` env var if probing fails.
     async fn discover_via_mdns(&self) -> Result<String> {
         use std::time::Duration;
@@ -317,7 +317,7 @@ impl DiscoveryBootstrap {
     ///
     /// Uses IP multicast to discover services in a more controlled way than broadcast.
     /// Multicast is often preferred in larger networks as it's more efficient.
-    async fn discover_via_multicast(&self) -> Result<String> {
+    fn discover_via_multicast(&self) -> Result<String> {
         tracing::info!("Attempting IP multicast discovery");
 
         // Multicast discovery pattern:
@@ -353,6 +353,7 @@ impl DiscoveryBootstrap {
     }
 
     /// Get the service name being searched for
+    #[must_use] 
     pub fn service_name(&self) -> &str {
         &self.service_name
     }
@@ -502,7 +503,7 @@ mod tests {
         );
 
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.discover_via_multicast().await;
+        let result = bootstrap.discover_via_multicast();
 
         remove_test_env("MULTICAST_DISCOVERED_ENDPOINT");
 
@@ -518,7 +519,7 @@ mod tests {
         remove_test_env("MULTICAST_DISCOVERED_ENDPOINT");
 
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.discover_via_multicast().await;
+        let result = bootstrap.discover_via_multicast();
 
         assert!(result.is_err());
         assert!(

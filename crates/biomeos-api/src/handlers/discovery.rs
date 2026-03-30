@@ -11,7 +11,7 @@ use tracing::info;
 
 use crate::{ApiError, AppState};
 
-/// Discovered primal information (matches PetalTongue's expectations)
+/// Discovered primal information (matches `PetalTongue`'s expectations)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveredPrimal {
     pub id: String,

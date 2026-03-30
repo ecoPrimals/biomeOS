@@ -5,7 +5,7 @@
 //!
 //! Tracks active primal sessions and integrates with the fossil record system.
 //!
-//! EVOLVED (Jan 27, 2026): Full integration with biomeos_spore::logs::LogManager
+//! EVOLVED (Jan 27, 2026): Full integration with `biomeos_spore::logs::LogManager`
 
 use biomeos_types::identifiers::PrimalId;
 use std::collections::HashMap;
@@ -37,6 +37,7 @@ pub struct LogSessionTracker {
 
 impl LogSessionTracker {
     /// Create a new log session tracker
+    #[must_use] 
     pub fn new(node_id: String) -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
@@ -74,7 +75,7 @@ impl LogSessionTracker {
 
     /// Archive all active sessions (called on shutdown)
     ///
-    /// EVOLVED (Jan 27, 2026): Full integration with biomeos_spore::logs::LogManager
+    /// EVOLVED (Jan 27, 2026): Full integration with `biomeos_spore::logs::LogManager`
     pub async fn archive_all_sessions(&self, reason: &str) -> anyhow::Result<()> {
         use biomeos_types::SystemPaths;
 

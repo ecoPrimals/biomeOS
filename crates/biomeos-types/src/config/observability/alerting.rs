@@ -61,7 +61,7 @@ pub enum NotificationChannel {
     Slack(SlackNotificationConfig),
     /// Generic webhook notifications
     Webhook(WebhookNotificationConfig),
-    /// PagerDuty notifications
+    /// `PagerDuty` notifications
     PagerDuty(PagerDutyNotificationConfig),
     /// Custom notification handler
     Custom(CustomNotificationConfig),
@@ -114,7 +114,7 @@ pub struct WebhookNotificationConfig {
     pub body_template: String,
 }
 
-/// PagerDuty notification configuration
+/// `PagerDuty` notification configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PagerDutyNotificationConfig {
     /// Integration key

@@ -65,6 +65,7 @@ impl Default for DiscoveryStrategy {
 
 impl DiscoveryStrategy {
     /// Create a strategy optimized for Android
+    #[must_use] 
     pub fn android() -> Self {
         Self {
             check_env_hints: true,
@@ -82,6 +83,7 @@ impl DiscoveryStrategy {
     }
 
     /// Create a strategy optimized for cross-device communication
+    #[must_use] 
     pub fn cross_device() -> Self {
         Self {
             check_env_hints: true,

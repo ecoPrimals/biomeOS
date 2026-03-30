@@ -19,15 +19,15 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Capability domain configuration
-/// Loaded from config/capability_registry.toml in production
-pub(crate) struct CapabilityDomain {
+/// Loaded from `config/capability_registry.toml` in production
+pub struct CapabilityDomain {
     pub provider: &'static str,
     pub capabilities: &'static [&'static str],
 }
 
 /// Default capability domains for fallback resolution
-/// These align with config/capability_registry.toml
-pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
+/// These align with `config/capability_registry.toml`
+pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     // Security domain (BearDog)
     CapabilityDomain {
         provider: BEARDOG,
@@ -202,7 +202,7 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
 /// Falls back to the compiled-in `CAPABILITY_DOMAINS` const for capabilities
 /// not found in the config.
 #[derive(Debug, Clone, Default)]
-pub(crate) struct CapabilityRegistry {
+pub struct CapabilityRegistry {
     /// capability name → provider primal name (from TOML config)
     config_map: HashMap<String, String>,
 }
@@ -272,7 +272,7 @@ impl CapabilityRegistry {
 ///
 /// This is the lowest-priority fallback when neither the neural-api router
 /// nor the TOML config have a match. Prefer `CapabilityRegistry::resolve`.
-pub(crate) fn capability_to_provider_fallback(capability: &str) -> Option<&'static str> {
+pub fn capability_to_provider_fallback(capability: &str) -> Option<&'static str> {
     for domain in CAPABILITY_DOMAINS {
         if domain.capabilities.contains(&capability) {
             return Some(domain.provider);

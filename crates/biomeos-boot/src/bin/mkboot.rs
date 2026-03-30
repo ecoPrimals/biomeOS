@@ -60,7 +60,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Usb { output: _ } => {
             let builder = BootableMediaBuilder::new(cli.project_root)?;
-            let image_path = builder.build(BootTarget::Usb).await?;
+            let image_path = builder.build(BootTarget::Usb)?;
 
             println!("\n✅ Success! Bootable USB image created:");
             println!("   {}\n", image_path.display());
@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
 
         Commands::Iso { output: _ } => {
             let builder = BootableMediaBuilder::new(cli.project_root)?;
-            let image_path = builder.build(BootTarget::Iso).await?;
+            let image_path = builder.build(BootTarget::Iso)?;
 
             println!("\n✅ Success! Bootable ISO image created:");
             println!("   {}\n", image_path.display());

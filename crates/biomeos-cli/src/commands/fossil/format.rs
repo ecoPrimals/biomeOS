@@ -19,7 +19,7 @@ pub struct CleanupPlan {
 }
 
 /// Filters sessions by optional node ID. Returns sessions matching the filter.
-pub(crate) fn filter_sessions<'a>(
+pub fn filter_sessions<'a>(
     sessions: &'a [ActiveLogSession],
     node_filter: Option<&str>,
 ) -> Vec<&'a ActiveLogSession> {
@@ -30,7 +30,7 @@ pub(crate) fn filter_sessions<'a>(
 }
 
 /// Builds display lines for a single session.
-pub(crate) fn format_session_display(session: &ActiveLogSession) -> Vec<String> {
+pub fn format_session_display(session: &ActiveLogSession) -> Vec<String> {
     let mut lines = Vec::new();
     let duration = session.duration();
     let hours = duration.num_hours();
@@ -75,7 +75,7 @@ pub(crate) fn format_session_display(session: &ActiveLogSession) -> Vec<String> 
 }
 
 /// Builds display lines for fossil detail view.
-pub(crate) fn format_fossil_detail(fossil: &FossilIndexEntry) -> Vec<String> {
+pub fn format_fossil_detail(fossil: &FossilIndexEntry) -> Vec<String> {
     vec![
         format!("Node: {}", fossil.node_id),
         format!(
@@ -90,7 +90,7 @@ pub(crate) fn format_fossil_detail(fossil: &FossilIndexEntry) -> Vec<String> {
 }
 
 /// Computes which fossils to remove based on cutoff. Does not perform IO.
-pub(crate) fn compute_cleanup_plan(
+pub fn compute_cleanup_plan(
     fossils: &[FossilIndexEntry],
     cutoff: chrono::DateTime<chrono::Utc>,
 ) -> CleanupPlan {
@@ -114,7 +114,7 @@ pub(crate) fn compute_cleanup_plan(
 }
 
 /// Scans a directory for .log files. Returns paths to log files found.
-pub(crate) fn scan_old_logs(from: &Path) -> Result<Vec<PathBuf>> {
+pub fn scan_old_logs(from: &Path) -> Result<Vec<PathBuf>> {
     let mut old_logs = Vec::new();
 
     if !from.exists() {

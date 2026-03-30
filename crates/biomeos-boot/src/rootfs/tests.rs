@@ -348,9 +348,8 @@ nameserver 10.0.0.1
             ..Default::default()
         };
         let builder = RootFsBuilder::new(config);
-        let result: Result<(), _> = builder
+        builder
             .install_primals(&root, Path::new("/nonexistent/primals"))
-            .await;
-        result.unwrap();
+            .unwrap();
     }
 }

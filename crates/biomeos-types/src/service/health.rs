@@ -406,7 +406,7 @@ pub enum DashboardTheme {
     Custom(String),
 }
 
-/// Default implementation for ServiceHealth
+/// Default implementation for `ServiceHealth`
 impl Default for ServiceHealth {
     fn default() -> Self {
         Self {

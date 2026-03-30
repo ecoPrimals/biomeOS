@@ -3,7 +3,7 @@
 
 //! Dark Forest Encrypted Beacon System
 //!
-//! Implements the BirdSong Dark Forest trust model:
+//! Implements the `BirdSong` Dark Forest trust model:
 //! - Encrypted beacons that reveal nothing to outsiders
 //! - Only family members can decrypt and understand broadcasts
 //! - Lineage verification after discovery

@@ -32,7 +32,7 @@ pub mod version {
     /// Types version (alias for VERSION)
     pub const TYPES_VERSION: &str = VERSION;
 
-    /// Build information for the entire BiomeOS ecosystem
+    /// Build information for the entire `BiomeOS` ecosystem
     pub use crate::BUILD_INFO;
 
     /// API version for biomeOS ecosystem
@@ -293,7 +293,7 @@ pub mod security {
 /// Filesystem path constants for the 5-tier socket discovery standard.
 ///
 /// These define the standardized base paths used when XDG runtime directories
-/// are unavailable (tier 4 of the PRIMAL_IPC_PROTOCOL.md discovery chain).
+/// are unavailable (tier 4 of the `PRIMAL_IPC_PROTOCOL.md` discovery chain).
 pub mod runtime_paths {
     /// Base path for the `/tmp` fallback tier in socket discovery.
     ///
@@ -355,7 +355,7 @@ pub mod files {
 
     /// Get default plugins directory for current primal (from environment)
     ///
-    /// Reads the PRIMAL_NAME environment variable. Falls back to "unknown" if not set.
+    /// Reads the `PRIMAL_NAME` environment variable. Falls back to "unknown" if not set.
     ///
     /// # Example
     /// ```
@@ -381,7 +381,7 @@ pub mod files {
 
 /// Runtime Unix socket basename rules for discovery scans
 ///
-/// **WateringHole**: These name *infrastructure* IPC endpoints (orchestration, not primals).
+/// **`WateringHole`**: These name *infrastructure* IPC endpoints (orchestration, not primals).
 /// Primal atomic sockets use `{instance}-{family_id}.sock` and are discovered by suffix match,
 /// not by enumerating primal names.
 pub mod runtime_ipc {

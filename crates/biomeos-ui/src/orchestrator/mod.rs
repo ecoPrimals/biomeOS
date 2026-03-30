@@ -106,7 +106,7 @@ impl InteractiveUIOrchestrator {
     /// - Uses capabilities, not names
     /// - Gracefully handles missing primals
     /// - No compile-time coupling
-    pub async fn new(family_id: impl Into<String>) -> Result<Self> {
+    pub fn new(family_id: impl Into<String>) -> Result<Self> {
         let family_id = family_id.into();
         let state = Arc::new(RwLock::new(UIState::new()));
         let events = EventBroadcaster::new();
@@ -307,12 +307,14 @@ impl InteractiveUIOrchestrator {
     }
 
     /// Get a reference to the UI state
-    pub fn state(&self) -> &Arc<RwLock<UIState>> {
+    #[must_use] 
+    pub const fn state(&self) -> &Arc<RwLock<UIState>> {
         &self.state
     }
 
     /// Get a reference to the event broadcaster
-    pub fn events(&self) -> &EventBroadcaster {
+    #[must_use] 
+    pub const fn events(&self) -> &EventBroadcaster {
         &self.events
     }
 
@@ -335,14 +337,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_orchestrator_creation() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await;
+        let orchestrator = InteractiveUIOrchestrator::new("test-family");
         assert!(orchestrator.is_ok());
     }
 
     #[tokio::test]
     async fn test_orchestrator_start_graceful_degradation() {
         // Should start even with no primals available
-        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
 
         let result = orchestrator.start().await;
         assert!(result.is_ok());
@@ -350,7 +352,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_user_action_assign_device() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
 
         let result = orchestrator
             .handle_user_action(UserAction::AssignDevice {
@@ -365,7 +367,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_orchestrator_state_and_events_accessors() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let state = orchestrator.state();
         let events = orchestrator.events();
 
@@ -375,7 +377,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_primal_event_primal_started() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let mut rx = orchestrator.events().subscribe();
 
         let event = serde_json::json!({
@@ -396,7 +398,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_primal_event_primal_stopped() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let mut rx = orchestrator.events().subscribe();
 
         let event = serde_json::json!({
@@ -417,7 +419,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_primal_event_device_connected() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let mut rx = orchestrator.events().subscribe();
 
         let event = serde_json::json!({
@@ -438,7 +440,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_primal_event_device_disconnected() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let mut rx = orchestrator.events().subscribe();
 
         let event = serde_json::json!({
@@ -459,7 +461,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_primal_event_unknown_type_no_emit() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let mut rx = orchestrator.events().subscribe();
 
         let event = serde_json::json!({
@@ -474,7 +476,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_primal_event_missing_primal_name_ignored() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let mut rx = orchestrator.events().subscribe();
 
         let event = serde_json::json!({
@@ -488,7 +490,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_primal_event_missing_device_id_ignored() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let mut rx = orchestrator.events().subscribe();
 
         let event = serde_json::json!({
@@ -502,7 +504,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_user_action_unassign_device() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let result = orchestrator
             .handle_user_action(UserAction::UnassignDevice {
                 device_id: "test-device".to_string(),
@@ -514,7 +516,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_user_action_refresh() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let result = orchestrator.handle_user_action(UserAction::Refresh).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_success());
@@ -522,7 +524,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_user_action_accept_suggestion() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let result = orchestrator
             .handle_user_action(UserAction::AcceptSuggestion {
                 suggestion_id: "sug-1".to_string(),
@@ -534,7 +536,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_user_action_dismiss_suggestion() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let result = orchestrator
             .handle_user_action(UserAction::DismissSuggestion {
                 suggestion_id: "sug-2".to_string(),
@@ -546,7 +548,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_user_action_start_primal_no_toadstool() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let result = orchestrator
             .handle_user_action(UserAction::StartPrimal {
                 primal_name: "beardog".to_string(),
@@ -558,7 +560,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_user_action_stop_primal() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let result = orchestrator
             .handle_user_action(UserAction::StopPrimal {
                 primal_id: "beardog-1".to_string(),
@@ -570,7 +572,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_user_action_restart_primal() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let result = orchestrator
             .handle_user_action(UserAction::RestartPrimal {
                 primal_id: "songbird-1".to_string(),
@@ -582,7 +584,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_primal_event_missing_type_uses_unknown() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         let mut rx = orchestrator.events().subscribe();
 
         let event = serde_json::json!({
@@ -597,7 +599,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "run() blocks indefinitely"]
     async fn test_run_subscribes_and_loops() {
-        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         orchestrator.start().await.unwrap();
         let _ =
             tokio::time::timeout(std::time::Duration::from_millis(100), orchestrator.run()).await;
@@ -631,7 +633,7 @@ mod tests {
         set_test_env("XDG_RUNTIME_DIR", temp.path());
         set_test_env("BIOMEOS_REGISTRY_PROVIDER", "songbird");
 
-        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         orchestrator.start().await.unwrap();
 
         let result =
@@ -683,7 +685,7 @@ mod tests {
         set_test_env("XDG_RUNTIME_DIR", temp.path());
         set_test_env("BIOMEOS_REGISTRY_PROVIDER", "songbird");
 
-        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
         orchestrator.start().await.unwrap();
 
         let result =

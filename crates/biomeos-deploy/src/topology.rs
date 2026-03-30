@@ -85,7 +85,7 @@ impl Topology {
             message: format!("Failed to read topology file {}: {}", path_ref.display(), e),
         })?;
 
-        let topology: Topology =
+        let topology: Self =
             serde_yaml::from_str(&contents).map_err(|e| DeployError::TopologyParse {
                 path: path_ref.to_path_buf(),
                 source: e,
@@ -131,12 +131,14 @@ impl Topology {
     }
 
     /// Get VM by name
+    #[must_use] 
     pub fn get_vm(&self, name: &str) -> Option<&VmTopology> {
         self.vms.iter().find(|vm| vm.name == name)
     }
 
     /// Get number of VMs
-    pub fn vm_count(&self) -> usize {
+    #[must_use] 
+    pub const fn vm_count(&self) -> usize {
         self.vms.len()
     }
 }

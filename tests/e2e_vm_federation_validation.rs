@@ -38,12 +38,12 @@ async fn test_vm_federation_with_validation() -> anyhow::Result<()> {
     println!("✅ Federation created and validated!");
 
     // Verify status
-    let status = manager.status(federation_name).await?;
+    let status = manager.status(federation_name)?;
     println!("Federation status:\n{status}");
 
     // Cleanup
-    manager.stop(federation_name).await?;
-    manager.destroy(federation_name).await?;
+    manager.stop(federation_name)?;
+    manager.destroy(federation_name)?;
 
     Ok(())
 }

@@ -154,7 +154,7 @@ impl SporeIncubator {
 
     /// Derive deployed node seed from spore seed + local entropy
     ///
-    /// Formula: deployed_seed = SHA256(spore_seed || local_entropy_hash)
+    /// Formula: `deployed_seed` = `SHA256(spore_seed` || `local_entropy_hash`)
     ///
     /// This ensures:
     /// - Each deployment is unique

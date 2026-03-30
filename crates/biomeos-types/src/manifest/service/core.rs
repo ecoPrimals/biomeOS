@@ -3,8 +3,8 @@
 
 //! Core Service Types
 //!
-//! This module contains the core service specification types including ServiceSpec,
-//! ServiceMetadata, ImageSpec, and related fundamental types.
+//! This module contains the core service specification types including `ServiceSpec`,
+//! `ServiceMetadata`, `ImageSpec`, and related fundamental types.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -55,7 +55,7 @@ pub struct ServiceSpec {
     /// Scaling configuration (delegated to Toadstool orchestration)
     pub scaling: Option<serde_json::Value>,
 
-    /// Security context (delegated to BearDog security primal)
+    /// Security context (delegated to `BearDog` security primal)
     pub security: Option<serde_json::Value>,
 
     /// Restart policy

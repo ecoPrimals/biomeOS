@@ -3,7 +3,7 @@
 
 //! Primal Service System
 //!
-//! This module contains the UniversalPrimalService trait, request/response types,
+//! This module contains the `UniversalPrimalService` trait, request/response types,
 //! service registration, and all service-related functionality.
 
 use chrono::{DateTime, Utc};

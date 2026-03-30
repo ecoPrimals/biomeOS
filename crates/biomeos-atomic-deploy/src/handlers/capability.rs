@@ -51,7 +51,7 @@ pub struct CapabilityHandler {
 
 impl CapabilityHandler {
     /// Create a new capability handler.
-    pub fn new(
+    pub const fn new(
         router: Arc<NeuralRouter>,
         translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
     ) -> Self {
@@ -238,7 +238,7 @@ impl CapabilityHandler {
     ///
     /// # Parameters
     /// - `primal`: Primal name (e.g., "beardog")
-    /// - `transport`: Transport endpoint string (e.g., "tcp://192.168.1.100:9001")
+    /// - `transport`: Transport endpoint string (e.g., "<tcp://192.168.1.100:9001>")
     /// - `capabilities`: Array of capability names to register
     /// - `gate`: Gate label (optional, stored as source metadata)
     /// - `source`: Registration source (optional, defaults to "route.register")
@@ -448,8 +448,8 @@ impl CapabilityHandler {
 
     /// Build operation dependency DAG edges for a capability domain.
     ///
-    /// Returns `[{"from": "op_a", "to": "op_b"}]` meaning op_a must
-    /// complete before op_b can run.
+    /// Returns `[{"from": "op_a", "to": "op_b"}]` meaning `op_a` must
+    /// complete before `op_b` can run.
     fn build_operation_dependencies(capability: &str, operations: &[String]) -> Vec<Value> {
         let mut deps = Vec::new();
 

@@ -3,8 +3,8 @@
 
 //! Core Network Specifications
 //!
-//! This module contains the fundamental networking types including NetworkSpec,
-//! NetworkMetadata, NetworkDriver, and basic network configuration.
+//! This module contains the fundamental networking types including `NetworkSpec`,
+//! `NetworkMetadata`, `NetworkDriver`, and basic network configuration.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -61,7 +61,7 @@ pub enum NetworkDriver {
     Overlay,
     /// Macvlan network driver
     Macvlan,
-    /// IPvlan network driver
+    /// `IPvlan` network driver
     Ipvlan,
     /// No network driver
     None,

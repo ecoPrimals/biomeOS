@@ -255,12 +255,14 @@ pub struct FailedBinary {
 
 impl RefreshReport {
     /// Check if refresh was completely successful
-    pub fn is_success(&self) -> bool {
+    #[must_use] 
+    pub const fn is_success(&self) -> bool {
         self.failed_binaries.is_empty()
     }
 
     /// Check if any binaries were refreshed
-    pub fn has_changes(&self) -> bool {
+    #[must_use] 
+    pub const fn has_changes(&self) -> bool {
         !self.refreshed_binaries.is_empty()
     }
 }

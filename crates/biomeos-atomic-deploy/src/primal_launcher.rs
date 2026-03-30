@@ -29,6 +29,7 @@ pub struct PrimalInstance {
 
 impl PrimalInstance {
     /// Calculate uptime
+    #[must_use] 
     pub fn uptime(&self) -> chrono::Duration {
         chrono::Utc::now() - self.started_at
     }
@@ -37,6 +38,7 @@ impl PrimalInstance {
     ///
     /// Uses signal 0 (null signal) to test process existence without affecting it.
     /// This is safe and idiomatic using the rustix crate's signal handling.
+    #[must_use] 
     pub fn is_running(&self) -> bool {
         use rustix::process::{Pid, test_kill_process};
 

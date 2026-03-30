@@ -7,7 +7,7 @@
 //! - Family-level federation (genetic lineage baseline)
 //! - Sub-federations (capability-based granular access)
 //! - Runtime primal discovery (no hardcoding)
-//! - BearDog integration for all cryptographic operations
+//! - `BearDog` integration for all cryptographic operations
 //! - NUCLEUS secure discovery protocol (5-layer verification)
 
 #![warn(missing_docs)]
@@ -65,7 +65,7 @@ pub enum FederationError {
     #[error("Genetic lineage verification failed: {0}")]
     LineageVerificationFailed(String),
 
-    /// Error communicating with the security provider (BearDog)
+    /// Error communicating with the security provider (`BearDog`)
     #[error("BearDog error: {0}")]
     BearDogError(String),
 

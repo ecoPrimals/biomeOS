@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! # BiomeOS Lab Integration
+//! # `BiomeOS` Lab Integration
 //!
 //! Integration layer for benchScale lab environment system.
-//! Allows BiomeOS to orchestrate lab experiments for testing P2P coordination,
-//! BTSP tunnels, BirdSong encryption, and multi-primal deployments.
+//! Allows `BiomeOS` to orchestrate lab experiments for testing P2P coordination,
+//! BTSP tunnels, `BirdSong` encryption, and multi-primal deployments.
 //!
 //! ## Runtime Dependencies (shell-outs)
 //!
@@ -35,6 +35,7 @@ pub struct LabManager {
 
 impl LabManager {
     /// Create a new lab manager
+    #[must_use] 
     pub fn new() -> Self {
         // Default to ../benchscale/ directory (parallel to biomeOS)
         // Get current directory and find workspace root
@@ -57,7 +58,8 @@ impl LabManager {
     }
 
     /// Create a new lab manager with custom benchScale path
-    pub fn with_path(benchscale_root: PathBuf) -> Self {
+    #[must_use] 
+    pub const fn with_path(benchscale_root: PathBuf) -> Self {
         Self { benchscale_root }
     }
 
@@ -67,7 +69,7 @@ impl LabManager {
     }
 
     /// Create a new lab environment
-    pub async fn create_lab(&self, topology: &str, name: &str) -> Result<LabHandle> {
+    pub fn create_lab(&self, topology: &str, name: &str) -> Result<LabHandle> {
         info!("Creating lab: {} with topology: {}", name, topology);
 
         let script = self.scripts_dir().join("create-lab.sh");
@@ -94,7 +96,7 @@ impl LabManager {
     }
 
     /// Deploy primals to a lab
-    pub async fn deploy_to_lab(&self, lab_name: &str, manifest: &str) -> Result<()> {
+    pub fn deploy_to_lab(&self, lab_name: &str, manifest: &str) -> Result<()> {
         info!("Deploying to lab: {} with manifest: {}", lab_name, manifest);
 
         let script = self.scripts_dir().join("deploy-to-lab.sh");
@@ -118,7 +120,7 @@ impl LabManager {
     }
 
     /// Run tests on a lab
-    pub async fn run_test(&self, lab_name: &str, test_name: &str) -> Result<TestResult> {
+    pub fn run_test(&self, lab_name: &str, test_name: &str) -> Result<TestResult> {
         info!("Running test: {} on lab: {}", test_name, lab_name);
 
         let script = self.scripts_dir().join("run-tests.sh");
@@ -150,7 +152,7 @@ impl LabManager {
     }
 
     /// Destroy a lab environment
-    pub async fn destroy_lab(&self, lab_name: &str) -> Result<()> {
+    pub fn destroy_lab(&self, lab_name: &str) -> Result<()> {
         info!("Destroying lab: {}", lab_name);
 
         let script = self.scripts_dir().join("destroy-lab.sh");
@@ -188,28 +190,30 @@ pub struct LabHandle {
 
 impl LabHandle {
     /// Get lab name
+    #[must_use] 
     pub fn name(&self) -> &str {
         &self.name
     }
 
     /// Get topology name
+    #[must_use] 
     pub fn topology(&self) -> &str {
         &self.topology
     }
 
     /// Deploy primals to this lab
-    pub async fn deploy(&self, manifest: &str) -> Result<()> {
-        self.manager.deploy_to_lab(&self.name, manifest).await
+    pub fn deploy(&self, manifest: &str) -> Result<()> {
+        self.manager.deploy_to_lab(&self.name, manifest)
     }
 
     /// Run a test on this lab
-    pub async fn run_test(&self, test_name: &str) -> Result<TestResult> {
-        self.manager.run_test(&self.name, test_name).await
+    pub fn run_test(&self, test_name: &str) -> Result<TestResult> {
+        self.manager.run_test(&self.name, test_name)
     }
 
     /// Destroy this lab
-    pub async fn destroy(self) -> Result<()> {
-        self.manager.destroy_lab(&self.name).await
+    pub fn destroy(self) -> Result<()> {
+        self.manager.destroy_lab(&self.name)
     }
 }
 
@@ -228,16 +232,19 @@ pub struct TestResult {
 
 impl TestResult {
     /// Check if test passed
-    pub fn passed(&self) -> bool {
+    #[must_use] 
+    pub const fn passed(&self) -> bool {
         self.success
     }
 
     /// Get test output
+    #[must_use] 
     pub fn output(&self) -> &str {
         &self.stdout
     }
 
     /// Get test errors (if any)
+    #[must_use] 
     pub fn errors(&self) -> &str {
         &self.stderr
     }
@@ -350,19 +357,17 @@ mod tests {
         let mgr = LabManager::with_path(root);
         let handle = mgr
             .create_lab("simple", "lab-stub")
-            .await
             .expect("create_lab");
         assert_eq!(handle.name(), "lab-stub");
         assert_eq!(handle.topology(), "simple");
 
         mgr.deploy_to_lab("lab-stub", "manifest.toml")
-            .await
             .expect("deploy");
 
-        let tr = mgr.run_test("lab-stub", "smoke").await.expect("run_test");
+        let tr = mgr.run_test("lab-stub", "smoke").expect("run_test");
         assert!(tr.passed());
 
-        mgr.destroy_lab("lab-stub").await.expect("destroy");
+        mgr.destroy_lab("lab-stub").expect("destroy");
     }
 
     #[tokio::test]
@@ -380,7 +385,6 @@ mod tests {
         let mgr = LabManager::with_path(root);
         let err = mgr
             .create_lab("t", "bad-lab")
-            .await
             .expect_err("should fail");
         assert!(
             err.to_string().contains("boom") || err.to_string().contains("Failed to create lab"),
@@ -403,11 +407,11 @@ mod tests {
         write_executable_script(&scripts.join("destroy-lab.sh"), "#!/bin/sh\nexit 0\n");
 
         let mgr = LabManager::with_path(root);
-        mgr.create_lab("t", "fail-lab").await.expect("create");
-        let tr = mgr.run_test("fail-lab", "t1").await.expect("run_test");
+        mgr.create_lab("t", "fail-lab").expect("create");
+        let tr = mgr.run_test("fail-lab", "t1").expect("run_test");
         assert!(!tr.passed());
         assert!(!tr.stderr.is_empty() || !tr.success);
-        mgr.destroy_lab("fail-lab").await.expect("destroy");
+        mgr.destroy_lab("fail-lab").expect("destroy");
     }
 
     #[tokio::test]
@@ -424,10 +428,9 @@ mod tests {
         );
 
         let mgr = LabManager::with_path(root);
-        mgr.create_lab("t", "doom-lab").await.expect("create");
+        mgr.create_lab("t", "doom-lab").expect("create");
         let err = mgr
             .destroy_lab("doom-lab")
-            .await
             .expect_err("destroy fails");
         assert!(
             err.to_string().contains("nope") || err.to_string().contains("Failed to destroy"),
@@ -448,10 +451,10 @@ mod tests {
         write_executable_script(&scripts.join("destroy-lab.sh"), "#!/bin/sh\nexit 0\n");
 
         let mgr = LabManager::with_path(root);
-        let h = mgr.create_lab("topo", "h1").await.expect("create");
-        h.deploy("m.toml").await.expect("handle deploy");
-        let tr = h.run_test("unit").await.expect("handle run_test");
+        let h = mgr.create_lab("topo", "h1").expect("create");
+        h.deploy("m.toml").expect("handle deploy");
+        let tr = h.run_test("unit").expect("handle run_test");
         assert!(tr.passed());
-        h.destroy().await.expect("handle destroy");
+        h.destroy().expect("handle destroy");
     }
 }

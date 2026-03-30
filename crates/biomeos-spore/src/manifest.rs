@@ -59,7 +59,7 @@ pub struct BinaryInfo {
 pub struct CompatibilityInfo {
     /// Minimum compatible Tower version
     pub min_tower_version: String,
-    /// Minimum compatible BearDog version
+    /// Minimum compatible `BearDog` version
     pub min_beardog_version: String,
     /// Minimum compatible Songbird version
     pub min_songbird_version: String,
@@ -103,7 +103,7 @@ pub struct LineageInfo {
     pub parent_seed_hash: String,
     /// SHA-256 hash of the derived child seed
     pub child_seed_hash: String,
-    /// Derivation method used (e.g. "sha256_chain")
+    /// Derivation method used (e.g. "`sha256_chain`")
     pub derivation_method: String,
 }
 
@@ -143,7 +143,7 @@ impl BinaryManifest {
     pub fn load(nucleus_path: impl AsRef<Path>) -> Result<Self> {
         let manifest_path = nucleus_path.as_ref().join("MANIFEST.toml");
         let manifest_str = std::fs::read_to_string(manifest_path)?;
-        let manifest: BinaryManifest = toml::from_str(&manifest_str)?;
+        let manifest: Self = toml::from_str(&manifest_str)?;
         Ok(manifest)
     }
 
@@ -225,7 +225,7 @@ impl BinaryManifest {
             }
         }
 
-        Ok(BinaryManifest {
+        Ok(Self {
             manifest: ManifestMeta {
                 version: "1.0".to_string(),
                 created_at: Utc::now(),
@@ -246,7 +246,7 @@ impl SporeManifest {
     pub fn load(spore_path: impl AsRef<Path>) -> Result<Self> {
         let manifest_path = spore_path.as_ref().join(".manifest.toml");
         let manifest_str = std::fs::read_to_string(manifest_path)?;
-        let manifest: SporeManifest = toml::from_str(&manifest_str)?;
+        let manifest: Self = toml::from_str(&manifest_str)?;
         Ok(manifest)
     }
 
@@ -259,6 +259,7 @@ impl SporeManifest {
     }
 
     /// Create a new spore manifest
+    #[must_use] 
     pub fn new(
         node_id: String,
         family_id: String,
@@ -267,7 +268,7 @@ impl SporeManifest {
         parent_seed_hash: String,
         child_seed_hash: String,
     ) -> Self {
-        SporeManifest {
+        Self {
             spore: SporeInfo {
                 node_id,
                 family_id,

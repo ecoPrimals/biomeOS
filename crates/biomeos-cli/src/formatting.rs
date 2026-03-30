@@ -19,6 +19,7 @@ pub fn format_yaml<T: serde::Serialize>(data: &T) -> String {
 }
 
 /// Colorize a status string based on its value
+#[must_use] 
 pub fn colorize_status(status: &str) -> String {
     match status.to_lowercase().as_str() {
         "healthy" | "ok" | "success" => status.green().to_string(),
@@ -76,6 +77,7 @@ pub fn format_table<T: serde::Serialize>(data: &[T]) -> String {
 }
 
 /// Format duration in human readable format
+#[must_use] 
 pub fn format_duration(seconds: i64) -> String {
     if seconds < 60 {
         format!("{seconds}s")
@@ -89,6 +91,7 @@ pub fn format_duration(seconds: i64) -> String {
 }
 
 /// Format file size in human readable format
+#[must_use] 
 pub fn format_file_size(bytes: u64) -> String {
     use biomeos_types::files::SIZE_UNITS;
     let mut size = bytes as f64;
@@ -107,6 +110,7 @@ pub fn format_file_size(bytes: u64) -> String {
 }
 
 /// Format percentage with color coding
+#[must_use] 
 pub fn format_percentage(value: f64) -> String {
     let formatted = format!("{value:.1}%");
     if value >= 90.0 {
@@ -119,6 +123,7 @@ pub fn format_percentage(value: f64) -> String {
 }
 
 /// Format timestamp for CLI display
+#[must_use] 
 pub fn format_timestamp(timestamp: &chrono::DateTime<chrono::Utc>) -> String {
     timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string()
 }

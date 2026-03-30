@@ -3,8 +3,8 @@
 
 //! Core Service Definitions
 //!
-//! This module contains the fundamental service types including UniversalService,
-//! ServiceMetadata, ServiceSpec, and various service type classifications.
+//! This module contains the fundamental service types including `UniversalService`,
+//! `ServiceMetadata`, `ServiceSpec`, and various service type classifications.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -591,7 +591,7 @@ pub enum ConfigSource {
         auth: Option<String>,
     },
 
-    /// Kubernetes ConfigMap
+    /// Kubernetes `ConfigMap`
     ConfigMap(String),
 
     /// Kubernetes Secret
@@ -692,7 +692,7 @@ pub enum LifecycleFailureAction {
     Retry,
 }
 
-/// Default implementation for UniversalService
+/// Default implementation for `UniversalService`
 impl Default for UniversalService {
     fn default() -> Self {
         Self {

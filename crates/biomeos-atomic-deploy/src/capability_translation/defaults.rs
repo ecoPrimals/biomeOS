@@ -13,16 +13,16 @@ use tracing::{debug, info};
 use super::CapabilityTranslationRegistry;
 use super::socket;
 
-/// Method translation tuple: (semantic_name, actual_method_name)
+/// Method translation tuple: (`semantic_name`, `actual_method_name`)
 type MethodTranslation = (&'static str, &'static str);
 
-/// Domain provider mapping: (primal_name, domain_name, method_translations)
+/// Domain provider mapping: (`primal_name`, `domain_name`, `method_translations`)
 type DomainProvider = (&'static str, &'static str, &'static [MethodTranslation]);
 
 /// Load default translations into the registry.
 ///
 /// Resolves providers via environment variables (BIOMEOS_*_PROVIDER).
-/// When BIOMEOS_STRICT_DISCOVERY is set, unset providers are skipped.
+/// When `BIOMEOS_STRICT_DISCOVERY` is set, unset providers are skipped.
 pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize {
     let family_id = biomeos_core::family_discovery::get_family_id();
     let mut count = 0;

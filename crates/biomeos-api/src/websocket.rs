@@ -50,6 +50,7 @@ pub struct SubscriptionFilter {
 
 impl SubscriptionFilter {
     /// Check if an event matches this filter
+    #[must_use] 
     pub fn matches(&self, event: &GraphEvent) -> bool {
         // Check graph_id filter
         if let Some(ref filter_graph_id) = self.graph_id {
@@ -87,8 +88,8 @@ impl SubscriptionFilter {
 }
 
 /// Active subscription
-pub(crate) struct Subscription {
-    /// Subscription ID (used in list_subscriptions and event notifications)
+pub struct Subscription {
+    /// Subscription ID (used in `list_subscriptions` and event notifications)
     id: Arc<str>,
     filter: Arc<SubscriptionFilter>,
     /// Channel sender (held to keep subscription alive; events forwarded on graph state changes).
@@ -97,7 +98,7 @@ pub(crate) struct Subscription {
 
 /// JSON-RPC 2.0 WebSocket server for graph events
 pub struct GraphEventWebSocketServer {
-    /// Active subscriptions (subscription_id -> Subscription)
+    /// Active subscriptions (`subscription_id` -> Subscription)
     subscriptions: Arc<RwLock<HashMap<Arc<str>, Subscription>>>,
 
     /// Event broadcaster from graph executor
@@ -109,6 +110,7 @@ pub struct GraphEventWebSocketServer {
 
 impl GraphEventWebSocketServer {
     /// Create a new WebSocket server
+    #[must_use] 
     pub fn new(bind_addr: SocketAddr, event_broadcaster: Arc<GraphEventBroadcaster>) -> Self {
         Self {
             subscriptions: Arc::new(RwLock::new(HashMap::new())),
@@ -329,7 +331,7 @@ impl GraphEventWebSocketServer {
         }))
     }
 
-    /// Handle events.list_subscriptions method
+    /// Handle `events.list_subscriptions` method
     async fn handle_list_subscriptions(
         subscriptions: &Arc<RwLock<HashMap<Arc<str>, Subscription>>>,
     ) -> Result<serde_json::Value, JsonRpcError> {
@@ -353,7 +355,7 @@ impl GraphEventWebSocketServer {
 }
 
 /// Dispatch JSON-RPC methods for the axum WebSocket event stream (`/api/v1/events/ws`).
-pub(crate) async fn dispatch_ws_method(
+pub async fn dispatch_ws_method(
     method: &str,
     params: Option<serde_json::Value>,
     id: Option<serde_json::Value>,

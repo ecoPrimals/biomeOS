@@ -21,7 +21,7 @@ pub async fn handle_monitor(
     duration: Option<u64>,
 ) -> Result<()> {
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     println!("🔍 Starting system monitoring (interval: {interval}s)");
     if let Some(duration_s) = duration {
@@ -77,7 +77,7 @@ pub async fn handle_logs(
     since: Option<String>,
 ) -> Result<()> {
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     if follow {
         println!("📜 Following logs for service '{service}' (Press Ctrl+C to stop)");
@@ -97,7 +97,7 @@ pub async fn handle_logs(
 /// Handle exec command
 pub async fn handle_exec(service: String, command: Vec<String>, interactive: bool) -> Result<()> {
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     let command_str = command.join(" ");
     println!("⚡ Executing '{command_str}' in service '{service}'");
@@ -120,7 +120,7 @@ pub async fn handle_scale(service: String, replicas: Option<u32>, auto: bool) ->
     let spinner = create_spinner(&format!("⚖️  Scaling service '{service}'..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     let scale_result = if auto {
         manager.enable_auto_scaling(&service).await?

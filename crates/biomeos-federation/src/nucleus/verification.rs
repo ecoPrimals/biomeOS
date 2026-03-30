@@ -14,17 +14,17 @@ use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, warn};
 
-/// Sentinel value for identity proofs where BearDog verification was unavailable
+/// Sentinel value for identity proofs where `BearDog` verification was unavailable
 pub const UNVERIFIED_SIGNATURE: &str = "unverified";
 
-/// Identity proof from BearDog
+/// Identity proof from `BearDog`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdentityProof {
     /// Node ID
     pub node_id: String,
-    /// Family ID (extracted from BearDog lineage verification)
+    /// Family ID (extracted from `BearDog` lineage verification)
     pub family_id: Option<String>,
-    /// Ed25519 signature (`UNVERIFIED_SIGNATURE` when BearDog unavailable)
+    /// Ed25519 signature (`UNVERIFIED_SIGNATURE` when `BearDog` unavailable)
     pub signature: String,
     /// Challenge that was signed
     pub challenge: String,
@@ -36,12 +36,13 @@ pub struct IdentityProof {
 
 impl IdentityProof {
     /// Returns true if this proof has not been cryptographically verified
+    #[must_use] 
     pub fn is_unverified(&self) -> bool {
         self.signature == UNVERIFIED_SIGNATURE
     }
 }
 
-/// Primal capability from get_capabilities response
+/// Primal capability from `get_capabilities` response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PrimalCapabilityInfo {
     #[serde(rename = "type")]
@@ -61,9 +62,9 @@ struct GetCapabilitiesResponse {
     provided_capabilities: Vec<PrimalCapabilityInfo>,
 }
 
-/// Layer 2: Identity Verification via BearDog
+/// Layer 2: Identity Verification via `BearDog`
 #[expect(clippy::expect_used, reason = "system clock before UNIX epoch")]
-pub(crate) async fn layer2_identity_verification(
+pub async fn layer2_identity_verification(
     _beardog: &BearDogClient,
     primal: &DiscoveredPrimal,
 ) -> FederationResult<IdentityProof> {
@@ -144,7 +145,7 @@ pub(crate) async fn layer2_identity_verification(
 }
 
 /// Layer 3: Capability Verification (query primal)
-pub(crate) async fn layer3_capability_verification(
+pub async fn layer3_capability_verification(
     primal: &DiscoveredPrimal,
 ) -> FederationResult<CapabilitySet> {
     debug!("Layer 3: Capability Verification");

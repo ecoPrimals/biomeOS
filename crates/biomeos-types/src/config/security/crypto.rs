@@ -91,7 +91,7 @@ impl Default for KeyManagementConfig {
 pub enum KeyStorageBackend {
     /// Local filesystem storage
     Local,
-    /// HashiCorp Vault
+    /// `HashiCorp` Vault
     Vault,
     /// Hardware Security Module
     Hsm,

@@ -48,7 +48,7 @@ async fn test_registry_discovery_success() {
         .await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await.unwrap();
+    let manager = UniversalBiomeOSManager::new(config).unwrap();
     let results = manager.discover_registry(&mock_server.uri()).await.unwrap();
 
     assert_eq!(results.len(), 2);
@@ -69,7 +69,7 @@ async fn test_registry_discovery_empty_response() {
         .await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await.unwrap();
+    let manager = UniversalBiomeOSManager::new(config).unwrap();
     let results = manager.discover_registry(&mock_server.uri()).await.unwrap();
 
     // Empty result is expected
@@ -87,7 +87,7 @@ async fn test_registry_discovery_malformed_response() {
         .await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await.unwrap();
+    let manager = UniversalBiomeOSManager::new(config).unwrap();
     let results = manager.discover_registry(&mock_server.uri()).await;
 
     // Should handle malformed response gracefully (empty results)
@@ -119,7 +119,7 @@ async fn test_capability_based_orchestration_discovery_success() {
         .await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await.unwrap();
+    let manager = UniversalBiomeOSManager::new(config).unwrap();
     let results = manager
         .discover_registry(&format!("{}/api/v1/services", mock_server.uri()))
         .await
@@ -158,8 +158,8 @@ async fn test_probe_endpoint_success() {
         .await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await.unwrap();
-    let result = manager.probe_endpoint(&mock_server.uri()).await;
+    let manager = UniversalBiomeOSManager::new(config).unwrap();
+    let result = manager.probe_endpoint(&mock_server.uri());
 
     assert!(result.is_ok());
     let info = result.unwrap();
@@ -170,10 +170,10 @@ async fn test_probe_endpoint_success() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_probe_endpoint_unreachable() {
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await.unwrap();
+    let manager = UniversalBiomeOSManager::new(config).unwrap();
 
     // Probe a non-existent endpoint
-    let result = manager.probe_endpoint("http://localhost:99999").await;
+    let result = manager.probe_endpoint("http://localhost:99999");
 
     // Should succeed with placeholder result (graceful degradation)
     assert!(result.is_ok());

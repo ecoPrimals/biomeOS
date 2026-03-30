@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Capability Caller - NeuralAPI and Direct Integration
+//! Capability Caller - `NeuralAPI` and Direct Integration
 //!
 //! Abstracts capability.call mechanism for beacon genetics operations.
 //!
@@ -23,7 +23,7 @@
 //!     └── MockCapabilityCaller (testing - returns preset responses)
 //! ```
 //!
-//! Uses Universal IPC v3.0 AtomicClient for multi-transport support.
+//! Uses Universal IPC v3.0 `AtomicClient` for multi-transport support.
 
 use biomeos_core::atomic_client::AtomicClient;
 use biomeos_types::constants::ports;
@@ -32,7 +32,7 @@ use tracing::debug;
 /// Trait for calling capabilities via neuralAPI.
 ///
 /// This abstracts the actual RPC mechanism, allowing:
-/// - Real capability.call via CapabilityTranslationRegistry
+/// - Real capability.call via `CapabilityTranslationRegistry`
 /// - Mock implementations for testing
 /// - Different transport mechanisms
 ///
@@ -56,7 +56,7 @@ pub trait CapabilityCaller: Send + Sync {
     ) -> Result<serde_json::Value, String>;
 }
 
-/// Default capability caller using AtomicClient to neuralAPI
+/// Default capability caller using `AtomicClient` to neuralAPI
 ///
 /// Uses Universal IPC v3.0 for multi-transport support.
 pub struct NeuralApiCapabilityCaller {
@@ -66,6 +66,7 @@ pub struct NeuralApiCapabilityCaller {
 
 impl NeuralApiCapabilityCaller {
     /// Create new caller
+    #[must_use] 
     pub fn new(neural_api_socket: &str) -> Self {
         Self {
             neural_api_socket: neural_api_socket.to_string(),
@@ -73,6 +74,7 @@ impl NeuralApiCapabilityCaller {
     }
 
     /// Get default neuralAPI socket path
+    #[must_use] 
     pub fn default_socket() -> String {
         // XDG-compliant path
         if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
@@ -121,17 +123,17 @@ impl CapabilityCaller for NeuralApiCapabilityCaller {
     }
 }
 
-/// Direct BearDog caller - calls BearDog methods directly
+/// Direct `BearDog` caller - calls `BearDog` methods directly
 ///
-/// Unlike NeuralApiCapabilityCaller which goes through Neural API's semantic
-/// routing, this caller connects directly to a BearDog socket and translates
-/// capability names to BearDog's actual method names.
+/// Unlike `NeuralApiCapabilityCaller` which goes through Neural API's semantic
+/// routing, this caller connects directly to a `BearDog` socket and translates
+/// capability names to `BearDog`'s actual method names.
 ///
 /// ## Usage
 ///
 /// This is useful for enrollment scenarios where:
 /// 1. Neural API may not be running
-/// 2. Direct BearDog access is needed for bootstrapping
+/// 2. Direct `BearDog` access is needed for bootstrapping
 /// 3. Simpler deployment without full Neural API stack
 ///
 /// ## Endpoint Formats
@@ -139,22 +141,24 @@ impl CapabilityCaller for NeuralApiCapabilityCaller {
 /// - **Unix socket**: `/path/to/socket.sock`
 /// - **TCP**: `tcp:host:port` (e.g., `tcp:127.0.0.1:9900`)
 pub struct DirectBeardogCaller {
-    /// Endpoint to BearDog (socket path or tcp:host:port)
+    /// Endpoint to `BearDog` (socket path or tcp:host:port)
     beardog_endpoint: String,
 }
 
 impl DirectBeardogCaller {
-    /// Create new direct BearDog caller
+    /// Create new direct `BearDog` caller
     ///
     /// # Arguments
     /// * `endpoint` - Either a Unix socket path or "tcp:host:port"
+    #[must_use] 
     pub fn new(endpoint: &str) -> Self {
         Self {
             beardog_endpoint: endpoint.to_string(),
         }
     }
 
-    /// Get default BearDog socket path
+    /// Get default `BearDog` socket path
+    #[must_use] 
     pub fn default_socket() -> String {
         // XDG-compliant path
         if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
@@ -169,17 +173,17 @@ impl DirectBeardogCaller {
         }
     }
 
-    /// Translate semantic capability name to BearDog method
+    /// Translate semantic capability name to `BearDog` method
     ///
-    /// BearDog uses flat method names like "genetic.derive_lineage_key"
+    /// `BearDog` uses flat method names like "`genetic.derive_lineage_key`"
     /// while semantic capabilities might be expressed differently.
-    fn translate_capability(capability: &str) -> &str {
+    const fn translate_capability(capability: &str) -> &str {
         // Most capabilities map directly to BearDog methods
         // This provides a hook for future translation if needed
         capability
     }
 
-    /// Create AtomicClient based on endpoint format
+    /// Create `AtomicClient` based on endpoint format
     fn create_client(&self) -> AtomicClient {
         if self.beardog_endpoint.starts_with("tcp:") {
             // Parse tcp:host:port format

@@ -619,7 +619,7 @@ async fn test_executor_with_metrics() {
 
     let temp = tempfile::TempDir::new().expect("tempdir");
     let db_path = temp.path().join("metrics.db");
-    let collector = MetricsCollector::new(&db_path).await.expect("collector");
+    let collector = MetricsCollector::new(&db_path).expect("collector");
 
     let mut executor_with_metrics = executor.with_metrics(collector);
     let report = executor_with_metrics.execute().await.unwrap();

@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 /// Request payload for lineage-gated relay authorization.
 ///
-/// biomeOS routes `relay.authorize` to the security provider (BearDog) at
+/// biomeOS routes `relay.authorize` to the security provider (`BearDog`) at
 /// runtime. The relay coordinator (Songbird) uses this to verify that a
 /// peer is authorized to use relay resources.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,7 +59,7 @@ pub struct RelayAuthorizeResponse {
 /// Request to submit a compute job.
 ///
 /// biomeOS routes `compute.dispatch.submit` to the compute provider
-/// (ToadStool) at runtime.
+/// (`ToadStool`) at runtime.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComputeSubmitRequest {
     /// Shader or compute kernel identifier.
@@ -74,7 +74,7 @@ pub struct ComputeSubmitRequest {
     pub timeout_ms: u64,
 }
 
-fn default_compute_timeout_ms() -> u64 {
+const fn default_compute_timeout_ms() -> u64 {
     30_000
 }
 
@@ -126,7 +126,7 @@ pub struct ComputeCancelRequest {
 
 /// Request to register a model in the cache.
 ///
-/// biomeOS routes `model.register` to the storage provider (NestGate).
+/// biomeOS routes `model.register` to the storage provider (`NestGate`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelRegisterRequest {
     /// Model identifier (e.g. "llama-3-8b", "whisper-large-v3").
@@ -197,7 +197,7 @@ pub enum PrimalLifecyclePhase {
 pub struct PrimalIdentityResponse {
     /// Lowercase primal identifier (e.g. "beardog").
     pub id: String,
-    /// Display name (e.g. "BearDog").
+    /// Display name (e.g. "`BearDog`").
     pub display_name: String,
     /// Semantic version.
     pub version: String,
@@ -215,7 +215,7 @@ pub struct PrimalIdentityResponse {
 /// Used by `biomeos validate primal` to check sourDough compliance.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalComplianceCheck {
-    /// UniBin: single binary with subcommands.
+    /// `UniBin`: single binary with subcommands.
     pub unibin_compliant: bool,
     /// ecoBin: pure Rust, no C dependencies.
     pub ecobin_compliant: bool,

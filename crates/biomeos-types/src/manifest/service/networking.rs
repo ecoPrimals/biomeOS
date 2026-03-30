@@ -3,8 +3,8 @@
 
 //! Service Networking Types
 //!
-//! This module contains networking-related service types including PortSpec,
-//! LoadBalancerSpec, and related networking configurations.
+//! This module contains networking-related service types including `PortSpec`,
+//! `LoadBalancerSpec`, and related networking configurations.
 
 use crate::health::HealthCheckConfig;
 use serde::{Deserialize, Serialize};

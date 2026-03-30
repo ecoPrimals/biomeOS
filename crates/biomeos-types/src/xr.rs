@@ -223,7 +223,7 @@ pub enum SurgicalInstrument {
 /// Tissue material properties for physics simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TissueMaterial {
-    /// Material identifier (e.g., "liver_parenchyma", "skin_dermis")
+    /// Material identifier (e.g., "`liver_parenchyma`", "`skin_dermis`")
     pub id: String,
     /// Young's modulus in kPa
     pub youngs_modulus_kpa: f64,

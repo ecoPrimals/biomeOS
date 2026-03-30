@@ -177,7 +177,7 @@ impl AtomicClient {
 
     /// Discover a primal by capability and create an atomic client
     ///
-    /// **WateringHole standard**: No hardcoded primal names. Use capability constants
+    /// **`WateringHole` standard**: No hardcoded primal names. Use capability constants
     /// from `biomeos_types::constants::capability` (e.g., `capability::CRYPTO`).
     ///
     /// # Arguments
@@ -220,14 +220,14 @@ impl AtomicClient {
         }
 
         anyhow::bail!(
-            "No primal found for capability '{}'. Ensure a primal with this capability is running.",
-            capability
+            "No primal found for capability '{capability}'. Ensure a primal with this capability is running."
         )
     }
 
     /// Create an atomic client from a transport endpoint
     ///
     /// **Universal IPC v3.0**: Use this with discovered endpoints.
+    #[must_use] 
     pub fn from_endpoint(endpoint: TransportEndpoint) -> Self {
         let socket_path = match &endpoint {
             TransportEndpoint::UnixSocket { path } => path.clone(),
@@ -302,7 +302,7 @@ impl AtomicClient {
     /// Create an atomic client with explicit abstract socket (Tier 1 - Linux/Android)
     ///
     /// Use this for high-performance local communication on Linux/Android
-    /// where filesystem sockets may be blocked (e.g., SELinux).
+    /// where filesystem sockets may be blocked (e.g., `SELinux`).
     ///
     /// # Arguments
     /// * `name` - Abstract socket name (without leading @)
@@ -317,13 +317,14 @@ impl AtomicClient {
         }
     }
 
-    /// Alias for unix() - backwards compatibility
+    /// Alias for `unix()` - backwards compatibility
     pub fn new(socket_path: impl AsRef<Path>) -> Self {
         Self::unix(socket_path)
     }
 
     /// Set the request timeout
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+    #[must_use] 
+    pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
     }
@@ -333,6 +334,7 @@ impl AtomicClient {
     /// For Unix sockets: checks if the socket file exists
     /// For TCP: returns true (availability checked on connect)
     /// For Abstract: returns true (availability checked on connect)
+    #[must_use] 
     pub fn is_available(&self) -> bool {
         match &self.endpoint {
             TransportEndpoint::UnixSocket { path } => path.exists(),
@@ -343,7 +345,8 @@ impl AtomicClient {
     }
 
     /// Get the transport endpoint
-    pub fn endpoint(&self) -> &TransportEndpoint {
+    #[must_use] 
+    pub const fn endpoint(&self) -> &TransportEndpoint {
         &self.endpoint
     }
 
@@ -588,7 +591,7 @@ impl AtomicClient {
         )
     }
 
-    /// Generic request sender for any AsyncRead + AsyncWrite stream
+    /// Generic request sender for any `AsyncRead` + `AsyncWrite` stream
     async fn send_request<S>(&self, stream: S, request: JsonRpcRequest) -> Result<JsonRpcResponse>
     where
         S: AsyncRead + AsyncWrite + Unpin,
@@ -634,7 +637,7 @@ impl AtomicClient {
     /// closing the connection.
     ///
     /// Returns an `mpsc::Receiver` that yields `StreamItem`s as they arrive.
-    pub async fn call_stream(
+    pub fn call_stream(
         &self,
         method: &str,
         params: Value,
@@ -772,6 +775,7 @@ impl AtomicClient {
     /// Get the socket path for this client (legacy compatibility)
     ///
     /// Returns empty path for non-Unix transports.
+    #[must_use] 
     pub fn socket_path(&self) -> &Path {
         &self.socket_path
     }
@@ -783,7 +787,7 @@ impl AtomicClient {
 ///
 /// This replaces hardcoded paths with capability-based discovery that:
 /// - Respects environment variables (e.g., `BEARDOG_SOCKET`, `BEARDOG_TCP`)
-/// - Uses XDG_RUNTIME_DIR when available
+/// - Uses `XDG_RUNTIME_DIR` when available
 /// - Tries abstract sockets on Linux/Android
 /// - Falls back to TCP if native IPC unavailable
 ///

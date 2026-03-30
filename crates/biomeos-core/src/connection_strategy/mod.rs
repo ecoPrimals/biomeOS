@@ -5,7 +5,7 @@
 //!
 //! Selects the optimal connection tier for reaching a peer, using the Neural API
 //! for capability routing. This is the biomeOS-owned "brain" that decides WHAT to
-//! do — primals (Songbird, BearDog) decide HOW.
+//! do — primals (Songbird, `BearDog`) decide HOW.
 //!
 //! ## Multi-Tier Strategy
 //!
@@ -21,7 +21,7 @@
 //!
 //! biomeOS decides which tier to attempt. It calls Neural API `capability.call`
 //! for each step. The actual UDP/STUN/relay operations are performed by Songbird.
-//! Cryptographic authorization is performed by BearDog.
+//! Cryptographic authorization is performed by `BearDog`.
 //!
 //! See: `ecoPrimals/wateringHole/handoffs/archive/` (relay/coordinated punch handoff)
 

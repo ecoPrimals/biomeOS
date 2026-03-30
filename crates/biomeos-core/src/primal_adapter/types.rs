@@ -154,7 +154,7 @@ pub enum PortConfigMethod {
     ConfigFile { path: String, format: String },
 
     /// Multiple methods (in priority order)
-    Multiple(Vec<PortConfigMethod>),
+    Multiple(Vec<Self>),
 
     /// Unknown
     Unknown,
@@ -214,6 +214,7 @@ pub enum PrimalState {
 
 impl PrimalAdapter {
     /// Create a new adapter with default capabilities
+    #[must_use] 
     pub fn new(name: String, binary: PathBuf) -> Self {
         Self {
             name,
@@ -229,7 +230,7 @@ impl PrimalAdapter {
     }
 
     /// Start the primal on the specified port
-    pub async fn start(&mut self, port: u16) -> Result<()> {
+    pub fn start(&mut self, port: u16) -> Result<()> {
         self.state = PrimalState::Starting {
             started_at: chrono::Utc::now(),
         };
@@ -255,8 +256,8 @@ impl PrimalAdapter {
     /// Check if primal is healthy
     ///
     /// Uses running state as health indicator (socket-based health checks
-    /// are done via AtomicClient in the deployment layer).
-    pub async fn check_health(&self) -> Result<bool> {
+    /// are done via `AtomicClient` in the deployment layer).
+    pub fn check_health(&self) -> Result<bool> {
         // Socket-based health checks are done via AtomicClient
         // Here we just check if the primal is in a running state
         Ok(matches!(self.state, PrimalState::Running { .. }))
@@ -347,8 +348,9 @@ impl Default for LifecycleCapabilities {
 
 impl PrimalInterface {
     /// Check if this is a known interface
-    pub fn is_known(&self) -> bool {
-        !matches!(self, PrimalInterface::Unknown { .. })
+    #[must_use] 
+    pub const fn is_known(&self) -> bool {
+        !matches!(self, Self::Unknown { .. })
     }
 }
 

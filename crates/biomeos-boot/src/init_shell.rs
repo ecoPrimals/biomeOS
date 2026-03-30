@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Shell Management for BiomeOS Init
+//! Shell Management for `BiomeOS` Init
 //!
 //! Spawns and manages the interactive shell.
 
@@ -30,13 +30,14 @@ pub struct ShellManager;
 
 impl ShellManager {
     /// Creates a new shell manager
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self
     }
 
     /// Spawns an interactive shell
     ///
-    /// This function spawns BusyBox sh and waits for it to complete.
+    /// This function spawns `BusyBox` sh and waits for it to complete.
     /// If the shell fails or exits, this enters an infinite loop to
     /// prevent PID 1 from exiting (which would cause a kernel panic).
     ///

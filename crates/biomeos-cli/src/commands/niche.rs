@@ -9,6 +9,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Map niche category to display icon (testable pure function)
+#[must_use] 
 pub fn category_to_icon(category: &str) -> &'static str {
     match category {
         "gaming" => "🎮",
@@ -20,6 +21,7 @@ pub fn category_to_icon(category: &str) -> &'static str {
 }
 
 /// Parse name and category from niche YAML content (testable pure function)
+#[must_use] 
 pub fn parse_niche_yaml_info(content: &str) -> (String, String) {
     let name = content
         .lines()
@@ -41,6 +43,7 @@ pub fn parse_niche_yaml_info(content: &str) -> (String, String) {
 }
 
 /// Map primal name to display icon (testable pure function)
+#[must_use] 
 pub fn primal_to_icon(primal: &str) -> &'static str {
     use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
     match primal {

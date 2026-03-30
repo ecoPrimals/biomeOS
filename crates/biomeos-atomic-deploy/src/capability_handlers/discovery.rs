@@ -16,7 +16,7 @@ use crate::executor::context::ExecutionContext;
 ///
 /// Uses `biomeos_types::CapabilityTaxonomy` for consistent mapping across the codebase.
 /// Set `BIOMEOS_STRICT_DISCOVERY=1` to disable fallback and require Songbird discovery.
-pub(crate) fn resolve_capability_to_primal(capability: &str) -> Option<&'static str> {
+pub fn resolve_capability_to_primal(capability: &str) -> Option<&'static str> {
     biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
 }
 
@@ -24,14 +24,14 @@ pub(crate) fn resolve_capability_to_primal(capability: &str) -> Option<&'static 
 ///
 /// This provides a canonical list of primals for health checks and deployment.
 /// Uses `biomeos_types::CapabilityTaxonomy::known_primals()` for consistency.
-pub(crate) fn known_primal_names() -> Vec<&'static str> {
+pub fn known_primal_names() -> Vec<&'static str> {
     biomeos_types::CapabilityTaxonomy::known_primals().to_vec()
 }
 
 /// Discover binary path for a primal
 ///
 /// Search order:
-/// 1. BIOMEOS_PLASMID_BIN_DIR environment variable
+/// 1. `BIOMEOS_PLASMID_BIN_DIR` environment variable
 /// 2. ./plasmidBin directory
 /// 3. ../plasmidBin directory
 /// 4. ../../plasmidBin directory

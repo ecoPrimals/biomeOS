@@ -5,7 +5,7 @@
 //!
 //! This module provides adaptive integration with primals, learning their interfaces
 //! rather than enforcing a universal contract. Respects primal sovereignty while
-//! enabling seamless BiomeOS orchestration.
+//! enabling seamless `BiomeOS` orchestration.
 //!
 //! # Philosophy
 //!
@@ -60,11 +60,11 @@ use std::path::Path;
 /// Quick discovery and start - convenience function
 pub async fn discover_and_start(binary: &Path, port: u16) -> Result<PrimalAdapter> {
     let mut adapter = discover_primal_interface(binary).await?;
-    adapter.start(port).await?;
+    adapter.start(port)?;
     Ok(adapter)
 }
 
-/// Check if primal is compatible with BiomeOS
+/// Check if primal is compatible with `BiomeOS`
 pub async fn check_compatibility(binary: &Path) -> Result<bool> {
     match discover_primal_interface(binary).await {
         Ok(adapter) => {

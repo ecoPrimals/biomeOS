@@ -23,7 +23,7 @@ pub fn is_explicit_coordinated_mode_str(mode: &str) -> bool {
     m == "coordinated" || m == "coord" || m == "join"
 }
 
-/// Check if BIOMEOS_MODE env var indicates explicit coordinated mode
+/// Check if `BIOMEOS_MODE` env var indicates explicit coordinated mode
 #[must_use]
 pub fn is_explicit_coordinated_mode() -> bool {
     is_explicit_coordinated_mode_with(None)
@@ -32,7 +32,7 @@ pub fn is_explicit_coordinated_mode() -> bool {
 /// Check coordinated mode with optional override (for testing without env mutation).
 ///
 /// - `Some(s)` — use the given mode string
-/// - `None` — read from BIOMEOS_MODE env var (or false if unset)
+/// - `None` — read from `BIOMEOS_MODE` env var (or false if unset)
 #[must_use]
 pub fn is_explicit_coordinated_mode_with(env_override: Option<&str>) -> bool {
     let mode: Option<String> = env_override
@@ -51,7 +51,7 @@ impl NeuralApiServer {
     /// bootstrap, and translation loading before accepting requests.
     pub async fn serve(&self) -> Result<()> {
         // 1. Bind socket EARLY so health probes see us immediately
-        let listener = self.bind_socket().await?;
+        let listener = self.bind_socket()?;
 
         // 2. Detect operating mode
         info!("🔍 Detecting biomeOS operating mode...");
@@ -77,7 +77,10 @@ impl NeuralApiServer {
         // ALWAYS load semantic translations from Tower Atomic graph
         self.load_translations_on_startup().await?;
 
-        // 4. Accept connections on the already-bound listener
+        // 5. Auto-discover running primals and register their capabilities
+        self.discover_and_register_primals().await;
+
+        // 6. Accept connections on the already-bound listener
         self.accept_connections(listener).await
     }
 
@@ -274,12 +277,217 @@ impl NeuralApiServer {
         Ok(())
     }
 
+    /// Scan `$XDG_RUNTIME_DIR/biomeos/` for running primals, probe each
+    /// socket's `capabilities.list`, and register every discovered capability
+    /// with the `NeuralRouter`.
+    ///
+    /// This is the sovereign auto-discovery path (Option 1 from ludoSpring V35):
+    /// no startup ordering dependency — biomeOS discovers what is already running.
+    async fn discover_and_register_primals(&self) {
+        let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
+        let mut total_caps = 0usize;
+        let mut total_primals = 0usize;
+
+        for socket_dir in &socket_dirs {
+            let entries = match std::fs::read_dir(socket_dir) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let filename = match path.file_name().and_then(|n| n.to_str()) {
+                    Some(f) => f.to_string(),
+                    None => continue,
+                };
+
+                if !filename.ends_with(".sock") {
+                    continue;
+                }
+
+                // Skip our own socket
+                if path == self.socket_path {
+                    continue;
+                }
+
+                let primal_name = match filename.strip_suffix(".sock") {
+                    Some(base) => base.split('-').next().unwrap_or(base).to_string(),
+                    None => continue,
+                };
+
+                if !biomeos_types::primal_names::is_known_primal(&primal_name) {
+                    continue;
+                }
+
+                let socket_str = path.to_string_lossy().to_string();
+                let capabilities = self.probe_primal_capabilities(&socket_str).await;
+
+                if capabilities.is_empty() {
+                    debug!("   {} — no capabilities (not responsive?)", primal_name);
+                    continue;
+                }
+
+                for cap in &capabilities {
+                    if let Err(e) = self
+                        .router
+                        .register_capability_unix(cap, &primal_name, &path, "auto-discovery")
+                        .await
+                    {
+                        warn!("   Failed to register {}.{}: {}", primal_name, cap, e);
+                    }
+                }
+
+                info!(
+                    "   🔍 Discovered {} — {} capabilities via {}",
+                    primal_name,
+                    capabilities.len(),
+                    socket_str,
+                );
+                total_caps += capabilities.len();
+                total_primals += 1;
+            }
+        }
+
+        if total_primals > 0 {
+            info!(
+                "✅ Auto-discovery registered {} capabilities from {} primals",
+                total_caps, total_primals
+            );
+        } else {
+            info!("🔍 Auto-discovery: no running primals found (they will register dynamically)");
+        }
+    }
+
+    /// Probe a primal's UDS socket for its capabilities via `capabilities.list`.
+    ///
+    /// Returns an empty vec on connection failure (non-fatal — the primal may
+    /// not be ready yet, or may not support this method).
+    async fn probe_primal_capabilities(&self, socket_path: &str) -> Vec<String> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        let stream = match tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            UnixStream::connect(socket_path),
+        )
+        .await
+        {
+            Ok(Ok(s)) => s,
+            _ => return vec![],
+        };
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "capabilities.list",
+            "id": 1
+        });
+        let Ok(mut request_line) = serde_json::to_string(&request) else {
+            return vec![];
+        };
+        request_line.push('\n');
+
+        let mut reader = BufReader::new(stream);
+        let w = reader.get_mut();
+        if w.write_all(request_line.as_bytes()).await.is_err() {
+            return vec![];
+        }
+        let _ = w.flush().await;
+
+        let mut response_line = String::new();
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            reader.read_line(&mut response_line),
+        )
+        .await
+        {
+            Ok(Ok(n)) if n > 0 => {}
+            _ => return vec![],
+        }
+
+        let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
+
+        // Handle multiple capability response formats (Format A/B/C/D from primalSpring)
+        if let Some(caps) = resp["result"]["capabilities"].as_array() {
+            return caps.iter().filter_map(|c| {
+                c.as_str().map(String::from).or_else(|| c["name"].as_str().map(String::from))
+            }).collect();
+        }
+        if let Some(caps) = resp["result"].as_array() {
+            return caps
+                .iter()
+                .filter_map(|c| c.as_str().map(String::from))
+                .collect();
+        }
+        vec![]
+    }
+
+    /// Re-scan socket directories and register any newly-appeared primals.
+    ///
+    /// JSON-RPC method: `topology.rescan`
+    ///
+    /// Use case: deploy biomeOS into an existing system with running primals,
+    /// or trigger re-discovery after new primals start. This is the on-demand
+    /// complement to startup auto-discovery (Option 1) and `capability.register`
+    /// (Option 2). All three paths converge at the same `NeuralRouter`.
+    pub(crate) async fn rescan_primals(&self) -> anyhow::Result<serde_json::Value> {
+        let before = self.router.list_capabilities().await.len();
+        self.discover_and_register_primals().await;
+        let after = self.router.list_capabilities().await.len();
+        let new_caps = after.saturating_sub(before);
+        Ok(serde_json::json!({
+            "rescanned": true,
+            "new_capabilities_registered": new_caps,
+            "total_capabilities": after,
+        }))
+    }
+
+    /// Full health status including mode, registered capabilities, and uptime.
+    ///
+    /// JSON-RPC method: `health.check`
+    pub(crate) async fn health_check(&self) -> Result<serde_json::Value> {
+        let mode = self.mode.read().await;
+        let cap_count = self.router.list_capabilities().await.len();
+        Ok(serde_json::json!({
+            "status": "healthy",
+            "mode": format!("{mode:?}"),
+            "family_id": self.family_id,
+            "socket_path": self.socket_path.display().to_string(),
+            "registered_capabilities": cap_count,
+            "version": env!("CARGO_PKG_VERSION"),
+        }))
+    }
+
+    /// Minimal liveness probe — confirms the process is running and responsive.
+    ///
+    /// JSON-RPC method: `health.liveness`
+    pub(crate) fn health_liveness(&self) -> Result<serde_json::Value> {
+        Ok(serde_json::json!({
+            "status": "alive",
+            "version": env!("CARGO_PKG_VERSION"),
+        }))
+    }
+
+    /// Readiness probe — confirms the server has finished bootstrapping and can
+    /// serve requests (capabilities loaded, mode resolved).
+    ///
+    /// JSON-RPC method: `health.readiness`
+    pub(crate) async fn health_readiness(&self) -> Result<serde_json::Value> {
+        let mode = self.mode.read().await;
+        let cap_count = self.router.list_capabilities().await.len();
+        let ready = cap_count > 0;
+        Ok(serde_json::json!({
+            "ready": ready,
+            "mode": format!("{mode:?}"),
+            "registered_capabilities": cap_count,
+        }))
+    }
+
     /// Bind the Unix socket so the path exists for external probes.
     ///
     /// Called early in `serve()` before bootstrap or translation loading,
     /// so that primalSpring and other health monitors can discover the
     /// socket immediately after the process starts.
-    async fn bind_socket(&self) -> Result<UnixListener> {
+    fn bind_socket(&self) -> Result<UnixListener> {
         if self.socket_path.exists() {
             std::fs::remove_file(&self.socket_path).context("Failed to remove old socket")?;
         }

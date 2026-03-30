@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Hardware Detection for BiomeOS Init
+//! Hardware Detection for `BiomeOS` Init
 //!
 //! Detects and reports hardware capabilities during boot (pure Rust via /proc - ecoBin v3).
 
@@ -25,7 +25,7 @@ pub struct HardwareInfo {
 pub enum Architecture {
     /// x86-64 (AMD64)
     X86_64,
-    /// ARM64 (AArch64)
+    /// ARM64 (`AArch64`)
     Aarch64,
     /// RISC-V 64-bit
     Riscv64,
@@ -35,7 +35,8 @@ pub enum Architecture {
 
 impl Architecture {
     /// Detects the current system architecture
-    pub fn detect() -> Self {
+    #[must_use] 
+    pub const fn detect() -> Self {
         #[cfg(target_arch = "x86_64")]
         return Self::X86_64;
 
@@ -54,7 +55,8 @@ impl Architecture {
     }
 
     /// Returns the architecture as a string
-    pub fn as_str(&self) -> &str {
+    #[must_use] 
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::X86_64 => "x86_64",
             Self::Aarch64 => "aarch64",

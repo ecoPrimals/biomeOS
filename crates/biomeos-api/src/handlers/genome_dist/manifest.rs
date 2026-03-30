@@ -99,7 +99,7 @@ pub async fn get_manifest() -> Result<Json<DistManifest>, (StatusCode, Json<Dist
 }
 
 #[expect(clippy::too_many_lines, reason = "manifest parsing and validation")]
-pub(crate) async fn get_manifest_from(
+pub async fn get_manifest_from(
     genome_bin: impl AsRef<std::path::Path>,
 ) -> Result<DistManifest, (StatusCode, Json<DistError>)> {
     let genome_bin = genome_bin.as_ref();
@@ -285,7 +285,7 @@ pub async fn get_latest(
     get_latest_from(genome_bin, primal).await
 }
 
-pub(crate) async fn get_latest_from(
+pub async fn get_latest_from(
     genome_bin: impl AsRef<std::path::Path>,
     primal: String,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<DistError>)> {
@@ -329,7 +329,7 @@ pub async fn get_checksum(
     get_checksum_from(genome_bin, primal, version, arch).await
 }
 
-pub(crate) async fn get_checksum_from(
+pub async fn get_checksum_from(
     genome_bin: PathBuf,
     primal: String,
     version: String,

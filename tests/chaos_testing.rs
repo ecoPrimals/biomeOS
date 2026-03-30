@@ -241,7 +241,7 @@ async fn test_network_partition_resilience() -> Result<()> {
     chaos_server.setup_chaos_responses().await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Initial discovery should work
     let _initial_result = manager
@@ -312,14 +312,14 @@ async fn test_service_degradation_handling() -> Result<()> {
     chaos_server.setup_chaos_responses().await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Set degraded mode
     chaos_server.set_degraded(true);
     chaos_server.set_failure_rate(0.2);
 
     // Perform health checks during degradation
-    let health_report = manager.get_system_health().await;
+    let health_report = manager.get_system_health();
 
     // System should still function, possibly reporting degraded status
     assert!(matches!(
@@ -340,7 +340,7 @@ async fn test_intermittent_failures() -> Result<()> {
     chaos_server.setup_chaos_responses().await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Set 30% failure rate
     chaos_server.set_failure_rate(0.3);
@@ -364,7 +364,7 @@ async fn test_intermittent_failures() -> Result<()> {
     println!("Intermittent failures test: {success_count} successes, {failure_count} failures");
 
     // System should handle failures gracefully without crashing
-    let health_report = manager.get_system_health().await;
+    let health_report = manager.get_system_health();
     assert!(matches!(
         health_report.health,
         Health::Healthy
@@ -383,7 +383,7 @@ async fn test_recovery_after_cascade_failure() -> Result<()> {
     chaos_server.setup_chaos_responses().await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Simulate cascade failure: partition + degradation + high failure rate
     chaos_server.set_partitioned(true);
@@ -411,7 +411,7 @@ async fn test_recovery_after_cascade_failure() -> Result<()> {
     chaos_server.set_failure_rate(0.0);
 
     // System should recover
-    let health_report = manager.get_system_health().await;
+    let health_report = manager.get_system_health();
     assert!(matches!(
         health_report.health,
         Health::Healthy
@@ -460,7 +460,7 @@ async fn test_health_monitoring_during_chaos() -> Result<()> {
     let mut health_checks = Vec::new();
 
     while monitoring_start.elapsed() < monitoring_duration {
-        let health_report = manager.get_system_health().await;
+        let health_report = manager.get_system_health();
         health_checks.push((monitoring_start.elapsed(), health_report));
         // Intentional: polling interval for health monitoring simulation
         tokio::time::sleep(Duration::from_millis(500)).await;
@@ -501,7 +501,7 @@ async fn test_request_counting_under_load() -> Result<()> {
     chaos_server.setup_chaos_responses().await;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Perform multiple parallel requests
     let mut handles = Vec::new();

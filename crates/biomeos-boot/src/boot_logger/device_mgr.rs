@@ -26,7 +26,7 @@ impl DeviceManager {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - Not running as root (mknod requires CAP_MKNOD)
+    /// - Not running as root (mknod requires `CAP_MKNOD`)
     /// - /dev directory doesn't exist
     /// - mknod system call fails
     pub fn ensure_serial_device() -> Result<()> {

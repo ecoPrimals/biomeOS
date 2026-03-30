@@ -3,8 +3,8 @@
 
 //! Core Manifest Structures
 //!
-//! This module contains the fundamental manifest types including BiomeManifest,
-//! ManifestMetadata, BiomeSpec, and BiomeType definitions.
+//! This module contains the fundamental manifest types including `BiomeManifest`,
+//! `ManifestMetadata`, `BiomeSpec`, and `BiomeType` definitions.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

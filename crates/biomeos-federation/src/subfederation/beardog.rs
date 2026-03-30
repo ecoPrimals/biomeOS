@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BearDog integration for sub-federation cryptographic operations
+//! `BearDog` integration for sub-federation cryptographic operations
 //!
 //! Lineage verification and key derivation via JSON-RPC.
 

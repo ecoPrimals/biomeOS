@@ -3,8 +3,8 @@
 
 //! Security Specifications for Manifests
 //!
-//! This module contains all security-related types including BiomeSecuritySpec,
-//! SecurityPolicySpec, AccessControlSpec, RBAC, encryption, and audit configurations.
+//! This module contains all security-related types including `BiomeSecuritySpec`,
+//! `SecurityPolicySpec`, `AccessControlSpec`, RBAC, encryption, and audit configurations.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

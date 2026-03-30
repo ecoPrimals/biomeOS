@@ -27,7 +27,7 @@ impl ConfigOps for Spore {
     /// Create tower.toml configuration
     ///
     /// **Note**: Uses `BEARDOG_FAMILY_SEED_FILE` to reference the seed file.
-    /// BearDog will read and process the seed at runtime.
+    /// `BearDog` will read and process the seed at runtime.
     async fn create_tower_config(&self) -> SporeResult<()> {
         info!("Creating tower.toml configuration");
 

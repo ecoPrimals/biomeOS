@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Core Universal BiomeOS Manager
+//! Core Universal `BiomeOS` Manager
 //!
 //! Central coordination system for managing the entire biomeOS ecosystem.
 //! Contains the main struct definition and initialization methods.
@@ -39,18 +39,18 @@ pub struct PrimalInfo {
     pub metadata: HashMap<String, String>,
 }
 
-/// Universal BiomeOS Manager for ecosystem orchestration
+/// Universal `BiomeOS` Manager for ecosystem orchestration
 #[derive(Debug, Clone)]
 pub struct UniversalBiomeOSManager {
-    /// Shared configuration for the BiomeOS ecosystem
+    /// Shared configuration for the `BiomeOS` ecosystem
     pub config: Arc<BiomeOSConfig>,
     pub(crate) discovery_service: Arc<PrimalDiscoveryService>,
     pub(crate) registered_primals: Arc<RwLock<HashMap<String, PrimalInfo>>>,
 }
 
 impl UniversalBiomeOSManager {
-    /// Initialize the UniversalBiomeOSManager
-    pub async fn new(config: BiomeOSConfig) -> Result<Self> {
+    /// Initialize the `UniversalBiomeOSManager`
+    pub fn new(config: BiomeOSConfig) -> Result<Self> {
         let config_arc = Arc::new(config);
         let registered_primals = Arc::new(RwLock::new(HashMap::new()));
         let discovery_service = Arc::new(PrimalDiscoveryService::new(config_arc.clone()));
@@ -63,23 +63,23 @@ impl UniversalBiomeOSManager {
     }
 
     /// Create manager with default configuration
-    pub async fn with_default_config() -> Result<Self> {
+    pub fn with_default_config() -> Result<Self> {
         let config = BiomeOSConfig::default();
-        Self::new(config).await
+        Self::new(config)
     }
 
     /// Initialize the manager
-    pub async fn initialize(&self) -> Result<()> {
+    pub fn initialize(&self) -> Result<()> {
         tracing::info!("🚀 Initializing Universal BiomeOS Manager");
 
-        self.discovery_service.initialize().await?;
+        self.discovery_service.initialize()?;
 
         tracing::info!("✅ Universal BiomeOS Manager initialized successfully");
         Ok(())
     }
 
     /// Start health monitoring
-    pub async fn start_monitoring(&self) -> Result<()> {
+    pub fn start_monitoring(&self) -> Result<()> {
         tracing::info!("🏥 Starting health monitoring");
 
         // Start background monitoring tasks
@@ -130,22 +130,25 @@ impl UniversalBiomeOSManager {
     }
 
     /// Get manager configuration
+    #[must_use] 
     pub fn get_config(&self) -> &BiomeOSConfig {
         &self.config
     }
 
     /// Get discovery service reference
-    pub fn discovery_service(&self) -> &Arc<PrimalDiscoveryService> {
+    #[must_use] 
+    pub const fn discovery_service(&self) -> &Arc<PrimalDiscoveryService> {
         &self.discovery_service
     }
 
     /// Get registered primals reference
-    pub fn registered_primals(&self) -> &Arc<RwLock<HashMap<String, PrimalInfo>>> {
+    #[must_use] 
+    pub const fn registered_primals(&self) -> &Arc<RwLock<HashMap<String, PrimalInfo>>> {
         &self.registered_primals
     }
 
     /// Shutdown the manager gracefully
-    pub async fn shutdown(&self) -> Result<()> {
+    pub fn shutdown(&self) -> Result<()> {
         tracing::info!("🛑 Shutting down Universal BiomeOS Manager");
 
         // Graceful shutdown logic would go here
@@ -170,14 +173,13 @@ mod tests {
     #[tokio::test]
     async fn test_new_with_config() {
         let config = BiomeOSConfig::default();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("new");
+        let manager = UniversalBiomeOSManager::new(config).expect("new");
         assert!(!manager.get_config().metadata.version.is_empty());
     }
 
     #[tokio::test]
     async fn test_with_default_config() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("with_default_config");
         let config = manager.get_config();
         assert!(!config.metadata.version.is_empty());
@@ -186,23 +188,21 @@ mod tests {
     #[tokio::test]
     async fn test_initialize() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("initialize");
+        manager.initialize().expect("initialize");
     }
 
     #[tokio::test]
     async fn test_get_config() {
         let mut config = BiomeOSConfig::default();
         config.metadata.version = "2.0.0-test".to_string();
-        let manager = UniversalBiomeOSManager::new(config).await.expect("new");
+        let manager = UniversalBiomeOSManager::new(config).expect("new");
         assert_eq!(manager.get_config().metadata.version, "2.0.0-test");
     }
 
     #[tokio::test]
     async fn test_discovery_service_accessor() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
         let discovery = manager.discovery_service();
         assert!(std::mem::size_of_val(discovery) > 0);
@@ -211,7 +211,6 @@ mod tests {
     #[tokio::test]
     async fn test_registered_primals_accessor() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
         let primals = manager.registered_primals();
         let count = primals.read().await.len();
@@ -221,18 +220,17 @@ mod tests {
     #[tokio::test]
     async fn test_shutdown() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.shutdown().await.expect("shutdown");
+        manager.shutdown().expect("shutdown");
     }
 
     #[tokio::test]
     async fn test_start_monitoring() {
         let mut config = BiomeOSConfig::default();
         config.health.check_interval = std::time::Duration::ZERO;
-        let manager = UniversalBiomeOSManager::new(config).await.expect("manager");
-        manager.initialize().await.expect("init");
-        manager.start_monitoring().await.expect("start_monitoring");
+        let manager = UniversalBiomeOSManager::new(config).expect("manager");
+        manager.initialize().expect("init");
+        manager.start_monitoring().expect("start_monitoring");
         // Give the spawned task a moment to start (zero interval = tight loop)
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }

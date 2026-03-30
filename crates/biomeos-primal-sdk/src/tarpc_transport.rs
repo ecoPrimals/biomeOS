@@ -90,7 +90,7 @@ pub fn tarpc_socket_path(jsonrpc_socket: &Path) -> std::path::PathBuf {
     std::path::PathBuf::from(tarpc_socket_name(&name))
 }
 
-/// Spawn a tarpc HealthRpc server on a Unix socket.
+/// Spawn a tarpc `HealthRpc` server on a Unix socket.
 ///
 /// Listens on the given socket path using the tarpc binary protocol (Bincode).
 /// Each incoming connection is served sequentially until the client disconnects.

@@ -93,9 +93,9 @@ async fn test_e2e_system_initialization() -> Result<()> {
     info!("🚀 Testing system initialization");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
-    let health_report = manager.get_system_health().await;
+    let health_report = manager.get_system_health();
     assert!(is_valid_health(&health_report.health));
 
     info!("✅ System initialization test passed");
@@ -109,7 +109,7 @@ async fn test_e2e_primal_discovery() -> Result<()> {
     info!("🔍 Testing primal discovery");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Test network scan
     let discovered = manager.discover_network_scan().await;
@@ -130,7 +130,7 @@ async fn test_e2e_capability_matching() -> Result<()> {
     info!("🎯 Testing capability matching");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     let capabilities = vec![
         PrimalCapability::new("compute", "provider", "1.0.0"),
@@ -151,11 +151,11 @@ async fn test_e2e_health_monitoring() -> Result<()> {
     info!("💚 Testing health monitoring");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Get health status multiple times
     for i in 0..3 {
-        let health_report = manager.get_system_health().await;
+        let health_report = manager.get_system_health();
         assert!(is_valid_health(&health_report.health));
         info!("Health check {}: {:?}", i + 1, health_report.health);
         sleep(Duration::from_millis(100)).await;
@@ -226,7 +226,7 @@ async fn test_e2e_concurrent_operations() -> Result<()> {
     info!("⚡ Testing concurrent operations");
 
     let config = BiomeOSConfig::default();
-    let manager = Arc::new(UniversalBiomeOSManager::new(config).await?);
+    let manager = Arc::new(UniversalBiomeOSManager::new(config)?);
 
     let start_time = Instant::now();
 
@@ -235,7 +235,7 @@ async fn test_e2e_concurrent_operations() -> Result<()> {
     for i in 0..5 {
         let manager_clone = Arc::clone(&manager);
         let handle = tokio::spawn(async move {
-            let _ = manager_clone.get_system_health().await;
+            let _ = manager_clone.get_system_health();
             info!("Concurrent health check {} completed", i);
         });
         handles.push(handle);
@@ -265,17 +265,17 @@ async fn test_e2e_recovery_scenarios() -> Result<()> {
     info!("🔄 Testing recovery scenarios");
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
 
     // Get initial health
-    let initial_health = manager.get_system_health().await;
+    let initial_health = manager.get_system_health();
     info!("Initial health: {:?}", initial_health.health);
 
     // Simulate some delay (as if recovering)
     sleep(Duration::from_millis(500)).await;
 
     // Check health again
-    let recovered_health = manager.get_system_health().await;
+    let recovered_health = manager.get_system_health();
     info!("Recovered health: {:?}", recovered_health.health);
 
     assert!(is_valid_health(&recovered_health.health));
@@ -292,7 +292,7 @@ async fn test_complete_e2e_suite() -> Result<()> {
     let start_time = Instant::now();
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config)?;
     let mut live_service = LiveService::new().await?;
     live_service.start().await?;
 
@@ -300,7 +300,7 @@ async fn test_complete_e2e_suite() -> Result<()> {
     let mut failed = 0;
 
     // Test 1: System health
-    match manager.get_system_health().await {
+    match manager.get_system_health() {
         health_report if is_valid_health(&health_report.health) => {
             info!("✅ System health check passed");
             passed += 1;

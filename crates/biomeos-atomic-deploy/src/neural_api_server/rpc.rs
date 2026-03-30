@@ -46,6 +46,7 @@ impl DispatchOutcome {
 }
 
 /// Create a JSON-RPC error response
+#[must_use] 
 pub fn error_response(code: i32, message: String, id: Option<Value>) -> Value {
     json!({
         "jsonrpc": "2.0",
@@ -58,6 +59,7 @@ pub fn error_response(code: i32, message: String, id: Option<Value>) -> Value {
 }
 
 /// Create a JSON-RPC success response
+#[must_use] 
 pub fn success_response(result: Value, id: Value) -> Value {
     json!({
         "jsonrpc": "2.0",
@@ -67,11 +69,13 @@ pub fn success_response(result: Value, id: Value) -> Value {
 }
 
 /// Create a JSON-RPC internal error response
+#[must_use] 
 pub fn internal_error_response(error: &anyhow::Error, id: Option<Value>) -> Value {
     error_response(-32603, format!("Internal error: {error}"), id)
 }
 
 /// Create a JSON-RPC method not found error response
+#[must_use] 
 pub fn method_not_found_response(method: &str, id: Value) -> Value {
     error_response(-32601, format!("Method not found: {method}"), Some(id))
 }

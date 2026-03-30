@@ -74,7 +74,7 @@ impl ChimeraBuilder {
 
     /// Set release mode
     #[must_use]
-    pub fn release(mut self, release: bool) -> Self {
+    pub const fn release(mut self, release: bool) -> Self {
         self.release = release;
         self
     }

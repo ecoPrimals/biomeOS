@@ -48,7 +48,8 @@ pub struct RenderTargets {
 
 impl StereoRenderAdapter {
     /// Create a new adapter with the given stereo configuration.
-    pub fn new(config: StereoConfig) -> Self {
+    #[must_use] 
+    pub const fn new(config: StereoConfig) -> Self {
         Self {
             config,
             session_active: false,
@@ -56,12 +57,14 @@ impl StereoRenderAdapter {
     }
 
     /// Create an adapter with default Quest-3-class configuration.
+    #[must_use] 
     pub fn with_defaults() -> Self {
         Self::new(StereoConfig::default())
     }
 
     /// Check whether a visual output capability supports stereo rendering.
-    pub fn supports_stereo(cap: &VisualOutputCapability) -> bool {
+    #[must_use] 
+    pub const fn supports_stereo(cap: &VisualOutputCapability) -> bool {
         matches!(cap, VisualOutputCapability::ThreeD(_))
     }
 
@@ -160,12 +163,14 @@ impl StereoRenderAdapter {
     }
 
     /// Whether a session is currently active.
-    pub fn is_session_active(&self) -> bool {
+    #[must_use] 
+    pub const fn is_session_active(&self) -> bool {
         self.session_active
     }
 
     /// Get the current stereo configuration.
-    pub fn config(&self) -> &StereoConfig {
+    #[must_use] 
+    pub const fn config(&self) -> &StereoConfig {
         &self.config
     }
 }

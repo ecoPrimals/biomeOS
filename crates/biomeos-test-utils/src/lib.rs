@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Test Utilities
+//! `BiomeOS` Test Utilities
 //!
-//! Shared test infrastructure for BiomeOS crates, including:
+//! Shared test infrastructure for `BiomeOS` crates, including:
 //! - Mock primal servers
 //! - VM test harnesses
 //! - Network test utilities

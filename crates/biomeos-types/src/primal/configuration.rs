@@ -23,7 +23,7 @@ pub struct PrimalConfiguration {
     /// Primal type information
     pub primal_type: PrimalType,
 
-    /// Configuration parameters (structured, not just HashMap)
+    /// Configuration parameters (structured, not just `HashMap`)
     pub configuration: ConfigurationParameters,
 
     /// Dependencies on other primals
@@ -415,7 +415,7 @@ pub enum KeySource {
         /// HSM configuration parameters
         hsm_config: HashMap<String, String>,
     },
-    /// Keys from HashiCorp Vault
+    /// Keys from `HashiCorp` Vault
     Vault {
         /// Vault secret path
         vault_path: String,

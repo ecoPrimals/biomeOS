@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Standard Primal API
+//! `BiomeOS` Standard Primal API
 //!
 //! All primals MUST implement these standard methods to enable
 //! infant bootstrapping and capability-based discovery.
@@ -50,7 +50,7 @@ use serde::{Deserialize, Serialize};
 // EVOLVED (Jan 27, 2026): Import from unified capabilities module
 pub use crate::capability_taxonomy::CapabilityTaxonomy as PrimalCapability;
 
-/// Standard BiomeOS primal API
+/// Standard `BiomeOS` primal API
 ///
 /// All primals MUST implement these methods to participate in
 /// capability-based discovery and composition.

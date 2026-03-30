@@ -37,14 +37,16 @@ async fn test_complete_system_lifecycle() -> Result<()> {
         .build();
 
     let manager = PerformanceTestUtils::assert_performance_bounds(
-        UniversalBiomeOSManager::new(config),
+        async {
+            UniversalBiomeOSManager::new(config).expect("System initialization")
+        },
         200, // System should initialize quickly
         "System initialization",
     )
-    .await?;
+    .await;
 
     // Verify initial system health
-    let initial_health = manager.get_system_health().await;
+    let initial_health = manager.get_system_health();
     TestAssertions::assert_system_healthy(&initial_health);
     println!("   ✅ System initialized successfully");
 
@@ -120,7 +122,7 @@ async fn test_complete_system_lifecycle() -> Result<()> {
     // Monitor health over time
     let mut health_checks = Vec::new();
     for i in 0..3 {
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         health_checks.push(health);
         println!(
             "   🏥 Health check {}: {:?}",
@@ -156,7 +158,7 @@ async fn test_complete_system_lifecycle() -> Result<()> {
     );
 
     // Health check from manager
-    let health_report = manager.get_system_health().await;
+    let health_report = manager.get_system_health();
     println!(
         "   🔍 Comprehensive health check completed - health: {:?}",
         health_report.health
@@ -175,7 +177,7 @@ async fn test_complete_system_lifecycle() -> Result<()> {
             match i % 3 {
                 0 => {
                     // Health checks
-                    let _health = manager_clone.get_system_health().await;
+                    let _health = manager_clone.get_system_health();
                     format!("health-{i}")
                 }
                 1 => {
@@ -214,7 +216,7 @@ async fn test_complete_system_lifecycle() -> Result<()> {
     println!("8️⃣ Final system verification...");
 
     // Verify system integrity after stress test
-    let final_health = manager.get_system_health().await;
+    let final_health = manager.get_system_health();
     TestAssertions::assert_system_healthy(&final_health);
 
     let final_primals = manager.get_registered_primals().await;
@@ -323,7 +325,7 @@ async fn test_primal_ecosystem_workflow() -> Result<()> {
     unhealthy_primal.health = Health::unhealthy(vec![]);
     manager.register_primal(unhealthy_primal).await?;
 
-    let ecosystem_health = manager.get_system_health().await;
+    let ecosystem_health = manager.get_system_health();
     TestAssertions::assert_system_healthy(&ecosystem_health);
     println!("   🏥 Ecosystem health check completed");
 
@@ -434,7 +436,7 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
             match i % 5 {
                 0 => {
                     // Health checks
-                    let _health = manager_clone.get_system_health().await;
+                    let _health = manager_clone.get_system_health();
                     "health"
                 }
                 1 => {
@@ -495,7 +497,7 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
     println!("3️⃣ Verifying system stability after high load...");
 
     // System should remain healthy
-    let post_load_health = manager.get_system_health().await;
+    let post_load_health = manager.get_system_health();
     TestAssertions::assert_system_healthy(&post_load_health);
 
     // All primals should still be registered
@@ -504,7 +506,7 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
 
     // Performance should still be good
     let final_health_start = std::time::Instant::now();
-    let _final_health = manager.get_system_health().await;
+    let _final_health = manager.get_system_health();
     let final_health_duration = final_health_start.elapsed();
 
     assert!(
@@ -547,7 +549,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
     }
 
     // System should remain healthy
-    let health_after_failure = manager.get_system_health().await;
+    let health_after_failure = manager.get_system_health();
     TestAssertions::assert_system_healthy(&health_after_failure);
     println!("   ✅ System recovered from network failures");
 
@@ -592,7 +594,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
     println!("   📊 {successful_registrations}/3 edge case primals handled");
 
     // System should remain stable
-    let health_after_edge_cases = manager.get_system_health().await;
+    let health_after_edge_cases = manager.get_system_health();
     TestAssertions::assert_system_healthy(&health_after_edge_cases);
 
     // 3. Test concurrent error handling
@@ -612,12 +614,12 @@ async fn test_error_recovery_workflow() -> Result<()> {
                 }
                 1 => {
                     // Invalid endpoint probes
-                    let _result = manager_clone.probe_endpoint("not-a-url").await;
+                    let _result = manager_clone.probe_endpoint("not-a-url");
                     "invalid_probe"
                 }
                 2 => {
                     // Valid operations (should succeed)
-                    let _health = manager_clone.get_system_health().await;
+                    let _health = manager_clone.get_system_health();
                     "valid_health"
                 }
                 3 => {
@@ -643,7 +645,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
     // 4. Final system verification
     println!("4️⃣ Final system health verification...");
 
-    let final_health = manager.get_system_health().await;
+    let final_health = manager.get_system_health();
     TestAssertions::assert_system_healthy(&final_health);
 
     // System should still be responsive

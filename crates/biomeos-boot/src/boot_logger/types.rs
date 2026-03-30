@@ -39,7 +39,7 @@ pub enum BootStage {
     HardwareDetection,
     /// Network initialization
     NetworkInit,
-    /// BiomeOS core services starting
+    /// `BiomeOS` core services starting
     BiomeOSCoreStart,
     /// Boot complete, system ready
     Complete,
@@ -48,12 +48,12 @@ pub enum BootStage {
 impl std::fmt::Display for LogLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LogLevel::Debug => write!(f, "DEBUG"),
-            LogLevel::Info => write!(f, "INFO"),
-            LogLevel::Warning => write!(f, "WARN"),
-            LogLevel::Error => write!(f, "ERROR"),
-            LogLevel::Critical => write!(f, "CRIT"),
-            LogLevel::Emergency => write!(f, "EMERG"),
+            Self::Debug => write!(f, "DEBUG"),
+            Self::Info => write!(f, "INFO"),
+            Self::Warning => write!(f, "WARN"),
+            Self::Error => write!(f, "ERROR"),
+            Self::Critical => write!(f, "CRIT"),
+            Self::Emergency => write!(f, "EMERG"),
         }
     }
 }
@@ -61,15 +61,15 @@ impl std::fmt::Display for LogLevel {
 impl std::fmt::Display for BootStage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BootStage::GrubHandoff => write!(f, "GRUB Handoff"),
-            BootStage::KernelLoad => write!(f, "Kernel Load"),
-            BootStage::InitramfsMount => write!(f, "Initramfs Mount"),
-            BootStage::InitStart => write!(f, "Init Start"),
-            BootStage::FilesystemMount => write!(f, "Filesystem Mount"),
-            BootStage::HardwareDetection => write!(f, "Hardware Detection"),
-            BootStage::NetworkInit => write!(f, "Network Init"),
-            BootStage::BiomeOSCoreStart => write!(f, "BiomeOS Core Start"),
-            BootStage::Complete => write!(f, "Boot Complete"),
+            Self::GrubHandoff => write!(f, "GRUB Handoff"),
+            Self::KernelLoad => write!(f, "Kernel Load"),
+            Self::InitramfsMount => write!(f, "Initramfs Mount"),
+            Self::InitStart => write!(f, "Init Start"),
+            Self::FilesystemMount => write!(f, "Filesystem Mount"),
+            Self::HardwareDetection => write!(f, "Hardware Detection"),
+            Self::NetworkInit => write!(f, "Network Init"),
+            Self::BiomeOSCoreStart => write!(f, "BiomeOS Core Start"),
+            Self::Complete => write!(f, "Boot Complete"),
         }
     }
 }

@@ -49,10 +49,10 @@ pub struct SecurityContext {
     /// Security capabilities
     pub capabilities: SecurityCapabilities,
 
-    /// SELinux options
+    /// `SELinux` options
     pub selinux: Option<SeLinuxOptions>,
 
-    /// AppArmor profile
+    /// `AppArmor` profile
     pub apparmor_profile: Option<String>,
 
     /// Seccomp profile
@@ -69,20 +69,20 @@ pub struct SecurityCapabilities {
     pub drop: Vec<String>,
 }
 
-/// SELinux options
+/// `SELinux` options
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeLinuxOptions {
-    /// SELinux user
+    /// `SELinux` user
     pub user: Option<String>,
 
-    /// SELinux role
+    /// `SELinux` role
     pub role: Option<String>,
 
-    /// SELinux type
+    /// `SELinux` type
     #[serde(rename = "type")]
     pub selinux_type: Option<String>,
 
-    /// SELinux level
+    /// `SELinux` level
     pub level: Option<String>,
 }
 
@@ -117,7 +117,7 @@ pub struct AuthenticationConfig {
     /// JWT configuration
     pub jwt: Option<JwtConfig>,
 
-    /// OAuth2 configuration
+    /// `OAuth2` configuration
     pub oauth2: Option<OAuth2Config>,
 }
 
@@ -133,7 +133,7 @@ pub enum AuthMethod {
     /// JWT token authentication
     Jwt,
 
-    /// OAuth2 authentication
+    /// `OAuth2` authentication
     OAuth2,
 
     /// LDAP authentication
@@ -222,7 +222,7 @@ pub struct JwtConfig {
     pub lifetime: u32,
 }
 
-/// OAuth2 configuration
+/// `OAuth2` configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OAuth2Config {
     /// Client ID
@@ -403,7 +403,7 @@ pub enum SecretsProvider {
     /// Kubernetes secrets
     Kubernetes,
 
-    /// HashiCorp Vault
+    /// `HashiCorp` Vault
     Vault {
         /// Vault address
         address: String,
@@ -564,7 +564,7 @@ pub enum NetworkPolicyAction {
     Log,
 }
 
-/// Default implementation for ServiceSecurity
+/// Default implementation for `ServiceSecurity`
 impl Default for ServiceSecurity {
     fn default() -> Self {
         Self {

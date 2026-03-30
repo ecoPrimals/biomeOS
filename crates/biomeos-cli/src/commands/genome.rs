@@ -11,6 +11,7 @@ use anyhow::{Context, Result};
 use biomeos_genomebin_v3::{Arch, GenomeBin, GenomeBinBuilder, GenomeBinComposer};
 
 /// Extract genome name from binary path (defaults to "genome" if unparseable)
+#[must_use] 
 pub fn extract_genome_name_from_path(path: &std::path::Path) -> String {
     path.file_stem()
         .and_then(|s| s.to_str())
@@ -50,7 +51,7 @@ pub struct CreateArgs {
     #[arg(short, long)]
     pub output: PathBuf,
 
-    /// Target architecture (x86_64, aarch64, arm, riscv64)
+    /// Target architecture (`x86_64`, aarch64, arm, riscv64)
     #[arg(short, long, default_value = "x86_64")]
     pub arch: String,
 
@@ -115,7 +116,7 @@ pub enum GenomeCommand {
         #[arg(short, long)]
         output: std::path::PathBuf,
 
-        /// Target architecture (x86_64, aarch64, arm, riscv64)
+        /// Target architecture (`x86_64`, aarch64, arm, riscv64)
         #[arg(short, long, default_value = "x86_64")]
         arch: String,
 
@@ -387,7 +388,7 @@ pub fn handle_genome_verify(args: &VerifyArgs) -> Result<()> {
 
 /// Execute genome command
 #[expect(clippy::too_many_lines, reason = "genome subcommand dispatch")]
-pub async fn execute(args: GenomeArgs) -> Result<()> {
+pub fn execute(args: GenomeArgs) -> Result<()> {
     match args.command {
         GenomeCommand::Build {
             binary,

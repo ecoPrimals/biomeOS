@@ -24,7 +24,7 @@ use crate::xr::{Pose6DoF, SurgicalInstrument};
 /// A surgical procedure definition for training or simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SurgicalProcedure {
-    /// Procedure identifier (e.g., "laparoscopic_cholecystectomy")
+    /// Procedure identifier (e.g., "`laparoscopic_cholecystectomy`")
     pub id: String,
     /// Human-readable name
     pub name: String,

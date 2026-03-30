@@ -80,7 +80,7 @@ pub struct ResourceSpec {
 
     /// Per-instance resources (for array components)
     #[serde(default)]
-    pub per_instance: Option<Box<ResourceSpec>>,
+    pub per_instance: Option<Box<Self>>,
 }
 
 /// GPU specification

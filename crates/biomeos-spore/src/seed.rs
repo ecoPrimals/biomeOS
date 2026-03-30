@@ -4,7 +4,7 @@
 //! Family seed file management
 //!
 //! **IMPORTANT**: This module only handles FILE operations and seed DERIVATION.
-//! BearDog performs cryptographic family ID extraction and key derivation.
+//! `BearDog` performs cryptographic family ID extraction and key derivation.
 //!
 //! ## Responsibility Boundary
 //!
@@ -14,9 +14,9 @@
 //! - Write seed files to disk
 //! - Set file permissions
 //! - Verify file exists and has correct size
-//! - Provide file path to BearDog
+//! - Provide file path to `BearDog`
 //!
-//! ### BearDog (Security Primal)
+//! ### `BearDog` (Security Primal)
 //! - Read seed file contents
 //! - HKDF-SHA256 for family ID extraction
 //! - Generate operational keys
@@ -27,8 +27,8 @@
 //!
 //! Siblings are NOT perfect clones - they are genetically related but unique:
 //! - Genesis: Creates parent seed (32 random bytes)
-//! - Sibling: Derives child seed from parent + node_id + batch
-//! - Formula: child = SHA256(parent || node_id || batch)
+//! - Sibling: Derives child seed from parent + `node_id` + batch
+//! - Formula: child = SHA256(parent || `node_id` || batch)
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -41,7 +41,7 @@ use tracing::{debug, info};
 /// Family seed file manager
 ///
 /// This struct represents a family seed FILE (not the cryptographic content).
-/// biomeOS manages the file, BearDog processes the crypto.
+/// biomeOS manages the file, `BearDog` processes the crypto.
 #[derive(Debug, Clone)]
 pub struct FamilySeed {
     /// Path to the seed file
@@ -110,7 +110,7 @@ impl FamilySeed {
     ///
     /// - SHA256 ensures unique, unpredictable output
     /// - Same inputs always produce same output (deterministic)
-    /// - Different node_id produces different seed
+    /// - Different `node_id` produces different seed
     /// - Cannot reverse to find parent seed
     ///
     /// # Arguments
@@ -162,11 +162,11 @@ impl FamilySeed {
 
     /// Genetic mixing: combine parent DNA with individual traits
     ///
-    /// Formula: child_seed = SHA256(parent_seed || node_id || batch_id)
+    /// Formula: `child_seed` = `SHA256(parent_seed` || `node_id` || `batch_id`)
     ///
     /// This creates unique individuals who share family traits:
-    /// - Same parent + different node_id = siblings (related but unique)
-    /// - Same batch_id = from same deployment (like twins/triplets)
+    /// - Same parent + different `node_id` = siblings (related but unique)
+    /// - Same `batch_id` = from same deployment (like twins/triplets)
     fn genetic_mix(parent_seed: &[u8], node_id: &str, deployment_batch: Option<&str>) -> [u8; 32] {
         let mut hasher = Sha256::new();
 
@@ -197,7 +197,7 @@ impl FamilySeed {
     /// Load existing seed file
     ///
     /// Verifies the file exists and is 32 bytes, but does NOT read or
-    /// process the contents. BearDog will read the file when needed.
+    /// process the contents. `BearDog` will read the file when needed.
     ///
     /// # Arguments
     ///
@@ -224,8 +224,9 @@ impl FamilySeed {
 
     /// Get the file path
     ///
-    /// This path should be passed to BearDog via the
+    /// This path should be passed to `BearDog` via the
     /// `BEARDOG_FAMILY_SEED_FILE` environment variable.
+    #[must_use] 
     pub fn file_path(&self) -> &Path {
         &self.file_path
     }

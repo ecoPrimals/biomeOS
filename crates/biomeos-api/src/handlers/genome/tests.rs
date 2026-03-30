@@ -385,7 +385,7 @@ async fn test_list_genomes_uses_global_state() {
 async fn test_genome_state_list_all_empty_dir() {
     let temp_dir = TempDir::new().expect("create temp dir");
     let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
-    let genomes = state.list_all().await.expect("list");
+    let genomes = state.list_all().expect("list");
     assert!(genomes.is_empty());
 }
 
@@ -492,7 +492,7 @@ async fn test_genome_state_list_all_with_genomes() {
     let genome = GenomeBin::with_manifest(manifest);
     state.save_genome("list-test", &genome).await.expect("save");
 
-    let genomes = state.list_all().await.expect("list");
+    let genomes = state.list_all().expect("list");
     assert_eq!(genomes.len(), 1);
     assert_eq!(genomes[0].0, "list-test");
 }
@@ -508,7 +508,7 @@ async fn test_genome_state_list_all_skips_corrupt_files() {
     let genome = GenomeBin::with_manifest(manifest);
     state.save_genome("good", &genome).await.expect("save");
 
-    let genomes = state.list_all().await.expect("list");
+    let genomes = state.list_all().expect("list");
     assert_eq!(genomes.len(), 1, "should skip corrupt, keep good");
     assert_eq!(genomes[0].0, "good");
 }
@@ -520,7 +520,7 @@ async fn test_genome_state_list_all_deleted_dir() {
     let state = GenomeState::with_storage(storage.clone()).expect("state");
     std::fs::remove_dir_all(&storage).expect("remove storage dir");
 
-    let genomes = state.list_all().await.expect("list");
+    let genomes = state.list_all().expect("list");
     assert!(genomes.is_empty());
 }
 

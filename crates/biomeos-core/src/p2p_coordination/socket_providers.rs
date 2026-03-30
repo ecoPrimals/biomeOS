@@ -36,13 +36,13 @@ use super::{
 /// DEEP DEBT PRINCIPLE: Single implementation of socket communication.
 /// Previously duplicated 3x across Security, Discovery, and Routing providers.
 #[derive(Clone)]
-pub(crate) struct SocketRpcClient {
+pub struct SocketRpcClient {
     socket_path: PathBuf,
     timeout: Duration,
 }
 
 impl SocketRpcClient {
-    pub fn new(socket_path: PathBuf) -> Self {
+    pub const fn new(socket_path: PathBuf) -> Self {
         Self {
             socket_path,
             timeout: Duration::from_secs(10),
@@ -113,7 +113,7 @@ impl SocketRpcClient {
 // ============================================================================
 
 /// Security provider that communicates via Unix socket JSON-RPC
-pub(crate) struct SocketSecurityProvider {
+pub struct SocketSecurityProvider {
     rpc: SocketRpcClient,
 }
 
@@ -285,7 +285,7 @@ impl SecurityProvider for SocketSecurityProvider {
 // ============================================================================
 
 /// Discovery provider that communicates via Unix socket JSON-RPC
-pub(crate) struct SocketDiscoveryProvider {
+pub struct SocketDiscoveryProvider {
     rpc: SocketRpcClient,
 }
 
@@ -385,7 +385,7 @@ impl DiscoveryProvider for SocketDiscoveryProvider {
 // ============================================================================
 
 /// Routing provider that communicates via Unix socket JSON-RPC
-pub(crate) struct SocketRoutingProvider {
+pub struct SocketRoutingProvider {
     rpc: SocketRpcClient,
 }
 

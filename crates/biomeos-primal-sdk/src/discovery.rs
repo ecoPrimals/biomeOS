@@ -74,6 +74,7 @@ pub struct DiscoveryQuery {
 
 impl DiscoveryQuery {
     /// Create query for capability
+    #[must_use] 
     pub fn capability(cap: PrimalCapability) -> Self {
         Self {
             capability: Some(cap),
@@ -181,7 +182,7 @@ impl PrimalDiscovery {
         Ok(discovered)
     }
 
-    /// 5-tier socket directory resolution per PRIMAL_DEPLOYMENT_STANDARD
+    /// 5-tier socket directory resolution per `PRIMAL_DEPLOYMENT_STANDARD`
     fn resolve_socket_dir() -> PathBuf {
         // Tier 1: Explicit override
         if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
@@ -280,6 +281,7 @@ impl PrimalDiscovery {
 ///
 /// Uses `biomeos_types::CapabilityTaxonomy` for capability→primal resolution.
 /// Returns bootstrap hints only; in sovereign mode, primals self-register at runtime.
+#[must_use] 
 pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
     // Try category first (e.g., "encryption", "security", "compute")
     for key in [cap.category.as_str(), cap.name.as_str()] {
@@ -340,6 +342,7 @@ pub(crate) fn bootstrap_capability_hint_for_primal_name(name: &str) -> PrimalCap
     since = "0.1.0",
     note = "Use capability-based discovery. Primals are discovered by capability, not name."
 )]
+#[must_use] 
 pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
     bootstrap_capability_hint_for_primal_name(name)
 }

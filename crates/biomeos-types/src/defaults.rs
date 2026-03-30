@@ -65,7 +65,7 @@ pub mod env_vars {
     /// Neural API socket path environment variable
     pub const NEURAL_API_SOCKET: &str = "NEURAL_API_SOCKET";
 
-    /// BearDog socket path environment variable
+    /// `BearDog` socket path environment variable
     pub const BEARDOG_SOCKET: &str = "BEARDOG_SOCKET";
 
     /// Songbird socket path environment variable
@@ -74,13 +74,13 @@ pub mod env_vars {
     /// Squirrel socket path environment variable
     pub const SQUIRREL_SOCKET: &str = "SQUIRREL_SOCKET";
 
-    /// NestGate socket path environment variable
+    /// `NestGate` socket path environment variable
     pub const NESTGATE_SOCKET: &str = "NESTGATE_SOCKET";
 
-    /// ToadStool socket path environment variable
+    /// `ToadStool` socket path environment variable
     pub const TOADSTOOL_SOCKET: &str = "TOADSTOOL_SOCKET";
 
-    /// PetalTongue socket path environment variable
+    /// `PetalTongue` socket path environment variable
     pub const PETALTONGUE_SOCKET: &str = "PETALTONGUE_SOCKET";
 
     /// Socket directory environment variable
@@ -102,6 +102,7 @@ pub mod env_vars {
     /// assert_eq!(socket_env_key("nestgate"), "NESTGATE_SOCKET");
     /// assert_eq!(socket_env_key("my-custom-primal"), "MY_CUSTOM_PRIMAL_SOCKET");
     /// ```
+    #[must_use] 
     pub fn socket_env_key(primal_name: &str) -> String {
         let base = primal_name
             .strip_suffix("-server")
@@ -165,7 +166,7 @@ pub struct RuntimeConfig {
 }
 
 impl RuntimeConfig {
-    /// Create RuntimeConfig from environment variables
+    /// Create `RuntimeConfig` from environment variables
     ///
     /// DEEP DEBT EVOLUTION: Uses XDG-aware resolution instead of bare `/tmp`.
     /// Resolution order:
@@ -178,7 +179,7 @@ impl RuntimeConfig {
         Self::from_env_with(None, None)
     }
 
-    /// Create RuntimeConfig with explicit overrides (for testing)
+    /// Create `RuntimeConfig` with explicit overrides (for testing)
     #[must_use]
     pub fn from_env_with(
         socket_dir_override: Option<&str>,
@@ -191,7 +192,7 @@ impl RuntimeConfig {
         )
     }
 
-    /// Create RuntimeConfig from explicit environment map (for testing)
+    /// Create `RuntimeConfig` from explicit environment map (for testing)
     #[must_use]
     pub fn from_env_with_map(
         env: &HashMap<String, String>,
@@ -211,7 +212,7 @@ impl RuntimeConfig {
             })
             .unwrap_or_else(|| {
                 if let Some(uid) = env.get("UID").or_else(|| env.get("EUID")) {
-                    let uid_path = PathBuf::from(format!("/run/user/{}/biomeos", uid));
+                    let uid_path = PathBuf::from(format!("/run/user/{uid}/biomeos"));
                     if uid_path.parent().is_some_and(Path::exists) {
                         return uid_path;
                     }
@@ -222,7 +223,7 @@ impl RuntimeConfig {
         Self { socket_dir }
     }
 
-    /// Create RuntimeConfig with custom socket directory
+    /// Create `RuntimeConfig` with custom socket directory
     #[must_use]
     pub fn with_socket_dir(socket_dir: impl Into<PathBuf>) -> Self {
         Self {

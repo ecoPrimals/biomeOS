@@ -35,7 +35,7 @@ async fn test_execute_graph_not_found() {
 
     let params = Some(json!({"graph_id": "nonexistent"}));
     let err = handler.execute(&params).await.expect_err("should fail");
-    assert!(err.to_string().contains("Graph file not found"));
+    assert!(err.to_string().contains("not found"));
 }
 
 #[tokio::test]

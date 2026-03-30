@@ -7,7 +7,7 @@
 //! Bridge create/delete/configure use netlink socket calls.
 //!
 //! **Privilege requirement**: Creating and destroying bridges requires
-//! CAP_NET_ADMIN (typically root). The process must run with sufficient
+//! `CAP_NET_ADMIN` (typically root). The process must run with sufficient
 //! privileges; rtnetlink does not invoke sudo.
 
 use crate::error::{DeployError, Result};
@@ -36,7 +36,7 @@ pub struct NetworkBridge {
     created: bool,
 }
 
-/// Parse CIDR string (e.g. "10.0.0.1/24") into (IpAddr, prefix_len)
+/// Parse CIDR string (e.g. "10.0.0.1/24") into (`IpAddr`, `prefix_len`)
 pub(crate) fn parse_cidr(cidr: &str) -> Result<(IpAddr, u8)> {
     let (ip_str, prefix_str) = cidr
         .split_once('/')
@@ -54,7 +54,8 @@ pub(crate) fn parse_cidr(cidr: &str) -> Result<(IpAddr, u8)> {
 
 impl NetworkBridge {
     /// Create a new network bridge manager
-    pub fn new(config: BridgeConfig) -> Self {
+    #[must_use] 
+    pub const fn new(config: BridgeConfig) -> Self {
         Self {
             config,
             created: false,
@@ -62,6 +63,7 @@ impl NetworkBridge {
     }
 
     /// Check if bridge exists (pure Rust via /sys/class/net/)
+    #[must_use] 
     pub fn exists(&self) -> bool {
         std::path::Path::new(&format!("/sys/class/net/{}", self.config.name)).exists()
     }
@@ -192,6 +194,7 @@ impl NetworkBridge {
     }
 
     /// Get bridge name
+    #[must_use] 
     pub fn name(&self) -> &str {
         &self.config.name
     }

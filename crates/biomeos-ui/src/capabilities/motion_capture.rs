@@ -53,7 +53,8 @@ pub struct CalibrationResult {
 
 impl MotionCaptureAdapter {
     /// Create a new adapter with the given configuration.
-    pub fn new(config: MotionCaptureConfig) -> Self {
+    #[must_use] 
+    pub const fn new(config: MotionCaptureConfig) -> Self {
         Self {
             config,
             tracking_active: false,
@@ -62,11 +63,13 @@ impl MotionCaptureAdapter {
     }
 
     /// Create an adapter with default OpenXR configuration (head + two hands).
+    #[must_use] 
     pub fn with_defaults() -> Self {
         Self::new(MotionCaptureConfig::default())
     }
 
     /// Create a surgical tracking adapter (head + two hands + tool).
+    #[must_use] 
     pub fn for_surgical() -> Self {
         Self::new(MotionCaptureConfig {
             backend: "openxr".to_string(),
@@ -176,21 +179,25 @@ impl MotionCaptureAdapter {
     }
 
     /// Whether tracking is currently active.
-    pub fn is_tracking_active(&self) -> bool {
+    #[must_use] 
+    pub const fn is_tracking_active(&self) -> bool {
         self.tracking_active
     }
 
     /// Total frames polled since tracking started.
-    pub fn frame_count(&self) -> u64 {
+    #[must_use] 
+    pub const fn frame_count(&self) -> u64 {
         self.frame_count
     }
 
     /// Get the current configuration.
-    pub fn config(&self) -> &MotionCaptureConfig {
+    #[must_use] 
+    pub const fn config(&self) -> &MotionCaptureConfig {
         &self.config
     }
 
     /// Extract a specific device pose from a tracking frame.
+    #[must_use] 
     pub fn get_device_pose(frame: &TrackingFrame, device: &str) -> Option<Pose6DoF> {
         frame.devices.get(device).copied()
     }

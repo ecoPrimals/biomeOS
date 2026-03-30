@@ -16,7 +16,7 @@ pub use crate::orchestrator::DeploymentResult;
 pub struct DeploymentGraphNode {
     /// Unique node identifier within the graph
     pub id: String,
-    /// Capability type (e.g., filesystem.check_exists, crypto.derive_seed)
+    /// Capability type (e.g., `filesystem.check_exists`, `crypto.derive_seed`)
     pub node_type: String,
     /// Node IDs this node depends on (execution order)
     pub dependencies: Vec<String>,
@@ -158,7 +158,8 @@ impl AtomicDeploymentGraph {
     /// Get execution order (topological sort)
     ///
     /// Note: Simplified implementation - returns nodes in declaration order
-    /// Neural API's GraphExecutor handles proper topological sorting
+    /// Neural API's `GraphExecutor` handles proper topological sorting
+    #[must_use] 
     pub fn execution_order(&self) -> Vec<&DeploymentGraphNode> {
         // Neural API handles topological sort - this is a simplified version
         self.nodes.iter().collect()

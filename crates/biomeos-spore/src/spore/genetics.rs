@@ -6,7 +6,7 @@
 
 //! Genetic seed generation for spores
 //!
-//! Handles family seed generation using BearDog cryptographic principles.
+//! Handles family seed generation using `BearDog` cryptographic principles.
 
 use tracing::{debug, info};
 

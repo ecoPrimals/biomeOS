@@ -60,7 +60,7 @@ impl Spore {
     /// # Arguments
     ///
     /// * `mount_point` - Where the USB is mounted (e.g., `/media/usb`)
-    /// * `config` - Spore configuration (label, node_id)
+    /// * `config` - Spore configuration (label, `node_id`)
     ///
     /// # Example
     ///
@@ -165,7 +165,7 @@ impl Spore {
     /// Unlike artificial systems that create perfect clones, biomeOS follows
     /// real biology: siblings are NOT identical! Each sibling:
     /// - Has the same **family lineage** (same `.family.seed`)
-    /// - Has a **unique node_id** (e.g., "tower2" vs "tower1")
+    /// - Has a **unique `node_id`** (e.g., "tower2" vs "tower1")
     /// - Represents a **deployment batch** (siblings from the same source)
     ///
     /// This reflects real biology: siblings are NOT perfect clones!
@@ -213,16 +213,18 @@ impl Spore {
     }
 
     /// Get the root path of this spore
+    #[must_use] 
     pub fn root_path(&self) -> &Path {
         &self.root_path
     }
 
     /// Get the spore configuration
-    pub fn config(&self) -> &SporeConfig {
+    #[must_use] 
+    pub const fn config(&self) -> &SporeConfig {
         &self.config
     }
 
-    /// Extract node_id from tower.toml (simple parsing)
+    /// Extract `node_id` from tower.toml (simple parsing)
     pub(crate) fn extract_node_id_from_config(config_str: &str) -> Option<String> {
         for line in config_str.lines() {
             if line.trim().starts_with("node_id") {

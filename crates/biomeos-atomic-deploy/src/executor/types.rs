@@ -20,10 +20,10 @@ pub struct ExecutionReport {
     /// Results from each phase
     #[serde(default)]
     pub phase_results: Vec<PhaseResultSummary>,
-    /// Number of phases executed (computed from phase_results)
+    /// Number of phases executed (computed from `phase_results`)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phases_executed: Option<usize>,
-    /// Total nodes executed (computed from phase_results)
+    /// Total nodes executed (computed from `phase_results`)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nodes_executed: Option<usize>,
     /// Error message if failed
@@ -69,7 +69,8 @@ impl ExecutionReport {
     }
 
     /// Mark as successful
-    pub fn mark_success(mut self) -> Self {
+    #[must_use] 
+    pub const fn mark_success(mut self) -> Self {
         self.success = true;
         self
     }
@@ -82,7 +83,8 @@ impl ExecutionReport {
     }
 
     /// Set duration
-    pub fn with_duration(mut self, duration_ms: u64) -> Self {
+    #[must_use] 
+    pub const fn with_duration(mut self, duration_ms: u64) -> Self {
         self.duration_ms = duration_ms;
         self
     }
@@ -93,23 +95,27 @@ impl ExecutionReport {
     }
 
     /// Set phases executed (explicit override)
-    pub fn with_phases(mut self, phases: usize) -> Self {
+    #[must_use] 
+    pub const fn with_phases(mut self, phases: usize) -> Self {
         self.phases_executed = Some(phases);
         self
     }
 
     /// Set nodes executed (explicit override)
-    pub fn with_nodes(mut self, nodes: usize) -> Self {
+    #[must_use] 
+    pub const fn with_nodes(mut self, nodes: usize) -> Self {
         self.nodes_executed = Some(nodes);
         self
     }
 
     /// Get total phases (from results or explicit)
+    #[must_use] 
     pub fn total_phases(&self) -> usize {
         self.phases_executed.unwrap_or(self.phase_results.len())
     }
 
     /// Get total nodes (from results or explicit)
+    #[must_use] 
     pub fn total_nodes(&self) -> usize {
         self.nodes_executed
             .unwrap_or_else(|| self.phase_results.iter().map(|p| p.total).sum())
@@ -127,13 +133,14 @@ pub struct PhaseResult {
     pub total: usize,
     /// Duration in milliseconds
     pub duration_ms: u64,
-    /// Error details (node_id, error_message)
+    /// Error details (`node_id`, `error_message`)
     pub errors: Vec<(String, String)>,
 }
 
 impl PhaseResult {
     /// Create new phase result
-    pub fn new(total_nodes: usize) -> Self {
+    #[must_use] 
+    pub const fn new(total_nodes: usize) -> Self {
         Self {
             completed: 0,
             failed: 0,
@@ -144,12 +151,13 @@ impl PhaseResult {
     }
 
     /// Check if phase succeeded (no failures)
-    pub fn is_success(&self) -> bool {
+    #[must_use] 
+    pub const fn is_success(&self) -> bool {
         self.failed == 0
     }
 
     /// Add a completion
-    pub fn add_completed(&mut self) {
+    pub const fn add_completed(&mut self) {
         self.completed += 1;
     }
 

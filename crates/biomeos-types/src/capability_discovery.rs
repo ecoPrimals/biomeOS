@@ -142,6 +142,7 @@ fn probe_socket_registry(registry_path: &Path, capability: &str) -> Option<Strin
 }
 
 /// Standard environment lookup that delegates to `std::env::var`.
+#[must_use] 
 pub fn std_env(key: &str) -> Option<String> {
     std::env::var(key).ok()
 }

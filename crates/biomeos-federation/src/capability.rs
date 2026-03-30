@@ -62,17 +62,17 @@ pub enum Capability {
 impl fmt::Display for Capability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Capability::Storage => write!(f, "storage"),
-            Capability::Compute => write!(f, "compute"),
-            Capability::Gaming => write!(f, "gaming"),
-            Capability::Sync => write!(f, "sync"),
-            Capability::Voice => write!(f, "voice"),
-            Capability::Video => write!(f, "video"),
-            Capability::Discovery => write!(f, "discovery"),
-            Capability::ReadOnly => write!(f, "read_only"),
-            Capability::Write => write!(f, "write"),
-            Capability::Admin => write!(f, "admin"),
-            Capability::Custom(s) => write!(f, "custom:{s}"),
+            Self::Storage => write!(f, "storage"),
+            Self::Compute => write!(f, "compute"),
+            Self::Gaming => write!(f, "gaming"),
+            Self::Sync => write!(f, "sync"),
+            Self::Voice => write!(f, "voice"),
+            Self::Video => write!(f, "video"),
+            Self::Discovery => write!(f, "discovery"),
+            Self::ReadOnly => write!(f, "read_only"),
+            Self::Write => write!(f, "write"),
+            Self::Admin => write!(f, "admin"),
+            Self::Custom(s) => write!(f, "custom:{s}"),
         }
     }
 }
@@ -86,6 +86,7 @@ impl Capability {
         clippy::should_implement_trait,
         reason = "custom builder pattern intentionally differs from std trait"
     )]
+    #[must_use] 
     pub fn from_str(s: &str) -> Self {
         match s.parse() {
             Ok(cap) => cap,
@@ -94,36 +95,36 @@ impl Capability {
     }
 }
 
-/// Implement standard FromStr trait for idiomatic parsing
+/// Implement standard `FromStr` trait for idiomatic parsing
 impl std::str::FromStr for Capability {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
-            "storage" => Capability::Storage,
-            "compute" => Capability::Compute,
-            "gaming" => Capability::Gaming,
-            "sync" => Capability::Sync,
-            "voice" => Capability::Voice,
-            "video" => Capability::Video,
-            "discovery" => Capability::Discovery,
-            "read_only" => Capability::ReadOnly,
-            "write" => Capability::Write,
-            "admin" => Capability::Admin,
+            "storage" => Self::Storage,
+            "compute" => Self::Compute,
+            "gaming" => Self::Gaming,
+            "sync" => Self::Sync,
+            "voice" => Self::Voice,
+            "video" => Self::Video,
+            "discovery" => Self::Discovery,
+            "read_only" => Self::ReadOnly,
+            "write" => Self::Write,
+            "admin" => Self::Admin,
             // Additional mappings for common primal capability types
-            "security" => Capability::Custom("security".to_string()),
-            "encryption" => Capability::Custom("encryption".to_string()),
-            "trust" => Capability::Custom("trust".to_string()),
-            "mesh" => Capability::Custom("mesh".to_string()),
-            "ai" => Capability::Custom("ai".to_string()),
-            "ml" => Capability::Custom("ml".to_string()),
-            "inference" => Capability::Custom("inference".to_string()),
-            "crypto" => Capability::Custom("crypto".to_string()),
+            "security" => Self::Custom("security".to_string()),
+            "encryption" => Self::Custom("encryption".to_string()),
+            "trust" => Self::Custom("trust".to_string()),
+            "mesh" => Self::Custom("mesh".to_string()),
+            "ai" => Self::Custom("ai".to_string()),
+            "ml" => Self::Custom("ml".to_string()),
+            "inference" => Self::Custom("inference".to_string()),
+            "crypto" => Self::Custom("crypto".to_string()),
             _ => {
                 if let Some(custom) = s.strip_prefix("custom:") {
-                    Capability::Custom(custom.to_string())
+                    Self::Custom(custom.to_string())
                 } else {
-                    Capability::Custom(s.to_string())
+                    Self::Custom(s.to_string())
                 }
             }
         })
@@ -139,7 +140,7 @@ impl From<&str> for Capability {
         // SAFETY: `FromStr` for `Capability` returns `Result<Self, Infallible>`
         // which means parsing can never fail - it always produces a valid Capability.
         // Unknown strings become `Capability::Custom(s)`.
-        match s.parse::<Capability>() {
+        match s.parse::<Self>() {
             Ok(cap) => cap,
             Err(infallible) => match infallible {},
         }
@@ -165,6 +166,7 @@ pub struct CapabilitySet {
 
 impl CapabilitySet {
     /// Create an empty capability set
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             capabilities: HashSet::new(),
@@ -172,6 +174,7 @@ impl CapabilitySet {
     }
 
     /// Create a capability set from a vector
+    #[must_use] 
     pub fn from_vec(caps: Vec<Capability>) -> Self {
         Self {
             capabilities: caps.into_iter().collect(),
@@ -180,8 +183,9 @@ impl CapabilitySet {
 
     /// Create a capability set from tags (e.g., from Songbird discovery)
     ///
-    /// Parses each tag as a capability using the FromStr trait.
+    /// Parses each tag as a capability using the `FromStr` trait.
     /// Unknown tags are treated as Custom capabilities.
+    #[must_use] 
     pub fn from_tags(tags: &[String]) -> Self {
         let caps: Vec<Capability> = tags
             .iter()
@@ -204,43 +208,50 @@ impl CapabilitySet {
     }
 
     /// Check if a capability is present
+    #[must_use] 
     pub fn has(&self, cap: &Capability) -> bool {
         self.capabilities.contains(cap)
     }
 
     /// Check if all capabilities from another set are present
-    pub fn has_all(&self, other: &CapabilitySet) -> bool {
+    #[must_use] 
+    pub fn has_all(&self, other: &Self) -> bool {
         other.capabilities.iter().all(|cap| self.has(cap))
     }
 
     /// Get all capabilities
+    #[must_use] 
     pub fn all(&self) -> Vec<&Capability> {
         self.capabilities.iter().collect()
     }
 
     /// Check if set is empty
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.capabilities.is_empty()
     }
 
     /// Merge with another capability set
-    pub fn merge(&mut self, other: &CapabilitySet) {
+    pub fn merge(&mut self, other: &Self) {
         for cap in &other.capabilities {
             self.capabilities.insert(cap.clone());
         }
     }
 
     /// Create a read-only capability set
+    #[must_use] 
     pub fn read_only() -> Self {
         Self::from_vec(vec![Capability::ReadOnly, Capability::Discovery])
     }
 
     /// Create a compute-only capability set
+    #[must_use] 
     pub fn compute_only() -> Self {
         Self::from_vec(vec![Capability::Compute, Capability::Discovery])
     }
 
     /// Create a full access capability set
+    #[must_use] 
     pub fn full_access() -> Self {
         Self::from_vec(vec![
             Capability::Storage,

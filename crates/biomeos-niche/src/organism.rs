@@ -175,7 +175,7 @@ impl ChimeraOrganism {
 
     /// Set as required
     #[must_use]
-    pub fn required(mut self) -> Self {
+    pub const fn required(mut self) -> Self {
         self.required = true;
         self
     }
@@ -202,7 +202,7 @@ impl PrimalOrganism {
 
     /// Set as required
     #[must_use]
-    pub fn required(mut self) -> Self {
+    pub const fn required(mut self) -> Self {
         self.required = true;
         self
     }

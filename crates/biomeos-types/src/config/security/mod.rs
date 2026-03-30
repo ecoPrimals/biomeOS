@@ -236,7 +236,7 @@ pub enum MfaMethod {
     Sms,
     /// Email verification code
     Email,
-    /// Hardware security key (e.g., YubiKey)
+    /// Hardware security key (e.g., `YubiKey`)
     Hardware,
     /// Backup recovery codes
     Backup,
@@ -449,11 +449,11 @@ pub struct CookieConfig {
     /// Cookie HTTP-only flag
     pub http_only: bool,
 
-    /// Cookie SameSite attribute
+    /// Cookie `SameSite` attribute
     pub same_site: SameSite,
 }
 
-/// SameSite cookie attribute
+/// `SameSite` cookie attribute
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SameSite {
     /// Strict same-site policy

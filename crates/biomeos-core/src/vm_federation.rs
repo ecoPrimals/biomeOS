@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS + benchScale Integration - VM Federation Manager
+//! `BiomeOS` + benchScale Integration - VM Federation Manager
 //!
-//! This module provides high-level APIs for managing BiomeOS VM federations
+//! This module provides high-level APIs for managing `BiomeOS` VM federations
 //! using benchScale's libvirt backend.
 //!
 //! ## Validation Strategy
@@ -54,8 +54,8 @@ pub(crate) fn parse_vm_names_from_list(vm_list: &str, federation_name: &str) -> 
 }
 
 /// Collect 192.168.x.x IPs from virsh `domifaddr` outputs (testable; used by [`VmFederationManager::discover_vm_ips`]).
-/// BenchScale `cargo run --release -- create …` argv (testable without invoking `cargo`).
-pub(crate) fn benchscale_create_argv<'a>(name: &'a str, topology: &'a str) -> [&'a str; 9] {
+/// `BenchScale` `cargo run --release -- create …` argv (testable without invoking `cargo`).
+pub(crate) const fn benchscale_create_argv<'a>(name: &'a str, topology: &'a str) -> [&'a str; 9] {
     [
         "run",
         "--release",
@@ -69,8 +69,8 @@ pub(crate) fn benchscale_create_argv<'a>(name: &'a str, topology: &'a str) -> [&
     ]
 }
 
-/// BenchScale `cargo run --release -- <subcommand> <name>` argv (start/stop/destroy/test).
-pub(crate) fn benchscale_subcommand_argv<'a>(subcommand: &'a str, name: &'a str) -> [&'a str; 5] {
+/// `BenchScale` `cargo run --release -- <subcommand> <name>` argv (start/stop/destroy/test).
+pub(crate) const fn benchscale_subcommand_argv<'a>(subcommand: &'a str, name: &'a str) -> [&'a str; 5] {
     ["run", "--release", "--", subcommand, name]
 }
 
@@ -172,7 +172,7 @@ impl Default for ValidationConfig {
 
 /// VM Federation Manager
 ///
-/// Provides a Rust API for managing BiomeOS VM federations using benchScale.
+/// Provides a Rust API for managing `BiomeOS` VM federations using benchScale.
 ///
 /// This manager implements **mandatory validation** - VMs are not considered
 /// "created" until they are fully provisioned and SSH-accessible.
@@ -274,7 +274,7 @@ impl VmFederationManager {
         self.wait_for_all_vms_ready(&vm_ips).await?;
 
         info!("Phase 4/4: Final SSH validation");
-        self.validate_ssh_access(&vm_ips).await?;
+        self.validate_ssh_access(&vm_ips)?;
 
         info!("✅ VM federation created and validated: {}", name);
         Ok(())
@@ -344,7 +344,7 @@ impl VmFederationManager {
     }
 
     /// Validate SSH access to all VMs (final check)
-    async fn validate_ssh_access(&self, vm_ips: &[String]) -> Result<()> {
+    fn validate_ssh_access(&self, vm_ips: &[String]) -> Result<()> {
         for ip in vm_ips {
             let output = Command::new("ssh")
                 .args([
@@ -371,7 +371,7 @@ impl VmFederationManager {
     }
 
     /// Start all VMs in the federation
-    pub async fn start(&self, name: &str) -> Result<()> {
+    pub fn start(&self, name: &str) -> Result<()> {
         info!("Starting VM federation: {}", name);
 
         let output = Command::new("cargo")
@@ -392,7 +392,7 @@ impl VmFederationManager {
     }
 
     /// Run tests on the federation
-    pub async fn test(&self, name: &str) -> Result<()> {
+    pub fn test(&self, name: &str) -> Result<()> {
         info!("Running tests on VM federation: {}", name);
 
         let output = Command::new("cargo")
@@ -413,7 +413,7 @@ impl VmFederationManager {
     }
 
     /// Stop all VMs in the federation
-    pub async fn stop(&self, name: &str) -> Result<()> {
+    pub fn stop(&self, name: &str) -> Result<()> {
         info!("Stopping VM federation: {}", name);
 
         let output = Command::new("cargo")
@@ -434,7 +434,7 @@ impl VmFederationManager {
     }
 
     /// Destroy the VM federation (cleanup)
-    pub async fn destroy(&self, name: &str) -> Result<()> {
+    pub fn destroy(&self, name: &str) -> Result<()> {
         info!("Destroying VM federation: {}", name);
 
         let output = Command::new("cargo")
@@ -455,7 +455,7 @@ impl VmFederationManager {
     }
 
     /// Get the status of the federation
-    pub async fn status(&self, name: &str) -> Result<String> {
+    pub fn status(&self, name: &str) -> Result<String> {
         let output = Command::new("cargo")
             .current_dir(&self.benchscale_root)
             .args(benchscale_subcommand_argv("status", name))

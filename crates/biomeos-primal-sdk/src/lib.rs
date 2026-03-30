@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Primal SDK
+//! `BiomeOS` Primal SDK
 //!
 //! Complete SDK for developing autonomous primals that follow deep debt principles:
 //! - Self-knowledge only

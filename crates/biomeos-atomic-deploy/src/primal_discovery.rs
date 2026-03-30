@@ -42,7 +42,7 @@ impl DiscoveredPrimal {
     }
 
     /// Extract family ID from socket filename
-    /// e.g., "beardog-test_family.sock" → Some("test_family")
+    /// e.g., "beardog-test_family.sock" → `Some("test_family`")
     fn extract_family_id(socket_name: &str) -> Option<String> {
         let without_sock = socket_name.strip_suffix(".sock")?;
         let parts: Vec<&str> = without_sock.split('-').collect();

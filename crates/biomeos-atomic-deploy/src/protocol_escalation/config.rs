@@ -41,31 +41,31 @@ pub struct EscalationConfig {
 }
 
 /// Default minimum requests before considering escalation.
-pub(crate) fn default_min_requests() -> u64 {
+pub const fn default_min_requests() -> u64 {
     100
 }
 /// Default latency threshold (μs) to trigger escalation.
-pub(crate) fn default_latency_threshold() -> u64 {
+pub const fn default_latency_threshold() -> u64 {
     500
 }
 /// Default stable health duration (secs) before auto-escalate.
-pub(crate) fn default_stable_health_duration() -> u64 {
+pub const fn default_stable_health_duration() -> u64 {
     30
 }
 /// Default tarpc failures before fallback to JSON-RPC.
-pub(crate) fn default_tarpc_failure_threshold() -> u32 {
+pub const fn default_tarpc_failure_threshold() -> u32 {
     3
 }
 /// Default interval (secs) between auto-escalation checks.
-pub(crate) fn default_check_interval() -> u64 {
+pub const fn default_check_interval() -> u64 {
     10
 }
 /// Default cooldown (secs) after failed escalation attempt.
-pub(crate) fn default_escalation_cooldown() -> u64 {
+pub const fn default_escalation_cooldown() -> u64 {
     60
 }
 /// Default for enabling auto-escalation.
-pub(crate) fn default_auto_escalate() -> bool {
+pub const fn default_auto_escalate() -> bool {
     true
 }
 

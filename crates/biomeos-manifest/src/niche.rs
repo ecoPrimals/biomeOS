@@ -73,7 +73,7 @@ pub struct NicheMetadata {
 
     /// Human-readable description
     pub description: String,
-    /// Target architecture (e.g. "x86_64", "aarch64")
+    /// Target architecture (e.g. "`x86_64`", "aarch64")
     pub architecture: String,
 
     /// Optional path to the family seed file for identity derivation
@@ -125,7 +125,7 @@ impl NicheManifest {
     /// Parse a niche manifest from a TOML file
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = fs::read_to_string(&path)?;
-        let mut manifest: NicheManifest = toml::from_str(&content)?;
+        let mut manifest: Self = toml::from_str(&content)?;
 
         // Resolve relative paths
         if let Some(parent) = path.as_ref().parent() {
@@ -140,7 +140,7 @@ impl NicheManifest {
 
     /// Parse from TOML string
     pub fn from_toml(content: &str) -> Result<Self> {
-        let manifest: NicheManifest = toml::from_str(content)?;
+        let manifest: Self = toml::from_str(content)?;
         manifest.validate_structure()?;
         Ok(manifest)
     }
@@ -272,16 +272,19 @@ impl NicheManifest {
     }
 
     /// Get the default graph (for `biomeos deploy --niche <name>`)
+    #[must_use] 
     pub fn get_default_graph(&self) -> Option<&GraphRef> {
         self.graphs.iter().find(|g| g.default)
     }
 
     /// Get a graph by name
+    #[must_use] 
     pub fn get_graph(&self, name: &str) -> Option<&GraphRef> {
         self.graphs.iter().find(|g| g.name == name)
     }
 
     /// Get all capabilities provided by this niche
+    #[must_use] 
     pub fn get_all_capabilities(&self) -> Vec<String> {
         let mut caps: Vec<String> = self
             .primals
@@ -296,6 +299,7 @@ impl NicheManifest {
     }
 
     /// Check if this niche provides a specific capability
+    #[must_use] 
     pub fn provides_capability(&self, capability: &str) -> bool {
         self.primals
             .iter()

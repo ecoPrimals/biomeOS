@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BirdSong Encrypted Discovery Coordination
+//! `BirdSong` Encrypted Discovery Coordination
 //!
-//! BiomeOS coordinates BirdSong (encrypted, lineage-based discovery) between
+//! `BiomeOS` coordinates `BirdSong` (encrypted, lineage-based discovery) between
 //! any security primal and any discovery primal in pure Rust.
 //!
-//! # What is BirdSong?
+//! # What is `BirdSong`?
 //!
 //! "A broadcast that is obvious to family and noise otherwise"
 //! - Family members (verified lineage) can decrypt and discover services
@@ -28,7 +28,7 @@ use anyhow::{Context, Result};
 use bytes::Bytes;
 use std::sync::Arc;
 
-/// BirdSong discovery coordinator
+/// `BirdSong` discovery coordinator
 ///
 /// Coordinates encrypted discovery between:
 /// - Any security primal (provides lineage verification and encryption)
@@ -43,11 +43,11 @@ pub struct BirdSongCoordinator {
 }
 
 impl BirdSongCoordinator {
-    /// Create a new BirdSong coordinator
+    /// Create a new `BirdSong` coordinator
     ///
     /// # Arguments
     ///
-    /// * `security` - Any primal providing security capabilities (e.g., BearDog)
+    /// * `security` - Any primal providing security capabilities (e.g., `BearDog`)
     /// * `discovery` - Any primal providing discovery capabilities (e.g., Songbird)
     ///
     /// # Philosophy
@@ -61,7 +61,7 @@ impl BirdSongCoordinator {
         }
     }
 
-    /// Enable encrypted discovery (BirdSong mode)
+    /// Enable encrypted discovery (`BirdSong` mode)
     ///
     /// # Coordination Flow
     ///
@@ -113,7 +113,7 @@ impl BirdSongCoordinator {
 
     /// Coordinate lineage-gated relay for NAT traversal
     ///
-    /// This is BirdSong's killer feature: NAT traversal without TURN servers!
+    /// This is `BirdSong`'s killer feature: NAT traversal without TURN servers!
     ///
     /// # How It Works
     ///

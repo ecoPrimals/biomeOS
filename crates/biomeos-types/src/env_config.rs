@@ -33,7 +33,7 @@ pub mod vars {
 
     // --- Provider Resolution ---
 
-    /// Security provider primal name override (default: resolved via CapabilityTaxonomy)
+    /// Security provider primal name override (default: resolved via `CapabilityTaxonomy`)
     pub const SECURITY_PROVIDER: &str = "BIOMEOS_SECURITY_PROVIDER";
 
     /// Network/discovery provider primal name override
@@ -57,7 +57,7 @@ pub mod vars {
     /// biomeOS-local binary directory (fallback when ecosystem root isn't set)
     pub const PLASMID_BIN_DIR: &str = "BIOMEOS_PLASMID_BIN_DIR";
 
-    /// GenomeBin path for distribution
+    /// `GenomeBin` path for distribution
     pub const GENOMEBIN_PATH: &str = "GENOMEBIN_PATH";
 
     // --- Per-Primal Sockets ---
@@ -65,7 +65,7 @@ pub mod vars {
     /// Neural API socket
     pub const NEURAL_API_SOCKET: &str = "NEURAL_API_SOCKET";
 
-    /// BearDog socket
+    /// `BearDog` socket
     pub const BEARDOG_SOCKET: &str = "BEARDOG_SOCKET";
 
     /// Songbird socket

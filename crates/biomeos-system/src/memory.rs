@@ -21,7 +21,7 @@ pub struct MemoryInfo {
 }
 
 /// Get memory information
-pub(crate) fn get_memory_info() -> BiomeResult<MemoryInfo> {
+pub fn get_memory_info() -> BiomeResult<MemoryInfo> {
     // Try to read from /proc/meminfo on Linux
     if let Ok(meminfo) = fs::read_to_string("/proc/meminfo") {
         let mut total_kb = 0;
@@ -61,7 +61,7 @@ pub(crate) fn get_memory_info() -> BiomeResult<MemoryInfo> {
 }
 
 /// Get current memory usage
-pub(crate) fn get_memory_usage() -> BiomeResult<f64> {
+pub fn get_memory_usage() -> BiomeResult<f64> {
     let memory_info = get_memory_info()?;
     Ok(memory_info.usage_percent)
 }

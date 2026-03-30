@@ -18,7 +18,7 @@ pub struct LogConfig {
     /// Maximum age before auto-archival (seconds)
     pub max_active_age_secs: u64,
 
-    /// Whether to enable BearDog encryption (future)
+    /// Whether to enable `BearDog` encryption (future)
     pub enable_encryption: bool,
 
     /// Compression for fossil logs

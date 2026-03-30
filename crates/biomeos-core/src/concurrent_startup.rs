@@ -29,7 +29,7 @@ pub struct DependencyGraph {
 impl DependencyGraph {
     /// Build dependency graph from primals
     pub fn build(primals: &[Arc<dyn ManagedPrimal>]) -> Result<Self> {
-        let mut graph = DependencyGraph {
+        let mut graph = Self {
             provides: HashMap::new(),
             requires: HashMap::new(),
             capability_providers: HashMap::new(),

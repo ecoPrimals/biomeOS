@@ -304,7 +304,7 @@ async fn test_execute_build_binary_not_found() {
             description: None,
         },
     };
-    let result = execute(args).await;
+    let result = execute(args);
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("Binary not found"));
 }
@@ -325,7 +325,7 @@ async fn test_execute_build_invalid_arch() {
             description: None,
         },
     };
-    let result = execute(args).await;
+    let result = execute(args);
     assert!(result.is_err());
     assert!(
         result
@@ -342,7 +342,7 @@ async fn test_execute_verify_path_not_found() {
             path: PathBuf::from("/nonexistent/genome.json"),
         },
     };
-    let result = execute(args).await;
+    let result = execute(args);
     assert!(result.is_err());
     assert!(
         result
@@ -361,7 +361,7 @@ async fn test_execute_extract_genome_not_found() {
             output: temp.path().to_path_buf(),
         },
     };
-    let result = execute(args).await;
+    let result = execute(args);
     assert!(result.is_err());
     assert!(
         result
@@ -378,7 +378,7 @@ async fn test_execute_info_path_not_found() {
             path: PathBuf::from("/nonexistent/genome.json"),
         },
     };
-    let result = execute(args).await;
+    let result = execute(args);
     assert!(result.is_err());
     assert!(
         result
@@ -405,7 +405,7 @@ async fn test_execute_build_success() {
             description: Some("desc".to_string()),
         },
     };
-    let result = execute(args).await;
+    let result = execute(args);
     assert!(result.is_ok());
     assert!(output.exists());
 }
@@ -430,7 +430,7 @@ async fn test_execute_verify_success() {
     let exec_args = GenomeArgs {
         command: GenomeCommand::Verify { path: output },
     };
-    let result = execute(exec_args).await;
+    let result = execute(exec_args);
     assert!(result.is_ok());
 }
 
@@ -489,9 +489,7 @@ async fn test_execute_extract_no_binary_for_foreign_arch() {
             output: out_dir,
         },
     };
-    let err = execute(args)
-        .await
-        .expect_err("should fail: no native binary");
+    let err = execute(args).expect_err("should fail: no native binary");
     let msg = err.to_string();
     assert!(
         msg.contains("No binary") || msg.contains("architecture"),
@@ -508,7 +506,7 @@ async fn test_execute_verify_invalid_json() {
     let args = GenomeArgs {
         command: GenomeCommand::Verify { path },
     };
-    let result = execute(args).await;
+    let result = execute(args);
     assert!(result.is_err());
 }
 
@@ -532,7 +530,7 @@ async fn test_execute_info_success() {
     let exec_args = GenomeArgs {
         command: GenomeCommand::Info { path: output },
     };
-    let result = execute(exec_args).await;
+    let result = execute(exec_args);
     assert!(result.is_ok());
 }
 
@@ -606,7 +604,7 @@ async fn test_execute_verify_checksum_failure() {
     let args = GenomeArgs {
         command: GenomeCommand::Verify { path },
     };
-    assert!(execute(args).await.is_err());
+    assert!(execute(args).is_err());
 }
 
 #[test]

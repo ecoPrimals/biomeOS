@@ -143,19 +143,19 @@ impl Default for HealthConfig {
     }
 }
 
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 
-fn default_health_interval() -> u64 {
+const fn default_health_interval() -> u64 {
     30
 }
 
-fn default_health_timeout() -> u64 {
+const fn default_health_timeout() -> u64 {
     5
 }
 
-fn default_recovery_attempts() -> u32 {
+const fn default_recovery_attempts() -> u32 {
     3
 }
 
@@ -163,17 +163,18 @@ impl TowerConfig {
     /// Load configuration from TOML file
     pub fn from_file(path: impl AsRef<std::path::Path>) -> Result<Self, anyhow::Error> {
         let contents = std::fs::read_to_string(path)?;
-        let config: TowerConfig = toml::from_str(&contents)?;
+        let config: Self = toml::from_str(&contents)?;
         Ok(config)
     }
 
     /// Load from TOML string
     pub fn from_toml(contents: &str) -> Result<Self, anyhow::Error> {
-        let config: TowerConfig = toml::from_str(contents)?;
+        let config: Self = toml::from_str(contents)?;
         Ok(config)
     }
 
     /// Create default configuration
+    #[must_use] 
     pub fn default_config() -> Self {
         Self {
             tower: TowerMeta::default(),
@@ -184,12 +185,14 @@ impl TowerConfig {
     }
 
     /// Get health check interval as Duration
-    pub fn health_interval(&self) -> Duration {
+    #[must_use] 
+    pub const fn health_interval(&self) -> Duration {
         Duration::from_secs(self.health.interval_secs)
     }
 
     /// Get health check timeout as Duration
-    pub fn health_timeout(&self) -> Duration {
+    #[must_use] 
+    pub const fn health_timeout(&self) -> Duration {
         Duration::from_secs(self.health.timeout_secs)
     }
 }

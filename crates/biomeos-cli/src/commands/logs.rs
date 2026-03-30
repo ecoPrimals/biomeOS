@@ -360,7 +360,7 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
     let manager = LogManager::new(config.clone());
     
     // Initialize log directories
-    manager.initialize().await?;
+    manager.initialize()?;
     
     // Scan for old log files
     let mut old_logs = Vec::new();
@@ -417,7 +417,7 @@ async fn handle_cleanup_stale() -> Result<()> {
     let config = LogConfig::default();
     let manager = LogManager::new(config);
     
-    manager.initialize().await?;
+    manager.initialize()?;
     
     let archived = manager.cleanup_stale_sessions().await?;
     

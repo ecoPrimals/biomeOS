@@ -361,7 +361,7 @@ pub enum MetricsFormat {
     Prometheus,
     /// JSON format
     Json,
-    /// StatsD format
+    /// `StatsD` format
     StatsD,
     /// Custom metrics format
     Custom(String),

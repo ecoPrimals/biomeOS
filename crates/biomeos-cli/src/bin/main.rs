@@ -498,7 +498,7 @@ enum Commands {
 }
 
 #[tokio::main]
-#[allow(clippy::too_many_lines, reason = "main command dispatch")]
+#[expect(clippy::too_many_lines, reason = "main command dispatch")]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     CliUtils::init_logging(&cli.log_level)?;

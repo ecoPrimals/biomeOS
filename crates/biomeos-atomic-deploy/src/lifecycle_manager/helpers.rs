@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use super::{LifecycleManager, LifecycleState, ManagedPrimal};
 
 impl LifecycleManager {
-    /// Update dependency graph (depended_by relationships)
+    /// Update dependency graph (`depended_by` relationships)
     pub(crate) async fn update_dependency_graph(&self) {
         let mut primals = self.primals.write().await;
 

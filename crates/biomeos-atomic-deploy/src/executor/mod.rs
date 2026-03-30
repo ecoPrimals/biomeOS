@@ -9,9 +9,9 @@
 //! ## Architecture
 //!
 //! - **context**: Execution context shared across all nodes
-//! - **types**: Shared result types (ExecutionReport, PhaseResult)
-//! - **node_handlers**: Individual node type execution handlers
-//! - **primal_spawner**: Process spawning and socket management
+//! - **types**: Shared result types (`ExecutionReport`, `PhaseResult`)
+//! - **`node_handlers`**: Individual node type execution handlers
+//! - **`primal_spawner`**: Process spawning and socket management
 //!
 //! ## Deep Debt Principles
 //!

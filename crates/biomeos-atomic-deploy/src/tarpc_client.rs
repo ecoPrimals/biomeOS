@@ -15,7 +15,7 @@ use tarpc::client;
 use tarpc::serde_transport::unix;
 use tokio_serde::formats::Bincode;
 
-/// Connect to a primal's tarpc socket and return a HealthRpcClient.
+/// Connect to a primal's tarpc socket and return a `HealthRpcClient`.
 ///
 /// Uses Bincode for binary serialization. Returns error if socket doesn't exist
 /// or connection fails — caller should fall back to JSON-RPC.
@@ -33,7 +33,7 @@ pub async fn connect_tarpc_health(socket_path: &Path) -> Result<HealthRpcClient>
     Ok(client)
 }
 
-/// Connect to a primal's tarpc socket and return a DiscoveryRpcClient.
+/// Connect to a primal's tarpc socket and return a `DiscoveryRpcClient`.
 pub async fn connect_tarpc_discovery(socket_path: &Path) -> Result<DiscoveryRpcClient> {
     let transport = unix::connect(socket_path, Bincode::default)
         .await
@@ -48,7 +48,7 @@ pub async fn connect_tarpc_discovery(socket_path: &Path) -> Result<DiscoveryRpcC
     Ok(client)
 }
 
-/// Connect to a primal's tarpc socket and return a SecurityRpcClient.
+/// Connect to a primal's tarpc socket and return a `SecurityRpcClient`.
 pub async fn connect_tarpc_security(socket_path: &Path) -> Result<SecurityRpcClient> {
     let transport = unix::connect(socket_path, Bincode::default)
         .await

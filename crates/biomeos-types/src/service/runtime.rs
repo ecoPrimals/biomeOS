@@ -3,8 +3,8 @@
 
 //! Service Runtime Configurations
 //!
-//! This module contains runtime-related types including ServiceRuntime,
-//! RuntimeType, container configurations, and process management.
+//! This module contains runtime-related types including `ServiceRuntime`,
+//! `RuntimeType`, container configurations, and process management.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -154,7 +154,7 @@ pub enum WasmEngine {
     Wasmtime,
     /// Wasmer runtime
     Wasmer,
-    /// WasmEdge runtime
+    /// `WasmEdge` runtime
     WasmEdge,
     /// Custom WASM engine
     Custom(String),
@@ -188,9 +188,9 @@ pub enum VmType {
     Kvm,
     /// Xen hypervisor
     Xen,
-    /// Oracle VirtualBox
+    /// Oracle `VirtualBox`
     VirtualBox,
-    /// VMware hypervisor
+    /// `VMware` hypervisor
     VMware,
     /// Custom VM type
     Custom(String),
@@ -382,7 +382,7 @@ pub struct ProcessLimits {
     pub oom_score_adj: Option<i32>,
 }
 
-/// Default implementation for ServiceRuntime
+/// Default implementation for `ServiceRuntime`
 impl Default for ServiceRuntime {
     fn default() -> Self {
         Self {

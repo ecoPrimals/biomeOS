@@ -74,7 +74,7 @@ async fn test_primal_adapter_health_check_no_config() {
     };
 
     // No health check configured, should return true if running
-    let result = adapter.check_health().await.unwrap();
+    let result = adapter.check_health().unwrap();
     assert!(result);
 }
 
@@ -83,7 +83,7 @@ async fn test_primal_adapter_health_check_not_running() {
     let adapter = PrimalAdapter::new("test".to_string(), PathBuf::from("/bin/test"));
 
     // Not running, should return false
-    let result = adapter.check_health().await.unwrap();
+    let result = adapter.check_health().unwrap();
     assert!(!result);
 }
 

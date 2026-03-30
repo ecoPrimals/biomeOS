@@ -26,7 +26,7 @@
 pub mod compose;
 /// Self-replication and genome distribution
 pub mod replicate;
-/// GenomeBin integrity verification
+/// `GenomeBin` integrity verification
 pub mod verify;
 
 pub use compose::{GenomeComposeRequest, GenomeComposeResponse};
@@ -63,16 +63,19 @@ impl GenomeFactory {
     }
 
     /// Get storage directory
-    pub fn storage_dir(&self) -> &PathBuf {
+    #[must_use] 
+    pub const fn storage_dir(&self) -> &PathBuf {
         &self.storage_dir
     }
 
     /// Get path for a specific genome
+    #[must_use] 
     pub fn genome_path(&self, name: &str) -> PathBuf {
         self.storage_dir.join(format!("{name}.genome"))
     }
 
     /// Check if genome exists
+    #[must_use] 
     pub fn genome_exists(&self, name: &str) -> bool {
         self.genome_path(name).exists()
     }

@@ -3,7 +3,7 @@
 
 //! Network Configuration
 //!
-//! Network configuration settings for BiomeOS components.
+//! Network configuration settings for `BiomeOS` components.
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

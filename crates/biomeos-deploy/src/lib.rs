@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Deployment Orchestration
+//! `BiomeOS` Deployment Orchestration
 //!
-//! Pure Rust deployment orchestration for BiomeOS federations.
+//! Pure Rust deployment orchestration for `BiomeOS` federations.
 //! Replaces bash scripts with type-safe, async Rust implementation.
 
 #![warn(missing_docs)]

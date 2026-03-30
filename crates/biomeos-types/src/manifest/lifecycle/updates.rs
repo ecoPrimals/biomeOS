@@ -187,13 +187,13 @@ pub struct AnalysisTemplate {
 pub enum MetricsProvider {
     /// Prometheus metrics system
     Prometheus,
-    /// DataDog monitoring platform
+    /// `DataDog` monitoring platform
     DataDog,
     /// New Relic observability platform
     NewRelic,
     /// Grafana monitoring stack
     Grafana,
-    /// AWS CloudWatch
+    /// AWS `CloudWatch`
     CloudWatch,
     /// Custom metrics provider
     Custom(String),

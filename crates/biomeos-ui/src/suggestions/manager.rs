@@ -41,6 +41,7 @@ pub struct AISuggestionManager {
 
 impl AISuggestionManager {
     /// Create a new AI suggestion manager
+    #[must_use] 
     pub fn new(family_id: String) -> Self {
         Self {
             ai_provider_socket: None,
@@ -64,7 +65,7 @@ impl AISuggestionManager {
                     let path = entry.path();
                     if path.extension().is_some_and(|e| e == "sock") {
                         // Check if this socket responds to ai.capabilities
-                        if Self::probe_ai_capability(&path).await {
+                        if Self::probe_ai_capability(&path) {
                             let name = path
                                 .file_stem()
                                 .map(|s| s.to_string_lossy().to_string())
@@ -105,7 +106,7 @@ impl AISuggestionManager {
     }
 
     /// Probe a socket to check if it provides AI capabilities
-    async fn probe_ai_capability(socket_path: &std::path::Path) -> bool {
+    fn probe_ai_capability(socket_path: &std::path::Path) -> bool {
         use std::io::{Read, Write};
         use std::os::unix::net::UnixStream;
 
@@ -137,7 +138,7 @@ impl AISuggestionManager {
     }
 
     /// Request suggestions based on current context
-    pub async fn request_suggestions(
+    pub fn request_suggestions(
         &mut self,
         context: SuggestionContext,
     ) -> Result<Vec<AISuggestion>> {
@@ -161,7 +162,7 @@ impl AISuggestionManager {
     }
 
     /// Send feedback on a suggestion for learning
-    pub async fn send_feedback(
+    pub fn send_feedback(
         &mut self,
         suggestion_id: &str,
         feedback: SuggestionFeedback,
@@ -190,6 +191,7 @@ impl AISuggestionManager {
     }
 
     /// Get active suggestions
+    #[must_use] 
     pub fn get_active_suggestions(&self) -> Vec<&AISuggestion> {
         self.active_suggestions.values().collect()
     }
@@ -408,7 +410,7 @@ mod tests {
             recent_events: None,
             preferences: None,
         };
-        let suggestions = mgr.request_suggestions(ctx).await.unwrap();
+        let suggestions = mgr.request_suggestions(ctx).unwrap();
         assert_eq!(suggestions.len(), 1);
         assert_eq!(mgr.get_active_suggestions().len(), 1);
     }
@@ -436,9 +438,7 @@ mod tests {
                 },
             },
         );
-        mgr.send_feedback("s1", SuggestionFeedback::Accepted)
-            .await
-            .unwrap();
+        mgr.send_feedback("s1", SuggestionFeedback::Accepted).unwrap();
         assert!(mgr.get_active_suggestions().is_empty());
     }
 
@@ -471,7 +471,6 @@ mod tests {
                 reason: "not needed".to_string(),
             },
         )
-        .await
         .unwrap();
         assert!(mgr.get_active_suggestions().is_empty());
     }
@@ -552,9 +551,7 @@ mod tests {
                 },
             },
         );
-        mgr.send_feedback("s3", SuggestionFeedback::Dismissed)
-            .await
-            .unwrap();
+        mgr.send_feedback("s3", SuggestionFeedback::Dismissed).unwrap();
         assert_eq!(mgr.get_active_suggestions().len(), 1);
     }
 
@@ -568,8 +565,7 @@ mod tests {
     #[tokio::test]
     async fn test_probe_ai_capability_nonexistent_returns_false() {
         let result =
-            AISuggestionManager::probe_ai_capability(std::path::Path::new("/tmp/no-such.sock"))
-                .await;
+            AISuggestionManager::probe_ai_capability(std::path::Path::new("/tmp/no-such.sock"));
         assert!(!result);
     }
 
@@ -592,7 +588,7 @@ mod tests {
             let _ = stream.write_all(b"\n");
         });
         ready_rx.recv().expect("wait for bind");
-        let result = AISuggestionManager::probe_ai_capability(&sock_path).await;
+        let result = AISuggestionManager::probe_ai_capability(&sock_path);
         assert!(result, "mock returning ai capability should be detected");
         let _ = server.join();
     }
@@ -616,7 +612,7 @@ mod tests {
             let _ = stream.write_all(b"\n");
         });
         ready_rx.recv().expect("wait for bind");
-        let result = AISuggestionManager::probe_ai_capability(&sock_path).await;
+        let result = AISuggestionManager::probe_ai_capability(&sock_path);
         assert!(!result, "non-AI capability should not match");
         let _ = server.join();
     }
@@ -632,7 +628,7 @@ mod tests {
             recent_events: None,
             preferences: None,
         };
-        let suggestions = mgr.request_suggestions(ctx).await.expect("suggestions");
+        let suggestions = mgr.request_suggestions(ctx).expect("suggestions");
         assert!(suggestions.is_empty());
     }
 
@@ -641,7 +637,6 @@ mod tests {
         let mut mgr = AISuggestionManager::new("fam1".to_string());
         mgr.ai_provider_socket = Some(PathBuf::from("/tmp/biomeos-ui-test-ai.sock"));
         mgr.send_feedback("any", SuggestionFeedback::Accepted)
-            .await
             .expect("feedback");
     }
 }

@@ -19,7 +19,7 @@
 //! - **[`genetics`]** - Genetic seed generation and lineage
 //! - **[`deployment`]** - Deployment script generation
 //! - **[`documentation`]** - README and manifest creation
-//! - **[`types`]** - Shared types (SporeConfig, moved from parent)
+//! - **[`types`]** - Shared types (`SporeConfig`, moved from parent)
 //!
 //! # Biology-Inspired Design
 //!

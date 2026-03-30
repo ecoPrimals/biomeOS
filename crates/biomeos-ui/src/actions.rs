@@ -91,12 +91,14 @@ impl ActionResult {
     }
 
     /// Check if the result is a success
-    pub fn is_success(&self) -> bool {
+    #[must_use] 
+    pub const fn is_success(&self) -> bool {
         matches!(self, Self::Success { .. })
     }
 
     /// Check if the result is an error
-    pub fn is_error(&self) -> bool {
+    #[must_use] 
+    pub const fn is_error(&self) -> bool {
         matches!(self, Self::Error { .. })
     }
 }

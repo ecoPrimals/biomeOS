@@ -4,8 +4,8 @@
 //! Primal Orchestrator - Async, concurrent primal lifecycle management
 //!
 //! Handles complex startup choreography:
-//! - BearDog → Songbird (crypto provider → discovery)
-//! - Songbird → BearDog fleet (discovery → crypto cluster)
+//! - `BearDog` → Songbird (crypto provider → discovery)
+//! - Songbird → `BearDog` fleet (discovery → crypto cluster)
 //! - Songbird → Songbird → Network (cascading discovery)
 //! - Concurrent health monitoring
 //! - Automatic recovery

@@ -232,6 +232,7 @@ pub enum ActionOutcome {
 
 impl SovereigntyGuardian {
     /// Create a new sovereignty guardian with default policies
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             policies: SovereigntyPolicies::default(),
@@ -241,6 +242,7 @@ impl SovereigntyGuardian {
     }
 
     /// Create sovereignty guardian with custom policies
+    #[must_use] 
     pub fn with_policies(policies: SovereigntyPolicies) -> Self {
         Self {
             policies,
@@ -323,7 +325,7 @@ impl SovereigntyGuardian {
                 ai_provider,
                 &ViolationType::EconomicExploitation,
                 &ViolationSeverity::Medium,
-                format!("Cost estimate {} exceeds daily limit", cost_estimate),
+                format!("Cost estimate {cost_estimate} exceeds daily limit"),
             );
             return Ok(false);
         }
@@ -365,7 +367,7 @@ impl SovereigntyGuardian {
                 entity,
                 &ViolationType::PrivacyInvasion,
                 &ViolationSeverity::High,
-                format!("Unauthorized tracking detected: {}", activity),
+                format!("Unauthorized tracking detected: {activity}"),
             );
         }
 
@@ -377,7 +379,7 @@ impl SovereigntyGuardian {
                 entity,
                 &ViolationType::PrivacyInvasion,
                 &ViolationSeverity::Medium,
-                format!("Behavioral profiling detected: {}", activity),
+                format!("Behavioral profiling detected: {activity}"),
             );
         }
 
@@ -577,14 +579,15 @@ impl SovereigntyGuardian {
             context: HashMap::from([
                 (
                     "violation_type".to_string(),
-                    format!("{:?}", violation_type),
+                    format!("{violation_type:?}"),
                 ),
-                ("severity".to_string(), format!("{:?}", severity)),
+                ("severity".to_string(), format!("{severity:?}")),
             ]),
         });
     }
 
     /// Get violation history for an entity
+    #[must_use] 
     pub fn get_violations(&self, entity: &str) -> Vec<&SovereigntyViolation> {
         self.violations
             .get(entity)
@@ -593,6 +596,7 @@ impl SovereigntyGuardian {
     }
 
     /// Get full audit trail
+    #[must_use] 
     pub fn get_audit_trail(&self) -> &[SovereigntyAuditEntry] {
         &self.audit_log
     }

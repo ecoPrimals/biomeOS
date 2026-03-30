@@ -139,7 +139,7 @@ impl RpcExtractionError {
 
     /// Whether this error is likely retriable.
     #[must_use]
-    pub fn is_retriable(&self) -> bool {
+    pub const fn is_retriable(&self) -> bool {
         self.phase.is_retriable()
     }
 }

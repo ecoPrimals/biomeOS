@@ -33,6 +33,7 @@ pub struct BeaconGeneticsManager {
 
 impl BeaconGeneticsManager {
     /// Create new manager with neuralAPI
+    #[must_use] 
     pub fn new(root_path: &Path) -> Self {
         let neural_socket = NeuralApiCapabilityCaller::default_socket();
         Self::with_capability_caller(
@@ -42,6 +43,7 @@ impl BeaconGeneticsManager {
     }
 
     /// Create with custom capability caller (for testing)
+    #[must_use] 
     pub fn with_capability_caller(
         root_path: &Path,
         capability_caller: Box<dyn CapabilityCaller>,
@@ -128,6 +130,7 @@ impl BeaconGeneticsManager {
     }
 
     /// Returns our beacon ID if beacon genetics has been initialized.
+    #[must_use] 
     pub fn our_beacon_id(&self) -> Option<&BeaconId> {
         self.manifest.as_ref().map(|m| &m.own_beacon_id)
     }
@@ -372,7 +375,7 @@ impl BeaconGeneticsManager {
     }
 
     /// Sync meeting records and shared state with a lineage peer.
-    pub async fn sync_with_lineage_peer(
+    pub fn sync_with_lineage_peer(
         &mut self,
         peer_manifest: &BeaconGeneticsManifest,
     ) -> SporeResult<SyncResult> {
@@ -432,6 +435,7 @@ impl BeaconGeneticsManager {
     }
 
     /// List all meetings (peers we've exchanged seeds with).
+    #[must_use] 
     pub fn list_meetings(&self) -> Vec<(BeaconId, &MeetingRecord)> {
         self.manifest
             .as_ref()

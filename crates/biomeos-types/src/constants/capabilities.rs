@@ -18,13 +18,13 @@
 //! assert_eq!(capabilities::SECURITY, "security");
 //! ```
 
-/// Compute and execution capability (e.g., ToadStool)
+/// Compute and execution capability (e.g., `ToadStool`)
 pub const COMPUTE: &str = "compute";
 
-/// Storage and persistence capability (e.g., NestGate)
+/// Storage and persistence capability (e.g., `NestGate`)
 pub const STORAGE: &str = "storage";
 
-/// Security and cryptography capability (e.g., BearDog)
+/// Security and cryptography capability (e.g., `BearDog`)
 pub const SECURITY: &str = "security";
 
 /// AI and intelligence capability (e.g., Squirrel)
@@ -33,10 +33,10 @@ pub const AI: &str = "ai";
 /// Discovery and service mesh capability (e.g., Songbird)
 pub const DISCOVERY: &str = "discovery";
 
-/// Orchestration capability (e.g., BiomeOS, Songbird)
+/// Orchestration capability (e.g., `BiomeOS`, Songbird)
 pub const ORCHESTRATION: &str = "orchestration";
 
-/// UI and visualization capability (e.g., PetalTongue)
+/// UI and visualization capability (e.g., `PetalTongue`)
 pub const VISUALIZATION: &str = "visualization";
 
 /// Networking capability

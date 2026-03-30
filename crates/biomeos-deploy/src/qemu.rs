@@ -49,6 +49,7 @@ pub struct QemuInstance {
 
 impl QemuInstance {
     /// Create a new QEMU instance
+    #[must_use] 
     pub fn new(config: QemuConfig) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -58,11 +59,13 @@ impl QemuInstance {
     }
 
     /// Get instance ID
-    pub fn id(&self) -> &Uuid {
+    #[must_use] 
+    pub const fn id(&self) -> &Uuid {
         &self.id
     }
 
     /// Get VM name
+    #[must_use] 
     pub fn name(&self) -> &str {
         &self.config.name
     }
@@ -78,7 +81,7 @@ impl QemuInstance {
     }
 
     /// Start the QEMU instance
-    pub async fn start(&mut self) -> Result<()> {
+    pub fn start(&mut self) -> Result<()> {
         if self.is_running() {
             return Err(DeployError::QemuProcess {
                 message: format!("VM {} is already running", self.config.name),
@@ -209,7 +212,8 @@ impl QemuInstance {
     }
 
     /// Get serial log path
-    pub fn serial_log_path(&self) -> &PathBuf {
+    #[must_use] 
+    pub const fn serial_log_path(&self) -> &PathBuf {
         &self.config.serial_log
     }
 }
@@ -367,9 +371,9 @@ mod tests {
         };
         std::fs::write(&config.disk_image, b"").expect("create disk");
         let mut instance = QemuInstance::new(config);
-        let first = instance.start().await;
+        let first = instance.start();
         if first.is_ok() {
-            let second = instance.start().await;
+            let second = instance.start();
             assert!(second.is_err());
             let _ = instance.stop().await;
         }

@@ -16,11 +16,11 @@ async fn main() -> Result<()> {
 
     // Initialize BiomeOS with default configuration
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config.clone()).await?;
+    let manager = UniversalBiomeOSManager::new(config.clone())?;
     println!("✅ BiomeOS manager initialized");
 
     // Test system health
-    let health = manager.get_system_health().await;
+    let health = manager.get_system_health();
     println!("🏥 System Health: {:?}", health.health);
 
     // Test network discovery (will return empty for now, but won't error)

@@ -24,6 +24,7 @@ pub struct BiomeOSConfigBuilder {
 
 impl BiomeOSConfigBuilder {
     /// Create a new configuration builder
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             config: BiomeOSConfig::default(),
@@ -37,13 +38,15 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Set the environment
+    #[must_use] 
     pub fn environment(mut self, env: Environment) -> Self {
         self.config.system.environment = env;
         self
     }
 
     /// Set organization scale
-    pub fn organization_scale(mut self, scale: OrganizationScale) -> Self {
+    #[must_use] 
+    pub const fn organization_scale(mut self, scale: OrganizationScale) -> Self {
         self.config.system.organization_scale = scale;
         self
     }
@@ -62,6 +65,7 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Set discovery method
+    #[must_use] 
     pub fn discovery_method(mut self, method: DiscoveryMethod) -> Self {
         self.config.discovery.default_method = method;
         self
@@ -89,14 +93,16 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Set system limits
-    pub fn max_workers(mut self, max_workers: u32) -> Self {
+    #[must_use] 
+    pub const fn max_workers(mut self, max_workers: u32) -> Self {
         // WorkerConfig uses worker_threads instead of max_workers
         self.config.system.workers.worker_threads = Some(max_workers as usize);
         self
     }
 
     /// Set connection timeout
-    pub fn connection_timeout(mut self, timeout_ms: u64) -> Self {
+    #[must_use] 
+    pub const fn connection_timeout(mut self, timeout_ms: u64) -> Self {
         // connection_timeout expects Duration
         self.config.system.timeouts.connection_timeout =
             std::time::Duration::from_millis(timeout_ms);
@@ -290,6 +296,7 @@ pub mod validation {
     }
 
     /// Check if configuration is suitable for production
+    #[must_use] 
     pub fn is_production_ready(config: &BiomeOSConfig) -> bool {
         let has_localhost = config
             .discovery

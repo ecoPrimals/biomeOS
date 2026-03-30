@@ -5,8 +5,8 @@
 //!
 //! Enables real-time niches (game engines, dashboards, audio pipelines, surgical VR)
 //! by running a graph at a fixed tick rate with:
-//! - **TickClock**: Fixed-timestep accumulator with frame-skip protection
-//! - **SessionState**: Start / Running / Paused / Stopping / Stopped lifecycle
+//! - **`TickClock`**: Fixed-timestep accumulator with frame-skip protection
+//! - **`SessionState`**: Start / Running / Paused / Stopping / Stopped lifecycle
 //! - **Feedback edges**: Node outputs feed back as next-tick inputs
 //! - **Budget enforcement**: Per-node time budgets with graceful fallback
 
@@ -49,6 +49,7 @@ pub struct TickClock {
 
 impl TickClock {
     /// Create a clock from a [`TickConfig`].
+    #[must_use] 
     pub fn from_config(config: &TickConfig) -> Self {
         let tick_duration = Duration::from_secs_f64(1.0 / config.target_hz);
         let max_accumulator = Duration::from_secs_f64(config.max_accumulator_ms / 1000.0);
@@ -62,6 +63,7 @@ impl TickClock {
     }
 
     /// Create a clock for a given target Hz.
+    #[must_use] 
     pub fn new(target_hz: f64) -> Self {
         Self::from_config(&TickConfig {
             target_hz,
@@ -107,16 +109,19 @@ impl TickClock {
     }
 
     /// Current tick count.
-    pub fn tick_count(&self) -> u64 {
+    #[must_use] 
+    pub const fn tick_count(&self) -> u64 {
         self.tick_count
     }
 
     /// Duration of one tick.
-    pub fn tick_duration(&self) -> Duration {
+    #[must_use] 
+    pub const fn tick_duration(&self) -> Duration {
         self.tick_duration
     }
 
     /// Target Hz this clock was configured for.
+    #[must_use] 
     pub fn target_hz(&self) -> f64 {
         1.0 / self.tick_duration.as_secs_f64()
     }
@@ -151,11 +156,11 @@ pub enum SessionState {
 impl std::fmt::Display for SessionState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SessionState::Starting => write!(f, "starting"),
-            SessionState::Running => write!(f, "running"),
-            SessionState::Paused => write!(f, "paused"),
-            SessionState::Stopping => write!(f, "stopping"),
-            SessionState::Stopped => write!(f, "stopped"),
+            Self::Starting => write!(f, "starting"),
+            Self::Running => write!(f, "running"),
+            Self::Paused => write!(f, "paused"),
+            Self::Stopping => write!(f, "stopping"),
+            Self::Stopped => write!(f, "stopped"),
         }
     }
 }
@@ -212,6 +217,7 @@ impl ContinuousExecutor {
     ///
     /// The graph's `tick` config is used for clock parameters.
     /// Falls back to 60 Hz defaults if no tick config is present.
+    #[must_use] 
     pub fn new(graph: DeploymentGraph, broadcaster: GraphEventBroadcaster) -> Self {
         let tick_config = Arc::new(graph.definition.tick.clone().unwrap_or_default());
 
@@ -246,11 +252,13 @@ impl ContinuousExecutor {
     }
 
     /// Subscribe to session state changes.
+    #[must_use] 
     pub fn state_receiver(&self) -> watch::Receiver<SessionState> {
         self.state_rx.clone()
     }
 
     /// Current session state.
+    #[must_use] 
     pub fn state(&self) -> SessionState {
         *self.state_rx.borrow()
     }

@@ -30,27 +30,27 @@ pub enum CapabilityTaxonomy {
     // Security & Cryptography
     // =============================================================================
     /// Encrypt/decrypt data
-    /// Typical provider: BearDog
+    /// Typical provider: `BearDog`
     Encryption,
 
     /// Cryptographic identity verification
-    /// Typical provider: BearDog
+    /// Typical provider: `BearDog`
     Identity,
 
     /// Trust evaluation (family membership, lineage)
-    /// Typical provider: BearDog
+    /// Typical provider: `BearDog`
     Trust,
 
     /// Key generation and management
-    /// Typical provider: BearDog
+    /// Typical provider: `BearDog`
     KeyManagement,
 
     /// HSM operations (hardware security module)
-    /// Typical provider: BearDog
+    /// Typical provider: `BearDog`
     HardwareSecurity,
 
     /// Secure tunneling (BTSP)
-    /// Typical provider: BearDog, Songbird
+    /// Typical provider: `BearDog`, Songbird
     SecureTunneling,
 
     // =============================================================================
@@ -72,7 +72,7 @@ pub enum CapabilityTaxonomy {
     /// Typical provider: Songbird
     Routing,
 
-    /// BirdSong genetic lineage NAT
+    /// `BirdSong` genetic lineage NAT
     /// Typical provider: Songbird
     GeneticRouting,
 
@@ -82,7 +82,7 @@ pub enum CapabilityTaxonomy {
 
     /// Distributed beacon mesh relay
     /// Typical provider: Songbird
-    /// Provides: mesh.status, mesh.find_path, mesh.announce, mesh.peers
+    /// Provides: mesh.status, `mesh.find_path`, mesh.announce, mesh.peers
     MeshRelay,
 
     /// UDP hole punching for symmetric NAT traversal
@@ -92,12 +92,12 @@ pub enum CapabilityTaxonomy {
 
     /// STUN protocol for NAT type detection
     /// Typical provider: Songbird
-    /// Provides: stun.discover, stun.detect_nat_type
+    /// Provides: stun.discover, `stun.detect_nat_type`
     StunClient,
 
     /// Sovereign onion service (lightweight .onion address generation)
-    /// Typical provider: Songbird (with BearDog crypto)
-    /// Provides: onion.create_service, onion.get_address, onion.connect
+    /// Typical provider: Songbird (with `BearDog` crypto)
+    /// Provides: `onion.create_service`, `onion.get_address`, onion.connect
     OnionService,
 
     /// Relay server for TURN-like fallback
@@ -132,27 +132,27 @@ pub enum CapabilityTaxonomy {
     // Storage & Data
     // =============================================================================
     /// Store and retrieve data
-    /// Typical provider: NestGate
+    /// Typical provider: `NestGate`
     DataStorage,
 
     /// Track data provenance and lineage
-    /// Typical provider: NestGate
+    /// Typical provider: `NestGate`
     Provenance,
 
     /// Compress data adaptively
-    /// Typical provider: NestGate
+    /// Typical provider: `NestGate`
     Compression,
 
     /// Replicate data across nodes
-    /// Typical provider: NestGate
+    /// Typical provider: `NestGate`
     Replication,
 
     /// Deduplication
-    /// Typical provider: NestGate
+    /// Typical provider: `NestGate`
     Deduplication,
 
     /// Content-addressed storage
-    /// Typical provider: NestGate
+    /// Typical provider: `NestGate`
     ContentAddressed,
 
     // =============================================================================
@@ -179,11 +179,11 @@ pub enum CapabilityTaxonomy {
     RealtimeUpdates,
 
     /// Stereoscopic 3D rendering (VR/AR)
-    /// Typical provider: petalTongue (behind VisualOutputCapability::ThreeD)
+    /// Typical provider: petalTongue (behind `VisualOutputCapability::ThreeD`)
     StereoRendering,
 
     /// Motion capture and 6DoF tracking (head, hand, tool)
-    /// Typical provider: petalTongue (MotionCaptureAdapter)
+    /// Typical provider: petalTongue (`MotionCaptureAdapter`)
     MotionTracking,
 
     /// Haptic feedback output (force feedback, vibration)
@@ -271,7 +271,7 @@ pub enum CapabilityTaxonomy {
     SporeDeployment,
 
     /// Genetic lineage management
-    /// Typical provider: biomeOS, BearDog
+    /// Typical provider: biomeOS, `BearDog`
     GeneticLineage,
 
     /// Niche (biome) deployment
@@ -673,7 +673,7 @@ impl CapabilityTaxonomy {
     /// Get known primal names from the capability taxonomy.
     ///
     /// **DEEP DEBT NOTE**: This is a bootstrap-time hint, NOT the source of truth.
-    /// In sovereign mode, primals self-register via capability.call() at runtime.
+    /// In sovereign mode, primals self-register via `capability.call()` at runtime.
     /// This list is ONLY used during initial bootstrap before capability discovery
     /// is available. Once Songbird is running, use `discovery.query` instead.
     ///

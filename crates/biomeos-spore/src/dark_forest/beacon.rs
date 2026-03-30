@@ -85,7 +85,7 @@ impl DarkForestBeacon {
         Self::new(caller, seed_path, node_id).await
     }
 
-    /// Create from a BearDog socket path (bootstrap only).
+    /// Create from a `BearDog` socket path (bootstrap only).
     ///
     /// Wraps the socket path in a `DirectBeardogCaller`. Prefer
     /// [`from_neural_api`](Self::from_neural_api) for production use.
@@ -262,7 +262,7 @@ impl DarkForestBeacon {
         Ok(Some(beacon))
     }
 
-    /// Hash a string using Blake3 (via BearDog)
+    /// Hash a string using Blake3 (via `BearDog`)
     async fn hash_string(&self, input: &str) -> SporeResult<String> {
         let input_b64 = BASE64.encode(input.as_bytes());
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Network Configuration for BiomeOS Init
+//! Network Configuration for `BiomeOS` Init
 //!
 //! Configures network interfaces during boot.
 
@@ -16,7 +16,8 @@ pub struct NetworkManager {
 
 impl NetworkManager {
     /// Creates a new network manager
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { configured: false }
     }
 
@@ -47,7 +48,8 @@ impl NetworkManager {
     }
 
     /// Checks if network is configured
-    pub fn is_configured(&self) -> bool {
+    #[must_use] 
+    pub const fn is_configured(&self) -> bool {
         self.configured
     }
 

@@ -105,9 +105,7 @@ async fn test_env_hint_discovery() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_via_env_hint_with("test_primal", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_via_env_hint_with("test_primal", Some(&env_overrides));
 
     // Result is None because socket doesn't exist
     assert!(result.is_none());
@@ -127,9 +125,7 @@ async fn test_env_hint_discovery_with_existing_socket() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_via_env_hint_with("test_primal", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_via_env_hint_with("test_primal", Some(&env_overrides));
 
     // Should find the socket even though it's not a real Unix socket
     assert!(result.is_some());
@@ -147,9 +143,7 @@ async fn test_env_hint_discovery_multiple_vars() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_via_env_hint_with("beardog", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_via_env_hint_with("beardog", Some(&env_overrides));
 
     assert!(result.is_some());
 }
@@ -159,9 +153,7 @@ async fn test_discover_endpoint_via_env_tcp() {
     let env_overrides: HashMap<String, String> =
         [("BEARDOG_TCP".to_string(), "127.0.0.1:9100".to_string())].into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("beardog", Some(&env_overrides));
 
     assert!(result.is_some());
     if let Some(TransportEndpoint::TcpSocket { host, port }) = result {
@@ -180,9 +172,7 @@ async fn test_discover_endpoint_via_env_endpoint_var() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("beardog", Some(&env_overrides));
 
     assert!(result.is_some());
 }
@@ -199,9 +189,7 @@ async fn test_discover_endpoint_via_env_unix() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("beardog", Some(&env_overrides));
 
     assert!(result.is_some());
 }
@@ -446,9 +434,7 @@ async fn test_discover_endpoint_via_env_tcp_port_only() {
     let env_overrides: HashMap<String, String> =
         [("BEARDOG_TCP".to_string(), "9100".to_string())].into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("beardog", Some(&env_overrides));
 
     // May or may not succeed depending on whether 127.0.0.1:9100 is listening
     // Just verify it doesn't panic - TCP verification happens in try_tcp_fallback
@@ -467,9 +453,7 @@ async fn test_discover_endpoint_via_env_biomeos_prefix() {
     )]
     .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("beardog", Some(&env_overrides));
 
     assert!(result.is_some());
 }
@@ -479,9 +463,7 @@ async fn test_discover_endpoint_via_env_primal_name_with_dash() {
     let env_overrides: HashMap<String, String> =
         [("MY_PRIMAL_TCP".to_string(), "127.0.0.1:9200".to_string())].into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery
-        .discover_endpoint_via_env_with("my-primal", Some(&env_overrides))
-        .await;
+    let result = discovery.discover_endpoint_via_env_with("my-primal", Some(&env_overrides));
 
     assert!(result.is_some());
     if let Some(TransportEndpoint::TcpSocket { host, port }) = result {

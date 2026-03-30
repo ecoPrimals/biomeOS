@@ -276,7 +276,7 @@ pub async fn run_tower(
     }
 
     tokio::spawn(async move {
-        if let Err(e) = health_monitor.start_monitoring().await {
+        if let Err(e) = health_monitor.start_monitoring() {
             error!("Health monitoring failed: {}", e);
         }
     });
@@ -352,7 +352,7 @@ pub async fn start_tower_legacy(
     }
 
     tokio::spawn(async move {
-        if let Err(e) = health_monitor.start_monitoring().await {
+        if let Err(e) = health_monitor.start_monitoring() {
             error!("Health monitoring failed: {}", e);
         }
     });
@@ -513,6 +513,7 @@ fn list_active_sockets(socket_dir: &Path) -> Vec<String> {
 }
 
 /// Format the list of known capabilities for display.
+#[must_use] 
 pub fn format_capabilities() -> Vec<(&'static str, &'static str)> {
     vec![
         ("Security", "Crypto, signing, encryption, key management"),
@@ -527,6 +528,7 @@ pub fn format_capabilities() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Standard environment lookup that delegates to `std::env::var`.
+#[must_use] 
 pub fn std_env_lookup(key: &str) -> Option<String> {
     std::env::var(key).ok()
 }

@@ -17,7 +17,7 @@ use tracing::{debug, warn};
 
 /// Songbird discovery response for a service
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SongbirdServiceInfo {
+pub struct SongbirdServiceInfo {
     pub id: String,
     pub name: String,
     pub address: String,
@@ -28,12 +28,12 @@ pub(crate) struct SongbirdServiceInfo {
 
 /// Songbird discovery response
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SongbirdDiscoveryResponse {
+pub struct SongbirdDiscoveryResponse {
     pub services: Vec<SongbirdServiceInfo>,
 }
 
-/// Convert SongbirdServiceInfo address/port to PrimalEndpoint (testable pure function)
-pub(crate) fn service_address_to_endpoint(service: &SongbirdServiceInfo) -> PrimalEndpoint {
+/// Convert `SongbirdServiceInfo` address/port to `PrimalEndpoint` (testable pure function)
+pub fn service_address_to_endpoint(service: &SongbirdServiceInfo) -> PrimalEndpoint {
     if service.address.starts_with('/') {
         PrimalEndpoint::UnixSocket {
             path: PathBuf::from(&service.address),
@@ -46,7 +46,7 @@ pub(crate) fn service_address_to_endpoint(service: &SongbirdServiceInfo) -> Prim
 }
 
 /// Layer 1: Physical Discovery via Songbird
-pub(crate) async fn layer1_physical_discovery_songbird(
+pub async fn layer1_physical_discovery_songbird(
     songbird: &UnixSocketClient,
     family_id: Option<&str>,
 ) -> FederationResult<Vec<DiscoveredPrimal>> {
@@ -111,7 +111,7 @@ pub(crate) async fn layer1_physical_discovery_songbird(
 }
 
 /// Layer 1: Physical Discovery via socket scanning (fallback)
-pub(crate) async fn layer1_physical_discovery_sockets() -> FederationResult<Vec<DiscoveredPrimal>> {
+pub async fn layer1_physical_discovery_sockets() -> FederationResult<Vec<DiscoveredPrimal>> {
     debug!("Layer 1: Physical Discovery (socket scan fallback)");
 
     let mut basic_discovery = PrimalDiscovery::new();

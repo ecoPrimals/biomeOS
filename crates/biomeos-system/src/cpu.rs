@@ -14,7 +14,7 @@ pub struct CpuInfo {
     pub model: String,
     /// Number of logical CPU cores
     pub cores: u32,
-    /// CPU architecture (e.g. "x86_64", "aarch64")
+    /// CPU architecture (e.g. "`x86_64`", "aarch64")
     pub architecture: String,
 }
 
@@ -30,7 +30,7 @@ pub struct LoadAverage {
 }
 
 /// Get CPU information
-pub(crate) fn get_cpu_info() -> BiomeResult<CpuInfo> {
+pub fn get_cpu_info() -> BiomeResult<CpuInfo> {
     // Try to read from /proc/cpuinfo on Linux
     if let Ok(cpuinfo) = fs::read_to_string("/proc/cpuinfo") {
         let mut model_name = "Unknown".to_string();
@@ -64,7 +64,7 @@ pub(crate) fn get_cpu_info() -> BiomeResult<CpuInfo> {
 /// Get current CPU usage via /proc/stat (pure Rust - ecoBin v3).
 ///
 /// Reads /proc/stat twice with a short delay and computes usage from jiffies.
-pub(crate) async fn get_cpu_usage() -> BiomeResult<f64> {
+pub async fn get_cpu_usage() -> BiomeResult<f64> {
     #[cfg(not(target_os = "linux"))]
     {
         let _ = tokio::time::Duration::from_millis(1);
@@ -155,7 +155,7 @@ fn parse_loadavg_proc_content(loadavg_str: &str) -> Option<LoadAverage> {
 }
 
 /// Get load average
-pub(crate) fn get_load_average() -> BiomeResult<LoadAverage> {
+pub fn get_load_average() -> BiomeResult<LoadAverage> {
     // Try to read from /proc/loadavg on Linux
     if let Ok(loadavg_str) = fs::read_to_string("/proc/loadavg") {
         if let Some(avg) = parse_loadavg_proc_content(&loadavg_str) {

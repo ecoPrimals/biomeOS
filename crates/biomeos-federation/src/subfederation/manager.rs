@@ -127,16 +127,19 @@ impl SubFederationManager {
     }
 
     /// Get a sub-federation by name
+    #[must_use] 
     pub fn get(&self, name: &str) -> Option<&SubFederation> {
         self.sub_federations.get(name)
     }
 
     /// Get all sub-federations
+    #[must_use] 
     pub fn all(&self) -> Vec<&SubFederation> {
         self.sub_federations.values().collect()
     }
 
     /// Get sub-federations a node belongs to
+    #[must_use] 
     pub fn for_node(&self, node_id: &str) -> Vec<&SubFederation> {
         self.sub_federations
             .values()
@@ -145,6 +148,7 @@ impl SubFederationManager {
     }
 
     /// Check if a node has access to a capability in any sub-federation
+    #[must_use] 
     pub fn has_access(&self, node_id: &str, capability: &Capability) -> bool {
         self.sub_federations
             .values()

@@ -68,11 +68,13 @@ impl PrimalClient {
     }
 
     /// Get the primal name
+    #[must_use] 
     pub fn name(&self) -> &str {
         &self.primal_name
     }
 
     /// Check if the primal socket is available
+    #[must_use] 
     pub fn is_available(&self) -> bool {
         self.client.is_available()
     }
@@ -158,6 +160,7 @@ impl PrimalConnections {
     }
 
     /// Get a primal client by name
+    #[must_use] 
     pub fn get(&self, name: &str) -> Option<&PrimalClient> {
         self.clients.get(name)
     }
@@ -166,12 +169,14 @@ impl PrimalConnections {
     ///
     /// Uses CapabilityTaxonomy to resolve capability → primal name, then looks up
     /// in the discovered registry. No hardcoded primal names.
+    #[must_use] 
     pub fn get_by_capability(&self, capability: &str) -> Option<&PrimalClient> {
         biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
             .and_then(|name| self.clients.get(name))
     }
 
     /// Count available primals
+    #[must_use] 
     pub fn count_available(&self) -> usize {
         self.clients.len()
     }
@@ -190,6 +195,7 @@ impl PrimalConnections {
     #[deprecated(
         note = "use get_by_capability(\"ui\") or get_by_capability(\"visualization\") instead"
     )]
+    #[must_use] 
     pub fn petaltongue(&self) -> Option<&PetalTongueClient> {
         self.get_by_capability("ui")
             .or_else(|| self.get_by_capability("visualization"))
@@ -199,6 +205,7 @@ impl PrimalConnections {
     #[deprecated(
         note = "use get_by_capability(\"discovery\") or get_by_capability(\"network\") instead"
     )]
+    #[must_use] 
     pub fn songbird(&self) -> Option<&SongbirdClient> {
         self.get_by_capability("discovery")
             .or_else(|| self.get_by_capability("network"))
@@ -208,6 +215,7 @@ impl PrimalConnections {
     #[deprecated(
         note = "use get_by_capability(\"crypto\") or get_by_capability(\"encryption\") instead"
     )]
+    #[must_use] 
     pub fn beardog(&self) -> Option<&BearDogClient> {
         self.get_by_capability("encryption")
             .or_else(|| self.get_by_capability("security"))
@@ -215,18 +223,21 @@ impl PrimalConnections {
     }
     /// NestGate storage connection (capability: storage)
     #[deprecated(note = "use get_by_capability(\"storage\") instead")]
+    #[must_use] 
     pub fn nestgate(&self) -> Option<&NestGateClient> {
         self.get_by_capability("storage")
             .or_else(|| self.get(biomeos_types::primal_names::NESTGATE))
     }
     /// ToadStool compute/GPU connection (capability: compute)
     #[deprecated(note = "use get_by_capability(\"compute\") instead")]
+    #[must_use] 
     pub fn toadstool(&self) -> Option<&ToadStoolClient> {
         self.get_by_capability("compute")
             .or_else(|| self.get(biomeos_types::primal_names::TOADSTOOL))
     }
     /// Squirrel AI connection (capability: ai)
     #[deprecated(note = "use get_by_capability(\"ai\") instead")]
+    #[must_use] 
     pub fn squirrel(&self) -> Option<&SquirrelClient> {
         self.get_by_capability("ai")
             .or_else(|| self.get(biomeos_types::primal_names::SQUIRREL))

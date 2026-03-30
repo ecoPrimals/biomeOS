@@ -273,7 +273,7 @@ pub async fn connect_to_peer(
     })
 }
 
-/// Detect our NAT type via Neural API → stun.detect_nat_type
+/// Detect our NAT type via Neural API → `stun.detect_nat_type`
 async fn detect_nat_type(client: &AtomicClient) -> NatType {
     match client
         .call(
@@ -300,7 +300,7 @@ async fn detect_nat_type(client: &AtomicClient) -> NatType {
     }
 }
 
-/// Probe our port allocation pattern via Neural API → stun.probe_port_pattern
+/// Probe our port allocation pattern via Neural API → `stun.probe_port_pattern`
 async fn probe_port_pattern(client: &AtomicClient) -> PortPattern {
     match client
         .call(

@@ -4,7 +4,7 @@
 //! Family ID Discovery Module
 //!
 //! Discovers the family ID for a biomeOS deployment through multiple sources:
-//! 1. `.family.seed` file (canonical for LiveSpore)
+//! 1. `.family.seed` file (canonical for `LiveSpore`)
 //! 2. `FAMILY_ID` environment variable
 //! 3. `BIOMEOS_FAMILY_ID` environment variable
 //!
@@ -54,10 +54,10 @@ pub enum FamilySource {
 impl std::fmt::Display for FamilySource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FamilySource::SeedFile(path) => write!(f, "seed file ({})", path.display()),
-            FamilySource::FamilyIdEnv => write!(f, "FAMILY_ID env var"),
-            FamilySource::BiomeosEnv => write!(f, "BIOMEOS_FAMILY_ID env var"),
-            FamilySource::Default => write!(f, "default (development)"),
+            Self::SeedFile(path) => write!(f, "seed file ({})", path.display()),
+            Self::FamilyIdEnv => write!(f, "FAMILY_ID env var"),
+            Self::BiomeosEnv => write!(f, "BIOMEOS_FAMILY_ID env var"),
+            Self::Default => write!(f, "default (development)"),
         }
     }
 }
@@ -69,11 +69,11 @@ pub struct FamilyDiscoveryConfig {
     pub seed_file_paths: Vec<PathBuf>,
     /// Whether to allow default fallback
     pub allow_default: bool,
-    /// Default family ID (only used if allow_default is true)
+    /// Default family ID (only used if `allow_default` is true)
     pub default_family: String,
-    /// Override for FAMILY_ID env var (when Some, skips env lookup)
+    /// Override for `FAMILY_ID` env var (when Some, skips env lookup)
     pub family_id_override: Option<String>,
-    /// Override for BIOMEOS_FAMILY_ID env var (when Some, skips env lookup)
+    /// Override for `BIOMEOS_FAMILY_ID` env var (when Some, skips env lookup)
     pub biomeos_family_id_override: Option<String>,
 }
 
@@ -114,10 +114,11 @@ impl Default for FamilyDiscoveryConfig {
 /// Discover family ID from available sources
 ///
 /// Priority:
-/// 1. FAMILY_ID env var (explicit override)
-/// 2. BIOMEOS_FAMILY_ID env var
+/// 1. `FAMILY_ID` env var (explicit override)
+/// 2. `BIOMEOS_FAMILY_ID` env var
 /// 3. .family.seed file in configured paths
 /// 4. Default (if allowed)
+#[must_use] 
 pub fn discover_family() -> Option<DiscoveredFamily> {
     discover_family_with_config(&FamilyDiscoveryConfig::default())
 }
@@ -198,7 +199,7 @@ pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<Dis
 /// - Bytes 0-31: Genesis seed (shared by family)
 /// - Bytes 32-63: Node key (unique per node)
 ///
-/// Family ID = hex(genesis_seed[0..8]) = 16 hex chars
+/// Family ID = `hex(genesis_seed`[0..8]) = 16 hex chars
 fn read_family_seed(path: &Path) -> Option<DiscoveredFamily> {
     if !path.exists() {
         debug!("Seed file not found: {}", path.display());
@@ -247,16 +248,19 @@ fn read_family_seed(path: &Path) -> Option<DiscoveredFamily> {
 }
 
 /// Get family ID string, falling back to default if not found
+#[must_use] 
 pub fn get_family_id() -> String {
     discover_family().map_or_else(|| "default".to_string(), |f| f.id)
 }
 
 /// Get family ID with custom configuration
+#[must_use] 
 pub fn get_family_id_with_config(config: &FamilyDiscoveryConfig) -> String {
     discover_family_with_config(config).map_or_else(|| "default".to_string(), |f| f.id)
 }
 
 /// Get family ID from environment or default
+#[must_use] 
 pub fn get_family_id_from_env() -> String {
     get_family_id_from_env_with(None, None, false)
 }

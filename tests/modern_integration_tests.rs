@@ -34,7 +34,7 @@ mod manager_discovery_integration {
             ])
             .build();
 
-        let manager = UniversalBiomeOSManager::new(config).await?;
+        let manager = UniversalBiomeOSManager::new(config)?;
 
         // Test that manager properly delegates to discovery service
         let static_results = manager.discover_network_scan().await?;
@@ -126,7 +126,7 @@ mod manager_discovery_integration {
         let registered = manager.get_registered_primals().await;
         assert_eq!(registered.len(), 5);
 
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         TestAssertions::assert_system_healthy(&health);
 
         Ok(())
@@ -201,10 +201,10 @@ mod configuration_integration {
         ];
 
         for config in configs {
-            let manager = UniversalBiomeOSManager::new(config).await?;
+            let manager = UniversalBiomeOSManager::new(config)?;
 
             // Each configuration should produce a working manager
-            let health = manager.get_system_health().await;
+            let health = manager.get_system_health();
             TestAssertions::assert_system_healthy(&health);
         }
 
@@ -215,10 +215,10 @@ mod configuration_integration {
     async fn test_config_environment_effects() -> Result<()> {
         // Test with default config (environments are configured at build level now)
         let config = TestConfigBuilder::new().build();
-        let manager = UniversalBiomeOSManager::new(config).await?;
+        let manager = UniversalBiomeOSManager::new(config)?;
 
         // Manager should work regardless of environment
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         TestAssertions::assert_system_healthy(&health);
 
         Ok(())
@@ -361,7 +361,7 @@ mod error_resilience_integration {
         }
 
         // System should remain functional despite unhealthy primals
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         TestAssertions::assert_system_healthy(&health); // Should handle mixed health states
 
         let registered = manager.get_registered_primals().await;
@@ -389,7 +389,7 @@ mod error_resilience_integration {
         }
 
         // System should remain healthy after timeout
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         TestAssertions::assert_system_healthy(&health);
 
         Ok(())
@@ -437,7 +437,7 @@ mod error_resilience_integration {
         }
 
         // System should remain stable
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         TestAssertions::assert_system_healthy(&health);
 
         Ok(())
@@ -509,7 +509,7 @@ mod performance_integration {
                         manager_clone.register_primal(primal).await.unwrap();
                     }
                     1 => {
-                        let _health = manager_clone.get_system_health().await;
+                        let _health = manager_clone.get_system_health();
                     }
                     2 => {
                         let _registered = manager_clone.get_registered_primals().await;
@@ -539,7 +539,7 @@ mod performance_integration {
         assert_eq!(results.len(), concurrent_ops);
 
         // System should remain healthy
-        let health = manager.get_system_health().await;
+        let health = manager.get_system_health();
         TestAssertions::assert_system_healthy(&health);
 
         Ok(())

@@ -3,7 +3,7 @@
 
 //! Test Assertions
 //!
-//! Custom assertions for BiomeOS testing that provide better error messages.
+//! Custom assertions for `BiomeOS` testing that provide better error messages.
 
 /// Assert that a Result is Ok and return the value
 #[macro_export]

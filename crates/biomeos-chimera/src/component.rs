@@ -62,11 +62,11 @@ pub struct ArraySpec {
     pub max: u32,
 }
 
-fn default_min_instances() -> u32 {
+const fn default_min_instances() -> u32 {
     1
 }
 
-fn default_max_instances() -> u32 {
+const fn default_max_instances() -> u32 {
     16
 }
 
@@ -106,7 +106,7 @@ impl Component {
 
     /// Enable array mode
     #[must_use]
-    pub fn with_array(mut self, min: u32, max: u32) -> Self {
+    pub const fn with_array(mut self, min: u32, max: u32) -> Self {
         self.array = Some(ArraySpec {
             enabled: true,
             min,

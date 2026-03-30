@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BTSP (BearDog Transport Security Protocol) Coordination
+//! BTSP (`BearDog` Transport Security Protocol) Coordination
 //!
-//! BiomeOS coordinates BTSP tunnel creation between any security primal
+//! `BiomeOS` coordinates BTSP tunnel creation between any security primal
 //! and any discovery primal in pure Rust.
 //!
 //! # Agnostic Design
@@ -12,7 +12,7 @@
 //! - `SecurityProvider` - Provides BTSP tunnel creation
 //! - `DiscoveryProvider` - Provides transport registration
 //!
-//! It doesn't care if the security provider is BearDog or something else!
+//! It doesn't care if the security provider is `BearDog` or something else!
 
 use super::{
     DiscoveryProvider, LineageProof, SecurityProvider, TransportHealth, TunnelHealth, TunnelInfo,
@@ -58,7 +58,7 @@ impl BtspCoordinator {
     ///
     /// # Coordination Flow
     ///
-    /// 1. Request tunnel from security provider (e.g., BearDog)
+    /// 1. Request tunnel from security provider (e.g., `BearDog`)
     /// 2. Register endpoints with discovery provider (e.g., Songbird)
     /// 3. Verify tunnel is operational
     /// 4. Return tunnel information
@@ -179,13 +179,13 @@ impl BtspCoordinator {
         tracing::info!("Attempting graceful recovery for tunnel: {}", tunnel_id);
 
         // Diagnose the issue
-        let degradation_cause = self.diagnose_degradation(tunnel_id).await?;
+        let degradation_cause = self.diagnose_degradation(tunnel_id)?;
 
         // Apply appropriate recovery strategy
         match degradation_cause {
             DegradationCause::TransportLatency => {
                 tracing::info!("Recovery: Optimizing transport path");
-                self.optimize_transport_path(tunnel_id).await?;
+                self.optimize_transport_path(tunnel_id)?;
             }
         }
 
@@ -205,7 +205,7 @@ impl BtspCoordinator {
     }
 
     /// Diagnose why a tunnel is degraded
-    async fn diagnose_degradation(&self, _tunnel_id: &str) -> Result<DegradationCause> {
+    fn diagnose_degradation(&self, _tunnel_id: &str) -> Result<DegradationCause> {
         // In production, this would check:
         // - Key expiration times
         // - Transport latency metrics
@@ -215,13 +215,13 @@ impl BtspCoordinator {
     }
 
     /// Optimize the transport path
-    async fn optimize_transport_path(&self, _tunnel_id: &str) -> Result<()> {
+    fn optimize_transport_path(&self, _tunnel_id: &str) -> Result<()> {
         // In production: query alternative routes, select best path
         tracing::debug!("Transport path optimized");
         Ok(())
     }
 
-    fn compute_overall_status(
+    const fn compute_overall_status(
         security: &TunnelHealth,
         transport: &TransportHealth,
     ) -> super::HealthStatus {

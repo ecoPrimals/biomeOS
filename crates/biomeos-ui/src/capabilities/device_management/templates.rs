@@ -26,6 +26,7 @@ use super::types::{NicheTemplate, PrimalRole, ResourceRequirements};
 ///
 /// Returns the standard templates that come with biomeOS.
 /// These can be extended by loading additional templates from config.
+#[must_use] 
 pub fn builtin_templates() -> Vec<NicheTemplate> {
     vec![tower_template(), node_template()]
 }
@@ -45,6 +46,7 @@ pub fn builtin_templates() -> Vec<NicheTemplate> {
 /// Lightweight footprint suitable for edge devices:
 /// - 2 CPU cores, 512MB RAM, 1GB storage
 /// - No GPU required
+#[must_use] 
 pub fn tower_template() -> NicheTemplate {
     NicheTemplate {
         id: "tower".to_string(),
@@ -92,6 +94,7 @@ pub fn tower_template() -> NicheTemplate {
 /// Heavier footprint for compute workloads:
 /// - 4 CPU cores, 2GB RAM, 10GB storage
 /// - GPU required
+#[must_use] 
 pub fn node_template() -> NicheTemplate {
     NicheTemplate {
         id: "node".to_string(),

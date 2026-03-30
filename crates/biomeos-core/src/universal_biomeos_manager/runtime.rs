@@ -233,7 +233,7 @@ impl UniversalBiomeOSManager {
         }));
 
         // System health
-        let health_report = self.get_system_health().await;
+        let health_report = self.get_system_health();
         result.insert(
             "health".to_string(),
             serde_json::json!(health_report.health),
@@ -364,9 +364,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_service_logs_service_not_found() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager
             .get_service_logs("nonexistent", false, Some(10), None)
@@ -378,9 +377,8 @@ mod tests {
     #[tokio::test]
     async fn test_exec_in_service_service_not_found() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager
             .exec_in_service(
@@ -396,9 +394,8 @@ mod tests {
     #[tokio::test]
     async fn test_monitor_service_found() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal_info("mon-1", "monitor-svc", "unix:///tmp/mon.sock");
         manager.register_primal(primal).await.expect("register");
@@ -418,9 +415,8 @@ mod tests {
     #[tokio::test]
     async fn test_monitor_service_not_found() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager
             .monitor_service("nonexistent")
@@ -432,9 +428,8 @@ mod tests {
     #[tokio::test]
     async fn test_monitor_service_by_id() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal_info("id-1", "by-id-svc", "unix:///tmp/id.sock");
         manager.register_primal(primal).await.expect("register");
@@ -449,9 +444,8 @@ mod tests {
     #[tokio::test]
     async fn test_monitor_system() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager.monitor_system().await.expect("monitor");
         assert!(result.contains_key("system"));
@@ -467,9 +461,8 @@ mod tests {
     #[tokio::test]
     async fn test_monitor_system_with_primals() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal_info("sys-1", "sys-svc", "unix:///tmp/sys.sock");
         manager.register_primal(primal).await.expect("register");
@@ -486,9 +479,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_system_status() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let result = manager.get_system_status().await.expect("status");
         assert_eq!(
@@ -504,9 +496,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_system_status_with_primals() {
         let manager = UniversalBiomeOSManager::with_default_config()
-            .await
             .expect("manager");
-        manager.initialize().await.expect("init");
+        manager.initialize().expect("init");
 
         let primal = test_primal_info("stat-1", "stat-svc", "unix:///tmp/stat.sock");
         manager.register_primal(primal).await.expect("register");

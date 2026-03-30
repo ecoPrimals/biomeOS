@@ -7,7 +7,7 @@
 //!
 //! This client provides convenience methods for common primal operations
 //! like health checks, command execution, and capability queries.
-//! Extracted from atomic_client.rs to keep files under 1000 lines.
+//! Extracted from `atomic_client.rs` to keep files under 1000 lines.
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -124,21 +124,25 @@ impl AtomicPrimalClient {
     }
 
     /// Get the primal name
+    #[must_use] 
     pub fn primal_name(&self) -> &str {
         &self.primal_name
     }
 
     /// Get direct access to the atomic client
-    pub fn atomic_client(&self) -> &AtomicClient {
+    #[must_use] 
+    pub const fn atomic_client(&self) -> &AtomicClient {
         &self.client
     }
 
     /// Get the transport endpoint
+    #[must_use] 
     pub fn endpoint(&self) -> &TransportEndpoint {
         self.client.endpoint()
     }
 
     /// Check if the primal is available
+    #[must_use] 
     pub fn is_available(&self) -> bool {
         self.client.is_available()
     }

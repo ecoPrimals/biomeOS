@@ -33,9 +33,9 @@ pub enum MetricsFormat {
     Prometheus,
     /// JSON format
     Json,
-    /// StatsD protocol
+    /// `StatsD` protocol
     StatsD,
-    /// InfluxDB line protocol
+    /// `InfluxDB` line protocol
     InfluxDB,
     /// Custom format
     Custom(String),

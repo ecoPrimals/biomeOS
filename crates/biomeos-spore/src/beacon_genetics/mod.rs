@@ -16,7 +16,7 @@
 //! - ✅ Orchestration of multi-step workflows
 //!
 //! Primals provide primitives via capability.call:
-//! - BearDog: `beacon.encrypt`, `beacon.decrypt`, `beacon.generate`
+//! - `BearDog`: `beacon.encrypt`, `beacon.decrypt`, `beacon.generate`
 //! - Nestgate: `storage.write`, `storage.read`
 //! - Songbird: `network.send`, `network.receive`
 //!
@@ -43,9 +43,9 @@
 //!
 //! ## Module Structure (Smart Refactor)
 //!
-//! - `types` - Core data types (BeaconId, MeetingRecord, etc.)
-//! - `capability` - CapabilityCaller trait and NeuralAPI implementation
-//! - `manager` - BeaconGeneticsManager orchestration
+//! - `types` - Core data types (`BeaconId`, `MeetingRecord`, etc.)
+//! - `capability` - `CapabilityCaller` trait and `NeuralAPI` implementation
+//! - `manager` - `BeaconGeneticsManager` orchestration
 //!
 //! AGPL-3.0-only License
 

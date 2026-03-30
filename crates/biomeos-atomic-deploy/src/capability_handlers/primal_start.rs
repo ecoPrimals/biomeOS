@@ -227,7 +227,7 @@ fn spawn_output_relays(child: &mut tokio::process::Child, primal_name: &str) {
 }
 
 /// Wait for socket with timeout
-pub(crate) async fn wait_for_socket_with_timeout(socket_path: &str, attempts: u32) -> bool {
+pub async fn wait_for_socket_with_timeout(socket_path: &str, attempts: u32) -> bool {
     for attempt in 1..=attempts {
         if PathBuf::from(socket_path).exists() {
             debug!("   Socket available after {}00ms", attempt);

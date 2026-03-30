@@ -17,8 +17,8 @@
 //! ## Principles
 //!
 //! 1. **No Hardcoding**: Socket paths discovered at runtime
-//! 2. **XDG Compliance**: Respects XDG_RUNTIME_DIR when available
-//! 3. **Family-Based Isolation**: Sockets namespaced by family_id
+//! 2. **XDG Compliance**: Respects `XDG_RUNTIME_DIR` when available
+//! 3. **Family-Based Isolation**: Sockets namespaced by `family_id`
 //! 4. **Capability Discovery**: Find primals by what they do, not where they are
 //! 5. **Platform Agnostic**: Works across Linux, macOS, Android, and other systems
 //! 6. **Graceful Fallback**: Tier 1 (Unix/Abstract) → Tier 2 (TCP) automatically
@@ -32,7 +32,7 @@
 //!
 //! 1. Environment variable hint (e.g., `BEARDOG_SOCKET`, `BEARDOG_TCP`)
 //! 2. Capability-first sockets (e.g., `security.sock`, `crypto.sock`)
-//! 3. XDG_RUNTIME_DIR (e.g., `/run/user/1000/biomeos/beardog-1894e909e454.sock`)
+//! 3. `XDG_RUNTIME_DIR` (e.g., `/run/user/1000/biomeos/beardog-1894e909e454.sock`)
 //! 4. Abstract socket (Android: `@biomeos_beardog_1894e909e454`)
 //! 5. Family-scoped /tmp (e.g., `/tmp/beardog-1894e909e454.sock`)
 //! 6. Socket registry (`$XDG_RUNTIME_DIR/biomeos/socket-registry.json`)
@@ -92,7 +92,7 @@ use std::path::PathBuf;
 
 /// Discover socket for a primal (convenience function)
 ///
-/// Uses default family_id from FAMILY_ID or BIOMEOS_FAMILY_ID environment.
+/// Uses default `family_id` from `FAMILY_ID` or `BIOMEOS_FAMILY_ID` environment.
 pub async fn discover_socket(primal_name: &str) -> Option<PathBuf> {
     let family_id = env::var("FAMILY_ID")
         .or_else(|_| env::var("BIOMEOS_FAMILY_ID"))
@@ -105,6 +105,7 @@ pub async fn discover_socket(primal_name: &str) -> Option<PathBuf> {
 /// Build socket path for a primal (convenience function)
 ///
 /// Deterministic path building for primals to register their own sockets.
+#[must_use] 
 pub fn build_socket(primal_name: &str, family_id: &str) -> PathBuf {
     let discovery = SocketDiscovery::new(family_id);
     discovery.build_socket_path(primal_name)
@@ -124,7 +125,7 @@ pub async fn discover_endpoint(primal_name: &str) -> Option<TransportEndpoint> {
 
 /// Discover transport endpoint by capability (convenience function)
 ///
-/// **WateringHole standard**: No hardcoded primal names. Use capability constants
+/// **`WateringHole` standard**: No hardcoded primal names. Use capability constants
 /// from `biomeos_types::constants::capability` (e.g., `capability::CRYPTO`).
 pub async fn discover_endpoint_by_capability(capability: &str) -> Option<TransportEndpoint> {
     let family_id = env::var("FAMILY_ID")

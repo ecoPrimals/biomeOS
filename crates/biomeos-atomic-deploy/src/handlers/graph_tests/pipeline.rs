@@ -31,7 +31,7 @@ async fn test_execute_pipeline_graph_not_found() {
         .execute_pipeline(&params)
         .await
         .expect_err("should fail");
-    assert!(err.to_string().contains("Graph file not found"));
+    assert!(err.to_string().contains("not found"));
 }
 
 #[tokio::test]

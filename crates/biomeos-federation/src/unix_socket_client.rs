@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Unix socket JSON-RPC client for BearDog
+//! Unix socket JSON-RPC client for `BearDog`
 //!
 //! Implements a simple JSON-RPC 2.0 client over Unix sockets.
 
@@ -29,6 +29,7 @@ impl UnixSocketClient {
     }
 
     /// Check if the socket exists
+    #[must_use] 
     pub fn is_available(&self) -> bool {
         self.socket_path.exists()
     }

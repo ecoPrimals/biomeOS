@@ -58,7 +58,7 @@ pub async fn download_genome(Path(id): Path<String>) -> Result<Json<DownloadResp
 pub async fn list_genomes() -> Result<Json<ListGenomesResponse>, StatusCode> {
     info!("Listing all genomes");
 
-    match genome_state().list_all().await {
+    match genome_state().list_all() {
         Ok(genomes) => {
             let summaries: Vec<GenomeSummary> = genomes
                 .iter()

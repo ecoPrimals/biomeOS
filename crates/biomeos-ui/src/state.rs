@@ -224,6 +224,7 @@ pub struct TopologyEdge {
 
 impl UIState {
     /// Create a new empty UI state
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
@@ -255,16 +256,19 @@ impl UIState {
     }
 
     /// Get device by ID
+    #[must_use] 
     pub fn get_device(&self, id: &str) -> Option<&Device> {
         self.devices.get(id)
     }
 
     /// Get primal by ID
+    #[must_use] 
     pub fn get_primal(&self, id: &str) -> Option<&PrimalInfo> {
         self.primals.get(id)
     }
 
     /// Get assignment for device
+    #[must_use] 
     pub fn get_assignment(&self, device_id: &str) -> Option<&Assignment> {
         self.assignments.get(device_id)
     }

@@ -31,10 +31,11 @@ pub enum IsolationLevel {
 
 impl IsolationLevel {
     /// Check if this isolation level allows auto-approval
-    pub fn allows_auto_approval(&self) -> bool {
+    #[must_use] 
+    pub const fn allows_auto_approval(&self) -> bool {
         matches!(
             self,
-            IsolationLevel::None | IsolationLevel::Low | IsolationLevel::Medium
+            Self::None | Self::Low | Self::Medium
         )
     }
 }
@@ -66,7 +67,7 @@ pub struct SubFederation {
     /// Metadata
     pub metadata: HashMap<String, String>,
 
-    /// BearDog encryption key ID (managed by BearDog, not stored here)
+    /// `BearDog` encryption key ID (managed by `BearDog`, not stored here)
     pub encryption_key_ref: Option<String>,
 }
 
@@ -99,6 +100,7 @@ impl SubFederation {
     }
 
     /// Check if a node is a member of this sub-federation
+    #[must_use] 
     pub fn is_member(&self, node_id: &str) -> bool {
         self.members.iter().any(|pattern| {
             if pattern.contains('*') {
@@ -154,7 +156,7 @@ impl SubFederation {
         self.members.retain(|id| id != node_id);
     }
 
-    /// Set BearDog encryption key reference
+    /// Set `BearDog` encryption key reference
     pub fn set_encryption_key_ref(&mut self, key_ref: String) {
         self.encryption_key_ref = Some(key_ref);
     }

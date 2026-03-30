@@ -77,10 +77,10 @@ pub enum ProtocolMode {
 impl std::fmt::Display for ProtocolMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ProtocolMode::JsonRpc => write!(f, "JSON-RPC"),
-            ProtocolMode::Tarpc => write!(f, "tarpc"),
-            ProtocolMode::Hybrid => write!(f, "Hybrid"),
-            ProtocolMode::Degraded => write!(f, "Degraded"),
+            Self::JsonRpc => write!(f, "JSON-RPC"),
+            Self::Tarpc => write!(f, "tarpc"),
+            Self::Hybrid => write!(f, "Hybrid"),
+            Self::Degraded => write!(f, "Degraded"),
         }
     }
 }
@@ -142,19 +142,22 @@ impl PrimalProtocolState {
     }
 
     /// Set the tarpc socket path
+    #[must_use] 
     pub fn with_tarpc_socket(mut self, socket: PathBuf) -> Self {
         self.tarpc_socket = Some(socket);
         self
     }
 
     /// Set capabilities
+    #[must_use] 
     pub fn with_capabilities(mut self, capabilities: Vec<String>) -> Self {
         self.capabilities = capabilities;
         self
     }
 
     /// Check if tarpc is available for this primal
-    pub fn tarpc_available(&self) -> bool {
+    #[must_use] 
+    pub const fn tarpc_available(&self) -> bool {
         self.tarpc_socket.is_some()
     }
 
@@ -169,12 +172,12 @@ impl PrimalProtocolState {
     }
 
     /// Record a tarpc failure
-    pub fn record_tarpc_failure(&mut self) {
+    pub const fn record_tarpc_failure(&mut self) {
         self.tarpc_failure_count += 1;
     }
 
     /// Reset tarpc failure count (after successful call)
-    pub fn reset_tarpc_failures(&mut self) {
+    pub const fn reset_tarpc_failures(&mut self) {
         self.tarpc_failure_count = 0;
     }
 }
@@ -221,6 +224,7 @@ impl ConnectionMetrics {
     }
 
     /// Get error rate (0.0 - 1.0)
+    #[must_use] 
     pub fn error_rate(&self) -> f64 {
         if self.request_count == 0 {
             0.0
@@ -286,7 +290,7 @@ impl ConnectionState {
     }
 
     /// Fallback to JSON-RPC
-    pub fn fallback(&mut self) {
+    pub const fn fallback(&mut self) {
         self.protocol = ProtocolMode::Degraded;
         self.fallback_count += 1;
     }
@@ -529,7 +533,8 @@ pub struct ProtocolSummary {
 
 impl ProtocolSummary {
     /// Total number of connections
-    pub fn total(&self) -> usize {
+    #[must_use] 
+    pub const fn total(&self) -> usize {
         self.json_rpc + self.tarpc + self.hybrid + self.degraded
     }
 }

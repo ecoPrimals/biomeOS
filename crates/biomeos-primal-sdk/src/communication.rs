@@ -73,7 +73,8 @@ impl PrimalClient {
     }
 
     /// Create client for a discovered primal
-    pub fn new(primal: DiscoveredPrimal) -> Self {
+    #[must_use] 
+    pub const fn new(primal: DiscoveredPrimal) -> Self {
         Self {
             primal,
             timeout: Duration::from_secs(30),
@@ -81,7 +82,8 @@ impl PrimalClient {
     }
 
     /// Set request timeout
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+    #[must_use] 
+    pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
     }
@@ -142,16 +144,17 @@ impl PrimalClient {
     }
 
     /// Get primal information
-    pub fn primal(&self) -> &DiscoveredPrimal {
+    #[must_use] 
+    pub const fn primal(&self) -> &DiscoveredPrimal {
         &self.primal
     }
 }
 
-/// Helper for creating secure tunnels via BearDog BTSP
+/// Helper for creating secure tunnels via `BearDog` BTSP
 pub struct SecureTunnel;
 
 impl SecureTunnel {
-    /// Establish secure tunnel to another primal via BearDog
+    /// Establish secure tunnel to another primal via `BearDog`
     ///
     /// # Example
     ///

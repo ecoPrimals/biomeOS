@@ -7,9 +7,9 @@
 //!
 //! ## Deep Debt Evolution (Feb 11, 2026)
 //!
-//! - BEFORE: Direct `UnixStream` to BearDog (raw sync I/O, hardcoded primal name)
+//! - BEFORE: Direct `UnixStream` to `BearDog` (raw sync I/O, hardcoded primal name)
 //! - AFTER: Neural API `capability.call` routing (async, capability-based discovery)
-//! - No knowledge of BearDog or any specific primal
+//! - No knowledge of `BearDog` or any specific primal
 //! - Uses `NeuralApiClient` for all security provider calls
 //! - Removed raw `std::os::unix::net::UnixStream` — pure async throughout
 
@@ -60,7 +60,7 @@ pub struct IdentityResponse {
 /// Discover Neural API socket for trust operations
 ///
 /// Deep Debt: Runtime discovery, not hardcoded.
-/// Uses shared beacon_verification discovery logic.
+/// Uses shared `beacon_verification` discovery logic.
 fn discover_neural_api_socket() -> Option<String> {
     let family_id = biomeos_core::family_discovery::get_family_id();
     crate::beacon_verification::discover_neural_api_socket(&family_id)
@@ -70,7 +70,7 @@ fn discover_neural_api_socket() -> Option<String> {
 ///
 /// Deep Debt Evolution: Replaces the raw `UnixStream` `call_beardog()`.
 /// Routes through Neural API `capability.call` for semantic discovery.
-/// Falls back to direct AtomicClient if Neural API is unavailable.
+/// Falls back to direct `AtomicClient` if Neural API is unavailable.
 async fn call_security_provider(
     method: &str,
     params: serde_json::Value,

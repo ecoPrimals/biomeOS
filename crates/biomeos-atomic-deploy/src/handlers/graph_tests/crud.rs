@@ -80,8 +80,8 @@ async fn test_list_nonexistent_directory() {
     let bad_path = temp.path().join("nonexistent_subdir");
     let (handler, _) = make_handler(&bad_path);
 
-    let err = handler.list().await.expect_err("should fail");
-    assert!(err.to_string().contains("Failed to read graphs directory"));
+    let result = handler.list().await.expect("list should succeed even with missing dirs");
+    assert!(result.as_array().expect("array").is_empty());
 }
 
 #[tokio::test]
@@ -189,7 +189,7 @@ async fn test_get_graph_not_found() {
 
     let params = Some(json!({"graph_id": "nonexistent_graph"}));
     let err = handler.get(&params).await.expect_err("should fail");
-    assert!(err.to_string().contains("Failed to load graph"));
+    assert!(err.to_string().contains("not found"));
 }
 
 #[tokio::test]
@@ -239,9 +239,11 @@ async fn test_save_success() {
 
     let result = handler.save(&params).await.expect("save");
     assert_eq!(result["graph_id"], "saved_graph");
+    assert_eq!(result["location"], "runtime");
 
-    let path = temp.path().join("saved_graph.toml");
-    assert!(path.exists(), "graph file should exist");
+    let runtime_dir = temp.path().parent().expect("parent").join("runtime_graphs");
+    let path = runtime_dir.join("saved_graph.toml");
+    assert!(path.exists(), "graph file should exist in runtime_graphs/");
     let content = std::fs::read_to_string(&path).expect("read");
     assert!(content.contains("saved_graph"));
 }
@@ -272,8 +274,6 @@ async fn test_save_invalid_graph_structure() {
 #[tokio::test]
 async fn test_save_overwrites_existing() {
     let temp = tempdir().expect("tempdir");
-    let path = temp.path().join("overwrite.toml");
-    std::fs::write(&path, "old content").expect("write");
     let (handler, _) = make_handler(temp.path());
 
     let graph_value = json!({
@@ -290,8 +290,11 @@ async fn test_save_overwrites_existing() {
             "rollback_on_failure": true
         }
     });
-    handler.save(&Some(graph_value)).await.expect("save");
+    handler.save(&Some(graph_value.clone())).await.expect("save first");
+    handler.save(&Some(graph_value)).await.expect("save overwrite");
 
+    let runtime_dir = temp.path().parent().expect("parent").join("runtime_graphs");
+    let path = runtime_dir.join("overwrite.toml");
     let content = std::fs::read_to_string(&path).expect("read");
     assert!(content.contains("2.0.0"));
     assert!(content.contains("Updated"));
@@ -322,8 +325,9 @@ async fn test_save_persists_file() {
     });
     handler.save(&Some(graph_value)).await.expect("save");
 
-    let path = temp.path().join("roundtrip_graph.toml");
-    assert!(path.exists(), "saved graph file should exist");
+    let runtime_dir = temp.path().parent().expect("parent").join("runtime_graphs");
+    let path = runtime_dir.join("roundtrip_graph.toml");
+    assert!(path.exists(), "saved graph file should exist in runtime_graphs/");
     let content = std::fs::read_to_string(&path).expect("read file");
     assert!(content.contains("roundtrip_graph"));
     assert!(content.contains("1.0.0"));

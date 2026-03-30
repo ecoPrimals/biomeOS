@@ -37,7 +37,8 @@ pub struct HapticPipeline {
 
 impl HapticPipeline {
     /// Create a new haptic pipeline (devices not yet discovered).
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             devices: Vec::new(),
             active: false,
@@ -122,21 +123,25 @@ impl HapticPipeline {
     }
 
     /// Get discovered device capabilities.
+    #[must_use] 
     pub fn devices(&self) -> &[HapticDeviceCapabilities] {
         &self.devices
     }
 
     /// Whether the pipeline has been initialized via `discover()`.
-    pub fn is_active(&self) -> bool {
+    #[must_use] 
+    pub const fn is_active(&self) -> bool {
         self.active
     }
 
     /// Find capabilities for a specific device type.
+    #[must_use] 
     pub fn find_device(&self, device_type: HapticDeviceType) -> Option<&HapticDeviceCapabilities> {
         self.devices.iter().find(|d| d.device_type == device_type)
     }
 
     /// Check if a force feedback device is available.
+    #[must_use] 
     pub fn has_force_feedback(&self) -> bool {
         self.devices
             .iter()

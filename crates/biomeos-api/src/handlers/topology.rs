@@ -372,14 +372,14 @@ async fn build_live_topology(
     Ok((primals, connections))
 }
 
-/// Extract node_id from primal ID pattern
+/// Extract `node_id` from primal ID pattern
 ///
 /// EVOLVED (Jan 27, 2026): Parses common primal ID patterns
 ///
 /// Patterns supported:
-/// - `{primal}-{family_id}-{node_id}` → node_id
-/// - `{primal}-{node_id}` → node_id
-/// - `{node_id}` → node_id
+/// - `{primal}-{family_id}-{node_id}` → `node_id`
+/// - `{primal}-{node_id}` → `node_id`
+/// - `{node_id}` → `node_id`
 fn extract_node_id_from_primal(primal_id: &str) -> Option<String> {
     let parts: Vec<&str> = primal_id.split('-').collect();
 

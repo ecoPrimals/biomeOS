@@ -19,7 +19,7 @@
 /// `.sock` when probing the filesystem.
 ///
 /// Delegates to the taxonomy so no primal names are hardcoded here.
-pub(crate) fn names_for_primal(primal_name: &str) -> Vec<String> {
+pub fn names_for_primal(primal_name: &str) -> Vec<String> {
     biomeos_types::capability_taxonomy::capabilities_for_primal(primal_name)
 }
 

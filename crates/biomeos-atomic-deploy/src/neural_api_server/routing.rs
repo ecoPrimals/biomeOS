@@ -41,6 +41,7 @@ enum Route {
     TopologyPrimals,
     TopologyProprioception,
     TopologyMetrics,
+    TopologyRescan,
     NicheList,
     NicheDeploy,
     LifecycleStatus,
@@ -75,10 +76,13 @@ enum Route {
     InferenceSchedule,
     InferenceGates,
     MeshCapabilityCall,
+    HealthCheck,
+    HealthLiveness,
+    HealthReadiness,
 }
 
 /// Table-driven handler registry: method name → route.
-/// Multiple method names may map to the same route (e.g. neural_api.list_graphs | graph.list).
+/// Multiple method names may map to the same route (e.g. `neural_api.list_graphs` | graph.list).
 const ROUTE_TABLE: &[(&str, Route)] = &[
     // Graph
     ("neural_api.list_graphs", Route::GraphList),
@@ -120,6 +124,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("topology.proprioception", Route::TopologyProprioception),
     ("neural_api.get_metrics", Route::TopologyMetrics),
     ("topology.metrics", Route::TopologyMetrics),
+    ("topology.rescan", Route::TopologyRescan),
     // Niche
     ("neural_api.list_niche_templates", Route::NicheList),
     ("niche.list", Route::NicheList),
@@ -190,6 +195,10 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("agent.auto_meld", Route::Agent),
     // Legacy
     ("neural_api.proxy_http", Route::ProxyHttp),
+    // Health (semantic naming standard: health.check, health.liveness, health.readiness)
+    ("health.check", Route::HealthCheck),
+    ("health.liveness", Route::HealthLiveness),
+    ("health.readiness", Route::HealthReadiness),
     // Mesh & NAT (capability.call sugar)
     ("mesh.status", Route::MeshCapabilityCall),
     ("mesh.find_path", Route::MeshCapabilityCall),
@@ -226,12 +235,12 @@ impl NeuralApiServer {
     /// results. Use `handle_request_json` for backward compatibility (returns `Value`).
     ///
     /// Delegates to focused handlers for each domain:
-    /// - Graph operations → GraphHandler
-    /// - Capability routing → CapabilityHandler
-    /// - Topology/metrics → TopologyHandler
-    /// - Niche templates → NicheHandler
-    /// - Lifecycle management → LifecycleHandler
-    /// - Protocol escalation → ProtocolHandler
+    /// - Graph operations → `GraphHandler`
+    /// - Capability routing → `CapabilityHandler`
+    /// - Topology/metrics → `TopologyHandler`
+    /// - Niche templates → `NicheHandler`
+    /// - Lifecycle management → `LifecycleHandler`
+    /// - Protocol escalation → `ProtocolHandler`
     pub async fn handle_request(&self, request_line: &str) -> DispatchOutcome {
         let request = match JsonRpcRequest::parse(request_line) {
             Ok(r) => r,
@@ -289,6 +298,7 @@ impl NeuralApiServer {
                 dispatch(self.topology_handler.get_proprioception().await, &id)
             }
             Route::TopologyMetrics => dispatch(self.topology_handler.get_metrics().await, &id),
+            Route::TopologyRescan => dispatch(self.rescan_primals().await, &id),
             // Niche
             Route::NicheList => dispatch(self.niche_handler.list().await, &id),
             Route::NicheDeploy => dispatch(self.niche_handler.deploy(params).await, &id),
@@ -370,6 +380,10 @@ impl NeuralApiServer {
                 dispatch(self.inference_handler.schedule(params).await, &id)
             }
             Route::InferenceGates => dispatch(self.inference_handler.gates(params).await, &id),
+            // Health probes (SEMANTIC_METHOD_NAMING_STANDARD.md compliance)
+            Route::HealthCheck => dispatch(self.health_check().await, &id),
+            Route::HealthLiveness => dispatch(self.health_liveness(), &id),
+            Route::HealthReadiness => dispatch(self.health_readiness().await, &id),
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, &id),
             // Mesh & NAT (capability.call sugar)
@@ -875,5 +889,32 @@ mod tests {
                 .unwrap()
                 .contains("nonexistent.method")
         );
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_health_check() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"health.check","id":80}"#;
+        let result = server.handle_request_json(req).await;
+        assert_eq!(result["result"]["status"], "healthy");
+        assert_eq!(result["result"]["family_id"], "test_family");
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_health_liveness() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"health.liveness","id":81}"#;
+        let result = server.handle_request_json(req).await;
+        assert_eq!(result["result"]["status"], "alive");
+        assert!(result["result"]["version"].is_string());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_health_readiness() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"health.readiness","id":82}"#;
+        let result = server.handle_request_json(req).await;
+        assert!(result["result"]["ready"].is_boolean());
+        assert!(result["result"]["mode"].is_string());
     }
 }

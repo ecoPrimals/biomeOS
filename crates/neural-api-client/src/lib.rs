@@ -13,13 +13,13 @@
 //! # TRUE PRIMAL Pattern
 //!
 //! Primals using this client have **zero knowledge** of:
-//! - Other primals (Songbird, BearDog, etc.)
+//! - Other primals (Songbird, `BearDog`, etc.)
 //! - HTTP/TLS implementation details
 //! - Crypto implementation
 //! - Socket paths of other services
 //!
 //! They only know:
-//! - "I need a capability" (e.g., "secure_http")
+//! - "I need a capability" (e.g., "`secure_http`")
 //! - "Neural API is at this socket"
 //!
 //! # Example

@@ -25,7 +25,7 @@ fn prefix_end(prefix: &str) -> String {
     s
 }
 
-/// Result of a graph execution (used by record_execution).
+/// Result of a graph execution (used by `record_execution`).
 #[derive(Debug, Clone, Default)]
 pub struct GraphResult {
     /// Whether the graph execution completed successfully.
@@ -144,25 +144,25 @@ struct NodeExecutionRecord {
 
 impl MetricsCollector {
     /// Create a new metrics collector (redb - ecoBin compliant!)
-    pub async fn new<P: AsRef<Path>>(db_path: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(db_path: P) -> Result<Self> {
         let path = db_path.as_ref();
         let db = Database::create(path)
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics database")?;
 
         // Ensure the metrics table exists (redb creates tables on first write)
         let txn = db
             .begin_write()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to initialize metrics database")?;
         {
             let _ = txn
                 .open_table(METRICS_TABLE)
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to create metrics table")?;
         }
         txn.commit()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to commit initialization")?;
 
         Ok(Self { db: Arc::new(db) })
@@ -172,7 +172,7 @@ impl MetricsCollector {
     ///
     /// When `execution_id` is `Some`, that value is used for the record id (for deterministic tests).
     /// Otherwise uses `chrono::Utc::now().timestamp_millis()`.
-    pub async fn record_execution(
+    pub fn record_execution(
         &self,
         graph_name: &str,
         result: &GraphResult,
@@ -198,38 +198,38 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_write()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin write transaction")?;
         {
             let mut table = txn
                 .open_table(METRICS_TABLE)
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to open metrics table")?;
             table
                 .insert(key.as_str(), value.as_slice())
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to insert execution record")?;
         }
         txn.commit()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to commit transaction")?;
 
         Ok(())
     }
 
     /// Get aggregated metrics for a graph (redb queries!)
-    pub async fn get_graph_metrics(&self, graph_name: &str) -> Result<Option<GraphMetrics>> {
-        let prefix = format!("exec:{}:", graph_name);
+    pub fn get_graph_metrics(&self, graph_name: &str) -> Result<Option<GraphMetrics>> {
+        let prefix = format!("exec:{graph_name}:");
         let end = prefix_end(&prefix);
 
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         let mut total = 0u64;
@@ -241,10 +241,10 @@ impl MetricsCollector {
 
         for item in table
             .range(prefix.as_str()..end.as_str())
-            .map_err(|e| anyhow::anyhow!("{}", e))?
+            .map_err(|e| anyhow::anyhow!("{e}"))?
         {
             let (_key, value) = item
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to read database entry")?;
             let value = value.value();
 
@@ -286,26 +286,26 @@ impl MetricsCollector {
     }
 
     /// Get all tracked graphs
-    pub async fn get_tracked_graphs(&self) -> Result<Vec<String>> {
+    pub fn get_tracked_graphs(&self) -> Result<Vec<String>> {
         let mut graphs = std::collections::HashSet::new();
         let end = prefix_end("exec:");
 
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         for item in table
             .range("exec:"..end.as_str())
-            .map_err(|e| anyhow::anyhow!("{}", e))?
+            .map_err(|e| anyhow::anyhow!("{e}"))?
         {
             let (key, _) = item
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to read database entry")?;
             let key_str = key.value();
 
@@ -320,20 +320,20 @@ impl MetricsCollector {
     }
 
     /// Clear all metrics (for testing or reset)
-    pub async fn clear_all(&self) -> Result<()> {
+    pub fn clear_all(&self) -> Result<()> {
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         let keys: Vec<String> = table
             .range::<&str>(""..)
-            .map_err(|e| anyhow::anyhow!("{}", e))?
+            .map_err(|e| anyhow::anyhow!("{e}"))?
             .filter_map(|item| item.map(|(k, _)| k.value().to_string()).ok())
             .collect();
 
@@ -343,22 +343,22 @@ impl MetricsCollector {
         let write_txn = self
             .db
             .begin_write()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin write transaction")?;
         {
             let mut table = write_txn
                 .open_table(METRICS_TABLE)
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to open metrics table")?;
             for key in keys {
                 table
                     .remove(key.as_str())
-                    .map_err(|e| anyhow::anyhow!("{}", e))?;
+                    .map_err(|e| anyhow::anyhow!("{e}"))?;
             }
         }
         write_txn
             .commit()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to commit transaction")?;
 
         Ok(())
@@ -367,8 +367,8 @@ impl MetricsCollector {
 
 impl MetricsCollector {
     /// Record a node-level execution for metrics aggregation.
-    /// Call with the same graph_name used in record_execution for this run.
-    pub async fn record_node_execution(&self, params: NodeExecutionParams<'_>) -> Result<()> {
+    /// Call with the same `graph_name` used in `record_execution` for this run.
+    pub fn record_node_execution(&self, params: NodeExecutionParams<'_>) -> Result<()> {
         let record = NodeExecutionRecord {
             graph_name: params.graph_name.to_string(),
             node_id: params.node_id.to_string(),
@@ -388,32 +388,32 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_write()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin write transaction")?;
         {
             let mut table = txn
                 .open_table(METRICS_TABLE)
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to open metrics table")?;
             table
                 .insert(key.as_str(), value.as_slice())
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to insert node execution record")?;
         }
         txn.commit()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to commit transaction")?;
 
         Ok(())
     }
 
     /// Get aggregated metrics for a specific node within a graph.
-    pub async fn get_node_metrics(
+    pub fn get_node_metrics(
         &self,
         graph_name: &str,
         node_id: &str,
     ) -> Result<Option<NodeMetricsAggregate>> {
-        let prefix = format!("node_exec:{}:{}:", graph_name, node_id);
+        let prefix = format!("node_exec:{graph_name}:{node_id}:");
         let end = prefix_end(&prefix);
         let mut total = 0u64;
         let mut successful = 0u64;
@@ -422,19 +422,19 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         for item in table
             .range(prefix.as_str()..end.as_str())
-            .map_err(|e| anyhow::anyhow!("{}", e))?
+            .map_err(|e| anyhow::anyhow!("{e}"))?
         {
             let (_key, value) = item
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to read database entry")?;
             let value = value.value();
             let record: NodeExecutionRecord =
@@ -462,31 +462,31 @@ impl MetricsCollector {
     }
 
     /// Get recent graph executions, sorted by id descending.
-    pub async fn get_recent_executions(
+    pub fn get_recent_executions(
         &self,
         graph_name: &str,
         limit: usize,
     ) -> Result<Vec<ExecutionRecord>> {
-        let prefix = format!("exec:{}:", graph_name);
+        let prefix = format!("exec:{graph_name}:");
         let end = prefix_end(&prefix);
         let mut records: Vec<ExecutionRecord> = Vec::new();
 
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{}", e))
+            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         for item in table
             .range(prefix.as_str()..end.as_str())
-            .map_err(|e| anyhow::anyhow!("{}", e))?
+            .map_err(|e| anyhow::anyhow!("{e}"))?
         {
             let (_key, value) = item
-                .map_err(|e| anyhow::anyhow!("{}", e))
+                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to read database entry")?;
             let value = value.value();
             let record: ExecutionRecord =

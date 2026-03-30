@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BiomeOS Manifest Management
+//! `BiomeOS` Manifest Management
 //!
 //! This crate provides comprehensive manifest parsing, validation, and management
 //! capabilities for biomeOS.
@@ -175,6 +175,7 @@ pub struct BiomeManifestTemplates;
 
 impl BiomeManifestTemplates {
     /// Generate a basic web application manifest
+    #[must_use] 
     pub fn web_application(name: &str, image: &str) -> BiomeManifest {
         use biomeos_types::{
             Environment, ManifestMetadata,
@@ -238,6 +239,7 @@ impl BiomeManifestTemplates {
     }
 
     /// Generate a database service manifest
+    #[must_use] 
     pub fn database(name: &str, db_type: &str, volume_size_gb: f64) -> BiomeManifest {
         use biomeos_types::{
             Environment, ManifestMetadata,
@@ -307,6 +309,7 @@ pub struct ManifestAnalyzer;
 
 impl ManifestAnalyzer {
     /// Get all capabilities required by services in the manifest
+    #[must_use] 
     pub fn get_manifest_capabilities(manifest: &BiomeManifest) -> Vec<String> {
         let mut capabilities = Vec::new();
 
@@ -329,6 +332,7 @@ impl ManifestAnalyzer {
     }
 
     /// Check if manifest has security requirements
+    #[must_use] 
     pub fn has_security_requirements(manifest: &BiomeManifest) -> bool {
         // Check biome-level security
         manifest.spec.security.is_some() ||
@@ -337,6 +341,7 @@ impl ManifestAnalyzer {
     }
 
     /// Get all services that have specific capabilities
+    #[must_use] 
     pub fn get_services_with_capabilities(
         manifest: &BiomeManifest,
         required_caps: &[String],
@@ -361,6 +366,7 @@ impl ManifestAnalyzer {
     }
 
     /// Get all exposed ports from the manifest
+    #[must_use] 
     pub fn get_exposed_ports(manifest: &BiomeManifest) -> Vec<u16> {
         let mut ports = Vec::new();
 
@@ -377,6 +383,7 @@ impl ManifestAnalyzer {
     }
 
     /// Check if the manifest has any security policies defined
+    #[must_use] 
     pub fn has_security_policies(manifest: &BiomeManifest) -> bool {
         manifest.spec.security.is_some()
             || manifest
@@ -386,6 +393,7 @@ impl ManifestAnalyzer {
     }
 
     /// Get service dependency graph
+    #[must_use] 
     pub fn get_dependency_graph(manifest: &BiomeManifest) -> HashMap<String, Vec<String>> {
         let mut graph = HashMap::new();
 
