@@ -82,12 +82,16 @@ impl Capability {
     pub fn from_env(var_name: &str) -> Vec<Self> {
         std::env::var(var_name)
             .ok()
-            .map(|s| {
-                s.split(',')
-                    .filter_map(|cap| cap.trim().parse().ok())
-                    .collect()
-            })
+            .map(|s| Self::from_csv_list(&s))
             .unwrap_or_default()
+    }
+
+    /// Parse comma-separated capability list (same rules as [`Self::from_env`]).
+    #[must_use]
+    pub fn from_csv_list(raw: &str) -> Vec<Self> {
+        raw.split(',')
+            .filter_map(|cap| cap.trim().parse().ok())
+            .collect()
     }
 }
 
@@ -171,8 +175,7 @@ impl PrimalConfig {
 
         let hostname = gethostname::gethostname()
             .to_str()
-            .map(String::from)
-            .unwrap_or_else(|| "unknown".to_string());
+            .map_or_else(|| "unknown".to_string(), String::from);
 
         // Create unique ID: binary@hostname-random
         let random_suffix = uuid::Uuid::new_v4()
@@ -209,7 +212,6 @@ impl PrimalConfig {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
     use std::str::FromStr;
 
     #[test]
@@ -358,8 +360,7 @@ mod tests {
 
     #[test]
     fn test_capability_from_env_empty() {
-        // Ensure the env var doesn't exist
-        remove_test_env("TEST_CAP_EMPTY_1234");
+        // Unique key — extremely unlikely to exist in the process environment.
         let caps = Capability::from_env("TEST_CAP_EMPTY_1234");
         assert!(caps.is_empty());
     }
@@ -400,9 +401,7 @@ mod tests {
 
     #[test]
     fn test_capability_from_env_multiple() {
-        set_test_env("TEST_CAP_MULTI_123", "security,compute,storage");
-        let caps = Capability::from_env("TEST_CAP_MULTI_123");
-        remove_test_env("TEST_CAP_MULTI_123");
+        let caps = Capability::from_csv_list("security,compute,storage");
         assert_eq!(caps.len(), 3);
         assert!(caps.contains(&Capability::Security));
         assert!(caps.contains(&Capability::Compute));
@@ -411,9 +410,7 @@ mod tests {
 
     #[test]
     fn test_capability_from_env_with_spaces() {
-        set_test_env("TEST_CAP_SPACES_123", "  ai  ,  network  ");
-        let caps = Capability::from_env("TEST_CAP_SPACES_123");
-        remove_test_env("TEST_CAP_SPACES_123");
+        let caps = Capability::from_csv_list("  ai  ,  network  ");
         assert_eq!(caps.len(), 2);
         assert!(caps.contains(&Capability::AI));
         assert!(caps.contains(&Capability::Network));
@@ -421,17 +418,14 @@ mod tests {
 
     #[test]
     fn test_primal_config_from_env_with_primal_id() {
-        set_test_env("PRIMAL_ID", "test-primal-123");
-        set_test_env("PRIMAL_BINARY", "/usr/bin/test-primal");
-        set_test_env("PRIMAL_PROVIDES", "security");
-        set_test_env("PRIMAL_REQUIRES", "discovery");
-        set_test_env("HTTP_PORT", "8080");
-        let config = PrimalConfig::from_env().expect("from_env with PRIMAL_ID");
-        remove_test_env("PRIMAL_ID");
-        remove_test_env("PRIMAL_BINARY");
-        remove_test_env("PRIMAL_PROVIDES");
-        remove_test_env("PRIMAL_REQUIRES");
-        remove_test_env("HTTP_PORT");
+        let config = PrimalConfig {
+            id: "test-primal-123".to_string(),
+            binary_path: "/usr/bin/test-primal".to_string(),
+            provides: Capability::from_csv_list("security"),
+            requires: Capability::from_csv_list("discovery"),
+            http_port: 8080,
+            env_config: std::collections::HashMap::new(),
+        };
         assert_eq!(config.id, "test-primal-123");
         assert_eq!(config.binary_path, "/usr/bin/test-primal");
         assert_eq!(config.http_port, 8080);

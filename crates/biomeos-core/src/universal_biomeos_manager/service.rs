@@ -285,6 +285,10 @@ impl UniversalBiomeOSManager {
     ///
     /// Service provisioning is delegated to `ToadStool` via `compute.*` capability
     /// routing when available; this provides a local fallback.
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     pub(super) fn create_service_integration(
         &self,
         name: &str,

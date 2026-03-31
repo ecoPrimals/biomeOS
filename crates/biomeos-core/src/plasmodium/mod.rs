@@ -46,12 +46,26 @@ pub use types::*;
 use anyhow::Result;
 use tracing::{info, warn};
 
+/// Explicit env-like inputs for [`Plasmodium`] without mutating process environment (tests, embedding).
+#[derive(Debug, Clone, Default)]
+pub struct PlasmodiumEnvOverrides {
+    /// Mirrors `FAMILY_ID` when set (wins over [`Self::node_family_id`]).
+    pub family_id: Option<String>,
+    /// Mirrors `NODE_FAMILY_ID` when `family_id` is unset.
+    pub node_family_id: Option<String>,
+    /// Mirrors `GATE_ID` (before `HOSTNAME` / `/etc/hostname` fallback).
+    pub gate_id: Option<String>,
+    /// Mirrors `PLASMODIUM_PEERS` comma-separated list when set.
+    pub plasmodium_peers: Option<String>,
+}
+
 /// Plasmodium collective query engine
 ///
 /// Queries local and remote NUCLEUS instances to build a collective view.
 pub struct Plasmodium {
     family_id: String,
     local_gate_id: String,
+    peers_override: Option<String>,
 }
 
 impl Default for Plasmodium {
@@ -64,13 +78,29 @@ impl Plasmodium {
     /// Create a new Plasmodium query engine
     #[must_use]
     pub fn new() -> Self {
-        let family_id = std::env::var("FAMILY_ID")
-            .or_else(|_| std::env::var("NODE_FAMILY_ID"))
-            .unwrap_or_else(|_| "default".to_string());
+        Self::new_with_env_overrides(&PlasmodiumEnvOverrides::default())
+    }
 
-        let local_gate_id = std::env::var("GATE_ID")
-            .or_else(|_| std::env::var("HOSTNAME"))
-            .unwrap_or_else(|_| {
+    /// Create with optional overrides; unset fields follow the same resolution as [`Self::new`] (process env).
+    #[must_use]
+    pub fn new_with_env_overrides(overrides: &PlasmodiumEnvOverrides) -> Self {
+        let family_id = match (
+            overrides.family_id.as_ref(),
+            overrides.node_family_id.as_ref(),
+        ) {
+            (Some(f), _) => f.clone(),
+            (None, Some(n)) => n.clone(),
+            (None, None) => std::env::var("FAMILY_ID")
+                .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+                .unwrap_or_else(|_| "default".to_string()),
+        };
+
+        let local_gate_id = overrides
+            .gate_id
+            .clone()
+            .or_else(|| std::env::var("GATE_ID").ok())
+            .or_else(|| std::env::var("HOSTNAME").ok())
+            .unwrap_or_else(|| {
                 std::fs::read_to_string("/etc/hostname")
                     .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string())
             });
@@ -78,6 +108,7 @@ impl Plasmodium {
         Self {
             family_id,
             local_gate_id,
+            peers_override: overrides.plasmodium_peers.clone(),
         }
     }
 

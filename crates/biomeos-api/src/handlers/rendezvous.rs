@@ -90,6 +90,17 @@ impl RendezvousState {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn new_for_test(family_id: &str, neural_socket_tier1: Option<&str>) -> Self {
+        let neural_api_socket =
+            beacon_verification::discover_neural_api_socket_from(family_id, neural_socket_tier1);
+        Self {
+            slots: Arc::new(RwLock::new(HashMap::new())),
+            family_id: family_id.to_string(),
+            neural_api_socket,
+        }
+    }
+
     /// Clean expired slots
     async fn clean_expired(&self) {
         let now = SystemTime::now()
@@ -786,19 +797,15 @@ mod tests {
 
     #[cfg(unix)]
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_post_beacon_accepted_neural_mock() {
-        use biomeos_test_utils::env_helpers::TestEnvGuard;
         use http_body_util::BodyExt;
 
         let (_dir, sock) = spawn_neural_api_loopback_mock("fam-rdz-1").await;
-        let _g = TestEnvGuard::set("FAMILY_ID", "fam-rdz-1");
-        let _n = TestEnvGuard::set(
-            "NEURAL_API_SOCKET",
-            sock.to_str().expect("utf8 socket path"),
-        );
 
-        let state = Arc::new(RendezvousState::new(""));
+        let state = Arc::new(RendezvousState::new_for_test(
+            "fam-rdz-1",
+            Some(sock.to_str().expect("utf8 socket path")),
+        ));
         let request = RendezvousPostRequest {
             encrypted_beacon: "beacon-a".to_string(),
             dark_forest_token: "token-a".to_string(),
@@ -817,19 +824,15 @@ mod tests {
 
     #[cfg(unix)]
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_check_peer_matched_neural_mock() {
-        use biomeos_test_utils::env_helpers::TestEnvGuard;
         use http_body_util::BodyExt;
 
         let (_dir, sock) = spawn_neural_api_loopback_mock("fam-rdz-2").await;
-        let _g = TestEnvGuard::set("FAMILY_ID", "fam-rdz-2");
-        let _n = TestEnvGuard::set(
-            "NEURAL_API_SOCKET",
-            sock.to_str().expect("utf8 socket path"),
-        );
 
-        let state = Arc::new(RendezvousState::new(""));
+        let state = Arc::new(RendezvousState::new_for_test(
+            "fam-rdz-2",
+            Some(sock.to_str().expect("utf8 socket path")),
+        ));
         let post = post_beacon(
             axum::extract::State(state.clone()),
             axum::Json(RendezvousPostRequest {

@@ -6,7 +6,6 @@
 #![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 
 use super::{JsonRpcNotification, *};
-use biomeos_test_utils::{remove_test_env, set_test_env};
 use std::sync::Arc;
 
 #[tokio::test]
@@ -589,31 +588,29 @@ async fn test_subscribe_sse_with_websocket_upgrades_to_websocket() {
 
 #[tokio::test]
 async fn test_discover_endpoints_with_ws_env() {
-    set_test_env("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints();
-    remove_test_env("BIOMEOS_WS_ENDPOINT");
+    let result = subscriber.discover_endpoints_with(Some("ws://test.example/ws"), None, None, None);
     assert!(result.is_ok());
     assert!(subscriber.subscribe_websocket().await.is_err());
 }
 
 #[tokio::test]
 async fn test_discover_endpoints_with_sse_env() {
-    set_test_env("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints();
-    remove_test_env("BIOMEOS_SSE_ENDPOINT");
+    let result =
+        subscriber.discover_endpoints_with(None, Some("http://test.example/sse"), None, None);
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_discover_endpoints_with_both_env_vars() {
-    set_test_env("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
-    set_test_env("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints();
-    remove_test_env("BIOMEOS_WS_ENDPOINT");
-    remove_test_env("BIOMEOS_SSE_ENDPOINT");
+    let result = subscriber.discover_endpoints_with(
+        Some("ws://test.example/ws"),
+        Some("http://test.example/sse"),
+        None,
+        None,
+    );
     assert!(result.is_ok());
 }
 
@@ -685,19 +682,17 @@ async fn test_subscription_multiple_receivers_independent() {
 
 #[tokio::test]
 async fn test_discover_endpoints_biomeos_api_ws_fallback() {
-    set_test_env("BIOMEOS_API_WS", "ws://fallback.example/ws");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints();
-    remove_test_env("BIOMEOS_API_WS");
+    let result =
+        subscriber.discover_endpoints_with(None, None, Some("ws://fallback.example/ws"), None);
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_discover_endpoints_biomeos_api_sse_fallback() {
-    set_test_env("BIOMEOS_API_SSE", "http://fallback.example/sse");
     let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
-    let result = subscriber.discover_endpoints();
-    remove_test_env("BIOMEOS_API_SSE");
+    let result =
+        subscriber.discover_endpoints_with(None, None, None, Some("http://fallback.example/sse"));
     assert!(result.is_ok());
 }
 

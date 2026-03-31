@@ -25,7 +25,13 @@ pub fn resolve_capability_to_primal(capability: &str) -> Option<&'static str> {
 /// This provides a canonical list of primals for health checks and deployment.
 /// Uses `biomeos_types::CapabilityTaxonomy::known_primals()` for consistency.
 pub fn known_primal_names() -> Vec<&'static str> {
-    biomeos_types::CapabilityTaxonomy::known_primals().to_vec()
+    known_primal_names_with(false)
+}
+
+/// Like [`known_primal_names`], with explicit strict-discovery mode (no env reads).
+#[must_use]
+pub fn known_primal_names_with(strict_discovery: bool) -> Vec<&'static str> {
+    biomeos_types::CapabilityTaxonomy::known_primals_with(strict_discovery).to_vec()
 }
 
 /// Discover binary path for a primal
@@ -236,12 +242,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env var BIOMEOS_STRICT_DISCOVERY races with parallel tests — run with --test-threads=1"]
     fn test_known_primal_names_strict_discovery() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
-        set_test_env("BIOMEOS_STRICT_DISCOVERY", "1");
-        let primals = known_primal_names();
-        remove_test_env("BIOMEOS_STRICT_DISCOVERY");
+        let primals = known_primal_names_with(true);
 
         assert!(
             primals.is_empty(),

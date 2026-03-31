@@ -41,7 +41,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info, trace};
 
-pub use socket::resolve_primal_socket;
+pub use socket::{resolve_primal_socket, resolve_primal_socket_with};
 
 /// Capability translation entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -308,6 +308,14 @@ impl CapabilityTranslationRegistry {
     /// Load default translations with automatic socket resolution
     pub fn load_defaults(&mut self) -> usize {
         defaults::load_defaults_into(self)
+    }
+
+    /// [`load_defaults`](Self::load_defaults) with per-call environment overrides (for tests).
+    pub fn load_defaults_with(
+        &mut self,
+        env_overrides: &std::collections::HashMap<&str, Option<&str>>,
+    ) -> usize {
+        defaults::load_defaults_into_with(self, env_overrides)
     }
 }
 

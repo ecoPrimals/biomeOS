@@ -44,6 +44,7 @@
 use anyhow::{Context, Result};
 use biomeos_types::IpcError;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -60,6 +61,43 @@ pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 // Re-export StreamItem for callers of call_stream
 pub use biomeos_graph::StreamItem;
+
+/// Options for [`AtomicClient::discover_with_opts`] and [`discover_primal_endpoint_with_opts`].
+#[derive(Debug, Default, Clone)]
+pub struct DiscoverOpts<'a> {
+    /// Override `FAMILY_ID` / `NODE_FAMILY_ID` resolution when set.
+    pub family_id: Option<&'a str>,
+    /// Per-call `{PRIMAL}_TCP` / socket overrides (same keys as real env vars).
+    pub env_overrides: Option<&'a HashMap<String, String>>,
+    /// Tier-2 TCP fallback string (replaces `{PRIMAL}_TCP`) when Tier 1 finds nothing.
+    pub tcp_tier2_override: Option<&'a str>,
+}
+
+/// Options for [`AtomicClient::discover_by_capability_with_opts`].
+#[derive(Debug, Default, Clone)]
+pub struct DiscoverByCapabilityOpts<'a> {
+    /// Override `FAMILY_ID` / `NODE_FAMILY_ID` resolution when set.
+    pub family_id: Option<&'a str>,
+    /// `Some(true)` = strict (no taxonomy bootstrap); `Some(false)` = allow taxonomy;
+    /// `None` = read `BIOMEOS_STRICT_DISCOVERY` from the environment.
+    pub strict_discovery: Option<bool>,
+}
+
+fn family_id_for_discovery(family_id_override: Option<&str>) -> String {
+    if let Some(id) = family_id_override {
+        return id.to_string();
+    }
+    std::env::var("FAMILY_ID")
+        .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+        .unwrap_or_else(|_| {
+            trace!("No FAMILY_ID set, using 'default' for discovery");
+            "default".to_string()
+        })
+}
+
+fn strict_discovery_from_env_or_override(strict_override: Option<bool>) -> bool {
+    strict_override.unwrap_or_else(|| std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
+}
 
 /// Atomic Multi-Transport Client - Universal IPC Standard v3.0
 ///
@@ -131,20 +169,25 @@ impl AtomicClient {
     /// # Returns
     /// Ready-to-use atomic client with best available transport
     pub async fn discover(primal_name: &str) -> Result<Self> {
+        Self::discover_with_opts(primal_name, DiscoverOpts::default()).await
+    }
+
+    /// Discover a primal with optional [`DiscoverOpts`] (for tests and explicit callers).
+    pub async fn discover_with_opts(primal_name: &str, opts: DiscoverOpts<'_>) -> Result<Self> {
         debug!("Discovering primal with fallback: {}", primal_name);
 
-        // Get family_id from environment
-        let family_id = std::env::var("FAMILY_ID")
-            .or_else(|_| std::env::var("NODE_FAMILY_ID"))
-            .unwrap_or_else(|_| {
-                trace!("No FAMILY_ID set, using 'default' for discovery");
-                "default".to_string()
-            });
+        let family_id = family_id_for_discovery(opts.family_id);
 
-        // Use SocketDiscovery with automatic fallback
         let discovery = SocketDiscovery::new(&family_id);
 
-        match discovery.discover_with_fallback(primal_name).await {
+        match discovery
+            .discover_with_fallback_with_env_overrides(
+                primal_name,
+                opts.env_overrides,
+                opts.tcp_tier2_override,
+            )
+            .await
+        {
             Some(endpoint) => {
                 debug!(
                     "Discovered {} via {}: {}",
@@ -186,14 +229,18 @@ impl AtomicClient {
     /// # Returns
     /// Ready-to-use atomic client for any primal providing the capability
     pub async fn discover_by_capability(capability: &str) -> Result<Self> {
+        Self::discover_by_capability_with_opts(capability, DiscoverByCapabilityOpts::default())
+            .await
+    }
+
+    /// Discover by capability with optional overrides (see [`DiscoverByCapabilityOpts`]).
+    pub async fn discover_by_capability_with_opts(
+        capability: &str,
+        opts: DiscoverByCapabilityOpts<'_>,
+    ) -> Result<Self> {
         debug!("Discovering primal by capability: {}", capability);
 
-        let family_id = std::env::var("FAMILY_ID")
-            .or_else(|_| std::env::var("NODE_FAMILY_ID"))
-            .unwrap_or_else(|_| {
-                trace!("No FAMILY_ID set, using 'default' for discovery");
-                "default".to_string()
-            });
+        let family_id = family_id_for_discovery(opts.family_id);
 
         let discovery = SocketDiscovery::new(&family_id);
 
@@ -208,7 +255,7 @@ impl AtomicClient {
         }
 
         // 2. Taxonomy bootstrap: resolve capability → primal name, then discover
-        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err()
+        if !strict_discovery_from_env_or_override(opts.strict_discovery)
             && let Some(primal_name) =
                 biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
         {
@@ -785,7 +832,15 @@ impl AtomicClient {
 ///
 /// Delegates to [`AtomicClient::discover`], returning just the endpoint.
 pub async fn discover_primal_endpoint(primal_name: &str) -> Result<TransportEndpoint> {
-    let client = AtomicClient::discover(primal_name).await?;
+    discover_primal_endpoint_with_opts(primal_name, DiscoverOpts::default()).await
+}
+
+/// Like [`discover_primal_endpoint`] with optional [`DiscoverOpts`].
+pub async fn discover_primal_endpoint_with_opts(
+    primal_name: &str,
+    opts: DiscoverOpts<'_>,
+) -> Result<TransportEndpoint> {
+    let client = AtomicClient::discover_with_opts(primal_name, opts).await?;
     Ok(client.endpoint().clone())
 }
 

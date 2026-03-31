@@ -94,6 +94,7 @@ fn test_deployment_result_aggregation() {
         pid: 1234,
         socket_path: PathBuf::from("/tmp/test.sock"),
         started_at: chrono::Utc::now(),
+        child: None,
     }]);
     result.success_count = 1;
 
@@ -116,6 +117,7 @@ fn test_primal_instance_lifecycle() {
         pid: std::process::id(), // Use our own PID for testing
         socket_path: PathBuf::from("/tmp/test.sock"),
         started_at: chrono::Utc::now() - chrono::Duration::seconds(5),
+        child: None,
     };
 
     // Should be running (our own process)

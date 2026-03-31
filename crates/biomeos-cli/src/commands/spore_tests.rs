@@ -11,7 +11,6 @@
 )]
 
 use super::*;
-use biomeos_test_utils::env_helpers::TestEnvGuard;
 
 #[test]
 fn test_parse_spore_type_live() {
@@ -250,7 +249,6 @@ async fn test_handle_spore_verify_invalid_tree() {
 #[tokio::test]
 async fn test_handle_spore_refresh_dry_run_with_plasmid_and_spore() {
     use biomeos_spore::manifest::{BinaryInfo, BinaryManifest, CompatibilityInfo, ManifestMeta};
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
     use sha2::{Digest, Sha256};
     use std::collections::HashMap;
 
@@ -316,8 +314,7 @@ BEARDOG_NODE_ID = "test-node"
     )
     .expect("tower.toml");
 
-    let _guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", nucleus.to_string_lossy().as_ref());
-    let result = handle_spore_refresh(spore, true).await;
+    let result = handle_spore_refresh_with_plasmid_dir(spore, true, nucleus).await;
     assert!(
         result.is_ok(),
         "dry-run refresh should succeed: {:?}",
@@ -393,8 +390,7 @@ fn test_discover_plasmid_dir_env_override() {
     let temp = tempfile::tempdir().expect("temp dir");
     let plasmid = temp.path().join("plasmidBin");
     std::fs::create_dir_all(&plasmid).expect("plasmid dir");
-    let _guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", plasmid.to_string_lossy().as_ref());
-    let got = super::discover_plasmid_dir().expect("discover");
+    let got = super::discover_plasmid_dir_with_override(Some(&plasmid)).expect("discover");
     assert_eq!(got, plasmid);
 }
 
@@ -402,8 +398,7 @@ fn test_discover_plasmid_dir_env_override() {
 fn test_discover_plasmid_dir_env_missing_falls_through() {
     let temp = tempfile::tempdir().expect("temp dir");
     let missing = temp.path().join("not-there");
-    let _guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", missing.to_string_lossy().as_ref());
-    let result = super::discover_plasmid_dir();
+    let result = super::discover_plasmid_dir_with_override(Some(&missing));
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
     assert!(
@@ -480,8 +475,7 @@ BEARDOG_NODE_ID = "test-node"
     )
     .expect("tower.toml");
 
-    let _guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", nucleus.to_string_lossy().as_ref());
-    let result = handle_spore_refresh(spore, false).await;
+    let result = super::handle_spore_refresh_with_plasmid_dir(spore, false, nucleus).await;
     assert!(
         result.is_ok(),
         "refresh apply should succeed when spore matches nucleus: {:?}",
@@ -573,8 +567,7 @@ BEARDOG_NODE_ID = "stale-node"
     )
     .expect("tower.toml");
 
-    let _guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", nucleus.to_string_lossy().as_ref());
-    let result = handle_spore_refresh(spore, true).await;
+    let result = handle_spore_refresh_with_plasmid_dir(spore, true, nucleus).await;
     assert!(
         result.is_ok(),
         "dry-run with stale binary: {:?}",

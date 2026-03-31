@@ -347,6 +347,10 @@ impl VmFederationManager {
     }
 
     /// Validate SSH access to all VMs (final check)
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     fn validate_ssh_access(&self, vm_ips: &[String]) -> Result<()> {
         for ip in vm_ips {
             let output = Command::new("ssh")

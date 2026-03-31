@@ -55,11 +55,28 @@ impl AISuggestionManager {
     /// Discovers ANY primal with "ai" capability, not specifically "Squirrel".
     /// Primals self-register capabilities at runtime.
     pub async fn discover_ai_provider(&mut self) -> Result<()> {
+        self.discover_ai_provider_with_strict(std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
+            .await
+    }
+
+    /// Like [`Self::discover_ai_provider`], with explicit strict-discovery (no `BIOMEOS_STRICT_DISCOVERY` env read).
+    pub async fn discover_ai_provider_with_strict(&mut self, strict_discovery: bool) -> Result<()> {
+        let paths = biomeos_types::SystemPaths::new().ok();
+        let runtime_dir = paths.as_ref().map(|p| p.runtime_dir().to_path_buf());
+        self.discover_ai_provider_in(runtime_dir.as_deref(), strict_discovery)
+            .await
+    }
+
+    /// Like [`Self::discover_ai_provider_with_strict`], but scans `runtime_dir` instead of
+    /// the real `SystemPaths`.
+    pub async fn discover_ai_provider_in(
+        &mut self,
+        runtime_dir: Option<&std::path::Path>,
+        strict_discovery: bool,
+    ) -> Result<()> {
         info!("🔍 Discovering AI capability provider...");
 
-        if let Ok(paths) = biomeos_types::SystemPaths::new() {
-            // Scan runtime directory for any primal socket that responds to ai capabilities
-            let runtime_dir = paths.runtime_dir();
+        if let Some(runtime_dir) = runtime_dir {
             if let Ok(entries) = std::fs::read_dir(runtime_dir) {
                 for entry in entries.flatten() {
                     let path = entry.path();
@@ -79,8 +96,7 @@ impl AISuggestionManager {
             }
 
             // Fallback: check well-known ai provider socket (bootstrap only)
-            // Uses CapabilityTaxonomy for the default provider name
-            if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
+            if !strict_discovery {
                 let ai_provider = std::env::var("BIOMEOS_AI_PROVIDER").ok().or_else(|| {
                     biomeos_types::CapabilityTaxonomy::AiCoordination
                         .default_primal()
@@ -90,7 +106,7 @@ impl AISuggestionManager {
                     info!("ℹ️ No AI provider configured (strict discovery)");
                     return Ok(());
                 };
-                let socket_path = paths.primal_socket(&ai_provider);
+                let socket_path = runtime_dir.join(format!("{ai_provider}.sock"));
                 if socket_path.exists() {
                     info!("✅ AI provider found via bootstrap name: {}", ai_provider);
                     self.ai_provider_socket = Some(socket_path);
@@ -519,9 +535,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_ai_provider_strict_discovery() {
-        let _guard = biomeos_test_utils::TestEnvGuard::set("BIOMEOS_STRICT_DISCOVERY", "1");
+        let tmp = tempfile::tempdir().expect("tempdir");
         let mut mgr = AISuggestionManager::new("fam1".to_string());
-        let result = mgr.discover_ai_provider().await;
+        let result = mgr.discover_ai_provider_in(Some(tmp.path()), true).await;
         assert!(result.is_ok());
         assert!(mgr.ai_provider_socket.is_none());
     }
@@ -556,8 +572,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_ai_provider_no_sockets_returns_ok() {
+        let tmp = tempfile::tempdir().expect("tempdir");
         let mut mgr = AISuggestionManager::new("fam1".to_string());
-        mgr.discover_ai_provider().await.expect("discover");
+        mgr.discover_ai_provider_in(Some(tmp.path()), false)
+            .await
+            .expect("discover");
         assert!(mgr.ai_provider_socket.is_none());
     }
 

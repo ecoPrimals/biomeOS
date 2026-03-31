@@ -12,7 +12,7 @@ mod handlers;
 mod tests;
 
 use clap::{Args, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub use format::CleanupPlan;
 
@@ -84,4 +84,9 @@ pub enum FossilAction {
 /// Execute a fossil log management command
 pub async fn run(args: FossilArgs) -> anyhow::Result<()> {
     handlers::dispatch(args).await
+}
+
+/// Execute a fossil command with an explicit log root (tests; avoids `BIOMEOS_CLI_LOG_ROOT`).
+pub async fn run_at(args: FossilArgs, log_root: &Path) -> anyhow::Result<()> {
+    handlers::dispatch_at(args, Some(log_root)).await
 }

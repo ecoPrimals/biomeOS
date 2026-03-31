@@ -8,22 +8,159 @@
 //! through Squirrel integration.
 //!
 //! Deep Debt Principles:
-//! - Capability-based Squirrel discovery (no hardcoding)
-//! - Graceful degradation without Squirrel
+//! - Capability-based AI provider discovery (scan `*-{family}.sock` and `capabilities.list`)
+//! - No fallback to a fixed primal name when taxonomy resolution fails
+//! - Graceful degradation without an AI primal
 //! - Modern async Rust
 //! - No unsafe code
 
 use crate::events::GraphEvent;
 use crate::graph::{Operation, PrimalGraph, PrimalNode, PrimalSelector};
 use crate::modification::GraphModification;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use biomeos_nucleus::client::call_unix_socket_rpc;
-use biomeos_types::capability_taxonomy::CapabilityTaxonomy;
 use biomeos_types::SystemPaths;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::UnixStream;
 use tokio::time::{timeout, Duration};
 use tracing::{debug, warn};
+
+fn family_id_for_sockets() -> String {
+    std::env::var("FAMILY_ID")
+        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+        .unwrap_or_else(|_| "default".to_string())
+}
+
+fn is_ai_capability(name: &str) -> bool {
+    name == "ai"
+        || name.starts_with("ai.")
+        || matches!(name, "mcp" | "ml" | "assistance")
+}
+
+/// Discover the Unix socket path for a primal that advertises AI-related capabilities.
+///
+/// Scans the biomeOS runtime directory for `{{name}}-{{family}}.sock` and uses the first
+/// socket whose `capabilities.list` includes an AI domain capability. Does not assume a
+/// specific primal name when taxonomy data is missing.
+async fn discover_ai_socket_path() -> Result<PathBuf> {
+    let paths = SystemPaths::new_lazy();
+    let runtime = paths.runtime_dir().to_path_buf();
+    let family = family_id_for_sockets();
+    let suffix = format!("-{family}.sock");
+
+    let mut candidates: Vec<PathBuf> = std::fs::read_dir(&runtime)
+        .map(|entries| {
+            entries
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| {
+                    p.file_name()
+                        .and_then(|n| n.to_str())
+                        .is_some_and(|n| n.ends_with(&suffix))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    candidates.sort();
+
+    for socket_path in candidates {
+        let caps = probe_capabilities_list(&socket_path).await;
+        if caps.iter().any(|c| is_ai_capability(c)) {
+            return Ok(socket_path);
+        }
+    }
+
+    anyhow::bail!(
+        "no primal advertising AI capability found under {}",
+        runtime.display()
+    )
+}
+
+async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
+    let socket_str = socket_path.to_string_lossy();
+    let stream = match tokio::time::timeout(
+        Duration::from_millis(500),
+        UnixStream::connect(socket_path),
+    )
+    .await
+    {
+        Ok(Ok(s)) => s,
+        Ok(Err(e)) => {
+            debug!("AI probe {}: connect failed: {}", socket_str, e);
+            return vec![];
+        }
+        Err(_) => {
+            debug!("AI probe {}: connect timed out", socket_str);
+            return vec![];
+        }
+    };
+
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "capabilities.list",
+        "id": 1
+    });
+    let Ok(mut request_line) = serde_json::to_string(&request) else {
+        return vec![];
+    };
+    request_line.push('\n');
+
+    let mut reader = BufReader::new(stream);
+    let w = reader.get_mut();
+    if w.write_all(request_line.as_bytes()).await.is_err() {
+        return vec![];
+    }
+    let _ = w.flush().await;
+
+    let mut response_line = String::new();
+    match tokio::time::timeout(
+        Duration::from_millis(500),
+        reader.read_line(&mut response_line),
+    )
+    .await
+    {
+        Ok(Ok(n)) if n > 0 => {}
+        _ => return vec![],
+    }
+
+    let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
+    extract_capabilities_from_list_response(&resp)
+}
+
+fn extract_capabilities_from_list_response(resp: &serde_json::Value) -> Vec<String> {
+    if let Some(caps) = resp["result"]["capabilities"].as_array() {
+        let parsed: Vec<String> = caps
+            .iter()
+            .filter_map(|c| {
+                c.as_str()
+                    .map(String::from)
+                    .or_else(|| c["name"].as_str().map(String::from))
+            })
+            .collect();
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+    if let Some(caps) = resp["result"].as_array() {
+        let parsed: Vec<String> = caps
+            .iter()
+            .filter_map(|c| c.as_str().map(String::from))
+            .collect();
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+    if let Some(caps) = resp["result"]["methods"].as_array() {
+        return caps
+            .iter()
+            .filter_map(|c| c.as_str().map(String::from))
+            .collect();
+    }
+    vec![]
+}
 
 /// AI suggestion from Squirrel
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,6 +316,9 @@ pub struct AiGraphAdvisor {
     /// Whether Squirrel is available
     squirrel_available: bool,
 
+    /// Resolved AI provider socket (runtime discovery via `capabilities.list`)
+    ai_socket_path: Option<PathBuf>,
+
     /// Timeout for Squirrel requests
     squirrel_timeout: Duration,
 
@@ -195,15 +335,11 @@ struct LocalPattern {
 }
 
 impl AiGraphAdvisor {
-    /// Resolve the AI provider primal name via capability taxonomy
-    fn ai_provider() -> &'static str {
-        CapabilityTaxonomy::resolve_to_primal("ai").unwrap_or(biomeos_types::primal_names::SQUIRREL)
-    }
-
     /// Create a new AI advisor
     pub fn new() -> Self {
         Self {
             squirrel_available: false,
+            ai_socket_path: None,
             squirrel_timeout: Duration::from_secs(5),
             local_patterns: Self::initialize_local_patterns(),
         }
@@ -213,6 +349,7 @@ impl AiGraphAdvisor {
     pub fn with_timeout(timeout: Duration) -> Self {
         Self {
             squirrel_available: false,
+            ai_socket_path: None,
             squirrel_timeout: timeout,
             local_patterns: Self::initialize_local_patterns(),
         }
@@ -220,17 +357,22 @@ impl AiGraphAdvisor {
 
     /// Check if the AI provider is available
     pub async fn check_squirrel_availability(&mut self) -> Result<bool> {
-        let socket_path = SystemPaths::primal_socket(Self::ai_provider());
+        let socket_path = match discover_ai_socket_path().await {
+            Ok(p) => p,
+            Err(e) => {
+                debug!("AI primal discovery failed: {e}");
+                self.ai_socket_path = None;
+                self.squirrel_available = false;
+                return Ok(false);
+            }
+        };
 
-        if !std::path::Path::new(&socket_path).exists() {
-            debug!("Squirrel socket not found at {}", socket_path);
-            self.squirrel_available = false;
-            return Ok(false);
-        }
+        self.ai_socket_path = Some(socket_path.clone());
 
-        // Try to call health check on Squirrel
         match call_unix_socket_rpc::<serde_json::Value>(
-            &socket_path,
+            socket_path
+                .to_str()
+                .context("AI socket path is not valid UTF-8")?,
             "health.check",
             serde_json::json!({}),
         )
@@ -243,11 +385,11 @@ impl AiGraphAdvisor {
                     .map(|s| s == "healthy" || s == "ok")
                     .unwrap_or(false);
                 self.squirrel_available = healthy;
-                debug!("Squirrel health check: available={}", healthy);
+                debug!("AI primal health check: available={}", healthy);
                 Ok(healthy)
             }
             Err(e) => {
-                debug!("Squirrel health check failed: {}", e);
+                debug!("AI primal health check failed: {}", e);
                 self.squirrel_available = false;
                 Ok(false)
             }
@@ -265,12 +407,19 @@ impl AiGraphAdvisor {
 
     /// Get suggestions from Squirrel
     async fn get_squirrel_suggestions(&self, graph: &PrimalGraph) -> Result<Vec<AiSuggestion>> {
-        let socket_path = SystemPaths::primal_socket(Self::ai_provider());
+        let socket_path = self
+            .ai_socket_path
+            .as_ref()
+            .context("AI provider socket not discovered")?;
+        let sock_str = socket_path
+            .to_str()
+            .context("AI socket path is not valid UTF-8")?;
         let graph_snapshot = GraphSnapshot::from_graph(graph);
 
-        let result = timeout(self.squirrel_timeout, async {
+        let result = timeout(
+            self.squirrel_timeout,
             call_unix_socket_rpc::<serde_json::Value>(
-                &socket_path,
+                sock_str,
                 "ai.analyze_graph",
                 serde_json::json!({
                     "graph_id": graph.id.as_str(),
@@ -280,9 +429,8 @@ impl AiGraphAdvisor {
                     "node_count": graph.nodes.len(),
                     "edge_count": graph.edges.len()
                 }),
-            )
-            .await
-        })
+            ),
+        )
         .await;
 
         match result {
@@ -491,10 +639,15 @@ impl AiGraphAdvisor {
             return Ok(());
         }
 
-        let socket_path = SystemPaths::primal_socket(Self::ai_provider());
+        let socket_path = self
+            .ai_socket_path
+            .as_ref()
+            .context("AI provider socket not discovered")?;
 
         match call_unix_socket_rpc::<serde_json::Value>(
-            &socket_path,
+            socket_path
+                .to_str()
+                .context("AI socket path is not valid UTF-8")?,
             "ai.learn_from_event",
             serde_json::json!({
                 "event_type": event.event_type,
@@ -525,10 +678,15 @@ impl AiGraphAdvisor {
             return Ok(());
         }
 
-        let socket_path = SystemPaths::primal_socket(Self::ai_provider());
+        let socket_path = self
+            .ai_socket_path
+            .as_ref()
+            .context("AI provider socket not discovered")?;
 
         match call_unix_socket_rpc::<serde_json::Value>(
-            &socket_path,
+            socket_path
+                .to_str()
+                .context("AI socket path is not valid UTF-8")?,
             "ai.record_feedback",
             serde_json::json!({
                 "suggestion_id": feedback.suggestion_id,

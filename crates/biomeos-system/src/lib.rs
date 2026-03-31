@@ -163,6 +163,14 @@ impl SystemInspector {
 
     /// Get hostname
     fn get_hostname() -> BiomeResult<String> {
+        Self::get_hostname_with(None)
+    }
+
+    /// Hostname resolution with optional override (use in tests instead of setting `HOSTNAME`).
+    pub(crate) fn get_hostname_with(hostname_override: Option<&str>) -> BiomeResult<String> {
+        if let Some(h) = hostname_override {
+            return Ok(h.to_string());
+        }
         if let Ok(hostname) = std::env::var("HOSTNAME") {
             Ok(hostname)
         } else {

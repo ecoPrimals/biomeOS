@@ -34,7 +34,6 @@ bytes = "1"
 base64 = { workspace = true }
 
 [dev-dependencies]
-serial_test = "3.2"
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio-test = "0.4"
 tempfile = { workspace = true }

@@ -9,8 +9,8 @@
 
 use crate::capability_translation::{
     CapabilityTranslation, CapabilityTranslationRegistry, RegistryStats, resolve_primal_socket,
+    resolve_primal_socket_with,
 };
-use biomeos_test_utils::{TestEnvGuard, remove_test_env, set_test_env};
 use std::collections::HashMap;
 
 #[test]
@@ -209,14 +209,12 @@ fn test_load_defaults() {
 #[test]
 fn test_resolve_primal_socket_env_override() {
     let unique_primal = "testprimal_env_override";
-    let env_var = format!("{}_SOCKET", unique_primal.to_uppercase());
-
-    set_test_env(&env_var, "/custom/unique-test.sock");
-
-    let socket = resolve_primal_socket(unique_primal, "test-family");
+    let socket = resolve_primal_socket_with(
+        unique_primal,
+        "test-family",
+        Some("/custom/unique-test.sock"),
+    );
     assert_eq!(socket, "/custom/unique-test.sock");
-
-    remove_test_env(&env_var);
 }
 
 #[test]
@@ -238,16 +236,14 @@ fn test_resolve_primal_socket_fallback() {
 
 #[test]
 fn test_resolve_primal_socket_different_primals() {
-    remove_test_env("SONGBIRD_SOCKET");
-    remove_test_env("NESTGATE_SOCKET");
+    // Unique names avoid collision with real SONGBIRD_SOCKET / NESTGATE_SOCKET in the environment.
+    let a = resolve_primal_socket_with("testprimal_sock_a", "fam1", None);
+    let b = resolve_primal_socket_with("testprimal_sock_b", "fam1", None);
 
-    let songbird = resolve_primal_socket("songbird", "fam1");
-    let nestgate = resolve_primal_socket("nestgate", "fam1");
+    assert_ne!(a, b);
 
-    assert_ne!(songbird, nestgate);
-
-    assert!(songbird.contains("songbird"));
-    assert!(nestgate.contains("nestgate"));
+    assert!(a.contains("testprimal_sock_a"));
+    assert!(b.contains("testprimal_sock_b"));
 }
 
 #[test]
@@ -481,11 +477,11 @@ fn all_core_primals_have_capabilities_in_toml() {
 
 /// `BIOMEOS_*_PROVIDER=Ok(value)` path in [`defaults::load_defaults_into`](crate::capability_translation::defaults::load_defaults_into).
 #[test]
-#[serial_test::serial]
 fn test_load_defaults_compute_provider_env_override() {
-    let _g = TestEnvGuard::set("BIOMEOS_COMPUTE_PROVIDER", "songbird");
+    let mut env = HashMap::new();
+    env.insert("BIOMEOS_COMPUTE_PROVIDER", Some("songbird"));
     let mut registry = CapabilityTranslationRegistry::new();
-    registry.load_defaults();
+    registry.load_defaults_with(&env);
     let t = registry
         .get_translation("compute.execute")
         .expect("compute.execute should be registered");
@@ -494,17 +490,17 @@ fn test_load_defaults_compute_provider_env_override() {
 
 /// Strict discovery with unset provider env still resolves defaults via domain tuple (warn path).
 #[test]
-#[serial_test::serial]
 fn test_load_defaults_strict_discovery_unset_providers_use_domain_defaults() {
-    let _strict = TestEnvGuard::set("BIOMEOS_STRICT_DISCOVERY", "1");
-    let _sec = TestEnvGuard::remove("BIOMEOS_SECURITY_PROVIDER");
-    let _net = TestEnvGuard::remove("BIOMEOS_NETWORK_PROVIDER");
-    let _stor = TestEnvGuard::remove("BIOMEOS_STORAGE_PROVIDER");
-    let _comp = TestEnvGuard::remove("BIOMEOS_COMPUTE_PROVIDER");
-    let _ai = TestEnvGuard::remove("BIOMEOS_AI_PROVIDER");
+    let mut env = HashMap::new();
+    env.insert("BIOMEOS_STRICT_DISCOVERY", Some("1"));
+    env.insert("BIOMEOS_SECURITY_PROVIDER", None);
+    env.insert("BIOMEOS_NETWORK_PROVIDER", None);
+    env.insert("BIOMEOS_STORAGE_PROVIDER", None);
+    env.insert("BIOMEOS_COMPUTE_PROVIDER", None);
+    env.insert("BIOMEOS_AI_PROVIDER", None);
 
     let mut registry = CapabilityTranslationRegistry::new();
-    let count = registry.load_defaults();
+    let count = registry.load_defaults_with(&env);
     assert!(
         count > 10,
         "defaults should still register domain translations when strict and env unset"

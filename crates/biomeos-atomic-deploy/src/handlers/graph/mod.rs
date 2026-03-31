@@ -87,6 +87,8 @@ pub struct GraphHandler {
     pub(super) router: Arc<NeuralRouter>,
     /// Capability Translation Registry
     pub(super) translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
+    /// Override neural metrics DB path (e.g. tests); when `None`, use XDG data dir.
+    pub(super) metrics_db_path: Option<PathBuf>,
 }
 
 impl GraphHandler {
@@ -102,6 +104,25 @@ impl GraphHandler {
         router: Arc<NeuralRouter>,
         translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
     ) -> Self {
+        Self::new_with_metrics_db(
+            graphs_dir,
+            family_id,
+            executions,
+            router,
+            translation_registry,
+            None,
+        )
+    }
+
+    /// Same as [`Self::new`], with an explicit metrics database path for isolated analysis/tests.
+    pub fn new_with_metrics_db(
+        graphs_dir: impl Into<PathBuf>,
+        family_id: impl Into<String>,
+        executions: Arc<RwLock<HashMap<String, ExecutionStatus>>>,
+        router: Arc<NeuralRouter>,
+        translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
+        metrics_db_path: Option<PathBuf>,
+    ) -> Self {
         let graphs_dir = graphs_dir.into();
         let runtime_graphs_dir = graphs_dir.parent().map_or_else(
             || graphs_dir.join("runtime_graphs"),
@@ -115,6 +136,7 @@ impl GraphHandler {
             continuous_sessions: Arc::new(RwLock::new(HashMap::new())),
             router,
             translation_registry,
+            metrics_db_path,
         }
     }
 
@@ -295,11 +317,13 @@ impl GraphHandler {
         let deployment_graph: DeploymentGraph = toml::from_str(&toml_str)
             .with_context(|| format!("Failed to parse DeploymentGraph: {graph_id}"))?;
 
-        let metrics_db_path = SystemPaths::new()
-            .map(|p| p.data_dir().join(files::DEFAULT_NEURAL_METRICS_DB))
-            .unwrap_or_else(|_| {
-                PathBuf::from(DEFAULT_SOCKET_DIR).join(files::DEFAULT_NEURAL_METRICS_DB)
-            });
+        let metrics_db_path = self.metrics_db_path.clone().unwrap_or_else(|| {
+            SystemPaths::new()
+                .map(|p| p.data_dir().join(files::DEFAULT_NEURAL_METRICS_DB))
+                .unwrap_or_else(|_| {
+                    PathBuf::from(DEFAULT_SOCKET_DIR).join(files::DEFAULT_NEURAL_METRICS_DB)
+                })
+        });
 
         let collector = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path)
             .context("Failed to open metrics database")?;

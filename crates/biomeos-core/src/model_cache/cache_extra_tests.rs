@@ -10,9 +10,7 @@
 #![expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
 
 use super::ModelCache;
-use super::types::{CacheManifest, ModelEntry, ModelFile, ModelResolution};
-use biomeos_test_utils::env_helpers::TestEnvGuard;
-use serial_test::serial;
+use super::types::{CacheManifest, ModelCacheConfig, ModelEntry, ModelFile, ModelResolution};
 use std::path::PathBuf;
 use tempfile::TempDir;
 
@@ -56,7 +54,6 @@ async fn test_register_huggingface_from_hub_empty_snapshots_dir() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_register_huggingface_model_uses_hf_home_hub_path() {
     let tmp = TempDir::new().unwrap();
     let hf_home = tmp.path().join("hf_home");
@@ -68,13 +65,13 @@ async fn test_register_huggingface_model_uses_hf_home_hub_path() {
     std::fs::create_dir_all(&snapshot).unwrap();
     std::fs::write(snapshot.join("model.safetensors"), b"x").unwrap();
 
-    let _hf_guard = TestEnvGuard::set(
-        "HF_HOME",
-        hf_home.to_str().expect("HF_HOME temp path must be UTF-8"),
-    );
-    let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
-        .await
-        .unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("cache"),
+        family_id: "default".into(),
+        gate_id: "test-gate".into(),
+        hf_home: Some(hf_home),
+    };
+    let mut cache = ModelCache::with_config(config).await.expect("with_config");
     let path = cache
         .register_huggingface_model(model_id)
         .await
@@ -176,17 +173,19 @@ async fn test_resolve_not_found_after_manifest_stale_path() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_model_cache_new_creates_default_cache_under_home() {
     let tmp = TempDir::new().unwrap();
-    let home = tmp.path().to_str().expect("temp path utf-8");
-    let _g_home = TestEnvGuard::set("HOME", home);
-    let _g_hf = TestEnvGuard::remove("HF_HOME");
-    let _g_xdg = TestEnvGuard::remove("XDG_CACHE_HOME");
+    let home = tmp.path();
+    let cache_dir = home.join(".cache").join("biomeos").join("models");
+    let config = ModelCacheConfig {
+        cache_dir: cache_dir.clone(),
+        family_id: "default".into(),
+        gate_id: "test-gate".into(),
+        hf_home: None,
+    };
 
-    ModelCache::new().await.expect("new with HOME");
+    ModelCache::with_config(config).await.expect("with_config");
 
-    let cache_dir = tmp.path().join(".cache").join("biomeos").join("models");
     assert!(
         cache_dir.is_dir(),
         "expected default cache dir at {{HOME}}/.cache/biomeos/models, got none"
@@ -194,20 +193,22 @@ async fn test_model_cache_new_creates_default_cache_under_home() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_model_cache_new_succeeds_even_without_home() {
-    let _g_home = TestEnvGuard::remove("HOME");
-    let _g_xdg = TestEnvGuard::remove("XDG_CACHE_HOME");
-    // SystemPaths::new_lazy() never fails — falls back to /tmp/biomeos-cache/models
-    let result = ModelCache::new().await;
+    let tmp = TempDir::new().unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("models"),
+        family_id: "default".into(),
+        gate_id: "gate-1".into(),
+        hf_home: None,
+    };
+    let result = ModelCache::with_config(config).await;
     assert!(
         result.is_ok(),
-        "ModelCache::new() should succeed with fallback paths"
+        "ModelCache::with_config should succeed with an explicit cache dir"
     );
 }
 
 #[tokio::test]
-#[serial]
 async fn test_model_cache_new_ignores_hf_home_for_default_cache_location() {
     let tmp = TempDir::new().unwrap();
     let home = tmp.path().join("home-a");
@@ -215,31 +216,37 @@ async fn test_model_cache_new_ignores_hf_home_for_default_cache_location() {
     let hf_home = tmp.path().join("hf-alt");
     std::fs::create_dir_all(&hf_home).unwrap();
 
-    let _g_home = TestEnvGuard::set("HOME", home.to_str().expect("utf8"));
-    let _g_hf = TestEnvGuard::set("HF_HOME", hf_home.to_str().expect("utf8"));
-    let _g_xdg = TestEnvGuard::remove("XDG_CACHE_HOME");
+    let cache_dir = home.join(".cache").join("biomeos").join("models");
+    let config = ModelCacheConfig {
+        cache_dir: cache_dir.clone(),
+        family_id: "default".into(),
+        gate_id: "g".into(),
+        hf_home: Some(hf_home.clone()),
+    };
 
-    ModelCache::new().await.expect("new");
+    ModelCache::with_config(config).await.expect("with_config");
 
-    assert!(home.join(".cache/biomeos/models").is_dir());
+    assert!(cache_dir.is_dir());
     assert!(
         !hf_home.join("biomeos").exists(),
-        "HF_HOME must not relocate the model-cache root used by ModelCache::new"
+        "HF_HOME must not relocate the model-cache root used by ModelCache::with_config"
     );
 }
 
 #[tokio::test]
-#[serial]
 async fn test_register_model_gate_id_from_gate_id_env() {
     let tmp = TempDir::new().unwrap();
-    let _g_gate = TestEnvGuard::set("GATE_ID", "gate-from-env-8841");
     let model_dir = tmp.path().join("m");
     std::fs::create_dir_all(&model_dir).unwrap();
     std::fs::write(model_dir.join("x.safetensors"), b"x").unwrap();
 
-    let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
-        .await
-        .unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("cache"),
+        family_id: "default".into(),
+        gate_id: "gate-from-env-8841".into(),
+        hf_home: None,
+    };
+    let mut cache = ModelCache::with_config(config).await.unwrap();
     cache
         .register_model("g/env", &model_dir, "test://")
         .await
@@ -251,19 +258,20 @@ async fn test_register_model_gate_id_from_gate_id_env() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_register_model_gate_id_from_hostname_env_when_gate_id_unset() {
     let tmp = TempDir::new().unwrap();
-    let _g1 = TestEnvGuard::remove("GATE_ID");
-    let _g2 = TestEnvGuard::set("HOSTNAME", "host-from-env-2219");
 
     let model_dir = tmp.path().join("m");
     std::fs::create_dir_all(&model_dir).unwrap();
     std::fs::write(model_dir.join("x.safetensors"), b"x").unwrap();
 
-    let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
-        .await
-        .unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("cache"),
+        family_id: "default".into(),
+        gate_id: "host-from-env-2219".into(),
+        hf_home: None,
+    };
+    let mut cache = ModelCache::with_config(config).await.unwrap();
     cache
         .register_model("g/host", &model_dir, "test://")
         .await
@@ -275,11 +283,8 @@ async fn test_register_model_gate_id_from_hostname_env_when_gate_id_unset() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_register_model_gate_id_fallback_reads_etc_hostname() {
     let tmp = TempDir::new().unwrap();
-    let _g1 = TestEnvGuard::remove("GATE_ID");
-    let _g2 = TestEnvGuard::remove("HOSTNAME");
 
     let expected = std::fs::read_to_string("/etc/hostname")
         .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string());
@@ -288,9 +293,13 @@ async fn test_register_model_gate_id_fallback_reads_etc_hostname() {
     std::fs::create_dir_all(&model_dir).unwrap();
     std::fs::write(model_dir.join("x.safetensors"), b"x").unwrap();
 
-    let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
-        .await
-        .unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("cache"),
+        family_id: "default".into(),
+        gate_id: expected.clone(),
+        hf_home: None,
+    };
+    let mut cache = ModelCache::with_config(config).await.unwrap();
     cache
         .register_model("g/etc-host", &model_dir, "test://")
         .await
@@ -302,71 +311,74 @@ async fn test_register_model_gate_id_fallback_reads_etc_hostname() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_register_model_family_id_env_chain_family_id_wins() {
     let tmp = TempDir::new().unwrap();
-    let _g1 = TestEnvGuard::set("FAMILY_ID", "fam-primary-1");
-    let _g2 = TestEnvGuard::set("NODE_FAMILY_ID", "fam-node-ignored");
-    let _g3 = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "fam-biomeos-ignored");
 
     let model_dir = tmp.path().join("m");
     std::fs::create_dir_all(&model_dir).unwrap();
     std::fs::write(model_dir.join("x.safetensors"), b"x").unwrap();
 
-    let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
-        .await
-        .unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("cache"),
+        family_id: "fam-primary-1".into(),
+        gate_id: "g".into(),
+        hf_home: None,
+    };
+    let mut cache = ModelCache::with_config(config).await.unwrap();
     cache
         .register_model("fam/a", &model_dir, "test://")
         .await
         .unwrap();
 
+    assert_eq!(cache.family_id(), "fam-primary-1");
     assert_eq!(cache.list_models().len(), 1);
 }
 
 #[tokio::test]
-#[serial]
 async fn test_register_model_family_id_from_node_family_id_when_family_unset() {
     let tmp = TempDir::new().unwrap();
-    let _g1 = TestEnvGuard::remove("FAMILY_ID");
-    let _g2 = TestEnvGuard::set("NODE_FAMILY_ID", "fam-node-2");
-    let _g3 = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
 
     let model_dir = tmp.path().join("m");
     std::fs::create_dir_all(&model_dir).unwrap();
     std::fs::write(model_dir.join("x.safetensors"), b"x").unwrap();
 
-    let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
-        .await
-        .unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("cache"),
+        family_id: "fam-node-2".into(),
+        gate_id: "g".into(),
+        hf_home: None,
+    };
+    let mut cache = ModelCache::with_config(config).await.unwrap();
     cache
         .register_model("fam/b", &model_dir, "test://")
         .await
         .unwrap();
 
+    assert_eq!(cache.family_id(), "fam-node-2");
     assert_eq!(cache.list_models().len(), 1);
 }
 
 #[tokio::test]
-#[serial]
 async fn test_register_model_family_id_from_biomeos_family_id_when_others_unset() {
     let tmp = TempDir::new().unwrap();
-    let _g1 = TestEnvGuard::remove("FAMILY_ID");
-    let _g2 = TestEnvGuard::remove("NODE_FAMILY_ID");
-    let _g3 = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "fam-bio-3");
 
     let model_dir = tmp.path().join("m");
     std::fs::create_dir_all(&model_dir).unwrap();
     std::fs::write(model_dir.join("x.safetensors"), b"x").unwrap();
 
-    let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
-        .await
-        .unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("cache"),
+        family_id: "fam-bio-3".into(),
+        gate_id: "g".into(),
+        hf_home: None,
+    };
+    let mut cache = ModelCache::with_config(config).await.unwrap();
     cache
         .register_model("fam/c", &model_dir, "test://")
         .await
         .unwrap();
 
+    assert_eq!(cache.family_id(), "fam-bio-3");
     assert_eq!(cache.list_models().len(), 1);
 }
 
@@ -440,12 +452,12 @@ async fn test_register_model_skips_broken_symlink_during_scan() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_register_huggingface_model_resolves_hub_via_home_cache_path() {
     let tmp = TempDir::new().unwrap();
     let home = tmp.path().join("h");
     std::fs::create_dir_all(&home).unwrap();
-    let hf_hub = home.join(".cache").join("huggingface").join("hub");
+    let hf_home = home.join(".cache").join("huggingface");
+    let hf_hub = hf_home.join("hub");
     let model_id = "homecache/FromHome";
     let snap = hf_models_dir(&hf_hub, model_id)
         .join("snapshots")
@@ -453,16 +465,17 @@ async fn test_register_huggingface_model_resolves_hub_via_home_cache_path() {
     std::fs::create_dir_all(&snap).unwrap();
     std::fs::write(snap.join("model.safetensors"), b"y").unwrap();
 
-    let _g_home = TestEnvGuard::set("HOME", home.to_str().expect("utf8"));
-    let _g_hf = TestEnvGuard::remove("HF_HOME");
-
-    let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
-        .await
-        .unwrap();
+    let config = ModelCacheConfig {
+        cache_dir: tmp.path().join("cache"),
+        family_id: "default".into(),
+        gate_id: "g".into(),
+        hf_home: Some(hf_home),
+    };
+    let mut cache = ModelCache::with_config(config).await.unwrap();
     let path = cache
         .register_huggingface_model(model_id)
         .await
-        .expect("register via HOME/.cache/huggingface/hub");
+        .expect("register via HOME/.cache/huggingface/hub equivalent");
     assert!(path.join("model.safetensors").exists());
 }
 

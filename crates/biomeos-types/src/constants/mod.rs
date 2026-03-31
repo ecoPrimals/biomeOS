@@ -64,13 +64,25 @@ pub mod endpoints {
     /// Production bind address (for accepting connections) - fallback only
     pub const PRODUCTION_BIND_ADDRESS: &str = "0.0.0.0";
 
+    /// Get bind address from an optional value (same semantics as env `BIND_ADDRESS`).
+    #[must_use]
+    pub fn bind_address_from(val: Option<&str>) -> String {
+        val.map_or_else(|| DEFAULT_LOCALHOST.to_string(), String::from)
+    }
+
     /// Get bind address from environment or fallback to default
     ///
     /// Checks `BIND_ADDRESS` environment variable first.
     /// Falls back to `DEFAULT_LOCALHOST` for development.
     #[must_use]
     pub fn bind_address() -> String {
-        env::var(env_vars::BIND_ADDRESS).unwrap_or_else(|_| DEFAULT_LOCALHOST.to_string())
+        bind_address_from(env::var(env_vars::BIND_ADDRESS).ok().as_deref())
+    }
+
+    /// Production bind address from an optional value.
+    #[must_use]
+    pub fn production_bind_address_from(val: Option<&str>) -> String {
+        val.map_or_else(|| PRODUCTION_BIND_ADDRESS.to_string(), String::from)
     }
 
     /// Get production bind address from environment or fallback
@@ -79,7 +91,7 @@ pub mod endpoints {
     /// Falls back to `PRODUCTION_BIND_ADDRESS` for production.
     #[must_use]
     pub fn production_bind_address() -> String {
-        env::var(env_vars::BIND_ADDRESS).unwrap_or_else(|_| PRODUCTION_BIND_ADDRESS.to_string())
+        production_bind_address_from(env::var(env_vars::BIND_ADDRESS).ok().as_deref())
     }
 
     // REMOVED: FALLBACK_*_ENDPOINT constants
@@ -183,6 +195,15 @@ pub mod timeouts {
 
     /// Short timeout for fast operations like health checks (milliseconds).
     pub const SHORT_TIMEOUT_MS: u64 = 3000;
+
+    /// Capability probe connect/read timeout (milliseconds).
+    ///
+    /// Intentionally short: probes are best-effort and must not block startup
+    /// or lazy discovery paths.
+    pub const PROBE_TIMEOUT_MS: u64 = 500;
+
+    /// Capability probe timeout as a `Duration`.
+    pub const PROBE_TIMEOUT: Duration = Duration::from_millis(PROBE_TIMEOUT_MS);
 }
 
 /// Resource limits and thresholds
@@ -626,66 +647,54 @@ mod tests {
 
     #[test]
     fn test_network_http_port_from_env() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set(env_vars::HTTP_PORT, "9999");
-        assert_eq!(network::http_port(), 9999);
+        assert_eq!(network::http_port_from(Some("9999")), 9999);
     }
 
     #[test]
     fn test_network_http_port_invalid_env_falls_back() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set(env_vars::HTTP_PORT, "not_a_number");
-        assert_eq!(network::http_port(), network::DEFAULT_HTTP_PORT);
+        assert_eq!(
+            network::http_port_from(Some("not_a_number")),
+            network::DEFAULT_HTTP_PORT
+        );
     }
 
     #[test]
     fn test_network_https_port_from_env() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set(env_vars::HTTPS_PORT, "4443");
-        assert_eq!(network::https_port(), 4443);
+        assert_eq!(network::https_port_from(Some("4443")), 4443);
     }
 
     #[test]
     fn test_network_websocket_port_from_env() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set(env_vars::WEBSOCKET_PORT, "7777");
-        assert_eq!(network::websocket_port(), 7777);
+        assert_eq!(network::websocket_port_from(Some("7777")), 7777);
     }
 
     #[test]
     fn test_network_mcp_port_from_env() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set(env_vars::MCP_WEBSOCKET_PORT, "5555");
-        assert_eq!(network::mcp_port(), 5555);
+        assert_eq!(network::mcp_port_from(Some("5555")), 5555);
     }
 
     #[test]
     fn test_network_discovery_port_from_env() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set("DISCOVERY_PORT", "6666");
-        assert_eq!(network::discovery_port(), 6666);
+        assert_eq!(network::discovery_port_from(Some("6666")), 6666);
     }
 
     #[test]
     fn test_network_beardog_port_from_env() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set(env_vars::BEARDOG_PORT, "9001");
-        assert_eq!(network::beardog_port(), 9001);
+        assert_eq!(network::beardog_port_from(Some("9001")), 9001);
     }
 
     #[test]
     fn test_network_songbird_port_from_env() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set(env_vars::SONGBIRD_PORT, "3333");
-        assert_eq!(network::songbird_port(), 3333);
+        assert_eq!(network::songbird_port_from(Some("3333")), 3333);
     }
 
     #[test]
     fn test_endpoints_bind_address_from_env() {
-        use biomeos_test_utils::TestEnvGuard;
-        let _g = TestEnvGuard::set(env_vars::BIND_ADDRESS, "10.0.0.1");
-        assert_eq!(endpoints::bind_address(), "10.0.0.1");
-        assert_eq!(endpoints::production_bind_address(), "10.0.0.1");
+        assert_eq!(endpoints::bind_address_from(Some("10.0.0.1")), "10.0.0.1");
+        assert_eq!(
+            endpoints::production_bind_address_from(Some("10.0.0.1")),
+            "10.0.0.1"
+        );
     }
 
     #[test]

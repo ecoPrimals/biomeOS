@@ -14,9 +14,9 @@ use axum::{
 };
 use biomeos_api::{AppState, Config};
 use biomeos_core::CompositeDiscovery;
-use biomeos_test_utils::set_test_env;
 use http_body_util::BodyExt;
 use serde_json::Value;
+use std::collections::HashMap;
 use tower::ServiceExt; // Required for .oneshot() method on Router
 
 /// Helper to create test app with standalone discovery
@@ -24,8 +24,9 @@ use tower::ServiceExt; // Required for .oneshot() method on Router
 /// NOTE: Sets BIOMEOS_SOVEREIGN=false because these tests verify API logic,
 /// not the Dark Forest security gate (which has its own tests).
 async fn test_app_with_standalone_discovery() -> Router {
-    // Disable sovereign gate for API logic tests
-    set_test_env("BIOMEOS_SOVEREIGN", "false");
+    let mut env = HashMap::new();
+    env.insert("BIOMEOS_SOVEREIGN".to_string(), "false".to_string());
+    let gate = biomeos_api::dark_forest_gate::DarkForestGateConfig::from_env_map(&env);
 
     let discovery = CompositeDiscovery::new();
 
@@ -38,7 +39,7 @@ async fn test_app_with_standalone_discovery() -> Router {
         .build()
         .expect("Failed to build test app state");
 
-    biomeos_api::create_app(state)
+    biomeos_api::create_app_with_gate(state, gate)
 }
 
 /// Helper to create test app in standalone mode
@@ -46,16 +47,17 @@ async fn test_app_with_standalone_discovery() -> Router {
 /// NOTE: Sets BIOMEOS_SOVEREIGN=false because these tests verify API logic,
 /// not the Dark Forest security gate (which has its own tests).
 async fn test_app_standalone() -> Router {
-    // Disable sovereign gate for API logic tests
-    set_test_env("BIOMEOS_SOVEREIGN", "false");
-    set_test_env("BIOMEOS_STANDALONE_MODE", "true");
+    let mut env = HashMap::new();
+    env.insert("BIOMEOS_SOVEREIGN".to_string(), "false".to_string());
+    env.insert("BIOMEOS_STANDALONE_MODE".to_string(), "true".to_string());
+    let gate = biomeos_api::dark_forest_gate::DarkForestGateConfig::from_env_map(&env);
 
     let state = AppState::builder()
-        .config_from_env()
+        .config(Config::from_env_map(&env))
         .build_with_defaults()
         .expect("Failed to build standalone app state");
 
-    biomeos_api::create_app(state)
+    biomeos_api::create_app_with_gate(state, gate)
 }
 
 #[tokio::test]

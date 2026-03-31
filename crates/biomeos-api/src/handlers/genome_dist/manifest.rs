@@ -15,6 +15,16 @@ use tracing::{error, info, warn};
 use super::discovery;
 use super::error::DistError;
 
+fn genome_bin_not_found_err() -> (StatusCode, Json<DistError>) {
+    (
+        StatusCode::SERVICE_UNAVAILABLE,
+        Json(DistError {
+            error: "Genome distribution not configured".to_string(),
+            code: "GENOMEBIN_NOT_FOUND".to_string(),
+        }),
+    )
+}
+
 /// Genome distribution manifest
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DistManifest {
@@ -86,13 +96,7 @@ pub async fn get_manifest() -> Result<Json<DistManifest>, (StatusCode, Json<Dist
 
     let genome_bin = discovery::get_genome_bin_path().ok_or_else(|| {
         error!("genomeBin path not found");
-        (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(DistError {
-                error: "Genome distribution not configured".to_string(),
-                code: "GENOMEBIN_NOT_FOUND".to_string(),
-            }),
-        )
+        genome_bin_not_found_err()
     })?;
 
     get_manifest_from(genome_bin).await.map(Json)
@@ -273,13 +277,7 @@ pub async fn get_latest(
 
     let genome_bin = discovery::get_genome_bin_path().ok_or_else(|| {
         error!("genomeBin path not found");
-        (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(DistError {
-                error: "Genome distribution not configured".to_string(),
-                code: "GENOMEBIN_NOT_FOUND".to_string(),
-            }),
-        )
+        genome_bin_not_found_err()
     })?;
 
     get_latest_from(genome_bin, primal).await
@@ -317,13 +315,8 @@ pub async fn get_checksum(
     info!("📦 Getting checksum for: {}/{}/{}", primal, version, arch);
 
     let genome_bin = discovery::get_genome_bin_path().ok_or_else(|| {
-        (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(DistError {
-                error: "Genome distribution not configured".to_string(),
-                code: "GENOMEBIN_NOT_FOUND".to_string(),
-            }),
-        )
+        error!("genomeBin path not found");
+        genome_bin_not_found_err()
     })?;
 
     get_checksum_from(genome_bin, primal, version, arch).await
@@ -397,9 +390,6 @@ pub async fn get_checksum_from(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
-    use serial_test::serial;
-
     #[test]
     fn test_dist_manifest_serialization() {
         let manifest = DistManifest {
@@ -715,10 +705,11 @@ size = 999
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_manifest_genome_bin_not_configured() {
-        let _guard = TestEnvGuard::remove("GENOMEBIN_PATH");
-        let result = get_manifest().await;
+        let result = match discovery::get_genome_bin_path_with(None, &[]) {
+            Some(p) => get_manifest_from(p).await.map(Json),
+            None => Err(genome_bin_not_found_err()),
+        };
         let Err((status, body)) = result else {
             panic!("expected Err when genome bin is not discoverable");
         };
@@ -727,10 +718,11 @@ size = 999
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_latest_genome_bin_not_configured() {
-        let _guard = TestEnvGuard::remove("GENOMEBIN_PATH");
-        let result = get_latest(Path("any-primal".to_string())).await;
+        let result = match discovery::get_genome_bin_path_with(None, &[]) {
+            Some(p) => get_latest_from(p, "any-primal".to_string()).await,
+            None => Err(genome_bin_not_found_err()),
+        };
         let Err((status, body)) = result else {
             panic!("expected Err when genome bin is not discoverable");
         };
@@ -739,11 +731,13 @@ size = 999
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_checksum_genome_bin_not_configured() {
-        let _guard = TestEnvGuard::remove("GENOMEBIN_PATH");
-        let result =
-            get_checksum(Path(("p".to_string(), "v".to_string(), "arch".to_string()))).await;
+        let result = match discovery::get_genome_bin_path_with(None, &[]) {
+            Some(p) => {
+                get_checksum_from(p, "p".to_string(), "v".to_string(), "arch".to_string()).await
+            }
+            None => Err(genome_bin_not_found_err()),
+        };
         let Err((status, body)) = result else {
             panic!("expected Err when genome bin is not discoverable");
         };

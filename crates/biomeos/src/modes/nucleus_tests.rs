@@ -377,8 +377,8 @@ fn test_discover_binaries_finds_in_path() {
     std::fs::set_permissions(&binary_path, perms).unwrap();
 
     let path_dirs = vec![temp_dir.path()];
-    let map =
-        discover_binaries_with(&[unique_name], None, &path_dirs).expect("discover should succeed");
+    let map = discover_binaries_with(&[unique_name], None, &path_dirs, None)
+        .expect("discover should succeed");
 
     assert!(
         map.contains_key(unique_name),
@@ -480,6 +480,7 @@ fn test_build_primal_command_squirrel_with_ai_providers() {
         anthropic_api_key: Some("test-key"),
         openai_api_key: None,
         ai_http_providers: None,
+        ai_default_model: None,
     };
     let cmd = build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
@@ -503,6 +504,7 @@ fn test_build_primal_command_squirrel_with_openai_key() {
         anthropic_api_key: None,
         openai_api_key: Some("sk-test"),
         ai_http_providers: None,
+        ai_default_model: None,
     };
     let cmd = build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
@@ -529,7 +531,7 @@ fn test_discover_binaries_finds_in_plasmidbin() {
     }
 
     let plasmid_bin_dir = plasmid_bin.parent().unwrap();
-    let map = discover_binaries_with(&[unique_name], Some(plasmid_bin_dir), &[])
+    let map = discover_binaries_with(&[unique_name], Some(plasmid_bin_dir), &[], None)
         .expect("discover should succeed");
 
     assert!(
@@ -557,7 +559,7 @@ fn test_discover_binaries_finds_in_plasmidbin_subdir() {
     }
 
     let plasmid_bin_dir = plasmid_bin.parent().unwrap();
-    let map = discover_binaries_with(&[unique_name], Some(plasmid_bin_dir), &[])
+    let map = discover_binaries_with(&[unique_name], Some(plasmid_bin_dir), &[], None)
         .expect("discover should succeed");
 
     assert!(

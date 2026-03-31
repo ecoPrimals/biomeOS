@@ -28,7 +28,7 @@ async fn test_minimal_rootfs_build() -> Result<()> {
     };
     
     // Execute
-    let builder = RootFsBuilder::new(config);
+    let mut builder = RootFsBuilder::new(config);
     let result = builder.build().await;
     
     // Verify
@@ -72,7 +72,7 @@ async fn test_rootfs_with_primals() -> Result<()> {
     };
     
     // Execute
-    let builder = RootFsBuilder::new(config);
+    let mut builder = RootFsBuilder::new(config);
     let result = builder.build().await;
     
     // Verify
@@ -109,7 +109,7 @@ async fn test_rootfs_concurrent_builds() -> Result<()> {
                 ..Default::default()
             };
             
-            let builder = RootFsBuilder::new(config);
+            let mut builder = RootFsBuilder::new(config);
             builder.build().await
         });
         
@@ -144,7 +144,7 @@ async fn test_rootfs_error_handling() -> Result<()> {
         ..Default::default()
     };
     
-    let builder = RootFsBuilder::new(config);
+    let mut builder = RootFsBuilder::new(config);
     let result = builder.build().await;
     assert!(result.is_err(), "Invalid size should fail");
     
@@ -155,7 +155,7 @@ async fn test_rootfs_error_handling() -> Result<()> {
         ..Default::default()
     };
     
-    let builder = RootFsBuilder::new(config);
+    let mut builder = RootFsBuilder::new(config);
     let result = builder.build().await;
     assert!(result.is_err(), "Invalid path should fail");
     

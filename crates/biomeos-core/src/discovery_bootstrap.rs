@@ -193,12 +193,20 @@ impl DiscoveryBootstrap {
     /// localhost ports where `BiomeOS` services (e.g., Songbird) typically advertise.
     /// Falls back to `MDNS_DISCOVERED_ENDPOINT` env var if probing fails.
     async fn discover_via_mdns(&self) -> Result<String> {
+        self.discover_via_mdns_with(None, None).await
+    }
+
+    async fn discover_via_mdns_with(
+        &self,
+        skip_probe_override: Option<bool>,
+        mdns_fallback_override: Option<&str>,
+    ) -> Result<String> {
         use std::time::Duration;
 
         tracing::info!("Attempting mDNS discovery for BiomeOS services (_biomeos._tcp.local)");
 
-        // Skip socket probe when disabled (e.g. for deterministic tests)
-        let skip_probe = std::env::var("BIOMEOS_SKIP_MDNS_PROBE").is_ok();
+        let skip_probe =
+            skip_probe_override.unwrap_or_else(|| std::env::var("BIOMEOS_SKIP_MDNS_PROBE").is_ok());
 
         if !skip_probe {
             // Socket-based discovery: probe known localhost ports where BiomeOS
@@ -234,7 +242,10 @@ impl DiscoveryBootstrap {
         }
 
         // Fallback to env var when probe skipped or found nothing
-        if let Ok(endpoint) = std::env::var("MDNS_DISCOVERED_ENDPOINT") {
+        let mdns_fb = mdns_fallback_override
+            .map(String::from)
+            .or_else(|| std::env::var("MDNS_DISCOVERED_ENDPOINT").ok());
+        if let Some(endpoint) = mdns_fb {
             tracing::info!(
                 "mDNS fallback: using MDNS_DISCOVERED_ENDPOINT: {}",
                 endpoint
@@ -251,13 +262,22 @@ impl DiscoveryBootstrap {
     /// DEEP DEBT EVOLUTION (Feb 7, 2026): Real UDP broadcast implementation.
     /// Sends a discovery packet to the local network and listens for responses.
     async fn discover_via_broadcast(&self) -> Result<String> {
+        self.discover_via_broadcast_with(None).await
+    }
+
+    async fn discover_via_broadcast_with(
+        &self,
+        broadcast_endpoint_override: Option<&str>,
+    ) -> Result<String> {
         use std::time::Duration;
         use tokio::net::UdpSocket;
 
         tracing::info!("Attempting UDP broadcast discovery");
 
-        // Allow env var override for testing
-        if let Ok(endpoint) = std::env::var("BROADCAST_DISCOVERED_ENDPOINT") {
+        let endpoint_hint = broadcast_endpoint_override
+            .map(String::from)
+            .or_else(|| std::env::var("BROADCAST_DISCOVERED_ENDPOINT").ok());
+        if let Some(endpoint) = endpoint_hint {
             tracing::info!("Broadcast discovered endpoint (from env): {}", endpoint);
             return Ok(endpoint);
         }
@@ -317,7 +337,15 @@ impl DiscoveryBootstrap {
     ///
     /// Uses IP multicast to discover services in a more controlled way than broadcast.
     /// Multicast is often preferred in larger networks as it's more efficient.
+    #[expect(
+        clippy::unused_self,
+        reason = "API symmetry with other discover_via_* instance methods"
+    )]
     fn discover_via_multicast(&self) -> Result<String> {
+        Self::discover_via_multicast_with(None)
+    }
+
+    fn discover_via_multicast_with(endpoint_override: Option<&str>) -> Result<String> {
         tracing::info!("Attempting IP multicast discovery");
 
         // Multicast discovery pattern:
@@ -343,7 +371,10 @@ impl DiscoveryBootstrap {
         tracing::debug!("Listening for responses (timeout: 3s)");
 
         // Simulated discovery - in production would use actual multicast
-        if let Ok(endpoint) = std::env::var("MULTICAST_DISCOVERED_ENDPOINT") {
+        let endpoint_hint = endpoint_override
+            .map(String::from)
+            .or_else(|| std::env::var("MULTICAST_DISCOVERED_ENDPOINT").ok());
+        if let Some(endpoint) = endpoint_hint {
             tracing::info!("Multicast discovered endpoint: {}", endpoint);
             return Ok(endpoint);
         }
@@ -373,7 +404,6 @@ impl Default for DiscoveryBootstrap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_bootstrap_creation() {
@@ -408,20 +438,12 @@ mod tests {
         assert!(debug_str.contains("test"));
     }
 
-    /// Mutex to serialize env-var-mutating tests
-    static MDNS_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
     #[tokio::test]
     async fn test_discover_via_mdns_with_env() {
-        let _guard = MDNS_ENV_LOCK.lock().await;
-        set_test_env("MDNS_DISCOVERED_ENDPOINT", "http://mdns-test:9999");
-        set_test_env("BIOMEOS_SKIP_MDNS_PROBE", "1");
-
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.discover_via_mdns().await;
-
-        remove_test_env("MDNS_DISCOVERED_ENDPOINT");
-        remove_test_env("BIOMEOS_SKIP_MDNS_PROBE");
+        let result = bootstrap
+            .discover_via_mdns_with(Some(true), Some("http://mdns-test:9999"))
+            .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "http://mdns-test:9999");
@@ -429,14 +451,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_via_mdns_no_service() {
-        let _guard = MDNS_ENV_LOCK.lock().await;
-        remove_test_env("MDNS_DISCOVERED_ENDPOINT");
-        set_test_env("BIOMEOS_SKIP_MDNS_PROBE", "1");
-
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.discover_via_mdns().await;
-
-        remove_test_env("BIOMEOS_SKIP_MDNS_PROBE");
+        let result = bootstrap.discover_via_mdns_with(Some(true), None).await;
 
         assert!(result.is_err());
         assert!(
@@ -447,23 +463,12 @@ mod tests {
         );
     }
 
-    /// Mutex to serialize env-var-mutating broadcast tests
-    static BROADCAST_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
     #[tokio::test]
     async fn test_discover_via_broadcast_with_env() {
-        let _lock = BROADCAST_ENV_LOCK.lock().await;
-
-        // Using the simulated broadcast discovery path
-        set_test_env(
-            "BROADCAST_DISCOVERED_ENDPOINT",
-            "http://broadcast-test:8888",
-        );
-
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.discover_via_broadcast().await;
-
-        remove_test_env("BROADCAST_DISCOVERED_ENDPOINT");
+        let result = bootstrap
+            .discover_via_broadcast_with(Some("http://broadcast-test:8888"))
+            .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "http://broadcast-test:8888");
@@ -471,13 +476,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_via_broadcast_no_response() {
-        let _lock = BROADCAST_ENV_LOCK.lock().await;
-
-        // Ensure the simulated env var is not set
-        remove_test_env("BROADCAST_DISCOVERED_ENDPOINT");
-
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.discover_via_broadcast().await;
+        let result = bootstrap.discover_via_broadcast_with(None).await;
 
         assert!(result.is_err());
         assert!(
@@ -488,24 +488,10 @@ mod tests {
         );
     }
 
-    /// Mutex to serialize env-var-mutating multicast tests
-    /// Uses tokio::sync::Mutex to safely hold across await points
-    static MULTICAST_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
     #[tokio::test]
     async fn test_discover_via_multicast_with_env() {
-        let _lock = MULTICAST_ENV_LOCK.lock().await;
-
-        // Using the simulated multicast discovery path
-        set_test_env(
-            "MULTICAST_DISCOVERED_ENDPOINT",
-            "http://multicast-test:7777",
-        );
-
-        let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.discover_via_multicast();
-
-        remove_test_env("MULTICAST_DISCOVERED_ENDPOINT");
+        let result =
+            DiscoveryBootstrap::discover_via_multicast_with(Some("http://multicast-test:7777"));
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "http://multicast-test:7777");
@@ -513,13 +499,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_via_multicast_no_service() {
-        let _lock = MULTICAST_ENV_LOCK.lock().await;
-
-        // Ensure the simulated env var is not set
-        remove_test_env("MULTICAST_DISCOVERED_ENDPOINT");
-
-        let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.discover_via_multicast();
+        let result = DiscoveryBootstrap::discover_via_multicast_with(None);
 
         assert!(result.is_err());
         assert!(

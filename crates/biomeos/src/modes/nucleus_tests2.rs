@@ -10,8 +10,6 @@
 )]
 
 use super::*;
-use biomeos_test_utils::TestEnvGuard;
-use serial_test::serial;
 use std::path::PathBuf;
 
 #[test]
@@ -36,6 +34,7 @@ fn test_build_primal_command_squirrel_without_ai_keys() {
         anthropic_api_key: None,
         openai_api_key: None,
         ai_http_providers: None,
+        ai_default_model: None,
     };
     let cmd = super::build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
@@ -81,6 +80,7 @@ fn test_primal_command_config_debug() {
         anthropic_api_key: None,
         openai_api_key: None,
         ai_http_providers: None,
+        ai_default_model: None,
     };
     let _ = format!("{config:?}");
 }
@@ -96,6 +96,7 @@ fn test_build_primal_command_squirrel_with_custom_ai_providers() {
         anthropic_api_key: Some("key"),
         openai_api_key: None,
         ai_http_providers: Some("custom,anthropic"),
+        ai_default_model: None,
     };
     let cmd = super::build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
@@ -115,24 +116,31 @@ fn test_generate_jwt_secret_produces_nonempty_string() {
 }
 
 #[test]
-#[serial]
 fn test_resolve_startup_config_uses_biomeos_socket_dir_env() {
-    let _guard = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", "/tmp/nucleus-env-test");
-    let config = resolve_startup_config("tower", "node1", Some("fam1")).expect("should succeed");
+    let config = resolve_startup_config_with(
+        "tower",
+        "node1",
+        Some("fam1"),
+        Some("/tmp/nucleus-env-test"),
+    )
+    .expect("should succeed");
     assert_eq!(config.socket_dir, PathBuf::from("/tmp/nucleus-env-test"));
 }
 
 #[test]
-#[serial]
 fn test_build_primal_command_squirrel_ai_default_model_env() {
-    let _guard = TestEnvGuard::set("AI_DEFAULT_MODEL", "custom-model-v1");
-    let cmd = build_primal_command(
-        "squirrel",
-        std::path::Path::new("/usr/bin/squirrel"),
-        std::path::Path::new("/tmp/sock"),
-        "fam1",
-        "node1",
-    );
+    let config = super::PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: None,
+        openai_api_key: None,
+        ai_http_providers: None,
+        ai_default_model: Some("custom-model-v1"),
+    };
+    let cmd = super::build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let model = envs
         .iter()
@@ -143,16 +151,19 @@ fn test_build_primal_command_squirrel_ai_default_model_env() {
 }
 
 #[test]
-#[serial]
 fn test_build_primal_command_squirrel_with_anthropic_key_env() {
-    let _guard = TestEnvGuard::set("ANTHROPIC_API_KEY", "sk-ant-test");
-    let cmd = build_primal_command(
-        "squirrel",
-        std::path::Path::new("/usr/bin/squirrel"),
-        std::path::Path::new("/tmp/sock"),
-        "fam1",
-        "node1",
-    );
+    let config = super::PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: Some("sk-ant-test"),
+        openai_api_key: None,
+        ai_http_providers: None,
+        ai_default_model: None,
+    };
+    let cmd = super::build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let ai_providers = envs
         .iter()
@@ -164,16 +175,19 @@ fn test_build_primal_command_squirrel_with_anthropic_key_env() {
 }
 
 #[test]
-#[serial]
 fn test_build_primal_command_squirrel_with_openai_key_env() {
-    let _guard = TestEnvGuard::set("OPENAI_API_KEY", "sk-openai-test");
-    let cmd = build_primal_command(
-        "squirrel",
-        std::path::Path::new("/usr/bin/squirrel"),
-        std::path::Path::new("/tmp/sock"),
-        "fam1",
-        "node1",
-    );
+    let config = super::PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: None,
+        openai_api_key: Some("sk-openai-test"),
+        ai_http_providers: None,
+        ai_default_model: None,
+    };
+    let cmd = super::build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let ai_providers = envs
         .iter()
@@ -182,10 +196,9 @@ fn test_build_primal_command_squirrel_with_openai_key_env() {
 }
 
 #[test]
-#[serial]
 fn test_discover_binaries_empty_path_env() {
-    let _guard = TestEnvGuard::set("PATH", "");
-    let map = discover_binaries(&["beardog"]).expect("discover should not panic");
+    let map =
+        discover_binaries_with(&["beardog"], None, &[], None).expect("discover should not panic");
     // May or may not find beardog depending on relative paths (plasmidBin, target/release)
     // Just verify it doesn't panic with empty PATH
     let _ = map;
@@ -304,14 +317,12 @@ async fn test_wait_for_socket_immediate_with_zero_poll() {
 
 #[test]
 fn test_discover_binaries_with_missing_primal_returns_partial_ok() {
-    let map = discover_binaries_with(&["missing_primal_abc"], None, &[]).expect("ok");
+    let map = discover_binaries_with(&["missing_primal_abc"], None, &[], None).expect("ok");
     assert!(map.is_empty());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_discover_binaries_with_livespore_usb_arch_primals() {
-    let _guard = crate::CWD_TEST_LOCK.lock().await;
     let temp = tempfile::tempdir().expect("tempdir");
     let arch = std::env::consts::ARCH;
     let primal_dir = temp.path().join("livespore-usb").join(arch).join("primals");
@@ -326,11 +337,7 @@ async fn test_discover_binaries_with_livespore_usb_arch_primals() {
         perms.set_mode(0o755);
         std::fs::set_permissions(&binary_path, perms).unwrap();
     }
-    let old = std::env::current_dir().unwrap();
-    std::env::set_current_dir(temp.path()).unwrap();
-    let map = discover_binaries_with(&[name], None, &[]);
-    std::env::set_current_dir(old).unwrap();
-    let map = map.expect("discover");
+    let map = discover_binaries_with(&[name], None, &[], Some(temp.path())).expect("discover");
     assert!(
         map.contains_key(name),
         "expected {name} under livespore-usb/{arch}/primals, got {map:?}"
@@ -448,7 +455,7 @@ async fn test_discover_binaries_with_livespore_usb_primals_flat_layout() {
     }
     let old = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp.path()).unwrap();
-    let map = discover_binaries_with(&[name], None, &[]);
+    let map = discover_binaries_with(&[name], None, &[], None);
     std::env::set_current_dir(old).unwrap();
     let map = map.expect("discover");
     assert!(
@@ -476,7 +483,7 @@ async fn test_discover_binaries_with_plasmidbin_optimized_arch() {
     }
     let old = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp.path()).unwrap();
-    let map = discover_binaries_with(&[name], None, &[]);
+    let map = discover_binaries_with(&[name], None, &[], None);
     std::env::set_current_dir(old).unwrap();
     let map = map.expect("discover");
     assert!(
@@ -503,7 +510,7 @@ async fn test_discover_binaries_with_target_release_relative() {
     }
     let old = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp.path()).unwrap();
-    let map = discover_binaries_with(&[name], None, &[]);
+    let map = discover_binaries_with(&[name], None, &[], None);
     std::env::set_current_dir(old).unwrap();
     let map = map.expect("discover");
     assert!(
@@ -533,7 +540,7 @@ async fn test_discover_binaries_with_relative_plasmidbin_primals() {
     }
     let old = std::env::current_dir().unwrap();
     std::env::set_current_dir(&nested).unwrap();
-    let map = discover_binaries_with(&[name], None, &[]);
+    let map = discover_binaries_with(&[name], None, &[], None);
     std::env::set_current_dir(old).unwrap();
     let map = map.expect("discover");
     assert!(
@@ -560,7 +567,7 @@ async fn test_discover_binaries_with_plasmidbin_direct_binary() {
     }
     let old = std::env::current_dir().unwrap();
     std::env::set_current_dir(temp.path()).unwrap();
-    let map = discover_binaries_with(&[name], None, &[]);
+    let map = discover_binaries_with(&[name], None, &[], None);
     std::env::set_current_dir(old).unwrap();
     let map = map.expect("discover");
     assert!(
@@ -570,18 +577,19 @@ async fn test_discover_binaries_with_plasmidbin_direct_binary() {
 }
 
 #[test]
-#[serial]
 fn test_build_primal_command_squirrel_custom_ai_http_providers_when_both_keys_set() {
-    let _a = TestEnvGuard::set("ANTHROPIC_API_KEY", "sk-ant");
-    let _o = TestEnvGuard::set("OPENAI_API_KEY", "sk-openai");
-    let _p = TestEnvGuard::set("AI_HTTP_PROVIDERS", "custom_a,custom_b");
-    let cmd = build_primal_command(
-        "squirrel",
-        std::path::Path::new("/usr/bin/squirrel"),
-        std::path::Path::new("/tmp/sock"),
-        "fam1",
-        "node1",
-    );
+    let config = super::PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: Some("sk-ant"),
+        openai_api_key: Some("sk-openai"),
+        ai_http_providers: Some("custom_a,custom_b"),
+        ai_default_model: None,
+    };
+    let cmd = super::build_primal_command_with(&config);
     let envs: Vec<_> = cmd.get_envs().collect();
     let ai = envs
         .iter()

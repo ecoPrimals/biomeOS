@@ -18,7 +18,6 @@
 #[cfg(test)]
 mod config_tests {
     use crate::config::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
     use std::collections::HashMap;
 
     /// Helper to create a test EnvironmentConfig
@@ -421,48 +420,40 @@ metadata:
     // Environment Variable Tests
     // ========================================================================
 
-    // NOTE: Environment variable tests are grouped into a single test function to avoid
-    // race conditions when tests run in parallel. Env vars are process-global state.
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_config_from_env_all_overrides() {
-        // Port
-        set_test_env("BIOMEOS_PORT", "8888");
-        let config = BiomeOSConfig::from_env();
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_PORT".to_string(), "8888".to_string());
+        let config = BiomeOSConfig::from_env_map(&env);
         assert_eq!(config.network.port, 8888);
-        remove_test_env("BIOMEOS_PORT");
 
-        // Invalid port ignored
-        set_test_env("BIOMEOS_PORT", "not_a_number");
-        let config = BiomeOSConfig::from_env();
+        env.clear();
+        env.insert("BIOMEOS_PORT".to_string(), "not_a_number".to_string());
+        let config = BiomeOSConfig::from_env_map(&env);
         assert!(config.network.port > 0);
-        remove_test_env("BIOMEOS_PORT");
 
-        // Bind address
-        set_test_env("BIOMEOS_BIND_ADDRESS", "192.168.1.1");
-        let config = BiomeOSConfig::from_env();
+        env.clear();
+        env.insert(
+            "BIOMEOS_BIND_ADDRESS".to_string(),
+            "192.168.1.1".to_string(),
+        );
+        let config = BiomeOSConfig::from_env_map(&env);
         assert_eq!(config.network.bind_address, "192.168.1.1");
-        remove_test_env("BIOMEOS_BIND_ADDRESS");
 
-        // Debug true
-        set_test_env("BIOMEOS_DEBUG", "true");
-        let config = BiomeOSConfig::from_env();
+        env.clear();
+        env.insert("BIOMEOS_DEBUG".to_string(), "true".to_string());
+        let config = BiomeOSConfig::from_env_map(&env);
         assert!(config.features.debug);
-        remove_test_env("BIOMEOS_DEBUG");
 
-        // Debug false
-        set_test_env("BIOMEOS_DEBUG", "false");
-        let config = BiomeOSConfig::from_env();
+        env.insert("BIOMEOS_DEBUG".to_string(), "false".to_string());
+        let config = BiomeOSConfig::from_env_map(&env);
         assert!(!config.features.debug);
-        remove_test_env("BIOMEOS_DEBUG");
 
-        // Experimental
-        set_test_env("BIOMEOS_EXPERIMENTAL", "true");
-        let config = BiomeOSConfig::from_env();
+        env.clear();
+        env.insert("BIOMEOS_EXPERIMENTAL".to_string(), "true".to_string());
+        let config = BiomeOSConfig::from_env_map(&env);
         assert!(config.features.experimental);
-        remove_test_env("BIOMEOS_EXPERIMENTAL");
 
-        // Log levels
         for (level_str, expected_debug) in [
             ("trace", "Trace"),
             ("debug", "Debug"),
@@ -474,15 +465,15 @@ metadata:
             ("INFO", "Info"),
             ("unknown", "Info"),
         ] {
-            set_test_env("BIOMEOS_LOG_LEVEL", level_str);
-            let config = BiomeOSConfig::from_env();
+            env.clear();
+            env.insert("BIOMEOS_LOG_LEVEL".to_string(), level_str.to_string());
+            let config = BiomeOSConfig::from_env_map(&env);
             assert_eq!(
                 format!("{:?}", config.observability.logging.level),
                 expected_debug,
                 "Failed for log level: {}",
                 level_str
             );
-            remove_test_env("BIOMEOS_LOG_LEVEL");
         }
     }
 

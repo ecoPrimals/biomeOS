@@ -272,6 +272,20 @@ impl CapabilityClient {
 }
 
 /// Resolve Neural API socket path using 5-tier discovery.
+///
+/// If `neural_api_socket` is `Some` and the path exists, it is returned without reading
+/// `NEURAL_API_SOCKET` (for tests and explicit wiring).
+pub fn resolve_neural_api_socket_with(
+    neural_api_socket: Option<&std::path::Path>,
+) -> Result<PathBuf> {
+    if let Some(p) = neural_api_socket {
+        if p.exists() {
+            return Ok(p.to_path_buf());
+        }
+    }
+    resolve_neural_api_socket()
+}
+
 fn resolve_neural_api_socket() -> Result<PathBuf> {
     // Tier 1: Explicit NEURAL_API_SOCKET
     if let Ok(path) = std::env::var("NEURAL_API_SOCKET") {

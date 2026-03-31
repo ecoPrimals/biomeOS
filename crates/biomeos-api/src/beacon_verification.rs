@@ -151,10 +151,32 @@ async fn try_blake3_hash(socket_path: &Path, encoded_data: &str) -> Option<Strin
 /// 3. `/tmp` fallback: same basename under the temp dir
 #[must_use]
 pub fn discover_neural_api_socket(family_id: &str) -> Option<String> {
-    // 1. Explicit env var
-    if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {
-        if std::path::Path::new(&socket).exists() {
-            return Some(socket);
+    discover_neural_api_socket_from(family_id, None)
+}
+
+/// Like [`discover_neural_api_socket`], with an optional tier-1 socket path.
+///
+/// - `None`: read `NEURAL_API_SOCKET` from the environment (same as [`discover_neural_api_socket`]).
+/// - `Some(path)` if the path exists: return it (environment is not consulted for tier 1).
+/// - `Some(path)` if the path does not exist: skip tier 1 without reading `NEURAL_API_SOCKET` (for tests and explicit fall-through to XDG/tmp).
+#[must_use]
+pub fn discover_neural_api_socket_from(
+    family_id: &str,
+    neural_api_socket_tier1: Option<&str>,
+) -> Option<String> {
+    // 1. Tier 1: explicit path or NEURAL_API_SOCKET
+    match neural_api_socket_tier1 {
+        Some(path) => {
+            if std::path::Path::new(path).exists() {
+                return Some(path.to_string());
+            }
+        }
+        None => {
+            if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {
+                if std::path::Path::new(&socket).exists() {
+                    return Some(socket);
+                }
+            }
         }
     }
 
@@ -663,30 +685,23 @@ mod tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_discover_neural_api_socket_env_existing_file() {
-        use biomeos_test_utils::env_helpers::TestEnvGuard;
-
         let temp = tempfile::tempdir().expect("tempdir");
         let sock = temp.path().join("neural-explicit.sock");
         std::fs::write(&sock, "").expect("touch");
-        let _g = TestEnvGuard::set("NEURAL_API_SOCKET", sock.to_str().expect("utf8"));
-        let got = discover_neural_api_socket("ignored");
+        let got = discover_neural_api_socket_from("ignored", sock.to_str());
         assert_eq!(got.as_deref(), sock.to_str());
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_discover_neural_api_socket_temp_dir_fallback_existing_file() {
-        use biomeos_test_utils::env_helpers::TestEnvGuard;
         use biomeos_types::constants::runtime_ipc;
 
         let basename = format!("{}my-tmp-fam.sock", runtime_ipc::NEURAL_API_BASENAME_PREFIX);
         let sock = std::env::temp_dir().join(&basename);
         std::fs::write(&sock, "").expect("touch");
-        let _clear = TestEnvGuard::remove("NEURAL_API_SOCKET");
-
-        let got = discover_neural_api_socket("my-tmp-fam");
+        let skip_tier1 = "/nonexistent/biomeos-test-neural-tier1-skip";
+        let got = discover_neural_api_socket_from("my-tmp-fam", Some(skip_tier1));
         assert_eq!(got.as_deref(), sock.to_str());
         let _ = std::fs::remove_file(&sock);
     }

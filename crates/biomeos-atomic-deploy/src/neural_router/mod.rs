@@ -21,9 +21,10 @@ mod types;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::RwLock;
 use tokio::time::Duration;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::living_graph::LivingGraph;
 use biomeos_core::TransportEndpoint;
@@ -55,6 +56,10 @@ pub struct NeuralRouter {
 
     /// Protocol preference from environment
     pub(crate) protocol_preference: ProtocolPreference,
+
+    /// Whether a lazy rescan has already been attempted this session.
+    /// Prevents repeated rescans on every miss in a tight loop.
+    lazy_rescan_attempted: AtomicBool,
 }
 
 impl NeuralRouter {
@@ -68,6 +73,7 @@ impl NeuralRouter {
             request_timeout: Duration::from_secs(30),
             living_graph: None,
             protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
+            lazy_rescan_attempted: AtomicBool::new(false),
         }
     }
 
@@ -175,6 +181,91 @@ impl NeuralRouter {
     /// Invalidate discovery cache (force rediscovery)
     pub async fn invalidate_cache(&self) {
         self.discovered_primals.write().await.clear();
+        self.lazy_rescan_attempted.store(false, Ordering::Relaxed);
         info!("🔄 Discovery cache invalidated");
     }
+
+    /// Rescan socket directories for newly-appeared primals.
+    ///
+    /// Called lazily on the first `capability.call` miss (BM-04 fix). Only runs
+    /// once per session — subsequent misses fast-fail. Reset via
+    /// `invalidate_cache()` or `topology.rescan`.
+    pub(crate) async fn lazy_rescan_sockets(&self) -> usize {
+        if self.lazy_rescan_attempted.swap(true, Ordering::Relaxed) {
+            return 0;
+        }
+
+        info!("🔄 Lazy rescan: capability miss triggered socket re-discovery");
+        let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
+        let mut registered = 0usize;
+
+        for socket_dir in &socket_dirs {
+            let entries = match std::fs::read_dir(socket_dir) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let filename = match path.file_name().and_then(|n| n.to_str()) {
+                    Some(f) => f.to_string(),
+                    None => continue,
+                };
+
+                if !filename.ends_with(".sock") {
+                    continue;
+                }
+
+                let primal_name = match filename.strip_suffix(".sock") {
+                    Some(base) => base.split('-').next().unwrap_or(base).to_string(),
+                    None => continue,
+                };
+
+                let socket_str = path.to_string_lossy().to_string();
+                let capabilities = probe_primal_capabilities_standalone(socket_str.as_str()).await;
+
+                if capabilities.is_empty() {
+                    debug!("   {} — no capabilities during lazy rescan", primal_name);
+                    continue;
+                }
+
+                for cap in &capabilities {
+                    if let Err(e) = self
+                        .register_capability_unix(cap, &primal_name, &path, "lazy-rescan")
+                        .await
+                    {
+                        warn!("   Failed to register {}.{}: {}", primal_name, cap, e);
+                    }
+                }
+
+                info!(
+                    "   🔍 Lazy rescan discovered {} — {} capabilities",
+                    primal_name,
+                    capabilities.len(),
+                );
+                registered += capabilities.len();
+            }
+        }
+
+        if registered > 0 {
+            info!("✅ Lazy rescan registered {} new capabilities", registered);
+        }
+
+        registered
+    }
+
+    /// Reset the lazy-rescan gate so the next miss triggers a fresh scan.
+    pub fn reset_lazy_rescan(&self) {
+        self.lazy_rescan_attempted.store(false, Ordering::Relaxed);
+    }
+}
+
+/// Probe a primal socket for capabilities (standalone, no `NeuralApiServer` dependency).
+///
+/// Delegates to [`biomeos_core::socket_discovery::probe_unix_socket_capabilities_list`].
+pub(crate) async fn probe_primal_capabilities_standalone(socket_path: &str) -> Vec<String> {
+    biomeos_core::socket_discovery::probe_unix_socket_capabilities_list(std::path::Path::new(
+        socket_path,
+    ))
+    .await
 }

@@ -13,7 +13,7 @@
 
 use anyhow::{Context, Result};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::process::{Child, Command};
 use tracing::{debug, info, warn};
@@ -60,19 +60,43 @@ use crate::neural_graph::GraphNode;
 /// ```
 pub async fn discover_primal_binary(
     primal_name: &str,
-    _context: &ExecutionContext,
+    context: &ExecutionContext,
 ) -> Result<PathBuf> {
-    let base_dirs: &[Option<PathBuf>] = &[
-        std::env::var("ECOPRIMALS_PLASMID_BIN")
-            .ok()
-            .map(PathBuf::from),
-        std::env::var("BIOMEOS_PLASMID_BIN_DIR")
-            .ok()
-            .map(PathBuf::from),
-        Some(PathBuf::from("./plasmidBin")),
-        Some(PathBuf::from("../plasmidBin")),
-        Some(PathBuf::from("../../plasmidBin")),
-    ];
+    discover_primal_binary_impl(primal_name, context, None).await
+}
+
+/// Discover binary under a single base directory (for tests; does not use env-driven search roots).
+pub async fn discover_primal_binary_in(
+    primal_name: &str,
+    context: &ExecutionContext,
+    bin_dir: &Path,
+) -> Result<PathBuf> {
+    discover_primal_binary_impl(primal_name, context, Some(bin_dir)).await
+}
+
+async fn discover_primal_binary_impl(
+    primal_name: &str,
+    _context: &ExecutionContext,
+    bin_dir_override: Option<&Path>,
+) -> Result<PathBuf> {
+    let base_dirs: Vec<PathBuf> = if let Some(dir) = bin_dir_override {
+        vec![dir.to_path_buf()]
+    } else {
+        [
+            std::env::var("ECOPRIMALS_PLASMID_BIN")
+                .ok()
+                .map(PathBuf::from),
+            std::env::var("BIOMEOS_PLASMID_BIN_DIR")
+                .ok()
+                .map(PathBuf::from),
+            Some(PathBuf::from("./plasmidBin")),
+            Some(PathBuf::from("../plasmidBin")),
+            Some(PathBuf::from("../../plasmidBin")),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
+    };
 
     // Auto-detect architecture from target triple
     let arch_suffix = std::env::consts::ARCH;
@@ -98,7 +122,7 @@ pub async fn discover_primal_binary(
     ];
 
     // Try each base directory
-    for base_dir in base_dirs.iter().filter_map(|d| d.as_ref()) {
+    for base_dir in &base_dirs {
         if !base_dir.exists() {
             continue;
         }
@@ -121,9 +145,6 @@ pub async fn discover_primal_binary(
          Set ECOPRIMALS_PLASMID_BIN or BIOMEOS_PLASMID_BIN_DIR to specify binary location.",
         primal_name,
         base_dirs
-            .iter()
-            .filter_map(|d| d.as_ref())
-            .collect::<Vec<_>>()
     )
 }
 
@@ -434,13 +455,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_primal_binary_with_env_dir_empty() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
         let temp_dir = TempDir::new().expect("Create temp dir");
-        set_test_env("BIOMEOS_PLASMID_BIN_DIR", temp_dir.path());
         let ctx = ExecutionContext::new(HashMap::new());
 
-        let result = discover_primal_binary("nonexistent_primal", &ctx).await;
-        remove_test_env("BIOMEOS_PLASMID_BIN_DIR");
+        let result = discover_primal_binary_in("nonexistent_primal", &ctx, temp_dir.path()).await;
         let err = result.expect_err("Should fail when dir has no binary");
         assert!(
             err.to_string().contains("Binary not found"),

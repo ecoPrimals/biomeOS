@@ -18,10 +18,18 @@ use tracing::info;
 /// server via Songbird's UDP multicast discovery.
 pub(super) async fn register_with_songbird(socket_path: &str) -> Result<()> {
     let songbird_socket = discover_songbird_socket()?;
+    register_with_songbird_at(&songbird_socket, socket_path).await
+}
 
+/// Same as [`register_with_songbird`], but connects to an explicit Songbird Unix socket
+/// (for tests and callers that inject discovery without process environment).
+pub(super) async fn register_with_songbird_at(
+    songbird_socket: &str,
+    device_management_socket_path: &str,
+) -> Result<()> {
     info!("📡 Registering with Songbird at: {}", songbird_socket);
 
-    let stream = tokio::net::UnixStream::connect(&songbird_socket)
+    let stream = tokio::net::UnixStream::connect(songbird_socket)
         .await
         .context("Failed to connect to Songbird")?;
 
@@ -31,12 +39,12 @@ pub(super) async fn register_with_songbird(socket_path: &str) -> Result<()> {
     let request = json!({
         "jsonrpc": "2.0",
         "method": "discovery.register_capability",
-        "params": {
-            "capability": "device.management",
-            "endpoint": {
-                "type": "unix_socket",
-                "path": socket_path
-            },
+            "params": {
+                "capability": "device.management",
+                "endpoint": {
+                    "type": "unix_socket",
+                    "path": device_management_socket_path
+                },
             "metadata": {
                 "version": env!("CARGO_PKG_VERSION"),
                 "description": "Device management and primal orchestration"
@@ -77,8 +85,16 @@ pub(super) async fn register_with_songbird(socket_path: &str) -> Result<()> {
 /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
 pub(super) fn discover_songbird_socket() -> Result<String> {
     use biomeos_types::capability_discovery;
+    discover_songbird_socket_with(&capability_discovery::std_env)
+}
 
-    capability_discovery::discover_capability_socket("discovery", &capability_discovery::std_env)
+/// Same as [`discover_songbird_socket`], using an injectable environment lookup
+/// (`std::env` in production; a `HashMap` closure in tests).
+pub(super) fn discover_songbird_socket_with(
+    env: &dyn Fn(&str) -> Option<String>,
+) -> Result<String> {
+    use biomeos_types::capability_discovery;
+    capability_discovery::discover_capability_socket("discovery", env)
         .context("Discovery provider socket not found. Is Songbird running?")
 }
 
@@ -89,45 +105,55 @@ pub(super) fn discover_songbird_socket() -> Result<String> {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
-    use serial_test::serial;
+    use std::collections::HashMap;
+    use std::sync::Mutex;
     use tokio::io::AsyncBufReadExt;
 
+    /// Serialize access to fixed `/tmp/biomeos` (empty family tier-4 path) across parallel tests.
+    static TMP_BIOMEOS_EMPTY_FAMILY_LOCK: Mutex<()> = Mutex::new(());
+
+    fn mock_env(vars: &HashMap<String, String>) -> impl Fn(&str) -> Option<String> + '_ {
+        move |key: &str| vars.get(key).cloned()
+    }
+
     #[test]
-    #[serial]
     fn test_discover_songbird_socket_env_override() {
-        let _guard = TestEnvGuard::set("SONGBIRD_SOCKET", "/custom/songbird.sock");
-        let result = discover_songbird_socket();
+        let mut env = HashMap::new();
+        env.insert(
+            "SONGBIRD_SOCKET".to_string(),
+            "/custom/songbird.sock".to_string(),
+        );
+        let result = discover_songbird_socket_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "/custom/songbird.sock");
     }
 
     #[test]
-    #[serial]
     fn test_discover_songbird_socket_not_found() {
-        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
-        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", "/nonexistent_xdg_path_for_test");
-        let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
-        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
-        let result = discover_songbird_socket();
+        let mut env = HashMap::new();
+        env.insert(
+            "XDG_RUNTIME_DIR".to_string(),
+            "/nonexistent_xdg_path_for_test".to_string(),
+        );
+        let result = discover_songbird_socket_with(&mock_env(&env));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
     }
 
     #[test]
-    #[serial]
     fn test_discover_songbird_socket_xdg_runtime_exists() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("biomeos").join("songbird.sock");
         std::fs::create_dir_all(socket_path.parent().unwrap()).unwrap();
         std::fs::File::create(&socket_path).unwrap();
 
-        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
-        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-        let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
-        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+        let mut env = HashMap::new();
+        env.insert(
+            "XDG_RUNTIME_DIR".to_string(),
+            temp.path().to_string_lossy().into_owned(),
+        );
 
-        let result = discover_songbird_socket();
+        let result = discover_songbird_socket_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -136,19 +162,20 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_discover_songbird_socket_family_xdg_path() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("biomeos").join("songbird-family99.sock");
         std::fs::create_dir_all(socket_path.parent().unwrap()).unwrap();
         std::fs::File::create(&socket_path).unwrap();
 
-        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
-        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-        let _guard_fam = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "family99");
-        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+        let mut env = HashMap::new();
+        env.insert(
+            "XDG_RUNTIME_DIR".to_string(),
+            temp.path().to_string_lossy().into_owned(),
+        );
+        env.insert("BIOMEOS_FAMILY_ID".to_string(), "family99".to_string());
 
-        let result = discover_songbird_socket();
+        let result = discover_songbird_socket_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -157,30 +184,29 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_discover_songbird_socket_family_tmp_biomeos_dir() {
-        let biomeos_dir = "/tmp/biomeos-testlegacy123";
+        let fam = format!("testlegacy{}", std::process::id());
+        let biomeos_dir = format!("/tmp/biomeos-{fam}");
         let legacy_socket = format!("{biomeos_dir}/songbird.sock");
-        let _ = std::fs::create_dir_all(biomeos_dir);
+        std::fs::create_dir_all(&biomeos_dir).unwrap();
         std::fs::File::create(&legacy_socket).unwrap();
 
-        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
-        let _guard_cap = TestEnvGuard::remove("DISCOVERY_PROVIDER_SOCKET");
-        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", "/nonexistent");
-        let _guard_fam = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "testlegacy123");
-        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+        let mut env = HashMap::new();
+        env.insert("XDG_RUNTIME_DIR".to_string(), "/nonexistent".to_string());
+        env.insert("BIOMEOS_FAMILY_ID".to_string(), fam);
 
-        let result = discover_songbird_socket();
+        let result = discover_songbird_socket_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), legacy_socket);
 
         let _ = std::fs::remove_file(&legacy_socket);
-        let _ = std::fs::remove_dir(biomeos_dir);
+        let _ = std::fs::remove_dir(&biomeos_dir);
     }
 
     #[test]
-    #[serial]
     fn test_discover_songbird_socket_common_pattern_tmp_biomeos_dir() {
+        let _lock = TMP_BIOMEOS_EMPTY_FAMILY_LOCK.lock().unwrap();
+
         let biomeos_dir = "/tmp/biomeos";
         let tmp_socket = format!("{biomeos_dir}/songbird.sock");
         let _ = std::fs::create_dir_all(biomeos_dir);
@@ -189,13 +215,10 @@ mod tests {
             std::fs::File::create(&tmp_socket).unwrap();
         }
 
-        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
-        let _guard_cap = TestEnvGuard::remove("DISCOVERY_PROVIDER_SOCKET");
-        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", "/nonexistent");
-        let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
-        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+        let mut env = HashMap::new();
+        env.insert("XDG_RUNTIME_DIR".to_string(), "/nonexistent".to_string());
 
-        let result = discover_songbird_socket();
+        let result = discover_songbird_socket_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), tmp_socket);
 
@@ -205,7 +228,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_discover_songbird_socket_family_id_fallback() {
         let temp = tempfile::tempdir().unwrap();
         let biomeos_dir = temp.path().join("biomeos");
@@ -213,12 +235,14 @@ mod tests {
         let socket_path = biomeos_dir.join("songbird-fam2.sock");
         std::fs::File::create(&socket_path).unwrap();
 
-        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
-        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().unwrap());
-        let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
-        let _guard_legacy = TestEnvGuard::set("FAMILY_ID", "fam2");
+        let mut env = HashMap::new();
+        env.insert(
+            "XDG_RUNTIME_DIR".to_string(),
+            temp.path().to_string_lossy().into_owned(),
+        );
+        env.insert("FAMILY_ID".to_string(), "fam2".to_string());
 
-        let result = discover_songbird_socket();
+        let result = discover_songbird_socket_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -227,12 +251,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_register_with_songbird_success() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("songbird.sock");
-
-        let _guard = TestEnvGuard::set("SONGBIRD_SOCKET", socket_path.to_str().unwrap());
 
         let listener = tokio::net::UnixListener::bind(&socket_path).unwrap();
 
@@ -250,19 +271,18 @@ mod tests {
             writer.flush().await.unwrap();
         });
 
-        let result = register_with_songbird("/run/user/1000/biomeos-device.sock").await;
+        let path_str = socket_path.to_str().unwrap();
+        let result =
+            register_with_songbird_at(path_str, "/run/user/1000/biomeos-device.sock").await;
         assert!(result.is_ok());
 
         server_handle.await.unwrap();
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_register_with_songbird_error_response() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("songbird-err.sock");
-
-        let _guard = TestEnvGuard::set("SONGBIRD_SOCKET", socket_path.to_str().unwrap());
 
         let listener = tokio::net::UnixListener::bind(&socket_path).unwrap();
 
@@ -281,7 +301,9 @@ mod tests {
             writer.flush().await.unwrap();
         });
 
-        let result = register_with_songbird("/run/user/1000/biomeos-device.sock").await;
+        let path_str = socket_path.to_str().unwrap();
+        let result =
+            register_with_songbird_at(path_str, "/run/user/1000/biomeos-device.sock").await;
         assert!(result.is_err());
         assert!(
             result
@@ -294,12 +316,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_register_with_songbird_error_unknown_message() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("songbird-err2.sock");
-
-        let _guard = TestEnvGuard::set("SONGBIRD_SOCKET", socket_path.to_str().unwrap());
 
         let listener = tokio::net::UnixListener::bind(&socket_path).unwrap();
 
@@ -317,7 +336,9 @@ mod tests {
             writer.flush().await.unwrap();
         });
 
-        let result = register_with_songbird("/run/user/1000/biomeos-device.sock").await;
+        let path_str = socket_path.to_str().unwrap();
+        let result =
+            register_with_songbird_at(path_str, "/run/user/1000/biomeos-device.sock").await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Unknown error"));
 

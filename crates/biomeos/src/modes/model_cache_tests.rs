@@ -8,7 +8,6 @@
 
 use super::*;
 use crate::ModelCacheCommand;
-use serial_test::serial;
 
 #[test]
 fn test_format_size_mb() {
@@ -312,7 +311,6 @@ async fn test_run_resolve_with_empty_model_id() {
 }
 
 #[test]
-#[serial]
 fn test_hf_dir_to_model_id_unicode_safe() {
     assert_eq!(
         hf_dir_to_model_id("models--org--model-name"),

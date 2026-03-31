@@ -608,10 +608,8 @@ fn test_memory_component_health_branches() {
 }
 
 #[test]
-fn test_get_hostname_uses_hostname_env_when_set() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _g = TestEnvGuard::set("HOSTNAME", "env-host-test");
-    let h = SystemInspector::get_hostname().expect("hostname");
+fn test_get_hostname_with_override() {
+    let h = SystemInspector::get_hostname_with(Some("env-host-test")).expect("hostname");
     assert_eq!(h, "env-host-test");
 }
 

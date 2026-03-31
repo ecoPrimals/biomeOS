@@ -57,8 +57,17 @@ pub struct NeuralApiServer {
     /// Family ID for this server
     pub(super) family_id: String,
 
-    /// Socket path
+    /// Socket path (UDS)
     pub(super) socket_path: PathBuf,
+
+    /// Optional TCP bind port for mobile/cross-gate orchestration.
+    /// When set, the server accepts newline-delimited JSON-RPC over TCP
+    /// in addition to (or instead of, if `tcp_only` is true) the Unix socket.
+    pub(super) tcp_port: Option<u16>,
+
+    /// When true, skip UDS binding entirely (mobile substrates where
+    /// SELinux denies `sock_file create`).
+    pub(super) tcp_only: bool,
 
     /// Neural Router for capability-based routing
     pub(super) router: Arc<NeuralRouter>,
@@ -124,8 +133,11 @@ impl NeuralApiServer {
             translation_registry.clone(),
         );
 
+        let gate_registry = Arc::new(crate::gate_registry::GateRegistry::new());
+
         let capability_handler =
-            CapabilityHandler::new(router.clone(), translation_registry.clone());
+            CapabilityHandler::new(router.clone(), translation_registry.clone())
+                .with_gate_registry(Arc::clone(&gate_registry));
 
         let topology_handler = TopologyHandler::new(
             family_id_str.clone(),
@@ -143,10 +155,8 @@ impl NeuralApiServer {
 
         let lifecycle_handler = LifecycleHandler::new(&family_id_str);
 
-        // Living Graph for protocol state tracking
         let living_graph = Arc::new(LivingGraph::new(&family_id_str));
 
-        // Protocol Escalation Manager (JSON-RPC → tarpc)
         let escalation_manager = Arc::new(RwLock::new(ProtocolEscalationManager::new(
             living_graph.clone(),
             EscalationConfig::default(),
@@ -154,13 +164,14 @@ impl NeuralApiServer {
 
         let protocol_handler = ProtocolHandler::new(living_graph.clone(), escalation_manager);
 
-        let gate_registry = Arc::new(crate::gate_registry::GateRegistry::new());
         let inference_handler = InferenceHandler::new(router.clone(), gate_registry);
 
         Self {
             graphs_dir,
             family_id: family_id_str,
             socket_path: socket_path.into(),
+            tcp_port: None,
+            tcp_only: false,
             router,
             mode: Arc::new(RwLock::new(BiomeOsMode::Bootstrap)),
             nucleation: Arc::new(RwLock::new(SocketNucleation::new(
@@ -176,5 +187,20 @@ impl NeuralApiServer {
             inference_handler,
             agent_registry: agents::AgentRegistry::new(),
         }
+    }
+
+    /// Enable TCP listener on the given port (alongside UDS).
+    #[must_use]
+    pub fn with_tcp_port(mut self, port: u16) -> Self {
+        self.tcp_port = Some(port);
+        self
+    }
+
+    /// Enable TCP-only mode (skip UDS binding, mobile/cross-gate).
+    #[must_use]
+    pub fn with_tcp_only(mut self, port: u16) -> Self {
+        self.tcp_port = Some(port);
+        self.tcp_only = true;
+        self
     }
 }

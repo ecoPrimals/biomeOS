@@ -13,8 +13,8 @@
 //! The mapping is SEMANTIC → PROVIDER (not implementation-specific).
 
 use biomeos_types::primal_names::{
-    BARRACUDA, BEARDOG, CORALREEF, LOAMSPINE, NESTGATE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS,
-    TOADSTOOL,
+    AIRSPRING, BARRACUDA, BEARDOG, CORALREEF, HEALTHSPRING, LOAMSPINE, LUDOSPRING, NESTGATE,
+    NEURALSPRING, PETALTONGUE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL, WETSPRING,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -90,9 +90,9 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "seismic_data",
         ],
     },
-    // Science domain (wetSpring)
+    // Science domain (wetSpring) — compile-time bootstrap hints; runtime uses capability registry / discovery
     CapabilityDomain {
-        provider: "wetspring",
+        provider: WETSPRING,
         capabilities: &[
             "science",
             "biodiversity",
@@ -104,7 +104,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Neural science domain (neuralSpring)
     CapabilityDomain {
-        provider: "neuralspring",
+        provider: NEURALSPRING,
         capabilities: &[
             "spectral_analysis",
             "anderson_localization",
@@ -115,7 +115,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Ecology domain (airSpring)
     CapabilityDomain {
-        provider: "airspring",
+        provider: AIRSPRING,
         capabilities: &[
             "ecology",
             "et0",
@@ -130,7 +130,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Game science domain (ludoSpring)
     CapabilityDomain {
-        provider: "ludospring",
+        provider: LUDOSPRING,
         capabilities: &[
             "game",
             "ludology",
@@ -142,7 +142,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Visualization domain (petalTongue)
     CapabilityDomain {
-        provider: "petaltongue",
+        provider: PETALTONGUE,
         capabilities: &[
             "visualization",
             "ui",
@@ -153,12 +153,12 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // XR / Immersive domain (petalTongue + ludoSpring)
     CapabilityDomain {
-        provider: "petaltongue",
+        provider: PETALTONGUE,
         capabilities: &["xr", "stereo", "vr", "ar", "tracking", "haptic", "mocap"],
     },
     // Medical / Surgical domain (healthSpring)
     CapabilityDomain {
-        provider: "healthspring",
+        provider: HEALTHSPRING,
         capabilities: &[
             "medical",
             "surgical",

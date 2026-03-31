@@ -128,6 +128,46 @@ impl SystemPaths {
         })
     }
 
+    /// Create `SystemPaths` from explicit directory paths (no environment reads).
+    ///
+    /// Each argument must be the full biomeOS leaf directory (e.g. `$XDG_RUNTIME_DIR/biomeos`),
+    /// matching what `new()` would construct from XDG variables.
+    pub fn from_overrides(
+        runtime_dir: PathBuf,
+        data_dir: PathBuf,
+        config_dir: PathBuf,
+        cache_dir: PathBuf,
+        state_dir: PathBuf,
+    ) -> Result<Self> {
+        Self::ensure_dir(&runtime_dir)?;
+        Self::ensure_dir(&data_dir)?;
+        Self::ensure_dir(&config_dir)?;
+        Self::ensure_dir(&cache_dir)?;
+        Self::ensure_dir(&state_dir)?;
+        Ok(Self {
+            runtime_dir,
+            data_dir,
+            config_dir,
+            cache_dir,
+            state_dir,
+        })
+    }
+
+    /// Returns the biomeOS runtime directory under an XDG-style parent (`$XDG_RUNTIME_DIR`),
+    /// or the `/tmp/biomeos-$USER`-style fallback when `runtime_parent` is `None`.
+    ///
+    /// Does not read `XDG_RUNTIME_DIR`; callers pass the parent explicitly or use `None` for the
+    /// same fallback as [`Self::get_runtime_dir`] when that variable is unset.
+    #[must_use]
+    pub fn runtime_dir_from_xdg_parent(runtime_parent: Option<&Path>) -> PathBuf {
+        if let Some(p) = runtime_parent {
+            p.join(primal_names::BIOMEOS)
+        } else {
+            let username = Self::get_username();
+            env::temp_dir().join(format!("{}-{}", primal_names::BIOMEOS, username))
+        }
+    }
+
     /// Create `SystemPaths` with XDG env overrides (for testing without mutating env)
     pub fn new_with_xdg_overrides(
         xdg_runtime_dir: Option<impl AsRef<Path>>,
@@ -557,8 +597,7 @@ impl Default for SystemPaths {
 #[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
-    use serial_test::serial;
+    use crate::primal_names;
     use tempfile::tempdir;
 
     #[test]
@@ -788,9 +827,8 @@ mod tests {
         assert!(!paths.state_dir().as_os_str().is_empty());
     }
 
-    /// Covers `get_*_dir` branches that read `XDG_*` env vars.
+    /// Same layout as `new()` with all `XDG_*` env vars set, via explicit paths.
     #[test]
-    #[serial]
     fn test_system_paths_new_respects_all_xdg_env_overrides() {
         let temp = tempdir().unwrap();
         let run = temp.path().join("xdg-run");
@@ -801,13 +839,14 @@ mod tests {
         for p in [&run, &data, &cfg, &cache, &state] {
             std::fs::create_dir_all(p).unwrap();
         }
-        let _g_run = TestEnvGuard::set("XDG_RUNTIME_DIR", run.to_str().unwrap());
-        let _g_data = TestEnvGuard::set("XDG_DATA_HOME", data.to_str().unwrap());
-        let _g_cfg = TestEnvGuard::set("XDG_CONFIG_HOME", cfg.to_str().unwrap());
-        let _g_cache = TestEnvGuard::set("XDG_CACHE_HOME", cache.to_str().unwrap());
-        let _g_state = TestEnvGuard::set("XDG_STATE_HOME", state.to_str().unwrap());
-
-        let paths = SystemPaths::new().unwrap();
+        let paths = SystemPaths::from_overrides(
+            run.join(primal_names::BIOMEOS),
+            data.join(primal_names::BIOMEOS),
+            cfg.join(primal_names::BIOMEOS),
+            cache.join(primal_names::BIOMEOS),
+            state.join(primal_names::BIOMEOS),
+        )
+        .unwrap();
         assert!(paths.runtime_dir().starts_with(&run));
         assert!(paths.data_dir().starts_with(&data));
         assert!(paths.config_dir().starts_with(&cfg));
@@ -815,13 +854,26 @@ mod tests {
         assert!(paths.state_dir().starts_with(&state));
     }
 
-    /// `get_runtime_dir` fallback uses `get_username` (`USER` / `USERNAME`).
+    /// Fallback runtime dir includes a user segment (`biomeos-$USER`).
     #[test]
-    #[serial]
     fn test_runtime_dir_fallback_includes_user_from_env() {
-        let _xdg = TestEnvGuard::remove("XDG_RUNTIME_DIR");
-        let _user = TestEnvGuard::set("USER", "pathstestuser");
-        let paths = SystemPaths::new().unwrap();
+        let temp = tempdir().unwrap();
+        let runtime = temp.path().join("biomeos-pathstestuser");
+        let data = temp.path().join("xdg-data");
+        let cfg = temp.path().join("xdg-cfg");
+        let cache = temp.path().join("xdg-cache");
+        let state = temp.path().join("xdg-state");
+        for p in [&runtime, &data, &cfg, &cache, &state] {
+            std::fs::create_dir_all(p).unwrap();
+        }
+        let paths = SystemPaths::from_overrides(
+            runtime.clone(),
+            data.join(primal_names::BIOMEOS),
+            cfg.join(primal_names::BIOMEOS),
+            cache.join(primal_names::BIOMEOS),
+            state.join(primal_names::BIOMEOS),
+        )
+        .unwrap();
         let s = paths.runtime_dir().to_string_lossy();
         assert!(
             s.contains("pathstestuser"),
@@ -829,20 +881,12 @@ mod tests {
         );
     }
 
-    /// `get_state_dir` uses `$HOME/.local/state` when `XDG_STATE_HOME` is unset.
+    /// State dir at `$HOME/.local/state/biomeos` when not using `XDG_STATE_HOME`.
     #[test]
-    #[serial]
     fn test_state_dir_prefers_home_local_state_without_xdg_state() {
         let temp = tempdir().unwrap();
         let home = temp.path().join("home-branch");
         std::fs::create_dir_all(&home).unwrap();
-        let _g_state = TestEnvGuard::remove("XDG_STATE_HOME");
-        let _g_home = TestEnvGuard::set("HOME", home.to_str().unwrap());
-        let _g_run = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().join("rt").to_str().unwrap());
-        let _g_data = TestEnvGuard::set("XDG_DATA_HOME", temp.path().join("dh").to_str().unwrap());
-        let _g_cfg = TestEnvGuard::set("XDG_CONFIG_HOME", temp.path().join("ch").to_str().unwrap());
-        let _g_cache =
-            TestEnvGuard::set("XDG_CACHE_HOME", temp.path().join("ca").to_str().unwrap());
         for p in [
             temp.path().join("rt"),
             temp.path().join("dh"),
@@ -851,9 +895,17 @@ mod tests {
         ] {
             std::fs::create_dir_all(&p).unwrap();
         }
+        let expected = home.join(".local/state").join(primal_names::BIOMEOS);
+        std::fs::create_dir_all(&expected).unwrap();
 
-        let paths = SystemPaths::new().unwrap();
-        let expected = home.join(".local/state").join(crate::primal_names::BIOMEOS);
+        let paths = SystemPaths::from_overrides(
+            temp.path().join("rt").join(primal_names::BIOMEOS),
+            temp.path().join("dh").join(primal_names::BIOMEOS),
+            temp.path().join("ch").join(primal_names::BIOMEOS),
+            temp.path().join("ca").join(primal_names::BIOMEOS),
+            expected.clone(),
+        )
+        .unwrap();
         assert_eq!(paths.state_dir(), &expected);
     }
 }

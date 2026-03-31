@@ -47,10 +47,10 @@ async fn test_suggest_optimizations_missing_graph_id() {
     assert!(err.to_string().contains("Missing graph_id"));
 }
 
-#[serial_test::serial]
 #[tokio::test]
 async fn test_suggest_optimizations_with_min_samples() {
     let temp = tempdir().expect("tempdir");
+    let metrics_db = temp.path().join("neural_metrics_test.redb");
     let path = temp.path().join("opt_graph.toml");
     let opt_toml = r#"
 [graph]
@@ -64,7 +64,7 @@ id = "n1"
 name = "Node 1"
 "#;
     std::fs::write(&path, opt_toml).expect("write");
-    let (handler, _) = make_handler(temp.path());
+    let (handler, _) = make_handler_with_metrics_db(temp.path(), Some(metrics_db));
 
     let params = Some(json!({
         "graph_id": "opt_graph",

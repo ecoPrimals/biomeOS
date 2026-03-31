@@ -50,7 +50,7 @@ impl RootFsCli {
             ..Default::default()
         };
 
-        let builder = RootFsBuilder::new(config);
+        let mut builder = RootFsBuilder::new(config);
         builder.build().await?;
 
         Ok(())

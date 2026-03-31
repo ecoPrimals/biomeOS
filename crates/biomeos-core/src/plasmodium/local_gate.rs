@@ -2,12 +2,18 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Local gate discovery: runtime socket scan, primal health, models, load.
+//!
+//! Running primals are discovered only via [`crate::socket_discovery::SocketDiscovery`]:
+//! all `*-{family}.sock` files under the biomeOS runtime directory are probed for health.
+//! There is no fallback to a compiled-in primal name list—if nothing is listening, the
+//! gate reports an empty primal list (graceful degradation).
 
 use anyhow::Result;
 use serde_json::json;
 
 use crate::atomic_client::AtomicClient;
 use crate::model_cache::ModelCache;
+use crate::socket_discovery::SocketDiscovery;
 
 use super::system;
 use super::types::{BondType, GateInfo, PrimalStatus};
@@ -16,58 +22,48 @@ impl super::Plasmodium {
     /// Query local gate status
     ///
     /// Dynamically discovers all running primals by scanning the runtime
-    /// directory for family-matching sockets, rather than hardcoding primal names.
+    /// directory for family-matching sockets via [`SocketDiscovery`], rather than
+    /// iterating a compiled primal name list.
     pub(super) async fn query_local_gate(&self) -> Result<GateInfo> {
         let mut primals = Vec::new();
 
-        // Discover running primals from socket directory (capability-based discovery)
-        let runtime_dir = biomeos_types::paths::SystemPaths::new_lazy()
-            .runtime_dir()
-            .to_path_buf();
+        let discovery = SocketDiscovery::new(&self.family_id);
+        let socket_paths = discovery.list_family_scoped_unix_sockets();
         let suffix = format!("-{}.sock", self.family_id);
 
-        if let Ok(mut entries) = tokio::fs::read_dir(&runtime_dir).await {
-            while let Ok(Some(entry)) = entries.next_entry().await {
-                let name = entry.file_name().to_string_lossy().to_string();
-                if let Some(primal_name) = name.strip_suffix(&suffix) {
-                    // Found a family-matching socket -- health check it
-                    let socket_path = entry.path();
-                    match AtomicClient::unix(&socket_path)
-                        .call("health", json!({}))
-                        .await
-                    {
-                        Ok(result) => {
-                            primals.push(PrimalStatus {
-                                name: primal_name.to_string(),
-                                healthy: result
-                                    .get("status")
-                                    .and_then(|s| s.as_str())
-                                    .is_some_and(|s| s == "healthy"),
-                                version: result
-                                    .get("version")
-                                    .and_then(|v| v.as_str())
-                                    .map(std::string::ToString::to_string),
-                            });
-                        }
-                        Err(_) => {
-                            // Socket exists but unresponsive (stale or starting up)
-                            primals.push(PrimalStatus {
-                                name: primal_name.to_string(),
-                                healthy: false,
-                                version: None,
-                            });
-                        }
-                    }
-                }
-            }
-        }
+        for socket_path in socket_paths {
+            let filename = socket_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
+            let primal_name = filename
+                .strip_suffix(&suffix)
+                .unwrap_or(filename)
+                .to_string();
 
-        // Fallback: if socket directory scan found nothing, try known primals via env-based discovery
-        if primals.is_empty() {
-            for primal_name in biomeos_types::primal_names::CORE_PRIMALS {
-                if let Ok(client) = AtomicClient::discover(primal_name).await {
-                    let health = Self::check_primal_health(&client, primal_name).await;
-                    primals.push(health);
+            match AtomicClient::unix(&socket_path)
+                .call("health", json!({}))
+                .await
+            {
+                Ok(result) => {
+                    primals.push(PrimalStatus {
+                        name: primal_name,
+                        healthy: result
+                            .get("status")
+                            .and_then(|s| s.as_str())
+                            .is_some_and(|s| s == "healthy"),
+                        version: result
+                            .get("version")
+                            .and_then(|v| v.as_str())
+                            .map(std::string::ToString::to_string),
+                    });
+                }
+                Err(_) => {
+                    primals.push(PrimalStatus {
+                        name: primal_name,
+                        healthy: false,
+                        version: None,
+                    });
                 }
             }
         }
@@ -92,28 +88,6 @@ impl super::Plasmodium {
             reachable: true,
             bond_type: BondType::Covalent,
         })
-    }
-
-    /// Check health of a single primal
-    pub(super) async fn check_primal_health(client: &AtomicClient, name: &str) -> PrimalStatus {
-        match client.call("health", json!({})).await {
-            Ok(result) => PrimalStatus {
-                name: name.to_string(),
-                healthy: result
-                    .get("status")
-                    .and_then(|s| s.as_str())
-                    .is_some_and(|s| s == "healthy"),
-                version: result
-                    .get("version")
-                    .and_then(|v| v.as_str())
-                    .map(std::string::ToString::to_string),
-            },
-            Err(_) => PrimalStatus {
-                name: name.to_string(),
-                healthy: false,
-                version: None,
-            },
-        }
     }
 
     /// Query local model cache

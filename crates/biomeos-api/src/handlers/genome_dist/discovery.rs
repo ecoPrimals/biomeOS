@@ -37,8 +37,13 @@ pub fn get_genome_bin_path_with(env_path: Option<&str>, search_paths: &[&Path]) 
 /// Searches for `wateringHole/genomeBin/` relative to the workspace.
 pub fn get_genome_bin_path() -> Option<PathBuf> {
     let env_path = std::env::var("GENOMEBIN_PATH").ok();
+    get_genome_bin_path_from(env_path.as_deref())
+}
+
+/// Like [`get_genome_bin_path`], with an explicit `GENOMEBIN_PATH` value (no process env read).
+pub fn get_genome_bin_path_from(env_path: Option<&str>) -> Option<PathBuf> {
     let search_paths: Vec<&Path> = DEFAULT_SEARCH_PATHS.iter().map(Path::new).collect();
-    get_genome_bin_path_with(env_path.as_deref(), &search_paths)
+    get_genome_bin_path_with(env_path, &search_paths)
 }
 
 #[cfg(test)]
@@ -52,8 +57,6 @@ pub fn get_genome_bin_path() -> Option<PathBuf> {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
-    use serial_test::serial;
     use std::path::{Path, PathBuf};
 
     #[test]
@@ -139,10 +142,8 @@ mod tests {
         assert!(result.is_none());
     }
 
-    /// Exercises [`get_genome_bin_path`] (env + default search paths), not only
-    /// [`get_genome_bin_path_with`].
+    /// Exercises [`get_genome_bin_path_from`] (same resolution as [`get_genome_bin_path`]).
     #[test]
-    #[serial]
     fn test_get_genome_bin_path_wrapper_respects_genomebin_path_env() {
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
@@ -150,8 +151,7 @@ mod tests {
             "[manifest]\nversion = \"1.0\"",
         )
         .expect("write manifest");
-        let _guard = TestEnvGuard::set("GENOMEBIN_PATH", temp.path().to_str().expect("utf8 path"));
-        let result = get_genome_bin_path();
+        let result = get_genome_bin_path_from(Some(temp.path().to_str().expect("utf8 path")));
         assert_eq!(result, Some(temp.path().to_path_buf()));
     }
 }

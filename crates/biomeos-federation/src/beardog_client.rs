@@ -118,6 +118,35 @@ impl BearDogClient {
         Ok(Self { endpoint })
     }
 
+    /// Create a `BearDog` client from an explicit endpoint string (no env reads).
+    ///
+    /// Alias for [`Self::with_endpoint`].
+    pub fn from_endpoint(endpoint: &str) -> Result<Self> {
+        Self::with_endpoint(endpoint)
+    }
+
+    /// Create a `BearDog` client from an already-populated [`PrimalDiscovery`] (no env reads).
+    pub fn from_primal_discovery(discovery: &PrimalDiscovery) -> Result<Self> {
+        let beardog = discovery
+            .get(biomeos_types::primal_names::BEARDOG)
+            .ok_or_else(|| anyhow::anyhow!("BearDog not found via discovery"))?;
+
+        if beardog.endpoints.is_empty() {
+            return Err(anyhow::anyhow!("BearDog has no endpoints"));
+        }
+
+        let endpoint = match &beardog.endpoints[0] {
+            PrimalEndpoint::UnixSocket { path } => BearDogEndpoint::UnixSocket(path.clone()),
+            other => {
+                return Err(anyhow::anyhow!(
+                    "BearDog only supports Unix sockets, found: {other:?}"
+                ));
+            }
+        };
+
+        Ok(Self { endpoint })
+    }
+
     /// Create a `BearDog` client with explicit endpoint
     pub fn with_endpoint(endpoint: impl AsRef<str>) -> Result<Self> {
         let endpoint = endpoint.as_ref();
@@ -307,7 +336,10 @@ impl BearDogClient {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{MockJsonRpcServer, TestEnvGuard};
+    use crate::{CapabilitySet, DiscoveredPrimal, PrimalDiscovery};
+    use biomeos_test_utils::MockJsonRpcServer;
+    use std::collections::HashMap;
+    use std::net::SocketAddr;
 
     #[test]
     fn test_beardog_client_creation_unix() {
@@ -643,24 +675,40 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial_test::serial]
-    async fn test_from_discovery_unix_socket_via_env() {
+    async fn test_from_primal_discovery_unix_socket() {
         let dir = tempfile::tempdir().expect("tempdir");
         let sock = dir.path().join("beardog-discovery.sock");
         let _l = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
-        let ep = format!("unix://{}", sock.display());
-        let _g = TestEnvGuard::set("PRIMAL_BEARDOG_ENDPOINT", &ep);
-        let client = BearDogClient::from_discovery()
-            .await
-            .expect("from discovery");
+        let mut pd = PrimalDiscovery::new();
+        pd.discovered_primals.insert(
+            biomeos_types::primal_names::BEARDOG.into(),
+            DiscoveredPrimal {
+                name: biomeos_types::primal_names::BEARDOG.into(),
+                primal_type: "security".into(),
+                capabilities: CapabilitySet::new(),
+                endpoints: vec![PrimalEndpoint::UnixSocket { path: sock.clone() }],
+                metadata: HashMap::new(),
+            },
+        );
+        let client = BearDogClient::from_primal_discovery(&pd).expect("from discovery");
         assert!(client.is_available());
     }
 
     #[tokio::test]
-    #[serial_test::serial]
-    async fn test_from_discovery_udp_not_supported() {
-        let _g = TestEnvGuard::set("PRIMAL_BEARDOG_ENDPOINT", "udp://127.0.0.1:9");
-        let r = BearDogClient::from_discovery().await;
+    async fn test_from_primal_discovery_udp_not_supported() {
+        let addr: SocketAddr = "127.0.0.1:9".parse().expect("addr");
+        let mut pd = PrimalDiscovery::new();
+        pd.discovered_primals.insert(
+            biomeos_types::primal_names::BEARDOG.into(),
+            DiscoveredPrimal {
+                name: biomeos_types::primal_names::BEARDOG.into(),
+                primal_type: "security".into(),
+                capabilities: CapabilitySet::new(),
+                endpoints: vec![PrimalEndpoint::Udp { addr }],
+                metadata: HashMap::new(),
+            },
+        );
+        let r = BearDogClient::from_primal_discovery(&pd);
         assert!(r.is_err(), "expected UDP endpoint to fail");
         let err = r.unwrap_err();
         let s = err.to_string().to_lowercase();

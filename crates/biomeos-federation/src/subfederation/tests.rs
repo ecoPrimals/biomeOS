@@ -5,7 +5,6 @@
 
 //! Sub-federation tests
 
-use biomeos_test_utils::{remove_test_env, set_test_env};
 use tempfile::TempDir;
 
 use super::manager::SubFederationManager;
@@ -138,8 +137,8 @@ mod run {
     #[tokio::test]
     async fn test_subfederation_manager_create_and_get() {
         let temp = TempDir::new().expect("create temp dir");
-        set_test_env("BEARDOG_SOCKET", "/tmp/nonexistent-beardog-test-12345.sock");
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = SubFederationManager::new(temp.path().to_path_buf())
+            .with_neural_api_socket("/tmp/nonexistent-beardog-test-12345.sock");
 
         let subfed = mgr
             .create(
@@ -156,15 +155,13 @@ mod run {
         let retrieved = mgr.get("gaming").expect("get should return created subfed");
         assert_eq!(retrieved.name, "gaming");
         assert_eq!(mgr.all().len(), 1);
-
-        remove_test_env("BEARDOG_SOCKET");
     }
 
     #[tokio::test]
     async fn test_subfederation_manager_create_duplicate_error() {
         let temp = TempDir::new().expect("create temp dir");
-        set_test_env("BEARDOG_SOCKET", "/tmp/nonexistent-beardog-test-12345.sock");
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = SubFederationManager::new(temp.path().to_path_buf())
+            .with_neural_api_socket("/tmp/nonexistent-beardog-test-12345.sock");
 
         mgr.create(
             "dup".to_string(),
@@ -188,15 +185,13 @@ mod run {
             .expect_err("second create with same name should fail");
         assert!(matches!(err, crate::FederationError::Generic(_)));
         assert!(err.to_string().contains("already exists"));
-
-        remove_test_env("BEARDOG_SOCKET");
     }
 
     #[tokio::test]
     async fn test_subfederation_manager_for_node_and_has_access() {
         let temp = TempDir::new().expect("create temp dir");
-        set_test_env("BEARDOG_SOCKET", "/tmp/nonexistent-beardog-test-12345.sock");
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = SubFederationManager::new(temp.path().to_path_buf())
+            .with_neural_api_socket("/tmp/nonexistent-beardog-test-12345.sock");
 
         mgr.create(
             "gaming".to_string(),
@@ -212,8 +207,6 @@ mod run {
         assert_eq!(for_node.len(), 1);
         assert!(mgr.has_access("node-alpha-laptop", &Capability::Gaming));
         assert!(!mgr.has_access("node-beta-laptop", &Capability::Gaming));
-
-        remove_test_env("BEARDOG_SOCKET");
     }
 
     #[tokio::test]
@@ -249,8 +242,8 @@ mod run {
     #[tokio::test]
     async fn test_subfederation_manager_add_remove_member_persists() {
         let temp = TempDir::new().expect("create temp dir");
-        set_test_env("BEARDOG_SOCKET", "/tmp/nonexistent-beardog-test-12345.sock");
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = SubFederationManager::new(temp.path().to_path_buf())
+            .with_neural_api_socket("/tmp/nonexistent-beardog-test-12345.sock");
 
         mgr.create(
             "test".to_string(),
@@ -271,8 +264,6 @@ mod run {
             .await
             .expect("remove member");
         assert!(!mgr.get("test").expect("get").is_member("node-b"));
-
-        remove_test_env("BEARDOG_SOCKET");
     }
 
     #[test]

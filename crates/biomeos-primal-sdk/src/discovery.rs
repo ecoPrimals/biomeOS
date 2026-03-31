@@ -16,7 +16,7 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::PrimalCapability;
 
@@ -108,21 +108,37 @@ impl PrimalDiscovery {
 
     /// Static helper to find a primal by capability using default family
     pub async fn find_by_capability(cap: PrimalCapability) -> Result<DiscoveredPrimal> {
+        Self::find_by_capability_in(cap, &Self::resolve_socket_dir()).await
+    }
+
+    /// Like [`Self::find_by_capability`], but uses `socket_dir` instead of resolving from the environment.
+    pub async fn find_by_capability_in(
+        cap: PrimalCapability,
+        socket_dir: &Path,
+    ) -> Result<DiscoveredPrimal> {
         let discovery = Self::new("default");
         discovery
-            .discover_capability(cap.clone())
+            .discover_capability_in(cap.clone(), socket_dir)
             .await?
             .ok_or_else(|| anyhow::anyhow!("No primal found for capability: {cap:?}"))
     }
 
     /// Discover primals matching query
     pub async fn discover(&self, query: &DiscoveryQuery) -> Result<Vec<DiscoveredPrimal>> {
-        let socket_dir = Self::resolve_socket_dir();
+        self.discover_in(query, &Self::resolve_socket_dir()).await
+    }
+
+    /// Like [`Self::discover`], but uses `socket_dir` instead of resolving from the environment.
+    pub async fn discover_in(
+        &self,
+        query: &DiscoveryQuery,
+        socket_dir: &Path,
+    ) -> Result<Vec<DiscoveredPrimal>> {
         let mut results = Vec::new();
 
         // If we have a specific name, try that directly
         if let Some(name) = &query.name
-            && let Some(primal) = self.try_discover_primal(&socket_dir, name).await
+            && let Some(primal) = self.try_discover_primal(socket_dir, name).await
         {
             results.push(primal);
         }
@@ -130,7 +146,7 @@ impl PrimalDiscovery {
         // If we have a capability, try known primals from taxonomy
         if let Some(cap) = &query.capability {
             for name in providers_for_capability(cap) {
-                if let Some(primal) = self.try_discover_primal(&socket_dir, name).await {
+                if let Some(primal) = self.try_discover_primal(socket_dir, name).await {
                     if query.healthy_only && !primal.is_healthy {
                         continue;
                     }
@@ -152,15 +168,34 @@ impl PrimalDiscovery {
         &self,
         capability: PrimalCapability,
     ) -> Result<Option<DiscoveredPrimal>> {
+        self.discover_capability_in(capability, &Self::resolve_socket_dir())
+            .await
+    }
+
+    /// Like [`Self::discover_capability`], but uses `socket_dir` instead of resolving from the environment.
+    pub async fn discover_capability_in(
+        &self,
+        capability: PrimalCapability,
+        socket_dir: &Path,
+    ) -> Result<Option<DiscoveredPrimal>> {
         let query = DiscoveryQuery::capability(capability);
-        let results = self.discover(&query).await?;
+        let results = self.discover_in(&query, socket_dir).await?;
         Ok(results.into_iter().next())
     }
 
     /// Discover specific primal by name
     pub async fn discover_primal(&self, name: &str) -> Option<DiscoveredPrimal> {
-        let socket_dir = Self::resolve_socket_dir();
-        self.try_discover_primal(&socket_dir, name).await
+        self.discover_primal_in(name, &Self::resolve_socket_dir())
+            .await
+    }
+
+    /// Like [`Self::discover_primal`], but uses `socket_dir` instead of resolving from the environment.
+    pub async fn discover_primal_in(
+        &self,
+        name: &str,
+        socket_dir: &Path,
+    ) -> Option<DiscoveredPrimal> {
+        self.try_discover_primal(socket_dir, name).await
     }
 
     /// Discover primals providing a capability by querying the capability taxonomy.
@@ -168,14 +203,23 @@ impl PrimalDiscovery {
     /// Uses `CapabilityTaxonomy::resolve_to_primal()` for bootstrap hints, then
     /// scans the socket directory. Returns names of discovered primals.
     pub async fn discover_by_capability(&self, capability: &str) -> Result<Vec<String>> {
+        self.discover_by_capability_in(capability, &Self::resolve_socket_dir())
+            .await
+    }
+
+    /// Like [`Self::discover_by_capability`], but uses `socket_dir` instead of resolving from the environment.
+    pub async fn discover_by_capability_in(
+        &self,
+        capability: &str,
+        socket_dir: &Path,
+    ) -> Result<Vec<String>> {
         let provider_names: Vec<&str> =
             biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
                 .map(|p| vec![p])
                 .unwrap_or_default();
-        let socket_dir = Self::resolve_socket_dir();
         let mut discovered = Vec::new();
         for name in provider_names {
-            if self.try_discover_primal(&socket_dir, name).await.is_some() {
+            if self.try_discover_primal(socket_dir, name).await.is_some() {
                 discovered.push(name.to_string());
             }
         }
@@ -326,7 +370,6 @@ pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
 
     #[test]
     fn test_discovery_query_capability() {
@@ -520,40 +563,38 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_find_by_capability_errors_when_empty_socket_dir() {
         let tmp = tempfile::tempdir().unwrap();
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
-        let err = PrimalDiscovery::find_by_capability(PrimalCapability::encryption())
-            .await
-            .expect_err("should fail");
+        let err =
+            PrimalDiscovery::find_by_capability_in(PrimalCapability::encryption(), tmp.path())
+                .await
+                .expect_err("should fail");
         assert!(err.to_string().contains("No primal"));
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_discover_primal_resolves_under_biomeos_socket_dir() {
         let tmp = tempfile::tempdir().unwrap();
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
         let sock = tmp.path().join("songbird-fam.sock");
         let listener = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
         let discovery = PrimalDiscovery::new("fam");
-        let p = discovery.discover_primal("songbird").await.expect("primal");
+        let p = discovery
+            .discover_primal_in("songbird", tmp.path())
+            .await
+            .expect("primal");
         assert_eq!(p.name, "songbird");
         assert_eq!(p.socket_path, sock);
         drop(listener);
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_discover_alt_socket_name_without_family_suffix() {
         let tmp = tempfile::tempdir().unwrap();
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
         let sock = tmp.path().join("toadstool.sock");
         let listener = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
         let discovery = PrimalDiscovery::new("fam");
         let p = discovery
-            .discover_primal("toadstool")
+            .discover_primal_in("toadstool", tmp.path())
             .await
             .expect("primal");
         assert_eq!(p.socket_path, sock);
@@ -561,28 +602,27 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_discover_respects_limit() {
         let tmp = tempfile::tempdir().unwrap();
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
         let sock = tmp.path().join("beardog-x.sock");
         let listener = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
         let discovery = PrimalDiscovery::new("x");
         let mut q = DiscoveryQuery::capability(PrimalCapability::encryption());
         q.limit = Some(0);
-        let v = discovery.discover(&q).await.expect("discover");
+        let v = discovery
+            .discover_in(&q, tmp.path())
+            .await
+            .expect("discover");
         assert!(v.is_empty());
         drop(listener);
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_discover_by_capability_taxonomy_empty_dir() {
         let tmp = tempfile::tempdir().unwrap();
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
         let discovery = PrimalDiscovery::new("x");
         let names = discovery
-            .discover_by_capability("encryption")
+            .discover_by_capability_in("encryption", tmp.path())
             .await
             .expect("ok");
         assert!(names.is_empty());
@@ -613,58 +653,62 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_discover_query_by_name_only() {
         let tmp = tempfile::tempdir().unwrap();
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
         let sock = tmp.path().join("beardog-fam.sock");
         let _l = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
         let discovery = PrimalDiscovery::new("fam");
         let mut q = DiscoveryQuery::primal("beardog");
         q.limit = Some(5);
-        let v = discovery.discover(&q).await.expect("discover");
+        let v = discovery
+            .discover_in(&q, tmp.path())
+            .await
+            .expect("discover");
         assert_eq!(v.len(), 1);
         assert_eq!(v[0].name, "beardog");
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_discover_healthy_only_skips_dead_socket_file() {
         let tmp = tempfile::tempdir().unwrap();
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
         let sock = tmp.path().join("beardog-fam.sock");
         std::fs::write(&sock, b"not-a-socket").expect("w");
         let discovery = PrimalDiscovery::new("fam");
         let q = DiscoveryQuery::capability(PrimalCapability::encryption());
-        let v = discovery.discover(&q).await.expect("discover");
+        let v = discovery
+            .discover_in(&q, tmp.path())
+            .await
+            .expect("discover");
         assert!(v.is_empty());
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_discover_capability_unhealthy_included_when_not_healthy_only() {
         let tmp = tempfile::tempdir().unwrap();
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", tmp.path().to_str().unwrap());
         let sock = tmp.path().join("beardog-fam.sock");
         std::fs::write(&sock, b"stale").expect("w");
         let discovery = PrimalDiscovery::new("fam");
         let mut q = DiscoveryQuery::capability(PrimalCapability::encryption());
         q.healthy_only = false;
-        let v = discovery.discover(&q).await.expect("discover");
+        let v = discovery
+            .discover_in(&q, tmp.path())
+            .await
+            .expect("discover");
         assert!(v.iter().any(|p| !p.is_healthy));
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_discovered_via_run_user_style_path() {
         let tmp = tempfile::tempdir().unwrap();
         let run = tmp.path().join("run/user/1000/biomeos");
         std::fs::create_dir_all(&run).expect("d");
-        let _g = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", run.to_str().unwrap());
         let sock = run.join("songbird-x.sock");
         let _l = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
         let discovery = PrimalDiscovery::new("x");
-        let p = discovery.discover_primal("songbird").await.expect("p");
+        let p = discovery
+            .discover_primal_in("songbird", &run)
+            .await
+            .expect("p");
         assert!(matches!(p.discovered_via, DiscoveryMethod::XdgRuntime));
     }
 }

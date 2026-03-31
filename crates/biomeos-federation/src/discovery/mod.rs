@@ -265,28 +265,52 @@ impl PrimalDiscovery {
     fn discover_from_env(&mut self) -> FederationResult<()> {
         for (key, value) in std::env::vars() {
             if key.starts_with("PRIMAL_") && key.ends_with("_ENDPOINT") {
-                let primal_name = key
-                    .strip_prefix("PRIMAL_")
-                    .and_then(|s| s.strip_suffix("_ENDPOINT"))
-                    .unwrap_or_default()
-                    .to_lowercase();
-
-                if let Some(endpoint) = Self::parse_endpoint(&value) {
-                    let discovered = DiscoveredPrimal {
-                        name: primal_name.clone(),
-                        primal_type: "unknown".to_string(),
-                        capabilities: CapabilitySet::new(),
-                        endpoints: vec![endpoint],
-                        metadata: HashMap::from([
-                            ("discovered_via".to_string(), "environment".to_string()),
-                            ("env_var".to_string(), key.clone()),
-                        ]),
-                    };
-
-                    debug!("Discovered primal from env: {} = {}", key, value);
-                    self.discovered_primals.insert(primal_name, discovered);
-                }
+                self.insert_primal_endpoint_from_env_key(&key, &value)?;
             }
+        }
+
+        Ok(())
+    }
+
+    /// Register `PRIMAL_*_ENDPOINT` pairs without reading the process environment (tests).
+    #[cfg(test)]
+    pub(crate) fn discover_from_primal_endpoint_pairs(
+        &mut self,
+        pairs: &[(&str, &str)],
+    ) -> FederationResult<()> {
+        for (key, value) in pairs {
+            if key.starts_with("PRIMAL_") && key.ends_with("_ENDPOINT") {
+                self.insert_primal_endpoint_from_env_key(key, value)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn insert_primal_endpoint_from_env_key(
+        &mut self,
+        key: &str,
+        value: &str,
+    ) -> FederationResult<()> {
+        let primal_name = key
+            .strip_prefix("PRIMAL_")
+            .and_then(|s| s.strip_suffix("_ENDPOINT"))
+            .unwrap_or_default()
+            .to_lowercase();
+
+        if let Some(endpoint) = Self::parse_endpoint(value) {
+            let discovered = DiscoveredPrimal {
+                name: primal_name.clone(),
+                primal_type: "unknown".to_string(),
+                capabilities: CapabilitySet::new(),
+                endpoints: vec![endpoint],
+                metadata: HashMap::from([
+                    ("discovered_via".to_string(), "environment".to_string()),
+                    ("env_var".to_string(), key.to_string()),
+                ]),
+            };
+
+            debug!("Discovered primal from env: {} = {}", key, value);
+            self.discovered_primals.insert(primal_name, discovered);
         }
 
         Ok(())
@@ -332,17 +356,25 @@ impl PrimalDiscovery {
     }
 
     pub(crate) async fn discover_via_songbird(&mut self) -> FederationResult<()> {
+        let songbird_socket = Self::discover_songbird_socket()?;
+        self.discover_via_songbird_socket_path(&songbird_socket)
+            .await
+    }
+
+    /// Like [`Self::discover_via_songbird`], using an explicit Songbird Unix socket path (tests).
+    pub(crate) async fn discover_via_songbird_socket_path(
+        &mut self,
+        songbird_socket: &str,
+    ) -> FederationResult<()> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
-
-        let songbird_socket = Self::discover_songbird_socket()?;
 
         debug!(
             "Querying Songbird for UDP-discovered peers: {}",
             songbird_socket
         );
 
-        let stream = UnixStream::connect(&songbird_socket).await.map_err(|e| {
+        let stream = UnixStream::connect(songbird_socket).await.map_err(|e| {
             crate::FederationError::DiscoveryError(format!("Songbird connection failed: {e}"))
         })?;
 
@@ -407,13 +439,16 @@ impl PrimalDiscovery {
     ///
     /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
     pub(crate) fn discover_songbird_socket() -> FederationResult<String> {
+        Self::discover_songbird_socket_with_env(&biomeos_types::capability_discovery::std_env)
+    }
+
+    /// Like [`Self::discover_songbird_socket`], with an injectable env lookup (tests).
+    pub(crate) fn discover_songbird_socket_with_env(
+        env: &dyn Fn(&str) -> Option<String>,
+    ) -> FederationResult<String> {
         use biomeos_types::capability_discovery;
 
-        capability_discovery::discover_capability_socket(
-            "discovery",
-            &capability_discovery::std_env,
-        )
-        .ok_or_else(|| {
+        capability_discovery::discover_capability_socket("discovery", env).ok_or_else(|| {
             crate::FederationError::DiscoveryError(
                 "Discovery provider socket not found. \
                      Set DISCOVERY_PROVIDER_SOCKET or ensure the discovery provider is running."

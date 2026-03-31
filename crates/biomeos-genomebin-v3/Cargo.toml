@@ -48,8 +48,6 @@ tempfile = "3.8"
 
 [dev-dependencies]
 tempfile = "3.8"
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-serial_test = "3.2"
 
 [lib]
 name = "biomeos_genomebin_v3"

@@ -15,9 +15,8 @@
 //! cargo test --test tower_atomic_e2e -- --test-threads=1
 //! ```
 
-use biomeos_test_utils::set_test_env;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -148,13 +147,13 @@ async fn test_capability_call_routing() {
 async fn test_nucleation_xdg_paths() {
     use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
 
-    // Set XDG_RUNTIME_DIR for test
-    set_test_env("XDG_RUNTIME_DIR", "/run/user/1000");
-
     let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
+    let runtime = Path::new("/run/user/1000");
 
-    let beardog_socket = nucleation.assign_socket("beardog", "test-family");
-    let songbird_socket = nucleation.assign_socket("songbird", "test-family");
+    let beardog_socket =
+        nucleation.assign_socket_with_runtime_dir("beardog", "test-family", Some(runtime));
+    let songbird_socket =
+        nucleation.assign_socket_with_runtime_dir("songbird", "test-family", Some(runtime));
 
     // Verify XDG paths are used
     assert!(
@@ -171,7 +170,8 @@ async fn test_nucleation_xdg_paths() {
     );
 
     // Verify deterministic assignment
-    let beardog_socket_2 = nucleation.assign_socket("beardog", "test-family");
+    let beardog_socket_2 =
+        nucleation.assign_socket_with_runtime_dir("beardog", "test-family", Some(runtime));
     assert_eq!(
         beardog_socket, beardog_socket_2,
         "Same primal should get same socket"
@@ -211,14 +211,20 @@ async fn test_execution_context_socket_paths() {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    set_test_env("XDG_RUNTIME_DIR", "/run/user/1000");
-
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "context-test".to_string());
 
     let nucleation = Arc::new(RwLock::new(SocketNucleation::new(
         SocketStrategy::XdgRuntime,
     )));
+    {
+        let mut n = nucleation.write().await;
+        n.assign_socket_with_runtime_dir(
+            "beardog",
+            "context-test",
+            Some(Path::new("/run/user/1000")),
+        );
+    }
     let context = ExecutionContext::new(env).with_nucleation(nucleation);
 
     let beardog_socket = context.get_socket_path("beardog").await;

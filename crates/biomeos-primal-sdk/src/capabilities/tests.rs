@@ -3,7 +3,6 @@
 
 use super::*;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
-use serial_test::serial;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 
@@ -337,14 +336,11 @@ fn test_resolve_neural_api_socket_invocation() {
 }
 
 #[test]
-#[serial]
 fn test_resolve_neural_api_socket_from_env() {
-    use biomeos_test_utils::TestEnvGuard;
-
     let tmp = tempfile::NamedTempFile::new().expect("temp file");
     let path = tmp.path().to_path_buf();
-    let _guard = TestEnvGuard::set("NEURAL_API_SOCKET", path.to_string_lossy().as_ref());
-    let got = resolve_neural_api_socket().expect("env path should resolve");
+    let got =
+        resolve_neural_api_socket_with(Some(tmp.path())).expect("explicit path should resolve");
     assert_eq!(got, path);
 }
 

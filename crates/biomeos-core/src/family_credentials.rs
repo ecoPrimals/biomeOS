@@ -192,25 +192,38 @@ impl FamilyCredentials {
     /// - `FAMILY_ID` or `BEARDOG_FAMILY_ID`
     /// - `FAMILY_SEED` or `BEARDOG_FAMILY_SEED`
     pub fn from_env() -> Result<Self, BirdSongError> {
-        let family_id_str = std::env::var("FAMILY_ID")
-            .or_else(|_| std::env::var("BEARDOG_FAMILY_ID"))
-            .map_err(|_| {
-                BirdSongError::InvalidCredentials(
-                    "Missing FAMILY_ID or BEARDOG_FAMILY_ID environment variable".to_string(),
-                )
-            })?;
+        Self::from_env_values(
+            std::env::var("FAMILY_ID")
+                .ok()
+                .or_else(|| std::env::var("BEARDOG_FAMILY_ID").ok())
+                .as_deref(),
+            std::env::var("FAMILY_SEED")
+                .ok()
+                .or_else(|| std::env::var("BEARDOG_FAMILY_SEED").ok())
+                .as_deref(),
+        )
+    }
 
-        let family_seed = std::env::var("FAMILY_SEED")
-            .or_else(|_| std::env::var("BEARDOG_FAMILY_SEED"))
-            .map_err(|_| {
-                BirdSongError::InvalidCredentials(
-                    "Missing FAMILY_SEED or BEARDOG_FAMILY_SEED environment variable".to_string(),
-                )
-            })?;
+    /// Load credentials from explicit values (same semantics as [`Self::from_env`]).
+    pub fn from_env_values(
+        family_id: Option<&str>,
+        family_seed: Option<&str>,
+    ) -> Result<Self, BirdSongError> {
+        let family_id_str = family_id.ok_or_else(|| {
+            BirdSongError::InvalidCredentials(
+                "Missing FAMILY_ID or BEARDOG_FAMILY_ID environment variable".to_string(),
+            )
+        })?;
+
+        let family_seed = family_seed.ok_or_else(|| {
+            BirdSongError::InvalidCredentials(
+                "Missing FAMILY_SEED or BEARDOG_FAMILY_SEED environment variable".to_string(),
+            )
+        })?;
 
         let family_id = FamilyId::new(family_id_str);
 
-        let seed = SecretSeed::new(family_seed)?;
+        let seed = SecretSeed::new(family_seed.to_string())?;
 
         Self::new(family_id, seed)
     }
@@ -351,7 +364,6 @@ impl std::fmt::Debug for FamilyCredentials {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_secret_seed_validation() {
@@ -405,38 +417,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     fn test_from_env_missing() {
-        // NOTE: This test modifies global environment, skip in parallel test runs
-        // Run with: cargo test test_from_env_missing -- --ignored
-
-        // Clear environment
-        remove_test_env("FAMILY_ID");
-        remove_test_env("BEARDOG_FAMILY_ID");
-        remove_test_env("FAMILY_SEED");
-        remove_test_env("BEARDOG_FAMILY_SEED");
-
-        assert!(FamilyCredentials::from_env().is_err());
+        assert!(FamilyCredentials::from_env_values(None, None).is_err());
     }
 
     #[test]
-    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     fn test_from_env_success() {
-        // NOTE: This test modifies global environment, skip in parallel test runs
-        // Run with: cargo test test_from_env_success -- --ignored
-
-        set_test_env("FAMILY_ID", "test-family");
-        set_test_env(
-            "FAMILY_SEED",
-            "iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=",
-        );
-
-        let creds = FamilyCredentials::from_env().unwrap();
+        let creds = FamilyCredentials::from_env_values(
+            Some("test-family"),
+            Some("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88="),
+        )
+        .unwrap();
         assert_eq!(creds.family_id().as_str(), "test-family");
-
-        // Cleanup
-        remove_test_env("FAMILY_ID");
-        remove_test_env("FAMILY_SEED");
     }
 
     #[test]

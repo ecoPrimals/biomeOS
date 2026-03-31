@@ -85,6 +85,36 @@ pub enum HostOS {
     Unknown,
 }
 
+/// Optional overrides for [`DeploymentMode::from_env_string_with_params`].
+///
+/// When a field is `None`, defaults match the behavior of unset environment variables
+/// (see each field).
+#[derive(Debug, Clone, Default)]
+pub struct DeploymentFromEnvParams {
+    /// `BIOMEOS_MEDIA_PATH` — when `None`, Cold Spore defaults to `/media/biomeos`.
+    pub media_path: Option<String>,
+    /// `BIOMEOS_PERSISTENCE` — when `None`, defaults to `false`.
+    pub persistence: Option<bool>,
+    /// `BIOMEOS_VERSION` — when `None`, Live Spore uses `CARGO_PKG_VERSION`.
+    pub installed_version: Option<String>,
+    /// `BIOMEOS_ISOLATION` — when `None`, [`DeploymentMode::isolation_level_from_env`] treats it
+    /// as unset and defaults to [`IsolationLevel::Shared`].
+    pub isolation: Option<String>,
+}
+
+impl DeploymentFromEnvParams {
+    fn from_current_env() -> Self {
+        Self {
+            media_path: std::env::var("BIOMEOS_MEDIA_PATH").ok(),
+            persistence: std::env::var("BIOMEOS_PERSISTENCE")
+                .ok()
+                .map(|v| v == "true" || v == "1"),
+            installed_version: std::env::var("BIOMEOS_VERSION").ok(),
+            isolation: std::env::var("BIOMEOS_ISOLATION").ok(),
+        }
+    }
+}
+
 /// Isolation level for Sibling Spore
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IsolationLevel {
@@ -117,7 +147,10 @@ impl DeploymentMode {
     pub fn detect() -> Result<Self> {
         // 1. Check for explicit override
         if let Ok(mode_str) = std::env::var("BIOMEOS_DEPLOYMENT_MODE") {
-            return Self::from_env_string(&mode_str);
+            return Self::from_env_string_with_params(
+                &mode_str,
+                DeploymentFromEnvParams::from_current_env(),
+            );
         }
 
         // 2. Check if running from removable media
@@ -146,7 +179,8 @@ impl DeploymentMode {
         // 4. Default to Sibling Spore
         let host_os = Self::detect_host_os()?;
         let install_dir = Self::get_install_dir()?;
-        let isolation = Self::detect_isolation_level();
+        let isolation =
+            Self::isolation_level_from_env(std::env::var("BIOMEOS_ISOLATION").ok().as_deref());
 
         Ok(Self::SiblingSpore {
             host_os,
@@ -169,23 +203,38 @@ impl DeploymentMode {
     /// ```
     #[must_use]
     pub fn socket_prefix(&self) -> PathBuf {
+        self.socket_prefix_with_runtime(std::env::var("XDG_RUNTIME_DIR").ok().as_deref(), None)
+    }
+
+    /// Like [`Self::socket_prefix`], but uses the given runtime directory and UID override
+    /// instead of reading `XDG_RUNTIME_DIR` / `UID` from the environment.
+    ///
+    /// For Live Spore, when `xdg_runtime_dir` is `None`, the path is `/run/user/{uid}/biomeos`
+    /// where `uid` is `uid_for_run_user_path` if set, otherwise [`Self::get_uid`].
+    #[must_use]
+    pub fn socket_prefix_with_runtime(
+        &self,
+        xdg_runtime_dir: Option<&str>,
+        uid_for_run_user_path: Option<u32>,
+    ) -> PathBuf {
         match self {
             Self::ColdSpore { media_path, .. } => media_path.join("runtime"),
             Self::LiveSpore { .. } => {
-                // EVOLVED: Use XDG_RUNTIME_DIR instead of hardcoded path
-                // This respects the system's runtime directory configuration
-                if let Ok(xdg_runtime) = std::env::var("XDG_RUNTIME_DIR") {
-                    PathBuf::from(xdg_runtime).join("biomeos")
-                } else {
-                    // Fallback: construct XDG-compliant path using UID
-                    let uid = Self::get_uid();
-                    PathBuf::from(format!("/run/user/{uid}/biomeos"))
-                }
+                Self::live_socket_prefix(xdg_runtime_dir, uid_for_run_user_path)
             }
-            Self::SiblingSpore { install_dir, .. } => {
-                // User-space runtime directory
-                install_dir.join("runtime")
-            }
+            Self::SiblingSpore { install_dir, .. } => install_dir.join("runtime"),
+        }
+    }
+
+    fn live_socket_prefix(
+        xdg_runtime_dir: Option<&str>,
+        uid_for_run_user_path: Option<u32>,
+    ) -> PathBuf {
+        if let Some(xdg) = xdg_runtime_dir {
+            PathBuf::from(xdg).join("biomeos")
+        } else {
+            let uid = uid_for_run_user_path.unwrap_or_else(Self::get_uid);
+            PathBuf::from(format!("/run/user/{uid}/biomeos"))
         }
     }
 
@@ -215,16 +264,18 @@ impl DeploymentMode {
         }
     }
 
-    // Private helper methods
-
-    fn from_env_string(s: &str) -> Result<Self> {
+    /// Build a deployment mode from a mode string and explicit env-equivalent values.
+    ///
+    /// This is the parameterized form of parsing `BIOMEOS_DEPLOYMENT_MODE`; see
+    /// [`DeploymentFromEnvParams`] for defaults when fields are unset.
+    pub fn from_env_string_with_params(s: &str, params: DeploymentFromEnvParams) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "cold" | "coldspore" | "cold_spore" => {
-                let media_path = std::env::var("BIOMEOS_MEDIA_PATH")
-                    .map_or_else(|_| PathBuf::from("/media/biomeos"), PathBuf::from);
-                let persistence = std::env::var("BIOMEOS_PERSISTENCE")
-                    .map(|v| v == "true" || v == "1")
-                    .unwrap_or(false);
+                let media_path = params
+                    .media_path
+                    .as_ref()
+                    .map_or_else(|| PathBuf::from("/media/biomeos"), PathBuf::from);
+                let persistence = params.persistence.unwrap_or(false);
                 let host_os = Self::detect_host_os()?;
 
                 Ok(Self::ColdSpore {
@@ -236,8 +287,9 @@ impl DeploymentMode {
             "live" | "livespore" | "live_spore" => {
                 let root = PathBuf::from("/");
                 let boot = PathBuf::from("/boot");
-                let version = std::env::var("BIOMEOS_VERSION")
-                    .unwrap_or_else(|_| env!("CARGO_PKG_VERSION").to_string());
+                let version = params
+                    .installed_version
+                    .unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_string());
 
                 Ok(Self::LiveSpore {
                     root_partition: root,
@@ -248,7 +300,7 @@ impl DeploymentMode {
             "sibling" | "siblingspore" | "sibling_spore" => {
                 let host_os = Self::detect_host_os()?;
                 let install_dir = Self::get_install_dir()?;
-                let isolation = Self::detect_isolation_level();
+                let isolation = Self::isolation_level_from_env(params.isolation.as_deref());
 
                 Ok(Self::SiblingSpore {
                     host_os,
@@ -259,6 +311,22 @@ impl DeploymentMode {
             _ => anyhow::bail!("Invalid deployment mode: {s}"),
         }
     }
+
+    /// Resolve isolation level from the `BIOMEOS_ISOLATION`-style value (or `None` for unset).
+    #[must_use]
+    pub fn isolation_level_from_env(isolation: Option<&str>) -> IsolationLevel {
+        if let Some(level) = isolation {
+            match level.to_lowercase().as_str() {
+                "sandboxed" | "sandbox" => return IsolationLevel::Sandboxed,
+                "shared" => return IsolationLevel::Shared,
+                "full" => return IsolationLevel::Full,
+                _ => {}
+            }
+        }
+        IsolationLevel::Shared
+    }
+
+    // Private helper methods
 
     fn detect_removable_media() -> Result<PathBuf> {
         // Strategy:
@@ -390,21 +458,6 @@ impl DeploymentMode {
             .context("Failed to determine install directory - no HOME or XDG paths available")
     }
 
-    fn detect_isolation_level() -> IsolationLevel {
-        // Check environment variable
-        if let Ok(level) = std::env::var("BIOMEOS_ISOLATION") {
-            match level.to_lowercase().as_str() {
-                "sandboxed" | "sandbox" => return IsolationLevel::Sandboxed,
-                "shared" => return IsolationLevel::Shared,
-                "full" => return IsolationLevel::Full,
-                _ => {}
-            }
-        }
-
-        // Default to Shared
-        IsolationLevel::Shared
-    }
-
     /// Get the current user ID.
     ///
     /// # Safety
@@ -457,16 +510,17 @@ impl HostOS {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
-    use serial_test::serial;
 
     #[test]
-    #[serial]
     fn test_deployment_mode_from_env_cold() {
-        set_test_env("BIOMEOS_DEPLOYMENT_MODE", "cold");
-        set_test_env("BIOMEOS_MEDIA_PATH", "/media/usb0");
-
-        let mode = DeploymentMode::from_env_string("cold").unwrap();
+        let mode = DeploymentMode::from_env_string_with_params(
+            "cold",
+            DeploymentFromEnvParams {
+                media_path: Some("/media/usb0".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
 
         match mode {
             DeploymentMode::ColdSpore { media_path, .. } => {
@@ -474,14 +528,13 @@ mod tests {
             }
             _ => panic!("Expected ColdSpore"),
         }
-
-        remove_test_env("BIOMEOS_DEPLOYMENT_MODE");
-        remove_test_env("BIOMEOS_MEDIA_PATH");
     }
 
     #[test]
     fn test_deployment_mode_from_env_live() {
-        let mode = DeploymentMode::from_env_string("live").unwrap();
+        let mode =
+            DeploymentMode::from_env_string_with_params("live", DeploymentFromEnvParams::default())
+                .unwrap();
 
         match mode {
             DeploymentMode::LiveSpore { root_partition, .. } => {
@@ -493,7 +546,11 @@ mod tests {
 
     #[test]
     fn test_deployment_mode_from_env_sibling() {
-        let mode = DeploymentMode::from_env_string("sibling").unwrap();
+        let mode = DeploymentMode::from_env_string_with_params(
+            "sibling",
+            DeploymentFromEnvParams::default(),
+        )
+        .unwrap();
 
         match mode {
             DeploymentMode::SiblingSpore { .. } => {
@@ -554,7 +611,10 @@ mod tests {
 
     #[test]
     fn test_from_env_string_invalid() {
-        let result = DeploymentMode::from_env_string("invalid_mode");
+        let result = DeploymentMode::from_env_string_with_params(
+            "invalid_mode",
+            DeploymentFromEnvParams::default(),
+        );
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Invalid deployment mode"));
@@ -563,46 +623,54 @@ mod tests {
     #[test]
     fn test_from_env_string_variants() {
         // cold_spore, livespore, sibling_spore (underscore variants)
-        let cold = DeploymentMode::from_env_string("cold_spore").unwrap();
+        let cold = DeploymentMode::from_env_string_with_params(
+            "cold_spore",
+            DeploymentFromEnvParams::default(),
+        )
+        .unwrap();
         assert!(matches!(cold, DeploymentMode::ColdSpore { .. }));
 
-        let live = DeploymentMode::from_env_string("live_spore").unwrap();
+        let live = DeploymentMode::from_env_string_with_params(
+            "live_spore",
+            DeploymentFromEnvParams::default(),
+        )
+        .unwrap();
         assert!(matches!(live, DeploymentMode::LiveSpore { .. }));
 
-        let sibling = DeploymentMode::from_env_string("sibling_spore").unwrap();
+        let sibling = DeploymentMode::from_env_string_with_params(
+            "sibling_spore",
+            DeploymentFromEnvParams::default(),
+        )
+        .unwrap();
         assert!(matches!(sibling, DeploymentMode::SiblingSpore { .. }));
     }
 
     #[test]
-    #[serial]
     fn test_from_env_string_cold_persistence() {
-        set_test_env("BIOMEOS_DEPLOYMENT_MODE", "cold");
-        set_test_env("BIOMEOS_MEDIA_PATH", "/media/usb1");
-        set_test_env("BIOMEOS_PERSISTENCE", "1");
-
-        let mode = DeploymentMode::from_env_string("cold").unwrap();
+        let mode = DeploymentMode::from_env_string_with_params(
+            "cold",
+            DeploymentFromEnvParams {
+                media_path: Some("/media/usb1".to_string()),
+                persistence: Some(true),
+                ..Default::default()
+            },
+        )
+        .unwrap();
         match mode {
             DeploymentMode::ColdSpore { persistence, .. } => assert!(persistence),
             _ => panic!("Expected ColdSpore"),
         }
-
-        remove_test_env("BIOMEOS_DEPLOYMENT_MODE");
-        remove_test_env("BIOMEOS_MEDIA_PATH");
-        remove_test_env("BIOMEOS_PERSISTENCE");
     }
 
     #[test]
-    #[serial]
     fn test_socket_prefix_livespore_with_xdg() {
-        set_test_env("XDG_RUNTIME_DIR", "/run/user/1000");
         let mode = DeploymentMode::LiveSpore {
             root_partition: PathBuf::from("/"),
             boot_partition: PathBuf::from("/boot"),
             installed_version: "1.0.0".to_string(),
         };
-        let prefix = mode.socket_prefix();
+        let prefix = mode.socket_prefix_with_runtime(Some("/run/user/1000"), None);
         assert_eq!(prefix, PathBuf::from("/run/user/1000/biomeos"));
-        remove_test_env("XDG_RUNTIME_DIR");
     }
 
     #[test]
@@ -696,16 +764,13 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_socket_prefix_livespore_without_xdg() {
-        remove_test_env("XDG_RUNTIME_DIR");
-        remove_test_env("UID");
         let mode = DeploymentMode::LiveSpore {
             root_partition: PathBuf::from("/"),
             boot_partition: PathBuf::from("/boot"),
             installed_version: "1.0".to_string(),
         };
-        let prefix = mode.socket_prefix();
+        let prefix = mode.socket_prefix_with_runtime(None, None);
         assert!(prefix.to_string_lossy().contains("biomeos"));
         assert!(
             prefix.to_string_lossy().contains("/run/user/")
@@ -715,17 +780,30 @@ mod tests {
 
     #[test]
     fn test_from_env_string_coldspore_livespore_variants() {
-        let c1 = DeploymentMode::from_env_string("coldspore").unwrap();
+        let c1 = DeploymentMode::from_env_string_with_params(
+            "coldspore",
+            DeploymentFromEnvParams::default(),
+        )
+        .unwrap();
         assert!(matches!(c1, DeploymentMode::ColdSpore { .. }));
-        let c2 = DeploymentMode::from_env_string("livespore").unwrap();
+        let c2 = DeploymentMode::from_env_string_with_params(
+            "livespore",
+            DeploymentFromEnvParams::default(),
+        )
+        .unwrap();
         assert!(matches!(c2, DeploymentMode::LiveSpore { .. }));
     }
 
     #[test]
     fn test_from_env_string_biomeos_version() {
-        set_test_env("BIOMEOS_VERSION", "9.9.9");
-        let mode = DeploymentMode::from_env_string("live").unwrap();
-        remove_test_env("BIOMEOS_VERSION");
+        let mode = DeploymentMode::from_env_string_with_params(
+            "live",
+            DeploymentFromEnvParams {
+                installed_version: Some("9.9.9".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
         match mode {
             DeploymentMode::LiveSpore {
                 installed_version, ..
@@ -788,12 +866,10 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_from_env_string_cold_default_media_when_unset() {
-        remove_test_env("BIOMEOS_MEDIA_PATH");
-        set_test_env("BIOMEOS_DEPLOYMENT_MODE", "cold");
-        let mode = DeploymentMode::from_env_string("cold").expect("cold");
-        remove_test_env("BIOMEOS_DEPLOYMENT_MODE");
+        let mode =
+            DeploymentMode::from_env_string_with_params("cold", DeploymentFromEnvParams::default())
+                .expect("cold");
         match mode {
             DeploymentMode::ColdSpore { media_path, .. } => {
                 assert_eq!(media_path, PathBuf::from("/media/biomeos"));
@@ -803,42 +879,31 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_detect_isolation_level_sandboxed_alias() {
-        set_test_env("BIOMEOS_ISOLATION", "sandbox");
         assert!(matches!(
-            DeploymentMode::detect_isolation_level(),
+            DeploymentMode::isolation_level_from_env(Some("sandbox")),
             IsolationLevel::Sandboxed
         ));
-        remove_test_env("BIOMEOS_ISOLATION");
     }
 
     #[test]
-    #[serial]
     fn test_detect_isolation_level_shared_and_full() {
-        set_test_env("BIOMEOS_ISOLATION", "shared");
         assert!(matches!(
-            DeploymentMode::detect_isolation_level(),
+            DeploymentMode::isolation_level_from_env(Some("shared")),
             IsolationLevel::Shared
         ));
-        remove_test_env("BIOMEOS_ISOLATION");
 
-        set_test_env("BIOMEOS_ISOLATION", "full");
         assert!(matches!(
-            DeploymentMode::detect_isolation_level(),
+            DeploymentMode::isolation_level_from_env(Some("full")),
             IsolationLevel::Full
         ));
-        remove_test_env("BIOMEOS_ISOLATION");
     }
 
     #[test]
-    #[serial]
     fn test_detect_isolation_level_unknown_falls_back_to_shared() {
-        set_test_env("BIOMEOS_ISOLATION", "not-a-real-level");
         assert!(matches!(
-            DeploymentMode::detect_isolation_level(),
+            DeploymentMode::isolation_level_from_env(Some("not-a-real-level")),
             IsolationLevel::Shared
         ));
-        remove_test_env("BIOMEOS_ISOLATION");
     }
 }

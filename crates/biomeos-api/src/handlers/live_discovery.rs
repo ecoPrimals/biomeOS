@@ -349,8 +349,12 @@ fn infer_type_from_name(name: &str) -> String {
 /// Single source of truth: `SystemPaths::new_lazy().runtime_dir()`.
 /// Only falls back to env override if `BIOMEOS_SOCKET_DIR` is explicitly set.
 fn get_socket_dir() -> String {
-    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
-        return dir;
+    get_socket_dir_from(std::env::var("BIOMEOS_SOCKET_DIR").ok().as_deref())
+}
+
+fn get_socket_dir_from(override_dir: Option<&str>) -> String {
+    if let Some(dir) = override_dir {
+        return dir.to_string();
     }
     biomeos_types::SystemPaths::new_lazy()
         .runtime_dir()
@@ -363,8 +367,13 @@ fn get_socket_dir() -> String {
 /// This is the primary discovery mechanism - scan for .sock files and query each.
 /// No hardcoded primal lists - purely dynamic discovery.
 pub async fn discover_all_primals() -> Vec<LivePrimalInfo> {
-    let mut primals = Vec::new();
     let socket_dir = get_socket_dir();
+    discover_all_primals_in(&socket_dir).await
+}
+
+/// Like [`discover_all_primals`], but uses `socket_dir` instead of reading `BIOMEOS_SOCKET_DIR`.
+pub async fn discover_all_primals_in(socket_dir: &str) -> Vec<LivePrimalInfo> {
+    let mut primals = Vec::new();
 
     info!("🔍 Scanning for primals in: {}", socket_dir);
 
@@ -431,7 +440,13 @@ pub async fn discover_all_primals() -> Vec<LivePrimalInfo> {
 ///
 /// Find all primals that provide a specific capability (e.g., "crypto.encrypt")
 pub async fn discover_by_capability(capability: &str) -> Vec<LivePrimalInfo> {
-    let all = discover_all_primals().await;
+    let socket_dir = get_socket_dir();
+    discover_by_capability_in(capability, &socket_dir).await
+}
+
+/// Like [`discover_by_capability`], but uses `socket_dir` instead of reading `BIOMEOS_SOCKET_DIR`.
+pub async fn discover_by_capability_in(capability: &str, socket_dir: &str) -> Vec<LivePrimalInfo> {
+    let all = discover_all_primals_in(socket_dir).await;
 
     all.into_iter()
         .filter(|p| {
@@ -446,7 +461,13 @@ pub async fn discover_by_capability(capability: &str) -> Vec<LivePrimalInfo> {
 ///
 /// Find all primals of a specific type (e.g., "security", "discovery")
 pub async fn discover_by_type(primal_type: &str) -> Vec<LivePrimalInfo> {
-    let all = discover_all_primals().await;
+    let socket_dir = get_socket_dir();
+    discover_by_type_in(primal_type, &socket_dir).await
+}
+
+/// Like [`discover_by_type`], but uses `socket_dir` instead of reading `BIOMEOS_SOCKET_DIR`.
+pub async fn discover_by_type_in(primal_type: &str, socket_dir: &str) -> Vec<LivePrimalInfo> {
+    let all = discover_all_primals_in(socket_dir).await;
 
     all.into_iter()
         .filter(|p| p.primal_type == primal_type)
@@ -526,25 +547,15 @@ mod tests {
 
     #[test]
     fn test_socket_dir_override_and_default() {
-        use biomeos_test_utils::TestEnvGuard;
+        let dir = get_socket_dir_from(Some("/tmp/biomeos-test-override"));
+        assert_eq!(dir, "/tmp/biomeos-test-override");
 
-        // Test override path
-        {
-            let _guard = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", "/tmp/biomeos-test-override");
-            let dir = get_socket_dir();
-            assert_eq!(dir, "/tmp/biomeos-test-override");
-        }
-
-        // Test default path (env var removed by guard drop)
-        {
-            let _guard = TestEnvGuard::remove("BIOMEOS_SOCKET_DIR");
-            let dir = get_socket_dir();
-            let expected = biomeos_types::SystemPaths::new_lazy()
-                .runtime_dir()
-                .to_string_lossy()
-                .to_string();
-            assert_eq!(dir, expected);
-        }
+        let dir = get_socket_dir_from(None);
+        let expected = biomeos_types::SystemPaths::new_lazy()
+            .runtime_dir()
+            .to_string_lossy()
+            .to_string();
+        assert_eq!(dir, expected);
     }
 
     #[test]
@@ -636,30 +647,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_all_primals_empty_dir() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
         // With no sockets, should return empty without panicking
-        set_test_env("BIOMEOS_SOCKET_DIR", "/nonexistent/path/for/tests");
-        let primals = discover_all_primals().await;
+        let primals = discover_all_primals_in("/nonexistent/path/for/tests").await;
         assert!(primals.is_empty());
-        remove_test_env("BIOMEOS_SOCKET_DIR");
     }
 
     #[tokio::test]
     async fn test_discover_by_capability_returns() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
-        set_test_env("BIOMEOS_SOCKET_DIR", "/nonexistent/path");
-        let primals = discover_by_capability("crypto.encrypt").await;
+        let primals = discover_by_capability_in("crypto.encrypt", "/nonexistent/path").await;
         assert!(primals.is_empty());
-        remove_test_env("BIOMEOS_SOCKET_DIR");
     }
 
     #[tokio::test]
     async fn test_discover_by_type_returns() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
-        set_test_env("BIOMEOS_SOCKET_DIR", "/nonexistent/path");
-        let primals = discover_by_type("security").await;
+        let primals = discover_by_type_in("security", "/nonexistent/path").await;
         assert!(primals.is_empty());
-        remove_test_env("BIOMEOS_SOCKET_DIR");
     }
 
     #[tokio::test]
@@ -678,14 +680,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_all_primals_nonexistent_dir() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
-        set_test_env(
-            "BIOMEOS_SOCKET_DIR",
-            "/nonexistent/path/that/does/not/exist",
-        );
-        let primals = discover_all_primals().await;
+        let primals = discover_all_primals_in("/nonexistent/path/that/does/not/exist").await;
         assert!(primals.is_empty());
-        remove_test_env("BIOMEOS_SOCKET_DIR");
     }
 
     #[test]
@@ -731,13 +727,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_all_primals_socket_dir_exists_no_socks() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
         let temp = tempfile::tempdir().expect("tempdir");
         let p = temp.path().to_string_lossy();
-        set_test_env("BIOMEOS_SOCKET_DIR", p.as_ref());
-        let primals = discover_all_primals().await;
-        assert!(primals.is_empty());
-        remove_test_env("BIOMEOS_SOCKET_DIR");
+        let primals = discover_all_primals_in(p.as_ref()).await;
+        assert!(
+            primals.is_empty(),
+            "expected empty discovery in isolated temp dir, found {} primals",
+            primals.len()
+        );
     }
 
     /// Covers `send_rpc_request` success path and `discover_primal` field mapping.

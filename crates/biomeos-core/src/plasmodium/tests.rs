@@ -4,6 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::Plasmodium;
+use super::PlasmodiumEnvOverrides;
 use super::system;
 use super::types::*;
 
@@ -306,15 +307,11 @@ async fn test_query_collective_no_peers() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_query_collective_merges_plasmodium_peers_env() {
-    use biomeos_test_utils::TestEnvGuard;
-
-    let _guard = TestEnvGuard::set(
-        "PLASMODIUM_PEERS",
-        "peer-a@127.0.0.1:59997,peer-b@host-only",
-    );
-    let p = Plasmodium::new();
+    let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
+        plasmodium_peers: Some("peer-a@127.0.0.1:59997,peer-b@host-only".to_string()),
+        ..Default::default()
+    });
     let result = p.query_collective().await;
     assert!(result.is_ok());
     let state = result.unwrap();
@@ -329,11 +326,11 @@ async fn test_query_collective_merges_plasmodium_peers_env() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_plasmodium_peers_bare_hostname_branch() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _guard = TestEnvGuard::set("PLASMODIUM_PEERS", "bare-hostname-only-token-unique-8821");
-    let p = Plasmodium::new();
+    let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
+        plasmodium_peers: Some("bare-hostname-only-token-unique-8821".to_string()),
+        ..Default::default()
+    });
     let state = p.query_collective().await.expect("collective");
     assert!(
         state
@@ -345,11 +342,11 @@ async fn test_plasmodium_peers_bare_hostname_branch() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_plasmodium_peers_skips_empty_segments() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _guard = TestEnvGuard::set("PLASMODIUM_PEERS", " ,  dup@127.0.0.1:1 , dup@127.0.0.1:2 ");
-    let p = Plasmodium::new();
+    let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
+        plasmodium_peers: Some(" ,  dup@127.0.0.1:1 , dup@127.0.0.1:2 ".to_string()),
+        ..Default::default()
+    });
     let state = p.query_collective().await.expect("collective");
     assert!(
         state.gates.iter().filter(|g| g.gate_id == "dup").count() <= 1,
@@ -553,32 +550,31 @@ fn test_aggregate_capabilities_models_merge_duplicate_ids() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_query_collective_family_id_from_family_id_env() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _g = TestEnvGuard::set("FAMILY_ID", "plasmo-env-family-42");
-    let p = Plasmodium::new();
+    let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
+        family_id: Some("plasmo-env-family-42".to_string()),
+        ..Default::default()
+    });
     let state = p.query_collective().await.expect("collective");
     assert_eq!(state.family_id, "plasmo-env-family-42");
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_query_collective_node_family_id_fallback_env() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _g1 = TestEnvGuard::remove("FAMILY_ID");
-    let _g2 = TestEnvGuard::set("NODE_FAMILY_ID", "node-fam-99");
-    let p = Plasmodium::new();
+    let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
+        node_family_id: Some("node-fam-99".to_string()),
+        ..Default::default()
+    });
     let state = p.query_collective().await.expect("collective");
     assert_eq!(state.family_id, "node-fam-99");
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_query_collective_gate_id_from_gate_id_env() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _g = TestEnvGuard::set("GATE_ID", "gate-env-unique-771");
-    let p = Plasmodium::new();
+    let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
+        gate_id: Some("gate-env-unique-771".to_string()),
+        ..Default::default()
+    });
     let state = p.query_collective().await.expect("collective");
     let local = state.gates.iter().find(|g| g.is_local).expect("local gate");
     assert_eq!(local.gate_id, "gate-env-unique-771");

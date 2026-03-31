@@ -99,7 +99,17 @@ impl NeuralBridge {
     /// automatic discovery is insufficient.
     #[must_use]
     pub fn discover_with(neural_api_socket: Option<&str>, family_id: Option<&str>) -> Option<Self> {
-        let path = resolve_socket_with(neural_api_socket, family_id)?;
+        Self::discover_with_env(neural_api_socket, family_id, SocketResolveEnv::default())
+    }
+
+    /// Like [`Self::discover_with`], with explicit runtime / temp overrides (no env mutation).
+    #[must_use]
+    pub fn discover_with_env(
+        neural_api_socket: Option<&str>,
+        family_id: Option<&str>,
+        env: SocketResolveEnv,
+    ) -> Option<Self> {
+        let path = resolve_socket_with_env(neural_api_socket, family_id, env)?;
         Some(Self {
             socket_path: path,
             timeout: Duration::from_secs(30),
@@ -211,6 +221,15 @@ impl NeuralBridge {
     }
 }
 
+/// Optional environment overrides for [`resolve_socket_with_env`] (tests and tooling).
+#[derive(Debug, Clone, Default)]
+pub struct SocketResolveEnv {
+    /// When set, used instead of the process `XDG_RUNTIME_DIR` for tier 2.
+    pub xdg_runtime_dir: Option<String>,
+    /// When set, used as the parent for tier 4 instead of [`std::env::temp_dir`].
+    pub tmpdir: Option<String>,
+}
+
 /// Resolve the Neural API socket path using the 5-tier discovery strategy.
 ///
 /// Checks: `NEURAL_API_SOCKET` env var, `$XDG_RUNTIME_DIR/biomeos/`, `/run/user/{uid}/biomeos/`,
@@ -218,6 +237,20 @@ impl NeuralBridge {
 pub fn resolve_socket_with(
     neural_api_socket: Option<&str>,
     family_id_override: Option<&str>,
+) -> Option<PathBuf> {
+    resolve_socket_with_env(
+        neural_api_socket,
+        family_id_override,
+        SocketResolveEnv::default(),
+    )
+}
+
+/// Like [`resolve_socket_with`], but supplies `XDG_RUNTIME_DIR` / `TMPDIR` equivalents explicitly.
+#[must_use]
+pub fn resolve_socket_with_env(
+    neural_api_socket: Option<&str>,
+    family_id_override: Option<&str>,
+    env: SocketResolveEnv,
 ) -> Option<PathBuf> {
     if let Some(path) = neural_api_socket {
         let p = PathBuf::from(path);
@@ -231,7 +264,11 @@ pub fn resolve_socket_with(
         .or_else(|| std::env::var("FAMILY_ID").ok())?;
 
     // Tier 2: XDG_RUNTIME_DIR
-    if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
+    let xdg = env
+        .xdg_runtime_dir
+        .clone()
+        .or_else(|| std::env::var("XDG_RUNTIME_DIR").ok());
+    if let Some(xdg) = xdg {
         let p = PathBuf::from(xdg)
             .join("biomeos")
             .join(format!("neural-api-{family_id}.sock"));
@@ -250,7 +287,12 @@ pub fn resolve_socket_with(
     }
 
     // Tier 4: platform temp-dir fallback (no hardcoded /tmp)
-    let p = std::env::temp_dir()
+    let tmp_base = env
+        .tmpdir
+        .as_ref()
+        .map(PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir);
+    let p = tmp_base
         .join("biomeos")
         .join(format!("neural-api-{family_id}.sock"));
     if p.exists() {
@@ -310,15 +352,12 @@ fn parse_response(response: &serde_json::Value) -> Result<CallResult, NeuralErro
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
-    use serial_test::serial;
 
     #[cfg(unix)]
     use std::os::unix::net::UnixListener;
     #[cfg(unix)]
     use std::thread;
 
-    /// Avoid `TMPDIR` races when `#[serial]` tier tests repoint the process temp dir.
     #[cfg(unix)]
     fn unix_isolated_tempdir(prefix: &str) -> tempfile::TempDir {
         tempfile::Builder::new()
@@ -470,7 +509,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn resolve_socket_tier_xdg_runtime_dir() {
         let family = "neural-tier-xdg-only-7f3a";
         let temp = tempfile::tempdir().expect("temp dir");
@@ -479,15 +517,19 @@ mod tests {
         let expected = biomeos_dir.join(format!("neural-api-{family}.sock"));
         std::fs::write(&expected, "").expect("placeholder socket path");
 
-        let _neural = TestEnvGuard::remove("NEURAL_API_SOCKET");
-        let _xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", temp.path().to_str().expect("utf8 path"));
-        let bridge = NeuralBridge::discover_with(None, Some(family));
+        let bridge = NeuralBridge::discover_with_env(
+            None,
+            Some(family),
+            SocketResolveEnv {
+                xdg_runtime_dir: Some(temp.path().to_str().expect("utf8 path").to_string()),
+                tmpdir: None,
+            },
+        );
         assert!(bridge.is_some());
         assert_eq!(bridge.expect("bridge").socket_path(), expected.as_path());
     }
 
     #[test]
-    #[serial]
     #[cfg(target_os = "linux")]
     fn resolve_socket_tier_run_user() {
         let family = "neural-tier-run-user-9c2e";
@@ -498,19 +540,19 @@ mod tests {
         std::fs::write(&expected, "").expect("placeholder socket path");
 
         let empty_xdg = tempfile::tempdir().expect("empty xdg");
-        let _neural = TestEnvGuard::remove("NEURAL_API_SOCKET");
-        let _xdg = TestEnvGuard::set(
-            "XDG_RUNTIME_DIR",
-            empty_xdg.path().to_str().expect("utf8 path"),
+        let bridge = NeuralBridge::discover_with_env(
+            None,
+            Some(family),
+            SocketResolveEnv {
+                xdg_runtime_dir: Some(empty_xdg.path().to_str().expect("utf8 path").to_string()),
+                tmpdir: None,
+            },
         );
-
-        let bridge = NeuralBridge::discover_with(None, Some(family));
         assert!(bridge.is_some());
         assert_eq!(bridge.expect("bridge").socket_path(), expected.as_path());
     }
 
     #[test]
-    #[serial]
     fn resolve_socket_tier_platform_temp_dir() {
         let family = "neural-tier-tmpdir-b4d1";
         let tmp_root = tempfile::tempdir().expect("tmp root");
@@ -520,14 +562,14 @@ mod tests {
         std::fs::write(&expected, "").expect("placeholder socket path");
 
         let empty_xdg = tempfile::tempdir().expect("empty xdg");
-        let _neural = TestEnvGuard::remove("NEURAL_API_SOCKET");
-        let _xdg = TestEnvGuard::set(
-            "XDG_RUNTIME_DIR",
-            empty_xdg.path().to_str().expect("utf8 path"),
+        let bridge = NeuralBridge::discover_with_env(
+            None,
+            Some(family),
+            SocketResolveEnv {
+                xdg_runtime_dir: Some(empty_xdg.path().to_str().expect("utf8 path").to_string()),
+                tmpdir: Some(tmp_root.path().to_str().expect("utf8 path").to_string()),
+            },
         );
-        let _tmpdir = TestEnvGuard::set("TMPDIR", tmp_root.path().to_str().expect("utf8 path"));
-
-        let bridge = NeuralBridge::discover_with(None, Some(family));
         assert!(bridge.is_some());
         assert_eq!(bridge.expect("bridge").socket_path(), expected.as_path());
     }

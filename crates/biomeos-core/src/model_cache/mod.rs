@@ -16,4 +16,4 @@ mod cache_extra_tests;
 mod tests;
 
 pub use cache::ModelCache;
-pub use types::{ModelEntry, ModelFile, ModelResolution};
+pub use types::{ModelCacheConfig, ModelEntry, ModelFile, ModelResolution};

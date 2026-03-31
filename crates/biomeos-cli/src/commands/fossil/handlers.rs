@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use biomeos_spore::logs::{ArchivalReason, FossilIndex, LogConfig, LogManager};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
 use super::format::{
@@ -14,35 +14,44 @@ use super::format::{
 };
 use super::{FossilAction, FossilArgs};
 
-/// Log layout for CLI handlers. When `BIOMEOS_CLI_LOG_ROOT` is set (tests), active and fossil
-/// directories are rooted there instead of `/var/biomeos/logs/...`.
-fn cli_log_config() -> LogConfig {
+/// Log layout for CLI handlers. When `log_root` is set, or `BIOMEOS_CLI_LOG_ROOT` is set, active and
+/// fossil directories are rooted there instead of `/var/biomeos/logs/...`.
+fn cli_log_config(log_root: Option<&Path>) -> LogConfig {
     let mut config = LogConfig::default();
-    if let Ok(root) = std::env::var("BIOMEOS_CLI_LOG_ROOT") {
-        let root = PathBuf::from(root);
+    let root: Option<PathBuf> = log_root.map(Path::to_path_buf).or_else(|| {
+        std::env::var("BIOMEOS_CLI_LOG_ROOT")
+            .ok()
+            .map(PathBuf::from)
+    });
+    if let Some(root) = root {
         config.active_dir = root.join("active");
         config.fossil_dir = root.join("fossil");
     }
     config
 }
 
-/// Dispatch fossil subcommand
+/// Dispatch fossil subcommand (uses `BIOMEOS_CLI_LOG_ROOT` when set).
 pub(super) async fn dispatch(args: FossilArgs) -> Result<()> {
+    dispatch_at(args, None).await
+}
+
+/// Dispatch with an explicit log root (overrides env for this call).
+pub(super) async fn dispatch_at(args: FossilArgs, log_root: Option<&Path>) -> Result<()> {
     match args.action {
-        FossilAction::Active { node } => handle_active(node),
-        FossilAction::Fossil { node, limit, show } => handle_fossil(node, limit, show),
-        FossilAction::Archive { node_id } => handle_archive(node_id).await,
+        FossilAction::Active { node } => handle_active(node, log_root),
+        FossilAction::Fossil { node, limit, show } => handle_fossil(node, limit, show, log_root),
+        FossilAction::Archive { node_id } => handle_archive(node_id, log_root).await,
         FossilAction::Clean {
             older_than,
             dry_run,
-        } => handle_clean(older_than, dry_run).await,
-        FossilAction::Migrate { from, dry_run } => handle_migrate(from, dry_run).await,
-        FossilAction::CleanupStale => handle_cleanup_stale().await,
+        } => handle_clean(older_than, dry_run, log_root).await,
+        FossilAction::Migrate { from, dry_run } => handle_migrate(from, dry_run, log_root).await,
+        FossilAction::CleanupStale => handle_cleanup_stale(log_root).await,
     }
 }
 
-fn handle_active(node_filter: Option<String>) -> Result<()> {
-    let config = cli_log_config();
+fn handle_active(node_filter: Option<String>, log_root: Option<&Path>) -> Result<()> {
+    let config = cli_log_config(log_root);
     let manager = LogManager::new(config);
 
     let sessions = manager.list_active_sessions()?;
@@ -71,8 +80,13 @@ fn handle_active(node_filter: Option<String>) -> Result<()> {
     Ok(())
 }
 
-fn handle_fossil(node_filter: Option<String>, limit: usize, show: Option<usize>) -> Result<()> {
-    let config = cli_log_config();
+fn handle_fossil(
+    node_filter: Option<String>,
+    limit: usize,
+    show: Option<usize>,
+    log_root: Option<&Path>,
+) -> Result<()> {
+    let config = cli_log_config(log_root);
     let index_path = config.fossil_dir.join("index.toml");
 
     if !index_path.exists() {
@@ -134,10 +148,10 @@ fn handle_fossil(node_filter: Option<String>, limit: usize, show: Option<usize>)
     Ok(())
 }
 
-async fn handle_archive(node_id: String) -> Result<()> {
+async fn handle_archive(node_id: String, log_root: Option<&Path>) -> Result<()> {
     info!("Manually archiving session for node: {}", node_id);
 
-    let config = cli_log_config();
+    let config = cli_log_config(log_root);
     let manager = LogManager::new(config);
 
     let sessions = manager.list_active_sessions()?;
@@ -158,14 +172,14 @@ async fn handle_archive(node_id: String) -> Result<()> {
     Ok(())
 }
 
-async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
+async fn handle_clean(older_than: u64, dry_run: bool, log_root: Option<&Path>) -> Result<()> {
     use chrono::{Duration, Utc};
 
     if dry_run {
         println!("🔍 Dry run: No files will be deleted\n");
     }
 
-    let config = cli_log_config();
+    let config = cli_log_config(log_root);
     let manager = LogManager::new(config.clone());
 
     manager.initialize().await?;
@@ -229,7 +243,7 @@ async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
     Ok(())
 }
 
-async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
+async fn handle_migrate(from: PathBuf, dry_run: bool, log_root: Option<&Path>) -> Result<()> {
     println!("\n🔄 Migrating logs from: {}", from.display());
 
     if dry_run {
@@ -241,7 +255,7 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
         return Ok(());
     }
 
-    let config = cli_log_config();
+    let config = cli_log_config(log_root);
     let manager = LogManager::new(config.clone());
 
     manager.initialize().await?;
@@ -285,10 +299,10 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
     Ok(())
 }
 
-async fn handle_cleanup_stale() -> Result<()> {
+async fn handle_cleanup_stale(log_root: Option<&Path>) -> Result<()> {
     info!("Cleaning up stale active sessions");
 
-    let config = cli_log_config();
+    let config = cli_log_config(log_root);
     let manager = LogManager::new(config);
 
     manager.initialize().await?;

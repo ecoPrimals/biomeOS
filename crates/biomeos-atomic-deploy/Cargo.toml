@@ -43,8 +43,6 @@ biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tempfile = "3.8"
 tokio-test = "0.4"
 rand = "0.8"
-serial_test = "3"
-
 
 [lints]
 workspace = true

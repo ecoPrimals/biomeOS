@@ -35,6 +35,8 @@ pub struct GenericManagedPrimal {
     id: PrimalId,
     config: PrimalConfig,
     process: Arc<Mutex<Option<Child>>>,
+    /// When set, [`ManagedPrimal::endpoint`] uses this path instead of `PRIMAL_SOCKET_PATH` env.
+    socket_path_override: Option<std::path::PathBuf>,
 }
 
 impl GenericManagedPrimal {
@@ -62,11 +64,20 @@ impl GenericManagedPrimal {
             id,
             config,
             process: Arc::new(Mutex::new(None)),
+            socket_path_override: None,
         })
     }
 
     /// Create with explicit config (for testing or manual construction)
     pub fn with_config(config: PrimalConfig) -> BiomeResult<Self> {
+        Self::with_config_socket(config, None)
+    }
+
+    /// Create with explicit config and optional Unix socket path override (tests).
+    pub fn with_config_socket(
+        config: PrimalConfig,
+        socket_path_override: Option<std::path::PathBuf>,
+    ) -> BiomeResult<Self> {
         let id = PrimalId::new(config.id.clone()).map_err(|e| {
             BiomeError::config_error(format!("Invalid primal ID: {e}"), Some("PRIMAL_ID"))
         })?;
@@ -75,6 +86,7 @@ impl GenericManagedPrimal {
             id,
             config,
             process: Arc::new(Mutex::new(None)),
+            socket_path_override,
         })
     }
 }
@@ -103,6 +115,12 @@ impl ManagedPrimal for GenericManagedPrimal {
         // 2. HTTP (legacy, deprecated)
         //
         // Deep Debt Principle: Unix socket first, HTTP bridge is temporary.
+
+        if let Some(ref p) = self.socket_path_override
+            && let Ok(endpoint) = Endpoint::new(format!("unix://{}", p.display()))
+        {
+            return Some(endpoint);
+        }
 
         // Try Unix socket first
         if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH")
@@ -307,6 +325,7 @@ pub struct PrimalBuilder {
     requires: Vec<Capability>,
     http_port: u16,
     env_vars: std::collections::HashMap<String, String>,
+    socket_path_override: Option<std::path::PathBuf>,
 }
 
 impl PrimalBuilder {
@@ -320,6 +339,7 @@ impl PrimalBuilder {
             requires: Vec::new(),
             http_port: 0,
             env_vars: std::collections::HashMap::new(),
+            socket_path_override: None,
         }
     }
 
@@ -365,6 +385,13 @@ impl PrimalBuilder {
         self
     }
 
+    /// Unix socket path for [`ManagedPrimal::endpoint`] without `PRIMAL_SOCKET_PATH` env.
+    #[must_use]
+    pub fn unix_socket_path(mut self, path: impl AsRef<std::path::Path>) -> Self {
+        self.socket_path_override = Some(path.as_ref().to_path_buf());
+        self
+    }
+
     /// Build the primal from the configured values
     pub fn build(self) -> BiomeResult<Arc<GenericManagedPrimal>> {
         let config = PrimalConfig {
@@ -378,7 +405,10 @@ impl PrimalBuilder {
             env_config: self.env_vars,
         };
 
-        Ok(Arc::new(GenericManagedPrimal::with_config(config)?))
+        Ok(Arc::new(GenericManagedPrimal::with_config_socket(
+            config,
+            self.socket_path_override,
+        )?))
     }
 }
 
@@ -466,7 +496,6 @@ pub type ManagedSongbird = GenericManagedPrimal;
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_builder_pattern() {
@@ -563,20 +592,16 @@ mod tests {
             create_discovery_orchestrator("/bin/true".to_string()).unwrap();
     }
 
-    static ENDPOINT_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
     #[tokio::test]
     async fn test_endpoint_unix_socket_preferred() {
-        let _guard = ENDPOINT_ENV_LOCK.lock().await;
-        set_test_env("PRIMAL_SOCKET_PATH", "/run/user/1000/biomeos/test.sock");
         let primal = PrimalBuilder::new()
             .id("test".to_string())
             .binary_path("/bin/true".to_string())
             .http_port(9000)
+            .unix_socket_path("/run/user/1000/biomeos/test.sock")
             .build()
             .unwrap();
         let endpoint = primal.endpoint().await;
-        remove_test_env("PRIMAL_SOCKET_PATH");
         assert!(endpoint.is_some());
         let ep = endpoint.unwrap();
         assert!(ep.to_string().contains("unix://"));
@@ -584,8 +609,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_endpoint_http_fallback() {
-        let _guard = ENDPOINT_ENV_LOCK.lock().await;
-        remove_test_env("PRIMAL_SOCKET_PATH");
         let primal = PrimalBuilder::new()
             .id("test".to_string())
             .binary_path("/bin/true".to_string())

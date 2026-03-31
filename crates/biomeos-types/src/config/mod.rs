@@ -197,20 +197,26 @@ impl BiomeOSConfig {
     /// Load configuration from environment variables
     #[must_use]
     pub fn from_env() -> Self {
+        let env: HashMap<String, String> = std::env::vars().collect();
+        Self::from_env_map(&env)
+    }
+
+    /// Load configuration from a synthetic environment map (no process env mutation).
+    #[must_use]
+    pub fn from_env_map(env: &HashMap<String, String>) -> Self {
         let mut config = Self::default();
 
-        // Apply environment variable overrides
-        if let Ok(port) = std::env::var("BIOMEOS_PORT")
+        if let Some(port) = env.get("BIOMEOS_PORT")
             && let Ok(port_num) = port.parse::<u16>()
         {
             config.network.port = port_num;
         }
 
-        if let Ok(bind_addr) = std::env::var("BIOMEOS_BIND_ADDRESS") {
-            config.network.bind_address = bind_addr;
+        if let Some(bind_addr) = env.get("BIOMEOS_BIND_ADDRESS") {
+            config.network.bind_address.clone_from(bind_addr);
         }
 
-        if let Ok(log_level) = std::env::var("BIOMEOS_LOG_LEVEL") {
+        if let Some(log_level) = env.get("BIOMEOS_LOG_LEVEL") {
             config.observability.logging.level = match log_level.to_lowercase().as_str() {
                 "trace" => observability::LogLevel::Trace,
                 "debug" => observability::LogLevel::Debug,
@@ -221,11 +227,11 @@ impl BiomeOSConfig {
             };
         }
 
-        if let Ok(debug) = std::env::var("BIOMEOS_DEBUG") {
+        if let Some(debug) = env.get("BIOMEOS_DEBUG") {
             config.features.debug = debug.to_lowercase() == "true";
         }
 
-        if let Ok(experimental) = std::env::var("BIOMEOS_EXPERIMENTAL") {
+        if let Some(experimental) = env.get("BIOMEOS_EXPERIMENTAL") {
             config.features.experimental = experimental.to_lowercase() == "true";
         }
 

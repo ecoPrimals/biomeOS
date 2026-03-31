@@ -147,6 +147,8 @@ pub(crate) struct PrimalCommandConfig<'a> {
     pub anthropic_api_key: Option<&'a str>,
     pub openai_api_key: Option<&'a str>,
     pub ai_http_providers: Option<&'a str>,
+    /// When set, used instead of reading `AI_DEFAULT_MODEL` from the environment.
+    pub ai_default_model: Option<&'a str>,
 }
 
 /// Build a primal process command (testable, no spawn).
@@ -175,6 +177,7 @@ pub(crate) fn build_primal_command(
         anthropic_api_key: anthropic.as_deref(),
         openai_api_key: openai.as_deref(),
         ai_http_providers: ai_providers.as_deref(),
+        ai_default_model: None,
     };
     build_primal_command_with(&config)
 }
@@ -226,7 +229,9 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
                 .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket);
             // AI_DEFAULT_MODEL: Squirrel reads this at startup for default model override.
             // Ref: wateringHole/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md Item 1.
-            if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
+            if let Some(model) = config.ai_default_model {
+                cmd.env("AI_DEFAULT_MODEL", model);
+            } else if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
                 cmd.env("AI_DEFAULT_MODEL", model);
             }
             if config.anthropic_api_key.is_some() || config.openai_api_key.is_some() {
@@ -510,32 +515,50 @@ fn discover_binaries(primals: &[&str]) -> Result<HashMap<String, PathBuf>> {
         .map(|s| s.split(':').map(PathBuf::from).collect())
         .unwrap_or_default();
     let path_dirs: Vec<&Path> = path_owned.iter().map(std::path::PathBuf::as_path).collect();
-    discover_binaries_with(primals, plasmid_bin_dir.as_deref(), &path_dirs)
+    discover_binaries_with(primals, plasmid_bin_dir.as_deref(), &path_dirs, None)
 }
 
+fn discover_search_path(rel: PathBuf, cwd: Option<&Path>) -> PathBuf {
+    match cwd {
+        Some(c) => c.join(rel),
+        None => rel,
+    }
+}
+
+/// `cwd`, when set, resolves relative search roots under that directory instead of the process cwd.
 pub(crate) fn discover_binaries_with(
     primals: &[&str],
     plasmid_bin_dir: Option<&Path>,
     path_dirs: &[&Path],
+    cwd: Option<&Path>,
 ) -> Result<HashMap<String, PathBuf>> {
     let mut map = HashMap::new();
 
     let mut search_paths = vec![
-        PathBuf::from("livespore-usb")
-            .join(std::env::consts::ARCH)
-            .join("primals"),
-        PathBuf::from("livespore-usb/primals"),
-        PathBuf::from("plasmidBin"),
-        PathBuf::from("plasmidBin/optimized").join(std::env::consts::ARCH),
+        discover_search_path(
+            PathBuf::from("livespore-usb")
+                .join(std::env::consts::ARCH)
+                .join("primals"),
+            cwd,
+        ),
+        discover_search_path(PathBuf::from("livespore-usb/primals"), cwd),
+        discover_search_path(PathBuf::from("plasmidBin"), cwd),
+        discover_search_path(
+            PathBuf::from("plasmidBin/optimized").join(std::env::consts::ARCH),
+            cwd,
+        ),
     ];
 
     if let Some(eco) = plasmid_bin_dir {
         search_paths.push(eco.join("primals"));
         search_paths.push(eco.to_path_buf());
     }
-    search_paths.push(PathBuf::from("../../plasmidBin/primals"));
-    search_paths.push(PathBuf::from("../../plasmidBin"));
-    search_paths.push(PathBuf::from("target/release"));
+    search_paths.push(discover_search_path(
+        PathBuf::from("../../plasmidBin/primals"),
+        cwd,
+    ));
+    search_paths.push(discover_search_path(PathBuf::from("../../plasmidBin"), cwd));
+    search_paths.push(discover_search_path(PathBuf::from("target/release"), cwd));
 
     for primal in primals {
         let mut found = false;

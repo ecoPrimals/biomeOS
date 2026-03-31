@@ -20,8 +20,25 @@ use super::types::{
 
 /// Resolve a capability to its runtime provider name via env var or taxonomy default.
 fn resolve_provider(env_var: &str, capability: &CapabilityTaxonomy) -> String {
-    std::env::var(env_var)
-        .unwrap_or_else(|_| capability.default_primal().unwrap_or("unknown").to_string())
+    resolve_provider_with(env_var, capability, None)
+}
+
+/// Same as [`resolve_provider`], with an optional simulated env value for tests.
+///
+/// - `None` — read `std::env::var(env_var)` with taxonomy fallback (production).
+/// - `Some(None)` — treat env as unset; use taxonomy default.
+/// - `Some(Some(v))` — use `v` without reading the process environment.
+fn resolve_provider_with(
+    env_var: &str,
+    capability: &CapabilityTaxonomy,
+    env_override: Option<Option<&str>>,
+) -> String {
+    match env_override {
+        None => std::env::var(env_var)
+            .unwrap_or_else(|_| capability.default_primal().unwrap_or("unknown").to_string()),
+        Some(None) => capability.default_primal().unwrap_or("unknown").to_string(),
+        Some(Some(v)) => v.to_string(),
+    }
 }
 
 /// Device Management Capability Provider
@@ -417,32 +434,36 @@ impl DeviceManagementProvider {
 mod tests {
     use super::*;
     use crate::capabilities::device_management::{templates, types};
-    use biomeos_test_utils::TestEnvGuard;
     use biomeos_types::CapabilityTaxonomy;
     use biomeos_types::primal_names;
-    use serial_test::serial;
 
     #[test]
-    #[serial]
     fn test_resolve_provider_registry_from_env() {
-        let _g = TestEnvGuard::set("BIOMEOS_REGISTRY_PROVIDER", "custom-registry");
-        let s = resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
+        let s = resolve_provider_with(
+            "BIOMEOS_REGISTRY_PROVIDER",
+            &CapabilityTaxonomy::Discovery,
+            Some(Some("custom-registry")),
+        );
         assert_eq!(s, "custom-registry");
     }
 
     #[test]
-    #[serial]
     fn test_resolve_provider_registry_default_without_env() {
-        let _g = TestEnvGuard::remove("BIOMEOS_REGISTRY_PROVIDER");
-        let s = resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
+        let s = resolve_provider_with(
+            "BIOMEOS_REGISTRY_PROVIDER",
+            &CapabilityTaxonomy::Discovery,
+            Some(None),
+        );
         assert_eq!(s, primal_names::SONGBIRD);
     }
 
     #[test]
-    #[serial]
     fn test_resolve_provider_storage_default_without_env() {
-        let _g = TestEnvGuard::remove("BIOMEOS_STORAGE_PROVIDER");
-        let s = resolve_provider("BIOMEOS_STORAGE_PROVIDER", &CapabilityTaxonomy::DataStorage);
+        let s = resolve_provider_with(
+            "BIOMEOS_STORAGE_PROVIDER",
+            &CapabilityTaxonomy::DataStorage,
+            Some(None),
+        );
         assert_eq!(s, primal_names::NESTGATE);
     }
 

@@ -2,7 +2,6 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use super::*;
-use serial_test::serial;
 
 #[test]
 fn test_discovered_primal_serialization() {
@@ -610,10 +609,7 @@ fn test_discovered_primal_empty_capabilities() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_probe_live_sockets_with_sock_files_no_runtime() {
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
-
     let temp = tempfile::tempdir().expect("tempdir");
     let sock_dir = temp.path();
 
@@ -622,9 +618,7 @@ async fn test_probe_live_sockets_with_sock_files_no_runtime() {
     std::fs::write(sock_dir.join("not-a-socket.txt"), "").expect("write");
     std::fs::write(sock_dir.join("another.log"), "").expect("write");
 
-    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", sock_dir.to_str().unwrap());
-
-    let primals = probe_live_sockets().await;
+    let primals = probe_live_sockets_in(sock_dir).await;
 
     assert_eq!(primals.len(), 2, "should find exactly 2 .sock files");
 
@@ -645,40 +639,28 @@ async fn test_probe_live_sockets_with_sock_files_no_runtime() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_probe_live_sockets_controlled_empty_dir() {
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
-
     let temp = tempfile::tempdir().expect("tempdir");
-    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", temp.path().to_str().unwrap());
 
-    let primals = probe_live_sockets().await;
+    let primals = probe_live_sockets_in(temp.path()).await;
     assert!(primals.is_empty());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_probe_live_sockets_nonexistent_override_dir() {
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
+    use std::path::Path;
 
-    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", "/nonexistent/probe/dir/xyz123");
-
-    let primals = probe_live_sockets().await;
+    let primals = probe_live_sockets_in(Path::new("/nonexistent/probe/dir/xyz123")).await;
     assert!(primals.is_empty());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_probe_live_sockets_extracts_primal_name_from_hyphenated_filename() {
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
-
     let temp = tempfile::tempdir().expect("tempdir");
     std::fs::write(temp.path().join("beardog-family-a.sock"), "").expect("write");
     std::fs::write(temp.path().join("simple.sock"), "").expect("write");
 
-    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", temp.path().to_str().unwrap());
-
-    let primals = probe_live_sockets().await;
+    let primals = probe_live_sockets_in(temp.path()).await;
     assert_eq!(primals.len(), 2);
 
     let by_id: std::collections::HashMap<&str, &DiscoveredPrimal> =
@@ -695,14 +677,10 @@ async fn test_probe_live_sockets_extracts_primal_name_from_hyphenated_filename()
 }
 
 #[test]
-#[serial]
 fn test_get_socket_dir_respects_primal_socket_env() {
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
-
     let temp = tempfile::tempdir().expect("tempdir");
-    let _guard = TestEnvGuard::set("PRIMAL_SOCKET", temp.path().to_str().unwrap());
 
-    let dir = get_socket_dir();
+    let dir = get_socket_dir_from(Some(temp.path().to_str().expect("utf8")));
     assert!(
         dir.starts_with(temp.path().to_str().unwrap()),
         "socket dir should use PRIMAL_SOCKET override: got {dir}"

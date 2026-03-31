@@ -328,6 +328,15 @@ pub struct KernelManager {
 impl KernelManager {
     /// Detect system kernel or use custom
     pub fn detect_or_custom(custom: Option<PathBuf>) -> Result<Self> {
+        Self::detect_or_custom_with(custom, None)
+    }
+
+    /// Like [`Self::detect_or_custom`], but accepts an explicit `BIOMEOS_KERNEL` path
+    /// (for tests without mutating the process environment).
+    pub fn detect_or_custom_with(
+        custom: Option<PathBuf>,
+        biomeos_kernel: Option<&str>,
+    ) -> Result<Self> {
         if let Some(kernel) = custom {
             info!("Using custom kernel: {}", kernel.display());
             let initramfs = kernel.with_file_name("initramfs.img");
@@ -338,8 +347,11 @@ impl KernelManager {
             });
         }
 
-        // Check environment variable first
-        if let Ok(env_kernel) = std::env::var("BIOMEOS_KERNEL") {
+        let env_kernel = biomeos_kernel
+            .map(String::from)
+            .or_else(|| std::env::var("BIOMEOS_KERNEL").ok());
+
+        if let Some(env_kernel) = env_kernel {
             let kernel_path = PathBuf::from(&env_kernel);
             if kernel_path.exists() {
                 info!(
@@ -421,10 +433,6 @@ impl KernelManager {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
-    use std::sync::Mutex;
-
-    static BIOMEOS_KERNEL_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_initramfs_builder_new() {
@@ -568,14 +576,12 @@ mod tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_kernel_manager_biomeos_kernel_env_valid() {
-        let _lock = BIOMEOS_KERNEL_TEST_LOCK.lock().expect("kernel env lock");
         let temp = tempfile::tempdir().expect("temp dir");
         let k = temp.path().join("from-env-vmlinuz");
         std::fs::write(&k, b"k").expect("write");
-        let _g = TestEnvGuard::set("BIOMEOS_KERNEL", k.to_str().expect("utf8"));
-        let mgr = KernelManager::detect_or_custom(None).expect("kernel from env");
+        let mgr = KernelManager::detect_or_custom_with(None, Some(k.to_str().expect("utf8")))
+            .expect("kernel from env");
         assert_eq!(mgr.kernel_path(), k.as_path());
         assert_eq!(
             mgr.initramfs_path(),
@@ -584,14 +590,11 @@ mod tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_kernel_manager_biomeos_kernel_missing_file_warns_and_falls_back() {
-        let _lock = BIOMEOS_KERNEL_TEST_LOCK.lock().expect("kernel env lock");
-        let _g = TestEnvGuard::set(
-            "BIOMEOS_KERNEL",
-            "/nonexistent/biomeos-test-kernel-zzzz.img",
+        let r = KernelManager::detect_or_custom_with(
+            None,
+            Some("/nonexistent/biomeos-test-kernel-zzzz.img"),
         );
-        let r = KernelManager::detect_or_custom(None);
         if let Some(err) = r.err() {
             assert!(err.to_string().to_lowercase().contains("kernel"));
         }

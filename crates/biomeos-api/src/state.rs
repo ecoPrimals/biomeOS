@@ -60,19 +60,19 @@
 
 use crate::handlers::genome::GenomeState;
 use biomeos_core::{CompositeDiscovery, PrimalDiscovery};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use thiserror::Error;
 
-/// Default bind address for Tier 2 TCP fallback transport (IPC Protocol v3.0).
-///
-/// Reads from environment variables via `RuntimeConfig`.
-/// Falls back to constant only for development.
-fn default_bind_addr() -> String {
+fn default_bind_addr_from_env_map(env: &HashMap<String, String>) -> String {
     use biomeos_types::defaults::RuntimeConfig;
-    let config = RuntimeConfig::from_env();
-    format!("{}:{}", config.bind_address(), config.mcp_port())
+    format!(
+        "{}:{}",
+        RuntimeConfig::bind_address_with(env),
+        RuntimeConfig::mcp_port_with(env)
+    )
 }
 
 /// Application state (shared across handlers)
@@ -160,21 +160,26 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        // Get runtime directory for Unix socket
-        let socket_path = Self::default_socket_path();
-
-        Self {
-            standalone_mode: false, // Production default: require primals
-            socket_path,
-            bind_addr: None,           // HTTP deprecated by default!
-            enable_http_bridge: false, // Disabled by default (secure!)
-            request_timeout: std::time::Duration::from_secs(30),
-            enable_cors: true,
-        }
+        let env: HashMap<String, String> = std::env::vars().collect();
+        Self::default_from_env_map(&env)
     }
 }
 
 impl Config {
+    /// Build default config using a synthetic environment map (no process env mutation).
+    #[must_use]
+    pub fn default_from_env_map(env: &HashMap<String, String>) -> Self {
+        let socket_path = Self::default_socket_path_from_env_map(env);
+        Self {
+            standalone_mode: false,
+            socket_path,
+            bind_addr: None,
+            enable_http_bridge: false,
+            request_timeout: std::time::Duration::from_secs(30),
+            enable_cors: true,
+        }
+    }
+
     /// Get default Unix socket path
     ///
     /// Uses 5-tier socket resolution per `PRIMAL_DEPLOYMENT_STANDARD.md`:
@@ -183,18 +188,20 @@ impl Config {
     /// 3. /run/user/{uid}/biomeos/
     /// 4. /data/local/tmp/biomeos/ (Android)
     /// 5. /tmp/biomeos/ (fallback)
-    fn default_socket_path() -> PathBuf {
+    /// Resolve default API socket path from an environment map (for tests and tooling).
+    #[must_use]
+    pub fn default_socket_path_from_env_map(env: &HashMap<String, String>) -> PathBuf {
         use biomeos_core::socket_discovery::SocketDiscovery;
 
-        // Check environment variable first
-        if let Ok(path) = std::env::var("BIOMEOS_API_SOCKET") {
+        if let Some(path) = env.get("BIOMEOS_API_SOCKET") {
             return PathBuf::from(path);
         }
 
-        // Use SocketDiscovery for 5-tier resolution
-        let family_id = std::env::var("FAMILY_ID")
-            .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-            .unwrap_or_else(|_| biomeos_core::family_discovery::get_family_id());
+        let family_id = env
+            .get("FAMILY_ID")
+            .or_else(|| env.get("BIOMEOS_FAMILY_ID"))
+            .cloned()
+            .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
 
         let discovery = SocketDiscovery::new(family_id);
         discovery.build_socket_path("biomeos-api")
@@ -202,28 +209,32 @@ impl Config {
 
     /// Load configuration from environment
     pub fn from_env() -> Self {
-        // Standalone mode
-        let standalone_mode = std::env::var("BIOMEOS_STANDALONE_MODE")
-            .ok()
+        let env: HashMap<String, String> = std::env::vars().collect();
+        Self::from_env_map(&env)
+    }
+
+    /// Load configuration from a synthetic environment map (no process env mutation).
+    #[must_use]
+    pub fn from_env_map(env: &HashMap<String, String>) -> Self {
+        let standalone_mode = env
+            .get("BIOMEOS_STANDALONE_MODE")
             .and_then(|v| v.parse::<bool>().ok())
             .unwrap_or(false);
 
-        // Unix socket path (PRIMARY)
-        let socket_path = std::env::var("BIOMEOS_API_SOCKET_PATH")
-            .map_or_else(|_| Self::default_socket_path(), PathBuf::from);
+        let socket_path = env.get("BIOMEOS_API_SOCKET_PATH").map_or_else(
+            || Self::default_socket_path_from_env_map(env),
+            PathBuf::from,
+        );
 
-        // HTTP bridge (DEPRECATED — for PetalTongue transition, removal in v0.5.0)
-        let enable_http_bridge = std::env::var("BIOMEOS_API_HTTP_BRIDGE")
-            .ok()
+        let enable_http_bridge = env
+            .get("BIOMEOS_API_HTTP_BRIDGE")
             .and_then(|v| v.parse::<bool>().ok())
             .unwrap_or(false);
 
-        // HTTP bind address (only if bridge enabled)
         let bind_addr = if enable_http_bridge {
-            std::env::var("BIOMEOS_API_BIND_ADDR")
-                .ok()
+            env.get("BIOMEOS_API_BIND_ADDR")
                 .and_then(|v| v.parse().ok())
-                .or_else(|| default_bind_addr().parse().ok())
+                .or_else(|| default_bind_addr_from_env_map(env).parse().ok())
         } else {
             None
         };
@@ -233,7 +244,8 @@ impl Config {
             socket_path,
             bind_addr,
             enable_http_bridge,
-            ..Default::default()
+            request_timeout: std::time::Duration::from_secs(30),
+            enable_cors: true,
         }
     }
 }
@@ -350,9 +362,7 @@ pub enum BuildError {
 mod tests {
     use super::*;
     use biomeos_core::{DiscoveryResult, HealthStatus};
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
     use biomeos_types::PrimalId;
-    use serial_test::serial;
 
     struct MockDiscovery;
 
@@ -410,24 +420,21 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_config_from_env_standalone_mode() {
-        let _guard = TestEnvGuard::set("BIOMEOS_STANDALONE_MODE", "true");
-        let config = Config::from_env();
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_STANDALONE_MODE".to_string(), "true".to_string());
+        let config = Config::from_env_map(&env);
         assert!(config.standalone_mode);
     }
 
     /// `BIOMEOS_API_HTTP_BRIDGE=true` enables deprecated HTTP bridge and resolves `bind_addr`
     /// (from `BIOMEOS_API_BIND_ADDR` or runtime default bind address).
     #[test]
-    #[serial]
     fn test_config_from_env_http_bridge_true_uses_default_bind_when_addr_unset() {
-        let _g_bridge = TestEnvGuard::set("BIOMEOS_API_HTTP_BRIDGE", "true");
-        let _g_bind = TestEnvGuard::remove("BIOMEOS_API_BIND_ADDR");
-        // `default_bind_addr()` uses `RuntimeConfig::bind_address()`; default `::1:3000` does not
-        // parse as `SocketAddr` without brackets — use IPv4 so `or_else` resolves to `Some`.
-        let _g_runtime_bind = TestEnvGuard::set("BIOMEOS_BIND_ADDRESS", "127.0.0.1");
-        let config = Config::from_env();
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_API_HTTP_BRIDGE".to_string(), "true".to_string());
+        env.insert("BIOMEOS_BIND_ADDRESS".to_string(), "127.0.0.1".to_string());
+        let config = Config::from_env_map(&env);
         assert!(config.enable_http_bridge);
         let addr = config
             .bind_addr
@@ -437,23 +444,29 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_config_from_env_http_bridge_with_explicit_bind_addr() {
-        let _g_bridge = TestEnvGuard::set("BIOMEOS_API_HTTP_BRIDGE", "true");
-        let _g_bind = TestEnvGuard::set("BIOMEOS_API_BIND_ADDR", "127.0.0.1:9876");
-        let config = Config::from_env();
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_API_HTTP_BRIDGE".to_string(), "true".to_string());
+        env.insert(
+            "BIOMEOS_API_BIND_ADDR".to_string(),
+            "127.0.0.1:9876".to_string(),
+        );
+        let config = Config::from_env_map(&env);
         assert!(config.enable_http_bridge);
         let addr = config.bind_addr.expect("bind_addr");
         assert_eq!(addr.to_string(), "127.0.0.1:9876");
     }
 
     #[test]
-    #[serial]
     fn test_config_from_env_http_bridge_invalid_bind_addr_falls_back_to_default() {
-        let _g_bridge = TestEnvGuard::set("BIOMEOS_API_HTTP_BRIDGE", "true");
-        let _g_bind = TestEnvGuard::set("BIOMEOS_API_BIND_ADDR", "not-a-valid-socket-addr");
-        let _g_runtime_bind = TestEnvGuard::set("BIOMEOS_BIND_ADDRESS", "127.0.0.1");
-        let config = Config::from_env();
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_API_HTTP_BRIDGE".to_string(), "true".to_string());
+        env.insert(
+            "BIOMEOS_API_BIND_ADDR".to_string(),
+            "not-a-valid-socket-addr".to_string(),
+        );
+        env.insert("BIOMEOS_BIND_ADDRESS".to_string(), "127.0.0.1".to_string());
+        let config = Config::from_env_map(&env);
         assert!(config.enable_http_bridge);
         let addr = config.bind_addr.expect("fallback bind_addr");
         assert_eq!(addr.port(), biomeos_types::constants::ports::API_DEFAULT);
@@ -462,10 +475,13 @@ mod tests {
 
     /// `default_socket_path` returns `BIOMEOS_API_SOCKET` verbatim when set (via `Config::default`).
     #[test]
-    #[serial]
     fn test_config_default_respects_biomeos_api_socket() {
-        let _g_sock = TestEnvGuard::set("BIOMEOS_API_SOCKET", "/tmp/biomeos-api-test.sock");
-        let config = Config::default();
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_API_SOCKET".to_string(),
+            "/tmp/biomeos-api-test.sock".to_string(),
+        );
+        let config = Config::default_from_env_map(&env);
         assert_eq!(
             config.socket_path,
             std::path::PathBuf::from("/tmp/biomeos-api-test.sock")
@@ -474,11 +490,10 @@ mod tests {
 
     /// Custom `FAMILY_ID` flows into socket discovery (`biomeos-api-{family}.sock`).
     #[test]
-    #[serial]
     fn test_config_default_socket_path_uses_family_id_env() {
-        let _g_family = TestEnvGuard::set("FAMILY_ID", "test_family_state");
-        let _g_sock = TestEnvGuard::remove("BIOMEOS_API_SOCKET");
-        let config = Config::default();
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "test_family_state".to_string());
+        let config = Config::default_from_env_map(&env);
         let name = config.socket_path.file_name().expect("file name");
         assert!(
             name.to_string_lossy().contains("test_family_state"),
@@ -489,12 +504,13 @@ mod tests {
 
     /// `BIOMEOS_FAMILY_ID` is used when `FAMILY_ID` is unset.
     #[test]
-    #[serial]
     fn test_config_default_socket_path_uses_biomeos_family_id_fallback() {
-        let _g_fid = TestEnvGuard::remove("FAMILY_ID");
-        let _g_bf = TestEnvGuard::set("BIOMEOS_FAMILY_ID", "fallback_family_xyz");
-        let _g_sock = TestEnvGuard::remove("BIOMEOS_API_SOCKET");
-        let config = Config::default();
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_FAMILY_ID".to_string(),
+            "fallback_family_xyz".to_string(),
+        );
+        let config = Config::default_from_env_map(&env);
         let name = config.socket_path.file_name().expect("file name");
         assert!(
             name.to_string_lossy().contains("fallback_family_xyz"),
@@ -504,26 +520,32 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_config_from_env_invalid_standalone_bool_defaults_false() {
-        let _g = TestEnvGuard::set("BIOMEOS_STANDALONE_MODE", "not-a-bool");
-        let config = Config::from_env();
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_STANDALONE_MODE".to_string(),
+            "not-a-bool".to_string(),
+        );
+        let config = Config::from_env_map(&env);
         assert!(!config.standalone_mode);
     }
 
     #[test]
-    #[serial]
     fn test_config_from_env_invalid_http_bridge_bool_defaults_false() {
-        let _g = TestEnvGuard::set("BIOMEOS_API_HTTP_BRIDGE", "maybe");
-        let config = Config::from_env();
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_API_HTTP_BRIDGE".to_string(), "maybe".to_string());
+        let config = Config::from_env_map(&env);
         assert!(!config.enable_http_bridge);
     }
 
     #[test]
-    #[serial]
     fn test_config_from_env_biomeos_api_socket_path_overrides_default_socket() {
-        let _g = TestEnvGuard::set("BIOMEOS_API_SOCKET_PATH", "/var/run/biomeos/override.sock");
-        let config = Config::from_env();
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_API_SOCKET_PATH".to_string(),
+            "/var/run/biomeos/override.sock".to_string(),
+        );
+        let config = Config::from_env_map(&env);
         assert_eq!(
             config.socket_path,
             std::path::PathBuf::from("/var/run/biomeos/override.sock")

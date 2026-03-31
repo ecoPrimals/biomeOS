@@ -205,6 +205,10 @@ impl BtspCoordinator {
     }
 
     /// Diagnose why a tunnel is degraded
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     fn diagnose_degradation(&self, _tunnel_id: &str) -> Result<DegradationCause> {
         // In production, this would check:
         // - Key expiration times
@@ -215,6 +219,10 @@ impl BtspCoordinator {
     }
 
     /// Optimize the transport path
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     fn optimize_transport_path(&self, _tunnel_id: &str) -> Result<()> {
         // In production: query alternative routes, select best path
         tracing::debug!("Transport path optimized");

@@ -7,25 +7,25 @@
 )]
 
 use super::*;
+use crate::dark_forest_gate::DarkForestGateConfig;
 use axum::body::Body;
-use biomeos_test_utils::TestEnvGuard;
 use futures_util::{SinkExt, StreamExt};
 use http_body_util::BodyExt;
-use std::sync::OnceLock;
+use std::collections::HashMap;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tower::ServiceExt;
 
-fn sovereign_env_lock() -> &'static tokio::sync::Mutex<()> {
-    static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+/// Gate config with sovereign checks disabled (equivalent to `BIOMEOS_SOVEREIGN=false`).
+fn gate_disabled() -> DarkForestGateConfig {
+    let mut env = HashMap::new();
+    env.insert("BIOMEOS_SOVEREIGN".to_string(), "false".to_string());
+    DarkForestGateConfig::from_env_map(&env)
 }
 
 #[tokio::test]
 async fn router_health_returns_json_when_gate_disabled() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
-    let app = create_app(state);
+    let app = create_app_with_gate(state, gate_disabled());
     let response = app
         .oneshot(
             axum::http::Request::builder()
@@ -48,11 +48,9 @@ async fn router_health_returns_json_when_gate_disabled() {
 
 #[tokio::test]
 async fn router_readiness_and_liveness_when_gate_disabled() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
     for path in ["/api/v1/health/ready", "/api/v1/health/live"] {
-        let app = create_app(state.clone());
+        let app = create_app_with_gate(state.clone(), gate_disabled());
         let response = app
             .oneshot(
                 axum::http::Request::builder()
@@ -68,8 +66,6 @@ async fn router_readiness_and_liveness_when_gate_disabled() {
 
 #[tokio::test]
 async fn router_topology_forbidden_without_token_when_sovereign() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::remove("BIOMEOS_SOVEREIGN");
     let state = AppState::builder().build_with_defaults().expect("state");
     let app = create_app_for_tcp(state);
     let response = app
@@ -86,8 +82,6 @@ async fn router_topology_forbidden_without_token_when_sovereign() {
 
 #[tokio::test]
 async fn router_well_known_bypasses_gate_when_sovereign() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::remove("BIOMEOS_SOVEREIGN");
     let state = AppState::builder().build_with_defaults().expect("state");
     let app = create_app_for_tcp(state);
     let response = app
@@ -104,8 +98,6 @@ async fn router_well_known_bypasses_gate_when_sovereign() {
 
 #[tokio::test]
 async fn router_health_bare_ok_when_sovereign_no_body() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::remove("BIOMEOS_SOVEREIGN");
     let state = AppState::builder().build_with_defaults().expect("state");
     let app = create_app_for_tcp(state);
     let response = app
@@ -129,10 +121,8 @@ async fn router_health_bare_ok_when_sovereign_no_body() {
 
 #[tokio::test]
 async fn events_ws_welcome_and_subscribe_roundtrip() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
-    let app = create_app(state);
+    let app = create_app_with_gate(state, gate_disabled());
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind");
@@ -403,10 +393,8 @@ fn test_subscription_filter_deserialization_defaults() {
 
 #[tokio::test]
 async fn router_unknown_route_returns_404() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
-    let app = create_app(state);
+    let app = create_app_with_gate(state, gate_disabled());
     let response = app
         .oneshot(
             axum::http::Request::builder()
@@ -421,10 +409,8 @@ async fn router_unknown_route_returns_404() {
 
 #[tokio::test]
 async fn router_health_includes_security_headers() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
-    let app = create_app(state);
+    let app = create_app_with_gate(state, gate_disabled());
     let response = app
         .oneshot(
             axum::http::Request::builder()
@@ -450,10 +436,8 @@ async fn router_health_includes_security_headers() {
 
 #[tokio::test]
 async fn router_cors_permissive_reflects_origin_when_gate_disabled() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
-    let app = create_app(state);
+    let app = create_app_with_gate(state, gate_disabled());
     let response = app
         .oneshot(
             axum::http::Request::builder()
@@ -475,10 +459,8 @@ async fn router_cors_permissive_reflects_origin_when_gate_disabled() {
 
 #[tokio::test]
 async fn router_post_body_over_limit_returns_413() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
-    let app = create_app(state);
+    let app = create_app_with_gate(state, gate_disabled());
     let oversized = vec![b'x'; 1024 * 1024 + 1];
     let response = app
         .oneshot(
@@ -496,10 +478,8 @@ async fn router_post_body_over_limit_returns_413() {
 
 #[tokio::test]
 async fn router_events_ws_invalid_json_and_unknown_method() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
-    let app = create_app(state);
+    let app = create_app_with_gate(state, gate_disabled());
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind");
@@ -549,10 +529,8 @@ async fn router_events_ws_invalid_json_and_unknown_method() {
 
 #[tokio::test]
 async fn router_events_ws_binary_message_ignored_no_reply() {
-    let _guard = sovereign_env_lock().lock().await;
-    let _sovereign = TestEnvGuard::set("BIOMEOS_SOVEREIGN", "false");
     let state = AppState::builder().build_with_defaults().expect("state");
-    let app = create_app(state);
+    let app = create_app_with_gate(state, gate_disabled());
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind");

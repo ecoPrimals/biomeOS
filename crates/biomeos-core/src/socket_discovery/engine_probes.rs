@@ -28,6 +28,10 @@ impl super::engine::SocketDiscovery {
         self.discover_via_env_hint_with(primal_name, None)
     }
 
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     pub(crate) fn discover_via_env_hint_with(
         &self,
         primal_name: &str,
@@ -70,10 +74,10 @@ impl super::engine::SocketDiscovery {
         None
     }
 
-    pub(crate) fn discover_endpoint_via_env(&self, primal_name: &str) -> Option<TransportEndpoint> {
-        self.discover_endpoint_via_env_with(primal_name, None)
-    }
-
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     pub(crate) fn discover_endpoint_via_env_with(
         &self,
         primal_name: &str,
@@ -407,11 +411,20 @@ impl super::engine::SocketDiscovery {
         }
     }
 
-    pub(super) async fn try_tcp_fallback(&self, primal_name: &str) -> Option<(Arc<str>, u16)> {
+    /// Tier 2 TCP fallback; `tcp_env_override` replaces `{PRIMAL}_TCP` when set (for tests).
+    pub(super) async fn try_tcp_fallback_with(
+        &self,
+        primal_name: &str,
+        tcp_env_override: Option<&str>,
+    ) -> Option<(Arc<str>, u16)> {
         let host = &self.strategy.tcp_fallback_host;
         let prefix = primal_name.to_uppercase().replace('-', "_");
 
-        if let Ok(tcp_env) = env::var(format!("{prefix}_TCP")) {
+        let tcp_env = tcp_env_override
+            .map(ToString::to_string)
+            .or_else(|| env::var(format!("{prefix}_TCP")).ok());
+
+        if let Some(tcp_env) = tcp_env {
             if let Some(TransportEndpoint::TcpSocket { host: h, port: p }) =
                 TransportEndpoint::parse(&tcp_env)
                 && self.verify_tcp_connection(h.as_ref(), p).await
@@ -434,7 +447,7 @@ impl super::engine::SocketDiscovery {
     }
 
     pub(crate) fn calculate_primal_port(&self, primal_name: &str) -> u16 {
-        let hash: u32 = primal_name.bytes().map(|b| u32::from(b)).sum();
+        let hash: u32 = primal_name.bytes().map(u32::from).sum();
         let offset = (hash % 100) as u16;
         self.strategy.tcp_port_start + offset
     }

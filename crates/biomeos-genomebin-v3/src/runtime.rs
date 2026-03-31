@@ -68,6 +68,12 @@ impl GenomeBin {
     ///
     /// Deep Debt: Uses etcetera for platform-agnostic paths
     pub fn default_install_dir() -> Result<PathBuf> {
+        let user = std::env::var("USER").unwrap_or_default();
+        Self::default_install_dir_for_user(&user)
+    }
+
+    /// Same as [`Self::default_install_dir`], but with an explicit username (no `USER` env read).
+    pub fn default_install_dir_for_user(user: &str) -> Result<PathBuf> {
         use etcetera::BaseStrategy;
 
         // Check for Android
@@ -80,14 +86,11 @@ impl GenomeBin {
         let strategy = etcetera::base_strategy::choose_base_strategy()
             .context("Failed to determine base directory strategy")?;
 
-        // Check if root
-        let is_root = std::env::var("USER").map(|u| u == "root").unwrap_or(false);
+        let is_root = user == "root";
 
         if is_root {
-            // Root: Use /opt
             Ok(PathBuf::from("/opt"))
         } else {
-            // Non-root: Use ~/.local
             let data_dir = strategy.data_dir();
             Ok(data_dir.join("..").join(".local"))
         }
@@ -134,8 +137,6 @@ impl GenomeBin {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
-    use serial_test::serial;
 
     #[test]
     fn test_default_install_dir() {
@@ -224,10 +225,8 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_default_install_dir_root_user_uses_opt_on_non_android() {
-        let _user = TestEnvGuard::set("USER", "root");
-        let dir = GenomeBin::default_install_dir().expect("default_install_dir");
+        let dir = GenomeBin::default_install_dir_for_user("root").expect("default_install_dir");
         if std::path::Path::new("/system/build.prop").exists() {
             assert_eq!(dir, std::path::PathBuf::from("/data/local/tmp"));
         } else {

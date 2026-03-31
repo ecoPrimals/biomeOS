@@ -111,12 +111,26 @@ impl PrimalConnections {
     /// rather than hardcoding a list of 6 names. Unknown primals are discovered
     /// and accessible via `get()`.
     pub async fn discover_all(family_id: &str) -> Self {
+        Self::discover_all_with_xdg(family_id, None).await
+    }
+
+    /// Like [`Self::discover_all`], with an optional XDG runtime parent (e.g. temp dir in tests).
+    pub async fn discover_all_with_xdg(
+        family_id: &str,
+        xdg_runtime_parent: Option<&std::path::Path>,
+    ) -> Self {
         let mut connections = Self::default();
 
         info!("🔍 Discovering primals for family: {}", family_id);
 
+        let paths_result = if let Some(p) = xdg_runtime_parent {
+            biomeos_types::SystemPaths::new_with_xdg_overrides(Some(p), None::<&std::path::Path>)
+        } else {
+            biomeos_types::SystemPaths::new()
+        };
+
         // Phase 1: Scan runtime directory for all .sock files (dynamic discovery)
-        if let Ok(paths) = biomeos_types::SystemPaths::new() {
+        if let Ok(paths) = paths_result {
             let runtime_dir = paths.runtime_dir();
             if let Ok(entries) = std::fs::read_dir(runtime_dir) {
                 for entry in entries.flatten() {

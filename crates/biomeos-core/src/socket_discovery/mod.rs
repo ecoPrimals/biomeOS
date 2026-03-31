@@ -58,6 +58,7 @@
 //! }
 //! ```
 
+mod cap_probe;
 mod capability_sockets;
 mod engine;
 mod engine_probes;
@@ -78,25 +79,47 @@ mod engine_tests;
 mod engine_tests2;
 
 // Re-export primary types
+pub use cap_probe::probe_unix_socket_capabilities_list;
 pub use engine::SocketDiscovery;
 pub use result::{DiscoveredSocket, DiscoveryMethod, PrimalManifest};
 pub use strategy::DiscoveryStrategy;
 pub use transport::TransportEndpoint;
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // ============================================================================
 // CONVENIENCE FUNCTIONS (for quick migrations from hardcoded paths)
 // ============================================================================
 
+/// Build deterministic socket path with optional tier-1 / tier-2 overrides (see `path_builder::build_socket_path`).
+#[must_use]
+pub fn build_socket_path_with_overrides(
+    primal_name: &str,
+    family_id: &str,
+    primal_socket: Option<&str>,
+    xdg_runtime_dir: Option<&Path>,
+) -> PathBuf {
+    path_builder::build_socket_path(primal_name, family_id, primal_socket, xdg_runtime_dir)
+}
+
 /// Discover socket for a primal (convenience function)
 ///
 /// Uses default `family_id` from `FAMILY_ID` or `BIOMEOS_FAMILY_ID` environment.
 pub async fn discover_socket(primal_name: &str) -> Option<PathBuf> {
-    let family_id = env::var("FAMILY_ID")
-        .or_else(|_| env::var("BIOMEOS_FAMILY_ID"))
-        .unwrap_or_else(|_| "default".to_string());
+    discover_socket_with_family(primal_name, None).await
+}
+
+/// Like [`discover_socket`], with an explicit `family_id` (skips `FAMILY_ID` / `BIOMEOS_FAMILY_ID` env).
+pub async fn discover_socket_with_family(
+    primal_name: &str,
+    family_id: Option<&str>,
+) -> Option<PathBuf> {
+    let family_id = family_id
+        .map(String::from)
+        .or_else(|| env::var("FAMILY_ID").ok())
+        .or_else(|| env::var("BIOMEOS_FAMILY_ID").ok())
+        .unwrap_or_else(|| "default".to_string());
 
     let discovery = SocketDiscovery::new(family_id);
     discovery.get_socket_path(primal_name).await
@@ -115,9 +138,19 @@ pub fn build_socket(primal_name: &str, family_id: &str) -> PathBuf {
 ///
 /// **Universal IPC Standard v3.0**: Use this for cross-platform discovery.
 pub async fn discover_endpoint(primal_name: &str) -> Option<TransportEndpoint> {
-    let family_id = env::var("FAMILY_ID")
-        .or_else(|_| env::var("BIOMEOS_FAMILY_ID"))
-        .unwrap_or_else(|_| "default".to_string());
+    discover_endpoint_with_family(primal_name, None).await
+}
+
+/// Like [`discover_endpoint`], with an explicit `family_id`.
+pub async fn discover_endpoint_with_family(
+    primal_name: &str,
+    family_id: Option<&str>,
+) -> Option<TransportEndpoint> {
+    let family_id = family_id
+        .map(String::from)
+        .or_else(|| env::var("FAMILY_ID").ok())
+        .or_else(|| env::var("BIOMEOS_FAMILY_ID").ok())
+        .unwrap_or_else(|| "default".to_string());
 
     let discovery = SocketDiscovery::new(family_id);
     discovery.discover_with_fallback(primal_name).await
@@ -142,7 +175,6 @@ pub async fn discover_endpoint_by_capability(capability: &str) -> Option<Transpo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_build_socket_convenience() {
@@ -160,9 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_socket_uses_family_id_env() {
-        set_test_env("FAMILY_ID", "env-family");
-        let _result = discover_socket("beardog").await;
-        remove_test_env("FAMILY_ID");
+        let _result = discover_socket_with_family("beardog", Some("env-family")).await;
         // Just verify it doesn't panic - result may be None if socket doesn't exist
     }
 
@@ -176,17 +206,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_endpoint_convenience() {
-        set_test_env("BIOMEOS_FAMILY_ID", "test-default");
-        let _result = discover_endpoint("nonexistent-primal").await;
-        remove_test_env("BIOMEOS_FAMILY_ID");
+        let _result =
+            discover_endpoint_with_family("nonexistent-primal", Some("test-default")).await;
         // Just verify it doesn't panic
     }
 
     #[tokio::test]
     async fn test_discover_socket_default_family() {
-        remove_test_env("FAMILY_ID");
-        remove_test_env("BIOMEOS_FAMILY_ID");
-        let _result = discover_socket("beardog").await;
+        let _result = discover_socket_with_family("beardog", None).await;
         // Should use "default" when no env vars set
     }
 }

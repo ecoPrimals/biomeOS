@@ -55,7 +55,13 @@ pub(crate) fn resolve_socket_path(socket: Option<PathBuf>, family_id: &str) -> P
     })
 }
 
-pub async fn run(graphs_dir: PathBuf, family_id: String, socket: Option<PathBuf>) -> Result<()> {
+pub async fn run(
+    graphs_dir: PathBuf,
+    family_id: String,
+    socket: Option<PathBuf>,
+    tcp_port: Option<u16>,
+    tcp_only: bool,
+) -> Result<()> {
     let socket_path = resolve_socket_path(socket, &family_id);
 
     info!("╔══════════════════════════════════════════════════════════════════════════╗");
@@ -67,13 +73,25 @@ pub async fn run(graphs_dir: PathBuf, family_id: String, socket: Option<PathBuf>
     info!("Configuration:");
     info!("  Graphs Directory: {}", graphs_dir.display());
     info!("  Family ID: {}", family_id);
-    info!("  Socket Path: {}", socket_path.display());
+    if tcp_only {
+        info!("  Transport: TCP-only (port {})", tcp_port.unwrap_or(0));
+    } else if let Some(port) = tcp_port {
+        info!("  Socket Path: {}", socket_path.display());
+        info!("  TCP Port: {port} (alongside UDS)");
+    } else {
+        info!("  Socket Path: {}", socket_path.display());
+    }
     info!("");
 
-    // Create Neural API server
-    let server = NeuralApiServer::new(graphs_dir, family_id, socket_path);
+    let mut server = NeuralApiServer::new(graphs_dir, family_id, socket_path);
+    if tcp_only {
+        if let Some(port) = tcp_port {
+            server = server.with_tcp_only(port);
+        }
+    } else if let Some(port) = tcp_port {
+        server = server.with_tcp_port(port);
+    }
 
-    // Start server
     info!("🚀 Starting Neural API server...");
     server.serve().await.context("Neural API server failed")
 }

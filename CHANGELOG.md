@@ -2,6 +2,59 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.81 (2026-03-31) — Fully Concurrent Testing + BM-04/05 Wiring + TCP-only + Gate Routing
+
+### `#[serial]` Elimination — Fully Concurrent Test Suite
+- Systematically refactored all environment-variable-reading production functions with parameterized `_with`/`_in`/`from_env_values` variants
+- All tests inject configuration directly — zero `std::env::set_var`/`remove_var` mutations in test code
+- Removed `serial_test` dependency from all `Cargo.toml` files
+- Removed all `TestEnvGuard`/`set_test_env`/`remove_test_env` usage from consumer crates
+- 7,212 tests pass fully concurrent at `RUST_TEST_THREADS=16`
+
+### BM-04: Capability Registration Timing (RESOLVED)
+- `topology.rescan` JSON-RPC method wired and dispatched
+- Lazy rescan on first `capability.call` miss via `discover_capability()` → `lazy_rescan_sockets()`
+- `rescan_primals()` resets lazy flag for subsequent misses
+
+### BM-05: Probe Response Format (RESOLVED)
+- `extract_capabilities_from_response()` in `cap_probe.rs` handles 4 wire formats (string array, object array with `name`, top-level array, `methods` key)
+- Unrecognized formats logged at `warn!` level (not `debug!`)
+- Probe timeout centralized to `timeouts::PROBE_TIMEOUT` constant
+
+### TCP-only API Mode (CLI wired)
+- `biomeos neural-api --port PORT` enables TCP alongside UDS
+- `biomeos neural-api --port PORT --tcp-only` skips UDS entirely (mobile/SELinux substrates)
+- `NeuralApiServer::with_tcp_port()` and `with_tcp_only()` builder methods
+- `serve()` uses `tokio::select!` across UDS and TCP listeners
+
+### Cross-Gate `capability.call` Routing (RESOLVED)
+- `CapabilityHandler` and `InferenceHandler` now share the same `Arc<GateRegistry>`
+- `capability.call` with `gate` parameter forwards to remote biomeOS instance
+- `GateRegistry::resolve()` maps gate names to transport endpoints
+
+### `mem::forget` Elimination
+- `primal_adapter/types.rs`: Child process stored in `PrimalAdapter` struct
+- `primal_launcher.rs`: `PrimalInstance` holds `tokio::process::Child`
+- `neural_executor.rs`: Spawned tasks tracked via `JoinHandle` in `ExecutionContext`
+- `rootfs/builder.rs`: `NbdGuard` stored in `RootFsBuilder` with explicit detach
+
+### Hardcoded Evolution
+- `CORE_PRIMALS` iteration replaced with dynamic socket directory scanning (`local_gate.rs`, `checks_primal.rs`)
+- Hardcoded spring names in `capability_domains.rs` replaced with `primal_names` constants
+- `is_known_primal` gate removed — registration driven solely by capability probe
+- `SQUIRREL` AI fallback removed — capability-based AI provider discovery
+- UID "1000" fallback removed from 4 sites — proper resolution via env/`/proc/self`/graceful skip
+
+### Production Stubs Completed
+- `start_monitoring()` uncommented and wired in `live_service.rs`
+- Interactive mode in `execute_command_integration` returns explicit error
+
+### Verified
+- `cargo clippy --all-targets --all-features -- -D warnings`: 0 warnings
+- `cargo fmt --all -- --check`: clean
+- `cargo test --all`: 7,212 passed, 0 failures
+- SPDX license headers: 100% coverage on all `.rs` files
+
 ## v2.80 (2026-03-30) — Deep Debt Completion + Dependency Governance + Smart Refactoring
 
 ### Path Centralization (Hardcoded → SystemPaths)

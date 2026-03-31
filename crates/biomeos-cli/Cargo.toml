@@ -51,7 +51,6 @@ default = []
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-serial_test = "3.2"
 toml = { workspace = true }
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
 # reqwest = { workspace = true }  # REMOVED: CLI uses atomic_client for Pure Rust # For testing/benchmarking only

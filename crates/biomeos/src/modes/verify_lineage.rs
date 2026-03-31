@@ -70,6 +70,25 @@ pub async fn run(path: PathBuf, detailed: bool) -> Result<()> {
 
 /// Verify lineage of a spore or primal directory
 pub(crate) async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<LineageVerification> {
+    verify_lineage_impl(path, detailed, None).await
+}
+
+/// Like [`verify_lineage`], but use a fixed security provider name for crypto discovery (tests)
+/// instead of `BIOMEOS_SECURITY_PROVIDER`.
+#[cfg(test)]
+pub(crate) async fn verify_lineage_with_security_provider(
+    path: &PathBuf,
+    detailed: bool,
+    security_provider: impl Into<String>,
+) -> Result<LineageVerification> {
+    verify_lineage_impl(path, detailed, Some(security_provider.into())).await
+}
+
+async fn verify_lineage_impl(
+    path: &PathBuf,
+    detailed: bool,
+    security_provider_override: Option<String>,
+) -> Result<LineageVerification> {
     let mut verification = LineageVerification {
         valid: true,
         family_id: None,
@@ -145,7 +164,13 @@ pub(crate) async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<Lin
 
         // Detailed verification: cryptographic checks via BearDog
         if detailed {
-            match verify_cryptographic_lineage(path, &verification).await {
+            match verify_cryptographic_lineage(
+                path,
+                &verification,
+                security_provider_override.clone(),
+            )
+            .await
+            {
                 Ok(crypto_details) => {
                     verification.details.extend(crypto_details);
                 }
@@ -186,6 +211,7 @@ pub(crate) async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<Lin
 async fn verify_cryptographic_lineage(
     path: &Path,
     verification: &LineageVerification,
+    security_provider_override: Option<String>,
 ) -> Result<Vec<String>> {
     use biomeos_core::atomic_client::AtomicClient;
 
@@ -193,8 +219,11 @@ async fn verify_cryptographic_lineage(
 
     // Discover security provider for cryptographic operations
     // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded
-    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-        .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string());
+    let security_provider = match security_provider_override {
+        Some(s) => s,
+        None => std::env::var("BIOMEOS_SECURITY_PROVIDER")
+            .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string()),
+    };
     let beardog = AtomicClient::discover(&security_provider)
         .await
         .context(format!(
@@ -521,11 +550,12 @@ node_id = "test-node-456"
         let seed_path = dir.path().join(".family.seed");
         std::fs::write(&seed_path, [0u8; 64]).expect("write seed");
 
-        let _guard = biomeos_test_utils::TestEnvGuard::set(
-            "BIOMEOS_SECURITY_PROVIDER",
+        let result = verify_lineage_with_security_provider(
+            &dir.path().to_path_buf(),
+            true,
             "nonexistent-beardog-xyz",
-        );
-        let result = verify_lineage(&dir.path().to_path_buf(), true).await;
+        )
+        .await;
 
         let v = result.expect("verify_lineage should succeed");
         assert!(v.valid);

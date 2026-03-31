@@ -47,6 +47,7 @@ pub use types::*;
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Capability required for security operations (encryption, key exchange, etc.)
@@ -134,24 +135,46 @@ pub struct P2PCoordinator {
     routing: Option<Arc<dyn RoutingProvider>>,
 }
 
+/// Configuration for [`P2PCoordinator::new_from_discovery_with_config`]: explicit strict mode and
+/// socket discovery roots without mutating process environment (tests, embedding).
+#[derive(Debug, Clone, Default)]
+pub struct P2pDiscoveryConfig {
+    /// `Some(true)` = strict (no taxonomy bootstrap); `Some(false)` = allow taxonomy;
+    /// `None` = read `BIOMEOS_STRICT_DISCOVERY` from the environment.
+    pub strict_discovery: Option<bool>,
+    /// Override XDG runtime dir for [`crate::socket_discovery::SocketDiscovery`] (e.g. isolated empty dirs in tests).
+    pub xdg_runtime_dir: Option<PathBuf>,
+}
+
+fn strict_discovery_resolved(config: &P2pDiscoveryConfig) -> bool {
+    config
+        .strict_discovery
+        .unwrap_or_else(|| std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
+}
+
 impl P2PCoordinator {
     /// Create coordinator by discovering primals with required capabilities
     ///
     /// This is **agnostic** - it finds any primal with the required capability,
     /// regardless of what it's called.
     pub async fn new_from_discovery() -> Result<Self> {
+        Self::new_from_discovery_with_config(&P2pDiscoveryConfig::default()).await
+    }
+
+    /// Like [`Self::new_from_discovery`], with optional [`P2pDiscoveryConfig`] overrides.
+    pub async fn new_from_discovery_with_config(config: &P2pDiscoveryConfig) -> Result<Self> {
         tracing::info!("🔍 Discovering P2P coordination capabilities...");
 
         // Discover security provider (capability: crypto/security)
-        let security = Self::discover_security_provider().await?;
+        let security = Self::discover_security_provider(config).await?;
         tracing::info!("✅ Security provider discovered");
 
         // Discover discovery provider (capability: discovery)
-        let discovery = Self::discover_discovery_provider().await?;
+        let discovery = Self::discover_discovery_provider(config).await?;
         tracing::info!("✅ Discovery provider discovered");
 
         // Routing is optional
-        let routing = Self::discover_routing_provider().await.ok();
+        let routing = Self::discover_routing_provider(config).await.ok();
         if routing.is_some() {
             tracing::info!("✅ Routing provider discovered");
         } else {
@@ -165,13 +188,18 @@ impl P2PCoordinator {
     ///
     /// Uses capability-based discovery to find any primal providing security/encryption.
     /// Works with `BearDog` or any compatible security primal.
-    async fn discover_security_provider() -> Result<Arc<dyn SecurityProvider>> {
+    async fn discover_security_provider(
+        config: &P2pDiscoveryConfig,
+    ) -> Result<Arc<dyn SecurityProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
         tracing::info!("🔐 Discovering security provider (capability: security)");
 
         let family_id = crate::family_discovery::get_family_id();
-        let discovery = SocketDiscovery::new(&family_id);
+        let mut discovery = SocketDiscovery::new(&family_id);
+        if let Some(ref p) = config.xdg_runtime_dir {
+            discovery = discovery.with_xdg_override(p);
+        }
 
         // Try capability strings from taxonomy (security, encryption, crypto)
         use biomeos_types::constants::capability;
@@ -191,23 +219,21 @@ impl P2PCoordinator {
         }
 
         // Taxonomy bootstrap: resolve capability → primal name, then discover by path
-        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
-            if let Some(primal_name) =
-                biomeos_types::CapabilityTaxonomy::resolve_to_primal("security")
-                    .or_else(|| biomeos_types::CapabilityTaxonomy::resolve_to_primal("encryption"))
-            {
-                tracing::warn!(
-                    "⚠️  Capability registry unavailable; using taxonomy bootstrap for security. Set BIOMEOS_STRICT_DISCOVERY=1 to require registry-based discovery."
-                );
-                if let Some(primal) = discovery.discover_primal(primal_name).await {
-                    return Ok(Arc::new(SocketSecurityProvider::new(primal.path)));
-                }
-            }
-        } else {
+        if strict_discovery_resolved(config) {
             anyhow::bail!(
                 "BIOMEOS_STRICT_DISCOVERY=1: No security provider found via capability registry. \
                  Ensure a primal with security capability is running and registered."
             );
+        }
+        if let Some(primal_name) = biomeos_types::CapabilityTaxonomy::resolve_to_primal("security")
+            .or_else(|| biomeos_types::CapabilityTaxonomy::resolve_to_primal("encryption"))
+        {
+            tracing::warn!(
+                "⚠️  Capability registry unavailable; using taxonomy bootstrap for security. Set BIOMEOS_STRICT_DISCOVERY=1 to require registry-based discovery."
+            );
+            if let Some(primal) = discovery.discover_primal(primal_name).await {
+                return Ok(Arc::new(SocketSecurityProvider::new(primal.path)));
+            }
         }
 
         anyhow::bail!(
@@ -219,13 +245,18 @@ impl P2PCoordinator {
     ///
     /// Uses capability-based discovery to find any primal providing discovery/registry.
     /// Works with Songbird or any compatible discovery primal.
-    async fn discover_discovery_provider() -> Result<Arc<dyn DiscoveryProvider>> {
+    async fn discover_discovery_provider(
+        config: &P2pDiscoveryConfig,
+    ) -> Result<Arc<dyn DiscoveryProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
         tracing::info!("🔍 Discovering discovery provider (capability: discovery)");
 
         let family_id = crate::family_discovery::get_family_id();
-        let discovery = SocketDiscovery::new(&family_id);
+        let mut discovery = SocketDiscovery::new(&family_id);
+        if let Some(ref p) = config.xdg_runtime_dir {
+            discovery = discovery.with_xdg_override(p);
+        }
 
         // Try capability strings from taxonomy (discovery, mesh, registry)
         use biomeos_types::constants::capability;
@@ -246,23 +277,21 @@ impl P2PCoordinator {
         }
 
         // Taxonomy bootstrap: resolve capability → primal name, then discover by path
-        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
-            if let Some(primal_name) =
-                biomeos_types::CapabilityTaxonomy::resolve_to_primal("discovery")
-                    .or_else(|| biomeos_types::CapabilityTaxonomy::resolve_to_primal("registry"))
-            {
-                tracing::warn!(
-                    "⚠️  Capability registry unavailable; using taxonomy bootstrap for discovery. Set BIOMEOS_STRICT_DISCOVERY=1 to require registry-based discovery."
-                );
-                if let Some(primal) = discovery.discover_primal(primal_name).await {
-                    return Ok(Arc::new(SocketDiscoveryProvider::new(primal.path)));
-                }
-            }
-        } else {
+        if strict_discovery_resolved(config) {
             anyhow::bail!(
                 "BIOMEOS_STRICT_DISCOVERY=1: No discovery provider found via capability registry. \
                  Ensure a primal with discovery capability is running and registered."
             );
+        }
+        if let Some(primal_name) = biomeos_types::CapabilityTaxonomy::resolve_to_primal("discovery")
+            .or_else(|| biomeos_types::CapabilityTaxonomy::resolve_to_primal("registry"))
+        {
+            tracing::warn!(
+                "⚠️  Capability registry unavailable; using taxonomy bootstrap for discovery. Set BIOMEOS_STRICT_DISCOVERY=1 to require registry-based discovery."
+            );
+            if let Some(primal) = discovery.discover_primal(primal_name).await {
+                return Ok(Arc::new(SocketDiscoveryProvider::new(primal.path)));
+            }
         }
 
         anyhow::bail!(
@@ -271,14 +300,19 @@ impl P2PCoordinator {
     }
 
     /// Discover a primal that provides routing capabilities (optional)
-    async fn discover_routing_provider() -> Result<Arc<dyn RoutingProvider>> {
+    async fn discover_routing_provider(
+        config: &P2pDiscoveryConfig,
+    ) -> Result<Arc<dyn RoutingProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
         tracing::info!("🔀 Discovering routing provider (capability: routing)");
 
         let family_id = crate::family_discovery::get_family_id();
 
-        let discovery = SocketDiscovery::new(&family_id);
+        let mut discovery = SocketDiscovery::new(&family_id);
+        if let Some(ref p) = config.xdg_runtime_dir {
+            discovery = discovery.with_xdg_override(p);
+        }
 
         use biomeos_types::constants::capability;
         if let Some(primal) = discovery

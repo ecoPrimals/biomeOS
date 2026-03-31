@@ -119,21 +119,23 @@ impl DeploymentConfig {
             runtime_dir: std::env::var("XDG_RUNTIME_DIR")
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| {
-                    // Pure Rust UID resolution: env var -> /proc/self metadata
                     let uid = std::env::var("UID")
                         .or_else(|_| std::env::var("EUID"))
-                        .unwrap_or_else(|_| {
+                        .or_else(|_| {
                             #[cfg(unix)]
                             {
                                 use std::os::unix::fs::MetadataExt;
                                 std::fs::metadata("/proc/self")
                                     .map(|m| m.uid().to_string())
-                                    .unwrap_or_else(|_| "1000".to_string())
+                                    .map_err(|_| std::env::VarError::NotPresent)
                             }
                             #[cfg(not(unix))]
-                            "1000".to_string()
+                            Err(std::env::VarError::NotPresent)
                         });
-                    PathBuf::from(format!("/run/user/{uid}"))
+                    match uid {
+                        Ok(uid) => PathBuf::from(format!("/run/user/{uid}")),
+                        Err(_) => std::env::temp_dir().join("biomeos"),
+                    }
                 }),
             deployment_mode: DeploymentMode::detect().unwrap_or_else(|_| {
                 DeploymentMode::SiblingSpore {
@@ -443,6 +445,7 @@ mod tests {
             pid,
             socket_path: PathBuf::from(format!("/tmp/{name}.sock")),
             started_at: chrono::Utc::now(),
+            child: None,
         }
     }
 

@@ -185,20 +185,33 @@ impl RealTimeEventSubscriber {
     ///
     /// Queries Songbird for services with "event_streaming" capability
     pub fn discover_endpoints(&mut self) -> Result<()> {
+        self.discover_endpoints_with(
+            std::env::var("BIOMEOS_WS_ENDPOINT").ok().as_deref(),
+            std::env::var("BIOMEOS_SSE_ENDPOINT").ok().as_deref(),
+            std::env::var("BIOMEOS_API_WS").ok().as_deref(),
+            std::env::var("BIOMEOS_API_SSE").ok().as_deref(),
+        )
+    }
+
+    /// Discover endpoints from explicit values (mirrors `BIOMEOS_WS_ENDPOINT` / `BIOMEOS_API_WS`, etc.).
+    ///
+    /// Pass `None` where an environment variable would be unset. Primary keys (`ws`, `sse`) take
+    /// precedence over API fallbacks (`api_ws`, `api_sse`).
+    pub fn discover_endpoints_with(
+        &mut self,
+        ws: Option<&str>,
+        sse: Option<&str>,
+        api_ws: Option<&str>,
+        api_sse: Option<&str>,
+    ) -> Result<()> {
         info!("🔍 Discovering real-time event endpoints...");
 
-        // EVOLUTION: Discover from environment, no hardcoded fallbacks
-        // biomeOS primals announce themselves via discovery
-
-        // WebSocket endpoint discovery
-        self.websocket_url = std::env::var("BIOMEOS_WS_ENDPOINT")
-            .or_else(|_| std::env::var("BIOMEOS_API_WS"))
-            .ok();
-
-        // SSE endpoint discovery
-        self.sse_url = std::env::var("BIOMEOS_SSE_ENDPOINT")
-            .or_else(|_| std::env::var("BIOMEOS_API_SSE"))
-            .ok();
+        self.websocket_url = ws
+            .map(std::string::ToString::to_string)
+            .or_else(|| api_ws.map(std::string::ToString::to_string));
+        self.sse_url = sse
+            .map(std::string::ToString::to_string)
+            .or_else(|| api_sse.map(std::string::ToString::to_string));
 
         if self.websocket_url.is_some() || self.sse_url.is_some() {
             info!("✅ Event endpoints discovered from environment");

@@ -10,13 +10,14 @@ use tracing::{debug, info, warn};
 use crate::capability::{Capability, CapabilitySet};
 use crate::{FederationError, FederationResult};
 
-use super::beardog::{request_subfederation_key, verify_member_lineage};
 use super::types::{IsolationLevel, SubFederation};
 
 /// Sub-federation manager
 pub struct SubFederationManager {
     config_dir: PathBuf,
     sub_federations: std::collections::HashMap<String, SubFederation>,
+    /// Optional Neural API socket for BearDog JSON-RPC (tests; avoids env mutation).
+    neural_api_socket_override: Option<String>,
 }
 
 impl SubFederationManager {
@@ -29,7 +30,15 @@ impl SubFederationManager {
         Self {
             config_dir,
             sub_federations: std::collections::HashMap::new(),
+            neural_api_socket_override: None,
         }
+    }
+
+    /// Set explicit Neural API socket for BearDog calls (overrides discovery from env).
+    #[must_use]
+    pub fn with_neural_api_socket(mut self, socket: impl Into<String>) -> Self {
+        self.neural_api_socket_override = Some(socket.into());
+        self
     }
 
     /// Load sub-federations from disk
@@ -88,7 +97,18 @@ impl SubFederationManager {
             )));
         }
 
-        if let Err(e) = verify_member_lineage(&parent_family, &members).await {
+        if let Some(ref s) = self.neural_api_socket_override {
+            if let Err(e) =
+                super::beardog::verify_member_lineage_with(s.as_str(), &parent_family, &members)
+                    .await
+            {
+                warn!(
+                    "Lineage verification failed for sub-federation '{}': {}",
+                    name, e
+                );
+            }
+        } else if let Err(e) = super::beardog::verify_member_lineage(&parent_family, &members).await
+        {
             warn!(
                 "Lineage verification failed for sub-federation '{}': {}",
                 name, e
@@ -103,7 +123,12 @@ impl SubFederationManager {
             isolation_level,
         );
 
-        match request_subfederation_key(&parent_family, &name).await {
+        let key_result = if let Some(ref s) = self.neural_api_socket_override {
+            super::beardog::request_subfederation_key_with(s.as_str(), &parent_family, &name).await
+        } else {
+            super::beardog::request_subfederation_key(&parent_family, &name).await
+        };
+        match key_result {
             Ok(key_ref) => {
                 subfed.encryption_key_ref = Some(key_ref);
                 info!("Encryption key derived for sub-federation '{}'", name);
@@ -219,22 +244,15 @@ impl SubFederationManager {
 )]
 #[cfg(test)]
 mod tests {
-    use biomeos_test_utils::{remove_test_env, set_test_env};
     use tempfile::TempDir;
 
     use super::*;
     use crate::FederationError;
     use crate::capability::{Capability, CapabilitySet};
 
-    fn setup_beardog_env() {
-        set_test_env(
-            "BEARDOG_SOCKET",
-            "/tmp/nonexistent-beardog-test-manager.sock",
-        );
-    }
-
-    fn teardown_beardog_env() {
-        remove_test_env("BEARDOG_SOCKET");
+    fn test_manager(temp: &TempDir) -> SubFederationManager {
+        SubFederationManager::new(temp.path().to_path_buf())
+            .with_neural_api_socket("/tmp/nonexistent-beardog-test-manager.sock")
     }
 
     #[test]
@@ -257,8 +275,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_subfederation() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         let subfed = mgr
@@ -277,15 +294,12 @@ mod tests {
         assert_eq!(subfed.members.len(), 2);
         assert!(subfed.capabilities.has(&Capability::Gaming));
         assert_eq!(subfed.isolation_level, IsolationLevel::Low);
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_create_duplicate_returns_error() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -311,15 +325,12 @@ mod tests {
 
         assert!(matches!(err, FederationError::Generic(_)));
         assert!(err.to_string().contains("already exists"));
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_create_empty_name_succeeds() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         let subfed = mgr
@@ -335,15 +346,12 @@ mod tests {
 
         assert_eq!(subfed.name, "");
         assert!(mgr.get("").is_some());
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_list_all_subfederations() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -371,15 +379,12 @@ mod tests {
         let names: Vec<&str> = all.iter().map(|s| s.name.as_str()).collect();
         assert!(names.contains(&"alpha"));
         assert!(names.contains(&"beta"));
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_get_subfederation() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -398,15 +403,12 @@ mod tests {
         assert!(retrieved.capabilities.has(&Capability::Storage));
 
         assert!(mgr.get("nonexistent").is_none());
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_for_node() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -438,15 +440,12 @@ mod tests {
 
         let for_gamma = mgr.for_node("node-gamma");
         assert!(for_gamma.is_empty());
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_has_access() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -462,8 +461,6 @@ mod tests {
         assert!(mgr.has_access("node-alpha", &Capability::Gaming));
         assert!(!mgr.has_access("node-alpha", &Capability::Storage));
         assert!(!mgr.has_access("node-beta", &Capability::Gaming));
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
@@ -499,8 +496,7 @@ mod tests {
     #[tokio::test]
     async fn test_add_and_remove_member() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -518,15 +514,12 @@ mod tests {
 
         mgr.remove_member("test", "node-b").await.unwrap();
         assert!(!mgr.get("test").unwrap().is_member("node-b"));
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_remove_nonexistent_member_is_noop() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -541,15 +534,12 @@ mod tests {
 
         mgr.remove_member("test", "node-nonexistent").await.unwrap();
         assert_eq!(mgr.get("test").unwrap().members.len(), 1);
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_persistence_save_and_load() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -575,8 +565,6 @@ mod tests {
         assert!(loaded.capabilities.has(&Capability::Compute));
         assert!(loaded.capabilities.has(&Capability::Storage));
         assert_eq!(loaded.isolation_level, IsolationLevel::Medium);
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
@@ -609,8 +597,7 @@ mod tests {
     #[tokio::test]
     async fn test_serialization_roundtrip_via_disk() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         let subfed = mgr
@@ -633,15 +620,12 @@ mod tests {
         assert_eq!(restored.isolation_level, subfed.isolation_level);
         assert!(restored.capabilities.has(&Capability::Gaming));
         assert!(restored.capabilities.has(&Capability::Sync));
-
-        teardown_beardog_env();
     }
 
     #[tokio::test]
     async fn test_add_member_persists_to_disk() {
         let temp = TempDir::new().unwrap();
-        setup_beardog_env();
-        let mut mgr = SubFederationManager::new(temp.path().to_path_buf());
+        let mut mgr = test_manager(&temp);
         mgr.load().await.unwrap();
 
         mgr.create(
@@ -662,7 +646,5 @@ mod tests {
         mgr2.load().await.unwrap();
         let loaded = mgr2.get("persist-member").unwrap();
         assert!(loaded.is_member("node-b"));
-
-        teardown_beardog_env();
     }
 }

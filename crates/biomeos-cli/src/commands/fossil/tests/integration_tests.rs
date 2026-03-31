@@ -2,7 +2,6 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Integration tests for fossil CLI commands.
-//! These tests mutate the environment and filesystem, requiring `#[serial]`.
 
 use super::*;
 
@@ -158,7 +157,6 @@ fn write_fossil_index(root: &Path, entries: Vec<FossilIndexEntry>) {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_fossil_lists_records_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -178,7 +176,6 @@ async fn test_run_fossil_lists_records_with_temp_log_root() {
         }],
     );
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Fossil {
             node: None,
@@ -186,12 +183,11 @@ async fn test_run_fossil_lists_records_with_temp_log_root() {
             show: None,
         },
     };
-    let result = run(args).await;
+    let result = run_at(args, root).await;
     assert!(result.is_ok(), "{result:?}");
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_fossil_show_detail_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -211,7 +207,6 @@ async fn test_run_fossil_show_detail_with_temp_log_root() {
         }],
     );
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Fossil {
             node: None,
@@ -219,11 +214,10 @@ async fn test_run_fossil_show_detail_with_temp_log_root() {
             show: Some(1),
         },
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_fossil_invalid_show_index_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -243,7 +237,6 @@ async fn test_run_fossil_invalid_show_index_with_temp_log_root() {
         }],
     );
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Fossil {
             node: None,
@@ -251,11 +244,10 @@ async fn test_run_fossil_invalid_show_index_with_temp_log_root() {
             show: Some(99),
         },
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_fossil_node_filter_no_match() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -275,7 +267,6 @@ async fn test_run_fossil_node_filter_no_match() {
         }],
     );
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Fossil {
             node: Some("zzzz-no-match".into()),
@@ -283,11 +274,10 @@ async fn test_run_fossil_node_filter_no_match() {
             show: None,
         },
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_fossil_node_filter_matches_with_header() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -307,7 +297,6 @@ async fn test_run_fossil_node_filter_matches_with_header() {
         }],
     );
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Fossil {
             node: Some("beta".into()),
@@ -315,11 +304,10 @@ async fn test_run_fossil_node_filter_matches_with_header() {
             show: None,
         },
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_clean_dry_run_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -339,18 +327,16 @@ async fn test_run_clean_dry_run_with_temp_log_root() {
         }],
     );
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Clean {
             older_than: 30,
             dry_run: true,
         },
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_clean_deletes_old_fossils_not_dry_run() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -370,19 +356,17 @@ async fn test_run_clean_deletes_old_fossils_not_dry_run() {
         }],
     );
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Clean {
             older_than: 30,
             dry_run: false,
         },
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
     assert!(!fossil_file.exists(), "cleanup should remove fossil file");
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_migrate_real_move_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -390,20 +374,18 @@ async fn test_run_migrate_real_move_with_temp_log_root() {
     std::fs::create_dir_all(&from).expect("from");
     std::fs::write(from.join("legacy.log"), b"line\n").expect("log");
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Migrate {
             from,
             dry_run: false,
         },
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
     let dest = root.join("fossil").join("legacy").join("legacy.log");
     assert!(dest.exists(), "migrated file should exist at {dest:?}");
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_active_lists_session_with_temp_log_root() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -413,15 +395,13 @@ async fn test_run_active_lists_session_with_temp_log_root() {
     let meta = toml::to_string_pretty(&session).expect("toml");
     std::fs::write(active.join(".metadata.toml"), meta).expect("metadata");
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::Active { node: None },
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_cleanup_stale_archives_idle_session() {
     let temp = tempfile::tempdir().expect("temp dir");
     let root = temp.path();
@@ -434,9 +414,8 @@ async fn test_run_cleanup_stale_archives_idle_session() {
     )
     .expect("metadata");
 
-    let _guard = TestEnvGuard::set("BIOMEOS_CLI_LOG_ROOT", root.to_string_lossy().as_ref());
     let args = FossilArgs {
         action: FossilAction::CleanupStale,
     };
-    assert!(run(args).await.is_ok());
+    assert!(run_at(args, root).await.is_ok());
 }

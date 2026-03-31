@@ -99,7 +99,16 @@ impl Authorization {
     ///
     /// Falls back to "anonymous" if no session is available.
     pub async fn get_current_user_id(beardog: Option<&BearDogClient>) -> String {
-        // Try to get from BearDog session
+        Self::get_current_user_id_with(beardog, None, None).await
+    }
+
+    /// Same as [`get_current_user_id`](Self::get_current_user_id), with optional overrides for
+    /// `BIOMEOS_USER` and `USER` (use in tests to avoid mutating the process environment).
+    pub async fn get_current_user_id_with(
+        beardog: Option<&BearDogClient>,
+        biomeos_user: Option<&str>,
+        system_user: Option<&str>,
+    ) -> String {
         if let Some(beardog) = beardog
             && let Ok(result) = beardog
                 .call("auth.get_current_user", serde_json::json!({}))
@@ -109,17 +118,22 @@ impl Authorization {
             return user_id.to_string();
         }
 
-        // Fall back to environment variable
+        if let Some(user) = biomeos_user {
+            return user.to_string();
+        }
+
         if let Ok(user) = std::env::var("BIOMEOS_USER") {
             return user;
         }
 
-        // Fall back to system user
+        if let Some(user) = system_user {
+            return user.to_string();
+        }
+
         if let Ok(user) = std::env::var("USER") {
             return user;
         }
 
-        // Default to anonymous
         "anonymous".to_string()
     }
 }
@@ -376,12 +390,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_current_user_with_env_var() {
-        use biomeos_test_utils::TestEnvGuard;
-
-        // Use RAII guard to restore on drop
-        let _guard = TestEnvGuard::new("BIOMEOS_USER", Some("test-env-user"));
-
-        let user_id = Authorization::get_current_user_id(None).await;
+        let user_id =
+            Authorization::get_current_user_id_with(None, Some("test-env-user"), None).await;
         assert_eq!(user_id, "test-env-user");
     }
 }

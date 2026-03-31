@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 /// Adapter that knows how to interact with a specific primal
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PrimalAdapter {
     /// Name of the primal (e.g., "squirrel", "songbird")
     pub name: String,
@@ -32,6 +32,26 @@ pub struct PrimalAdapter {
 
     /// Primal version (if available)
     pub version: Option<String>,
+
+    /// Spawned process handle when this adapter started the primal (not serialized).
+    /// Dropping the adapter kills the process unless [`Self::take_spawned_child`] is called first.
+    #[serde(skip)]
+    pub spawned_child: Option<std::process::Child>,
+}
+
+impl Clone for PrimalAdapter {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            binary: self.binary.clone(),
+            interface: self.interface.clone(),
+            capabilities: self.capabilities.clone(),
+            state: self.state.clone(),
+            discovered_at: self.discovered_at,
+            version: self.version.clone(),
+            spawned_child: None,
+        }
+    }
 }
 
 /// How to communicate with a primal
@@ -226,7 +246,15 @@ impl PrimalAdapter {
             state: PrimalState::NotStarted,
             discovered_at: chrono::Utc::now(),
             version: None,
+            spawned_child: None,
         }
+    }
+
+    /// Take ownership of the spawned child handle, if any.
+    ///
+    /// After this call, dropping the adapter will not affect that process.
+    pub fn take_spawned_child(&mut self) -> Option<std::process::Child> {
+        self.spawned_child.take()
     }
 
     /// Start the primal on the specified port
@@ -247,8 +275,7 @@ impl PrimalAdapter {
             port,
         };
 
-        // Don't wait for child (it runs in background)
-        std::mem::forget(child);
+        self.spawned_child = Some(child);
 
         Ok(())
     }

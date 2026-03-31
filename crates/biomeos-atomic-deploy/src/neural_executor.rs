@@ -251,7 +251,7 @@ impl GraphExecutor {
 
             // Record per-node metrics for PathwayLearner
             if let Some(ref collector) = self.metrics {
-                if let Err(e) = collector.record_node_execution(NodeExecutionParams {
+                if let Err(e) = collector.record_node_execution(&NodeExecutionParams {
                     execution_id,
                     graph_name: &graph_id,
                     node_id: &node_id,

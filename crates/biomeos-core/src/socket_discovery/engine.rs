@@ -204,6 +204,18 @@ impl SocketDiscovery {
     ///
     /// **Universal IPC Standard v3.0**: Implements graceful transport fallback.
     pub async fn discover_with_fallback(&self, primal_name: &str) -> Option<TransportEndpoint> {
+        self.discover_with_fallback_with_env_overrides(primal_name, None, None)
+            .await
+    }
+
+    /// Like [`Self::discover_with_fallback`], but supplies optional per-process env overrides
+    /// (e.g. `{PRIMAL}_TCP`) without mutating the process environment.
+    pub async fn discover_with_fallback_with_env_overrides(
+        &self,
+        primal_name: &str,
+        env_overrides: Option<&HashMap<String, String>>,
+        tcp_tier2_override: Option<&str>,
+    ) -> Option<TransportEndpoint> {
         let cache_key = format!("endpoint:{primal_name}");
 
         if self.strategy.enable_cache
@@ -213,7 +225,7 @@ impl SocketDiscovery {
         }
 
         if self.strategy.check_env_hints
-            && let Some(endpoint) = self.discover_endpoint_via_env(primal_name)
+            && let Some(endpoint) = self.discover_endpoint_via_env_with(primal_name, env_overrides)
         {
             let socket = DiscoveredSocket::from_endpoint(
                 endpoint.clone(),
@@ -280,7 +292,9 @@ impl SocketDiscovery {
         // === TIER 2: Universal Fallback ===
 
         if self.strategy.enable_tcp_fallback
-            && let Some((host, port)) = self.try_tcp_fallback(primal_name).await
+            && let Some((host, port)) = self
+                .try_tcp_fallback_with(primal_name, tcp_tier2_override)
+                .await
         {
             let endpoint = TransportEndpoint::TcpSocket { host, port };
             info!(
@@ -329,6 +343,35 @@ impl SocketDiscovery {
             primal_socket,
             xdg_runtime_dir,
         )
+    }
+
+    /// Enumerate Unix socket paths in `$XDG_RUNTIME_DIR/biomeos` matching
+    /// `{primal}-{family_id}.sock`.
+    ///
+    /// Name-agnostic: every matching file is a candidate for capability or health
+    /// probing (no compiled primal list).
+    #[must_use]
+    pub fn list_family_scoped_unix_sockets(&self) -> Vec<PathBuf> {
+        let Some(xdg) = self.xdg_runtime_dir() else {
+            return vec![];
+        };
+        let biomeos_dir = xdg.join("biomeos");
+        let suffix = format!("-{}.sock", self.family_id.as_str());
+        let Ok(entries) = std::fs::read_dir(&biomeos_dir) else {
+            return vec![];
+        };
+
+        let mut paths: Vec<PathBuf> = entries
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.ends_with(&suffix))
+            })
+            .collect();
+        paths.sort();
+        paths
     }
 
     // ========================================================================

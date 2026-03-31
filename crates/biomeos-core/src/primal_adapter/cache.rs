@@ -129,6 +129,7 @@ mod tests {
             state: PrimalState::NotStarted,
             discovered_at: chrono::Utc::now(),
             version: Some("1.0.0".to_string()),
+            spawned_child: None,
         }
     }
 

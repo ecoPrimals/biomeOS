@@ -48,7 +48,12 @@ impl super::Plasmodium {
 
         // Always merge PLASMODIUM_PEERS env var (supplements Songbird mesh)
         // Format: node_id@host:port  or  node_id@ssh:user@host
-        if let Ok(peer_list) = std::env::var("PLASMODIUM_PEERS") {
+        let peer_list_opt = self
+            .peers_override
+            .clone()
+            .or_else(|| std::env::var("PLASMODIUM_PEERS").ok());
+
+        if let Some(ref peer_list) = peer_list_opt {
             for peer_str in peer_list.split(',') {
                 let peer_str = peer_str.trim();
                 if peer_str.is_empty() {

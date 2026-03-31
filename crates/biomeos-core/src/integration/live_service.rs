@@ -82,10 +82,8 @@ impl LiveService {
 
     /// Start monitoring loops
     async fn start_monitoring_loops(&self) -> Result<()> {
-        // Start the universal manager monitoring
-        // Start universal manager monitoring (implementation pending manager fixes)
+        self.universal_manager.start_monitoring()?;
         tracing::info!("Live service monitoring initialized");
-        // self.universal_manager.start_monitoring().await?; // Uncomment when universal manager compiles
 
         // Start periodic health checks
         let manager_clone = self.universal_manager.clone();

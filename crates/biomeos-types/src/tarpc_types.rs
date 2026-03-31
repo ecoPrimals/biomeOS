@@ -302,13 +302,18 @@ pub const PROTOCOL_ENV_VAR: &str = "IPC_PROTOCOL";
 /// Defaults to `Auto` if the variable is unset or contains an unrecognized value.
 #[must_use]
 pub fn protocol_from_env() -> ProtocolPreference {
-    match std::env::var(PROTOCOL_ENV_VAR).as_deref() {
-        Ok("jsonrpc" | "json-rpc") => ProtocolPreference::JsonRpcOnly,
-        Ok("tarpc") => ProtocolPreference::TarpcOnly,
-        Ok("prefer-jsonrpc") => ProtocolPreference::PreferJsonRpc,
-        Ok("prefer-tarpc") => ProtocolPreference::PreferTarpc,
-        // "auto" and any unrecognized value default to Auto
-        Ok("auto" | _) | Err(_) => ProtocolPreference::Auto,
+    protocol_from_value(std::env::var(PROTOCOL_ENV_VAR).ok().as_deref())
+}
+
+/// Parse protocol preference from an optional value (same rules as [`protocol_from_env`]).
+#[must_use]
+pub fn protocol_from_value(val: Option<&str>) -> ProtocolPreference {
+    match val {
+        Some("jsonrpc" | "json-rpc") => ProtocolPreference::JsonRpcOnly,
+        Some("tarpc") => ProtocolPreference::TarpcOnly,
+        Some("prefer-jsonrpc") => ProtocolPreference::PreferJsonRpc,
+        Some("prefer-tarpc") => ProtocolPreference::PreferTarpc,
+        Some("auto" | _) | None => ProtocolPreference::Auto,
     }
 }
 
@@ -323,7 +328,6 @@ pub fn protocol_from_env() -> ProtocolPreference {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
     use bytes::Bytes;
 
     #[test]
@@ -373,24 +377,19 @@ mod tests {
 
     #[test]
     fn test_protocol_from_env() {
-        set_test_env(PROTOCOL_ENV_VAR, "tarpc");
-        let pref = protocol_from_env();
-        remove_test_env(PROTOCOL_ENV_VAR);
-        assert_eq!(pref, ProtocolPreference::TarpcOnly);
-
-        set_test_env(PROTOCOL_ENV_VAR, "jsonrpc");
-        let pref = protocol_from_env();
-        remove_test_env(PROTOCOL_ENV_VAR);
-        assert_eq!(pref, ProtocolPreference::JsonRpcOnly);
-
-        set_test_env(PROTOCOL_ENV_VAR, "prefer-tarpc");
-        let pref = protocol_from_env();
-        remove_test_env(PROTOCOL_ENV_VAR);
-        assert_eq!(pref, ProtocolPreference::PreferTarpc);
-
-        remove_test_env(PROTOCOL_ENV_VAR);
-        let pref = protocol_from_env();
-        assert_eq!(pref, ProtocolPreference::Auto);
+        assert_eq!(
+            protocol_from_value(Some("tarpc")),
+            ProtocolPreference::TarpcOnly
+        );
+        assert_eq!(
+            protocol_from_value(Some("jsonrpc")),
+            ProtocolPreference::JsonRpcOnly
+        );
+        assert_eq!(
+            protocol_from_value(Some("prefer-tarpc")),
+            ProtocolPreference::PreferTarpc
+        );
+        assert_eq!(protocol_from_value(None), ProtocolPreference::Auto);
     }
 
     #[test]

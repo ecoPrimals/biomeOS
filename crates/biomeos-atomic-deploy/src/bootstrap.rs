@@ -17,7 +17,7 @@ use crate::nucleation::{SocketNucleation, SocketStrategy};
 use crate::primal_communication::{establish_btsp_tunnel, verify_primal_health};
 use anyhow::Result;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, sleep};
@@ -131,6 +131,16 @@ pub async fn execute_bootstrap_sequence(
 /// # Arguments
 /// * `family_id` - Family ID for this server
 pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
+    let runtime_dir = std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from);
+    transition_to_coordinated_with_runtime_dir(family_id, runtime_dir.as_deref()).await
+}
+
+/// Like [`transition_to_coordinated`], but supplies the XDG runtime parent directory explicitly
+/// (same semantics as [`SocketNucleation::assign_socket_with_runtime_dir`]).
+pub async fn transition_to_coordinated_with_runtime_dir(
+    family_id: &str,
+    runtime_dir: Option<&Path>,
+) -> Result<()> {
     info!("🔄 Establishing connection with Tower Atomic...");
 
     // Wait for Tower Atomic to be ready (sockets to exist)
@@ -153,8 +163,10 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
         })
         .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
     let mut nucleation = SocketNucleation::new(SocketStrategy::default());
-    let beardog_socket = nucleation.assign_socket(&security_provider, family_id);
-    let songbird_socket = nucleation.assign_socket(&network_provider, family_id);
+    let beardog_socket =
+        nucleation.assign_socket_with_runtime_dir(&security_provider, family_id, runtime_dir);
+    let songbird_socket =
+        nucleation.assign_socket_with_runtime_dir(&network_provider, family_id, runtime_dir);
 
     loop {
         if start.elapsed() > max_wait {
@@ -450,10 +462,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_transition_to_coordinated_tower_sockets_present() {
-        use biomeos_test_utils::TestEnvGuard;
-
         let tmp = TempDir::new().expect("temp");
-        let _xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", tmp.path().to_str().expect("utf8"));
+        let runtime = tmp.path();
 
         let family_id = "bootstrap-coord-fam";
         let security_provider = biomeos_types::env_config::security_provider()
@@ -474,12 +484,14 @@ mod tests {
             .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
 
         let mut nucleation = SocketNucleation::new(SocketStrategy::default());
-        let beardog_socket = nucleation.assign_socket(&security_provider, family_id);
-        let songbird_socket = nucleation.assign_socket(&network_provider, family_id);
+        let beardog_socket =
+            nucleation.assign_socket_with_runtime_dir(&security_provider, family_id, Some(runtime));
+        let songbird_socket =
+            nucleation.assign_socket_with_runtime_dir(&network_provider, family_id, Some(runtime));
         std::fs::File::create(&beardog_socket).expect("touch beardog");
         std::fs::File::create(&songbird_socket).expect("touch songbird");
 
-        let result = transition_to_coordinated(family_id).await;
+        let result = transition_to_coordinated_with_runtime_dir(family_id, Some(runtime)).await;
         assert!(
             result.is_ok(),
             "transition should complete when sockets exist: {:?}",

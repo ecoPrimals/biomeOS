@@ -336,10 +336,6 @@ impl RetryStrategy {
     }
 
     /// Create exponential backoff retry strategy
-    #[expect(
-        clippy::cast_lossless,
-        reason = "u32 max_attempts widened to u64 for max_retry_time_ms arithmetic"
-    )]
     #[must_use]
     pub const fn exponential_backoff(
         max_attempts: u32,
@@ -361,10 +357,6 @@ impl RetryStrategy {
     }
 
     /// Create linear backoff retry strategy
-    #[expect(
-        clippy::cast_lossless,
-        reason = "u32 max_attempts widened to u64 for max_retry_time_ms arithmetic"
-    )]
     #[must_use]
     pub const fn linear_backoff(max_attempts: u32, delay_ms: u64, increment_ms: u64) -> Self {
         Self {

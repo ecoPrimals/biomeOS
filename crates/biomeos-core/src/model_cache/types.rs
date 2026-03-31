@@ -7,6 +7,56 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+/// Configuration for [`super::cache::ModelCache`]: paths and identity derived from environment
+/// or injected explicitly (e.g. in tests).
+#[derive(Debug, Clone)]
+pub struct ModelCacheConfig {
+    /// Root directory for the model cache (`manifest.json` and local paths).
+    pub cache_dir: PathBuf,
+    /// Family scope for mesh / NestGate storage keys.
+    pub family_id: String,
+    /// Gate identity recorded on [`ModelEntry`] and used in mesh lookups.
+    pub gate_id: String,
+    /// Hugging Face cache root (`HF_HOME`); hub artifacts live in `hf_home.join("hub")`.
+    /// `None` means resolve via `HOME` (same as unset `HF_HOME` in the legacy behavior).
+    pub hf_home: Option<PathBuf>,
+}
+
+impl ModelCacheConfig {
+    /// Build from the current process environment (same rules as the legacy `ModelCache` constructors).
+    #[must_use]
+    pub fn from_env() -> Self {
+        Self {
+            cache_dir: Self::default_cache_dir_from_system_paths(),
+            family_id: resolve_family_id_from_env(),
+            gate_id: resolve_gate_id_from_env(),
+            hf_home: std::env::var("HF_HOME").ok().map(PathBuf::from),
+        }
+    }
+
+    fn default_cache_dir_from_system_paths() -> PathBuf {
+        biomeos_types::SystemPaths::new_lazy()
+            .cache_dir()
+            .join("models")
+    }
+}
+
+fn resolve_family_id_from_env() -> String {
+    std::env::var("FAMILY_ID")
+        .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+        .unwrap_or_else(|_| "default".to_string())
+}
+
+fn resolve_gate_id_from_env() -> String {
+    std::env::var("GATE_ID")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| {
+            std::fs::read_to_string("/etc/hostname")
+                .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string())
+        })
+}
+
 /// Metadata about a cached model
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelEntry {

@@ -16,6 +16,39 @@ use super::NeuralRouter;
 use super::types::{AtomicType, DiscoveredAtomic, DiscoveredPrimal};
 
 impl NeuralRouter {
+    /// Look up a capability in the registry; returns `None` on miss.
+    async fn try_registry_lookup(&self, capability: &str) -> Option<DiscoveredAtomic> {
+        let providers = self.get_capability_providers(capability).await?;
+        if providers.is_empty() {
+            return None;
+        }
+
+        let primary = &providers[0];
+        info!(
+            "   ✅ Found in registry: {} → {}",
+            capability, primary.primal_name
+        );
+
+        let mut primals = Vec::new();
+        for provider in &providers {
+            let healthy = Self::check_endpoint_health(&provider.endpoint).await;
+            primals.push(DiscoveredPrimal {
+                name: provider.primal_name.clone(),
+                endpoint: provider.endpoint.clone(),
+                capabilities: vec![capability.to_string()],
+                healthy,
+                last_check: chrono::Utc::now(),
+            });
+        }
+
+        Some(DiscoveredAtomic {
+            capability: Arc::from(capability),
+            primals,
+            atomic_type: None,
+            primary_endpoint: primary.endpoint.clone(),
+        })
+    }
+
     /// Discover primals by capability category
     async fn discover_by_capability_category(&self, capability: &str) -> Result<DiscoveredAtomic> {
         let category = match capability {
@@ -84,32 +117,17 @@ impl NeuralRouter {
     pub async fn discover_capability(&self, capability: &str) -> Result<DiscoveredAtomic> {
         info!("🔍 Discovering capability: {}", capability);
 
-        if let Some(providers) = self.get_capability_providers(capability).await {
-            if !providers.is_empty() {
-                let primary = &providers[0];
-                info!(
-                    "   ✅ Found in registry: {} → {}",
-                    capability, primary.primal_name
-                );
+        // First attempt: check the registry
+        if let Some(result) = self.try_registry_lookup(capability).await {
+            return Ok(result);
+        }
 
-                let mut primals = Vec::new();
-                for provider in &providers {
-                    let healthy = Self::check_endpoint_health(&provider.endpoint).await;
-                    primals.push(DiscoveredPrimal {
-                        name: provider.primal_name.clone(),
-                        endpoint: provider.endpoint.clone(),
-                        capabilities: vec![capability.to_string()],
-                        healthy,
-                        last_check: chrono::Utc::now(),
-                    });
-                }
-
-                return Ok(DiscoveredAtomic {
-                    capability: Arc::from(capability),
-                    primals,
-                    atomic_type: None,
-                    primary_endpoint: primary.endpoint.clone(),
-                });
+        // BM-04 fix: lazy rescan on first miss — primals that started after
+        // biomeOS are invisible until we re-scan the socket directory.
+        let new_caps = self.lazy_rescan_sockets().await;
+        if new_caps > 0 {
+            if let Some(result) = self.try_registry_lookup(capability).await {
+                return Ok(result);
             }
         }
 
@@ -272,6 +290,16 @@ impl NeuralRouter {
         &self,
         primal_name: &str,
     ) -> Result<DiscoveredPrimal> {
+        self.find_primal_by_socket_with_runtime_dir(primal_name, None)
+            .await
+    }
+
+    /// Like [`Self::find_primal_by_socket`], but supplies `$XDG_RUNTIME_DIR` parent explicitly (tests).
+    pub(crate) async fn find_primal_by_socket_with_runtime_dir(
+        &self,
+        primal_name: &str,
+        xdg_runtime_parent: Option<&std::path::Path>,
+    ) -> Result<DiscoveredPrimal> {
         {
             let cache = self.discovered_primals.read().await;
             if let Some(primal) = cache.get(primal_name) {
@@ -281,7 +309,11 @@ impl NeuralRouter {
         }
 
         let mut nucleation = SocketNucleation::default();
-        let socket_path = nucleation.assign_socket(primal_name, &self.family_id);
+        let socket_path = nucleation.assign_socket_with_runtime_dir(
+            primal_name,
+            &self.family_id,
+            xdg_runtime_parent,
+        );
 
         if !socket_path.exists() {
             return Err(anyhow!(
@@ -431,12 +463,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_primal_by_socket_nonexistent() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
-
-        set_test_env("XDG_RUNTIME_DIR", "/nonexistent/path/for/tests");
         let router = NeuralRouter::new("test-family-xyz");
-        let result = router.find_primal_by_socket("beardog").await;
-        remove_test_env("XDG_RUNTIME_DIR");
+        let result = router
+            .find_primal_by_socket_with_runtime_dir(
+                "beardog",
+                Some(std::path::Path::new("/nonexistent/path/for/tests")),
+            )
+            .await;
 
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();

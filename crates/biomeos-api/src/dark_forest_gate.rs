@@ -42,7 +42,7 @@ use axum::{
     http::{Request, Response, StatusCode},
     middleware::Next,
 };
-use std::env;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -87,17 +87,28 @@ impl DarkForestGateConfig {
     /// Socket resolution uses shared `beacon_verification::discover_neural_api_socket()`
     #[must_use]
     pub fn from_env() -> Self {
-        // DEFAULT: true — the system is closed unless explicitly opened
-        let enabled = env::var("BIOMEOS_SOVEREIGN")
-            .or_else(|_| env::var("BIOMEOS_DARK_FOREST"))
+        let env: HashMap<String, String> = std::env::vars().collect();
+        Self::from_env_map(&env)
+    }
+
+    /// Build gate config from a synthetic environment map (no process env mutation).
+    #[must_use]
+    pub fn from_env_map(env: &HashMap<String, String>) -> Self {
+        let enabled = env
+            .get("BIOMEOS_SOVEREIGN")
+            .or_else(|| env.get("BIOMEOS_DARK_FOREST"))
             .map(|v| v != "false" && v != "0")
             .unwrap_or(true);
 
-        // Resolve family ID from seed (not hardcoded!)
-        let family_id = biomeos_core::family_discovery::get_family_id();
+        let family_id = env
+            .get("FAMILY_ID")
+            .or_else(|| env.get("BIOMEOS_FAMILY_ID"))
+            .cloned()
+            .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
 
-        // Discover Neural API socket via shared discovery logic
-        let neural_api_socket = beacon_verification::discover_neural_api_socket(&family_id);
+        let tier1 = env.get("NEURAL_API_SOCKET").map(|s| s.as_str());
+        let neural_api_socket =
+            beacon_verification::discover_neural_api_socket_from(&family_id, tier1);
 
         Self {
             enabled,

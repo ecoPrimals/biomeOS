@@ -28,7 +28,6 @@ use axum::{
     http::{Method, Request, StatusCode, header},
 };
 use biomeos_api::{AppState, Config};
-use biomeos_test_utils::set_test_env;
 use http_body_util::BodyExt;
 use std::time::Instant;
 use tower::ServiceExt;
@@ -43,10 +42,12 @@ use tower::ServiceExt;
 /// the attacker doesn't have a valid token. Since BearDog socket doesn't
 /// exist in test, ALL token verification will fail — which is what we want.
 fn sovereign_app() -> Router {
-    // Ensure sovereign mode is ON
-    set_test_env("BIOMEOS_SOVEREIGN", "true");
-    // Point to nonexistent socket so all verification fails
-    set_test_env("BEARDOG_SOCKET", "/tmp/nonexistent-beardog-pentest.sock");
+    let family_id = biomeos_core::family_discovery::get_family_id();
+    let gate = biomeos_api::dark_forest_gate::DarkForestGateConfig {
+        enabled: true,
+        neural_api_socket: Some("/tmp/nonexistent-beardog-pentest.sock".to_string()),
+        family_id,
+    };
 
     let state = AppState::builder()
         .config(Config {
@@ -56,7 +57,7 @@ fn sovereign_app() -> Router {
         .build_with_defaults()
         .expect("Failed to build app state");
 
-    biomeos_api::create_app_for_tcp(state)
+    biomeos_api::create_app_for_tcp_with_gate(state, gate)
 }
 
 /// Assert a response is a proper Dark Forest rejection:

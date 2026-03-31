@@ -193,7 +193,15 @@ impl FamilyId {
     ///
     /// Checks `BIOMEOS_FAMILY_ID` environment variable
     pub fn from_env() -> Option<Self> {
-        std::env::var("BIOMEOS_FAMILY_ID").ok().map(Self::new)
+        Self::from_env_or_override(None)
+    }
+
+    /// Resolve family ID from an explicit value or `BIOMEOS_FAMILY_ID` (no env mutation needed in tests).
+    #[must_use]
+    pub fn from_env_or_override(env_value: Option<&str>) -> Option<Self> {
+        env_value
+            .map(Self::new)
+            .or_else(|| std::env::var("BIOMEOS_FAMILY_ID").ok().map(Self::new))
     }
 
     /// Discover local family ID from config
@@ -478,7 +486,6 @@ pub enum IdError {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn primal_id_valid() {
@@ -553,9 +560,7 @@ mod tests {
 
     #[test]
     fn family_id_from_env() {
-        set_test_env("BIOMEOS_FAMILY_ID", "env-family");
-        let id = FamilyId::from_env();
-        remove_test_env("BIOMEOS_FAMILY_ID");
+        let id = FamilyId::from_env_or_override(Some("env-family"));
         assert!(id.is_some());
         assert_eq!(id.unwrap().as_str(), "env-family");
     }

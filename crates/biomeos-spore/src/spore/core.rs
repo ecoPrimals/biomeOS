@@ -334,8 +334,7 @@ node_id = "tower-2"
 
     #[test]
     fn test_default_family_id() {
-        biomeos_test_utils::remove_test_env("FAMILY_ID");
-        let id = crate::spore::types::default_family_id();
+        let id = crate::spore::types::default_family_id_with(None, true);
         assert!(!id.is_empty());
     }
 }

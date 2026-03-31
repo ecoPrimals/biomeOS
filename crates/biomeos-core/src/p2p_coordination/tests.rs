@@ -11,7 +11,6 @@
 )]
 
 use super::*;
-use biomeos_test_utils::TestEnvGuard;
 use std::time::SystemTime;
 
 struct MockSecurityProvider;
@@ -431,12 +430,13 @@ async fn test_monitor_tunnel_discovery_provider_error_message() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_new_from_discovery_strict_without_sockets_fails() {
     let temp = tempfile::tempdir().expect("tempdir");
-    let _sock = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", temp.path().to_str().expect("utf8"));
-    let _strict = TestEnvGuard::set("BIOMEOS_STRICT_DISCOVERY", "1");
-    let result = P2PCoordinator::new_from_discovery().await;
+    let result = P2PCoordinator::new_from_discovery_with_config(&P2pDiscoveryConfig {
+        strict_discovery: Some(true),
+        xdg_runtime_dir: Some(temp.path().to_path_buf()),
+    })
+    .await;
     let err = result.err().expect("expected empty socket dir to fail");
     let msg = err.to_string();
     assert!(
@@ -556,12 +556,13 @@ async fn test_enable_encrypted_discovery_propagates_error() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_new_from_discovery_non_strict_empty_dir_errors() {
     let temp = tempfile::tempdir().expect("tempdir");
-    let _sock = TestEnvGuard::set("BIOMEOS_SOCKET_DIR", temp.path().to_str().expect("utf8"));
-    let _strict = TestEnvGuard::remove("BIOMEOS_STRICT_DISCOVERY");
-    let result = P2PCoordinator::new_from_discovery().await;
+    let result = P2PCoordinator::new_from_discovery_with_config(&P2pDiscoveryConfig {
+        strict_discovery: Some(false),
+        xdg_runtime_dir: Some(temp.path().to_path_buf()),
+    })
+    .await;
     let err = result.err().expect("expected empty socket dir");
     assert!(err.to_string().contains("security") || err.to_string().contains("No security"));
 }

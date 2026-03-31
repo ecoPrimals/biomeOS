@@ -296,8 +296,14 @@ impl UniversalBiomeOSManager {
         &self,
         primal: &PrimalInfo,
         command: &str,
-        _interactive: bool, // Note: interactive mode not yet supported via atomic_client
+        interactive: bool,
     ) -> Result<ExecutionResult> {
+        if interactive {
+            anyhow::bail!(
+                "Interactive command execution is not supported via the atomic primal client; pass interactive=false"
+            );
+        }
+
         tracing::debug!(
             "🚀 Executing command in {} via atomic client: {}",
             primal.name,

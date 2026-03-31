@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.80)
+## Status: Production Ready (v2.81)
 
 | Metric | Value |
 |--------|-------|
@@ -12,23 +12,24 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
-| Tests | 5,700+ passing (0 failures) — 90%+ coverage (llvm-cov verified) |
-| Unsafe Code | 0 in production (workspace `deny`, test-only `expect` for env mutation) |
+| Tests | 7,212 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
+| Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots) |
 | C Dependencies | 0 (blake3 pure, deny.toml enforced bans) |
-| Clippy | pedantic+nursery enabled, workspace lint inheritance |
+| Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0-only + ORC + CC-BY-SA 4.0) |
-| Deployment | USB + Pixel + Cross-Device AI |
+| Deployment | USB + Pixel + Cross-Device AI + TCP-only mobile |
 | AI Bridge | Capability-routed to Squirrel (tag-in at runtime; biomeOS runs without AI primal) |
-| Neural API | 290+ capability translations, 26 domains, 5 coordination patterns, auto-discovery |
+| Neural API | 290+ capability translations, 26 domains, 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
 | Files >1000 LOC | 0 (all under 1000 after smart domain extraction) |
-| Discovery | Auto-discovery via XDG sockets + `topology.rescan` + `capability.register` + DNS-SD mDNS |
-| Blocking Debt | 0 (primal auto-discovery, continuous executor, nucleus/runtime graph separation — all resolved) |
-| Dep Governance | tokio, base64, serde, serde_json, gethostname — workspace-unified; serde_yml replaced with serde_yaml_ng; hostname consolidated to gethostname; 11 unused workspace deps removed; pure Rust stack (rustix, etcetera, ureq) |
+| Discovery | Auto-discovery via XDG sockets + `topology.rescan` + lazy rescan on miss + `capability.register` + DNS-SD mDNS |
+| Blocking Debt | 0 (BM-04 capability registration, BM-05 probe formats, TCP-only, gate routing, `#[serial]` elimination — all resolved) |
+| Dep Governance | tokio, base64, serde, serde_json, gethostname — workspace-unified; `serial_test` removed; pure Rust stack (rustix, etcetera, ureq) |
 | TODO/FIXME/HACK | 0 in production code |
+| SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-only`) |
 
 ---
 
@@ -250,7 +251,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (5,700+ tests across 26 crates)
+### Test (7,212 tests across 26 crates)
 
 ```bash
 cargo test --workspace
@@ -344,10 +345,10 @@ scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC
 
 ---
 
-**Status**: Production Ready (v2.80)
-**Updated**: March 30, 2026
-**Tests**: 5,700+ passing, 90%+ coverage (llvm-cov verified) | **Clippy**: pedantic+nursery via workspace lints | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production | **Blocking debt**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Auto-discovery + capability-first routing + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
+**Status**: Production Ready (v2.81)
+**Updated**: March 31, 2026
+**Tests**: 7,212 passing, 90%+ coverage (llvm-cov verified) | **Clippy**: pedantic+nursery via workspace lints | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production | **Blocking debt**: 0
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Auto-discovery + lazy rescan + capability-first routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
 
 ---
 

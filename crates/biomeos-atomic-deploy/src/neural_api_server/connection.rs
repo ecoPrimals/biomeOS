@@ -3,12 +3,13 @@
 
 //! Connection handling for Neural API Server
 //!
-//! Handles incoming Unix socket connections, reads requests, and writes responses.
+//! Handles incoming connections (Unix socket **and** TCP), reads newline-
+//! delimited JSON-RPC requests, and writes responses.
 
 use anyhow::Result;
 use biomeos_types::jsonrpc::{JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 use tracing::debug;
@@ -16,13 +17,25 @@ use tracing::debug;
 use super::NeuralApiServer;
 
 impl NeuralApiServer {
-    /// Handle a client connection.
-    ///
-    /// Reads JSON-RPC requests line-by-line.  Supports both single request
-    /// objects and JSON-RPC 2.0 Section 6 batch arrays.  Batch elements are
-    /// processed concurrently via `futures::future::join_all`.
+    /// Handle a Unix socket client connection.
     pub async fn handle_connection(&self, stream: UnixStream) -> Result<()> {
-        let mut reader = BufReader::new(stream);
+        self.handle_stream(BufReader::new(stream)).await
+    }
+
+    /// Handle a TCP client connection.
+    pub async fn handle_tcp_connection(&self, stream: tokio::net::TcpStream) -> Result<()> {
+        self.handle_stream(BufReader::new(stream)).await
+    }
+
+    /// Transport-agnostic connection handler.
+    ///
+    /// Reads JSON-RPC requests line-by-line. Supports both single request
+    /// objects and JSON-RPC 2.0 Section 6 batch arrays. Batch elements are
+    /// processed concurrently via `futures::future::join_all`.
+    async fn handle_stream<S>(&self, mut reader: BufReader<S>) -> Result<()>
+    where
+        S: tokio::io::AsyncRead + AsyncWrite + Unpin,
+    {
         let mut line = String::new();
 
         loop {
@@ -39,7 +52,6 @@ impl NeuralApiServer {
                         stream.write_all(response_str.as_bytes()).await?;
                         stream.flush().await?;
                     }
-                    // No response for notifications (id == None)
                 }
                 Ok(Ok(_) | Err(_)) | Err(_) => {
                     break;

@@ -155,6 +155,14 @@ fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
 }
 
 fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
+    verify_single_spore_at(mount_point, nucleus_path_for_spore_verify())
+}
+
+/// Verify a spore against a specific plasmidBin path (env-free; tests and tooling).
+fn verify_single_spore_at(
+    mount_point: &PathBuf,
+    nucleus_path: impl AsRef<std::path::Path>,
+) -> Result<()> {
     info!("Verifying spore at: {}", mount_point.display());
 
     println!("╔════════════════════════════════════════════════════════════════╗");
@@ -165,14 +173,14 @@ fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     println!();
 
     // Load nucleus manifest
-    let nucleus_path = nucleus_path_for_spore_verify();
+    let nucleus_path = nucleus_path.as_ref();
     if !nucleus_path.exists() {
         println!("❌ Error: plasmidBin not found (required for comparison)");
         println!("   Expected at: {}", nucleus_path.display());
         return Ok(());
     }
 
-    let verifier = SporeVerifier::from_nucleus(&nucleus_path)?;
+    let verifier = SporeVerifier::from_nucleus(nucleus_path)?;
     let report = verifier.verify_spore(mount_point)?;
 
     println!("Node ID: {}", report.node_id);
@@ -258,7 +266,7 @@ fn verify_all_spores(verbose: bool) -> Result<()> {
         return Ok(());
     }
 
-    let verifier = SporeVerifier::from_nucleus(&nucleus_path)?;
+    let verifier = SporeVerifier::from_nucleus(nucleus_path)?;
     let reports = verifier.verify_all_spores()?;
 
     if reports.is_empty() {
@@ -482,8 +490,6 @@ fn discover_spore_mounts() -> Vec<(String, String)> {
 mod tests {
     use super::*;
     use biomeos_spore::verification::VerificationStatus;
-    use biomeos_test_utils::env_helpers::TestEnvGuard;
-    use serial_test::serial;
 
     #[test]
     fn test_verification_status_display() {
@@ -731,11 +737,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_run_spore_verify_with_matching_plasmid_and_spore() {
         let temp = tempfile::tempdir().unwrap();
         let pb = minimal_plasmid_bin(temp.path());
-        let _plasmid_guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", pb.to_str().unwrap());
         let spore = temp.path().join("spore-mount");
         std::fs::create_dir_all(spore.join("bin")).unwrap();
         std::fs::create_dir_all(spore.join("primals")).unwrap();
@@ -752,20 +756,13 @@ NODE_ID = "node-test-123"
         )
         .unwrap();
 
-        let args = VerifyArgs {
-            target: VerifyTarget::Spore {
-                mount_point: spore.clone(),
-            },
-        };
-        assert!(run(args).await.is_ok());
+        assert!(verify_single_spore_at(&spore, &pb).is_ok());
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_run_spore_verify_stale_binary() {
         let temp = tempfile::tempdir().unwrap();
         let pb = minimal_plasmid_bin(temp.path());
-        let _plasmid_guard = TestEnvGuard::set("BIOMEOS_PLASMID_DIR", pb.to_str().unwrap());
         let spore = temp.path().join("spore-stale");
         std::fs::create_dir_all(spore.join("bin")).unwrap();
         std::fs::create_dir_all(spore.join("primals")).unwrap();
@@ -782,9 +779,6 @@ NODE_ID = "node-stale"
         )
         .unwrap();
 
-        let args = VerifyArgs {
-            target: VerifyTarget::Spore { mount_point: spore },
-        };
-        assert!(run(args).await.is_ok());
+        assert!(verify_single_spore_at(&spore, &pb).is_ok());
     }
 }

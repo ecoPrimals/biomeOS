@@ -15,6 +15,7 @@ use anyhow::{Context, Result};
 use biomeos_types::JsonRpcVersion;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
@@ -44,6 +45,43 @@ pub(crate) struct JsonRpcError {
     pub(crate) data: Option<Value>,
 }
 
+fn effective_unix_uid_string() -> Option<String> {
+    if let Ok(u) = std::env::var("UID") {
+        if !u.is_empty() {
+            return Some(u);
+        }
+    }
+    if let Ok(u) = std::env::var("EUID") {
+        if !u.is_empty() {
+            return Some(u);
+        }
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        return std::fs::metadata("/proc/self")
+            .ok()
+            .map(|m| m.uid().to_string());
+    }
+    #[cfg(not(unix))]
+    None
+}
+
+fn device_management_socket_path() -> Result<String> {
+    if let Ok(dir) = std::env::var("XDG_RUNTIME_DIR") {
+        return Ok(PathBuf::from(dir)
+            .join("biomeos-device-management.sock")
+            .to_string_lossy()
+            .into_owned());
+    }
+    let uid = effective_unix_uid_string().ok_or_else(|| {
+        anyhow::anyhow!(
+            "Cannot resolve socket path: set XDG_RUNTIME_DIR or ensure UID is discoverable (UID/EUID or /proc/self on Unix)"
+        )
+    })?;
+    Ok(format!("/run/user/{uid}/biomeos-device-management.sock"))
+}
+
 /// Run the device management server: bind Unix socket, register with Songbird, accept connections.
 pub async fn run() -> Result<()> {
     tracing_subscriber::fmt()
@@ -52,8 +90,8 @@ pub async fn run() -> Result<()> {
 
     info!("🌸 Starting biomeOS Device Management Server");
 
-    let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
-    let socket_path = format!("/run/user/{uid}/biomeos-device-management.sock");
+    let socket_path =
+        device_management_socket_path().context("resolve device management socket path")?;
 
     let _ = tokio::fs::remove_file(&socket_path).await;
 

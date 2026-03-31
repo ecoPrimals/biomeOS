@@ -83,25 +83,25 @@ pub struct StunExtensionConfig {
     pub public_servers: Vec<String>,
 }
 
-impl Default for StunExtensionConfig {
-    fn default() -> Self {
-        // Self-hosted STUN takes priority if configured
-        let self_hosted_address = std::env::var("BIOMEOS_STUN_SERVER").ok();
+impl StunExtensionConfig {
+    /// Build STUN extension config from explicit env-equivalent values (for tests and tooling).
+    ///
+    /// Pass `None` for a variable to behave as if it were unset.
+    #[must_use]
+    pub fn from_env_values(
+        stun_server: Option<&str>,
+        no_public_stun: Option<&str>,
+        stun_servers: Option<&str>,
+    ) -> Self {
+        let self_hosted_address = stun_server.map(std::string::ToString::to_string);
 
-        // Check if public STUN is disabled (sovereignty mode)
-        let no_public_stun = std::env::var("BIOMEOS_NO_PUBLIC_STUN")
-            .map(|v| v == "1" || v.to_lowercase() == "true")
-            .unwrap_or(false);
+        let no_public_stun = no_public_stun.is_some_and(|v| v == "1" || v.to_lowercase() == "true");
 
-        // Resolve public servers: self-hosted first, then env override, then
-        // community-run FOSS servers as last resort. Corporate STUN servers
-        // (Google, Cloudflare) are intentionally excluded — sovereignty means
-        // not depending on corporate infrastructure for core functionality.
         let public_servers = if no_public_stun {
             Vec::new()
         } else {
-            std::env::var("BIOMEOS_STUN_SERVERS").map_or_else(
-                |_| {
+            stun_servers.map_or_else(
+                || {
                     vec![
                         format!("stun.nextcloud.com:{}", ports::STUN),
                         format!("stun.sip.us:{}", ports::STUN),
@@ -119,6 +119,16 @@ impl Default for StunExtensionConfig {
             fallback_to_public: !no_public_stun,
             public_servers,
         }
+    }
+}
+
+impl Default for StunExtensionConfig {
+    fn default() -> Self {
+        Self::from_env_values(
+            std::env::var("BIOMEOS_STUN_SERVER").ok().as_deref(),
+            std::env::var("BIOMEOS_NO_PUBLIC_STUN").ok().as_deref(),
+            std::env::var("BIOMEOS_STUN_SERVERS").ok().as_deref(),
+        )
     }
 }
 
@@ -186,20 +196,11 @@ impl StunExtension {
     }
 
     /// Discover self-hosted STUN address from configuration or beacons
-    #[expect(
-        clippy::unused_self,
-        reason = "instance method reserved for future beacon-based STUN discovery"
-    )]
     fn discover_self_hosted_address(&self) -> Option<String> {
-        // Check environment variable
-        if let Ok(addr) = std::env::var("BIOMEOS_STUN_SERVER") {
-            return Some(addr);
+        if let Some(addr) = &self.config.self_hosted_address {
+            return Some(addr.clone());
         }
-
-        // Could also check .known_beacons.json for family STUN servers
-        // For now, return None to use default
-
-        None
+        std::env::var("BIOMEOS_STUN_SERVER").ok()
     }
 
     /// Query a STUN server via Songbird
@@ -363,25 +364,10 @@ pub enum StunExtensionError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
-
-    /// Mutex to serialize tests that modify environment variables.
-    /// Env vars are process-global, so parallel tests race without this.
-    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-    /// Helper: clear all STUN-related env vars while holding the lock.
-    fn clear_stun_env() {
-        remove_test_env("BIOMEOS_STUN_SERVER");
-        remove_test_env("BIOMEOS_NO_PUBLIC_STUN");
-        remove_test_env("BIOMEOS_STUN_SERVERS");
-    }
 
     #[test]
     fn test_default_config() {
-        let _lock = ENV_LOCK.lock().expect("env lock");
-        clear_stun_env();
-
-        let config = StunExtensionConfig::default();
+        let config = StunExtensionConfig::from_env_values(None, None, None);
         assert!(config.enabled);
         assert!(config.fallback_to_public);
         assert!(!config.public_servers.is_empty());
@@ -391,10 +377,7 @@ mod tests {
 
     #[test]
     fn test_default_public_servers_are_sovereign() {
-        let _lock = ENV_LOCK.lock().expect("env lock");
-        clear_stun_env();
-
-        let config = StunExtensionConfig::default();
+        let config = StunExtensionConfig::from_env_values(None, None, None);
         assert!(config.public_servers.len() >= 3);
         // Sovereign defaults: community-run FOSS servers only, no corporate
         assert!(
@@ -419,53 +402,35 @@ mod tests {
 
     #[test]
     fn test_custom_stun_servers_from_env() {
-        let _lock = ENV_LOCK.lock().expect("env lock");
-        clear_stun_env();
-
-        set_test_env("BIOMEOS_STUN_SERVERS", "custom1:3478, custom2:3478");
-        let config = StunExtensionConfig::default();
+        let config =
+            StunExtensionConfig::from_env_values(None, None, Some("custom1:3478, custom2:3478"));
         assert_eq!(config.public_servers.len(), 2);
         assert_eq!(config.public_servers[0], "custom1:3478");
         assert_eq!(config.public_servers[1], "custom2:3478");
-        remove_test_env("BIOMEOS_STUN_SERVERS");
     }
 
     #[test]
     fn test_no_public_stun_sovereignty_mode() {
-        let _lock = ENV_LOCK.lock().expect("env lock");
-        clear_stun_env();
-
-        set_test_env("BIOMEOS_NO_PUBLIC_STUN", "true");
-        let config = StunExtensionConfig::default();
+        let config = StunExtensionConfig::from_env_values(None, Some("true"), None);
         assert!(config.public_servers.is_empty());
         assert!(!config.fallback_to_public);
-        remove_test_env("BIOMEOS_NO_PUBLIC_STUN");
     }
 
     #[test]
     fn test_no_public_stun_flag_1() {
-        let _lock = ENV_LOCK.lock().expect("env lock");
-        clear_stun_env();
-
-        set_test_env("BIOMEOS_NO_PUBLIC_STUN", "1");
-        let config = StunExtensionConfig::default();
+        let config = StunExtensionConfig::from_env_values(None, Some("1"), None);
         assert!(config.public_servers.is_empty());
         assert!(!config.fallback_to_public);
-        remove_test_env("BIOMEOS_NO_PUBLIC_STUN");
     }
 
     #[test]
     fn test_self_hosted_from_env() {
-        let _lock = ENV_LOCK.lock().expect("env lock");
-        clear_stun_env();
-
-        set_test_env("BIOMEOS_STUN_SERVER", "stun.myserver.com:3478");
-        let config = StunExtensionConfig::default();
+        let config =
+            StunExtensionConfig::from_env_values(Some("stun.myserver.com:3478"), None, None);
         assert_eq!(
             config.self_hosted_address,
             Some("stun.myserver.com:3478".to_string())
         );
-        remove_test_env("BIOMEOS_STUN_SERVER");
     }
 
     #[test]
@@ -531,25 +496,19 @@ mod tests {
 
     #[test]
     fn test_discover_self_hosted_address_without_env() {
-        let _lock = ENV_LOCK.lock().expect("env lock");
-        clear_stun_env();
-
-        let ext = StunExtension::new();
+        let config = StunExtensionConfig::from_env_values(None, None, None);
+        let ext = StunExtension::with_config(config);
         assert!(ext.discover_self_hosted_address().is_none());
     }
 
     #[test]
     fn test_discover_self_hosted_address_with_env() {
-        let _lock = ENV_LOCK.lock().expect("env lock");
-        clear_stun_env();
-
-        set_test_env("BIOMEOS_STUN_SERVER", "192.168.1.100:3478");
-        let ext = StunExtension::new();
+        let config = StunExtensionConfig::from_env_values(Some("192.168.1.100:3478"), None, None);
+        let ext = StunExtension::with_config(config);
         assert_eq!(
             ext.discover_self_hosted_address(),
             Some("192.168.1.100:3478".to_string())
         );
-        remove_test_env("BIOMEOS_STUN_SERVER");
     }
 
     #[tokio::test]

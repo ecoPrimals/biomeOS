@@ -8,11 +8,15 @@
     reason = "test assertions use unwrap/expect for clarity"
 )]
 
-use super::atomic_client::*;
 use crate::TransportEndpoint;
+use crate::atomic_client::{
+    AtomicClient, DiscoverByCapabilityOpts, DiscoverOpts, discover_primal_endpoint,
+    discover_primal_endpoint_with_opts,
+};
 use crate::atomic_primal_client::{AtomicPrimalClient, ExecutionResult};
 use biomeos_test_utils::ready_signal;
 use serde_json::{Value, json};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -458,11 +462,15 @@ async fn test_call_stream_unix_jsonrpc_single_line_wrapped() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_discover_primal_uses_node_family_id_env() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _g = TestEnvGuard::set("NODE_FAMILY_ID", "from-node-env");
-    let err = AtomicClient::discover("totally_missing_primal_xyz_999").await;
+    let err = AtomicClient::discover_with_opts(
+        "totally_missing_primal_xyz_999",
+        DiscoverOpts {
+            family_id: Some("from-node-env"),
+            ..Default::default()
+        },
+    )
+    .await;
     assert!(err.is_err());
     let msg = err.unwrap_err().to_string();
     assert!(
@@ -555,11 +563,15 @@ async fn test_call_stream_unix_raw_non_json_line_becomes_string_data() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn test_discover_by_capability_strict_env_disables_taxonomy_bootstrap() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _g = TestEnvGuard::set("BIOMEOS_STRICT_DISCOVERY", "1");
-    let err = AtomicClient::discover_by_capability("nonexistent.strict.cap").await;
+    let err = AtomicClient::discover_by_capability_with_opts(
+        "nonexistent.strict.cap",
+        DiscoverByCapabilityOpts {
+            strict_discovery: Some(true),
+            ..Default::default()
+        },
+    )
+    .await;
     assert!(err.is_err());
 }
 
@@ -577,12 +589,19 @@ fn test_is_available_abstract_linux_only() {
 // ========================================================================
 
 #[tokio::test]
-#[serial_test::serial]
 #[expect(clippy::unwrap_used, reason = "test asserts successful discovery")]
 async fn test_atomic_client_discover_via_tcp_env_succeeds() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _tcp = TestEnvGuard::set("DISCOVERUT_TCP", "127.0.0.1:59996");
-    let client = AtomicClient::discover("discoverut").await.unwrap();
+    let mut m = HashMap::new();
+    m.insert("DISCOVERUT_TCP".to_string(), "127.0.0.1:59996".to_string());
+    let client = AtomicClient::discover_with_opts(
+        "discoverut",
+        DiscoverOpts {
+            env_overrides: Some(&m),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
     assert!(
         matches!(client.endpoint(), TransportEndpoint::TcpSocket { .. }),
         "expected TCP from env, got {:?}",
@@ -592,12 +611,19 @@ async fn test_atomic_client_discover_via_tcp_env_succeeds() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 #[expect(clippy::unwrap_used, reason = "test asserts successful discovery")]
 async fn test_discover_primal_endpoint_via_tcp_env_succeeds() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _tcp = TestEnvGuard::set("DISCOVERPE_TCP", "127.0.0.1:59995");
-    let ep = discover_primal_endpoint("discoverpe").await.unwrap();
+    let mut m = HashMap::new();
+    m.insert("DISCOVERPE_TCP".to_string(), "127.0.0.1:59995".to_string());
+    let ep = discover_primal_endpoint_with_opts(
+        "discoverpe",
+        DiscoverOpts {
+            env_overrides: Some(&m),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
     assert!(matches!(ep, TransportEndpoint::TcpSocket { .. }));
 }
 

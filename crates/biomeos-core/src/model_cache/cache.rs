@@ -11,33 +11,29 @@ use tracing::{debug, info, warn};
 
 use crate::atomic_client::AtomicClient;
 
-use super::types::{CacheManifest, ModelEntry, ModelFile, ModelResolution};
+use super::types::{CacheManifest, ModelCacheConfig, ModelEntry, ModelFile, ModelResolution};
 
 /// NUCLEUS Model Cache Manager
 pub struct ModelCache {
-    /// Base directory for cached models; used for logging and future path operations.
-    _cache_dir: PathBuf,
+    config: ModelCacheConfig,
 
     manifest_path: PathBuf,
 
     manifest: CacheManifest,
 
     nestgate: Option<AtomicClient>,
-
-    family_id: String,
-
-    gate_id: String,
 }
 
 impl ModelCache {
     /// Create a new `ModelCache` with automatic `NestGate` discovery
     pub async fn new() -> Result<Self> {
-        let cache_dir = Self::default_cache_dir()?;
-        Self::with_cache_dir(cache_dir).await
+        Self::with_config(ModelCacheConfig::from_env()).await
     }
 
-    /// Create a `ModelCache` with a specific cache directory
-    pub async fn with_cache_dir(cache_dir: PathBuf) -> Result<Self> {
+    /// Create a `ModelCache` from explicit configuration (no implicit environment reads beyond
+    /// [`AtomicClient::discover`]).
+    pub async fn with_config(config: ModelCacheConfig) -> Result<Self> {
+        let cache_dir = config.cache_dir.clone();
         fs::create_dir_all(&cache_dir)
             .await
             .context("Failed to create model cache directory")?;
@@ -68,18 +64,6 @@ impl ModelCache {
             }
         };
 
-        let family_id = std::env::var("FAMILY_ID")
-            .or_else(|_| std::env::var("NODE_FAMILY_ID"))
-            .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-            .unwrap_or_else(|_| "default".to_string());
-
-        let gate_id = std::env::var("GATE_ID")
-            .or_else(|_| std::env::var("HOSTNAME"))
-            .unwrap_or_else(|_| {
-                std::fs::read_to_string("/etc/hostname")
-                    .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string())
-            });
-
         info!(
             "Model cache initialized: {} ({} models cached, NestGate: {})",
             cache_dir.display(),
@@ -92,19 +76,36 @@ impl ModelCache {
         );
 
         Ok(Self {
-            _cache_dir: cache_dir,
+            config,
             manifest_path,
             manifest,
             nestgate,
-            family_id,
-            gate_id,
         })
     }
 
-    fn default_cache_dir() -> Result<PathBuf> {
-        Ok(biomeos_types::SystemPaths::new_lazy()
-            .cache_dir()
-            .join("models"))
+    /// Create a `ModelCache` with a specific cache directory; other fields match [`ModelCacheConfig::from_env`].
+    pub async fn with_cache_dir(cache_dir: PathBuf) -> Result<Self> {
+        let mut config = ModelCacheConfig::from_env();
+        config.cache_dir = cache_dir;
+        Self::with_config(config).await
+    }
+
+    /// Family id used for mesh / NestGate keys.
+    #[must_use]
+    pub fn family_id(&self) -> &str {
+        &self.config.family_id
+    }
+
+    /// Resolve the Hugging Face hub directory (`HF_HOME/hub` or `HOME/.cache/huggingface/hub`).
+    pub fn huggingface_hub_dir(&self) -> Result<PathBuf> {
+        if let Some(ref hf) = self.config.hf_home {
+            return Ok(hf.join("hub"));
+        }
+        let home = std::env::var("HOME").context("HOME not set")?;
+        Ok(PathBuf::from(home)
+            .join(".cache")
+            .join("huggingface")
+            .join("hub"))
     }
 
     /// Check if a model is cached locally
@@ -166,7 +167,7 @@ impl ModelCache {
             source: source.to_string(),
             sha256: None,
             cached_at: chrono::Utc::now().to_rfc3339(),
-            gate_id: self.gate_id.clone(),
+            gate_id: self.config.gate_id.clone(),
             format: Self::detect_format(local_path).await,
             files,
         };
@@ -190,7 +191,7 @@ impl ModelCache {
 
     /// Register a model with the `HuggingFace` cache path
     pub async fn register_huggingface_model(&mut self, model_id: &str) -> Result<PathBuf> {
-        let hf_hub = Self::huggingface_hub_dir()?;
+        let hf_hub = self.huggingface_hub_dir()?;
         self.register_huggingface_model_from_hub(model_id, &hf_hub)
             .await
     }
@@ -221,7 +222,7 @@ impl ModelCache {
 
     /// Import all `HuggingFace` models from the default cache
     pub async fn import_huggingface_cache(&mut self) -> Result<Vec<String>> {
-        let hf_hub = Self::huggingface_hub_dir()?;
+        let hf_hub = self.huggingface_hub_dir()?;
         self.import_huggingface_cache_from(&hf_hub).await
     }
 
@@ -274,7 +275,7 @@ impl ModelCache {
             .call(
                 "storage.exists",
                 json!({
-                    "family_id": self.family_id,
+                    "family_id": self.config.family_id,
                     "key": key
                 }),
             )
@@ -298,7 +299,7 @@ impl ModelCache {
             .call(
                 "storage.retrieve",
                 json!({
-                    "family_id": self.family_id,
+                    "family_id": self.config.family_id,
                     "key": key
                 }),
             )
@@ -333,7 +334,7 @@ impl ModelCache {
             .call(
                 "storage.list",
                 json!({
-                    "family_id": self.family_id,
+                    "family_id": self.config.family_id,
                     "prefix": "model-cache:"
                 }),
             )
@@ -393,7 +394,7 @@ impl ModelCache {
             .call(
                 "storage.store",
                 json!({
-                    "family_id": self.family_id,
+                    "family_id": self.config.family_id,
                     "key": format!("model-cache:{}", entry.model_id),
                     "value": serde_json::to_value(entry).unwrap_or_default()
                 }),
@@ -483,17 +484,6 @@ impl ModelCache {
             }
         }
         "huggingface".to_string()
-    }
-
-    fn huggingface_hub_dir() -> Result<PathBuf> {
-        if let Ok(cache) = std::env::var("HF_HOME") {
-            return Ok(PathBuf::from(cache).join("hub"));
-        }
-        let home = std::env::var("HOME").context("HOME not set")?;
-        Ok(PathBuf::from(home)
-            .join(".cache")
-            .join("huggingface")
-            .join("hub"))
     }
 
     fn find_hf_snapshot(model_dir: &Path) -> Result<PathBuf> {

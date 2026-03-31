@@ -6,7 +6,7 @@
 //! Neural API assigns sockets for coordinated startup (no race conditions).
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{debug, info};
 
 /// Socket Nucleation Strategy
@@ -47,6 +47,21 @@ impl SocketNucleation {
     /// This is the "nucleation point" - provides deterministic socket
     /// assignment that prevents race conditions and enables coordinated startup
     pub fn assign_socket(&mut self, primal: &str, family_id: &str) -> PathBuf {
+        let xdg_parent = std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from);
+        let runtime_dir = xdg_parent.as_deref();
+        self.assign_socket_with_runtime_dir(primal, family_id, runtime_dir)
+    }
+
+    /// Like [`Self::assign_socket`], but supplies the XDG runtime parent directory explicitly
+    /// (the directory that would be `$XDG_RUNTIME_DIR`), without reading environment variables.
+    ///
+    /// Pass `None` to use the same `/tmp/biomeos-$USER` fallback as when `XDG_RUNTIME_DIR` is unset.
+    pub fn assign_socket_with_runtime_dir(
+        &mut self,
+        primal: &str,
+        family_id: &str,
+        runtime_dir: Option<&Path>,
+    ) -> PathBuf {
         // Check if already assigned
         let key = format!("{primal}-{family_id}");
         if let Some(existing) = self.assignments.get(&key) {
@@ -59,7 +74,9 @@ impl SocketNucleation {
             SocketStrategy::FamilyDeterministic => {
                 Self::family_deterministic_path(primal, family_id)
             }
-            SocketStrategy::XdgRuntime => Self::xdg_runtime_path(primal, family_id),
+            SocketStrategy::XdgRuntime => {
+                Self::xdg_runtime_path_with(primal, family_id, runtime_dir)
+            }
         };
 
         if let Some(parent) = socket.parent() {
@@ -174,21 +191,19 @@ impl SocketNucleation {
         paths.primal_socket(&format!("{primal}-{family_id}"))
     }
 
-    /// XDG runtime path using `SystemPaths`
+    /// XDG runtime path using explicit runtime parent or tmp fallback (no `XDG_RUNTIME_DIR` read).
     ///
-    /// Creates sockets in `XDG_RUNTIME_DIR/biomeos`/ for proper namespacing
-    fn xdg_runtime_path(primal: &str, family_id: &str) -> PathBuf {
+    /// Creates sockets in `runtime_parent/biomeos/` for proper namespacing.
+    fn xdg_runtime_path_with(primal: &str, family_id: &str, runtime_dir: Option<&Path>) -> PathBuf {
         use biomeos_types::paths::SystemPaths;
 
-        // Use SystemPaths for XDG-compliant paths with automatic directory creation
-        let paths = SystemPaths::new_lazy();
+        let resolved = SystemPaths::runtime_dir_from_xdg_parent(runtime_dir);
 
-        // Ensure runtime directory exists
-        if let Err(e) = std::fs::create_dir_all(paths.runtime_dir()) {
+        if let Err(e) = std::fs::create_dir_all(&resolved) {
             tracing::warn!("Failed to create runtime dir: {}", e);
         }
 
-        paths.primal_socket(&format!("{primal}-{family_id}"))
+        resolved.join(format!("{}-{}.sock", primal, family_id))
     }
 }
 
@@ -265,33 +280,31 @@ mod tests {
         assert!(songbird.to_string_lossy().ends_with(".sock"));
         assert!(squirrel.to_string_lossy().ends_with(".sock"));
     }
-}
 
-#[test]
-#[serial_test::serial]
-fn test_xdg_runtime_strategy() {
-    let _guard = biomeos_test_utils::TestEnvGuard::set("XDG_RUNTIME_DIR", "/run/user/1000");
+    #[test]
+    fn test_xdg_runtime_strategy() {
+        let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
+        let socket = nucleation.assign_socket_with_runtime_dir(
+            "beardog",
+            "test_family",
+            Some(std::path::Path::new("/run/user/1000")),
+        );
 
-    let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
-    let socket = nucleation.assign_socket("beardog", "test_family");
+        assert!(socket.to_string_lossy().contains("/run/user/1000/biomeos/"));
+        assert!(socket.to_string_lossy().contains("beardog-test_family"));
+        assert!(socket.to_string_lossy().ends_with(".sock"));
+    }
 
-    assert!(socket.to_string_lossy().contains("/run/user/1000/biomeos/"));
-    assert!(socket.to_string_lossy().contains("beardog-test_family"));
-    assert!(socket.to_string_lossy().ends_with(".sock"));
-}
+    #[test]
+    fn test_xdg_runtime_fallback_to_tmp() {
+        let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
+        let socket = nucleation.assign_socket_with_runtime_dir("songbird", "test-family", None);
 
-#[test]
-#[serial_test::serial]
-fn test_xdg_runtime_fallback_to_tmp() {
-    let _guard = biomeos_test_utils::TestEnvGuard::remove("XDG_RUNTIME_DIR");
-
-    let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
-    let socket = nucleation.assign_socket("songbird", "test-family");
-
-    assert!(
-        socket.to_string_lossy().contains("/tmp/biomeos/")
-            || socket.to_string_lossy().contains("songbird-test-family")
-    );
+        assert!(
+            socket.to_string_lossy().contains("/tmp/biomeos/")
+                || socket.to_string_lossy().contains("songbird-test-family")
+        );
+    }
 }
 
 #[test]

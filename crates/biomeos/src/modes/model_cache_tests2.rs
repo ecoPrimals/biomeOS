@@ -7,9 +7,17 @@
 
 use super::*;
 use crate::ModelCacheCommand;
-use biomeos_core::model_cache::{ModelEntry, ModelFile, ModelResolution};
-use biomeos_test_utils::TestEnvGuard;
-use serial_test::serial;
+use biomeos_core::model_cache::{ModelCacheConfig, ModelEntry, ModelFile, ModelResolution};
+
+/// Same layout as [`ModelCacheConfig::from_env`] when only `HOME` is set (no `XDG_CACHE_HOME`).
+fn model_cache_config_for_home(home: &std::path::Path) -> ModelCacheConfig {
+    ModelCacheConfig {
+        cache_dir: home.join(".cache/biomeos/models"),
+        family_id: "default".to_string(),
+        gate_id: "test-gate".to_string(),
+        hf_home: Some(home.join(".cache/huggingface")),
+    }
+}
 
 #[test]
 fn nestgate_status_label_connected_when_mesh_registry_active() {
@@ -452,12 +460,10 @@ async fn test_run_register_same_model_id_twice_updates_cache() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_list_uses_home_for_default_model_cache() {
     let temp = tempfile::tempdir().expect("temp dir");
-    let home = temp.path().to_string_lossy();
-    let _guard = TestEnvGuard::set("HOME", home.as_ref());
-    let result = run(ModelCacheCommand::List).await;
+    let cfg = model_cache_config_for_home(temp.path());
+    let result = run_with_config(cfg, ModelCacheCommand::List).await;
     assert!(
         result.is_ok(),
         "production run(List) with isolated HOME should succeed: {:?}",
@@ -466,14 +472,13 @@ async fn test_run_list_uses_home_for_default_model_cache() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_status_production_uses_home_for_hf_scan() {
     let temp = tempfile::tempdir().expect("temp dir");
     let home = temp.path();
-    let _guard = TestEnvGuard::set("HOME", home.to_string_lossy().as_ref());
     let hub = home.join(".cache/huggingface/hub");
     std::fs::create_dir_all(hub.join("models--org--model-xyz")).expect("hf hub layout");
-    let result = run(ModelCacheCommand::Status).await;
+    let cfg = model_cache_config_for_home(home);
+    let result = run_with_config(cfg, ModelCacheCommand::Status).await;
     assert!(
         result.is_ok(),
         "production run(Status) with HF cache under HOME: {:?}",
@@ -482,13 +487,15 @@ async fn test_run_status_production_uses_home_for_hf_scan() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_resolve_production_not_found() {
     let temp = tempfile::tempdir().expect("temp dir");
-    let _guard = TestEnvGuard::set("HOME", temp.path().to_string_lossy().as_ref());
-    let result = run(ModelCacheCommand::Resolve {
-        model_id: "no/such/model-for-run-test".to_string(),
-    })
+    let cfg = model_cache_config_for_home(temp.path());
+    let result = run_with_config(
+        cfg,
+        ModelCacheCommand::Resolve {
+            model_id: "no/such/model-for-run-test".to_string(),
+        },
+    )
     .await;
     assert!(result.is_ok(), "resolve NotFound path: {:?}", result.err());
 }
@@ -527,12 +534,10 @@ async fn test_resolve_model_with_nested_files() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_import_hf_production_shows_already_cached_section() {
     let temp = tempfile::tempdir().expect("temp");
     let home = temp.path();
-    let _guard = TestEnvGuard::set("HOME", home.to_string_lossy().as_ref());
-    let cache_dir = home.join(".biomeos/model-cache");
+    let cache_dir = home.join(".cache/biomeos/models");
     std::fs::create_dir_all(&cache_dir).expect("cache");
 
     let model_dir = temp.path().join("pre-for-import-prod");
@@ -553,7 +558,8 @@ async fn test_run_import_hf_production_shows_already_cached_section() {
     let hub = home.join(".cache/huggingface/hub");
     std::fs::create_dir_all(&hub).expect("hub");
 
-    let result = run(ModelCacheCommand::ImportHf).await;
+    let cfg = model_cache_config_for_home(home);
+    let result = run_with_config(cfg, ModelCacheCommand::ImportHf).await;
     assert!(
         result.is_ok(),
         "production ImportHf with prior cache: {:?}",
@@ -562,12 +568,10 @@ async fn test_run_import_hf_production_shows_already_cached_section() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_import_hf_production_imports_from_default_hf_hub_layout() {
     let temp = tempfile::tempdir().expect("temp");
     let home = temp.path();
-    let _guard = TestEnvGuard::set("HOME", home.to_string_lossy().as_ref());
-    let cache_dir = home.join(".biomeos/model-cache");
+    let cache_dir = home.join(".cache/biomeos/models");
     std::fs::create_dir_all(&cache_dir).expect("cache");
 
     let hub = home.join(".cache/huggingface/hub");
@@ -578,7 +582,8 @@ async fn test_run_import_hf_production_imports_from_default_hf_hub_layout() {
     std::fs::create_dir_all(&snap).expect("hf layout");
     std::fs::write(snap.join("config.json"), "{}").expect("config");
 
-    let result = run(ModelCacheCommand::ImportHf).await;
+    let cfg = model_cache_config_for_home(home);
+    let result = run_with_config(cfg, ModelCacheCommand::ImportHf).await;
     assert!(
         result.is_ok(),
         "production ImportHf from ~/.cache/huggingface/hub: {:?}",
@@ -587,12 +592,10 @@ async fn test_run_import_hf_production_imports_from_default_hf_hub_layout() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_resolve_production_local_entry() {
     let temp = tempfile::tempdir().expect("temp");
     let home = temp.path();
-    let _guard = TestEnvGuard::set("HOME", home.to_string_lossy().as_ref());
-    let cache_dir = home.join(".biomeos/model-cache");
+    let cache_dir = home.join(".cache/biomeos/models");
     std::fs::create_dir_all(&cache_dir).expect("cache");
 
     let model_dir = temp.path().join("resolve-prod-model");
@@ -610,9 +613,13 @@ async fn test_run_resolve_production_local_entry() {
     .await
     .expect("register");
 
-    let result = run(ModelCacheCommand::Resolve {
-        model_id: "test/resolve-production-local".to_string(),
-    })
+    let cfg = model_cache_config_for_home(home);
+    let result = run_with_config(
+        cfg,
+        ModelCacheCommand::Resolve {
+            model_id: "test/resolve-production-local".to_string(),
+        },
+    )
     .await;
     assert!(
         result.is_ok(),
@@ -622,15 +629,14 @@ async fn test_run_resolve_production_local_entry() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_status_production_hf_unregistered_count_and_hint() {
     let temp = tempfile::tempdir().expect("temp");
     let home = temp.path();
-    let _guard = TestEnvGuard::set("HOME", home.to_string_lossy().as_ref());
     let hub = home.join(".cache/huggingface/hub");
     std::fs::create_dir_all(hub.join("models--orphan--model-xyz")).expect("hf model dir");
 
-    let result = run(ModelCacheCommand::Status).await;
+    let cfg = model_cache_config_for_home(home);
+    let result = run_with_config(cfg, ModelCacheCommand::Status).await;
     assert!(
         result.is_ok(),
         "production status with unregistered HF dirs: {:?}",
@@ -639,22 +645,23 @@ async fn test_run_status_production_hf_unregistered_count_and_hint() {
 }
 
 #[tokio::test]
-#[serial]
 async fn test_run_register_production_success_path() {
     let temp = tempfile::tempdir().expect("temp");
     let home = temp.path();
-    let _guard = TestEnvGuard::set("HOME", home.to_string_lossy().as_ref());
-    let cache_dir = home.join(".biomeos/model-cache");
-    std::fs::create_dir_all(&cache_dir).expect("cache");
+    std::fs::create_dir_all(home.join(".cache/biomeos/models")).expect("cache");
 
     let model_dir = temp.path().join("register-prod-model");
     std::fs::create_dir_all(&model_dir).expect("create");
     std::fs::write(model_dir.join("config.json"), "{}").expect("write");
 
-    let result = run(ModelCacheCommand::Register {
-        model_id: "test/register-production-path".to_string(),
-        path: model_dir,
-    })
+    let cfg = model_cache_config_for_home(home);
+    let result = run_with_config(
+        cfg,
+        ModelCacheCommand::Register {
+            model_id: "test/register-production-path".to_string(),
+            path: model_dir,
+        },
+    )
     .await;
     assert!(result.is_ok(), "production register: {:?}", result.err());
 }

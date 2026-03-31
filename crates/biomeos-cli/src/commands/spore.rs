@@ -287,8 +287,19 @@ pub async fn handle_spore_list() -> Result<()> {
     Ok(())
 }
 
-/// Discover `plasmidBin` directory via env override, explicit path, or workspace-relative default.
-fn discover_plasmid_dir() -> Result<PathBuf> {
+pub(super) fn discover_plasmid_dir_with_override(
+    plasmid_override: Option<&Path>,
+) -> Result<PathBuf> {
+    if let Some(path) = plasmid_override {
+        if path.exists() {
+            return Ok(path.to_path_buf());
+        }
+        return Err(anyhow::anyhow!(
+            "plasmidBin not found at {}",
+            path.display()
+        ));
+    }
+
     if let Ok(p) = std::env::var("BIOMEOS_PLASMID_DIR") {
         let path = PathBuf::from(p);
         if path.exists() {
@@ -309,6 +320,23 @@ fn discover_plasmid_dir() -> Result<PathBuf> {
 
 /// Refresh spore binaries from plasmidBin
 pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
+    handle_spore_refresh_impl(mount, dry_run, None).await
+}
+
+#[cfg(test)]
+pub async fn handle_spore_refresh_with_plasmid_dir(
+    mount: PathBuf,
+    dry_run: bool,
+    plasmid_dir: PathBuf,
+) -> Result<()> {
+    handle_spore_refresh_impl(mount, dry_run, Some(plasmid_dir)).await
+}
+
+async fn handle_spore_refresh_impl(
+    mount: PathBuf,
+    dry_run: bool,
+    plasmid_override: Option<PathBuf>,
+) -> Result<()> {
     use biomeos_spore::refresh::SporeRefresher;
     use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
 
@@ -327,7 +355,7 @@ pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
     println!("Spore: {}", mount.display());
     println!();
 
-    let nucleus_path = discover_plasmid_dir()?;
+    let nucleus_path = discover_plasmid_dir_with_override(plasmid_override.as_deref())?;
 
     let refresher = SporeRefresher::from_nucleus(&nucleus_path)?;
 

@@ -368,7 +368,7 @@ impl MetricsCollector {
 impl MetricsCollector {
     /// Record a node-level execution for metrics aggregation.
     /// Call with the same `graph_name` used in `record_execution` for this run.
-    pub fn record_node_execution(&self, params: NodeExecutionParams<'_>) -> Result<()> {
+    pub fn record_node_execution(&self, params: &NodeExecutionParams<'_>) -> Result<()> {
         let record = NodeExecutionRecord {
             graph_name: params.graph_name.to_string(),
             node_id: params.node_id.to_string(),

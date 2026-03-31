@@ -13,8 +13,6 @@ use super::engine::SocketDiscovery;
 use super::result::DiscoveryMethod;
 use super::strategy::DiscoveryStrategy;
 use super::transport::TransportEndpoint;
-use biomeos_test_utils::TestEnvGuard;
-use serial_test::serial;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -708,7 +706,6 @@ async fn discover_capability_unknown_emits_none_without_taxonomy() {
 }
 
 /// Tier 2 TCP fallback: `try_tcp_fallback` uses `{PRIMAL}_TCP` when Tier 1 finds nothing.
-#[serial]
 #[tokio::test]
 async fn test_discover_with_fallback_tcp_env_chain_after_tier1_miss() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
@@ -721,7 +718,6 @@ async fn test_discover_with_fallback_tcp_env_chain_after_tier1_miss() {
 
     let primal = "tcpfbprimal";
     let tcp_val = format!("127.0.0.1:{port}");
-    let _tcp_env = TestEnvGuard::set("TCPFBPRIMAL_TCP", &tcp_val);
     let strategy = DiscoveryStrategy {
         check_env_hints: false,
         use_xdg_runtime: false,
@@ -732,7 +728,9 @@ async fn test_discover_with_fallback_tcp_env_chain_after_tier1_miss() {
         ..Default::default()
     };
     let discovery = SocketDiscovery::with_strategy("tfam", strategy);
-    let ep = discovery.discover_with_fallback(primal).await;
+    let ep = discovery
+        .discover_with_fallback_with_env_overrides(primal, None, Some(tcp_val.as_str()))
+        .await;
     assert!(ep.is_some());
     assert!(
         matches!(ep.unwrap(), TransportEndpoint::TcpSocket { .. }),
@@ -741,7 +739,6 @@ async fn test_discover_with_fallback_tcp_env_chain_after_tier1_miss() {
 }
 
 /// `try_tcp_fallback` accepts bare port in `{PRIMAL}_TCP` using `tcp_fallback_host`.
-#[serial]
 #[tokio::test]
 async fn test_discover_with_fallback_tcp_port_only_env_uses_fallback_host() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
@@ -753,7 +750,6 @@ async fn test_discover_with_fallback_tcp_port_only_env_uses_fallback_host() {
     });
 
     let port_s = port.to_string();
-    let _tcp_env = TestEnvGuard::set("PORTONLYX_TCP", &port_s);
     let strategy = DiscoveryStrategy {
         check_env_hints: false,
         use_xdg_runtime: false,
@@ -765,7 +761,9 @@ async fn test_discover_with_fallback_tcp_port_only_env_uses_fallback_host() {
         ..Default::default()
     };
     let discovery = SocketDiscovery::with_strategy("pfam", strategy);
-    let ep = discovery.discover_with_fallback("portonlyx").await;
+    let ep = discovery
+        .discover_with_fallback_with_env_overrides("portonlyx", None, Some(port_s.as_str()))
+        .await;
     assert!(ep.is_some());
 }
 

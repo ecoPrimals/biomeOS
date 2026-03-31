@@ -37,15 +37,26 @@ pub const DEFAULT_BROADCAST_DISCOVERY_PORT: u16 = 9199;
 /// Default dev server port (common Flask/alternative HTTP fallback)
 pub const DEFAULT_DEV_PORT: u16 = 5000;
 
+/// HTTP port from an optional value (same parse rules as the `HTTP_PORT` env var).
+#[must_use]
+pub fn http_port_from(val: Option<&str>) -> u16 {
+    val.and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_HTTP_PORT)
+}
+
 /// Get HTTP port from environment or fallback to default
 ///
 /// Checks `HTTP_PORT` environment variable first.
 #[must_use]
 pub fn http_port() -> u16 {
-    env::var(env_vars::HTTP_PORT)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(DEFAULT_HTTP_PORT)
+    http_port_from(env::var(env_vars::HTTP_PORT).ok().as_deref())
+}
+
+/// HTTPS port from an optional value (same parse rules as the `HTTPS_PORT` env var).
+#[must_use]
+pub fn https_port_from(val: Option<&str>) -> u16 {
+    val.and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_HTTPS_PORT)
 }
 
 /// Get HTTPS port from environment or fallback to default
@@ -53,10 +64,13 @@ pub fn http_port() -> u16 {
 /// Checks `HTTPS_PORT` environment variable first.
 #[must_use]
 pub fn https_port() -> u16 {
-    env::var(env_vars::HTTPS_PORT)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(DEFAULT_HTTPS_PORT)
+    https_port_from(env::var(env_vars::HTTPS_PORT).ok().as_deref())
+}
+
+/// WebSocket port from an optional value (same parse rules as the `WEBSOCKET_PORT` env var).
+#[must_use]
+pub fn websocket_port_from(val: Option<&str>) -> u16 {
+    val.and_then(|v| v.parse().ok()).unwrap_or(DEFAULT_WS_PORT)
 }
 
 /// Get WebSocket port from environment or fallback to default
@@ -64,10 +78,13 @@ pub fn https_port() -> u16 {
 /// Checks `WEBSOCKET_PORT` environment variable first.
 #[must_use]
 pub fn websocket_port() -> u16 {
-    env::var(env_vars::WEBSOCKET_PORT)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(DEFAULT_WS_PORT)
+    websocket_port_from(env::var(env_vars::WEBSOCKET_PORT).ok().as_deref())
+}
+
+/// MCP port from an optional value (same parse rules as `MCP_WEBSOCKET_PORT` / `MCP_PORT`).
+#[must_use]
+pub fn mcp_port_from(val: Option<&str>) -> u16 {
+    val.and_then(|v| v.parse().ok()).unwrap_or(DEFAULT_MCP_PORT)
 }
 
 /// Get MCP port from environment or fallback to default
@@ -75,11 +92,19 @@ pub fn websocket_port() -> u16 {
 /// Checks `MCP_PORT` or `MCP_WEBSOCKET_PORT` environment variable first.
 #[must_use]
 pub fn mcp_port() -> u16 {
-    env::var(env_vars::MCP_WEBSOCKET_PORT)
-        .or_else(|_| env::var("MCP_PORT"))
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(DEFAULT_MCP_PORT)
+    mcp_port_from(
+        env::var(env_vars::MCP_WEBSOCKET_PORT)
+            .or_else(|_| env::var("MCP_PORT"))
+            .ok()
+            .as_deref(),
+    )
+}
+
+/// Discovery port from an optional value (same parse rules as `DISCOVERY_PORT`).
+#[must_use]
+pub fn discovery_port_from(val: Option<&str>) -> u16 {
+    val.and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_DISCOVERY_PORT)
 }
 
 /// Get discovery port from environment or fallback to default
@@ -87,10 +112,14 @@ pub fn mcp_port() -> u16 {
 /// Checks `DISCOVERY_PORT` environment variable first.
 #[must_use]
 pub fn discovery_port() -> u16 {
-    env::var("DISCOVERY_PORT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(DEFAULT_DISCOVERY_PORT)
+    discovery_port_from(env::var("DISCOVERY_PORT").ok().as_deref())
+}
+
+/// BearDog port from an optional value (same parse rules as `BEARDOG_PORT`).
+#[must_use]
+pub fn beardog_port_from(val: Option<&str>) -> u16 {
+    val.and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_BEARDOG_PORT)
 }
 
 /// Get `BearDog` port from environment or fallback to default
@@ -98,10 +127,14 @@ pub fn discovery_port() -> u16 {
 /// Checks `BEARDOG_PORT` environment variable first.
 #[must_use]
 pub fn beardog_port() -> u16 {
-    env::var(env_vars::BEARDOG_PORT)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(DEFAULT_BEARDOG_PORT)
+    beardog_port_from(env::var(env_vars::BEARDOG_PORT).ok().as_deref())
+}
+
+/// Songbird port from an optional value (same parse rules as `SONGBIRD_PORT` / MCP env vars).
+#[must_use]
+pub fn songbird_port_from(val: Option<&str>) -> u16 {
+    val.and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_SONGBIRD_PORT)
 }
 
 /// Get Songbird port from environment or fallback to default
@@ -109,12 +142,13 @@ pub fn beardog_port() -> u16 {
 /// Checks `SONGBIRD_PORT` or `MCP_PORT` environment variable first.
 #[must_use]
 pub fn songbird_port() -> u16 {
-    env::var(env_vars::SONGBIRD_PORT)
-        .or_else(|_| env::var(env_vars::MCP_WEBSOCKET_PORT))
-        .or_else(|_| env::var("MCP_PORT"))
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(DEFAULT_SONGBIRD_PORT)
+    songbird_port_from(
+        env::var(env_vars::SONGBIRD_PORT)
+            .or_else(|_| env::var(env_vars::MCP_WEBSOCKET_PORT))
+            .or_else(|_| env::var("MCP_PORT"))
+            .ok()
+            .as_deref(),
+    )
 }
 
 /// Link local address range

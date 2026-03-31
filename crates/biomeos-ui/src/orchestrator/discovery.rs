@@ -44,7 +44,22 @@ pub fn resolve_capability_provider(
     env_var: &str,
     capability: &CapabilityTaxonomy,
 ) -> Option<String> {
-    resolve_provider(std::env::var(env_var).ok(), capability)
+    resolve_capability_provider_with(env_var, capability, None)
+}
+
+/// Like [`resolve_capability_provider`], with an optional value instead of reading `env_var`.
+#[must_use]
+pub fn resolve_capability_provider_with(
+    env_var: &str,
+    capability: &CapabilityTaxonomy,
+    env_override: Option<&str>,
+) -> Option<String> {
+    resolve_provider(
+        env_override
+            .map(String::from)
+            .or_else(|| std::env::var(env_var).ok()),
+        capability,
+    )
 }
 
 fn resolve_provider(env_value: Option<String>, capability: &CapabilityTaxonomy) -> Option<String> {
@@ -70,13 +85,21 @@ impl Discovery {
     /// DEEP DEBT EVOLUTION: Uses dynamic socket scanning instead of hardcoded list.
     /// Discovers ANY primal with a socket in the runtime directory.
     pub async fn discover_primals() -> Result<DiscoveryResult> {
-        info!("Discovering primals via dynamic socket scanning...");
-
         let family_id = std::env::var("FAMILY_ID")
             .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
             .unwrap_or_else(|_| "default".to_string());
+        Self::discover_primals_with(&family_id, None).await
+    }
 
-        let connections = PrimalConnections::discover_all(&family_id).await;
+    /// Discover primals with optional XDG runtime parent (tests) and explicit `family_id`.
+    pub async fn discover_primals_with(
+        family_id: &str,
+        xdg_runtime_parent: Option<&std::path::Path>,
+    ) -> Result<DiscoveryResult> {
+        info!("Discovering primals via dynamic socket scanning...");
+
+        let connections =
+            PrimalConnections::discover_all_with_xdg(family_id, xdg_runtime_parent).await;
 
         let discovered_count = connections.count_available();
         info!(

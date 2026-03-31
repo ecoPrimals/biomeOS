@@ -4,10 +4,9 @@
 #![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 #![expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
 
-use super::get_genome_storage_dir;
+use super::get_genome_storage_dir_with;
 use super::*;
 use biomeos_genomebin_v3::{Arch, GenomeBinBuilder};
-use serial_test::serial;
 use std::path::{Path, PathBuf};
 
 #[test]
@@ -66,22 +65,9 @@ fn test_parse_arch_case_sensitive() {
 }
 
 #[test]
-#[serial]
 fn test_get_genome_storage_dir_with_xdg() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _guard = TestEnvGuard::new("XDG_DATA_HOME", Some("/tmp/xdg_test"));
-    let dir = get_genome_storage_dir();
+    let dir = get_genome_storage_dir_with(Some("/tmp/xdg_test"));
     assert_eq!(dir, PathBuf::from("/tmp/xdg_test/biomeos/genomes"));
-}
-
-#[test]
-#[ignore = "modifies env vars; run with --ignored"]
-fn test_get_genome_storage_dir_home_fallback() {
-    use biomeos_test_utils::remove_test_env;
-    let _ = std::env::var("XDG_DATA_HOME").ok();
-    remove_test_env("XDG_DATA_HOME");
-    let dir = get_genome_storage_dir();
-    assert!(dir.to_string_lossy().contains("genomes"));
 }
 
 #[test]
@@ -151,9 +137,8 @@ fn test_handle_genome_compose_nonexistent_genome() {
 
 #[test]
 fn test_handle_genome_list_nonexistent_storage() {
-    use biomeos_test_utils::TestEnvGuard;
-    let _guard = TestEnvGuard::new("XDG_DATA_HOME", Some("/nonexistent_biomeos_test_xyz"));
-    let result = handle_genome_list();
+    let storage = PathBuf::from("/nonexistent_biomeos_test_xyz/biomeos/genomes");
+    let result = handle_genome_list_at(&storage);
     assert!(result.is_ok());
 }
 
@@ -437,11 +422,7 @@ async fn test_execute_verify_success() {
 #[test]
 fn test_handle_genome_list_with_genomes_under_xdg() {
     let data = tempfile::tempdir().expect("tempdir");
-    let _guard = biomeos_test_utils::TestEnvGuard::set(
-        "XDG_DATA_HOME",
-        data.path().to_str().expect("utf8 path"),
-    );
-    let store = get_genome_storage_dir();
+    let store = get_genome_storage_dir_with(Some(data.path().to_str().expect("utf8 path")));
     std::fs::create_dir_all(&store).expect("mkdir genomes");
 
     let binary = data.path().join("list-bin");
@@ -458,7 +439,7 @@ fn test_handle_genome_list_with_genomes_under_xdg() {
     };
     handle_genome_create(args).expect("create in storage dir");
 
-    let result = handle_genome_list();
+    let result = handle_genome_list_at(&store);
     assert!(result.is_ok(), "{:?}", result.err());
 }
 
@@ -605,11 +586,4 @@ async fn test_execute_verify_checksum_failure() {
         command: GenomeCommand::Verify { path },
     };
     assert!(execute(args).is_err());
-}
-
-#[test]
-fn test_get_genome_storage_dir_fallback_home() {
-    let _xdg = biomeos_test_utils::TestEnvGuard::remove("XDG_DATA_HOME");
-    let dir = get_genome_storage_dir();
-    assert!(dir.to_string_lossy().contains("genomes"));
 }

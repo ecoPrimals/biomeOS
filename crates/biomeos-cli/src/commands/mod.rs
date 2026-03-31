@@ -28,7 +28,10 @@ pub use monitor::{handle_dashboard, handle_exec, handle_logs, handle_monitor, ha
 pub use utils::{create_spinner, display_results, parse_capabilities};
 
 // Chimera commands
-pub use chimera::{handle_chimera_build, handle_chimera_list, handle_chimera_show};
+pub use chimera::{
+    handle_chimera_build, handle_chimera_build_at, handle_chimera_list, handle_chimera_list_at,
+    handle_chimera_show, handle_chimera_show_at,
+};
 
 // Niche commands
 pub use niche::{handle_niche_list, handle_niche_show, handle_primal_list};
@@ -43,7 +46,7 @@ pub use spore::{
 pub use verify::run as verify_run;
 
 // Fossil commands
-pub use fossil::run as fossil_run;
+pub use fossil::{run as fossil_run, run_at as fossil_run_at};
 
 // Incubation commands
 pub use incubation::{handle_node_list_local, handle_spore_incubate};
@@ -57,6 +60,7 @@ pub use federation::{
 // Genome commands
 pub use genome::{
     ComposeArgs as GenomeComposeArgs, CreateArgs as GenomeCreateArgs,
-    VerifyArgs as GenomeVerifyArgs, handle_genome_compose, handle_genome_create,
-    handle_genome_list, handle_genome_self_replicate, handle_genome_verify,
+    VerifyArgs as GenomeVerifyArgs, get_genome_storage_dir_with, handle_genome_compose,
+    handle_genome_create, handle_genome_list, handle_genome_list_at, handle_genome_self_replicate,
+    handle_genome_verify,
 };

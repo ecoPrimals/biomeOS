@@ -15,7 +15,7 @@ use tokio::time::{Duration, sleep};
 use tracing::{debug, info};
 
 /// Primal instance information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PrimalInstance {
     /// Primal name (e.g., beardog, songbird)
     pub primal_name: String,
@@ -25,6 +25,22 @@ pub struct PrimalInstance {
     pub socket_path: PathBuf,
     /// When the primal was started
     pub started_at: chrono::DateTime<chrono::Utc>,
+    /// Owning handle for the spawned process (not serialized).
+    /// The orchestrator keeps this alive for the lifetime of the deployment.
+    #[serde(skip)]
+    pub child: Option<tokio::process::Child>,
+}
+
+impl Clone for PrimalInstance {
+    fn clone(&self) -> Self {
+        Self {
+            primal_name: self.primal_name.clone(),
+            pid: self.pid,
+            socket_path: self.socket_path.clone(),
+            started_at: self.started_at,
+            child: None,
+        }
+    }
 }
 
 impl PrimalInstance {
@@ -121,14 +137,12 @@ impl PrimalLauncher {
         self.wait_for_socket(&socket_path_buf, Duration::from_secs(5))
             .await?;
 
-        // Detach child (let it run independently)
-        std::mem::forget(child);
-
         Ok(PrimalInstance {
             primal_name: primal_name.to_string(),
             pid,
             socket_path: socket_path_buf,
             started_at: chrono::Utc::now(),
+            child: Some(child),
         })
     }
 
@@ -260,6 +274,7 @@ mod tests {
             pid: 12345,
             socket_path: PathBuf::from("/tmp/test.sock"),
             started_at: chrono::Utc::now(),
+            child: None,
         };
 
         // Test JSON round-trip
@@ -278,6 +293,7 @@ mod tests {
             pid: 1,
             socket_path: PathBuf::from("/tmp/test.sock"),
             started_at: chrono::Utc::now() - chrono::Duration::seconds(10),
+            child: None,
         };
 
         let uptime = instance.uptime();

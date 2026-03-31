@@ -79,6 +79,14 @@ enum Mode {
         /// Unix socket path
         #[arg(long)]
         socket: Option<PathBuf>,
+
+        /// TCP port for mobile/cross-gate orchestration (alongside UDS by default)
+        #[arg(long)]
+        port: Option<u16>,
+
+        /// TCP-only mode: skip Unix socket, bind TCP only (mobile substrates)
+        #[arg(long, requires = "port")]
+        tcp_only: bool,
     },
 
     /// Deploy mode - Execute deployment graph
@@ -356,6 +364,8 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             graphs_dir,
             family_id,
             socket,
+            port,
+            tcp_only,
         } => {
             let config = modes::neural_api::resolve_neural_api_config(
                 graphs_dir,
@@ -366,6 +376,8 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 config.graphs_dir,
                 config.family_id,
                 Some(config.socket_path),
+                port,
+                tcp_only,
             )
             .await
         }

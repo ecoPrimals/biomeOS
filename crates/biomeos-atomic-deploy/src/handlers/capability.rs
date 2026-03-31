@@ -31,6 +31,7 @@
 //! first dot; `"params"` accepted as alias for `"args"`.
 
 use crate::capability_translation::CapabilityTranslationRegistry;
+use crate::gate_registry::GateRegistry;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
@@ -47,18 +48,28 @@ pub struct CapabilityHandler {
 
     /// Capability Translation Registry
     translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
+
+    /// Gate registry for cross-gate capability forwarding
+    gate_registry: Arc<GateRegistry>,
 }
 
 impl CapabilityHandler {
     /// Create a new capability handler.
-    pub const fn new(
+    pub fn new(
         router: Arc<NeuralRouter>,
         translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
     ) -> Self {
         Self {
             router,
             translation_registry,
+            gate_registry: Arc::new(GateRegistry::new()),
         }
+    }
+
+    /// Create a capability handler with a gate registry for cross-gate routing.
+    pub fn with_gate_registry(mut self, registry: Arc<GateRegistry>) -> Self {
+        self.gate_registry = registry;
+        self
     }
 
     /// Discover primals that provide a capability.
@@ -548,6 +559,34 @@ impl CapabilityHandler {
             .or_else(|| params.get("params"))
             .cloned()
             .unwrap_or(json!({}));
+
+        // Cross-gate routing: if `gate` is specified and resolves to a remote
+        // endpoint, forward the entire capability.call to that gate's biomeOS
+        // Neural API instead of routing locally.
+        if let Some(gate_name) = params["gate"].as_str() {
+            if let Some(remote_endpoint) = self.gate_registry.resolve(gate_name) {
+                let semantic_name = format!("{capability}.{operation}");
+                debug!(
+                    "   🌉 Cross-gate routing: {semantic_name} → gate '{gate_name}' @ {}",
+                    remote_endpoint.display_string()
+                );
+
+                let remote_call = json!({
+                    "capability": capability,
+                    "operation": operation,
+                    "args": args,
+                });
+
+                let result = self
+                    .router
+                    .forward_request(remote_endpoint, "capability.call", &remote_call)
+                    .await?;
+
+                let latency = start.elapsed().as_millis();
+                trace!("   ✓ {semantic_name} completed in {latency}ms via gate '{gate_name}'");
+                return Ok(result);
+            }
+        }
 
         trace!("capability.call: {}.{}", capability, &operation);
 

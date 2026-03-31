@@ -218,7 +218,7 @@ async fn test_record_node_execution_and_get_node_metrics() {
         duration_ms: 50,
         error: None,
     };
-    collector.record_node_execution(params).unwrap();
+    collector.record_node_execution(&params).unwrap();
 
     let params_fail = NodeExecutionParams {
         execution_id: 42,
@@ -230,7 +230,7 @@ async fn test_record_node_execution_and_get_node_metrics() {
         duration_ms: 10,
         error: Some("boom"),
     };
-    collector.record_node_execution(params_fail).unwrap();
+    collector.record_node_execution(&params_fail).unwrap();
 
     let agg = collector
         .get_node_metrics("g1", "n1")
@@ -480,7 +480,7 @@ async fn test_record_node_execution_colon_in_graph_and_node_ids() {
         duration_ms: 7,
         error: None,
     };
-    collector.record_node_execution(params).unwrap();
+    collector.record_node_execution(&params).unwrap();
 
     let agg = collector
         .get_node_metrics("ns:graph:name", "node:with:colons")
@@ -506,7 +506,7 @@ async fn test_record_node_execution_error_field_and_failure() {
         duration_ms: 3,
         error: Some("node failed hard"),
     };
-    collector.record_node_execution(params).unwrap();
+    collector.record_node_execution(&params).unwrap();
 
     let agg = collector
         .get_node_metrics("ge", "n_err")

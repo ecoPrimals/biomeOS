@@ -18,6 +18,30 @@ use super::types::{Device, DeviceStatus, DeviceType, ManagedPrimal, PrimalStatus
 /// Default interval between /proc/stat reads for CPU usage (100ms).
 pub const DEFAULT_CPU_SAMPLE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 
+/// Resolve effective UID for `/run/user/{uid}` without a hardcoded default.
+/// Returns `None` if the UID cannot be determined (skip `/run/user` discovery).
+fn effective_unix_uid_string() -> Option<String> {
+    if let Ok(u) = std::env::var("UID") {
+        if !u.is_empty() {
+            return Some(u);
+        }
+    }
+    if let Ok(u) = std::env::var("EUID") {
+        if !u.is_empty() {
+            return Some(u);
+        }
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        return std::fs::metadata("/proc/self")
+            .ok()
+            .map(|m| m.uid().to_string());
+    }
+    #[cfg(not(unix))]
+    None
+}
+
 /// Discover all devices from the system (GPU, CPU, storage, network).
 pub async fn discover_devices() -> Result<Vec<Device>> {
     let mut devices = Vec::new();
@@ -269,40 +293,43 @@ pub async fn discover_network() -> Result<Vec<Device>> {
 pub async fn discover_primals() -> Result<Vec<ManagedPrimal>> {
     let mut primals = Vec::new();
 
-    let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
-    let socket_dir = format!("/run/user/{uid}");
+    if let Some(uid) = effective_unix_uid_string() {
+        let socket_dir = format!("/run/user/{uid}");
 
-    if let Ok(mut entries) = tokio::fs::read_dir(&socket_dir).await {
-        while let Ok(Some(entry)) = entries.next_entry().await {
-            if let Some(name) = entry.file_name().to_str()
-                && std::path::Path::new(name)
-                    .extension()
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
-            {
-                let socket_path = format!("{socket_dir}/{name}");
+        if let Ok(mut entries) = tokio::fs::read_dir(&socket_dir).await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                if let Some(name) = entry.file_name().to_str()
+                    && std::path::Path::new(name)
+                        .extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+                {
+                    let socket_path = format!("{socket_dir}/{name}");
 
-                let primal_name = query_primal_identity(&socket_path).await;
-                let primal_id = primal_name.to_lowercase();
+                    let primal_name = query_primal_identity(&socket_path).await;
+                    let primal_id = primal_name.to_lowercase();
 
-                let (health, load, status) = probe_primal_health(&socket_path).await;
+                    let (health, load, status) = probe_primal_health(&socket_path).await;
 
-                let capabilities = get_primal_capabilities(&socket_path).await;
+                    let capabilities = get_primal_capabilities(&socket_path).await;
 
-                primals.push(ManagedPrimal {
-                    id: primal_id.clone(),
-                    name: primal_name,
-                    status,
-                    health,
-                    load,
-                    capabilities,
-                    assigned_devices: vec![],
-                    metadata: serde_json::json!({
-                        "socket": name,
-                        "discovered_at": chrono::Utc::now().to_rfc3339()
-                    }),
-                });
+                    primals.push(ManagedPrimal {
+                        id: primal_id.clone(),
+                        name: primal_name,
+                        status,
+                        health,
+                        load,
+                        capabilities,
+                        assigned_devices: vec![],
+                        metadata: serde_json::json!({
+                            "socket": name,
+                            "discovered_at": chrono::Utc::now().to_rfc3339()
+                        }),
+                    });
+                }
             }
         }
+    } else {
+        warn!("Skipping /run/user primal socket scan: could not determine UID");
     }
 
     primals.push(ManagedPrimal {

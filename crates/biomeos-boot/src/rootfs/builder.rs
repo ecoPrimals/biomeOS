@@ -19,17 +19,22 @@ use super::nbd::NbdGuard;
 pub struct RootFsBuilder {
     /// Configuration
     pub(crate) config: RootFsConfig,
+    /// NBD guard for the mounted image (held until [`Self::unmount_image`]).
+    nbd_mount_guard: Option<NbdGuard>,
 }
 
 impl RootFsBuilder {
     /// Create a new root filesystem builder
     #[must_use]
-    pub const fn new(config: RootFsConfig) -> Self {
-        Self { config }
+    pub fn new(config: RootFsConfig) -> Self {
+        Self {
+            config,
+            nbd_mount_guard: None,
+        }
     }
 
     /// Build the complete root filesystem
-    pub async fn build(&self) -> Result<PathBuf> {
+    pub async fn build(&mut self) -> Result<PathBuf> {
         info!("🏗️  Building BiomeOS root filesystem");
         info!("  Output: {}", self.config.output.display());
         info!("  Size: {}", self.config.size);
@@ -51,7 +56,7 @@ impl RootFsBuilder {
         }
 
         self.configure_system(&mount_point)?;
-        Self::unmount_image(&mount_point)?;
+        self.unmount_image(&mount_point)?;
 
         info!("✅ Root filesystem built: {}", self.config.output.display());
         Ok(self.config.output.clone())
@@ -100,7 +105,7 @@ impl RootFsBuilder {
     }
 
     /// Mount the filesystem image using RAII NBD guard
-    fn mount_image(&self) -> Result<PathBuf> {
+    fn mount_image(&mut self) -> Result<PathBuf> {
         info!("📂 Mounting filesystem...");
 
         let nbd = NbdGuard::attach(&self.config.output)?;
@@ -129,13 +134,13 @@ impl RootFsBuilder {
 
         info!("  ✓ Mounted at {}", mount_point.display());
 
-        std::mem::forget(nbd);
+        self.nbd_mount_guard = Some(nbd);
 
         Ok(mount_point)
     }
 
     /// Unmount the filesystem and detach NBD
-    fn unmount_image(mount_point: &Path) -> Result<()> {
+    fn unmount_image(&mut self, mount_point: &Path) -> Result<()> {
         info!("📤 Unmounting filesystem...");
 
         let status = Command::new("umount")
@@ -149,17 +154,21 @@ impl RootFsBuilder {
 
         std::thread::sleep(std::time::Duration::from_millis(100));
 
-        for i in 0..16 {
-            let device = format!("/dev/nbd{i}");
-            let size_path = format!("/sys/block/nbd{i}/size");
+        if let Some(mut guard) = self.nbd_mount_guard.take() {
+            guard.detach()?;
+        } else {
+            for i in 0..16 {
+                let device = format!("/dev/nbd{i}");
+                let size_path = format!("/sys/block/nbd{i}/size");
 
-            if let Ok(mut file) = fs::File::open(&size_path) {
-                let mut contents = String::new();
-                if file.read_to_string(&mut contents).is_ok() {
-                    if let Ok(size) = contents.trim().parse::<u64>() {
-                        if size > 0 {
-                            info!("  🔓 Detaching {}", device);
-                            let _ = Command::new("qemu-nbd").args(["-d", &device]).output();
+                if let Ok(mut file) = fs::File::open(&size_path) {
+                    let mut contents = String::new();
+                    if file.read_to_string(&mut contents).is_ok() {
+                        if let Ok(size) = contents.trim().parse::<u64>() {
+                            if size > 0 {
+                                info!("  🔓 Detaching {}", device);
+                                let _ = Command::new("qemu-nbd").args(["-d", &device]).output();
+                            }
                         }
                     }
                 }

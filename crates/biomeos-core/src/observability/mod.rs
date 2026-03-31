@@ -259,6 +259,16 @@ impl MinimalObserver {
     /// Only works in `FamilyFederation` mode.
     /// Returns Ok(true) if shared, Ok(false) if not enabled.
     pub fn share_with_family(&self) -> Result<bool> {
+        self.share_with_family_using_endpoints(None, None)
+    }
+
+    /// Like [`Self::share_with_family`], but supplies optional endpoint overrides
+    /// (instead of reading `BEARDOG_ENDPOINT` / `SONGBIRD_ENDPOINT` from the environment).
+    pub fn share_with_family_using_endpoints(
+        &self,
+        beardog_endpoint: Option<&str>,
+        songbird_endpoint: Option<&str>,
+    ) -> Result<bool> {
         if self.mode != ObservabilityMode::FamilyFederation {
             debug!("📊 Family sharing not enabled (mode: {:?})", self.mode);
             return Ok(false);
@@ -280,17 +290,22 @@ impl MinimalObserver {
             family.lineage_id
         );
 
-        // Implement actual sharing via Beardog + Songbird
-        self.share_metrics_securely(&metrics, family)?;
+        self.share_metrics_securely(&metrics, family, beardog_endpoint, songbird_endpoint)?;
 
         Ok(true)
     }
 
     /// Share metrics securely via `BearDog` encryption and Songbird routing
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     fn share_metrics_securely(
         &self,
         metrics: &LocalMetrics,
         family: &FamilyObservability,
+        beardog_override: Option<&str>,
+        songbird_override: Option<&str>,
     ) -> Result<()> {
         debug!("📊 Preparing metrics for secure sharing");
 
@@ -298,7 +313,10 @@ impl MinimalObserver {
         let metrics_json = serde_json::to_string(metrics).context("Failed to serialize metrics")?;
 
         // Step 1: Encrypt via BearDog (if available)
-        let _encrypted_payload = if let Ok(beardog_endpoint) = std::env::var("BEARDOG_ENDPOINT") {
+        let beardog_resolved = beardog_override
+            .map(String::from)
+            .or_else(|| std::env::var("BEARDOG_ENDPOINT").ok());
+        let _encrypted_payload = if let Some(beardog_endpoint) = beardog_resolved {
             debug!("🔒 Encrypting metrics via BearDog at {}", beardog_endpoint);
 
             // In production, this would:
@@ -318,7 +336,10 @@ impl MinimalObserver {
         };
 
         // Step 2: Route via Songbird (if available)
-        if let Ok(songbird_endpoint) = std::env::var("SONGBIRD_ENDPOINT") {
+        let songbird_resolved = songbird_override
+            .map(String::from)
+            .or_else(|| std::env::var("SONGBIRD_ENDPOINT").ok());
+        if let Some(songbird_endpoint) = songbird_resolved {
             debug!(
                 "📡 Routing encrypted metrics via Songbird at {}",
                 songbird_endpoint
@@ -372,7 +393,6 @@ impl Default for MinimalObserver {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
 
     #[test]
     fn test_local_only_observer() {
@@ -521,35 +541,26 @@ mod tests {
         assert!(!result);
     }
 
-    static SHARE_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
     #[tokio::test]
     async fn test_share_with_family_no_beardog_fails() {
-        let _guard = SHARE_ENV_LOCK.lock().await;
-        remove_test_env("BEARDOG_ENDPOINT");
-        remove_test_env("SONGBIRD_ENDPOINT");
         let observer = MinimalObserver::family_federation(
             "family-x".to_string(),
             Some("http://localhost:8080".to_string()),
         )
         .unwrap();
-        let result = observer.share_with_family();
+        let result = observer.share_with_family_using_endpoints(None, None);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("BearDog"));
     }
 
     #[tokio::test]
     async fn test_share_with_family_beardog_but_no_songbird_fails() {
-        let _guard = SHARE_ENV_LOCK.lock().await;
-        set_test_env("BEARDOG_ENDPOINT", "/tmp/beardog.sock");
-        remove_test_env("SONGBIRD_ENDPOINT");
         let observer = MinimalObserver::family_federation(
             "family-y".to_string(),
             Some("http://localhost:8080".to_string()),
         )
         .unwrap();
-        let result = observer.share_with_family();
-        remove_test_env("BEARDOG_ENDPOINT");
+        let result = observer.share_with_family_using_endpoints(Some("/tmp/beardog.sock"), None);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Songbird"));
     }

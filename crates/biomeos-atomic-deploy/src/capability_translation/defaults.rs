@@ -7,11 +7,26 @@
 //! used when loading defaults. Providers are resolved via environment variables
 //! for runtime capability substitution.
 
+use std::collections::HashMap;
+
 use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
 use tracing::{debug, info};
 
 use super::CapabilityTranslationRegistry;
 use super::socket;
+
+fn lookup_env(
+    key: &str,
+    env_overrides: &HashMap<&str, Option<&str>>,
+) -> Result<String, std::env::VarError> {
+    if let Some(opt) = env_overrides.get(key) {
+        return match opt {
+            Some(v) => Ok((*v).to_string()),
+            None => Err(std::env::VarError::NotPresent),
+        };
+    }
+    std::env::var(key)
+}
 
 /// Method translation tuple: (`semantic_name`, `actual_method_name`)
 type MethodTranslation = (&'static str, &'static str);
@@ -24,14 +39,25 @@ type DomainProvider = (&'static str, &'static str, &'static [MethodTranslation])
 /// Resolves providers via environment variables (BIOMEOS_*_PROVIDER).
 /// When `BIOMEOS_STRICT_DISCOVERY` is set, unset providers are skipped.
 pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize {
+    load_defaults_into_with(registry, &HashMap::new())
+}
+
+/// Same as [`load_defaults_into`], but `env_overrides` supplies synthetic values for tests.
+///
+/// For each key, `Some(value)` sets the variable; `None` forces unset (no process env fallback).
+/// Keys not present in the map fall back to [`std::env::var`].
+pub fn load_defaults_into_with(
+    registry: &mut CapabilityTranslationRegistry,
+    env_overrides: &HashMap<&str, Option<&str>>,
+) -> usize {
     let family_id = biomeos_core::family_discovery::get_family_id();
     let mut count = 0;
 
     // DEEP DEBT EVOLUTION: Provider resolution is ENV-FIRST.
-    let strict = std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok();
+    let strict = lookup_env("BIOMEOS_STRICT_DISCOVERY", env_overrides).is_ok();
 
     let resolve_provider = |env_key: &str, default: &str| -> String {
-        match std::env::var(env_key) {
+        match lookup_env(env_key, env_overrides) {
             Ok(v) => v,
             Err(_) if strict => {
                 tracing::warn!(

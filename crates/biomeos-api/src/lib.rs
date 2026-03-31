@@ -205,7 +205,16 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
 ///
 /// Set `BIOMEOS_SOVEREIGN=false` to disable (development/testing only).
 pub fn create_app(state: AppState) -> Router {
-    create_app_with_transport(state, false)
+    let gate = dark_forest_gate::DarkForestGateConfig::from_env();
+    create_app_with_gate_inner(state, gate)
+}
+
+/// Create the application router with an explicit Dark Forest gate configuration.
+pub fn create_app_with_gate(
+    state: AppState,
+    gate_config: dark_forest_gate::DarkForestGateConfig,
+) -> Router {
+    create_app_with_gate_inner(state, gate_config)
 }
 
 /// Create the application router for TCP-bound mode
@@ -214,7 +223,16 @@ pub fn create_app(state: AppState) -> Router {
 /// regardless of environment variables. The system never exposes anything
 /// on a network port without lineage verification.
 pub fn create_app_for_tcp(state: AppState) -> Router {
-    create_app_with_transport(state, true)
+    let gate = dark_forest_gate::DarkForestGateConfig::from_env().force_sovereign();
+    create_app_with_gate_inner(state, gate)
+}
+
+/// TCP mode with an explicit gate config (sovereign flag is forced on).
+pub fn create_app_for_tcp_with_gate(
+    state: AppState,
+    gate_config: dark_forest_gate::DarkForestGateConfig,
+) -> Router {
+    create_app_with_gate_inner(state, gate_config.force_sovereign())
 }
 
 #[expect(
@@ -397,16 +415,12 @@ where
         .layer(RequestBodyLimitLayer::new(1024 * 1024))
 }
 
-/// Internal: create app with transport-aware security
-fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
+fn create_app_with_gate_inner(
+    state: AppState,
+    gate_config: dark_forest_gate::DarkForestGateConfig,
+) -> Router {
     let shared_state = Arc::new(state);
-
-    let mut gate_config = dark_forest_gate::DarkForestGateConfig::from_env();
-    if force_sovereign {
-        gate_config = gate_config.force_sovereign();
-    }
     let gate_state = dark_forest_gate::DarkForestGateState::new(gate_config);
-
     let router = register_api_routes(shared_state, gate_state);
     apply_security_headers(router)
 }

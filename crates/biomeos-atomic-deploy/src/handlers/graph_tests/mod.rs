@@ -20,6 +20,7 @@ pub use super::graph::{ExecutionStatus, GraphHandler};
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::neural_router::NeuralRouter;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -27,7 +28,15 @@ use tokio::sync::RwLock;
 pub fn make_handler(
     graphs_dir: &std::path::Path,
 ) -> (GraphHandler, Arc<RwLock<HashMap<String, ExecutionStatus>>>) {
-    let (handler, executions, _) = make_handler_with_registry(graphs_dir);
+    make_handler_with_metrics_db(graphs_dir, None)
+}
+
+/// Same as [`make_handler`], with an isolated neural metrics DB path (avoids shared redb locks).
+pub fn make_handler_with_metrics_db(
+    graphs_dir: &std::path::Path,
+    metrics_db_path: Option<PathBuf>,
+) -> (GraphHandler, Arc<RwLock<HashMap<String, ExecutionStatus>>>) {
+    let (handler, executions, _) = make_handler_with_registry_metrics(graphs_dir, metrics_db_path);
     (handler, executions)
 }
 
@@ -39,15 +48,27 @@ pub fn make_handler_with_registry(
     Arc<RwLock<HashMap<String, ExecutionStatus>>>,
     Arc<RwLock<CapabilityTranslationRegistry>>,
 ) {
+    make_handler_with_registry_metrics(graphs_dir, None)
+}
+
+pub fn make_handler_with_registry_metrics(
+    graphs_dir: &std::path::Path,
+    metrics_db_path: Option<PathBuf>,
+) -> (
+    GraphHandler,
+    Arc<RwLock<HashMap<String, ExecutionStatus>>>,
+    Arc<RwLock<CapabilityTranslationRegistry>>,
+) {
     let router = Arc::new(NeuralRouter::new("test-family"));
     let registry = Arc::new(RwLock::new(CapabilityTranslationRegistry::new()));
     let executions = Arc::new(RwLock::new(HashMap::new()));
-    let handler = GraphHandler::new(
+    let handler = GraphHandler::new_with_metrics_db(
         graphs_dir,
         "test-family",
         executions.clone(),
         router,
         registry.clone(),
+        metrics_db_path,
     );
     (handler, executions, registry)
 }

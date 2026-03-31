@@ -4,7 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::coordinator::{NucleusClient, NucleusClientBuilder};
-use super::family_seed::load_family_seed_from_storage;
+use super::family_seed::load_family_seed_from_storage_with;
 use super::transport::call_unix_socket_rpc;
 use crate::Endpoint;
 use crate::EndpointType;
@@ -16,7 +16,7 @@ use crate::discovery::{DiscoveredPrimal, DiscoveryRequest, PhysicalDiscovery};
 use crate::identity::{IdentityLayer, IdentityProof, IdentityVerification};
 use crate::trust::{TrustEvaluation, TrustLayer, TrustLevel};
 use async_trait::async_trait;
-use biomeos_test_utils::{TestEnvGuard, ready_signal};
+use biomeos_test_utils::ready_signal;
 use biomeos_types::CapabilityTaxonomy;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use std::sync::Arc;
@@ -729,18 +729,15 @@ async fn test_call_unix_socket_rpc_read_times_out() {
 }
 
 #[test]
-#[serial_test::serial]
 fn test_get_family_seed_from_env_valid_base64() {
     use base64::{Engine, engine::general_purpose::STANDARD};
     let seed = b"family-seed-bytes";
     let b64 = STANDARD.encode(seed);
-    let _guard = TestEnvGuard::new("BIOMEOS_FAMILY_SEED", Some(b64.as_str()));
-    let out = load_family_seed_from_storage();
+    let out = load_family_seed_from_storage_with(Some(b64.as_str()), None, false);
     assert_eq!(out.as_ref(), seed);
 }
 
 #[test]
-#[serial_test::serial]
 fn test_get_family_seed_prefers_env_over_xdg_runtime() {
     use base64::{Engine, engine::general_purpose::STANDARD};
     let seed = b"env-wins";
@@ -750,36 +747,24 @@ fn test_get_family_seed_prefers_env_over_xdg_runtime() {
     std::fs::create_dir_all(seed_path.parent().unwrap()).unwrap();
     std::fs::write(&seed_path, b"from-xdg-file").unwrap();
 
-    let _xdg = TestEnvGuard::new("XDG_RUNTIME_DIR", Some(temp.path().to_str().expect("utf8")));
-    let _env = TestEnvGuard::new("BIOMEOS_FAMILY_SEED", Some(b64.as_str()));
-
-    let out = load_family_seed_from_storage();
+    let out = load_family_seed_from_storage_with(Some(b64.as_str()), Some(temp.path()), false);
     assert_eq!(out.as_ref(), seed);
 }
 
 #[test]
-#[serial_test::serial]
 fn test_get_family_seed_invalid_base64_ignored() {
-    let _g = TestEnvGuard::new("BIOMEOS_FAMILY_SEED", Some("@@@not-base64@@@"));
-    let out = load_family_seed_from_storage();
+    let out = load_family_seed_from_storage_with(Some("@@@not-base64@@@"), None, false);
     assert!(out.is_empty());
 }
 
 #[test]
-#[serial_test::serial]
 fn test_get_family_seed_from_xdg_file_when_env_unset() {
     let temp = tempfile::tempdir().expect("tempdir");
     let seed_path = temp.path().join("biomeos").join("family.seed");
     std::fs::create_dir_all(seed_path.parent().unwrap()).unwrap();
     std::fs::write(&seed_path, b"seed-from-xdg").unwrap();
-    let _clear = TestEnvGuard::remove("BIOMEOS_FAMILY_SEED");
-    let _xdg = TestEnvGuard::new("XDG_RUNTIME_DIR", Some(temp.path().to_str().expect("utf8")));
-    let out = load_family_seed_from_storage();
-    assert!(
-        out.as_ref() == b"seed-from-xdg" || out.is_empty(),
-        "expected XDG seed or empty (env race), got {} bytes",
-        out.len()
-    );
+    let out = load_family_seed_from_storage_with(None, Some(temp.path()), false);
+    assert_eq!(out.as_ref(), b"seed-from-xdg");
 }
 
 #[test]
@@ -824,10 +809,7 @@ async fn test_call_unix_socket_rpc_read_error_empty_after_headers() {
 }
 
 #[test]
-#[serial_test::serial]
 fn test_get_family_seed_empty_when_no_sources() {
-    let _b64 = TestEnvGuard::remove("BIOMEOS_FAMILY_SEED");
-    let _xdg = TestEnvGuard::remove("XDG_RUNTIME_DIR");
-    let out = load_family_seed_from_storage();
+    let out = load_family_seed_from_storage_with(None, None, false);
     assert!(out.is_empty());
 }

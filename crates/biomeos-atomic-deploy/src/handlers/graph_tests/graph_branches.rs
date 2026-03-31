@@ -214,10 +214,10 @@ async fn test_list_toml_parse_error_skips_file_quietly() {
     assert_eq!(arr[0]["id"], "only_good");
 }
 
-#[serial_test::serial]
 #[tokio::test]
 async fn test_suggest_optimizations_default_min_samples() {
     let temp = tempdir().expect("tempdir");
+    let metrics_db = temp.path().join("neural_metrics_test.redb");
     let path = temp.path().join("opt_default.toml");
     let toml = r#"
 [graph]
@@ -231,7 +231,7 @@ id = "n1"
 name = "N"
 "#;
     std::fs::write(&path, toml).expect("write");
-    let (handler, _) = make_handler(temp.path());
+    let (handler, _) = make_handler_with_metrics_db(temp.path(), Some(metrics_db));
 
     let result = handler
         .suggest_optimizations(&Some(json!({"graph_id": "opt_default"})))

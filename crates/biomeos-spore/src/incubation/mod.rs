@@ -80,7 +80,19 @@ impl SporeIncubator {
     pub async fn incubate(
         &self,
         computer_name: Option<&str>,
+        deploy_local: bool,
+    ) -> SporeResult<IncubatedNode> {
+        self.incubate_with_home(computer_name, deploy_local, None)
+            .await
+    }
+
+    /// Like [`Self::incubate`], but uses `home` as the user's home directory for config paths
+    /// instead of `HOME` / `USERPROFILE`.
+    pub async fn incubate_with_home(
+        &self,
+        computer_name: Option<&str>,
         _deploy_local: bool,
+        home: Option<&Path>,
     ) -> SporeResult<IncubatedNode> {
         info!("Incubating spore on local computer");
 
@@ -102,7 +114,15 @@ impl SporeIncubator {
         info!("Creating incubated node: {}", node_id);
 
         // 4. Create local configuration
-        let local_config_path = Self::get_local_config_path(&spore_id)?;
+        let home = if let Some(h) = home {
+            h.to_path_buf()
+        } else {
+            std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .map(PathBuf::from)
+                .context("Could not determine home directory")?
+        };
+        let local_config_path = Self::get_local_config_path(&spore_id, &home)?;
         self.create_local_config(CreateLocalConfigParams {
             config_path: &local_config_path,
             spore_id: &spore_id,
@@ -178,19 +198,13 @@ impl SporeIncubator {
         format!("{:x}", hasher.finalize())
     }
 
-    /// Get local configuration path for this spore
-    fn get_local_config_path(spore_id: &str) -> SporeResult<PathBuf> {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .context("Could not determine home directory")?;
-
-        let config_dir = PathBuf::from(home)
+    /// Get local configuration path for this spore under the given home directory.
+    fn get_local_config_path(spore_id: &str, home: &Path) -> SporeResult<PathBuf> {
+        Ok(home
             .join(".config")
             .join("biomeos")
             .join("deployed-nodes")
-            .join(spore_id);
-
-        Ok(config_dir)
+            .join(spore_id))
     }
 
     /// Create local configuration for incubated node
@@ -273,16 +287,9 @@ impl SporeIncubator {
     }
 }
 
-/// List all locally incubated nodes
-pub async fn list_local_nodes() -> SporeResult<Vec<NodeConfig>> {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .context("Could not determine home directory")?;
-
-    let nodes_dir = PathBuf::from(home)
-        .join(".config")
-        .join("biomeos")
-        .join("deployed-nodes");
+/// List all locally incubated nodes under `home` (typically `$HOME`).
+pub async fn list_local_nodes_in(home: &Path) -> SporeResult<Vec<NodeConfig>> {
+    let nodes_dir = home.join(".config").join("biomeos").join("deployed-nodes");
 
     if !nodes_dir.exists() {
         return Ok(vec![]);
@@ -303,6 +310,14 @@ pub async fn list_local_nodes() -> SporeResult<Vec<NodeConfig>> {
     }
 
     Ok(nodes)
+}
+
+/// List all locally incubated nodes (uses `HOME` / `USERPROFILE`).
+pub async fn list_local_nodes() -> SporeResult<Vec<NodeConfig>> {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .context("Could not determine home directory")?;
+    list_local_nodes_in(Path::new(&home)).await
 }
 
 #[cfg(test)]
@@ -644,12 +659,8 @@ family = "test-family"
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_incubate_end_to_end_and_list_local_nodes() {
-        use biomeos_test_utils::TestEnvGuard;
-
         let temp_home = tempfile::tempdir().expect("temp home");
-        let _home_guard = TestEnvGuard::set("HOME", temp_home.path().to_str().expect("utf8 path"));
 
         let spore_root = tempfile::tempdir().expect("spore root");
         std::fs::write(spore_root.path().join(".family.seed"), [11u8; 32]).expect("seed");
@@ -665,7 +676,7 @@ family = "fam-e2e-incubate"
 
         let incubator = SporeIncubator::new(spore_root.path()).expect("incubator");
         let node = incubator
-            .incubate(Some("e2e-test-host"), false)
+            .incubate_with_home(Some("e2e-test-host"), false, Some(temp_home.path()))
             .await
             .expect("incubate");
 
@@ -674,7 +685,7 @@ family = "fam-e2e-incubate"
         assert!(node.local_config_path.join(".deployed.seed").exists());
         assert!(node.local_config_path.join("entropy.json").exists());
 
-        let listed = list_local_nodes().await.expect("list");
+        let listed = list_local_nodes_in(temp_home.path()).await.expect("list");
         assert!(
             listed.iter().any(|c| c.node.node_id == node.node_id),
             "deployed-nodes scan should find incubated node"
@@ -682,12 +693,8 @@ family = "fam-e2e-incubate"
     }
 
     #[tokio::test]
-    #[serial_test::serial]
     async fn test_list_local_nodes_skips_invalid_node_toml() {
-        use biomeos_test_utils::TestEnvGuard;
-
         let temp_home = tempfile::tempdir().expect("temp home");
-        let _home_guard = TestEnvGuard::set("HOME", temp_home.path().to_str().expect("utf8 path"));
 
         let nodes_dir = temp_home
             .path()
@@ -698,7 +705,7 @@ family = "fam-e2e-incubate"
         std::fs::create_dir_all(&bad).expect("mkdir");
         std::fs::write(bad.join("node.toml"), "not valid toml {{{").expect("bad toml");
 
-        let listed = list_local_nodes().await.expect("list");
+        let listed = list_local_nodes_in(temp_home.path()).await.expect("list");
         assert!(
             listed.is_empty(),
             "invalid node.toml should be skipped, got {} entries",

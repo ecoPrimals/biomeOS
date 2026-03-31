@@ -91,10 +91,14 @@ fn test_cli_parse_neural_api() {
             graphs_dir,
             family_id,
             socket,
+            port,
+            tcp_only,
         } => {
             assert_eq!(graphs_dir, &PathBuf::from("graphs"));
             assert!(family_id.is_none());
             assert!(socket.is_none());
+            assert!(port.is_none());
+            assert!(!tcp_only);
         }
         _ => panic!("expected NeuralApi mode"),
     }
@@ -117,6 +121,8 @@ fn test_cli_parse_neural_api_with_opts() {
             graphs_dir,
             family_id,
             socket,
+            port,
+            tcp_only,
         } => {
             assert_eq!(graphs_dir, &PathBuf::from("/tmp/graphs"));
             assert_eq!(family_id.as_deref(), Some("fam1"));
@@ -124,6 +130,32 @@ fn test_cli_parse_neural_api_with_opts() {
                 socket.as_ref().map(PathBuf::as_path),
                 Some(std::path::Path::new("/tmp/api.sock"))
             );
+            assert!(port.is_none());
+            assert!(!tcp_only);
+        }
+        _ => panic!("expected NeuralApi mode"),
+    }
+}
+
+#[test]
+fn test_cli_parse_neural_api_tcp_only() {
+    let cli = Cli::parse_from(["biomeos", "neural-api", "--port", "9000", "--tcp-only"]);
+    match &cli.mode {
+        Mode::NeuralApi { port, tcp_only, .. } => {
+            assert_eq!(*port, Some(9000));
+            assert!(tcp_only);
+        }
+        _ => panic!("expected NeuralApi mode"),
+    }
+}
+
+#[test]
+fn test_cli_parse_neural_api_tcp_port_no_tcp_only() {
+    let cli = Cli::parse_from(["biomeos", "neural-api", "--port", "8080"]);
+    match &cli.mode {
+        Mode::NeuralApi { port, tcp_only, .. } => {
+            assert_eq!(*port, Some(8080));
+            assert!(!tcp_only);
         }
         _ => panic!("expected NeuralApi mode"),
     }

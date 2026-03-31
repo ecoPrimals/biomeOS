@@ -111,7 +111,10 @@ pub mod log_session;
 pub use universal_biomeos_manager::{PrimalInfo, PrimalStatistics, UniversalBiomeOSManager};
 
 // Re-export atomic client (Universal IPC v3.0 - Multi-Transport)
-pub use atomic_client::{AtomicClient, JsonRpcRequest, JsonRpcResponse, discover_primal_endpoint};
+pub use atomic_client::{
+    AtomicClient, DiscoverByCapabilityOpts, DiscoverOpts, JsonRpcRequest, JsonRpcResponse,
+    discover_primal_endpoint, discover_primal_endpoint_with_opts,
+};
 pub use atomic_primal_client::{AtomicPrimalClient, ExecutionResult};
 
 // Re-export core services

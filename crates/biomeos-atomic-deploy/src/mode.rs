@@ -31,10 +31,17 @@ impl BiomeOsMode {
     /// - Bootstrap if Tower Atomic does not exist (or `BIOMEOS_MODE=bootstrap`)
     /// - Coordinated if Tower Atomic exists (or `BIOMEOS_MODE=coordinated`)
     pub async fn detect(family_id: &str) -> Self {
+        Self::detect_with_mode(family_id, std::env::var("BIOMEOS_MODE").ok().as_deref()).await
+    }
+
+    /// Like [`Self::detect`], but supplies the `BIOMEOS_MODE` value directly (for tests and tooling).
+    ///
+    /// Pass `None` when the variable is unset (auto-detect only).
+    pub async fn detect_with_mode(family_id: &str, mode_env: Option<&str>) -> Self {
         info!("🔍 Detecting biomeOS operating mode...");
 
         // Priority 1: Check for explicit mode override
-        if let Ok(mode_override) = std::env::var("BIOMEOS_MODE") {
+        if let Some(mode_override) = mode_env {
             match mode_override.to_lowercase().as_str() {
                 "coordinated" | "coord" | "join" => {
                     info!(
@@ -148,7 +155,6 @@ mod tests {
     #![allow(clippy::unwrap_used)]
 
     use super::*;
-    use biomeos_test_utils::{remove_test_env, set_test_env};
     use tempfile::tempdir;
     use tokio::net::UnixListener;
 
@@ -226,64 +232,44 @@ mod tests {
 
     #[tokio::test]
     async fn test_detect_coordinated_mode_explicit() {
-        let _guard = ENV_LOCK.lock().await;
-        set_test_env("BIOMEOS_MODE", "coordinated");
-        let mode = BiomeOsMode::detect("any-family").await;
-        remove_test_env("BIOMEOS_MODE");
+        let mode = BiomeOsMode::detect_with_mode("any-family", Some("coordinated")).await;
         assert_eq!(mode, BiomeOsMode::Coordinated);
     }
 
     #[tokio::test]
     async fn test_detect_coordinated_mode_coord_alias() {
-        let _guard = ENV_LOCK.lock().await;
-        set_test_env("BIOMEOS_MODE", "coord");
-        let mode = BiomeOsMode::detect("any-family").await;
-        remove_test_env("BIOMEOS_MODE");
+        let mode = BiomeOsMode::detect_with_mode("any-family", Some("coord")).await;
         assert_eq!(mode, BiomeOsMode::Coordinated);
     }
 
     #[tokio::test]
     async fn test_detect_coordinated_mode_join_alias() {
-        let _guard = ENV_LOCK.lock().await;
-        set_test_env("BIOMEOS_MODE", "join");
-        let mode = BiomeOsMode::detect("any-family").await;
-        remove_test_env("BIOMEOS_MODE");
+        let mode = BiomeOsMode::detect_with_mode("any-family", Some("join")).await;
         assert_eq!(mode, BiomeOsMode::Coordinated);
     }
 
     #[tokio::test]
     async fn test_detect_bootstrap_mode_explicit() {
-        let _guard = ENV_LOCK.lock().await;
-        set_test_env("BIOMEOS_MODE", "bootstrap");
-        let mode = BiomeOsMode::detect("any-family").await;
-        remove_test_env("BIOMEOS_MODE");
+        let mode = BiomeOsMode::detect_with_mode("any-family", Some("bootstrap")).await;
         assert_eq!(mode, BiomeOsMode::Bootstrap);
     }
 
     #[tokio::test]
     async fn test_detect_bootstrap_mode_boot_alias() {
-        let _guard = ENV_LOCK.lock().await;
-        set_test_env("BIOMEOS_MODE", "boot");
-        let mode = BiomeOsMode::detect("any-family").await;
-        remove_test_env("BIOMEOS_MODE");
+        let mode = BiomeOsMode::detect_with_mode("any-family", Some("boot")).await;
         assert_eq!(mode, BiomeOsMode::Bootstrap);
     }
 
     #[tokio::test]
     async fn test_detect_bootstrap_mode_genesis_alias() {
-        let _guard = ENV_LOCK.lock().await;
-        set_test_env("BIOMEOS_MODE", "genesis");
-        let mode = BiomeOsMode::detect("any-family").await;
-        remove_test_env("BIOMEOS_MODE");
+        let mode = BiomeOsMode::detect_with_mode("any-family", Some("genesis")).await;
         assert_eq!(mode, BiomeOsMode::Bootstrap);
     }
 
     #[tokio::test]
     async fn test_detect_unknown_mode_falls_back_to_autodetect() {
-        let _guard = ENV_LOCK.lock().await;
-        set_test_env("BIOMEOS_MODE", "unknown_mode_xyz");
-        let mode = BiomeOsMode::detect("no-tower-exists-xyz").await;
-        remove_test_env("BIOMEOS_MODE");
+        let mode =
+            BiomeOsMode::detect_with_mode("no-tower-exists-xyz", Some("unknown_mode_xyz")).await;
         assert_eq!(mode, BiomeOsMode::Bootstrap);
     }
 
@@ -304,6 +290,4 @@ mod tests {
         let reachable = BiomeOsMode::primal_reachable(socket_path.to_str().unwrap()).await;
         assert!(!reachable);
     }
-
-    static ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 }

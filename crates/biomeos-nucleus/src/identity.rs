@@ -96,13 +96,55 @@ impl IdentityLayerImpl {
         reason = "public API contract — callers already .await"
     )]
     pub async fn new() -> Result<Self> {
+        Self::new_with_impl(None, None)
+    }
+
+    /// Create an identity layer with optional overrides (for tests and tooling).
+    ///
+    /// If `beardog_socket` is set, it is used as the `BearDog` Unix socket path.
+    /// Otherwise, if `runtime_dir` is set, socket discovery uses only that `XDG_RUNTIME_DIR`
+    /// (no other env tiers). If both are `None`, full production discovery via process
+    /// environment applies (same as [`Self::new`]).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `BearDog` socket discovery fails and no fallback is available.
+    #[expect(
+        clippy::unused_async,
+        reason = "public API contract — callers already .await"
+    )]
+    pub async fn new_with(beardog_socket: Option<&str>, runtime_dir: Option<&str>) -> Result<Self> {
+        Self::new_with_impl(beardog_socket, runtime_dir)
+    }
+
+    fn new_with_impl(beardog_socket: Option<&str>, runtime_dir: Option<&str>) -> Result<Self> {
         info!("Initializing NUCLEUS Identity Layer (delegating to BearDog)");
 
-        // Discover BearDog socket (no hardcoded paths!)
-        let beardog_socket = Self::discover_beardog_socket()?;
+        if let Some(path) = beardog_socket {
+            return Ok(Self {
+                beardog_socket: Some(path.to_string()),
+            });
+        }
 
+        if let Some(rd) = runtime_dir {
+            let xdg = rd.to_string();
+            let env_fn = move |key: &str| -> Option<String> {
+                if key == "XDG_RUNTIME_DIR" {
+                    return Some(xdg.clone());
+                }
+                None
+            };
+            let sock = Self::discover_beardog_socket_with(&env_fn)?;
+            return Ok(Self {
+                beardog_socket: Some(sock),
+            });
+        }
+
+        let sock = Self::discover_beardog_socket_with(&|k| {
+            biomeos_types::capability_discovery::std_env(k)
+        })?;
         Ok(Self {
-            beardog_socket: Some(beardog_socket),
+            beardog_socket: Some(sock),
         })
     }
 
@@ -121,16 +163,12 @@ impl IdentityLayerImpl {
     ///
     /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`]
     /// so all discovery logic lives in one place.
-    fn discover_beardog_socket() -> Result<String> {
+    fn discover_beardog_socket_with(env: &dyn Fn(&str) -> Option<String>) -> Result<String> {
         use biomeos_types::capability_discovery;
 
         debug!("Discovering security provider socket (5-tier capability discovery)");
 
-        capability_discovery::discover_capability_socket(
-            "encryption",
-            &capability_discovery::std_env,
-        )
-        .ok_or_else(|| {
+        capability_discovery::discover_capability_socket("encryption", env).ok_or_else(|| {
             Error::discovery_failed(
                 "Could not discover security provider socket. Is the security primal running?",
                 Some("identity".to_string()),
@@ -250,7 +288,6 @@ mod tests {
     use super::*;
     use crate::discovery::DiscoveredPrimal;
     use biomeos_test_utils::ready_signal;
-    use serial_test::serial;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     fn sample_proof() -> IdentityProof {
@@ -510,13 +547,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_identity_layer_new_with_beardog_socket_env() {
-        let _guard = biomeos_test_utils::TestEnvGuard::set(
-            "BEARDOG_SOCKET",
-            "/tmp/nonexistent-but-env-ok.sock",
-        );
-        let layer = IdentityLayerImpl::new().await;
+        let layer =
+            IdentityLayerImpl::new_with(Some("/tmp/nonexistent-but-env-ok.sock"), None).await;
         assert!(layer.is_ok());
         assert_eq!(
             layer.unwrap().beardog_socket.as_deref(),
@@ -525,7 +558,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_identity_layer_new_discovers_via_xdg_runtime_dir() {
         let tmp = tempfile::tempdir().expect("tempdir");
         let biomeos_dir = tmp.path().join("biomeos");
@@ -533,13 +565,7 @@ mod tests {
         let sock_path = biomeos_dir.join("beardog.sock");
         std::fs::write(&sock_path, "").expect("write placeholder socket");
 
-        let _no_env = biomeos_test_utils::TestEnvGuard::remove("BEARDOG_SOCKET");
-        let _no_cap_env = biomeos_test_utils::TestEnvGuard::remove("ENCRYPTION_PROVIDER_SOCKET");
-        let _xdg = biomeos_test_utils::TestEnvGuard::set(
-            "XDG_RUNTIME_DIR",
-            tmp.path().to_str().expect("utf8"),
-        );
-        let layer = IdentityLayerImpl::new()
+        let layer = IdentityLayerImpl::new_with(None, tmp.path().to_str())
             .await
             .expect("discover via XDG runtime");
         assert_eq!(

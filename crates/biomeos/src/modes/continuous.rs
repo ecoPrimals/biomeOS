@@ -18,6 +18,7 @@ use biomeos_graph::{
 use biomeos_types::JsonRpcRequest;
 use biomeos_types::paths::SystemPaths;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::sync::mpsc;
@@ -26,17 +27,21 @@ use tracing::{debug, info, warn};
 /// Resolve a primal's Unix socket path.
 ///
 /// Priority (per wateringHole `UNIVERSAL_IPC_STANDARD_V3`):
-/// 1. `BIOMEOS_SOCKET_DIR/{primal}.sock` (explicit override)
-/// 2. XDG-compliant path via SystemPaths (runtime_dir + primal.sock)
-fn resolve_primal_socket(primal: &str) -> PathBuf {
-    resolve_primal_socket_with(primal, std::env::var("BIOMEOS_SOCKET_DIR").ok())
-}
-
+/// 1. `socket_dir` when provided (e.g. [`run_controlled_with_socket_dir`])
+/// 2. `BIOMEOS_SOCKET_DIR/{primal}.sock` (explicit override)
+/// 3. XDG-compliant path via SystemPaths (runtime_dir + primal.sock)
 fn resolve_primal_socket_with(primal: &str, socket_dir: Option<String>) -> PathBuf {
     if let Some(dir) = socket_dir {
         return PathBuf::from(dir).join(format!("{primal}.sock"));
     }
     SystemPaths::new_lazy().primal_socket(primal)
+}
+
+/// Effective socket directory: explicit override wins; otherwise `BIOMEOS_SOCKET_DIR`, then XDG.
+fn effective_socket_dir(socket_dir_override: Option<&String>) -> Option<String> {
+    socket_dir_override
+        .cloned()
+        .or_else(|| std::env::var("BIOMEOS_SOCKET_DIR").ok())
 }
 
 /// Send a JSON-RPC capability call to a primal over Unix socket.
@@ -92,15 +97,20 @@ fn build_call_params(node: &GraphNode, feedback: Option<serde_json::Value>) -> s
 }
 
 /// Execute a single node by routing its capability to the target primal.
-async fn execute_node(
+///
+/// `socket_dir_override`: if `Some`, resolve sockets under that directory only; if `None`, use
+/// `BIOMEOS_SOCKET_DIR` / XDG.
+async fn execute_node_with_socket_dir(
     node_id: String,
     node: GraphNode,
     feedback: Option<serde_json::Value>,
+    socket_dir_override: Option<String>,
 ) -> Result<serde_json::Value> {
     let primal = node.config.primal.as_deref().unwrap_or("unknown");
     let capability = node.capability.as_deref().unwrap_or("health.check");
 
-    let socket = resolve_primal_socket(primal);
+    let socket =
+        resolve_primal_socket_with(primal, effective_socket_dir(socket_dir_override.as_ref()));
     let params = build_call_params(&node, feedback);
 
     match call_primal(&socket, capability, params).await {
@@ -116,6 +126,15 @@ async fn execute_node(
             Err(e)
         }
     }
+}
+
+#[cfg(test)]
+async fn execute_node(
+    node_id: String,
+    node: GraphNode,
+    feedback: Option<serde_json::Value>,
+) -> Result<serde_json::Value> {
+    execute_node_with_socket_dir(node_id, node, feedback, None).await
 }
 
 /// Run a continuous coordination graph.
@@ -146,6 +165,17 @@ pub(crate) async fn run_controlled(
     graph_path: PathBuf,
     dry_run: bool,
     cmd_rx: mpsc::Receiver<SessionCommand>,
+) -> Result<()> {
+    run_controlled_with_socket_dir(graph_path, dry_run, cmd_rx, None).await
+}
+
+/// Like [`run_controlled`], but resolve primal sockets under `socket_dir_override` (tests) instead
+/// of relying on `BIOMEOS_SOCKET_DIR`.
+pub(crate) async fn run_controlled_with_socket_dir(
+    graph_path: PathBuf,
+    dry_run: bool,
+    cmd_rx: mpsc::Receiver<SessionCommand>,
+    socket_dir_override: Option<String>,
 ) -> Result<()> {
     if !graph_path.exists() {
         anyhow::bail!("Graph file not found: {}", graph_path.display());
@@ -199,7 +229,10 @@ pub(crate) async fn run_controlled(
     let mut missing = Vec::new();
     for node in graph.nodes() {
         if let Some(primal) = node.config.primal.as_deref() {
-            let socket = resolve_primal_socket(primal);
+            let socket = resolve_primal_socket_with(
+                primal,
+                effective_socket_dir(socket_dir_override.as_ref()),
+            );
             if !socket.exists() {
                 missing.push((primal.to_string(), socket));
             }
@@ -218,8 +251,25 @@ pub(crate) async fn run_controlled(
     let broadcaster = GraphEventBroadcaster::new(1024);
     let mut executor = ContinuousExecutor::new(graph, broadcaster);
 
+    let socket_override = Arc::new(socket_dir_override);
     info!("Starting continuous execution...");
-    executor.run(cmd_rx, execute_node).await;
+    executor
+        .run(cmd_rx, {
+            let socket_override = Arc::clone(&socket_override);
+            move |node_id, node, feedback| {
+                let socket_override = Arc::clone(&socket_override);
+                async move {
+                    execute_node_with_socket_dir(
+                        node_id,
+                        node,
+                        feedback,
+                        (*socket_override).clone(),
+                    )
+                    .await
+                }
+            }
+        })
+        .await;
     info!("Continuous session ended.");
 
     Ok(())
@@ -236,7 +286,6 @@ pub(crate) async fn run_controlled(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -515,8 +564,6 @@ mod tests {
         )
         .expect("write graph");
 
-        let _env = TestEnvGuard::new("BIOMEOS_SOCKET_DIR", dir.path().to_str());
-
         let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
         let cmd_tx_stop = cmd_tx.clone();
         let first_request_waiter = Arc::clone(&first_request);
@@ -525,9 +572,10 @@ mod tests {
             let _ = cmd_tx_stop.send(SessionCommand::Stop).await;
         });
 
+        let socket_dir = dir.path().to_string_lossy().into_owned();
         let result = tokio::time::timeout(
             std::time::Duration::from_secs(5),
-            run_controlled(graph_path, false, cmd_rx),
+            run_controlled_with_socket_dir(graph_path, false, cmd_rx, Some(socket_dir)),
         )
         .await;
 
@@ -577,8 +625,6 @@ mod tests {
         )
         .expect("write graph");
 
-        let _env = TestEnvGuard::new("BIOMEOS_SOCKET_DIR", dir.path().to_str());
-
         let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
         let cmd_tx_stop = cmd_tx.clone();
         tokio::spawn(async move {
@@ -587,9 +633,10 @@ mod tests {
             let _ = cmd_tx_stop.send(SessionCommand::Stop).await;
         });
 
+        let socket_dir = dir.path().to_string_lossy().into_owned();
         let result = tokio::time::timeout(
             std::time::Duration::from_secs(5),
-            run_controlled(graph_path, false, cmd_rx),
+            run_controlled_with_socket_dir(graph_path, false, cmd_rx, Some(socket_dir)),
         )
         .await;
 

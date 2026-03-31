@@ -29,6 +29,7 @@ use crate::{
     state::UIState,
 };
 use anyhow::Result;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -92,6 +93,12 @@ pub struct InteractiveUIOrchestrator {
 
     /// Family ID for primal discovery
     family_id: String,
+
+    /// Optional XDG runtime parent for discovery (tests; avoids `XDG_RUNTIME_DIR` mutation).
+    xdg_runtime_parent: Option<PathBuf>,
+
+    /// Optional registry provider name (tests; avoids `BIOMEOS_REGISTRY_PROVIDER` mutation).
+    registry_provider_override: Option<String>,
 }
 
 impl InteractiveUIOrchestrator {
@@ -121,6 +128,31 @@ impl InteractiveUIOrchestrator {
             events,
             connections: PrimalConnections::default(),
             family_id,
+            xdg_runtime_parent: None,
+            registry_provider_override: None,
+        })
+    }
+
+    /// Create an orchestrator with explicit runtime discovery overrides (for tests).
+    pub fn new_with_runtime_overrides(
+        family_id: impl Into<String>,
+        xdg_runtime_parent: Option<PathBuf>,
+        registry_provider: Option<String>,
+    ) -> Result<Self> {
+        let family_id = family_id.into();
+        let state = Arc::new(RwLock::new(UIState::new()));
+        let events = EventBroadcaster::new();
+        info!(
+            "Creating Interactive UI Orchestrator for family: {}",
+            family_id
+        );
+        Ok(Self {
+            state,
+            events,
+            connections: PrimalConnections::default(),
+            family_id,
+            xdg_runtime_parent,
+            registry_provider_override: registry_provider,
         })
     }
 
@@ -128,7 +160,9 @@ impl InteractiveUIOrchestrator {
     ///
     /// Uses capability-based discovery to find primals. No hardcoded assumptions!
     async fn discover_primals(&mut self) -> Result<()> {
-        let result = Discovery::discover_primals().await?;
+        let result =
+            Discovery::discover_primals_with(&self.family_id, self.xdg_runtime_parent.as_deref())
+                .await?;
         self.connections = result.connections;
         Ok(())
     }
@@ -208,9 +242,10 @@ impl InteractiveUIOrchestrator {
         info!("Running Interactive UI Orchestrator event loop...");
 
         // Subscribe to registry provider events if available
-        let registry_name = discovery::resolve_capability_provider(
+        let registry_name = discovery::resolve_capability_provider_with(
             "BIOMEOS_REGISTRY_PROVIDER",
             &biomeos_types::CapabilityTaxonomy::Discovery,
+            self.registry_provider_override.as_deref(),
         );
         if let Some(registry) = registry_name
             .as_deref()
@@ -607,7 +642,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_with_registry_subscribe_failure() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
         use tokio::io::{AsyncBufReadExt, BufReader};
 
         let temp = tempfile::tempdir().expect("temp dir");
@@ -630,17 +664,17 @@ mod tests {
 
         ready_rx.wait().await.unwrap();
 
-        set_test_env("XDG_RUNTIME_DIR", temp.path());
-        set_test_env("BIOMEOS_REGISTRY_PROVIDER", "songbird");
-
-        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
+        let mut orchestrator = InteractiveUIOrchestrator::new_with_runtime_overrides(
+            "test-family",
+            Some(temp.path().to_path_buf()),
+            Some("songbird".to_string()),
+        )
+        .unwrap();
         orchestrator.start().await.unwrap();
 
         let result =
             tokio::time::timeout(std::time::Duration::from_millis(500), orchestrator.run()).await;
 
-        remove_test_env("XDG_RUNTIME_DIR");
-        remove_test_env("BIOMEOS_REGISTRY_PROVIDER");
         server.abort();
 
         assert!(
@@ -651,7 +685,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_with_registry_events_poll_non_array() {
-        use biomeos_test_utils::{remove_test_env, set_test_env};
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         let temp = tempfile::tempdir().expect("temp dir");
@@ -682,17 +715,17 @@ mod tests {
 
         ready_rx.wait().await.unwrap();
 
-        set_test_env("XDG_RUNTIME_DIR", temp.path());
-        set_test_env("BIOMEOS_REGISTRY_PROVIDER", "songbird");
-
-        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
+        let mut orchestrator = InteractiveUIOrchestrator::new_with_runtime_overrides(
+            "test-family",
+            Some(temp.path().to_path_buf()),
+            Some("songbird".to_string()),
+        )
+        .unwrap();
         orchestrator.start().await.unwrap();
 
         let result =
             tokio::time::timeout(std::time::Duration::from_millis(500), orchestrator.run()).await;
 
-        remove_test_env("XDG_RUNTIME_DIR");
-        remove_test_env("BIOMEOS_REGISTRY_PROVIDER");
         server.abort();
 
         assert!(

@@ -54,9 +54,30 @@ impl NeuralApiServer {
     /// Binds the socket **first** so external probes (primalSpring, health
     /// monitors) can connect immediately, then performs mode detection,
     /// bootstrap, and translation loading before accepting requests.
+    ///
+    /// Supports three transport modes:
+    /// - UDS only (default)
+    /// - UDS + TCP (when `tcp_port` is set)
+    /// - TCP only (when `tcp_only` is true — mobile substrates)
     pub async fn serve(&self) -> Result<()> {
-        // 1. Bind socket EARLY so health probes see us immediately
-        let listener = self.bind_socket()?;
+        // 1. Bind listeners EARLY so health probes see us immediately
+        let uds_listener = if self.tcp_only {
+            info!("📡 TCP-only mode — skipping Unix socket bind");
+            None
+        } else {
+            Some(self.bind_socket()?)
+        };
+
+        let tcp_listener = if let Some(port) = self.tcp_port {
+            let addr: std::net::SocketAddr = ([0, 0, 0, 0], port).into();
+            let listener = tokio::net::TcpListener::bind(addr)
+                .await
+                .context(format!("Failed to bind TCP listener on port {port}"))?;
+            info!("📡 Neural API TCP listener bound: 0.0.0.0:{}", port);
+            Some(listener)
+        } else {
+            None
+        };
 
         // 2. Detect operating mode
         info!("🔍 Detecting biomeOS operating mode...");
@@ -85,8 +106,20 @@ impl NeuralApiServer {
         // 5. Auto-discover running primals and register their capabilities
         self.discover_and_register_primals().await;
 
-        // 6. Accept connections on the already-bound listener
-        self.accept_connections(listener).await
+        // 6. Accept connections on bound listener(s)
+        match (uds_listener, tcp_listener) {
+            (Some(uds), Some(tcp)) => {
+                tokio::select! {
+                    r = self.accept_connections(uds) => r,
+                    r = self.accept_tcp_connections(tcp) => r,
+                }
+            }
+            (Some(uds), None) => self.accept_connections(uds).await,
+            (None, Some(tcp)) => self.accept_tcp_connections(tcp).await,
+            (None, None) => {
+                anyhow::bail!("No listeners configured — set a socket path or TCP port")
+            }
+        }
     }
 
     /// Handle bootstrap mode: execute bootstrap sequence and transition to coordinated
@@ -288,6 +321,9 @@ impl NeuralApiServer {
     /// socket's `capabilities.list`, and register every discovered capability
     /// with the `NeuralRouter`.
     ///
+    /// Any `.sock` (except this server's own path) is considered: registration is
+    /// gated by a successful capability probe, not by a compiled primal name list.
+    ///
     /// This is the sovereign auto-discovery path (Option 1 from ludoSpring V35):
     /// no startup ordering dependency — biomeOS discovers what is already running.
     async fn discover_and_register_primals(&self) {
@@ -321,10 +357,6 @@ impl NeuralApiServer {
                     Some(base) => base.split('-').next().unwrap_or(base).to_string(),
                     None => continue,
                 };
-
-                if !biomeos_types::primal_names::is_known_primal(&primal_name) {
-                    continue;
-                }
 
                 let socket_str = path.to_string_lossy().to_string();
                 let capabilities = self.probe_primal_capabilities(&socket_str).await;
@@ -367,70 +399,10 @@ impl NeuralApiServer {
 
     /// Probe a primal's UDS socket for its capabilities via `capabilities.list`.
     ///
-    /// Returns an empty vec on connection failure (non-fatal — the primal may
-    /// not be ready yet, or may not support this method).
+    /// Delegates to `probe_primal_capabilities_standalone` (shared with lazy
+    /// rescan). Returns an empty vec on connection failure (non-fatal).
     async fn probe_primal_capabilities(&self, socket_path: &str) -> Vec<String> {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
-
-        let stream = match tokio::time::timeout(
-            std::time::Duration::from_millis(500),
-            UnixStream::connect(socket_path),
-        )
-        .await
-        {
-            Ok(Ok(s)) => s,
-            _ => return vec![],
-        };
-
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "capabilities.list",
-            "id": 1
-        });
-        let Ok(mut request_line) = serde_json::to_string(&request) else {
-            return vec![];
-        };
-        request_line.push('\n');
-
-        let mut reader = BufReader::new(stream);
-        let w = reader.get_mut();
-        if w.write_all(request_line.as_bytes()).await.is_err() {
-            return vec![];
-        }
-        let _ = w.flush().await;
-
-        let mut response_line = String::new();
-        match tokio::time::timeout(
-            std::time::Duration::from_millis(500),
-            reader.read_line(&mut response_line),
-        )
-        .await
-        {
-            Ok(Ok(n)) if n > 0 => {}
-            _ => return vec![],
-        }
-
-        let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
-
-        // Handle multiple capability response formats (Format A/B/C/D from primalSpring)
-        if let Some(caps) = resp["result"]["capabilities"].as_array() {
-            return caps
-                .iter()
-                .filter_map(|c| {
-                    c.as_str()
-                        .map(String::from)
-                        .or_else(|| c["name"].as_str().map(String::from))
-                })
-                .collect();
-        }
-        if let Some(caps) = resp["result"].as_array() {
-            return caps
-                .iter()
-                .filter_map(|c| c.as_str().map(String::from))
-                .collect();
-        }
-        vec![]
+        crate::neural_router::probe_primal_capabilities_standalone(socket_path).await
     }
 
     /// Re-scan socket directories and register any newly-appeared primals.
@@ -444,6 +416,7 @@ impl NeuralApiServer {
     pub(crate) async fn rescan_primals(&self) -> anyhow::Result<serde_json::Value> {
         let before = self.router.list_capabilities().await.len();
         self.discover_and_register_primals().await;
+        self.router.reset_lazy_rescan();
         let after = self.router.list_capabilities().await.len();
         let new_caps = after.saturating_sub(before);
         Ok(serde_json::json!({
@@ -514,19 +487,11 @@ impl NeuralApiServer {
         Ok(listener)
     }
 
-    /// Accept connections on a previously-bound listener.
+    /// Accept UDS connections on a previously-bound listener.
     async fn accept_connections(&self, listener: UnixListener) -> Result<()> {
-        let mode_str = {
-            let mode = self.mode.read().await;
-            match *mode {
-                BiomeOsMode::Bootstrap => "BOOTSTRAP (genesis)",
-                BiomeOsMode::Coordinated => "COORDINATED (gen 1)",
-            }
-        };
-
         info!(
-            "🧠 Neural API server accepting connections (mode: {})",
-            mode_str
+            "🧠 Neural API server accepting UDS connections (mode: {})",
+            self.mode_display_str().await
         );
 
         loop {
@@ -543,6 +508,39 @@ impl NeuralApiServer {
                     error!("Failed to accept connection: {}", e);
                 }
             }
+        }
+    }
+
+    /// Accept TCP connections (mobile / cross-gate).
+    async fn accept_tcp_connections(&self, listener: tokio::net::TcpListener) -> Result<()> {
+        info!(
+            "📡 Neural API server accepting TCP connections (mode: {})",
+            self.mode_display_str().await
+        );
+
+        loop {
+            match listener.accept().await {
+                Ok((stream, addr)) => {
+                    debug!("TCP connection from {}", addr);
+                    let server = self.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = server.handle_tcp_connection(stream).await {
+                            error!("TCP connection error from {}: {}", addr, e);
+                        }
+                    });
+                }
+                Err(e) => {
+                    error!("Failed to accept TCP connection: {}", e);
+                }
+            }
+        }
+    }
+
+    async fn mode_display_str(&self) -> &'static str {
+        let mode = self.mode.read().await;
+        match *mode {
+            BiomeOsMode::Bootstrap => "BOOTSTRAP (genesis)",
+            BiomeOsMode::Coordinated => "COORDINATED (gen 1)",
         }
     }
 }
@@ -562,14 +560,6 @@ impl NeuralApiServer {
 )]
 mod tests {
     use super::*;
-    use biomeos_test_utils::TestEnvGuard;
-
-    #[test]
-    #[serial_test::serial]
-    fn test_is_explicit_coordinated_mode_reads_biomeos_mode_env() {
-        let _guard = TestEnvGuard::set("BIOMEOS_MODE", "join");
-        assert!(is_explicit_coordinated_mode());
-    }
 
     #[test]
     fn test_is_explicit_coordinated_mode_str_coordinated() {

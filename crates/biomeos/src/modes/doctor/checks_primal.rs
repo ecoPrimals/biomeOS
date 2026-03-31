@@ -2,11 +2,31 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Doctor mode primal checks - primal discovery, plasmidBin
+//!
+//! Primal health checks are driven by **runtime socket enumeration**: every `*.sock` in the
+//! biomeOS runtime directory is treated as a primal endpoint. No compiled `CORE_PRIMALS` list.
 
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use super::types::{HealthCheck, HealthStatus};
+
+/// Collect all `.sock` paths under `runtime_dir` (flat scan).
+fn list_runtime_socket_paths(runtime_dir: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(runtime_dir) else {
+        return vec![];
+    };
+    let mut paths: Vec<PathBuf> = entries
+        .flatten()
+        .filter_map(|e| {
+            let p = e.path();
+            let name = p.file_name()?.to_str()?;
+            name.ends_with(".sock").then_some(p)
+        })
+        .collect();
+    paths.sort();
+    paths
+}
 
 pub(crate) async fn check_primal_discovery() -> Result<HealthCheck> {
     let family_id = biomeos_core::family_discovery::get_family_id();
@@ -29,42 +49,45 @@ pub(crate) async fn check_primal_discovery_with(
     let health_checker =
         biomeos_atomic_deploy::health_check::HealthChecker::new(runtime_dir.to_path_buf());
 
-    let primals = biomeos_types::primal_names::CORE_PRIMALS;
-
     check
         .details
         .push(format!("Socket dir: {}", runtime_dir.display()));
     check.details.push(format!("Family ID: {family_id}"));
 
-    let mut found_count = 0;
-    for primal_name in primals {
-        let socket_path = runtime_dir.join(format!("{primal_name}-{family_id}.sock"));
+    let socket_paths = list_runtime_socket_paths(runtime_dir);
+    let total = socket_paths.len();
+    let mut found_count = 0usize;
+
+    for socket_path in socket_paths {
+        let label = socket_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("socket")
+            .strip_suffix(".sock")
+            .unwrap_or("socket");
 
         match health_checker.check_primal(&socket_path).await {
             Ok(status) if status.is_healthy => {
                 found_count += 1;
-                check.details.push(format!(
-                    "{}: ✅ Healthy ({})",
-                    primal_name,
-                    socket_path.display()
-                ));
+                check
+                    .details
+                    .push(format!("{}: ✅ Healthy ({})", label, socket_path.display()));
             }
             Ok(status) => {
                 let msg = status.message.unwrap_or_else(|| "Not found".to_string());
-                check.details.push(format!("{primal_name}: ❌ {msg}"));
+                check.details.push(format!("{label}: ❌ {msg}"));
             }
             Err(e) => {
-                check.details.push(format!("{primal_name}: ❌ Error: {e}"));
+                check.details.push(format!("{label}: ❌ Error: {e}"));
             }
         }
     }
 
-    let expected = primals.len();
     check.details.push(format!(
-        "Total: {found_count}/{expected} primals discovered"
+        "Total: {found_count}/{total} healthy primals (sockets scanned: {total})"
     ));
 
-    if found_count < expected / 2 {
+    if total > 0 && found_count * 2 < total {
         check.status = HealthStatus::Warning;
     }
 
@@ -151,7 +174,7 @@ mod tests {
             check
                 .details
                 .iter()
-                .any(|d| d.contains("primals discovered"))
+                .any(|d| d.contains("healthy primals") || d.contains("primals discovered"))
         );
         // Status may be Healthy or Warning depending on running primals
         assert!(matches!(
@@ -219,9 +242,8 @@ mod tests {
         let runtime_dir = temp.path().join("xdg-runtime").join("biomeos");
         std::fs::create_dir_all(&runtime_dir).unwrap();
 
-        let primals = biomeos_types::primal_names::CORE_PRIMALS;
-        for primal_name in primals.iter().take(4) {
-            let socket_path = runtime_dir.join(format!("{primal_name}-test.sock"));
+        for i in 0..4 {
+            let socket_path = runtime_dir.join(format!("primal{i}-test.sock"));
             let _listener = std::os::unix::net::UnixListener::bind(&socket_path).expect("bind");
         }
 
@@ -235,7 +257,7 @@ mod tests {
             check
                 .details
                 .iter()
-                .any(|d| d.contains("primals discovered"))
+                .any(|d| d.contains("healthy primals") || d.contains("primals discovered"))
         );
         assert_eq!(check.status, HealthStatus::Healthy);
     }
@@ -246,8 +268,15 @@ mod tests {
         let runtime_dir = temp.path().join("xdg-runtime").join("biomeos");
         std::fs::create_dir_all(&runtime_dir).unwrap();
 
-        let socket_path = runtime_dir.join("beardog-test.sock");
-        let _listener = std::os::unix::net::UnixListener::bind(&socket_path).expect("bind");
+        let good = runtime_dir.join("good-test.sock");
+        let _listener = std::os::unix::net::UnixListener::bind(&good).expect("bind");
+        for i in 0..3 {
+            std::fs::write(
+                runtime_dir.join(format!("bad{i}-test.sock")),
+                b"not-a-socket",
+            )
+            .unwrap();
+        }
 
         let check = check_primal_discovery_with(&runtime_dir, "test")
             .await
@@ -258,20 +287,22 @@ mod tests {
             check
                 .details
                 .iter()
-                .any(|d| d.contains("1/7") || d.contains("2/7"))
+                .any(|d| d.contains("Total: 1/4") || d.contains("1/4"))
         );
     }
 
     #[tokio::test]
-    async fn test_check_primal_discovery_details_contain_all_primals() {
+    async fn test_check_primal_discovery_lists_sockets_in_runtime_dir() {
         let check = check_primal_discovery().await.unwrap();
-        let primals = biomeos_types::primal_names::CORE_PRIMALS;
-        for primal_name in primals {
-            assert!(
-                check.details.iter().any(|d| d.starts_with(primal_name)),
-                "expected detail for primal {primal_name}"
-            );
-        }
+        assert!(check.details.iter().any(|d| d.starts_with("Socket dir:")));
+        assert!(
+            check
+                .details
+                .iter()
+                .any(|d| { d.contains("healthy primals") && d.contains("sockets scanned") }),
+            "expected summary line with socket scan count: {:?}",
+            check.details
+        );
     }
 
     #[tokio::test]
@@ -280,8 +311,11 @@ mod tests {
         let total_detail = check
             .details
             .iter()
-            .find(|d| d.contains("primals discovered"))
+            .find(|d| d.contains("healthy primals") && d.contains("sockets scanned"))
             .expect("total line");
-        assert!(total_detail.contains("/7"));
+        assert!(
+            total_detail.contains("Total:") && total_detail.contains('/'),
+            "{total_detail}"
+        );
     }
 }

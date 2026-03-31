@@ -63,6 +63,10 @@ impl UniversalBiomeOSManager {
     /// Validate manifest integration.
     ///
     /// Validation delegates to `ToadStool` via `compute.validate` when available.
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     pub(super) fn validate_manifest_integration(&self, manifest_path: &str) -> Result<String> {
         tracing::debug!("Validating manifest: {}", manifest_path);
         // Integration point with Toadstool parser
@@ -74,6 +78,10 @@ impl UniversalBiomeOSManager {
     /// Deploy via ecosystem integration.
     ///
     /// Compute orchestration routes to `ToadStool` via `compute.*` capabilities.
+    #[expect(
+        clippy::unused_self,
+        reason = "method for future use or API consistency"
+    )]
     pub(super) fn deploy_via_ecosystem_integration(&self, manifest_path: &str) -> Result<String> {
         tracing::debug!("Deploying via ecosystem integration: {}", manifest_path);
         // Integration point with Toadstool for compute orchestration

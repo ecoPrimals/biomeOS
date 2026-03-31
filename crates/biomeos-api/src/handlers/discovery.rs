@@ -6,6 +6,7 @@
 
 use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::sync::Arc;
 use tracing::info;
 
@@ -155,7 +156,10 @@ pub async fn get_discovered_primals(
 /// 3. **Capability-based**: Reads capabilities from primal's own response
 /// 4. **Environment-aware**: Uses 5-tier socket resolution
 async fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
-    let socket_dir = get_socket_dir();
+    probe_live_sockets_in(Path::new(&get_socket_dir())).await
+}
+
+async fn probe_live_sockets_in(socket_dir: &Path) -> Vec<DiscoveredPrimal> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or(std::time::Duration::from_secs(0))
@@ -163,10 +167,10 @@ async fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
 
     let mut primals = Vec::new();
 
-    let dir = match std::fs::read_dir(&socket_dir) {
+    let dir = match std::fs::read_dir(socket_dir) {
         Ok(d) => d,
         Err(e) => {
-            tracing::debug!("Socket dir {} not readable: {}", socket_dir, e);
+            tracing::debug!("Socket dir {} not readable: {}", socket_dir.display(), e);
             return primals;
         }
     };
@@ -254,15 +258,23 @@ async fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
 /// 4. `/data/local/tmp/biomeos` (Android)
 /// 5. `/tmp/biomeos` (fallback)
 fn get_socket_dir() -> String {
-    use biomeos_core::socket_discovery::SocketDiscovery;
+    get_socket_dir_from(None)
+}
+
+/// Like [`get_socket_dir`], with an optional `PRIMAL_SOCKET` tier-1 override (no other env mutation).
+fn get_socket_dir_from(primal_socket_override: Option<&str>) -> String {
     use biomeos_types::constants::runtime_paths;
 
     let family_id = std::env::var("FAMILY_ID")
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
         .unwrap_or_else(|_| biomeos_core::family_discovery::get_family_id());
 
-    let discovery = SocketDiscovery::new(family_id);
-    let socket_path = discovery.build_socket_path("_discovery_probe");
+    let socket_path = biomeos_core::socket_discovery::build_socket_path_with_overrides(
+        "_discovery_probe",
+        family_id.as_str(),
+        primal_socket_override,
+        None,
+    );
 
     socket_path.parent().map_or_else(
         || runtime_paths::FALLBACK_RUNTIME_BASE.to_string(),

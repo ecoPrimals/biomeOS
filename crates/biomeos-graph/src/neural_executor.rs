@@ -55,6 +55,8 @@ pub struct ExecutionContext {
     pub checkpoint_dir: Option<PathBuf>,
     /// Rollback actions (in execution order)
     pub rollback_actions: Arc<Mutex<Vec<(String, RollbackAction)>>>,
+    /// Background tasks that own spawned primal `Child` handles and reap on exit.
+    pub spawned_primal_tasks: Arc<Mutex<Vec<tokio::task::JoinHandle<()>>>>,
 }
 
 impl ExecutionContext {
@@ -66,7 +68,14 @@ impl ExecutionContext {
             status: Arc::new(Mutex::new(HashMap::new())),
             checkpoint_dir: None,
             rollback_actions: Arc::new(Mutex::new(Vec::new())),
+            spawned_primal_tasks: Arc::new(Mutex::new(Vec::new())),
         }
+    }
+
+    /// Track a background task that owns a primal process handle until the process exits.
+    pub async fn record_spawned_primal_task(&self, handle: tokio::task::JoinHandle<()>) {
+        let mut tasks = self.spawned_primal_tasks.lock().await;
+        tasks.push(handle);
     }
 
     /// Set output for a node
@@ -339,17 +348,19 @@ impl GraphExecutor {
             .unwrap_or("server");
         
         // Spawn the primal process
-        let mut child = primal_spawner::spawn_primal_process(primal_name, mode, context, node)
+        let child = primal_spawner::spawn_primal_process(primal_name, mode, context, node)
             .await
             .context("Failed to spawn primal process")?;
         
         // Get the PID from the spawned child
         let pid = child.id()
             .ok_or_else(|| anyhow::anyhow!("Failed to get PID from spawned process"))?;
-        
-        // Detach the child process (let it run independently)
-        std::mem::forget(child);
-        
+
+        let wait_task = tokio::spawn(async move {
+            let _ = child.wait().await;
+        });
+        context.record_spawned_primal_task(wait_task).await;
+
         Ok(serde_json::json!({
             "launched": true,
             "primal": primal_name,

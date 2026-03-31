@@ -33,7 +33,7 @@ pub fn parse_arch(arch: &str) -> Result<Arch> {
 }
 use clap::{Args, Subcommand};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
 // ============================================================================
@@ -275,31 +275,43 @@ pub fn handle_genome_self_replicate() -> Result<()> {
     Ok(())
 }
 
-/// Get the XDG-compliant genome storage directory
+/// Resolve genome storage directory.
 ///
-/// DEEP DEBT EVOLUTION: Uses $HOME env instead of `dirs` (C-based)
-fn get_genome_storage_dir() -> PathBuf {
-    // Check XDG data directory first
+/// When `data_home` is `Some`, treat it as `XDG_DATA_HOME` (`<dir>/biomeos/genomes`).
+/// When `None`, use the same rules as the CLI: `XDG_DATA_HOME`, then `HOME`, then system defaults.
+///
+/// DEEP DEBT EVOLUTION: Uses `$HOME` env instead of `dirs` (C-based)
+pub fn get_genome_storage_dir_with(data_home: Option<&str>) -> PathBuf {
+    if let Some(data_home) = data_home {
+        return PathBuf::from(data_home).join("biomeos/genomes");
+    }
+
     if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
         return PathBuf::from(data_home).join("biomeos/genomes");
     }
 
-    // Fall back to $HOME/.local/share/biomeos/genomes
     if let Ok(home) = std::env::var("HOME") {
         return PathBuf::from(home).join(".local/share/biomeos/genomes");
     }
 
-    // Last resort: XDG-compliant data dir
     biomeos_types::SystemPaths::new_lazy()
         .data_dir()
         .join("genomes")
 }
 
+/// Get the XDG-compliant genome storage directory (reads process environment).
+fn get_genome_storage_dir() -> PathBuf {
+    get_genome_storage_dir_with(None)
+}
+
 /// Handle genome list command
 pub fn handle_genome_list() -> Result<()> {
-    info!("Listing genomes");
+    handle_genome_list_at(&get_genome_storage_dir())
+}
 
-    let storage_dir = get_genome_storage_dir();
+/// List genomes under an explicit storage directory (tests, tooling).
+pub fn handle_genome_list_at(storage_dir: &Path) -> Result<()> {
+    info!("Listing genomes");
 
     if !storage_dir.exists() {
         println!("📂 Genome storage: {}", storage_dir.display());
@@ -317,7 +329,7 @@ pub fn handle_genome_list() -> Result<()> {
     let mut genomes_found = 0;
 
     // Scan for .json genome files
-    if let Ok(entries) = fs::read_dir(&storage_dir) {
+    if let Ok(entries) = fs::read_dir(storage_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if path.extension().is_some_and(|ext| ext == "json") {
