@@ -686,7 +686,7 @@ mod tests {
                 name: biomeos_types::primal_names::BEARDOG.into(),
                 primal_type: "security".into(),
                 capabilities: CapabilitySet::new(),
-                endpoints: vec![PrimalEndpoint::UnixSocket { path: sock.clone() }],
+                endpoints: vec![PrimalEndpoint::UnixSocket { path: sock }],
                 metadata: HashMap::new(),
             },
         );

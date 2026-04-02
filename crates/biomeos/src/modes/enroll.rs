@@ -14,7 +14,7 @@
 //! ## What It Does
 //!
 //! 1. Reads the shared `.family.seed` file
-//! 2. Calls BearDog to derive a UNIQUE seed for this device
+//! 2. Calls the security provider (discovered by capability) to derive a UNIQUE seed
 //! 3. Saves the derived seed to `.lineage.seed`
 //! 4. Saves metadata to `.lineage.json`
 //!
@@ -28,8 +28,7 @@ use biomeos_spore::beacon_genetics::{
     DirectBeardogCaller, LineageDeriver, NeuralApiCapabilityCaller, generate_device_entropy,
     load_lineage,
 };
-use biomeos_types::Uuid;
-use biomeos_types::primal_names::BEARDOG;
+use biomeos_types::{CapabilityTaxonomy, Uuid};
 use clap::Args;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
@@ -58,12 +57,12 @@ pub struct EnrollArgs {
     #[arg(long, default_value = ".lineage.seed")]
     pub lineage_seed: PathBuf,
 
-    /// BearDog socket path (for derivation)
-    #[arg(long, env = "BEARDOG_SOCKET")]
-    pub beardog_socket: Option<String>,
+    /// Security provider socket path (for seed derivation)
+    #[arg(long = "security-provider-socket", alias = "beardog-socket", env = "SECURITY_PROVIDER_SOCKET")]
+    pub security_socket: Option<String>,
 
     #[arg(skip)]
-    pub beardog_socket_dir: Option<PathBuf>,
+    pub security_socket_dir: Option<PathBuf>,
 
     /// Force re-enrollment even if lineage already exists
     #[arg(long)]
@@ -152,7 +151,7 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
     // Enroll the device
     info!("📝 Deriving unique device seed...");
 
-    // Prefer Neural API routing; fall back to direct BearDog for bootstrap
+    // Prefer Neural API routing; fall back to direct security provider for bootstrap
     let neural_socket = NeuralApiCapabilityCaller::default_socket();
     let result = if Path::new(&neural_socket).exists() {
         info!("   Neural API: {} (capability routing)", neural_socket);
@@ -168,20 +167,20 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
             .await
             .context("Device enrollment failed (via Neural API)")?
     } else {
-        let beardog_socket = args
-            .beardog_socket
+        let security_socket = args
+            .security_socket
             .or_else(|| {
-                args.beardog_socket_dir
+                args.security_socket_dir
                     .as_ref()
-                    .map_or_else(discover_beardog_socket, |dir| {
-                        discover_beardog_socket_in(Some(dir.as_path()), Some(&args.family_id))
+                    .map_or_else(discover_security_socket, |dir| {
+                        discover_security_socket_in(Some(dir.as_path()), Some(&args.family_id))
                     })
             })
             .context(
-                "Could not find BearDog socket (Neural API not available). Is BearDog running?",
+                "Could not find security provider socket (Neural API not available). Is the security provider running?",
             )?;
-        info!("   BearDog (direct, bootstrap): {}", beardog_socket);
-        let caller = DirectBeardogCaller::new(&beardog_socket);
+        info!("   Security provider (direct, bootstrap): {}", security_socket);
+        let caller = DirectBeardogCaller::new(&security_socket);
         LineageDeriver::new(caller)
             .enroll_device(
                 &args.family_seed,
@@ -191,7 +190,7 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
                 &args.node_id,
             )
             .await
-            .context("Device enrollment failed (direct BearDog)")?
+            .context("Device enrollment failed (direct security provider)")?
     };
 
     info!("✅ Device enrolled successfully!");
@@ -214,22 +213,25 @@ fn get_machine_id() -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
-/// Bootstrap-specific BearDog discovery with an explicit socket directory.
+/// Bootstrap security provider discovery with an explicit socket directory.
 ///
-/// Used when the CLI provides `--beardog-socket-dir`, narrowing the search
-/// to a single directory rather than the full 5-tier protocol.
-pub(crate) fn discover_beardog_socket_in(
+/// Used when the CLI provides `--security-provider-socket-dir`, narrowing the
+/// search to a single directory rather than the full 5-tier protocol.
+/// Resolves the primal name from capability taxonomy instead of hardcoding.
+pub(crate) fn discover_security_socket_in(
     socket_dir: Option<&Path>,
     family_id: Option<&str>,
 ) -> Option<String> {
+    let primal = CapabilityTaxonomy::resolve_to_primal("encryption").unwrap_or("beardog");
+
     if let Some(runtime_dir) = socket_dir {
         let biomeos_dir = runtime_dir.join("biomeos");
-        let xdg_path = biomeos_dir.join(format!("{BEARDOG}.sock"));
+        let xdg_path = biomeos_dir.join(format!("{primal}.sock"));
         if xdg_path.exists() {
             return Some(xdg_path.to_string_lossy().to_string());
         }
         if let Some(fid) = family_id {
-            let family_path = biomeos_dir.join(format!("{BEARDOG}-{fid}.sock"));
+            let family_path = biomeos_dir.join(format!("{primal}-{fid}.sock"));
             if family_path.exists() {
                 return Some(family_path.to_string_lossy().to_string());
             }
@@ -239,8 +241,8 @@ pub(crate) fn discover_beardog_socket_in(
     None
 }
 
-/// Bootstrap BearDog discovery — delegates to the 5-tier capability protocol.
-fn discover_beardog_socket() -> Option<String> {
+/// Bootstrap security provider discovery — delegates to the 5-tier capability protocol.
+fn discover_security_socket() -> Option<String> {
     use biomeos_types::capability_discovery;
 
     capability_discovery::discover_capability_socket("encryption", &capability_discovery::std_env)
@@ -353,8 +355,8 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_beardog_socket_handles_missing() {
-        assert!(discover_beardog_socket_in(None, None).is_none());
+    fn test_discover_security_socket_handles_missing() {
+        assert!(discover_security_socket_in(None, None).is_none());
     }
 
     #[tokio::test]
@@ -366,8 +368,8 @@ mod tests {
             device_id: Some("test-device-123".to_string()),
             family_seed: temp.path().join("nonexistent.family.seed"),
             lineage_seed: temp.path().join(".lineage.seed"),
-            beardog_socket: None,
-            beardog_socket_dir: None,
+            security_socket: None,
+            security_socket_dir: None,
             force: false,
         };
         let result = run(args).await;
@@ -380,7 +382,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_run_fails_when_beardog_socket_missing() {
+    async fn test_run_fails_when_security_socket_missing() {
         let temp = tempfile::tempdir().expect("temp dir");
         let family_seed = temp.path().join(".family.seed");
         std::fs::write(&family_seed, "test-seed-content").expect("write family seed");
@@ -391,8 +393,8 @@ mod tests {
             device_id: Some("test-device-123".to_string()),
             family_seed,
             lineage_seed: temp.path().join(".lineage.seed"),
-            beardog_socket: None,
-            beardog_socket_dir: Some(temp.path().to_path_buf()),
+            security_socket: None,
+            security_socket_dir: Some(temp.path().to_path_buf()),
             force: false,
         };
         let result = run(args).await;
@@ -419,8 +421,8 @@ mod tests {
             device_id: None,
             family_seed,
             lineage_seed: temp.path().join(".lineage.seed"),
-            beardog_socket: None,
-            beardog_socket_dir: Some(temp.path().to_path_buf()),
+            security_socket: None,
+            security_socket_dir: Some(temp.path().to_path_buf()),
             force: false,
         };
         let result = run(args).await;
@@ -442,8 +444,8 @@ mod tests {
             device_id: Some("custom-device-id-xyz".to_string()),
             family_seed,
             lineage_seed: temp.path().join(".lineage.seed"),
-            beardog_socket: None,
-            beardog_socket_dir: None,
+            security_socket: None,
+            security_socket_dir: None,
             force: false,
         };
         let result = run(args).await;
@@ -464,8 +466,8 @@ mod tests {
             device_id: Some("device-1".to_string()),
             family_seed,
             lineage_seed,
-            beardog_socket: None,
-            beardog_socket_dir: None,
+            security_socket: None,
+            security_socket_dir: None,
             force: false,
         };
         let result = run(args).await;
@@ -493,8 +495,8 @@ mod tests {
             device_id: Some("device-1".to_string()),
             family_seed,
             lineage_seed,
-            beardog_socket: None,
-            beardog_socket_dir: None,
+            security_socket: None,
+            security_socket_dir: None,
             force: false,
         };
         let result = run(args).await;
@@ -519,8 +521,8 @@ mod tests {
             device_id: Some("device-1".to_string()),
             family_seed,
             lineage_seed,
-            beardog_socket: None,
-            beardog_socket_dir: None,
+            security_socket: None,
+            security_socket_dir: None,
             force: true,
         };
         let result = run(args).await;
@@ -549,8 +551,8 @@ mod tests {
             device_id: Some("device-1".to_string()),
             family_seed,
             lineage_seed,
-            beardog_socket: None,
-            beardog_socket_dir: None,
+            security_socket: None,
+            security_socket_dir: None,
             force: false,
         };
         let result = run(args).await;
@@ -568,8 +570,8 @@ mod tests {
             device_id: Some("dev456".to_string()),
             family_seed: std::path::PathBuf::from(".family.seed"),
             lineage_seed: std::path::PathBuf::from(".lineage.seed"),
-            beardog_socket: None,
-            beardog_socket_dir: None,
+            security_socket: None,
+            security_socket_dir: None,
             force: false,
         };
         assert_eq!(args.family_id, "fam123");
@@ -590,25 +592,25 @@ mod tests {
             device_id: None,
             family_seed: custom_family.clone(),
             lineage_seed: custom_lineage.clone(),
-            beardog_socket: Some("/tmp/beardog.sock".to_string()),
-            beardog_socket_dir: None,
+            security_socket: Some("/tmp/beardog.sock".to_string()),
+            security_socket_dir: None,
             force: true,
         };
         assert_eq!(args.family_seed, custom_family);
         assert_eq!(args.lineage_seed, custom_lineage);
         assert!(args.force);
-        assert_eq!(args.beardog_socket, Some("/tmp/beardog.sock".to_string()));
+        assert_eq!(args.security_socket, Some("/tmp/beardog.sock".to_string()));
     }
 
     #[test]
-    fn test_discover_beardog_socket_finds_default_socket() {
+    fn test_discover_security_socket_finds_default_socket() {
         let temp = tempfile::tempdir().expect("temp dir");
         let biomeos_dir = temp.path().join("biomeos");
         std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
         let socket_path = biomeos_dir.join("beardog.sock");
         std::fs::write(&socket_path, "").expect("create socket file");
 
-        let result = discover_beardog_socket_in(Some(temp.path()), None);
+        let result = discover_security_socket_in(Some(temp.path()), None);
         assert!(
             result.is_some(),
             "Should find socket when socket_dir/biomeos/beardog.sock exists"
@@ -617,14 +619,14 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_beardog_socket_finds_family_suffixed_socket() {
+    fn test_discover_security_socket_finds_family_suffixed_socket() {
         let temp = tempfile::tempdir().expect("temp dir");
         let biomeos_dir = temp.path().join("biomeos");
         std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
         let socket_path = biomeos_dir.join("beardog-testfamily123.sock");
         std::fs::write(&socket_path, "").expect("create socket file");
 
-        let result = discover_beardog_socket_in(Some(temp.path()), Some("testfamily123"));
+        let result = discover_security_socket_in(Some(temp.path()), Some("testfamily123"));
         assert!(
             result.is_some(),
             "Should find beardog-{{family_id}}.sock when socket_dir and family_id provided"
@@ -645,8 +647,8 @@ mod tests {
             device_id: Some("device-xyz".to_string()),
             family_seed,
             lineage_seed,
-            beardog_socket: None,
-            beardog_socket_dir: None,
+            security_socket: None,
+            security_socket_dir: None,
             force: false,
         };
         let result = run(args).await;
@@ -657,7 +659,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_run_fails_when_beardog_socket_connection_refused() {
+    async fn test_run_fails_when_security_socket_connection_refused() {
         let temp = tempfile::tempdir().expect("temp dir");
         let family_seed = temp.path().join(".family.seed");
         std::fs::write(&family_seed, "valid-seed-content").expect("write family seed");
@@ -670,8 +672,8 @@ mod tests {
             device_id: Some("device-xyz".to_string()),
             family_seed,
             lineage_seed,
-            beardog_socket: Some(nonexistent_socket.to_string_lossy().to_string()),
-            beardog_socket_dir: None,
+            security_socket: Some(nonexistent_socket.to_string_lossy().to_string()),
+            security_socket_dir: None,
             force: false,
         };
         let result = run(args).await;

@@ -77,6 +77,8 @@ mod transport;
 mod engine_tests;
 #[cfg(test)]
 mod engine_tests2;
+#[cfg(test)]
+mod engine_tests3;
 
 // Re-export primary types
 pub use cap_probe::probe_unix_socket_capabilities_list;

@@ -99,7 +99,7 @@ impl NeuralBridge {
     /// automatic discovery is insufficient.
     #[must_use]
     pub fn discover_with(neural_api_socket: Option<&str>, family_id: Option<&str>) -> Option<Self> {
-        Self::discover_with_env(neural_api_socket, family_id, SocketResolveEnv::default())
+        Self::discover_with_env(neural_api_socket, family_id, &SocketResolveEnv::default())
     }
 
     /// Like [`Self::discover_with`], with explicit runtime / temp overrides (no env mutation).
@@ -107,7 +107,7 @@ impl NeuralBridge {
     pub fn discover_with_env(
         neural_api_socket: Option<&str>,
         family_id: Option<&str>,
-        env: SocketResolveEnv,
+        env: &SocketResolveEnv,
     ) -> Option<Self> {
         let path = resolve_socket_with_env(neural_api_socket, family_id, env)?;
         Some(Self {
@@ -241,7 +241,7 @@ pub fn resolve_socket_with(
     resolve_socket_with_env(
         neural_api_socket,
         family_id_override,
-        SocketResolveEnv::default(),
+        &SocketResolveEnv::default(),
     )
 }
 
@@ -250,7 +250,7 @@ pub fn resolve_socket_with(
 pub fn resolve_socket_with_env(
     neural_api_socket: Option<&str>,
     family_id_override: Option<&str>,
-    env: SocketResolveEnv,
+    env: &SocketResolveEnv,
 ) -> Option<PathBuf> {
     if let Some(path) = neural_api_socket {
         let p = PathBuf::from(path);
@@ -290,8 +290,7 @@ pub fn resolve_socket_with_env(
     let tmp_base = env
         .tmpdir
         .as_ref()
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir);
+        .map_or_else(std::env::temp_dir, PathBuf::from);
     let p = tmp_base
         .join("biomeos")
         .join(format!("neural-api-{family_id}.sock"));
@@ -520,7 +519,7 @@ mod tests {
         let bridge = NeuralBridge::discover_with_env(
             None,
             Some(family),
-            SocketResolveEnv {
+            &SocketResolveEnv {
                 xdg_runtime_dir: Some(temp.path().to_str().expect("utf8 path").to_string()),
                 tmpdir: None,
             },
@@ -543,7 +542,7 @@ mod tests {
         let bridge = NeuralBridge::discover_with_env(
             None,
             Some(family),
-            SocketResolveEnv {
+            &SocketResolveEnv {
                 xdg_runtime_dir: Some(empty_xdg.path().to_str().expect("utf8 path").to_string()),
                 tmpdir: None,
             },
@@ -565,7 +564,7 @@ mod tests {
         let bridge = NeuralBridge::discover_with_env(
             None,
             Some(family),
-            SocketResolveEnv {
+            &SocketResolveEnv {
                 xdg_runtime_dir: Some(empty_xdg.path().to_str().expect("utf8 path").to_string()),
                 tmpdir: Some(tmp_root.path().to_str().expect("utf8 path").to_string()),
             },

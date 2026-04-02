@@ -304,6 +304,10 @@ impl BootableMediaBuilder {
     }
 
     /// Create bootable ISO with grub-mkrescue (preferred method)
+    #[expect(
+        clippy::unused_self,
+        reason = "method for API consistency with fallback chain"
+    )]
     fn create_with_grub_mkrescue(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
         info!("Using grub-mkrescue (GRUB built-in)...");
 
@@ -323,6 +327,10 @@ impl BootableMediaBuilder {
     }
 
     /// Create bootable ISO with xorriso (fallback method)
+    #[expect(
+        clippy::unused_self,
+        reason = "method for API consistency with fallback chain"
+    )]
     fn create_with_xorriso(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
         info!("Using xorriso (fallback)...");
 
@@ -352,6 +360,10 @@ impl BootableMediaBuilder {
     }
 
     /// Create tar.gz archive as final fallback
+    #[expect(
+        clippy::unused_self,
+        reason = "method for API consistency with fallback chain"
+    )]
     fn create_archive_fallback(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
         use flate2::Compression;
         use flate2::write::GzEncoder;
@@ -670,7 +682,7 @@ mod tests {
     async fn test_add_biomeos_data_without_phase1_parent() {
         let temp = tempfile::tempdir().expect("temp dir");
         let project_root = temp.path().to_path_buf();
-        let builder = BootableMediaBuilder::new(project_root.clone()).expect("new");
+        let builder = BootableMediaBuilder::new(project_root).expect("new");
         let boot_dir = temp.path().join("br");
         std::fs::create_dir_all(&boot_dir).expect("boot");
         builder
@@ -788,7 +800,7 @@ mod tests {
         let temp = tempfile::tempdir().expect("temp dir");
         let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
         let missing_kernel = temp.path().join("no-such-vmlinuz");
-        let km = KernelManager::detect_or_custom(Some(missing_kernel.clone())).expect("km");
+        let km = KernelManager::detect_or_custom(Some(missing_kernel)).expect("km");
         let initramfs = temp.path().join("ir.img");
         std::fs::write(&initramfs, b"x").expect("init");
         let r = builder.create_boot_structure(&km, &initramfs);

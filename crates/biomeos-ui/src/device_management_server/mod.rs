@@ -46,22 +46,22 @@ pub(crate) struct JsonRpcError {
 }
 
 fn effective_unix_uid_string() -> Option<String> {
-    if let Ok(u) = std::env::var("UID") {
-        if !u.is_empty() {
-            return Some(u);
-        }
+    if let Ok(u) = std::env::var("UID")
+        && !u.is_empty()
+    {
+        return Some(u);
     }
-    if let Ok(u) = std::env::var("EUID") {
-        if !u.is_empty() {
-            return Some(u);
-        }
+    if let Ok(u) = std::env::var("EUID")
+        && !u.is_empty()
+    {
+        return Some(u);
     }
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt;
-        return std::fs::metadata("/proc/self")
+        std::fs::metadata("/proc/self")
             .ok()
-            .map(|m| m.uid().to_string());
+            .map(|m| m.uid().to_string())
     }
     #[cfg(not(unix))]
     None

@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.81)
+## Status: Production Ready (v2.82)
 
 | Metric | Value |
 |--------|-------|
@@ -345,8 +345,8 @@ scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC
 
 ---
 
-**Status**: Production Ready (v2.81)
-**Updated**: March 31, 2026
+**Status**: Production Ready (v2.82)
+**Updated**: April 1, 2026
 **Tests**: 7,212 passing, 90%+ coverage (llvm-cov verified) | **Clippy**: pedantic+nursery via workspace lints | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Auto-discovery + lazy rescan + capability-first routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
 

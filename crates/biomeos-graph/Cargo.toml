@@ -19,7 +19,7 @@ thiserror = "1.0"
 anyhow = "1.0"
 
 # Async & Events (for events.rs GraphEventBroadcaster)
-tokio = { version = "1.34", features = ["sync", "time", "test-util", "net", "io-util", "macros", "process", "rt"] }
+tokio = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 

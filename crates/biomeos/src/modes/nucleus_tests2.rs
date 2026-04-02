@@ -600,3 +600,104 @@ fn test_build_primal_command_squirrel_custom_ai_http_providers_when_both_keys_se
         "custom_a,custom_b"
     );
 }
+
+#[test]
+fn test_build_primal_command_squirrel_with_ai_default_model() {
+    let config = super::PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: None,
+        openai_api_key: None,
+        ai_http_providers: None,
+        ai_default_model: Some("claude-3-sonnet"),
+    };
+    let cmd = super::build_primal_command_with(&config);
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let model = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("AI_DEFAULT_MODEL"));
+    assert!(model.is_some(), "AI_DEFAULT_MODEL should be set");
+    assert_eq!(
+        model.unwrap().1.unwrap().to_string_lossy(),
+        "claude-3-sonnet"
+    );
+}
+
+#[test]
+fn test_discover_search_path_with_cwd() {
+    let cwd = std::path::Path::new("/home/user/project");
+    let rel = PathBuf::from("plasmidBin");
+    let result = super::discover_search_path(rel, Some(cwd));
+    assert_eq!(result, PathBuf::from("/home/user/project/plasmidBin"));
+}
+
+#[test]
+fn test_discover_search_path_without_cwd() {
+    let rel = PathBuf::from("plasmidBin");
+    let result = super::discover_search_path(rel, None);
+    assert_eq!(result, PathBuf::from("plasmidBin"));
+}
+
+#[test]
+fn test_discover_binaries_with_cwd_finds_in_target_release() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let release_dir = temp.path().join("target/release");
+    std::fs::create_dir_all(&release_dir).expect("create target/release");
+    let name = "biomeos_cwd_test_binary";
+    let binary = release_dir.join(name);
+    std::fs::write(&binary, b"#!/bin/sh\nexit 0").expect("write");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&binary).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary, perms).unwrap();
+    }
+    let map =
+        super::discover_binaries_with(&[name], None, &[], Some(temp.path())).expect("discover");
+    assert!(
+        map.contains_key(name),
+        "should find {name} in target/release with cwd, got {map:?}"
+    );
+}
+
+#[test]
+fn test_build_primal_command_with_all_env_keys_set() {
+    let config = super::PrimalCommandConfig {
+        name: "beardog",
+        binary: std::path::Path::new("/usr/bin/beardog"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node-42",
+        anthropic_api_key: None,
+        openai_api_key: None,
+        ai_http_providers: None,
+        ai_default_model: None,
+    };
+    let cmd = super::build_primal_command_with(&config);
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let family = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("FAMILY_ID"));
+    assert!(family.is_some());
+    assert_eq!(family.unwrap().1.unwrap().to_string_lossy(), "fam1");
+    let node = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("NODE_ID"));
+    assert!(node.is_some());
+    assert_eq!(node.unwrap().1.unwrap().to_string_lossy(), "node-42");
+    let beardog_node = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("BEARDOG_NODE_ID"));
+    assert!(beardog_node.is_some());
+}
+
+#[test]
+fn test_nucleus_mode_clone_and_copy() {
+    let mode = NucleusMode::Full;
+    let cloned = mode;
+    assert!(matches!(cloned, NucleusMode::Full));
+}

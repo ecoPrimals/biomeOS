@@ -6,9 +6,7 @@
 //! Wraps biomeos-core::model_cache with CLI interface.
 
 use anyhow::Result;
-#[cfg(test)]
-use biomeos_core::model_cache::ModelCacheConfig;
-use biomeos_core::model_cache::{ModelCache, ModelResolution};
+use biomeos_core::model_cache::{ModelCache, ModelCacheConfig, ModelResolution};
 use std::path::Path;
 #[cfg(test)]
 use std::path::PathBuf;
@@ -78,13 +76,7 @@ pub(crate) fn hf_dir_to_model_id(dir_name: &str) -> Option<String> {
 
 /// Run model cache command
 pub async fn run(command: ModelCacheCommand) -> Result<()> {
-    match command {
-        ModelCacheCommand::ImportHf => import_huggingface().await,
-        ModelCacheCommand::List => list_models().await,
-        ModelCacheCommand::Resolve { model_id } => resolve_model(&model_id).await,
-        ModelCacheCommand::Register { model_id, path } => register_model(&model_id, &path).await,
-        ModelCacheCommand::Status => show_status().await,
-    }
+    run_with_config(ModelCacheConfig::from_env(), command).await
 }
 
 #[cfg(test)]
@@ -107,7 +99,6 @@ pub async fn run_with(
 }
 
 /// Run model-cache commands with an explicit [`ModelCacheConfig`] (no `HOME` / env coupling).
-#[cfg(test)]
 pub async fn run_with_config(config: ModelCacheConfig, command: ModelCacheCommand) -> Result<()> {
     match command {
         ModelCacheCommand::ImportHf => import_huggingface_config(config).await,
@@ -120,7 +111,6 @@ pub async fn run_with_config(config: ModelCacheConfig, command: ModelCacheComman
     }
 }
 
-#[cfg(test)]
 async fn import_huggingface_config(config: ModelCacheConfig) -> Result<()> {
     println!("\n  NUCLEUS Model Cache - HuggingFace Import");
     println!("  =========================================\n");
@@ -172,7 +162,6 @@ async fn import_huggingface_config(config: ModelCacheConfig) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
 async fn list_models_config(config: ModelCacheConfig) -> Result<()> {
     println!("\n  NUCLEUS Model Cache");
     println!("  ===================\n");
@@ -211,7 +200,6 @@ async fn list_models_config(config: ModelCacheConfig) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
 async fn resolve_model_config(config: ModelCacheConfig, model_id: &str) -> Result<()> {
     println!("\n  Resolving: {model_id}\n");
 
@@ -224,7 +212,6 @@ async fn resolve_model_config(config: ModelCacheConfig, model_id: &str) -> Resul
     Ok(())
 }
 
-#[cfg(test)]
 async fn register_model_config(
     config: ModelCacheConfig,
     model_id: &str,
@@ -249,7 +236,6 @@ async fn register_model_config(
     Ok(())
 }
 
-#[cfg(test)]
 async fn show_status_config(config: ModelCacheConfig) -> Result<()> {
     println!("\n  NUCLEUS Model Cache Status");
     println!("  ==========================\n");
@@ -294,61 +280,6 @@ async fn show_status_config(config: ModelCacheConfig) -> Result<()> {
     }
 
     println!();
-    Ok(())
-}
-
-/// Import all models from HuggingFace cache
-async fn import_huggingface() -> Result<()> {
-    println!("\n  NUCLEUS Model Cache - HuggingFace Import");
-    println!("  =========================================\n");
-
-    let mut cache = ModelCache::new().await?;
-
-    // First show what's already cached
-    let existing = cache.list_models();
-    if !existing.is_empty() {
-        println!("  Already cached:");
-        for model in &existing {
-            println!(
-                "    {} ({})",
-                model.model_id,
-                format_size_mb(model.size_bytes)
-            );
-        }
-        println!();
-    }
-
-    // Import from HuggingFace
-    let imported = cache.import_huggingface_cache().await?;
-
-    if imported.is_empty() {
-        println!("  No new models found in HuggingFace cache.");
-        println!("  (All models already registered or no HF cache found)");
-    } else {
-        println!("  Imported {} new models:", imported.len());
-        for model_id in &imported {
-            if let Some(entry) = cache.get_model(model_id) {
-                println!(
-                    "    + {} ({}, {})",
-                    model_id,
-                    format_size_mb(entry.size_bytes),
-                    entry.format
-                );
-            }
-        }
-    }
-
-    // Summary
-    let all = cache.list_models();
-    let total_size: u64 = all.iter().map(|m| m.size_bytes).sum();
-    println!();
-    println!(
-        "  Total: {} models, {} cached",
-        all.len(),
-        format_size_gb(total_size)
-    );
-    println!();
-
     Ok(())
 }
 
@@ -408,45 +339,6 @@ async fn import_huggingface_with(cache_dir: &Path, hf_hub_dir: Option<&Path>) ->
     Ok(())
 }
 
-/// List all cached models
-async fn list_models() -> Result<()> {
-    println!("\n  NUCLEUS Model Cache");
-    println!("  ===================\n");
-
-    let cache = ModelCache::new().await?;
-    let models = cache.list_models();
-
-    if models.is_empty() {
-        println!("  No models cached.");
-        println!("  Run 'biomeos model-cache import-hf' to import from HuggingFace.");
-        return Ok(());
-    }
-
-    println!("  {:<40} {:>10}  {:>12}  PATH", "MODEL", "FORMAT", "SIZE",);
-    println!("  {}", "-".repeat(90));
-
-    for model in &models {
-        println!(
-            "  {:<40} {:>10}  {:>9}  {}",
-            model.model_id,
-            model.format,
-            format_size_mb(model.size_bytes),
-            model.local_path.display()
-        );
-    }
-
-    let total_size: u64 = models.iter().map(|m| m.size_bytes).sum();
-    println!();
-    println!(
-        "  Total: {} models, {}",
-        models.len(),
-        format_size_gb(total_size)
-    );
-    println!();
-
-    Ok(())
-}
-
 #[cfg(test)]
 async fn list_models_with(cache_dir: &Path) -> Result<()> {
     println!("\n  NUCLEUS Model Cache");
@@ -486,19 +378,6 @@ async fn list_models_with(cache_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Resolve a model across the mesh
-async fn resolve_model(model_id: &str) -> Result<()> {
-    println!("\n  Resolving: {model_id}\n");
-
-    let cache = ModelCache::new().await?;
-    let resolution = cache.resolve(model_id).await;
-
-    print_resolve_model_resolution(model_id, &resolution);
-    println!();
-
-    Ok(())
-}
-
 #[cfg(test)]
 async fn resolve_model_with(cache_dir: &Path, model_id: &str) -> Result<()> {
     println!("\n  Resolving: {model_id}\n");
@@ -507,27 +386,6 @@ async fn resolve_model_with(cache_dir: &Path, model_id: &str) -> Result<()> {
     let resolution = cache.resolve(model_id).await;
 
     print_resolve_model_resolution(model_id, &resolution);
-    println!();
-
-    Ok(())
-}
-
-/// Register a model from a local path
-async fn register_model(model_id: &str, path: &Path) -> Result<()> {
-    println!("\n  Registering: {} -> {}\n", model_id, path.display());
-
-    let mut cache = ModelCache::new().await?;
-    cache
-        .register_model(model_id, path, &format!("local:{}", path.display()))
-        .await?;
-
-    println!("  Registered successfully.");
-
-    if let Some(entry) = cache.get_model(model_id) {
-        println!("    Size:   {}", format_size_mb(entry.size_bytes));
-        println!("    Format: {}", entry.format);
-        println!("    Files:  {}", entry.files.len());
-    }
     println!();
 
     Ok(())
@@ -551,57 +409,6 @@ async fn register_model_with(cache_dir: &Path, model_id: &str, path: &Path) -> R
     }
     println!();
 
-    Ok(())
-}
-
-/// Show model cache status
-async fn show_status() -> Result<()> {
-    println!("\n  NUCLEUS Model Cache Status");
-    println!("  ==========================\n");
-
-    let cache = ModelCache::new().await?;
-    let models = cache.list_models();
-
-    let total_size: u64 = models.iter().map(|m| m.size_bytes).sum();
-
-    println!("  Local cache:");
-    println!("    Models:    {}", models.len());
-    println!("    Size:      {}", format_size_gb(total_size));
-
-    // Check NestGate connection
-    let nestgate_status = nestgate_status_label(cache.list_mesh_models().await.is_empty());
-    println!("    NestGate:  {nestgate_status}");
-
-    let hf_cache = cache.huggingface_hub_dir().ok();
-
-    if let Some(ref hf_path) = hf_cache {
-        if hf_path.exists() {
-            let hf_models: Vec<_> = std::fs::read_dir(hf_path)
-                .into_iter()
-                .flatten()
-                .filter_map(std::result::Result::ok)
-                .filter(|e| e.file_name().to_string_lossy().starts_with("models--"))
-                .collect();
-
-            let unregistered = hf_models
-                .iter()
-                .filter(|e| {
-                    hf_dir_to_model_id(&e.file_name().to_string_lossy())
-                        .is_none_or(|id| !cache.has_model(&id))
-                })
-                .count();
-
-            println!();
-            println!("  HuggingFace cache:");
-            println!("    Models:       {}", hf_models.len());
-            println!("    Unregistered: {unregistered}");
-            if unregistered > 0 {
-                println!("    Run 'biomeos model-cache import-hf' to register them");
-            }
-        }
-    }
-
-    println!();
     Ok(())
 }
 

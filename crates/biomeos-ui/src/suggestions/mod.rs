@@ -245,7 +245,7 @@ mod tests {
         manager
             .send_feedback(
                 &suggestion.id,
-                SuggestionFeedback::Modified {
+                &SuggestionFeedback::Modified {
                     changes: "Adjusted parameters".to_string(),
                 },
             )
@@ -271,7 +271,7 @@ mod tests {
         };
 
         let suggestions = manager
-            .request_suggestions(context)
+            .request_suggestions(&context)
             .expect("request_suggestions should succeed");
         assert!(suggestions.is_empty());
         assert!(manager.active_suggestions.is_empty());
@@ -305,7 +305,7 @@ mod tests {
         assert_eq!(manager.active_suggestions.len(), 1);
 
         // Send accepted feedback
-        let result = manager.send_feedback(&suggestion.id, SuggestionFeedback::Accepted);
+        let result = manager.send_feedback(&suggestion.id, &SuggestionFeedback::Accepted);
         assert!(result.is_ok());
 
         // Should be removed from active suggestions
@@ -488,7 +488,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.request_suggestions(context).unwrap();
+        let suggestions = manager.request_suggestions(&context).unwrap();
         assert!(!suggestions.is_empty());
         assert_eq!(
             suggestions[0].suggestion_type,
@@ -521,7 +521,7 @@ mod tests {
             preferences: None,
         };
 
-        let suggestions = manager.request_suggestions(context).unwrap();
+        let suggestions = manager.request_suggestions(&context).unwrap();
         assert!(!suggestions.is_empty());
         assert_eq!(manager.active_suggestions.len(), suggestions.len());
     }
@@ -585,7 +585,7 @@ mod tests {
         assert_eq!(manager.active_suggestions.len(), 1);
 
         manager
-            .send_feedback(&suggestion.id, SuggestionFeedback::Accepted)
+            .send_feedback(&suggestion.id, &SuggestionFeedback::Accepted)
             .unwrap();
         assert_eq!(manager.active_suggestions.len(), 0);
     }
@@ -618,7 +618,7 @@ mod tests {
         manager
             .send_feedback(
                 &suggestion.id,
-                SuggestionFeedback::Rejected {
+                &SuggestionFeedback::Rejected {
                     reason: "Too expensive".to_string(),
                 },
             )
@@ -655,7 +655,7 @@ mod tests {
             .insert(suggestion.id.clone(), suggestion.clone());
 
         manager
-            .send_feedback(&suggestion.id, SuggestionFeedback::Dismissed)
+            .send_feedback(&suggestion.id, &SuggestionFeedback::Dismissed)
             .unwrap();
 
         // Dismissed feedback should NOT remove the suggestion

@@ -28,6 +28,10 @@ fn resolve_provider(env_var: &str, capability: &CapabilityTaxonomy) -> String {
 /// - `None` — read `std::env::var(env_var)` with taxonomy fallback (production).
 /// - `Some(None)` — treat env as unset; use taxonomy default.
 /// - `Some(Some(v))` — use `v` without reading the process environment.
+#[expect(
+    clippy::option_option,
+    reason = "three-state: None=read env, Some(None)=unset, Some(Some)=override"
+)]
 fn resolve_provider_with(
     env_var: &str,
     capability: &CapabilityTaxonomy,

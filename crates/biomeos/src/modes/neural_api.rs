@@ -230,4 +230,37 @@ mod tests {
         assert_eq!(config.graphs_dir, PathBuf::from("g"));
         assert!(config.socket_path.to_string_lossy().contains("neural-api"));
     }
+
+    #[test]
+    fn test_resolve_neural_api_config_clone() {
+        let original = NeuralApiConfig {
+            graphs_dir: PathBuf::from("g"),
+            family_id: "f".to_string(),
+            socket_path: PathBuf::from("/tmp/s.sock"),
+        };
+        let cloned = original.clone();
+        assert_eq!(cloned.family_id, original.family_id);
+        assert_eq!(cloned.graphs_dir, original.graphs_dir);
+    }
+
+    #[test]
+    fn test_resolve_neural_api_config_discovery_fallback_no_explicit() {
+        let config =
+            resolve_neural_api_config_with(PathBuf::from("graphs"), None, None, Some("disc-fam"));
+        assert_eq!(config.family_id, "disc-fam");
+    }
+
+    #[test]
+    fn test_resolve_neural_api_config_with_all_some() {
+        let sock = PathBuf::from("/custom.sock");
+        let config = resolve_neural_api_config_with(
+            PathBuf::from("g"),
+            Some(sock.clone()),
+            Some("explicit"),
+            Some("discovery"),
+        );
+        assert_eq!(config.family_id, "explicit");
+        assert_eq!(config.socket_path, sock);
+        assert_eq!(config.graphs_dir, PathBuf::from("g"));
+    }
 }

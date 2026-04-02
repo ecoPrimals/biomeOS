@@ -244,6 +244,7 @@ impl RootFsBuilder {
     }
 
     /// Install biomeos-init as PID 1
+    #[expect(clippy::unused_self, reason = "method for builder API consistency")]
     fn install_biomeos_init(&self, root: &Path) -> Result<()> {
         let init_binary = PathBuf::from("target/release/biomeos-init");
 
@@ -274,6 +275,7 @@ impl RootFsBuilder {
     }
 
     /// Install primal binaries
+    #[expect(clippy::unused_self, reason = "method for builder API consistency")]
     pub(crate) fn install_primals(&self, root: &Path, primals_dir: &Path) -> Result<()> {
         info!("🔧 Installing primal binaries...");
 

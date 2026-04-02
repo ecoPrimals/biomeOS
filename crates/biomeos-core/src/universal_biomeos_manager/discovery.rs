@@ -14,6 +14,9 @@ use super::core::PrimalInfo;
 use biomeos_primal_sdk::PrimalCapability;
 use biomeos_types::{BiomeOSConfig, Health, PrimalType};
 
+use crate::family_discovery::get_family_id;
+use crate::socket_discovery::SocketDiscovery;
+
 /// Primal Discovery Service for ecosystem-wide primal discovery
 #[derive(Debug, Clone)]
 pub struct PrimalDiscoveryService {
@@ -68,10 +71,9 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
+    #[deprecated(note = "Use SocketDiscovery::discover_with_fallback() for capability-based discovery")]
     pub fn discover_registry(&self, _registry_url: &str) -> Result<Vec<DiscoveryResult>> {
-        // This method is deprecated - discovery now happens through ClientRegistry
-        // which uses Songbird for capability-based discovery
-        tracing::debug!("discover_registry called - using ClientRegistry instead");
+        tracing::debug!("discover_registry is deprecated — use SocketDiscovery instead");
         Ok(vec![])
     }
 
@@ -79,10 +81,9 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
+    #[deprecated(note = "Use SocketDiscovery::discover_with_fallback() for capability-based discovery")]
     pub fn discover_network_scan(&self) -> Result<Vec<DiscoveryResult>> {
-        // This method is deprecated - discovery now happens through ClientRegistry
-        // which uses Songbird for capability-based discovery
-        tracing::debug!("discover_network_scan called - using ClientRegistry instead");
+        tracing::debug!("discover_network_scan is deprecated — use SocketDiscovery instead");
         Ok(vec![])
     }
 
@@ -90,10 +91,9 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if probing fails.
+    #[deprecated(note = "Use PrimalClient::health_check() for endpoint probing")]
     pub fn probe_endpoint(&self, _endpoint: &str) -> Result<ProbeResult> {
-        // This method is deprecated - health checking now happens through
-        // PrimalClient::health_check() on individual clients
-        tracing::debug!("probe_endpoint called - use PrimalClient::health_check() instead");
+        tracing::debug!("probe_endpoint is deprecated — use PrimalClient::health_check()");
         Ok(ProbeResult {
             name: "unknown".to_string(),
             version: "1.0.0".to_string(),
@@ -106,9 +106,9 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
+    #[deprecated(note = "Use SocketDiscovery::discover_capability() for capability-based discovery")]
     pub fn discover_orchestration(&self, _orchestration_url: &str) -> Result<Vec<DiscoveryResult>> {
-        // This method is deprecated - use ClientRegistry and Songbird for discovery
-        tracing::debug!("discover_orchestration called - using ClientRegistry instead");
+        tracing::debug!("discover_orchestration is deprecated — use SocketDiscovery instead");
         Ok(vec![])
     }
 
@@ -116,9 +116,9 @@ impl PrimalDiscoveryService {
     ///
     /// # Errors
     /// Returns an error if discovery fails.
+    #[deprecated(note = "Use dns_sd::discover_dns_sd_services() for mDNS discovery")]
     pub fn discover_multicast(&self) -> Result<Vec<DiscoveryResult>> {
-        // This method is deprecated - multicast discovery now handled by DiscoveryBootstrap
-        tracing::debug!("discover_multicast called - using DiscoveryBootstrap instead");
+        tracing::debug!("discover_multicast is deprecated — use dns_sd module instead");
         Ok(vec![])
     }
 }
@@ -127,6 +127,8 @@ use super::core::UniversalBiomeOSManager;
 
 impl UniversalBiomeOSManager {
     /// Discover primals in registry using unified configuration system
+    #[deprecated(note = "Use discover() for 5-tier socket-based discovery")]
+    #[allow(deprecated)]
     pub async fn discover_registry(&self, registry_url: &str) -> Result<Vec<String>> {
         let results = self.discovery_service.discover_registry(registry_url)?;
         let mut endpoints = Vec::new();
@@ -156,6 +158,8 @@ impl UniversalBiomeOSManager {
     }
 
     /// Discover primals through network scanning
+    #[deprecated(note = "Use discover() for 5-tier socket-based discovery")]
+    #[allow(deprecated)]
     pub async fn discover_network_scan(&self) -> Result<Vec<String>> {
         tracing::info!("🔍 Starting network scan for primals");
 
@@ -186,60 +190,61 @@ impl UniversalBiomeOSManager {
         Ok(endpoints)
     }
 
-    /// General discovery method that tries multiple approaches
+    /// General discovery method using the 5-tier socket discovery protocol.
+    ///
+    /// Scans all known primal names via `SocketDiscovery::discover_with_fallback`,
+    /// registering each discovered primal and returning their endpoints.
     pub async fn discover(&self) -> Result<Vec<String>> {
-        tracing::info!("🌐 Starting comprehensive primal discovery");
+        tracing::info!("🌐 Starting comprehensive primal discovery via SocketDiscovery");
 
+        let family_id = get_family_id();
+        let discovery = SocketDiscovery::new(&family_id);
         let mut all_endpoints = Vec::new();
 
-        // Try registry discovery first (from config)
-        if let Some(registry_config) = self.config.discovery.registry.as_ref() {
-            match self.discover_registry(&registry_config.url).await {
-                Ok(mut endpoints) => {
-                    all_endpoints.append(&mut endpoints);
-                    tracing::info!("Registry discovery found {} primals", all_endpoints.len());
-                }
-                Err(e) => {
-                    tracing::warn!("Registry discovery failed: {}", e);
-                }
+        for &primal_name in biomeos_types::primal_names::CORE_PRIMALS {
+            if let Some(endpoint) = discovery.discover_with_fallback(primal_name).await {
+                let ep_str = endpoint.to_string();
+                tracing::debug!("Discovered {primal_name} at {ep_str}");
+
+                let primal_info = PrimalInfo {
+                    id: primal_name.to_string(),
+                    name: primal_name.to_string(),
+                    primal_type: PrimalType::from_discovered("core", primal_name, "1.0"),
+                    endpoint: ep_str.clone(),
+                    capabilities: vec![],
+                    health: Health::unknown("Discovered, not yet probed"),
+                    last_seen: chrono::Utc::now(),
+                    discovered_at: chrono::Utc::now(),
+                    metadata: HashMap::new(),
+                };
+
+                let _ = self.register_primal(primal_info).await;
+                all_endpoints.push(ep_str);
             }
         }
 
-        // Try network scan as fallback
-        match self.discover_network_scan().await {
-            Ok(endpoints) => {
-                all_endpoints.extend(endpoints);
-                tracing::info!("Network scan found {} total primals", all_endpoints.len());
-            }
-            Err(e) => {
-                tracing::warn!("Network scan failed: {}", e);
-            }
-        }
-
-        // Try capability-based discovery as additional method
-        // Removed recursive call to avoid infinite recursion
         tracing::info!(
-            "Final discovery result: {} primals found",
+            "Discovery complete: {} primals found",
             all_endpoints.len()
         );
 
         Ok(all_endpoints)
     }
 
-    /// Discover primals by capabilities using unified configuration system
+    /// Discover primals by capabilities using the 5-tier socket discovery protocol.
+    ///
+    /// First checks already-registered primals, then falls back to live
+    /// `SocketDiscovery::discover_capability` for each requested capability.
     pub async fn discover_by_capability(
         &self,
         capabilities: &[PrimalCapability],
     ) -> Result<Vec<String>> {
         tracing::info!("🔍 Discovering primals by capabilities: {:?}", capabilities);
 
-        // Get all registered primals
         let primals = self.registered_primals.read().await;
         let mut matching_ids = Vec::new();
 
-        // Filter by capabilities
         for (id, primal) in primals.iter() {
-            // Check if primal has any required capabilities
             let has_required_capabilities = capabilities.iter().any(|required_cap| {
                 primal.capabilities.iter().any(|primal_cap| {
                     primal_cap.category == required_cap.category
@@ -251,15 +256,31 @@ impl UniversalBiomeOSManager {
                 matching_ids.push(id.clone());
             }
         }
+        drop(primals);
+
+        if matching_ids.is_empty() {
+            let family_id = get_family_id();
+            let discovery = SocketDiscovery::new(&family_id);
+
+            for cap in capabilities {
+                if let Some(socket) = discovery.discover_capability(&cap.category).await {
+                    let ep_str = socket.endpoint.to_string();
+                    tracing::debug!("Socket discovery found {} for capability {}", ep_str, cap.category);
+                    matching_ids.push(ep_str);
+                }
+            }
+        }
 
         tracing::info!(
-            "✅ Capability-based discovery found {} matching primals",
+            "Capability-based discovery found {} matching primals",
             matching_ids.len()
         );
         Ok(matching_ids)
     }
 
     /// Discover primals via multicast (delegated to Songbird discovery)
+    #[deprecated(note = "Use discover_via_dns() for mDNS-based discovery")]
+    #[allow(deprecated)]
     pub fn discover_via_multicast(&self) -> Result<Vec<String>> {
         tracing::info!("🔍 Starting multicast discovery via Songbird");
 
@@ -273,6 +294,8 @@ impl UniversalBiomeOSManager {
     }
 
     /// Discover orchestration services specifically
+    #[deprecated(note = "Use discover_by_capability() with orchestration capability")]
+    #[allow(deprecated)]
     pub async fn discover_orchestration_services(&self, registry_url: &str) -> Result<Vec<String>> {
         tracing::info!(
             "🎭 Discovering orchestration services from registry: {}",
@@ -321,6 +344,8 @@ impl UniversalBiomeOSManager {
     }
 
     /// Discover primals via multicast
+    #[deprecated(note = "Use discover_via_dns() for mDNS-based discovery")]
+    #[allow(deprecated)]
     pub async fn discover_multicast(&self) -> Result<Vec<String>> {
         tracing::info!("📡 Starting multicast discovery");
 
@@ -384,6 +409,8 @@ impl UniversalBiomeOSManager {
     }
 
     /// Discover services from a specific registry
+    #[deprecated(note = "Use discover_all_services() for 5-tier socket-based discovery")]
+    #[allow(deprecated)]
     pub async fn discover_from_registry(
         &self,
         registry_url: &str,
@@ -458,4 +485,5 @@ mod dns_sd;
     clippy::expect_used,
     reason = "test assertions use unwrap/expect for clarity"
 )]
+#[allow(deprecated)]
 mod tests;

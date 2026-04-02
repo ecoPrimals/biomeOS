@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use biomeos_spore::{Spore, SporeConfig, SporeType, SporeVerification};
+use biomeos_types::primal_names::CORE_PRIMALS;
 use serde_json::Value;
 
 /// Information about a path in the spore structure.
@@ -43,13 +44,14 @@ pub fn parse_spore_type(s: &str) -> Result<SporeType> {
 
 /// Gathers structure info for paths under a spore root. Returns `PathInfo` for each.
 pub(crate) fn gather_spore_structure_info(path: &Path) -> Vec<PathInfo> {
-    let rel_paths = [
-        ".family.seed",
-        "tower.toml",
-        "bin/tower",
-        "primals/beardog",
-        "primals/songbird",
+    let mut rel_paths: Vec<String> = vec![
+        ".family.seed".to_string(),
+        "tower.toml".to_string(),
+        "bin/tower".to_string(),
     ];
+    for primal in CORE_PRIMALS {
+        rel_paths.push(format!("primals/{primal}"));
+    }
 
     let mut infos = Vec::new();
     for rel in &rel_paths {
@@ -71,7 +73,7 @@ pub(crate) fn gather_spore_structure_info(path: &Path) -> Vec<PathInfo> {
         };
 
         infos.push(PathInfo {
-            name: (*rel).to_string(),
+            name: rel.clone(),
             exists,
             permissions,
         });
@@ -324,6 +326,7 @@ pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
 }
 
 #[cfg(test)]
+/// Test helper: `handle_spore_refresh` with an explicit plasmid directory.
 pub async fn handle_spore_refresh_with_plasmid_dir(
     mount: PathBuf,
     dry_run: bool,

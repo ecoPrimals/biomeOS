@@ -20,8 +20,9 @@ fn list_runtime_socket_paths(runtime_dir: &Path) -> Vec<PathBuf> {
         .flatten()
         .filter_map(|e| {
             let p = e.path();
-            let name = p.file_name()?.to_str()?;
-            name.ends_with(".sock").then_some(p)
+            p.extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+                .then_some(p)
         })
         .collect();
     paths.sort();

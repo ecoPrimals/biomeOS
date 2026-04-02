@@ -182,13 +182,14 @@ impl Config {
 
     /// Get default Unix socket path
     ///
+    /// Resolve default API socket path from an environment map (for tests and tooling).
+    ///
     /// Uses 5-tier socket resolution per `PRIMAL_DEPLOYMENT_STANDARD.md`:
     /// 1. Environment variable (`BIOMEOS_API_SOCKET`)
     /// 2. `XDG_RUNTIME_DIR/biomeos`/
     /// 3. /run/user/{uid}/biomeos/
     /// 4. /data/local/tmp/biomeos/ (Android)
     /// 5. /tmp/biomeos/ (fallback)
-    /// Resolve default API socket path from an environment map (for tests and tooling).
     #[must_use]
     pub fn default_socket_path_from_env_map(env: &HashMap<String, String>) -> PathBuf {
         use biomeos_core::socket_discovery::SocketDiscovery;

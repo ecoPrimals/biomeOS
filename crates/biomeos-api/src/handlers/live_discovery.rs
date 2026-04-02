@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-#![cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "live discovery helpers are pub for future REST routes and cross-module reuse"
-    )
+#![expect(
+    dead_code,
+    reason = "live discovery helpers are pub(crate) for future REST routes and cross-module reuse"
 )]
 
 //! Live Primal Discovery - Capability-Based Dynamic Discovery.
@@ -366,7 +363,7 @@ fn get_socket_dir_from(override_dir: Option<&str>) -> String {
 ///
 /// This is the primary discovery mechanism - scan for .sock files and query each.
 /// No hardcoded primal lists - purely dynamic discovery.
-pub async fn discover_all_primals() -> Vec<LivePrimalInfo> {
+pub(crate) async fn discover_all_primals() -> Vec<LivePrimalInfo> {
     let socket_dir = get_socket_dir();
     discover_all_primals_in(&socket_dir).await
 }
@@ -439,7 +436,7 @@ pub async fn discover_all_primals_in(socket_dir: &str) -> Vec<LivePrimalInfo> {
 /// Discover primals by capability
 ///
 /// Find all primals that provide a specific capability (e.g., "crypto.encrypt")
-pub async fn discover_by_capability(capability: &str) -> Vec<LivePrimalInfo> {
+pub(crate) async fn discover_by_capability(capability: &str) -> Vec<LivePrimalInfo> {
     let socket_dir = get_socket_dir();
     discover_by_capability_in(capability, &socket_dir).await
 }
@@ -460,7 +457,7 @@ pub async fn discover_by_capability_in(capability: &str, socket_dir: &str) -> Ve
 /// Discover primals by type
 ///
 /// Find all primals of a specific type (e.g., "security", "discovery")
-pub async fn discover_by_type(primal_type: &str) -> Vec<LivePrimalInfo> {
+pub(crate) async fn discover_by_type(primal_type: &str) -> Vec<LivePrimalInfo> {
     let socket_dir = get_socket_dir();
     discover_by_type_in(primal_type, &socket_dir).await
 }

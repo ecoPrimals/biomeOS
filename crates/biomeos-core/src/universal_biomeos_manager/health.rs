@@ -95,6 +95,7 @@ impl UniversalBiomeOSManager {
     }
 
     /// Probe a specific endpoint using unified configuration system
+    #[allow(deprecated)]
     pub fn probe_endpoint(&self, endpoint: &str) -> Result<String> {
         tracing::debug!("🔍 Probing endpoint: {}", endpoint);
 

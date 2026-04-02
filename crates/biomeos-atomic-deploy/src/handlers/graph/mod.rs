@@ -5,9 +5,9 @@
 //!
 //! This module handles all graph-related JSON-RPC methods:
 //! - `graph.list` / `graph.get` / `graph.save` — CRUD (this file)
-//! - `graph.execute` — Sequential execution ([`execute`])
-//! - `graph.execute_pipeline` — Pipeline/streaming execution ([`pipeline`])
-//! - `graph.start_continuous` / pause / resume / stop — Continuous sessions ([`continuous`])
+//! - `graph.execute` — Sequential execution (`execute` submodule)
+//! - `graph.execute_pipeline` — Pipeline/streaming execution (`pipeline` submodule)
+//! - `graph.start_continuous` / pause / resume / stop — Continuous sessions (`continuous` submodule)
 //! - `graph.status` — Execution status (this file)
 //! - `graph.suggest_optimizations` — PathwayLearner analysis (this file)
 //!

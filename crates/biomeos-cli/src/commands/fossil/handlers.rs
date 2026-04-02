@@ -38,8 +38,10 @@ pub(super) async fn dispatch(args: FossilArgs) -> Result<()> {
 /// Dispatch with an explicit log root (overrides env for this call).
 pub(super) async fn dispatch_at(args: FossilArgs, log_root: Option<&Path>) -> Result<()> {
     match args.action {
-        FossilAction::Active { node } => handle_active(node, log_root),
-        FossilAction::Fossil { node, limit, show } => handle_fossil(node, limit, show, log_root),
+        FossilAction::Active { node } => handle_active(node.as_deref(), log_root),
+        FossilAction::Fossil { node, limit, show } => {
+            handle_fossil(node.as_deref(), limit, show, log_root)
+        }
         FossilAction::Archive { node_id } => handle_archive(node_id, log_root).await,
         FossilAction::Clean {
             older_than,
@@ -50,12 +52,12 @@ pub(super) async fn dispatch_at(args: FossilArgs, log_root: Option<&Path>) -> Re
     }
 }
 
-fn handle_active(node_filter: Option<String>, log_root: Option<&Path>) -> Result<()> {
+fn handle_active(node_filter: Option<&str>, log_root: Option<&Path>) -> Result<()> {
     let config = cli_log_config(log_root);
     let manager = LogManager::new(config);
 
     let sessions = manager.list_active_sessions()?;
-    let filtered = filter_sessions(&sessions, node_filter.as_deref());
+    let filtered = filter_sessions(&sessions, node_filter);
 
     if filtered.is_empty() {
         println!("\n🌱 No active log sessions found");
@@ -81,7 +83,7 @@ fn handle_active(node_filter: Option<String>, log_root: Option<&Path>) -> Result
 }
 
 fn handle_fossil(
-    node_filter: Option<String>,
+    node_filter: Option<&str>,
     limit: usize,
     show: Option<usize>,
     log_root: Option<&Path>,
@@ -99,7 +101,7 @@ fn handle_fossil(
     let filtered: Vec<_> = index
         .fossils
         .iter()
-        .filter(|f| node_filter.as_ref().is_none_or(|n| f.node_id.contains(n)))
+        .filter(|f| node_filter.is_none_or(|n| f.node_id.contains(n)))
         .take(limit)
         .collect();
 

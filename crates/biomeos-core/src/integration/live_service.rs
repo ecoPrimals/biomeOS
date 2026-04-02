@@ -106,12 +106,11 @@ impl LiveService {
             loop {
                 interval.tick().await;
 
-                // ✅ DISCOVERY FUNCTIONALITY RE-ENABLED
-                // Use the unified discovery system to find available primals
-                match manager_clone.discover_network_scan().await {
+                // 5-tier socket-based discovery for all known primals
+                match manager_clone.discover().await {
                     Ok(discovered_services) => {
                         if discovered_services.is_empty() {
-                            debug!("Discovery refresh: no new services found");
+                            debug!("Discovery refresh: no services found");
                         } else {
                             info!(
                                 "Discovery refresh found {} services",
@@ -124,35 +123,6 @@ impl LiveService {
                     }
                     Err(e) => {
                         warn!("Discovery refresh failed: {}", e);
-                    }
-                }
-
-                // Also attempt static discovery for configured endpoints
-                match manager_clone.discover().await {
-                    Ok(static_services) => {
-                        if !static_services.is_empty() {
-                            debug!("Static discovery found {} services", static_services.len());
-                        }
-                    }
-                    Err(e) => {
-                        debug!("Static discovery failed: {}", e);
-                    }
-                }
-
-                // Also attempt registry discovery if configured
-                if let Some(ref registry) = manager_clone.config.discovery.registry {
-                    match manager_clone.discover_registry(&registry.url).await {
-                        Ok(registry_services) => {
-                            if !registry_services.is_empty() {
-                                info!(
-                                    "Registry discovery found {} services",
-                                    registry_services.len()
-                                );
-                            }
-                        }
-                        Err(e) => {
-                            debug!("Registry discovery failed (may be expected): {}", e);
-                        }
                     }
                 }
             }
@@ -231,27 +201,25 @@ impl LiveService {
         }
     }
 
-    /// Get raw discovered primals (re-enabled with proper discovery integration)
+    /// Discover primals using the 5-tier socket discovery protocol.
     pub async fn get_raw_discovered_primals(&self) -> Result<Vec<String>> {
-        debug!("Getting raw discovered primals from universal manager");
+        debug!("Getting raw discovered primals via socket discovery");
 
-        // Use network scan discovery for raw results
-        match self.universal_manager.discover_network_scan().await {
-            Ok(raw_endpoints) => {
-                info!(
-                    "Network scan discovered {} raw endpoints",
-                    raw_endpoints.len()
-                );
-                Ok(raw_endpoints)
+        match self.universal_manager.discover().await {
+            Ok(endpoints) => {
+                info!("Socket discovery found {} endpoints", endpoints.len());
+                Ok(endpoints)
             }
             Err(e) => {
-                warn!("Failed to perform network scan discovery: {}", e);
+                warn!("Failed to discover primals: {}", e);
                 Ok(Vec::new())
             }
         }
     }
 
-    /// Discover primals by registry (new method)
+    /// Discover primals by registry
+    #[deprecated(note = "Use get_raw_discovered_primals() for 5-tier socket-based discovery")]
+    #[allow(deprecated)]
     pub async fn discover_primals_by_registry(&self, registry_url: &str) -> Result<Vec<String>> {
         debug!("Discovering primals from registry: {}", registry_url);
 

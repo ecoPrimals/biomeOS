@@ -12,7 +12,7 @@
 //! This crate is only for testing - it should never be used in production code.
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 // test-only crate — expect/unwrap are idiomatic in test infrastructure.
 // #![allow] rather than #![expect] because the non-test production surface
 // of this crate has zero unwrap/expect calls; the submodule test blocks
@@ -20,13 +20,11 @@
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 pub mod assertions;
-pub mod env_helpers;
 pub mod fixtures;
 pub mod mock_jsonrpc_server;
 pub mod mock_primal;
 pub mod ready_signal;
 
-pub use env_helpers::{TestEnvGuard, remove_test_env, set_test_env};
 pub use fixtures::{create_test_config, create_test_manifest};
 pub use mock_jsonrpc_server::MockJsonRpcServer;
 pub use mock_primal::{MockPrimal, MockPrimalBuilder};

@@ -2,6 +2,38 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.82 (2026-04-01) — Deep Debt Evolution: Capability-Based Discovery + Smart Refactoring
+
+### Coverage Push (Wave 1)
+- Coverage improved from 88.95% to 89.11% lines, 90.10% functions
+- `model_cache.rs` consolidated: ~170 LOC of untestable duplicate code eliminated by delegating `run()` to `run_with_config()` variants
+- New tests for `plasmodium.rs` (rich gate/compute/GPU formatting), `nucleus_tests2.rs` (7 new tests), `neural_api.rs` (3 config tests)
+
+### Smart File Refactoring (Wave 2)
+- `ai_advisor.rs` 956 → 769 lines (tests → `ai_advisor_tests.rs`)
+- `engine_tests2.rs` 935 → 707 lines (tier-2 integration → `engine_tests3.rs` 248 lines)
+- `routing.rs` 921 → 421 lines (tests → `routing_tests.rs` 499 lines)
+- `paths.rs` 912 → 598 lines (tests → `paths_tests.rs` 319 lines)
+
+### Unsafe Code Elimination (Wave 3)
+- Removed unused `env_helpers.rs` containing 2 `unsafe` blocks (`set_var`/`remove_var`)
+- Upgraded `biomeos-test-utils` from `#![deny(unsafe_code)]` to `#![forbid(unsafe_code)]`
+
+### Capability-Based Evolution (Wave 4)
+- `enroll.rs`: `--beardog-socket` → `--security-provider-socket` (with backward-compat alias), socket names resolved via `CapabilityTaxonomy::resolve_to_primal("encryption")` instead of hardcoded `BEARDOG`
+- `verify_lineage.rs`: `beardog` variable → `security_client` (capability-agnostic naming)
+- `spore.rs`: Hardcoded `"primals/beardog"`, `"primals/songbird"` → dynamic `CORE_PRIMALS` iteration
+- `PrimalDiscoveryService`: 5 stub methods marked `#[deprecated]` with migration guidance
+- `UniversalBiomeOSManager::discover()`: Wired to real `SocketDiscovery` 5-tier protocol (was returning empty `Vec`)
+- `live_service.rs`: Discovery loop simplified from 3 deprecated calls to single `discover()` invocation
+
+### Dependency Governance (Wave 5)
+- `tower` 0.4 → 0.5 workspace alignment in `biomeos-api`
+- `tokio` explicit version → workspace dep in `biomeos-graph`
+- `build.rs` date shell-out (`/usr/bin/date`) → pure Rust `SystemTime` UTC formatting
+
+---
+
 ## v2.81 (2026-03-31) — Fully Concurrent Testing + BM-04/05 Wiring + TCP-only + Gate Routing
 
 ### `#[serial]` Elimination — Fully Concurrent Test Suite

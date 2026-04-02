@@ -224,7 +224,7 @@ async fn verify_cryptographic_lineage(
         None => std::env::var("BIOMEOS_SECURITY_PROVIDER")
             .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string()),
     };
-    let beardog = AtomicClient::discover(&security_provider)
+    let security_client = AtomicClient::discover(&security_provider)
         .await
         .context(format!(
             "{security_provider} not available for cryptographic verification"
@@ -246,11 +246,10 @@ async fn verify_cryptographic_lineage(
     let seed = std::fs::read(&seed_path)?;
     let seed_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &seed);
 
-    // Call BearDog to verify seed derivation
     let family_id = verification.family_id.as_deref().unwrap_or("unknown");
     let node_id = verification.node_id.as_deref().unwrap_or("unknown");
 
-    let result = beardog
+    let result = security_client
         .call(
             "lineage.verify",
             serde_json::json!({

@@ -532,7 +532,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_dispatches_all_commands() {
-        // Exercises run() with each command variant - may succeed or fail depending on env
         for cmd in [
             crate::PlasmodiumCommand::Status,
             crate::PlasmodiumCommand::Gates,
@@ -540,5 +539,107 @@ mod tests {
         ] {
             let _ = run(cmd).await;
         }
+    }
+
+    fn make_rich_gate(gate_id: &str, local: bool, reachable: bool) -> GateInfo {
+        GateInfo {
+            gate_id: gate_id.to_string(),
+            address: format!("{gate_id}:9100"),
+            is_local: local,
+            primals: vec![
+                PrimalStatus {
+                    name: primal_names::BEARDOG.to_string(),
+                    healthy: true,
+                    version: Some("1.0.0".to_string()),
+                },
+                PrimalStatus {
+                    name: primal_names::SONGBIRD.to_string(),
+                    healthy: false,
+                    version: None,
+                },
+            ],
+            compute: ComputeInfo {
+                gpus: vec![biomeos_core::plasmodium::GpuInfo {
+                    name: "RTX 4090".to_string(),
+                    vram_mb: 24576,
+                    gate_id: gate_id.to_string(),
+                }],
+                ram_gb: 64,
+                cpu_cores: 16,
+            },
+            models: vec!["llama3".to_string(), "mistral".to_string()],
+            load: 0.42,
+            reachable,
+            bond_type: BondType::Covalent,
+        }
+    }
+
+    #[test]
+    fn test_format_status_table_rich_gates() {
+        let state = PlasmodiumState {
+            gates: vec![
+                make_rich_gate("local", true, true),
+                make_rich_gate("remote-1", false, true),
+                make_rich_gate("offline-1", false, false),
+            ],
+            snapshot_at: "2026-01-15T00:00:00Z".to_string(),
+            family_id: "rich-test".to_string(),
+            collective: CollectiveCapabilities {
+                total_gpus: 2,
+                total_ram_gb: 128,
+                total_models: 3,
+                capabilities: vec!["ai.inference".to_string(), "storage".to_string()],
+                ..Default::default()
+            },
+        };
+        let lines = format_status_table(&state);
+        let joined = lines.join("\n");
+        assert!(joined.contains("local (local)"));
+        assert!(joined.contains("remote-1"));
+        assert!(joined.contains("offline"));
+        assert!(joined.contains("64 GB"));
+        assert!(joined.contains("42%"));
+        assert!(joined.contains("Capabilities:"));
+        assert!(joined.contains("ai.inference"));
+        assert!(joined.contains("Bond:"));
+    }
+
+    #[test]
+    fn test_format_gates_detail_rich() {
+        let state = PlasmodiumState {
+            gates: vec![
+                make_rich_gate("local", true, true),
+                make_rich_gate("remote-2", false, false),
+            ],
+            snapshot_at: "2026-01-15T00:00:00Z".to_string(),
+            family_id: "detail-test".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let lines = format_gates_detail(&state);
+        let joined = lines.join("\n");
+        assert!(joined.contains("Gate: local (local)"));
+        assert!(joined.contains("Gate: remote-2"));
+        assert!(joined.contains("online"));
+        assert!(joined.contains("offline"));
+        assert!(joined.contains("RTX 4090"));
+        assert!(joined.contains("64 GB"));
+        assert!(joined.contains("16 cores"));
+        assert!(joined.contains("42%"));
+        assert!(joined.contains("llama3"));
+        assert!(joined.contains("songbird (down)"));
+    }
+
+    #[test]
+    fn test_format_models_table_empty_map() {
+        let state = PlasmodiumState {
+            gates: vec![],
+            snapshot_at: "2026-01-15T00:00:00Z".to_string(),
+            family_id: "empty".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let map: HashMap<String, Vec<String>> = HashMap::new();
+        let lines = format_models_table(&map, &state);
+        assert!(lines.iter().any(|l| l.contains("Plasmodium Models")));
+        assert!(!lines.iter().any(|l| l.contains("MODEL")));
     }
 }

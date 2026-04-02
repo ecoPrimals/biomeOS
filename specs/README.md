@@ -1,7 +1,7 @@
 # biomeOS Specifications
 
-**Last Updated**: March 31, 2026
-**Active Specs**: 24 (47 archived to `ecoPrimals/archive/` as fossil record)
+**Last Updated**: April 1, 2026
+**Active Specs**: 22 + 3 lifecycle (47 archived to `ecoPrimals/archive/` as fossil record)
 
 ---
 

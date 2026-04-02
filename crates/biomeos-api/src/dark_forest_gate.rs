@@ -97,8 +97,7 @@ impl DarkForestGateConfig {
         let enabled = env
             .get("BIOMEOS_SOVEREIGN")
             .or_else(|| env.get("BIOMEOS_DARK_FOREST"))
-            .map(|v| v != "false" && v != "0")
-            .unwrap_or(true);
+            .is_none_or(|v| v != "false" && v != "0");
 
         let family_id = env
             .get("FAMILY_ID")
@@ -106,7 +105,7 @@ impl DarkForestGateConfig {
             .cloned()
             .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
 
-        let tier1 = env.get("NEURAL_API_SOCKET").map(|s| s.as_str());
+        let tier1 = env.get("NEURAL_API_SOCKET").map(String::as_str);
         let neural_api_socket =
             beacon_verification::discover_neural_api_socket_from(&family_id, tier1);
 

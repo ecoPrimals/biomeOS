@@ -154,7 +154,10 @@ impl AISuggestionManager {
     }
 
     /// Request suggestions based on current context
-    pub fn request_suggestions(&mut self, context: SuggestionContext) -> Result<Vec<AISuggestion>> {
+    pub fn request_suggestions(
+        &mut self,
+        context: &SuggestionContext,
+    ) -> Result<Vec<AISuggestion>> {
         info!("🤖 Requesting AI suggestions...");
 
         if self.ai_provider_socket.is_none() {
@@ -162,7 +165,7 @@ impl AISuggestionManager {
         }
 
         // Generate suggestions (via AI provider if available, otherwise local heuristics)
-        let suggestions = Self::generate_local_suggestions(&context);
+        let suggestions = Self::generate_local_suggestions(context);
 
         // Store active suggestions
         for suggestion in &suggestions {
@@ -178,7 +181,7 @@ impl AISuggestionManager {
     pub fn send_feedback(
         &mut self,
         suggestion_id: &str,
-        feedback: SuggestionFeedback,
+        feedback: &SuggestionFeedback,
     ) -> Result<()> {
         info!(
             "📨 Sending feedback for suggestion {}: {:?}",
@@ -423,7 +426,7 @@ mod tests {
             recent_events: None,
             preferences: None,
         };
-        let suggestions = mgr.request_suggestions(ctx).unwrap();
+        let suggestions = mgr.request_suggestions(&ctx).unwrap();
         assert_eq!(suggestions.len(), 1);
         assert_eq!(mgr.get_active_suggestions().len(), 1);
     }
@@ -451,7 +454,7 @@ mod tests {
                 },
             },
         );
-        mgr.send_feedback("s1", SuggestionFeedback::Accepted)
+        mgr.send_feedback("s1", &SuggestionFeedback::Accepted)
             .unwrap();
         assert!(mgr.get_active_suggestions().is_empty());
     }
@@ -481,7 +484,7 @@ mod tests {
         );
         mgr.send_feedback(
             "s2",
-            SuggestionFeedback::Rejected {
+            &SuggestionFeedback::Rejected {
                 reason: "not needed".to_string(),
             },
         )
@@ -565,7 +568,7 @@ mod tests {
                 },
             },
         );
-        mgr.send_feedback("s3", SuggestionFeedback::Dismissed)
+        mgr.send_feedback("s3", &SuggestionFeedback::Dismissed)
             .unwrap();
         assert_eq!(mgr.get_active_suggestions().len(), 1);
     }
@@ -646,7 +649,7 @@ mod tests {
             recent_events: None,
             preferences: None,
         };
-        let suggestions = mgr.request_suggestions(ctx).expect("suggestions");
+        let suggestions = mgr.request_suggestions(&ctx).expect("suggestions");
         assert!(suggestions.is_empty());
     }
 
@@ -654,7 +657,7 @@ mod tests {
     async fn test_send_feedback_with_ai_provider_socket() {
         let mut mgr = AISuggestionManager::new("fam1".to_string());
         mgr.ai_provider_socket = Some(PathBuf::from("/tmp/biomeos-ui-test-ai.sock"));
-        mgr.send_feedback("any", SuggestionFeedback::Accepted)
+        mgr.send_feedback("any", &SuggestionFeedback::Accepted)
             .expect("feedback");
     }
 }

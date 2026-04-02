@@ -210,7 +210,7 @@ impl DeploymentMode {
     /// instead of reading `XDG_RUNTIME_DIR` / `UID` from the environment.
     ///
     /// For Live Spore, when `xdg_runtime_dir` is `None`, the path is `/run/user/{uid}/biomeos`
-    /// where `uid` is `uid_for_run_user_path` if set, otherwise [`Self::get_uid`].
+    /// where `uid` is `uid_for_run_user_path` if set, otherwise `get_uid()`.
     #[must_use]
     pub fn socket_prefix_with_runtime(
         &self,

@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: March 19, 2026 (all bypasses resolved, shell-outs eliminated, zero-copy evolution)
+**Updated**: April 1, 2026 (deep debt evolution: capability-based discovery, deprecated stubs evolved, large file refactoring)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -12,7 +12,7 @@ biomeOS and the full NUCLEUS stack are **production validated** with **0 active 
 All 6 original bypasses have been evolved to production-quality solutions. This roadmap
 is preserved as a fossil record of the evolution paths taken.
 
-**Post-cleanup**: 19 active specs, 14 active handoffs, 10 active scripts.
+**Post-cleanup**: 22 active specs + 3 lifecycle, 4 active scripts.
 47 specs, 14 handoffs, 35 scripts archived to `ecoPrimals/archive/biomeos-feb09-2026/`.
 
 ---
@@ -376,6 +376,22 @@ the traffic that arrives on its socket.
 ---
 
 **Total estimated evolution**: ~3,000 LOC across all primals + biomeOS
-**Current codebase**: Production ready with 3 active bypasses (2 evolved)
+**Current codebase**: Production ready with 0 active bypasses (all evolved)
 **Philosophy**: Solve first, evolve solutions, clean all debt
 **Architecture**: Primals compose through capabilities, not coupling
+
+---
+
+## Deep Debt Evolution Session (April 1, 2026)
+
+Systematic deep debt resolution across 7 waves:
+
+| Wave | Scope | Result |
+|------|-------|--------|
+| 1 | Coverage push | 88.95%→89.11% lines, 90.10% functions; `model_cache.rs` consolidated ~170 LOC of untestable code |
+| 2 | Large file refactoring | 4 files refactored: `ai_advisor.rs` 956→769, `engine_tests2.rs` 935→707+248, `routing.rs` 921→421+499, `paths.rs` 912→598+319 |
+| 3 | Unsafe code elimination | Removed unused `env_helpers.rs`, upgraded `biomeos-test-utils` to `#![forbid(unsafe_code)]` |
+| 4a | Hardcoded primal evolution | `enroll.rs` → capability-based `--security-provider-socket`, taxonomy-resolved socket names; `verify_lineage.rs` → `security_client`; `spore.rs` → dynamic `CORE_PRIMALS` |
+| 4b | Stub evolution | `PrimalDiscoveryService` stubs marked `#[deprecated]`; `UniversalBiomeOSManager::discover()` wired to real `SocketDiscovery` 5-tier protocol |
+| 5a | Dep alignment | tower 0.4→0.5 workspace in `biomeos-api`, tokio workspace dep in `biomeos-graph` |
+| 5b | Shell-out elimination | `build.rs` date shell-out → pure Rust `SystemTime` UTC formatting |
