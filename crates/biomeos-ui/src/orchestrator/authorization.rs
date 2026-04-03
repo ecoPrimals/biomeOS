@@ -3,7 +3,7 @@
 
 //! Authorization Module
 //!
-//! Handles authorization checks via BearDog security primal.
+//! Handles authorization checks via the security / encryption capability provider.
 //!
 //! ## Network Effect Phase 1: Authorization
 //!
@@ -13,9 +13,9 @@
 //!
 //! ## Graceful Degradation
 //!
-//! If BearDog is not available, authorization is granted by default.
+//! If no security provider is available, authorization is granted by default.
 
-use crate::primal_client::BearDogClient;
+use crate::primal_client::SecurityClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
@@ -32,11 +32,11 @@ pub enum AuthorizationResult {
 pub struct Authorization;
 
 impl Authorization {
-    /// Authorize device assignment via BearDog
+    /// Authorize device assignment via the security provider
     ///
-    /// Falls back to allowing the operation if BearDog is unavailable.
+    /// Falls back to allowing the operation if no security client is connected.
     pub async fn authorize_device_assignment(
-        beardog: Option<&BearDogClient>,
+        security: Option<&SecurityClient>,
         user_id: &str,
         device_id: &str,
         primal_id: &str,
@@ -46,12 +46,10 @@ impl Authorization {
             user_id, device_id, primal_id
         );
 
-        // Check if BearDog is available
-        if let Some(beardog) = beardog {
-            info!("🔒 BearDog available - checking authorization");
+        if let Some(security) = security {
+            info!("🔒 Security provider available — checking authorization");
 
-            // Call BearDog to check authorization
-            match beardog
+            match security
                 .call(
                     "auth.check_device_assignment",
                     serde_json::json!({
@@ -68,7 +66,7 @@ impl Authorization {
                         .and_then(serde_json::Value::as_bool)
                         .unwrap_or(false)
                     {
-                        info!("✅ BearDog authorization: Approved");
+                        info!("✅ Security provider authorization: approved");
                         Ok(AuthorizationResult::Authorized)
                     } else {
                         let reason = result
@@ -76,41 +74,43 @@ impl Authorization {
                             .and_then(|v| v.as_str())
                             .unwrap_or("Authorization denied")
                             .to_string();
-                        info!("❌ BearDog authorization: Denied - {}", reason);
+                        info!("❌ Security provider authorization: denied — {}", reason);
                         Ok(AuthorizationResult::Denied(reason))
                     }
                 }
                 Err(e) => {
-                    // BearDog might not support this method yet
-                    warn!("⚠️ BearDog call failed: {} - falling back to allow", e);
-                    info!("✅ BearDog authorization: Approved (fallback)");
+                    warn!(
+                        "⚠️ Security provider call failed: {} — falling back to allow",
+                        e
+                    );
+                    info!("✅ Security provider authorization: approved (fallback)");
                     Ok(AuthorizationResult::Authorized)
                 }
             }
         } else {
-            warn!("⚠️ No security primal (BearDog) available");
+            warn!("⚠️ No security provider available");
             warn!("⚠️ Allowing assignment without authorization (graceful degradation)");
-            info!("✅ Authorization: Approved (no security primal)");
+            info!("✅ Authorization: approved (no security provider)");
             Ok(AuthorizationResult::Authorized)
         }
     }
 
-    /// Get the current user ID from BearDog session or environment
+    /// Get the current user ID from the security provider session or environment
     ///
     /// Falls back to "anonymous" if no session is available.
-    pub async fn get_current_user_id(beardog: Option<&BearDogClient>) -> String {
-        Self::get_current_user_id_with(beardog, None, None).await
+    pub async fn get_current_user_id(security: Option<&SecurityClient>) -> String {
+        Self::get_current_user_id_with(security, None, None).await
     }
 
     /// Same as [`get_current_user_id`](Self::get_current_user_id), with optional overrides for
     /// `BIOMEOS_USER` and `USER` (use in tests to avoid mutating the process environment).
     pub async fn get_current_user_id_with(
-        beardog: Option<&BearDogClient>,
+        security: Option<&SecurityClient>,
         biomeos_user: Option<&str>,
         system_user: Option<&str>,
     ) -> String {
-        if let Some(beardog) = beardog
-            && let Ok(result) = beardog
+        if let Some(security) = security
+            && let Ok(result) = security
                 .call("auth.get_current_user", serde_json::json!({}))
                 .await
             && let Some(user_id) = result.get("user_id").and_then(|v| v.as_str())
@@ -151,12 +151,12 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixListener;
 
-    async fn spawn_mock_beardog(
+    async fn spawn_mock_security(
         authorized: bool,
         reason: Option<&str>,
     ) -> (String, tokio::task::JoinHandle<()>) {
         let dir = tempfile::tempdir().unwrap();
-        let socket_path = dir.path().join("beardog.sock");
+        let socket_path = dir.path().join("security.sock");
         let path_str = socket_path.to_str().unwrap().to_string();
 
         let auth_response = if authorized {
@@ -196,9 +196,9 @@ mod tests {
         (path_str, handle)
     }
 
-    async fn spawn_mock_beardog_user(user_id: &str) -> (String, tokio::task::JoinHandle<()>) {
+    async fn spawn_mock_security_user(user_id: &str) -> (String, tokio::task::JoinHandle<()>) {
         let dir = tempfile::tempdir().unwrap();
-        let socket_path = dir.path().join("beardog.sock");
+        let socket_path = dir.path().join("security.sock");
         let path_str = socket_path.to_str().unwrap().to_string();
         let user_id = user_id.to_string();
 
@@ -234,7 +234,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_authorization_no_beardog() {
+    async fn test_authorization_no_security_provider() {
         let result = Authorization::authorize_device_assignment(
             None,
             "test-user",
@@ -248,15 +248,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_current_user_no_beardog() {
+    async fn test_get_current_user_no_security_provider() {
         let user_id = Authorization::get_current_user_id(None).await;
         // Should return something (env var or "anonymous")
         assert!(!user_id.is_empty());
     }
 
     #[tokio::test]
-    async fn test_authorization_no_beardog_graceful_degradation() {
-        // Tests that authorization is granted by default when BearDog is unavailable
+    async fn test_authorization_no_security_graceful_degradation() {
+        // Authorization is granted by default when no security provider is available
         let result = Authorization::authorize_device_assignment(
             None,
             "user-abc-123",
@@ -322,10 +322,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_authorization_beardog_denied() {
-        let (path, _handle) = spawn_mock_beardog(false, Some("Insufficient permissions")).await;
-        let client = Some(crate::primal_client::BearDogClient::with_socket(
-            "beardog", &path,
+    async fn test_authorization_security_denied() {
+        let (path, _handle) = spawn_mock_security(false, Some("Insufficient permissions")).await;
+        let client = Some(crate::primal_client::SecurityClient::with_socket(
+            "security", &path,
         ));
         let result = Authorization::authorize_device_assignment(
             client.as_ref(),
@@ -343,10 +343,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_authorization_beardog_authorized() {
-        let (path, _handle) = spawn_mock_beardog(true, None).await;
-        let client = Some(crate::primal_client::BearDogClient::with_socket(
-            "beardog", &path,
+    async fn test_authorization_security_authorized() {
+        let (path, _handle) = spawn_mock_security(true, None).await;
+        let client = Some(crate::primal_client::SecurityClient::with_socket(
+            "security", &path,
         ));
         let result = Authorization::authorize_device_assignment(
             client.as_ref(),
@@ -361,10 +361,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_authorization_beardog_call_fails_fallback() {
-        let client = Some(crate::primal_client::BearDogClient::with_socket(
-            "beardog",
-            "/nonexistent/beardog.sock",
+    async fn test_authorization_security_call_fails_fallback() {
+        let client = Some(crate::primal_client::SecurityClient::with_socket(
+            "security",
+            "/nonexistent/security.sock",
         ));
         let result = Authorization::authorize_device_assignment(
             client.as_ref(),
@@ -379,13 +379,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_current_user_from_beardog() {
-        let (path, _handle) = spawn_mock_beardog_user("beardog-user-123").await;
-        let client = Some(crate::primal_client::BearDogClient::with_socket(
-            "beardog", &path,
+    async fn test_get_current_user_from_security_provider() {
+        let (path, _handle) = spawn_mock_security_user("security-user-123").await;
+        let client = Some(crate::primal_client::SecurityClient::with_socket(
+            "security", &path,
         ));
         let user_id = Authorization::get_current_user_id(client.as_ref()).await;
-        assert_eq!(user_id, "beardog-user-123");
+        assert_eq!(user_id, "security-user-123");
     }
 
     #[tokio::test]

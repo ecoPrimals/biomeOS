@@ -288,7 +288,7 @@ impl RealTimeEventSubscriber {
 
     /// Subscribe to events via SSE (with automatic WebSocket fallback)
     ///
-    /// DEEP DEBT EVOLUTION (Feb 7, 2026): SSE now auto-redirects to WebSocket.
+    /// SSE auto-redirects to WebSocket.
     /// SSE requires an external HTTP client which violates the pure Rust principle.
     /// Instead of silently succeeding without streaming, this method transparently
     /// upgrades to WebSocket (pure Rust via tokio-tungstenite).

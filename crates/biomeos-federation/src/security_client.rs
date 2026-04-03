@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! `BearDog` client for cryptographic operations
+//! Security provider client for cryptographic operations
 //!
-//! This client discovers `BearDog` via runtime discovery and delegates
-//! all cryptographic operations to `BearDog`'s HSM.
+//! This client discovers the security provider via runtime discovery and delegates
+//! all cryptographic operations to the provider's HSM.
 
 use anyhow::{Context, Result};
 use bytes::Bytes;
@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use crate::discovery::{PrimalDiscovery, PrimalEndpoint};
 use crate::unix_socket_client::UnixSocketClient;
 
-/// Request payload for deriving a sub-federation key via `BearDog`
+/// Request payload for deriving a sub-federation key via the security provider
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyDerivationRequest {
     /// Parent family identifier
@@ -78,19 +78,19 @@ impl std::fmt::Display for LineageVerificationResponse {
     }
 }
 
-/// `BearDog` client for cryptographic operations
+/// Security provider client for cryptographic operations
 #[derive(Debug)]
-pub struct BearDogClient {
-    endpoint: BearDogEndpoint,
+pub struct SecurityProviderClient {
+    endpoint: SecurityEndpoint,
 }
 
 #[derive(Debug)]
-enum BearDogEndpoint {
+enum SecurityEndpoint {
     UnixSocket(PathBuf),
 }
 
-impl BearDogClient {
-    /// Create a `BearDog` client from runtime discovery
+impl SecurityProviderClient {
+    /// Create a security provider client from runtime discovery
     pub async fn from_discovery() -> Result<Self> {
         let mut discovery = PrimalDiscovery::new();
         discovery
@@ -98,19 +98,19 @@ impl BearDogClient {
             .await
             .context("Failed to discover primals")?;
 
-        let beardog = discovery
+        let security_provider = discovery
             .get(biomeos_types::primal_names::BEARDOG)
-            .ok_or_else(|| anyhow::anyhow!("BearDog not found via discovery"))?;
+            .ok_or_else(|| anyhow::anyhow!("Security provider not found via discovery"))?;
 
-        if beardog.endpoints.is_empty() {
-            return Err(anyhow::anyhow!("BearDog has no endpoints"));
+        if security_provider.endpoints.is_empty() {
+            return Err(anyhow::anyhow!("Security provider has no endpoints"));
         }
 
-        let endpoint = match &beardog.endpoints[0] {
-            PrimalEndpoint::UnixSocket { path } => BearDogEndpoint::UnixSocket(path.clone()),
+        let endpoint = match &security_provider.endpoints[0] {
+            PrimalEndpoint::UnixSocket { path } => SecurityEndpoint::UnixSocket(path.clone()),
             other => {
                 return Err(anyhow::anyhow!(
-                    "BearDog only supports Unix sockets, found: {other:?}"
+                    "Security provider only supports Unix sockets, found: {other:?}"
                 ));
             }
         };
@@ -118,28 +118,28 @@ impl BearDogClient {
         Ok(Self { endpoint })
     }
 
-    /// Create a `BearDog` client from an explicit endpoint string (no env reads).
+    /// Create a security provider client from an explicit endpoint string (no env reads).
     ///
     /// Alias for [`Self::with_endpoint`].
     pub fn from_endpoint(endpoint: &str) -> Result<Self> {
         Self::with_endpoint(endpoint)
     }
 
-    /// Create a `BearDog` client from an already-populated [`PrimalDiscovery`] (no env reads).
+    /// Create a security provider client from an already-populated [`PrimalDiscovery`] (no env reads).
     pub fn from_primal_discovery(discovery: &PrimalDiscovery) -> Result<Self> {
-        let beardog = discovery
+        let security_provider = discovery
             .get(biomeos_types::primal_names::BEARDOG)
-            .ok_or_else(|| anyhow::anyhow!("BearDog not found via discovery"))?;
+            .ok_or_else(|| anyhow::anyhow!("Security provider not found via discovery"))?;
 
-        if beardog.endpoints.is_empty() {
-            return Err(anyhow::anyhow!("BearDog has no endpoints"));
+        if security_provider.endpoints.is_empty() {
+            return Err(anyhow::anyhow!("Security provider has no endpoints"));
         }
 
-        let endpoint = match &beardog.endpoints[0] {
-            PrimalEndpoint::UnixSocket { path } => BearDogEndpoint::UnixSocket(path.clone()),
+        let endpoint = match &security_provider.endpoints[0] {
+            PrimalEndpoint::UnixSocket { path } => SecurityEndpoint::UnixSocket(path.clone()),
             other => {
                 return Err(anyhow::anyhow!(
-                    "BearDog only supports Unix sockets, found: {other:?}"
+                    "Security provider only supports Unix sockets, found: {other:?}"
                 ));
             }
         };
@@ -147,7 +147,7 @@ impl BearDogClient {
         Ok(Self { endpoint })
     }
 
-    /// Create a `BearDog` client with explicit endpoint
+    /// Create a security provider client with explicit endpoint
     pub fn with_endpoint(endpoint: impl AsRef<str>) -> Result<Self> {
         let endpoint = endpoint.as_ref();
         let path = if let Some(stripped) = endpoint.strip_prefix("unix://") {
@@ -156,29 +156,29 @@ impl BearDogClient {
             endpoint
         } else {
             return Err(anyhow::anyhow!(
-                "BearDog only supports Unix sockets (unix:// or absolute path), got: {endpoint}"
+                "Security provider only supports Unix sockets (unix:// or absolute path), got: {endpoint}"
             ));
         };
 
         Ok(Self {
-            endpoint: BearDogEndpoint::UnixSocket(PathBuf::from(path)),
+            endpoint: SecurityEndpoint::UnixSocket(PathBuf::from(path)),
         })
     }
 
-    /// Check if `BearDog` is available
+    /// Check if the security provider is available
     pub fn is_available(&self) -> bool {
-        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let SecurityEndpoint::UnixSocket(path) = &self.endpoint;
         path.exists()
     }
 
     /// Health check
     pub async fn health_check(&self) -> Result<()> {
-        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let SecurityEndpoint::UnixSocket(path) = &self.endpoint;
         let client = UnixSocketClient::new(path);
 
         if !client.is_available() {
             return Err(anyhow::anyhow!(
-                "BearDog Unix socket not found: {}",
+                "Security provider Unix socket not found: {}",
                 path.display()
             ));
         }
@@ -193,7 +193,7 @@ impl BearDogClient {
                 Ok(())
             } else {
                 Err(anyhow::anyhow!(
-                    "BearDog reports unhealthy status: {status}"
+                    "Security provider reports unhealthy status: {status}"
                 ))
             }
         } else {
@@ -201,14 +201,14 @@ impl BearDogClient {
         }
     }
 
-    /// Verify if a seed is part of a family (`BearDog` v0.15.2+)
+    /// Verify if a seed is part of a family (security provider v0.15.2+)
     pub async fn verify_same_family(
         &self,
         family_id: &str,
         seed_hash: &str,
         node_id: &str,
     ) -> Result<LineageVerificationResponse> {
-        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let SecurityEndpoint::UnixSocket(path) = &self.endpoint;
         let client = UnixSocketClient::new(path);
 
         let params = json!({
@@ -240,7 +240,7 @@ impl BearDogClient {
         &self,
         request: KeyDerivationRequest,
     ) -> Result<KeyDerivationResponse> {
-        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let SecurityEndpoint::UnixSocket(path) = &self.endpoint;
         let client = UnixSocketClient::new(path);
 
         let params = json!({
@@ -265,9 +265,9 @@ impl BearDogClient {
         })
     }
 
-    /// Encrypt data using `BearDog`'s HSM
+    /// Encrypt data using the security provider's HSM
     pub async fn encrypt_data(&self, data: &[u8], key_ref: &str) -> Result<EncryptResponse> {
-        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let SecurityEndpoint::UnixSocket(path) = &self.endpoint;
         let client = UnixSocketClient::new(path);
 
         use base64::Engine;
@@ -292,7 +292,7 @@ impl BearDogClient {
         })
     }
 
-    /// Decrypt data using `BearDog`'s HSM
+    /// Decrypt data using the security provider's HSM
     pub async fn decrypt_data(
         &self,
         encrypted_data: &str,
@@ -300,7 +300,7 @@ impl BearDogClient {
         tag: &str,
         key_ref: &str,
     ) -> Result<Bytes> {
-        let BearDogEndpoint::UnixSocket(path) = &self.endpoint;
+        let SecurityEndpoint::UnixSocket(path) = &self.endpoint;
         let client = UnixSocketClient::new(path);
 
         let params = json!({
@@ -342,28 +342,28 @@ mod tests {
     use std::net::SocketAddr;
 
     #[test]
-    fn test_beardog_client_creation_unix() {
-        let client = BearDogClient::with_endpoint("unix:///tmp/beardog.sock")
+    fn test_security_client_creation_unix() {
+        let client = SecurityProviderClient::with_endpoint("unix:///tmp/security-provider.sock")
             .expect("unix endpoint should parse");
-        assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
+        assert!(matches!(client.endpoint, SecurityEndpoint::UnixSocket(_)));
     }
 
     #[test]
-    fn test_beardog_client_creation_absolute_path() {
-        let client = BearDogClient::with_endpoint("/run/beardog/beardog.sock")
+    fn test_security_client_creation_absolute_path() {
+        let client = SecurityProviderClient::with_endpoint("/run/biomeos/security-provider.sock")
             .expect("absolute path should parse");
-        assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
+        assert!(matches!(client.endpoint, SecurityEndpoint::UnixSocket(_)));
     }
 
     #[test]
     fn test_http_endpoint_rejected() {
-        let result = BearDogClient::with_endpoint("http://localhost:9000");
+        let result = SecurityProviderClient::with_endpoint("http://localhost:9000");
         assert!(result.is_err(), "HTTP endpoints should be rejected");
     }
 
     #[test]
     fn test_invalid_endpoint() {
-        let result = BearDogClient::with_endpoint("invalid://endpoint");
+        let result = SecurityProviderClient::with_endpoint("invalid://endpoint");
         assert!(result.is_err(), "invalid scheme should fail");
     }
 
@@ -445,20 +445,22 @@ mod tests {
 
     #[test]
     fn test_with_endpoint_unix_path() {
-        let client =
-            BearDogClient::with_endpoint("unix:///run/user/1000/biomeos/beardog.sock").unwrap();
-        assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
+        let client = SecurityProviderClient::with_endpoint(
+            "unix:///run/user/1000/biomeos/security-provider.sock",
+        )
+        .unwrap();
+        assert!(matches!(client.endpoint, SecurityEndpoint::UnixSocket(_)));
     }
 
     #[test]
     fn test_invalid_endpoint_ftp() {
-        let result = BearDogClient::with_endpoint("ftp://localhost/path");
+        let result = SecurityProviderClient::with_endpoint("ftp://localhost/path");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_endpoint_empty() {
-        let result = BearDogClient::with_endpoint(String::new());
+        let result = SecurityProviderClient::with_endpoint(String::new());
         assert!(result.is_err());
     }
 
@@ -486,23 +488,25 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_beardog_is_available_unix_nonexistent() {
+    async fn test_security_provider_is_available_unix_nonexistent() {
         let client =
-            BearDogClient::with_endpoint("unix:///nonexistent/beardog/socket.sock").unwrap();
+            SecurityProviderClient::with_endpoint("unix:///nonexistent/security/socket.sock")
+                .unwrap();
         assert!(!client.is_available());
     }
 
     #[tokio::test]
-    async fn test_beardog_health_check_unix_nonexistent() {
-        let client = BearDogClient::with_endpoint("unix:///nonexistent/socket.sock").unwrap();
+    async fn test_security_provider_health_check_unix_nonexistent() {
+        let client =
+            SecurityProviderClient::with_endpoint("unix:///nonexistent/socket.sock").unwrap();
         let result = client.health_check().await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
     }
 
     #[test]
-    fn test_beardog_http_rejected_at_construction() {
-        let result = BearDogClient::with_endpoint("http://localhost:9000");
+    fn test_security_provider_http_rejected_at_construction() {
+        let result = SecurityProviderClient::with_endpoint("http://localhost:9000");
         assert!(result.is_err());
         assert!(
             result
@@ -515,14 +519,14 @@ mod tests {
     #[tokio::test]
     async fn test_health_check_ok_status_via_mock_unix() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let sock = dir.path().join("beardog-health.sock");
+        let sock = dir.path().join("security-provider-health.sock");
         let _srv = MockJsonRpcServer::spawn_echo_success(
             &sock,
             serde_json::json!({ "status": "healthy" }),
         )
         .await;
-        let client =
-            BearDogClient::with_endpoint(format!("unix://{}", sock.display())).expect("client");
+        let client = SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display()))
+            .expect("client");
         assert!(client.is_available());
         client.health_check().await.expect("healthy");
     }
@@ -530,11 +534,12 @@ mod tests {
     #[tokio::test]
     async fn test_health_check_ok_status_short() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let sock = dir.path().join("beardog-ok.sock");
+        let sock = dir.path().join("security-provider-ok.sock");
         let _srv =
             MockJsonRpcServer::spawn_echo_success(&sock, serde_json::json!({ "status": "ok" }))
                 .await;
-        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let client =
+            SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
         client.health_check().await.expect("ok");
     }
 
@@ -547,7 +552,8 @@ mod tests {
             serde_json::json!({ "status": "degraded" }),
         )
         .await;
-        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let client =
+            SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
         let e = client.health_check().await.expect_err("unhealthy");
         assert!(e.to_string().contains("unhealthy") || format!("{e:#}").contains("unhealthy"));
     }
@@ -565,7 +571,8 @@ mod tests {
             }),
         )
         .await;
-        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let client =
+            SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
         let r = client
             .verify_same_family("f1", "sh", "n1")
             .await
@@ -587,7 +594,8 @@ mod tests {
             }),
         )
         .await;
-        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let client =
+            SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
         let r = client
             .derive_subfed_key(KeyDerivationRequest {
                 parent_family: "p".to_string(),
@@ -627,7 +635,8 @@ mod tests {
             )
         })
         .await;
-        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let client =
+            SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
         let e = client
             .encrypt_data(b"hello", "kref")
             .await
@@ -649,14 +658,15 @@ mod tests {
             serde_json::json!({ "data": "!!!not-base64!!!" }),
         )
         .await;
-        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let client =
+            SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
         let r = client.decrypt_data("x", "n", "t", "k").await;
         assert!(r.is_err());
     }
 
     #[test]
     fn test_http_encrypt_rejected_at_construction() {
-        let r = BearDogClient::with_endpoint("http://localhost:1");
+        let r = SecurityProviderClient::with_endpoint("http://localhost:1");
         assert!(r.is_err());
         assert!(
             r.unwrap_err()
@@ -670,14 +680,15 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let sock = dir.path().join("bd-h-empty.sock");
         let _srv = MockJsonRpcServer::spawn_echo_success(&sock, serde_json::json!({})).await;
-        let client = BearDogClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
+        let client =
+            SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
         client.health_check().await.expect("ok without status");
     }
 
     #[tokio::test]
     async fn test_from_primal_discovery_unix_socket() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let sock = dir.path().join("beardog-discovery.sock");
+        let sock = dir.path().join("security-provider-discovery.sock");
         let _l = std::os::unix::net::UnixListener::bind(&sock).expect("bind");
         let mut pd = PrimalDiscovery::new();
         pd.discovered_primals.insert(
@@ -690,7 +701,7 @@ mod tests {
                 metadata: HashMap::new(),
             },
         );
-        let client = BearDogClient::from_primal_discovery(&pd).expect("from discovery");
+        let client = SecurityProviderClient::from_primal_discovery(&pd).expect("from discovery");
         assert!(client.is_available());
     }
 
@@ -708,7 +719,7 @@ mod tests {
                 metadata: HashMap::new(),
             },
         );
-        let r = BearDogClient::from_primal_discovery(&pd);
+        let r = SecurityProviderClient::from_primal_discovery(&pd);
         assert!(r.is_err(), "expected UDP endpoint to fail");
         let err = r.unwrap_err();
         let s = err.to_string().to_lowercase();
@@ -717,7 +728,7 @@ mod tests {
 
     #[test]
     fn test_https_rejected_at_construction() {
-        let r = BearDogClient::with_endpoint("https://localhost:1");
+        let r = SecurityProviderClient::with_endpoint("https://localhost:1");
         assert!(r.is_err());
         assert!(
             r.unwrap_err()

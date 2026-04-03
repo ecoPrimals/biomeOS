@@ -13,7 +13,7 @@ futures = "0.3"
 
 # Error handling
 anyhow = "1"
-thiserror = "1"
+thiserror = { workspace = true }
 
 # Logging
 tracing = "0.1"

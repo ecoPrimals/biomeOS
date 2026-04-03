@@ -32,25 +32,14 @@ async fn main() -> Result<()> {
         }
     };
 
-    // Discover available primals using network scan
+    // Discover available primals using 5-tier socket discovery
     println!("\n🔍 Discovering available primals...");
-    match manager.discover_network_scan().await {
+    match manager.discover().await {
         Ok(endpoints) => {
             println!("Found {} endpoints:", endpoints.len());
 
             for endpoint in &endpoints {
-                println!("  🔗 Network endpoint: {endpoint}");
-
-                // Test endpoint probing for each discovered endpoint
-                match manager.probe_endpoint(endpoint) {
-                    Ok(probe_result) => {
-                        println!("     Status: {probe_result}");
-                    }
-                    Err(e) => {
-                        println!("     Status: Probe failed - {e}");
-                    }
-                }
-                println!();
+                println!("  🔗 Discovered: {endpoint}");
             }
 
             if endpoints.is_empty() {
@@ -70,16 +59,16 @@ async fn main() -> Result<()> {
     println!("  Components: {}", health.components.len());
     println!("  Metrics available: {}", health.metrics.custom.len());
 
-    // Test network discovery
-    println!("\n🌐 Network Discovery:");
-    match manager.discover_network_scan().await {
-        Ok(network_primals) => {
-            println!("  Found {} primals via network scan", network_primals.len());
-            for endpoint in network_primals {
-                println!("    🔗 Network endpoint: {endpoint}");
+    // Test socket discovery
+    println!("\n🌐 Socket Discovery:");
+    match manager.discover().await {
+        Ok(primals) => {
+            println!("  Found {} primals via socket discovery", primals.len());
+            for endpoint in primals {
+                println!("    🔗 Endpoint: {endpoint}");
             }
         }
-        Err(e) => println!("❌ Network discovery failed: {e}"),
+        Err(e) => println!("❌ Socket discovery failed: {e}"),
     }
 
     // Test primal registration

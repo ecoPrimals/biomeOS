@@ -244,9 +244,7 @@ async fn test_network_partition_resilience() -> Result<()> {
     let manager = UniversalBiomeOSManager::new(config)?;
 
     // Initial discovery should work
-    let _initial_result = manager
-        .discover_registry(&format!("{}/api/v1/services", chaos_server.uri()))
-        .await;
+    let _initial_result = manager.discover().await;
 
     // May succeed or fail depending on mock response format compatibility
     // The key is graceful handling
@@ -256,11 +254,7 @@ async fn test_network_partition_resilience() -> Result<()> {
 
     // Discovery should fail gracefully during partition
     let _start_time = Instant::now();
-    let partitioned_result = timeout(
-        Duration::from_secs(5),
-        manager.discover_registry(&format!("{}/api/v1/services", chaos_server.uri())),
-    )
-    .await;
+    let partitioned_result = timeout(Duration::from_secs(5), manager.discover()).await;
 
     // Should timeout or fail gracefully
     match partitioned_result {
@@ -281,11 +275,7 @@ async fn test_network_partition_resilience() -> Result<()> {
     // Wait for recovery: poll until discover succeeds or timeout
     let recovered = tokio::time::timeout(Duration::from_secs(5), async {
         loop {
-            if manager
-                .discover_registry(&format!("{}/api/v1/services", chaos_server.uri()))
-                .await
-                .is_ok()
-            {
+            if manager.discover().await.is_ok() {
                 break;
             }
             tokio::time::sleep(Duration::from_millis(50)).await;
@@ -298,9 +288,7 @@ async fn test_network_partition_resilience() -> Result<()> {
     );
 
     // Should have recovered
-    let _recovered_result = manager
-        .discover_registry(&format!("{}/api/v1/services", chaos_server.uri()))
-        .await;
+    let _recovered_result = manager.discover().await;
 
     Ok(())
 }
@@ -350,10 +338,7 @@ async fn test_intermittent_failures() -> Result<()> {
     let mut failure_count = 0;
 
     for _ in 0..10 {
-        match manager
-            .discover_registry(&format!("{}/api/v1/services", chaos_server.uri()))
-            .await
-        {
+        match manager.discover().await {
             Ok(_) => success_count += 1,
             Err(_) => failure_count += 1,
         }
@@ -391,11 +376,7 @@ async fn test_recovery_after_cascade_failure() -> Result<()> {
     chaos_server.set_failure_rate(0.8);
 
     // Try operations during total failure
-    let cascade_result = timeout(
-        Duration::from_secs(2),
-        manager.discover_registry(&format!("{}/api/v1/services", chaos_server.uri())),
-    )
-    .await;
+    let cascade_result = timeout(Duration::from_secs(2), manager.discover()).await;
 
     // Should fail or timeout gracefully
     match cascade_result {
@@ -509,11 +490,8 @@ async fn test_request_counting_under_load() -> Result<()> {
 
     for _ in 0..request_count {
         let manager_clone = manager.clone();
-        let uri = chaos_server.uri();
         let handle = tokio::spawn(async move {
-            let _ = manager_clone
-                .discover_registry(&format!("{uri}/api/v1/health"))
-                .await;
+            let _ = manager_clone.discover().await;
         });
         handles.push(handle);
     }

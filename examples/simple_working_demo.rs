@@ -23,16 +23,16 @@ async fn main() -> Result<()> {
     let health = manager.get_system_health();
     println!("🏥 System Health: {:?}", health.health);
 
-    // Test network discovery (will return empty for now, but won't error)
-    match manager.discover_network_scan().await {
+    // Test 5-tier socket discovery
+    match manager.discover().await {
         Ok(discovered) => {
             println!(
-                "🔍 Network scan completed: {} services discovered",
+                "🔍 Discovery completed: {} primals discovered",
                 discovered.len()
             );
         }
         Err(e) => {
-            println!("⚠️ Network scan failed: {e}");
+            println!("⚠️ Discovery failed: {e}");
         }
     }
 

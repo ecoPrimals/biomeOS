@@ -23,7 +23,19 @@ pub mod atomic_client;
 mod atomic_client_tests;
 #[cfg(test)]
 mod atomic_client_tests2;
+#[cfg(test)]
+mod atomic_client_tests3;
 pub mod atomic_primal_client;
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+mod atomic_primal_client_tests;
 
 // Primal adapter pattern (CLI-agnostic integration)
 pub mod primal_adapter;
@@ -49,6 +61,8 @@ pub mod concurrent_startup;
 mod concurrent_startup_tests;
 /// Deployment mode detection (LiveSpore vs development)
 pub mod deployment_mode;
+#[cfg(test)]
+mod deployment_mode_tests;
 pub mod discovery_bootstrap;
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
@@ -91,6 +105,12 @@ pub mod stun_extension;
 
 /// Sovereignty and human dignity protection enforcement.
 pub mod sovereignty_guardian;
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+mod sovereignty_guardian_tests;
 
 // NUCLEUS model cache (NestGate-integrated, filesystem fallback)
 pub mod model_cache;

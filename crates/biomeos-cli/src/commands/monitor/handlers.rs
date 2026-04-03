@@ -5,6 +5,7 @@
 
 use anyhow::Result;
 use std::time::Duration;
+use tracing::warn;
 
 use biomeos_core::UniversalBiomeOSManager;
 
@@ -13,6 +14,10 @@ use super::display::{
 };
 use super::format::should_stop_monitoring;
 use crate::commands::utils::{create_spinner, format_duration};
+
+fn missing_scale_options_error() -> anyhow::Error {
+    anyhow::anyhow!("Must specify either --replicas or --auto")
+}
 
 /// Handle monitoring command
 pub async fn handle_monitor(
@@ -62,10 +67,12 @@ pub async fn handle_monitor(
 
 /// Handle dashboard command — redirects to petalTongue (the universal UI primal).
 pub async fn handle_dashboard(_interval: u64, _refresh: bool) -> Result<()> {
-    eprintln!("The built-in TUI dashboard has been removed.");
-    eprintln!("petalTongue is the universal UI primal for the ecoPrimals ecosystem.");
-    eprintln!();
-    eprintln!("  To launch petalTongue:  biomeos start petaltongue");
+    warn!(
+        "The built-in TUI dashboard has been removed.\n\
+         petalTongue is the universal UI primal for the ecoPrimals ecosystem.\n\
+         \n\
+           To launch petalTongue:  biomeos start petaltongue"
+    );
     Ok(())
 }
 
@@ -129,7 +136,7 @@ pub async fn handle_scale(service: String, replicas: Option<u32>, auto: bool) ->
             .scale_service(&service, Some(replica_count), false)
             .await?
     } else {
-        return Err(anyhow::anyhow!("Must specify either --replicas or --auto"));
+        return Err(missing_scale_options_error());
     };
 
     spinner.finish_with_message("✅ Scaling operation completed");
@@ -137,4 +144,16 @@ pub async fn handle_scale(service: String, replicas: Option<u32>, auto: bool) ->
     display_scale_result(&service, &scale_result, auto);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::missing_scale_options_error;
+
+    #[test]
+    fn missing_scale_options_error_lists_flags() {
+        let msg = missing_scale_options_error().to_string();
+        assert!(msg.contains("--replicas"));
+        assert!(msg.contains("--auto"));
+    }
 }

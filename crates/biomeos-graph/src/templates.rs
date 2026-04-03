@@ -9,7 +9,7 @@
 //!
 //! Deep Debt Principles:
 //! - Capability-based discovery (no hardcoded NestGate endpoints)
-//! - Runtime primal discovery via Songbird
+//! - Runtime discovery via the storage capability domain
 //! - Zero unsafe code
 //! - Modern async Rust
 
@@ -83,10 +83,10 @@ pub enum ParameterType {
     Object,
 }
 
-/// Template manager with NestGate integration
+/// Template manager with storage-provider (NestGate) integration
 pub struct GraphTemplateManager {
-    /// NestGate client (discovered at runtime)
-    nestgate_client: Option<NestGateTemplateClient>,
+    /// Storage provider client (discovered at runtime)
+    storage_client: Option<NestGateTemplateClient>,
 
     /// Local cache of templates
     cache: std::sync::Arc<tokio::sync::RwLock<HashMap<String, GraphTemplate>>>,
@@ -96,25 +96,25 @@ impl GraphTemplateManager {
     /// Create a new template manager
     pub fn new() -> Self {
         Self {
-            nestgate_client: None,
+            storage_client: None,
             cache: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
         }
     }
 
-    /// Discover and connect to NestGate
-    pub async fn discover_nestgate(&mut self) -> Result<()> {
-        tracing::info!("Discovering NestGate for template storage...");
+    /// Discover and connect to the storage capability provider
+    pub async fn discover_storage_provider(&mut self) -> Result<()> {
+        tracing::info!("Discovering storage provider for template storage...");
 
         // Capability-based discovery (no hardcoded endpoints!)
         match NestGateTemplateClient::discover().await {
             Ok(client) => {
-                tracing::info!("✅ NestGate discovered for template storage");
-                self.nestgate_client = Some(client);
+                tracing::info!("✅ Storage provider discovered for template storage");
+                self.storage_client = Some(client);
                 Ok(())
             }
             Err(e) => {
                 tracing::warn!(
-                    "⚠️  NestGate not available, templates will be memory-only: {}",
+                    "⚠️  Storage provider not available, templates will be memory-only: {}",
                     e
                 );
                 Ok(()) // Graceful degradation
@@ -130,13 +130,13 @@ impl GraphTemplateManager {
             .await
             .insert(template.id.clone(), template.clone());
 
-        // Persist to NestGate if available
-        if let Some(ref client) = self.nestgate_client {
+        // Persist to storage provider if available
+        if let Some(ref client) = self.storage_client {
             client.store_template(&template).await?;
-            tracing::info!("✅ Template '{}' saved to NestGate", template.name);
+            tracing::info!("✅ Template '{}' saved to storage provider", template.name);
         } else {
             tracing::warn!(
-                "⚠️  Template '{}' saved to memory only (NestGate unavailable)",
+                "⚠️  Template '{}' saved to memory only (storage provider unavailable)",
                 template.name
             );
         }
@@ -151,8 +151,8 @@ impl GraphTemplateManager {
             return Ok(template.clone());
         }
 
-        // Try NestGate
-        if let Some(ref client) = self.nestgate_client {
+        // Try storage provider
+        if let Some(ref client) = self.storage_client {
             let template = client.retrieve_template(template_id).await?;
 
             // Update cache
@@ -169,8 +169,8 @@ impl GraphTemplateManager {
 
     /// List all templates
     pub async fn list_templates(&self) -> Result<Vec<GraphTemplate>> {
-        // Try NestGate first
-        if let Some(ref client) = self.nestgate_client {
+        // Try storage provider first
+        if let Some(ref client) = self.storage_client {
             let templates = client.list_templates().await?;
 
             // Update cache
@@ -191,10 +191,10 @@ impl GraphTemplateManager {
         // Remove from cache
         self.cache.write().await.remove(template_id);
 
-        // Remove from NestGate if available
-        if let Some(ref client) = self.nestgate_client {
+        // Remove from storage provider if available
+        if let Some(ref client) = self.storage_client {
             client.delete_template(template_id).await?;
-            tracing::info!("✅ Template '{}' deleted from NestGate", template_id);
+            tracing::info!("✅ Template '{}' deleted from storage provider", template_id);
         }
 
         Ok(())
@@ -530,7 +530,7 @@ mod tests {
     #[tokio::test]
     async fn test_template_manager_creation() {
         let manager = GraphTemplateManager::new();
-        assert!(manager.nestgate_client.is_none());
+        assert!(manager.storage_client.is_none());
     }
 
     #[tokio::test]

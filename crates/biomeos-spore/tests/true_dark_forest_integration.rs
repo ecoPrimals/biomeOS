@@ -60,8 +60,8 @@ async fn test_same_family_discovery() -> Result<(), Box<dyn std::error::Error>> 
     create_test_seed(seed_path, seed).await?;
 
     // Create two nodes with SAME family seed
-    let node_a = DarkForestBeacon::from_beardog_socket(&beardog, seed_path, "node_a").await?;
-    let node_b = DarkForestBeacon::from_beardog_socket(&beardog, seed_path, "node_b").await?;
+    let node_a = DarkForestBeacon::from_security_socket(&beardog, seed_path, "node_a").await?;
+    let node_b = DarkForestBeacon::from_security_socket(&beardog, seed_path, "node_b").await?;
 
     // Node A generates pure noise beacon
     println!("🌑 Node A: Generating pure noise beacon...");
@@ -115,9 +115,9 @@ async fn test_different_family_isolation() -> Result<(), Box<dyn std::error::Err
 
     // Create two nodes with DIFFERENT family seeds
     let node_alpha =
-        DarkForestBeacon::from_beardog_socket(&beardog, seed_path_alpha, "alpha_node").await?;
+        DarkForestBeacon::from_security_socket(&beardog, seed_path_alpha, "alpha_node").await?;
     let node_beta =
-        DarkForestBeacon::from_beardog_socket(&beardog, seed_path_beta, "beta_node").await?;
+        DarkForestBeacon::from_security_socket(&beardog, seed_path_beta, "beta_node").await?;
 
     // Node Alpha generates pure noise beacon
     println!("🌑 Node Alpha: Generating pure noise beacon...");
@@ -169,7 +169,7 @@ async fn test_beacon_determinism() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create first beacon manager
     println!("🔑 Creating first beacon manager...");
-    let mgr1 = DarkForestBeacon::from_beardog_socket(&beardog, seed_path, "test_node").await?;
+    let mgr1 = DarkForestBeacon::from_security_socket(&beardog, seed_path, "test_node").await?;
 
     // Generate beacon 1
     let beacon1 = mgr1
@@ -179,7 +179,7 @@ async fn test_beacon_determinism() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create second beacon manager (simulating restart)
     println!("🔑 Creating second beacon manager (simulated restart)...");
-    let mgr2 = DarkForestBeacon::from_beardog_socket(&beardog, seed_path, "test_node").await?;
+    let mgr2 = DarkForestBeacon::from_security_socket(&beardog, seed_path, "test_node").await?;
 
     // Generate beacon 2
     let beacon2 = mgr2
@@ -225,7 +225,7 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
     let seed = b"indistinguishable_seed_32bytes!!";
     create_test_seed(seed_path, seed).await?;
 
-    let mgr = DarkForestBeacon::from_beardog_socket(&beardog, seed_path, "test_node").await?;
+    let mgr = DarkForestBeacon::from_security_socket(&beardog, seed_path, "test_node").await?;
 
     // Generate multiple beacons
     println!("🌑 Generating 10 pure noise beacons...");
@@ -346,7 +346,7 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     let seed = b"performance_test_seed_32bytes!!!";
     create_test_seed(seed_path, seed).await?;
 
-    let mgr = DarkForestBeacon::from_beardog_socket(&beardog, seed_path, "test_node").await?;
+    let mgr = DarkForestBeacon::from_security_socket(&beardog, seed_path, "test_node").await?;
 
     // Benchmark generation
     println!("⚡ Benchmarking beacon generation (50 iterations)...");
@@ -393,7 +393,7 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     let mut random_beacons = Vec::new();
     for _ in 0..50 {
         let mut noise = vec![0u8; beacons[0].len()];
-        rand::thread_rng().fill_bytes(&mut noise);
+        rand::rng().fill_bytes(&mut noise);
         random_beacons.push(noise);
     }
 

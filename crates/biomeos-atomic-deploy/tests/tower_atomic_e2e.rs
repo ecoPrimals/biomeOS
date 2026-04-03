@@ -27,8 +27,8 @@ use tokio::net::UnixStream;
 struct TowerAtomicFixture {
     family_id: String,
     socket_dir: PathBuf,
-    beardog_socket: PathBuf,
-    songbird_socket: PathBuf,
+    security_provider_socket: PathBuf,
+    discovery_socket: PathBuf,
     neural_api_socket: PathBuf,
 }
 
@@ -43,15 +43,15 @@ impl TowerAtomicFixture {
         Self {
             family_id: family_id.to_string(),
             socket_dir: socket_dir.clone(),
-            beardog_socket: socket_dir.join(format!("beardog-{family_id}.sock")),
-            songbird_socket: socket_dir.join(format!("songbird-{family_id}.sock")),
+            security_provider_socket: socket_dir.join(format!("beardog-{family_id}.sock")),
+            discovery_socket: socket_dir.join(format!("songbird-{family_id}.sock")),
             neural_api_socket: socket_dir.join(format!("neural-api-{family_id}.sock")),
         }
     }
 
     async fn cleanup(&self) {
-        let _ = std::fs::remove_file(&self.beardog_socket);
-        let _ = std::fs::remove_file(&self.songbird_socket);
+        let _ = std::fs::remove_file(&self.security_provider_socket);
+        let _ = std::fs::remove_file(&self.discovery_socket);
         let _ = std::fs::remove_file(&self.neural_api_socket);
     }
 }
@@ -102,9 +102,9 @@ async fn test_beardog_xdg_socket_path() {
     fixture.cleanup().await;
 
     // Verify BearDog can be reached at XDG path (if running)
-    if fixture.beardog_socket.exists() {
+    if fixture.security_provider_socket.exists() {
         let result = json_rpc_call(
-            &fixture.beardog_socket,
+            &fixture.security_provider_socket,
             "crypto.sha256",
             serde_json::json!({"data": "dGVzdA=="}),
         )
@@ -150,30 +150,30 @@ async fn test_nucleation_xdg_paths() {
     let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
     let runtime = Path::new("/run/user/1000");
 
-    let beardog_socket =
+    let security_provider_socket =
         nucleation.assign_socket_with_runtime_dir("beardog", "test-family", Some(runtime));
-    let songbird_socket =
+    let discovery_socket =
         nucleation.assign_socket_with_runtime_dir("songbird", "test-family", Some(runtime));
 
     // Verify XDG paths are used
     assert!(
-        beardog_socket
+        security_provider_socket
             .to_string_lossy()
             .contains("/run/user/1000/biomeos/"),
-        "BearDog socket should be in XDG runtime dir: {beardog_socket:?}"
+        "Security provider socket should be in XDG runtime dir: {security_provider_socket:?}"
     );
     assert!(
-        songbird_socket
+        discovery_socket
             .to_string_lossy()
             .contains("/run/user/1000/biomeos/"),
-        "Songbird socket should be in XDG runtime dir: {songbird_socket:?}"
+        "Discovery socket should be in XDG runtime dir: {discovery_socket:?}"
     );
 
     // Verify deterministic assignment
-    let beardog_socket_2 =
+    let security_provider_socket_2 =
         nucleation.assign_socket_with_runtime_dir("beardog", "test-family", Some(runtime));
     assert_eq!(
-        beardog_socket, beardog_socket_2,
+        security_provider_socket, security_provider_socket_2,
         "Same primal should get same socket"
     );
 }
@@ -227,10 +227,10 @@ async fn test_execution_context_socket_paths() {
     }
     let context = ExecutionContext::new(env).with_nucleation(nucleation);
 
-    let beardog_socket = context.get_socket_path("beardog").await;
+    let security_provider_socket = context.get_socket_path("beardog").await;
 
     assert!(
-        beardog_socket.contains("/run/user/1000/biomeos/beardog-context-test.sock"),
-        "Context should use XDG socket path: {beardog_socket}"
+        security_provider_socket.contains("/run/user/1000/biomeos/beardog-context-test.sock"),
+        "Context should use XDG socket path: {security_provider_socket}"
     );
 }

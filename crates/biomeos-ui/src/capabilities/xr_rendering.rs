@@ -16,7 +16,7 @@
 //! - `xr.get_render_targets` — query current render target configuration
 //! - `xr.begin_session` / `xr.end_session` — session lifecycle
 
-use crate::primal_client::PetalTongueClient;
+use crate::primal_client::UiClient;
 use anyhow::Result;
 use biomeos_types::xr::{StereoConfig, VisualOutputCapability};
 use tracing::{debug, info, warn};
@@ -73,7 +73,7 @@ impl StereoRenderAdapter {
     /// Sends the desired `StereoConfig` and receives back the actual
     /// render targets that petalTongue allocated. The returned targets
     /// may have different resolution/refresh if the hardware can't match.
-    pub async fn negotiate(&self, petaltongue: &PetalTongueClient) -> Result<RenderTargets> {
+    pub async fn negotiate(&self, ui: &UiClient) -> Result<RenderTargets> {
         info!(
             "Negotiating stereo: {}x{} @ {}Hz, IPD={}mm",
             self.config.eye_resolution.0,
@@ -90,7 +90,7 @@ impl StereoRenderAdapter {
             "color_format": self.config.color_format,
         });
 
-        let result = petaltongue.call("xr.negotiate_stereo", params).await?;
+        let result = ui.call("xr.negotiate_stereo", params).await?;
         let targets: RenderTargets = serde_json::from_value(result)?;
 
         info!(
@@ -104,7 +104,7 @@ impl StereoRenderAdapter {
     /// Begin a stereo rendering session.
     ///
     /// Must be called after `negotiate()` and before `submit_frame()`.
-    pub async fn begin_session(&mut self, petaltongue: &PetalTongueClient) -> Result<()> {
+    pub async fn begin_session(&mut self, ui: &UiClient) -> Result<()> {
         if self.session_active {
             warn!("Stereo session already active");
             return Ok(());
@@ -117,7 +117,7 @@ impl StereoRenderAdapter {
             }
         });
 
-        petaltongue.call("xr.begin_session", params).await?;
+        ui.call("xr.begin_session", params).await?;
         self.session_active = true;
         info!("Stereo session started");
         Ok(())
@@ -129,7 +129,7 @@ impl StereoRenderAdapter {
     /// `timestamp_us` is the predicted display time in microseconds.
     pub async fn submit_frame(
         &self,
-        petaltongue: &PetalTongueClient,
+        ui: &UiClient,
         frame_id: u64,
         timestamp_us: u64,
     ) -> Result<()> {
@@ -144,19 +144,17 @@ impl StereoRenderAdapter {
             "timestamp_us": timestamp_us,
         });
 
-        petaltongue.call("xr.submit_frame", params).await?;
+        ui.call("xr.submit_frame", params).await?;
         Ok(())
     }
 
     /// End the stereo rendering session and release resources.
-    pub async fn end_session(&mut self, petaltongue: &PetalTongueClient) -> Result<()> {
+    pub async fn end_session(&mut self, ui: &UiClient) -> Result<()> {
         if !self.session_active {
             return Ok(());
         }
 
-        petaltongue
-            .call("xr.end_session", serde_json::json!({}))
-            .await?;
+        ui.call("xr.end_session", serde_json::json!({})).await?;
         self.session_active = false;
         info!("Stereo session ended");
         Ok(())
@@ -237,8 +235,7 @@ mod tests {
     #[tokio::test]
     async fn test_submit_frame_without_session() {
         let adapter = StereoRenderAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.submit_frame(&client, 0, 0).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("No active stereo"));
@@ -247,8 +244,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_session_noop_when_inactive() {
         let mut adapter = StereoRenderAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.end_session(&client).await;
         assert!(result.is_ok());
     }
@@ -315,8 +311,7 @@ mod tests {
         let config = StereoConfig::default();
         let mut adapter = StereoRenderAdapter::new(config);
         adapter.session_active = true;
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.begin_session(&client).await;
         assert!(result.is_ok());
     }
@@ -325,8 +320,7 @@ mod tests {
     #[ignore = "requires petalTongue socket"]
     async fn test_negotiate() {
         let adapter = StereoRenderAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");
         let _ = adapter.negotiate(&client).await;
     }
 
@@ -334,8 +328,7 @@ mod tests {
     #[ignore = "requires petalTongue socket"]
     async fn test_begin_session_and_submit_frame() {
         let mut adapter = StereoRenderAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");
         let _ = adapter.begin_session(&client).await;
         let _ = adapter.submit_frame(&client, 1, 16666).await;
     }
@@ -343,8 +336,7 @@ mod tests {
     #[tokio::test]
     async fn test_negotiate_with_nonexistent_socket_returns_err() {
         let adapter = StereoRenderAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.negotiate(&client).await;
         assert!(result.is_err());
     }
@@ -352,8 +344,7 @@ mod tests {
     #[tokio::test]
     async fn test_begin_session_with_nonexistent_socket_returns_err() {
         let mut adapter = StereoRenderAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.begin_session(&client).await;
         assert!(result.is_err());
     }
@@ -362,8 +353,7 @@ mod tests {
     async fn test_end_session_when_active_but_call_fails() {
         let mut adapter = StereoRenderAdapter::with_defaults();
         adapter.session_active = true;
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.end_session(&client).await;
         assert!(result.is_err());
         assert!(adapter.is_session_active());
@@ -372,7 +362,7 @@ mod tests {
     #[tokio::test]
     async fn test_negotiate_success() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let targets = RenderTargets {
             left_eye: "L".to_string(),
@@ -405,7 +395,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let adapter = StereoRenderAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let got = adapter.negotiate(&client).await.expect("negotiate");
         assert_eq!(got.left_eye, "L");
         assert_eq!(got.resolution, (100, 200));
@@ -416,7 +406,7 @@ mod tests {
     #[tokio::test]
     async fn test_negotiate_invalid_result_returns_err() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -438,7 +428,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let adapter = StereoRenderAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         assert!(adapter.negotiate(&client).await.is_err());
         server.abort();
     }
@@ -446,7 +436,7 @@ mod tests {
     #[tokio::test]
     async fn test_begin_session_success() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -468,7 +458,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let mut adapter = StereoRenderAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         adapter.begin_session(&client).await.expect("begin");
         assert!(adapter.is_session_active());
         server.abort();
@@ -477,7 +467,7 @@ mod tests {
     #[tokio::test]
     async fn test_submit_frame_success_after_begin() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -498,7 +488,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let mut adapter = StereoRenderAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         adapter.begin_session(&client).await.expect("begin");
         adapter
             .submit_frame(&client, 3, 99_000)
@@ -510,7 +500,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_session_success_clears_active() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -531,7 +521,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let mut adapter = StereoRenderAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         adapter.begin_session(&client).await.expect("begin");
         assert!(adapter.is_session_active());
         adapter.end_session(&client).await.expect("end");

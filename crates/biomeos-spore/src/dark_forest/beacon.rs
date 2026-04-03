@@ -23,7 +23,7 @@ use super::types::{BeaconPlaintext, EncryptedBeacon};
 ///
 /// ## Deep Debt Evolution (Feb 11, 2026)
 ///
-/// - BEFORE: Direct `beardog_socket: String` — hardcoded primal knowledge
+/// - BEFORE: Direct security socket string — hardcoded primal knowledge
 /// - AFTER: `Arc<dyn CapabilityCaller>` — capability-routed, primal-agnostic
 ///
 /// The beacon manager has zero knowledge of which primal provides crypto.
@@ -85,17 +85,17 @@ impl DarkForestBeacon {
         Self::new(caller, seed_path, node_id).await
     }
 
-    /// Create from a `BearDog` socket path (bootstrap only).
+    /// Create from a security-provider Unix socket path (bootstrap only).
     ///
     /// Wraps the socket path in a `DirectBeardogCaller`. Prefer
     /// [`from_neural_api`](Self::from_neural_api) for production use.
-    pub async fn from_beardog_socket<P: AsRef<Path>>(
-        beardog_socket: &str,
+    pub async fn from_security_socket<P: AsRef<Path>>(
+        security_socket: &str,
         seed_path: P,
         node_id: &str,
     ) -> SporeResult<Self> {
         let caller = Arc::new(crate::beacon_genetics::DirectBeardogCaller::new(
-            beardog_socket,
+            security_socket,
         ));
         Self::new(caller, seed_path, node_id).await
     }

@@ -412,7 +412,7 @@ async fn test_health_check_semantic_fallback_when_plain_health_fails() {
                     "id": id,
                     "error": { "code": -32601, "message": "Method not found" }
                 })
-            } else if method == "beardog.health" {
+            } else if method == "health.status" {
                 serde_json::json!({
                     "jsonrpc": "2.0",
                     "id": id,

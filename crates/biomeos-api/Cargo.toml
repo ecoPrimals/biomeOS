@@ -44,13 +44,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Error handling
 anyhow = "1"
-thiserror = "1"
+thiserror = { workspace = true }
 
 # HTTP client REMOVED - Using Unix socket JSON-RPC for primal discovery
 # External HTTP/HTTPS requests should go through Songbird
-
-# Configuration
-config = "0.14"
 
 # Utilities
 # DEEP DEBT: lazy_static replaced by std::sync::OnceLock; dirs replaced by etcetera (pure Rust)
@@ -72,7 +69,7 @@ tokio-test = "0.4"
 http-body-util = "0.1"
 sha2 = "0.10"
 hex = "0.4"
-rand = "0.8"
+rand = { workspace = true }
 tempfile = "3"
 
 [lints]

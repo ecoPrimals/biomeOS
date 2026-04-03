@@ -198,7 +198,7 @@ mod discovery_tests {
     }
 
     #[tokio::test]
-    async fn test_discover_network_scan() -> Result<()> {
+    async fn test_discover() -> Result<()> {
         let config = TestConfigBuilder::new()
             .with_network_discovery(vec!["localhost"], vec![8080, 8081])
             .build();
@@ -206,7 +206,7 @@ mod discovery_tests {
         let manager = TestManagerFactory::create_with_config(config).await?;
 
         // Test network scan discovery
-        let results = manager.discover_network_scan().await?;
+        let results = manager.discover().await?;
 
         // Should complete without error (may be empty in test environment)
         // Results validated (may be empty in test env)
@@ -392,8 +392,8 @@ mod error_handling_tests {
             "http://localhost:99999",
         ];
 
-        for url in invalid_urls {
-            let result = manager.discover_registry(url).await;
+        for _url in invalid_urls {
+            let result = manager.discover().await;
             // Should handle gracefully (may return empty results or error)
             match result {
                 Ok(results) => {

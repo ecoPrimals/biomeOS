@@ -654,4 +654,44 @@ mod tests {
         let state = breaker.state().await;
         assert_eq!(state, CircuitState::Closed);
     }
+
+    #[test]
+    fn calculate_delay_custom_multiplier_without_jitter() {
+        let policy = RetryPolicy::exponential(5, Duration::from_millis(10))
+            .with_multiplier(3.0)
+            .with_jitter(false);
+        assert_eq!(policy.calculate_delay(2), Duration::from_millis(30));
+        assert_eq!(policy.calculate_delay(3), Duration::from_millis(90));
+    }
+
+    #[test]
+    fn calculate_delay_with_jitter_stays_bounded() {
+        let policy = RetryPolicy::exponential(5, Duration::from_millis(100)).with_jitter(true);
+        for attempt in 1..=4 {
+            let d = policy.calculate_delay(attempt);
+            assert!(d <= Duration::from_secs(60));
+        }
+    }
+
+    #[test]
+    fn fixed_policy_zero_initial_delay_for_positive_attempts() {
+        let policy = RetryPolicy::fixed(3, Duration::from_millis(0));
+        assert_eq!(policy.calculate_delay(1), Duration::from_millis(0));
+    }
+
+    #[test]
+    fn no_retry_single_attempt_delay_zero() {
+        let policy = RetryPolicy::no_retry();
+        assert_eq!(policy.max_attempts, 1);
+        assert_eq!(policy.calculate_delay(1), Duration::from_millis(0));
+    }
+
+    #[test]
+    fn retry_policy_builder_chain_caps_at_max_delay() {
+        let policy = RetryPolicy::exponential(20, Duration::from_millis(100))
+            .with_max_delay(Duration::from_millis(200))
+            .with_jitter(false)
+            .with_multiplier(2.0);
+        assert_eq!(policy.calculate_delay(50), Duration::from_millis(200));
+    }
 }

@@ -116,7 +116,8 @@ impl DeviceManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
+    use crate::init_error::BootError;
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn test_device_manager_safe() {
@@ -186,5 +187,31 @@ mod tests {
             let result = DeviceManager::ensure_vga_device();
             assert!(result.is_ok());
         }
+    }
+
+    #[test]
+    fn boot_error_device_creation_display_contains_device() {
+        let err = BootError::DeviceCreation {
+            device: "/dev/ttyS0".to_string(),
+            error: "mknod failed".to_string(),
+        };
+        let s = err.to_string();
+        assert!(s.contains("/dev/ttyS0"));
+        assert!(s.contains("mknod"));
+    }
+
+    #[test]
+    fn boot_error_directory_creation_display() {
+        let err = BootError::DirectoryCreation {
+            path: PathBuf::from("/dev"),
+            error: "missing".to_string(),
+        };
+        assert!(err.to_string().contains("/dev"));
+    }
+
+    #[test]
+    fn serial_and_vga_paths_are_under_dev() {
+        assert!(Path::new("/dev/ttyS0").starts_with("/dev"));
+        assert!(Path::new("/dev/tty0").starts_with("/dev"));
     }
 }

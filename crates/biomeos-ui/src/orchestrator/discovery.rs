@@ -5,8 +5,6 @@
 //!
 //! Handles runtime discovery of primals, devices, and saved state.
 //!
-//! ## DEEP DEBT EVOLUTION (Feb 7, 2026)
-//!
 //! - **Dynamic discovery**: Scans runtime socket directory for ANY primal
 //! - **No hardcoded primal list**: Unknown primals are discovered and accessible
 //! - **Capability-based**: Uses `PrimalConnections` dynamic registry
@@ -68,9 +66,9 @@ fn resolve_provider(env_value: Option<String>, capability: &CapabilityTaxonomy) 
 
 /// Discovery result — wraps PrimalConnections for dynamic primal access
 ///
-/// DEEP DEBT EVOLUTION: Replaced fixed-field struct with dynamic registry.
-/// Access primals by name: `result.connections.get("beardog")`
-/// Or via typed accessors: `result.connections.beardog()`
+/// Dynamic primal registry (replaced fixed-field struct).
+/// Access services by taxonomy name: `result.connections.get("…")`
+/// Or via capability: `result.connections.security_provider()` / [`PrimalConnections::get_by_capability`].
 pub struct DiscoveryResult {
     /// Dynamic primal connections registry
     pub connections: PrimalConnections,
@@ -82,7 +80,7 @@ pub struct Discovery;
 impl Discovery {
     /// Discover and connect to all primals
     ///
-    /// DEEP DEBT EVOLUTION: Uses dynamic socket scanning instead of hardcoded list.
+    /// Uses dynamic socket scanning instead of hardcoded list.
     /// Discovers ANY primal with a socket in the runtime directory.
     pub async fn discover_primals() -> Result<DiscoveryResult> {
         let family_id = std::env::var("FAMILY_ID")
@@ -245,7 +243,7 @@ impl Discovery {
 
     /// Build initial UI state from discovered primals
     ///
-    /// DEEP DEBT EVOLUTION: Takes `PrimalConnections` instead of individual
+    /// Takes `PrimalConnections` instead of individual
     /// primal references. State includes ALL discovered primals dynamically.
     pub async fn build_initial_ui_state(
         family_id: &str,

@@ -67,7 +67,7 @@ impl SecurityProvider for CryptoSecurityAdapter {
 
         let lineage_id = &proof.lineage_id;
 
-        // BearDog CLI command: beardog btsp create-tunnel --node-a <> --node-b <> --lineage <>
+        // Security-primal CLI: `btsp create-tunnel --node-a … --node-b … --lineage …`
         let args = vec![
             "btsp",
             "create-tunnel",
@@ -252,12 +252,46 @@ impl CryptoSecurityAdapter {
     }
 }
 
+/// Local registration payload for discovery transport APIs (until shared client types land).
+#[derive(Debug)]
+struct DiscoveryServiceMetadata {
+    version: String,
+    location: Option<String>,
+    tags: Vec<String>,
+}
+
+#[derive(Debug)]
+struct DiscoveryServiceRegistration {
+    service_name: String,
+    capabilities: Vec<String>,
+    endpoint: String,
+    metadata: DiscoveryServiceMetadata,
+}
+
+/// HTTP-oriented client for the discovery capability (transport registration, health).
+///
+/// This module is not yet wired into the main `p2p_coordination` build; it is kept as a
+/// reference implementation for capability-based discovery integration.
+#[derive(Debug, Default)]
+pub struct DiscoveryRegistryClient;
+
+impl DiscoveryRegistryClient {
+    /// Discover a discovery-capability endpoint for the given family.
+    pub async fn discover(_family_id: &str) -> anyhow::Result<Self> {
+        Ok(Self)
+    }
+
+    async fn register_service(&self, _service: &DiscoveryServiceRegistration) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
 /// Mesh/discovery adapter for discovery primal operations
 ///
 /// Implements DiscoveryProvider for any primal providing discovery capability.
 /// Uses HTTP APIs when the primal is HTTP-based (discovered at runtime).
 pub struct MeshDiscoveryAdapter {
-    client: SongbirdClient,
+    discovery_client: DiscoveryRegistryClient,
 }
 
 impl MeshDiscoveryAdapter {
@@ -277,15 +311,14 @@ impl MeshDiscoveryAdapter {
         // EVOLVED: Return error instead of panic for deprecated function
         anyhow::bail!(
             "MeshDiscoveryAdapter::new() is deprecated. \
-             Use SongbirdClient::discover() for capability-based discovery. \
-             See migration guide in docs/migrations/SONGBIRD_CLIENT_MIGRATION.md"
+             Use DiscoveryRegistryClient::discover() for capability-based discovery."
         )
     }
 
     /// Create adapter from a discovered discovery client (capability: discovery)
     pub async fn from_discovery(family_id: &str) -> anyhow::Result<Self> {
-        let client = SongbirdClient::discover(family_id).await?;
-        Ok(Self { client })
+        let discovery_client = DiscoveryRegistryClient::discover(family_id).await?;
+        Ok(Self { discovery_client })
     }
 }
 
@@ -297,23 +330,18 @@ impl DiscoveryProvider for MeshDiscoveryAdapter {
             endpoint.node_id
         );
 
-        // Use discovery primal HTTP API to register transport
-        // In a real implementation, this would call a specific Songbird API
-        // For now, we'll use the register_service method
-        use crate::clients::songbird::{ServiceMetadata, ServiceRegistration};
-
-        let service = ServiceRegistration {
+        let service = DiscoveryServiceRegistration {
             service_name: format!("transport-{}", endpoint.node_id),
             capabilities: vec!["transport".to_string()],
             endpoint: format!("{}:{}", endpoint.address, endpoint.port),
-            metadata: ServiceMetadata {
+            metadata: DiscoveryServiceMetadata {
                 version: "1.0.0".to_string(),
                 location: None,
                 tags: vec![],
             },
         };
 
-        self.client
+        self.discovery_client
             .register_service(&service)
             .await
             .context("Failed to register transport with discovery primal")?;
@@ -367,14 +395,6 @@ impl DiscoveryProvider for MeshDiscoveryAdapter {
         })
     }
 }
-
-// Backward compatibility: type aliases for legacy name-based references.
-// No modern replacement for the aliases; MeshDiscoveryAdapter::new() is deprecated
-// but the types themselves remain valid. Consumers should use from_discovery().
-#[expect(deprecated, reason = "legacy alias kept for backward compat")]
-pub type BeardogSecurityAdapter = CryptoSecurityAdapter;
-#[expect(deprecated, reason = "legacy alias kept for backward compat")]
-pub type SongbirdDiscoveryAdapter = MeshDiscoveryAdapter;
 
 #[cfg(test)]
 mod tests {

@@ -8,7 +8,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::neural_executor::GraphExecutor;
-use crate::neural_graph::{Graph, GraphConfig, GraphNode};
+use crate::neural_graph::{Graph, GraphConfig, GraphNode, Operation};
 use std::collections::HashMap;
 
 #[test]
@@ -527,4 +527,146 @@ fn test_topological_sort_depends_on_missing_node_id() {
         msg.contains("cycle") || msg.contains("unreachable"),
         "unexpected: {msg}"
     );
+}
+
+fn node_log_info(id: &str, depends_on: Vec<String>, message: &str) -> GraphNode {
+    let mut config = HashMap::new();
+    config.insert(
+        "message".to_string(),
+        serde_json::Value::String(message.to_string()),
+    );
+    GraphNode {
+        id: id.to_string(),
+        depends_on,
+        operation: Some(Operation {
+            name: "log.info".to_string(),
+            params: HashMap::new(),
+            environment: None,
+        }),
+        config,
+        ..Default::default()
+    }
+}
+
+fn node_fs_check(id: &str, optional: bool) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        depends_on: vec![],
+        operation: Some(Operation {
+            name: "filesystem.check_exists".to_string(),
+            params: HashMap::new(),
+            environment: None,
+        }),
+        config: HashMap::new(),
+        fallback: optional.then(|| "skip".to_string()),
+        ..Default::default()
+    }
+}
+
+#[tokio::test]
+async fn test_execute_single_log_info_node_succeeds() {
+    let graph = Graph {
+        id: "exec-log".to_string(),
+        version: "1.0".to_string(),
+        description: "test".to_string(),
+        nodes: vec![node_log_info("n1", vec![], "hello")],
+        config: GraphConfig {
+            rollback_on_failure: false,
+            ..Default::default()
+        },
+        coordination: None,
+        env: HashMap::new(),
+    };
+    let mut ex = GraphExecutor::new(graph, HashMap::new());
+    let report = ex.execute().await.expect("execute");
+    assert!(report.success);
+}
+
+#[tokio::test]
+async fn test_execute_two_phase_log_chain() {
+    let graph = Graph {
+        id: "exec-chain".to_string(),
+        version: "1.0".to_string(),
+        description: "test".to_string(),
+        nodes: vec![
+            node_log_info("a", vec![], "first"),
+            node_log_info("b", vec!["a".to_string()], "second"),
+        ],
+        config: GraphConfig {
+            rollback_on_failure: false,
+            ..Default::default()
+        },
+        coordination: None,
+        env: HashMap::new(),
+    };
+    let mut ex = GraphExecutor::new(graph, HashMap::new());
+    let report = ex.execute().await.expect("execute");
+    assert!(report.success);
+    assert_eq!(report.phase_results.len(), 2);
+}
+
+#[tokio::test]
+async fn test_execute_filesystem_missing_path_fails() {
+    let graph = Graph {
+        id: "exec-fail".to_string(),
+        version: "1.0".to_string(),
+        description: "test".to_string(),
+        nodes: vec![node_fs_check("bad", false)],
+        config: GraphConfig {
+            rollback_on_failure: false,
+            ..Default::default()
+        },
+        coordination: None,
+        env: HashMap::new(),
+    };
+    let mut ex = GraphExecutor::new(graph, HashMap::new());
+    let report = ex.execute().await.expect("execute returns report");
+    assert!(!report.success);
+}
+
+#[tokio::test]
+async fn test_execute_optional_filesystem_skip_keeps_success() {
+    let graph = Graph {
+        id: "exec-opt".to_string(),
+        version: "1.0".to_string(),
+        description: "test".to_string(),
+        nodes: vec![node_fs_check("skipme", true)],
+        config: GraphConfig {
+            rollback_on_failure: false,
+            ..Default::default()
+        },
+        coordination: None,
+        env: HashMap::new(),
+    };
+    let mut ex = GraphExecutor::new(graph, HashMap::new());
+    let report = ex.execute().await.expect("execute");
+    assert!(report.success);
+}
+
+#[tokio::test]
+async fn test_execute_unknown_operation_yields_skipped_json() {
+    let graph = Graph {
+        id: "exec-unknown".to_string(),
+        version: "1.0".to_string(),
+        description: "test".to_string(),
+        nodes: vec![GraphNode {
+            id: "u1".to_string(),
+            depends_on: vec![],
+            operation: Some(Operation {
+                name: "not.a.real.handler".to_string(),
+                params: HashMap::new(),
+                environment: None,
+            }),
+            ..Default::default()
+        }],
+        config: GraphConfig {
+            rollback_on_failure: false,
+            ..Default::default()
+        },
+        coordination: None,
+        env: HashMap::new(),
+    };
+    let mut ex = GraphExecutor::new(graph, HashMap::new());
+    let report = ex.execute().await.expect("execute");
+    assert!(report.success);
 }

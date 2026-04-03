@@ -259,6 +259,25 @@ fn test_nat_type_from_detection_mixed_case() {
 }
 
 #[test]
+fn nat_type_address_restricted_supports_punch() {
+    assert!(NatType::AddressRestricted.supports_direct_punch());
+    assert!(!NatType::Unknown.supports_direct_punch());
+}
+
+#[test]
+fn port_pattern_random_non_numeric_observed_entries_skipped() {
+    let json = serde_json::json!({
+        "type": "random",
+        "observed": ["not-a-number", 41200, null]
+    });
+    let pattern = PortPattern::from_json(&json);
+    match pattern {
+        PortPattern::Random { observed } => assert_eq!(observed, vec![41200u16]),
+        _ => panic!("expected Random"),
+    }
+}
+
+#[test]
 fn test_port_pattern_sequential_exact_confidence_threshold() {
     let json = serde_json::json!({
         "type": "sequential",

@@ -653,6 +653,57 @@ mod tests {
         assert_eq!(candidates[0].from, "slow");
     }
 
+    #[test]
+    fn connection_metrics_error_rate_and_p50_ema() {
+        let mut m = ConnectionMetrics::default();
+        assert!(m.error_rate() <= f64::EPSILON);
+        m.record_request(100, true);
+        m.record_request(200, false);
+        assert!((m.error_rate() - 0.5).abs() < f64::EPSILON);
+        assert!(m.p50_latency_us > 0);
+        assert_eq!(m.max_latency_us, 200);
+        assert!(m.avg_latency_us > 0.0);
+    }
+
+    #[test]
+    fn connection_metrics_many_samples_percentile_caps() {
+        let mut m = ConnectionMetrics::default();
+        m.record_request(1000, true);
+        assert!(m.p95_latency_us >= 950);
+        assert!(m.p99_latency_us >= 990);
+    }
+
+    #[test]
+    fn protocol_summary_total_sum() {
+        let s = ProtocolSummary {
+            json_rpc: 2,
+            tarpc: 1,
+            hybrid: 1,
+            degraded: 0,
+        };
+        assert_eq!(s.total(), 4);
+    }
+
+    #[test]
+    fn connection_id_and_protocol_mode_display() {
+        let id = ConnectionId::new("a", "b");
+        assert!(id.to_string().contains('→'));
+        assert_eq!(ProtocolMode::JsonRpc.to_string(), "JSON-RPC");
+        assert_eq!(ProtocolMode::Tarpc.to_string(), "tarpc");
+        assert_eq!(ProtocolMode::Hybrid.to_string(), "Hybrid");
+        assert_eq!(ProtocolMode::Degraded.to_string(), "Degraded");
+    }
+
+    #[test]
+    fn primal_protocol_state_tarpc_counters() {
+        let mut p = PrimalProtocolState::new("p", std::path::PathBuf::from("/x.sock"));
+        assert!(!p.tarpc_available());
+        p.record_tarpc_failure();
+        assert_eq!(p.tarpc_failure_count, 1);
+        p.reset_tarpc_failures();
+        assert_eq!(p.tarpc_failure_count, 0);
+    }
+
     #[tokio::test]
     async fn test_primal_removal() {
         let graph = LivingGraph::new("test-family");

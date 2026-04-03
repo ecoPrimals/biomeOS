@@ -312,3 +312,114 @@ pub fn extract_version_from_output(text: &str) -> Option<String> {
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use sha2::{Digest, Sha256};
+    use std::fs;
+
+    #[test]
+    fn sanitize_cache_component_replaces_non_alnum() {
+        assert_eq!(sanitize_cache_component("org/name:v1.0"), "org_name_v1.0");
+        assert_eq!(sanitize_cache_component("simple"), "simple");
+    }
+
+    #[test]
+    fn cached_download_path_url_only_and_named() {
+        let base = registry_cache_dir().expect("registry base");
+        let url = "https://example.com/asset?v=1";
+        let p_url = cached_download_path(url, "", "", "", url).expect("path");
+        assert!(p_url.starts_with(&base));
+        assert!(p_url.to_string_lossy().contains("url_"));
+
+        let p_named = cached_download_path(url, "eco", "primal", "v1.0.0", "linux-amd64.tar.gz")
+            .expect("path2");
+        assert!(p_named.starts_with(&base));
+        assert!(p_named.to_string_lossy().contains("eco"));
+        assert!(p_named.to_string_lossy().contains("linux-amd64"));
+    }
+
+    #[test]
+    fn github_release_deserializes_minimal_json() {
+        let json = r#"{"tag_name":"v1.0.0","assets":[{"name":"bin","browser_download_url":"https://a/b"}]}"#;
+        let r: GitHubRelease = serde_json::from_str(json).expect("serde");
+        assert_eq!(r.tag_name, "v1.0.0");
+        assert_eq!(r.assets.len(), 1);
+        assert_eq!(r.assets[0].name, "bin");
+    }
+
+    #[test]
+    fn is_skippable_non_binary_asset_cases() {
+        assert!(is_skippable_non_binary_asset("foo.sha256"));
+        assert!(is_skippable_non_binary_asset("x.asc"));
+        assert!(is_skippable_non_binary_asset("note.md"));
+        assert!(!is_skippable_non_binary_asset("primal-linux-amd64"));
+    }
+
+    #[test]
+    fn asset_matches_platform_smoke_current_host() {
+        let os = std::env::consts::OS;
+        let arch = std::env::consts::ARCH;
+        let name = format!("thing-{os}-{arch}-release");
+        assert!(asset_matches_platform(&name));
+    }
+
+    #[test]
+    fn extract_version_from_output_variants() {
+        assert_eq!(
+            extract_version_from_output("primal version v1.2.3\n"),
+            Some("1.2.3".to_string())
+        );
+        assert_eq!(
+            extract_version_from_output("1.4.0-rc1 extra"),
+            Some("1.4.0-rc1".to_string())
+        );
+        assert_eq!(extract_version_from_output(""), None);
+        assert_eq!(extract_version_from_output("\n\n"), None);
+    }
+
+    #[test]
+    fn percent_encode_github_tag_special_chars() {
+        assert_eq!(
+            super::percent_encode_github_tag("v1.0.0+build"),
+            "v1.0.0%2Bbuild"
+        );
+        assert_eq!(super::percent_encode_github_tag("release"), "release");
+    }
+
+    #[tokio::test]
+    async fn download_url_unsupported_scheme_errors_without_io() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dest = dir.path().join("out");
+        let err = download_url_to_path_with_verify("ftp://example.com/x", &dest, None)
+            .await
+            .expect_err("ftp unsupported");
+        assert!(err.to_string().contains("unsupported URL scheme"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn verify_checksum_mismatch_errors() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("blob");
+        fs::write(&path, b"hello").expect("write");
+        let wrong = format!("{:x}", Sha256::digest(b"nope"));
+        let err = super::verify_checksum_optional(&path, Some(&wrong))
+            .await
+            .expect_err("checksum mismatch");
+        assert!(err.to_string().contains("SHA256 mismatch"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn compute_checksum_file_matches_sha256() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("f");
+        let data = b"abc";
+        fs::write(&path, data).expect("write");
+        let got = compute_checksum_file(&path).await.expect("hash");
+        let exp = format!("{:x}", Sha256::digest(data));
+        assert_eq!(got, exp);
+    }
+}

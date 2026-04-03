@@ -21,10 +21,10 @@ collapsible_if = "allow"           # let-chains preferred; fix incrementally (ed
 must_use_candidate = "allow"       # Fix incrementally; too noisy for entire codebase at once
 return_self_not_must_use = "allow" # Builders return Self; fix incrementally
 missing_const_for_fn = "allow"     # Fix incrementally; many functions need const evaluation
-cast_possible_truncation = "allow" # Handled case-by-case with explicit allow where needed
-cast_precision_loss = "allow"      # f64 display values don't need full u64 precision
-cast_sign_loss = "allow"           # Handled case-by-case
-cast_lossless = "allow"            # Explicit casts for clarity
+cast_possible_truncation = "allow" # Safe: see biomeos-types/src/cast.rs for audited helpers; per-site #[expect] for new code
+cast_precision_loss = "allow"      # Safe: display-only f64 values; precision beyond 2^53 is irrelevant for metrics/UI
+cast_sign_loss = "allow"           # Safe: all sites verified unsigned; see biomeos-types/src/cast.rs for checked alternatives
+cast_lossless = "allow"            # Widening casts are always safe; .into() preferred for new code
 option_if_let_else = "allow"       # Style preference; match is often clearer
 redundant_pub_crate = "allow"      # pub(crate) vs pub is a valid choice
 significant_drop_tightening = "allow" # RwLock/Mutex scoping is intentional
@@ -95,7 +95,7 @@ serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 clap = { version = "4.0", features = ["derive"] }
@@ -129,16 +129,13 @@ dashmap = "5.5"
 # Networking
 hyper = { version = "1.0", features = ["full"] }
 
-# Configuration and environment
-config = "0.14"
-
 # Testing
 tempfile = "3.8"
 criterion = "0.5"
 # dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
 etcetera = "0.8"  # Pure Rust replacement for dirs
 
-rand = "0.8"
+rand = "0.9"
 sha2 = "0.10"
 base64 = "0.22"
 tokio-test = "0.4"
@@ -183,7 +180,7 @@ async-trait = "0.1"
 
 # Error handling
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -218,7 +215,7 @@ anyhow = "1.0"
 tempfile = "3.0"
 tracing-test = "0.2"
 wiremock = "0.6"
-rand = "0.8"
+rand = "0.9"
 biomeos-test-utils = { path = "crates/biomeos-test-utils", version = "0.1.0" }
 
 [[example]]

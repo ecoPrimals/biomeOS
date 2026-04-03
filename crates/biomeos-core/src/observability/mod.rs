@@ -266,8 +266,8 @@ impl MinimalObserver {
     /// (instead of reading `BEARDOG_ENDPOINT` / `SONGBIRD_ENDPOINT` from the environment).
     pub fn share_with_family_using_endpoints(
         &self,
-        beardog_endpoint: Option<&str>,
-        songbird_endpoint: Option<&str>,
+        security_endpoint: Option<&str>,
+        discovery_endpoint: Option<&str>,
     ) -> Result<bool> {
         if self.mode != ObservabilityMode::FamilyFederation {
             debug!("📊 Family sharing not enabled (mode: {:?})", self.mode);
@@ -290,12 +290,12 @@ impl MinimalObserver {
             family.lineage_id
         );
 
-        self.share_metrics_securely(&metrics, family, beardog_endpoint, songbird_endpoint)?;
+        self.share_metrics_securely(&metrics, family, security_endpoint, discovery_endpoint)?;
 
         Ok(true)
     }
 
-    /// Share metrics securely via `BearDog` encryption and Songbird routing
+    /// Share metrics securely via the security provider (`BearDog`) and discovery-based routing
     #[expect(
         clippy::unused_self,
         reason = "method for future use or API consistency"
@@ -304,8 +304,8 @@ impl MinimalObserver {
         &self,
         metrics: &LocalMetrics,
         family: &FamilyObservability,
-        beardog_override: Option<&str>,
-        songbird_override: Option<&str>,
+        security_endpoint_override: Option<&str>,
+        discovery_endpoint_override: Option<&str>,
     ) -> Result<()> {
         debug!("📊 Preparing metrics for secure sharing");
 
@@ -313,11 +313,11 @@ impl MinimalObserver {
         let metrics_json = serde_json::to_string(metrics).context("Failed to serialize metrics")?;
 
         // Step 1: Encrypt via BearDog (if available)
-        let beardog_resolved = beardog_override
+        let beardog_resolved = security_endpoint_override
             .map(String::from)
             .or_else(|| std::env::var("BEARDOG_ENDPOINT").ok());
-        let _encrypted_payload = if let Some(beardog_endpoint) = beardog_resolved {
-            debug!("🔒 Encrypting metrics via BearDog at {}", beardog_endpoint);
+        let _encrypted_payload = if let Some(security_endpoint) = beardog_resolved {
+            debug!("🔒 Encrypting metrics via BearDog at {}", security_endpoint);
 
             // In production, this would:
             // 1. Call BearDog's encryption API
@@ -335,29 +335,31 @@ impl MinimalObserver {
             return Err(anyhow::anyhow!("BearDog required for secure sharing"));
         };
 
-        // Step 2: Route via Songbird (if available)
-        let songbird_resolved = songbird_override
+        // Step 2: Route via discovery endpoint (if available)
+        let songbird_resolved = discovery_endpoint_override
             .map(String::from)
             .or_else(|| std::env::var("SONGBIRD_ENDPOINT").ok());
-        if let Some(songbird_endpoint) = songbird_resolved {
+        if let Some(discovery_endpoint) = songbird_resolved {
             debug!(
-                "📡 Routing encrypted metrics via Songbird at {}",
-                songbird_endpoint
+                "📡 Routing encrypted metrics via discovery endpoint at {}",
+                discovery_endpoint
             );
 
             // In production, this would:
-            // 1. Call Songbird's routing API
+            // 1. Call the discovery provider's routing API
             // 2. Send to family endpoint
             // 3. Verify delivery
 
             info!(
-                "✅ Metrics shared securely with family {} via Songbird",
+                "✅ Metrics shared securely with family {} via discovery routing",
                 family.endpoint.as_deref().unwrap_or("unknown")
             );
         } else {
-            // Without Songbird, we can't route (sovereignty principle)
-            warn!("⚠️  Songbird not available - cannot route metrics");
-            return Err(anyhow::anyhow!("Songbird required for routing"));
+            // Without a discovery endpoint, we can't route (sovereignty principle)
+            warn!("⚠️  Discovery routing endpoint not available - cannot route metrics");
+            return Err(anyhow::anyhow!(
+                "Discovery routing endpoint required for routing"
+            ));
         }
 
         // Step 3: Log sharing event (local audit trail)
@@ -562,7 +564,7 @@ mod tests {
         .unwrap();
         let result = observer.share_with_family_using_endpoints(Some("/tmp/beardog.sock"), None);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Songbird"));
+        assert!(result.unwrap_err().to_string().contains("Discovery"));
     }
 
     #[test]

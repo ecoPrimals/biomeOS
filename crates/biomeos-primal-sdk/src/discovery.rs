@@ -345,20 +345,6 @@ pub(crate) fn bootstrap_capability_hint_for_primal_name(name: &str) -> PrimalCap
     }
 }
 
-/// Infer capability from primal name.
-///
-/// **DEPRECATED**: Use capability-based discovery instead. Primals should be
-/// discovered by capability via `discover_by_capability()`, not by name.
-/// This exists only for bootstrap/legacy when a socket is found by path scan.
-#[deprecated(
-    since = "0.1.0",
-    note = "Use capability-based discovery. Primals are discovered by capability, not name."
-)]
-#[must_use]
-pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
-    bootstrap_capability_hint_for_primal_name(name)
-}
-
 #[cfg(test)]
 #[expect(
     clippy::unwrap_used,

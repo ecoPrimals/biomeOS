@@ -6,22 +6,22 @@
 //! Network-Universal Coordinated Lifecycle & Ecosystem Unification System
 //!
 //! This module provides secure, 5-layer primal discovery that delegates
-//! cryptographic and communication responsibilities to `BearDog` and Songbird.
+//! cryptographic and communication responsibilities to the security and discovery primals.
 //!
 //! ## Core Principle: Delegate, Don't Reimplement!
 //!
 //! | Capability | Primal | What It Provides |
 //! |------------|--------|------------------|
-//! | **Crypto & Identity** | 🐻 `BearDog` | Signatures, verification, trust evaluation |
-//! | **Discovery & Comms** | 🐦 Songbird | UDP multicast, registry, routing |
+//! | **Crypto & Identity** | Security provider | Signatures, verification, trust evaluation |
+//! | **Discovery & Comms** | Discovery primal | UDP multicast, registry, routing |
 //! | **Coordination** | 🌱 biomeOS | Orchestrates protocol, no reimplementation |
 //!
 //! ## 5-Layer Protocol
 //!
 //! 1. **Physical Discovery** (Songbird) - UDP multicast, socket scanning
-//! 2. **Identity Verification** (`BearDog`) - Ed25519 challenge-response
+//! 2. **Identity Verification** (security provider) - Ed25519 challenge-response
 //! 3. **Capability Verification** (biomeOS) - Query primal, validate capabilities
-//! 4. **Trust Evaluation** (`BearDog`) - Genetic lineage, trust level
+//! 4. **Trust Evaluation** (security provider) - Genetic lineage, trust level
 //! 5. **Registration** (biomeOS) - Add to verified primal registry
 
 mod discovery;
@@ -31,9 +31,9 @@ mod verification;
 pub use trust::TrustLevel;
 pub use verification::{IdentityProof, UNVERIFIED_SIGNATURE};
 
-use crate::beardog_client::BearDogClient;
 use crate::capability::{Capability, CapabilitySet};
 use crate::discovery::{DiscoveredPrimal, PrimalDiscovery, PrimalEndpoint};
+use crate::security_client::SecurityProviderClient;
 use crate::unix_socket_client::UnixSocketClient;
 use crate::{FederationError, FederationResult};
 use serde::{Deserialize, Serialize};
@@ -64,7 +64,7 @@ pub struct VerifiedPrimal {
     /// Verified capabilities (queried from primal, not inferred)
     pub capabilities: CapabilitySet,
 
-    /// Identity proof from `BearDog`
+    /// Identity proof from the security provider
     pub identity_proof: IdentityProof,
 
     /// Trust level
@@ -107,8 +107,8 @@ pub struct SecureNucleusDiscovery {
     /// Songbird client (for Layer 1: Physical Discovery)
     songbird: Option<UnixSocketClient>,
 
-    /// `BearDog` client (for Layer 2 & 4: Identity & Trust)
-    beardog: Option<BearDogClient>,
+    /// Security provider client (for Layer 2 & 4: Identity & Trust)
+    security_client: Option<SecurityProviderClient>,
 
     /// Verified primals (multiple instances per name possible)
     verified_primals: HashMap<String, Vec<VerifiedPrimal>>,
@@ -126,22 +126,22 @@ impl SecureNucleusDiscovery {
         info!("🧬 Initializing NUCLEUS (Secure Discovery Protocol)");
         Self {
             songbird: None,
-            beardog: None,
+            security_client: None,
             verified_primals: HashMap::new(),
             family_id: None,
             _node_id: None,
         }
     }
 
-    /// Create with Songbird and `BearDog` clients (delegated discovery)
+    /// Create with discovery (Songbird) and security provider clients (delegated discovery)
     pub fn with_clients(
         songbird: Option<UnixSocketClient>,
-        beardog: Option<BearDogClient>,
+        security_client: Option<SecurityProviderClient>,
     ) -> Self {
         info!("🧬 Initializing NUCLEUS with primal clients");
         Self {
             songbird,
-            beardog,
+            security_client,
             verified_primals: HashMap::new(),
             family_id: std::env::var("FAMILY_ID").ok(),
             _node_id: std::env::var("NODE_ID").ok(),
@@ -150,11 +150,11 @@ impl SecureNucleusDiscovery {
 
     /// Discover primals using insecure basic discovery (for bootstrapping)
     ///
-    /// This is used when Songbird/BearDog are not yet available.
+    /// This is used when discovery / security clients are not yet available.
     /// It falls back to basic socket scanning without verification.
     #[expect(clippy::expect_used, reason = "system clock before UNIX epoch")]
     pub async fn discover_insecure(&mut self) -> FederationResult<Vec<VerifiedPrimal>> {
-        warn!("⚠️  Using insecure discovery (no Songbird/BearDog verification)");
+        warn!("⚠️  Using insecure discovery (no discovery/security verification)");
         warn!("   This should only be used for bootstrapping!");
 
         let mut basic_discovery = PrimalDiscovery::new();
@@ -198,20 +198,21 @@ impl SecureNucleusDiscovery {
 
     /// Discover primals using secure 5-layer protocol
     ///
-    /// **Requires**: Songbird and `BearDog` must be available
+    /// **Requires**: Discovery primal and/or security provider must be available
     ///
     /// ## Layers:
-    /// 1. Physical Discovery (Songbird)
-    /// 2. Identity Verification (`BearDog`)
+    /// 1. Physical Discovery (discovery primal)
+    /// 2. Identity Verification (security provider)
     /// 3. Capability Verification (biomeOS)
-    /// 4. Trust Evaluation (`BearDog`)
+    /// 4. Trust Evaluation (security provider)
     /// 5. Registration (biomeOS)
     pub async fn discover_secure(&mut self) -> FederationResult<Vec<VerifiedPrimal>> {
         info!("🔒 Starting secure 5-layer discovery");
 
-        if self.songbird.is_none() && self.beardog.is_none() {
+        if self.songbird.is_none() && self.security_client.is_none() {
             return Err(FederationError::DiscoveryError(
-                "Cannot perform secure discovery without Songbird or BearDog".to_string(),
+                "Cannot perform secure discovery without discovery primal or security provider"
+                    .to_string(),
             ));
         }
 
@@ -258,8 +259,8 @@ impl SecureNucleusDiscovery {
             .expect("system clock before UNIX epoch")
             .as_secs();
 
-        let identity_proof = if let Some(ref beardog) = self.beardog {
-            layer2_identity_verification(beardog, &primal).await?
+        let identity_proof = if let Some(ref security_client) = self.security_client {
+            layer2_identity_verification(security_client, &primal).await?
         } else {
             IdentityProof {
                 node_id: primal.name.clone(),
@@ -273,8 +274,9 @@ impl SecureNucleusDiscovery {
 
         let capabilities = layer3_capability_verification(&primal).await?;
 
-        let trust_level = if let Some(ref beardog) = self.beardog {
-            layer4_trust_evaluation(beardog, &identity_proof, self.family_id.as_deref()).await?
+        let trust_level = if let Some(ref security_client) = self.security_client {
+            layer4_trust_evaluation(security_client, &identity_proof, self.family_id.as_deref())
+                .await?
         } else {
             TrustLevel::Basic
         };
@@ -489,7 +491,7 @@ mod tests {
         let disc = SecureNucleusDiscovery::new();
         assert!(disc.verified_primals.is_empty());
         assert!(disc.songbird.is_none());
-        assert!(disc.beardog.is_none());
+        assert!(disc.security_client.is_none());
         assert!(disc.family_id.is_none());
     }
 
@@ -733,6 +735,10 @@ mod tests {
             "secure discovery without clients must fail"
         );
         let err_msg = format!("{}", result.unwrap_err());
-        assert!(err_msg.contains("Songbird") || err_msg.contains("BearDog"));
+        assert!(
+            err_msg.contains("discovery")
+                || err_msg.contains("security")
+                || err_msg.contains("Songbird")
+        );
     }
 }

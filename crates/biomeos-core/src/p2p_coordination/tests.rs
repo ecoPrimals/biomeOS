@@ -1,15 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-#![expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
-#![expect(
-    clippy::expect_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
-
 use super::*;
 use std::time::SystemTime;
 
@@ -223,13 +214,13 @@ async fn test_coordinate_relay_without_routing_fails() {
         None,
     );
     let result = coordinator.coordinate_relay("requester", "target").await;
-    assert!(result.is_err());
-    assert!(
-        result
-            .unwrap_err()
-            .to_string()
-            .contains("No routing provider")
-    );
+    match result {
+        Err(e) => assert!(
+            e.to_string().contains("No routing provider"),
+            "unexpected err: {e}"
+        ),
+        Ok(_) => panic!("expected coordinate_relay to fail without routing"),
+    }
 }
 
 #[tokio::test]
@@ -308,6 +299,85 @@ fn test_capability_constants() {
     assert_eq!(CAPABILITY_SECURITY, "security");
     assert_eq!(CAPABILITY_DISCOVERY, "discovery");
     assert_eq!(CAPABILITY_ROUTING, "routing");
+}
+
+#[test]
+fn strict_discovery_resolved_honors_explicit_config() {
+    assert!(super::strict_discovery_resolved(&P2pDiscoveryConfig {
+        strict_discovery: Some(true),
+        xdg_runtime_dir: None,
+    }));
+    assert!(!super::strict_discovery_resolved(&P2pDiscoveryConfig {
+        strict_discovery: Some(false),
+        xdg_runtime_dir: None,
+    }));
+}
+
+#[test]
+fn tunnel_health_all_status_variants_roundtrip_json() {
+    for status in [
+        HealthStatus::Healthy,
+        HealthStatus::Degraded,
+        HealthStatus::Unhealthy,
+    ] {
+        let th = TunnelHealth {
+            encryption_status: status,
+            forward_secrecy: true,
+            last_key_rotation: None,
+            status,
+        };
+        let json = serde_json::to_string(&th).expect("serialize tunnel health");
+        let back: TunnelHealth = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.status, status);
+        assert_eq!(back.encryption_status, status);
+    }
+}
+
+#[test]
+fn transport_health_status_and_connection_status_paths() {
+    let t = TransportHealth {
+        connection_status: HealthStatus::Degraded,
+        latency_ms: Some(12),
+        packet_loss: Some(0.5),
+        status: HealthStatus::Healthy,
+    };
+    let json = serde_json::to_string(&t).expect("serialize");
+    assert!(json.contains("connection_status"));
+    let back: TransportHealth = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(back.connection_status, HealthStatus::Degraded);
+    assert_eq!(back.status, HealthStatus::Healthy);
+}
+
+#[test]
+fn tunnel_status_and_relay_status_variants_serialize() {
+    for ts in [
+        TunnelStatus::Active,
+        TunnelStatus::Establishing,
+        TunnelStatus::Degraded,
+        TunnelStatus::Closed,
+    ] {
+        let json = serde_json::to_string(&ts).unwrap();
+        let u: TunnelStatus = serde_json::from_str(&json).unwrap();
+        assert_eq!(u, ts);
+    }
+    for rs in [
+        RelayStatus::Active,
+        RelayStatus::Establishing,
+        RelayStatus::Failed,
+    ] {
+        let json = serde_json::to_string(&rs).unwrap();
+        let u: RelayStatus = serde_json::from_str(&json).unwrap();
+        assert_eq!(u, rs);
+    }
+}
+
+#[test]
+fn discovery_mode_plaintext_encrypted_roundtrip() {
+    for m in [DiscoveryMode::Plaintext, DiscoveryMode::Encrypted] {
+        let json = serde_json::to_string(&m).unwrap();
+        let u: DiscoveryMode = serde_json::from_str(&json).unwrap();
+        assert_eq!(u, m);
+    }
 }
 
 #[test]
@@ -565,4 +635,114 @@ async fn test_new_from_discovery_non_strict_empty_dir_errors() {
     .await;
     let err = result.err().expect("expected empty socket dir");
     assert!(err.to_string().contains("security") || err.to_string().contains("No security"));
+}
+
+#[test]
+fn test_p2p_discovery_config_default_clone_debug() {
+    let a = P2pDiscoveryConfig::default();
+    let b = a.clone();
+    assert!(format!("{a:?}").contains("P2pDiscoveryConfig"));
+    assert_eq!(a.strict_discovery, b.strict_discovery);
+    assert_eq!(a.xdg_runtime_dir, b.xdg_runtime_dir);
+}
+
+#[test]
+fn test_compute_status_security_healthy_transport_unhealthy() {
+    let security = TunnelHealth {
+        encryption_status: HealthStatus::Healthy,
+        forward_secrecy: true,
+        last_key_rotation: None,
+        status: HealthStatus::Healthy,
+    };
+    let transport = TransportHealth {
+        connection_status: HealthStatus::Unhealthy,
+        latency_ms: None,
+        packet_loss: Some(10.0),
+        status: HealthStatus::Unhealthy,
+    };
+    assert_eq!(
+        compute_status_impl(&security, &transport),
+        HealthStatus::Unhealthy
+    );
+}
+
+#[test]
+fn test_compute_status_security_unhealthy_transport_healthy() {
+    let security = TunnelHealth {
+        encryption_status: HealthStatus::Unhealthy,
+        forward_secrecy: false,
+        last_key_rotation: None,
+        status: HealthStatus::Unhealthy,
+    };
+    let transport = TransportHealth {
+        connection_status: HealthStatus::Healthy,
+        latency_ms: Some(1),
+        packet_loss: None,
+        status: HealthStatus::Healthy,
+    };
+    assert_eq!(
+        compute_status_impl(&security, &transport),
+        HealthStatus::Unhealthy
+    );
+}
+
+#[tokio::test]
+async fn test_enable_encrypted_discovery_fails_when_discovery_enable_errors() {
+    struct FailEncrypted;
+    #[async_trait::async_trait]
+    impl DiscoveryProvider for FailEncrypted {
+        async fn register_transport(&self, _: &TransportEndpoint) -> Result<()> {
+            Ok(())
+        }
+        async fn enable_encrypted_mode(&self, _: EncryptedDiscoveryConfig) -> Result<()> {
+            anyhow::bail!("encrypted-mode-fail")
+        }
+        async fn check_transport_health(&self, _: &str) -> Result<TransportHealth> {
+            anyhow::bail!("skip")
+        }
+        async fn test_encrypted_broadcast(&self) -> Result<BroadcastTest> {
+            anyhow::bail!("skip")
+        }
+    }
+    let coordinator = P2PCoordinator::new(
+        Arc::new(MockSecurityProvider),
+        Arc::new(FailEncrypted),
+        None,
+    );
+    let err = coordinator
+        .enable_encrypted_discovery("fam")
+        .await
+        .expect_err("discovery enable should fail");
+    assert!(
+        format!("{err:#}").contains("encrypted-mode-fail"),
+        "{err:#}"
+    );
+}
+
+#[tokio::test]
+async fn test_coordinate_relay_propagates_when_routing_request_relay_fails() {
+    struct FailRelay;
+    #[async_trait::async_trait]
+    impl RoutingProvider for FailRelay {
+        async fn request_relay(&self, _: &str, _: &str, _: LineageInfo) -> Result<RelayOffer> {
+            anyhow::bail!("relay-offer-fail")
+        }
+        async fn accept_relay(&self, _: &RelayOffer) -> Result<RelayConnection> {
+            anyhow::bail!("skip")
+        }
+    }
+    let coordinator = P2PCoordinator::new(
+        Arc::new(MockSecurityProvider),
+        Arc::new(MockDiscoveryProvider),
+        Some(Arc::new(FailRelay)),
+    );
+    let err = coordinator
+        .coordinate_relay("req", "tgt")
+        .await
+        .expect_err("relay");
+    let chain = format!("{err:#}");
+    assert!(
+        chain.contains("relay-offer-fail") || chain.contains("relay"),
+        "{chain}"
+    );
 }

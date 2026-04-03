@@ -588,3 +588,191 @@ fn test_format_diagnostics_via_probe_array_and_null() {
     assert!(lines.iter().any(|l| l.contains("items")));
     assert!(lines.iter().any(|l| l.contains("null")));
 }
+
+#[test]
+fn test_format_probe_connectivity_endpoint_unknown_status() {
+    let mut results = HashMap::new();
+    results.insert(
+        "connectivity".to_string(),
+        serde_json::json!({
+            "endpoints": [ {"url": "http://x", "status": "unknown"} ]
+        }),
+    );
+    let lines = format_probe_results("svc", &results);
+    assert!(
+        lines
+            .iter()
+            .any(|l| l.contains('❌') && l.contains("http://x"))
+    );
+}
+
+#[test]
+fn test_format_scan_summary_only_issues() {
+    let mut results = HashMap::new();
+    results.insert("issues_count".to_string(), serde_json::json!(3));
+    let out = format_scan_results(&results, "summary").unwrap();
+    assert!(out.contains("Issues found"));
+    assert!(out.contains('3'));
+}
+
+#[test]
+fn test_format_scan_summary_only_services_scanned() {
+    let mut results = HashMap::new();
+    results.insert("services_scanned".to_string(), serde_json::json!(12));
+    let out = format_scan_results(&results, "summary").unwrap();
+    assert!(out.contains("Services scanned"));
+    assert!(out.contains("12"));
+}
+
+#[test]
+fn test_format_health_summary_detailed_service_metrics_only_cpu() {
+    let mut results = HashMap::new();
+    results.insert(
+        "services".to_string(),
+        serde_json::json!({
+            "svc": { "status": "Healthy", "metrics": { "cpu_usage": 7 } }
+        }),
+    );
+    let lines = format_health_summary(&results, true);
+    assert!(
+        lines
+            .iter()
+            .any(|l| l.contains("CPU Usage") && l.contains('7'))
+    );
+}
+
+#[test]
+fn test_format_probe_results_all_sections_combined() {
+    let mut results = HashMap::new();
+    results.insert(
+        "connectivity".to_string(),
+        serde_json::json!({ "reachable": true, "response_time_ms": 3 }),
+    );
+    results.insert(
+        "performance".to_string(),
+        serde_json::json!({
+            "throughput_rps": 9,
+            "avg_latency_ms": 1,
+            "error_rate_percent": 0.0
+        }),
+    );
+    results.insert(
+        "diagnostics".to_string(),
+        serde_json::json!({ "note": "ok" }),
+    );
+    let lines = format_probe_results("full", &results);
+    assert!(lines.iter().any(|l| l.contains("Connectivity")));
+    assert!(lines.iter().any(|l| l.contains("Performance")));
+    assert!(lines.iter().any(|l| l.contains("Diagnostics")));
+    assert!(lines.iter().any(|l| l.contains("note")));
+}
+
+#[test]
+fn test_format_health_summary_non_object_services_skipped() {
+    let mut results = HashMap::new();
+    results.insert("services".to_string(), serde_json::json!("not-an-object"));
+    let lines = format_health_summary(&results, false);
+    assert!(!lines.iter().any(|l| l.contains("Service Health")));
+}
+
+#[test]
+fn test_display_health_results_runs() {
+    let mut results = HashMap::new();
+    results.insert("overall_status".to_string(), serde_json::json!("Healthy"));
+    display_health_results(&results, false);
+}
+
+#[test]
+fn test_display_probe_results_runs() {
+    let mut results = HashMap::new();
+    results.insert(
+        "performance".to_string(),
+        serde_json::json!({ "throughput_rps": 1 }),
+    );
+    display_probe_results("p", &results);
+}
+
+#[test]
+fn test_format_scan_results_json_roundtrip_empty() {
+    let results = HashMap::new();
+    let out = format_scan_results(&results, "json").unwrap();
+    assert!(out.contains("{}") || out.contains('\n'));
+}
+
+#[test]
+fn test_format_health_summary_services_not_array_skipped() {
+    let mut results = HashMap::new();
+    results.insert("services".to_string(), serde_json::json!([]));
+    let lines = format_health_summary(&results, true);
+    assert!(!lines.iter().any(|l| l.contains("Service Health")));
+}
+
+#[test]
+fn test_format_probe_diagnostics_empty_object() {
+    let mut results = HashMap::new();
+    results.insert("diagnostics".to_string(), serde_json::json!({}));
+    let lines = format_probe_results("svc", &results);
+    assert!(lines.iter().any(|l| l.contains("Diagnostics")));
+}
+
+#[test]
+fn test_format_health_metrics_system_network_only_received() {
+    let mut results = HashMap::new();
+    results.insert(
+        "system_metrics".to_string(),
+        serde_json::json!({
+            "network": { "bytes_received": 100 }
+        }),
+    );
+    let lines = format_health_summary(&results, false);
+    assert!(!lines.iter().any(|l| l.contains('↑')));
+}
+
+#[test]
+fn test_format_health_metrics_system_only_disk_used() {
+    let mut results = HashMap::new();
+    results.insert(
+        "system_metrics".to_string(),
+        serde_json::json!({
+            "disk_usage": { "used_bytes": 1024 }
+        }),
+    );
+    let lines = format_health_summary(&results, false);
+    assert!(lines.iter().any(|l| l.contains("Disk Usage")));
+}
+
+#[test]
+fn test_format_probe_connectivity_only_endpoints_array() {
+    let mut results = HashMap::new();
+    results.insert(
+        "connectivity".to_string(),
+        serde_json::json!({ "endpoints": [] }),
+    );
+    let lines = format_probe_results("svc", &results);
+    assert!(lines.iter().any(|l| l.contains("Endpoints")));
+}
+
+#[test]
+fn test_format_health_summary_detailed_issue_with_empty_message_object() {
+    let mut results = HashMap::new();
+    results.insert(
+        "services".to_string(),
+        serde_json::json!({
+            "svc": { "status": "Healthy", "issues": [{}] }
+        }),
+    );
+    let lines = format_health_summary(&results, true);
+    assert!(lines.iter().any(|l| l.contains("svc")));
+}
+
+#[test]
+fn test_compute_memory_percent_large_values() {
+    let p = compute_memory_percent(1_000_000_000, 2_000_000_000);
+    assert!((p - 50.0).abs() < 1e-6);
+}
+
+#[test]
+fn test_status_to_icon_maintenance_and_stopping() {
+    assert_eq!(status_to_icon("Maintenance"), "🔧");
+    assert_eq!(status_to_icon("Stopping"), "⏹️");
+}

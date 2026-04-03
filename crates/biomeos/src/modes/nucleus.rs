@@ -39,7 +39,7 @@ pub(crate) enum EcosystemState {
 }
 
 /// NUCLEUS deployment pattern
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NucleusMode {
     /// BearDog + Songbird
     Tower,
@@ -396,10 +396,10 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
             )
             .await?;
 
-        // Toadstool uses semantic method naming: "toadstool.health" instead of "health"
+        // Toadstool JSON-RPC uses capability-namespaced health (`health.status` → `health.check` per registry)
         if *primal == TOADSTOOL {
             lifecycle
-                .set_health_method(TOADSTOOL, "toadstool.health")
+                .set_health_method(TOADSTOOL, "health.status")
                 .await;
         }
 
@@ -650,20 +650,13 @@ async fn health_check(socket_path: &std::path::Path) -> Result<()> {
 
     let client = AtomicClient::unix(socket_path).with_timeout(Duration::from_secs(3));
 
-    // Try plain "health" first (BearDog, Songbird, NestGate, Squirrel),
-    // then semantic "{primal}.health" (Toadstool follows the naming standard)
+    // Try plain "health" first (common legacy surface), then capability `health.status`
+    // (registry maps `health.status` → `health.check`; avoids primal-prefixed method names)
     let response = if let Ok(resp) = client.call("health", serde_json::json!({})).await {
         resp
     } else {
-        // Extract primal name from socket path for semantic method naming
-        let primal_name = socket_path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .and_then(|s| s.split('-').next())
-            .unwrap_or("unknown");
-        let semantic_method = format!("{primal_name}.health");
         client
-            .call(&semantic_method, serde_json::json!({}))
+            .call("health.status", serde_json::json!({}))
             .await
             .context("Health check RPC failed")?
     };
@@ -679,7 +672,7 @@ fn generate_jwt_secret() -> String {
     use rand::RngCore;
 
     let mut bytes = [0u8; 48];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     base64::engine::general_purpose::STANDARD.encode(bytes)
 }
 

@@ -516,3 +516,81 @@ async fn test_record_node_execution_error_field_and_failure() {
     assert_eq!(agg.total_executions, 1);
     assert!((agg.success_rate - 0.0).abs() < f64::EPSILON);
 }
+
+#[test]
+fn test_prefix_end_increments_last_byte() {
+    assert_eq!(prefix_end("prefix"), "prefiy");
+}
+
+#[test]
+fn test_prefix_end_single_ascii_char() {
+    assert_eq!(prefix_end("a"), "b");
+}
+
+#[tokio::test]
+async fn test_graph_metrics_avg_duration_weighted_by_counts() {
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("metrics_avg_weighted.redb");
+    let collector = MetricsCollector::new(&db_path).unwrap();
+
+    for (id, dur) in [(1_i64, 10_u64), (2, 30), (3, 60)] {
+        let result = GraphResult {
+            success: true,
+            node_results: HashMap::default(),
+            errors: vec![],
+            duration_ms: dur,
+        };
+        collector
+            .record_execution("weighted", &result, dur, Some(id))
+            .unwrap();
+    }
+
+    let m = collector
+        .get_graph_metrics("weighted")
+        .unwrap()
+        .expect("metrics");
+    assert_eq!(m.total_executions, 3);
+    let expected_avg = (10.0 + 30.0 + 60.0) / 3.0;
+    assert!((m.avg_duration_ms - expected_avg).abs() < 1e-9);
+    assert_eq!(m.min_duration_ms, 10);
+    assert_eq!(m.max_duration_ms, 60);
+    assert!((m.success_rate - 1.0).abs() < f64::EPSILON);
+}
+
+#[tokio::test]
+async fn test_get_node_metrics_filters_wrong_graph_same_prefix() {
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("metrics_node_filter.redb");
+    let collector = MetricsCollector::new(&db_path).unwrap();
+
+    let p_other = NodeExecutionParams {
+        execution_id: 1,
+        graph_name: "g_other",
+        node_id: "n1",
+        primal_id: "p",
+        operation: "op",
+        success: true,
+        duration_ms: 5,
+        error: None,
+    };
+    collector.record_node_execution(&p_other).unwrap();
+
+    let p_target = NodeExecutionParams {
+        execution_id: 2,
+        graph_name: "g_target",
+        node_id: "n1",
+        primal_id: "p",
+        operation: "op",
+        success: true,
+        duration_ms: 15,
+        error: None,
+    };
+    collector.record_node_execution(&p_target).unwrap();
+
+    let agg = collector
+        .get_node_metrics("g_target", "n1")
+        .unwrap()
+        .expect("aggregate");
+    assert_eq!(agg.total_executions, 1);
+    assert!((agg.avg_duration_ms - 15.0).abs() < f64::EPSILON);
+}

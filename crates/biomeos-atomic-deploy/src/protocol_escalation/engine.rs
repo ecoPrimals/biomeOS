@@ -750,4 +750,65 @@ mod tests {
         assert_eq!(manager.config().latency_threshold_us, 250);
         assert_eq!(manager.config().check_interval_secs, 5);
     }
+
+    #[tokio::test]
+    async fn auto_escalate_skips_when_below_min_requests() {
+        let graph = Arc::new(LivingGraph::new("fam"));
+        graph.register_connection("a", "b").await;
+        graph.record_request("a", "b", 5000, true).await;
+
+        let config = EscalationConfig {
+            min_requests: 100,
+            latency_threshold_us: 1,
+            ..Default::default()
+        };
+        let manager = ProtocolEscalationManager::new(graph, config);
+        assert!(manager.auto_escalate_check().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn auto_escalate_skips_when_latency_below_threshold() {
+        let graph = Arc::new(LivingGraph::new("fam"));
+        graph.register_connection("a", "b").await;
+        for _ in 0..200 {
+            graph.record_request("a", "b", 10, true).await;
+        }
+
+        let config = EscalationConfig {
+            min_requests: 1,
+            latency_threshold_us: 1_000_000,
+            ..Default::default()
+        };
+        let manager = ProtocolEscalationManager::new(graph, config);
+        assert!(manager.auto_escalate_check().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn escalation_candidates_empty_for_json_rpc_only_without_volume() {
+        let graph = Arc::new(LivingGraph::new("fam"));
+        graph.register_connection("x", "y").await;
+        let c = graph.get_escalation_candidates(100, 100.0).await;
+        assert!(c.is_empty());
+    }
+
+    #[tokio::test]
+    async fn manager_graph_family_matches_constructor() {
+        let graph = Arc::new(LivingGraph::new("lineage-42"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        assert_eq!(manager.graph().family_id(), "lineage-42");
+    }
+
+    #[tokio::test]
+    async fn fallback_connection_preserves_message_on_success() {
+        let graph = Arc::new(LivingGraph::new("fam"));
+        graph.register_connection("src", "dst").await;
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let r = manager
+            .fallback_connection("src", "dst", "latency spike")
+            .await
+            .expect("fallback");
+        assert!(r.success);
+        assert!(r.message.contains("latency spike"));
+        assert_eq!(r.current_mode, ProtocolMode::Degraded);
+    }
 }

@@ -114,7 +114,6 @@
 //!     └─→ Neural API Reporter (graph execution)
 //! ```
 
-pub mod beardog_jwt_client; // NEW: BearDog JWT integration for orchestrator
 pub mod bootstrap; // NEW: Bootstrap sequence execution and mode transitions
 pub mod deployment_graph;
 pub mod executor; // Shared executor module (types, context, handlers, spawner)
@@ -124,7 +123,8 @@ pub mod orchestrator;
 pub mod primal_communication;
 pub mod primal_coordinator; // NEW: Discovery-based coordination (TRUE PRIMAL)
 pub mod primal_discovery; // NEW: Socket scanning discovery
-pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator // NEW: Primal health verification and BTSP tunnel establishment
+pub mod primal_launcher;
+pub mod security_jwt_client; // JWT secret provisioning via security provider (orchestrator) // EVOLVING: Legacy launcher → coordinator // NEW: Primal health verification and BTSP tunnel establishment
 
 // Neural API graph execution (TOML-based deterministic deployment)
 mod capability_domains; // Capability domain mappings for fallback resolution

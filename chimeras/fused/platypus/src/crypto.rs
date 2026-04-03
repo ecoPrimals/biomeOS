@@ -30,7 +30,7 @@ pub struct GeneticKeys {
 impl GeneticKeys {
     /// Create a new root key (generation 0)
     pub fn new_root() -> Self {
-        let signing_key = SigningKey::generate(&mut rand::thread_rng());
+        let signing_key = SigningKey::generate(&mut rand::rng());
         let verifying_key = signing_key.verifying_key();
         
         // Root lineage is just the hash of the public key
@@ -47,7 +47,7 @@ impl GeneticKeys {
     
     /// Evolve to next generation (create child key)
     pub fn evolve(&self) -> Self {
-        let child_signing = SigningKey::generate(&mut rand::thread_rng());
+        let child_signing = SigningKey::generate(&mut rand::rng());
         let child_verifying = child_signing.verifying_key();
         
         // Child lineage includes parent lineage + new hash

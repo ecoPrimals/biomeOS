@@ -3,7 +3,7 @@
 
 //! Persistence Module
 //!
-//! Handles data persistence via NestGate storage primal.
+//! Handles data persistence via the storage capability provider.
 //!
 //! ## Network Effect Phase 5: Persistence
 //!
@@ -11,10 +11,10 @@
 //!
 //! ## Graceful Degradation
 //!
-//! If NestGate is not available, data is not persisted
+//! If no storage provider is available, data is not persisted
 //! but operations continue successfully.
 
-use crate::primal_client::NestGateClient;
+use crate::primal_client::StorageClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
@@ -22,11 +22,11 @@ use tracing::{debug, info, warn};
 pub struct Persistence;
 
 impl Persistence {
-    /// Persist assignment via NestGate
+    /// Persist assignment via the storage provider
     ///
-    /// Falls back gracefully if NestGate is unavailable.
+    /// Falls back gracefully if storage is unavailable.
     pub async fn persist_assignment(
-        nestgate: Option<&NestGateClient>,
+        storage: Option<&StorageClient>,
         family_id: &str,
         assignment_id: &str,
         device_id: &str,
@@ -37,11 +37,10 @@ impl Persistence {
             assignment_id, device_id, primal_id
         );
 
-        if let Some(nestgate) = nestgate {
-            info!("🏠 NestGate available - persisting assignment");
+        if let Some(storage) = storage {
+            info!("Storage provider available — persisting assignment");
 
-            // Call NestGate to store the assignment
-            match nestgate
+            match storage
                 .call(
                     "storage.store",
                     serde_json::json!({
@@ -57,30 +56,27 @@ impl Persistence {
                 .await
             {
                 Ok(_) => {
-                    info!("✅ Persisted via NestGate");
+                    info!("✅ Persisted via storage provider");
                     Ok(())
                 }
                 Err(e) => {
                     warn!(
-                        "⚠️ NestGate storage failed: {} - continuing without persistence",
+                        "⚠️ Storage provider failed: {} — continuing without persistence",
                         e
                     );
                     Ok(())
                 }
             }
         } else {
-            warn!("⚠️ No storage primal available, assignment not persisted");
-            Err(anyhow::anyhow!("No storage primal available"))
+            warn!("⚠️ No storage provider available, assignment not persisted");
+            Err(anyhow::anyhow!("No storage provider available"))
         }
     }
 
-    /// Remove assignment from NestGate persistence
-    pub async fn remove_assignment(
-        nestgate: Option<&NestGateClient>,
-        device_id: &str,
-    ) -> Result<()> {
-        if let Some(nestgate) = nestgate {
-            match nestgate
+    /// Remove assignment from storage
+    pub async fn remove_assignment(storage: Option<&StorageClient>, device_id: &str) -> Result<()> {
+        if let Some(storage) = storage {
+            match storage
                 .call(
                     "storage.delete",
                     serde_json::json!({ "key_prefix": format!("assignment:*-{}", device_id) }),
@@ -88,16 +84,16 @@ impl Persistence {
                 .await
             {
                 Ok(_) => {
-                    info!("✅ Removed assignment from NestGate");
+                    info!("✅ Removed assignment from storage");
                     Ok(())
                 }
                 Err(e) => {
-                    warn!("⚠️ NestGate delete failed: {}", e);
+                    warn!("⚠️ Storage delete failed: {}", e);
                     Err(e)
                 }
             }
         } else {
-            warn!("⚠️ No storage primal available");
+            warn!("⚠️ No storage provider available");
             Ok(())
         }
     }
@@ -106,10 +102,10 @@ impl Persistence {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primal_client::NestGateClient;
+    use crate::primal_client::StorageClient;
 
     #[tokio::test]
-    async fn test_persist_assignment_no_nestgate() {
+    async fn test_persist_assignment_no_storage() {
         let result = Persistence::persist_assignment(
             None,
             "test-family",
@@ -123,29 +119,29 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
-            err.to_string().contains("No storage primal available"),
-            "Expected 'No storage primal available' in error, got: {err}"
+            err.to_string().contains("No storage provider available"),
+            "Expected 'No storage provider available' in error, got: {err}"
         );
     }
 
     #[tokio::test]
-    async fn test_remove_assignment_no_nestgate() {
+    async fn test_remove_assignment_no_storage() {
         let result = Persistence::remove_assignment(None, "test-device").await;
 
-        // Should succeed gracefully (no-op when no NestGate)
+        // Should succeed gracefully (no-op when no storage provider)
         assert!(result.is_ok());
     }
 
     #[tokio::test]
-    async fn test_persist_assignment_nestgate_unavailable_graceful_degradation() {
-        // NestGate client pointing to non-existent socket - call will fail
-        let nestgate = Some(NestGateClient::with_socket(
-            "nestgate",
+    async fn test_persist_assignment_storage_unavailable_graceful_degradation() {
+        // Storage client pointing to non-existent socket — call will fail
+        let storage = Some(StorageClient::with_socket(
+            "storage",
             "/tmp/nonexistent-biomeos-persistence-test-12345.sock",
         ));
 
         let result = Persistence::persist_assignment(
-            nestgate.as_ref(),
+            storage.as_ref(),
             "test-family",
             "assign-001",
             "gpu-0",
@@ -156,31 +152,29 @@ mod tests {
         // Graceful degradation: storage failure returns Ok(()) - assignment continues
         assert!(
             result.is_ok(),
-            "Persistence should degrade gracefully when NestGate call fails: {result:?}"
+            "Persistence should degrade gracefully when storage call fails: {result:?}"
         );
     }
 
     #[tokio::test]
-    async fn test_remove_assignment_nestgate_unavailable_returns_ok() {
-        // When NestGate is None, remove_assignment returns Ok (no-op)
+    async fn test_remove_assignment_storage_unavailable_returns_ok() {
+        // When storage is None, remove_assignment returns Ok (no-op)
         let result = Persistence::remove_assignment(None, "gpu-0").await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
-    async fn test_remove_assignment_nestgate_call_fails_returns_err() {
-        // NestGate client pointing to non-existent socket - delete call will fail
-        let nestgate = Some(NestGateClient::with_socket(
-            "nestgate",
+    async fn test_remove_assignment_storage_call_fails_returns_err() {
+        let storage = Some(StorageClient::with_socket(
+            "storage",
             "/tmp/nonexistent-biomeos-remove-test-67890.sock",
         ));
 
-        let result = Persistence::remove_assignment(nestgate.as_ref(), "gpu-0").await;
+        let result = Persistence::remove_assignment(storage.as_ref(), "gpu-0").await;
 
-        // remove_assignment propagates errors when NestGate call fails
         assert!(
             result.is_err(),
-            "remove_assignment should return Err when NestGate delete fails"
+            "remove_assignment should return Err when storage delete fails"
         );
     }
 

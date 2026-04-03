@@ -20,7 +20,7 @@
 //! to get the latest device poses, which are then routed to game-logic,
 //! physics, or surgical simulation nodes via the sensor event bus.
 
-use crate::primal_client::PetalTongueClient;
+use crate::primal_client::UiClient;
 use anyhow::Result;
 use biomeos_types::xr::{MotionCaptureConfig, Pose6DoF, TrackedDeviceType, TrackingFrame};
 use tracing::{debug, info, warn};
@@ -85,7 +85,7 @@ impl MotionCaptureAdapter {
     }
 
     /// Start tracking on petalTongue.
-    pub async fn start_tracking(&mut self, petaltongue: &PetalTongueClient) -> Result<()> {
+    pub async fn start_tracking(&mut self, ui: &UiClient) -> Result<()> {
         if self.tracking_active {
             warn!("Tracking already active");
             return Ok(());
@@ -105,7 +105,7 @@ impl MotionCaptureAdapter {
             "prediction_ms": self.config.prediction_ms,
         });
 
-        petaltongue.call("xr.start_tracking", params).await?;
+        ui.call("xr.start_tracking", params).await?;
         self.tracking_active = true;
         self.frame_count = 0;
         info!(
@@ -120,15 +120,12 @@ impl MotionCaptureAdapter {
     /// Poll the latest tracking frame from petalTongue.
     ///
     /// Returns `None` if tracking is not active or no frame is available.
-    pub async fn poll_frame(
-        &mut self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<Option<TrackingFrame>> {
+    pub async fn poll_frame(&mut self, ui: &UiClient) -> Result<Option<TrackingFrame>> {
         if !self.tracking_active {
             return Ok(None);
         }
 
-        let result = petaltongue
+        let result = ui
             .call("xr.get_tracking_frame", serde_json::json!({}))
             .await;
 
@@ -150,9 +147,9 @@ impl MotionCaptureAdapter {
     }
 
     /// Trigger tracking calibration.
-    pub async fn calibrate(&self, petaltongue: &PetalTongueClient) -> Result<CalibrationResult> {
+    pub async fn calibrate(&self, ui: &UiClient) -> Result<CalibrationResult> {
         info!("Starting tracking calibration");
-        let result = petaltongue
+        let result = ui
             .call("xr.calibrate_tracking", serde_json::json!({}))
             .await?;
         let cal: CalibrationResult = serde_json::from_value(result)?;
@@ -165,14 +162,12 @@ impl MotionCaptureAdapter {
     }
 
     /// Stop tracking and release devices.
-    pub async fn stop_tracking(&mut self, petaltongue: &PetalTongueClient) -> Result<()> {
+    pub async fn stop_tracking(&mut self, ui: &UiClient) -> Result<()> {
         if !self.tracking_active {
             return Ok(());
         }
 
-        petaltongue
-            .call("xr.stop_tracking", serde_json::json!({}))
-            .await?;
+        ui.call("xr.stop_tracking", serde_json::json!({})).await?;
         self.tracking_active = false;
         info!("Tracking stopped after {} frames", self.frame_count);
         Ok(())
@@ -272,8 +267,7 @@ mod tests {
     #[tokio::test]
     async fn test_poll_frame_when_inactive() {
         let mut adapter = MotionCaptureAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.poll_frame(&client).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
@@ -282,8 +276,7 @@ mod tests {
     #[tokio::test]
     async fn test_stop_tracking_noop_when_inactive() {
         let mut adapter = MotionCaptureAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.stop_tracking(&client).await;
         assert!(result.is_ok());
     }
@@ -354,8 +347,7 @@ mod tests {
     async fn test_start_tracking_already_active() {
         let config = MotionCaptureConfig::default();
         let mut adapter = MotionCaptureAdapter::new(config);
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         adapter.set_tracking_active_for_test(true);
         let result = adapter.start_tracking(&client).await;
         assert!(result.is_ok());
@@ -378,8 +370,7 @@ mod tests {
     #[ignore = "requires petalTongue socket"]
     async fn test_start_tracking() {
         let mut adapter = MotionCaptureAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");
         let _ = adapter.start_tracking(&client).await;
     }
 
@@ -387,8 +378,7 @@ mod tests {
     #[ignore = "requires petalTongue socket"]
     async fn test_calibrate() {
         let adapter = MotionCaptureAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");
         let _ = adapter.calibrate(&client).await;
     }
 
@@ -396,8 +386,7 @@ mod tests {
     async fn test_poll_frame_when_active_but_call_fails_returns_none() {
         let mut adapter = MotionCaptureAdapter::with_defaults();
         adapter.set_tracking_active_for_test(true);
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.poll_frame(&client).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
@@ -406,8 +395,7 @@ mod tests {
     #[tokio::test]
     async fn test_start_tracking_with_nonexistent_socket_returns_err() {
         let mut adapter = MotionCaptureAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.start_tracking(&client).await;
         assert!(result.is_err());
     }
@@ -415,8 +403,7 @@ mod tests {
     #[tokio::test]
     async fn test_calibrate_with_nonexistent_socket_returns_err() {
         let adapter = MotionCaptureAdapter::with_defaults();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.calibrate(&client).await;
         assert!(result.is_err());
     }
@@ -425,8 +412,7 @@ mod tests {
     async fn test_stop_tracking_when_active_but_call_fails_returns_err() {
         let mut adapter = MotionCaptureAdapter::with_defaults();
         adapter.set_tracking_active_for_test(true);
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = adapter.stop_tracking(&client).await;
         assert!(result.is_err());
     }
@@ -434,7 +420,7 @@ mod tests {
     #[tokio::test]
     async fn test_start_tracking_success() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -462,7 +448,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let mut adapter = MotionCaptureAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         adapter.start_tracking(&client).await.expect("start");
         assert!(adapter.is_tracking_active());
         assert_eq!(adapter.frame_count(), 0);
@@ -472,7 +458,7 @@ mod tests {
     #[tokio::test]
     async fn test_poll_frame_success_increments_count() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let frame = TrackingFrame {
             frame: 7,
@@ -506,7 +492,7 @@ mod tests {
         ready_rx.wait().await.unwrap();
         let mut adapter = MotionCaptureAdapter::with_defaults();
         adapter.set_tracking_active_for_test(true);
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let out = adapter.poll_frame(&client).await.expect("poll");
         let f = out.expect("some frame");
         assert_eq!(f.frame, 7);
@@ -517,7 +503,7 @@ mod tests {
     #[tokio::test]
     async fn test_poll_frame_invalid_result_returns_err() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -540,7 +526,7 @@ mod tests {
         ready_rx.wait().await.unwrap();
         let mut adapter = MotionCaptureAdapter::with_defaults();
         adapter.set_tracking_active_for_test(true);
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let err = adapter.poll_frame(&client).await.unwrap_err();
         assert!(!err.to_string().is_empty());
         server.abort();
@@ -549,7 +535,7 @@ mod tests {
     #[tokio::test]
     async fn test_calibrate_success() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let cal = CalibrationResult {
             success: true,
@@ -582,7 +568,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let adapter = MotionCaptureAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let out = adapter.calibrate(&client).await.expect("calibrate");
         assert!(out.success);
         assert!((out.residual_mm - 0.12).abs() < 1e-9);
@@ -592,7 +578,7 @@ mod tests {
     #[tokio::test]
     async fn test_calibrate_failed_branch_logs_path() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let cal = CalibrationResult {
             success: false,
@@ -621,7 +607,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let adapter = MotionCaptureAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let out = adapter.calibrate(&client).await.expect("calibrate");
         assert!(!out.success);
         server.abort();
@@ -630,7 +616,7 @@ mod tests {
     #[tokio::test]
     async fn test_stop_tracking_success_after_start() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -654,7 +640,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let mut adapter = MotionCaptureAdapter::with_defaults();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         adapter.start_tracking(&client).await.expect("start");
         assert!(adapter.is_tracking_active());
         adapter.stop_tracking(&client).await.expect("stop");

@@ -218,7 +218,7 @@ async fn verify_cryptographic_lineage(
     let mut details = Vec::new();
 
     // Discover security provider for cryptographic operations
-    // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded
+    // Provider name resolved from env, not hardcoded
     let security_provider = match security_provider_override {
         Some(s) => s,
         None => std::env::var("BIOMEOS_SECURITY_PROVIDER")

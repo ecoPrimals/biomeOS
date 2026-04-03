@@ -62,8 +62,8 @@ impl LifecycleManager {
 
     /// Set the JSON-RPC health check method for a primal
     ///
-    /// Some primals use semantic method naming (e.g., "toadstool.health")
-    /// instead of plain "health". Call this after `register_primal` to override.
+    /// Some primals use capability-namespaced health (e.g., `"health.status"`)
+    /// instead of plain `"health"`. Call this after `register_primal` to override.
     pub async fn set_health_method(&self, name: &str, method: impl Into<String>) {
         let mut primals = self.primals.write().await;
         if let Some(primal) = primals.get_mut(name) {

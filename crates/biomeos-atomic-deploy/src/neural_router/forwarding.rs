@@ -307,10 +307,7 @@ impl NeuralRouter {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[expect(clippy::unwrap_used, reason = "test")]
 #[expect(
     clippy::expect_used,
     reason = "test assertions use unwrap/expect for clarity"
@@ -318,6 +315,9 @@ impl NeuralRouter {
 mod tests {
     use super::*;
     use base64::Engine;
+    use biomeos_core::TransportEndpoint;
+    use biomeos_types::tarpc_types::ProtocolPreference;
+    use serde_json::json;
 
     #[test]
     fn test_parse_security_bytes_param_base64_roundtrip() {
@@ -353,5 +353,103 @@ mod tests {
         let params = serde_json::json!({ "data": 42 });
         let err = parse_security_bytes_param(&params, "data").unwrap_err();
         assert!(err.contains("base64 string or byte array"));
+    }
+
+    #[test]
+    fn test_parse_security_bytes_param_empty_array() {
+        let params = json!({ "data": [] });
+        let out = parse_security_bytes_param(&params, "data").expect("empty");
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn primal_label_for_endpoint_unix_socket_stem() {
+        let router = NeuralRouter::new("fam");
+        let ep = TransportEndpoint::UnixSocket {
+            path: std::path::PathBuf::from("/run/biomeos/beardog-f1.sock"),
+        };
+        assert_eq!(
+            router.primal_label_for_endpoint(&ep),
+            Some("beardog-f1".to_string())
+        );
+    }
+
+    #[test]
+    fn primal_label_for_endpoint_abstract() {
+        let router = NeuralRouter::new("fam");
+        let ep = TransportEndpoint::AbstractSocket {
+            name: "biomeos-abstract".into(),
+        };
+        assert_eq!(
+            router.primal_label_for_endpoint(&ep),
+            Some("biomeos-abstract".to_string())
+        );
+    }
+
+    #[test]
+    fn primal_label_for_endpoint_tcp() {
+        let router = NeuralRouter::new("fam");
+        let ep = TransportEndpoint::TcpSocket {
+            host: "127.0.0.1".into(),
+            port: 9000,
+        };
+        assert_eq!(
+            router.primal_label_for_endpoint(&ep),
+            Some("127.0.0.1:9000".to_string())
+        );
+    }
+
+    #[test]
+    fn primal_label_for_endpoint_http_jsonrpc() {
+        let router = NeuralRouter::new("fam");
+        let ep = TransportEndpoint::HttpJsonRpc {
+            host: "10.0.0.1".into(),
+            port: 8443,
+        };
+        assert_eq!(
+            router.primal_label_for_endpoint(&ep),
+            Some("10.0.0.1:8443".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn should_use_tarpc_json_rpc_only_returns_false() {
+        let router =
+            NeuralRouter::new("fam").with_protocol_preference(ProtocolPreference::JsonRpcOnly);
+        let ep = TransportEndpoint::UnixSocket {
+            path: std::path::PathBuf::from("/tmp/x.sock"),
+        };
+        assert!(!router.should_use_tarpc(&ep).await);
+    }
+
+    #[tokio::test]
+    async fn should_use_tarpc_prefer_json_rpc_returns_false() {
+        let router =
+            NeuralRouter::new("fam").with_protocol_preference(ProtocolPreference::PreferJsonRpc);
+        let ep = TransportEndpoint::UnixSocket {
+            path: std::path::PathBuf::from("/tmp/x.sock"),
+        };
+        assert!(!router.should_use_tarpc(&ep).await);
+    }
+
+    #[tokio::test]
+    async fn should_use_tarpc_tarpc_only_returns_true() {
+        let router =
+            NeuralRouter::new("fam").with_protocol_preference(ProtocolPreference::TarpcOnly);
+        let ep = TransportEndpoint::UnixSocket {
+            path: std::path::PathBuf::from("/tmp/x.sock"),
+        };
+        assert!(router.should_use_tarpc(&ep).await);
+    }
+
+    #[tokio::test]
+    async fn forward_via_tarpc_errors_when_tarpc_socket_missing() {
+        let router = NeuralRouter::new("fam");
+        let p = std::path::Path::new("/tmp/biomeos_forward_test_no_such.sock");
+        let err = router
+            .forward_via_tarpc(p, "health.check", &json!({}))
+            .await
+            .expect_err("missing tarpc");
+        assert!(err.contains("tarpc socket not found"));
     }
 }

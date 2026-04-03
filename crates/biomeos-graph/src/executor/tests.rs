@@ -174,7 +174,7 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Mock failure"));
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_mock_executor_with_delay() {
         let executor = MockPrimalExecutor::with_delay(10);
         let operation = Operation {
@@ -183,11 +183,15 @@ mod tests {
             environment: None,
         };
 
-        let start = std::time::Instant::now();
-        let _result = executor.execute_operation("test_primal", &operation).await;
-        let duration = start.elapsed();
-
-        assert!(duration.as_millis() >= 10);
+        let handle = tokio::spawn(async move {
+            executor
+                .execute_operation("test_primal", &operation)
+                .await
+                .expect("Should succeed")
+        });
+        tokio::time::advance(Duration::from_millis(10)).await;
+        let result = handle.await.expect("join");
+        assert_eq!(result["status"], "success");
     }
 
     #[test]

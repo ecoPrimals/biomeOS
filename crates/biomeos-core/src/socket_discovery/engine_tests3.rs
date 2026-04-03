@@ -14,8 +14,6 @@ use super::engine::SocketDiscovery;
 use super::result::DiscoveryMethod;
 use super::strategy::DiscoveryStrategy;
 use super::transport::TransportEndpoint;
-use std::collections::HashMap;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Tier 2 TCP fallback: `try_tcp_fallback` uses `{PRIMAL}_TCP` when Tier 1 finds nothing.

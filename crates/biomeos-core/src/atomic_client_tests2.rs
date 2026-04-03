@@ -45,6 +45,103 @@ async fn test_atomic_client_discover_by_capability_failure() {
     assert!(err.contains("No primal found") || err.contains("capability"));
 }
 
+#[tokio::test]
+async fn test_discover_with_opts_includes_family_id_in_error() {
+    let result = AtomicClient::discover_with_opts(
+        "totally_missing_primal_zz",
+        DiscoverOpts {
+            family_id: Some("custom-family-xyz"),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(
+        msg.contains("custom-family-xyz"),
+        "error should mention family id: {msg}"
+    );
+}
+
+#[tokio::test]
+async fn test_discover_primal_endpoint_with_opts_family_id() {
+    let result = discover_primal_endpoint_with_opts(
+        "missing_endpoint_primal_ab",
+        DiscoverOpts {
+            family_id: Some("fam-endpoint-test"),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert!(result.is_err());
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("fam-endpoint-test")
+    );
+}
+
+#[tokio::test]
+async fn test_discover_by_capability_strict_skips_taxonomy() {
+    let result = AtomicClient::discover_by_capability_with_opts(
+        "nonexistent.strict.cap.123",
+        DiscoverByCapabilityOpts {
+            strict_discovery: Some(true),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_discover_opts_clone() {
+    let mut m = HashMap::new();
+    m.insert("K".to_string(), "v".to_string());
+    let a = DiscoverOpts {
+        family_id: Some("f"),
+        env_overrides: Some(&m),
+        tcp_tier2_override: Some("h:1"),
+    };
+    let b = a.clone();
+    assert_eq!(a.family_id, b.family_id);
+}
+
+#[test]
+fn test_discover_by_capability_opts_clone() {
+    let a = DiscoverByCapabilityOpts {
+        family_id: Some("g"),
+        strict_discovery: Some(false),
+    };
+    assert_eq!(a.clone().strict_discovery, Some(false));
+}
+
+#[test]
+fn test_atomic_client_from_endpoint_http_preserves_host_port() {
+    let ep = TransportEndpoint::HttpJsonRpc {
+        host: Arc::from("gw.example"),
+        port: 8443,
+    };
+    let c = AtomicClient::from_endpoint(ep);
+    assert!(matches!(
+        c.endpoint(),
+        TransportEndpoint::HttpJsonRpc { .. }
+    ));
+    assert!(c.socket_path().as_os_str().is_empty());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn test_atomic_client_abstract_socket_constructor() {
+    let c = AtomicClient::abstract_socket("test-abs-name");
+    assert!(matches!(
+        c.endpoint(),
+        TransportEndpoint::AbstractSocket { .. }
+    ));
+    assert!(c.is_available());
+}
+
 #[test]
 fn test_atomic_primal_client_http_constructor() {
     let client = AtomicPrimalClient::tcp("beardog", "192.168.1.100", 9100);
@@ -339,7 +436,7 @@ async fn test_try_call_timeout_while_reading_response() {
         if let Ok((mut stream, _)) = listener.accept().await {
             let mut buf = vec![0u8; 256];
             let _ = stream.read(&mut buf).await;
-            tokio::time::sleep(Duration::from_secs(60)).await;
+            std::future::pending::<()>().await;
         }
     });
 
@@ -378,7 +475,7 @@ async fn test_call_http_jsonrpc_success() {
             let _ = stream.write_all(response.as_bytes()).await;
         }
     });
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    tokio::task::yield_now().await;
     let client = AtomicClient::http("127.0.0.1", port);
     let result = client.call("ping", json!({})).await.expect("http call");
     assert_eq!(result["http_ok"], true);
@@ -399,7 +496,7 @@ async fn test_call_http_malformed_no_separator_fails() {
                 .await;
         }
     });
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    tokio::task::yield_now().await;
     let client = AtomicClient::http("127.0.0.1", port).with_timeout(Duration::from_secs(2));
     let err = client
         .call("m", json!({}))
@@ -673,7 +770,7 @@ async fn test_call_http_jsonrpc_body_after_lf_only_separator() {
             let _ = stream.write_all(response.as_bytes()).await;
         }
     });
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    tokio::task::yield_now().await;
     let client = AtomicClient::http("127.0.0.1", port);
     let result = client.call("ping", json!({})).await.expect("http call");
     assert_eq!(result["lf_sep"], true);
@@ -698,7 +795,7 @@ async fn test_call_http_jsonrpc_invalid_body_json_fails() {
             let _ = stream.write_all(response.as_bytes()).await;
         }
     });
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    tokio::task::yield_now().await;
     let client = AtomicClient::http("127.0.0.1", port).with_timeout(Duration::from_secs(2));
     let err = client
         .call("m", json!({}))

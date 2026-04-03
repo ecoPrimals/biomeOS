@@ -88,6 +88,7 @@ impl PhaseResult {
 }
 
 #[cfg(test)]
+#[expect(clippy::expect_used, reason = "test assertions")]
 mod tests {
     use super::*;
 
@@ -135,5 +136,37 @@ mod tests {
         
         assert_eq!(report.total_nodes(), 7);
         assert_eq!(report.total_failures(), 1);
+    }
+
+    #[test]
+    fn phase_success_rate_zero_total_nodes_is_hundred() {
+        let phase = PhaseResult::new(0);
+        assert_eq!(phase.success_rate(), 100.0);
+        assert!(phase.is_success());
+    }
+
+    #[test]
+    fn phase_success_executed_less_than_total_fails_is_success_check() {
+        let mut phase = PhaseResult::new(3);
+        phase.nodes_executed = 2;
+        phase.nodes_failed = 0;
+        assert!(!phase.is_success());
+    }
+
+    #[test]
+    fn execution_report_totals_empty_phases() {
+        let report = ExecutionReport::new("g".to_string());
+        assert_eq!(report.total_nodes(), 0);
+        assert_eq!(report.total_failures(), 0);
+    }
+
+    #[test]
+    fn execution_report_with_failure_message() {
+        let mut r = ExecutionReport::new("fail-graph".to_string());
+        r.success = false;
+        r.error = Some("boom".to_string());
+        r.duration_ms = 42;
+        assert!(!r.success);
+        assert_eq!(r.error.as_deref(), Some("boom"));
     }
 }

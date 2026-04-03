@@ -217,30 +217,6 @@ impl LiveService {
         }
     }
 
-    /// Discover primals by registry
-    #[deprecated(note = "Use get_raw_discovered_primals() for 5-tier socket-based discovery")]
-    #[allow(deprecated)]
-    pub async fn discover_primals_by_registry(&self, registry_url: &str) -> Result<Vec<String>> {
-        debug!("Discovering primals from registry: {}", registry_url);
-
-        match self.universal_manager.discover_registry(registry_url).await {
-            Ok(registry_endpoints) => {
-                info!(
-                    "Registry discovery found {} primals",
-                    registry_endpoints.len()
-                );
-                Ok(registry_endpoints)
-            }
-            Err(e) => {
-                warn!(
-                    "Failed to discover primals from registry {}: {}",
-                    registry_url, e
-                );
-                Ok(Vec::new())
-            }
-        }
-    }
-
     /// Discover primals by capability (new method)
     pub async fn discover_primals_by_capability(
         &self,
@@ -702,15 +678,6 @@ mod tests {
     async fn test_live_service_get_raw_discovered_primals() {
         let service = LiveService::new().await.expect("new");
         let result = service.get_raw_discovered_primals().await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_live_service_discover_primals_by_registry() {
-        let service = LiveService::new().await.expect("new");
-        let result = service
-            .discover_primals_by_registry("http://registry.test:8500")
-            .await;
         assert!(result.is_ok());
     }
 

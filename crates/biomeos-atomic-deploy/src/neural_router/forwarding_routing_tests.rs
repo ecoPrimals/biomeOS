@@ -16,6 +16,7 @@
 use super::NeuralRouter;
 use crate::living_graph::{LivingGraph, PrimalProtocolState, ProtocolMode};
 use biomeos_core::TransportEndpoint;
+use biomeos_test_utils::ready_signal;
 use biomeos_types::tarpc_types::ProtocolPreference;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -360,14 +361,16 @@ async fn test_forward_request_jsonrpc_times_out_when_server_hangs() {
     let socket_path = temp.path().join("hanging.sock");
     let path = socket_path.clone();
 
+    let (mut ready_tx, ready_rx) = ready_signal();
     tokio::spawn(async move {
         let listener = UnixListener::bind(&path).expect("bind");
+        ready_tx.signal();
         if let Ok((_, _)) = listener.accept().await {
-            tokio::time::sleep(Duration::from_secs(120)).await;
+            std::future::pending::<()>().await;
         }
     });
 
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    ready_rx.wait().await.expect("mock server ready");
 
     let mut router =
         create_router("test").with_protocol_preference(ProtocolPreference::JsonRpcOnly);

@@ -3,15 +3,15 @@
 
 //! Layer 2: Identity Verification
 //!
-//! **Delegates to `BearDog`** - No reimplementation!
+//! **Delegates to the security provider** (`BearDog` at runtime) — no reimplementation.
 //!
-//! `BearDog` handles:
+//! The security primal handles:
 //! - Ed25519 signature generation and verification
 //! - Process identity validation
 //! - Challenge-response authentication
 //! - Family key management
 //!
-//! This layer just coordinates `BearDog`'s existing APIs.
+//! This layer coordinates those APIs over the `"encryption"` capability socket.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -59,7 +59,7 @@ pub struct IdentityVerification {
     pub message: String,
 }
 
-/// Identity verification layer (delegates to `BearDog`)
+/// Identity verification layer (delegates to the security provider)
 #[async_trait]
 pub trait IdentityLayer: Send + Sync {
     /// Request identity proof from a primal
@@ -69,7 +69,7 @@ pub trait IdentityLayer: Send + Sync {
 
     /// Verify identity proof
     ///
-    /// Delegates to `BearDog`'s `security.verify_primal_identity` API
+    /// Delegates to `security.verify_primal_identity` on the security provider
     async fn verify_proof(&self, proof: &IdentityProof) -> Result<IdentityVerification>;
 
     /// Full verification flow (request + verify)
@@ -78,19 +78,19 @@ pub trait IdentityLayer: Send + Sync {
 
 /// Identity layer implementation
 pub struct IdentityLayerImpl {
-    /// `BearDog` socket (discovered at runtime)
-    pub(crate) beardog_socket: Option<String>,
+    /// Security provider Unix socket (discovered at runtime via `"encryption"` capability)
+    pub(crate) security_socket: Option<String>,
 }
 
 impl IdentityLayerImpl {
     /// Create a new identity layer
     ///
-    /// **Deep Debt Principle**: Discovers `BearDog` at runtime, no hardcoding!
+    /// **Deep Debt Principle**: Discovers the security provider at runtime, no hardcoding!
     ///
     /// # Errors
     ///
     /// Returns an error if:
-    /// - `BearDog` socket cannot be discovered (`BearDog` not running or socket not found)
+    /// - Security provider socket cannot be discovered (service not running or socket not found)
     #[expect(
         clippy::unused_async,
         reason = "public API contract — callers already .await"
@@ -101,28 +101,31 @@ impl IdentityLayerImpl {
 
     /// Create an identity layer with optional overrides (for tests and tooling).
     ///
-    /// If `beardog_socket` is set, it is used as the `BearDog` Unix socket path.
+    /// If `security_socket` is set, it is used as the security provider Unix socket path.
     /// Otherwise, if `runtime_dir` is set, socket discovery uses only that `XDG_RUNTIME_DIR`
     /// (no other env tiers). If both are `None`, full production discovery via process
     /// environment applies (same as [`Self::new`]).
     ///
     /// # Errors
     ///
-    /// Returns an error if `BearDog` socket discovery fails and no fallback is available.
+    /// Returns an error if security provider socket discovery fails and no fallback is available.
     #[expect(
         clippy::unused_async,
         reason = "public API contract — callers already .await"
     )]
-    pub async fn new_with(beardog_socket: Option<&str>, runtime_dir: Option<&str>) -> Result<Self> {
-        Self::new_with_impl(beardog_socket, runtime_dir)
+    pub async fn new_with(
+        security_socket: Option<&str>,
+        runtime_dir: Option<&str>,
+    ) -> Result<Self> {
+        Self::new_with_impl(security_socket, runtime_dir)
     }
 
-    fn new_with_impl(beardog_socket: Option<&str>, runtime_dir: Option<&str>) -> Result<Self> {
-        info!("Initializing NUCLEUS Identity Layer (delegating to BearDog)");
+    fn new_with_impl(security_socket: Option<&str>, runtime_dir: Option<&str>) -> Result<Self> {
+        info!("Initializing NUCLEUS Identity Layer (security provider)");
 
-        if let Some(path) = beardog_socket {
+        if let Some(path) = security_socket {
             return Ok(Self {
-                beardog_socket: Some(path.to_string()),
+                security_socket: Some(path.to_string()),
             });
         }
 
@@ -134,17 +137,17 @@ impl IdentityLayerImpl {
                 }
                 None
             };
-            let sock = Self::discover_beardog_socket_with(&env_fn)?;
+            let sock = Self::discover_provider_socket("encryption", &env_fn)?;
             return Ok(Self {
-                beardog_socket: Some(sock),
+                security_socket: Some(sock),
             });
         }
 
-        let sock = Self::discover_beardog_socket_with(&|k| {
+        let sock = Self::discover_provider_socket("encryption", &|k| {
             biomeos_types::capability_discovery::std_env(k)
         })?;
         Ok(Self {
-            beardog_socket: Some(sock),
+            security_socket: Some(sock),
         })
     }
 
@@ -158,29 +161,36 @@ impl IdentityLayerImpl {
         format!("{:x}", hasher.finalize())
     }
 
-    /// Discover the security provider's Unix socket via the 5-tier capability
-    /// discovery protocol.
+    /// Resolve a capability domain to a Unix socket via the 5-tier discovery protocol.
     ///
-    /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`]
-    /// so all discovery logic lives in one place.
-    fn discover_beardog_socket_with(env: &dyn Fn(&str) -> Option<String>) -> Result<String> {
+    /// Wraps [`biomeos_types::capability_discovery::discover_capability_socket`] with
+    /// consistent [`Error`] mapping for nucleus callers.
+    pub(crate) fn discover_provider_socket(
+        capability: &str,
+        env: &dyn Fn(&str) -> Option<String>,
+    ) -> Result<String> {
         use biomeos_types::capability_discovery;
 
-        debug!("Discovering security provider socket (5-tier capability discovery)");
+        debug!(
+            capability = %capability,
+            "Discovering provider socket (5-tier capability discovery)"
+        );
 
-        capability_discovery::discover_capability_socket("encryption", env).ok_or_else(|| {
-            Error::discovery_failed(
-                "Could not discover security provider socket. Is the security primal running?",
-                Some("identity".to_string()),
-            )
-        })
+        let not_found = if matches!(capability, "encryption" | "security") {
+            "Could not discover security provider socket. Is the security primal running?"
+        } else {
+            "Could not discover provider socket for the requested capability."
+        };
+
+        capability_discovery::discover_capability_socket(capability, env)
+            .ok_or_else(|| Error::discovery_failed(not_found, Some("identity".to_string())))
     }
 
-    /// Get `BearDog` socket path
-    fn beardog_socket(&self) -> Result<&str> {
-        self.beardog_socket
-            .as_deref()
-            .ok_or_else(|| Error::discovery_failed("BearDog socket not initialized", None))
+    /// Security provider socket path (`encryption` capability)
+    fn security_socket(&self) -> Result<&str> {
+        self.security_socket.as_deref().ok_or_else(|| {
+            Error::discovery_failed("Security provider socket not initialized", None)
+        })
     }
 }
 
@@ -231,7 +241,7 @@ impl IdentityLayer for IdentityLayerImpl {
             "Verifying identity proof (via BearDog)"
         );
 
-        let beardog_socket = self.beardog_socket()?;
+        let security_socket = self.security_socket()?;
 
         let params = serde_json::json!({
             "identity_proof": proof,
@@ -239,7 +249,7 @@ impl IdentityLayer for IdentityLayerImpl {
         });
 
         let response: serde_json::Value = crate::client::call_unix_socket_rpc(
-            beardog_socket,
+            security_socket,
             "security.verify_primal_identity",
             params,
         )
@@ -391,7 +401,7 @@ mod tests {
     #[tokio::test]
     async fn test_verify_identity_no_endpoints() {
         let layer = IdentityLayerImpl {
-            beardog_socket: Some("/tmp/bd.sock".into()),
+            security_socket: Some("/tmp/bd.sock".into()),
         };
         let discovered = DiscoveredPrimal {
             primal: "p".into(),
@@ -437,7 +447,7 @@ mod tests {
         ready_rx.wait().await.unwrap();
 
         let layer = IdentityLayerImpl {
-            beardog_socket: Some(sock.to_string_lossy().into_owned()),
+            security_socket: Some(sock.to_string_lossy().into_owned()),
         };
         let r = layer.verify_proof(&sample_proof()).await;
         assert!(r.is_err());
@@ -469,7 +479,7 @@ mod tests {
         ready_rx.wait().await.unwrap();
 
         let layer = IdentityLayerImpl {
-            beardog_socket: Some(sock.to_string_lossy().into_owned()),
+            security_socket: Some(sock.to_string_lossy().into_owned()),
         };
         let r = layer.verify_proof(&sample_proof()).await;
         assert!(r.is_ok());
@@ -502,7 +512,7 @@ mod tests {
         ready_rx.wait().await.unwrap();
 
         let layer = IdentityLayerImpl {
-            beardog_socket: Some(sock.to_string_lossy().into_owned()),
+            security_socket: Some(sock.to_string_lossy().into_owned()),
         };
         let r = layer.verify_proof(&sample_proof()).await;
         assert!(r.is_err());
@@ -537,7 +547,7 @@ mod tests {
         ready_rx.wait().await.unwrap();
 
         let layer = IdentityLayerImpl {
-            beardog_socket: Some("/unused".into()),
+            security_socket: Some("/unused".into()),
         };
         let r = layer
             .request_proof(primal_sock.to_str().unwrap(), "nonce")
@@ -547,12 +557,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_identity_layer_new_with_beardog_socket_env() {
+    async fn test_identity_layer_new_with_security_socket_env() {
         let layer =
             IdentityLayerImpl::new_with(Some("/tmp/nonexistent-but-env-ok.sock"), None).await;
         assert!(layer.is_ok());
         assert_eq!(
-            layer.unwrap().beardog_socket.as_deref(),
+            layer.unwrap().security_socket.as_deref(),
             Some("/tmp/nonexistent-but-env-ok.sock")
         );
     }
@@ -569,7 +579,7 @@ mod tests {
             .await
             .expect("discover via XDG runtime");
         assert_eq!(
-            layer.beardog_socket.as_deref(),
+            layer.security_socket.as_deref(),
             Some(sock_path.to_str().expect("utf8"))
         );
     }

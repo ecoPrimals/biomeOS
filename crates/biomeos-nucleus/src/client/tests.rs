@@ -711,7 +711,7 @@ async fn test_call_unix_socket_rpc_read_times_out() {
             let mut buf = vec![0u8; 2048];
             let _ = tokio::io::AsyncReadExt::read(&mut stream, &mut buf).await;
             // Never write a response — client should hit 30s timeout
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            std::future::pending::<()>().await;
         }
     });
 

@@ -232,7 +232,7 @@ async fn test_get_discovered_primals_standalone_mode() {
 
     assert!(result.is_ok());
     let response = result.unwrap();
-    // DEEP DEBT: Standalone mode now falls back to socket probing (real discovery)
+    // Standalone mode falls back to socket probing
     // Mode will be "socket_probe" instead of "standalone" (no more fabricated data)
     assert!(
         response.mode == "socket_probe" || response.mode == "live",

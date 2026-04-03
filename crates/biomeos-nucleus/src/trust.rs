@@ -3,15 +3,15 @@
 
 //! Layer 4: Trust Evaluation
 //!
-//! **Delegates to `BearDog`** - No reimplementation!
+//! **Delegates to the security provider** (`BearDog` at runtime) — no reimplementation.
 //!
-//! `BearDog` handles:
+//! The security primal handles:
 //! - Genetic lineage verification
 //! - Family membership validation
 //! - Trust level computation
 //! - Cryptographic proof of relationship
 //!
-//! This layer just coordinates `BearDog`'s existing APIs.
+//! This layer coordinates those APIs over the `"encryption"` capability socket.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -61,12 +61,12 @@ pub struct TrustEvaluation {
     pub message: String,
 }
 
-/// Trust evaluation layer (delegates to `BearDog`)
+/// Trust evaluation layer (delegates to the security provider)
 #[async_trait]
 pub trait TrustLayer: Send + Sync {
     /// Evaluate trust for a discovered primal
     ///
-    /// Delegates to `BearDog`'s `federation.verify_family_member` API
+    /// Delegates to `federation.verify_family_member` on the security provider
     async fn evaluate_trust(
         &self,
         discovered: &DiscoveredPrimal,
@@ -77,44 +77,44 @@ pub trait TrustLayer: Send + Sync {
 
 /// Trust layer implementation
 pub struct TrustLayerImpl {
-    /// `BearDog` socket (discovered at runtime)
-    beardog_socket: Option<String>,
+    /// Security provider Unix socket (discovered at runtime via `"encryption"` capability)
+    security_socket: Option<String>,
 }
 
 impl TrustLayerImpl {
     /// Create a new trust layer
     ///
-    /// **Deep Debt Principle**: Discovers `BearDog` at runtime, no hardcoding!
+    /// **Deep Debt Principle**: Discovers the security provider at runtime, no hardcoding!
     ///
     /// # Errors
     ///
     /// Returns an error if:
-    /// - `BearDog` socket cannot be discovered (`BearDog` not running or socket not found)
+    /// - Security provider socket cannot be discovered (service not running or socket not found)
     pub async fn new() -> Result<Self> {
-        info!("Initializing NUCLEUS Trust Layer (delegating to BearDog)");
+        info!("Initializing NUCLEUS Trust Layer (security provider)");
 
-        // Discover BearDog socket
-        let beardog_socket = Self::discover_beardog_socket().await?;
+        let security_socket = Self::discover_security_provider().await?;
 
         Ok(Self {
-            beardog_socket: Some(beardog_socket),
+            security_socket: Some(security_socket),
         })
     }
 
-    /// Discover `BearDog`'s Unix socket (same logic as identity layer)
-    async fn discover_beardog_socket() -> Result<String> {
-        // Reuse discovery logic from identity layer
-        crate::identity::IdentityLayerImpl::new()
-            .await?
-            .beardog_socket
-            .ok_or_else(|| Error::discovery_failed("BearDog socket not found", None))
+    /// Discover the security provider Unix socket via [`discover_capability_socket`](biomeos_types::capability_discovery::discover_capability_socket) (`encryption` capability).
+    #[expect(
+        clippy::unused_async,
+        reason = "mirrors IdentityLayerImpl::new — stable async constructor surface"
+    )]
+    async fn discover_security_provider() -> Result<String> {
+        crate::identity::IdentityLayerImpl::discover_provider_socket("encryption", &|k| {
+            biomeos_types::capability_discovery::std_env(k)
+        })
     }
 
-    /// Get `BearDog` socket path
-    fn beardog_socket(&self) -> Result<&str> {
-        self.beardog_socket
-            .as_deref()
-            .ok_or_else(|| Error::discovery_failed("BearDog socket not initialized", None))
+    fn security_socket(&self) -> Result<&str> {
+        self.security_socket.as_deref().ok_or_else(|| {
+            Error::discovery_failed("Security provider socket not initialized", None)
+        })
     }
 }
 
@@ -129,10 +129,10 @@ impl TrustLayer for TrustLayerImpl {
         info!(
             primal = %discovered.primal,
             family = %discovered.family_id,
-            "Evaluating trust (via BearDog)"
+            "Evaluating trust (via security provider)"
         );
 
-        let beardog_socket = self.beardog_socket()?;
+        let security_socket = self.security_socket()?;
 
         // Encode family seed as hex
         let seed_hex = hex::encode(family_seed);
@@ -144,7 +144,7 @@ impl TrustLayer for TrustLayerImpl {
         });
 
         let response: serde_json::Value = crate::client::call_unix_socket_rpc(
-            beardog_socket,
+            security_socket,
             "federation.verify_family_member",
             params,
         )
@@ -225,6 +225,22 @@ mod tests {
     }
 
     #[test]
+    fn trust_level_unknown_only_satisfies_unknown() {
+        use TrustLevel::*;
+        assert!(Unknown.is_sufficient(&Unknown));
+        assert!(!Unknown.is_sufficient(&Known));
+        assert!(!Unknown.is_sufficient(&Trusted));
+        assert!(!Unknown.is_sufficient(&Verified));
+    }
+
+    #[test]
+    fn trust_level_known_and_trusted_cover_unknown_requirement() {
+        use TrustLevel::*;
+        assert!(Known.is_sufficient(&Unknown));
+        assert!(Trusted.is_sufficient(&Unknown));
+    }
+
+    #[test]
     fn test_trust_evaluation_parsing() {
         let json = r#"{
             "level": "verified",
@@ -237,5 +253,45 @@ mod tests {
         assert_eq!(eval.level, TrustLevel::Verified);
         assert_eq!(eval.relationship, Some("sibling".to_string()));
         assert!(eval.lineage_verified);
+    }
+
+    #[test]
+    fn trust_level_serde_snake_case_roundtrip() {
+        for level in [
+            TrustLevel::Verified,
+            TrustLevel::Trusted,
+            TrustLevel::Known,
+            TrustLevel::Unknown,
+        ] {
+            let json = serde_json::to_string(&level).unwrap();
+            let back: TrustLevel = serde_json::from_str(&json).unwrap();
+            assert_eq!(back, level);
+        }
+    }
+
+    #[test]
+    fn trust_evaluation_serde_roundtrip() {
+        let eval = TrustEvaluation {
+            level: TrustLevel::Trusted,
+            relationship: Some("child".to_string()),
+            lineage_verified: false,
+            message: "m".to_string(),
+        };
+        let json = serde_json::to_string(&eval).unwrap();
+        let back: TrustEvaluation = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.level, eval.level);
+        assert_eq!(back.relationship, eval.relationship);
+        assert_eq!(back.lineage_verified, eval.lineage_verified);
+        assert_eq!(back.message, eval.message);
+    }
+
+    #[test]
+    fn trusted_is_sufficient_for_known_requirement() {
+        assert!(TrustLevel::Trusted.is_sufficient(&TrustLevel::Known));
+    }
+
+    #[test]
+    fn verified_is_sufficient_for_trusted_requirement() {
+        assert!(TrustLevel::Verified.is_sufficient(&TrustLevel::Trusted));
     }
 }

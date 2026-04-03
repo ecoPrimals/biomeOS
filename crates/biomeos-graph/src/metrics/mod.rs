@@ -3,8 +3,13 @@
 
 //! Metrics collection and storage for graph execution (ecoBin compliant).
 //!
-//! Uses redb for persistent storage. Records graph and node-level execution
-//! metrics for aggregation and learning.
+//! Uses `redb` (pure Rust, embedded) for persistent local storage. Records
+//! graph and node-level execution metrics for aggregation and learning.
+//!
+//! **Policy**: Graph metrics are graph-local operational data (timing, success
+//! rates, node performance). This is NOT distributed storage — NestGate handles
+//! cross-node persistence. `redb` is kept here for low-latency, zero-IPC
+//! metrics recording during graph execution.
 
 use anyhow::{Context, Result};
 use redb::{Database, TableDefinition};

@@ -554,10 +554,7 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::expect_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[expect(clippy::expect_used, reason = "test")]
 mod tests {
     use super::*;
 
@@ -755,5 +752,103 @@ message = "test"
             .test_load_translations_on_startup()
             .await
             .expect("startup tolerates bad capability_registry.toml");
+    }
+
+    #[test]
+    fn test_health_liveness_reports_alive_and_version() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("neural-api.sock");
+        let server = NeuralApiServer::new(temp.path(), "fam-liveness", sock);
+        let v = server.health_liveness().expect("liveness");
+        assert_eq!(v["status"], "alive");
+        assert_eq!(v["version"], env!("CARGO_PKG_VERSION"));
+    }
+
+    #[tokio::test]
+    async fn test_health_check_includes_family_socket_and_capability_count() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("api-health.sock");
+        let server = NeuralApiServer::new(temp.path(), "fam-health", &sock);
+        let j = server.health_check().await.expect("health check");
+        assert_eq!(j["status"], "healthy");
+        assert_eq!(j["family_id"], "fam-health");
+        assert_eq!(j["socket_path"], sock.display().to_string());
+        assert_eq!(j["registered_capabilities"], serde_json::json!(0));
+    }
+
+    #[tokio::test]
+    async fn test_health_readiness_false_without_registered_capabilities() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("api-ready.sock");
+        let server = NeuralApiServer::new(temp.path(), "fam-ready", sock);
+        let j = server.health_readiness().await.expect("readiness");
+        assert_eq!(j["ready"], serde_json::json!(false));
+        assert_eq!(j["registered_capabilities"], serde_json::json!(0));
+    }
+
+    #[tokio::test]
+    async fn test_bind_socket_replaces_stale_path_and_binds() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("bind-test.sock");
+        std::fs::write(&sock, b"stale").expect("seed stale file");
+        let server = NeuralApiServer::new(temp.path(), "fam-bind", &sock);
+        let listener = server.bind_socket().expect("bind unix socket");
+        drop(listener);
+        assert!(sock.exists());
+    }
+
+    #[tokio::test]
+    async fn test_rescan_primals_returns_json_shape() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("rescan.sock");
+        let server = NeuralApiServer::new(temp.path(), "fam-rescan", sock);
+        let v = server.rescan_primals().await.expect("rescan");
+        assert_eq!(v["rescanned"], true);
+        assert!(v.get("new_capabilities_registered").is_some());
+        assert!(v.get("total_capabilities").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_load_translations_skips_domain_providers_star_and_empty() {
+        let base = tempfile::tempdir().expect("tempdir");
+        let graphs_dir = base.path().join("graphs");
+        std::fs::create_dir_all(&graphs_dir).expect("graphs dir");
+        let config_path = graphs_dir.join("../config/capability_registry.toml");
+        std::fs::create_dir_all(config_path.parent().expect("parent")).expect("config dir");
+        std::fs::write(
+            &config_path,
+            r#"
+[translations.crypto]
+"crypto.unit.test_ping" = { provider = "beardog", method = "ping" }
+
+[domains.star]
+provider = "*"
+capabilities = ["cap.a"]
+
+[domains.empty]
+provider = ""
+capabilities = ["cap.b"]
+
+[domains.valid]
+provider = "beardog"
+capabilities = ["cap.c"]
+"#,
+        )
+        .expect("write");
+        let sock = graphs_dir.join("neural-api.sock");
+        let server = NeuralApiServer::new(&graphs_dir, "fam-dom", sock);
+        server
+            .test_load_translations_on_startup()
+            .await
+            .expect("load with domain table");
+    }
+
+    #[test]
+    fn test_with_tcp_port_and_tcp_only_builder_chain() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("neural.sock");
+        let _ = NeuralApiServer::new(temp.path(), "fam-tcp", &sock)
+            .with_tcp_port(0)
+            .with_tcp_only(0);
     }
 }

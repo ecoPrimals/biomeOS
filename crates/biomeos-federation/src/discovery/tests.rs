@@ -247,14 +247,14 @@ fn test_register_songbird_peer_full() {
             "udp": "192.168.1.10:9000"
         }
     });
-    pd.register_songbird_peer(&peer);
+    pd.register_discovery_peer(&peer);
 
     assert_eq!(pd.discovered_primals.len(), 1);
     let dp = pd.get("beardog").expect("should exist");
     assert_eq!(dp.primal_type, "remote");
     assert_eq!(dp.endpoints.len(), 2);
     assert_eq!(dp.metadata["family_id"], "fam1");
-    assert_eq!(dp.metadata["discovered_via"], "songbird_udp");
+    assert_eq!(dp.metadata["discovered_via"], "discovery_udp");
 }
 
 #[test]
@@ -263,7 +263,7 @@ fn test_register_songbird_peer_minimal() {
     let peer = serde_json::json!({
         "node_id": "songbird"
     });
-    pd.register_songbird_peer(&peer);
+    pd.register_discovery_peer(&peer);
 
     let dp = pd.get("songbird").expect("should exist");
     assert_eq!(dp.name, "songbird");
@@ -275,7 +275,7 @@ fn test_register_songbird_peer_minimal() {
 fn test_register_songbird_peer_no_node_id() {
     let mut pd = PrimalDiscovery::new();
     let peer = serde_json::json!({"family_id": "x"});
-    pd.register_songbird_peer(&peer);
+    pd.register_discovery_peer(&peer);
     assert!(pd.discovered_primals.is_empty());
 }
 
@@ -288,7 +288,7 @@ fn test_register_songbird_peer_with_unix_only() {
             "unix_socket": "/run/biomeos/nestgate.sock"
         }
     });
-    pd.register_songbird_peer(&peer);
+    pd.register_discovery_peer(&peer);
 
     let dp = pd.get("nestgate").expect("should exist");
     assert_eq!(dp.endpoints.len(), 1);
@@ -307,7 +307,7 @@ fn test_register_songbird_peer_with_udp_only() {
             "udp": "10.0.0.1:5000"
         }
     });
-    pd.register_songbird_peer(&peer);
+    pd.register_discovery_peer(&peer);
 
     let dp = pd.get("svc").expect("should exist");
     assert_eq!(dp.endpoints.len(), 1);
@@ -323,7 +323,7 @@ fn test_register_songbird_peer_invalid_udp() {
             "udp": "not-valid-addr"
         }
     });
-    pd.register_songbird_peer(&peer);
+    pd.register_discovery_peer(&peer);
 
     let dp = pd.get("svc").expect("should exist");
     assert!(
@@ -346,30 +346,31 @@ fn test_primal_info_debug_and_clone() {
 }
 
 #[test]
-fn test_discover_songbird_socket_not_found() {
-    let result = PrimalDiscovery::discover_songbird_socket();
+fn test_discover_discovery_provider_not_found() {
+    let result = PrimalDiscovery::discover_discovery_provider();
     if let Err(e) = result {
         let err_msg = format!("{e}");
-        assert!(err_msg.contains("not found") || err_msg.contains("Songbird"));
+        assert!(err_msg.contains("not found") || err_msg.contains("Discovery"));
     }
 }
 
 #[test]
-fn test_discover_songbird_socket_from_env_vars() {
+fn test_discover_discovery_provider_from_env_vars() {
     let via_discovery_provider =
-        PrimalDiscovery::discover_songbird_socket_with_env(&|key| match key {
+        PrimalDiscovery::discover_discovery_provider_with_env(&|key| match key {
             "DISCOVERY_PROVIDER_SOCKET" => Some("/tmp/discovery-via-env.sock".to_string()),
             _ => None,
         })
         .expect("tier-1 discovery provider socket");
     assert_eq!(via_discovery_provider, "/tmp/discovery-via-env.sock");
 
-    let via_songbird = PrimalDiscovery::discover_songbird_socket_with_env(&|key| match key {
-        "SONGBIRD_SOCKET" => Some("/tmp/test-sb.sock".to_string()),
-        _ => None,
-    })
-    .expect("tier-2 songbird socket");
-    assert_eq!(via_songbird, "/tmp/test-sb.sock");
+    let via_legacy_socket =
+        PrimalDiscovery::discover_discovery_provider_with_env(&|key| match key {
+            "SONGBIRD_SOCKET" => Some("/tmp/test-sb.sock".to_string()),
+            _ => None,
+        })
+        .expect("tier-2 legacy socket env");
+    assert_eq!(via_legacy_socket, "/tmp/test-sb.sock");
 }
 
 #[test]
@@ -483,7 +484,7 @@ async fn test_discover_songbird_jsonrpc_error_path() {
 
     let mut pd = PrimalDiscovery::new();
     let err = pd
-        .discover_via_songbird_socket_path(sock_path.to_string_lossy().as_ref())
+        .discover_via_discovery_socket_path(sock_path.to_string_lossy().as_ref())
         .await
         .expect_err("songbird should return error");
     let msg = format!("{err}");

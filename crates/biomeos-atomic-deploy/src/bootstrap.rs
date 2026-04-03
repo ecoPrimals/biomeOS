@@ -163,9 +163,9 @@ pub async fn transition_to_coordinated_with_runtime_dir(
         })
         .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
     let mut nucleation = SocketNucleation::new(SocketStrategy::default());
-    let beardog_socket =
+    let security_socket =
         nucleation.assign_socket_with_runtime_dir(&security_provider, family_id, runtime_dir);
-    let songbird_socket =
+    let discovery_socket =
         nucleation.assign_socket_with_runtime_dir(&network_provider, family_id, runtime_dir);
 
     loop {
@@ -176,25 +176,25 @@ pub async fn transition_to_coordinated_with_runtime_dir(
             ));
         }
 
-        let beardog_exists = beardog_socket.exists();
-        let songbird_exists = songbird_socket.exists();
+        let security_exists = security_socket.exists();
+        let discovery_exists = discovery_socket.exists();
 
-        if beardog_exists && songbird_exists {
+        if security_exists && discovery_exists {
             info!("✅ Tower Atomic sockets detected");
             break;
         }
 
         debug!(
-            "   Waiting for Tower Atomic... (BearDog: {}, Songbird: {})",
-            if beardog_exists { "✓" } else { "✗" },
-            if songbird_exists { "✓" } else { "✗" }
+            "   Waiting for Tower Atomic... (security: {}, discovery: {})",
+            if security_exists { "✓" } else { "✗" },
+            if discovery_exists { "✓" } else { "✗" }
         );
 
         sleep(check_interval).await;
     }
 
     // Layer 1: Verify security provider health
-    match verify_primal_health(&beardog_socket, &security_provider).await {
+    match verify_primal_health(&security_socket, &security_provider).await {
         Ok(caps) => {
             info!(
                 "✅ {} healthy with {} capabilities",
@@ -211,7 +211,7 @@ pub async fn transition_to_coordinated_with_runtime_dir(
     }
 
     // Layer 2: Verify network provider health
-    match verify_primal_health(&songbird_socket, &network_provider).await {
+    match verify_primal_health(&discovery_socket, &network_provider).await {
         Ok(caps) => {
             info!(
                 "✅ {} healthy with {} capabilities",
@@ -221,7 +221,7 @@ pub async fn transition_to_coordinated_with_runtime_dir(
         }
         Err(e) => {
             warn!(
-                "⚠️ Songbird health check failed: {} (continuing without mesh)",
+                "⚠️ Discovery provider health check failed: {} (continuing without mesh)",
                 e
             );
         }
@@ -229,7 +229,7 @@ pub async fn transition_to_coordinated_with_runtime_dir(
 
     // Layer 3: Establish BTSP tunnel via BearDog (capability: secure_tunneling)
     // This creates a cryptographically secure channel for inter-primal communication
-    match establish_btsp_tunnel(&beardog_socket, family_id).await {
+    match establish_btsp_tunnel(&security_socket, family_id).await {
         Ok(session_id) => {
             info!("✅ BTSP tunnel established (session: {})", session_id);
         }
@@ -261,18 +261,18 @@ mod tests {
     #[test]
     fn test_socket_nucleation_creates_valid_paths() {
         let mut nucleation = SocketNucleation::new(SocketStrategy::default());
-        let beardog_socket = nucleation.assign_socket("beardog", "test-family");
-        let songbird_socket = nucleation.assign_socket("songbird", "test-family");
+        let security_socket = nucleation.assign_socket("beardog", "test-family");
+        let discovery_socket = nucleation.assign_socket("songbird", "test-family");
 
         // Socket paths should be different
-        assert_ne!(beardog_socket, songbird_socket);
+        assert_ne!(security_socket, discovery_socket);
 
         // Should contain primal name and family
-        let beardog_str = beardog_socket.to_string_lossy();
-        let songbird_str = songbird_socket.to_string_lossy();
+        let security_str = security_socket.to_string_lossy();
+        let discovery_str = discovery_socket.to_string_lossy();
 
-        assert!(beardog_str.contains("beardog") || beardog_str.contains("test-family"));
-        assert!(songbird_str.contains("songbird") || songbird_str.contains("test-family"));
+        assert!(security_str.contains("beardog") || security_str.contains("test-family"));
+        assert!(discovery_str.contains("songbird") || discovery_str.contains("test-family"));
     }
 
     #[test]
@@ -484,12 +484,12 @@ mod tests {
             .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
 
         let mut nucleation = SocketNucleation::new(SocketStrategy::default());
-        let beardog_socket =
+        let security_provider_socket =
             nucleation.assign_socket_with_runtime_dir(&security_provider, family_id, Some(runtime));
-        let songbird_socket =
+        let discovery_socket =
             nucleation.assign_socket_with_runtime_dir(&network_provider, family_id, Some(runtime));
-        std::fs::File::create(&beardog_socket).expect("touch beardog");
-        std::fs::File::create(&songbird_socket).expect("touch songbird");
+        std::fs::File::create(&security_provider_socket).expect("touch security provider socket");
+        std::fs::File::create(&discovery_socket).expect("touch discovery socket");
 
         let result = transition_to_coordinated_with_runtime_dir(family_id, Some(runtime)).await;
         assert!(

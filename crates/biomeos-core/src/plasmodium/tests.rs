@@ -342,6 +342,31 @@ async fn test_plasmodium_peers_bare_hostname_branch() {
 }
 
 #[tokio::test]
+async fn test_discover_peers_dedupes_duplicate_node_ids_in_env() {
+    let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
+        plasmodium_peers: Some("dup@127.0.0.1:1,dup@127.0.0.1:2".to_string()),
+        ..Default::default()
+    });
+    let peers = p.discover_peers().await;
+    assert_eq!(peers.iter().filter(|x| x.node_id == "dup").count(), 1);
+    assert_eq!(
+        peers.iter().find(|x| x.node_id == "dup").unwrap().address,
+        "127.0.0.1:1"
+    );
+}
+
+#[tokio::test]
+async fn test_discover_peers_splitn_preserves_at_in_address() {
+    let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
+        plasmodium_peers: Some("node@ssh:user@remote.host".to_string()),
+        ..Default::default()
+    });
+    let peers = p.discover_peers().await;
+    let peer = peers.iter().find(|x| x.node_id == "node").expect("peer");
+    assert_eq!(peer.address, "ssh:user@remote.host");
+}
+
+#[tokio::test]
 async fn test_plasmodium_peers_skips_empty_segments() {
     let p = Plasmodium::new_with_env_overrides(&PlasmodiumEnvOverrides {
         plasmodium_peers: Some(" ,  dup@127.0.0.1:1 , dup@127.0.0.1:2 ".to_string()),

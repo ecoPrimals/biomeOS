@@ -25,13 +25,33 @@ use clap::{Args, Subcommand};
 use std::path::PathBuf;
 use tracing::info;
 
+/// Resolve plasmidBin directory from optional `BIOMEOS_PLASMID_DIR`-style value (testable).
+fn plasmid_bin_dir_for_verify(plasmid_dir_env: Option<&str>) -> PathBuf {
+    match plasmid_dir_env {
+        Some(p) if !p.is_empty() => PathBuf::from(p),
+        _ => PathBuf::from("plasmidBin"),
+    }
+}
+
 /// `plasmidBin` path for spore verification: `BIOMEOS_PLASMID_DIR` if set, else cwd-relative `plasmidBin`.
 fn nucleus_path_for_spore_verify() -> PathBuf {
-    if let Ok(p) = std::env::var("BIOMEOS_PLASMID_DIR") {
-        PathBuf::from(p)
-    } else {
-        PathBuf::from("plasmidBin")
-    }
+    plasmid_bin_dir_for_verify(std::env::var("BIOMEOS_PLASMID_DIR").ok().as_deref())
+}
+
+/// Parse `BIOMEOS_SPORE_PATHS`-style comma-separated list (testable; used by [`discover_spore_mounts`]).
+fn parse_biomeos_spore_paths_list(paths: &str) -> Vec<(String, String)> {
+    paths
+        .split(',')
+        .filter(|p| !p.trim().is_empty())
+        .enumerate()
+        .map(|(i, p)| {
+            let p = p.trim().to_string();
+            let node_id = PathBuf::from(&p)
+                .file_name()
+                .map_or_else(|| format!("node-{i}"), |n| n.to_string_lossy().to_string());
+            (p, node_id)
+        })
+        .collect()
 }
 
 /// Arguments for verification commands
@@ -355,18 +375,22 @@ fn verify_all_spores(verbose: bool) -> Result<()> {
 ///
 /// Discovers spore mount points from the environment (`BIOMEOS_SPORE_PATHS`,
 /// or scans `/media/$USER` by default), then verifies genetic relationships
-/// between spores using `BearDog`'s HKDF-SHA256 lineage system.
+/// between spores using the security provider's HKDF-SHA256 lineage system.
 pub async fn run_verify_lineage() -> Result<()> {
-    use biomeos_federation::beardog_client::BearDogClient;
+    use biomeos_federation::security_client::SecurityProviderClient;
 
-    println!("\n  BearDog Genetic Lineage Verifier");
-    println!("===================================\n");
+    println!("\n  Genetic Lineage Verifier (security provider)");
+    println!("===============================================\n");
 
-    println!("Discovering BearDog...");
-    let client = BearDogClient::from_discovery().await.map_err(|e| {
-        anyhow::anyhow!("Failed to discover BearDog: {e}. Is beardog-server running?")
-    })?;
-    println!("BearDog found!\n");
+    println!("Discovering security provider...");
+    let client = SecurityProviderClient::from_discovery()
+        .await
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to discover security provider: {e}. Is the security primal running?"
+            )
+        })?;
+    println!("Security provider found!\n");
 
     let spore_paths = discover_spore_mounts();
     if spore_paths.is_empty() {
@@ -449,18 +473,7 @@ pub async fn run_verify_lineage() -> Result<()> {
 /// `/media/$USER` for directories containing `.family.seed`.
 fn discover_spore_mounts() -> Vec<(String, String)> {
     if let Ok(paths) = std::env::var("BIOMEOS_SPORE_PATHS") {
-        return paths
-            .split(',')
-            .filter(|p| !p.trim().is_empty())
-            .enumerate()
-            .map(|(i, p)| {
-                let p = p.trim().to_string();
-                let node_id = PathBuf::from(&p)
-                    .file_name()
-                    .map_or_else(|| format!("node-{i}"), |n| n.to_string_lossy().to_string());
-                (p, node_id)
-            })
-            .collect();
+        return parse_biomeos_spore_paths_list(&paths);
     }
 
     let user = std::env::var("USER").unwrap_or_else(|_| "root".to_string());
@@ -483,10 +496,7 @@ fn discover_spore_mounts() -> Vec<(String, String)> {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[expect(clippy::unwrap_used, reason = "test")]
 mod tests {
     use super::*;
     use biomeos_spore::verification::VerificationStatus;
@@ -513,12 +523,6 @@ mod tests {
             verification_status_display(&VerificationStatus::Newer),
             ("❓", "Newer")
         );
-    }
-
-    #[tokio::test]
-    async fn test_verify_args_parsing() {
-        // Test that the command structure is valid
-        // Actual verification logic is tested in biomeos-spore
     }
 
     #[test]
@@ -780,5 +784,76 @@ NODE_ID = "node-stale"
         .unwrap();
 
         assert!(verify_single_spore_at(&spore, &pb).is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_verify_single_spore_at_missing_binary_branch() {
+        let temp = tempfile::tempdir().unwrap();
+        let pb = minimal_plasmid_bin(temp.path());
+        let spore = temp.path().join("spore-missing-bin");
+        std::fs::create_dir_all(spore.join("bin")).unwrap();
+        std::fs::create_dir_all(spore.join("primals")).unwrap();
+        std::fs::write(spore.join("bin").join("tower"), b"tower-bytes").unwrap();
+        std::fs::write(spore.join("primals").join("beardog-server"), b"bd").unwrap();
+        // songbird intentionally absent — exercises Missing per-binary path
+        std::fs::write(spore.join(".family.seed"), b"seed").unwrap();
+        std::fs::write(
+            spore.join("tower.toml"),
+            r#"
+[tower]
+NODE_ID = "node-missing"
+"#,
+        )
+        .unwrap();
+
+        assert!(verify_single_spore_at(&spore, &pb).is_ok());
+    }
+
+    #[test]
+    fn test_parse_biomeos_spore_paths_list_two_paths() {
+        let mounts = super::parse_biomeos_spore_paths_list(
+            "/tmp/biome-paths/spore-a,/tmp/biome-paths/spore-b",
+        );
+        assert_eq!(mounts.len(), 2);
+        assert_eq!(mounts[0].0, "/tmp/biome-paths/spore-a");
+        assert_eq!(mounts[0].1, "spore-a");
+        assert_eq!(mounts[1].1, "spore-b");
+    }
+
+    #[test]
+    fn test_parse_biomeos_spore_paths_list_skips_empty_segments() {
+        let mounts = super::parse_biomeos_spore_paths_list("/x/only-one,,/y/two");
+        assert_eq!(mounts.len(), 2);
+        assert_eq!(mounts[0].1, "only-one");
+        assert_eq!(mounts[1].1, "two");
+    }
+
+    #[test]
+    fn test_plasmid_bin_dir_for_verify_custom() {
+        assert_eq!(
+            super::plasmid_bin_dir_for_verify(Some("/opt/custom/plasmidBin")),
+            PathBuf::from("/opt/custom/plasmidBin")
+        );
+    }
+
+    #[test]
+    fn test_plasmid_bin_dir_for_verify_defaults_when_none_or_empty() {
+        assert_eq!(
+            super::plasmid_bin_dir_for_verify(None),
+            PathBuf::from("plasmidBin")
+        );
+        assert_eq!(
+            super::plasmid_bin_dir_for_verify(Some("")),
+            PathBuf::from("plasmidBin")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_single_spore_at_nucleus_missing_returns_ok() {
+        let temp = tempfile::tempdir().unwrap();
+        let spore = temp.path().join("any-spore");
+        std::fs::create_dir_all(&spore).unwrap();
+        let missing_nucleus = temp.path().join("no-plasmid-here");
+        assert!(verify_single_spore_at(&spore, &missing_nucleus).is_ok());
     }
 }

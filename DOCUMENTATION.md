@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: April 1, 2026
+**Updated**: April 3, 2026
 
 ---
 
@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v2.79) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v2.87) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -130,10 +130,10 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (7,204 tests — ~134 ignored hardware-dependent — use --ignored --test-threads=1 for those)
+# Test (7,723 tests — ~91 remaining #[ignore] for external/slow/pending — use --ignored --test-threads=1 when needed)
 cargo test --workspace
 
-# Coverage (90%+ all metrics, llvm-cov verified)
+# Coverage (90.08% line / 90.85% function / 89.89% region, llvm-cov verified)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -155,7 +155,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 28, 2026**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v2.78), 4 scripts**
+**Documentation current as of April 3, 2026 (v2.87)**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v2.87), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 7,204 passing (0 failures), ~134 ignored | 90%+ coverage (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery) | Docs: Full coverage | C deps: 0 | Unsafe: 0 production | Blocking debt: 0**
+**Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed**
+**Tests: 7,723 passing (0 failures), suite ~93s | 90.08% line / 90.85% function / 89.89% region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0**

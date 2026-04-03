@@ -61,7 +61,7 @@ impl DiscoveryUtils {
         manager: &UniversalBiomeOSManager,
         service_type: &str,
     ) -> Result<Vec<DiscoveryResult>> {
-        let all_endpoints = manager.discover_network_scan().await?;
+        let all_endpoints = manager.discover().await?;
         let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
         let filtered = filter_by_type(&all_services, service_type);
         Ok(filtered)
@@ -74,7 +74,7 @@ impl DiscoveryUtils {
         let start_time = std::time::Instant::now();
 
         // Discover all available services
-        let all_endpoints = manager.discover_network_scan().await?;
+        let all_endpoints = manager.discover().await?;
         let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
 
         // Categorize services
@@ -126,7 +126,7 @@ impl DiscoveryUtils {
     where
         F: Fn(&DiscoveryResult) -> bool,
     {
-        let all_endpoints = manager.discover_network_scan().await?;
+        let all_endpoints = manager.discover().await?;
         let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
         let filtered: Vec<DiscoveryResult> = all_services.into_iter().filter(filter).collect();
         Ok(filtered)

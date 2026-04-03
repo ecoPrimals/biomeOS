@@ -46,6 +46,12 @@ impl ProtocolHandler {
         }
     }
 
+    /// Access the living graph (crate tests in `protocol_tests.rs`).
+    #[cfg(test)]
+    pub(crate) fn living_graph(&self) -> &Arc<LivingGraph> {
+        &self.graph
+    }
+
     /// Handle protocol.status
     ///
     /// Returns the protocol status for all connections.

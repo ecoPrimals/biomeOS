@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: April 1, 2026
-**Status**: Production Ready (v2.82) — 7,212 tests (0 failures), Edition 2024 all 26 crates, 90%+ coverage (llvm-cov), 0 clippy warnings (pedantic+nursery), 0 C deps, 0 unsafe prod, 0 blocking debt, scyBorg triple-copyleft
+**Last Updated**: April 3, 2026
+**Status**: Production Ready (v2.87) — 7,723 tests (0 failures), Edition 2024 all 26 crates, 90.08% line / 90.85% function / 89.89% region (llvm-cov), 0 clippy warnings (pedantic+nursery), 0 C deps, 0 unsafe prod, 0 deprecated APIs, 0 TODO/FIXME, capability-based discovery compliant, test suite ~93s, 0 blocking debt, scyBorg triple-copyleft
 
 ---
 
@@ -108,8 +108,8 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 files >1000 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 7,212 tests (0 failures), 90%+ coverage
-9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns
+8. **Tested**: 7,723 tests (0 failures), 90.08% line / 90.85% function / 89.89% region (llvm-cov), suite ~93s wall time
+9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
 
@@ -167,7 +167,8 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.81 — zero blocking debt)
+**Status**: Production Ready (v2.87 — zero blocking debt)
+**Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Neural API**: 290+ semantic translations, 26 capability domains, lazy rescan, cross-gate routing (part of biomeOS)
@@ -175,5 +176,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile)
 **Primals**: 7/7 ecoBin v3.0 compliant
-**Tests**: 7,212 passing, 90%+ coverage (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 production | **Blocking debt**: 0
-**Updated**: April 1, 2026
+**Tests**: 7,723 passing, 90.08% line / 90.85% function / 89.89% region (llvm-cov), ~93s suite | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0
+**Updated**: April 3, 2026

@@ -3,7 +3,6 @@
 
 //! Socket-Based Provider Implementations
 //!
-//! DEEP DEBT REFACTORING (Feb 7, 2026):
 //! - Extracted from monolithic `mod.rs` (870+ lines)
 //! - Unified 3x duplicated `send_rpc` into single `SocketRpcClient`
 //! - Eliminated hardcoded "127.0.0.1" in tunnel endpoints
@@ -33,7 +32,7 @@ use super::{
 
 /// Generic Unix socket JSON-RPC 2.0 client
 ///
-/// DEEP DEBT PRINCIPLE: Single implementation of socket communication.
+/// Single socket communication implementation.
 /// Previously duplicated 3x across Security, Discovery, and Routing providers.
 #[derive(Clone)]
 pub struct SocketRpcClient {
@@ -151,7 +150,7 @@ impl SecurityProvider for SocketSecurityProvider {
             .unwrap_or("pending")
             .to_string();
 
-        // DEEP DEBT: Endpoint addresses come from the provider response,
+        // Endpoint addresses come from the provider response,
         // NOT hardcoded. Fall back to the socket path for local connections.
         let addr_a = result
             .get("endpoint_a_address")
@@ -423,7 +422,7 @@ impl RoutingProvider for SocketRoutingProvider {
             .unwrap_or("relay")
             .to_string();
 
-        // DEEP DEBT: Address from provider response, not hardcoded
+        // Address from provider response, not hardcoded
         let address = result
             .get("address")
             .and_then(|v| v.as_str())
@@ -513,19 +512,19 @@ mod tests {
 
     #[test]
     fn test_socket_security_provider_new() {
-        let provider = SocketSecurityProvider::new(PathBuf::from("/run/beardog.sock"));
+        let provider = SocketSecurityProvider::new(PathBuf::from("/run/security.sock"));
         assert_eq!(
             provider.rpc.socket_path(),
-            &PathBuf::from("/run/beardog.sock")
+            &PathBuf::from("/run/security.sock")
         );
     }
 
     #[test]
     fn test_socket_discovery_provider_new() {
-        let provider = SocketDiscoveryProvider::new(PathBuf::from("/run/songbird.sock"));
+        let provider = SocketDiscoveryProvider::new(PathBuf::from("/run/discovery.sock"));
         assert_eq!(
             provider.rpc.socket_path(),
-            &PathBuf::from("/run/songbird.sock")
+            &PathBuf::from("/run/discovery.sock")
         );
     }
 

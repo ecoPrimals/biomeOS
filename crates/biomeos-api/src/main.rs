@@ -15,9 +15,12 @@ use biomeos_api::{AppState, Config, create_app};
 
 /// Resolve API server configuration from environment (extracted for testability)
 pub(crate) fn resolve_api_server_config() -> anyhow::Result<(AppState, Config)> {
-    let state = AppState::builder()
-        .config_from_env()
-        .build_with_defaults()?;
+    resolve_api_server_config_with(Config::from_env())
+}
+
+/// Build app state from an explicit config (used by tests and for dependency injection).
+pub(crate) fn resolve_api_server_config_with(config: Config) -> anyhow::Result<(AppState, Config)> {
+    let state = AppState::builder().config(config).build_with_defaults()?;
     let config = state.config().clone();
     Ok((state, config))
 }
@@ -69,9 +72,8 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore = "env-dependent; run with --test-threads=1"]
     fn test_resolve_api_server_config() {
-        let (state, config) = resolve_api_server_config().unwrap();
+        let (state, config) = resolve_api_server_config_with(Config::default()).unwrap();
         assert!(!config.socket_path.as_os_str().is_empty());
         let _ = state;
     }

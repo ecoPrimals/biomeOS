@@ -522,6 +522,52 @@ fn test_handle_genome_self_replicate() {
 }
 
 #[test]
+fn test_extract_genome_name_nested_path() {
+    assert_eq!(
+        extract_genome_name_from_path(Path::new("/opt/primals/tower-bin")),
+        "tower-bin"
+    );
+}
+
+#[test]
+fn test_handle_genome_list_skips_invalid_genome_json() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let store = get_genome_storage_dir_with(Some(temp.path().to_str().expect("utf8")));
+    std::fs::create_dir_all(&store).expect("mkdir");
+    std::fs::write(store.join("corrupt.json"), b"{ not json").expect("write");
+    assert!(handle_genome_list_at(&store).is_ok());
+}
+
+#[test]
+fn test_parse_arch_riscv64() {
+    assert!(matches!(parse_arch("riscv64").unwrap(), Arch::Riscv64));
+}
+
+#[test]
+fn test_create_args_default_arch_string() {
+    let args = CreateArgs {
+        binary: PathBuf::from("/b"),
+        output: PathBuf::from("/o"),
+        arch: "x86_64".to_string(),
+        name: None,
+        version: None,
+        description: None,
+    };
+    assert_eq!(args.arch, "x86_64");
+}
+
+#[test]
+fn test_compose_args_nucleus_type_default() {
+    let args = ComposeArgs {
+        name: "n".to_string(),
+        nucleus_type: "TOWER".to_string(),
+        genomes: vec![],
+        output: PathBuf::from("/o"),
+    };
+    assert_eq!(args.nucleus_type, "TOWER");
+}
+
+#[test]
 fn test_handle_genome_compose_two_genomes_success() {
     let temp = tempfile::tempdir().expect("tempdir");
     let b1 = temp.path().join("b1");

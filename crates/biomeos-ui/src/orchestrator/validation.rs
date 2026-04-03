@@ -3,7 +3,7 @@
 
 //! Validation Module
 //!
-//! Handles validation checks via Songbird service registry.
+//! Handles validation checks via the discovery / registry capability provider.
 //!
 //! ## Network Effect Phase 2: Validation
 //!
@@ -14,9 +14,9 @@
 //!
 //! ## Graceful Degradation
 //!
-//! If Songbird is not available, validation passes by default.
+//! If no discovery provider is available, validation passes by default.
 
-use crate::primal_client::SongbirdClient;
+use crate::primal_client::DiscoveryClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
@@ -33,11 +33,11 @@ pub enum ValidationResult {
 pub struct Validation;
 
 impl Validation {
-    /// Validate device assignment via Songbird
+    /// Validate device assignment via the discovery / registry provider
     ///
-    /// Falls back to allowing the operation if Songbird is unavailable.
+    /// Falls back to allowing the operation if discovery is unavailable.
     pub async fn validate_device_assignment(
-        songbird: Option<&SongbirdClient>,
+        discovery: Option<&DiscoveryClient>,
         device_id: &str,
         primal_id: &str,
     ) -> Result<ValidationResult> {
@@ -46,11 +46,10 @@ impl Validation {
             device_id, primal_id
         );
 
-        if let Some(songbird) = songbird {
-            info!("🎵 Songbird available - checking validation");
+        if let Some(discovery) = discovery {
+            info!("Discovery provider available — checking validation");
 
-            // Call Songbird to validate the assignment
-            match songbird
+            match discovery
                 .call(
                     "registry.validate_assignment",
                     serde_json::json!({
@@ -66,7 +65,7 @@ impl Validation {
                         .and_then(serde_json::Value::as_bool)
                         .unwrap_or(true)
                     {
-                        info!("✅ Songbird validation: Passed");
+                        info!("✅ Discovery validation: passed");
                         Ok(ValidationResult::Valid)
                     } else {
                         let reason = result
@@ -74,21 +73,23 @@ impl Validation {
                             .and_then(|v| v.as_str())
                             .unwrap_or("Validation failed")
                             .to_string();
-                        info!("❌ Songbird validation: Failed - {}", reason);
+                        info!("❌ Discovery validation: failed — {}", reason);
                         Ok(ValidationResult::Invalid(reason))
                     }
                 }
                 Err(e) => {
-                    // Songbird might not support this method yet
-                    warn!("⚠️ Songbird call failed: {} - falling back to valid", e);
-                    info!("✅ Songbird validation: Passed (fallback)");
+                    warn!(
+                        "⚠️ Discovery provider call failed: {} — falling back to valid",
+                        e
+                    );
+                    info!("✅ Discovery validation: passed (fallback)");
                     Ok(ValidationResult::Valid)
                 }
             }
         } else {
-            warn!("⚠️ No service registry (Songbird) available");
+            warn!("⚠️ No discovery / registry provider available");
             warn!("⚠️ Allowing assignment without validation (graceful degradation)");
-            info!("✅ Validation: Passed (no service registry)");
+            info!("✅ Validation: passed (no registry)");
             Ok(ValidationResult::Valid)
         }
     }
@@ -107,12 +108,12 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixListener;
 
-    async fn spawn_mock_songbird(
+    async fn spawn_mock_discovery(
         valid: bool,
         reason: Option<&str>,
     ) -> (String, tokio::task::JoinHandle<()>) {
         let dir = tempfile::tempdir().unwrap();
-        let socket_path = dir.path().join("songbird.sock");
+        let socket_path = dir.path().join("discovery.sock");
         let path_str = socket_path.to_str().unwrap().to_string();
 
         let validation_response = if valid {
@@ -153,7 +154,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validation_no_songbird() {
+    async fn test_validation_no_discovery() {
         let result =
             Validation::validate_device_assignment(None, "test-device", "test-primal").await;
 
@@ -162,8 +163,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validation_no_songbird_graceful_degradation() {
-        // Tests that validation passes by default when Songbird is unavailable
+    async fn test_validation_no_discovery_graceful_degradation() {
+        // Validation passes by default when no discovery provider is available
         let result =
             Validation::validate_device_assignment(None, "device-abc-123", "primal-xyz-456").await;
 
@@ -224,10 +225,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validation_songbird_invalid() {
-        let (path, _handle) = spawn_mock_songbird(false, Some("Device already assigned")).await;
-        let client = Some(crate::primal_client::SongbirdClient::with_socket(
-            "songbird", &path,
+    async fn test_validation_discovery_invalid() {
+        let (path, _handle) = spawn_mock_discovery(false, Some("Device already assigned")).await;
+        let client = Some(crate::primal_client::DiscoveryClient::with_socket(
+            "discovery",
+            &path,
         ));
         let result =
             Validation::validate_device_assignment(client.as_ref(), "test-device", "test-primal")
@@ -241,10 +243,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validation_songbird_valid() {
-        let (path, _handle) = spawn_mock_songbird(true, None).await;
-        let client = Some(crate::primal_client::SongbirdClient::with_socket(
-            "songbird", &path,
+    async fn test_validation_discovery_valid() {
+        let (path, _handle) = spawn_mock_discovery(true, None).await;
+        let client = Some(crate::primal_client::DiscoveryClient::with_socket(
+            "discovery",
+            &path,
         ));
         let result =
             Validation::validate_device_assignment(client.as_ref(), "test-device", "test-primal")
@@ -255,10 +258,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validation_songbird_call_fails_fallback() {
-        let client = Some(crate::primal_client::SongbirdClient::with_socket(
-            "songbird",
-            "/nonexistent/songbird.sock",
+    async fn test_validation_discovery_call_fails_fallback() {
+        let client = Some(crate::primal_client::DiscoveryClient::with_socket(
+            "discovery",
+            "/nonexistent/discovery.sock",
         ));
         let result =
             Validation::validate_device_assignment(client.as_ref(), "test-device", "test-primal")

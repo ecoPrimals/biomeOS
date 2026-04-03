@@ -280,7 +280,7 @@ pub fn handle_genome_self_replicate() -> Result<()> {
 /// When `data_home` is `Some`, treat it as `XDG_DATA_HOME` (`<dir>/biomeos/genomes`).
 /// When `None`, use the same rules as the CLI: `XDG_DATA_HOME`, then `HOME`, then system defaults.
 ///
-/// DEEP DEBT EVOLUTION: Uses `$HOME` env instead of `dirs` (C-based)
+/// Uses `$HOME` env instead of `dirs` crate (ecoBin: no C deps)
 pub fn get_genome_storage_dir_with(data_home: Option<&str>) -> PathBuf {
     if let Some(data_home) = data_home {
         return PathBuf::from(data_home).join("biomeos/genomes");

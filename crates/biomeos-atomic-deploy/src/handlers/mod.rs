@@ -41,7 +41,11 @@ pub mod inference;
 pub mod lifecycle;
 pub mod niche;
 pub mod protocol;
+#[cfg(test)]
+mod protocol_tests;
 pub mod topology;
+#[cfg(test)]
+mod topology_tests;
 
 pub use capability::CapabilityHandler;
 pub use graph::{ExecutionStatus, GraphHandler};

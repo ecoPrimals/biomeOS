@@ -53,7 +53,7 @@ pub fn load_defaults_into_with(
     let family_id = biomeos_core::family_discovery::get_family_id();
     let mut count = 0;
 
-    // DEEP DEBT EVOLUTION: Provider resolution is ENV-FIRST.
+    // Provider resolution is env-first.
     let strict = lookup_env("BIOMEOS_STRICT_DISCOVERY", env_overrides).is_ok();
 
     let resolve_provider = |env_key: &str, default: &str| -> String {

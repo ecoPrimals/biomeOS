@@ -152,6 +152,7 @@ impl RootFsBuilder {
             warn!("  ⚠️  Unmount returned error");
         }
 
+        // Sync path: let the kernel release the mount/NBD device before detach (not async).
         std::thread::sleep(std::time::Duration::from_millis(100));
 
         if let Some(mut guard) = self.nbd_mount_guard.take() {

@@ -112,11 +112,11 @@ async fn test_e2e_primal_discovery() -> Result<()> {
     let manager = UniversalBiomeOSManager::new(config)?;
 
     // Test network scan
-    let discovered = manager.discover_network_scan().await;
+    let discovered = manager.discover().await;
     info!("Network scan result: {:?}", discovered);
 
     // Test registry discovery
-    let registry_result = manager.discover_registry("http://localhost:8080").await;
+    let registry_result = manager.discover().await;
     info!("Registry discovery result: {:?}", registry_result);
 
     info!("✅ Primal discovery test passed");

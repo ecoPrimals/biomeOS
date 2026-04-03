@@ -3,15 +3,15 @@
 
 //! Layer 1: Physical Discovery
 //!
-//! **Delegates to Songbird** - No reimplementation!
+//! **Delegates to the mesh discovery provider** (`Songbird` at runtime) — no reimplementation.
 //!
-//! Songbird handles:
+//! The discovery service handles:
 //! - UDP multicast discovery
 //! - Primal announcements
 //! - Capability indexing
 //! - Network topology
 //!
-//! This layer just coordinates Songbird's existing APIs.
+//! This layer coordinates those APIs over the `"discovery"` capability socket.
 //!
 //! **Deep Debt Evolution**:
 //! - Uses `CapabilityTaxonomy` (enum) instead of strings
@@ -63,7 +63,7 @@ impl DiscoveryRequest {
     }
 }
 
-/// Discovered primal (from Songbird)
+/// Discovered primal (from the discovery provider)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveredPrimal {
     /// Primal name (discovered at runtime)
@@ -82,12 +82,12 @@ pub struct DiscoveredPrimal {
     pub timestamp: String,
 }
 
-/// Physical discovery layer (delegates to Songbird)
+/// Physical discovery layer (delegates to the discovery provider)
 #[async_trait]
 pub trait PhysicalDiscovery: Send + Sync {
     /// Discover primals by capability
     ///
-    /// This delegates to Songbird's `discover_by_capability` API
+    /// Delegates to `discover_by_capability` on the discovery provider
     async fn discover_by_capability(
         &self,
         request: &DiscoveryRequest,
@@ -95,39 +95,39 @@ pub trait PhysicalDiscovery: Send + Sync {
 
     /// Discover primals by family
     ///
-    /// This delegates to Songbird's `discover_by_family` API
+    /// Delegates to `discover_by_family` on the discovery provider
     async fn discover_by_family(&self, family_id: &str) -> Result<Vec<DiscoveredPrimal>>;
 
     /// Announce this primal's capabilities
     ///
-    /// This delegates to Songbird's `announce_capabilities` API
+    /// Delegates to `announce_capabilities` on the discovery provider
     async fn announce(&self, primal_info: &DiscoveredPrimal) -> Result<()>;
 }
 
-/// Discovery layer implementation (talks to Songbird via Unix socket)
+/// Discovery layer implementation (mesh discovery provider via Unix socket)
 pub struct DiscoveryLayer {
-    /// Songbird Unix socket path (discovered at runtime, not hardcoded!)
-    songbird_socket: Option<String>,
+    /// Discovery provider Unix socket path (discovered at runtime, not hardcoded!)
+    discovery_socket: Option<String>,
     /// System paths (XDG-compliant)
     _paths: SystemPaths,
 }
 
 #[cfg(test)]
 impl DiscoveryLayer {
-    /// Construct with a known Songbird socket (skips filesystem discovery; tests only).
+    /// Construct with a known discovery socket (skips filesystem discovery; tests only).
     #[must_use]
-    pub fn from_songbird_socket_for_test(songbird_socket: String, paths: SystemPaths) -> Self {
+    pub fn from_discovery_socket_for_test(discovery_socket: String, paths: SystemPaths) -> Self {
         Self {
-            songbird_socket: Some(songbird_socket),
+            discovery_socket: Some(discovery_socket),
             _paths: paths,
         }
     }
 
-    /// Construct with no socket to exercise `songbird_socket()` error paths (tests only).
+    /// Construct with no socket to exercise `discovery_socket()` error paths (tests only).
     #[must_use]
     pub fn with_no_socket_for_test(paths: SystemPaths) -> Self {
         Self {
-            songbird_socket: None,
+            discovery_socket: None,
             _paths: paths,
         }
     }
@@ -136,41 +136,41 @@ impl DiscoveryLayer {
 impl DiscoveryLayer {
     /// Create a new discovery layer
     ///
-    /// **Deep Debt Principle**: Discovers Songbird at runtime, no hardcoding!
+    /// **Deep Debt Principle**: Discovers the discovery provider at runtime, no hardcoding!
     ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - System paths cannot be initialized (XDG directories unavailable)
-    /// - Songbird socket cannot be discovered (Songbird not running or socket not found)
+    /// - Discovery provider socket cannot be discovered (service not running or socket not found)
     #[expect(
         clippy::unused_async,
         reason = "public API contract — callers already .await"
     )]
     pub async fn new() -> Result<Self> {
-        info!("Initializing NUCLEUS Discovery Layer (delegating to Songbird)");
+        info!("Initializing NUCLEUS Discovery Layer (discovery provider)");
 
         // Get XDG-compliant paths
         let paths = SystemPaths::new().map_err(|e| {
             Error::discovery_failed(format!("Failed to initialize SystemPaths: {e}"), None)
         })?;
 
-        // Discover Songbird socket (no hardcoded paths!)
-        let songbird_socket = Self::discover_songbird_socket(&paths)?;
+        let discovery_socket = Self::discover_discovery_provider_socket(&paths)?;
 
         Ok(Self {
-            songbird_socket: Some(songbird_socket),
+            discovery_socket: Some(discovery_socket),
             _paths: paths,
         })
     }
 
-    /// Discover Songbird's Unix socket via the 5-tier capability discovery protocol.
+    /// Discover the mesh discovery provider's Unix socket via the 5-tier capability discovery protocol.
     ///
-    /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
-    fn discover_songbird_socket(_paths: &SystemPaths) -> Result<String> {
+    /// Wraps [`biomeos_types::capability_discovery::discover_capability_socket`] with the
+    /// `"discovery"` capability and consistent [`Error`] mapping.
+    fn discover_discovery_provider_socket(_paths: &SystemPaths) -> Result<String> {
         use biomeos_types::capability_discovery;
 
-        debug!("Discovering discovery-provider socket (5-tier capability discovery)");
+        debug!("Discovering discovery provider socket (5-tier capability discovery)");
 
         capability_discovery::discover_capability_socket(
             "discovery",
@@ -178,28 +178,30 @@ impl DiscoveryLayer {
         )
         .ok_or_else(|| {
             Error::discovery_failed(
-                "Could not discover Songbird socket. Is Songbird running?",
+                "Could not discover discovery provider socket. Is the discovery service running?",
                 Some("discovery".to_string()),
             )
         })
     }
 
-    /// Get Songbird socket path
-    fn songbird_socket(&self) -> Result<&str> {
-        self.songbird_socket
-            .as_deref()
-            .ok_or_else(|| Error::discovery_failed("Songbird socket not initialized", None))
+    fn discovery_socket(&self) -> Result<&str> {
+        self.discovery_socket.as_deref().ok_or_else(|| {
+            Error::discovery_failed("Discovery provider socket not initialized", None)
+        })
     }
 
-    /// Call Songbird JSON-RPC API
-    async fn call_songbird_rpc<T: serde::de::DeserializeOwned>(
+    /// Call the discovery provider JSON-RPC API
+    async fn call_discovery_rpc<T: serde::de::DeserializeOwned>(
         &self,
         method: &str,
         params: serde_json::Value,
     ) -> Result<T> {
-        let socket_path = self.songbird_socket()?;
+        let socket_path = self.discovery_socket()?;
 
-        debug!("Calling Songbird RPC: {} at {}", method, socket_path);
+        debug!(
+            "Calling discovery provider RPC: {} at {}",
+            method, socket_path
+        );
 
         // Use crate::client::unix_socket_client for actual implementation
         // (This avoids duplication and delegates to specialized code)
@@ -216,7 +218,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
         info!(
             capability = %request.capability,
             family = ?request.family,
-            "Discovering primals by capability (via Songbird)"
+            "Discovering primals by capability (via discovery provider)"
         );
 
         // Convert taxonomy to string for Songbird API
@@ -228,7 +230,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
         });
 
         let mut response: serde_json::Value = self
-            .call_songbird_rpc("discover_by_capability", params)
+            .call_discovery_rpc("discover_by_capability", params)
             .await?;
 
         if response.get("primals").is_none() {
@@ -249,14 +251,15 @@ impl PhysicalDiscovery for DiscoveryLayer {
     }
 
     async fn discover_by_family(&self, family_id: &str) -> Result<Vec<DiscoveredPrimal>> {
-        info!(family = %family_id, "Discovering primals by family (via Songbird)");
+        info!(family = %family_id, "Discovering primals by family (via discovery provider)");
 
         let params = serde_json::json!({
             "family_id": family_id,
         });
 
-        let mut response: serde_json::Value =
-            self.call_songbird_rpc("discover_by_family", params).await?;
+        let mut response: serde_json::Value = self
+            .call_discovery_rpc("discover_by_family", params)
+            .await?;
 
         if response.get("primals").is_none() {
             return Err(Error::invalid_response(
@@ -278,7 +281,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
         info!(
             primal = %primal_info.primal,
             node = %primal_info.node_id,
-            "Announcing primal capabilities (via Songbird)"
+            "Announcing primal capabilities (via discovery provider)"
         );
 
         let params = serde_json::json!({
@@ -286,7 +289,7 @@ impl PhysicalDiscovery for DiscoveryLayer {
         });
 
         let _response: serde_json::Value = self
-            .call_songbird_rpc("announce_capabilities", params)
+            .call_discovery_rpc("announce_capabilities", params)
             .await?;
 
         info!("Successfully announced capabilities");
@@ -443,7 +446,7 @@ mod tests {
         let paths =
             SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
         let layer =
-            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+            DiscoveryLayer::from_discovery_socket_for_test(sock.to_string_lossy().into(), paths);
 
         let req = DiscoveryRequest::new(CapabilityTaxonomy::Encryption);
         let out = layer
@@ -463,7 +466,7 @@ mod tests {
         let paths =
             SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
         let layer =
-            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+            DiscoveryLayer::from_discovery_socket_for_test(sock.to_string_lossy().into(), paths);
 
         let req = DiscoveryRequest::new(CapabilityTaxonomy::Discovery);
         let err = layer
@@ -486,7 +489,7 @@ mod tests {
         let paths =
             SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
         let layer =
-            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+            DiscoveryLayer::from_discovery_socket_for_test(sock.to_string_lossy().into(), paths);
 
         let err = layer
             .discover_by_family("fam-1")
@@ -507,11 +510,15 @@ mod tests {
             .discover_by_capability(&req)
             .await
             .expect_err("expected socket error");
-        assert!(err.to_string().contains("Songbird") || err.to_string().contains("socket"));
+        assert!(
+            err.to_string().contains("Discovery")
+                || err.to_string().contains("discovery")
+                || err.to_string().contains("socket")
+        );
     }
 
     #[tokio::test]
-    async fn test_discover_jsonrpc_error_from_songbird() {
+    async fn test_discover_jsonrpc_error_from_discovery_provider() {
         let dir = tempfile::tempdir().expect("tempdir");
         let sock = dir.path().join("songbird-mock.sock");
         let listener = UnixListener::bind(&sock).expect("bind");
@@ -535,7 +542,7 @@ mod tests {
         let paths =
             SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
         let layer =
-            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+            DiscoveryLayer::from_discovery_socket_for_test(sock.to_string_lossy().into(), paths);
 
         let req = DiscoveryRequest::new(CapabilityTaxonomy::P2PFederation);
         let err = layer
@@ -558,7 +565,7 @@ mod tests {
         let paths =
             SystemPaths::new_with_xdg_overrides(Some(dir.path()), Some(dir.path())).expect("paths");
         let layer =
-            DiscoveryLayer::from_songbird_socket_for_test(sock.to_string_lossy().into(), paths);
+            DiscoveryLayer::from_discovery_socket_for_test(sock.to_string_lossy().into(), paths);
 
         let info = DiscoveredPrimal {
             primal: "test".to_string(),

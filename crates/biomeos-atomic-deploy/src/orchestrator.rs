@@ -328,14 +328,14 @@ impl DeploymentOrchestrator {
 
         // For Songbird, set security provider (BearDog)
         if primal_name == SONGBIRD_ORCHESTRATOR_ROLE {
-            let beardog_socket = self.config.runtime_dir.join(format!(
+            let security_socket = self.config.runtime_dir.join(format!(
                 "{}-{}.sock",
                 primal_names::BEARDOG,
                 atomic_type.node_id()
             ));
             env.insert(
                 "SONGBIRD_SECURITY_PROVIDER".to_string(),
-                beardog_socket.display().to_string(),
+                security_socket.display().to_string(),
             );
         }
 

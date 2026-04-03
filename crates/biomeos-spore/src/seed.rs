@@ -57,7 +57,7 @@ impl FamilySeed {
     ///
     /// # Security
     ///
-    /// - Uses OS-level cryptographic RNG (`rand::thread_rng()`)
+    /// - Uses OS-level cryptographic RNG (`rand::rng()`)
     /// - Sets file permissions to 0600 (owner read/write only) on Unix
     /// - Creates new genetic lineage (not derived from anything)
     ///
@@ -75,7 +75,7 @@ impl FamilySeed {
 
         // Generate 256 bits of entropy (32 bytes) - the "parent DNA"
         let mut bytes = [0u8; 32];
-        rand::thread_rng().fill_bytes(&mut bytes);
+        rand::rng().fill_bytes(&mut bytes);
 
         debug!("Generated 32 bytes of genesis entropy");
 

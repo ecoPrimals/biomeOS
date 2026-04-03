@@ -11,8 +11,9 @@ use tracing::{debug, info};
 
 /// Discover Neural API socket for capability routing (Gate 5.3 / 6.2).
 ///
-/// Replaces the old `discover_beardog_socket()` — all inter-primal calls now
-/// route through the Neural API's capability translation layer.
+/// Replaces legacy identity-based security socket discovery — inter-primal calls use
+/// capability domains (e.g. [`biomeos_types::capability_discovery::discover_capability_socket`]
+/// for `"security"`) and route through the Neural API's capability translation layer.
 pub fn discover_neural_api_socket() -> FederationResult<String> {
     discover_neural_api_socket_with(None)
 }

@@ -82,7 +82,7 @@ async fn test_get_discovered_primals_standalone_mode() {
     // Verify structure
     assert!(json.get("primals").is_some());
     assert!(json.get("count").is_some());
-    // DEEP DEBT EVOLUTION: Standalone now uses socket probing (real discovery)
+    // Standalone mode uses socket probing (real discovery)
     // Mode will be "socket_probe" or "live", not "standalone"
     let mode = json["mode"].as_str().unwrap_or("");
     assert!(

@@ -155,11 +155,8 @@ impl GenomeBinComposer {
     }
 }
 
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
 #[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "test")]
 mod tests {
     use super::*;
     use crate::GenomeManifest;
@@ -206,5 +203,142 @@ mod tests {
         let result = GenomeBinComposer::new("empty").build();
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_node_atomic_via_tower_plus_toadstool() {
+        let tower = create_test_genome("tower");
+        let toad = create_test_genome("toadstool");
+        let composed = GenomeBinComposer::new("node-stack")
+            .nucleus_type("NODE")
+            .add_genome(tower)
+            .add_genome(toad)
+            .build()
+            .unwrap();
+        assert_eq!(composed.manifest.nucleus_atomic, Some("NODE".to_string()));
+    }
+
+    #[test]
+    fn test_node_atomic_requires_toadstool() {
+        let tower = create_test_genome("tower");
+        let err = GenomeBinComposer::new("bad-node")
+            .nucleus_type("NODE")
+            .add_genome(tower)
+            .build()
+            .unwrap_err();
+        assert!(err.to_string().contains("toadstool"));
+    }
+
+    #[test]
+    fn test_nest_atomic_requires_nestgate() {
+        let bd = create_test_genome("beardog");
+        let sb = create_test_genome("songbird");
+        let err = GenomeBinComposer::new("bad-nest")
+            .nucleus_type("NEST")
+            .add_genome(bd)
+            .add_genome(sb)
+            .build()
+            .unwrap_err();
+        assert!(err.to_string().contains("nestgate"));
+    }
+
+    #[test]
+    fn test_nucleus_atomic_requires_all_four_primals() {
+        let bd = create_test_genome("beardog");
+        let sb = create_test_genome("songbird");
+        let ts = create_test_genome("toadstool");
+        let err = GenomeBinComposer::new("partial-nucleus")
+            .nucleus_type("NUCLEUS")
+            .add_genome(bd)
+            .add_genome(sb)
+            .add_genome(ts)
+            .build()
+            .unwrap_err();
+        assert!(err.to_string().contains("nestgate"));
+    }
+
+    #[test]
+    fn test_unknown_nucleus_type_skips_validation() {
+        let g = create_test_genome("solo");
+        let composed = GenomeBinComposer::new("custom")
+            .nucleus_type("FRACTAL_LAB")
+            .add_genome(g)
+            .build()
+            .unwrap();
+        assert_eq!(composed.embedded_genomes.len(), 1);
+    }
+
+    #[test]
+    fn node_atomic_accepts_beardog_songbird_toadstool() {
+        let bd = create_test_genome("beardog");
+        let sb = create_test_genome("songbird");
+        let ts = create_test_genome("toadstool");
+        let composed = GenomeBinComposer::new("node-components")
+            .nucleus_type("NODE")
+            .add_genome(bd)
+            .add_genome(sb)
+            .add_genome(ts)
+            .build()
+            .unwrap();
+        assert_eq!(composed.manifest.nucleus_atomic, Some("NODE".to_string()));
+    }
+
+    #[test]
+    fn nest_atomic_accepts_tower_and_nestgate() {
+        let tower = create_test_genome("tower");
+        let ng = create_test_genome(NESTGATE);
+        let composed = GenomeBinComposer::new("nest-stack")
+            .nucleus_type("NEST")
+            .add_genome(tower)
+            .add_genome(ng)
+            .build()
+            .unwrap();
+        assert_eq!(composed.manifest.nucleus_atomic, Some("NEST".to_string()));
+    }
+
+    #[test]
+    fn nest_atomic_accepts_beardog_songbird_nestgate() {
+        let bd = create_test_genome("beardog");
+        let sb = create_test_genome("songbird");
+        let ng = create_test_genome(NESTGATE);
+        let composed = GenomeBinComposer::new("nest-alt")
+            .nucleus_type("NEST")
+            .add_genome(bd)
+            .add_genome(sb)
+            .add_genome(ng)
+            .build()
+            .unwrap();
+        assert_eq!(composed.embedded_genomes.len(), 3);
+    }
+
+    #[test]
+    fn nucleus_atomic_full_stack() {
+        let bd = create_test_genome("beardog");
+        let sb = create_test_genome("songbird");
+        let ts = create_test_genome("toadstool");
+        let ng = create_test_genome(NESTGATE);
+        let composed = GenomeBinComposer::new("full-nucleus")
+            .nucleus_type("NUCLEUS")
+            .add_genome(bd)
+            .add_genome(sb)
+            .add_genome(ts)
+            .add_genome(ng)
+            .build()
+            .unwrap();
+        assert_eq!(
+            composed.manifest.nucleus_atomic,
+            Some("NUCLEUS".to_string())
+        );
+        assert_eq!(composed.embedded_genomes.len(), 4);
+    }
+
+    #[test]
+    fn composer_new_sets_name() {
+        let g = create_test_genome("g");
+        let c = GenomeBinComposer::new("my-name")
+            .add_genome(g)
+            .build()
+            .unwrap();
+        assert_eq!(c.manifest.name, "my-name");
     }
 }

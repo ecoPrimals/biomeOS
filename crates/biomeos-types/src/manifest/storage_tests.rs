@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, reason = "test")]
+#![allow(clippy::expect_used)]
 
 //! Unit tests for storage manifest types.
 
@@ -166,4 +167,198 @@ fn test_label_selector() {
     let json = serde_json::to_string(&selector).unwrap();
     assert!(json.contains("app"));
     assert!(json.contains("tier"));
+}
+
+#[test]
+fn volume_type_nfs_roundtrip() {
+    let v = VolumeType::Nfs {
+        server: "nfs.example".into(),
+        path: "/export".into(),
+        read_only: true,
+    };
+    let json = serde_json::to_string(&v).unwrap();
+    let back: VolumeType = serde_json::from_str(&json).unwrap();
+    assert!(matches!(
+        back,
+        VolumeType::Nfs {
+            read_only: true,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn volume_type_csi_roundtrip() {
+    let v = VolumeType::Csi {
+        driver: "csi.example".into(),
+        volume_attributes: HashMap::from([("k".into(), "v".into())]),
+        node_publish_secret_ref: Some(SecretReference {
+            name: "sec".into(),
+            namespace: Some("ns".into()),
+        }),
+        read_only: false,
+        fs_type: Some("ext4".into()),
+    };
+    let json = serde_json::to_string(&v).unwrap();
+    let back: VolumeType = serde_json::from_str(&json).unwrap();
+    assert!(matches!(back, VolumeType::Csi { .. }));
+}
+
+#[test]
+fn volume_type_persistent_volume_claim_roundtrip() {
+    let v = VolumeType::PersistentVolumeClaim {
+        claim_name: "pvc-1".into(),
+        read_only: false,
+    };
+    let json = serde_json::to_string(&v).unwrap();
+    let back: VolumeType = serde_json::from_str(&json).unwrap();
+    assert!(matches!(
+        back,
+        VolumeType::PersistentVolumeClaim {
+            claim_name: ref n,
+            ..
+        } if n == "pvc-1"
+    ));
+}
+
+#[test]
+fn volume_type_ephemeral_roundtrip() {
+    let tpl = PersistentVolumeClaimTemplate {
+        metadata: VolumeMetadata {
+            name: "eph-vol".into(),
+            description: None,
+            labels: HashMap::new(),
+            annotations: HashMap::new(),
+        },
+        spec: PersistentVolumeClaimSpec {
+            access_modes: vec![VolumeAccessMode::ReadWriteOnce],
+            resources: VolumeResourceRequirements {
+                limits: HashMap::new(),
+                requests: HashMap::from([("storage".into(), "1Gi".into())]),
+            },
+            volume_name: None,
+            storage_class: Some("fast".into()),
+            volume_mode: Some(VolumeMode::Filesystem),
+            selector: None,
+        },
+    };
+    let v = VolumeType::Ephemeral {
+        volume_claim_template: Box::new(tpl),
+    };
+    let json = serde_json::to_string(&v).unwrap();
+    let back: VolumeType = serde_json::from_str(&json).unwrap();
+    assert!(matches!(back, VolumeType::Ephemeral { .. }));
+}
+
+#[test]
+fn config_data_yaml_json_toml_roundtrip() {
+    let y = ConfigData::Yaml(serde_yaml::Value::String("x".into()));
+    let j = ConfigData::Json(serde_json::json!({"a": 1}));
+    let t = ConfigData::Toml("k = 1".into());
+    for data in [y, j, t] {
+        let json = serde_json::to_string(&data).unwrap();
+        let back: ConfigData = serde_json::from_str(&json).unwrap();
+        let _ = format!("{back:?}");
+    }
+}
+
+#[test]
+fn storage_class_spec_roundtrip() {
+    let spec = StorageClassSpec {
+        metadata: StorageClassMetadata {
+            name: "gold".into(),
+            description: None,
+            labels: HashMap::new(),
+            annotations: HashMap::new(),
+        },
+        provisioner: "example.com/provisioner".into(),
+        parameters: HashMap::from([("type".into(), "ssd".into())]),
+        reclaim_policy: VolumeReclaimPolicy::Delete,
+        allow_volume_expansion: true,
+        volume_binding_mode: VolumeBindingMode::WaitForFirstConsumer,
+        allowed_topologies: vec![TopologySelectorTerm {
+            match_label_expressions: vec![TopologySelectorLabelRequirement {
+                key: "zone".into(),
+                values: vec!["a".into()],
+            }],
+        }],
+    };
+    let json = serde_json::to_string(&spec).unwrap();
+    let back: StorageClassSpec = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.provisioner, spec.provisioner);
+}
+
+#[test]
+fn secret_provider_cloud_variants_roundtrip() {
+    let cases = vec![
+        SecretProvider::AwsSecretsManager {
+            region: "us-east-1".into(),
+        },
+        SecretProvider::AzureKeyVault {
+            vault_url: "https://vault.vault.azure.net".into(),
+        },
+        SecretProvider::GoogleSecretManager {
+            project_id: "p".into(),
+        },
+        SecretProvider::Vault {
+            address: "https://vault:8200".into(),
+            path: "secret/data/app".into(),
+        },
+        SecretProvider::Kubernetes {
+            namespace: "default".into(),
+            name: "cred".into(),
+        },
+        SecretProvider::Custom {
+            provider_name: "custom".into(),
+            config: HashMap::from([("k".into(), "v".into())]),
+        },
+    ];
+    for p in cases {
+        let json = serde_json::to_string(&p).unwrap();
+        let back: SecretProvider = serde_json::from_str(&json).unwrap();
+        let _ = format!("{back:?}");
+    }
+}
+
+#[test]
+fn node_selector_operator_gt_lt_roundtrip() {
+    let req = NodeSelectorRequirement {
+        key: "cpu".into(),
+        operator: NodeSelectorOperator::Gt,
+        values: vec!["4".into()],
+    };
+    let json = serde_json::to_string(&req).unwrap();
+    let back: NodeSelectorRequirement = serde_json::from_str(&json).unwrap();
+    assert!(matches!(back.operator, NodeSelectorOperator::Gt));
+}
+
+#[test]
+fn volume_projection_secret_roundtrip() {
+    let vp = VolumeProjection::Secret {
+        local_object_reference: LocalObjectReference { name: "s".into() },
+        items: vec![KeyToPath {
+            key: "k".into(),
+            path: "p".into(),
+            mode: None,
+        }],
+        optional: true,
+    };
+    let json = serde_json::to_string(&vp).unwrap();
+    let back: VolumeProjection = serde_json::from_str(&json).unwrap();
+    assert!(matches!(back, VolumeProjection::Secret { .. }));
+}
+
+#[test]
+fn external_secret_ref_roundtrip() {
+    let r = SecretData::External(ExternalSecretRef {
+        provider: SecretProvider::Kubernetes {
+            namespace: "ns".into(),
+            name: "x".into(),
+        },
+        key: "password".into(),
+        version: Some("2".into()),
+    });
+    let json = serde_json::to_string(&r).unwrap();
+    let back: SecretData = serde_json::from_str(&json).unwrap();
+    assert!(matches!(back, SecretData::External(_)));
 }

@@ -765,4 +765,93 @@ mod tests {
         std::mem::forget(dir);
         PathwayLearner::new(metrics, min_samples)
     }
+
+    #[test]
+    fn parallelization_skips_low_combined_latency() {
+        let graph = make_graph(vec![
+            make_node("a", vec![], Some("p1")),
+            make_node("b", vec![], Some("p2")),
+        ]);
+        let metrics = HashMap::from([
+            ("a".to_string(), make_node_metrics("a", 10, 0.2)),
+            ("b".to_string(), make_node_metrics("b", 10, 0.3)),
+        ]);
+        let suggestions = PathwayLearner::find_parallelization_opportunities(&graph, &metrics);
+        assert!(
+            suggestions.is_empty(),
+            "combined latency < 1ms should not suggest parallelization"
+        );
+    }
+
+    #[test]
+    fn parallelization_speedup_cap_when_equal_latency() {
+        let graph = make_graph(vec![
+            make_node("x", vec![], Some("p1")),
+            make_node("y", vec![], Some("p2")),
+        ]);
+        let metrics = HashMap::from([
+            ("x".to_string(), make_node_metrics("x", 50, 60.0)),
+            ("y".to_string(), make_node_metrics("y", 50, 60.0)),
+        ]);
+        let suggestions = PathwayLearner::find_parallelization_opportunities(&graph, &metrics);
+        assert!(!suggestions.is_empty());
+        let s = &suggestions[0];
+        assert!(s.estimated_speedup > 1.1);
+    }
+
+    #[test]
+    fn batch_speedup_one_when_total_latency_zero() {
+        let graph = make_graph(vec![
+            make_node("a", vec![], Some("same")),
+            make_node("b", vec![], Some("same")),
+        ]);
+        let metrics = HashMap::new();
+        let suggestions = PathwayLearner::find_batch_candidates(&graph, &metrics);
+        assert!(suggestions.is_empty() || suggestions[0].estimated_speedup >= 1.0);
+    }
+
+    #[test]
+    fn cache_rejects_low_execution_count() {
+        let graph = make_graph(vec![make_node("pure", vec![], Some("p"))]);
+        let metrics = HashMap::from([(
+            "pure".to_string(),
+            NodeMetricsAggregate {
+                node_id: "pure".to_string(),
+                total_executions: 5,
+                successful_executions: 5,
+                avg_duration_ms: 50.0,
+                success_rate: 1.0,
+            },
+        )]);
+        let suggestions = PathwayLearner::find_cache_candidates(&graph, &metrics);
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn reorder_skips_when_node_already_first_phase() {
+        let mut expensive = make_node("root", vec![], Some("p"));
+        expensive.cost_estimate_ms = Some(500);
+        let graph = make_graph(vec![expensive]);
+        let metrics = HashMap::from([("root".to_string(), make_node_metrics("root", 20, 200.0))]);
+        let suggestions = PathwayLearner::find_reorder_candidates(&graph, &metrics);
+        assert!(
+            suggestions.is_empty(),
+            "idx 0 should not reorder (no earlier phase)"
+        );
+    }
+
+    #[test]
+    fn prewarm_picks_max_latency_per_primal() {
+        let graph = make_graph(vec![
+            make_node("n1", vec![], Some("shared")),
+            make_node("n2", vec![], Some("shared")),
+        ]);
+        let metrics = HashMap::from([
+            ("n1".to_string(), make_node_metrics("n1", 10, 60.0)),
+            ("n2".to_string(), make_node_metrics("n2", 10, 120.0)),
+        ]);
+        let suggestions = PathwayLearner::find_prewarm_candidates(&graph, &metrics);
+        assert_eq!(suggestions.len(), 1);
+        assert!(suggestions[0].reason.contains("shared"));
+    }
 }

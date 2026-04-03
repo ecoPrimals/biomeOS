@@ -10,7 +10,7 @@ license = "AGPL-3.0-only"
 # Core async runtime
 tokio = { workspace = true }
 anyhow = "1"
-thiserror = "1"
+thiserror = { workspace = true }
 
 # Structured logging
 tracing = "0.1"

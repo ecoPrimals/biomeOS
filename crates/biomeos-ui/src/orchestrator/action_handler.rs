@@ -7,19 +7,19 @@
 //!
 //! ## Network Effect in Action
 //!
-//! Each user action orchestrates multiple primals:
-//! - BearDog: Authorization
-//! - Songbird: Validation and registry
-//! - ToadStool: Capacity and process management
-//! - NestGate: Persistence
-//! - petalTongue: UI updates
-//! - Squirrel: AI suggestions
+//! Each user action orchestrates multiple capability providers:
+//! - Security: authorization
+//! - Discovery: validation and registry
+//! - Compute: capacity and process management
+//! - Storage: persistence
+//! - UI: visualization updates
+//! - AI: suggestions
 
 use crate::{
     actions::{ActionResult, UserAction},
     primal_client::{
-        BearDogClient, NestGateClient, PetalTongueClient, PrimalConnections, SongbirdClient,
-        SquirrelClient, ToadStoolClient,
+        AiClient, ComputeClient, DiscoveryClient, PrimalConnections, SecurityClient, StorageClient,
+        UiClient,
     },
 };
 use anyhow::Result;
@@ -36,13 +36,13 @@ use super::{
 /// Action handler
 pub struct ActionHandler;
 
-/// Context for device assignment coordination (bundles primal clients)
+/// Context for device assignment coordination (bundles capability clients)
 struct DeviceAssignmentCtx<'a> {
-    petaltongue: Option<&'a PetalTongueClient>,
-    songbird: Option<&'a SongbirdClient>,
-    beardog: Option<&'a BearDogClient>,
-    nestgate: Option<&'a NestGateClient>,
-    toadstool: Option<&'a ToadStoolClient>,
+    ui: Option<&'a UiClient>,
+    discovery: Option<&'a DiscoveryClient>,
+    security: Option<&'a SecurityClient>,
+    storage: Option<&'a StorageClient>,
+    compute: Option<&'a ComputeClient>,
 }
 
 impl ActionHandler {
@@ -50,21 +50,20 @@ impl ActionHandler {
     ///
     /// Actions come from the UI (petalTongue) and are processed here.
     /// The orchestrator coordinates between multiple primals to fulfill the action.
-    /// Handle a user action
     ///
-    /// DEEP DEBT EVOLUTION (Feb 7, 2026): Takes `PrimalConnections` instead of
+    /// Takes `PrimalConnections` instead of
     /// individual primal references. Extracts typed clients internally.
     pub async fn handle_user_action(
         action: UserAction,
         family_id: &str,
         connections: &PrimalConnections,
     ) -> Result<ActionResult> {
-        let petaltongue = connections.get_by_capability("ui").cloned();
-        let songbird = connections.get_by_capability("discovery").cloned();
-        let beardog = connections.get_by_capability("encryption").cloned();
-        let nestgate = connections.get_by_capability("storage").cloned();
-        let toadstool = connections.get_by_capability("compute").cloned();
-        let squirrel = connections.get_by_capability("ai").cloned();
+        let ui = connections.get_by_capability("ui").cloned();
+        let discovery = connections.get_by_capability("discovery").cloned();
+        let security = connections.get_by_capability("encryption").cloned();
+        let storage = connections.get_by_capability("storage").cloned();
+        let compute = connections.get_by_capability("compute").cloned();
+        let ai = connections.get_by_capability("ai").cloned();
 
         match action {
             UserAction::AssignDevice {
@@ -72,11 +71,11 @@ impl ActionHandler {
                 primal_id,
             } => {
                 let ctx = DeviceAssignmentCtx {
-                    petaltongue: petaltongue.as_ref(),
-                    songbird: songbird.as_ref(),
-                    beardog: beardog.as_ref(),
-                    nestgate: nestgate.as_ref(),
-                    toadstool: toadstool.as_ref(),
+                    ui: ui.as_ref(),
+                    discovery: discovery.as_ref(),
+                    security: security.as_ref(),
+                    storage: storage.as_ref(),
+                    compute: compute.as_ref(),
                 };
                 Self::handle_assign_device(&device_id, &primal_id, family_id, &ctx).await
             }
@@ -84,56 +83,51 @@ impl ActionHandler {
             UserAction::UnassignDevice { device_id } => {
                 Self::handle_unassign_device(
                     &device_id,
-                    songbird.as_ref(),
-                    nestgate.as_ref(),
-                    petaltongue.as_ref(),
+                    discovery.as_ref(),
+                    storage.as_ref(),
+                    ui.as_ref(),
                 )
                 .await
             }
 
             UserAction::StartPrimal { primal_name } => {
-                Self::handle_start_primal(&primal_name, toadstool.as_ref()).await
+                Self::handle_start_primal(&primal_name, compute.as_ref()).await
             }
 
             UserAction::StopPrimal { primal_id } => {
-                Self::handle_stop_primal(&primal_id, toadstool.as_ref()).await
+                Self::handle_stop_primal(&primal_id, compute.as_ref()).await
             }
 
             UserAction::RestartPrimal { primal_id } => {
-                Self::handle_restart_primal(&primal_id, toadstool.as_ref()).await
+                Self::handle_restart_primal(&primal_id, compute.as_ref()).await
             }
 
             UserAction::AcceptSuggestion { suggestion_id } => {
-                Self::handle_accept_suggestion(&suggestion_id, family_id, squirrel.as_ref()).await
+                Self::handle_accept_suggestion(&suggestion_id, family_id, ai.as_ref()).await
             }
 
             UserAction::DismissSuggestion { suggestion_id } => {
-                Self::handle_dismiss_suggestion(&suggestion_id, family_id, squirrel.as_ref()).await
+                Self::handle_dismiss_suggestion(&suggestion_id, family_id, ai.as_ref()).await
             }
 
             UserAction::Refresh => {
-                Self::handle_refresh(songbird.as_ref(), toadstool.as_ref(), petaltongue.as_ref())
-                    .await
+                Self::handle_refresh(discovery.as_ref(), compute.as_ref(), ui.as_ref()).await
             }
         }
     }
 
     /// Handle device assignment
     ///
-    /// Network effect: Coordinates 6 primals for a single user action!
+    /// Network effect: coordinates multiple capability providers for one user action.
     ///
-    /// ## Multi-Primal Coordination Flow
+    /// ## Coordination flow
     ///
-    /// 1. **BearDog**: Authorization (user permissions, primal policy)
-    /// 2. **Songbird**: Validation (device availability, primal health)
-    /// 3. **ToadStool**: Capacity check (resource availability)
-    /// 4. **Songbird**: Register assignment (service registry)
-    /// 5. **NestGate**: Persist assignment (recovery after restart)
-    /// 6. **petalTongue**: Update UI (visual feedback)
-    #[expect(
-        clippy::too_many_lines,
-        reason = "orchestrates 6-phase device assignment across primals"
-    )]
+    /// 1. **Security**: authorization (user permissions, primal policy)
+    /// 2. **Discovery**: validation (device availability, primal health)
+    /// 3. **Compute**: capacity check (resource availability)
+    /// 4. **Discovery**: register assignment (service registry)
+    /// 5. **Storage**: persist assignment (recovery after restart)
+    /// 6. **UI**: update visualization (feedback)
     async fn handle_assign_device(
         device_id: &str,
         primal_id: &str,
@@ -145,10 +139,10 @@ impl ActionHandler {
             device_id, primal_id
         );
 
-        // Phase 1: Authorization via BearDog
-        let current_user = Authorization::get_current_user_id(ctx.beardog).await;
+        // Phase 1: Authorization via security provider
+        let current_user = Authorization::get_current_user_id(ctx.security).await;
         let auth_result = Authorization::authorize_device_assignment(
-            ctx.beardog,
+            ctx.security,
             &current_user,
             device_id,
             primal_id,
@@ -173,9 +167,9 @@ impl ActionHandler {
             }
         }
 
-        // Phase 2: Validation via Songbird
+        // Phase 2: Validation via discovery provider
         let validation_result =
-            Validation::validate_device_assignment(ctx.songbird, device_id, primal_id).await;
+            Validation::validate_device_assignment(ctx.discovery, device_id, primal_id).await;
 
         match validation_result {
             Ok(ValidationResult::Valid) => {
@@ -191,9 +185,9 @@ impl ActionHandler {
             }
         }
 
-        // Phase 3: Capacity check via ToadStool
+        // Phase 3: Capacity check via compute provider
         let capacity_result =
-            Capacity::check_primal_capacity(ctx.toadstool, device_id, primal_id).await;
+            Capacity::check_primal_capacity(ctx.compute, device_id, primal_id).await;
 
         match capacity_result {
             Ok(CapacityResult::Available) => {
@@ -211,9 +205,9 @@ impl ActionHandler {
             }
         }
 
-        // Phase 4: Register assignment via Songbird
+        // Phase 4: Register assignment via discovery provider
         let assignment_id =
-            match Self::register_assignment(ctx.songbird, device_id, primal_id).await {
+            match Self::register_assignment(ctx.discovery, device_id, primal_id).await {
                 Ok(id) => {
                     info!("✅ Assignment registered: {}", id);
                     id
@@ -226,9 +220,9 @@ impl ActionHandler {
                 }
             };
 
-        // Phase 5: Persist assignment via NestGate (non-critical)
+        // Phase 5: Persist assignment via storage provider (non-critical)
         if let Err(e) = Persistence::persist_assignment(
-            ctx.nestgate,
+            ctx.storage,
             family_id,
             &assignment_id,
             device_id,
@@ -242,10 +236,8 @@ impl ActionHandler {
             info!("✅ Assignment persisted");
         }
 
-        // Phase 6: Update UI via petalTongue (non-critical)
-        if let Err(e) =
-            UISync::update_ui_after_assignment(ctx.petaltongue, device_id, primal_id).await
-        {
+        // Phase 6: Update UI via visualization provider (non-critical)
+        if let Err(e) = UISync::update_ui_after_assignment(ctx.ui, device_id, primal_id).await {
             warn!("⚠️ Failed to update UI: {}, continuing", e);
             // Non-critical: assignment succeeded, UI just not updated
         } else {
@@ -262,19 +254,19 @@ impl ActionHandler {
         )))
     }
 
-    /// Register assignment via Songbird
+    /// Register assignment via discovery/registry provider
     ///
     /// Creates the assignment record in the service registry.
     /// Returns assignment ID for tracking.
     async fn register_assignment(
-        songbird: Option<&SongbirdClient>,
+        discovery: Option<&DiscoveryClient>,
         device_id: &str,
         primal_id: &str,
     ) -> Result<String> {
-        if let Some(songbird) = songbird {
-            info!("🎵 Songbird available - registering assignment");
+        if let Some(discovery) = discovery {
+            info!("Discovery provider available — registering assignment");
 
-            match songbird
+            match discovery
                 .call(
                     "registry.register_assignment",
                     serde_json::json!({
@@ -289,14 +281,17 @@ impl ActionHandler {
                         .get("assignment_id")
                         .and_then(|v| v.as_str())
                         .map_or_else(
-                            || format!("songbird-{device_id}-{primal_id}"),
+                            || format!("registry-{device_id}-{primal_id}"),
                             std::string::ToString::to_string,
                         );
-                    info!("✅ Registered via Songbird: {}", assignment_id);
+                    info!("✅ Registered via discovery provider: {}", assignment_id);
                     return Ok(assignment_id);
                 }
                 Err(e) => {
-                    warn!("⚠️ Songbird registration failed: {} - using local ID", e);
+                    warn!(
+                        "⚠️ Discovery registry registration failed: {} — using local ID",
+                        e
+                    );
                 }
             }
         }
@@ -309,31 +304,31 @@ impl ActionHandler {
     /// Handle device unassignment
     async fn handle_unassign_device(
         device_id: &str,
-        songbird: Option<&SongbirdClient>,
-        nestgate: Option<&NestGateClient>,
-        petaltongue: Option<&PetalTongueClient>,
+        discovery: Option<&DiscoveryClient>,
+        storage: Option<&StorageClient>,
+        ui: Option<&UiClient>,
     ) -> Result<ActionResult> {
         info!("Unassigning device {}", device_id);
 
-        // Step 1: Remove from Songbird registry
-        if let Some(songbird) = songbird {
-            match songbird
+        // Step 1: Remove from discovery/registry
+        if let Some(discovery) = discovery {
+            match discovery
                 .call(
                     "registry.unassign_device",
                     serde_json::json!({ "device_id": device_id }),
                 )
                 .await
             {
-                Ok(_) => info!("✅ Removed assignment from Songbird registry"),
-                Err(e) => warn!("⚠️ Songbird unassign failed: {}", e),
+                Ok(_) => info!("✅ Removed assignment from discovery registry"),
+                Err(e) => warn!("⚠️ Discovery unassign failed: {}", e),
             }
         }
 
-        // Step 2: Remove from NestGate persistence
-        let _ = Persistence::remove_assignment(nestgate, device_id).await;
+        // Step 2: Remove from storage provider
+        let _ = Persistence::remove_assignment(storage, device_id).await;
 
         // Step 3: Update UI
-        let _ = UISync::update_ui_after_unassignment(petaltongue, device_id).await;
+        let _ = UISync::update_ui_after_unassignment(ui, device_id).await;
 
         Ok(ActionResult::success(format!(
             "Device {device_id} unassigned successfully"
@@ -343,12 +338,12 @@ impl ActionHandler {
     /// Handle primal start
     async fn handle_start_primal(
         primal_name: &str,
-        toadstool: Option<&ToadStoolClient>,
+        compute: Option<&ComputeClient>,
     ) -> Result<ActionResult> {
         info!("Starting primal {}", primal_name);
 
-        if let Some(toadstool) = toadstool {
-            match toadstool
+        if let Some(compute) = compute {
+            match compute
                 .call(
                     "compute.start_primal",
                     serde_json::json!({ "primal_name": primal_name }),
@@ -375,19 +370,19 @@ impl ActionHandler {
         }
 
         Ok(ActionResult::error(
-            "No compute primal (ToadStool) available to start primals".to_string(),
+            "No compute provider available to start primals".to_string(),
         ))
     }
 
     /// Handle primal stop
     async fn handle_stop_primal(
         primal_id: &str,
-        toadstool: Option<&ToadStoolClient>,
+        compute: Option<&ComputeClient>,
     ) -> Result<ActionResult> {
         info!("Stopping primal {}", primal_id);
 
-        if let Some(toadstool) = toadstool {
-            match toadstool
+        if let Some(compute) = compute {
+            match compute
                 .call(
                     "compute.stop_primal",
                     serde_json::json!({ "primal_id": primal_id, "graceful": true }),
@@ -408,19 +403,19 @@ impl ActionHandler {
         }
 
         Ok(ActionResult::error(
-            "No compute primal (ToadStool) available to stop primals".to_string(),
+            "No compute provider available to stop primals".to_string(),
         ))
     }
 
     /// Handle primal restart
     async fn handle_restart_primal(
         primal_id: &str,
-        toadstool: Option<&ToadStoolClient>,
+        compute: Option<&ComputeClient>,
     ) -> Result<ActionResult> {
         info!("Restarting primal {}", primal_id);
 
-        if let Some(toadstool) = toadstool {
-            match toadstool
+        if let Some(compute) = compute {
+            match compute
                 .call(
                     "compute.restart_primal",
                     serde_json::json!({ "primal_id": primal_id }),
@@ -447,7 +442,7 @@ impl ActionHandler {
         }
 
         Ok(ActionResult::error(
-            "No compute primal (ToadStool) available to restart primals".to_string(),
+            "No compute provider available to restart primals".to_string(),
         ))
     }
 
@@ -455,12 +450,12 @@ impl ActionHandler {
     async fn handle_accept_suggestion(
         suggestion_id: &str,
         family_id: &str,
-        squirrel: Option<&SquirrelClient>,
+        ai: Option<&AiClient>,
     ) -> Result<ActionResult> {
         info!("Accepting suggestion {}", suggestion_id);
 
-        if let Some(squirrel) = squirrel {
-            match squirrel
+        if let Some(ai) = ai {
+            match ai
                 .call(
                     "ai.accept_suggestion",
                     serde_json::json!({
@@ -471,10 +466,10 @@ impl ActionHandler {
                 .await
             {
                 Ok(_) => {
-                    info!("✅ Squirrel notified of accepted suggestion");
+                    info!("✅ AI provider notified of accepted suggestion");
                 }
                 Err(e) => {
-                    warn!("⚠️ Failed to notify Squirrel: {}", e);
+                    warn!("⚠️ Failed to notify AI provider: {}", e);
                 }
             }
         }
@@ -488,12 +483,12 @@ impl ActionHandler {
     async fn handle_dismiss_suggestion(
         suggestion_id: &str,
         family_id: &str,
-        squirrel: Option<&SquirrelClient>,
+        ai: Option<&AiClient>,
     ) -> Result<ActionResult> {
         info!("Dismissing suggestion {}", suggestion_id);
 
-        if let Some(squirrel) = squirrel {
-            match squirrel
+        if let Some(ai) = ai {
+            match ai
                 .call(
                     "ai.dismiss_suggestion",
                     serde_json::json!({
@@ -504,10 +499,10 @@ impl ActionHandler {
                 .await
             {
                 Ok(_) => {
-                    info!("✅ Squirrel notified of dismissed suggestion");
+                    info!("✅ AI provider notified of dismissed suggestion");
                 }
                 Err(e) => {
-                    warn!("⚠️ Failed to notify Squirrel: {}", e);
+                    warn!("⚠️ Failed to notify AI provider: {}", e);
                 }
             }
         }
@@ -519,17 +514,17 @@ impl ActionHandler {
 
     /// Handle UI refresh
     async fn handle_refresh(
-        songbird: Option<&SongbirdClient>,
-        toadstool: Option<&ToadStoolClient>,
-        petaltongue: Option<&PetalTongueClient>,
+        discovery: Option<&DiscoveryClient>,
+        compute: Option<&ComputeClient>,
+        ui: Option<&UiClient>,
     ) -> Result<ActionResult> {
         info!("Refreshing UI state");
 
         let mut refresh_results = Vec::new();
 
-        // Refresh device list from Songbird
-        if let Some(songbird) = songbird {
-            match songbird
+        // Refresh device list from discovery provider
+        if let Some(discovery) = discovery {
+            match discovery
                 .call("registry.list_devices", serde_json::json!({}))
                 .await
             {
@@ -537,7 +532,7 @@ impl ActionHandler {
                 Err(e) => warn!("Failed to refresh devices: {}", e),
             }
 
-            match songbird
+            match discovery
                 .call("registry.list_primals", serde_json::json!({}))
                 .await
             {
@@ -546,9 +541,9 @@ impl ActionHandler {
             }
         }
 
-        // Refresh metrics from ToadStool
-        if let Some(toadstool) = toadstool {
-            match toadstool
+        // Refresh metrics from compute provider
+        if let Some(compute) = compute {
+            match compute
                 .call("compute.get_metrics", serde_json::json!({}))
                 .await
             {
@@ -558,7 +553,7 @@ impl ActionHandler {
         }
 
         // Push refresh to UI
-        let _ = UISync::push_refresh(petaltongue, refresh_results.clone()).await;
+        let _ = UISync::push_refresh(ui, refresh_results.clone()).await;
 
         Ok(ActionResult::success(format!(
             "UI refreshed ({} sources updated)",

@@ -394,4 +394,39 @@ mod tests {
         assert_eq!(cloned.pid, session.pid);
         assert_eq!(cloned.log_file, session.log_file);
     }
+
+    #[tokio::test]
+    async fn register_session_overwrites_same_primal_id() {
+        let tracker = LogSessionTracker::new("node".to_string());
+        let id = PrimalId::new("same").unwrap();
+        tracker.register_session(id.clone(), 1, None).await;
+        tracker.register_session(id.clone(), 2, None).await;
+        let sessions = tracker.get_all_sessions().await;
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].pid, 2);
+    }
+
+    #[test]
+    fn primal_session_debug_is_bounded() {
+        let s = PrimalSession {
+            primal_id: PrimalId::new("p").unwrap(),
+            node_id: "n".to_string(),
+            pid: 9,
+            started_at: chrono::Utc::now(),
+            log_file: None,
+        };
+        let dbg = format!("{s:?}");
+        assert!(dbg.contains("PrimalSession"));
+    }
+
+    #[tokio::test]
+    async fn get_all_sessions_returns_sorted_order_not_guaranteed_but_clones() {
+        let tracker = LogSessionTracker::new("n".to_string());
+        let a = PrimalId::new("alpha").unwrap();
+        let b = PrimalId::new("beta").unwrap();
+        tracker.register_session(a, 1, None).await;
+        tracker.register_session(b, 2, None).await;
+        let v = tracker.get_all_sessions().await;
+        assert_eq!(v.len(), 2);
+    }
 }

@@ -223,6 +223,14 @@ impl PrimalOrganism {
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#[expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 mod tests {
     use super::*;
 
@@ -242,5 +250,118 @@ mod tests {
         let required = spec.required();
         assert_eq!(required.len(), 1);
         assert_eq!(required[0].0, "mesh");
+    }
+
+    #[test]
+    fn get_returns_none_for_unknown_name() {
+        let spec = OrganismSpec::new().with_primal("a", PrimalOrganism::new("t"));
+        assert!(spec.get("missing").is_none());
+    }
+
+    #[test]
+    fn get_prefers_chimera_when_names_collide_in_maps() {
+        let spec = OrganismSpec::new()
+            .with_chimera("same", ChimeraOrganism::new("chimera-type"))
+            .with_primal("same", PrimalOrganism::new("primal-type"));
+        match spec.get("same").expect("organism") {
+            Organism::Chimera(c) => assert_eq!(c.chimera_type, "chimera-type"),
+            Organism::Primal(_) => panic!("chimera should win when both exist"),
+        }
+    }
+
+    #[test]
+    fn all_names_lists_both_chimeras_and_primals() {
+        let spec = OrganismSpec::new()
+            .with_chimera("c", ChimeraOrganism::new("ct"))
+            .with_primal("p", PrimalOrganism::new("pt"));
+        let mut names = spec.all_names();
+        names.sort_unstable();
+        assert_eq!(names, vec!["c", "p"]);
+    }
+
+    #[test]
+    fn is_empty_true_when_no_organisms() {
+        assert!(OrganismSpec::new().is_empty());
+        assert_eq!(OrganismSpec::new().len(), 0);
+    }
+
+    #[test]
+    fn required_lists_both_required_chimeras_and_primals() {
+        let spec = OrganismSpec::new()
+            .with_chimera("c", ChimeraOrganism::new("t").required())
+            .with_primal("p", PrimalOrganism::new("t").required());
+        let mut req = spec.required();
+        req.sort_by_key(|(n, _)| *n);
+        assert_eq!(
+            req,
+            vec![("c", OrganismType::Chimera), ("p", OrganismType::Primal),]
+        );
+    }
+
+    #[test]
+    fn chimera_with_config_stores_json_values() {
+        let c = ChimeraOrganism::new("x").with_config("k", serde_json::json!({"z": 1}));
+        assert_eq!(c.config.get("k").unwrap()["z"], 1);
+    }
+
+    #[test]
+    fn primal_with_dependencies_round_trips() {
+        let p = PrimalOrganism::new("nestgate")
+            .with_dependencies(vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(p.dependencies, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn organism_spec_get_chimera_branch() {
+        let spec = OrganismSpec::new().with_chimera("c", ChimeraOrganism::new("t"));
+        match spec.get("c").unwrap() {
+            Organism::Chimera(ch) => assert_eq!(ch.chimera_type, "t"),
+            Organism::Primal(_) => panic!("expected chimera"),
+        }
+    }
+
+    #[test]
+    fn organism_spec_get_primal_branch() {
+        let spec = OrganismSpec::new().with_primal("p", PrimalOrganism::new("beardog"));
+        match spec.get("p").unwrap() {
+            Organism::Primal(p) => assert_eq!(p.primal_type, "beardog"),
+            Organism::Chimera(_) => panic!("expected primal"),
+        }
+    }
+
+    #[test]
+    fn primal_with_role_sets_role() {
+        let p = PrimalOrganism::new("songbird").with_role("mesh");
+        assert_eq!(p.role, "mesh");
+    }
+
+    #[test]
+    fn chimera_required_builder() {
+        let c = ChimeraOrganism::new("x").required();
+        assert!(c.required);
+    }
+
+    #[test]
+    fn organism_spec_serde_roundtrip_empty() {
+        let spec = OrganismSpec::new();
+        let yaml = serde_yaml::to_string(&spec).unwrap();
+        let back: OrganismSpec = serde_yaml::from_str(&yaml).unwrap();
+        assert!(back.is_empty());
+    }
+
+    #[test]
+    fn organism_type_copy_eq() {
+        assert_eq!(OrganismType::Chimera, OrganismType::Chimera);
+        assert_ne!(OrganismType::Chimera, OrganismType::Primal);
+    }
+
+    #[test]
+    fn required_only_marks_explicit_flags() {
+        let spec = OrganismSpec::new()
+            .with_chimera("opt", ChimeraOrganism::new("t"))
+            .with_primal("req", PrimalOrganism::new("p").required());
+        let r = spec.required();
+        assert_eq!(r.len(), 1);
+        assert_eq!(r[0].0, "req");
     }
 }

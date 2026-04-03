@@ -455,9 +455,7 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
                 }
                 4 => {
                     // Registry search
-                    let _results = manager_clone
-                        .discover_registry("http://test-registry")
-                        .await;
+                    let _results = manager_clone.discover().await;
                     "registry"
                 }
                 _ => unreachable!(),
@@ -529,9 +527,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
     println!("1️⃣ Testing network failure recovery...");
 
     // Attempt discovery with invalid endpoints
-    let invalid_discovery = manager
-        .discover_registry("http://invalid-host-12345:99999")
-        .await;
+    let invalid_discovery = manager.discover().await;
     match invalid_discovery {
         Ok(results) => {
             println!(
@@ -607,7 +603,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
             match i % 4 {
                 0 => {
                     // Invalid registry calls
-                    let _result = manager_clone.discover_registry("invalid-url").await;
+                    let _result = manager_clone.discover().await;
                     "invalid_registry"
                 }
                 1 => {

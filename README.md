@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.82)
+## Status: Production Ready (v2.87)
 
 | Metric | Value |
 |--------|-------|
@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
-| Tests | 7,212 passing (0 failures) — 90%+ coverage (llvm-cov verified) |
+| Tests | 7,723 passing (0 failures) — 90.08% line / 90.85% function / 89.89% region (llvm-cov), suite ~93s |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots) |
 | C Dependencies | 0 (blake3 pure, deny.toml enforced bans) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
@@ -25,10 +25,11 @@
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
 | Files >1000 LOC | 0 (all under 1000 after smart domain extraction) |
-| Discovery | Auto-discovery via XDG sockets + `topology.rescan` + lazy rescan on miss + `capability.register` + DNS-SD mDNS |
+| Discovery | **Capability-based** per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — XDG sockets + `topology.rescan` + lazy rescan + `capability.register` + DNS-SD mDNS; no identity-based routing or deprecated discovery stubs |
 | Blocking Debt | 0 (BM-04 capability registration, BM-05 probe formats, TCP-only, gate routing, `#[serial]` elimination — all resolved) |
 | Dep Governance | tokio, base64, serde, serde_json, gethostname — workspace-unified; `serial_test` removed; pure Rust stack (rustix, etcetera, ureq) |
 | TODO/FIXME/HACK | 0 in production code |
+| Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-only`) |
 
 ---
@@ -251,13 +252,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,212 tests across 26 crates)
+### Test (7,723 tests across 26 crates, ~93s typical wall time)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (90%+ line / 91%+ function / 90%+ region)
+### Coverage (90.08% line / 90.85% function / 89.89% region)
 
 ```bash
 cargo llvm-cov --workspace
@@ -345,10 +346,10 @@ scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC
 
 ---
 
-**Status**: Production Ready (v2.82)
-**Updated**: April 1, 2026
-**Tests**: 7,212 passing, 90%+ coverage (llvm-cov verified) | **Clippy**: pedantic+nursery via workspace lints | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 production | **Blocking debt**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Auto-discovery + lazy rescan + capability-first routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
+**Status**: Production Ready (v2.87)
+**Updated**: April 3, 2026
+**Tests**: 7,723 passing, 90.08% line / 90.85% function / 89.89% region (llvm-cov), ~93s suite | **Clippy**: pedantic+nursery via workspace lints | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
 
 ---
 

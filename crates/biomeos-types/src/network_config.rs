@@ -168,7 +168,7 @@ impl NetworkConfig {
 
         let stun_servers = Self::resolve_stun_servers_with(env);
         let self_hosted_stun = env.get(env_vars::SELF_HOSTED_STUN).cloned();
-        // DEEP DEBT: In sovereign mode, public STUN is disabled by default
+        // In sovereign mode, public STUN is disabled by default
         let is_sovereign = env
             .get("BIOMEOS_SOVEREIGN")
             .is_some_and(|v| v == "1" || v.to_lowercase() == "true");
@@ -455,7 +455,7 @@ mod tests {
     fn test_bind_all() {
         let env = env_map(&[(env_vars::BIND_ALL, "true")]);
         let config = NetworkConfig::from_env_with(&env);
-        // DEEP DEBT: bind_all uses IPv6 [::] for dual-stack (accepts IPv4 + IPv6)
+        // Uses IPv6 [::] for dual-stack (accepts IPv4 + IPv6)
         assert_eq!(config.bind_address(), IpAddr::V6(Ipv6Addr::UNSPECIFIED));
         assert!(config.bind_all);
     }

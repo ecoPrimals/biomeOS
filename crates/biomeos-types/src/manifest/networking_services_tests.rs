@@ -3,7 +3,7 @@
 //
 // Test module for manifest/networking_services.rs - included via #[path]
 
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "test")]
 
 use super::*;
 use std::collections::HashMap;
@@ -357,6 +357,136 @@ fn mesh_security_policy_spec_roundtrip() {
                 values: vec!["https://accounts.google.com".into()],
             }],
         }],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn mesh_egress_spec_roundtrip() {
+    let spec = MeshEgressSpec {
+        service_entries: vec![ServiceEntrySpec {
+            name: "egress-wiki".into(),
+            hosts: vec!["wiki.example.org".into()],
+            ports: vec![ServiceEntryPort {
+                number: 443,
+                name: "https".into(),
+                protocol: "TLS".into(),
+            }],
+            location: ServiceLocation::MeshExternal,
+            resolution: ServiceResolution::DNS,
+        }],
+        destination_rules: vec![DestinationRuleSpec {
+            name: "wiki-dr".into(),
+            host: "wiki.example.org".into(),
+            traffic_policy: None,
+            subsets: vec![SubsetSpec {
+                name: "v1".into(),
+                labels: HashMap::from([("version".into(), "v1".into())]),
+                traffic_policy: None,
+            }],
+        }],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn tcp_route_spec_roundtrip() {
+    let spec = TcpRouteSpec {
+        match_conditions: vec![TcpMatchCondition {
+            destination_subnets: vec!["10.0.0.0/8".into()],
+            port: Some(9000),
+            source_labels: HashMap::new(),
+            gateways: vec!["mesh".into()],
+        }],
+        route: vec![TcpRouteDestination {
+            destination: DestinationSpec {
+                host: "reviews".into(),
+                subset: None,
+                port: Some(PortSelector::Number(9080)),
+            },
+            weight: Some(100),
+        }],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn tls_route_spec_roundtrip() {
+    let spec = TlsRouteSpec {
+        match_conditions: vec![TlsMatchCondition {
+            sni_hosts: vec!["api.example.com".into()],
+            destination_subnets: vec![],
+            port: Some(443),
+            source_labels: HashMap::new(),
+            gateways: vec![],
+        }],
+        route: vec![TlsRouteDestination {
+            destination: DestinationSpec {
+                host: "api.example.com".into(),
+                subset: Some("stable".into()),
+                port: None,
+            },
+            weight: None,
+        }],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn destination_rule_spec_minimal_roundtrip() {
+    let spec = DestinationRuleSpec {
+        name: "reviews".into(),
+        host: "reviews".into(),
+        traffic_policy: None,
+        subsets: vec![],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn mesh_ingress_with_egress_on_config_roundtrip() {
+    let spec = ServiceMeshConfig {
+        mtls_enabled: false,
+        telemetry: None,
+        ingress: Some(MeshIngressSpec {
+            gateways: vec![],
+            virtual_services: vec![],
+        }),
+        egress: Some(MeshEgressSpec {
+            service_entries: vec![],
+            destination_rules: vec![],
+        }),
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn http_redirect_and_rewrite_roundtrip() {
+    roundtrip_json(&HttpRedirect {
+        uri: Some("/new".into()),
+        authority: Some("other.example".into()),
+        redirect_code: Some(302),
+    });
+    roundtrip_json(&HttpRewrite {
+        uri: Some("/v2".into()),
+        authority: None,
+    });
+}
+
+#[test]
+fn subset_spec_with_traffic_policy_roundtrip() {
+    let spec = SubsetSpec {
+        name: "canary".into(),
+        labels: HashMap::new(),
+        traffic_policy: Some(TrafficPolicySpec {
+            load_balancer: Some(LoadBalancerSpec {
+                simple: Some(LoadBalancerAlgorithm::LeastConn),
+                consistent_hash: None,
+            }),
+            connection_pool: None,
+            outlier_detection: None,
+            tls: None,
+        }),
     };
     roundtrip_json(&spec);
 }

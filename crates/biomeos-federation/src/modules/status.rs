@@ -6,8 +6,8 @@
 //! Handles deployment and federation status monitoring and reporting
 
 use anyhow::{Context, Result};
-use std::thread;
 use std::time::Duration;
+use tokio::time::sleep;
 use tracing::{error, info, warn};
 
 use super::config::FederationConfig;
@@ -36,46 +36,67 @@ pub fn show_status(config: &FederationConfig, deployment: Option<String>, watch:
 
 fn watch_deployment_status(config: &FederationConfig, deployment: &str) -> Result<()> {
     info!("Watching deployment status for '{}' (Press Ctrl+C to stop)", deployment);
-    
-    loop {
-        // Clear screen (ANSI escape sequence)
-        print!("\x1B[2J\x1B[1;1H");
-        
-        match get_dynamic_deployment_status(config, deployment) {
-            Ok(status) => {
-                info!("=== Deployment Status: {} ===", deployment);
-                info!("Last Updated: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
-                info!("{}", status);
+
+    let config = config.clone();
+    let deployment = deployment.to_string();
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("Failed to build tokio runtime for deployment status watch")?
+        .block_on(async move {
+            loop {
+                // Clear screen (ANSI escape sequence)
+                print!("\x1B[2J\x1B[1;1H");
+
+                match get_dynamic_deployment_status(&config, &deployment) {
+                    Ok(status) => {
+                        info!("=== Deployment Status: {} ===", deployment);
+                        info!(
+                            "Last Updated: {}",
+                            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+                        );
+                        info!("{}", status);
+                    }
+                    Err(e) => {
+                        error!("Failed to get deployment status: {}", e);
+                    }
+                }
+
+                sleep(Duration::from_secs(5)).await;
             }
-            Err(e) => {
-                error!("Failed to get deployment status: {}", e);
-            }
-        }
-        
-        thread::sleep(Duration::from_secs(5));
-    }
+        })
 }
 
 fn watch_federation_status(config: &FederationConfig) -> Result<()> {
     info!("Watching federation status (Press Ctrl+C to stop)");
-    
-    loop {
-        // Clear screen
-        print!("\x1B[2J\x1B[1;1H");
-        
-        match get_federation_status(config) {
-            Ok(status) => {
-                info!("=== Federation Status ===");
-                info!("Last Updated: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
-                info!("{}", status);
+
+    let config = config.clone();
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("Failed to build tokio runtime for federation status watch")?
+        .block_on(async move {
+            loop {
+                // Clear screen
+                print!("\x1B[2J\x1B[1;1H");
+
+                match get_federation_status(&config) {
+                    Ok(status) => {
+                        info!("=== Federation Status ===");
+                        info!(
+                            "Last Updated: {}",
+                            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+                        );
+                        info!("{}", status);
+                    }
+                    Err(e) => {
+                        error!("Failed to get federation status: {}", e);
+                    }
+                }
+
+                sleep(Duration::from_secs(10)).await;
             }
-            Err(e) => {
-                error!("Failed to get federation status: {}", e);
-            }
-        }
-        
-        thread::sleep(Duration::from_secs(10));
-    }
+        })
 }
 
 fn show_federation_overview(config: &FederationConfig) -> Result<()> {

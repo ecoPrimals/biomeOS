@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Songbird discovery and `discovery.register_capability` registration for device management.
+//! Discovery provider registration and `discovery.register_capability` for device management.
 
 #![forbid(unsafe_code)]
 
@@ -12,26 +12,29 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
 use tracing::info;
 
-/// Register this server with Songbird for capability advertisement
+/// Register this server with the discovery provider for capability advertisement
 ///
 /// This enables other primals and nodes to discover this device management
-/// server via Songbird's UDP multicast discovery.
+/// server via the discovery provider's UDP multicast discovery.
 pub(super) async fn register_with_songbird(socket_path: &str) -> Result<()> {
-    let songbird_socket = discover_songbird_socket()?;
-    register_with_songbird_at(&songbird_socket, socket_path).await
+    let discovery_socket = discover_discovery_provider()?;
+    register_with_songbird_at(&discovery_socket, socket_path).await
 }
 
-/// Same as [`register_with_songbird`], but connects to an explicit Songbird Unix socket
+/// Same as [`register_with_songbird`], but connects to an explicit discovery provider Unix socket
 /// (for tests and callers that inject discovery without process environment).
 pub(super) async fn register_with_songbird_at(
-    songbird_socket: &str,
+    discovery_socket: &str,
     device_management_socket_path: &str,
 ) -> Result<()> {
-    info!("📡 Registering with Songbird at: {}", songbird_socket);
+    info!(
+        "📡 Registering with discovery provider at: {}",
+        discovery_socket
+    );
 
-    let stream = tokio::net::UnixStream::connect(songbird_socket)
+    let stream = tokio::net::UnixStream::connect(discovery_socket)
         .await
-        .context("Failed to connect to Songbird")?;
+        .context("Failed to connect to discovery provider")?;
 
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -63,8 +66,8 @@ pub(super) async fn register_with_songbird_at(
         reader.read_line(&mut response_line),
     )
     .await
-    .context("Songbird registration timeout (30s)")?
-    .context("Failed to read Songbird response")?;
+    .context("Discovery provider registration timeout (30s)")?
+    .context("Failed to read discovery provider response")?;
 
     let response: Value = serde_json::from_str(response_line.trim())?;
 
@@ -73,29 +76,29 @@ pub(super) async fn register_with_songbird_at(
             .get("message")
             .and_then(|m| m.as_str())
             .unwrap_or("Unknown error");
-        anyhow::bail!("Songbird registration failed: {msg}");
+        anyhow::bail!("Discovery provider registration failed: {msg}");
     }
 
-    info!("✅ Registered with Songbird for UDP multicast discovery");
+    info!("✅ Registered with discovery provider for UDP multicast discovery");
     Ok(())
 }
 
 /// Discover discovery provider socket via the 5-tier capability protocol.
 ///
 /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
-pub(super) fn discover_songbird_socket() -> Result<String> {
+pub(super) fn discover_discovery_provider() -> Result<String> {
     use biomeos_types::capability_discovery;
-    discover_songbird_socket_with(&capability_discovery::std_env)
+    discover_discovery_provider_with(&capability_discovery::std_env)
 }
 
-/// Same as [`discover_songbird_socket`], using an injectable environment lookup
+/// Same as [`discover_discovery_provider`], using an injectable environment lookup
 /// (`std::env` in production; a `HashMap` closure in tests).
-pub(super) fn discover_songbird_socket_with(
+pub(super) fn discover_discovery_provider_with(
     env: &dyn Fn(&str) -> Option<String>,
 ) -> Result<String> {
     use biomeos_types::capability_discovery;
     capability_discovery::discover_capability_socket("discovery", env)
-        .context("Discovery provider socket not found. Is Songbird running?")
+        .context("Discovery provider socket not found. Set DISCOVERY_PROVIDER_SOCKET or ensure the discovery provider is running.")
 }
 
 #[cfg(test)]
@@ -117,31 +120,31 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_songbird_socket_env_override() {
+    fn test_discover_discovery_provider_env_override() {
         let mut env = HashMap::new();
         env.insert(
             "SONGBIRD_SOCKET".to_string(),
             "/custom/songbird.sock".to_string(),
         );
-        let result = discover_songbird_socket_with(&mock_env(&env));
+        let result = discover_discovery_provider_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "/custom/songbird.sock");
     }
 
     #[test]
-    fn test_discover_songbird_socket_not_found() {
+    fn test_discover_discovery_provider_not_found() {
         let mut env = HashMap::new();
         env.insert(
             "XDG_RUNTIME_DIR".to_string(),
             "/nonexistent_xdg_path_for_test".to_string(),
         );
-        let result = discover_songbird_socket_with(&mock_env(&env));
+        let result = discover_discovery_provider_with(&mock_env(&env));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
     }
 
     #[test]
-    fn test_discover_songbird_socket_xdg_runtime_exists() {
+    fn test_discover_discovery_provider_xdg_runtime_exists() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("biomeos").join("songbird.sock");
         std::fs::create_dir_all(socket_path.parent().unwrap()).unwrap();
@@ -153,7 +156,7 @@ mod tests {
             temp.path().to_string_lossy().into_owned(),
         );
 
-        let result = discover_songbird_socket_with(&mock_env(&env));
+        let result = discover_discovery_provider_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -162,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_songbird_socket_family_xdg_path() {
+    fn test_discover_discovery_provider_family_xdg_path() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("biomeos").join("songbird-family99.sock");
         std::fs::create_dir_all(socket_path.parent().unwrap()).unwrap();
@@ -175,7 +178,7 @@ mod tests {
         );
         env.insert("BIOMEOS_FAMILY_ID".to_string(), "family99".to_string());
 
-        let result = discover_songbird_socket_with(&mock_env(&env));
+        let result = discover_discovery_provider_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -184,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_songbird_socket_family_tmp_biomeos_dir() {
+    fn test_discover_discovery_provider_family_tmp_biomeos_dir() {
         let fam = format!("testlegacy{}", std::process::id());
         let biomeos_dir = format!("/tmp/biomeos-{fam}");
         let legacy_socket = format!("{biomeos_dir}/songbird.sock");
@@ -195,7 +198,7 @@ mod tests {
         env.insert("XDG_RUNTIME_DIR".to_string(), "/nonexistent".to_string());
         env.insert("BIOMEOS_FAMILY_ID".to_string(), fam);
 
-        let result = discover_songbird_socket_with(&mock_env(&env));
+        let result = discover_discovery_provider_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), legacy_socket);
 
@@ -204,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_songbird_socket_common_pattern_tmp_biomeos_dir() {
+    fn test_discover_discovery_provider_common_pattern_tmp_biomeos_dir() {
         let _lock = TMP_BIOMEOS_EMPTY_FAMILY_LOCK.lock().unwrap();
 
         let biomeos_dir = "/tmp/biomeos";
@@ -218,7 +221,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("XDG_RUNTIME_DIR".to_string(), "/nonexistent".to_string());
 
-        let result = discover_songbird_socket_with(&mock_env(&env));
+        let result = discover_discovery_provider_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), tmp_socket);
 
@@ -228,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_songbird_socket_family_id_fallback() {
+    fn test_discover_discovery_provider_family_id_fallback() {
         let temp = tempfile::tempdir().unwrap();
         let biomeos_dir = temp.path().join("biomeos");
         std::fs::create_dir_all(&biomeos_dir).unwrap();
@@ -242,7 +245,7 @@ mod tests {
         );
         env.insert("FAMILY_ID".to_string(), "fam2".to_string());
 
-        let result = discover_songbird_socket_with(&mock_env(&env));
+        let result = discover_discovery_provider_with(&mock_env(&env));
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),

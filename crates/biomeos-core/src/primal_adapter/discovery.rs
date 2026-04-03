@@ -156,9 +156,11 @@ async fn discover_capabilities(adapter: &PrimalAdapter) -> Result<PrimalCapabili
     // Try to detect port configuration method
     capabilities.port_config = detect_port_config(&adapter.binary).await;
 
-    // Set default health check pattern
+    // Pattern uses placeholders; HOST and PORT are resolved at runtime from
+    // the discovered or configured endpoint — no baked-in assumption about where
+    // this primal (or any other) binds.
     capabilities.health_check = Some(HealthCheckConfig {
-        url_pattern: "http://localhost:PORT/health".to_string(),
+        url_pattern: "http://{HOST}:{PORT}/health".to_string(),
         expected_status: 200,
         timeout: Duration::from_secs(2),
     });

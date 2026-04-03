@@ -8,7 +8,7 @@
 //! **Concurrency-First Design**: All tests use proper timeouts to prevent hangs.
 //! Test issues will be production issues!
 
-use biomeos_federation::beardog_client::BearDogClient;
+use biomeos_federation::security_client::SecurityProviderClient;
 use std::time::Duration;
 
 /// Timeout for BearDog availability check
@@ -16,11 +16,11 @@ const AVAILABILITY_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Helper to check if BearDog is available for testing
 /// **Concurrency**: Uses timeout to prevent hangs when BearDog isn't available
-async fn beardog_available() -> Option<BearDogClient> {
+async fn beardog_available() -> Option<SecurityProviderClient> {
     // Use timeout to prevent hanging when BearDog isn't available
     let result = tokio::time::timeout(AVAILABILITY_TIMEOUT, async {
         // Try to find BearDog via discovery first
-        if let Ok(client) = BearDogClient::from_discovery().await
+        if let Ok(client) = SecurityProviderClient::from_discovery().await
             && client.is_available()
         {
             return Some(client);
@@ -34,7 +34,7 @@ async fn beardog_available() -> Option<BearDogClient> {
         ];
 
         for endpoint in endpoints {
-            if let Ok(client) = BearDogClient::with_endpoint(endpoint) {
+            if let Ok(client) = SecurityProviderClient::with_endpoint(endpoint) {
                 if client.is_available() {
                     println!("✅ Found BearDog at: {endpoint}");
                     return Some(client);
@@ -118,7 +118,7 @@ async fn test_beardog_key_derivation() {
         return;
     };
 
-    use biomeos_federation::beardog_client::KeyDerivationRequest;
+    use biomeos_federation::security_client::KeyDerivationRequest;
 
     let request = KeyDerivationRequest {
         parent_family: "test_family".to_string(),
@@ -243,7 +243,7 @@ async fn test_beardog_full_workflow() {
     }
 
     println!("\n3️⃣  Key Derivation");
-    use biomeos_federation::beardog_client::KeyDerivationRequest;
+    use biomeos_federation::security_client::KeyDerivationRequest;
     let request = KeyDerivationRequest {
         parent_family: "test_family".to_string(),
         subfed_name: "test-subfed".to_string(),

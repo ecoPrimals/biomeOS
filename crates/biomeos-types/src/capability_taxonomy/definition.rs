@@ -672,7 +672,7 @@ impl CapabilityTaxonomy {
 
     /// Get known primal names from the capability taxonomy.
     ///
-    /// **DEEP DEBT NOTE**: This is a bootstrap-time hint, NOT the source of truth.
+    /// Bootstrap-time hint, NOT the source of truth.
     /// In sovereign mode, primals self-register via `capability.call()` at runtime.
     /// This list is ONLY used during initial bootstrap before capability discovery
     /// is available. Once Songbird is running, use `discovery.query` instead.

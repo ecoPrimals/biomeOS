@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-#![expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#![expect(clippy::unwrap_used, reason = "test")]
 
 use super::*;
 
@@ -571,6 +568,87 @@ async fn test_wait_for_vm_ssh_ready_max_retries_exceeded() {
     .await;
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("10.0.0.1"));
+}
+
+#[tokio::test]
+async fn test_wait_for_vm_ssh_ready_cloud_init_timeout_zero_bails_immediately() {
+    let config = ValidationConfig {
+        cloud_init_timeout: Duration::ZERO,
+        ssh_timeout: Duration::from_secs(5),
+        ssh_retry_interval: Duration::from_millis(1),
+        ssh_max_retries: 10,
+    };
+    let start = Instant::now();
+    let result = wait_for_vm_ssh_ready("192.168.1.1", &config, start, || {
+        unreachable!("SSH probe should not run when cloud_init_timeout is zero")
+    })
+    .await;
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("192.168.1.1"), "msg={msg}");
+    assert!(msg.contains("Timeout") || msg.contains("timeout"));
+}
+
+#[tokio::test]
+async fn test_wait_for_vm_ssh_ready_succeeds_on_second_ssh_attempt() {
+    use std::os::unix::process::ExitStatusExt;
+    let config = ValidationConfig {
+        cloud_init_timeout: Duration::from_secs(30),
+        ssh_timeout: Duration::from_secs(5),
+        ssh_retry_interval: Duration::from_millis(1),
+        ssh_max_retries: 5,
+    };
+    let start = Instant::now();
+    let attempt = std::cell::Cell::new(0u32);
+    let result = wait_for_vm_ssh_ready("10.0.0.2", &config, start, || {
+        let n = attempt.get() + 1;
+        attempt.set(n);
+        if n == 1 {
+            Ok(std::process::Output {
+                status: std::process::ExitStatus::from_raw(256),
+                stdout: vec![],
+                stderr: vec![],
+            })
+        } else {
+            Ok(std::process::Output {
+                status: std::process::ExitStatus::from_raw(0),
+                stdout: b"ok".to_vec(),
+                stderr: vec![],
+            })
+        }
+    })
+    .await;
+    assert!(result.is_ok());
+    assert_eq!(attempt.get(), 2);
+}
+
+#[cfg(unix)]
+#[test]
+fn test_topology_path_for_cli_rejects_non_utf8_path() {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+    let path = PathBuf::from(OsString::from_vec(vec![0xFF, 0xFE, 0xFD]));
+    let err = topology_path_for_cli(&path).unwrap_err();
+    assert!(err.to_string().contains("UTF-8") || err.to_string().contains("utf-8"));
+}
+
+#[test]
+fn test_collect_ips_for_vm_names_first_fails_second_ok() {
+    let mut calls = 0u32;
+    let ips = collect_ips_for_vm_names(vec!["bad".to_string(), "good".to_string()], |_| {
+        calls += 1;
+        if calls == 1 {
+            Err(std::io::Error::other("domifaddr failed"))
+        } else {
+            Ok(std::process::Output {
+                status: std::process::ExitStatus::default(),
+                stdout: b"vnet0  ipv4  192.168.50.10/24\n".to_vec(),
+                stderr: vec![],
+            })
+        }
+    });
+    assert_eq!(ips, vec!["192.168.50.10"]);
+    assert_eq!(calls, 2);
 }
 
 #[tokio::test]

@@ -50,16 +50,16 @@ pub mod generators {
     use rand::Rng;
     
     pub fn random_jwt_secret() -> String {
-        let mut rng = rand::thread_rng();
-        let secret: [u8; 48] = rng.r#gen();
+        let mut rng = rand::rng();
+        let secret: [u8; 48] = rng.random();
         base64::encode(secret)
     }
     
     pub fn random_family_id() -> String {
-        format!("test{}", rand::thread_rng().gen::<u16>())
+        format!("test{}", rand::rng().random::<u16>())
     }
     
     pub fn random_node_id() -> String {
-        format!("node{}", rand::thread_rng().gen::<u16>())
+        format!("node{}", rand::rng().random::<u16>())
     }
 }

@@ -406,4 +406,118 @@ mod tests {
         assert!(collector.primal_stats().await.is_empty());
         assert!(collector.co_occurrences().await.is_empty());
     }
+
+    #[test]
+    fn primal_stats_avg_and_p95_defaults() {
+        let s = PrimalStats::default();
+        assert_eq!(s.avg_latency(), Duration::ZERO);
+        assert_eq!(s.p95_latency(), Duration::ZERO);
+    }
+
+    #[tokio::test]
+    async fn record_execution_marks_failures() {
+        let collector = MetricsCollector::new();
+        collector
+            .record_execution(make_metrics("g1", &["p"], &[("p", 5)], false, 5))
+            .await;
+        let stats = collector.primal_stats().await;
+        let s = stats.get("p").unwrap();
+        assert_eq!(s.failure_count, 1);
+        assert_eq!(s.success_count, 0);
+    }
+
+    #[tokio::test]
+    async fn record_execution_no_primals_still_counts_graph() {
+        let collector = MetricsCollector::new();
+        let m = GraphExecutionMetrics {
+            graph_id: "empty".to_string(),
+            primals_invoked: vec![],
+            latencies: HashMap::new(),
+            success: true,
+            total_duration: Duration::from_millis(1),
+            timestamp: SystemTime::now(),
+        };
+        collector.record_execution(m).await;
+        assert_eq!(collector.total_executions().await, 1);
+        assert!(collector.primal_stats().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn top_primals_respects_limit_and_tie_breaks_by_id() {
+        let collector = MetricsCollector::new();
+        collector
+            .record_execution(make_metrics("g", &["b", "a"], &[], true, 1))
+            .await;
+        let top = collector.top_primals(1).await;
+        assert_eq!(top.len(), 1);
+        assert_eq!(top[0].1, 1u64);
+    }
+
+    #[tokio::test]
+    async fn graph_execution_count_missing_is_zero() {
+        let collector = MetricsCollector::new();
+        assert_eq!(collector.graph_execution_count("nope").await, 0);
+    }
+
+    #[tokio::test]
+    async fn top_primals_zero_limit_returns_empty() {
+        let collector = MetricsCollector::new();
+        collector
+            .record_execution(make_metrics("g", &["only"], &[], true, 1))
+            .await;
+        assert!(collector.top_primals(0).await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn co_occurrence_four_primals_six_pairs() {
+        let collector = MetricsCollector::new();
+        collector
+            .record_execution(make_metrics("g", &["a", "b", "c", "d"], &[], true, 1))
+            .await;
+        let co = collector.co_occurrences().await;
+        assert_eq!(co.len(), 6);
+        assert_eq!(
+            co.get(&("a".to_string(), "d".to_string())).unwrap().count,
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn record_execution_ring_buffer_after_max_latency_samples() {
+        let collector = MetricsCollector::new();
+        for i in 0..1001 {
+            let ms = u64::try_from(i % 73 + 1).unwrap_or(1);
+            collector
+                .record_execution(make_metrics("g", &["p"], &[("p", ms)], true, ms))
+                .await;
+        }
+        let stats = collector.primal_stats().await;
+        let s = stats.get("p").unwrap();
+        assert_eq!(s.invocation_count, 1001);
+        assert_eq!(s.latency_samples.len(), super::MAX_LATENCY_SAMPLES);
+    }
+
+    #[tokio::test]
+    async fn p95_latency_matches_sorted_index_for_twenty_samples() {
+        let collector = MetricsCollector::new();
+        for ms in 1_u64..=20 {
+            collector
+                .record_execution(make_metrics("g", &["q"], &[("q", ms)], true, ms))
+                .await;
+        }
+        let stats = collector.primal_stats().await;
+        let s = stats.get("q").unwrap();
+        assert_eq!(s.latency_samples.len(), 20);
+        let p95 = s.p95_latency();
+        assert_eq!(p95, Duration::from_millis(20));
+    }
+
+    #[tokio::test]
+    async fn metrics_collector_default_starts_empty_like_new() {
+        let c = MetricsCollector::default();
+        assert_eq!(c.total_executions().await, 0);
+        assert!(c.top_primals(10).await.is_empty());
+        let n = MetricsCollector::new();
+        assert_eq!(n.total_executions().await, 0);
+    }
 }

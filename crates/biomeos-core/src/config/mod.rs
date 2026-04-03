@@ -213,7 +213,7 @@ pub mod presets {
         let discovery_endpoint = std::env::var("DISCOVERY_ENDPOINT")
             .or_else(|_| std::env::var("BIOMEOS_DISCOVERY_ENDPOINT"))
             .unwrap_or_else(|_| {
-                // DEEP DEBT SOLUTION: Discover Songbird socket at runtime
+                // Discover Songbird socket at runtime
                 // No hardcoded paths, no panics - pure capability-based discovery
                 use crate::socket_discovery::SocketDiscovery;
                 let family_id = std::env::var("FAMILY_ID")

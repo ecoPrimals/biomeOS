@@ -208,6 +208,120 @@ pub enum GraphCategory {
     Lifecycle,
 }
 
+// ---------------------------------------------------------------------------
+// Flat TOML graph DSL (`GraphParser`) — distinct from nested `DeploymentGraph`
+// ---------------------------------------------------------------------------
+
+/// Edge kind in the flat graph DSL.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum EdgeType {
+    /// Dependency ordering
+    Dependency,
+    /// Control-flow edge
+    ControlFlow,
+    /// Data-flow edge
+    DataFlow,
+}
+
+/// Directed edge between node IDs.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GraphEdge {
+    /// Source node id
+    pub from: String,
+    /// Target node id
+    pub to: String,
+    /// Edge classification
+    pub edge_type: EdgeType,
+}
+
+/// Retry policy for node operations in the flat DSL.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RetryPolicy {
+    /// Maximum attempts
+    pub max_attempts: u32,
+    /// Backoff between attempts (ms)
+    pub backoff_ms: u64,
+}
+
+/// Optional execution constraints (used by tooling / future node wiring).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NodeConstraints {
+    /// Timeout in milliseconds
+    pub timeout_ms: Option<u64>,
+    /// Retry policy if any
+    pub retry_policy: Option<RetryPolicy>,
+    /// Capabilities required on the host
+    pub required_capabilities: Option<Vec<String>>,
+}
+
+/// Operation invoked on a primal in the flat DSL.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+pub struct Operation {
+    /// RPC / method name
+    pub name: String,
+    /// JSON parameters
+    pub params: serde_json::Value,
+    /// Optional environment for the operation
+    pub environment: Option<HashMap<String, String>>,
+}
+
+/// Capability-based or id-based primal selection.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PrimalSelector {
+    /// Select by registered primal id
+    ById {
+        /// Primal instance id
+        by_id: String,
+    },
+    /// Select by single capability
+    ByCapability {
+        /// Capability string
+        by_capability: String,
+    },
+    /// Select by multiple capabilities (AND semantics at runtime)
+    ByCapabilities {
+        /// Capability strings
+        by_capabilities: Vec<String>,
+    },
+}
+
+/// One node in the flat graph DSL.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+pub struct PrimalNode {
+    /// Node id
+    pub id: String,
+    /// How to pick the primal
+    pub primal: PrimalSelector,
+    /// Operation to run
+    pub operation: Operation,
+    /// Runtime input (filled during execution)
+    pub input: Option<serde_json::Value>,
+    /// Named outputs
+    pub outputs: Vec<String>,
+}
+
+/// Parsed flat graph (see `crate::parser::GraphParser`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+pub struct PrimalGraph {
+    /// Validated graph id
+    pub id: GraphId,
+    /// Display name
+    pub name: String,
+    /// Description
+    pub description: String,
+    /// Semantic version string
+    pub version: String,
+    /// Nodes
+    pub nodes: Vec<PrimalNode>,
+    /// Edges
+    pub edges: Vec<GraphEdge>,
+    /// Coordination pattern
+    pub coordination: CoordinationPattern,
+}
+
 impl DeploymentGraph {
     /// Get the graph ID.
     #[must_use]

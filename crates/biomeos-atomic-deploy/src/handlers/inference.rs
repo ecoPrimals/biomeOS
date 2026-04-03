@@ -313,6 +313,7 @@ impl InferenceHandler {
 }
 
 #[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "test")]
 mod tests {
     use super::*;
     use crate::gate_registry::GateRegistry;
@@ -374,5 +375,39 @@ mod tests {
         let params = Some(json!({"model": "test"}));
         let result = handler.schedule(&params).await;
         assert!(result.is_err(), "should fail without prompt");
+    }
+
+    #[test]
+    fn test_estimate_vram_30b_class() {
+        assert!(
+            (18.0..=22.0).contains(&InferenceHandler::estimate_vram_requirement(
+                "model-30b-chat",
+            ))
+        );
+    }
+
+    #[test]
+    fn test_estimate_vram_13b_class() {
+        assert!((9.0..=11.0).contains(&InferenceHandler::estimate_vram_requirement("llama-13b",)));
+    }
+
+    #[test]
+    fn test_estimate_vram_tiny_and_mini_hints() {
+        assert!((2.0..=4.0).contains(&InferenceHandler::estimate_vram_requirement("phi-3b")));
+        assert!((3.0..=5.0).contains(&InferenceHandler::estimate_vram_requirement("mini-model")));
+    }
+
+    #[tokio::test]
+    async fn test_schedule_missing_params_none_errors() {
+        let handler = make_handler();
+        let err = handler.schedule(&None).await.unwrap_err();
+        assert!(err.to_string().contains("Missing parameters"));
+    }
+
+    #[tokio::test]
+    async fn test_schedule_empty_object_missing_prompt_errors() {
+        let handler = make_handler();
+        let err = handler.schedule(&Some(json!({}))).await.unwrap_err();
+        assert!(err.to_string().contains("prompt") || err.to_string().contains("Missing"));
     }
 }

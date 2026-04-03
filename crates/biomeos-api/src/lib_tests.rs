@@ -9,6 +9,7 @@
 use super::*;
 use crate::dark_forest_gate::DarkForestGateConfig;
 use axum::body::Body;
+use biomeos_test_utils::ready_signal;
 use futures_util::{SinkExt, StreamExt};
 use http_body_util::BodyExt;
 use std::collections::HashMap;
@@ -128,10 +129,12 @@ async fn events_ws_welcome_and_subscribe_roundtrip() {
         .expect("bind");
     let addr = listener.local_addr().expect("addr");
     let server = axum::serve(listener, app);
+    let (mut ready_tx, ready_rx) = ready_signal();
     let join = tokio::spawn(async move {
+        ready_tx.signal();
         server.await.expect("serve");
     });
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    ready_rx.wait().await.expect("server ready");
     let url = format!("ws://{addr}/api/v1/events/ws");
     let (ws, _) = tokio_tungstenite::connect_async(url.as_str())
         .await
@@ -485,10 +488,12 @@ async fn router_events_ws_invalid_json_and_unknown_method() {
         .expect("bind");
     let addr = listener.local_addr().expect("addr");
     let server = axum::serve(listener, app);
+    let (mut ready_tx, ready_rx) = ready_signal();
     let join = tokio::spawn(async move {
+        ready_tx.signal();
         server.await.expect("serve");
     });
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    ready_rx.wait().await.expect("server ready");
     let url = format!("ws://{addr}/api/v1/events/ws");
     let (ws, _) = tokio_tungstenite::connect_async(url.as_str())
         .await
@@ -536,10 +541,12 @@ async fn router_events_ws_binary_message_ignored_no_reply() {
         .expect("bind");
     let addr = listener.local_addr().expect("addr");
     let server = axum::serve(listener, app);
+    let (mut ready_tx, ready_rx) = ready_signal();
     let join = tokio::spawn(async move {
+        ready_tx.signal();
         server.await.expect("serve");
     });
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    ready_rx.wait().await.expect("server ready");
     let url = format!("ws://{addr}/api/v1/events/ws");
     let (ws, _) = tokio_tungstenite::connect_async(url.as_str())
         .await

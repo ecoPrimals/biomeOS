@@ -106,20 +106,20 @@ impl DiscoveryBootstrap {
     /// Adapter discovery with explicit endpoint overrides (for testability).
     pub async fn find_universal_adapter_with(
         &self,
-        discovery_endpoint: Option<&str>,
-        songbird_endpoint: Option<&str>,
+        explicit_discovery_endpoint: Option<&str>,
+        alternate_discovery_endpoint: Option<&str>,
         skip_env: bool,
     ) -> Result<String> {
         tracing::info!("🔍 Starting zero-knowledge discovery for universal adapter");
 
-        if let Some(endpoint) = discovery_endpoint {
+        if let Some(endpoint) = explicit_discovery_endpoint {
             tracing::info!(
                 "✅ Found universal adapter via DISCOVERY_ENDPOINT: {}",
                 endpoint
             );
             return Ok(endpoint.to_string());
         }
-        if let Some(endpoint) = songbird_endpoint {
+        if let Some(endpoint) = alternate_discovery_endpoint {
             tracing::info!(
                 "✅ Found universal adapter via SONGBIRD_ENDPOINT: {}",
                 endpoint
@@ -208,9 +208,12 @@ impl DiscoveryBootstrap {
         let skip_probe =
             skip_probe_override.unwrap_or_else(|| std::env::var("BIOMEOS_SKIP_MDNS_PROBE").is_ok());
 
-        if !skip_probe {
-            // Socket-based discovery: probe known localhost ports where BiomeOS
-            // services advertise (Songbird, broadcast discovery, HTTP, dev)
+        // Loopback port-scanning requires explicit opt-in.  Production primals
+        // discover peers through socket-discovery, mDNS, or env vars — never by
+        // assuming another primal lives on 127.0.0.1.
+        let allow_loopback = std::env::var("BIOMEOS_ALLOW_LOOPBACK_DISCOVERY").is_ok();
+
+        if !skip_probe && allow_loopback {
             const CANDIDATE_PORTS: &[u16] = &[
                 network::DEFAULT_SONGBIRD_PORT,
                 network::DEFAULT_BROADCAST_DISCOVERY_PORT,
@@ -228,7 +231,7 @@ impl DiscoveryBootstrap {
                 {
                     Ok(Ok(_)) => {
                         let endpoint = format!("http://{}:{port}", endpoints::DEFAULT_LOCALHOST);
-                        tracing::info!("mDNS-style discovery: found service at {}", endpoint);
+                        tracing::info!("loopback discovery: found service at {}", endpoint);
                         return Ok(endpoint);
                     }
                     Ok(Err(e)) => {
@@ -239,6 +242,10 @@ impl DiscoveryBootstrap {
                     }
                 }
             }
+        } else if !skip_probe {
+            tracing::trace!(
+                "loopback probe skipped (set BIOMEOS_ALLOW_LOOPBACK_DISCOVERY=1 for dev)"
+            );
         }
 
         // Fallback to env var when probe skipped or found nothing
@@ -259,7 +266,7 @@ impl DiscoveryBootstrap {
 
     /// Discover via UDP broadcast (pure Rust)
     ///
-    /// DEEP DEBT EVOLUTION (Feb 7, 2026): Real UDP broadcast implementation.
+    /// Real UDP broadcast implementation.
     /// Sends a discovery packet to the local network and listens for responses.
     async fn discover_via_broadcast(&self) -> Result<String> {
         self.discover_via_broadcast_with(None).await

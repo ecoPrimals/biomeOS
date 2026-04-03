@@ -346,14 +346,20 @@ async fn query_srv(socket: &UdpSocket, instance: &str) -> anyhow::Result<Option<
 fn fallback_lan_candidates() -> Vec<Candidate> {
     let mut v = Vec::new();
     let base_port = ports::TCP_PORT_SCAN_START;
-    for host in &["127.0.0.1", "::1"] {
-        v.push(Candidate {
-            host: (*host).to_string(),
-            port: base_port,
-            instance_fqdn: format!("fallback.{SERVICE_PTR}"),
-            txt: HashMap::new(),
-            fallback_scan: true,
-        });
+
+    // Loopback is only included when explicitly opted-in. Production primals
+    // discover peers on the real LAN; assuming another primal on 127.0.0.1
+    // violates the self-knowledge principle.
+    if std::env::var("BIOMEOS_ALLOW_LOOPBACK_DISCOVERY").is_ok() {
+        for host in &["127.0.0.1", "::1"] {
+            v.push(Candidate {
+                host: (*host).to_string(),
+                port: base_port,
+                instance_fqdn: format!("fallback.{SERVICE_PTR}"),
+                txt: HashMap::new(),
+                fallback_scan: true,
+            });
+        }
     }
     if let Some(ip) = local_ipv4_via_udp() {
         let octets = ip.octets();
@@ -658,3 +664,7 @@ fn read_domain_name(buf: &[u8], mut pos: usize) -> Result<(String, usize), ()> {
 
     Ok((labels.join("."), end_pos))
 }
+
+#[cfg(test)]
+#[path = "dns_sd_tests.rs"]
+mod dns_sd_tests;

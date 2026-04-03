@@ -161,7 +161,7 @@ async fn test_wait_for_socket_appears_after_short_delay() {
     let path = tmp.path().join("late.sock");
     let path_c = path.clone();
     tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(80)).await;
+        tokio::task::yield_now().await;
         std::fs::write(&path_c, b"").expect("touch");
     });
     let result = wait_for_socket(&path, Duration::from_secs(2), Duration::from_millis(20)).await;

@@ -119,7 +119,7 @@ pub async fn layer1_physical_discovery_sockets() -> FederationResult<Vec<Discove
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
+#[expect(clippy::expect_used, reason = "test")]
 mod tests {
     use super::*;
 
@@ -193,5 +193,63 @@ mod tests {
         let resp: SongbirdDiscoveryResponse = serde_json::from_str(json).expect("deserialize");
         assert_eq!(resp.services.len(), 1);
         assert_eq!(resp.services[0].name, "test");
+    }
+
+    #[test]
+    fn test_service_address_to_endpoint_http_hostname() {
+        let service = SongbirdServiceInfo {
+            id: "h1".to_string(),
+            name: "host".to_string(),
+            address: "songbird.internal".to_string(),
+            port: 443,
+            tags: vec!["discovery".to_string()],
+            health: "ok".to_string(),
+        };
+        let ep = service_address_to_endpoint(&service);
+        match ep {
+            PrimalEndpoint::Http { url } => assert_eq!(url, "http://songbird.internal:443"),
+            _ => panic!("Expected Http"),
+        }
+    }
+
+    #[test]
+    fn test_service_address_to_endpoint_unix_preserves_non_slash_as_http() {
+        // Only paths starting with '/' become Unix sockets; hostnames stay HTTP.
+        let service = SongbirdServiceInfo {
+            id: "rel".to_string(),
+            name: "n".to_string(),
+            address: "relative-not-unix".to_string(),
+            port: 8080,
+            tags: vec![],
+            health: "ok".to_string(),
+        };
+        let ep = service_address_to_endpoint(&service);
+        match ep {
+            PrimalEndpoint::Http { url } => assert_eq!(url, "http://relative-not-unix:8080"),
+            _ => panic!("Expected Http"),
+        }
+    }
+
+    #[test]
+    fn test_songbird_discovery_response_empty_services() {
+        let json = r#"{"services":[]}"#;
+        let resp: SongbirdDiscoveryResponse = serde_json::from_str(json).expect("deserialize");
+        assert!(resp.services.is_empty());
+    }
+
+    #[test]
+    fn test_songbird_service_info_roundtrip() {
+        let orig = SongbirdServiceInfo {
+            id: "id".to_string(),
+            name: "n".to_string(),
+            address: "10.0.0.1".to_string(),
+            port: 1,
+            tags: vec!["a".to_string(), "b".to_string()],
+            health: "degraded".to_string(),
+        };
+        let v = serde_json::to_value(&orig).expect("serialize");
+        let back: SongbirdServiceInfo = serde_json::from_value(v).expect("deserialize");
+        assert_eq!(orig.id, back.id);
+        assert_eq!(orig.tags, back.tags);
     }
 }

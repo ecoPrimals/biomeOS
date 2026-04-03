@@ -432,7 +432,8 @@ fn init_logging(log_level: &str, verbose: bool) -> Result<()> {
         .with_thread_ids(false)
         .with_file(false)
         .with_line_number(false)
-        .init();
+        .try_init()
+        .ok();
 
     Ok(())
 }

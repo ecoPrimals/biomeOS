@@ -80,8 +80,8 @@ impl FamilySeed {
 /// Encrypt plaintext bytes with a key, returning hex-encoded ciphertext
 /// Format: [8-byte nonce][xor-encrypted data][32-byte hmac]
 fn symmetric_encrypt(plaintext: &[u8], key: &[u8; 32]) -> String {
-    let mut rng = rand::thread_rng();
-    let nonce: [u8; 8] = rng.r#gen();
+    let mut rng = rand::rng();
+    let nonce: [u8; 8] = rng.random();
 
     // Derive stream key from key + nonce
     let mut hasher = Sha256::new();

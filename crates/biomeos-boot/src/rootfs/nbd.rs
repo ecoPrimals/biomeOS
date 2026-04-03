@@ -28,6 +28,7 @@ impl NbdGuard {
         info!("📎 Attaching {} to {}", device, image_path.display());
 
         let _ = Command::new("qemu-nbd").args(["-d", &device]).output();
+        // Sync path: wait for the kernel to release the device node after detach (not async-capable).
         std::thread::sleep(std::time::Duration::from_millis(100));
 
         let status = Command::new("qemu-nbd")
@@ -40,6 +41,7 @@ impl NbdGuard {
             anyhow::bail!("qemu-nbd failed to attach {device}");
         }
 
+        // Sync path: allow block device and partition nodes to appear before mkfs/mount.
         std::thread::sleep(std::time::Duration::from_millis(500));
 
         info!("  ✓ NBD attached: {}", device);
@@ -94,6 +96,7 @@ impl NbdGuard {
         }
 
         self.attached = false;
+        // Sync path: brief settle after detach before reusing the device (kernel udev).
         std::thread::sleep(std::time::Duration::from_millis(100));
 
         Ok(())

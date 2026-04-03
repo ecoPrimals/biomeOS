@@ -41,12 +41,15 @@
 #![warn(missing_docs)]
 
 pub mod continuous;
+#[cfg(test)]
+mod continuous_tests;
 pub mod error;
 pub mod events;
 pub mod graph;
 pub mod loader;
 pub mod metrics;
 pub mod node;
+pub mod parser;
 pub mod pathway_learner;
 pub mod pipeline;
 pub mod sensor;
@@ -55,7 +58,10 @@ pub mod validation;
 pub use continuous::{ContinuousExecutor, SessionState, TickClock};
 pub use error::{GraphError, Result};
 pub use events::{GraphEvent, GraphEventBroadcaster};
-pub use graph::{CoordinationPattern, DeploymentGraph, GraphMetadata, TickConfig};
+pub use graph::{
+    CoordinationPattern, DeploymentGraph, EdgeType, GraphEdge, GraphId, GraphMetadata,
+    NodeConstraints, Operation, PrimalGraph, PrimalNode, PrimalSelector, RetryPolicy, TickConfig,
+};
 pub use loader::GraphLoader;
 pub use node::{GraphNode, NodeConfig, NodeParams};
 pub use pathway_learner::{

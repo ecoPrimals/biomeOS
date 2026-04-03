@@ -347,6 +347,7 @@ impl PrimalDiscovery for CompositeDiscovery {
 
 #[expect(
     clippy::unwrap_used,
+    clippy::expect_used,
     reason = "test assertions use unwrap/expect for clarity"
 )]
 #[cfg(test)]
@@ -628,6 +629,37 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err, DiscoveryError::NotFound { .. }));
+    }
+
+    #[test]
+    fn health_status_unknown_not_operational_but_matches() {
+        assert!(!HealthStatus::Unknown.is_operational());
+        assert!(!HealthStatus::Unknown.is_healthy());
+    }
+
+    #[test]
+    fn discovery_error_url_parse_roundtrip() {
+        assert!(url::Url::parse("not a url").is_err());
+        let err = url::Url::parse("http://").unwrap_err();
+        let e: DiscoveryError = err.into();
+        assert!(matches!(e, DiscoveryError::UrlParse(_)));
+    }
+
+    #[test]
+    fn discovery_error_other_from_anyhow() {
+        let e: DiscoveryError = anyhow::anyhow!("inner").into();
+        assert!(e.to_string().contains("inner") || matches!(e, DiscoveryError::Other(_)));
+    }
+
+    #[tokio::test]
+    async fn composite_discovery_add_boxed_and_add_sources() {
+        let empty = MockDiscovery { primals: vec![] };
+        let boxed: Box<dyn PrimalDiscovery> = Box::new(empty);
+        let composite = CompositeDiscovery::new()
+            .add_boxed_source(boxed)
+            .add_sources(std::iter::empty::<Box<dyn PrimalDiscovery>>());
+        let primals = composite.discover_all().await.expect("discover");
+        assert!(primals.is_empty());
     }
 
     #[tokio::test]

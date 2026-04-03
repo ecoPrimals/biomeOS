@@ -196,13 +196,12 @@ impl SecureTunnel {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
+#[expect(clippy::unwrap_used, clippy::expect_used, reason = "test")]
 mod tests {
     use super::*;
     use crate::discovery::{DiscoveredPrimal, DiscoveryMethod};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
 
     #[test]
     fn test_jsonrpc_request_serialization() {
@@ -284,5 +283,121 @@ mod tests {
         };
         let client = PrimalClient::new(primal).with_timeout(Duration::from_secs(5));
         assert_eq!(client.primal().name, "x");
+    }
+
+    #[tokio::test]
+    async fn primal_client_request_returns_rpc_error_string() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("rpc.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind unix listener");
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept");
+            let mut reader = BufReader::new(&mut stream);
+            let mut line = Vec::new();
+            reader
+                .read_until(b'\n', &mut line)
+                .await
+                .expect("read request line");
+            assert!(!line.is_empty());
+            let stream = reader.into_inner();
+            let resp =
+                br#"{"jsonrpc":"2.0","error":{"code":-32603,"message":"server boom"},"id":1}"#;
+            stream.write_all(resp).await.expect("write");
+            stream.shutdown().await.expect("shutdown");
+        });
+
+        let primal = DiscoveredPrimal {
+            name: "local".to_string(),
+            socket_path: sock_path.clone(),
+            capability: PrimalCapability::encryption(),
+            discovered_via: DiscoveryMethod::TmpFallback,
+            is_healthy: true,
+        };
+        let client = PrimalClient::new(primal).with_timeout(Duration::from_secs(5));
+        let err = client
+            .request("ping", serde_json::json!({}))
+            .await
+            .expect_err("rpc error expected");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("RPC error") && msg.contains("-32603"),
+            "unexpected: {msg}"
+        );
+        server.await.expect("server task");
+    }
+
+    #[tokio::test]
+    async fn primal_client_request_err_when_no_result_field() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("rpc2.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind");
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept");
+            let mut reader = BufReader::new(&mut stream);
+            let mut line = Vec::new();
+            reader
+                .read_until(b'\n', &mut line)
+                .await
+                .expect("read request line");
+            assert!(!line.is_empty());
+            let stream = reader.into_inner();
+            let resp = br#"{"jsonrpc":"2.0","id":1}"#;
+            stream.write_all(resp).await.expect("write");
+            stream.shutdown().await.expect("shutdown");
+        });
+
+        let primal = DiscoveredPrimal {
+            name: "local".to_string(),
+            socket_path: sock_path,
+            capability: PrimalCapability::encryption(),
+            discovered_via: DiscoveryMethod::TmpFallback,
+            is_healthy: true,
+        };
+        let client = PrimalClient::new(primal).with_timeout(Duration::from_secs(5));
+        let err = client
+            .request("x", serde_json::json!({}))
+            .await
+            .expect_err("missing result");
+        assert!(err.to_string().contains("No result"), "unexpected: {err}");
+        server.await.expect("server");
+    }
+
+    #[tokio::test]
+    async fn primal_client_send_request_fails_on_invalid_json_response() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sock_path = dir.path().join("rpc3.sock");
+        let listener = UnixListener::bind(&sock_path).expect("bind");
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept");
+            let mut reader = BufReader::new(&mut stream);
+            let mut line = Vec::new();
+            reader
+                .read_until(b'\n', &mut line)
+                .await
+                .expect("read request line");
+            assert!(!line.is_empty());
+            let stream = reader.into_inner();
+            stream.write_all(b"not-json").await.expect("write");
+            stream.shutdown().await.expect("shutdown");
+        });
+
+        let primal = DiscoveredPrimal {
+            name: "local".to_string(),
+            socket_path: sock_path,
+            capability: PrimalCapability::encryption(),
+            discovered_via: DiscoveryMethod::TmpFallback,
+            is_healthy: true,
+        };
+        let client = PrimalClient::new(primal).with_timeout(Duration::from_secs(5));
+        let err = client
+            .request("x", serde_json::json!({}))
+            .await
+            .expect_err("parse fail");
+        let chain = format!("{err:#}");
+        assert!(
+            chain.contains("parse") || chain.contains("JSON"),
+            "unexpected: {chain}"
+        );
+        server.await.expect("server");
     }
 }

@@ -58,7 +58,11 @@ pub struct EnrollArgs {
     pub lineage_seed: PathBuf,
 
     /// Security provider socket path (for seed derivation)
-    #[arg(long = "security-provider-socket", alias = "beardog-socket", env = "SECURITY_PROVIDER_SOCKET")]
+    #[arg(
+        long = "security-provider-socket",
+        alias = "beardog-socket",
+        env = "SECURITY_PROVIDER_SOCKET"
+    )]
     pub security_socket: Option<String>,
 
     #[arg(skip)]
@@ -179,7 +183,10 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
             .context(
                 "Could not find security provider socket (Neural API not available). Is the security provider running?",
             )?;
-        info!("   Security provider (direct, bootstrap): {}", security_socket);
+        info!(
+            "   Security provider (direct, bootstrap): {}",
+            security_socket
+        );
         let caller = DirectBeardogCaller::new(&security_socket);
         LineageDeriver::new(caller)
             .enroll_device(

@@ -13,6 +13,8 @@ mod types;
 #[cfg(test)]
 mod cache_extra_tests;
 #[cfg(test)]
+mod cache_tests;
+#[cfg(test)]
 mod tests;
 
 pub use cache::ModelCache;

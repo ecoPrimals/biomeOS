@@ -179,7 +179,7 @@ async fn test_handle_start_primal_toadstool_connection_fails() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
+        ComputeClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
     );
     let action = UserAction::StartPrimal {
         primal_name: "beardog".to_string(),
@@ -195,7 +195,7 @@ async fn test_handle_stop_primal_toadstool_connection_fails() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
+        ComputeClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
     );
     let action = UserAction::StopPrimal {
         primal_id: "primal-123".to_string(),
@@ -211,11 +211,11 @@ async fn test_handle_refresh_with_failing_clients() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "songbird",
-        SongbirdClient::with_socket("songbird", "/nonexistent/songbird.sock"),
+        DiscoveryClient::with_socket("songbird", "/nonexistent/songbird.sock"),
     );
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
+        ComputeClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
     );
     let action = UserAction::Refresh;
     let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
@@ -242,7 +242,7 @@ async fn test_handle_unassign_device_with_songbird_failing() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "songbird",
-        SongbirdClient::with_socket("songbird", "/nonexistent/songbird.sock"),
+        DiscoveryClient::with_socket("songbird", "/nonexistent/songbird.sock"),
     );
     let action = UserAction::UnassignDevice {
         device_id: "dev-123".to_string(),
@@ -293,7 +293,7 @@ async fn test_register_assignment_songbird_returns_id() {
         }
     });
     ready_rx.wait().await.unwrap();
-    let songbird = SongbirdClient::with_socket("songbird", &socket_path);
+    let songbird = DiscoveryClient::with_socket("songbird", &socket_path);
     let result = ActionHandler::register_assignment(Some(&songbird), "device-1", "primal-1").await;
     assert!(result.is_ok());
     let id = result.unwrap();
@@ -330,7 +330,7 @@ async fn test_handle_assign_device_beardog_denied() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "beardog",
-        BearDogClient::with_socket("beardog", &socket_path),
+        SecurityClient::with_socket("beardog", &socket_path),
     );
     let action = UserAction::AssignDevice {
         device_id: "dev-1".to_string(),
@@ -388,11 +388,11 @@ async fn test_handle_assign_device_songbird_validation_invalid() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "beardog",
-        BearDogClient::with_socket("beardog", &beardog_path),
+        SecurityClient::with_socket("beardog", &beardog_path),
     );
     connections.add_client(
         "songbird",
-        SongbirdClient::with_socket("songbird", &songbird_path),
+        DiscoveryClient::with_socket("songbird", &songbird_path),
     );
     let action = UserAction::AssignDevice {
         device_id: "dev-1".to_string(),
@@ -493,15 +493,15 @@ async fn test_handle_assign_device_toadstool_insufficient_capacity() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "beardog",
-        BearDogClient::with_socket("beardog", &beardog_path),
+        SecurityClient::with_socket("beardog", &beardog_path),
     );
     connections.add_client(
         "songbird",
-        SongbirdClient::with_socket("songbird", &songbird_path),
+        DiscoveryClient::with_socket("songbird", &songbird_path),
     );
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", &toadstool_path),
+        ComputeClient::with_socket("toadstool", &toadstool_path),
     );
     let action = UserAction::AssignDevice {
         device_id: "dev-1".to_string(),
@@ -541,7 +541,7 @@ async fn test_handle_start_primal_success() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", &socket_path),
+        ComputeClient::with_socket("toadstool", &socket_path),
     );
     let action = UserAction::StartPrimal {
         primal_name: "beardog".to_string(),
@@ -578,7 +578,7 @@ async fn test_handle_stop_primal_success() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", &socket_path),
+        ComputeClient::with_socket("toadstool", &socket_path),
     );
     let action = UserAction::StopPrimal {
         primal_id: "primal-123".to_string(),
@@ -612,7 +612,7 @@ async fn test_handle_restart_primal_success() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", &socket_path),
+        ComputeClient::with_socket("toadstool", &socket_path),
     );
     let action = UserAction::RestartPrimal {
         primal_id: "primal-456".to_string(),
@@ -629,7 +629,7 @@ async fn test_handle_restart_primal_success() {
 
 #[tokio::test]
 async fn test_register_assignment_songbird_unreachable_uses_local_id() {
-    let songbird = SongbirdClient::with_socket("songbird", "/nonexistent/songbird-missing.sock");
+    let songbird = DiscoveryClient::with_socket("songbird", "/nonexistent/songbird-missing.sock");
     let result = ActionHandler::register_assignment(Some(&songbird), "device-x", "primal-y").await;
     assert!(result.is_ok());
     let id = result.unwrap();
@@ -700,15 +700,15 @@ async fn test_handle_refresh_mock_sockets_three_sources() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "songbird",
-        SongbirdClient::with_socket("songbird", &songbird_path),
+        DiscoveryClient::with_socket("songbird", &songbird_path),
     );
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", &toad_path),
+        ComputeClient::with_socket("toadstool", &toad_path),
     );
     connections.add_client(
         "petaltongue",
-        PetalTongueClient::with_socket("petaltongue", &pt_path),
+        UiClient::with_socket("petaltongue", &pt_path),
     );
     let result = ActionHandler::handle_user_action(UserAction::Refresh, "fam", &connections).await;
     assert!(result.is_ok());
@@ -851,23 +851,23 @@ async fn test_handle_assign_device_all_primals_mocked_success() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "beardog",
-        BearDogClient::with_socket("beardog", &beardog_path),
+        SecurityClient::with_socket("beardog", &beardog_path),
     );
     connections.add_client(
         "songbird",
-        SongbirdClient::with_socket("songbird", &songbird_path),
+        DiscoveryClient::with_socket("songbird", &songbird_path),
     );
     connections.add_client(
         "toadstool",
-        ToadStoolClient::with_socket("toadstool", &toad_path),
+        ComputeClient::with_socket("toadstool", &toad_path),
     );
     connections.add_client(
         "nestgate",
-        NestGateClient::with_socket("nestgate", &nest_path),
+        StorageClient::with_socket("nestgate", &nest_path),
     );
     connections.add_client(
         "petaltongue",
-        PetalTongueClient::with_socket("petaltongue", &pt_path),
+        UiClient::with_socket("petaltongue", &pt_path),
     );
     let action = UserAction::AssignDevice {
         device_id: "gpu-coord".to_string(),
@@ -912,10 +912,7 @@ async fn test_handle_accept_suggestion_squirrel_mock_ok() {
     });
     ready_rx.wait().await.unwrap();
     let mut connections = PrimalConnections::default();
-    connections.add_client(
-        "squirrel",
-        SquirrelClient::with_socket("squirrel", &socket_path),
-    );
+    connections.add_client("squirrel", AiClient::with_socket("squirrel", &socket_path));
     let action = UserAction::AcceptSuggestion {
         suggestion_id: "sugg-ok".to_string(),
     };
@@ -930,7 +927,7 @@ async fn test_handle_dismiss_suggestion_squirrel_mock_err_still_success() {
     let mut connections = PrimalConnections::default();
     connections.add_client(
         "squirrel",
-        SquirrelClient::with_socket("squirrel", "/nonexistent/squirrel.sock"),
+        AiClient::with_socket("squirrel", "/nonexistent/squirrel.sock"),
     );
     let action = UserAction::DismissSuggestion {
         suggestion_id: "sugg-x".to_string(),

@@ -88,7 +88,7 @@ pub struct InteractiveUIOrchestrator {
     /// Event broadcaster
     events: EventBroadcaster,
 
-    /// Dynamic primal connections (DEEP DEBT EVOLUTION: replaced 6 fixed fields)
+    /// Dynamic primal connections.
     connections: PrimalConnections,
 
     /// Family ID for primal discovery

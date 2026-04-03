@@ -228,36 +228,36 @@ async fn test_socket_connection_failure() {
 
 #[tokio::test]
 async fn test_multiple_primals_routing() {
-    let beardog_socket = "/tmp/test-semantic-multi-bd.sock";
-    let songbird_socket = "/tmp/test-semantic-multi-sb.sock";
-    let _cleanup1 = SocketCleanup(beardog_socket.to_string());
-    let _cleanup2 = SocketCleanup(songbird_socket.to_string());
+    let security_provider_socket = "/tmp/test-semantic-multi-bd.sock";
+    let discovery_socket = "/tmp/test-semantic-multi-sb.sock";
+    let _cleanup1 = SocketCleanup(security_provider_socket.to_string());
+    let _cleanup2 = SocketCleanup(discovery_socket.to_string());
 
-    // Start mock BearDog
-    let beardog_server = MockPrimalServer::new(
-        beardog_socket,
+    // Start mock security provider
+    let security_provider_server = MockPrimalServer::new(
+        security_provider_socket,
         "crypto.sha256",
         json!({
             "hash": "abc123hash"
         }),
     );
-    let (_bd_handle, bd_ready) = beardog_server.start_with_ready().await;
+    let (_bd_handle, bd_ready) = security_provider_server.start_with_ready().await;
 
-    // Start mock Songbird
-    let songbird_server = MockPrimalServer::new(
-        songbird_socket,
+    // Start mock discovery primal
+    let discovery_server = MockPrimalServer::new(
+        discovery_socket,
         "http.get",
         json!({
             "status": 200,
             "body": "Hello World"
         }),
     );
-    let (_sb_handle, sb_ready) = songbird_server.start_with_ready().await;
+    let (_sb_handle, sb_ready) = discovery_server.start_with_ready().await;
 
     // Wait for BOTH servers concurrently (no serial waiting!)
     tokio::try_join!(
-        async { bd_ready.await.map_err(|_| "BearDog failed") },
-        async { sb_ready.await.map_err(|_| "Songbird failed") },
+        async { bd_ready.await.map_err(|_| "security provider failed") },
+        async { sb_ready.await.map_err(|_| "discovery primal failed") },
     )
     .expect("Servers failed to start");
 
@@ -268,7 +268,7 @@ async fn test_multiple_primals_routing() {
         "crypto.hash",
         "beardog",
         "crypto.sha256",
-        beardog_socket,
+        security_provider_socket,
         None,
     );
 
@@ -276,16 +276,16 @@ async fn test_multiple_primals_routing() {
         "http.request",
         "songbird",
         "http.get",
-        songbird_socket,
+        discovery_socket,
         None,
     );
 
-    // Route to BearDog
+    // Route to security provider
     let crypto_result = registry.call_capability("crypto.hash", json!({})).await;
     assert!(crypto_result.is_ok());
     assert_eq!(crypto_result.unwrap()["hash"], "abc123hash");
 
-    // Route to Songbird
+    // Route to discovery primal
     let http_result = registry.call_capability("http.request", json!({})).await;
     assert!(http_result.is_ok());
     assert_eq!(http_result.unwrap()["status"], 200);

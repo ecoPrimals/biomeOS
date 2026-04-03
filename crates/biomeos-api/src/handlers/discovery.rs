@@ -54,7 +54,6 @@ pub async fn get_discovered_primals(
 ) -> Result<Json<DiscoveredPrimalsResponse>, ApiError> {
     info!("🔍 Discovering primals...");
 
-    // DEEP DEBT EVOLUTION (Feb 7, 2026):
     // Standalone mode no longer returns fabricated data.
     // All modes attempt live discovery first. Standalone only affects
     // whether we fall back to socket-probing when trait discovery fails.
@@ -124,7 +123,7 @@ pub async fn get_discovered_primals(
         Err(e) => {
             tracing::warn!("   Trait-based discovery failed: {}", e);
 
-            // DEEP DEBT EVOLUTION: In standalone mode, fall back to socket probing.
+            // In standalone mode, fall back to socket probing.
             // This checks if actual primal sockets exist on disk (real discovery,
             // not fabricated data). Only reports primals that are actually running.
             if state.is_standalone_mode() {

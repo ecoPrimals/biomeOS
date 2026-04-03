@@ -62,7 +62,7 @@ impl HealthUtils {
         let mut services = Vec::new();
 
         // Discover available services
-        if let Ok(discovered_endpoints) = manager.discover_network_scan().await {
+        if let Ok(discovered_endpoints) = manager.discover().await {
             for endpoint in discovered_endpoints {
                 // Probe each service for detailed health info
                 let start_time = std::time::Instant::now();

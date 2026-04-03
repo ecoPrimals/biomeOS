@@ -50,7 +50,11 @@ fn test_parse_spore_type_error_message() {
 #[test]
 fn test_gather_spore_structure_info_nonexistent() {
     let infos = gather_spore_structure_info(Path::new("/nonexistent/path"));
-    assert_eq!(infos.len(), 5);
+    // 3 static entries (.family.seed, tower.toml, bin/tower) + CORE_PRIMALS
+    assert_eq!(
+        infos.len(),
+        3 + biomeos_types::primal_names::CORE_PRIMALS.len()
+    );
     assert!(infos.iter().all(|i| !i.exists));
 }
 
@@ -356,16 +360,19 @@ fn test_parse_spore_type_whitespace_not_trimmed() {
 fn test_gather_spore_structure_info_order() {
     let infos = gather_spore_structure_info(Path::new("/nonexistent"));
     let order: Vec<_> = infos.iter().map(|i| i.name.as_str()).collect();
-    assert_eq!(
-        order,
-        vec![
-            ".family.seed",
-            "tower.toml",
-            "bin/tower",
-            "primals/beardog",
-            "primals/songbird"
-        ]
-    );
+    let mut expected = vec![".family.seed", "tower.toml", "bin/tower"];
+    for primal in biomeos_types::primal_names::CORE_PRIMALS {
+        expected.push(primal);
+    }
+    assert_eq!(order.len(), expected.len());
+    assert_eq!(order[..3], expected[..3], "static entries must come first");
+    for primal in biomeos_types::primal_names::CORE_PRIMALS {
+        let primal_path = format!("primals/{primal}");
+        assert!(
+            order.iter().any(|o| *o == primal_path),
+            "missing expected primal path: {primal_path}"
+        );
+    }
 }
 
 #[test]
@@ -392,6 +399,20 @@ fn test_discover_plasmid_dir_env_override() {
     std::fs::create_dir_all(&plasmid).expect("plasmid dir");
     let got = super::discover_plasmid_dir_with_override(Some(&plasmid)).expect("discover");
     assert_eq!(got, plasmid);
+}
+
+#[tokio::test]
+async fn test_handle_spore_create_invalid_spore_type() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let err = handle_spore_create(
+        temp.path().to_path_buf(),
+        "l".into(),
+        "n1".into(),
+        "thermal".into(),
+    )
+    .await
+    .expect_err("invalid type");
+    assert!(err.to_string().to_lowercase().contains("invalid"));
 }
 
 #[test]

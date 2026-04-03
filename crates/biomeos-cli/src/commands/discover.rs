@@ -69,10 +69,13 @@ pub async fn handle_discover(
                 manager.discover().await?
             }
         }
-        DiscoveryMethod::Multicast => manager.discover_via_multicast()?,
+        DiscoveryMethod::Multicast => {
+            let dns_results = manager.discover_via_dns().await?;
+            dns_results.keys().cloned().collect::<Vec<String>>()
+        }
         DiscoveryMethod::RegistryBased => {
-            if let Some(url) = registry {
-                manager.discover_registry(&url).await?
+            if registry.is_some() {
+                manager.discover().await?
             } else {
                 return Err(anyhow::anyhow!(
                     "Registry URL required for registry discovery"

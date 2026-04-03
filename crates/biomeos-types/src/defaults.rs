@@ -49,7 +49,7 @@ use std::path::{Path, PathBuf};
 
 /// Default Unix socket directory
 ///
-/// DEEP DEBT NOTE: This is a last-resort fallback. Production should use:
+/// Last-resort fallback. Production should use:
 /// 1. `BIOMEOS_SOCKET_DIR` env var
 /// 2. `$XDG_RUNTIME_DIR/biomeos`
 /// 3. `/run/user/{uid}/biomeos`
@@ -168,7 +168,7 @@ pub struct RuntimeConfig {
 impl RuntimeConfig {
     /// Create `RuntimeConfig` from environment variables
     ///
-    /// DEEP DEBT EVOLUTION: Uses XDG-aware resolution instead of bare `/tmp`.
+    /// Uses XDG-aware resolution instead of bare `/tmp/`.
     /// Resolution order:
     /// 1. `BIOMEOS_SOCKET_DIR` env var (explicit override)
     /// 2. `$XDG_RUNTIME_DIR/biomeos` (XDG standard)
@@ -349,7 +349,7 @@ impl RuntimeConfig {
 
     /// Get bind address from environment or fallback to default
     ///
-    /// DEEP DEBT EVOLUTION: Defaults to `::1` (IPv6 loopback) for dual-stack support.
+    /// Defaults to `::1` (IPv6 loopback) for dual-stack support.
     /// Use `BIND_ADDRESS` env var to override. Prefers `BIOMEOS_BIND_ADDRESS` first.
     #[must_use]
     pub fn bind_address(&self) -> String {

@@ -27,7 +27,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use anyhow::Result;
-use biomeos_federation::beardog_client::BearDogClient;
+use biomeos_federation::security_client::SecurityProviderClient;
 use biomeos_types::identifiers::FamilyId;
 use sha2::{Digest, Sha256};
 
@@ -36,8 +36,8 @@ use sha2::{Digest, Sha256};
 // ============================================================================
 
 /// Create a test BearDog client
-async fn create_test_client() -> Result<BearDogClient> {
-    BearDogClient::with_endpoint("unix:///tmp/beardog-test.sock")
+async fn create_test_client() -> Result<SecurityProviderClient> {
+    SecurityProviderClient::with_endpoint("unix:///tmp/beardog-test.sock")
 }
 
 /// Generate a test family ID
@@ -513,7 +513,7 @@ async fn test_large_scale_family_verification() {
 #[tokio::test]
 async fn test_beardog_unavailable_error() {
     // Try to connect to nonexistent BearDog instance
-    let result = BearDogClient::with_endpoint("unix:///tmp/nonexistent_beardog.sock");
+    let result = SecurityProviderClient::with_endpoint("unix:///tmp/nonexistent_beardog.sock");
 
     // Should create client successfully (connection happens on call)
     assert!(result.is_ok(), "Client creation should succeed");
@@ -608,7 +608,7 @@ async fn test_invalid_endpoint_format() {
     ];
 
     for endpoint in invalid_endpoints {
-        let result = BearDogClient::with_endpoint(endpoint);
+        let result = SecurityProviderClient::with_endpoint(endpoint);
 
         // Client creation may succeed (validation happens at connection time)
         // Or it may fail early - both are acceptable behaviors

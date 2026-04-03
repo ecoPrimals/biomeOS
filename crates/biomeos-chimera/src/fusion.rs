@@ -24,11 +24,11 @@ pub struct Fusion {
 /// A binding between components
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FusionBinding {
-    /// Provider component.module (e.g., "beardog.btsp")
+    /// Provider component.module (e.g., "security.btsp")
     #[serde(default)]
     pub provider: Option<String>,
 
-    /// Consumer component.modules (e.g., `["songbird.mesh", "songbird.birdsong"]`)
+    /// Consumer component.modules (e.g., `["network.mesh", "network.birdsong"]`)
     #[serde(default)]
     pub consumers: Vec<String>,
 
@@ -234,8 +234,8 @@ mod tests {
             .with_binding(
                 "encryption_layer",
                 FusionBinding::new()
-                    .with_provider("beardog.btsp")
-                    .with_consumers(vec!["songbird.mesh".into()]),
+                    .with_provider("security.btsp")
+                    .with_consumers(vec!["network.mesh".into()]),
             )
             .with_endpoint(
                 FusionEndpoint::new("connect")
@@ -244,17 +244,17 @@ mod tests {
                     .with_returns("SecureChannel"),
             );
 
-        assert_eq!(fusion.providers(), vec!["beardog.btsp"]);
+        assert_eq!(fusion.providers(), vec!["security.btsp"]);
         assert_eq!(fusion.api.endpoints.len(), 1);
     }
 
     #[test]
     fn test_validate_references() {
         let fusion =
-            Fusion::new().with_binding("test", FusionBinding::new().with_provider("beardog.btsp"));
+            Fusion::new().with_binding("test", FusionBinding::new().with_provider("security.btsp"));
 
-        assert!(fusion.validate_references(&["beardog", "songbird"]).is_ok());
-        assert!(fusion.validate_references(&["songbird"]).is_err());
+        assert!(fusion.validate_references(&["security", "network"]).is_ok());
+        assert!(fusion.validate_references(&["network"]).is_err());
     }
 
     #[test]
@@ -271,11 +271,11 @@ mod tests {
         let fusion = Fusion::new().with_binding(
             "test",
             FusionBinding::new()
-                .with_provider("beardog.btsp")
+                .with_provider("security.btsp")
                 .with_consumers(vec!["unknown.mesh".into()]),
         );
-        assert!(fusion.validate_references(&["beardog"]).is_err());
-        assert!(fusion.validate_references(&["beardog", "unknown"]).is_ok());
+        assert!(fusion.validate_references(&["security"]).is_err());
+        assert!(fusion.validate_references(&["security", "unknown"]).is_ok());
     }
 
     #[test]
@@ -283,10 +283,10 @@ mod tests {
         let fusion = Fusion::new().with_binding(
             "test",
             FusionBinding::new()
-                .with_provider("beardog.btsp")
-                .with_consumers(vec!["songbird[].mesh".into()]),
+                .with_provider("security.btsp")
+                .with_consumers(vec!["network[].mesh".into()]),
         );
-        assert!(fusion.validate_references(&["beardog", "songbird"]).is_ok());
+        assert!(fusion.validate_references(&["security", "network"]).is_ok());
     }
 
     #[test]
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn test_fusion_binding_with_config() {
         let binding = FusionBinding::new()
-            .with_provider("beardog.btsp")
+            .with_provider("security.btsp")
             .with_config("timeout", serde_json::json!(30));
         assert_eq!(binding.config.get("timeout"), Some(&serde_json::json!(30)));
     }
@@ -341,6 +341,6 @@ mod tests {
             "empty",
             FusionBinding::new(), // no provider, no consumers
         );
-        assert!(fusion.validate_references(&["beardog"]).is_ok());
+        assert!(fusion.validate_references(&["security"]).is_ok());
     }
 }

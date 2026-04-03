@@ -2,6 +2,60 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.87 (2026-04-03) — Deep Debt Evolution: Deprecated APIs Removed + Refactors + Tracing
+
+### Deprecated discovery API removal
+- Removed deprecated methods from `UniversalBiomeOSManager` (`discover_registry`, `discover_network_scan`, `discover_from_registry`, `discover_via_multicast`, `discover_orchestration_services`, `discover_multicast`); all callers migrated to `discover()`, `discover_via_dns()`, and `discover_by_capability()`
+- `PrimalDiscoveryService` stubs removed; CLI discovery modes updated; zero `#[deprecated]` markers in the codebase
+
+### Tests and large-file refactors
+- 30+ new tests across protocol handlers, topology, manifest/storage, networking services, and atomic client
+- `dns_sd.rs` refactored with tests extracted to `dns_sd_tests.rs`
+- `tower_orchestration.rs` refactored with tests extracted to `tower_orchestration_tests.rs`
+
+### Observability and documentation
+- CLI monitor handlers: `eprintln!` → `tracing` (`warn!` / structured logging)
+- Broken intra-doc links fixed (e.g. `primal_client.rs` cross-references)
+
+### Verified
+- Coverage: 90.08% line / 90.85% function / 89.89% region (llvm-cov workspace)
+- Quality gates: zero TODO/FIXME, zero `unsafe` in production, zero deprecated APIs, capability-based discovery compliant
+- Test suite wall time ~93s (down from ~141s in v2.85 wave)
+
+---
+
+## v2.86 (2026-04-03) — Capability-Based Discovery Compliance
+
+- Full migration per `CAPABILITY_BASED_DISCOVERY_STANDARD.md` v1.2.0 — method namespaces, identity-based discovery helpers, and primal-named clients/fields evolved to capability-domain discovery (`discover_provider_socket`, `SecurityProviderClient`, `security_client.rs`, `security_jwt_client.rs`, etc.)
+- Post-migration audit: no primal-named discovery functions or socket fields in routing code; taxonomy and env configuration remain the supported surfaces
+
+---
+
+## v2.85 (2026-04-02) — Build/Test Performance
+
+- Test suite wall time **141s → ~93s** (~34% faster)
+- All test sleeps eliminated (`pending()`, `tokio::time::advance`, readiness signals, `yield_now()`)
+- Dependencies trimmed (`thiserror` 2.x alignment, `rand` 0.9, removal of unused crates); production retry/backoff made configurable where needed
+- Additional `#[ignore]` tests unlocked for concurrent execution; suite remains fully concurrent (zero `serial_test`)
+
+---
+
+## v2.84 (2026-04-02) — Deep Debt Evolution: Coverage + Large-File Refactors
+
+- **500+ new tests** pushing the workspace past **90%+ coverage** targets on line/function/region metrics
+- **7 large files** smart-refactored (deployment_mode, networking split, model cache, sovereignty_guardian, live_discovery, neural agents, continuous graph) with tests colocated in `*_tests.rs` modules
+- Hardcoding evolved: loopback discovery behind `BIOMEOS_ALLOW_LOOPBACK_DISCOVERY`, URL patterns use `{HOST}:{PORT}` placeholders; production mocks audit clean
+
+---
+
+## v2.83 (2026-04-02) — primalSpring Audit Response
+
+- `cargo clippy -D warnings` clean across workspace (deprecated call sites in tests addressed, examples migrated to `discover()`)
+- Narrative "DEEP DEBT" audit comments cleaned (primalSpring alignment)
+- **`redb` policy** documented: retained for graph-local metrics with explicit rationale; `deny.toml` advisories documented where upstream blocks removal
+
+---
+
 ## v2.82 (2026-04-01) — Deep Debt Evolution: Capability-Based Discovery + Smart Refactoring
 
 ### Coverage Push (Wave 1)

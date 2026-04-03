@@ -128,13 +128,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
     async fn test_check_graphs_dir_no_directory() {
         let temp = tempfile::tempdir().unwrap();
-        let old_cwd = std::env::current_dir().unwrap();
-        std::env::set_current_dir(temp.path()).unwrap();
-        let check = check_graphs_dir().await.unwrap();
-        std::env::set_current_dir(&old_cwd).unwrap();
+        let check = check_graphs_dir_at(temp.path()).await.unwrap();
         assert_eq!(check.status, HealthStatus::Warning);
         assert!(
             check

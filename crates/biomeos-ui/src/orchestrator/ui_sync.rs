@@ -3,7 +3,7 @@
 
 //! UI Sync Module
 //!
-//! Handles UI updates and event synchronization via petalTongue.
+//! Handles UI updates and event synchronization via the UI / visualization provider.
 //!
 //! ## Network Effect Phase 6: UI Updates
 //!
@@ -11,10 +11,10 @@
 //!
 //! ## Graceful Degradation
 //!
-//! If petalTongue is not available, UI is not updated
+//! If no UI provider is available, visualization is not updated
 //! but operations continue successfully.
 
-use crate::primal_client::PetalTongueClient;
+use crate::primal_client::UiClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
@@ -22,21 +22,20 @@ use tracing::{debug, info, warn};
 pub struct UISync;
 
 impl UISync {
-    /// Update UI via petalTongue after assignment
+    /// Update UI after assignment via the visualization provider
     ///
-    /// Falls back gracefully if petalTongue is unavailable.
+    /// Falls back gracefully if the UI client is unavailable.
     pub async fn update_ui_after_assignment(
-        petaltongue: Option<&PetalTongueClient>,
+        ui: Option<&UiClient>,
         device_id: &str,
         primal_id: &str,
     ) -> Result<()> {
         debug!("Updating UI: device={}, primal={}", device_id, primal_id);
 
-        if let Some(petaltongue) = petaltongue {
-            info!("🌸 petalTongue available - updating UI");
+        if let Some(ui) = ui {
+            info!("UI provider available — updating visualization");
 
-            // Call petalTongue to update the topology display
-            match petaltongue
+            match ui
                 .call(
                     "ui.update_topology",
                     serde_json::json!({
@@ -48,27 +47,27 @@ impl UISync {
                 .await
             {
                 Ok(_) => {
-                    info!("✅ UI updated via petalTongue");
+                    info!("✅ UI updated via visualization provider");
                     Ok(())
                 }
                 Err(e) => {
-                    warn!("⚠️ petalTongue update failed: {} - continuing", e);
+                    warn!("⚠️ UI update failed: {} — continuing", e);
                     Ok(())
                 }
             }
         } else {
-            warn!("⚠️ No visualization primal available, UI not updated");
-            Err(anyhow::anyhow!("No visualization primal available"))
+            warn!("⚠️ No visualization provider available, UI not updated");
+            Err(anyhow::anyhow!("No visualization provider available"))
         }
     }
 
     /// Update UI after device unassignment
     pub async fn update_ui_after_unassignment(
-        petaltongue: Option<&PetalTongueClient>,
+        ui: Option<&UiClient>,
         device_id: &str,
     ) -> Result<()> {
-        if let Some(petaltongue) = petaltongue {
-            match petaltongue
+        if let Some(ui) = ui {
+            match ui
                 .call(
                     "ui.update_topology",
                     serde_json::json!({
@@ -94,13 +93,13 @@ impl UISync {
 
     /// Initialize UI state
     pub async fn initialize_ui(
-        petaltongue: Option<&PetalTongueClient>,
+        ui: Option<&UiClient>,
         initial_state: serde_json::Value,
     ) -> Result<()> {
-        if let Some(petaltongue) = petaltongue {
-            match petaltongue.call("ui.initialize", initial_state).await {
+        if let Some(ui) = ui {
+            match ui.call("ui.initialize", initial_state).await {
                 Ok(_) => {
-                    info!("✅ Initial UI state pushed to petalTongue");
+                    info!("✅ Initial UI state pushed to visualization provider");
                     Ok(())
                 }
                 Err(e) => {
@@ -109,18 +108,15 @@ impl UISync {
                 }
             }
         } else {
-            warn!("⚠️ No petalTongue available - running headless");
+            warn!("⚠️ No UI provider available — running headless");
             Ok(())
         }
     }
 
     /// Push UI refresh
-    pub async fn push_refresh(
-        petaltongue: Option<&PetalTongueClient>,
-        refresh_results: Vec<&str>,
-    ) -> Result<()> {
-        if let Some(petaltongue) = petaltongue {
-            let _ = petaltongue
+    pub async fn push_refresh(ui: Option<&UiClient>, refresh_results: Vec<&str>) -> Result<()> {
+        if let Some(ui) = ui {
+            let _ = ui
                 .call(
                     "ui.refresh",
                     serde_json::json!({ "refreshed": refresh_results }),
@@ -131,9 +127,9 @@ impl UISync {
     }
 
     /// Send UI heartbeat
-    pub async fn send_heartbeat(petaltongue: Option<&PetalTongueClient>) -> Result<()> {
-        if let Some(petaltongue) = petaltongue {
-            let _ = petaltongue
+    pub async fn send_heartbeat(ui: Option<&UiClient>) -> Result<()> {
+        if let Some(ui) = ui {
+            let _ = ui
                 .call("ui.heartbeat", serde_json::json!({ "status": "running" }))
                 .await;
         }
@@ -144,34 +140,32 @@ impl UISync {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primal_client::{PetalTongueClient, PrimalClient};
+    use crate::primal_client::{PrimalClient, UiClient};
 
     #[tokio::test]
-    async fn test_update_ui_no_petaltongue() {
+    async fn test_update_ui_no_ui_provider() {
         let result = UISync::update_ui_after_assignment(None, "test-device", "test-primal").await;
 
         // Should return error but not panic
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().contains("No visualization primal"));
+        assert!(err.to_string().contains("No visualization provider"));
     }
 
     #[tokio::test]
     async fn test_update_ui_after_assignment_with_client_call_fails() {
-        let client: PetalTongueClient =
-            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
-        let petaltongue = Some(client);
+        let client: UiClient = PrimalClient::with_socket("ui", "/nonexistent/ui.sock");
+        let ui = Some(client);
         let result =
-            UISync::update_ui_after_assignment(petaltongue.as_ref(), "device-123", "primal-456")
-                .await;
+            UISync::update_ui_after_assignment(ui.as_ref(), "device-123", "primal-456").await;
         assert!(
             result.is_ok(),
-            "graceful degradation when petaltongue call fails"
+            "graceful degradation when UI provider call fails"
         );
     }
 
     #[tokio::test]
-    async fn test_initialize_ui_no_petaltongue() {
+    async fn test_initialize_ui_no_ui_provider() {
         let state = serde_json::json!({"test": "data"});
         let result = UISync::initialize_ui(None, state).await;
 
@@ -181,11 +175,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_initialize_ui_with_client_call_fails() {
-        let client: PetalTongueClient =
-            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
-        let petaltongue = Some(client);
+        let client: UiClient = PrimalClient::with_socket("ui", "/nonexistent/ui.sock");
+        let ui = Some(client);
         let state = serde_json::json!({"family_id": "test", "primals": {}});
-        let result = UISync::initialize_ui(petaltongue.as_ref(), state).await;
+        let result = UISync::initialize_ui(ui.as_ref(), state).await;
         assert!(
             result.is_err(),
             "initialize_ui propagates error when call fails"
@@ -202,10 +195,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_ui_after_unassignment_with_client_call_fails() {
-        let client: PetalTongueClient =
-            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
-        let petaltongue = Some(client);
-        let result = UISync::update_ui_after_unassignment(petaltongue.as_ref(), "device-123").await;
+        let client: UiClient = PrimalClient::with_socket("ui", "/nonexistent/ui.sock");
+        let ui = Some(client);
+        let result = UISync::update_ui_after_unassignment(ui.as_ref(), "device-123").await;
         assert!(result.is_ok(), "graceful degradation when call fails");
     }
 
@@ -220,10 +212,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_push_refresh_with_client() {
-        let client: PetalTongueClient =
-            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
-        let petaltongue = Some(client);
-        let result = UISync::push_refresh(petaltongue.as_ref(), vec!["devices", "primals"]).await;
+        let client: UiClient = PrimalClient::with_socket("ui", "/nonexistent/ui.sock");
+        let ui = Some(client);
+        let result = UISync::push_refresh(ui.as_ref(), vec!["devices", "primals"]).await;
         assert!(result.is_ok(), "push_refresh always returns Ok");
     }
 
@@ -245,10 +236,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_heartbeat_with_client() {
-        let client: PetalTongueClient =
-            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
-        let petaltongue = Some(client);
-        let result = UISync::send_heartbeat(petaltongue.as_ref()).await;
+        let client: UiClient = PrimalClient::with_socket("ui", "/nonexistent/ui.sock");
+        let ui = Some(client);
+        let result = UISync::send_heartbeat(ui.as_ref()).await;
         assert!(result.is_ok(), "send_heartbeat always returns Ok");
     }
 
@@ -264,7 +254,7 @@ mod tests {
             result
                 .unwrap_err()
                 .to_string()
-                .contains("visualization primal")
+                .contains("visualization provider")
         );
     }
 }

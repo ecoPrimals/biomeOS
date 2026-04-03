@@ -52,10 +52,12 @@
 mod client;
 mod connection;
 mod error;
+mod retry_config;
 mod types;
 
 pub use client::NeuralApiClient;
 pub use error::NeuralApiError;
+pub use retry_config::NeuralApiRetryConfig;
 pub use types::{CapabilityInfo, HttpResponse, PrimalInfo, RoutingMetric, RoutingMetrics};
 
 #[cfg(test)]

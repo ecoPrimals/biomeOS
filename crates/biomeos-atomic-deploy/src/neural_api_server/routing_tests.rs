@@ -3,16 +3,21 @@
 
 //! Routing tests for Neural API Server (extracted from routing.rs).
 
-#![expect(clippy::unwrap_used, reason = "test assertions use unwrap/expect for clarity")]
-#![expect(clippy::expect_used, reason = "test assertions use unwrap/expect for clarity")]
+#![expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+#![expect(
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 
 use crate::neural_api_server::NeuralApiServer;
 
 fn create_test_server() -> (NeuralApiServer, tempfile::TempDir) {
     let temp = tempfile::tempdir().expect("temp dir");
     std::fs::create_dir_all(temp.path()).expect("create graphs dir");
-    let server =
-        NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"));
+    let server = NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"));
     (server, temp)
 }
 
@@ -183,8 +188,7 @@ async fn test_handle_request_capability_register_route() {
 #[tokio::test]
 async fn test_handle_request_capability_list_translations_route() {
     let (server, _temp) = create_test_server();
-    let req =
-        r#"{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":31}"#;
+    let req = r#"{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":31}"#;
     let result = server.handle_request_json(req).await;
     assert!(result.get("result").is_some());
 }
@@ -253,8 +257,7 @@ async fn test_handle_request_neural_api_get_topology_alias() {
 #[tokio::test]
 async fn test_handle_request_lifecycle_get_route() {
     let (server, _temp) = create_test_server();
-    let req =
-        r#"{"jsonrpc":"2.0","method":"lifecycle.get","params":{"primal_id":"test"},"id":53}"#;
+    let req = r#"{"jsonrpc":"2.0","method":"lifecycle.get","params":{"primal_id":"test"},"id":53}"#;
     let result = server.handle_request_json(req).await;
     assert!(result.get("result").is_some() || result.get("error").is_some());
 }
@@ -270,7 +273,8 @@ async fn test_handle_request_lifecycle_shutdown_all_route() {
 #[tokio::test]
 async fn test_handle_request_protocol_escalate_route() {
     let (server, _temp) = create_test_server();
-    let req = r#"{"jsonrpc":"2.0","method":"protocol.escalate","params":{"from":"a","to":"b"},"id":55}"#;
+    let req =
+        r#"{"jsonrpc":"2.0","method":"protocol.escalate","params":{"from":"a","to":"b"},"id":55}"#;
     let result = server.handle_request_json(req).await;
     assert!(result.get("result").is_some() || result.get("error").is_some());
 }
@@ -278,7 +282,8 @@ async fn test_handle_request_protocol_escalate_route() {
 #[tokio::test]
 async fn test_handle_request_protocol_fallback_route() {
     let (server, _temp) = create_test_server();
-    let req = r#"{"jsonrpc":"2.0","method":"protocol.fallback","params":{"from":"a","to":"b"},"id":56}"#;
+    let req =
+        r#"{"jsonrpc":"2.0","method":"protocol.fallback","params":{"from":"a","to":"b"},"id":56}"#;
     let result = server.handle_request_json(req).await;
     assert!(result.get("result").is_some() || result.get("error").is_some());
 }
@@ -398,8 +403,7 @@ async fn test_handle_request_graph_suggest_optimizations_route() {
 #[tokio::test]
 async fn test_handle_request_niche_deploy_route() {
     let (server, _temp) = create_test_server();
-    let req =
-        r#"{"jsonrpc":"2.0","method":"niche.deploy","params":{"template":"test"},"id":71}"#;
+    let req = r#"{"jsonrpc":"2.0","method":"niche.deploy","params":{"template":"test"},"id":71}"#;
     let result = server.handle_request_json(req).await;
     assert!(result.get("result").is_some() || result.get("error").is_some());
 }

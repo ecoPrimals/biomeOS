@@ -89,8 +89,8 @@ impl PrimalDiscovery {
         self.discover_unix_sockets().await?;
         self.discover_from_env()?;
 
-        if let Err(e) = self.discover_via_songbird().await {
-            debug!("Songbird discovery unavailable: {} (non-fatal)", e);
+        if let Err(e) = self.discover_via_discovery_provider().await {
+            debug!("Discovery provider path unavailable: {} (non-fatal)", e);
         }
 
         debug!("Discovered {} primals", self.discovered_primals.len());
@@ -355,27 +355,29 @@ impl PrimalDiscovery {
             .collect()
     }
 
-    pub(crate) async fn discover_via_songbird(&mut self) -> FederationResult<()> {
-        let songbird_socket = Self::discover_songbird_socket()?;
-        self.discover_via_songbird_socket_path(&songbird_socket)
+    pub(crate) async fn discover_via_discovery_provider(&mut self) -> FederationResult<()> {
+        let discovery_socket = Self::discover_discovery_provider()?;
+        self.discover_via_discovery_socket_path(&discovery_socket)
             .await
     }
 
-    /// Like [`Self::discover_via_songbird`], using an explicit Songbird Unix socket path (tests).
-    pub(crate) async fn discover_via_songbird_socket_path(
+    /// Like [`Self::discover_via_discovery_provider`], using an explicit discovery provider Unix socket path (tests).
+    pub(crate) async fn discover_via_discovery_socket_path(
         &mut self,
-        songbird_socket: &str,
+        discovery_socket: &str,
     ) -> FederationResult<()> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
 
         debug!(
-            "Querying Songbird for UDP-discovered peers: {}",
-            songbird_socket
+            "Querying discovery provider for UDP-discovered peers: {}",
+            discovery_socket
         );
 
-        let stream = UnixStream::connect(songbird_socket).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Songbird connection failed: {e}"))
+        let stream = UnixStream::connect(discovery_socket).await.map_err(|e| {
+            crate::FederationError::DiscoveryError(format!(
+                "Discovery provider connection failed: {e}"
+            ))
         })?;
 
         let (reader, mut writer) = stream.into_split();
@@ -419,7 +421,7 @@ impl PrimalDiscovery {
                 .and_then(|m| m.as_str())
                 .unwrap_or_default();
             return Err(crate::FederationError::DiscoveryError(format!(
-                "Songbird discovery failed: {msg}"
+                "Discovery provider list_peers failed: {msg}"
             )));
         }
 
@@ -427,9 +429,12 @@ impl PrimalDiscovery {
             && let Some(peers) = result.get("peers").and_then(|p| p.as_array())
         {
             for peer in peers {
-                self.register_songbird_peer(peer);
+                self.register_discovery_peer(peer);
             }
-            info!("✅ Songbird UDP discovery found {} peers", peers.len());
+            info!(
+                "✅ Discovery provider UDP discovery found {} peers",
+                peers.len()
+            );
         }
 
         Ok(())
@@ -438,12 +443,12 @@ impl PrimalDiscovery {
     /// Find discovery provider socket via the 5-tier capability protocol.
     ///
     /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
-    pub(crate) fn discover_songbird_socket() -> FederationResult<String> {
-        Self::discover_songbird_socket_with_env(&biomeos_types::capability_discovery::std_env)
+    pub(crate) fn discover_discovery_provider() -> FederationResult<String> {
+        Self::discover_discovery_provider_with_env(&biomeos_types::capability_discovery::std_env)
     }
 
-    /// Like [`Self::discover_songbird_socket`], with an injectable env lookup (tests).
-    pub(crate) fn discover_songbird_socket_with_env(
+    /// Like [`Self::discover_discovery_provider`], with an injectable env lookup (tests).
+    pub(crate) fn discover_discovery_provider_with_env(
         env: &dyn Fn(&str) -> Option<String>,
     ) -> FederationResult<String> {
         use biomeos_types::capability_discovery;
@@ -457,8 +462,8 @@ impl PrimalDiscovery {
         })
     }
 
-    /// Register a peer discovered via Songbird UDP multicast. pub(crate) for tests.
-    pub(crate) fn register_songbird_peer(&mut self, peer: &serde_json::Value) {
+    /// Register a peer discovered via the discovery provider's UDP multicast. pub(crate) for tests.
+    pub(crate) fn register_discovery_peer(&mut self, peer: &serde_json::Value) {
         let node_id = match peer.get("node_id").and_then(|v| v.as_str()) {
             Some(id) => id.to_string(),
             None => return,
@@ -502,7 +507,7 @@ impl PrimalDiscovery {
         let mut metadata = HashMap::new();
         metadata.insert("family_id".to_string(), family_id);
         metadata.insert("node_id".to_string(), node_id.clone());
-        metadata.insert("discovered_via".to_string(), "songbird_udp".to_string());
+        metadata.insert("discovered_via".to_string(), "discovery_udp".to_string());
         metadata.insert("discovered_at".to_string(), chrono::Utc::now().to_rfc3339());
 
         let discovered = DiscoveredPrimal {
@@ -513,7 +518,7 @@ impl PrimalDiscovery {
             metadata,
         };
 
-        debug!("Registered Songbird peer: {} (via UDP multicast)", node_id);
+        debug!("Registered discovery peer: {} (via UDP multicast)", node_id);
         self.discovered_primals.insert(primal_name, discovered);
     }
 }

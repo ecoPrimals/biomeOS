@@ -52,8 +52,8 @@ async fn cleanup_test_seed(path: &str) {
     tokio::fs::remove_file(path).await.ok();
 }
 
-/// Get beardog socket
-fn beardog_socket() -> String {
+/// Resolve security-provider socket path (env override or default).
+fn security_socket_path() -> String {
     std::env::var("BEARDOG_SOCKET")
         .unwrap_or_else(|_| "/run/user/1000/biomeos/beardog.sock".to_string())
 }
@@ -67,16 +67,16 @@ fn bench_pure_noise_generation(c: &mut Criterion) {
 
     // Setup
     let seed_path = rt.block_on(setup_test_seed());
-    let beardog = beardog_socket();
+    let security_socket = security_socket_path();
 
-    // Check if beardog is available
-    if !std::path::Path::new(&beardog).exists() {
-        eprintln!("⚠️  Skipping benchmarks: BearDog not running at {beardog}");
+    // Check if security provider is available
+    if !std::path::Path::new(&security_socket).exists() {
+        eprintln!("⚠️  Skipping benchmarks: BearDog not running at {security_socket}");
         return;
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_security_socket(&security_socket, &seed_path, "bench_node")
             .await
             .unwrap()
     });
@@ -107,14 +107,14 @@ fn bench_old_format_generation(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     let seed_path = rt.block_on(setup_test_seed());
-    let beardog = beardog_socket();
+    let security_socket = security_socket_path();
 
-    if !std::path::Path::new(&beardog).exists() {
+    if !std::path::Path::new(&security_socket).exists() {
         return;
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_security_socket(&security_socket, &seed_path, "bench_node")
             .await
             .unwrap()
     });
@@ -144,14 +144,14 @@ fn bench_pure_noise_decrypt_success(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     let seed_path = rt.block_on(setup_test_seed());
-    let beardog = beardog_socket();
+    let security_socket = security_socket_path();
 
-    if !std::path::Path::new(&beardog).exists() {
+    if !std::path::Path::new(&security_socket).exists() {
         return;
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_security_socket(&security_socket, &seed_path, "bench_node")
             .await
             .unwrap()
     });
@@ -184,14 +184,14 @@ fn bench_pure_noise_silent_failure(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     let seed_path = rt.block_on(setup_test_seed());
-    let beardog = beardog_socket();
+    let security_socket = security_socket_path();
 
-    if !std::path::Path::new(&beardog).exists() {
+    if !std::path::Path::new(&security_socket).exists() {
         return;
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_security_socket(&security_socket, &seed_path, "bench_node")
             .await
             .unwrap()
     });
@@ -199,7 +199,7 @@ fn bench_pure_noise_silent_failure(c: &mut Criterion) {
     // Generate random noise (simulates different family)
     use rand::RngCore;
     let mut random_noise = vec![0u8; 128];
-    rand::thread_rng().fill_bytes(&mut random_noise);
+    rand::rng().fill_bytes(&mut random_noise);
 
     c.bench_function("pure_noise_silent_failure", |b| {
         b.to_async(&rt).iter(|| async {
@@ -222,14 +222,14 @@ fn bench_size_comparison(_c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     let seed_path = rt.block_on(setup_test_seed());
-    let beardog = beardog_socket();
+    let security_socket = security_socket_path();
 
-    if !std::path::Path::new(&beardog).exists() {
+    if !std::path::Path::new(&security_socket).exists() {
         return;
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_security_socket(&security_socket, &seed_path, "bench_node")
             .await
             .unwrap()
     });

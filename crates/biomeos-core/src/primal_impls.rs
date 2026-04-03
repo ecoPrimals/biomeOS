@@ -185,7 +185,7 @@ impl ManagedPrimal for GenericManagedPrimal {
             cmd.env("PRIMAL_PROVIDES", provides_str);
         }
 
-        // ✅ DEEP DEBT FIX (Jan 5, 2026): Redirect logs to per-primal files
+        // Logs redirected to per-primal files
         // instead of /dev/null to enable observability and debugging!
         // Use XDG-compliant paths via SystemPaths
         let node_id = std::env::var("SONGBIRD_NODE_ID")

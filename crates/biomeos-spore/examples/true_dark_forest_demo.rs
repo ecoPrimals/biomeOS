@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // Configuration
-    let beardog_socket = "/run/user/1000/biomeos/beardog.sock";
+    let security_socket = "/run/user/1000/biomeos/beardog.sock";
     let family_seed_path = "/tmp/dark_forest_demo.seed";
     let node_id = "demo_node_1";
 
@@ -59,19 +59,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Check beardog availability
     println!("🔍 Checking beardog availability...");
-    if !std::path::Path::new(beardog_socket).exists() {
-        eprintln!("❌ BearDog not running at {beardog_socket}");
+    if !std::path::Path::new(security_socket).exists() {
+        eprintln!("❌ BearDog not running at {security_socket}");
         eprintln!("   Start beardog first:");
-        eprintln!("   FAMILY_ID=demo ./beardog server --socket {beardog_socket}");
+        eprintln!("   FAMILY_ID=demo ./beardog server --socket {security_socket}");
         return Ok(());
     }
-    println!("✅ BearDog socket found: {beardog_socket}");
+    println!("✅ BearDog socket found: {security_socket}");
     println!();
 
     // Create Dark Forest beacon manager
     println!("🌲 Creating Dark Forest beacon manager...");
     let beacon_mgr =
-        DarkForestBeacon::from_beardog_socket(beardog_socket, family_seed_path, node_id).await?;
+        DarkForestBeacon::from_security_socket(security_socket, family_seed_path, node_id).await?;
     println!("✅ Manager created");
     println!();
 
@@ -181,7 +181,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate random noise (simulates different family or actual noise)
     use rand::RngCore;
     let mut random_noise = vec![0u8; pure_noise_beacon.len()];
-    rand::thread_rng().fill_bytes(&mut random_noise);
+    rand::rng().fill_bytes(&mut random_noise);
 
     println!("🔓 Attempting to decrypt random noise (different family)...");
     let start = Instant::now();

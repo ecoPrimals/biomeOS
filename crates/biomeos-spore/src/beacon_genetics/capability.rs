@@ -135,8 +135,8 @@ impl CapabilityCaller for NeuralApiCapabilityCaller {
 /// - **Unix socket**: `/path/to/socket.sock`
 /// - **TCP**: `tcp:host:port` (e.g., `tcp:127.0.0.1:9900`)
 pub struct DirectBeardogCaller {
-    /// Endpoint to `BearDog` (socket path or tcp:host:port)
-    beardog_endpoint: String,
+    /// Endpoint to the security provider (socket path or tcp:host:port)
+    security_endpoint: String,
 }
 
 impl DirectBeardogCaller {
@@ -147,7 +147,7 @@ impl DirectBeardogCaller {
     #[must_use]
     pub fn new(endpoint: &str) -> Self {
         Self {
-            beardog_endpoint: endpoint.to_string(),
+            security_endpoint: endpoint.to_string(),
         }
     }
 
@@ -173,9 +173,9 @@ impl DirectBeardogCaller {
 
     /// Create `AtomicClient` based on endpoint format
     fn create_client(&self) -> AtomicClient {
-        if self.beardog_endpoint.starts_with("tcp:") {
+        if self.security_endpoint.starts_with("tcp:") {
             // Parse tcp:host:port format
-            let addr = &self.beardog_endpoint[4..]; // Skip "tcp:"
+            let addr = &self.security_endpoint[4..]; // Skip "tcp:"
             let parts: Vec<&str> = addr.rsplitn(2, ':').collect();
             if parts.len() == 2 {
                 let port: u16 = parts[0].parse().unwrap_or(ports::NEURAL_API);
@@ -186,14 +186,14 @@ impl DirectBeardogCaller {
                 // Fallback to default if parse fails
                 debug!(
                     "Invalid TCP endpoint format, falling back to Unix: {}",
-                    self.beardog_endpoint
+                    self.security_endpoint
                 );
-                AtomicClient::unix(&self.beardog_endpoint)
+                AtomicClient::unix(&self.security_endpoint)
             }
         } else {
             // Unix socket path
-            debug!("Creating Unix socket client: {}", self.beardog_endpoint);
-            AtomicClient::unix(&self.beardog_endpoint)
+            debug!("Creating Unix socket client: {}", self.security_endpoint);
+            AtomicClient::unix(&self.security_endpoint)
         }
     }
 }
@@ -258,13 +258,13 @@ mod tests {
     #[test]
     fn test_direct_beardog_new_unix() {
         let caller = DirectBeardogCaller::new("/tmp/beardog.sock");
-        assert_eq!(caller.beardog_endpoint, "/tmp/beardog.sock");
+        assert_eq!(caller.security_endpoint, "/tmp/beardog.sock");
     }
 
     #[test]
     fn test_direct_beardog_new_tcp() {
         let caller = DirectBeardogCaller::new("tcp:127.0.0.1:9000");
-        assert_eq!(caller.beardog_endpoint, "tcp:127.0.0.1:9000");
+        assert_eq!(caller.security_endpoint, "tcp:127.0.0.1:9000");
     }
 
     #[test]

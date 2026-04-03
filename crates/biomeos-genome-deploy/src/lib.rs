@@ -161,7 +161,7 @@ impl GenomeDeployer {
 
     /// Get default installation directory for current platform
     ///
-    /// DEEP DEBT EVOLUTION: Uses $HOME env instead of `dirs` (C-based).
+    /// Uses `$HOME` env instead of `dirs` crate (ecoBin: no C deps).
     /// Root detection via $EUID/$USER instead of `nix::Uid`.
     pub(crate) fn default_install_dir(&self, primal_name: &str) -> PathBuf {
         let home_dir = || -> PathBuf {

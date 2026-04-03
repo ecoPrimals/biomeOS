@@ -11,6 +11,19 @@ use crate::atomic_client::AtomicClient;
 
 use super::types::{BondType, ComputeInfo, GateInfo, PrimalStatus};
 
+/// Parse `host:port` from a mesh peer address; uses `default_port` when no port is present or when
+/// the port segment fails to parse as `u16`.
+#[must_use]
+pub(crate) fn parse_mesh_peer_address(address: &str, default_port: u16) -> (String, u16) {
+    if let Some(idx) = address.rfind(':') {
+        let h = &address[..idx];
+        let p = address[idx + 1..].parse::<u16>().unwrap_or(default_port);
+        (h.to_string(), p)
+    } else {
+        (address.to_string(), default_port)
+    }
+}
+
 impl super::Plasmodium {
     /// Query a remote gate's NUCLEUS status via HTTP JSON-RPC gateway
     ///
@@ -23,14 +36,7 @@ impl super::Plasmodium {
             .and_then(|p| p.parse().ok())
             .unwrap_or(biomeos_types::constants::network::DEFAULT_HTTP_PORT);
 
-        // Parse host:port from mesh.peers address (port comes from beacon discovery)
-        let (host, port) = if let Some(idx) = address.rfind(':') {
-            let h = &address[..idx];
-            let p = address[idx + 1..].parse::<u16>().unwrap_or(default_port);
-            (h.to_string(), p)
-        } else {
-            (address.to_string(), default_port)
-        };
+        let (host, port) = parse_mesh_peer_address(address, default_port);
 
         // Use HTTP JSON-RPC gateway (covalent bond transport)
         let client = AtomicClient::http(&host, port);
@@ -93,5 +99,38 @@ impl super::Plasmodium {
         }
 
         primals
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_mesh_peer_address;
+
+    #[test]
+    fn parse_mesh_peer_host_and_port() {
+        let (h, p) = parse_mesh_peer_address("10.0.0.1:9443", 8080);
+        assert_eq!(h, "10.0.0.1");
+        assert_eq!(p, 9443);
+    }
+
+    #[test]
+    fn parse_mesh_peer_no_port_uses_default() {
+        let (h, p) = parse_mesh_peer_address("gateway.local", 8080);
+        assert_eq!(h, "gateway.local");
+        assert_eq!(p, 8080);
+    }
+
+    #[test]
+    fn parse_mesh_peer_invalid_port_uses_default() {
+        let (h, p) = parse_mesh_peer_address("host:999999", 3000);
+        assert_eq!(h, "host");
+        assert_eq!(p, 3000);
+    }
+
+    #[test]
+    fn parse_mesh_peer_last_colon_splits_port() {
+        let (h, p) = parse_mesh_peer_address("a:b:c:9000", 1);
+        assert_eq!(h, "a:b:c");
+        assert_eq!(p, 9000);
     }
 }

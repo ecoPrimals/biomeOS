@@ -171,7 +171,7 @@ async fn test_e2e_local_config_structure() {
     // 5. Verifying .deployed.seed permissions (0600)
     // 6. Checking entropy.json content
 
-    // DEEP DEBT: Local config structure test pending full implementation
+    // Local config structure test pending full implementation
     // Steps to complete:
     // 1. Create test spore definition
     // 2. Incubate the spore

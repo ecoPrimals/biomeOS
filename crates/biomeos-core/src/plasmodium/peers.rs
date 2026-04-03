@@ -12,7 +12,7 @@ use super::types::PeerInfo;
 
 impl super::Plasmodium {
     /// Discover peers via Songbird mesh + `PLASMODIUM_PEERS` env var
-    pub(super) async fn discover_peers(&self) -> Vec<PeerInfo> {
+    pub(crate) async fn discover_peers(&self) -> Vec<PeerInfo> {
         let mut peers = Vec::new();
 
         let discovery_provider = std::env::var("DISCOVERY_PROVIDER")

@@ -19,7 +19,7 @@
 //! The pipeline clamps intensity and force values to the device's reported
 //! maximums before dispatch to prevent hardware damage or user injury.
 
-use crate::primal_client::PetalTongueClient;
+use crate::primal_client::UiClient;
 use anyhow::Result;
 use biomeos_types::xr::{HapticCommand, HapticDeviceCapabilities, HapticDeviceType};
 use tracing::{debug, info, warn};
@@ -46,15 +46,10 @@ impl HapticPipeline {
     }
 
     /// Discover all available haptic devices from petalTongue.
-    pub async fn discover(
-        &mut self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<&[HapticDeviceCapabilities]> {
+    pub async fn discover(&mut self, ui: &UiClient) -> Result<&[HapticDeviceCapabilities]> {
         info!("Discovering haptic devices");
 
-        let result = petaltongue
-            .call("xr.discover_haptic", serde_json::json!({}))
-            .await?;
+        let result = ui.call("xr.discover_haptic", serde_json::json!({})).await?;
 
         let devices: Vec<HapticDeviceCapabilities> = serde_json::from_value(result)?;
         info!("Found {} haptic devices", devices.len());
@@ -74,11 +69,7 @@ impl HapticPipeline {
     ///
     /// If the target device type is not found in discovered devices,
     /// the command is silently dropped (graceful degradation).
-    pub async fn send_command(
-        &self,
-        petaltongue: &PetalTongueClient,
-        mut command: HapticCommand,
-    ) -> Result<()> {
+    pub async fn send_command(&self, ui: &UiClient, mut command: HapticCommand) -> Result<()> {
         if !self.active {
             warn!("Haptic pipeline not active, dropping command");
             return Ok(());
@@ -101,7 +92,7 @@ impl HapticPipeline {
         }
 
         let params = serde_json::to_value(&command)?;
-        petaltongue.call("xr.send_haptic", params).await?;
+        ui.call("xr.send_haptic", params).await?;
         debug!(
             "Haptic sent: {:?} intensity={:.2} duration={}ms",
             command.device, command.intensity, command.duration_ms
@@ -110,14 +101,12 @@ impl HapticPipeline {
     }
 
     /// Emergency stop all haptic output.
-    pub async fn stop_all(&self, petaltongue: &PetalTongueClient) -> Result<()> {
+    pub async fn stop_all(&self, ui: &UiClient) -> Result<()> {
         if !self.active {
             return Ok(());
         }
 
-        petaltongue
-            .call("xr.stop_haptic", serde_json::json!({}))
-            .await?;
+        ui.call("xr.stop_haptic", serde_json::json!({})).await?;
         info!("All haptic output stopped");
         Ok(())
     }
@@ -227,8 +216,7 @@ mod tests {
     #[tokio::test]
     async fn test_send_command_inactive() {
         let pipeline = HapticPipeline::new();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let command = HapticCommand {
             device: HapticDeviceType::Rumble,
             target: TrackedDeviceType::RightHand,
@@ -244,8 +232,7 @@ mod tests {
     #[tokio::test]
     async fn test_stop_all_inactive() {
         let pipeline = HapticPipeline::new();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = pipeline.stop_all(&client).await;
         assert!(result.is_ok());
     }
@@ -345,8 +332,7 @@ mod tests {
             frequency_hz: Some(600.0),
             force_vector: None,
         };
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = pipeline.send_command(&client, command).await;
         assert!(result.is_err());
     }
@@ -370,8 +356,7 @@ mod tests {
             frequency_hz: None,
             force_vector: Some([10.0, 5.0, -3.0]),
         };
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/nonexistent.sock");
         let result = pipeline.send_command(&client, command).await;
         assert!(result.is_err());
     }
@@ -380,15 +365,14 @@ mod tests {
     #[ignore = "requires petalTongue socket"]
     async fn test_discover() {
         let mut pipeline = HapticPipeline::new();
-        let client =
-            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");
         let _ = pipeline.discover(&client).await;
     }
 
     #[tokio::test]
     async fn test_discover_success_from_mock_socket() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let expected = mock_devices();
         let expected_clone = expected.clone();
@@ -417,7 +401,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let mut pipeline = HapticPipeline::new();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let discovered_len = pipeline.discover(&client).await.expect("discover").len();
         assert!(pipeline.is_active());
         assert_eq!(discovered_len, expected.len());
@@ -428,7 +412,7 @@ mod tests {
     #[tokio::test]
     async fn test_send_command_success_clamps_rumble_caps() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -471,7 +455,7 @@ mod tests {
         let mut pipeline = HapticPipeline::new();
         pipeline.devices = mock_devices();
         pipeline.active = true;
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let command = HapticCommand {
             device: HapticDeviceType::Rumble,
             target: TrackedDeviceType::RightHand,
@@ -487,7 +471,7 @@ mod tests {
     #[tokio::test]
     async fn test_send_command_clamps_force_feedback_vector() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -522,7 +506,7 @@ mod tests {
             update_hz: 1000,
         }];
         pipeline.active = true;
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let command = HapticCommand {
             device: HapticDeviceType::ForceFeedback,
             target: TrackedDeviceType::LeftHand,
@@ -538,7 +522,7 @@ mod tests {
     #[tokio::test]
     async fn test_stop_all_active_success() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -561,7 +545,7 @@ mod tests {
         ready_rx.wait().await.unwrap();
         let mut pipeline = HapticPipeline::new();
         pipeline.active = true;
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         pipeline.stop_all(&client).await.expect("stop");
         server.abort();
     }
@@ -569,7 +553,7 @@ mod tests {
     #[tokio::test]
     async fn test_discover_invalid_payload_returns_err() {
         let temp = tempfile::tempdir().expect("temp dir");
-        let socket_path = temp.path().join("petaltongue.sock");
+        let socket_path = temp.path().join("ui.sock");
         let path = socket_path.clone();
         let (mut ready_tx, ready_rx) = ready_signal();
         let server = tokio::spawn(async move {
@@ -591,7 +575,7 @@ mod tests {
         });
         ready_rx.wait().await.unwrap();
         let mut pipeline = HapticPipeline::new();
-        let client = crate::primal_client::PrimalClient::with_socket("petaltongue", &socket_path);
+        let client = crate::primal_client::PrimalClient::with_socket("ui", &socket_path);
         let err = pipeline.discover(&client).await.unwrap_err();
         assert!(err.to_string().contains("invalid type") || err.to_string().contains("invalid"));
         server.abort();

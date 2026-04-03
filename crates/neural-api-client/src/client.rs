@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use tokio::time::Duration;
 
 use crate::connection::json_rpc_call;
+use crate::retry_config::NeuralApiRetryConfig;
 use crate::types::{CapabilityInfo, HttpResponse, RoutingMetrics};
 
 /// Neural API Client - Pure Rust capability-based routing
@@ -21,6 +22,8 @@ pub struct NeuralApiClient {
     pub request_timeout: Duration,
     /// Connection timeout
     pub connection_timeout: Duration,
+    /// Backoff between connection retries (used when `max_connect_attempts` is greater than 1)
+    pub retry_config: NeuralApiRetryConfig,
 }
 
 impl NeuralApiClient {
@@ -30,6 +33,7 @@ impl NeuralApiClient {
             socket_path: socket_path.into(),
             request_timeout: Duration::from_secs(30),
             connection_timeout: Duration::from_secs(5),
+            retry_config: NeuralApiRetryConfig::default(),
         })
     }
 
@@ -70,6 +74,13 @@ impl NeuralApiClient {
     #[must_use]
     pub const fn with_connection_timeout(mut self, timeout: Duration) -> Self {
         self.connection_timeout = timeout;
+        self
+    }
+
+    /// Set retry policy for transient connection failures
+    #[must_use]
+    pub const fn with_retry_config(mut self, retry_config: NeuralApiRetryConfig) -> Self {
+        self.retry_config = retry_config;
         self
     }
 
@@ -136,6 +147,7 @@ impl NeuralApiClient {
             params,
             self.request_timeout,
             self.connection_timeout,
+            &self.retry_config,
         )
         .await
     }
@@ -146,6 +158,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::NeuralApiRetryConfig;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::UnixListener;
     use tokio::time::Duration;
@@ -162,6 +175,7 @@ mod tests {
             client.connection_timeout,
             tokio::time::Duration::from_secs(5)
         );
+        assert_eq!(client.retry_config, NeuralApiRetryConfig::default());
     }
 
     #[test]
@@ -212,10 +226,12 @@ mod tests {
     async fn test_proxy_http_parse_error() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("proxy_parse.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -227,9 +243,9 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        ready_rx.await.expect("listener bound");
 
-        let client = NeuralApiClient::new(socket_path_clone)
+        let client = NeuralApiClient::new(socket_path)
             .unwrap()
             .with_connection_timeout(Duration::from_secs(2))
             .with_request_timeout(Duration::from_secs(2));
@@ -252,10 +268,12 @@ mod tests {
     async fn test_discover_capability_parse_error() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("discover_parse.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -267,9 +285,9 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        ready_rx.await.expect("listener bound");
 
-        let client = NeuralApiClient::new(socket_path_clone)
+        let client = NeuralApiClient::new(socket_path)
             .unwrap()
             .with_connection_timeout(Duration::from_secs(2))
             .with_request_timeout(Duration::from_secs(2));
@@ -290,10 +308,12 @@ mod tests {
     async fn test_get_metrics_parse_error() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("metrics_parse.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -305,9 +325,9 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        ready_rx.await.expect("listener bound");
 
-        let client = NeuralApiClient::new(socket_path_clone)
+        let client = NeuralApiClient::new(socket_path)
             .unwrap()
             .with_connection_timeout(Duration::from_secs(2))
             .with_request_timeout(Duration::from_secs(2));

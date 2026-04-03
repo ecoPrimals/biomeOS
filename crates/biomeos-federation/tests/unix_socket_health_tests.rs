@@ -10,7 +10,7 @@
 //! - Fully concurrent and deterministic
 //! - No artificial delays or race conditions
 
-use biomeos_federation::beardog_client::BearDogClient;
+use biomeos_federation::security_client::SecurityProviderClient;
 use std::path::PathBuf;
 use tempfile::TempDir;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -69,7 +69,7 @@ async fn test_unix_socket_health_check_success() {
 
     // Create client and test health check
     let endpoint = format!("unix://{}", socket_path.display());
-    let client = BearDogClient::with_endpoint(endpoint).unwrap();
+    let client = SecurityProviderClient::with_endpoint(endpoint).unwrap();
     let result = client.health_check().await;
 
     assert!(result.is_ok(), "Health check should succeed");
@@ -120,7 +120,7 @@ async fn test_unix_socket_health_check_unhealthy() {
     ready_rx.await.unwrap();
 
     let endpoint = format!("unix://{}", socket_path.display());
-    let client = BearDogClient::with_endpoint(endpoint).unwrap();
+    let client = SecurityProviderClient::with_endpoint(endpoint).unwrap();
     let result = client.health_check().await;
 
     assert!(
@@ -143,7 +143,7 @@ async fn test_unix_socket_health_check_no_socket() {
     let socket_path = PathBuf::from("/tmp/nonexistent-beardog-socket-12345.sock");
 
     let endpoint = format!("unix://{}", socket_path.display());
-    let client = BearDogClient::with_endpoint(endpoint).unwrap();
+    let client = SecurityProviderClient::with_endpoint(endpoint).unwrap();
     let result = client.health_check().await;
 
     assert!(
@@ -186,7 +186,7 @@ async fn test_unix_socket_health_check_timeout() {
     ready_rx.await.unwrap();
 
     let endpoint = format!("unix://{}", socket_path.display());
-    let client = BearDogClient::with_endpoint(endpoint).unwrap();
+    let client = SecurityProviderClient::with_endpoint(endpoint).unwrap();
 
     // Health check should either timeout or complete
     // Using tokio timeout to ensure test doesn't hang
@@ -242,7 +242,7 @@ async fn test_unix_socket_health_check_invalid_response() {
     ready_rx.await.unwrap();
 
     let endpoint = format!("unix://{}", socket_path.display());
-    let client = BearDogClient::with_endpoint(endpoint).unwrap();
+    let client = SecurityProviderClient::with_endpoint(endpoint).unwrap();
     let result = client.health_check().await;
 
     // Should handle invalid response gracefully

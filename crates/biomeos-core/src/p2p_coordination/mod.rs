@@ -431,11 +431,15 @@ pub(crate) fn compute_status_impl(
 }
 
 // Socket-based provider implementations extracted to socket_providers.rs
-// DEEP DEBT REFACTORING (Feb 7, 2026):
 // - Unified 3x duplicated send_rpc into single SocketRpcClient
 // - Eliminated hardcoded "127.0.0.1" in tunnel endpoints
 // - Reduced mod.rs from 870+ to ~400 lines (traits + coordinator only)
 use socket_providers::{SocketDiscoveryProvider, SocketRoutingProvider, SocketSecurityProvider};
 
 #[cfg(test)]
+#[expect(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "p2p coordination unit tests"
+)]
 mod tests;

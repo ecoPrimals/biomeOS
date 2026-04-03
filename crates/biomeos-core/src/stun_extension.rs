@@ -162,18 +162,18 @@ impl StunExtension {
     ///
     /// This performs a quick health check against the configured
     /// self-hosted STUN server. Caches result for subsequent calls.
-    pub async fn check_availability(&mut self, songbird_socket: &str) -> bool {
+    pub async fn check_availability(&mut self, discovery_socket: &str) -> bool {
         if let Some(available) = self.self_hosted_available {
             return available;
         }
 
-        let available = self.probe_self_hosted(songbird_socket).await;
+        let available = self.probe_self_hosted(discovery_socket).await;
         self.self_hosted_available = Some(available);
         available
     }
 
     /// Probe self-hosted STUN server
-    async fn probe_self_hosted(&self, songbird_socket: &str) -> bool {
+    async fn probe_self_hosted(&self, discovery_socket: &str) -> bool {
         let address = match &self.config.self_hosted_address {
             Some(addr) => addr.clone(),
             None => self.discover_self_hosted_address().unwrap_or_else(|| {
@@ -183,7 +183,7 @@ impl StunExtension {
         };
 
         // Try to get public address from self-hosted STUN
-        match self.query_stun(&address, songbird_socket).await {
+        match self.query_stun(&address, discovery_socket).await {
             Ok(_) => {
                 tracing::info!("✅ Self-hosted STUN available at {}", address);
                 true
@@ -203,11 +203,11 @@ impl StunExtension {
         std::env::var("BIOMEOS_STUN_SERVER").ok()
     }
 
-    /// Query a STUN server via Songbird
+    /// Query a STUN server via the discovery delegate (Unix socket)
     async fn query_stun(
         &self,
         server: &str,
-        songbird_socket: &str,
+        discovery_socket: &str,
     ) -> Result<SocketAddr, StunExtensionError> {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         use tokio::net::UnixStream;
@@ -221,7 +221,7 @@ impl StunExtension {
         let timeout_duration = Duration::from_millis(self.config.check_timeout_ms);
 
         let result = timeout(timeout_duration, async {
-            let mut stream = UnixStream::connect(songbird_socket).await?;
+            let mut stream = UnixStream::connect(discovery_socket).await?;
 
             let request_bytes = serde_json::to_vec(&request)?;
             stream.write_all(&request_bytes).await?;
@@ -262,13 +262,13 @@ impl StunExtension {
     /// 3. If both fail: return error
     pub async fn get_public_address_with_fallback(
         &mut self,
-        songbird_socket: &str,
+        discovery_socket: &str,
     ) -> Result<SocketAddr, StunExtensionError> {
         // Try self-hosted first
         if self.config.enabled
             && let Some(addr) = &self.config.self_hosted_address
         {
-            match self.query_stun(addr, songbird_socket).await {
+            match self.query_stun(addr, discovery_socket).await {
                 Ok(public_addr) => {
                     tracing::info!("📡 Public address via self-hosted STUN: {}", public_addr);
                     return Ok(public_addr);
@@ -282,7 +282,7 @@ impl StunExtension {
         // Fallback to public STUN
         if self.config.fallback_to_public {
             for server in &self.config.public_servers {
-                match self.query_stun(server, songbird_socket).await {
+                match self.query_stun(server, discovery_socket).await {
                     Ok(public_addr) => {
                         tracing::info!(
                             "📡 Public address via public STUN ({}): {}",

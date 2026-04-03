@@ -30,7 +30,7 @@ bytes = { workspace = true }
 tokio-serde = { workspace = true }
 
 # Error handling
-thiserror = "1.0"
+thiserror = { workspace = true }
 
 # Tracing
 tracing = { workspace = true }

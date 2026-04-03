@@ -3,11 +3,11 @@
 
 //! Layer 4: Trust Evaluation
 //!
-//! Trust/attestation logic via `BearDog` lineage verification.
+//! Trust/attestation logic via security provider lineage verification.
 
 use super::verification::IdentityProof;
 use crate::FederationResult;
-use crate::beardog_client::BearDogClient;
+use crate::security_client::SecurityProviderClient;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
@@ -26,17 +26,17 @@ pub enum TrustLevel {
     Highest = 4,
 }
 
-/// Layer 4: Trust Evaluation via `BearDog`
+/// Layer 4: Trust Evaluation via security provider
 pub async fn layer4_trust_evaluation(
-    beardog: &BearDogClient,
+    security_client: &SecurityProviderClient,
     identity_proof: &IdentityProof,
     family_id: Option<&str>,
 ) -> FederationResult<TrustLevel> {
-    debug!("Layer 4: Trust Evaluation (BearDog)");
+    debug!("Layer 4: Trust Evaluation (security provider)");
 
     if let Some(ref peer_family_id) = identity_proof.family_id {
         if let Some(our_family_id) = family_id {
-            match beardog
+            match security_client
                 .verify_same_family(our_family_id, peer_family_id, &identity_proof.node_id)
                 .await
             {

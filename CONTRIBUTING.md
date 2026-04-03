@@ -36,8 +36,8 @@ cargo fmt --all -- --check         # 0 diffs
 
 - **JSON-RPC 2.0** is required for all primal communication
 - **tarpc** is optional for high-performance internal paths (protocol escalation)
-- Primals discover each other at runtime via capability-based discovery — no hardcoded primal names in production code
-- Use `biomeos_types::primal_names::*` constants only for bootstrap hints
+- Primals discover each other at runtime via **capability-based discovery** per **CAPABILITY_BASED_DISCOVERY_STANDARD** v1.2.0 (audit narrative in `CURRENT_STATUS.md`) — do not add identity-based helpers (`discover_beardog_*`, primal-named socket fields in routing, etc.); use capability domains and `discover_capability_socket` / provider discovery APIs
+- Use `biomeos_types::primal_names::*` constants only for bootstrap hints and packaging — not for runtime routing
 - Use `biomeos_types::constants::*` for ports, endpoints, and other constants
 
 ## Zero-Copy Guidelines
@@ -92,8 +92,8 @@ biomeOS = UniBin orchestrator (single binary, 14+ subcommands)
   tarpc protocol escalation (optional)
   HTTP JSON-RPC for cross-machine (Tier 2)
          ↓
-  Primals discover each other by capability, not identity
-  Socket paths: $XDG_RUNTIME_DIR/biomeos/{primal}-{family_id}.sock
+  Primals discover each other by capability (taxonomy + probes), not hardcoded identity
+  Socket paths: $XDG_RUNTIME_DIR/biomeos/{primal}-{family_id}.sock (naming convention; resolution via capability discovery, not fixed primal imports)
 ```
 
 See `specs/` for detailed specifications and `CURRENT_STATUS.md` for current state.

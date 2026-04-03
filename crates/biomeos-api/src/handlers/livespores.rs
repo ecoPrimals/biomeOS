@@ -142,7 +142,7 @@ pub async fn get_livespores(
                     if let Ok(mut entries) = tokio::fs::read_dir(&bin_dir).await {
                         while let Ok(Some(entry)) = entries.next_entry().await {
                             if let Some(name) = entry.file_name().to_str() {
-                                // DEEP DEBT EVOLUTION: Accept ANY executable as a primal.
+                                // Accept any executable as a primal.
                                 // No hardcoded whitelist — primals self-identify at runtime.
                                 // Skip hidden files and non-executable entries.
                                 if is_primal_filename_candidate(name) {

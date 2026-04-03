@@ -163,10 +163,74 @@ async fn test_wait_for_socket_delayed_creation() {
     let sock = tmp.path().join("delayed.sock");
     let sock_clone = sock.clone();
     tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::task::yield_now().await;
         std::fs::write(&sock_clone, b"").expect("create");
     });
     wait_for_socket(&sock, Duration::from_secs(2), Duration::from_millis(10))
         .await
         .expect("should find socket after delay");
+}
+
+#[test]
+fn test_format_nucleus_summary_bootstrap_empty_children() {
+    let lines = format_nucleus_summary(
+        &[],
+        std::path::Path::new("/run/biomeos"),
+        "fam",
+        "node",
+        NucleusMode::Tower,
+        "bootstrap",
+    );
+    let joined = lines.join("\n");
+    assert!(joined.contains("bootstrap"));
+    assert!(joined.contains("Tower"));
+    assert!(joined.contains("Health check"));
+}
+
+#[test]
+fn test_resolve_startup_config_invalid_mode_string() {
+    let err = resolve_startup_config_with("not-a-valid-mode", "n1", Some("f1"), Some("/tmp/s"))
+        .expect_err("invalid mode");
+    assert!(err.to_string().contains("Unknown nucleus mode"));
+}
+
+#[test]
+fn test_resolve_socket_dir_with_explicit_override_roundtrip() {
+    let p = resolve_socket_dir_with(Some("/tmp/nucleus-sock-override")).expect("ok");
+    assert_eq!(p, std::path::PathBuf::from("/tmp/nucleus-sock-override"));
+}
+
+#[test]
+fn test_discover_binaries_with_path_dirs_finds_executable() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let name = "unique_primal_bin_zz_test";
+    let bin = tmp.path().join(name);
+    std::fs::write(&bin, b"#!/bin/sh\necho").expect("write");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&bin).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&bin, perms).unwrap();
+    }
+    let map = discover_binaries_with(&[name], None, &[tmp.path()], None).expect("discover");
+    assert_eq!(
+        map.get(name).map(std::path::PathBuf::as_path),
+        Some(bin.as_path())
+    );
+}
+
+#[test]
+fn test_ecosystem_state_debug() {
+    let bootstrap = EcosystemState::Bootstrap;
+    let coord = EcosystemState::Coordinated {
+        active_primals: vec!["a".to_string()],
+    };
+    let _ = format!("{bootstrap:?} {coord:?}");
+}
+
+#[test]
+fn test_nucleus_mode_copy_eq() {
+    assert_eq!(NucleusMode::Tower, NucleusMode::Tower);
+    assert_ne!(NucleusMode::Tower, NucleusMode::Nest);
 }

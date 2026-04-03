@@ -6,25 +6,25 @@
 //! Identity proof via challenge-response, capability verification via primal query.
 
 use crate::FederationResult;
-use crate::beardog_client::BearDogClient;
 use crate::capability::{Capability, CapabilitySet};
 use crate::discovery::{DiscoveredPrimal, PrimalEndpoint};
+use crate::security_client::SecurityProviderClient;
 use crate::unix_socket_client::{JsonRpcRequest, UnixSocketClient};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, warn};
 
-/// Sentinel value for identity proofs where `BearDog` verification was unavailable
+/// Sentinel value for identity proofs where security provider verification was unavailable
 pub const UNVERIFIED_SIGNATURE: &str = "unverified";
 
-/// Identity proof from `BearDog`
+/// Identity proof from the security provider
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdentityProof {
     /// Node ID
     pub node_id: String,
-    /// Family ID (extracted from `BearDog` lineage verification)
+    /// Family ID (extracted from security provider lineage verification)
     pub family_id: Option<String>,
-    /// Ed25519 signature (`UNVERIFIED_SIGNATURE` when `BearDog` unavailable)
+    /// Ed25519 signature (`UNVERIFIED_SIGNATURE` when security provider unavailable)
     pub signature: String,
     /// Challenge that was signed
     pub challenge: String,
@@ -62,13 +62,13 @@ struct GetCapabilitiesResponse {
     provided_capabilities: Vec<PrimalCapabilityInfo>,
 }
 
-/// Layer 2: Identity Verification via `BearDog`
+/// Layer 2: Identity Verification via security provider
 #[expect(clippy::expect_used, reason = "system clock before UNIX epoch")]
 pub async fn layer2_identity_verification(
-    _beardog: &BearDogClient,
+    _security_client: &SecurityProviderClient,
     primal: &DiscoveredPrimal,
 ) -> FederationResult<IdentityProof> {
-    debug!("Layer 2: Identity Verification (BearDog)");
+    debug!("Layer 2: Identity Verification (security provider)");
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -334,9 +334,9 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixListener;
 
-    use crate::beardog_client::BearDogClient;
     use crate::capability::{Capability, CapabilitySet};
     use crate::discovery::{DiscoveredPrimal, PrimalEndpoint};
+    use crate::security_client::SecurityProviderClient;
 
     fn test_primal_with_socket(path: std::path::PathBuf) -> DiscoveredPrimal {
         let mut caps = CapabilitySet::new();
@@ -361,9 +361,11 @@ mod tests {
             }],
             metadata: HashMap::new(),
         };
-        let beardog = BearDogClient::with_endpoint("unix:///tmp/biomeos-unused-beardog-socket")
-            .expect("endpoint");
-        let proof = layer2_identity_verification(&beardog, &primal)
+        let security_client = SecurityProviderClient::with_endpoint(
+            "unix:///tmp/biomeos-unused-security-provider-socket",
+        )
+        .expect("endpoint");
+        let proof = layer2_identity_verification(&security_client, &primal)
             .await
             .expect("layer2");
         assert_eq!(proof.node_id, "solo");
@@ -405,8 +407,9 @@ mod tests {
         });
 
         let primal = test_primal_with_socket(sock_path_clone);
-        let beardog = BearDogClient::with_endpoint("unix:///tmp/unused").expect("endpoint");
-        let proof = layer2_identity_verification(&beardog, &primal)
+        let security_client =
+            SecurityProviderClient::with_endpoint("unix:///tmp/unused").expect("endpoint");
+        let proof = layer2_identity_verification(&security_client, &primal)
             .await
             .expect("layer2");
 
@@ -424,8 +427,9 @@ mod tests {
         std::fs::write(&sock_path, b"").expect("placeholder path");
 
         let primal = test_primal_with_socket(sock_path);
-        let beardog = BearDogClient::with_endpoint("unix:///tmp/unused").expect("endpoint");
-        let proof = layer2_identity_verification(&beardog, &primal)
+        let security_client =
+            SecurityProviderClient::with_endpoint("unix:///tmp/unused").expect("endpoint");
+        let proof = layer2_identity_verification(&security_client, &primal)
             .await
             .expect("layer2");
         assert_eq!(proof.node_id, "test-primal");

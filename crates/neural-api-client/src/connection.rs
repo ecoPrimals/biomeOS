@@ -12,6 +12,7 @@ use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 
 use crate::error::NeuralApiError;
+use crate::retry_config::NeuralApiRetryConfig;
 
 /// Connect to Neural API and execute JSON-RPC call
 pub async fn json_rpc_call(
@@ -20,16 +21,38 @@ pub async fn json_rpc_call(
     params: &Value,
     request_timeout: Duration,
     connection_timeout: Duration,
+    retry_config: &NeuralApiRetryConfig,
 ) -> Result<Value> {
-    let mut stream = timeout(connection_timeout, UnixStream::connect(socket_path))
-        .await
-        .context("Connection timeout")?
-        .with_context(|| {
-            format!(
-                "Failed to connect to Neural API at {}",
-                socket_path.display()
-            )
-        })?;
+    let attempts = retry_config.max_connect_attempts.max(1);
+    let mut stream = None;
+    let mut last_connect_err = None::<std::io::Error>;
+    for attempt in 0..attempts {
+        if attempt > 0 {
+            tokio::time::sleep(retry_config.initial_backoff).await;
+        }
+        match timeout(connection_timeout, UnixStream::connect(socket_path)).await {
+            Ok(Ok(s)) => {
+                stream = Some(s);
+                break;
+            }
+            Ok(Err(e)) => last_connect_err = Some(e),
+            Err(_) => {
+                return Err(anyhow::anyhow!("Connection timeout")).context("Connection timeout");
+            }
+        }
+    }
+
+    let detail = last_connect_err.as_ref().map_or_else(
+        || "connection timeout".to_string(),
+        std::string::ToString::to_string,
+    );
+    let mut stream = stream.with_context(|| {
+        format!(
+            "Failed to connect to Neural API at {} ({})",
+            socket_path.display(),
+            detail
+        )
+    })?;
 
     let request = JsonRpcRequest::new(method, params.clone());
 
@@ -80,18 +103,21 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::retry_config::NeuralApiRetryConfig;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::UnixListener;
 
     #[tokio::test]
     async fn test_json_rpc_call_connection_timeout_on_nonexistent_socket() {
         let path = std::path::PathBuf::from("/nonexistent/socket/that/does/not/exist.sock");
+        let retry = NeuralApiRetryConfig::default();
         let result = json_rpc_call(
             &path,
             "test.method",
             &serde_json::json!({}),
             Duration::from_secs(1),
             Duration::from_millis(10),
+            &retry,
         )
         .await;
         assert!(result.is_err());
@@ -110,10 +136,12 @@ mod tests {
     async fn test_json_rpc_call_rpc_error_response() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("rpc_error.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -126,14 +154,15 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
+        ready_rx.await.expect("listener bound");
+        let retry = NeuralApiRetryConfig::default();
         let result = json_rpc_call(
-            &socket_path_clone,
+            &socket_path,
             "test.method",
             &serde_json::json!({}),
             Duration::from_secs(2),
             Duration::from_secs(2),
+            &retry,
         )
         .await;
 
@@ -151,10 +180,12 @@ mod tests {
     async fn test_json_rpc_call_missing_result_field() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("no_result.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -163,14 +194,15 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
+        ready_rx.await.expect("listener bound");
+        let retry = NeuralApiRetryConfig::default();
         let result = json_rpc_call(
-            &socket_path_clone,
+            &socket_path,
             "test",
             &serde_json::json!({}),
             Duration::from_secs(2),
             Duration::from_secs(2),
+            &retry,
         )
         .await;
 
@@ -188,10 +220,12 @@ mod tests {
     async fn test_json_rpc_call_rpc_error_with_minimal_error_object() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("minimal_error.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -203,14 +237,15 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
+        ready_rx.await.expect("listener bound");
+        let retry = NeuralApiRetryConfig::default();
         let result = json_rpc_call(
-            &socket_path_clone,
+            &socket_path,
             "test",
             &serde_json::json!({}),
             Duration::from_secs(2),
             Duration::from_secs(2),
+            &retry,
         )
         .await;
 
@@ -222,10 +257,12 @@ mod tests {
     async fn test_json_rpc_call_invalid_json_response() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("invalid_json.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -234,14 +271,15 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
+        ready_rx.await.expect("listener bound");
+        let retry = NeuralApiRetryConfig::default();
         let result = json_rpc_call(
-            &socket_path_clone,
+            &socket_path,
             "test",
             &serde_json::json!({}),
             Duration::from_secs(2),
             Duration::from_secs(2),
+            &retry,
         )
         .await;
 
@@ -259,10 +297,12 @@ mod tests {
     async fn test_json_rpc_call_rpc_error_code_not_number() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("code_not_num.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -275,14 +315,15 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
+        ready_rx.await.expect("listener bound");
+        let retry = NeuralApiRetryConfig::default();
         let result = json_rpc_call(
-            &socket_path_clone,
+            &socket_path,
             "test",
             &serde_json::json!({}),
             Duration::from_secs(2),
             Duration::from_secs(2),
+            &retry,
         )
         .await;
 
@@ -294,10 +335,12 @@ mod tests {
     async fn test_json_rpc_call_rpc_error_message_not_string() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("msg_not_str.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -309,14 +352,15 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
+        ready_rx.await.expect("listener bound");
+        let retry = NeuralApiRetryConfig::default();
         let result = json_rpc_call(
-            &socket_path_clone,
+            &socket_path,
             "test",
             &serde_json::json!({}),
             Duration::from_secs(2),
             Duration::from_secs(2),
+            &retry,
         )
         .await;
 
@@ -334,10 +378,12 @@ mod tests {
     async fn test_json_rpc_call_success_with_result() {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_path = temp.path().join("success.sock");
-        let listener = UnixListener::bind(&socket_path).expect("bind");
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
 
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
+            let listener = UnixListener::bind(&socket_path_clone).expect("bind");
+            ready_tx.send(()).ok();
             let (mut stream, _) = listener.accept().await.expect("accept");
             let mut buf = vec![0u8; 4096];
             let _ = stream.read(&mut buf).await;
@@ -346,14 +392,15 @@ mod tests {
             stream.write_all(b"\n").await.expect("write newline");
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-
+        ready_rx.await.expect("listener bound");
+        let retry = NeuralApiRetryConfig::default();
         let result = json_rpc_call(
-            &socket_path_clone,
+            &socket_path,
             "test",
             &serde_json::json!({}),
             Duration::from_secs(2),
             Duration::from_secs(2),
+            &retry,
         )
         .await;
 

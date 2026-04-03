@@ -32,7 +32,7 @@ async fn test_pure_noise_beacon_generation() {
     std::fs::write(seed_path, seed_bytes).unwrap();
 
     // Create Dark Forest beacon manager
-    let beacon_mgr = DarkForestBeacon::from_beardog_socket(beardog_socket, seed_path, node_id)
+    let beacon_mgr = DarkForestBeacon::from_security_socket(beardog_socket, seed_path, node_id)
         .await
         .expect("Failed to create beacon manager");
 
@@ -161,7 +161,7 @@ fn test_zero_metadata_properties() {
     // Generate random "noise"
     use rand::RngCore;
     let mut beacon = vec![0u8; 128];
-    rand::thread_rng().fill_bytes(&mut beacon);
+    rand::rng().fill_bytes(&mut beacon);
 
     // Verify it looks random
     let beacon_str = String::from_utf8_lossy(&beacon);

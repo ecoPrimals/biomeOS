@@ -3,7 +3,7 @@
 
 //! Capacity Module
 //!
-//! Handles capacity checks via ToadStool compute primal.
+//! Handles capacity checks via the compute capability provider.
 //!
 //! ## Network Effect Phase 3: Capacity Check
 //!
@@ -13,9 +13,9 @@
 //!
 //! ## Graceful Degradation
 //!
-//! If ToadStool is not available, capacity check passes by default.
+//! If no compute provider is available, capacity check passes by default.
 
-use crate::primal_client::ToadStoolClient;
+use crate::primal_client::ComputeClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
@@ -35,11 +35,11 @@ pub enum CapacityResult {
 pub struct Capacity;
 
 impl Capacity {
-    /// Check primal capacity via ToadStool
+    /// Check primal capacity via the compute provider
     ///
-    /// Falls back to allowing the operation if ToadStool is unavailable.
+    /// Falls back to allowing the operation if compute is unavailable.
     pub async fn check_primal_capacity(
-        toadstool: Option<&ToadStoolClient>,
+        compute: Option<&ComputeClient>,
         device_id: &str,
         primal_id: &str,
     ) -> Result<CapacityResult> {
@@ -48,11 +48,10 @@ impl Capacity {
             device_id, primal_id
         );
 
-        if let Some(toadstool) = toadstool {
-            info!("🍄 ToadStool available - checking capacity");
+        if let Some(compute) = compute {
+            info!("Compute provider available — checking capacity");
 
-            // Call ToadStool to check resource capacity
-            match toadstool
+            match compute
                 .call(
                     "compute.check_capacity",
                     serde_json::json!({
@@ -68,7 +67,7 @@ impl Capacity {
                         .and_then(serde_json::Value::as_bool)
                         .unwrap_or(true)
                     {
-                        info!("✅ ToadStool capacity: Available");
+                        info!("✅ Compute capacity: available");
                         Ok(CapacityResult::Available)
                     } else {
                         let reason = result
@@ -76,24 +75,23 @@ impl Capacity {
                             .and_then(|v| v.as_str())
                             .unwrap_or("Insufficient capacity")
                             .to_string();
-                        info!("❌ ToadStool capacity: Insufficient - {}", reason);
+                        info!("❌ Compute capacity: insufficient — {}", reason);
                         Ok(CapacityResult::Insufficient { reason })
                     }
                 }
                 Err(e) => {
-                    // ToadStool might not support this method yet
                     warn!(
-                        "⚠️ ToadStool call failed: {} - falling back to available",
+                        "⚠️ Compute provider call failed: {} — falling back to available",
                         e
                     );
-                    info!("✅ ToadStool capacity: Available (fallback)");
+                    info!("✅ Compute capacity: available (fallback)");
                     Ok(CapacityResult::Available)
                 }
             }
         } else {
-            warn!("⚠️ No compute primal (ToadStool) available");
+            warn!("⚠️ No compute provider available");
             warn!("⚠️ Allowing assignment without capacity check (graceful degradation)");
-            info!("✅ Capacity: Available (no compute primal)");
+            info!("✅ Capacity: available (no compute provider)");
             Ok(CapacityResult::Available)
         }
     }
@@ -112,12 +110,12 @@ mod tests {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixListener;
 
-    async fn spawn_mock_toadstool(
+    async fn spawn_mock_compute(
         available: bool,
         reason: Option<&str>,
     ) -> (String, tokio::task::JoinHandle<()>) {
         let dir = tempfile::tempdir().unwrap();
-        let socket_path = dir.path().join("toadstool.sock");
+        let socket_path = dir.path().join("compute.sock");
         let path_str = socket_path.to_str().unwrap().to_string();
 
         let capacity_response = if available {
@@ -158,7 +156,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_capacity_no_toadstool() {
+    async fn test_capacity_no_compute() {
         let result = Capacity::check_primal_capacity(None, "test-device", "test-primal").await;
 
         assert!(result.is_ok());
@@ -166,8 +164,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_capacity_no_toadstool_graceful_degradation() {
-        // Tests that capacity check passes by default when ToadStool is unavailable
+    async fn test_capacity_no_compute_graceful_degradation() {
+        // Capacity check passes by default when no compute provider is available
         let result =
             Capacity::check_primal_capacity(None, "device-abc-123", "primal-xyz-456").await;
 
@@ -240,11 +238,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_capacity_toadstool_insufficient() {
-        let (path, _handle) = spawn_mock_toadstool(false, Some("Not enough memory")).await;
-        let client = Some(crate::primal_client::ToadStoolClient::with_socket(
-            "toadstool",
-            &path,
+    async fn test_capacity_compute_insufficient() {
+        let (path, _handle) = spawn_mock_compute(false, Some("Not enough memory")).await;
+        let client = Some(crate::primal_client::ComputeClient::with_socket(
+            "compute", &path,
         ));
         let result =
             Capacity::check_primal_capacity(client.as_ref(), "test-device", "test-primal").await;
@@ -257,11 +254,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_capacity_toadstool_available() {
-        let (path, _handle) = spawn_mock_toadstool(true, None).await;
-        let client = Some(crate::primal_client::ToadStoolClient::with_socket(
-            "toadstool",
-            &path,
+    async fn test_capacity_compute_available() {
+        let (path, _handle) = spawn_mock_compute(true, None).await;
+        let client = Some(crate::primal_client::ComputeClient::with_socket(
+            "compute", &path,
         ));
         let result =
             Capacity::check_primal_capacity(client.as_ref(), "test-device", "test-primal").await;
@@ -271,10 +267,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_capacity_toadstool_call_fails_fallback() {
-        let client = Some(crate::primal_client::ToadStoolClient::with_socket(
-            "toadstool",
-            "/nonexistent/toadstool.sock",
+    async fn test_capacity_compute_call_fails_fallback() {
+        let client = Some(crate::primal_client::ComputeClient::with_socket(
+            "compute",
+            "/nonexistent/compute.sock",
         ));
         let result =
             Capacity::check_primal_capacity(client.as_ref(), "test-device", "test-primal").await;

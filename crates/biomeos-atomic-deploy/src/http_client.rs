@@ -3,7 +3,7 @@
 
 //! HTTP client for Tower Atomic integration.
 //!
-//! Provides HTTP/HTTPS via Songbird delegation: fetching binaries, update checks,
+//! Provides HTTP/HTTPS via the discovery provider (network delegate): fetching binaries, update checks,
 //! niche deployment (git clone), and remote health checks.
 
 use anyhow::{Context, Result};
@@ -21,11 +21,11 @@ use tracing::{debug, info};
 /// HTTP request builder for biomeOS
 #[derive(Debug, Clone)]
 pub struct BiomeOsHttpClient {
-    /// Songbird socket path (Tower Atomic networking)
-    songbird_socket: String,
+    /// Discovery-provider Unix socket path (Tower Atomic networking / HTTP delegate)
+    discovery_socket: String,
 }
 
-/// HTTP response from Songbird
+/// HTTP response from the discovery delegate
 #[derive(Debug, Deserialize)]
 pub struct HttpResponse {
     /// HTTP status code (200, 404, etc.)
@@ -41,20 +41,20 @@ impl BiomeOsHttpClient {
     #[cfg(test)]
     pub fn with_socket(socket: impl Into<String>) -> Self {
         Self {
-            songbird_socket: socket.into(),
+            discovery_socket: socket.into(),
         }
     }
 
     /// Create new HTTP client
     ///
-    /// This delegates all HTTP requests to Songbird (Tower Atomic)
+    /// This delegates all HTTP requests to the discovery provider (Tower Atomic)
     /// Uses `SocketNucleation` for deterministic paths (no hardcoding)
     pub fn new() -> Self {
         use crate::nucleation::SocketNucleation;
 
         let discovery_provider = std::env::var("DISCOVERY_PROVIDER")
             .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
-        let songbird_socket = std::env::var(biomeos_types::defaults::env_vars::socket_env_key(
+        let discovery_socket = std::env::var(biomeos_types::defaults::env_vars::socket_env_key(
             primal_names::SONGBIRD,
         ))
         .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
@@ -68,9 +68,9 @@ impl BiomeOsHttpClient {
         });
 
         info!("🌐 biomeOS HTTP client initialized (via Tower Atomic)");
-        debug!("   Songbird socket: {}", songbird_socket);
+        debug!("   Discovery socket: {}", discovery_socket);
 
-        Self { songbird_socket }
+        Self { discovery_socket }
     }
 
     /// Perform HTTP GET request
@@ -134,7 +134,7 @@ impl BiomeOsHttpClient {
         let body = self.get(url).await?;
 
         // For now, HTTP returns string body
-        // Note: Songbird returns string body; binary would need base64 encoding
+        // Note: discovery delegate returns string body; binary would need base64 encoding
         Ok(Bytes::from(body.into_bytes()))
     }
 
@@ -177,17 +177,17 @@ impl BiomeOsHttpClient {
             "id": 1
         });
 
-        // Connect to Songbird
-        let mut stream = UnixStream::connect(&self.songbird_socket)
+        // Connect to discovery delegate
+        let mut stream = UnixStream::connect(&self.discovery_socket)
             .await
             .context(format!(
-                "Failed to connect to Songbird at {}",
-                self.songbird_socket
+                "Failed to connect to discovery socket at {}",
+                self.discovery_socket
             ))?;
 
         // Send request
         let request_json = serde_json::to_string(&rpc_request)?;
-        debug!("→ Songbird: {}", request_json);
+        debug!("→ discovery: {}", request_json);
         stream.write_all(request_json.as_bytes()).await?;
         stream.shutdown().await?;
 
@@ -199,8 +199,8 @@ impl BiomeOsHttpClient {
         )
         .await
         .context("Socket read timeout (60s)")?
-        .context("Failed to read response from Songbird")?;
-        debug!("← Songbird: {}", response_buf);
+        .context("Failed to read response from discovery delegate")?;
+        debug!("← discovery: {}", response_buf);
 
         // Parse JSON-RPC response
         let rpc_response: Value =
@@ -208,7 +208,7 @@ impl BiomeOsHttpClient {
 
         // Check for errors
         if let Some(error) = rpc_response.get("error") {
-            anyhow::bail!("Songbird RPC error: {error}");
+            anyhow::bail!("Discovery RPC error: {error}");
         }
 
         // Extract result
@@ -263,9 +263,9 @@ mod tests {
     fn test_client_creation() {
         let client = BiomeOsHttpClient::new();
         assert!(
-            client.songbird_socket.contains("songbird"),
-            "Default socket should contain songbird: {}",
-            client.songbird_socket
+            client.discovery_socket.contains("songbird"),
+            "Default socket should contain discovery primal name: {}",
+            client.discovery_socket
         );
     }
 
@@ -273,16 +273,16 @@ mod tests {
     fn test_default() {
         let client = BiomeOsHttpClient::default();
         assert!(
-            client.songbird_socket.contains("songbird"),
+            client.discovery_socket.contains("songbird"),
             "Default should match new(): {}",
-            client.songbird_socket
+            client.discovery_socket
         );
     }
 
     #[test]
     fn test_with_socket_for_testing() {
         let client = BiomeOsHttpClient::with_socket("/tmp/test-songbird.sock");
-        assert_eq!(client.songbird_socket, "/tmp/test-songbird.sock");
+        assert_eq!(client.discovery_socket, "/tmp/test-songbird.sock");
     }
 
     #[test]
@@ -314,15 +314,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_fails_when_songbird_unavailable() {
-        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-songbird-xyz.sock");
+    async fn test_get_fails_when_discovery_unavailable() {
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-discovery-xyz.sock");
 
         let result = client.get("http://example.com").await;
 
-        let err = result.expect_err("Should fail when Songbird socket does not exist");
+        let err = result.expect_err("Should fail when discovery socket does not exist");
         assert!(
             err.to_string().contains("Failed to connect")
-                || err.to_string().contains("Songbird")
+                || err.to_string().contains("discovery")
                 || err.to_string().contains("Connection refused")
                 || err.to_string().contains("No such file"),
             "Error should mention connection failure: {err}"
@@ -330,17 +330,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_post_fails_when_songbird_unavailable() {
-        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-songbird-xyz.sock");
+    async fn test_post_fails_when_discovery_unavailable() {
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-discovery-post.sock");
 
         let result = client
             .post("http://example.com", serde_json::json!({"test": true}))
             .await;
 
-        let err = result.expect_err("Should fail when Songbird socket does not exist");
+        let err = result.expect_err("Should fail when discovery socket does not exist");
         assert!(
             err.to_string().contains("Failed to connect")
-                || err.to_string().contains("Songbird")
+                || err.to_string().contains("discovery")
                 || err.to_string().contains("Connection refused")
                 || err.to_string().contains("No such file"),
             "Error should mention connection failure: {err}"
@@ -348,15 +348,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fetch_binary_fails_when_songbird_unavailable() {
-        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-songbird-xyz.sock");
+    async fn test_fetch_binary_fails_when_discovery_unavailable() {
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-discovery-xyz.sock");
 
         let result = client.fetch_binary("http://example.com/binary").await;
 
-        let err = result.expect_err("Should fail when Songbird socket does not exist");
+        let err = result.expect_err("Should fail when discovery socket does not exist");
         assert!(
             err.to_string().contains("Failed to connect")
-                || err.to_string().contains("Songbird")
+                || err.to_string().contains("discovery")
                 || err.to_string().contains("Connection refused")
                 || err.to_string().contains("No such file"),
             "Error should mention connection failure: {err}"
@@ -365,13 +365,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_reachable_returns_false_when_unavailable() {
-        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-songbird-xyz.sock");
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-discovery-xyz.sock");
 
         let reachable = client.is_reachable("http://example.com").await;
 
         assert!(
             !reachable,
-            "is_reachable should return false when Songbird unavailable"
+            "is_reachable should return false when discovery delegate unavailable"
         );
     }
 
@@ -428,7 +428,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_reachable_returns_false_on_4xx() {
-        // When Songbird returns 4xx, is_reachable should be false.
+        // When discovery delegate returns 4xx, is_reachable should be false.
         // We use nonexistent socket - request will fail before we get status,
         // so we're testing the Err branch. For 4xx we'd need a mock.
         // This test documents the contract: Err => false
@@ -440,15 +440,15 @@ mod tests {
     #[tokio::test]
     async fn test_get_rpc_error_returns_err() {
         let rpc_error =
-            r#"{"jsonrpc":"2.0","error":{"code":-1,"message":"Songbird unavailable"},"id":1}"#;
+            r#"{"jsonrpc":"2.0","error":{"code":-1,"message":"Discovery unavailable"},"id":1}"#;
         let (_dir, socket_path) = spawn_mock_server(rpc_error).await;
 
         let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
         let result = client.get("http://example.com").await;
 
         let err = result.expect_err("get should fail on RPC error");
-        assert!(err.to_string().contains("Songbird RPC error"));
-        assert!(err.to_string().contains("Songbird unavailable"));
+        assert!(err.to_string().contains("Discovery RPC error"));
+        assert!(err.to_string().contains("Discovery unavailable"));
     }
 
     #[tokio::test]

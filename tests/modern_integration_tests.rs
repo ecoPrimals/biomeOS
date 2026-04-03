@@ -2,7 +2,6 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-
 //! Integration tests for biomeOS API contracts and component interactions
 //!
 //! Modern integration test suite that validates how different components of biomeOS
@@ -37,10 +36,8 @@ mod manager_discovery_integration {
         let manager = UniversalBiomeOSManager::new(config)?;
 
         // Test that manager properly delegates to discovery service
-        let static_results = manager.discover_network_scan().await?;
-        let registry_results = manager
-            .discover_registry("http://localhost:8080/registry")
-            .await;
+        let static_results = manager.discover().await?;
+        let registry_results = manager.discover().await;
 
         // Both should complete without crashing (may return empty results)
         // Static results may be empty in test environment

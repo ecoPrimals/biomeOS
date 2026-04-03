@@ -247,3 +247,86 @@ impl GraphHandler {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "test")]
+mod tests {
+    use super::*;
+    use crate::capability_translation::CapabilityTranslationRegistry;
+    use crate::neural_graph::{Graph, GraphConfig, GraphNode};
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    fn test_handler(graphs_dir: std::path::PathBuf) -> GraphHandler {
+        GraphHandler::new(
+            graphs_dir,
+            "test-family",
+            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(NeuralRouter::new("test-family")),
+            Arc::new(RwLock::new(CapabilityTranslationRegistry::new())),
+        )
+    }
+
+    #[tokio::test]
+    async fn execute_errors_on_missing_params() {
+        let dir = tempfile::tempdir().unwrap();
+        let handler = test_handler(dir.path().to_path_buf());
+        let err = handler.execute(&None).await.unwrap_err();
+        assert!(err.to_string().contains("Missing parameters"));
+    }
+
+    #[tokio::test]
+    async fn execute_errors_on_missing_graph_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let handler = test_handler(dir.path().to_path_buf());
+        let err = handler.execute(&Some(json!({}))).await.unwrap_err();
+        assert!(err.to_string().contains("graph_id"));
+    }
+
+    #[tokio::test]
+    async fn execute_errors_when_graph_file_not_found() {
+        let dir = tempfile::tempdir().unwrap();
+        let handler = test_handler(dir.path().to_path_buf());
+        let err = handler
+            .execute(&Some(json!({ "graph_id": "no_such_graph_xyz" })))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("no_such_graph_xyz"));
+    }
+
+    #[tokio::test]
+    async fn load_translations_from_graph_succeeds_with_empty_nodes() {
+        let dir = tempfile::tempdir().unwrap();
+        let handler = test_handler(dir.path().to_path_buf());
+        let graph = Graph {
+            id: "g".into(),
+            version: "1".into(),
+            description: String::new(),
+            nodes: vec![],
+            config: GraphConfig::default(),
+            coordination: None,
+            env: HashMap::new(),
+        };
+        handler.load_translations_from_graph(&graph).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn register_capabilities_from_graph_skips_nodes_without_capabilities() {
+        let router = Arc::new(NeuralRouter::new("fam"));
+        let graph = Graph {
+            id: "g".into(),
+            version: "1".into(),
+            description: String::new(),
+            nodes: vec![GraphNode {
+                id: "n1".into(),
+                capabilities: vec![],
+                ..Default::default()
+            }],
+            config: GraphConfig::default(),
+            coordination: None,
+            env: HashMap::new(),
+        };
+        GraphHandler::register_capabilities_from_graph(&router, &graph, "fam").await;
+    }
+}

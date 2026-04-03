@@ -545,14 +545,12 @@ fn test_cli_parse_api_unix_only() {
 }
 
 #[test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 fn test_init_logging_verbose_overrides_level() {
     let result = init_logging("warn", true);
     assert!(result.is_ok());
 }
 
 #[tokio::test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 async fn test_dispatch_mode_version() {
     let cli = Cli::parse_from(["biomeos", "version"]);
     let result = dispatch_mode(cli).await;
@@ -560,7 +558,6 @@ async fn test_dispatch_mode_version() {
 }
 
 #[test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 fn test_init_logging() {
     let result = init_logging("warn", false);
     assert!(result.is_ok());
@@ -614,7 +611,6 @@ fn test_cli_parse_fails_rootpulse_commit_missing_args() {
 }
 
 #[tokio::test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 async fn test_dispatch_mode_doctor() {
     let cli = Cli::parse_from(["biomeos", "doctor"]);
     let result = dispatch_mode(cli).await;
@@ -622,7 +618,6 @@ async fn test_dispatch_mode_doctor() {
 }
 
 #[tokio::test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 async fn test_dispatch_mode_cli() {
     let cli = Cli::parse_from(["biomeos", "cli"]);
     let result = dispatch_mode(cli).await;
@@ -630,7 +625,6 @@ async fn test_dispatch_mode_cli() {
 }
 
 #[tokio::test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 async fn test_dispatch_mode_model_cache_list() {
     let cli = Cli::parse_from(["biomeos", "model-cache", "list"]);
     let result = dispatch_mode(cli).await;
@@ -638,7 +632,6 @@ async fn test_dispatch_mode_model_cache_list() {
 }
 
 #[tokio::test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 async fn test_dispatch_mode_plasmodium_status() {
     let cli = Cli::parse_from(["biomeos", "plasmodium", "status"]);
     let result = dispatch_mode(cli).await;
@@ -646,7 +639,6 @@ async fn test_dispatch_mode_plasmodium_status() {
 }
 
 #[tokio::test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 async fn test_dispatch_mode_deploy_fails_nonexistent_graph() {
     let cli = Cli::parse_from([
         "biomeos",
@@ -658,7 +650,6 @@ async fn test_dispatch_mode_deploy_fails_nonexistent_graph() {
 }
 
 #[tokio::test]
-#[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
 async fn test_dispatch_mode_verify_lineage_fails_nonexistent_path() {
     let cli = Cli::parse_from([
         "biomeos",

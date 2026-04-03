@@ -7,16 +7,16 @@
 //! - Family-level federation (genetic lineage baseline)
 //! - Sub-federations (capability-based granular access)
 //! - Runtime primal discovery (no hardcoding)
-//! - `BearDog` integration for all cryptographic operations
+//! - Security provider integration for all cryptographic operations
 //! - NUCLEUS secure discovery protocol (5-layer verification)
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
 
-pub mod beardog_client;
 pub mod capability;
 pub mod discovery;
 pub mod nucleus;
+pub mod security_client;
 pub mod subfederation;
 pub mod unix_socket_client;
 
@@ -28,8 +28,8 @@ pub use nucleus::{
 pub use subfederation::{IsolationLevel, SubFederation, SubFederationManager};
 
 // Re-export PrimalEndpoint for tests
-pub use beardog_client::BearDogClient;
 pub use discovery::PrimalEndpoint;
+pub use security_client::SecurityProviderClient;
 pub use unix_socket_client::{JsonRpcRequest, JsonRpcResponse, UnixSocketClient};
 
 use thiserror::Error;
@@ -65,9 +65,9 @@ pub enum FederationError {
     #[error("Genetic lineage verification failed: {0}")]
     LineageVerificationFailed(String),
 
-    /// Error communicating with the security provider (`BearDog`)
-    #[error("BearDog error: {0}")]
-    BearDogError(String),
+    /// Error communicating with the security provider
+    #[error("Security provider error: {0}")]
+    SecurityProviderError(String),
 
     /// Primal discovery error
     #[error("Discovery error: {0}")]

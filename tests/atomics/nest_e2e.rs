@@ -176,7 +176,7 @@ mod tests {
         // - discover_songbird()
         // - discover_beardog()
         // - discover_toadstool()
-        // - discover_nestgate()
+        // - discover_storage_provider() (GraphTemplateManager)
         
         println!("✅ Discovery helpers working");
         

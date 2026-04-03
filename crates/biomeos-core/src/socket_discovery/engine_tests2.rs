@@ -704,4 +704,3 @@ async fn discover_capability_unknown_emits_none_without_taxonomy() {
             .is_none()
     );
 }
-

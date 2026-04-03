@@ -52,11 +52,9 @@ async fn test_beardog_style_socket_communication() {
         socket.write_all(response.as_bytes()).await.unwrap();
         socket.flush().await.unwrap();
 
-        // KEEP SOCKET OPEN (this is what BearDog does)
-        // Use a bounded wait instead of long sleep
+        // KEEP SOCKET OPEN (this is what BearDog does) — hang without wall-clock delay
         println!("Server sent response, keeping socket open for client to read...");
-        // Server task will be dropped when test completes
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        std::future::pending::<()>().await;
     });
 
     // Wait for server ready (no arbitrary sleep!)
@@ -124,8 +122,8 @@ async fn test_json_aware_reading() {
         socket.write_all(response.as_bytes()).await.unwrap();
         socket.flush().await.unwrap();
 
-        // Keep connection alive briefly for client to read
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        // Keep connection open for client to read — no arbitrary wall-clock wait
+        std::future::pending::<()>().await;
     });
 
     // Wait for server ready (no arbitrary sleep!)

@@ -107,14 +107,14 @@ pub async fn verify_primal_health_with_discovery(primal_name: &str) -> Result<Ve
 /// communication. The tunnel is authenticated using family lineage.
 ///
 /// # Arguments
-/// * `beardog_socket` - Path to `BearDog`'s Unix socket
+/// * `security_socket` - Path to the security provider's Unix socket (`BearDog` transport)
 /// * `family_id` - The family identifier for lineage authentication
 ///
 /// # Returns
 /// Session ID for the established tunnel
-pub async fn establish_btsp_tunnel(beardog_socket: &Path, family_id: &str) -> Result<String> {
+pub async fn establish_btsp_tunnel(security_socket: &Path, family_id: &str) -> Result<String> {
     // Create AtomicClient with 10 second timeout (BTSP can take longer)
-    let client = AtomicClient::unix(beardog_socket).with_timeout(Duration::from_secs(10));
+    let client = AtomicClient::unix(security_socket).with_timeout(Duration::from_secs(10));
 
     // Request BTSP tunnel establishment
     let response = client
@@ -143,7 +143,7 @@ pub async fn establish_btsp_tunnel(beardog_socket: &Path, family_id: &str) -> Re
 /// Uses `AtomicClient::discover()` to find `BearDog` automatically.
 pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<String> {
     // Discover security provider with automatic transport fallback
-    // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded
+    // Provider name resolved from env, not hardcoded
     let security_provider =
         std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
     let client = AtomicClient::discover(&security_provider)

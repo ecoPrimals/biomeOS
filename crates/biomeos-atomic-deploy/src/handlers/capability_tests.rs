@@ -600,3 +600,178 @@ async fn test_discover_translations_missing_capability_field() {
     let err = handler.discover_translations(&Some(json!({}))).await;
     assert!(err.is_err());
 }
+
+#[tokio::test]
+async fn test_discover_uses_domain_alias_instead_of_capability() {
+    let handler = handler_with_registration().await;
+    let params = Some(json!({ "domain": "crypto" }));
+    let result = handler.discover(&params).await.expect("domain alias");
+    assert_eq!(result["capability"], "crypto");
+}
+
+#[tokio::test]
+async fn test_register_route_tcp_transport() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "primal": "remote",
+        "transport": "127.0.0.1:19999",
+        "capabilities": ["http.request", "relay"],
+        "source": "route-test"
+    }));
+    let out = handler
+        .register_route(&params)
+        .await
+        .expect("register_route");
+    assert_eq!(out["registered"], 2);
+    assert_eq!(out["primal"], "remote");
+    let caps = out["capabilities"].as_array().expect("caps");
+    assert_eq!(caps.len(), 2);
+}
+
+#[tokio::test]
+async fn test_register_route_with_gate_in_source_tag() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "primal": "p",
+        "transport": "/tmp/reg-route.sock",
+        "capabilities": ["z"],
+        "gate": "gate-a"
+    }));
+    let out = handler.register_route(&params).await.expect("ok");
+    assert_eq!(out["gate"], "gate-a");
+}
+
+#[tokio::test]
+async fn test_register_route_empty_capabilities_errors() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "primal": "p",
+        "transport": "/tmp/x.sock",
+        "capabilities": []
+    }));
+    assert!(handler.register_route(&params).await.is_err());
+}
+
+#[tokio::test]
+async fn test_register_route_missing_transport() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "primal": "p",
+        "capabilities": ["c"]
+    }));
+    assert!(handler.register_route(&params).await.is_err());
+}
+
+#[tokio::test]
+async fn test_register_route_non_string_capability_errors() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "primal": "p",
+        "transport": "/tmp/y.sock",
+        "capabilities": [123]
+    }));
+    assert!(handler.register_route(&params).await.is_err());
+}
+
+#[tokio::test]
+async fn test_route_uses_default_empty_params_object() {
+    let dir = tempdir().expect("tempdir");
+    let sock = dir.path().join("route-default-params.sock");
+    let _server = MockJsonRpcServer::spawn_echo_success(&sock, json!({ "ok": true })).await;
+
+    let handler = make_handler();
+    handler
+        .register(&Some(json!({
+            "capability": "mesh",
+            "primal": "songbird",
+            "socket": sock.to_str().unwrap(),
+            "source": "t"
+        })))
+        .await
+        .unwrap();
+
+    let params = Some(json!({
+        "capability": "mesh",
+        "method": "ping"
+    }));
+    let result = handler.route(&params).await.expect("route");
+    assert_eq!(result["ok"], true);
+}
+
+#[tokio::test]
+async fn test_call_with_unknown_gate_falls_through() {
+    let dir = tempdir().expect("tempdir");
+    let sock = dir.path().join("call-gate.sock");
+    let _server = MockJsonRpcServer::spawn_echo_success(&sock, json!({ "via": "local" })).await;
+
+    let handler = make_handler();
+    handler
+        .register(&Some(json!({
+            "capability": "zcap",
+            "primal": "z",
+            "socket": sock.to_str().unwrap(),
+            "source": "t"
+        })))
+        .await
+        .unwrap();
+
+    let params = Some(json!({
+        "capability": "zcap",
+        "operation": "zcap.op",
+        "args": {},
+        "gate": "nonexistent_gate_label"
+    }));
+    let out = handler
+        .call(&params)
+        .await
+        .expect("call without remote gate");
+    assert_eq!(out["via"], "local");
+}
+
+#[tokio::test]
+async fn test_list_includes_shader_domain_metadata() {
+    let handler = make_handler();
+    handler
+        .register(&Some(json!({
+            "capability": "shader",
+            "primal": "gpu",
+            "socket": "/tmp/shader.sock"
+        })))
+        .await
+        .unwrap();
+    let list = handler.list().await.unwrap();
+    let details = list["details"].as_array().unwrap();
+    let shader = details
+        .iter()
+        .find(|d| d["capability"] == "shader")
+        .expect("shader entry");
+    assert_eq!(shader["locality"], "local");
+    assert_eq!(shader["provider_count"], 1);
+    assert!(shader["cost_estimates"].is_array());
+}
+
+#[tokio::test]
+async fn test_list_includes_stun_locality_mesh() {
+    let handler = make_handler();
+    handler
+        .register(&Some(json!({
+            "capability": "stun",
+            "primal": "s",
+            "socket": "/tmp/stun.sock"
+        })))
+        .await
+        .unwrap();
+    let list = handler.list().await.unwrap();
+    let details = list["details"].as_array().unwrap();
+    let stun = details
+        .iter()
+        .find(|d| d["capability"] == "stun")
+        .expect("stun");
+    assert_eq!(stun["locality"], "mesh");
+}
+
+#[tokio::test]
+async fn test_register_missing_params_for_route_register_alias() {
+    let handler = make_handler();
+    assert!(handler.register_route(&None).await.is_err());
+}

@@ -479,3 +479,156 @@ impl GraphExecutor {
         serde_json::from_str(line.trim()).context("Invalid JSON response")
     }
 }
+
+#[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "test")]
+mod tests {
+    use crate::capability_domains::CapabilityRegistry;
+    use crate::executor::context::ExecutionContext;
+    use crate::neural_executor::GraphExecutor;
+    use crate::neural_graph::GraphNode;
+    use biomeos_types::JsonRpcRequest;
+    use std::collections::HashMap;
+
+    fn ctx_with_env(env: HashMap<String, String>) -> ExecutionContext {
+        ExecutionContext::new(env)
+    }
+
+    #[tokio::test]
+    async fn node_verification_skips_socket_checks_when_disabled() {
+        let env = HashMap::from([("FAMILY_ID".to_string(), "test-fam".to_string())]);
+        let ctx = ctx_with_env(env);
+        let mut node = GraphNode::default();
+        node.config
+            .insert("check_sockets".into(), serde_json::Value::Bool(false));
+        let out = GraphExecutor::node_verification(&node, &ctx)
+            .await
+            .expect("verification");
+        assert_eq!(out["check_sockets"], false);
+        assert_eq!(out["verified_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn node_verification_errors_when_check_sockets_true_without_socket_dir() {
+        let env = HashMap::from([("FAMILY_ID".to_string(), "f".to_string())]);
+        let ctx = ctx_with_env(env);
+        let mut node = GraphNode::default();
+        node.config
+            .insert("check_sockets".into(), serde_json::Value::Bool(true));
+        let err = GraphExecutor::node_verification(&node, &ctx)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("SOCKET_DIR"));
+    }
+
+    #[tokio::test]
+    async fn node_verification_errors_when_dependency_socket_missing() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "fam".to_string());
+        env.insert(
+            "SOCKET_DIR".to_string(),
+            dir.path().to_string_lossy().into_owned(),
+        );
+        let ctx = ctx_with_env(env);
+        let mut node = GraphNode {
+            dependencies: vec!["dep_a".into()],
+            ..Default::default()
+        };
+        node.config
+            .insert("check_sockets".into(), serde_json::Value::Bool(true));
+        ctx.set_output(
+            "dep_a",
+            serde_json::json!({ "socket": "/no/such/socket/path.sock" }),
+        )
+        .await;
+        let err = GraphExecutor::node_verification(&node, &ctx)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("Socket not found"));
+    }
+
+    #[tokio::test]
+    async fn node_health_check_all_errors_without_socket_dir() {
+        let ctx = ctx_with_env(HashMap::from([("FAMILY_ID".to_string(), "f".to_string())]));
+        let node = GraphNode::default();
+        let err = GraphExecutor::node_health_check_all(&node, &ctx)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("SOCKET_DIR"));
+    }
+
+    #[tokio::test]
+    async fn node_health_check_all_empty_when_socket_dir_missing_on_disk() {
+        let env = HashMap::from([
+            ("FAMILY_ID".to_string(), "f".to_string()),
+            (
+                "SOCKET_DIR".to_string(),
+                "/no/such/socket/dir/biomeos-test-xyz".to_string(),
+            ),
+        ]);
+        let ctx = ctx_with_env(env);
+        let node = GraphNode::default();
+        let out = GraphExecutor::node_health_check_all(&node, &ctx)
+            .await
+            .expect("ok");
+        assert_eq!(out["healthy_count"], 0);
+        assert_eq!(out["unhealthy_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn node_rpc_call_requires_target() {
+        let ctx = ctx_with_env(HashMap::new());
+        let mut node = GraphNode::default();
+        node.config
+            .insert("method".into(), serde_json::json!("ping"));
+        let err = GraphExecutor::node_rpc_call(&node, &ctx).await.unwrap_err();
+        assert!(err.to_string().contains("target"));
+    }
+
+    #[tokio::test]
+    async fn node_rpc_call_requires_method() {
+        let ctx = ctx_with_env(HashMap::new());
+        let mut node = GraphNode::default();
+        node.config
+            .insert("target".into(), serde_json::json!("beardog"));
+        let err = GraphExecutor::node_rpc_call(&node, &ctx).await.unwrap_err();
+        assert!(err.to_string().contains("method"));
+    }
+
+    #[tokio::test]
+    async fn node_capability_call_requires_capability_key() {
+        let ctx = ctx_with_env(HashMap::new());
+        let node = GraphNode::default();
+        let reg = CapabilityRegistry::default();
+        let err = GraphExecutor::node_capability_call_with_registry(&node, &ctx, &reg)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("capability"));
+    }
+
+    #[tokio::test]
+    async fn node_capability_call_no_provider_when_unmapped() {
+        let env = HashMap::from([("FAMILY_ID".to_string(), "test-fam".to_string())]);
+        let ctx = ctx_with_env(env);
+        let mut node = GraphNode::default();
+        node.config.insert(
+            "capability".into(),
+            serde_json::json!("zzzz_unmapped_capability_no_dots"),
+        );
+        let reg = CapabilityRegistry::default();
+        let err = GraphExecutor::node_capability_call_with_registry(&node, &ctx, &reg)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("No provider found"));
+    }
+
+    #[tokio::test]
+    async fn send_jsonrpc_async_fails_on_invalid_socket() {
+        let req = JsonRpcRequest::new("health.liveness", serde_json::json!({}));
+        let err = GraphExecutor::send_jsonrpc_async("/nonexistent/biomeos-neural-test.sock", &req)
+            .await
+            .unwrap_err();
+        assert!(!err.to_string().is_empty());
+    }
+}
