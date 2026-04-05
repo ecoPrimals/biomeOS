@@ -249,7 +249,7 @@ impl CapabilityHandler {
     ///
     /// # Parameters
     /// - `primal`: Primal name (e.g., "beardog")
-    /// - `transport`: Transport endpoint string (e.g., "<tcp://192.168.1.100:9001>")
+    /// - `transport`: Transport endpoint string (e.g., "<tcp://192.0.2.100:9001>")
     /// - `capabilities`: Array of capability names to register
     /// - `gate`: Gate label (optional, stored as source metadata)
     /// - `source`: Registration source (optional, defaults to "route.register")

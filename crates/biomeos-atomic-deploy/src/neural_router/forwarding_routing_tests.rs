@@ -611,7 +611,7 @@ async fn test_forward_request_jsonrpc_error_response_from_server() {
 async fn test_should_use_tarpc_tcp_endpoint_with_auto_no_graph() {
     let router = create_router("test").with_protocol_preference(ProtocolPreference::Auto);
     let ep = TransportEndpoint::TcpSocket {
-        host: Arc::from("192.168.1.100"),
+        host: Arc::from("192.0.2.100"),
         port: 9001,
     };
     assert!(!router.should_use_tarpc(&ep).await);
@@ -630,12 +630,12 @@ async fn test_primal_label_for_endpoint_variants() {
     );
 
     let tcp = TransportEndpoint::TcpSocket {
-        host: Arc::from("192.168.1.100"),
+        host: Arc::from("192.0.2.100"),
         port: 9001,
     };
     assert_eq!(
         router.primal_label_for_endpoint(&tcp),
-        Some("192.168.1.100:9001".to_string())
+        Some("192.0.2.100:9001".to_string())
     );
 
     let abs = TransportEndpoint::AbstractSocket {

@@ -509,11 +509,11 @@ mod tests {
     fn test_from_config() {
         let base = BiomeOSConfigBuilder::new()
             .with_port(9999)
-            .with_bind_address("192.168.1.1")
+            .with_bind_address("192.0.2.1")
             .build();
         let config = BiomeOSConfigBuilder::from_config(base).build();
         assert_eq!(config.network.port, 9999);
-        assert_eq!(config.network.bind_address, "192.168.1.1");
+        assert_eq!(config.network.bind_address, "192.0.2.1");
     }
 
     #[test]

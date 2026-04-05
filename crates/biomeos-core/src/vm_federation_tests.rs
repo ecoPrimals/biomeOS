@@ -76,7 +76,7 @@ async fn wait_for_vm_ssh_ready_succeeds_when_ssh_probe_succeeds() {
         ssh_retry_interval: Duration::from_millis(1),
         ssh_max_retries: 5,
     };
-    wait_for_vm_ssh_ready("192.168.1.1", &cfg, Instant::now(), || {
+    wait_for_vm_ssh_ready("192.0.2.1", &cfg, Instant::now(), || {
         std::process::Command::new("true").output()
     })
     .await
@@ -92,7 +92,7 @@ async fn wait_for_vm_ssh_ready_fails_after_max_retries() {
         ssh_retry_interval: Duration::from_nanos(1),
         ssh_max_retries: 4,
     };
-    let err = wait_for_vm_ssh_ready("192.168.1.2", &cfg, Instant::now(), || {
+    let err = wait_for_vm_ssh_ready("192.0.2.2", &cfg, Instant::now(), || {
         std::process::Command::new("false").output()
     })
     .await
@@ -112,7 +112,7 @@ async fn wait_for_vm_ssh_ready_times_out_before_max_retries() {
         ssh_retry_interval: Duration::from_nanos(1),
         ssh_max_retries: 100_000,
     };
-    let err = wait_for_vm_ssh_ready("192.168.1.3", &cfg, Instant::now(), || {
+    let err = wait_for_vm_ssh_ready("192.0.2.3", &cfg, Instant::now(), || {
         std::process::Command::new("false").output()
     })
     .await
@@ -133,7 +133,7 @@ async fn wait_for_vm_ssh_ready_io_error_then_success() {
         ssh_max_retries: 10,
     };
     let mut n = 0u32;
-    wait_for_vm_ssh_ready("192.168.1.4", &cfg, Instant::now(), || {
+    wait_for_vm_ssh_ready("192.0.2.4", &cfg, Instant::now(), || {
         n += 1;
         if n < 3 {
             Err(std::io::Error::new(

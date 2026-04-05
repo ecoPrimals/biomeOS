@@ -431,7 +431,7 @@ async fn test_runtime_discovery_pattern() {
 async fn test_route_register_batch_tcp() {
     let router = create_test_router();
 
-    let endpoint = TransportEndpoint::parse("tcp://192.168.1.100:9001").unwrap();
+    let endpoint = TransportEndpoint::parse("tcp://192.0.2.100:9001").unwrap();
     let capabilities = ["crypto.sign", "crypto.verify", "crypto.encrypt"];
 
     for cap in capabilities {
@@ -534,7 +534,7 @@ async fn test_route_register_all_transport_types() {
 async fn test_route_register_source_tag_with_gate() {
     let router = create_test_router();
 
-    let endpoint = TransportEndpoint::parse("tcp://192.168.1.132:9001").unwrap();
+    let endpoint = TransportEndpoint::parse("tcp://192.0.2.132:9001").unwrap();
     router
         .register_capability("crypto", "beardog", endpoint, "cross-gate@gate2")
         .await

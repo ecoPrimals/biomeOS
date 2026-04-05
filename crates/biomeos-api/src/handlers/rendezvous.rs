@@ -551,7 +551,7 @@ mod tests {
                     public_addr: "1.2.3.4:41200".to_string(),
                     nat_type: "symmetric".to_string(),
                 }),
-                relay_endpoint: Some("192.168.1.144:3479".to_string()),
+                relay_endpoint: Some("192.0.2.10:3479".to_string()),
                 stun_server: None,
             }),
             peers_waiting: 1,
@@ -561,7 +561,7 @@ mod tests {
         assert!(json.contains("peer_connection_info"));
         assert!(json.contains("1.2.3.4:41200"));
         assert!(json.contains("symmetric"));
-        assert!(json.contains("192.168.1.144:3479"));
+        assert!(json.contains("192.0.2.10:3479"));
     }
 
     #[test]
@@ -723,7 +723,7 @@ mod tests {
             "dark_forest_token": "token",
             "connection_info": {
                 "stun_results": {"public_addr": "1.2.3.4:41200", "nat_type": "symmetric"},
-                "relay_endpoint": "192.168.1.1:3479"
+                "relay_endpoint": "192.0.2.1:3479"
             }
         });
         let request: RendezvousPostRequest = serde_json::from_value(json).expect("deserialize");

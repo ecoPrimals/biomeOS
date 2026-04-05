@@ -22,7 +22,7 @@ struct Cli {
     command: Option<Commands>,
 
     /// Workspace root directory
-    #[arg(short, long, default_value = "/home/strandgate/Development")]
+    #[arg(short, long, default_value = ".")]
     workspace: String,
 
     /// Enable detailed health checks

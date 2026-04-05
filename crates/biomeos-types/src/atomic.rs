@@ -358,14 +358,14 @@ mod tests {
     #[test]
     fn full_nucleus_degradation_levels() {
         let mut nucleus = FullNucleus {
-            node: NodeAtomic::new("strandgate"),
+            node: NodeAtomic::new("gate-primary"),
             storage: PrimalHealth::Unavailable,
             inference: PrimalHealth::Unavailable,
         };
 
         assert_eq!(nucleus.degradation_level(), "Sovereign (local only)");
 
-        nucleus.node.tower = healthy_tower("strandgate");
+        nucleus.node.tower = healthy_tower("gate-primary");
         assert_eq!(nucleus.degradation_level(), "Tower only (no compute)");
 
         nucleus.node.compute = PrimalHealth::Healthy;
@@ -382,11 +382,11 @@ mod tests {
     #[test]
     fn full_nucleus_capabilities() {
         let mut nucleus = FullNucleus {
-            node: NodeAtomic::new("strandgate"),
+            node: NodeAtomic::new("gate-primary"),
             storage: PrimalHealth::Healthy,
             inference: PrimalHealth::Healthy,
         };
-        nucleus.node.tower = healthy_tower("strandgate");
+        nucleus.node.tower = healthy_tower("gate-primary");
         nucleus.node.compute = PrimalHealth::Healthy;
 
         let caps = nucleus.capabilities();

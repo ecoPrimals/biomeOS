@@ -228,7 +228,7 @@ Detailed per-gate hardware and status.
 
 ```
   Gate: Tower (local)
-    Address:  192.168.1.100
+    Address:  192.0.2.100
     Primals:  BearDog, Songbird, Toadstool, NestGate, Squirrel
     GPUs:     NVIDIA RTX 4070 (12 GB)
     RAM:      64 GB
@@ -236,7 +236,7 @@ Detailed per-gate hardware and status.
     Models:   TinyLlama/1.1B-Chat, runwayml/stable-diffusion-v1-5
 
   Gate: gate2
-    Address:  192.168.1.132
+    Address:  192.0.2.132
     Primals:  BearDog, Songbird, Toadstool, NestGate, Squirrel
     GPUs:     NVIDIA RTX 3090 (24 GB), AMD Radeon RX 6950 XT (16 GB)
     RAM:      256 GB

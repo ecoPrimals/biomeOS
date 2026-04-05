@@ -616,7 +616,7 @@ mod tests {
     async fn test_register_capability_tcp_endpoint() {
         let router = NeuralRouter::new("tcp-test");
         let ep = TransportEndpoint::TcpSocket {
-            host: Arc::from("192.168.1.100"),
+            host: Arc::from("192.0.2.100"),
             port: 9001,
         };
         router

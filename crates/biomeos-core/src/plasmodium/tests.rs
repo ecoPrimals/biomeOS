@@ -59,7 +59,7 @@ fn test_aggregate_with_gates() {
         },
         GateInfo {
             gate_id: "gate2".to_string(),
-            address: "192.168.1.132".to_string(),
+            address: "192.0.2.132".to_string(),
             is_local: false,
             primals: vec![PrimalStatus {
                 name: "toadstool".to_string(),
@@ -126,7 +126,7 @@ fn test_aggregate_unreachable_gates_excluded() {
         },
         GateInfo {
             gate_id: "unreachable".to_string(),
-            address: "192.168.1.99".to_string(),
+            address: "192.0.2.99".to_string(),
             is_local: false,
             primals: vec![],
             compute: ComputeInfo {

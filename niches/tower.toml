@@ -292,7 +292,7 @@ log_fossil_enabled = true  # Integrate with biomeOS log fossil
 
 # Scenario 2: WAN Tower with Multiple Sub-Federations
 # export NODE_ID=tower-beta
-# export NODE_NAME=strandgate
+# export NODE_NAME=gate-primary
 # export FAMILY_ID=1894e909e454
 # export SUB_FEDERATIONS=gaming,family,work
 # export ANNOUNCE_CAPABILITIES=storage,compute,ai

@@ -311,7 +311,7 @@ fn store_met_seed(
       "node_name": "pixel8a",
       "first_met": "2026-02-04T11:17:00Z",
       "last_seen": "2026-02-04T11:45:00Z",
-      "endpoints": ["192.168.1.50:9900"],
+      "endpoints": ["192.0.2.50:9900"],
       "capabilities_hint": ["mobile", "compute", "ai-client"],
       "notes": "Same lineage - family device",
       "relationship": "same_lineage",
@@ -731,7 +731,7 @@ Beacon Genetics (Mitochondria)
       "node_name": "pixel8a",
       "first_met": "2026-02-04T11:17:00Z",
       "last_seen": "2026-02-04T14:30:00Z",
-      "endpoints": ["192.168.1.50:9900", "10.0.0.5:9900"],
+      "endpoints": ["192.0.2.50:9900", "10.0.0.5:9900"],
       "capabilities_hint": ["mobile", "compute", "ai-client"],
       "notes": "Same lineage - family device",
       "relationship": {
@@ -777,7 +777,7 @@ Beacon Genetics (Mitochondria)
       "known_members": [
         "northgate-beacon-id",
         "southgate-beacon-id",
-        "strandgate-beacon-id"
+        "test-gate-beacon-id"
       ],
       "seed_file": "cluster-basement-towers.seed"
     }

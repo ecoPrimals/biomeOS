@@ -567,13 +567,13 @@ mod tests {
         let status = InterfaceStatus {
             name: "eth0".to_string(),
             status: "up".to_string(),
-            ip_address: Some("192.168.1.1".to_string()),
+            ip_address: Some("192.0.2.1".to_string()),
             is_active: true,
         };
         let json = serde_json::to_string(&status).expect("serialize");
         let parsed: InterfaceStatus = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(parsed.name, "eth0");
-        assert_eq!(parsed.ip_address, Some("192.168.1.1".to_string()));
+        assert_eq!(parsed.ip_address, Some("192.0.2.1".to_string()));
     }
 
     #[test]

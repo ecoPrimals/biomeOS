@@ -66,7 +66,7 @@ impl GateRegistry {
     ///
     /// ```toml
     /// [graph.env]
-    /// gate2 = "tcp://192.168.1.132:9001"
+    /// gate2 = "tcp://192.0.2.132:9001"
     /// pixel = "@biomeos-pixel"
     /// ```
     pub fn from_graph_env(env: &HashMap<String, String>) -> Self {
@@ -112,14 +112,14 @@ mod tests {
     #[test]
     fn test_register_and_resolve() {
         let mut reg = GateRegistry::new();
-        let ep = TransportEndpoint::parse("tcp://192.168.1.132:9001").unwrap();
+        let ep = TransportEndpoint::parse("tcp://192.0.2.132:9001").unwrap();
         reg.register("gate2", ep);
 
         assert_eq!(reg.len(), 1);
         assert!(reg.is_remote("gate2"));
 
         let resolved = reg.resolve("gate2").unwrap();
-        assert_eq!(resolved.display_string(), "tcp://192.168.1.132:9001");
+        assert_eq!(resolved.display_string(), "tcp://192.0.2.132:9001");
     }
 
     #[test]
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn test_from_graph_env() {
         let mut env = HashMap::new();
-        env.insert("gate2".into(), "tcp://192.168.1.132:9001".into());
+        env.insert("gate2".into(), "tcp://192.0.2.132:9001".into());
         env.insert("pixel".into(), "@biomeos-pixel".into());
         env.insert("RUST_LOG".into(), "info".into()); // not a transport — should be skipped
 

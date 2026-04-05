@@ -182,7 +182,7 @@ Songbird needs to implement this RPC handler:
 {
   "method": "network.beacon_exchange",
   "params": {
-    "endpoint": "192.168.1.100:9900",
+    "endpoint": "192.0.2.100:9900",
     "payload": {
       "beacon_id": "d03029e5...",
       "encrypted_seed": "base64..."

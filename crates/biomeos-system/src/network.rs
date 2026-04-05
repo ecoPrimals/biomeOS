@@ -289,7 +289,7 @@ mod tests {
             name: "wlan0".to_string(),
             interface_type: NetworkInterfaceType::Wireless,
             status: NetworkInterfaceStatus::Up,
-            addresses: vec!["192.168.1.100".to_string()],
+            addresses: vec!["192.0.2.100".to_string()],
             mac_address: Some("aa:bb:cc:dd:ee:ff".to_string()),
             mtu: 1500,
             bytes_sent: 1_000_000,

@@ -643,8 +643,8 @@ mod tests {
             let result = match method {
                 "tunnel.request" => serde_json::json!({
                     "tunnel_id": "tid",
-                    "endpoint_a_address": "192.168.1.1",
-                    "endpoint_b_address": "192.168.1.2",
+                    "endpoint_a_address": "192.0.2.1",
+                    "endpoint_b_address": "192.0.2.2",
                     "endpoint_a_port": 111,
                     "endpoint_b_port": 222
                 }),

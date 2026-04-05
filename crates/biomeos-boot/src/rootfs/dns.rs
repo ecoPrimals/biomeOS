@@ -57,9 +57,9 @@ mod tests {
 
     #[test]
     fn test_parse_resolv_conf_handles_whitespace() {
-        let content = "  nameserver   192.168.1.1  \n";
+        let content = "  nameserver   192.0.2.1  \n";
         let servers = parse_resolv_conf(content);
-        assert_eq!(servers, vec!["192.168.1.1"]);
+        assert_eq!(servers, vec!["192.0.2.1"]);
     }
 
     #[test]

@@ -693,7 +693,7 @@ fn test_auto_meld_two_gates() {
 fn test_auto_meld_local_priority() {
     let state = mock_state(vec![
         mock_gate("tower", "local", true, vec![("songbird", true)], 0),
-        mock_gate("gate2", "192.168.1.132", false, vec![("songbird", true)], 0),
+        mock_gate("gate2", "192.0.2.132", false, vec![("songbird", true)], 0),
     ]);
 
     let agents = agents_from_collective(&state);
@@ -715,7 +715,7 @@ fn test_auto_meld_skips_unreachable() {
     )]);
     let mut unreachable = mock_gate(
         "gate2",
-        "192.168.1.132",
+        "192.0.2.132",
         false,
         vec![("toadstool", true)],
         0,

@@ -13,25 +13,25 @@
 
 | Node | Config | Tower | Compute | Specs | Purpose |
 |------|--------|-------|---------|-------|---------|
-| **Northgate** | `northgate.toml` | ✅ | GPU+CPU | i9-14900K, RTX 5090, 192GB | AI/LLM hub |
-| **Southgate** | `southgate.toml` | ✅ | GPU+CPU | 5800X3D, RTX 3090, 128GB | Gaming + compute |
-| **Eastgate** | `eastgate.toml` | ✅ | GPU+CPU | i9-12900, RTX 3090, 32GB | Utility compute |
-| **Westgate** | `westgate.toml` | ✅ | CPU | i7-4771, 76TB ZFS, 32GB | NAS + storage |
-| **Strandgate** | `strandgate.toml` | ✅ | CPU+GPU | Dual EPYC 64c, RTX 3070, 256GB | Bio pipeline |
-| **BlueGate** | `bluegate.toml` | ✅ | GPU+CPU | TBD, RTX 4070, 128GB | General compute |
+| **Gate A** | `northgate.toml` | ✅ | GPU+CPU | i9-14900K, RTX 5090, 192GB | AI/LLM hub |
+| **Gate B** | `southgate.toml` | ✅ | GPU+CPU | 5800X3D, RTX 3090, 128GB | Gaming + compute |
+| **Gate C** | `eastgate.toml` | ✅ | GPU+CPU | i9-12900, RTX 3090, 32GB | Utility compute |
+| **Gate D** | `westgate.toml` | ✅ | CPU | i7-4771, 76TB ZFS, 32GB | NAS + storage |
+| **Gate E** | `primary.toml` | ✅ | CPU+GPU | Dual EPYC 64c, RTX 3070, 256GB | Bio pipeline |
+| **Gate F** | `bluegate.toml` | ✅ | GPU+CPU | TBD, RTX 4070, 128GB | General compute |
 
 ### **Internet Nodes (2 machines)**
 
 | Node | Config | Tower | Compute | Location | Specs |
 |------|--------|-------|---------|----------|-------|
-| **FlockGate** | `flockgate.toml` | ✅ | GPU+CPU | Brother's house | i9-13900K, RTX 3070Ti, 64GB |
-| **KinGate** | `kingate.toml` | ✅ | GPU+CPU | Family | i7-6700K, RTX 3070, 32GB |
+| **Gate G** | `flockgate.toml` | ✅ | GPU+CPU | Remote site | i9-13900K, RTX 3070Ti, 64GB |
+| **Gate H** | `kingate.toml` | ✅ | GPU+CPU | Remote site | i7-6700K, RTX 3070, 32GB |
 
 ### **Mobile Nodes (2 devices)**
 
 | Node | Config | Tower | Compute | Mobility | Specs |
 |------|--------|-------|---------|----------|-------|
-| **Swiftgate** | `swiftgate.toml` | ✅ | GPU+CPU | Portable | 5800X, RTX 3070, 64GB |
+| **Gate I** | `swiftgate.toml` | ✅ | GPU+CPU | Portable | 5800X, RTX 3070, 64GB |
 | **Pixel 8a** | `pixel8a.toml` | ✅ Lite | Mobile | Phone | Tensor G2, Android |
 
 ---
@@ -72,38 +72,38 @@ done
 Deploy towers on each LAN machine:
 
 ```bash
-# On Northgate (and similarly for other nodes)
-export NODE_ID=tower-northgate
+# On Gate B (and similarly for other nodes)
+export NODE_ID=tower-gate-b
 export FAMILY_ID=${FAMILY_ID}
-biomeos nucleus start --mode tower --node-id tower-northgate
+biomeos nucleus start --mode tower --node-id tower-gate-b
 # Or graph-based: biomeos deploy graphs/tower_atomic_bootstrap.toml
 ```
 
 ### **Phase 4: Verify LAN Federation**
 
 ```bash
-# From any LAN tower (e.g., Northgate)
-curl --unix-socket /tmp/songbird-tower-northgate.sock \
+# From any LAN tower (e.g., Gate B)
+curl --unix-socket /tmp/songbird-tower-gate-b.sock \
   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"],"timeout_ms":5000},"id":1}' \
   | jq '.result.nodes'
 
 # Expected: 6 towers discovered
-# - tower-northgate
-# - tower-southgate
-# - tower-eastgate
-# - tower-westgate
-# - tower-strandgate
-# - tower-bluegate
+# - tower-gate-b
+# - tower-gate-c
+# - tower-gate-d
+# - tower-gate-e
+# - tower-gate-a
+# - tower-gate-f
 ```
 
 ### **Phase 5: Deploy Compute Nodes (13 nodes on LAN)**
 
 Deploy compute nodes on each machine (see individual config files).
 
-**Example: Northgate**
+**Example: Gate B**
 ```bash
 # Compute nodes use biomeos nucleus or graph-based deployment
-export NODE_ID=compute-northgate-rtx5090
+export NODE_ID=compute-gate-b-rtx5090
 biomeos deploy graphs/node_atomic_compute.toml
 ```
 
@@ -112,22 +112,22 @@ Repeat for all LAN nodes using their respective config files.
 ### **Phase 6: Deploy Internet Nodes (2 nodes)**
 
 ```bash
-# On FlockGate (brother's house)
-export NODE_ID=tower-flockgate
+# On Gate G (remote site)
+export NODE_ID=tower-gate-g
 export FAMILY_ID=${FAMILY_ID}
-biomeos nucleus start --mode tower --node-id tower-flockgate
+biomeos nucleus start --mode tower --node-id tower-gate-g
 
-# On KinGate (family)
-export NODE_ID=tower-kingate
+# On Gate H (remote site)
+export NODE_ID=tower-gate-h
 export FAMILY_ID=${FAMILY_ID}
-biomeos nucleus start --mode tower --node-id tower-kingate
+biomeos nucleus start --mode tower --node-id tower-gate-h
 ```
 
 ### **Phase 7: Verify Internet Federation**
 
 ```bash
 # From any LAN tower
-curl --unix-socket /tmp/songbird-tower-northgate.sock \
+curl --unix-socket /tmp/songbird-tower-gate-b.sock \
   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"],"timeout_ms":10000},"id":1}' \
   | jq '.result.nodes | map(.node_id)'
 
@@ -137,10 +137,10 @@ curl --unix-socket /tmp/songbird-tower-northgate.sock \
 ### **Phase 8: Deploy Mobile Nodes (2 devices)**
 
 ```bash
-# Swiftgate (portable laptop)
-export NODE_ID=tower-swiftgate
+# Gate I (portable laptop)
+export NODE_ID=tower-gate-i
 export FAMILY_ID=${FAMILY_ID}
-biomeos nucleus start --mode tower --node-id tower-swiftgate
+biomeos nucleus start --mode tower --node-id tower-gate-i
 
 # Pixel 8a (Android phone) - use tower-lite mode if available
 export NODE_ID=tower-pixel8a
@@ -155,7 +155,7 @@ biomeos nucleus start --mode tower --node-id tower-pixel8a
 ### **Test 1: Federation Discovery**
 ```bash
 # Count federated towers
-curl --unix-socket /tmp/songbird-tower-northgate.sock \
+curl --unix-socket /tmp/songbird-tower-gate-b.sock \
   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"]},"id":1}' \
   | jq '.result.nodes | length'
 
@@ -165,7 +165,7 @@ curl --unix-socket /tmp/songbird-tower-northgate.sock \
 ### **Test 2: Compute Node Discovery**
 ```bash
 # List all compute nodes
-for tower in northgate southgate eastgate westgate strandgate bluegate; do
+for tower in gate-b gate-c gate-d gate-e gate-a gate-f; do
   curl --unix-socket /tmp/songbird-tower-$tower.sock \
     -d '{"jsonrpc":"2.0","method":"list_compute_nodes","params":{},"id":1}' \
     | jq ".result.nodes[] | {node_id, resource_type}"
@@ -174,15 +174,15 @@ done
 
 ### **Test 3: Submit Workload**
 ```bash
-# Submit test workload to Northgate GPU
-curl --unix-socket /tmp/compute-node-northgate-rtx5090.sock \
+# Submit test workload to Gate B GPU
+curl --unix-socket /tmp/compute-node-gate-b-rtx5090.sock \
   -d '{"jsonrpc":"2.0","method":"workload.submit","params":{"runtime":"native","code":"println!(\"Hello from RTX 5090!\");","language":"rust"},"id":1}'
 ```
 
 ### **Test 4: Genetic Lineage Verification**
 ```bash
 # Verify all nodes share genetic lineage
-for tower in northgate southgate eastgate westgate strandgate bluegate flockgate kingate swiftgate; do
+for tower in gate-b gate-c gate-d gate-e gate-a gate-f gate-g gate-h gate-i; do
   biomeos verify-lineage /path/to/tower-$tower/spore --detailed
 done
 ```
@@ -200,20 +200,20 @@ scrape_configs:
   - job_name: 'towers-lan'
     static_configs:
       - targets:
-        - 'northgate:8080'
-        - 'southgate:8080'
-        - 'eastgate:8080'
-        - 'westgate:8080'
-        - 'strandgate:8080'
-        - 'bluegate:8080'
+        - 'gate-b:8080'
+        - 'gate-c:8080'
+        - 'gate-d:8080'
+        - 'gate-e:8080'
+        - 'gate-a:8080'
+        - 'gate-f:8080'
 
   # LAN Compute Nodes
   - job_name: 'compute-lan'
     static_configs:
       - targets:
-        - 'northgate:9091'  # GPU
-        - 'northgate:9092'  # CPU
-        - 'southgate:9091'
+        - 'gate-b:9091'  # GPU
+        - 'gate-b:9092'  # CPU
+        - 'gate-c:9091'
         # ... etc
 ```
 
@@ -239,7 +239,7 @@ Create granular trust domains (via Songbird/BearDog family tags):
 ```bash
 # Sub-federations use family tags; configure via tower.toml or Songbird discovery
 # Example: set FAMILY_ID per sub-fed or use biomeos nucleus --node-id for tower identity
-biomeos nucleus start --mode tower --node-id tower-southgate
+biomeos nucleus start --mode tower --node-id tower-gate-c
 # Trust is established via genetic lineage (biomeos verify-lineage) and family_id
 ```
 
@@ -248,18 +248,18 @@ biomeos nucleus start --mode tower --node-id tower-southgate
 ## 🎯 Use Cases
 
 ### **1. Distributed AI Training**
-- **Nodes**: Northgate (5090), Southgate (3090), Eastgate (3090)
+- **Nodes**: Gate A (5090), Gate B (3090), Gate C (3090)
 - **Workload**: Spread LLM across 3 GPUs
 - **Coordination**: Towers manage gradient sync
 
 ### **2. Gaming Federation**
-- **Nodes**: Southgate, BlueGate, FlockGate, KinGate
+- **Nodes**: Gate B, Gate F, Gate G, Gate H
 - **Sub-fed**: `gaming`
 - **Workload**: Multiplayer servers, game state sync
 
 ### **3. Bio Pipeline**
-- **Node**: Strandgate (64 cores, 256GB ECC)
-- **Storage**: Westgate (76TB ZFS)
+- **Node**: Gate E (64 cores, 256GB ECC)
+- **Storage**: Gate D (76TB ZFS)
 - **Workload**: Alignment, Kraken2, preprocessing
 
 ---

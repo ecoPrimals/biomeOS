@@ -198,10 +198,10 @@ mod tests {
 
     #[test]
     fn test_parse_tcp_with_prefix() {
-        let endpoint = TransportEndpoint::parse("tcp://192.168.1.100:8080").unwrap();
+        let endpoint = TransportEndpoint::parse("tcp://192.0.2.100:8080").unwrap();
         assert!(matches!(endpoint, TransportEndpoint::TcpSocket { .. }));
         if let TransportEndpoint::TcpSocket { host, port } = endpoint {
-            assert_eq!(host.as_ref(), "192.168.1.100");
+            assert_eq!(host.as_ref(), "192.0.2.100");
             assert_eq!(port, 8080);
         }
     }
@@ -371,11 +371,11 @@ mod tests {
         assert_eq!(display, "unix:///tmp/beardog-1894e909e454.sock");
 
         let tcp = TransportEndpoint::TcpSocket {
-            host: Arc::from("192.168.1.100"),
+            host: Arc::from("192.0.2.100"),
             port: 9100,
         };
         let display = format!("{tcp}");
-        assert_eq!(display, "tcp://192.168.1.100:9100");
+        assert_eq!(display, "tcp://192.0.2.100:9100");
     }
 
     #[test]
@@ -414,10 +414,10 @@ mod tests {
 
     #[test]
     fn test_parse_http_jsonrpc() {
-        let endpoint = TransportEndpoint::parse("http://192.168.1.100:8080").unwrap();
+        let endpoint = TransportEndpoint::parse("http://192.0.2.100:8080").unwrap();
         assert!(matches!(endpoint, TransportEndpoint::HttpJsonRpc { .. }));
         if let TransportEndpoint::HttpJsonRpc { host, port } = endpoint {
-            assert_eq!(host.as_ref(), "192.168.1.100");
+            assert_eq!(host.as_ref(), "192.0.2.100");
             assert_eq!(port, 8080);
         }
     }

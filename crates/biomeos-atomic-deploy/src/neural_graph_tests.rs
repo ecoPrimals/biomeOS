@@ -568,7 +568,7 @@ description = "Deploy across Tower + gate2"
 coordination = "Sequential"
 
 [graph.env]
-gate2 = "tcp://192.168.1.132:9001"
+gate2 = "tcp://192.0.2.132:9001"
 
 [[graph.nodes]]
 id = "beardog"
@@ -604,7 +604,7 @@ version = "1.0.0"
 description = "Tests [graph.env] parsing"
 
 [graph.env]
-gate2 = "tcp://192.168.1.132:9001"
+gate2 = "tcp://192.0.2.132:9001"
 pixel = "@biomeos-pixel"
 RUST_LOG = "info"
 
@@ -616,7 +616,7 @@ capability = "test"
     let graph = Graph::from_toml_str(toml).unwrap();
 
     assert_eq!(graph.env.len(), 3);
-    assert_eq!(graph.env.get("gate2").unwrap(), "tcp://192.168.1.132:9001");
+    assert_eq!(graph.env.get("gate2").unwrap(), "tcp://192.0.2.132:9001");
     assert_eq!(graph.env.get("pixel").unwrap(), "@biomeos-pixel");
     assert_eq!(graph.env.get("RUST_LOG").unwrap(), "info");
 }
@@ -649,7 +649,7 @@ version = "1.0.0"
 description = "Gate registry from graph env"
 
 [graph.env]
-gate2 = "tcp://192.168.1.132:9001"
+gate2 = "tcp://192.0.2.132:9001"
 pixel = "@biomeos-pixel"
 RUST_LOG = "info"
 

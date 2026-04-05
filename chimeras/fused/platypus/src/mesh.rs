@@ -154,7 +154,7 @@ impl MeshNode {
     ///
     /// Reads from a discovery file at a standard path (XDG_RUNTIME_DIR/biomeos/mesh-peers.json
     /// or /tmp/biomeos/mesh-peers.json). Other primals can write peer addresses to this file.
-    /// Expects a JSON array of address strings, e.g. `["127.0.0.1:8080", "192.168.1.100:8080"]`.
+    /// Expects a JSON array of address strings, e.g. `["127.0.0.1:8080", "192.0.2.100:8080"]`.
     pub async fn discover(&self) -> Vec<Peer> {
         let path = Self::discovery_file_path();
         let content = match tokio::fs::read_to_string(&path).await {

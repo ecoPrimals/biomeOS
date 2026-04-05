@@ -60,7 +60,7 @@ async fn test_sync_with_lineage_peer_same_lineage() {
             node_name: "peer-a".to_string(),
             first_met: 1000,
             last_seen: 1000,
-            endpoints: vec!["192.168.1.1:9900".to_string()],
+            endpoints: vec!["192.0.2.1:9900".to_string()],
             capabilities_hint: vec![],
             notes: "Local meeting".to_string(),
             relationship: MeetingRelationship::Direct,
@@ -78,7 +78,7 @@ async fn test_sync_with_lineage_peer_same_lineage() {
             node_name: "peer-b".to_string(),
             first_met: 2000,
             last_seen: 2000,
-            endpoints: vec!["192.168.1.2:9900".to_string()],
+            endpoints: vec!["192.0.2.2:9900".to_string()],
             capabilities_hint: vec!["compute".to_string()],
             notes: "Remote meeting".to_string(),
             relationship: MeetingRelationship::Direct,
@@ -255,7 +255,7 @@ fn test_list_meetings_with_data() {
             node_name: "peer-1".to_string(),
             first_met: 1000,
             last_seen: 1000,
-            endpoints: vec!["192.168.1.1:9900".to_string()],
+            endpoints: vec!["192.0.2.1:9900".to_string()],
             capabilities_hint: vec![],
             notes: "Test".to_string(),
             relationship: MeetingRelationship::Direct,
@@ -396,7 +396,7 @@ async fn test_initiate_meeting_full_flow() {
     ));
 
     let result = manager
-        .initiate_meeting("192.168.1.10:9900", "peer-node")
+        .initiate_meeting("192.0.2.10:9900", "peer-node")
         .await
         .expect("initiate meeting");
 
@@ -417,7 +417,7 @@ async fn test_initiate_meeting_beacon_get_id_fails() {
         "lineage",
     ));
 
-    let result = manager.initiate_meeting("192.168.1.10:9900", "peer").await;
+    let result = manager.initiate_meeting("192.0.2.10:9900", "peer").await;
 
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("beacon.get_id"));
@@ -437,7 +437,7 @@ async fn test_sync_with_lineage_peer_updates_existing() {
             node_name: "peer-a".to_string(),
             first_met: 1000,
             last_seen: 1000,
-            endpoints: vec!["192.168.1.1:9900".to_string()],
+            endpoints: vec!["192.0.2.1:9900".to_string()],
             capabilities_hint: vec![],
             notes: "Local".to_string(),
             relationship: MeetingRelationship::Direct,
@@ -456,8 +456,8 @@ async fn test_sync_with_lineage_peer_updates_existing() {
             first_met: 1000,
             last_seen: 2000,
             endpoints: vec![
-                "192.168.1.1:9900".to_string(),
-                "192.168.1.2:9900".to_string(),
+                "192.0.2.1:9900".to_string(),
+                "192.0.2.2:9900".to_string(),
             ],
             capabilities_hint: vec![],
             notes: "Remote".to_string(),

@@ -88,7 +88,7 @@ Step 1: Address Discovery (Tier 3: Public STUN)
 │ Tower                                    Google STUN               │
 │   │                                         │                       │
 │   │──── STUN Binding Request ──────────────►│                       │
-│   │◄─── 162.226.225.148:32822 ─────────────│                       │
+│   │◄─── 198.51.100.1:32822 ─────────────│                       │
 │                                                                     │
 │ Pixel                                    Google STUN               │
 │   │                                         │                       │
@@ -103,7 +103,7 @@ Step 2: Beacon Exchange (Tier 1: Genetic Lineage)
 │   birdsong.generate_encrypted_beacon({                             │
 │     node_id: "tower",                                              │
 │     capabilities: ["ai-server", "gpu", "family-relay"],            │
-│     public_endpoint: "162.226.225.148:32822"                       │
+│     public_endpoint: "198.51.100.1:32822"                       │
 │   })                                                               │
 │   → Encrypted with mito beacon seed                                │
 │                                                                     │
@@ -118,8 +118,8 @@ Step 3: Connection Attempt (UDP Hole Punch)
 ┌─────────────────────────────────────────────────────────────────────┐
 │ Both sides have symmetric NAT → Direct hole punch FAILS            │
 │                                                                     │
-│ Tower: 162.226.225.148:* ─────X────► Pixel: 107.122.244.113:*     │
-│ Pixel: 107.122.244.113:* ─────X────► Tower: 162.226.225.148:*     │
+│ Tower: 198.51.100.1:* ─────X────► Pixel: 107.122.244.113:*     │
+│ Pixel: 107.122.244.113:* ─────X────► Tower: 198.51.100.1:*     │
 │                                                                     │
 │ Symmetric NAT changes port per destination = unpredictable         │
 └─────────────────────────────────────────────────────────────────────┘
@@ -128,7 +128,7 @@ Step 4: Family Relay Fallback (Tier 1)
 ┌─────────────────────────────────────────────────────────────────────┐
 │ Tower offers relay service (can_offer_relay: true)                 │
 │                                                                     │
-│ Pixel ──► Tower LAN (192.168.1.144) ──► Target                    │
+│ Pixel ──► Tower LAN (192.0.2.10) ──► Target                    │
 │   │                  │                                             │
 │   └── Encrypted with mito seed ──────┘                             │
 │                                                                     │
@@ -224,8 +224,8 @@ realm=biomeos.local
 server-name=tower.biomeos.local
 
 # For TURN (relay) functionality:
-relay-ip=192.168.1.144
-external-ip=162.226.225.148
+relay-ip=192.0.2.10
+external-ip=198.51.100.1
 
 # Start
 sudo systemctl enable coturn

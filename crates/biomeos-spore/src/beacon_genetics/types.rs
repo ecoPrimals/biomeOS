@@ -361,7 +361,7 @@ mod tests {
             node_name: "alice-laptop".to_string(),
             first_met: 1_234_567_890,
             last_seen: 1_234_567_899,
-            endpoints: vec!["192.168.1.100:9900".to_string()],
+            endpoints: vec!["192.0.2.100:9900".to_string()],
             capabilities_hint: vec!["compute".to_string()],
             notes: "Met at conference".to_string(),
             relationship: MeetingRelationship::Direct,

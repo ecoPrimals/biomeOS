@@ -38,7 +38,7 @@ The beacon "address book" (known_beacons.json):
       "node_name": "alice-desktop",
       "first_met": "2026-02-04T10:30:00Z",
       "last_seen": "2026-02-04T11:45:00Z", 
-      "endpoints": ["192.168.1.50:9900", "10.0.0.5:9900"],
+      "endpoints": ["192.0.2.50:9900", "10.0.0.5:9900"],
       "capabilities_hint": ["compute", "storage"],
       "notes": "Met at coffee shop, trusted for AI work",
       "trust_level": "met"  # met | verified | trusted

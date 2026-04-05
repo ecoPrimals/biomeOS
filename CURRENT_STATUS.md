@@ -88,7 +88,7 @@ Permanent tunnel established for external beacon rendezvous:
 | Endpoint | `https://api.nestgate.io` |
 | Protocol | QUIC (4x HA connections) |
 | Latency | ~160ms (Cloudflare edge) |
-| LAN Access | `http://192.168.1.144:3492` (direct) |
+| LAN Access | `http://192.0.2.10:3492` (direct) |
 | Pixel Hotspot | ✅ Reachable via Cloudflare |
 | Security Audit | 100/100 (0 metadata leaks) |
 
@@ -117,12 +117,12 @@ Dynamic address book synchronization tested:
 | Network | Pixel IP | Access Method | Status |
 |---------|----------|---------------|--------|
 | **Hotspot** | 172.20.10.x | `api.nestgate.io` (Cloudflare) | ✅ Validated |
-| **Home WiFi** | 192.168.1.114 | Direct LAN HTTP | ✅ Validated |
+| **Home WiFi** | 192.0.2.114 | Direct LAN HTTP | ✅ Validated |
 
 **Transition Flow:**
 ```
 1. Pixel on hotspot → uses api.nestgate.io → beacon exchange ✅
-2. Pixel switches to home WiFi → detects new IP (192.168.1.114)
+2. Pixel switches to home WiFi → detects new IP (192.0.2.114)
 3. Address book updated via NestGate storage → ✅
 4. Direct LAN HTTP test → 0% packet loss, 141ms latency
 5. Bidirectional beacon exchange → family verified ✅
@@ -142,8 +142,8 @@ First multi-computer federated cluster established:
 
 | Node | IP | Gen | Role | Primals |
 |------|----|-----|------|---------|
-| **Tower** | 192.168.1.144 | 0 | Parent/Orchestrator | biomeos-api |
-| **NUC** | 192.168.1.190 | 2 | Gate/Compute | All 5 primals |
+| **Tower** | 192.0.2.10 | 0 | Parent/Orchestrator | biomeos-api |
+| **NUC** | 192.0.2.190 | 2 | Gate/Compute | All 5 primals |
 
 **NUC Hardware:**
 - CPU: Ryzen 5 6600H (6 cores)
@@ -267,7 +267,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 | **Infallible error handling** | `biomeos-federation` `Capability::from_str` / `from_tags`: `.expect()` → `match never {}` exhaustive match on `Infallible` |
 | **Hardcoded primal names** | `trust.rs`, `beardog.rs`, `primal_spawner.rs`, `orchestrator.rs`: string literals → `primal_names::*` constants |
 | **Doc-tests** | New doctests on `identifiers.rs`, `error/core.rs`, `paths.rs`, `config/mod.rs`, `transport.rs`, `atomic_client.rs`, `capability.rs` |
-| **Deployments doc** | `basement-hpc/README.md`: hardcoded `/home/eastgate/...` → `$BIOMEOS_REPO` |
+| **Deployments doc** | `basement-hpc/README.md`: hardcoded home-directory paths → `$BIOMEOS_REPO` |
 | **Tests** | 7,209 passing (0 failures), 135 ignored, 0 Clippy warnings |
 
 ### Deep Audit + Hardcoding Evolution — v2.68 (Mar 27, 2026)
@@ -437,8 +437,8 @@ Comprehensive audit and evolution pass against ecoPrimals wateringHole standards
 | **sysinfo → /proc** | All 5 crates migrated from `sysinfo` (C deps) to direct `/proc` reads + `rustix::fs::statvfs`. ecoBin v3.0 compliant. |
 | **Large file refactoring** | 8 files >1000 lines refactored into domain modules: widgets.rs (1571→3 files), doctor.rs (1075→6 files), ai_first_api.rs (1049→4 files), dark_forest.rs (1041→4 files), subfederation.rs (1019→5 files), rootfs.rs (1005→7 files), model_cache.rs (1002→4 files). Max file now 998 lines. |
 | **JSON-RPC consolidation** | 5+ duplicate `JsonRpcRequest`/`JsonRpcResponse` definitions unified into `biomeos-types::jsonrpc` |
-| **Hardcoded paths** | `/home/strandgate/Development` removed from 4 `tools/src/*.rs` files → runtime `discover_workspace_root()` |
-| **Hardcoded IPs** | `192.168.1.132:8080` in tests → RFC 5737 documentation address; `192.168.1.1` → `192.0.2.1` |
+| **Hardcoded paths** | hardcoded workspace paths removed from 4 `tools/src/*.rs` files → runtime `discover_workspace_root()` |
+| **Hardcoded IPs** | `192.0.2.132:8080` in tests → RFC 5737 documentation address; `192.0.2.1` → `192.0.2.1` |
 | **Mock production code** | 3 mock implementations in `tools/src/` evolved to real: sovereignty→dep tree inspection, coverage→llvm-cov parsing, health→runtime socket discovery |
 | **deny.toml** | New — bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys |
 | **rustfmt.toml** | New — enforces edition 2021, max_width 100 |
@@ -502,7 +502,7 @@ Data-driven architecture evolution across 8 phases:
 | Phase | Scope | Key Changes |
 |-------|-------|-------------|
 | **1. Capability routing** | Eliminated hardcoded primal names from routing | `primal_spawner.rs` match block → `config/primal_launch_profiles.toml`; `bootstrap.rs`, `ai_advisor.rs` use `CapabilityTaxonomy::resolve_to_primal()` |
-| **2. Path elimination** | Removed all hardcoded socket/log/config paths | 7 files migrated to `SystemPaths` XDG; removed personal `/home/eastgate/` path from `genome_dist.rs` |
+| **2. Path elimination** | Removed all hardcoded socket/log/config paths | 7 files migrated to `SystemPaths` XDG; removed personal home-directory path from `genome_dist.rs` |
 | **3. Deploy graphs** | Created missing deployment graphs | `nucleus_simple.toml`, `ui_atomic.toml`, `livespore_create.toml`; niche template graph_id naming fixed |
 | **4. Large file splits** | 6 files >1000 LOC → domain modules | `system/lib.rs`, `security.rs`, `capability_handlers.rs`, `genome_dist.rs`, `protocol_escalation.rs`, `nucleus.rs` |
 | **5. Dead code** | Resolved placeholders and dead code | `usb.rs` metadata.len() bug; `UNVERIFIED_SIGNATURE` constant; `config_builder` domain method |
@@ -804,7 +804,7 @@ Full NUCLEUS  = All 5 primals (biomeOS routes capabilities via Neural API)
 ### Live HPC Configuration
 
 ```
-Tower (pop-os, x86_64):
+Tower (local, x86_64):
   GPU:    RTX 4070 (12 GB VRAM)
   RAM:    31 GB
   CPU:    24 cores (i9-14900)
@@ -812,7 +812,7 @@ Tower (pop-os, x86_64):
   Primals: BearDog, Songbird, NestGate, Toadstool, Squirrel
   biomeOS: Neural API capability routing (290+ translations + agent routing)
 
-gate2 (pop-os, x86_64):
+gate2 (local, x86_64):
   GPU:    RTX 3090 (24 GB VRAM)
   RAM:    251 GB
   CPU:    128 cores (EPYC 9274F)

@@ -131,7 +131,7 @@ struct LineageSeed {
 │  Node A broadcasts: encrypt(beacon_seed, presence_info)                    │
 │                                                                             │
 │  Observers without beacon genetics: [noise] [noise] [noise]                │
-│  Observers with beacon genetics: "Node A at 192.168.1.100:9200"           │
+│  Observers with beacon genetics: "Node A at 192.0.2.100:9200"           │
 │                                                                             │
 │  ✅ TRUE Dark Forest - outsiders can't even detect communication          │
 │                                                                             │

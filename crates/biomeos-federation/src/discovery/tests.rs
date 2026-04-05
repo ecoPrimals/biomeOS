@@ -244,7 +244,7 @@ fn test_register_songbird_peer_full() {
         "capabilities": ["security", "crypto"],
         "endpoints": {
             "unix_socket": "/tmp/beardog.sock",
-            "udp": "192.168.1.10:9000"
+            "udp": "192.0.2.10:9000"
         }
     });
     pd.register_discovery_peer(&peer);

@@ -439,7 +439,7 @@ async fn e2e_phase1_beacon_generation() {
         family_seed.clone(),
         "[2600:1700:b0b0:5b90::80]:9901",
     );
-    let usb = SimulatedNode::new("usb", family_seed.clone(), "192.168.1.50:9902");
+    let usb = SimulatedNode::new("usb", family_seed.clone(), "192.0.2.50:9902");
     let tower = SimulatedNode::new("tower", family_seed, "tower.nestgate.io:3492");
 
     // Each node has a unique beacon ID
@@ -471,7 +471,7 @@ async fn e2e_phase2_rendezvous_matching() {
         family_seed.clone(),
         "[2600:1700:b0b0:5b90::80]:9901",
     );
-    let usb = SimulatedNode::new("usb", family_seed.clone(), "192.168.1.50:9902");
+    let usb = SimulatedNode::new("usb", family_seed.clone(), "192.0.2.50:9902");
 
     // Tower acts as rendezvous point
     let rendezvous = MockRendezvous::new(family_seed);
@@ -531,7 +531,7 @@ async fn e2e_phase3_mutual_decryption() {
         family_seed.clone(),
         "[2600:1700:b0b0:5b90::80]:9901",
     );
-    let usb = SimulatedNode::new("usb", family_seed, "192.168.1.50:9902");
+    let usb = SimulatedNode::new("usb", family_seed, "192.0.2.50:9902");
 
     // Exchange encrypted beacons (as if through rendezvous)
     let pixel_encrypted = pixel.encrypt_beacon();
@@ -554,7 +554,7 @@ async fn e2e_phase3_mutual_decryption() {
             .as_array()
             .unwrap()
             .iter()
-            .any(|e| e.as_str().unwrap().contains("192.168.1.50")),
+            .any(|e| e.as_str().unwrap().contains("192.0.2.50")),
         "Decrypted beacon should contain USB's endpoint"
     );
 
@@ -711,7 +711,7 @@ async fn e2e_phase6_full_sovereign_mesh_flow() {
         family_seed.clone(),
         "[2600:1700:b0b0:5b90::80]:9901",
     );
-    let usb = SimulatedNode::new("usb", family_seed.clone(), "192.168.1.50:9902");
+    let usb = SimulatedNode::new("usb", family_seed.clone(), "192.0.2.50:9902");
     let tower = SimulatedNode::new("tower", family_seed.clone(), "tower.nestgate.io:3492");
 
     // === RENDEZVOUS: Pixel and USB meet via Tower ===

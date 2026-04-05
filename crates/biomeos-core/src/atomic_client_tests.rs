@@ -53,13 +53,13 @@ fn test_atomic_client_unix() {
 
 #[test]
 fn test_atomic_client_tcp() {
-    let client = AtomicClient::tcp("192.168.1.100", 9100);
+    let client = AtomicClient::tcp("192.0.2.100", 9100);
     assert!(matches!(
         client.endpoint(),
         TransportEndpoint::TcpSocket { .. }
     ));
     if let TransportEndpoint::TcpSocket { host, port } = client.endpoint() {
-        assert_eq!(host.as_ref(), "192.168.1.100");
+        assert_eq!(host.as_ref(), "192.0.2.100");
         assert_eq!(*port, 9100);
     }
 }
@@ -120,7 +120,7 @@ fn test_atomic_primal_client_unix() {
 
 #[test]
 fn test_atomic_primal_client_tcp() {
-    let client = AtomicPrimalClient::tcp("beardog", "192.168.1.100", 9100);
+    let client = AtomicPrimalClient::tcp("beardog", "192.0.2.100", 9100);
     assert_eq!(client.primal_name(), "beardog");
     assert!(matches!(
         client.endpoint(),
@@ -305,7 +305,7 @@ fn test_atomic_client_from_endpoint_tcp() {
 
 #[test]
 fn test_atomic_client_endpoint_accessor() {
-    let client = AtomicClient::tcp("192.168.1.1", 9100);
+    let client = AtomicClient::tcp("192.0.2.1", 9100);
     let endpoint = client.endpoint();
     assert!(matches!(endpoint, TransportEndpoint::TcpSocket { .. }));
 }
@@ -357,10 +357,10 @@ fn test_atomic_primal_client_is_available() {
 
 #[test]
 fn test_atomic_primal_client_endpoint() {
-    let client = AtomicPrimalClient::tcp("beardog", "192.168.1.100", 9100);
+    let client = AtomicPrimalClient::tcp("beardog", "192.0.2.100", 9100);
     let endpoint = client.endpoint();
     if let TransportEndpoint::TcpSocket { host, port } = endpoint {
-        assert_eq!(host.as_ref(), "192.168.1.100");
+        assert_eq!(host.as_ref(), "192.0.2.100");
         assert_eq!(*port, 9100);
     } else {
         panic!("Expected TCP endpoint");
@@ -468,7 +468,7 @@ fn test_atomic_primal_client_empty_name() {
 fn test_atomic_client_tcp_with_different_hosts() {
     let client1 = AtomicClient::tcp("localhost", 9100);
     let client2 = AtomicClient::tcp("127.0.0.1", 9100);
-    let client3 = AtomicClient::tcp("192.168.1.1", 9100);
+    let client3 = AtomicClient::tcp("192.0.2.1", 9100);
 
     if let TransportEndpoint::TcpSocket { host: h1, .. } = client1.endpoint() {
         assert_eq!(h1.as_ref(), "localhost");
@@ -477,7 +477,7 @@ fn test_atomic_client_tcp_with_different_hosts() {
         assert_eq!(h2.as_ref(), "127.0.0.1");
     }
     if let TransportEndpoint::TcpSocket { host: h3, .. } = client3.endpoint() {
-        assert_eq!(h3.as_ref(), "192.168.1.1");
+        assert_eq!(h3.as_ref(), "192.0.2.1");
     }
 }
 
@@ -504,13 +504,13 @@ fn test_atomic_client_tcp_with_different_ports() {
 
 #[test]
 fn test_atomic_client_http_constructor() {
-    let client = AtomicClient::http("192.168.1.100", 8080);
+    let client = AtomicClient::http("192.0.2.100", 8080);
     assert!(matches!(
         client.endpoint(),
         TransportEndpoint::HttpJsonRpc { .. }
     ));
     if let TransportEndpoint::HttpJsonRpc { host, port } = client.endpoint() {
-        assert_eq!(host.as_ref(), "192.168.1.100");
+        assert_eq!(host.as_ref(), "192.0.2.100");
         assert_eq!(*port, 8080);
     }
     assert!(client.is_available());

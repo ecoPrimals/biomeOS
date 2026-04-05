@@ -10,7 +10,7 @@
 # This graph exercises:
 #   - gate = "pixel" on nodes → forward_to_remote_gate()
 #   - Abstract socket transport: @biomeos-pixel
-#   - TCP fallback for cross-network: tcp://192.168.1.XXX:9001
+#   - TCP fallback for cross-network: tcp://192.0.2.XXX:9001
 #   - route.register for Pixel capability cross-registration
 #
 # Prerequisites:
@@ -23,7 +23,7 @@
 # Usage:
 #   biomeos atomic deploy graphs/cross_gate_pixel.toml \
 #     --env FAMILY_ID=cf7e8729 \
-#     --env PIXEL_ENDPOINT=tcp://192.168.1.150:9001 \
+#     --env PIXEL_ENDPOINT=tcp://192.0.2.150:9001 \
 #     --env XDG_RUNTIME_DIR=/run/user/1000
 #
 # =============================================================================

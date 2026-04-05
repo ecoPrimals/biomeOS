@@ -22,7 +22,7 @@ struct Cli {
     command: Option<Commands>,
 
     /// Workspace root directory
-    #[arg(short, long, default_value = "/home/strandgate/Development/biomeOS")]
+    #[arg(short, long, default_value = ".")]
     workspace: String,
 
     /// Coverage threshold percentage

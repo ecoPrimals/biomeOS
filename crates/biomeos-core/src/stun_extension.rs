@@ -503,11 +503,11 @@ mod tests {
 
     #[test]
     fn test_discover_self_hosted_address_with_env() {
-        let config = StunExtensionConfig::from_env_values(Some("192.168.1.100:3478"), None, None);
+        let config = StunExtensionConfig::from_env_values(Some("192.0.2.100:3478"), None, None);
         let ext = StunExtension::with_config(config);
         assert_eq!(
             ext.discover_self_hosted_address(),
-            Some("192.168.1.100:3478".to_string())
+            Some("192.0.2.100:3478".to_string())
         );
     }
 

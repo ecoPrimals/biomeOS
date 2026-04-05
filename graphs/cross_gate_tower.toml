@@ -14,7 +14,7 @@
 #
 # Prerequisites:
 #   - Both gates enrolled (shared .family.seed)
-#   - biomeOS running on gate2 at tcp://192.168.1.132:9001
+#   - biomeOS running on gate2 at tcp://192.0.2.132:9001
 #   - genomeBin deployed to gate2
 #
 # Usage:
@@ -32,7 +32,7 @@ description = "Cross-gate Tower: BearDog + Songbird on Eastgate and gate2 with f
 coordination = "Sequential"
 
 [graph.env]
-gate2 = "tcp://192.168.1.132:9001"
+gate2 = "tcp://192.0.2.132:9001"
 
 # =============================================================================
 # PHASE 1: LOCAL TOWER (Eastgate)
@@ -158,7 +158,7 @@ name = "rpc_call"
 
 [nodes.operation.params]
 method = "route.register"
-params = { primal = "beardog", transport = "tcp://192.168.1.132:9001", capabilities = ["crypto.sign", "crypto.verify", "crypto.encrypt", "crypto.decrypt", "crypto.hash", "crypto.generate_keypair"], gate = "gate2", source = "cross_gate_tower" }
+params = { primal = "beardog", transport = "tcp://192.0.2.132:9001", capabilities = ["crypto.sign", "crypto.verify", "crypto.encrypt", "crypto.decrypt", "crypto.hash", "crypto.generate_keypair"], gate = "gate2", source = "cross_gate_tower" }
 
 [nodes.constraints]
 timeout_ms = 10000
@@ -174,7 +174,7 @@ name = "rpc_call"
 
 [nodes.operation.params]
 method = "route.register"
-params = { primal = "songbird", transport = "tcp://192.168.1.132:9001", capabilities = ["http.request", "discovery.announce", "discovery.query", "mesh.status", "mesh.peers"], gate = "gate2", source = "cross_gate_tower" }
+params = { primal = "songbird", transport = "tcp://192.0.2.132:9001", capabilities = ["http.request", "discovery.announce", "discovery.query", "mesh.status", "mesh.peers"], gate = "gate2", source = "cross_gate_tower" }
 
 [nodes.constraints]
 timeout_ms = 10000

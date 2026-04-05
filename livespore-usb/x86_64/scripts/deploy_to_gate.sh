@@ -6,8 +6,8 @@
 #   ./deploy_to_gate.sh <target-ip> [node-id] [user]
 #
 # Example:
-#   ./deploy_to_gate.sh 192.168.1.132 gate2
-#   ./deploy_to_gate.sh 192.168.1.132 gate2 eastgate
+#   ./deploy_to_gate.sh 192.0.2.132 gate2
+#   ./deploy_to_gate.sh 192.0.2.132 gate2 eastgate
 #
 # What this does:
 #   1. Copies LiveSpore package (binaries, seeds, scripts) to target via scp

@@ -254,7 +254,7 @@ All notable changes to biomeOS will be documented in this file.
 
 ### Fixed
 - Stale `exclude = ["validation"]` in root `Cargo.toml` → accurate `["tools", "tools/harvest"]`.
-- `deployments/basement-hpc/README.md`: hardcoded `/home/eastgate/...` → `$BIOMEOS_REPO`.
+- `deployments/basement-hpc/README.md`: hardcoded home-directory paths → `$BIOMEOS_REPO`.
 
 ### Added
 - Doc-tests on `identifiers.rs`, `error/core.rs`, `paths.rs`, `config/mod.rs`, `transport.rs`, `atomic_client.rs`, `capability.rs`.
@@ -981,7 +981,7 @@ All notable changes to biomeOS will be documented in this file.
 ### Sovereignty & Compliance
 - Added `license = "AGPL-3.0-only"` to 9 Cargo.toml files that were missing it
 - Replaced hardcoded Google/Cloudflare DNS (8.8.8.8, 1.1.1.1) with RFC 5737 test addresses in config tests
-- Replaced hardcoded private IP `192.168.1.144:3478` with RFC 5737 `192.0.2.1:3478`
+- Replaced hardcoded private IP `192.0.2.10:3478` with RFC 5737 `192.0.2.1:3478`
 - Replaced hardcoded `family-hub:8080` with RFC 6761 `family-hub.example.test:8080`
 
 ### Code Quality
@@ -1604,7 +1604,7 @@ Full dynamic network transition validated:
 | Network State | Pixel IP | Access Method | Status |
 |---------------|----------|---------------|--------|
 | Hotspot | 172.20.10.x | api.nestgate.io (Cloudflare) | ✅ |
-| Home WiFi | 192.168.1.114 | Direct LAN HTTP | ✅ |
+| Home WiFi | 192.0.2.114 | Direct LAN HTTP | ✅ |
 
 **Validated Operations:**
 - IP auto-detection on network switch
@@ -1629,7 +1629,7 @@ Permanent tunnel established for external beacon rendezvous, bypassing NAT/firew
 | Latency | ~160ms via Cloudflare edge |
 | ISP Visibility | Standard HTTPS only (cannot block/sniff) |
 | Pixel on Hotspot | ✅ Validated (172.20.10.2 → Tower) |
-| LAN Direct | ✅ Validated (192.168.1.x) |
+| LAN Direct | ✅ Validated (192.0.2.x) |
 
 ### Security Headers (100/100 Score)
 
@@ -2202,7 +2202,7 @@ Complete codebase-wide evolution to modern idiomatic Rust with zero actionable w
 
 ### NAT Traversal Verified
 - **Tower on iPhone Hotspot**: 107.116.252.130 (carrier NAT)
-- **Pixel on Home ISP**: 162.226.225.148 (home NAT)
+- **Pixel on Home ISP**: 198.51.100.1 (home NAT)
 - **BirdSong beacon exchange**: Works bidirectionally across networks
 
 ### Fixed

@@ -44,7 +44,7 @@ max_concurrent_relays = 10        # Max simultaneous relay connections
 # Relay: Tower offers Dark Forest rendezvous at /api/v1/rendezvous/beacon
 # DNS: tower.nestgate.io → IPv6/IPv4 direct connection
 [[user_provided]]
-address = "192.168.1.144:3478"    # Tower LAN address (Songbird STUN)
+address = "192.0.2.10:3478"    # Tower LAN address (Songbird STUN)
 protocol = "udp"
 priority = 1                      # Highest priority
 enabled = true

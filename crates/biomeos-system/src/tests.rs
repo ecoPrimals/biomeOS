@@ -310,7 +310,7 @@ fn test_system_info_serialization_roundtrip() {
             name: "eth0".to_string(),
             interface_type: NetworkInterfaceType::Ethernet,
             status: NetworkInterfaceStatus::Up,
-            addresses: vec!["192.168.1.1".to_string()],
+            addresses: vec!["192.0.2.1".to_string()],
             mac_address: Some("00:11:22:33:44:55".to_string()),
             mtu: 1500,
             bytes_sent: 1000,

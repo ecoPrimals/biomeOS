@@ -1,5 +1,5 @@
 # =============================================================================
-# STRANDGATE - Bio Pipeline & Alignment Node
+# GATE PRIMARY - Bio Pipeline & Alignment Node (example deployment)
 # =============================================================================
 #
 # Hardware: Dual EPYC 7452 (64 cores), RTX 3070 FE, 256GB ECC DDR4, 14TB NVMe
@@ -16,7 +16,7 @@
 # =============================================================================
 
 [deployment]
-hostname = "strandgate"
+hostname = "gate-primary"
 location = "basement-lan"
 family_id = "1894e909e454"
 deployment_type = "tower-plus-compute"
@@ -27,7 +27,7 @@ deployment_type = "tower-plus-compute"
 
 [tower]
 enabled = true
-node_id = "tower-strandgate"
+node_id = "tower-primary"
 niche = "tower"
 
 [tower.config]
@@ -53,7 +53,7 @@ sub_federations = ["lan-hpc", "bio-pipeline"]
 # Pooled CPU Node (Dual EPYC 7452 - 64 cores)
 [[compute_nodes]]
 enabled = true
-node_id = "compute-strandgate-epyc-pool"
+node_id = "compute-primary-epyc-pool"
 niche = "compute-node"
 
 [compute_nodes.config]
@@ -67,7 +67,7 @@ cpu_cores = 64  # All cores
 topology = "pooled"
 pooled_enabled = true
 pool_coordinator = true
-pool_id = "strandgate-epyc-pool"
+pool_id = "primary-epyc-pool"
 
 # Capacity
 max_concurrent_workloads = 32  # High parallelism
@@ -90,7 +90,7 @@ prometheus_port = 9091
 # GPU Compute Node (RTX 3070 FE - for GPU-accelerated tools)
 [[compute_nodes]]
 enabled = true
-node_id = "compute-strandgate-rtx3070"
+node_id = "compute-primary-gpu0"
 niche = "compute-node"
 
 [compute_nodes.config]
@@ -145,14 +145,14 @@ nvme_drives = [
 ]
 
 # Mount points
-data_dir = "/data/strandgate"
+data_dir = "/data/primary"
 bio_pipeline_dir = "/data/bio-pipeline"
-cache_dir = "/cache/strandgate"
-logs_dir = "/var/log/strandgate"
+cache_dir = "/cache/primary"
+logs_dir = "/var/log/primary"
 
 # ZFS (recommended for bio data)
 zfs_enabled = true
-zfs_pool = "strandpool"
+zfs_pool = "primarypool"
 zfs_compression = "lz4"
 zfs_dedup = false  # Too expensive for this workload
 
@@ -206,20 +206,20 @@ health_check_timeout = 10
 # =============================================================================
 
 # Step 1: Deploy Tower
-# export NODE_ID=tower-strandgate
+# export NODE_ID=tower-primary
 # export FAMILY_ID=1894e909e454
-# biomeos deploy --niche tower --config deployments/basement-hpc/strandgate.toml
+# biomeos deploy --niche tower --config deployments/basement-hpc/primary.toml
 
 # Step 2: Deploy Pooled CPU Compute Node
-# export NODE_ID=compute-strandgate-epyc-pool
+# export NODE_ID=compute-primary-epyc-pool
 # export RESOURCE_TYPE=cpu
 # export CPU_CORES=64
 # export POOLED_ENABLED=true
-# biomeos deploy --niche compute-node --config deployments/basement-hpc/strandgate.toml
+# biomeos deploy --niche compute-node --config deployments/basement-hpc/primary.toml
 
 # Step 3: Deploy GPU Compute Node
-# export NODE_ID=compute-strandgate-rtx3070
+# export NODE_ID=compute-primary-gpu0
 # export RESOURCE_TYPE=gpu
 # export RESOURCE_ID=0
-# biomeos deploy --niche compute-node --config deployments/basement-hpc/strandgate.toml
+# biomeos deploy --niche compute-node --config deployments/basement-hpc/primary.toml
 

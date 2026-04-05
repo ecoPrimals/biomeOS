@@ -400,6 +400,6 @@ description = "Graceful shutdown with workload draining"
 # export LOGICAL_NODE_ID=ml-train-distributed
 # export FAMILY_ID=1894e909e454
 # export SPREAD_ENABLED=true
-# export COORDINATOR_ENDPOINT=udp://192.168.1.100:4433
+# export COORDINATOR_ENDPOINT=udp://192.0.2.100:4433
 # biomeos deploy --niche compute-node
 

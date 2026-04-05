@@ -64,7 +64,7 @@ if [ -n "$TOWER_IP" ]; then
     test_pass "DNS: $TOWER_HOST -> $TOWER_IP"
 else
     test_fail "DNS: $TOWER_HOST failed to resolve"
-    TOWER_IP="162.226.225.148"  # Fallback to known IP
+    TOWER_IP="198.51.100.1"  # Fallback to known IP
     log "  Using fallback IP: $TOWER_IP"
 fi
 

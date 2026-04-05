@@ -1,7 +1,7 @@
 # gate2 NUCLEUS Deployment Graph
 # =============================================================================
 #
-# Deploys a full NUCLEUS on gate2 (192.168.1.132) for covalent bonding with Tower.
+# Deploys a full NUCLEUS on gate2 (192.0.2.132) for covalent bonding with Tower.
 # biomeOS orchestrates gate2's primals via its Neural API, enabling cross-gate
 # capability.call routing through the Songbird mesh.
 #

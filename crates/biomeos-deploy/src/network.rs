@@ -323,8 +323,8 @@ mod tests {
     fn test_bridge_config_debug() {
         let config = BridgeConfig {
             name: "test".to_string(),
-            ip_address: "192.168.1.1/24".to_string(),
-            subnet: "192.168.1.0/24".to_string(),
+            ip_address: "192.0.2.1/24".to_string(),
+            subnet: "192.0.2.0/24".to_string(),
         };
         let s = format!("{config:?}");
         assert!(s.contains("test"));

@@ -168,7 +168,7 @@ async fn test_discover_endpoint_via_env_tcp() {
 async fn test_discover_endpoint_via_env_endpoint_var() {
     let env_overrides: HashMap<String, String> = [(
         "BEARDOG_ENDPOINT".to_string(),
-        "tcp://192.168.1.1:8080".to_string(),
+        "tcp://192.0.2.1:8080".to_string(),
     )]
     .into();
     let discovery = SocketDiscovery::new("test");

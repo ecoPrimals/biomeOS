@@ -35,7 +35,7 @@
 //! let client = AtomicClient::discover("beardog").await?;
 //!
 //! // Explicit transport
-//! let client = AtomicClient::tcp("192.168.1.100", 9100);
+//! let client = AtomicClient::tcp("192.0.2.100", 9100);
 //! let client = AtomicClient::unix("/tmp/beardog.sock");
 //!
 //! let result = client.call("generate_entropy", json!({ "bytes": 32 })).await?;
@@ -133,7 +133,7 @@ fn strict_discovery_from_env_or_override(strict_override: Option<bool>) -> bool 
 /// let client = AtomicClient::discover("beardog").await?;
 ///
 /// // Or explicit transport
-/// let tcp_client = AtomicClient::tcp("192.168.1.100", 9100);
+/// let tcp_client = AtomicClient::tcp("192.0.2.100", 9100);
 /// let unix_client = AtomicClient::unix("/tmp/beardog.sock");
 ///
 /// let result = client.call("generate_entropy", json!({ "bytes": 32 })).await?;

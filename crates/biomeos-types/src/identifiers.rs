@@ -593,7 +593,7 @@ mod tests {
     #[test]
     fn endpoint_valid() {
         assert!(Endpoint::new("http://localhost:9000").is_ok());
-        assert!(Endpoint::new("https://192.168.1.144:8080").is_ok());
+        assert!(Endpoint::new("https://192.0.2.10:8080").is_ok());
     }
 
     #[test]

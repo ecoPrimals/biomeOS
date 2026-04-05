@@ -98,7 +98,7 @@ fn test_validate_endpoint_url() {
     // Test endpoint URL validation
     assert!(is_valid_endpoint("http://localhost:8080"));
     assert!(is_valid_endpoint("https://example.com"));
-    assert!(is_valid_endpoint("http://192.168.1.1:3000"));
+    assert!(is_valid_endpoint("http://192.0.2.1:3000"));
 
     assert!(!is_valid_endpoint("not-a-url"));
     assert!(!is_valid_endpoint("ftp://invalid"));

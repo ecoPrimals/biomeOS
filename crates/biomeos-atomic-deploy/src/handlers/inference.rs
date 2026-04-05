@@ -324,7 +324,7 @@ mod tests {
         let mut registry = GateRegistry::new();
         registry.register(
             "gate2",
-            biomeos_core::TransportEndpoint::parse("tcp://192.168.1.132:9001").unwrap(),
+            biomeos_core::TransportEndpoint::parse("tcp://192.0.2.132:9001").unwrap(),
         );
         InferenceHandler::new(router, Arc::new(registry))
     }

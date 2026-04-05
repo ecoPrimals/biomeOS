@@ -44,7 +44,7 @@ Returns current mesh network status.
     "relay_enabled": true,
     "nat_type": "symmetric",
     "public_address": "203.0.113.50:45678",
-    "local_address": "192.168.1.100:34567",
+    "local_address": "192.0.2.100:34567",
     "uptime_seconds": 3600,
     "paths": {
       "direct": 2,

@@ -144,9 +144,9 @@ fn test_atomic_client_abstract_socket_constructor() {
 
 #[test]
 fn test_atomic_primal_client_http_constructor() {
-    let client = AtomicPrimalClient::tcp("beardog", "192.168.1.100", 9100);
+    let client = AtomicPrimalClient::tcp("beardog", "192.0.2.100", 9100);
     assert_eq!(client.primal_name(), "beardog");
-    assert!(client.endpoint().display_string().contains("192.168.1.100"));
+    assert!(client.endpoint().display_string().contains("192.0.2.100"));
 }
 
 #[test]

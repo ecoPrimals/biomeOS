@@ -234,17 +234,17 @@ mod tests {
     #[test]
     fn test_subnet_spec_creation() {
         let mut aux_addresses = HashMap::new();
-        aux_addresses.insert("router".to_string(), "192.168.1.1".to_string());
+        aux_addresses.insert("router".to_string(), "192.0.2.1".to_string());
 
         let subnet = SubnetSpec {
-            subnet: "192.168.1.0/24".to_string(),
-            gateway: Some("192.168.1.1".to_string()),
-            ip_range: Some("192.168.1.100-192.168.1.200".to_string()),
+            subnet: "192.0.2.0/24".to_string(),
+            gateway: Some("192.0.2.1".to_string()),
+            ip_range: Some("192.0.2.100-192.0.2.200".to_string()),
             aux_addresses,
         };
 
-        assert_eq!(subnet.subnet, "192.168.1.0/24");
-        assert_eq!(subnet.gateway, Some("192.168.1.1".to_string()));
+        assert_eq!(subnet.subnet, "192.0.2.0/24");
+        assert_eq!(subnet.gateway, Some("192.0.2.1".to_string()));
         assert_eq!(subnet.aux_addresses.len(), 1);
     }
 

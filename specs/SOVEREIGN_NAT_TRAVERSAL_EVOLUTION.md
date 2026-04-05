@@ -279,16 +279,16 @@ impl MultiTierCoordinator {
 ### Scenario 1: Tower at Home (Port Forwarded)
 
 ```
-Tower (192.168.1.144) ──► Router ──► Internet
+Tower (192.0.2.10) ──► Router ──► Internet
         │
         ├── STUN Server on :3478
         ├── Relay Service on :3479
         └── Songbird Orchestrator
 
 Router Port Forwards:
-  UDP 3478 → 192.168.1.144:3478  (STUN)
-  UDP 3479 → 192.168.1.144:3479  (Relay)
-  UDP 49152-65535 → 192.168.1.144 (Relay data)
+  UDP 3478 → 192.0.2.10:3478  (STUN)
+  UDP 3479 → 192.0.2.10:3479  (Relay)
+  UDP 49152-65535 → 192.0.2.10 (Relay data)
 ```
 
 **Family devices use Tower for**:

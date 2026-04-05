@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn test_custom_bind_address() {
-        let env = env_map(&[(env_vars::BIND_ADDRESS, "192.168.1.100")]);
+        let env = env_map(&[(env_vars::BIND_ADDRESS, "192.0.2.100")]);
         let config = NetworkConfig::from_env_with(&env);
         assert!(config.bind_address().is_ipv4() || config.bind_address().is_ipv6());
     }

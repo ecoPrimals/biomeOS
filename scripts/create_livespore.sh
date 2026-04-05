@@ -218,7 +218,7 @@ derive_genetics() {
     "spore_format": "bootable",
     "bootable": true,
     "generation": 1,
-    "parent_id": "tower-pop-os",
+    "parent_id": "tower-local",
     "family_id": "$FAMILY_ID",
     "deployment_batch": "$BATCH",
     "birth_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",

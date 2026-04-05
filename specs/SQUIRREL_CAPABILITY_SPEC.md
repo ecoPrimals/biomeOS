@@ -324,9 +324,9 @@ SOCKET_REGISTRY_PATH=/run/user/1000/socket-registry.json
 ## 📚 References
 
 ### Squirrel Documentation
-- `/home/eastgate/Development/ecoPrimals/phase1/squirrel/README.md`
-- `/home/eastgate/Development/ecoPrimals/phase1/squirrel/USAGE_GUIDE.md`
-- `/home/eastgate/Development/ecoPrimals/phase1/squirrel/BIOMEOS_HANDOFF_PACKAGE.md`
+- `$HOME/Development/ecoPrimals/phase1/squirrel/README.md`
+- `$HOME/Development/ecoPrimals/phase1/squirrel/USAGE_GUIDE.md`
+- `$HOME/Development/ecoPrimals/phase1/squirrel/BIOMEOS_HANDOFF_PACKAGE.md`
 
 ### biomeOS Integration
 - `docs/primal-integrations/SQUIRREL_V1_DEPLOYMENT_JAN15.md`
