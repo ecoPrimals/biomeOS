@@ -2011,7 +2011,7 @@ Key evolutions:
 - **Validated**: Songbird `http.request` -> Ollama (phi3, tinyllama) via HTTP (~2s)
 - **Validated**: Neural API `proxy_http` -> Songbird -> BearDog TLS -> HTTPS -> Anthropic
 - **Discovery**: `HTTP_REQUEST_PROVIDER_SOCKET` env var bypass for instant capability discovery
-- **API Keys**: Loaded from `ecoPrimals/testing-secrets/api-keys.toml`
+- **API Keys**: Loaded from `$SECRETS_DIR/api-keys.toml`
 
 ### Neural API Server
 - Started as `biomeos neural-api` mode with 121 capability translations
@@ -2021,7 +2021,7 @@ Key evolutions:
 
 ### NUCLEUS Startup Script Evolution
 - `scripts/start_nucleus.sh`: Added `load_api_keys()`, `start_neural_api()`
-- Automatic API key loading from testing-secrets
+- Automatic API key loading from secrets directory
 - Socket symlink creation for nucleated paths
 - Squirrel configured with `HTTP_REQUEST_PROVIDER_SOCKET` and `AI_HTTP_PROVIDERS`
 - NestGate startup fixed to use `daemon --socket-only`

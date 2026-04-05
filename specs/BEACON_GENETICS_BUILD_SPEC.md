@@ -4,7 +4,7 @@
 **Version**: 2.0.0  
 **Date**: February 11, 2026  
 **Status**: DESIGN SPECIFICATION  
-**Author**: Kevin Mok + AI Collaborative Intelligence
+**Author**: ecoPrimal + AI Collaborative Intelligence
 
 ---
 
