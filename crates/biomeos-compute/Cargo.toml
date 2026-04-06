@@ -1,10 +1,11 @@
 [package]
 name = "biomeos-compute"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 authors = ["ecoPrimals Team"]
 description = "Isomorphic & fractal compute architecture for biomeOS"
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 # Async runtime

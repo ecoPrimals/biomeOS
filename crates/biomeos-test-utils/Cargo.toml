@@ -3,7 +3,8 @@ name = "biomeos-test-utils"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 # Core dependencies
@@ -14,7 +15,7 @@ serde_json = { workspace = true }
 
 # Testing
 tempfile = { workspace = true }
-wiremock = "0.6"
+wiremock = { workspace = true }
 
 # HTTP server for mocks
 axum = { workspace = true }
@@ -31,8 +32,8 @@ uuid = { workspace = true }
 [dev-dependencies]
 tokio-test = { workspace = true }
 hyper = { workspace = true }  # Pure Rust HTTP client for testing
-hyper-util = { version = "0.1", features = ["client-legacy", "http1", "tokio"] }  # HTTP client utilities
-http-body-util = "0.1"  # Body utilities for hyper
+hyper-util = { workspace = true, features = ["client-legacy", "http1", "tokio"] }  # HTTP client utilities
+http-body-util = { workspace = true }  # Body utilities for hyper
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
 # reqwest = { workspace = true } # REMOVED (TRUE ecoBin v2.0): Use atomic_client for Pure Rust testing
 

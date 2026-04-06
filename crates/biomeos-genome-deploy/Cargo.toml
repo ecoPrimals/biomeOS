@@ -2,21 +2,22 @@
 name = "biomeos-genome-deploy"
 version = "0.1.0"
 edition.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 authors = ["ecoPrimals Collective"]
 description = "Rust-based genomeBin deployment wrapper"
 
 [dependencies]
-anyhow = "1.0"
-clap = { version = "4.5", features = ["derive"] }
-flate2 = "1.0"
-tar = "0.4"
-indicatif = "0.17"
-colored = "2.1"
-serde = { version = "1.0", features = ["derive"] }
-toml = "0.8"
+anyhow = { workspace = true }
+clap = { workspace = true }
+flate2 = { workspace = true }
+tar = { workspace = true }
+indicatif = { workspace = true }
+colored = { workspace = true }
+serde = { workspace = true }
+toml = { workspace = true }
 # DEEP DEBT: nix and dirs removed — pure Rust via $HOME/$EUID env resolution
-tempfile = "3.10"
+tempfile = { workspace = true }
 # memmap2 REMOVED — evolved to safe std::fs::read() (no unsafe code in entire crate)
 
 [lib]

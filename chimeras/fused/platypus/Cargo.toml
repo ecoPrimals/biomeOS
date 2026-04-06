@@ -12,7 +12,8 @@ Niche: Aquatic secure mesh - environments requiring both
 cryptographic trust AND mesh networking as inseparable traits.
 """
 authors = ["ecoPrimals Team"]
-license = "AGPL-3.0-only"
+license = "AGPL-3.0-or-later"
+rust-version = "1.87"
 publish = false
 
 # This is a fused chimera - standalone workspace

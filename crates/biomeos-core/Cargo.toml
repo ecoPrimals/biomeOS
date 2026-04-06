@@ -3,7 +3,8 @@ name = "biomeos-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 description = "Core biomeOS functionality"
 
 [[bin]]
@@ -18,38 +19,38 @@ async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-uuid = { version = "1.6", features = ["v4", "serde"] }
+uuid = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 tracing = { workspace = true }
-tracing-subscriber = "0.3"
+tracing-subscriber = { workspace = true }
 # reqwest = { workspace = true, optional = true }  # REMOVED: Deprecated HTTP transport, use Tower Atomic (Songbird + BearDog)
-futures = "0.3"
-hex = "0.4"
-clap = { version = "4.5", features = ["derive", "env"] }
+futures = { workspace = true }
+hex = { workspace = true }
+clap = { workspace = true, features = ["derive", "env"] }
 
 # Configuration and environment
 # dirs = { workspace = true }  # DEPRECATED: Uses dirs-sys (C dependency)
 etcetera = { workspace = true }  # Pure Rust replacement
-toml = "0.8"
+toml = { workspace = true }
 
 # Utilities
 bytes = { workspace = true }
 itertools = { workspace = true }
 base64 = { workspace = true }
-sha2 = "0.10"
-hmac = "0.12"
-semver = { version = "1.0", features = ["serde"] }
-url = "2.5"
+sha2 = { workspace = true }
+hmac = { workspace = true }
+semver = { workspace = true }
+url = { workspace = true }
 # HTTP(S) for primal registry: hyper for http://; HTTPS uses curl subprocess (avoids rustls→ring per ecoBin policy)
 hyper = { workspace = true }
-hyper-util = { version = "0.1", features = ["tokio", "client", "client-legacy", "http1"] }
-http-body-util = "0.1"
-zeroize = { version = "1.7", features = ["derive"] }
+hyper-util = { workspace = true, features = ["tokio", "client", "client-legacy", "http1"] }
+http-body-util = { workspace = true }
+zeroize = { workspace = true }
 rand = { workspace = true }
 gethostname = { workspace = true }
-glob = "0.3"
-rustix = { version = "0.38", features = ["fs"] }  # statvfs for storage metrics
+glob = { workspace = true }
+rustix = { workspace = true, features = ["fs"] }  # statvfs for storage metrics
 biomeos-system = { path = "../biomeos-system", version = "0.1.0" }  # Real uptime and resource metrics
 
 # biomeOS dependencies
@@ -60,8 +61,8 @@ biomeos-manifest = { path = "../biomeos-manifest", version = "0.1.0" }
 biomeos-nucleus = { path = "../biomeos-nucleus", version = "0.1.0" }
 
 [dev-dependencies]
-tokio-test = "0.4"
-wiremock = "0.6" 
+tokio-test = { workspace = true }
+wiremock = { workspace = true }
 tempfile = { workspace = true }
 criterion = { workspace = true }
 # REMOVED for ecoBin v2.0: Use ureq or atomic_client for Pure Rust
@@ -70,8 +71,8 @@ ureq = { workspace = true }
 # Test utilities
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 serde_json = { workspace = true }
-tracing-test = "0.2"
-proptest = "1"
+tracing-test = { workspace = true }
+proptest = { workspace = true }
 
 [features]
 default = []

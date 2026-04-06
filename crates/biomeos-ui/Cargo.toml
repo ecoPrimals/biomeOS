@@ -4,7 +4,8 @@ version = "0.1.0"
 edition.workspace = true
 authors = ["biomeOS Contributors"]
 description = "Interactive UI orchestration for biomeOS - network effect of multiple primals"
-license = "AGPL-3.0-only"
+license = "AGPL-3.0-or-later"
+rust-version = "1.87"
 
 [dependencies]
 # Core biomeOS

@@ -123,10 +123,10 @@ fn test_parse_vm_names_from_list_single_vm() {
 
 #[test]
 fn test_parse_ip_from_domifaddr_192_168_prefix_only() {
-    let output = " Name       MAC address          Protocol     Address\n\nvnet0      xx:xx    ipv4         192.0.2.50/24\n";
+    let output = " Name       MAC address          Protocol     Address\n\nvnet0      xx:xx    ipv4         192.168.0.50/24\n";
     assert_eq!(
         super::parse_ip_from_domifaddr_output(output),
-        Some("192.0.2.50".to_string())
+        Some("192.168.0.50".to_string())
     );
 }
 
@@ -189,9 +189,9 @@ fn test_validation_config_clone() {
 
 #[test]
 fn test_parse_ip_from_domifaddr_empty_lines() {
-    let output = "\n\n  ipv4    192.0.2.1/24  \n\n";
+    let output = "\n\n  ipv4    192.168.0.2/24  \n\n";
     let ip = super::parse_ip_from_domifaddr_output(output);
-    assert_eq!(ip, Some("192.0.2.1".to_string()));
+    assert_eq!(ip, Some("192.168.0.2".to_string()));
 }
 
 #[test]
@@ -373,10 +373,10 @@ fn test_parse_vm_names_long_federation_substring() {
 
 #[test]
 fn test_parse_ip_domifaddr_ipv4_keyword_non_192_line_then_valid() {
-    let t = "vnet0  ipv4  10.0.0.1/24\nvnet1  ipv4  192.0.2.2/24\n";
+    let t = "vnet0  ipv4  10.0.0.1/24\nvnet1  ipv4  192.168.0.2/24\n";
     assert_eq!(
         parse_ip_from_domifaddr_output(t),
-        Some("192.0.2.2".to_string())
+        Some("192.168.0.2".to_string())
     );
 }
 
@@ -493,9 +493,9 @@ fn test_validate_ssh_probe_output_failure() {
 fn test_collect_ips_for_vm_names_with_mock() {
     let ips = collect_ips_for_vm_names(vec!["vm1".to_string(), "vm2".to_string()], |name| {
         let ip = if name == "vm1" {
-            "vnet0  xx  ipv4  192.0.2.10/24\n"
+            "vnet0  xx  ipv4  192.168.0.10/24\n"
         } else {
-            "vnet0  xx  ipv4  192.0.2.20/24\n"
+            "vnet0  xx  ipv4  192.168.0.20/24\n"
         };
         Ok(std::process::Output {
             status: std::process::ExitStatus::default(),
@@ -503,7 +503,7 @@ fn test_collect_ips_for_vm_names_with_mock() {
             stderr: vec![],
         })
     });
-    assert_eq!(ips, vec!["192.0.2.10", "192.0.2.20"]);
+    assert_eq!(ips, vec!["192.168.0.10", "192.168.0.20"]);
 }
 
 #[test]

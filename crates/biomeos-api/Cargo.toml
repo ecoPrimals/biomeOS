@@ -2,28 +2,29 @@
 name = "biomeos-api"
 version = "0.1.0"
 edition.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 # Web framework
-axum = { version = "0.7", features = ["ws"] }
+axum = { workspace = true }
 tower = { workspace = true, features = ["util"] }
-tower-http = { version = "0.5", features = ["cors", "trace", "set-header", "limit"] }
+tower-http = { workspace = true, features = ["cors", "trace", "set-header", "limit"] }
 
 # Async runtime
 tokio = { workspace = true }
-tokio-stream = "0.1"
-tokio-util = { version = "0.7", features = ["compat", "io"] }
-futures = "0.3"
+tokio-stream = { workspace = true }
+tokio-util = { workspace = true, features = ["compat", "io"] }
+futures = { workspace = true }
 
 # HTTP server (for Unix socket support)
-hyper = { version = "1", features = ["server", "http1"] }
-hyper-util = { version = "0.1", features = ["tokio", "server", "server-auto"] }
+hyper = { workspace = true, features = ["server", "http1"] }
+hyper-util = { workspace = true, features = ["tokio", "server", "server-auto"] }
 
 # Serialization
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-toml = "0.8"
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
 
 # Internal dependencies
 # NOTE: http-transport feature REMOVED - using Unix sockets for primal communication
@@ -36,14 +37,14 @@ biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 neural-api-client = { path = "../neural-api-client" }
 
 # Async utilities
-async-trait = "0.1"
+async-trait = { workspace = true }
 
 # Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 # Error handling
-anyhow = "1"
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 # HTTP client REMOVED - Using Unix socket JSON-RPC for primal discovery
@@ -51,26 +52,26 @@ thiserror = { workspace = true }
 
 # Utilities
 # DEEP DEBT: lazy_static replaced by std::sync::OnceLock; dirs replaced by etcetera (pure Rust)
-etcetera = "0.8"
-semver = "1.0"
+etcetera = { workspace = true }
+semver = { workspace = true }
 base64 = { workspace = true }
 
 # WebSocket support (JSON-RPC 2.0 over WebSocket)
-tokio-tungstenite = "0.21"
-futures-util = "0.3"
-uuid = { version = "1", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-async-stream = "0.3.6"
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+async-stream = { workspace = true }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 # Testing utilities
-tokio-test = "0.4"
-http-body-util = "0.1"
-sha2 = "0.10"
-hex = "0.4"
+tokio-test = { workspace = true }
+http-body-util = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
 rand = { workspace = true }
-tempfile = "3"
+tempfile = { workspace = true }
 
 [lints]
 workspace = true

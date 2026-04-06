@@ -76,8 +76,9 @@ exclude = [
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.87"
 authors = ["biomeOS Team"]
-license = "AGPL-3.0-only"
+license = "AGPL-3.0-or-later"
 repository = "https://github.com/biomeOS/biomeOS"
 homepage = "https://biomeOS.org"
 documentation = "https://docs.biomeOS.org"
@@ -144,10 +145,68 @@ walkdir = "2.4"
 # REMOVED: image (unused in workspace — no member references it)
 gethostname = "0.5"
 
+# HTTP stack building blocks (members merge feature flags as needed)
+hyper-util = { version = "0.1", default-features = false }
+http-body-util = "0.1"
+tower-http = { version = "0.5", default-features = false }
+tokio-util = { version = "0.7", default-features = false }
+tokio-stream = "0.1"
+
+# WebSockets / async helpers
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+async-stream = "0.3.6"
+
+# Crypto & secrets
+hmac = "0.12"
+zeroize = { version = "1.7", features = ["derive"] }
+ed25519-dalek = "2.1"
+blake3 = { version = "1.5", features = ["pure"] }
+
+# Data structures / parsing
+indexmap = { version = "2.0", features = ["serde"] }
+url = { version = "2.5", features = ["serde"] }
+semver = { version = "1.0", features = ["serde"] }
+glob = "0.3"
+regex = "1.11"
+
+# OS interfaces
+rustix = "0.38"
+which = "6"
+flate2 = "1.0"
+tar = "0.4"
+
+# CLI / TUI helpers
+indicatif = "0.17"
+colored = "2.1"
+console = "0.15"
+comfy-table = "7.0"
+humantime = "2.1"
+
+# Storage / codecs
+redb = "2.4"
+lz4_flex = "0.11"
+hex = "0.4"
+mdns-sd = "0.11"
+rtnetlink = "0.20"
+
+# Async I/O & bytes helpers
+async-fs = "2.1"
+getrandom = "0.2"
+serde_bytes = "0.11"
+
+# Testing
+proptest = "1"
+wiremock = "0.6"
+tracing-test = "0.2"
+assert_cmd = "2"
+predicates = "3"
+
 [package]
 name = "biomeos"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -176,25 +235,25 @@ biomeos-graph = { path = "crates/biomeos-graph", version = "0.1.0" }  # Neural A
 
 # Async runtime
 tokio = { workspace = true }
-async-trait = "0.1"
+async-trait = { workspace = true }
 
 # Error handling
-anyhow = "1.0"
-thiserror = "2"
+anyhow = { workspace = true }
+thiserror = { workspace = true }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-toml = "0.8"
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
 serde_yaml = { workspace = true }
 uuid = { workspace = true }
-gethostname = "0.5"
+gethostname = { workspace = true }
 clap = { workspace = true }
 axum = { workspace = true }
 
 # Logging and tracing
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 # HTTP client - DEPRECATED: Use Songbird/BearDog for HTTP/TLS
 # reqwest = { version = "0.11", features = ["json"] } # REMOVED - Use atomic_client
@@ -203,19 +262,19 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Should be invoked as a separate binary, not a hard dependency
 # benchscale = { path = "../../primalTools/benchscale", features = ["libvirt"] } # REMOVED
 # dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
-etcetera = "0.8"  # Pure Rust replacement for dirs
+etcetera = { workspace = true }  # Pure Rust replacement for dirs
 
 # Time handling
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-tokio-test = "0.4"
-anyhow = "1.0"
-tempfile = "3.0"
-tracing-test = "0.2"
-wiremock = "0.6"
-rand = "0.9"
+tokio-test = { workspace = true }
+anyhow = { workspace = true }
+tempfile = { workspace = true }
+tracing-test = { workspace = true }
+wiremock = { workspace = true }
+rand = { workspace = true }
 biomeos-test-utils = { path = "crates/biomeos-test-utils", version = "0.1.0" }
 
 [[example]]

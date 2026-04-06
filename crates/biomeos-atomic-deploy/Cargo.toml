@@ -2,22 +2,23 @@
 name = "biomeos-atomic-deploy"
 version = "0.1.0"
 edition.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-anyhow = "1.0"
+anyhow = { workspace = true }
 bytes = { workspace = true }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }  # For binaries
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }  # For binaries
 thiserror = { workspace = true }
-rustix = { version = "0.38", features = ["process"] }
+rustix = { workspace = true, features = ["process"] }
 # users crate REMOVED (RUSTSEC-2024-0399/RUSTSEC-2025-0040): unmaintained + vulnerability
 # UID retrieval now uses rustix::process::getuid() (already a dependency, pure Rust)
 # System metrics: pure Rust via /proc (ecoBin v3)
-regex = "1.11"  # For socket pattern matching
+regex = { workspace = true }  # For socket pattern matching
 rand = { workspace = true }  # For JWT secret generation
 base64 = { workspace = true }  # For JWT secret encoding
 
@@ -30,18 +31,18 @@ biomeos-primal-sdk = { path = "../biomeos-primal-sdk", version = "0.1.0" }
 tarpc = { workspace = true }
 tokio-serde = { workspace = true }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
-chrono = "0.4"
+chrono = { workspace = true }
 futures = { workspace = true }
-uuid = { version = "1.11", features = ["v4"] }  # For request ID generation
-toml = "0.8"  # For Neural API graph parsing
+uuid = { workspace = true }  # For request ID generation
+toml = { workspace = true }  # For Neural API graph parsing
 
 # Neural API integration (neural-api-client crate exists — uncomment when wired)
 # neural-api-client = { path = "../neural-api-client" }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-tempfile = "3.8"
-tokio-test = "0.4"
+tempfile = { workspace = true }
+tokio-test = { workspace = true }
 rand = { workspace = true }
 
 [lints]

@@ -4,48 +4,49 @@ version = "0.1.0"
 edition.workspace = true
 authors = ["biomeOS Team"]
 description = "Unified type system for the biomeOS ecosystem"
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 repository = "https://github.com/your-org/biomeos"
 
 [dependencies]
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
 serde_yaml.workspace = true
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { workspace = true, features = ["serde"] }
 base64 = { workspace = true }
 
 # RPC framework (tarpc for high-performance binary RPC)
-tarpc = { version = "0.37", features = ["serde-transport", "serde-transport-bincode", "tokio1"] }
+tarpc = { workspace = true }
 
 # Date/time handling
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
 
 # UUID support
-uuid = { version = "1.6", features = ["v4", "serde"] }
+uuid = { workspace = true }
 
 # URL parsing and validation
-url = { version = "2.5", features = ["serde"] }
+url = { workspace = true }
 
 # Error handling
 thiserror = { workspace = true }
-anyhow = "1.0"
+anyhow = { workspace = true }
 
 # Async support
 tokio = { workspace = true }
-async-trait = "0.1"
+async-trait = { workspace = true }
 
 # Collections and utilities
-indexmap = { version = "2.0", features = ["serde"] }
+indexmap = { workspace = true }
 
 # XDG directory support
 # dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
-etcetera = "0.8"  # Pure Rust replacement for dirs
+etcetera = { workspace = true }  # Pure Rust replacement for dirs
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-tempfile = "3.8"
-proptest = "1"
+tempfile = { workspace = true }
+proptest = { workspace = true }
 
 [features]
 default = []

@@ -4,48 +4,49 @@ version = "0.1.0"
 edition.workspace = true
 authors = ["BiomeOS Contributors"]
 description = "Pure Rust deployment orchestration for BiomeOS"
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 # Async runtime
 tokio = { workspace = true }
-futures = "0.3"
+futures = { workspace = true }
 
 # Error handling
-anyhow = "1"
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 # Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["json"] }
 
 # Serialization
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true }
 serde_yaml.workspace = true
-serde_json = "1"
+serde_json = { workspace = true }
 
 # System interaction (process signals via rustix)
-rustix = { version = "0.38", features = ["process"] }
+rustix = { workspace = true, features = ["process"] }
 
 # Network interface management (pure Rust, replaces sudo ip)
-rtnetlink = "0.20"
+rtnetlink = { workspace = true }
 
 # Path and file utilities
-walkdir = "2"
-tempfile = "3"
+walkdir = { workspace = true }
+tempfile = { workspace = true }
 
 # CLI
-clap = { version = "4", features = ["derive", "cargo"] }
+clap = { workspace = true, features = ["cargo"] }
 
 # UUID for instance identification
-uuid = { version = "1", features = ["v4", "serde"] }
+uuid = { workspace = true }
 
 # BiomeOS crates
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 
 [dev-dependencies]
-tokio-test = "0.4"
+tokio-test = { workspace = true }
 
 
 [lints]

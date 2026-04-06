@@ -4,63 +4,64 @@ version = "0.1.0"
 edition.workspace = true
 authors = ["BiomeOS Contributors"]
 description = "Pure Rust boot infrastructure for BiomeOS"
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 # Core async runtime
 tokio = { workspace = true }
-anyhow = "1"
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 # Structured logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["json"] }
 
 # Serialization for manifests and configs
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true }
 serde_yaml.workspace = true
-toml = "0.8"
+toml = { workspace = true }
 
 # System interaction (pure Rust via rustix)
-rustix = { version = "0.38", features = ["fs", "mount", "process"] }
+rustix = { workspace = true, features = ["fs", "mount", "process"] }
 
 # Hardware detection (pure Rust via /proc - ecoBin v3)
 
 # UUID for device identification
-uuid = { version = "1", features = ["v4", "serde"] }
+uuid = { workspace = true }
 
 # Filesystem operations
-tar = "0.4"
-flate2 = "1.0"
+tar = { workspace = true }
+flate2 = { workspace = true }
 
 # Network discovery
-mdns-sd = "0.11"
+mdns-sd = { workspace = true }
 
 # Cryptographic operations
-sha2 = "0.10"
-hex = "0.4"
+sha2 = { workspace = true }
+hex = { workspace = true }
 
 # Path and file utilities
-walkdir = "2"
-tempfile = "3"
+walkdir = { workspace = true }
+tempfile = { workspace = true }
 
 # CLI parsing
-clap = { version = "4", features = ["derive", "cargo"] }
+clap = { workspace = true, features = ["cargo"] }
 
 # Date/time
-chrono = "0.4"
+chrono = { workspace = true }
 
 # Process utilities
-which = "6"
+which = { workspace = true }
 
 # BiomeOS crates
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 
 [dev-dependencies]
-tokio-test = "0.4"
-assert_cmd = "2"
-predicates = "3"
+tokio-test = { workspace = true }
+assert_cmd = { workspace = true }
+predicates = { workspace = true }
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 
 [[bin]]

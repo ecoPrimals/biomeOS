@@ -3,7 +3,8 @@ name = "biomeos-primal-sdk"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 description = "Universal SDK for creating biomeOS Primals"
 
 [dependencies]
@@ -17,7 +18,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
-futures = "0.3"
+futures = { workspace = true }
 
 # Tokio for async runtime
 tokio = { workspace = true, features = ["test-util"] }
@@ -37,7 +38,7 @@ tracing = { workspace = true }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-tempfile = "3.8"
+tempfile = { workspace = true }
 
 [lints]
 workspace = true

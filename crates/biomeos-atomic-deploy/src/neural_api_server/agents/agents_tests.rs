@@ -713,13 +713,7 @@ fn test_auto_meld_skips_unreachable() {
         vec![("beardog", true)],
         0,
     )]);
-    let mut unreachable = mock_gate(
-        "gate2",
-        "192.0.2.132",
-        false,
-        vec![("toadstool", true)],
-        0,
-    );
+    let mut unreachable = mock_gate("gate2", "192.0.2.132", false, vec![("toadstool", true)], 0);
     unreachable.reachable = false;
     state.gates.push(unreachable);
 

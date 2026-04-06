@@ -3,7 +3,8 @@ name = "biomeos-federation"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 description = "biomeOS federation and sub-federation management"
 
 [dependencies]
@@ -14,7 +15,7 @@ tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-toml = "0.8"
+toml = { workspace = true }
 chrono = { workspace = true }
 
 # Error handling
@@ -27,7 +28,7 @@ tracing = { workspace = true }
 # biomeOS types and core (AtomicClient, SystemPaths, CapabilityTaxonomy)
 biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
-bytes = "1"
+bytes = { workspace = true }
 
 # HTTP client DEPRECATED: Use atomic_client (Unix sockets) for BearDog/Songbird
 # # reqwest = { workspace = true }  # REMOVED: Use Tower Atomic (Songbird + BearDog) for Pure Rust HTTPS # REMOVED - Songbird/BearDog handle HTTP/TLS
@@ -35,7 +36,7 @@ base64 = { workspace = true }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-tokio-test = "0.4"
+tokio-test = { workspace = true }
 tempfile = { workspace = true }
 sha2 = { workspace = true }
 

@@ -455,10 +455,7 @@ async fn test_sync_with_lineage_peer_updates_existing() {
             node_name: "peer-a".to_string(),
             first_met: 1000,
             last_seen: 2000,
-            endpoints: vec![
-                "192.0.2.1:9900".to_string(),
-                "192.0.2.2:9900".to_string(),
-            ],
+            endpoints: vec!["192.0.2.1:9900".to_string(), "192.0.2.2:9900".to_string()],
             capabilities_hint: vec![],
             notes: "Remote".to_string(),
             relationship: MeetingRelationship::Direct,

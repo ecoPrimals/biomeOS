@@ -3,7 +3,8 @@
 
 [workspace.package]
 authors = ["biomeOS Team"]
-license = "AGPL-3.0-only"
+license = "AGPL-3.0-or-later"
+rust-version = "1.87"
 
 [package]
 name = "biomeos-tools"
@@ -11,6 +12,7 @@ version = "0.1.0"
 edition = "2021"
 authors.workspace = true
 license.workspace = true
+rust-version.workspace = true
 description = "biomeOS development and integration tools - Rust until the very edge"
 
 [[bin]]

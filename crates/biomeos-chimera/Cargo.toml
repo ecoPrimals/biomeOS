@@ -3,7 +3,8 @@ name = "biomeos-chimera"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 description = "Chimera system for BiomeOS - mixed-boundary primal amalgams"
 
 [dependencies]

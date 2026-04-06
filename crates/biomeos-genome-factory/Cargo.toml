@@ -3,7 +3,8 @@ name = "biomeos-genome-factory"
 version = "1.0.0"
 edition.workspace = true
 authors = ["ecoPrimals Team"]
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 description = "Genome Factory - Universal genomeBin production for any primal"
 repository = "https://github.com/ecoPrimals/biomeOS"
 
@@ -32,11 +33,11 @@ tokio = { workspace = true, features = ["fs", "process"] }
 etcetera = { workspace = true }
 
 # Hex encoding (Pure Rust)
-hex = "0.4"
+hex = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
-tempfile = "3.8"
+tempfile = { workspace = true }
 
 [lib]
 name = "biomeos_genome_factory"

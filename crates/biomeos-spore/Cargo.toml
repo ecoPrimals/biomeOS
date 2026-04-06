@@ -3,7 +3,8 @@ name = "biomeos-spore"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license = "AGPL-3.0-only"
+license.workspace = true
+rust-version.workspace = true
 description = "biomeOS USB spore management - orchestration layer only"
 
 [dependencies]
@@ -16,7 +17,7 @@ async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
-toml = "0.8"  # For manifest files
+toml = { workspace = true }  # For manifest files
 
 # Error handling
 thiserror = { workspace = true }
@@ -28,14 +29,14 @@ gethostname = { workspace = true }  # For node identification
 
 # Genetic derivation (sibling seeds)
 sha2 = { workspace = true }  # For SHA256-based seed derivation
-bytes = { version = "1", features = ["serde"] }  # Zero-copy binary data
-getrandom = "0.2"  # For secure random nonce generation
-serde_bytes = "0.11"  # For binary data serialization
+bytes = { workspace = true, features = ["serde"] }  # Zero-copy binary data
+getrandom = { workspace = true }  # For secure random nonce generation
+serde_bytes = { workspace = true }  # For binary data serialization
 base64 = { workspace = true }  # For beacon encoding
-rustix = { version = "0.38", features = ["fs", "process"] }  # statvfs + kill for rollback
-hex = "0.4"  # For hex encoding
+rustix = { workspace = true, features = ["fs", "process"] }  # statvfs + kill for rollback
+hex = { workspace = true }  # For hex encoding
 uuid = { workspace = true }  # For unique IDs
-async-fs = "2.1"  # For async file operations
+async-fs = { workspace = true }  # For async file operations
 
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
@@ -48,11 +49,11 @@ tracing = { workspace = true }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-tokio-test = "0.4"
+tokio-test = { workspace = true }
 tempfile = { workspace = true }
-futures = "0.3"
+futures = { workspace = true }
 tracing-subscriber = { workspace = true }
-criterion = { version = "0.5", features = ["async_tokio"] }
+criterion = { workspace = true, features = ["async_tokio"] }
 
 [[bench]]
 name = "dark_forest_benches"

@@ -433,10 +433,7 @@ metadata:
         assert!(config.network.port > 0);
 
         env.clear();
-        env.insert(
-            "BIOMEOS_BIND_ADDRESS".to_string(),
-            "192.0.2.1".to_string(),
-        );
+        env.insert("BIOMEOS_BIND_ADDRESS".to_string(), "192.0.2.1".to_string());
         let config = BiomeOSConfig::from_env_map(&env);
         assert_eq!(config.network.bind_address, "192.0.2.1");
 
