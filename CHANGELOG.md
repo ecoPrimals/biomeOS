@@ -2,6 +2,31 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.91 (2026-04-06) — Large-File Refactors + Test Growth + Dep Audit
+
+### Refactors
+- Four large files smart-refactored: topology **869 → 433**, rendezvous **862 → 321**, verify **859 → 500**, orchestrator **855 → 427**
+
+### Tests and quality
+- **27** new tests (storage, networking, topology, capability, lifecycle)
+- All **25** duplicate dependency roots confirmed transitive
+- **7,638** tests passing
+
+---
+
+## v2.90 (2026-04-06) — Neural API Semantic Fallback + Provenance + Routing Tests
+
+### Neural API and capabilities
+- Neural API semantic method fallback: any `domain.operation` routes through `capability.call`
+- **32** provenance trio capability translations (dag/commit/attribution domains)
+- Composition health canonical namespace with **9** translations
+- `birdsong.decrypt` / `encrypt` legacy aliases
+
+### Tests
+- **5** new routing tests
+
+---
+
 ## v2.89 (2026-04-06) — Workspace Dep Governance + Test Refactors + Coverage
 
 ### Workspace and metadata

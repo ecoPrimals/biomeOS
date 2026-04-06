@@ -391,7 +391,7 @@ Comprehensive evolution pass: zero-copy binary payloads, capability-based discov
 | **Smart refactoring** | `capability_translation.rs` (985→302+191+28), `provider.rs` (944→407+494), `concurrent_startup.rs` (931→210+672) — split at logical boundaries, not arbitrary lines |
 | **Error handling** | `concurrent_startup.rs` `expect` → `unwrap_or` for malformed dependency graphs (no panic) |
 | **Doc collision** | Root `[lib] doc = false` eliminates `biomeos/index.html` collision between workspace root and `crates/biomeos` |
-| **SPDX headers** | 619/619 `.rs` files now have `SPDX-License-Identifier: AGPL-3.0-only` |
+| **SPDX headers** | 619/619 `.rs` files now have `SPDX-License-Identifier: AGPL-3.0-or-later` |
 | **Coverage expansion** | ~25 new tests for `checks_config`, `checks_primal`, `model_cache`, `rootpulse`, `main.rs`, `neural-api-client-sync` |
 | **Test total** | 4,383 → 4,728 (+345), 0 failures, 203 ignored |
 | **Coverage** | 75.38% → 76.15% line; per-file: rootpulse 45→67%, model_cache 47→54%, main 38→44% |
