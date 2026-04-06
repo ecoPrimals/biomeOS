@@ -179,8 +179,8 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v2.87)
-**Updated**: April 3, 2026
-**Tests**: 7,723 passing (0 failures), 90.08% line / 90.85% function / 89.89% region (llvm-cov), suite ~93s | **Clippy**: PASS (0 warnings) | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
+**Status**: Production Ready (v2.89)
+**Updated**: April 6, 2026
+**Tests**: 7,607 passing (0 failures, 0 ignored, fully concurrent), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

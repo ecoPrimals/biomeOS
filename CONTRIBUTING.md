@@ -1,6 +1,6 @@
 # Contributing to biomeOS
 
-**License**: scyBorg triple-copyleft — AGPL-3.0-only (code), ORC (operational/mechanics), CC-BY-SA 4.0 (documentation/creative)
+**License**: scyBorg triple-copyleft — AGPL-3.0-or-later (code), ORC (operational/mechanics), CC-BY-SA 4.0 (documentation/creative)
 
 All contributions must comply with the ecoPrimals wateringHole standards.
 See `ecoPrimals/wateringHole/STANDARDS_AND_EXPECTATIONS.md` (monorepo-relative) for the full standard.
@@ -23,6 +23,7 @@ cargo fmt --all -- --check         # 0 diffs
 | Rule | Detail |
 |------|--------|
 | **Edition** | Rust 2024 (`edition = "2024"`) |
+| **MSRV** | Rust **1.87** (`rust-version = "1.87"` in workspace `Cargo.toml`) |
 | **Linting** | `clippy::pedantic` + `clippy::nursery` — zero warnings, inherited via `[lints] workspace = true` |
 | **Unsafe** | `#![forbid(unsafe_code)]` on all crate roots; `#![deny(unsafe_code)]` only for crates with justified test-only `#[allow]` |
 | **Error handling** | `Result<T, E>` everywhere; no `.unwrap()` in library/production code; workspace denies `unwrap_used`/`expect_used` |
@@ -30,7 +31,7 @@ cargo fmt --all -- --check         # 0 diffs
 | **File size** | No file over 1000 lines; refactor at logical boundaries, not arbitrary splits |
 | **TODO/FIXME** | No TODO, FIXME, HACK, or XXX in committed code |
 | **Commented code** | No commented-out code |
-| **License headers** | `// SPDX-License-Identifier: AGPL-3.0-only` + `// Copyright 2025-2026 ecoPrimals Project` on every `.rs` file |
+| **License headers** | `// SPDX-License-Identifier: AGPL-3.0-or-later` + `// Copyright 2025-2026 ecoPrimals Project` on every `.rs` file |
 
 ## IPC Standards
 

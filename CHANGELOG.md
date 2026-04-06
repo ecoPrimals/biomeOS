@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.89 (2026-04-06) — Workspace Dep Governance + Test Refactors + Coverage
+
+### Workspace and metadata
+- Workspace dependency pins **22 → 2** (remaining pins are intentional version mismatches only); all dependencies centralized via `workspace = true`
+- `biomeos-ui` workspace metadata aligned with the rest of the workspace
+
+### Large-file refactors (tests extracted/merged)
+- `socket_providers.rs` **884 → 484** lines (tests extracted)
+- `protocol.rs` **878 → 448** lines (tests merged)
+
+### Tests and quality
+- Targeted tests added for five previously untested files: `health.rs`, `service/core.rs`, `definition.rs`, `ai_advisor.rs`, `fractal.rs`
+- Library `eprintln!` audit: **3** occurrences verified acceptable
+- **7,607** tests, **0** failures, **0** ignored (fully concurrent)
+
+---
+
+## v2.88 (2026-04-05) — Federation Tests + License + MSRV + Workspace Deps
+
+### Tests
+- Fixed **4** `vm_federation` test failures (reserved documentation addresses **192.0.2.x → 192.168.x**)
+
+### Licensing and toolchain
+- License **AGPL-3.0-only → AGPL-3.0-or-later** (scyBorg triple-copyleft)
+- **`rust-version` 1.87** added to the workspace `Cargo.toml`
+
+### Dependencies
+- ~**150** local dependency pins migrated to **`workspace = true`**
+
+---
+
 ## v2.87 (2026-04-03) — Deep Debt Evolution: Deprecated APIs Removed + Refactors + Tracing
 
 ### Deprecated discovery API removal

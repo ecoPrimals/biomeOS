@@ -4,20 +4,20 @@
 
 ---
 
-## Status: Production Ready (v2.87)
+## Status: Production Ready (v2.89)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 7/7 ecoBin v3.0 compliant (+ barraCuda, coralReef) |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024 all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
-| Tests | 7,723 passing (0 failures) — 90.08% line / 90.85% function / 89.89% region (llvm-cov), suite ~93s |
+| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
+| Tests | 7,607 passing (0 failures, 0 ignored, fully concurrent) — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots) |
 | C Dependencies | 0 (blake3 pure, deny.toml enforced bans) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
 | Formatting | PASS |
-| License | scyBorg triple-copyleft (AGPL-3.0-only + ORC + CC-BY-SA 4.0) |
+| License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI + TCP-only mobile |
 | AI Bridge | Capability-routed to Squirrel (tag-in at runtime; biomeOS runs without AI primal) |
 | Neural API | 290+ capability translations, 26 domains, 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing |
@@ -27,10 +27,10 @@
 | Files >1000 LOC | 0 (all under 1000 after smart domain extraction) |
 | Discovery | **Capability-based** per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — XDG sockets + `topology.rescan` + lazy rescan + `capability.register` + DNS-SD mDNS; no identity-based routing or deprecated discovery stubs |
 | Blocking Debt | 0 (BM-04 capability registration, BM-05 probe formats, TCP-only, gate routing, `#[serial]` elimination — all resolved) |
-| Dep Governance | tokio, base64, serde, serde_json, gethostname — workspace-unified; `serial_test` removed; pure Rust stack (rustix, etcetera, ureq) |
+| Dep Governance | All crates: dependencies centralized via `workspace = true` (intentional version pins only where required); `serial_test` removed; pure Rust stack (rustix, etcetera, ureq) |
 | TODO/FIXME/HACK | 0 in production code |
 | Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
-| SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-only`) |
+| SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
 
 ---
 
@@ -238,7 +238,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 | Universal IPC v3.0 | Multi-transport (Unix/Abstract/TCP/HTTP JSON-RPC) |
 | PRIMAL_DEPLOYMENT_STANDARD v1.0 | Deterministic behavior |
 | Semantic Method Naming | capability.call routing |
-| scyBorg Triple-Copyleft | AGPL-3.0-only + ORC + CC-BY-SA 4.0 |
+| scyBorg Triple-Copyleft | AGPL-3.0-or-later + ORC + CC-BY-SA 4.0 |
 | Evolved Genetic Model v2.0 | Mitochondrial + Nuclear |
 | XDG Base Directory | SystemPaths (all paths XDG-compliant) |
 
@@ -252,13 +252,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,723 tests across 26 crates, ~93s typical wall time)
+### Test (7,607 tests across 26 crates, fully concurrent)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (90.08% line / 90.85% function / 89.89% region)
+### Coverage (90%+ line / function / region)
 
 ```bash
 cargo llvm-cov --workspace
@@ -326,7 +326,7 @@ biomeOS/
 
 ## License
 
-scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC-BY-SA 4.0** (documentation)
+scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + **CC-BY-SA 4.0** (documentation)
 
 ---
 
@@ -346,10 +346,10 @@ scyBorg triple-copyleft: **AGPL-3.0-only** (code) + **ORC** (operational) + **CC
 
 ---
 
-**Status**: Production Ready (v2.87)
-**Updated**: April 3, 2026
-**Tests**: 7,723 passing, 90.08% line / 90.85% function / 89.89% region (llvm-cov), ~93s suite | **Clippy**: pedantic+nursery via workspace lints | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
+**Status**: Production Ready (v2.89)
+**Updated**: April 6, 2026
+**Tests**: 7,607 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, `-D warnings` | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---
 
