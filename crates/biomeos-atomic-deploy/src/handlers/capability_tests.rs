@@ -3,7 +3,8 @@
 
 //! Capability handler tests - extracted to keep capability.rs under 1000 lines
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, reason = "test")]
+#![allow(clippy::expect_used)]
 
 use biomeos_test_utils::MockJsonRpcServer;
 use serde_json::json;
@@ -774,4 +775,57 @@ async fn test_list_includes_stun_locality_mesh() {
 async fn test_register_missing_params_for_route_register_alias() {
     let handler = make_handler();
     assert!(handler.register_route(&None).await.is_err());
+}
+
+#[tokio::test]
+async fn test_providers_missing_capability_field_errors() {
+    let handler = make_handler();
+    let err = handler.providers(&Some(json!({}))).await;
+    assert!(err.is_err());
+}
+
+#[tokio::test]
+async fn test_discover_missing_capability_field_errors() {
+    let handler = make_handler();
+    let err = handler.discover(&Some(json!({}))).await;
+    assert!(err.is_err());
+}
+
+#[tokio::test]
+async fn test_register_route_missing_primal_field_errors() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "transport": "127.0.0.1:19998",
+        "capabilities": ["a"]
+    }));
+    assert!(handler.register_route(&params).await.is_err());
+}
+
+#[tokio::test]
+async fn test_route_logs_metric_on_success() {
+    let dir = tempdir().expect("tempdir");
+    let sock = dir.path().join("metric-route.sock");
+    let _server = MockJsonRpcServer::spawn_echo_success(&sock, json!({ "metric": true })).await;
+
+    let handler = make_handler();
+    handler
+        .register(&Some(json!({
+            "capability": "metric-cap",
+            "primal": "m",
+            "socket": sock.to_str().unwrap(),
+            "source": "t"
+        })))
+        .await
+        .unwrap();
+
+    let params = Some(json!({
+        "capability": "metric-cap",
+        "method": "x",
+        "params": {}
+    }));
+    let out = handler.route(&params).await.expect("route");
+    assert_eq!(out["metric"], true);
+    let m = handler.get_metrics().await.expect("metrics");
+    assert_eq!(m["total_requests"], 1);
+    assert_eq!(m["metrics"].as_array().unwrap()[0]["success"], true);
 }

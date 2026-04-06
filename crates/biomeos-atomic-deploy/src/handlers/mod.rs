@@ -39,6 +39,8 @@ pub mod graph;
 mod graph_tests;
 pub mod inference;
 pub mod lifecycle;
+#[cfg(test)]
+mod lifecycle_tests;
 pub mod niche;
 pub mod protocol;
 #[cfg(test)]

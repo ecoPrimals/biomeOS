@@ -490,3 +490,151 @@ fn subset_spec_with_traffic_policy_roundtrip() {
     };
     roundtrip_json(&spec);
 }
+
+#[test]
+fn mesh_egress_spec_destination_rules_only_roundtrip() {
+    let spec = MeshEgressSpec {
+        service_entries: vec![],
+        destination_rules: vec![DestinationRuleSpec {
+            name: "dr-only".into(),
+            host: "svc.local".into(),
+            traffic_policy: Some(TrafficPolicySpec {
+                load_balancer: None,
+                connection_pool: None,
+                outlier_detection: None,
+                tls: Some(ClientTlsSettings {
+                    mode: ClientTlsMode::Simple,
+                    client_certificate: None,
+                    private_key: None,
+                    ca_certificates: None,
+                    subject_alternative_names: vec!["svc.local".into()],
+                    sni: None,
+                }),
+            }),
+            subsets: vec![],
+        }],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn http_route_with_redirect_instead_of_route_roundtrip() {
+    let spec = VirtualServiceSpec {
+        name: "redirector".into(),
+        hosts: vec!["old.example".into()],
+        gateways: vec!["mesh".into()],
+        http: vec![HttpRouteSpec {
+            match_conditions: vec![HttpMatchCondition {
+                uri: Some(StringMatch::Prefix("/".into())),
+                scheme: None,
+                method: None,
+                authority: None,
+                headers: HashMap::new(),
+                query_params: HashMap::new(),
+            }],
+            route: vec![],
+            redirect: Some(HttpRedirect {
+                uri: Some("https://new.example".into()),
+                authority: None,
+                redirect_code: Some(301),
+            }),
+            rewrite: None,
+            timeout: None,
+            retries: None,
+        }],
+        tcp: vec![],
+        tls: vec![],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn http_route_rewrite_preserves_method_match_roundtrip() {
+    let spec = VirtualServiceSpec {
+        name: "rewrite-only".into(),
+        hosts: vec!["api".into()],
+        gateways: vec![],
+        http: vec![HttpRouteSpec {
+            match_conditions: vec![HttpMatchCondition {
+                uri: Some(StringMatch::Exact("/v1".into())),
+                scheme: None,
+                method: Some(StringMatch::Exact("POST".into())),
+                authority: None,
+                headers: HashMap::new(),
+                query_params: HashMap::new(),
+            }],
+            route: vec![HttpRouteDestination {
+                destination: DestinationSpec {
+                    host: "api".into(),
+                    subset: None,
+                    port: Some(PortSelector::Name("http".into())),
+                },
+                weight: Some(100),
+                headers: None,
+            }],
+            redirect: None,
+            rewrite: Some(HttpRewrite {
+                uri: Some("/v2".into()),
+                authority: Some("internal".into()),
+            }),
+            timeout: Some(5),
+            retries: None,
+        }],
+        tcp: vec![],
+        tls: vec![],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn gateway_spec_and_server_spec_roundtrip() {
+    let spec = MeshIngressSpec {
+        gateways: vec![GatewaySpec {
+            name: "gw".into(),
+            selector: HashMap::from([("istio".into(), "ingress".into())]),
+            servers: vec![ServerSpec {
+                port: PortSpec {
+                    number: 8443,
+                    name: "https".into(),
+                    protocol: "HTTPS".into(),
+                },
+                hosts: vec!["*".into()],
+                tls: Some(TlsSpec {
+                    mode: TlsMode::Mutual,
+                    credential_name: None,
+                    server_certificate: Some("cert.pem".into()),
+                    private_key: Some("key.pem".into()),
+                }),
+            }],
+        }],
+        virtual_services: vec![],
+    };
+    roundtrip_json(&spec);
+}
+
+#[test]
+fn traffic_policy_tls_only_roundtrip() {
+    let tp = TrafficPolicySpec {
+        load_balancer: None,
+        connection_pool: None,
+        outlier_detection: None,
+        tls: Some(ClientTlsSettings {
+            mode: ClientTlsMode::Mutual,
+            client_certificate: Some("/certs/client.pem".into()),
+            private_key: Some("/certs/client-key.pem".into()),
+            ca_certificates: Some("/certs/ca.pem".into()),
+            subject_alternative_names: vec![],
+            sni: Some("svc.internal".into()),
+        }),
+    };
+    roundtrip_json(&tp);
+}
+
+#[test]
+fn tls_route_spec_minimal_roundtrip() {
+    let spec = TlsRouteSpec {
+        match_conditions: vec![],
+        route: vec![],
+    };
+    roundtrip_json(&spec);
+}

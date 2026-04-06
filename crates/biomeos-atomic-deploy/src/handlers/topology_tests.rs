@@ -149,3 +149,82 @@ fn socket_directories_non_empty_and_biomeos_or_legacy_tmp() {
         "expected /tmp fallback or a biomeos runtime dir, got {dirs:?}"
     );
 }
+
+#[tokio::test]
+async fn proprioception_two_of_three_capabilities_is_degraded() {
+    let router = Arc::new(NeuralRouter::new("deg-fam"));
+    router
+        .register_capability_unix("security", "a", "/tmp/a-deg-fam.sock", "t")
+        .await
+        .expect("reg");
+    router
+        .register_capability_unix("discovery", "b", "/tmp/b-deg-fam.sock", "t")
+        .await
+        .expect("reg");
+    let exec = Arc::new(RwLock::new(HashMap::new()));
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let h = TopologyHandler::new("deg-fam", router, exec, tmp.path());
+    let v = h.get_proprioception().await.expect("proprio");
+    assert_eq!(v["health"]["status"], "degraded");
+    let pct = v["health"]["percentage"].as_f64().expect("pct");
+    assert!(pct > 50.0 && pct < 80.0, "expected ~66%, got {pct}");
+}
+
+#[tokio::test]
+async fn topology_connections_empty_without_discovery_and_security_pair() {
+    let router = Arc::new(NeuralRouter::new("solo-fam"));
+    router
+        .register_capability_unix("security", "solo", "/tmp/solo-solo-fam.sock", "t")
+        .await
+        .expect("reg");
+    let exec = Arc::new(RwLock::new(HashMap::new()));
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let h = TopologyHandler::new("solo-fam", router, exec, tmp.path());
+    let top = h.get().await.expect("get");
+    let conns = top["connections"].as_array().expect("connections");
+    assert!(
+        conns.is_empty(),
+        "infer_connections needs discovery + security pair, got {conns:?}"
+    );
+}
+
+#[tokio::test]
+async fn get_primals_includes_registry_entries_with_expected_ids() {
+    let router = Arc::new(NeuralRouter::new("id-fam"));
+    router
+        .register_capability_unix("compute", "toad", "/tmp/toad-id-fam.sock", "t")
+        .await
+        .expect("reg");
+    let exec = Arc::new(RwLock::new(HashMap::new()));
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let h = TopologyHandler::new("id-fam", router, exec, tmp.path());
+    let v = h.get_primals().await.expect("primals");
+    let arr = v["primals"].as_array().expect("arr");
+    assert!(
+        arr.iter().any(|p| p["id"] == "toad-id-fam"),
+        "expected registry primal id, got {arr:?}"
+    );
+}
+
+#[tokio::test]
+async fn motor_coordination_requires_two_or_more_primals() {
+    let router = Arc::new(NeuralRouter::new("motor-fam"));
+    router
+        .register_capability_unix("x", "p1", "/tmp/p1-motor-fam.sock", "t")
+        .await
+        .expect("r1");
+    let exec = Arc::new(RwLock::new(HashMap::new()));
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let h = TopologyHandler::new("motor-fam", router.clone(), exec, tmp.path());
+    let v = h.get_proprioception().await.expect("p");
+    assert_eq!(v["motor"]["can_coordinate_primals"], false);
+
+    router
+        .register_capability_unix("y", "p2", "/tmp/p2-motor-fam.sock", "t")
+        .await
+        .expect("r2");
+    let exec2 = Arc::new(RwLock::new(HashMap::new()));
+    let h2 = TopologyHandler::new("motor-fam", router, exec2, tmp.path());
+    let v2 = h2.get_proprioception().await.expect("p2");
+    assert_eq!(v2["motor"]["can_coordinate_primals"], true);
+}
