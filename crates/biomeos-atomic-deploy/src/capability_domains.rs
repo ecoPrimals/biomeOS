@@ -205,6 +205,13 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "prov_export",
         ],
     },
+    // Composition health domain (biomeOS — cross-cutting aggregate)
+    // Canonical namespace for composed system health: tower, webb, service,
+    // nucleus, and spring-specific health aggregation.
+    CapabilityDomain {
+        provider: "biomeos",
+        capabilities: &["composition"],
+    },
 ];
 
 /// Config-driven capability → provider registry.

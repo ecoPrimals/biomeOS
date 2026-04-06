@@ -128,7 +128,9 @@ mod tests {
             tokio::net::UnixStream::pair().expect("UnixStream::pair");
         let server = create_test_server();
 
-        let request = r#"{"jsonrpc":"2.0","method":"unknown.method","id":1}"#;
+        // Single-word method (no dot) → MethodNotFound; domain.operation methods
+        // route through the semantic capability fallback instead.
+        let request = r#"{"jsonrpc":"2.0","method":"nonexistent","id":1}"#;
         client_stream
             .write_all((request.to_string() + "\n").as_bytes())
             .await
@@ -148,7 +150,7 @@ mod tests {
         conn_result.expect("handle_connection should succeed");
         assert!(buf.contains("jsonrpc"));
         assert!(buf.contains("error"));
-        assert!(buf.contains("unknown.method"));
+        assert!(buf.contains("nonexistent"));
     }
 
     #[tokio::test]

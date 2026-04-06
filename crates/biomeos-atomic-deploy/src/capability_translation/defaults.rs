@@ -9,7 +9,9 @@
 
 use std::collections::HashMap;
 
-use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
+use biomeos_types::primal_names::{
+    BEARDOG, LOAMSPINE, NESTGATE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
+};
 use tracing::{debug, info};
 
 use super::CapabilityTranslationRegistry;
@@ -76,6 +78,9 @@ pub fn load_defaults_into_with(
     let compute_provider = resolve_provider("BIOMEOS_COMPUTE_PROVIDER", TOADSTOOL);
     let ai_provider = resolve_provider("BIOMEOS_AI_PROVIDER", SQUIRREL);
     let genetic_provider = resolve_provider("BIOMEOS_GENETIC_PROVIDER", BEARDOG);
+    let dag_provider = resolve_provider("BIOMEOS_DAG_PROVIDER", RHIZOCRYPT);
+    let history_provider = resolve_provider("BIOMEOS_HISTORY_PROVIDER", LOAMSPINE);
+    let attribution_provider = resolve_provider("BIOMEOS_ATTRIBUTION_PROVIDER", SWEETGRASS);
 
     let domain_providers: &[DomainProvider] = &[
         // Security domain - cryptographic operations
@@ -187,6 +192,63 @@ pub fn load_defaults_into_with(
                 ("lineage.verify", "genetic.verify_sibling"),
             ],
         ),
+        // Ephemeral workspace / DAG domain (rhizoCrypt)
+        (
+            RHIZOCRYPT,
+            "dag",
+            &[
+                ("dag.create_session", "dag.create_session"),
+                ("dag.dehydrate", "dag.dehydrate"),
+                ("dag.rehydrate", "dag.rehydrate"),
+                ("dag.get_session", "dag.get_session"),
+                ("dag.list_sessions", "dag.list_sessions"),
+                ("dag.add_vertex", "dag.add_vertex"),
+                ("dag.slice", "dag.slice"),
+                ("session.create", "dag.create_session"),
+                ("session.get", "dag.get_session"),
+                ("dehydration.execute", "dag.dehydrate"),
+                ("provenance.begin", "dag.create_session"),
+                ("provenance.begin_session", "dag.create_session"),
+            ],
+        ),
+        // Permanent history / commit domain (LoamSpine)
+        (
+            LOAMSPINE,
+            "commit",
+            &[
+                ("commit.session", "commit.session"),
+                ("commit.append", "commit.append"),
+                ("commit.get", "commit.get"),
+                ("commit.list", "commit.list"),
+                ("permanent_storage.commit", "commit.session"),
+                ("spine.append", "commit.append"),
+                ("spine.get", "commit.get"),
+            ],
+        ),
+        // Attribution / provenance domain (sweetGrass)
+        (
+            SWEETGRASS,
+            "attribution",
+            &[
+                ("provenance.create_braid", "provenance.create_braid"),
+                ("provenance.get_braid", "provenance.get_braid"),
+                ("provenance.verify", "provenance.verify"),
+                ("attribution.create", "provenance.create_braid"),
+                ("attribution.get", "provenance.get_braid"),
+                ("attribution.verify", "provenance.verify"),
+                ("braid.create", "provenance.create_braid"),
+                ("braid.get", "provenance.get_braid"),
+            ],
+        ),
+        // Legacy birdsong aliases → BearDog crypto (pre-capability naming)
+        (
+            BEARDOG,
+            "security",
+            &[
+                ("birdsong.decrypt", "beacon.decrypt"),
+                ("birdsong.encrypt", "beacon.encrypt"),
+            ],
+        ),
     ];
 
     // Health domain translations (provider-agnostic, resolved to biomeOS itself)
@@ -203,6 +265,30 @@ pub fn load_defaults_into_with(
         health_translations.len()
     );
 
+    // Composition health — canonical namespace for composed system health.
+    // gen3 uses composition.tower_health, gen4 uses composition.webb_*_health,
+    // springs use composition.science_health. This registry normalizes them
+    // to a single biomeOS-local health aggregation endpoint.
+    let composition_translations: &[MethodTranslation] = &[
+        ("composition.health", "composition.health"),
+        ("composition.tower_health", "composition.health"),
+        ("composition.service_health", "composition.health"),
+        ("composition.science_health", "composition.health"),
+        ("composition.webb_health", "composition.health"),
+        ("composition.webb_compute_health", "composition.health"),
+        ("composition.webb_storage_health", "composition.health"),
+        ("composition.webb_network_health", "composition.health"),
+        ("composition.nucleus_health", "composition.health"),
+    ];
+    for (semantic, method) in composition_translations {
+        registry.register_translation(*semantic, "biomeos", *method, "local", None);
+        count += 1;
+    }
+    debug!(
+        "📦 Loaded {} composition health aliases",
+        composition_translations.len()
+    );
+
     let provider_overrides: std::collections::HashMap<&str, String> = [
         ("security", security_provider),
         ("network", network_provider),
@@ -210,6 +296,9 @@ pub fn load_defaults_into_with(
         ("compute", compute_provider),
         ("ai", ai_provider),
         ("genetic", genetic_provider),
+        ("dag", dag_provider),
+        ("commit", history_provider),
+        ("attribution", attribution_provider),
     ]
     .into_iter()
     .collect();

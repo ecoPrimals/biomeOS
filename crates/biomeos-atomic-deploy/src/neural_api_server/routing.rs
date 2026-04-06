@@ -75,7 +75,7 @@ enum Route {
     ProxyHttp,
     InferenceSchedule,
     InferenceGates,
-    MeshCapabilityCall,
+    SemanticCapabilityCall,
     HealthCheck,
     HealthLiveness,
     HealthReadiness,
@@ -199,26 +199,26 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("health.check", Route::HealthCheck),
     ("health.liveness", Route::HealthLiveness),
     ("health.readiness", Route::HealthReadiness),
-    // Mesh & NAT (capability.call sugar)
-    ("mesh.status", Route::MeshCapabilityCall),
-    ("mesh.find_path", Route::MeshCapabilityCall),
-    ("mesh.announce", Route::MeshCapabilityCall),
-    ("mesh.peers", Route::MeshCapabilityCall),
-    ("mesh.health_check", Route::MeshCapabilityCall),
-    ("punch.request", Route::MeshCapabilityCall),
-    ("punch.status", Route::MeshCapabilityCall),
-    ("punch.coordinate", Route::MeshCapabilityCall),
-    ("stun.discover", Route::MeshCapabilityCall),
-    ("stun.detect_nat_type", Route::MeshCapabilityCall),
-    ("stun.probe_port_pattern", Route::MeshCapabilityCall),
-    ("relay.serve", Route::MeshCapabilityCall),
-    ("relay.status", Route::MeshCapabilityCall),
-    ("relay.allocate", Route::MeshCapabilityCall),
-    ("relay.authorize", Route::MeshCapabilityCall),
-    ("onion.create_service", Route::MeshCapabilityCall),
-    ("onion.get_address", Route::MeshCapabilityCall),
-    ("onion.connect", Route::MeshCapabilityCall),
-    ("onion.status", Route::MeshCapabilityCall),
+    // Mesh & NAT (explicit semantic capability routes for known domains)
+    ("mesh.status", Route::SemanticCapabilityCall),
+    ("mesh.find_path", Route::SemanticCapabilityCall),
+    ("mesh.announce", Route::SemanticCapabilityCall),
+    ("mesh.peers", Route::SemanticCapabilityCall),
+    ("mesh.health_check", Route::SemanticCapabilityCall),
+    ("punch.request", Route::SemanticCapabilityCall),
+    ("punch.status", Route::SemanticCapabilityCall),
+    ("punch.coordinate", Route::SemanticCapabilityCall),
+    ("stun.discover", Route::SemanticCapabilityCall),
+    ("stun.detect_nat_type", Route::SemanticCapabilityCall),
+    ("stun.probe_port_pattern", Route::SemanticCapabilityCall),
+    ("relay.serve", Route::SemanticCapabilityCall),
+    ("relay.status", Route::SemanticCapabilityCall),
+    ("relay.allocate", Route::SemanticCapabilityCall),
+    ("relay.authorize", Route::SemanticCapabilityCall),
+    ("onion.create_service", Route::SemanticCapabilityCall),
+    ("onion.get_address", Route::SemanticCapabilityCall),
+    ("onion.connect", Route::SemanticCapabilityCall),
+    ("onion.status", Route::SemanticCapabilityCall),
 ];
 
 fn lookup_route(method: &str) -> Option<Route> {
@@ -255,17 +255,36 @@ impl NeuralApiServer {
         debug!("📥 Request: {} (id: {})", request.method, id);
         trace!("📥 Full request: {}", request_line.trim());
 
+        let params = &request.params;
+
         let route = match lookup_route(request.method.as_ref()) {
             Some(r) => r,
             None => {
+                // Semantic fallback: any "domain.operation" method not in
+                // ROUTE_TABLE routes through the capability layer. Springs call
+                // provenance.begin, birdsong.decrypt, dag.dehydrate, etc. as
+                // top-level JSON-RPC — the capability handler resolves provider
+                // + socket via CapabilityTranslationRegistry and CAPABILITY_DOMAINS.
+                if let Some((domain, operation)) = request.method.as_ref().split_once('.') {
+                    if !domain.is_empty() && !operation.is_empty() {
+                        debug!(
+                            "📡 Semantic fallback: {}.{} → capability.call",
+                            domain, operation
+                        );
+                        let cap_params = Some(serde_json::json!({
+                            "capability": domain,
+                            "operation": operation,
+                            "args": params.clone().unwrap_or(serde_json::json!({}))
+                        }));
+                        return dispatch(self.capability_handler.call(&cap_params).await, &id);
+                    }
+                }
                 return DispatchOutcome::MethodNotFound {
                     method: request.method.as_ref().to_string(),
                     id,
                 };
             }
         };
-
-        let params = &request.params;
         let outcome = match route {
             // Graph
             Route::GraphList => dispatch(self.graph_handler.list().await, &id),
@@ -386,13 +405,12 @@ impl NeuralApiServer {
             Route::HealthReadiness => dispatch(self.health_readiness().await, &id),
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, &id),
-            // Mesh & NAT (capability.call sugar)
-            Route::MeshCapabilityCall => {
-                let parts: Vec<&str> = request.method.as_ref().split('.').collect();
-                if parts.len() == 2 {
+            // Semantic capability routing: domain.operation → capability.call
+            Route::SemanticCapabilityCall => {
+                if let Some((domain, operation)) = request.method.as_ref().split_once('.') {
                     let cap_params = Some(serde_json::json!({
-                        "capability": parts[0],
-                        "operation": parts[1],
+                        "capability": domain,
+                        "operation": operation,
                         "args": params.clone().unwrap_or(serde_json::json!({}))
                     }));
                     dispatch(self.capability_handler.call(&cap_params).await, &id)

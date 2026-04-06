@@ -22,9 +22,9 @@ fn create_test_server() -> (NeuralApiServer, tempfile::TempDir) {
 }
 
 #[tokio::test]
-async fn test_handle_request_unknown_method() {
+async fn test_handle_request_unknown_single_word_method() {
     let (server, _temp) = create_test_server();
-    let req = r#"{"jsonrpc":"2.0","method":"nonexistent.method","id":1}"#;
+    let req = r#"{"jsonrpc":"2.0","method":"nonexistent","id":1}"#;
     let result = server.handle_request_json(req).await;
     assert_eq!(result["jsonrpc"], "2.0");
     assert_eq!(result["error"]["code"], -32601);
@@ -32,9 +32,51 @@ async fn test_handle_request_unknown_method() {
         result["error"]["message"]
             .as_str()
             .unwrap()
-            .contains("nonexistent.method")
+            .contains("nonexistent")
     );
     assert_eq!(result["id"], 1);
+}
+
+#[tokio::test]
+async fn test_semantic_fallback_routes_through_capability_call() {
+    let (server, _temp) = create_test_server();
+    // "provenance.begin" is not in ROUTE_TABLE but has domain.operation format,
+    // so it routes through capability.call via the semantic fallback.
+    let req = r#"{"jsonrpc":"2.0","method":"provenance.begin","params":{},"id":1}"#;
+    let result = server.handle_request_json(req).await;
+    // No provider registered in test server → ApplicationError (-32603), not MethodNotFound
+    assert!(result.get("error").is_some());
+    assert_ne!(
+        result["error"]["code"], -32601,
+        "semantic fallback should route through capability.call, not MethodNotFound"
+    );
+}
+
+#[tokio::test]
+async fn test_semantic_fallback_birdsong_decrypt() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"birdsong.decrypt","params":{"data":"test"},"id":2}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("error").is_some());
+    assert_ne!(result["error"]["code"], -32601);
+}
+
+#[tokio::test]
+async fn test_semantic_fallback_dag_dehydrate() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"dag.dehydrate","params":{"session_id":"s1"},"id":3}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("error").is_some());
+    assert_ne!(result["error"]["code"], -32601);
+}
+
+#[tokio::test]
+async fn test_semantic_fallback_composition_health() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"composition.tower_health","params":{},"id":4}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("error").is_some());
+    assert_ne!(result["error"]["code"], -32601);
 }
 
 #[tokio::test]
@@ -61,11 +103,14 @@ async fn test_handle_request_mesh_method_invalid_format_single_part() {
 }
 
 #[tokio::test]
-async fn test_handle_request_mesh_method_invalid_format_three_parts() {
+async fn test_semantic_fallback_multipart_method() {
     let (server, _temp) = create_test_server();
+    // "a.b.c" has a dot so semantic fallback splits on first dot: domain="a", operation="b.c"
     let req = r#"{"jsonrpc":"2.0","method":"a.b.c","id":3}"#;
     let result = server.handle_request_json(req).await;
-    assert_eq!(result["error"]["code"], -32601);
+    // Routes through capability.call (no provider), not MethodNotFound
+    assert!(result.get("error").is_some());
+    assert_ne!(result["error"]["code"], -32601);
 }
 
 #[tokio::test]
@@ -79,10 +124,12 @@ async fn test_handle_request_empty_method() {
 #[tokio::test]
 async fn test_handle_request_method_not_found_response_structure() {
     let (server, _temp) = create_test_server();
-    let req = r#"{"jsonrpc":"2.0","method":"foo.bar.baz","id":99}"#;
+    // Single-word methods with no dot hit MethodNotFound (no semantic fallback)
+    let req = r#"{"jsonrpc":"2.0","method":"nonexistent_verb","id":99}"#;
     let result = server.handle_request_json(req).await;
     assert!(result.get("result").is_none());
     assert!(result.get("error").is_some());
+    assert_eq!(result["error"]["code"], -32601);
     assert_eq!(result["id"], 99);
 }
 
@@ -463,7 +510,8 @@ async fn test_handle_request_dispatch_outcome_parse_error() {
 #[tokio::test]
 async fn test_handle_request_dispatch_outcome_method_not_found() {
     let (server, _temp) = create_test_server();
-    let req = r#"{"jsonrpc":"2.0","method":"nonexistent.method","id":77}"#;
+    // No-dot method → pure MethodNotFound (no semantic fallback)
+    let req = r#"{"jsonrpc":"2.0","method":"nonexistent","id":77}"#;
     let outcome = server.handle_request(req).await;
     let response = outcome.into_response();
     assert_eq!(response["error"]["code"], -32601);
@@ -471,7 +519,7 @@ async fn test_handle_request_dispatch_outcome_method_not_found() {
         response["error"]["message"]
             .as_str()
             .unwrap()
-            .contains("nonexistent.method")
+            .contains("nonexistent")
     );
 }
 
