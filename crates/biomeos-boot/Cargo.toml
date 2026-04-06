@@ -1,6 +1,6 @@
 [package]
 name = "biomeos-boot"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 authors = ["BiomeOS Contributors"]
 description = "Pure Rust boot infrastructure for BiomeOS"

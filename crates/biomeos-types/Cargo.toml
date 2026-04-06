@@ -1,6 +1,6 @@
 [package]
 name = "biomeos-types"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 authors = ["biomeOS Team"]
 description = "Unified type system for the biomeOS ecosystem"

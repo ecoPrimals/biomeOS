@@ -1,6 +1,6 @@
 [package]
 name = "biomeos-system"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 authors = ["biomeOS Team"]
 description = "System information and monitoring utilities for biomeOS using the unified type system"

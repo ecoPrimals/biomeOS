@@ -1,11 +1,11 @@
 [package]
 name = "biomeos-ui"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
-authors = ["biomeOS Contributors"]
+authors.workspace = true
 description = "Interactive UI orchestration for biomeOS - network effect of multiple primals"
-license = "AGPL-3.0-or-later"
-rust-version = "1.87"
+license.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 # Core biomeOS
@@ -14,40 +14,40 @@ biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 # Async runtime
 tokio = { workspace = true }
-tokio-stream = "0.1"
+tokio-stream = { workspace = true }
 
 # WebSocket client for real-time events (Pure Rust)
-tokio-tungstenite = "0.21"
-futures-util = "0.3"
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
 
 # HTTP client REMOVED - External HTTP requests go through Songbird
 # SSE support stubbed until Songbird exposes streaming
 
 # Error handling
-anyhow = "1.0"
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 # Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 # Collections
-indexmap = "2.0"
+indexmap = { workspace = true }
 
 # System info (statvfs for disk usage, pure Rust via rustix)
-rustix = { version = "0.38", features = ["fs"] }
+rustix = { workspace = true, features = ["fs"] }
 
 # Time
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-tokio-test = "0.4"
-tempfile = "3.0"
+tokio-test = { workspace = true }
+tempfile = { workspace = true }
 
 
 [lints]

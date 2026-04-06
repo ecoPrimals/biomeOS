@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, reason = "test")]
+#![expect(clippy::expect_used, reason = "test")]
 
 //! Health Module Tests
 //!
@@ -658,5 +659,91 @@ mod health_tests {
             estimated_completion: Some(Utc::now()),
         };
         assert!(!health.is_terminal());
+    }
+
+    #[test]
+    fn test_health_serde_roundtrip_healthy_and_degraded() {
+        let h = Health::healthy();
+        let json = serde_json::to_string(&h).expect("serialize");
+        let back: Health = serde_json::from_str(&json).expect("deserialize");
+        assert!(back.is_healthy());
+
+        let degraded = Health::degraded(vec![HealthIssue {
+            id: "i1".to_string(),
+            category: HealthIssueCategory::Resource,
+            severity: HealthIssueSeverity::Low,
+            message: "m".to_string(),
+            detected_at: Utc::now(),
+            details: HashMap::new(),
+            remediation: vec![],
+        }]);
+        let json = serde_json::to_string(&degraded).expect("serialize");
+        let back: Health = serde_json::from_str(&json).expect("deserialize");
+        assert!(back.is_operational());
+    }
+
+    #[test]
+    fn test_health_serde_roundtrip_unknown_with_nested_last_known() {
+        let inner = Box::new(Health::healthy());
+        let health = Health::Unknown {
+            reason: "probe".to_string(),
+            last_known: Some(inner),
+        };
+        let json = serde_json::to_string(&health).expect("serialize");
+        let back: Health = serde_json::from_str(&json).expect("deserialize");
+        match back {
+            Health::Unknown { last_known, .. } => {
+                assert!(last_known.is_some());
+                assert!(last_known.unwrap().is_healthy());
+            }
+            _ => panic!("expected Unknown"),
+        }
+    }
+
+    #[test]
+    fn test_health_check_target_command_function_custom_serde() {
+        for target in [
+            HealthCheckTarget::Command {
+                command: "/bin/true".to_string(),
+                args: vec!["-v".to_string()],
+            },
+            HealthCheckTarget::Function {
+                function: "check".to_string(),
+            },
+            HealthCheckTarget::Custom {
+                target: "custom:probe".to_string(),
+            },
+        ] {
+            let json = serde_json::to_string(&target).expect("serialize");
+            let _: HealthCheckTarget = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_metric_threshold_full_serde_roundtrip() {
+        let mt = MetricThreshold {
+            value: 0.92,
+            operator: ThresholdOperator::GreaterThan,
+            action: ThresholdAction::MarkCritical,
+        };
+        let json = serde_json::to_string(&mt).expect("serialize");
+        let back: MetricThreshold = serde_json::from_str(&json).expect("deserialize");
+        assert!((back.value - 0.92).abs() < f64::EPSILON);
+        assert!(matches!(back.operator, ThresholdOperator::GreaterThan));
+    }
+
+    #[test]
+    fn test_health_issues_empty_for_non_issue_variants() {
+        assert!(Health::healthy().issues().is_empty());
+        assert!(Health::unknown("x").issues().is_empty());
+    }
+
+    #[test]
+    fn test_health_check_config_serde_roundtrip() {
+        let cfg = HealthCheckConfig::default();
+        let json = serde_json::to_string(&cfg).expect("serialize");
+        let back: HealthCheckConfig = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(cfg.interval_secs, back.interval_secs);
+        assert_eq!(cfg.failure_threshold, back.failure_threshold);
     }
 }

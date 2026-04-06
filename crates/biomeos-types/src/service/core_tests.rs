@@ -3,7 +3,7 @@
 //
 // Test module for service/core.rs - included via #[path]
 
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "test")]
 
 use super::*;
 use crate::primal::PrimalCapability;
@@ -498,4 +498,52 @@ fn test_dependency_status_enum_serde() {
         let json = serde_json::to_string(&s).unwrap();
         let _: DependencyStatus = serde_json::from_str(&json).unwrap();
     }
+}
+
+#[test]
+fn test_service_status_serde_json_roundtrip() {
+    let status = UniversalService::default().status;
+    let json = serde_json::to_string(&status).unwrap();
+    let back: ServiceStatus = serde_json::from_str(&json).unwrap();
+    assert!(matches!(
+        (status.phase, back.phase),
+        (ServicePhase::Pending, ServicePhase::Pending)
+    ));
+    assert_eq!(status.replicas.desired, back.replicas.desired);
+}
+
+#[test]
+fn test_service_spec_serde_preserves_runtime_and_scaling() {
+    let spec = UniversalService::default().spec;
+    let json = serde_json::to_string(&spec).unwrap();
+    let back: ServiceSpec = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.scaling.min_replicas, spec.scaling.min_replicas);
+    assert!(matches!(
+        (back.service_type, spec.service_type),
+        (
+            ServiceType::Application { .. },
+            ServiceType::Application { .. }
+        )
+    ));
+}
+
+#[test]
+fn test_universal_service_debug_includes_name() {
+    let s = UniversalService::default();
+    let dbg = format!("{s:?}");
+    assert!(dbg.contains("default-service"));
+}
+
+#[test]
+fn test_replica_status_default_like_values_serde() {
+    let r = ReplicaStatus {
+        desired: 2,
+        current: 2,
+        ready: 2,
+        available: 2,
+        unavailable: 0,
+    };
+    let json = serde_json::to_string(&r).unwrap();
+    let back: ReplicaStatus = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.ready, 2);
 }

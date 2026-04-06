@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025-2026 ecoPrimals Project
 
+#![expect(clippy::unwrap_used, reason = "test")]
+
+use super::super::category::CapabilityCategory;
 use super::*;
 
 fn resolve(cap: &str) -> Option<&'static str> {
@@ -442,4 +445,71 @@ fn serde_roundtrip_custom() {
     let json = serde_json::to_string(&cap).unwrap();
     let parsed: CapabilityTaxonomy = serde_json::from_str(&json).unwrap();
     assert_eq!(parsed, cap);
+}
+
+#[test]
+fn representative_for_category_maps_to_expected_variants() {
+    assert_eq!(
+        CapabilityTaxonomy::representative_for_category(CapabilityCategory::Security),
+        Some(CapabilityTaxonomy::Encryption)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::representative_for_category(CapabilityCategory::Communication),
+        Some(CapabilityTaxonomy::Discovery)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::representative_for_category(CapabilityCategory::Compute),
+        Some(CapabilityTaxonomy::WorkloadExecution)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::representative_for_category(CapabilityCategory::Storage),
+        Some(CapabilityTaxonomy::DataStorage)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::representative_for_category(CapabilityCategory::AI),
+        Some(CapabilityTaxonomy::AiCoordination)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::representative_for_category(CapabilityCategory::Orchestration),
+        Some(CapabilityTaxonomy::LifecycleManagement)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::representative_for_category(CapabilityCategory::UserInterface),
+        Some(CapabilityTaxonomy::VisualRendering)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::representative_for_category(CapabilityCategory::Specialized),
+        Some(CapabilityTaxonomy::GeneticLineage)
+    );
+}
+
+#[test]
+fn resolve_to_primal_public_matches_from_str_and_default() {
+    assert_eq!(
+        CapabilityTaxonomy::resolve_to_primal("encryption"),
+        CapabilityTaxonomy::Encryption.default_primal_with(false)
+    );
+}
+
+#[test]
+fn from_str_flexible_http_bridge_and_federation_aliases() {
+    assert_eq!(
+        CapabilityTaxonomy::from_str_flexible("http_bridge"),
+        Some(CapabilityTaxonomy::Discovery)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::from_str_flexible("federation"),
+        Some(CapabilityTaxonomy::P2PFederation)
+    );
+    assert_eq!(
+        CapabilityTaxonomy::from_str_flexible("dedup"),
+        Some(CapabilityTaxonomy::Deduplication)
+    );
+}
+
+#[test]
+fn domain_mapping_spore_and_niche_resolve_to_biomeos() {
+    assert_eq!(resolve("spore"), Some("biomeos"));
+    assert_eq!(resolve("niche"), Some("biomeos"));
+    assert_eq!(resolve("lifecycle"), Some("biomeos"));
 }

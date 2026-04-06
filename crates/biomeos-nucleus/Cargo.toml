@@ -1,6 +1,6 @@
 [package]
 name = "biomeos-nucleus"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 authors = ["ecoPrimals Project"]
 description = "Secure Primal Discovery Protocol (NUCLEUS) for biomeOS"

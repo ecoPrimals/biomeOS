@@ -1,6 +1,6 @@
 [package]
 name = "neural-api-client"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 authors = ["biomeOS Team"]
 description = "Pure Rust client for Neural API capability-based routing"
