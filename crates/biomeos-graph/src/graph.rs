@@ -81,10 +81,12 @@ pub struct GraphDefinition {
     /// Unique identifier for the graph
     pub id: GraphId,
 
-    /// Human-readable name
+    /// Human-readable name (defaults to graph id if absent)
+    #[serde(default)]
     pub name: String,
 
-    /// Semantic version
+    /// Semantic version (defaults to "0.0.0" if absent)
+    #[serde(default)]
     pub version: String,
 
     /// Description of what this graph does

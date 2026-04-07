@@ -191,14 +191,27 @@ mod tests {
 
     #[test]
     fn test_missing_required_fields() {
-        // Missing name field
+        // Missing id field (the only truly required field)
         let toml = r#"
             [graph]
-            id = "missing-name"
+            name = "has-name-but-no-id"
             version = "1.0.0"
         "#;
         let result = GraphLoader::from_str(toml, None);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_name_and_version_default_when_absent() {
+        let toml = r#"
+            [graph]
+            id = "minimal-graph"
+        "#;
+        let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_ok(), "name and version should default: {result:?}");
+        let graph = result.unwrap();
+        assert!(graph.definition.name.is_empty());
+        assert!(graph.definition.version.is_empty());
     }
 
     #[test]

@@ -90,7 +90,7 @@ pub async fn probe_unix_socket_capabilities_list(socket_path: impl AsRef<Path>) 
 
 /// Parse capability names from a `capabilities.list` / `capability.list` JSON-RPC response.
 ///
-/// Handles all 4 ecosystem wire formats (aligned with primalSpring's
+/// Handles all 5 ecosystem wire formats (aligned with primalSpring's
 /// `extract_capability_names` reference parser):
 ///
 /// - **Format A** — `result` is a flat string array: `["crypto.sign", ...]`
@@ -98,6 +98,8 @@ pub async fn probe_unix_socket_capabilities_list(socket_path: impl AsRef<Path>) 
 ///   (also accepts `{"name": ...}` for `result.capabilities` sub-arrays)
 /// - **Format C** — `result.method_info`: `[{"name": "crypto.sign", ...}]`
 /// - **Format D** — `result.semantic_mappings`: `{"crypto": {"sign": {}}}`
+/// - **Format E** — `result.provided_capabilities`: `[{"type": "security", "methods": [...]}]`
+///   (BearDog wire format — each entry is a capability group with typed methods)
 ///
 /// Legacy shapes (`result.capabilities`, `result.methods`) are tried first
 /// for backwards compatibility.
@@ -155,6 +157,33 @@ pub fn extract_capabilities_from_response(resp: &serde_json::Value) -> Vec<Strin
                 } else {
                     vec![domain.clone()]
                 }
+            })
+            .collect();
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+
+    // --- Format E: result.provided_capabilities [{type: "security", methods: [...]}] ---
+    // BearDog wire format: each entry is a capability group with a type and method list.
+    // Emits both the group type ("security") and qualified methods ("security.encrypt").
+    if let Some(groups) = result["provided_capabilities"].as_array() {
+        let parsed: Vec<String> = groups
+            .iter()
+            .flat_map(|group| {
+                let cap_type = group["type"].as_str().unwrap_or_default();
+                let mut names = Vec::new();
+                if !cap_type.is_empty() {
+                    names.push(cap_type.to_string());
+                }
+                if let Some(methods) = group["methods"].as_array() {
+                    for m in methods {
+                        if let Some(method_name) = m.as_str() {
+                            names.push(format!("{cap_type}.{method_name}"));
+                        }
+                    }
+                }
+                names
             })
             .collect();
         if !parsed.is_empty() {
@@ -374,6 +403,66 @@ mod tests {
             }
         });
         assert!(extract_capabilities_from_response(&resp).is_empty());
+    }
+
+    // ── Format E: provided_capabilities [{type, methods}] (BearDog wire format) ──
+
+    #[test]
+    fn format_e_provided_capabilities_beardog() {
+        let resp = json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+                "primal": "beardog",
+                "version": "0.9.0",
+                "provided_capabilities": [
+                    {
+                        "type": "security",
+                        "methods": ["sign", "verify", "encrypt", "decrypt"],
+                        "version": "1.0.0"
+                    },
+                    {
+                        "type": "crypto",
+                        "methods": ["blake3_hash", "hmac_sha256"],
+                        "version": "1.0.0"
+                    },
+                    {
+                        "type": "beacon",
+                        "methods": ["generate", "get_id"],
+                        "version": "1.0.0"
+                    }
+                ]
+            }
+        });
+        let mut caps = extract_capabilities_from_response(&resp);
+        caps.sort();
+        assert_eq!(caps, vec![
+            "beacon",
+            "beacon.generate",
+            "beacon.get_id",
+            "crypto",
+            "crypto.blake3_hash",
+            "crypto.hmac_sha256",
+            "security",
+            "security.decrypt",
+            "security.encrypt",
+            "security.sign",
+            "security.verify",
+        ]);
+    }
+
+    #[test]
+    fn format_e_provided_capabilities_type_only() {
+        let resp = json!({
+            "result": {
+                "provided_capabilities": [
+                    {"type": "storage"},
+                    {"type": "compute"}
+                ]
+            }
+        });
+        let caps = extract_capabilities_from_response(&resp);
+        assert_eq!(caps, vec!["storage", "compute"]);
     }
 
     // ── Socket probe tests ──

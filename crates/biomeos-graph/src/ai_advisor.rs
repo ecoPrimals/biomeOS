@@ -130,7 +130,7 @@ async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
     extract_capabilities_from_list_response(&resp)
 }
 
-/// Parse capability names from a JSON-RPC response, handling all 4 ecosystem wire formats.
+/// Parse capability names from a JSON-RPC response, handling all 5 ecosystem wire formats.
 ///
 /// Mirrors the canonical parser in `biomeos_core::socket_discovery::cap_probe`.
 fn extract_capabilities_from_list_response(resp: &serde_json::Value) -> Vec<String> {
@@ -181,6 +181,30 @@ fn extract_capabilities_from_list_response(resp: &serde_json::Value) -> Vec<Stri
                 } else {
                     vec![domain.clone()]
                 }
+            })
+            .collect();
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+    // Format E: result.provided_capabilities [{type: "security", methods: [...]}]
+    if let Some(groups) = result["provided_capabilities"].as_array() {
+        let parsed: Vec<String> = groups
+            .iter()
+            .flat_map(|group| {
+                let cap_type = group["type"].as_str().unwrap_or_default();
+                let mut names = Vec::new();
+                if !cap_type.is_empty() {
+                    names.push(cap_type.to_string());
+                }
+                if let Some(methods) = group["methods"].as_array() {
+                    for m in methods {
+                        if let Some(method_name) = m.as_str() {
+                            names.push(format!("{cap_type}.{method_name}"));
+                        }
+                    }
+                }
+                names
             })
             .collect();
         if !parsed.is_empty() {

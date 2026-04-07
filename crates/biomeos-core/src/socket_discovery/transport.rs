@@ -106,9 +106,15 @@ impl TransportEndpoint {
             });
         }
 
+        // Unix socket: explicit unix:// prefix (round-trips from display_string())
+        if let Some(stripped) = value.strip_prefix("unix://") {
+            return Some(Self::UnixSocket {
+                path: PathBuf::from(stripped),
+            });
+        }
+
         // HTTP JSON-RPC: explicit prefix
         if let Some(stripped) = value.strip_prefix("http://") {
-            // Strip trailing /jsonrpc if present
             let stripped = stripped.strip_suffix("/jsonrpc").unwrap_or(stripped);
             return Self::parse_http(stripped);
         }
@@ -248,6 +254,28 @@ mod tests {
             name: Arc::from("biomeos_test"),
         };
         assert_eq!(abstract_sock.display_string(), "abstract://@biomeos_test");
+    }
+
+    #[test]
+    fn test_parse_unix_scheme() {
+        let endpoint =
+            TransportEndpoint::parse("unix:///run/biomeos/beardog-abc123.sock").unwrap();
+        if let TransportEndpoint::UnixSocket { path } = endpoint {
+            assert_eq!(path, PathBuf::from("/run/biomeos/beardog-abc123.sock"));
+        } else {
+            panic!("Expected UnixSocket, got {endpoint:?}");
+        }
+    }
+
+    #[test]
+    fn test_parse_unix_scheme_roundtrip() {
+        let original = TransportEndpoint::UnixSocket {
+            path: PathBuf::from("/tmp/test.sock"),
+        };
+        let display = original.display_string();
+        assert_eq!(display, "unix:///tmp/test.sock");
+        let parsed = TransportEndpoint::parse(&display).unwrap();
+        assert_eq!(original, parsed);
     }
 
     #[test]
