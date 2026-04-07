@@ -159,7 +159,7 @@ All notable changes to biomeOS will be documented in this file.
 - `rescan_primals()` resets lazy flag for subsequent misses
 
 ### BM-05: Probe Response Format (RESOLVED)
-- `extract_capabilities_from_response()` in `cap_probe.rs` handles 4 wire formats (string array, object array with `name`, top-level array, `methods` key)
+- `extract_capabilities_from_response()` in `cap_probe.rs` handles 5 wire formats (A: flat string array, B: object array, C: method_info, D: semantic_mappings, E: provided_capabilities)
 - Unrecognized formats logged at `warn!` level (not `debug!`)
 - Probe timeout centralized to `timeouts::PROBE_TIMEOUT` constant
 
