@@ -441,3 +441,27 @@ async fn test_get_status_with_non_string_execution_id() {
     let err = handler.get_status(&params).await.expect_err("should fail");
     assert!(err.to_string().contains("Missing execution_id"));
 }
+
+#[tokio::test]
+async fn test_list_deployment_graph_fallback() {
+    let temp = tempdir().expect("tempdir");
+    let toml = r#"
+[graph]
+id = "deployment_only"
+description = "Graph using DeploymentGraph schema"
+coordination = "sequential"
+
+[[graph.nodes]]
+id = "node_a"
+capability = "security"
+"#;
+    std::fs::write(temp.path().join("deployment_only.toml"), toml).expect("write");
+    let (handler, _) = make_handler(temp.path());
+
+    let result = handler.list().await.expect("list");
+    let arr = result.as_array().expect("array");
+    assert!(
+        arr.iter().any(|g| g["id"] == "deployment_only"),
+        "DeploymentGraph fallback should appear in graph.list: {arr:?}"
+    );
+}

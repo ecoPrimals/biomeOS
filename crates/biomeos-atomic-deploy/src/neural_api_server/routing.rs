@@ -15,11 +15,27 @@ use super::rpc::{DispatchOutcome, JsonRpcRequest};
 fn dispatch(result: Result<Value, anyhow::Error>, id: &Value) -> DispatchOutcome {
     match result {
         Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
-        Err(e) => DispatchOutcome::ApplicationError {
-            code: -32603,
-            message: format!("Internal error: {e}"),
-            id: id.clone(),
-        },
+        Err(e) => {
+            // Preserve JSON-RPC error codes from primals (GAP-MATRIX-07b).
+            // Without this, a primal returning -32601 "method not found" would be
+            // swallowed into a generic -32603 "Internal error", making the caller
+            // unable to distinguish "primal rejected request" from "primal is down".
+            if let Some(biomeos_types::IpcError::JsonRpcError {
+                code, message, ..
+            }) = e.downcast_ref::<biomeos_types::IpcError>()
+            {
+                return DispatchOutcome::ApplicationError {
+                    code: *code,
+                    message: message.clone(),
+                    id: id.clone(),
+                };
+            }
+            DispatchOutcome::ApplicationError {
+                code: -32603,
+                message: format!("Internal error: {e}"),
+                id: id.clone(),
+            }
+        }
     }
 }
 

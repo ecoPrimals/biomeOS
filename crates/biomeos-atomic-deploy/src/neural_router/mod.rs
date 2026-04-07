@@ -60,6 +60,10 @@ pub struct NeuralRouter {
     /// Whether a lazy rescan has already been attempted this session.
     /// Prevents repeated rescans on every miss in a tight loop.
     lazy_rescan_attempted: AtomicBool,
+
+    /// Neural API's own socket path, excluded from auto-discovery to prevent
+    /// self-registration pollution (GAP-MATRIX-08).
+    self_socket_path: RwLock<Option<PathBuf>>,
 }
 
 impl NeuralRouter {
@@ -74,6 +78,7 @@ impl NeuralRouter {
             living_graph: None,
             protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
             lazy_rescan_attempted: AtomicBool::new(false),
+            self_socket_path: RwLock::new(None),
         }
     }
 
@@ -88,6 +93,11 @@ impl NeuralRouter {
     pub const fn with_protocol_preference(mut self, preference: ProtocolPreference) -> Self {
         self.protocol_preference = preference;
         self
+    }
+
+    /// Set the Neural API's own socket path so auto-discovery excludes it.
+    pub async fn set_self_socket_path(&self, path: PathBuf) {
+        *self.self_socket_path.write().await = Some(path);
     }
 
     /// Register a capability with a transport endpoint
@@ -197,6 +207,7 @@ impl NeuralRouter {
 
         info!("🔄 Lazy rescan: capability miss triggered socket re-discovery");
         let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
+        let self_socket = self.self_socket_path.read().await.clone();
         let mut registered = 0usize;
 
         for socket_dir in &socket_dirs {
@@ -213,6 +224,10 @@ impl NeuralRouter {
                 };
 
                 if !filename.ends_with(".sock") {
+                    continue;
+                }
+
+                if self_socket.as_ref().is_some_and(|s| *s == path) {
                     continue;
                 }
 

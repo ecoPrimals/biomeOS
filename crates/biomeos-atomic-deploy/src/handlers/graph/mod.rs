@@ -194,6 +194,24 @@ impl GraphHandler {
                             "tags": []
                         }));
                     }
+                } else if let Ok(dg) =
+                    biomeos_graph::GraphLoader::from_file(&path)
+                {
+                    let def = &dg.definition;
+                    let id_str = def.id.as_str().to_string();
+                    if seen_ids.insert(id_str.clone()) {
+                        graphs.push(json!({
+                            "id": id_str,
+                            "version": if def.version.is_empty() { "0.0.0" } else { &def.version },
+                            "description": def.description,
+                            "node_count": def.nodes.len(),
+                            "coordination": format!("{:?}", def.coordination).to_lowercase(),
+                            "continuous": matches!(def.coordination, biomeos_graph::CoordinationPattern::Continuous),
+                            "tier": tier,
+                            "estimated_time_ms": null,
+                            "tags": []
+                        }));
+                    }
                 }
             }
         }

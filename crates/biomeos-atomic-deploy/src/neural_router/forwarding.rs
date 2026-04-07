@@ -3,13 +3,14 @@
 
 //! Request forwarding - JSON-RPC and tarpc protocol escalation
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use bytes::Bytes;
 use serde_json::Value;
 use tracing::debug;
 
 use biomeos_core::TransportEndpoint;
 use biomeos_core::atomic_client::AtomicClient;
+use biomeos_types::IpcError;
 use biomeos_types::tarpc_types::ProtocolPreference;
 
 use crate::living_graph::ProtocolMode;
@@ -77,11 +78,21 @@ impl NeuralRouter {
         let client =
             AtomicClient::from_endpoint(endpoint.clone()).with_timeout(self.request_timeout);
 
-        let result = client.call(method, params.clone()).await.context(format!(
-            "Failed to forward {} to {}",
-            method,
-            endpoint.display_string()
-        ))?;
+        let result = match client.try_call(method, params.clone()).await {
+            Ok(value) => value,
+            Err(e @ IpcError::JsonRpcError { .. }) => {
+                // Primal responded with a JSON-RPC error (e.g. -32601 method not found).
+                // Propagate as-is so callers can distinguish "primal rejected" from "primal down".
+                return Err(e.into());
+            }
+            Err(e) => {
+                return Err(anyhow::Error::from(e).context(format!(
+                    "Failed to forward {} to {}",
+                    method,
+                    endpoint.display_string()
+                )));
+            }
+        };
 
         let latency = start.elapsed().as_millis() as u64;
         debug!("   ✓ Forwarded successfully in {}ms", latency);

@@ -13,6 +13,7 @@
 )]
 
 use crate::neural_api_server::NeuralApiServer;
+use crate::neural_api_server::rpc::DispatchOutcome;
 
 fn create_test_server() -> (NeuralApiServer, tempfile::TempDir) {
     let temp = tempfile::tempdir().expect("temp dir");
@@ -548,4 +549,35 @@ async fn test_handle_request_health_readiness() {
     let result = server.handle_request_json(req).await;
     assert!(result["result"]["ready"].is_boolean());
     assert!(result["result"]["mode"].is_string());
+}
+
+#[test]
+fn dispatch_preserves_primal_json_rpc_error_code() {
+    let err = biomeos_types::IpcError::JsonRpcError {
+        primal: "beardog".to_string(),
+        code: -32601,
+        message: "Method not found".to_string(),
+    };
+    let id = serde_json::json!(42);
+    let outcome = super::dispatch(Err(err.into()), &id);
+    match outcome {
+        DispatchOutcome::ApplicationError { code, message, .. } => {
+            assert_eq!(code, -32601, "primal error code must be preserved");
+            assert_eq!(message, "Method not found");
+        }
+        other => panic!("expected ApplicationError, got: {other:?}"),
+    }
+}
+
+#[test]
+fn dispatch_uses_generic_code_for_non_ipc_errors() {
+    let err = anyhow::anyhow!("connection refused");
+    let id = serde_json::json!(1);
+    let outcome = super::dispatch(Err(err), &id);
+    match outcome {
+        DispatchOutcome::ApplicationError { code, .. } => {
+            assert_eq!(code, -32603, "non-IPC errors use generic code");
+        }
+        other => panic!("expected ApplicationError, got: {other:?}"),
+    }
 }

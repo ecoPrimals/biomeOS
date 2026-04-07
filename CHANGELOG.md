@@ -2,6 +2,26 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.94 (2026-04-07) — GAP-MATRIX Second Wave: Error Propagation + Self-Discovery + Graph Unification
+
+### GAP-MATRIX-07b: Proxy error propagation
+- `forward_request()` now uses `try_call()` and preserves `IpcError::JsonRpcError` without `.context()` wrapping
+- `dispatch()` extracts the original JSON-RPC error code via `downcast_ref::<IpcError>()` — callers can distinguish -32601 (primal rejected) from -32603 (internal/connection error)
+
+### GAP-MATRIX-08: Self-discovery pollution
+- `NeuralRouter` gains `self_socket_path` field, set at startup via `set_self_socket_path()`
+- `lazy_rescan_sockets()` now excludes the Neural API's own socket, matching the initial-scan filter in `server_lifecycle.rs`
+
+### GAP-MATRIX-02b: graph.list DeploymentGraph fallback
+- `graph.list` now falls back to `biomeos_graph::GraphLoader::from_file()` when the `neural_graph::Graph` parser fails
+- Bootstrap and deployment-format TOMLs always appear in graph listings
+
+### Tests
+- **4** new tests (dispatch error code propagation, self-socket exclusion, DeploymentGraph fallback listing, generic error fallback)
+- **7,658** tests passing (0 failures)
+
+---
+
 ## v2.91 (2026-04-06) — Large-File Refactors + Test Growth + Dep Audit
 
 ### Refactors

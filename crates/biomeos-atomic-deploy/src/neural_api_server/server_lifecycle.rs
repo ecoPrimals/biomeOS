@@ -79,6 +79,11 @@ impl NeuralApiServer {
             None
         };
 
+        // Tell the router our own socket so lazy rescan excludes it (GAP-MATRIX-08)
+        self.router
+            .set_self_socket_path(self.socket_path.clone())
+            .await;
+
         // 2. Detect operating mode
         info!("🔍 Detecting biomeOS operating mode...");
         let detected_mode = BiomeOsMode::detect(&self.family_id).await;
