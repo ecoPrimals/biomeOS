@@ -49,6 +49,60 @@ impl NeuralRouter {
         })
     }
 
+    /// Domain prefix matching: `"dag"` finds primals registered under `"dag.*"`.
+    ///
+    /// When `capability.call` receives `{ capability: "dag", operation: "session.create" }`,
+    /// the exact key `"dag"` may not be registered — only `"dag.session.create"` etc.
+    /// This method scans the registry for any key starting with `"{domain}."` and
+    /// returns the first matching provider, deduplicating by primal name.
+    async fn try_prefix_lookup(&self, domain: &str) -> Option<DiscoveredAtomic> {
+        let prefix = format!("{domain}.");
+        let registry = self.capability_registry.read().await;
+
+        let mut seen = std::collections::HashSet::new();
+        let mut unique_providers = Vec::new();
+        for (key, providers) in registry.iter() {
+            if key.starts_with(&prefix) {
+                for p in providers {
+                    if seen.insert(p.primal_name.clone()) {
+                        unique_providers.push(p.clone());
+                    }
+                }
+            }
+        }
+
+        if unique_providers.is_empty() {
+            return None;
+        }
+
+        let primary = &unique_providers[0];
+        info!(
+            "   ✅ Prefix match: '{}' → {} (via '{prefix}*' scan)",
+            domain, primary.primal_name
+        );
+
+        drop(registry);
+
+        let mut primals = Vec::new();
+        for provider in &unique_providers {
+            let healthy = Self::check_endpoint_health(&provider.endpoint).await;
+            primals.push(DiscoveredPrimal {
+                name: provider.primal_name.clone(),
+                endpoint: provider.endpoint.clone(),
+                capabilities: vec![domain.to_string()],
+                healthy,
+                last_check: chrono::Utc::now(),
+            });
+        }
+
+        Some(DiscoveredAtomic {
+            capability: Arc::from(domain),
+            primals,
+            atomic_type: None,
+            primary_endpoint: primary.endpoint.clone(),
+        })
+    }
+
     /// Discover primals by capability category
     async fn discover_by_capability_category(&self, capability: &str) -> Result<DiscoveredAtomic> {
         let category = match capability {
@@ -114,16 +168,23 @@ impl NeuralRouter {
     }
 
     /// Discover primal(s) by capability
+    ///
+    /// Resolution order:
+    /// 1. Exact key lookup in capability registry
+    /// 2. Lazy socket rescan (BM-04) + retry exact lookup
+    /// 3. Domain prefix matching — `"dag"` finds `"dag.session.create"` etc.
+    /// 4. Composite atomic discovery (Tower, Nest, Node)
+    /// 5. Category-based discovery (security, ai, math, ...)
+    /// 6. `capability_domains.rs` compiled-in fallback table
     pub async fn discover_capability(&self, capability: &str) -> Result<DiscoveredAtomic> {
         info!("🔍 Discovering capability: {}", capability);
 
-        // First attempt: check the registry
+        // 1. Exact key lookup
         if let Some(result) = self.try_registry_lookup(capability).await {
             return Ok(result);
         }
 
-        // BM-04 fix: lazy rescan on first miss — primals that started after
-        // biomeOS are invisible until we re-scan the socket directory.
+        // 2. BM-04 fix: lazy rescan on first miss
         let new_caps = self.lazy_rescan_sockets().await;
         if new_caps > 0 {
             if let Some(result) = self.try_registry_lookup(capability).await {
@@ -131,29 +192,54 @@ impl NeuralRouter {
             }
         }
 
+        // 3. Domain prefix matching — handles capability.call domain routing
+        if let Some(result) = self.try_prefix_lookup(capability).await {
+            return Ok(result);
+        }
+
+        // 4 + 5. Composite atomics and category discovery
         warn!("   ⚠️  Capability not in registry, trying capability category discovery");
         match capability {
             "secure_http" | "http.request" | "http.post" | "http.get" => {
-                self.discover_tower_atomic().await
+                return self.discover_tower_atomic().await;
             }
-            "secure_storage" => self.discover_nest_atomic().await,
-            "secure_compute" => self.discover_node_atomic().await,
+            "secure_storage" => return self.discover_nest_atomic().await,
+            "secure_compute" => return self.discover_node_atomic().await,
             "crypto_sign" | "crypto.sign" | "crypto" | "security" | "encryption" | "discovery"
             | "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" | "math"
             | "tensor" | "stats" | "noise" | "activation" | "rng" | "shader" | "wgsl" | "spirv"
             | "compute" | "workload" | "orchestration" => {
-                self.discover_by_capability_category(capability).await
+                return self.discover_by_capability_category(capability).await;
             }
-            _ => Err(anyhow!(
-                "Capability '{}' not registered. Available: {:?}",
-                capability,
-                self.capability_registry
-                    .read()
-                    .await
-                    .keys()
-                    .collect::<Vec<_>>()
-            )),
+            _ => {}
         }
+
+        // 6. capability_domains.rs fallback — uses the compiled-in domain table
+        //    to resolve capability → primal name, then finds the primal by socket.
+        if let Some(provider) = capability_to_provider_fallback(capability) {
+            info!(
+                "   ⚠️  Using domain fallback: '{}' → '{}'",
+                capability, provider
+            );
+            let primal = self.find_primal_by_socket(provider).await?;
+            let endpoint = primal.endpoint.clone();
+            return Ok(DiscoveredAtomic {
+                capability: Arc::from(capability),
+                primals: vec![primal],
+                atomic_type: None,
+                primary_endpoint: endpoint,
+            });
+        }
+
+        Err(anyhow!(
+            "Capability '{}' not registered. Available: {:?}",
+            capability,
+            self.capability_registry
+                .read()
+                .await
+                .keys()
+                .collect::<Vec<_>>()
+        ))
     }
 
     /// Discover Tower Atomic (security + discovery capabilities)
@@ -665,5 +751,89 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(providers[0].endpoint, ep);
+    }
+
+    #[tokio::test]
+    async fn test_prefix_lookup_finds_dag_domain() {
+        let router = NeuralRouter::new("prefix-dag");
+        let ep = unix_endpoint("/tmp/rhizocrypt-prefix.sock");
+        router
+            .register_capability("dag.session.create", "rhizocrypt", ep.clone(), "graph")
+            .await
+            .unwrap();
+        router
+            .register_capability("dag.event.append", "rhizocrypt", ep.clone(), "graph")
+            .await
+            .unwrap();
+
+        let result = router.try_prefix_lookup("dag").await;
+        assert!(result.is_some(), "prefix lookup should find dag.* methods");
+        let atomic = result.unwrap();
+        assert_eq!(atomic.primals.len(), 1, "deduplicate by primal name");
+        assert_eq!(atomic.primals[0].name.as_ref(), "rhizocrypt");
+    }
+
+    #[tokio::test]
+    async fn test_prefix_lookup_misses_unrelated() {
+        let router = NeuralRouter::new("prefix-miss");
+        router
+            .register_capability(
+                "dag.session.create",
+                "rhizocrypt",
+                unix_endpoint("/tmp/rc.sock"),
+                "graph",
+            )
+            .await
+            .unwrap();
+
+        let result = router.try_prefix_lookup("spine").await;
+        assert!(result.is_none(), "spine.* should not match dag.*");
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_via_prefix() {
+        let router = NeuralRouter::new("discover-prefix");
+        let ep = unix_endpoint("/tmp/loamspine-prefix.sock");
+        router
+            .register_capability("session.commit", "loamspine", ep.clone(), "graph")
+            .await
+            .unwrap();
+        router
+            .register_capability("spine.create", "loamspine", ep.clone(), "graph")
+            .await
+            .unwrap();
+
+        let atomic = router
+            .discover_capability("session")
+            .await
+            .expect("should find loamspine via session.* prefix");
+        assert_eq!(atomic.primals[0].name.as_ref(), "loamspine");
+    }
+
+    #[tokio::test]
+    async fn test_prefix_lookup_deduplicates_providers() {
+        let router = NeuralRouter::new("prefix-dedup");
+        let ep = unix_endpoint("/tmp/sweetgrass-dedup.sock");
+        router
+            .register_capability("braid.create", "sweetgrass", ep.clone(), "graph")
+            .await
+            .unwrap();
+        router
+            .register_capability("braid.commit", "sweetgrass", ep.clone(), "graph")
+            .await
+            .unwrap();
+        router
+            .register_capability("braid.get", "sweetgrass", ep.clone(), "graph")
+            .await
+            .unwrap();
+
+        let result = router.try_prefix_lookup("braid").await;
+        assert!(result.is_some());
+        let atomic = result.unwrap();
+        assert_eq!(
+            atomic.primals.len(),
+            1,
+            "same primal registered 3x should appear once"
+        );
     }
 }
