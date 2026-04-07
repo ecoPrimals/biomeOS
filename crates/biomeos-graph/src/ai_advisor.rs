@@ -130,36 +130,78 @@ async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
     extract_capabilities_from_list_response(&resp)
 }
 
+/// Parse capability names from a JSON-RPC response, handling all 4 ecosystem wire formats.
+///
+/// Mirrors the canonical parser in `biomeos_core::socket_discovery::cap_probe`.
 fn extract_capabilities_from_list_response(resp: &serde_json::Value) -> Vec<String> {
-    if let Some(caps) = resp["result"]["capabilities"].as_array() {
+    let result = &resp["result"];
+
+    if let Some(caps) = result["capabilities"].as_array() {
+        let parsed = extract_names_from_array(caps);
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+    // Format A / B: result is a top-level array
+    if let Some(arr) = result.as_array() {
+        let parsed = extract_names_from_array(arr);
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+    if let Some(caps) = result["methods"].as_array() {
         let parsed: Vec<String> = caps
             .iter()
-            .filter_map(|c| {
-                c.as_str()
-                    .map(String::from)
-                    .or_else(|| c["name"].as_str().map(String::from))
+            .filter_map(|c| c.as_str().map(String::from))
+            .collect();
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+    // Format C: result.method_info [{name: "..."}]
+    if let Some(info) = result["method_info"].as_array() {
+        let parsed: Vec<String> = info
+            .iter()
+            .filter_map(|item| item["name"].as_str().map(String::from))
+            .collect();
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+    // Format D: result.semantic_mappings {domain: {verb: ...}}
+    if let Some(domains) = result["semantic_mappings"].as_object() {
+        let parsed: Vec<String> = domains
+            .iter()
+            .flat_map(|(domain, verbs)| {
+                if let Some(verb_map) = verbs.as_object() {
+                    verb_map
+                        .keys()
+                        .map(|verb| format!("{domain}.{verb}"))
+                        .collect::<Vec<_>>()
+                } else {
+                    vec![domain.clone()]
+                }
             })
             .collect();
         if !parsed.is_empty() {
             return parsed;
         }
     }
-    if let Some(caps) = resp["result"].as_array() {
-        let parsed: Vec<String> = caps
-            .iter()
-            .filter_map(|c| c.as_str().map(String::from))
-            .collect();
-        if !parsed.is_empty() {
-            return parsed;
-        }
-    }
-    if let Some(caps) = resp["result"]["methods"].as_array() {
-        return caps
-            .iter()
-            .filter_map(|c| c.as_str().map(String::from))
-            .collect();
-    }
     vec![]
+}
+
+fn extract_names_from_array(arr: &[serde_json::Value]) -> Vec<String> {
+    arr.iter()
+        .filter_map(|v| {
+            if let Some(s) = v.as_str() {
+                return Some(s.to_owned());
+            }
+            v.get("method")
+                .or_else(|| v.get("name"))
+                .and_then(serde_json::Value::as_str)
+                .map(String::from)
+        })
+        .collect()
 }
 
 /// AI suggestion from Squirrel

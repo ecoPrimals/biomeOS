@@ -23,7 +23,7 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 
 # Async runtime
-tokio = { workspace = true, features = ["test-util"] }
+tokio = { workspace = true }
 
 # Structured logging
 tracing = { workspace = true }
@@ -34,6 +34,7 @@ rustix = { workspace = true, features = ["fs", "mount"] }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+tokio = { workspace = true, features = ["test-util"] }
 tokio-test = { workspace = true }
 
 [features]

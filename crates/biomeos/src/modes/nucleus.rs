@@ -22,7 +22,7 @@
 
 use anyhow::{Context, Result};
 use biomeos_types::defaults::env_vars::socket_env_key;
-use biomeos_types::primal_names::{self, BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
+use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -120,19 +120,19 @@ pub(crate) fn resolve_startup_config_with(
     })
 }
 
-/// Resolve socket path for a capability using taxonomy (not hardcoded primal names).
+/// Resolve socket path for a capability using taxonomy-based discovery.
+///
+/// Delegates to `CapabilityTaxonomy::resolve_to_primal` without hardcoded
+/// fallbacks — if the taxonomy can't resolve the capability, we return an
+/// `unknown-{family_id}.sock` path that simply won't exist on disk,
+/// triggering the appropriate "socket not found" error at connect time.
 fn socket_path_for_capability(
     socket_dir: &std::path::Path,
     family_id: &str,
     capability: &str,
 ) -> PathBuf {
-    let primal_name = biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability).unwrap_or(
-        match capability {
-            "security" | "encryption" => BEARDOG,
-            "discovery" | "registry" => SONGBIRD,
-            _ => "unknown",
-        },
-    );
+    let primal_name = biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
+        .unwrap_or("unknown");
     socket_dir.join(format!("{primal_name}-{family_id}.sock"))
 }
 
@@ -348,10 +348,11 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
 
         let socket_path = socket_dir.join(format!("{primal}-{family_id}.sock"));
 
-        // Toadstool exposes tarpc on .sock and JSON-RPC on .jsonrpc.sock
-        // NUCLEUS health checks use JSON-RPC, so use the jsonrpc socket for health monitoring
-        let health_socket = if *primal == TOADSTOOL {
-            socket_dir.join(format!("{primal}-{family_id}.jsonrpc.sock"))
+        // Primals that expose tarpc on .sock provide a separate .jsonrpc.sock for
+        // JSON-RPC health checks. Use the jsonrpc socket when it exists.
+        let jsonrpc_socket = socket_dir.join(format!("{primal}-{family_id}.jsonrpc.sock"));
+        let health_socket = if jsonrpc_socket.exists() {
+            jsonrpc_socket
         } else {
             socket_path.clone()
         };
@@ -396,10 +397,11 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
             )
             .await?;
 
-        // Toadstool JSON-RPC uses capability-namespaced health (`health.status` → `health.check` per registry)
-        if *primal == TOADSTOOL {
+        // Primals using .jsonrpc.sock typically expose `health.status` rather
+        // than the legacy `health` method. Register the namespaced method.
+        if health_socket != socket_path {
             lifecycle
-                .set_health_method(TOADSTOOL, "health.status")
+                .set_health_method(primal, "health.status")
                 .await;
         }
 
@@ -456,29 +458,38 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
     Ok(())
 }
 
-/// Detect whether an existing ecosystem is running
+/// Detect whether an existing ecosystem is running.
 ///
-/// Scans the socket directory for primal sockets matching the family ID.
-/// If any respond to health checks, we're joining an existing ecosystem.
+/// Scans the socket directory for any `*-{family_id}.sock` files and health-
+/// checks them. Does NOT iterate a hardcoded primal list — any primal that
+/// follows the `{name}-{family_id}.sock` convention is discovered.
 async fn detect_ecosystem(socket_dir: &std::path::Path, family_id: &str) -> EcosystemState {
     if !socket_dir.exists() {
         return EcosystemState::Bootstrap;
     }
 
-    let known_primals = primal_names::CORE_PRIMALS;
+    let suffix = format!("-{family_id}.sock");
     let mut active = Vec::new();
 
-    for primal in known_primals {
-        let socket_path = socket_dir.join(format!("{primal}-{family_id}.sock"));
-        if socket_path.exists() {
-            // Socket file exists -- try a health check
+    let Ok(entries) = std::fs::read_dir(socket_dir) else {
+        return EcosystemState::Bootstrap;
+    };
+
+    for entry in entries.flatten() {
+        let filename = entry.file_name();
+        let name = filename.to_string_lossy();
+        if let Some(primal) = name.strip_suffix(&suffix) {
+            // Skip auxiliary sockets (e.g. `.jsonrpc.sock`)
+            if primal.contains('.') {
+                continue;
+            }
+            let socket_path = entry.path();
             match health_check(&socket_path).await {
                 Ok(()) => {
                     info!("  Detected active {}", primal);
                     active.push(primal.to_string());
                 }
                 Err(_) => {
-                    // Socket exists but primal isn't responding -- stale socket
                     info!("  Stale socket for {} (will replace)", primal);
                 }
             }

@@ -21,7 +21,7 @@ serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
-tokio = { workspace = true, features = ["test-util"] }
+tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 # reqwest = { workspace = true, optional = true }  # REMOVED: Deprecated HTTP transport, use Tower Atomic (Songbird + BearDog)
@@ -61,6 +61,7 @@ biomeos-manifest = { path = "../biomeos-manifest", version = "0.1.0" }
 biomeos-nucleus = { path = "../biomeos-nucleus", version = "0.1.0" }
 
 [dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
 tokio-test = { workspace = true }
 wiremock = { workspace = true }
 tempfile = { workspace = true }

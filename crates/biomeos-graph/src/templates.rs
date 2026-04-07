@@ -335,13 +335,10 @@ impl NestGateTemplateClient {
         let family_id =
             std::env::var("NESTGATE_FAMILY_ID").unwrap_or_else(|_| biomeos_core::family_discovery::get_family_id());
 
-        // Use SystemPaths for XDG-compliant socket discovery
-        let socket_path = if let Ok(paths) = biomeos_types::SystemPaths::new() {
-            paths.primal_socket(&format!("nestgate-{}", family_id))
-        } else {
-            // Fallback path
-            std::path::PathBuf::from(format!("/tmp/nestgate-{}.sock", family_id))
-        };
+        // Use SystemPaths for XDG-compliant socket discovery (no hardcoded /tmp)
+        let paths = biomeos_types::SystemPaths::new()
+            .map_err(|e| anyhow::anyhow!("SystemPaths init failed: {e}"))?;
+        let socket_path = paths.primal_socket(&format!("nestgate-{}", family_id));
 
         // Verify socket exists (NestGate must be running)
         if !socket_path.exists() {

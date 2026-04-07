@@ -64,6 +64,7 @@ pub async fn handle_discover(
             } else if let Some(target_endpoint) = endpoint {
                 manager
                     .probe_endpoint(&target_endpoint)
+                    .await
                     .map(|_| vec![target_endpoint])?
             } else {
                 manager.discover().await?

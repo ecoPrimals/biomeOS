@@ -36,7 +36,7 @@ biomeOS uses GitHub Actions for continuous integration and delivery, with two ma
 
 #### **Job 4: Code Coverage**
 - Uses `cargo-llvm-cov` for coverage generation (`cargo llvm-cov --workspace --lcov --output-path lcov.info`)
-- Enforces a minimum line coverage threshold (`cargo llvm-cov --workspace --fail-under-lines 85 --no-run`)
+- Enforces a minimum line coverage threshold (`cargo llvm-cov --workspace --fail-under-lines 90 --no-run`)
 - Uploads to Codecov
 - Archives HTML coverage report (`cargo llvm-cov --workspace --html`)
 - **Purpose:** Track test coverage trends
@@ -149,7 +149,7 @@ biomeOS CI/CD distinguishes between:
 **Blocking (failing job fails the workflow):**
 - Format check, Clippy (all targets), and doc warnings (`-D warnings` on rustdoc)
 - Build (debug and release) and full test suite
-- Coverage below the enforced line threshold (85%) and `cargo audit` / `cargo deny check` failures
+- Coverage below the enforced line threshold (90%) and `cargo audit` / `cargo deny check` failures
 - File size job when any file exceeds the guideline
 - Standards job (TODO/FIXME markers, `panic!()` in production paths, any `unsafe` block)
 - Zero unsafe code remains a hard policy
@@ -213,7 +213,7 @@ From Deep Debt Analysis (Jan 30, 2026):
 | Unsafe Code | ✅ Enforced | Yes |
 | Dependency policy (`cargo deny`) | ✅ Enforced | Yes |
 | Security Audit | ✅ Enforced | Yes (on `cargo audit` failure) |
-| Coverage | ✅ Enforced | Yes (min. 85% lines) |
+| Coverage | ✅ Enforced | Yes (min. 90% lines) |
 | File Size | ✅ Enforced | Yes (when over guideline) |
 | Benchmarks | ✅ Tracked | No (`continue-on-error`) |
 
@@ -303,7 +303,7 @@ Each workflow run archives:
 The CI/CD pipeline evolves with the codebase:
 
 **Recent Enhancements (March 20, 2026):**
-1. Coverage threshold raised from 75% to 85% (actual: 89.84%)
+1. Coverage threshold raised from 75% to 90% (actual: 90.05%)
 2. File size check is now blocking (0 files over limit)
 3. `#[allow]` migrated to `#[expect(reason)]` workspace-wide
 4. All flaky mock tests hardened (flush + shutdown + case-insensitive matching)

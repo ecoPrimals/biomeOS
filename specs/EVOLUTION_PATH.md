@@ -39,7 +39,7 @@ User → ./start_tower.sh → spawns BearDog, Songbird
 - `livespore-usb/*/scripts/start_tower.sh`
 - `livespore-usb/*/scripts/start_node.sh`
 - `livespore-usb/*/scripts/start_nest.sh`
-- `scripts/start_nucleus.sh`
+- ~~`scripts/start_nucleus.sh`~~ → evolved to `biomeos nucleus start` (Rust)
 
 **Limitations**:
 - No self-healing

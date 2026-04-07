@@ -53,4 +53,7 @@ walkdir = "2.4"
 tokio-test = "0.4"
 criterion = "0.5"
 
+# songbird_universal_ui_demo uses HTTP client (legacy pattern — prefer AtomicClient for new work)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
 biomeos-core = { path = "../crates/biomeos-core" } 

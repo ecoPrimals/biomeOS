@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 6, 2026 (v2.91: deep debt evolution — 4 large files smart-refactored (topology 869→433, rendezvous 862→321, verify 859→500, orchestrator 855→427), 27 new tests across 5 files (storage, networking, topology, capability, lifecycle), all duplicate deps confirmed transitive)
-**Version**: 2.91
+**Updated**: April 7, 2026 (v2.92: deep debt evolution — probe_endpoint stub→real JSON-RPC, tokio-tungstenite 0.21→0.24 aligned with axum, tokio test-util→dev-deps in 5 crates, nucleus.rs hardcoding→capability-based dispatch, detect_ecosystem→dynamic socket scan, abstract socket dedup, root detection bug fixed in genome_deploy, "registry" taxonomy alias added)
+**Version**: 2.92
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,638 lib + bin + doc + proptest (0 failures, 0 ignored, fully concurrent) |
+| **Tests Passing** | 7,649 lib + bin + doc + proptest (0 failures, 0 ignored, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots, `mem::forget` eliminated) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -63,7 +63,7 @@
 | **JSON-RPC types** | `JSONRPC_VERSION` const + zero-alloc `JsonRpcVersion` marker type (was `String`), `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
 | **Zero-copy** | `JsonRpcVersion` (zero-size, zero-alloc serde), `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client, primal SDK IPC); `Arc<str>` for identifiers + `PrimalManifest` + `PrimalConnections` keys + `OptimizationType` graph nodes + WebSocket subscription IDs; `Arc<SubscriptionFilter>` for subscriptions; `Value::take()` on Songbird discovery + provider hot paths (eliminates subtree clone); `TransportEndpoint` (tagged enum, zero `PathBuf` allocation for abstract/TCP/HTTP transports) |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
-| **Dep policy** | `deny.toml` (cargo-deny 0.19) bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys; `serde_yaml`→`serde_yml` (deprecated dep evolved via Cargo package rename) |
+| **Dep policy** | `deny.toml` (cargo-deny 0.19) bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys; YAML via `serde_yaml_ng` (pure Rust — `unsafe-libyaml` is a Rust translation, not C FFI); tokio-tungstenite 0.24 aligned with axum 0.7 |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
@@ -644,7 +644,7 @@ Comprehensive codebase audit against ecoPrimals standards:
 | `#[allow]` unnecessary | 2 (`vec_init_then_push`) | 0 (replaced with `vec![]`) |
 | Files >1000 lines | 0 | 0 (max: 985 lines) |
 | Unsafe code | 0 | 0 |
-| External C deps | 1 (`zstd-sys`) | 1 (noted for future format evolution) |
+| External C deps | 1 (`zstd-sys`) | 0 (zstd-sys→lz4_flex, deny.toml enforced) |
 
 Key evolutions:
 - `std::sync::Mutex` → `tokio::sync::Mutex` in async test contexts

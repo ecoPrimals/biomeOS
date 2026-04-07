@@ -66,11 +66,11 @@ impl HealthUtils {
             for endpoint in discovered_endpoints {
                 // Probe each service for detailed health info
                 let start_time = std::time::Instant::now();
-                match manager.probe_endpoint(&endpoint) {
+                match manager.probe_endpoint(&endpoint).await {
                     Ok(probe_result) => {
                         let response_time = start_time.elapsed().as_millis() as u64;
                         services.push(ServiceHealth {
-                            name: probe_result, // probe_result is the service name/description
+                            name: format!("{} v{}", probe_result.name, probe_result.version),
                             endpoint: endpoint.clone(),
                             status: biomeos_types::Health::Healthy,
                             response_time_ms: response_time,

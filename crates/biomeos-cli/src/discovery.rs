@@ -26,7 +26,7 @@ impl DiscoveryUtils {
 
         for endpoint in endpoints {
             // Try to probe the endpoint to get detailed information
-            if let Ok(_probe_result) = manager.probe_endpoint(&endpoint) {
+            if let Ok(_probe_result) = manager.probe_endpoint(&endpoint).await {
                 // Create a DiscoveryResult from the probe result
                 let discovery_result = DiscoveryResult {
                     id: Uuid::new_v4().to_string(),
@@ -84,7 +84,7 @@ impl DiscoveryUtils {
         let mut healthy_services = 0;
         let mut unhealthy_services = 0;
         for service in &all_services {
-            match manager.probe_endpoint(&service.endpoint) {
+            match manager.probe_endpoint(&service.endpoint).await {
                 Ok(_) => healthy_services += 1,
                 Err(_) => unhealthy_services += 1,
             }

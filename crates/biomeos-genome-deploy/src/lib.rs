@@ -26,6 +26,16 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use tar::Archive;
 
+/// Detect whether the current user is root ($EUID/$UID == "0" or $USER == "root").
+fn is_root_user() -> bool {
+    std::env::var("EUID")
+        .or_else(|_| std::env::var("UID"))
+        .map_or_else(
+            |_| std::env::var("USER").map(|u| u == "root").unwrap_or(false),
+            |uid| uid == "0",
+        )
+}
+
 /// Supported architectures
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Architecture {
@@ -162,18 +172,12 @@ impl GenomeDeployer {
     /// Get default installation directory for current platform
     ///
     /// Uses `$HOME` env instead of `dirs` crate (ecoBin: no C deps).
-    /// Root detection via $EUID/$USER instead of `nix::Uid`.
     pub(crate) fn default_install_dir(&self, primal_name: &str) -> PathBuf {
         let home_dir = || -> PathBuf {
             std::env::var("HOME").map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from)
         };
 
-        let is_root = std::env::var("EUID")
-            .or_else(|_| std::env::var("UID"))
-            .map_or_else(
-                |_| std::env::var("USER").map(|u| u == "root").unwrap_or(false),
-                |uid| uid == "0",
-            );
+        let is_root = is_root_user();
 
         match self.platform {
             Platform::Android => PathBuf::from(format!("/data/local/tmp/{primal_name}")),
@@ -396,11 +400,7 @@ impl GenomeDeployer {
         println!();
         println!("{}", "Next steps:".blue().bold());
 
-        let is_root = std::env::var("EUID")
-            .or_else(|_| std::env::var("UID"))
-            .map(|uid| uid == "0")
-            .unwrap_or(false);
-        if !is_root && self.platform != Platform::Android {
+        if !is_root_user() && self.platform != Platform::Android {
             println!("1. Add to PATH:");
             println!("   export PATH=\"$PATH:{}\"", install_dir.display());
             println!();

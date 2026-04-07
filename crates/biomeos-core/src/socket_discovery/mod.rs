@@ -58,7 +58,7 @@
 //! }
 //! ```
 
-mod cap_probe;
+pub mod cap_probe;
 mod capability_sockets;
 mod engine;
 mod engine_probes;

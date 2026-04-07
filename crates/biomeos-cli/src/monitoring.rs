@@ -27,11 +27,11 @@ impl MonitoringUtils {
 
         let start_time = std::time::Instant::now();
         for endpoint in endpoints {
-            match manager.probe_endpoint(endpoint) {
+            match manager.probe_endpoint(endpoint).await {
                 Ok(probe_result) => {
                     services.push(ServiceStatus {
                         endpoint: endpoint.clone(),
-                        name: probe_result, // probe_result is already a String
+                        name: format!("{} v{}", probe_result.name, probe_result.version),
                         health: biomeos_types::Health::Healthy, // Successfully probed, assume healthy
                         response_time_ms: start_time.elapsed().as_millis() as u64,
                     });
@@ -91,7 +91,7 @@ impl MonitoringUtils {
             interval.tick().await;
 
             let measurement_start = std::time::Instant::now();
-            match manager.probe_endpoint(endpoint) {
+            match manager.probe_endpoint(endpoint).await {
                 Ok(_) => {
                     measurements.push(PerformanceMeasurement {
                         timestamp: chrono::Utc::now(),

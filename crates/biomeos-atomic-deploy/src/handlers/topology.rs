@@ -207,21 +207,16 @@ impl TopologyHandler {
 
             let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
 
-            if resp["error"]["code"].as_i64() == Some(-32601) {
+            if resp.get("error").is_some() {
                 continue;
             }
 
-            if let Some(caps) = resp["result"]["capabilities"].as_array() {
-                return Ok(caps
-                    .iter()
-                    .filter_map(|c| c.as_str().map(String::from))
-                    .collect());
-            }
-            if let Some(caps) = resp["result"].as_array() {
-                return Ok(caps
-                    .iter()
-                    .filter_map(|c| c.as_str().map(String::from))
-                    .collect());
+            let caps =
+                biomeos_core::socket_discovery::cap_probe::extract_capabilities_from_response(
+                    &resp,
+                );
+            if !caps.is_empty() {
+                return Ok(caps);
             }
         }
         Ok(vec![])

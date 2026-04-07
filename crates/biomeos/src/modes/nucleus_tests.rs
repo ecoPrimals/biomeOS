@@ -117,13 +117,19 @@ fn test_socket_path_for_capability_uses_taxonomy() {
 }
 
 #[test]
-fn test_socket_path_for_capability_fallbacks() {
+fn test_socket_path_for_capability_taxonomy_resolution() {
     let socket_dir = std::path::Path::new("/tmp/sock");
     let family_id = "fam1";
+    // Taxonomy maps "encryption" → beardog
     let enc = super::socket_path_for_capability(socket_dir, family_id, "encryption");
     assert!(enc.to_string_lossy().contains("beardog"));
+    // Taxonomy maps "discovery" → songbird
+    let disc = super::socket_path_for_capability(socket_dir, family_id, "discovery");
+    assert!(disc.to_string_lossy().contains("songbird"));
+    // "registry" is an alias for Discovery → songbird
     let reg = super::socket_path_for_capability(socket_dir, family_id, "registry");
     assert!(reg.to_string_lossy().contains("songbird"));
+    // Unknown capabilities → "unknown" (no hardcoded fallback)
     let unknown = super::socket_path_for_capability(socket_dir, family_id, "unknown-cap");
     assert!(unknown.to_string_lossy().contains("unknown"));
 }

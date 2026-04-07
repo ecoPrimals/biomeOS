@@ -20,7 +20,7 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 # Async & Events (for events.rs GraphEventBroadcaster)
-tokio = { workspace = true, features = ["test-util"] }
+tokio = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 
@@ -35,7 +35,7 @@ biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-nucleus = { path = "../biomeos-nucleus", version = "0.1.0" }
 
 [dev-dependencies]
-# Testing
+tokio = { workspace = true, features = ["test-util"] }
 tempfile = { workspace = true }
 
 [features]

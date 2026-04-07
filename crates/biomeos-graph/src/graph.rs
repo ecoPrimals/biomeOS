@@ -116,13 +116,16 @@ pub struct GraphDefinition {
     pub outputs: HashMap<String, String>,
 }
 
-/// Graph identifier - validated to be lowercase alphanumeric with hyphens.
+/// Graph identifier - validated to be lowercase alphanumeric with hyphens and underscores.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct GraphId(String);
 
 impl GraphId {
     /// Create a new graph ID, validating format.
+    ///
+    /// Accepts lowercase ASCII, digits, hyphens, and underscores — aligned with
+    /// `NodeId` rules and ecosystem graph conventions (e.g. `tower_atomic_bootstrap`).
     pub fn new(id: impl Into<String>) -> Result<Self, String> {
         let id = id.into();
         if id.is_empty() {
@@ -130,10 +133,10 @@ impl GraphId {
         }
         if !id
             .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
         {
             return Err(format!(
-                "Graph ID must be lowercase alphanumeric with hyphens: {id}"
+                "Graph ID must be lowercase alphanumeric with hyphens/underscores: {id}"
             ));
         }
         Ok(Self(id))
@@ -475,12 +478,12 @@ mod tests {
     fn test_graph_id_validation() {
         assert!(GraphId::new("livespore-deploy").is_ok());
         assert!(GraphId::new("tower-atomic-bootstrap").is_ok());
+        assert!(GraphId::new("tower_atomic_bootstrap").is_ok());
         assert!(GraphId::new("test123").is_ok());
 
         assert!(GraphId::new("").is_err());
         assert!(GraphId::new("UPPERCASE").is_err());
         assert!(GraphId::new("has spaces").is_err());
-        assert!(GraphId::new("has_underscore").is_err());
     }
 
     #[test]

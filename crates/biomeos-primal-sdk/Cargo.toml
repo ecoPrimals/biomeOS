@@ -21,7 +21,7 @@ chrono = { workspace = true }
 futures = { workspace = true }
 
 # Tokio for async runtime
-tokio = { workspace = true, features = ["test-util"] }
+tokio = { workspace = true }
 
 # tarpc for high-performance binary RPC (protocol escalation)
 tarpc = { workspace = true }
@@ -38,6 +38,7 @@ tracing = { workspace = true }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+tokio = { workspace = true, features = ["test-util"] }
 tempfile = { workspace = true }
 
 [lints]

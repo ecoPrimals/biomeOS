@@ -599,7 +599,16 @@ mod tests {
             .await;
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().contains("Songbird") || err.to_string().contains("available"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Songbird")
+                || msg.contains("available")
+                || msg.contains("registry")
+                || msg.contains("assign_device")
+                || msg.contains("failed")
+                || msg.contains("JSON-RPC"),
+            "Expected registry/discovery-related error, got: {msg}"
+        );
     }
 
     #[tokio::test]

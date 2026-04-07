@@ -289,6 +289,7 @@ fn test_resolve_startup_config_with_explicit_family() {
 
 #[test]
 fn test_socket_path_for_capability_registry_alias() {
+    // "registry" is a taxonomy alias for Discovery → songbird
     let p = super::socket_path_for_capability(std::path::Path::new("/run"), "fam", "registry");
     assert!(p.to_string_lossy().contains("songbird"));
 }

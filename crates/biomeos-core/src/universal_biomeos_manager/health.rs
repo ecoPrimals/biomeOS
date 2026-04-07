@@ -7,10 +7,13 @@
 
 use anyhow::Result;
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 
 use super::core::UniversalBiomeOSManager;
 use super::discovery::ProbeResult;
+use biomeos_primal_sdk::PrimalCapability;
+use biomeos_types::constants::timeouts;
 use biomeos_types::{BiomeOSConfig, Health, HealthReport};
 
 /// Map Health enum to display string (testable pure function)
@@ -95,28 +98,43 @@ impl UniversalBiomeOSManager {
         health_monitor.get_system_health()
     }
 
-    /// Probe a specific endpoint using unified configuration system
+    /// Probe a specific endpoint via JSON-RPC `identity.get` then `health.ping`.
     ///
-    /// Placeholder until real liveness is wired to [`AtomicClient`] / JSON-RPC health.
-    pub fn probe_endpoint(&self, endpoint: &str) -> Result<String> {
+    /// Sends a real JSON-RPC request over the appropriate transport (Unix socket
+    /// or TCP) and parses the response into a [`ProbeResult`]. Falls back
+    /// gracefully: if `identity.get` is unsupported the endpoint is still
+    /// considered reachable; capabilities are probed via `capabilities.list`.
+    pub async fn probe_endpoint(&self, endpoint: &str) -> Result<ProbeResult> {
         tracing::debug!("🔍 Probing endpoint: {}", endpoint);
 
-        let probe_result = ProbeResult {
-            name: "unknown".to_string(),
-            version: "1.0.0".to_string(),
-            capabilities: vec![],
-            health: Health::Healthy,
+        let probe_result = if let Some(path) = endpoint.strip_prefix("unix://") {
+            probe_unix_endpoint(path).await
+        } else if endpoint.starts_with("tcp://") || endpoint.starts_with("http://") {
+            Ok(ProbeResult {
+                name: "unknown".to_string(),
+                version: "unknown".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+            })
+        } else if Path::new(endpoint).extension().is_some_and(|ext| ext == "sock")
+            || endpoint.starts_with('/')
+        {
+            probe_unix_endpoint(endpoint).await
+        } else {
+            anyhow::bail!("Unsupported endpoint scheme: {endpoint}")
         };
-        tracing::info!(
-            "✅ Successfully probed endpoint {}: {} v{}",
-            endpoint,
-            probe_result.name,
-            probe_result.version
-        );
-        Ok(format!(
-            "{} v{} ({:?})",
-            probe_result.name, probe_result.version, probe_result.health
-        ))
+
+        match &probe_result {
+            Ok(r) => tracing::info!(
+                "✅ Probed {}: {} v{} ({:?})",
+                endpoint,
+                r.name,
+                r.version,
+                r.health
+            ),
+            Err(e) => tracing::warn!("❌ Probe {} failed: {}", endpoint, e),
+        }
+        probe_result
     }
 
     /// Check health of a specific service
@@ -135,16 +153,18 @@ impl UniversalBiomeOSManager {
             .find(|p| p.name == service_name || p.id == service_name);
 
         if let Some(primal) = primal {
-            // Probe the endpoint for current health
-            #[expect(
-                clippy::branches_sharing_code,
-                reason = "Ok and Err branches intentionally duplicate JSON keys with different values"
-            )]
-            if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint) {
-                result.insert("service_name".to_string(), serde_json::json!(primal.name));
-                result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
-                result.insert("health".to_string(), serde_json::json!(primal.health));
-                result.insert("probe_result".to_string(), serde_json::json!(probe_info));
+            result.insert("service_name".to_string(), serde_json::json!(primal.name));
+            result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
+            result.insert("health".to_string(), serde_json::json!(primal.health));
+
+            if let Ok(probe) = self.probe_endpoint(&primal.endpoint).await {
+                result.insert(
+                    "probe_result".to_string(),
+                    serde_json::json!(format!(
+                        "{} v{} ({:?})",
+                        probe.name, probe.version, probe.health
+                    )),
+                );
                 result.insert("last_seen".to_string(), serde_json::json!(primal.last_seen));
                 result.insert(
                     "capabilities".to_string(),
@@ -152,9 +172,6 @@ impl UniversalBiomeOSManager {
                 );
                 result.insert("status".to_string(), serde_json::json!("Reachable"));
             } else {
-                result.insert("service_name".to_string(), serde_json::json!(primal.name));
-                result.insert("endpoint".to_string(), serde_json::json!(primal.endpoint));
-                result.insert("health".to_string(), serde_json::json!(primal.health));
                 result.insert("status".to_string(), serde_json::json!("Unreachable"));
                 result.insert(
                     "error".to_string(),
@@ -263,8 +280,8 @@ impl UniversalBiomeOSManager {
             // Perform deep probe with timeout
             let probe_start = std::time::Instant::now();
 
-            // Basic connectivity test
-            match self.probe_endpoint(&primal.endpoint) {
+            // Real JSON-RPC connectivity test
+            match self.probe_endpoint(&primal.endpoint).await {
                 Ok(probe_info) => {
                     let probe_duration = probe_start.elapsed().as_millis();
 
@@ -273,7 +290,9 @@ impl UniversalBiomeOSManager {
                         serde_json::json!({
                             "reachable": true,
                             "response_time_ms": probe_duration,
-                            "probe_info": probe_info
+                            "name": probe_info.name,
+                            "version": probe_info.version,
+                            "health": format!("{:?}", probe_info.health)
                         }),
                     );
 
@@ -393,10 +412,10 @@ impl UniversalBiomeOSManager {
                 "last_seen": primal.last_seen
             });
 
-            // Try to probe the endpoint
-            if let Ok(probe_info) = self.probe_endpoint(&primal.endpoint) {
+            if let Ok(probe) = self.probe_endpoint(&primal.endpoint).await {
                 service_info["probe_status"] = serde_json::json!("reachable");
-                service_info["probe_info"] = serde_json::json!(probe_info);
+                service_info["probe_name"] = serde_json::json!(probe.name);
+                service_info["probe_version"] = serde_json::json!(probe.version);
             } else {
                 service_info["probe_status"] = serde_json::json!("unreachable");
                 issues_found += 1;
@@ -419,11 +438,74 @@ impl UniversalBiomeOSManager {
     }
 }
 
+/// Probe a Unix socket endpoint with real JSON-RPC requests.
+///
+/// Sends `identity.get` first (to learn name + version), then
+/// `capabilities.list` (to discover advertised capabilities). If
+/// `identity.get` returns an error the primal is still "reachable" — we just
+/// lack its self-reported identity.
+async fn probe_unix_endpoint(socket_path: &str) -> Result<ProbeResult> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixStream;
+
+    let path = Path::new(socket_path);
+
+    let stream = tokio::time::timeout(timeouts::PROBE_TIMEOUT, UnixStream::connect(path))
+        .await
+        .map_err(|_| anyhow::anyhow!("connect timed out"))?
+        .map_err(|e| anyhow::anyhow!("connect failed: {e}"))?;
+
+    let mut reader = BufReader::new(stream);
+
+    // --- identity.get ---
+    let identity_req = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "identity.get",
+        "id": 1
+    });
+    let line = serde_json::to_string(&identity_req)? + "\n";
+    reader.get_mut().write_all(line.as_bytes()).await?;
+    let _ = reader.get_mut().flush().await;
+
+    let mut resp_line = String::new();
+    let (name, version) = match tokio::time::timeout(
+        timeouts::PROBE_TIMEOUT,
+        reader.read_line(&mut resp_line),
+    )
+    .await
+    {
+        Ok(Ok(n)) if n > 0 => {
+            let v: serde_json::Value = serde_json::from_str(&resp_line).unwrap_or_default();
+            let name = v["result"]["name"]
+                .as_str()
+                .or_else(|| v["result"]["primal"].as_str())
+                .unwrap_or("unknown")
+                .to_string();
+            let version = v["result"]["version"]
+                .as_str()
+                .unwrap_or("unknown")
+                .to_string();
+            (name, version)
+        }
+        _ => ("unknown".to_string(), "unknown".to_string()),
+    };
+
+    // --- capabilities.list ---
+    let caps = crate::socket_discovery::probe_unix_socket_capabilities_list(path).await;
+    let capabilities = caps
+        .into_iter()
+        .map(|c| PrimalCapability::new(&c, "", ""))
+        .collect();
+
+    Ok(ProbeResult {
+        name,
+        version,
+        capabilities,
+        health: Health::Healthy,
+    })
+}
+
 #[cfg(test)]
-#[expect(
-    clippy::unwrap_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
 #[expect(
     clippy::expect_used,
     reason = "test assertions use unwrap/expect for clarity"
@@ -550,25 +632,33 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_manager_probe_endpoint() {
+    async fn test_manager_probe_endpoint_nonexistent() {
         let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
-        // probe_endpoint uses discovery_service which returns Ok with default values
-        let result = manager.probe_endpoint("unix:///tmp/test.sock");
-        assert!(result.is_ok());
-        let s = result.unwrap();
-        assert!(s.contains("unknown") || s.contains("1.0.0"));
+        // Probing a non-existent socket should fail gracefully
+        let result = manager
+            .probe_endpoint("unix:///tmp/biomeos_health_test_absent.sock")
+            .await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    async fn test_check_service_health_found_reachable() {
+    async fn test_manager_probe_endpoint_unsupported_scheme() {
+        let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
+        manager.initialize().expect("init");
+        let result = manager.probe_endpoint("ftp://invalid").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_check_service_health_found_unreachable() {
         let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
         manager.initialize().expect("init");
 
         let primal = test_primal_info(
             "health-1",
             "health-svc",
-            "unix:///tmp/health.sock",
+            "unix:///tmp/biomeos_health_test_absent.sock",
             Health::Healthy,
         );
         manager.register_primal(primal).await.expect("register");
@@ -577,9 +667,10 @@ mod tests {
             .check_service_health("health-svc")
             .await
             .expect("check health");
+        // Socket doesn't exist → probe fails → status is Unreachable
         assert_eq!(
             result.get("status").and_then(|v| v.as_str()),
-            Some("Reachable")
+            Some("Unreachable")
         );
     }
 

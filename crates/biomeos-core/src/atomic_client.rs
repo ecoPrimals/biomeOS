@@ -608,20 +608,7 @@ impl AtomicClient {
         name: &str,
         request: JsonRpcRequest,
     ) -> Result<JsonRpcResponse> {
-        use std::os::linux::net::SocketAddrExt;
-        use std::os::unix::net::SocketAddr;
-
-        // Create abstract socket address
-        let addr = SocketAddr::from_abstract_name(name)
-            .context(format!("Invalid abstract socket name: {name}"))?;
-
-        // Connect using blocking socket, then wrap in tokio
-        // Note: tokio doesn't directly support abstract socket connect
-        let std_stream = std::os::unix::net::UnixStream::connect_addr(&addr)
-            .context(format!("Failed to connect to abstract socket: @{name}"))?;
-        std_stream.set_nonblocking(true)?;
-
-        let stream = UnixStream::from_std(std_stream)?;
+        let stream = connect_abstract(name)?;
         self.send_request(stream, request).await
     }
 
@@ -740,12 +727,7 @@ impl AtomicClient {
             }
             #[cfg(target_os = "linux")]
             TransportEndpoint::AbstractSocket { name } => {
-                use std::os::linux::net::SocketAddrExt;
-                use std::os::unix::net::SocketAddr;
-                let addr = SocketAddr::from_abstract_name(name.as_bytes())?;
-                let std_stream = std::os::unix::net::UnixStream::connect_addr(&addr)?;
-                std_stream.set_nonblocking(true)?;
-                let stream = UnixStream::from_std(std_stream)?;
+                let stream = connect_abstract(name)?;
                 Self::read_stream(stream, request, &tx).await
             }
             _ => anyhow::bail!(
@@ -826,6 +808,20 @@ impl AtomicClient {
     pub fn socket_path(&self) -> &Path {
         &self.socket_path
     }
+}
+
+/// Connect to a Linux abstract socket, returning a tokio-ready `UnixStream`.
+#[cfg(target_os = "linux")]
+fn connect_abstract(name: &str) -> Result<UnixStream> {
+    use std::os::linux::net::SocketAddrExt;
+    use std::os::unix::net::SocketAddr;
+
+    let addr = SocketAddr::from_abstract_name(name)
+        .context(format!("Invalid abstract socket name: {name}"))?;
+    let std_stream = std::os::unix::net::UnixStream::connect_addr(&addr)
+        .context(format!("Failed to connect to abstract socket: @{name}"))?;
+    std_stream.set_nonblocking(true)?;
+    Ok(UnixStream::from_std(std_stream)?)
 }
 
 /// Discover primal endpoint by name using platform-agnostic discovery.

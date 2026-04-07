@@ -58,6 +58,9 @@ async fn test_complete_system_lifecycle() -> Result<()> {
         discovered_primals.len()
     );
 
+    // Capture baseline before registering test primals — discover() may auto-register
+    let baseline_count = manager.get_registered_primals().await.len();
+
     // Simulate discovery by creating test primals
     let test_primals = vec![
         MockPrimalFactory::create_compute_primal("production-compute"),
@@ -78,9 +81,9 @@ async fn test_complete_system_lifecycle() -> Result<()> {
         println!("   📝 Registered primal: {} ({})", primal.name, primal.id);
     }
 
-    // Verify registration
+    // Verify registration — baseline may include network-discovered primals
     let registered_primals = manager.get_registered_primals().await;
-    assert_eq!(registered_primals.len(), 3);
+    assert_eq!(registered_primals.len(), baseline_count + 3);
     println!("   ✅ All primals registered successfully");
 
     // 4. Capability-Based Discovery
@@ -218,7 +221,7 @@ async fn test_complete_system_lifecycle() -> Result<()> {
     TestAssertions::assert_system_healthy(&final_health);
 
     let final_primals = manager.get_registered_primals().await;
-    assert_eq!(final_primals.len(), 3);
+    assert_eq!(final_primals.len(), baseline_count + 3);
 
     println!("   ✅ System integrity maintained");
 
@@ -367,6 +370,9 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
 
     let manager = TestManagerFactory::create_default().await?;
 
+    // Capture baseline — network discovery may pre-register primals
+    let baseline_count = manager.get_registered_primals().await.len();
+
     // 1. Concurrent primal registration
     println!("1️⃣ Testing concurrent primal registration...");
 
@@ -419,7 +425,10 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
     // Verify all registrations succeeded
     assert_eq!(registration_results.len(), concurrent_registrations);
     let final_registered = manager.get_registered_primals().await;
-    assert_eq!(final_registered.len(), concurrent_registrations);
+    assert_eq!(
+        final_registered.len(),
+        baseline_count + concurrent_registrations
+    );
 
     // 2. Concurrent mixed operations
     println!("2️⃣ Testing concurrent mixed operations...");
@@ -496,9 +505,15 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
     let post_load_health = manager.get_system_health();
     TestAssertions::assert_system_healthy(&post_load_health);
 
-    // All primals should still be registered
+    // All originally registered primals should persist; discover() during mixed
+    // ops may add more, so assert at-least semantics.
     let post_load_primals = manager.get_registered_primals().await;
-    assert_eq!(post_load_primals.len(), concurrent_registrations);
+    assert!(
+        post_load_primals.len() >= baseline_count + concurrent_registrations,
+        "Expected at least {} registered primals, got {}",
+        baseline_count + concurrent_registrations,
+        post_load_primals.len()
+    );
 
     // Performance should still be good
     let final_health_start = std::time::Instant::now();
@@ -608,7 +623,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
                 }
                 1 => {
                     // Invalid endpoint probes
-                    let _result = manager_clone.probe_endpoint("not-a-url");
+                    let _result = manager_clone.probe_endpoint("not-a-url").await;
                     "invalid_probe"
                 }
                 2 => {

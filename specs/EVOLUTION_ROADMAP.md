@@ -24,13 +24,10 @@ is preserved as a fossil record of the evolution paths taken.
 **Was**: Squirrel discovered Songbird via explicit `HTTP_REQUEST_PROVIDER_SOCKET` env var.
 **Now**: `http_bridge` registered as Songbird capability in `capability_sockets.rs` and `CapabilityTaxonomy`. Squirrel uses `BIOMEOS_DISCOVERY_SOCKET` and capability-based discovery. Env var removed from nucleus spawn.
 
-### Bypass 2: Socket nucleation symlinks
+### ~~Bypass 2: Socket nucleation symlinks~~ (EVOLVED)
 
-**Current**: `start_nucleus.sh` creates symlinks: `songbird.sock -> songbird-{family_id}.sock`
-**Root Cause**: Primals create plain-named sockets; Neural API expects family-suffixed.
-
-**Decision: Option A** -- All primals accept `--family-id` and create `{primal}-{family_id}.sock`.
-This enables multi-family support and is the correct architecture for primal sharing.
+**Was**: `start_nucleus.sh` created symlinks: `songbird.sock -> songbird-{family_id}.sock`
+**Now**: Shell script fully replaced by `biomeos nucleus start` (Rust). All primals accept `--family-id` and create `{primal}-{family_id}.sock`. `detect_ecosystem()` dynamically scans socket directories — no hardcoded primal list.
 See Section 7 for full multi-family spec.
 
 ### ~~Bypass 3: NestGate inverted boolean~~ (EVOLVED Mar 19)
@@ -83,22 +80,21 @@ Detailed handoffs in `ecoPrimals/infra/wateringHole/handoffs/`:
 
 ## 4. Shell Scripts (Post-Cleanup)
 
-10 active scripts remain:
+Active scripts (shell scripts that remain in the repository):
 
-| Script | Purpose | Evolution Target |
-|--------|---------|-----------------|
-| `start_nucleus.sh` | NUCLEUS startup | `biomeos nucleus start` (Rust) |
-| `build-genome.sh` | genomeBin build | `biomeos genome build` — archived Mar 14, 2026 |
+| Script | Purpose | Status |
+|--------|---------|--------|
+| ~~`start_nucleus.sh`~~ | ~~NUCLEUS startup~~ | **Archived** → `biomeos nucleus start` (Rust) |
+| ~~`build-genome.sh`~~ | ~~genomeBin build~~ | **Archived** Mar 14, 2026 |
 | `build_primals_for_testing.sh` | Test builds | Keep (dev tooling) |
-| `create_sibling_spore.sh` | Spore creation | `biomeos spore create` (Rust) |
-| `validate_beacon_discovery.sh` | Beacon validation | `biomeos validate beacon` (Rust) |
-| `beacon_dns_updater.sh` | DNS updater | Keep (infra tooling) |
-| `genomeBin-hardened-template.sh` | Template | Keep (template) |
-| `mini_stun_server.py` | Test STUN | Keep (test tooling) |
-| `setup_coturn.sh` | TURN setup | Keep (infra tooling) |
-| `README.md` | Index | Keep |
+| `create_sibling_spore.sh` | Spore creation | Keep (dev tooling) |
+| `create_livespore.sh` | LiveSpore USB creation | Keep (dev tooling) |
+| `test_provenance_trio_e2e.sh` | Provenance E2E test | Keep (test tooling) |
+| `bootstrap-selector.sh` | genomeBin v3 bootstrap | Keep (embedded in binary) |
+| `livespore-usb/*/scripts/*.sh` | USB deploy/start scripts | Keep (deployment tooling) |
+| `pixel8a-deploy/*.sh` | Mobile deployment | Keep (device tooling) |
 
-35 scripts archived to fossil record.
+35+ scripts archived to fossil record.
 
 ---
 
