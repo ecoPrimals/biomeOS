@@ -30,7 +30,6 @@ gethostname = { workspace = true }  # For node identification
 # Genetic derivation (sibling seeds)
 sha2 = { workspace = true }  # For SHA256-based seed derivation
 bytes = { workspace = true, features = ["serde"] }  # Zero-copy binary data
-getrandom = { workspace = true }  # For secure random nonce generation
 serde_bytes = { workspace = true }  # For binary data serialization
 base64 = { workspace = true }  # For beacon encoding
 rustix = { workspace = true, features = ["fs", "process"] }  # statvfs + kill for rollback
@@ -47,7 +46,12 @@ tracing = { workspace = true }
 # NOTE: Genetic derivation uses SHA256 for seed mixing
 # BearDog still handles all cryptographic operations on the seeds
 
+[features]
+test-support = []
+default = []
+
 [dev-dependencies]
+biomeos-spore = { path = ".", features = ["test-support"] }
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }

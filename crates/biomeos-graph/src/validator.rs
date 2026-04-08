@@ -126,6 +126,7 @@ mod tests {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             }],
             edges: vec![],
             coordination: CoordinationPattern::Sequential,
@@ -169,6 +170,7 @@ mod tests {
                     },
                     input: None,
                     outputs: vec![],
+                    constraints: None,
                 },
                 PrimalNode {
                     id: "node1".to_string(), // Duplicate!
@@ -182,6 +184,7 @@ mod tests {
                     },
                     input: None,
                     outputs: vec![],
+                    constraints: None,
                 },
             ],
             edges: vec![],
@@ -213,6 +216,7 @@ mod tests {
                     },
                     input: None,
                     outputs: vec![],
+                    constraints: None,
                 },
                 PrimalNode {
                     id: "node2".to_string(),
@@ -226,6 +230,7 @@ mod tests {
                     },
                     input: None,
                     outputs: vec![],
+                    constraints: None,
                 },
             ],
             edges: vec![

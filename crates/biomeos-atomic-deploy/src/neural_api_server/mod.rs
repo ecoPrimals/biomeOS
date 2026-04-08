@@ -20,12 +20,16 @@
 //! focuses on connection handling and request routing.
 
 pub mod agents;
+mod bootstrap;
 mod connection;
+mod discovery_init;
+mod listeners;
 mod proxy;
 mod routing;
 mod rpc;
 mod server_lifecycle;
 mod translation_loader;
+mod translation_startup;
 
 // Re-export types that may be needed externally
 pub use rpc::{

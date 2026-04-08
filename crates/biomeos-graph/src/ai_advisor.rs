@@ -615,6 +615,7 @@ impl AiGraphAdvisor {
                         },
                         input: None,
                         outputs: vec![],
+                        constraints: None,
                     },
                 },
                 reasoning: "No error handling nodes detected. Consider adding error handling for better reliability.".to_string(),

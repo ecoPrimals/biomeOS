@@ -123,12 +123,18 @@ impl GraphParser {
             })
             .unwrap_or_default();
 
+        let constraints = table
+            .get("constraints")
+            .map(Self::parse_constraints)
+            .transpose()?;
+
         Ok(PrimalNode {
             id,
             primal,
             operation,
-            input: None, // Filled in during execution
+            input: None,
             outputs,
+            constraints,
         })
     }
 
@@ -219,8 +225,7 @@ impl GraphParser {
         })
     }
 
-    /// Parse constraints (reserved for extended node tables).
-    #[cfg_attr(not(test), allow(dead_code))]
+    /// Parse constraints from `[constraints]` sub-table of a node.
     fn parse_constraints(value: &toml::Value) -> Result<NodeConstraints> {
         let table = value
             .as_table()
@@ -252,8 +257,7 @@ impl GraphParser {
         })
     }
 
-    /// Parse retry policy (used by [`Self::parse_constraints`]).
-    #[cfg_attr(not(test), allow(dead_code))]
+    /// Parse retry policy from `[constraints.retry]` sub-table.
     fn parse_retry_policy(value: &toml::Value) -> Result<RetryPolicy> {
         let table = value
             .as_table()

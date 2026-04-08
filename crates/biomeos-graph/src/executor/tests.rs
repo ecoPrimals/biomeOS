@@ -85,6 +85,7 @@ pub fn create_test_graph() -> PrimalGraph {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             },
             PrimalNode {
                 id: "node2".to_string(),
@@ -98,6 +99,7 @@ pub fn create_test_graph() -> PrimalGraph {
                 },
                 input: Some("node1".to_string()),
                 outputs: vec![],
+                constraints: None,
             },
         ],
         edges: vec![],

@@ -28,7 +28,7 @@ use biomeos_spore::beacon_genetics::{
     DirectBeardogCaller, LineageDeriver, NeuralApiCapabilityCaller, generate_device_entropy,
     load_lineage,
 };
-use biomeos_types::{CapabilityTaxonomy, Uuid};
+use biomeos_types::{CapabilityTaxonomy, Uuid, primal_names};
 use clap::Args;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
@@ -229,7 +229,7 @@ pub(crate) fn discover_security_socket_in(
     socket_dir: Option<&Path>,
     family_id: Option<&str>,
 ) -> Option<String> {
-    let primal = CapabilityTaxonomy::resolve_to_primal("encryption").unwrap_or("beardog");
+    let primal = CapabilityTaxonomy::resolve_to_primal("encryption").unwrap_or(primal_names::BEARDOG);
 
     if let Some(runtime_dir) = socket_dir {
         let biomeos_dir = runtime_dir.join("biomeos");

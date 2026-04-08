@@ -261,7 +261,7 @@ pub struct NodeConstraints {
 
 /// Operation invoked on a primal in the flat DSL.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[allow(clippy::derive_partial_eq_without_eq)]
+#[expect(clippy::derive_partial_eq_without_eq, reason = "serde_json::Value contains f64, cannot impl Eq")]
 pub struct Operation {
     /// RPC / method name
     pub name: String,
@@ -293,7 +293,6 @@ pub enum PrimalSelector {
 
 /// One node in the flat graph DSL.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[allow(clippy::derive_partial_eq_without_eq)]
 pub struct PrimalNode {
     /// Node id
     pub id: String,
@@ -305,11 +304,13 @@ pub struct PrimalNode {
     pub input: Option<serde_json::Value>,
     /// Named outputs
     pub outputs: Vec<String>,
+    /// Optional execution constraints (timeout, retry, required capabilities)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub constraints: Option<NodeConstraints>,
 }
 
 /// Parsed flat graph (see `crate::parser::GraphParser`).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[allow(clippy::derive_partial_eq_without_eq)]
 pub struct PrimalGraph {
     /// Validated graph id
     pub id: GraphId,

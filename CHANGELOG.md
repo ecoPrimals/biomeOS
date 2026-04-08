@@ -2,6 +2,47 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.95 (2026-04-08) — Deep Debt Overstep Cleanup: Safety, Agnostic, Refactors, Dependencies
+
+### Safety evolution
+- `std::mem::forget(dir)` in `pathway_learner.rs` → safe TempDir ownership (return tuple)
+- `#[forbid(unsafe_code)]` added to `biomeos-cli/src/bin/main.rs` binary crate root
+
+### Hardcoding → capability-based / SSOT
+- `enroll.rs:232` raw `"beardog"` literal → `primal_names::BEARDOG` constant
+- `templates.rs:341` raw `"nestgate"` literal → `primal_names::NESTGATE` constant
+
+### Mock isolation
+- `biomeos-spore/test_support` gated behind `#[cfg(any(test, feature = "test-support"))]`
+- Self-referencing dev-dep enables feature for integration tests only
+
+### Stub evolution → real implementations
+- `get_disk_serial()`: reads `/sys/block/*/serial` on Linux with device-model hash fallback
+- `get_cpu_hash()`: non-Linux fallback derives hash from `ARCH+OS` instead of returning `"unknown-cpu"`
+- MAC address: non-Linux fallback derives stable pseudo-MAC from hostname hash
+
+### Dead code evolution
+- `parse_constraints`/`parse_retry_policy` wired into `parse_node()` pipeline
+- New `constraints: Option<NodeConstraints>` field on `PrimalNode` (serde-optional, backward compatible)
+- `allow(dead_code)` suppressions removed from parser
+- `allow(clippy::derive_partial_eq_without_eq)` → `expect(...)` with reason on `Operation`
+- Unnecessary `allow`/`expect` removed from `PrimalNode` and `PrimalGraph`
+
+### Smart refactors (3 large files)
+- `server_lifecycle.rs` **859 → 101** LOC: extracted `bootstrap.rs`, `discovery_init.rs`, `listeners.rs`, `translation_startup.rs`
+- `pathway_learner.rs` **857 → 217** LOC: extracted `pathway_analysis.rs`, `pathway_learner_tests.rs`
+- `atomic_client.rs` **843 → 487** LOC: extracted `atomic_transport.rs`, `atomic_rpc.rs`, `atomic_discovery.rs`
+
+### Dependency evolution
+- `tar` default-features disabled → eliminates `xattr` crate and `rustix` 1.x duplicate
+- Direct `getrandom` 0.2 dep removed from workspace; `biomeos-spore` uses `rand::random` for CSPRNG
+
+### Tests
+- **7,658** tests passing (0 failures)
+- Zero clippy warnings
+
+---
+
 ## v2.94 (2026-04-07) — GAP-MATRIX Second Wave: Error Propagation + Self-Discovery + Graph Unification
 
 ### GAP-MATRIX-07b: Proxy error propagation

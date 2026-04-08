@@ -69,7 +69,7 @@ pub mod usb;
 pub mod verification;
 pub mod verify;
 
-// Test support - available in dev/test builds
+#[cfg(any(test, feature = "test-support"))]
 #[doc(hidden)]
 pub mod test_support;
 
@@ -85,6 +85,6 @@ pub use spore::{Spore, SporeConfig};
 pub use spore_types::SporeType;
 pub use verify::{SporeVerification, VerificationResult};
 
-// Re-export for integration tests
+#[cfg(any(test, feature = "test-support"))]
 #[doc(hidden)]
 pub use test_support::setup_test_binaries;

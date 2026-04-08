@@ -338,7 +338,7 @@ impl NestGateTemplateClient {
         // Use SystemPaths for XDG-compliant socket discovery (no hardcoded /tmp)
         let paths = biomeos_types::SystemPaths::new()
             .map_err(|e| anyhow::anyhow!("SystemPaths init failed: {e}"))?;
-        let socket_path = paths.primal_socket(&format!("nestgate-{}", family_id));
+        let socket_path = paths.primal_socket(&format!("{}-{}", biomeos_types::primal_names::NESTGATE, family_id));
 
         // Verify socket exists (NestGate must be running)
         if !socket_path.exists() {
@@ -505,6 +505,7 @@ mod tests {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             }],
             edges: vec![],
             coordination: CoordinationPattern::Sequential,

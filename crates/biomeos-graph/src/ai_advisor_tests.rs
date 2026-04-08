@@ -30,6 +30,7 @@ fn create_test_graph() -> PrimalGraph {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             },
             PrimalNode {
                 id: "node2".to_string(),
@@ -43,6 +44,7 @@ fn create_test_graph() -> PrimalGraph {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             },
             PrimalNode {
                 id: "node3".to_string(),
@@ -56,6 +58,7 @@ fn create_test_graph() -> PrimalGraph {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             },
         ],
         edges: vec![],
@@ -118,6 +121,7 @@ fn test_detect_missing_error_handling() {
             },
             input: None,
             outputs: vec![],
+            constraints: None,
         });
     }
 
@@ -215,6 +219,7 @@ fn test_graph_snapshot_by_id_and_by_capabilities_keys() {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             },
             PrimalNode {
                 id: "b".to_string(),
@@ -228,6 +233,7 @@ fn test_graph_snapshot_by_id_and_by_capabilities_keys() {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             },
         ],
         edges: vec![],
@@ -272,6 +278,7 @@ fn test_detect_coordination_dag_when_parallel_has_many_edges() {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             },
             PrimalNode {
                 id: "n2".to_string(),
@@ -285,6 +292,7 @@ fn test_detect_coordination_dag_when_parallel_has_many_edges() {
                 },
                 input: None,
                 outputs: vec![],
+                constraints: None,
             },
         ],
         edges: vec![
@@ -331,6 +339,7 @@ fn test_detect_single_node_with_edge_suggests_remove_edge() {
             },
             input: None,
             outputs: vec![],
+            constraints: None,
         }],
         edges: vec![GraphEdge {
             from: "only".to_string(),

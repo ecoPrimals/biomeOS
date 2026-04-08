@@ -1,0 +1,192 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright 2025-2026 ecoPrimals Project
+
+//! Unix/TCP socket binding, accept loops, and JSON-RPC health probes.
+
+use anyhow::{Context, Result};
+use tokio::net::UnixListener;
+use tracing::{debug, error, info};
+
+use super::NeuralApiServer;
+use crate::mode::BiomeOsMode;
+
+impl NeuralApiServer {
+    /// Full health status including mode, registered capabilities, and uptime.
+    ///
+    /// JSON-RPC method: `health.check`
+    pub(crate) async fn health_check(&self) -> Result<serde_json::Value> {
+        let mode = self.mode.read().await;
+        let cap_count = self.router.list_capabilities().await.len();
+        Ok(serde_json::json!({
+            "status": "healthy",
+            "mode": format!("{mode:?}"),
+            "family_id": self.family_id,
+            "socket_path": self.socket_path.display().to_string(),
+            "registered_capabilities": cap_count,
+            "version": env!("CARGO_PKG_VERSION"),
+        }))
+    }
+
+    /// Minimal liveness probe — confirms the process is running and responsive.
+    ///
+    /// JSON-RPC method: `health.liveness`
+    pub(crate) fn health_liveness(&self) -> Result<serde_json::Value> {
+        Ok(serde_json::json!({
+            "status": "alive",
+            "version": env!("CARGO_PKG_VERSION"),
+        }))
+    }
+
+    /// Readiness probe — confirms the server has finished bootstrapping and can
+    /// serve requests (capabilities loaded, mode resolved).
+    ///
+    /// JSON-RPC method: `health.readiness`
+    pub(crate) async fn health_readiness(&self) -> Result<serde_json::Value> {
+        let mode = self.mode.read().await;
+        let cap_count = self.router.list_capabilities().await.len();
+        let ready = cap_count > 0;
+        Ok(serde_json::json!({
+            "ready": ready,
+            "mode": format!("{mode:?}"),
+            "registered_capabilities": cap_count,
+        }))
+    }
+
+    /// Bind the Unix socket so the path exists for external probes.
+    ///
+    /// Called early in `serve()` before bootstrap or translation loading,
+    /// so that primalSpring and other health monitors can discover the
+    /// socket immediately after the process starts.
+    pub(crate) fn bind_socket(&self) -> Result<UnixListener> {
+        if self.socket_path.exists() {
+            std::fs::remove_file(&self.socket_path).context("Failed to remove old socket")?;
+        }
+
+        let listener =
+            UnixListener::bind(&self.socket_path).context("Failed to bind Unix socket")?;
+
+        info!("🧠 Neural API socket bound: {}", self.socket_path.display());
+        info!("   Graphs directory: {}", self.graphs_dir.display());
+        info!("   Family ID: {}", self.family_id);
+
+        Ok(listener)
+    }
+
+    /// Accept UDS connections on a previously-bound listener.
+    pub(crate) async fn accept_connections(&self, listener: UnixListener) -> Result<()> {
+        info!(
+            "🧠 Neural API server accepting UDS connections (mode: {})",
+            self.mode_display_str().await
+        );
+
+        loop {
+            match listener.accept().await {
+                Ok((stream, _addr)) => {
+                    let server = self.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = server.handle_connection(stream).await {
+                            error!("Connection error: {}", e);
+                        }
+                    });
+                }
+                Err(e) => {
+                    error!("Failed to accept connection: {}", e);
+                }
+            }
+        }
+    }
+
+    /// Accept TCP connections (mobile / cross-gate).
+    pub(crate) async fn accept_tcp_connections(
+        &self,
+        listener: tokio::net::TcpListener,
+    ) -> Result<()> {
+        info!(
+            "📡 Neural API server accepting TCP connections (mode: {})",
+            self.mode_display_str().await
+        );
+
+        loop {
+            match listener.accept().await {
+                Ok((stream, addr)) => {
+                    debug!("TCP connection from {}", addr);
+                    let server = self.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = server.handle_tcp_connection(stream).await {
+                            error!("TCP connection error from {}: {}", addr, e);
+                        }
+                    });
+                }
+                Err(e) => {
+                    error!("Failed to accept TCP connection: {}", e);
+                }
+            }
+        }
+    }
+
+    async fn mode_display_str(&self) -> &'static str {
+        let mode = self.mode.read().await;
+        match *mode {
+            BiomeOsMode::Bootstrap => "BOOTSTRAP (genesis)",
+            BiomeOsMode::Coordinated => "COORDINATED (gen 1)",
+        }
+    }
+}
+
+#[cfg(test)]
+#[expect(clippy::expect_used, reason = "test")]
+mod tests {
+    use super::super::NeuralApiServer;
+
+    #[test]
+    fn test_health_liveness_reports_alive_and_version() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("neural-api.sock");
+        let server = NeuralApiServer::new(temp.path(), "fam-liveness", sock);
+        let v = server.health_liveness().expect("liveness");
+        assert_eq!(v["status"], "alive");
+        assert_eq!(v["version"], env!("CARGO_PKG_VERSION"));
+    }
+
+    #[tokio::test]
+    async fn test_health_check_includes_family_socket_and_capability_count() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("api-health.sock");
+        let server = NeuralApiServer::new(temp.path(), "fam-health", &sock);
+        let j = server.health_check().await.expect("health check");
+        assert_eq!(j["status"], "healthy");
+        assert_eq!(j["family_id"], "fam-health");
+        assert_eq!(j["socket_path"], sock.display().to_string());
+        assert_eq!(j["registered_capabilities"], serde_json::json!(0));
+    }
+
+    #[tokio::test]
+    async fn test_health_readiness_false_without_registered_capabilities() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("api-ready.sock");
+        let server = NeuralApiServer::new(temp.path(), "fam-ready", sock);
+        let j = server.health_readiness().await.expect("readiness");
+        assert_eq!(j["ready"], serde_json::json!(false));
+        assert_eq!(j["registered_capabilities"], serde_json::json!(0));
+    }
+
+    #[tokio::test]
+    async fn test_bind_socket_replaces_stale_path_and_binds() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("bind-test.sock");
+        std::fs::write(&sock, b"stale").expect("seed stale file");
+        let server = NeuralApiServer::new(temp.path(), "fam-bind", &sock);
+        let listener = server.bind_socket().expect("bind unix socket");
+        drop(listener);
+        assert!(sock.exists());
+    }
+
+    #[test]
+    fn test_with_tcp_port_and_tcp_only_builder_chain() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let sock = temp.path().join("neural.sock");
+        let _ = NeuralApiServer::new(temp.path(), "fam-tcp", &sock)
+            .with_tcp_port(0)
+            .with_tcp_only(0);
+    }
+}

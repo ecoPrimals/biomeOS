@@ -50,7 +50,10 @@ pub mod loader;
 pub mod metrics;
 pub mod node;
 pub mod parser;
+mod pathway_analysis;
 pub mod pathway_learner;
+#[cfg(test)]
+mod pathway_learner_tests;
 pub mod pipeline;
 pub mod sensor;
 pub mod validation;

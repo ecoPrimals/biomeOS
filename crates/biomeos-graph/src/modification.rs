@@ -407,6 +407,7 @@ mod tests {
             },
             input: None,
             outputs: vec![],
+            constraints: None,
         }
     }
 

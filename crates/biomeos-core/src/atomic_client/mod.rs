@@ -41,20 +41,21 @@
 //! let result = client.call("generate_entropy", json!({ "bytes": 32 })).await?;
 //! ```
 
-use anyhow::{Context, Result};
+mod atomic_discovery;
+mod atomic_rpc;
+mod atomic_transport;
+
+use anyhow::Result;
 use biomeos_types::IpcError;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
-use tokio::net::{TcpStream, UnixStream};
 use tokio::time::timeout;
 use tracing::{debug, trace};
 
-// Import the Universal IPC v3.0 transport types
-use crate::socket_discovery::{SocketDiscovery, TransportEndpoint};
+use crate::socket_discovery::TransportEndpoint;
 
 // Re-export JSON-RPC types from biomeos-types for backwards compatibility
 pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
@@ -83,63 +84,9 @@ pub struct DiscoverByCapabilityOpts<'a> {
     pub strict_discovery: Option<bool>,
 }
 
-fn family_id_for_discovery(family_id_override: Option<&str>) -> String {
-    if let Some(id) = family_id_override {
-        return id.to_string();
-    }
-    std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("NODE_FAMILY_ID"))
-        .unwrap_or_else(|_| {
-            trace!("No FAMILY_ID set, using 'default' for discovery");
-            "default".to_string()
-        })
-}
-
-fn strict_discovery_from_env_or_override(strict_override: Option<bool>) -> bool {
-    strict_override.unwrap_or_else(|| std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
-}
-
-/// Atomic Multi-Transport Client - Universal IPC Standard v3.0
+/// Atomic multi-transport JSON-RPC client (Universal IPC v3.0).
 ///
-/// This client provides atomic, zero-copy communication with primals via
-/// multiple transport layers: Unix sockets, abstract sockets, and TCP.
-///
-/// ## Architecture
-///
-/// - **Atomic**: Single-purpose, minimal overhead
-/// - **Pure Rust**: No C dependencies (ecoBin ready!)
-/// - **Multi-Transport**: Unix, Abstract, TCP support
-/// - **Tower-based**: Follows Tower service patterns
-/// - **Capability-driven**: Runtime primal discovery with fallback
-///
-/// ## Transport Selection
-///
-/// When using `discover()`, the client automatically selects the best available
-/// transport following Universal IPC v3.0:
-/// 1. Unix socket (Tier 1) - fastest, local only
-/// 2. Abstract socket (Tier 1) - Linux/Android, no filesystem
-/// 3. TCP socket (Tier 2) - universal, cross-device
-///
-/// ## Example
-///
-/// ```ignore
-/// use biomeos_core::atomic_client::AtomicClient;
-/// use biomeos_types::constants::capability;
-///
-/// // Capability-based discovery (preferred)
-/// let client = AtomicClient::discover_by_capability(capability::CRYPTO).await?;
-///
-/// // Or by primal name when known
-/// let client = AtomicClient::discover("beardog").await?;
-///
-/// // Or explicit transport
-/// let tcp_client = AtomicClient::tcp("192.0.2.100", 9100);
-/// let unix_client = AtomicClient::unix("/tmp/beardog.sock");
-///
-/// let result = client.call("generate_entropy", json!({ "bytes": 32 })).await?;
-/// ```
-///
-/// Constructing a client for a known Unix socket (compiles; needs a running primal to connect):
+/// Design, transport tiers, and usage examples: [`atomic_client`](crate::atomic_client) module docs.
 ///
 /// ```no_run
 /// use biomeos_core::AtomicClient;
@@ -174,48 +121,8 @@ impl AtomicClient {
 
     /// Discover a primal with optional [`DiscoverOpts`] (for tests and explicit callers).
     pub async fn discover_with_opts(primal_name: &str, opts: DiscoverOpts<'_>) -> Result<Self> {
-        debug!("Discovering primal with fallback: {}", primal_name);
-
-        let family_id = family_id_for_discovery(opts.family_id);
-
-        let discovery = SocketDiscovery::new(&family_id);
-
-        match discovery
-            .discover_with_fallback_with_env_overrides(
-                primal_name,
-                opts.env_overrides,
-                opts.tcp_tier2_override,
-            )
-            .await
-        {
-            Some(endpoint) => {
-                debug!(
-                    "Discovered {} via {}: {}",
-                    primal_name,
-                    if endpoint.is_native() {
-                        "Tier 1"
-                    } else {
-                        "Tier 2"
-                    },
-                    endpoint
-                );
-
-                Ok(Self::from_endpoint(endpoint))
-            }
-            None => {
-                anyhow::bail!(
-                    "Primal '{}' not found via any transport. Try:\n\
-                     1. Set {}_SOCKET=/path/to/{}.sock (Unix)\n\
-                     2. Set {}_TCP=host:port (TCP)\n\
-                     3. Ensure primal is running in family: {}",
-                    primal_name,
-                    primal_name.to_uppercase(),
-                    primal_name,
-                    primal_name.to_uppercase(),
-                    family_id
-                )
-            }
-        }
+        let endpoint = atomic_discovery::discover_named_endpoint(primal_name, opts).await?;
+        Ok(Self::from_endpoint(endpoint))
     }
 
     /// Discover a primal by capability and create an atomic client
@@ -240,30 +147,23 @@ impl AtomicClient {
     ) -> Result<Self> {
         debug!("Discovering primal by capability: {}", capability);
 
-        let family_id = family_id_for_discovery(opts.family_id);
-
-        let discovery = SocketDiscovery::new(&family_id);
-
-        // 1. Try capability registry first
-        if let Some(socket) = discovery.discover_capability(capability).await {
-            debug!(
-                "Discovered capability {} via registry: {}",
-                capability,
-                socket.endpoint.display_string()
-            );
-            return Ok(Self::from_endpoint(socket.endpoint));
+        if let Some(endpoint) = atomic_discovery::discover_capability_registry_endpoint(
+            capability,
+            opts.family_id,
+        )
+        .await
+        {
+            return Ok(Self::from_endpoint(endpoint));
         }
 
-        // 2. Taxonomy bootstrap: resolve capability → primal name, then discover
-        if !strict_discovery_from_env_or_override(opts.strict_discovery)
-            && let Some(primal_name) =
-                biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
+        if let Some(primal_name) =
+            atomic_discovery::taxonomy_primal_for_capability(&opts, capability)
         {
             trace!(
                 "Capability '{}' resolved to primal '{}' via taxonomy bootstrap",
                 capability, primal_name
             );
-            return Self::discover(primal_name).await;
+            return Self::discover(primal_name.as_str()).await;
         }
 
         anyhow::bail!(
@@ -437,7 +337,6 @@ impl AtomicClient {
 
         let primal = self.endpoint.to_string();
 
-        // Timeout wrapper for fail-fast behavior
         let response = match timeout(self.timeout, self.call_impl(request)).await {
             Ok(Ok(resp)) => resp,
             Ok(Err(e)) => {
@@ -457,7 +356,6 @@ impl AtomicClient {
             }
         };
 
-        // Check for JSON-RPC errors
         if let Some(error) = response.error {
             return Err(IpcError::JsonRpcError {
                 primal,
@@ -474,190 +372,19 @@ impl AtomicClient {
     /// Dispatches to the appropriate transport based on endpoint type.
     async fn call_impl(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
         match &self.endpoint {
-            TransportEndpoint::UnixSocket { path } => self.call_via_unix(path, request).await,
+            TransportEndpoint::UnixSocket { path } => {
+                atomic_transport::jsonrpc_unix(path, request).await
+            }
             TransportEndpoint::TcpSocket { host, port } => {
-                self.call_via_tcp(host, *port, request).await
+                atomic_transport::jsonrpc_tcp(host, *port, request).await
             }
             TransportEndpoint::AbstractSocket { name } => {
-                self.call_via_abstract(name, request).await
+                atomic_transport::jsonrpc_abstract(name, request).await
             }
             TransportEndpoint::HttpJsonRpc { host, port } => {
-                self.call_via_http(host, *port, request).await
+                atomic_transport::jsonrpc_http(host, *port, request).await
             }
         }
-    }
-
-    /// Send JSON-RPC request via Unix socket
-    async fn call_via_unix(&self, path: &Path, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        let stream = UnixStream::connect(path).await.context(format!(
-            "Failed to connect to Unix socket: {}",
-            path.display()
-        ))?;
-
-        self.send_request(stream, request).await
-    }
-
-    /// Send JSON-RPC request via TCP
-    async fn call_via_tcp(
-        &self,
-        host: &str,
-        port: u16,
-        request: JsonRpcRequest,
-    ) -> Result<JsonRpcResponse> {
-        let addr = format!("{host}:{port}");
-        let stream = TcpStream::connect(&addr)
-            .await
-            .context(format!("Failed to connect to TCP: {addr}"))?;
-
-        self.send_request(stream, request).await
-    }
-
-    /// Send JSON-RPC request via HTTP POST to `/jsonrpc` endpoint
-    ///
-    /// This implements a minimal HTTP/1.1 POST client using raw `TcpStream`,
-    /// keeping the zero-C-dependency Pure Rust guarantee. The remote Songbird
-    /// instance serves JSON-RPC over HTTP at `POST /jsonrpc`, which forwards
-    /// to the same IPC handler as the Unix socket (mesh.*, relay.*, health, etc.)
-    ///
-    /// EVOLUTION (Feb 2026): Replaces raw TCP JSON-RPC for inter-gate communication.
-    /// Songbird's HTTP gateway is the covalent bond transport.
-    async fn call_via_http(
-        &self,
-        host: &str,
-        port: u16,
-        request: JsonRpcRequest,
-    ) -> Result<JsonRpcResponse> {
-        let addr = format!("{host}:{port}");
-        let mut stream = TcpStream::connect(&addr)
-            .await
-            .context(format!("Failed to connect to HTTP endpoint: {addr}"))?;
-
-        // Serialize JSON-RPC request body
-        let body =
-            serde_json::to_string(&request).context("Failed to serialize JSON-RPC request")?;
-
-        // Build minimal HTTP/1.1 POST request
-        let http_request = format!(
-            "POST /jsonrpc HTTP/1.1\r\n\
-             Host: {}\r\n\
-             Content-Type: application/json\r\n\
-             Content-Length: {}\r\n\
-             Connection: close\r\n\
-             \r\n\
-             {}",
-            addr,
-            body.len(),
-            body
-        );
-
-        trace!("Sending HTTP JSON-RPC request to {}", addr);
-
-        // Send HTTP request
-        stream.write_all(http_request.as_bytes()).await?;
-        stream.flush().await?;
-
-        // Read full HTTP response
-        let mut response_buf = Vec::new();
-        let mut reader = BufReader::new(stream);
-        loop {
-            let mut line = String::new();
-            match reader.read_line(&mut line).await {
-                Ok(0) => break, // EOF
-                Ok(_) => response_buf.push(line),
-                Err(e) => {
-                    // Connection closed after body -- expected with Connection: close
-                    if response_buf.is_empty() {
-                        return Err(e).context("Failed to read HTTP response");
-                    }
-                    break;
-                }
-            }
-        }
-
-        // Find the JSON body after the blank line separator
-        let full_response = response_buf.join("");
-        let body_start = full_response
-            .find("\r\n\r\n")
-            .or_else(|| full_response.find("\n\n"))
-            .map(|pos| {
-                if full_response[pos..].starts_with("\r\n\r\n") {
-                    pos + 4
-                } else {
-                    pos + 2
-                }
-            })
-            .ok_or_else(|| anyhow::anyhow!("Malformed HTTP response: no body separator"))?;
-
-        let json_body = full_response[body_start..].trim();
-
-        trace!("Received HTTP JSON-RPC response: {}", json_body);
-
-        // Parse JSON-RPC response from HTTP body
-        let response: JsonRpcResponse = serde_json::from_str(json_body).context(format!(
-            "Failed to parse JSON-RPC response from HTTP body: {}",
-            &json_body[..json_body.len().min(200)]
-        ))?;
-
-        Ok(response)
-    }
-
-    /// Send JSON-RPC request via abstract socket (Linux/Android)
-    #[cfg(target_os = "linux")]
-    async fn call_via_abstract(
-        &self,
-        name: &str,
-        request: JsonRpcRequest,
-    ) -> Result<JsonRpcResponse> {
-        let stream = connect_abstract(name)?;
-        self.send_request(stream, request).await
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    async fn call_via_abstract(
-        &self,
-        name: &str,
-        _request: JsonRpcRequest,
-    ) -> Result<JsonRpcResponse> {
-        anyhow::bail!(
-            "Abstract sockets not supported on this platform (only Linux/Android). \
-             Socket name: @{}",
-            name
-        )
-    }
-
-    /// Generic request sender for any `AsyncRead` + `AsyncWrite` stream
-    async fn send_request<S>(&self, stream: S, request: JsonRpcRequest) -> Result<JsonRpcResponse>
-    where
-        S: AsyncRead + AsyncWrite + Unpin,
-    {
-        let (reader, mut writer) = tokio::io::split(stream);
-
-        // Serialize request
-        let request_str =
-            serde_json::to_string(&request).context("Failed to serialize JSON-RPC request")?;
-
-        trace!("Sending JSON-RPC request: {}", request_str);
-
-        // Send request (newline-delimited JSON-RPC)
-        writer.write_all(request_str.as_bytes()).await?;
-        writer.write_all(b"\n").await?;
-        writer.flush().await?;
-
-        // Read response (newline-delimited)
-        let mut reader = BufReader::new(reader);
-        let mut line = String::new();
-        reader
-            .read_line(&mut line)
-            .await
-            .context("Failed to read JSON-RPC response")?;
-
-        trace!("Received JSON-RPC response: {}", line.trim());
-
-        // Parse response
-        let response: JsonRpcResponse =
-            serde_json::from_str(&line).context("Failed to parse JSON-RPC response")?;
-
-        Ok(response)
     }
 
     /// Call a method that returns a stream of NDJSON items.
@@ -711,24 +438,18 @@ impl AtomicClient {
     ) -> Result<()> {
         match &endpoint {
             TransportEndpoint::UnixSocket { path } => {
-                let stream = timeout(timeout_dur, UnixStream::connect(path))
-                    .await
-                    .context("Unix connect timeout")?
-                    .context(format!("Unix connect: {}", path.display()))?;
-                Self::read_stream(stream, request, &tx).await
+                let stream = atomic_transport::connect_unix_timed(path, timeout_dur).await?;
+                atomic_rpc::pump_ndjson_stream(stream, request, &tx).await
             }
             TransportEndpoint::TcpSocket { host, port } => {
-                let addr = format!("{host}:{port}");
-                let stream = timeout(timeout_dur, TcpStream::connect(&addr))
-                    .await
-                    .context("TCP connect timeout")?
-                    .context(format!("TCP connect: {addr}"))?;
-                Self::read_stream(stream, request, &tx).await
+                let stream =
+                    atomic_transport::connect_tcp_timed(host, *port, timeout_dur).await?;
+                atomic_rpc::pump_ndjson_stream(stream, request, &tx).await
             }
             #[cfg(target_os = "linux")]
             TransportEndpoint::AbstractSocket { name } => {
-                let stream = connect_abstract(name)?;
-                Self::read_stream(stream, request, &tx).await
+                let stream = atomic_transport::connect_abstract(name)?;
+                atomic_rpc::pump_ndjson_stream(stream, request, &tx).await
             }
             _ => anyhow::bail!(
                 "Streaming not supported for transport: {} (socket: {})",
@@ -738,69 +459,6 @@ impl AtomicClient {
         }
     }
 
-    /// Send a request and read multiple NDJSON response lines as `StreamItem`s.
-    async fn read_stream<S>(
-        stream: S,
-        request: JsonRpcRequest,
-        tx: &tokio::sync::mpsc::Sender<StreamItem>,
-    ) -> Result<()>
-    where
-        S: AsyncRead + AsyncWrite + Unpin,
-    {
-        let (reader, mut writer) = tokio::io::split(stream);
-
-        let request_str =
-            serde_json::to_string(&request).context("Failed to serialize streaming request")?;
-
-        writer.write_all(request_str.as_bytes()).await?;
-        writer.write_all(b"\n").await?;
-        writer.flush().await?;
-
-        let mut reader = BufReader::new(reader);
-        let mut line = String::new();
-
-        loop {
-            line.clear();
-            let n = reader.read_line(&mut line).await?;
-            if n == 0 {
-                let _ = tx.send(StreamItem::End).await;
-                break;
-            }
-
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-
-            // Try parsing as StreamItem first, fall back to JsonRpcResponse
-            if let Ok(item) = serde_json::from_str::<StreamItem>(trimmed) {
-                let is_end = matches!(item, StreamItem::End);
-                if tx.send(item).await.is_err() {
-                    break;
-                }
-                if is_end {
-                    break;
-                }
-            } else if let Ok(resp) = serde_json::from_str::<JsonRpcResponse>(trimmed) {
-                // Standard JSON-RPC response — wrap as final StreamItem
-                if let Some(result) = resp.result {
-                    let _ = tx.send(StreamItem::Data(result)).await;
-                }
-                let _ = tx.send(StreamItem::End).await;
-                break;
-            } else {
-                // Unrecognized line — forward as raw data
-                let _ = tx
-                    .send(StreamItem::Data(serde_json::Value::String(
-                        trimmed.to_string(),
-                    )))
-                    .await;
-            }
-        }
-
-        Ok(())
-    }
-
     /// Get the socket path for this client (legacy compatibility)
     ///
     /// Returns empty path for non-Unix transports.
@@ -808,20 +466,6 @@ impl AtomicClient {
     pub fn socket_path(&self) -> &Path {
         &self.socket_path
     }
-}
-
-/// Connect to a Linux abstract socket, returning a tokio-ready `UnixStream`.
-#[cfg(target_os = "linux")]
-fn connect_abstract(name: &str) -> Result<UnixStream> {
-    use std::os::linux::net::SocketAddrExt;
-    use std::os::unix::net::SocketAddr;
-
-    let addr = SocketAddr::from_abstract_name(name)
-        .context(format!("Invalid abstract socket name: {name}"))?;
-    let std_stream = std::os::unix::net::UnixStream::connect_addr(&addr)
-        .context(format!("Failed to connect to abstract socket: @{name}"))?;
-    std_stream.set_nonblocking(true)?;
-    Ok(UnixStream::from_std(std_stream)?)
 }
 
 /// Discover primal endpoint by name using platform-agnostic discovery.
