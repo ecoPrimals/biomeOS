@@ -66,12 +66,10 @@ pub fn validate_insecure_guard() -> Result<(), String> {
         .unwrap_or(false);
 
     if has_family && insecure {
-        return Err(
-            "FATAL: FAMILY_ID and BIOMEOS_INSECURE=1 cannot coexist. \
+        return Err("FATAL: FAMILY_ID and BIOMEOS_INSECURE=1 cannot coexist. \
              Production mode (FAMILY_ID set) requires BTSP authentication. \
              Remove BIOMEOS_INSECURE to run in production, or unset FAMILY_ID for development."
-                .to_owned(),
-        );
+            .to_owned());
     }
     Ok(())
 }

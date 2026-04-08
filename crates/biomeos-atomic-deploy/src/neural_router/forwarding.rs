@@ -77,10 +77,7 @@ impl NeuralRouter {
                 match btsp_client::security_mode() {
                     btsp_client::SecurityMode::Production { btsp_available } => {
                         if btsp_available {
-                            debug!(
-                                "   🔒 BTSP-authenticated connection to {}",
-                                path.display()
-                            );
+                            debug!("   🔒 BTSP-authenticated connection to {}", path.display());
                         } else {
                             tracing::warn!(
                                 "   ⚠️ BTSP-required socket detected but handshake not yet wired: {}",

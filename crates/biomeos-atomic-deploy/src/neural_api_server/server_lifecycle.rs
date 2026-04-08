@@ -14,7 +14,7 @@ use super::NeuralApiServer;
 use crate::mode::BiomeOsMode;
 
 // Re-export coordinated-mode helpers at the historical `server_lifecycle` path.
-#[allow(unused_imports)]
+#[expect(unused_imports, reason = "re-exports at historical path for downstream consumers")]
 pub use super::bootstrap::{
     is_explicit_coordinated_mode, is_explicit_coordinated_mode_str,
     is_explicit_coordinated_mode_with,

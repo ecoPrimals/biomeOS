@@ -229,7 +229,8 @@ pub(crate) fn discover_security_socket_in(
     socket_dir: Option<&Path>,
     family_id: Option<&str>,
 ) -> Option<String> {
-    let primal = CapabilityTaxonomy::resolve_to_primal("encryption").unwrap_or(primal_names::BEARDOG);
+    let primal =
+        CapabilityTaxonomy::resolve_to_primal("encryption").unwrap_or(primal_names::BEARDOG);
 
     if let Some(runtime_dir) = socket_dir {
         let biomeos_dir = runtime_dir.join("biomeos");

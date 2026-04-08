@@ -31,5 +31,4 @@ pub use types::{Architecture, GenomeMetadata, Platform};
     clippy::expect_used,
     reason = "test assertions use unwrap/expect for clarity"
 )]
-#[allow(missing_docs)]
 mod tests;

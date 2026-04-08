@@ -6,8 +6,8 @@
     reason = "test assertions use unwrap/expect for clarity"
 )]
 
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
 use biomeos_types::error::{BiomeError, BiomeResult};

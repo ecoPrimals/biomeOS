@@ -261,7 +261,10 @@ pub struct NodeConstraints {
 
 /// Operation invoked on a primal in the flat DSL.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[expect(clippy::derive_partial_eq_without_eq, reason = "serde_json::Value contains f64, cannot impl Eq")]
+#[expect(
+    clippy::derive_partial_eq_without_eq,
+    reason = "serde_json::Value contains f64, cannot impl Eq"
+)]
 pub struct Operation {
     /// RPC / method name
     pub name: String,

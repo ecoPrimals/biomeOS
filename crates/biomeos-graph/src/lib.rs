@@ -40,6 +40,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod ai_advisor;
 pub mod continuous;
 #[cfg(test)]
 mod continuous_tests;
@@ -48,6 +49,7 @@ pub mod events;
 pub mod graph;
 pub mod loader;
 pub mod metrics;
+mod modification;
 pub mod node;
 pub mod parser;
 mod pathway_analysis;
@@ -58,6 +60,10 @@ pub mod pipeline;
 pub mod sensor;
 pub mod validation;
 
+pub use ai_advisor::{
+    AiGraphAdvisor, AiSuggestion, FeedbackOutcome, GraphSnapshot, ImpactEstimate, LearningEvent,
+    SuggestionFeedback, SuggestionType,
+};
 pub use continuous::{ContinuousExecutor, SessionState, TickClock};
 pub use error::{GraphError, Result};
 pub use events::{GraphEvent, GraphEventBroadcaster};
@@ -66,6 +72,7 @@ pub use graph::{
     NodeConstraints, Operation, PrimalGraph, PrimalNode, PrimalSelector, RetryPolicy, TickConfig,
 };
 pub use loader::GraphLoader;
+pub use modification::GraphModification;
 pub use node::{GraphNode, NodeConfig, NodeParams};
 pub use pathway_learner::{
     GraphAnalysis, OptimizationSuggestion, OptimizationType, PathwayLearner,

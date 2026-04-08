@@ -131,8 +131,8 @@ fn socket_path_for_capability(
     family_id: &str,
     capability: &str,
 ) -> PathBuf {
-    let primal_name = biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
-        .unwrap_or("unknown");
+    let primal_name =
+        biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability).unwrap_or("unknown");
     socket_dir.join(format!("{primal_name}-{family_id}.sock"))
 }
 
@@ -400,9 +400,7 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
         // Primals using .jsonrpc.sock typically expose `health.status` rather
         // than the legacy `health` method. Register the namespaced method.
         if health_socket != socket_path {
-            lifecycle
-                .set_health_method(primal, "health.status")
-                .await;
+            lifecycle.set_health_method(primal, "health.status").await;
         }
 
         children.push((primal.to_string(), child));

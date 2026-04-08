@@ -208,7 +208,10 @@ mod tests {
             id = "minimal-graph"
         "#;
         let result = GraphLoader::from_str(toml, None);
-        assert!(result.is_ok(), "name and version should default: {result:?}");
+        assert!(
+            result.is_ok(),
+            "name and version should default: {result:?}"
+        );
         let graph = result.unwrap();
         assert!(graph.definition.name.is_empty());
         assert!(graph.definition.version.is_empty());

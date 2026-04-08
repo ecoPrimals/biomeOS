@@ -61,8 +61,7 @@ pub(crate) async fn jsonrpc_http(
         .await
         .context(format!("Failed to connect to HTTP endpoint: {addr}"))?;
 
-    let body =
-        serde_json::to_string(&request).context("Failed to serialize JSON-RPC request")?;
+    let body = serde_json::to_string(&request).context("Failed to serialize JSON-RPC request")?;
 
     let http_request = format!(
         "POST /jsonrpc HTTP/1.1\r\n\

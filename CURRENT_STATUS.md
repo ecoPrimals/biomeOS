@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 8, 2026 (v2.98: GAP-MATRIX-11 — BTSP insecure guard + security posture wired into all server startup paths, forwarding BTSP awareness enhanced)
-**Version**: 2.98
+**Updated**: April 8, 2026 (v2.99: Deep Debt Cleanup III — 3 more large files smart-refactored, all #[allow] → #[expect], comprehensive zero-debt audit)
+**Version**: 2.99
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,669 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,695 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -34,6 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **Deep Debt Overstep Cleanup III v2.99 (Apr 8)** | 3 large files smart-refactored: `rootfs/builder.rs` 846→12 LOC (5 submodules + test dir), `ai_advisor.rs` 836→53 LOC (5 submodules), `bootable.rs` 833→24 LOC (5 submodules + tests). All remaining `#[allow(` → `#[expect(` (4 migrated). Clippy modernizations: `.map().unwrap_or(false)` → `.is_some_and()`, `Copy::clone()` → deref, `"".to_string()` → `String::new()`. Comprehensive zero-debt audit confirms: 0 unsafe, 0 production mocks, 0 TODO/FIXME, 0 hardcoded primal names in production, 0 external C deps. 7,695 tests (0 failures), clippy PASS. |
 | **GAP-MATRIX-11 Resolution v2.98 (Apr 8)** | BTSP `validate_insecure_guard()` wired into all 3 server startup paths (`biomeos` main, `neural-api-server` binary, `NeuralApiServer::serve()`). `log_security_posture()` logs production/development/standalone mode on boot. Tower binary also wired. Forwarding BTSP detection enhanced with security mode context. 5 new tests. 7,669 tests (0 failures), clippy PASS. |
 | **Deep Debt Overstep Cleanup II v2.97 (Apr 8)** | `#![forbid(unsafe_code)]` added to all 20+ binary entry points, `main.rs` conditional forbid→unconditional, 6 submodule `deny→forbid` upgrades. `niche.rs` 8 hardcoded template IDs + 8 match arms→`primal_names::` constants. 3 large files smart-refactored: `genome-deploy/lib.rs` 860→35 LOC (`types.rs` + `deployer.rs` + `tests/`), `orchestrator.rs` 836→36 LOC (`lifecycle` + `health` + `deps` + `tests`), `discovery.rs` 843→94 LOC (`registry` + `primal` + `composite` + `tests`). `biomeos-spore` wildcard dev-dep version fixed. 7,660+ tests (0 failures), clippy PASS. |
 | **GAP-02 + GAP-09 Resolution v2.96 (Apr 8)** | **GAP-02:** `biomeos deploy` unified parser — tries `GraphLoader` (DeploymentGraph `[[graph.nodes]]`) first, falls back to `neural_graph::Graph` (`[[nodes]]`); 2 new tests. **GAP-09:** Attribution domain translation table corrected — `braid.create`/`braid.get` wire methods aligned with sweetGrass v0.7.5 API. `NeuralRouter::lazy_rescan_attempted` promoted to `pub(crate)` for test isolation; 2 environment-dependent tests hardened. 7,660 tests (0 failures), clippy PASS. |

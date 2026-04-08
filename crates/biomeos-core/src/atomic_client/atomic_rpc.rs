@@ -10,7 +10,10 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader
 use tracing::trace;
 
 /// Send one JSON-RPC request and read one newline-delimited response.
-pub(crate) async fn send_jsonrpc_line<S>(stream: S, request: JsonRpcRequest) -> Result<JsonRpcResponse>
+pub(crate) async fn send_jsonrpc_line<S>(
+    stream: S,
+    request: JsonRpcRequest,
+) -> Result<JsonRpcResponse>
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {

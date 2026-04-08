@@ -19,6 +19,9 @@
 
 pub mod boot_logger;
 pub mod bootable;
+
+#[cfg(test)]
+mod bootable_tests;
 pub mod init_console;
 pub mod init_error;
 pub mod init_filesystem;

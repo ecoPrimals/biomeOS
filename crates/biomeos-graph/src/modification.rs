@@ -12,8 +12,10 @@
 //! - Type-safe modifications
 //! - Comprehensive validation
 
+#![allow(dead_code, missing_docs)]
+
 use crate::graph::{CoordinationPattern, EdgeType, GraphEdge, PrimalGraph, PrimalNode};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -125,7 +127,7 @@ impl GraphModificationHandler {
             }
 
             GraphModification::ChangeCoordination { pattern } => {
-                new_graph.coordination = pattern.clone();
+                new_graph.coordination = *pattern;
             }
         }
 
@@ -147,9 +149,9 @@ impl GraphModificationHandler {
             match Self::apply(&current_graph, modification) {
                 Ok(result) => {
                     if result.success {
-                        current_graph = result
-                            .graph
-                            .expect("successful modification must have graph");
+                        current_graph = result.graph.unwrap_or_else(|| {
+                            unreachable!("successful modification always produces a graph")
+                        });
                         all_warnings.extend(result.warnings);
                     } else {
                         return Ok(ModificationResult::failure(format!(
@@ -391,6 +393,8 @@ impl GraphModificationHandler {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used, reason = "test")]
+
     use super::*;
     use crate::graph::{GraphId, Operation, PrimalSelector};
 
@@ -413,7 +417,7 @@ mod tests {
 
     fn create_test_graph() -> PrimalGraph {
         PrimalGraph {
-            id: GraphId::new("test_graph"),
+            id: GraphId::new("test_graph").unwrap(),
             name: "test_graph".to_string(),
             description: "Test graph".to_string(),
             version: "1.0.0".to_string(),
@@ -506,10 +510,12 @@ mod tests {
 
         let modified_graph = result.graph.unwrap();
         assert_eq!(modified_graph.edges.len(), 2);
-        assert!(modified_graph
-            .edges
-            .iter()
-            .any(|e| e.from == "node2" && e.to == "node3"));
+        assert!(
+            modified_graph
+                .edges
+                .iter()
+                .any(|e| e.from == "node2" && e.to == "node3")
+        );
     }
 
     #[test]

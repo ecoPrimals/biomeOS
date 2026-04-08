@@ -24,22 +24,20 @@ pub async fn probe_unix_socket_capabilities_list(socket_path: impl AsRef<Path>) 
 
     // Try plural first (biomeOS convention), then singular (primal convention).
     for method in &["capabilities.list", "capability.list"] {
-        let stream = match tokio::time::timeout(
-            timeouts::PROBE_TIMEOUT,
-            UnixStream::connect(socket_path),
-        )
-        .await
-        {
-            Ok(Ok(s)) => s,
-            Ok(Err(e)) => {
-                debug!("probe {}: connect failed: {}", socket_path_str, e);
-                return vec![];
-            }
-            Err(_) => {
-                debug!("probe {}: connect timed out", socket_path_str);
-                return vec![];
-            }
-        };
+        let stream =
+            match tokio::time::timeout(timeouts::PROBE_TIMEOUT, UnixStream::connect(socket_path))
+                .await
+            {
+                Ok(Ok(s)) => s,
+                Ok(Err(e)) => {
+                    debug!("probe {}: connect failed: {}", socket_path_str, e);
+                    return vec![];
+                }
+                Err(_) => {
+                    debug!("probe {}: connect timed out", socket_path_str);
+                    return vec![];
+                }
+            };
 
         let request = serde_json::json!({
             "jsonrpc": "2.0",
@@ -291,10 +289,7 @@ mod tests {
             ]
         });
         let caps = extract_capabilities_from_response(&resp);
-        assert_eq!(
-            caps,
-            vec!["crypto.sign", "crypto.verify", "crypto.encrypt"]
-        );
+        assert_eq!(caps, vec!["crypto.sign", "crypto.verify", "crypto.encrypt"]);
     }
 
     // ── Format B: mixed strings and objects in result array ──
@@ -357,7 +352,12 @@ mod tests {
         caps.sort();
         assert_eq!(
             caps,
-            vec!["crypto.encrypt", "crypto.sign", "crypto.verify", "tls.derive_secrets"]
+            vec![
+                "crypto.encrypt",
+                "crypto.sign",
+                "crypto.verify",
+                "tls.derive_secrets"
+            ]
         );
     }
 
@@ -372,10 +372,7 @@ mod tests {
                 }
             }
         });
-        assert_eq!(
-            extract_capabilities_from_response(&resp),
-            vec!["beacon"]
-        );
+        assert_eq!(extract_capabilities_from_response(&resp), vec!["beacon"]);
     }
 
     // ── Legacy: result.methods ──
@@ -436,19 +433,22 @@ mod tests {
         });
         let mut caps = extract_capabilities_from_response(&resp);
         caps.sort();
-        assert_eq!(caps, vec![
-            "beacon",
-            "beacon.generate",
-            "beacon.get_id",
-            "crypto",
-            "crypto.blake3_hash",
-            "crypto.hmac_sha256",
-            "security",
-            "security.decrypt",
-            "security.encrypt",
-            "security.sign",
-            "security.verify",
-        ]);
+        assert_eq!(
+            caps,
+            vec![
+                "beacon",
+                "beacon.generate",
+                "beacon.get_id",
+                "crypto",
+                "crypto.blake3_hash",
+                "crypto.hmac_sha256",
+                "security",
+                "security.decrypt",
+                "security.encrypt",
+                "security.sign",
+                "security.verify",
+            ]
+        );
     }
 
     #[test]

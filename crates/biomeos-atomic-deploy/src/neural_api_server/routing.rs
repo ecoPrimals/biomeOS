@@ -20,9 +20,8 @@ fn dispatch(result: Result<Value, anyhow::Error>, id: &Value) -> DispatchOutcome
             // Without this, a primal returning -32601 "method not found" would be
             // swallowed into a generic -32603 "Internal error", making the caller
             // unable to distinguish "primal rejected request" from "primal is down".
-            if let Some(biomeos_types::IpcError::JsonRpcError {
-                code, message, ..
-            }) = e.downcast_ref::<biomeos_types::IpcError>()
+            if let Some(biomeos_types::IpcError::JsonRpcError { code, message, .. }) =
+                e.downcast_ref::<biomeos_types::IpcError>()
             {
                 return DispatchOutcome::ApplicationError {
                     code: *code,

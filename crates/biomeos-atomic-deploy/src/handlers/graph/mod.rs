@@ -194,9 +194,7 @@ impl GraphHandler {
                             "tags": []
                         }));
                     }
-                } else if let Ok(dg) =
-                    biomeos_graph::GraphLoader::from_file(&path)
-                {
+                } else if let Ok(dg) = biomeos_graph::GraphLoader::from_file(&path) {
                     let def = &dg.definition;
                     let id_str = def.id.as_str().to_string();
                     if seen_ids.insert(id_str.clone()) {

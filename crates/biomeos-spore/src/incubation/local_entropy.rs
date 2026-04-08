@@ -179,8 +179,12 @@ impl LocalEntropy {
         let hash = format!("{:x}", hasher.finalize());
         Ok(format!(
             "{:02}:{:02}:{:02}:{:02}:{:02}:{:02}",
-            &hash[0..2], &hash[2..4], &hash[4..6],
-            &hash[6..8], &hash[8..10], &hash[10..12]
+            &hash[0..2],
+            &hash[2..4],
+            &hash[4..6],
+            &hash[6..8],
+            &hash[8..10],
+            &hash[10..12]
         ))
     }
 

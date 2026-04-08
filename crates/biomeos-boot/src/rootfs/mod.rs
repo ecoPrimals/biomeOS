@@ -13,6 +13,9 @@ mod dns;
 mod nbd;
 
 #[cfg(test)]
+mod builder_tests;
+
+#[cfg(test)]
 mod tests;
 
 pub use builder::RootFsBuilder;

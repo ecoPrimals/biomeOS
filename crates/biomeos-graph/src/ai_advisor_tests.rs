@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! AI advisor tests (extracted from ai_advisor.rs).
-
 #![expect(clippy::unwrap_used, reason = "test")]
+#![expect(clippy::float_cmp, reason = "exact f64 comparison in test fixtures")]
 
 use super::*;
-use crate::events::GraphEvent;
-use crate::graph::{CoordinationPattern, EdgeType, GraphEdge, GraphId};
+use crate::{
+    events::GraphEvent,
+    graph::{
+        CoordinationPattern, EdgeType, GraphEdge, GraphId, Operation, PrimalGraph, PrimalNode,
+        PrimalSelector,
+    },
+};
 use chrono::Utc;
 
 fn create_test_graph() -> PrimalGraph {
     PrimalGraph {
-        id: GraphId::new("test"),
+        id: GraphId::new("test").unwrap(),
         name: "test".to_string(),
         description: "Test graph".to_string(),
         version: "1.0.0".to_string(),
@@ -64,14 +68,12 @@ fn create_test_graph() -> PrimalGraph {
         edges: vec![],
     }
 }
-
 #[test]
 fn test_advisor_creation() {
     let advisor = AiGraphAdvisor::new();
     assert!(!advisor.squirrel_available);
     assert_eq!(advisor.local_patterns.len(), 3);
 }
-
 #[test]
 fn test_graph_snapshot() {
     let graph = create_test_graph();
@@ -84,7 +86,6 @@ fn test_graph_snapshot() {
     assert_eq!(snapshot.capabilities.get("storage"), Some(&1));
     assert_eq!(snapshot.capabilities.get("network"), Some(&1));
 }
-
 #[test]
 fn test_detect_parallelization() {
     let advisor = AiGraphAdvisor::new();
@@ -101,7 +102,6 @@ fn test_detect_parallelization() {
     assert!(suggestion.confidence > 0.8);
     assert!(!suggestion.evidence.is_empty());
 }
-
 #[test]
 fn test_detect_missing_error_handling() {
     let advisor = AiGraphAdvisor::new();
@@ -131,7 +131,6 @@ fn test_detect_missing_error_handling() {
     let suggestion = suggestion.unwrap();
     assert_eq!(suggestion.suggestion_type, SuggestionType::BestPractice);
 }
-
 #[tokio::test]
 async fn test_get_local_suggestions() {
     let advisor = AiGraphAdvisor::new();
@@ -140,7 +139,6 @@ async fn test_get_local_suggestions() {
     let suggestions = advisor.get_local_suggestions(&graph);
     assert!(!suggestions.is_empty());
 }
-
 #[tokio::test]
 async fn test_check_availability_graceful_failure() {
     let mut advisor = AiGraphAdvisor::new();
@@ -149,7 +147,6 @@ async fn test_check_availability_graceful_failure() {
     assert!(result.is_ok());
     assert!(!advisor.squirrel_available);
 }
-
 #[tokio::test]
 async fn test_get_suggestions_without_squirrel() {
     let advisor = AiGraphAdvisor::new();
@@ -161,13 +158,11 @@ async fn test_get_suggestions_without_squirrel() {
     let suggestions = result.unwrap();
     assert!(!suggestions.is_empty());
 }
-
 #[test]
 fn test_ai_advisor_default() {
     let advisor = AiGraphAdvisor::default();
     assert!(!advisor.squirrel_available);
 }
-
 #[test]
 fn test_suggestion_type_serde_roundtrip() {
     for st in [
@@ -183,7 +178,6 @@ fn test_suggestion_type_serde_roundtrip() {
         assert_eq!(st, restored);
     }
 }
-
 #[test]
 fn test_impact_estimate_serde_roundtrip() {
     let impact = ImpactEstimate {
@@ -197,13 +191,12 @@ fn test_impact_estimate_serde_roundtrip() {
     assert_eq!(impact.performance, restored.performance);
     assert_eq!(impact.summary, restored.summary);
 }
-
 #[test]
 fn test_graph_snapshot_by_id_and_by_capabilities_keys() {
     let graph = PrimalGraph {
-        id: GraphId::new("g"),
+        id: GraphId::new("g").unwrap(),
         name: "g".to_string(),
-        description: "".to_string(),
+        description: String::new(),
         version: "1".to_string(),
         coordination: CoordinationPattern::Sequential,
         nodes: vec![
@@ -243,7 +236,6 @@ fn test_graph_snapshot_by_id_and_by_capabilities_keys() {
     assert!(snap.capabilities.contains_key("beardog"));
     assert!(snap.capabilities.contains_key("x+y"));
 }
-
 #[test]
 fn test_detect_parallelization_skipped_when_edges_present() {
     let advisor = AiGraphAdvisor::new();
@@ -255,14 +247,13 @@ fn test_detect_parallelization_skipped_when_edges_present() {
     });
     assert!(advisor.detect_parallelization_opportunity(&graph).is_none());
 }
-
 #[test]
 fn test_detect_coordination_dag_when_parallel_has_many_edges() {
     let advisor = AiGraphAdvisor::new();
     let graph = PrimalGraph {
-        id: GraphId::new("dag"),
+        id: GraphId::new("dag").unwrap(),
         name: "dag".to_string(),
-        description: "".to_string(),
+        description: String::new(),
         version: "1".to_string(),
         coordination: CoordinationPattern::Parallel,
         nodes: vec![
@@ -317,14 +308,13 @@ fn test_detect_coordination_dag_when_parallel_has_many_edges() {
     assert!(s.is_some());
     assert_eq!(s.unwrap().suggestion_type, SuggestionType::Optimization);
 }
-
 #[test]
 fn test_detect_single_node_with_edge_suggests_remove_edge() {
     let advisor = AiGraphAdvisor::new();
     let graph = PrimalGraph {
-        id: GraphId::new("one"),
+        id: GraphId::new("one").unwrap(),
         name: "one".to_string(),
-        description: "".to_string(),
+        description: String::new(),
         version: "1".to_string(),
         coordination: CoordinationPattern::Sequential,
         nodes: vec![PrimalNode {
@@ -351,7 +341,6 @@ fn test_detect_single_node_with_edge_suggests_remove_edge() {
     assert!(s.is_some());
     assert_eq!(s.unwrap().suggestion_type, SuggestionType::BestPractice);
 }
-
 #[tokio::test]
 async fn test_learn_from_event_graph_events_ok() {
     let advisor = AiGraphAdvisor::new();
@@ -374,7 +363,6 @@ async fn test_learn_from_event_graph_events_ok() {
     };
     assert!(advisor.learn_from_event(&decision).await.is_ok());
 }
-
 #[tokio::test]
 async fn test_advisor_with_timeout_constructor() {
     let advisor = AiGraphAdvisor::with_timeout(std::time::Duration::from_millis(200));
@@ -382,7 +370,6 @@ async fn test_advisor_with_timeout_constructor() {
     let r = advisor.get_suggestions(&graph).await;
     assert!(r.is_ok());
 }
-
 #[test]
 fn test_suggestion_feedback_serde_roundtrip() {
     let fb = SuggestionFeedback {

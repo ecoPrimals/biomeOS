@@ -147,11 +147,9 @@ impl AtomicClient {
     ) -> Result<Self> {
         debug!("Discovering primal by capability: {}", capability);
 
-        if let Some(endpoint) = atomic_discovery::discover_capability_registry_endpoint(
-            capability,
-            opts.family_id,
-        )
-        .await
+        if let Some(endpoint) =
+            atomic_discovery::discover_capability_registry_endpoint(capability, opts.family_id)
+                .await
         {
             return Ok(Self::from_endpoint(endpoint));
         }
@@ -442,8 +440,7 @@ impl AtomicClient {
                 atomic_rpc::pump_ndjson_stream(stream, request, &tx).await
             }
             TransportEndpoint::TcpSocket { host, port } => {
-                let stream =
-                    atomic_transport::connect_tcp_timed(host, *port, timeout_dur).await?;
+                let stream = atomic_transport::connect_tcp_timed(host, *port, timeout_dur).await?;
                 atomic_rpc::pump_ndjson_stream(stream, request, &tx).await
             }
             #[cfg(target_os = "linux")]

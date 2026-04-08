@@ -116,7 +116,9 @@ impl UniversalBiomeOSManager {
                 capabilities: vec![],
                 health: Health::Healthy,
             })
-        } else if Path::new(endpoint).extension().is_some_and(|ext| ext == "sock")
+        } else if Path::new(endpoint)
+            .extension()
+            .is_some_and(|ext| ext == "sock")
             || endpoint.starts_with('/')
         {
             probe_unix_endpoint(endpoint).await
@@ -468,27 +470,24 @@ async fn probe_unix_endpoint(socket_path: &str) -> Result<ProbeResult> {
     let _ = reader.get_mut().flush().await;
 
     let mut resp_line = String::new();
-    let (name, version) = match tokio::time::timeout(
-        timeouts::PROBE_TIMEOUT,
-        reader.read_line(&mut resp_line),
-    )
-    .await
-    {
-        Ok(Ok(n)) if n > 0 => {
-            let v: serde_json::Value = serde_json::from_str(&resp_line).unwrap_or_default();
-            let name = v["result"]["name"]
-                .as_str()
-                .or_else(|| v["result"]["primal"].as_str())
-                .unwrap_or("unknown")
-                .to_string();
-            let version = v["result"]["version"]
-                .as_str()
-                .unwrap_or("unknown")
-                .to_string();
-            (name, version)
-        }
-        _ => ("unknown".to_string(), "unknown".to_string()),
-    };
+    let (name, version) =
+        match tokio::time::timeout(timeouts::PROBE_TIMEOUT, reader.read_line(&mut resp_line)).await
+        {
+            Ok(Ok(n)) if n > 0 => {
+                let v: serde_json::Value = serde_json::from_str(&resp_line).unwrap_or_default();
+                let name = v["result"]["name"]
+                    .as_str()
+                    .or_else(|| v["result"]["primal"].as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let version = v["result"]["version"]
+                    .as_str()
+                    .unwrap_or("unknown")
+                    .to_string();
+                (name, version)
+            }
+            _ => ("unknown".to_string(), "unknown".to_string()),
+        };
 
     // --- capabilities.list ---
     let caps = crate::socket_discovery::probe_unix_socket_capabilities_list(path).await;

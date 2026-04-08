@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.99 (2026-04-08) — Deep Debt Overstep Cleanup III: Smart Refactors, Lint Hardening, Idiomatic Rust
+
+### Smart refactors (3 large files)
+| File | Before | After | Extracted Modules |
+|------|--------|-------|-------------------|
+| `biomeos-boot/src/rootfs/builder.rs` | 846 LOC | 12 LOC | `builder/types.rs`, `builder/image.rs`, `builder/install.rs`, `builder/configure.rs`, `builder_tests/{mod,dns,install}.rs` |
+| `biomeos-graph/src/ai_advisor.rs` | 836 LOC | 53 LOC | `ai_advisor_core.rs`, `ai_advisor_discovery.rs`, `ai_advisor_local.rs`, `ai_advisor_types.rs`, `ai_advisor_tests.rs` |
+| `biomeos-boot/src/bootable.rs` | 833 LOC | 24 LOC | `bootable/builder.rs`, `bootable/copy.rs`, `bootable/grub.rs`, `bootable/iso.rs`, `bootable/types.rs`, `bootable_tests.rs` |
+
+### Lint hardening
+- All remaining `#[allow(` attributes (4 total) migrated to `#[expect(` with documented reasons
+- `cfg_attr(not(test), expect(...))` pattern used for test-conditional dead code
+- `modification.rs` Clippy fixes: `pattern.clone()` → `*pattern` (Copy type), `expect()` → `unwrap_or_else(|| unreachable!())`
+- `ai_advisor_core.rs`: `.map().unwrap_or(false)` → `.is_some_and()`
+- `ai_advisor_local.rs`: unused `self` arguments acknowledged
+- `ai_advisor_tests.rs`: `"".to_string()` → `String::new()`
+
+### Comprehensive audit (clean)
+- **Unsafe code**: 0 blocks/functions in production (verified)
+- **Mocks in production**: 0 (all behind `#[cfg(test)]`)
+- **TODO/FIXME/HACK**: 0
+- **Hardcoded primal names**: 0 in production (all use `primal_names::*` constants; test fixtures acceptable)
+- **External C deps**: Only transitive `linux-raw-sys` + `netlink-sys` (kernel interfaces, acceptable)
+- **Commented-out code**: 5 lines in 2 files — intentional BEFORE/AFTER doc examples (kept)
+
+### Tests
+- **7,695** tests passing (0 failures)
+- Zero clippy warnings
+
+---
+
 ## v2.98 (2026-04-08) — GAP-MATRIX-11: BTSP Insecure Guard + Security Posture Wiring
 
 ### GAP-MATRIX-11 (Medium) — Socket naming alignment live-wired
