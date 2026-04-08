@@ -866,16 +866,16 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 2. ~~**ARM64 biomeOS genomeBin**~~ - ✅ Built (`aarch64-unknown-linux-musl`, 9.6 MB stripped, static)
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
-5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v2.84, 7,723 tests) |
+5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v2.99, 7,695 tests) |
 
 ### Low Priority
 1. **API key encryption** - NestGate + BearDog secured storage
 
 ---
 
-## Test Coverage Analysis (llvm-cov, Apr 2, 2026)
+## Test Coverage Analysis (llvm-cov, Apr 8, 2026)
 
-**Overall**: 89.85% region / 90.78% function / 90.02% line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,723 total tests including doc-tests and proptests)
+**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,695 total tests including doc-tests and proptests)
 
 ### Coverage Distribution
 
@@ -959,7 +959,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,723 tests — fully concurrent)
+# Test (7,695 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -981,8 +981,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.97 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
-**Tests**: 7,660+ passing, 0 failures, fully concurrent
+**Status**: Production Ready (v2.99 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Tests**: 7,695 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
