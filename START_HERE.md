@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: April 8, 2026
-**Status**: Production Ready (v2.95) — 7,658 tests (0 failures, 0 ignored, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery, `-D warnings`), 0 C deps, 0 unsafe prod, 0 deprecated APIs, 0 TODO/FIXME, capability-based discovery compliant, workspace dependency governance (`workspace = true`), 0 blocking debt, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v2.97) — 7,660+ tests (0 failures, 0 ignored, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery, `-D warnings`), 0 C deps, 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, capability-based discovery compliant, workspace dependency governance (`workspace = true`), 0 blocking debt, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.91 — zero blocking debt)
+**Status**: Production Ready (v2.97 — zero blocking debt)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
@@ -176,5 +176,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile)
 **Primals**: 7/7 ecoBin v3.0 compliant
-**Tests**: 7,658 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0
+**Tests**: 7,660+ passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0
 **Updated**: April 6, 2026

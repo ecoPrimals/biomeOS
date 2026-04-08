@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v2.95) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v2.97) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---

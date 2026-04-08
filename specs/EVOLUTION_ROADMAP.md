@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: April 1, 2026 (deep debt evolution: capability-based discovery, deprecated stubs evolved, large file refactoring)
+**Updated**: April 8, 2026 (v2.97: deep debt evolution complete — capability-based discovery, deprecated stubs evolved, large file refactoring, unsafe hardening, smart refactors, agnostic naming)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
