@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+#![forbid(unsafe_code)]
+
 //! Test Coverage Analyzer
 //! 
 //! Pure Rust test coverage analysis and reporting tool.

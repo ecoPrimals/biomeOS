@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+#![forbid(unsafe_code)]
+
 //! biomeOS Device Management Server
 //!
 //! JSON-RPC server that provides device.management capability for petalTongue integration.

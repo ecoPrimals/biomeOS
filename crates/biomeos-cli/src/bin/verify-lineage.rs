@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+#![forbid(unsafe_code)]
+
 //! Verify genetic lineage between spores using BearDog.
 //!
 //! Thin binary entry point that delegates to

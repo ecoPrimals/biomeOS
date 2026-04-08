@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 8, 2026 (v2.96: GAP-02 + GAP-09 resolved — deploy path unified to accept both graph formats, capability translation wire methods corrected for sweetGrass braid domain, environment-dependent test flakiness eliminated)
-**Version**: 2.96
+**Updated**: April 8, 2026 (v2.97: Deep debt overstep cleanup II — #![forbid(unsafe_code)] on all 20+ binaries, 3 large files smart-refactored, hardcoded primal names eliminated in niche templates, deny→forbid upgraded in 6 submodules, spore wildcard version fixed)
+**Version**: 2.97
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,9 +17,9 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,660 lib + bin + doc + proptest (0 failures, 0 ignored, fully concurrent) |
+| **Tests Passing** | 7,660+ lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
-| **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots including CLI bin, `mem::forget` eliminated) |
+| **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
 | **C dependencies** | 0 (zstd-sys eliminated → lz4_flex, deny.toml enforced) |

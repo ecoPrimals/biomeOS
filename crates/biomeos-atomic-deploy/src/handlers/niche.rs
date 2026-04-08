@@ -15,6 +15,7 @@
 use crate::neural_graph::Graph;
 use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
+use biomeos_types::primal_names;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -137,7 +138,7 @@ impl NicheHandler {
                 ]
             }),
             json!({
-                "id": "ludospring",
+                "id": primal_names::LUDOSPRING,
                 "name": "Game Science",
                 "description": "ludoSpring game science primal atop Node Atomic",
                 "category": "science",
@@ -151,7 +152,7 @@ impl NicheHandler {
                 "parameters": []
             }),
             json!({
-                "id": "petaltongue",
+                "id": primal_names::PETALTONGUE,
                 "name": "Visualization",
                 "description": "petalTongue universal visualization primal",
                 "category": "visualization",
@@ -216,7 +217,7 @@ impl NicheHandler {
                 "parameters": []
             }),
             json!({
-                "id": "hotspring",
+                "id": primal_names::HOTSPRING,
                 "name": "Physics Simulation",
                 "description": "hotSpring computational physics primal (MD, lattice QCD, transport)",
                 "category": "science",
@@ -230,7 +231,7 @@ impl NicheHandler {
                 "parameters": []
             }),
             json!({
-                "id": "groundspring",
+                "id": primal_names::GROUNDSPRING,
                 "name": "Measurement Science",
                 "description": "groundSpring measurement and sensing primal (stats, FAO-56, seismic, ESN)",
                 "category": "science",
@@ -244,7 +245,7 @@ impl NicheHandler {
                 "parameters": []
             }),
             json!({
-                "id": "healthspring",
+                "id": primal_names::HEALTHSPRING,
                 "name": "Medical Science",
                 "description": "healthSpring medical primal (PK/PD, biosignal, microbiome, NLME)",
                 "category": "medical",
@@ -383,7 +384,7 @@ impl NicheHandler {
                 ]
             }),
             json!({
-                "id": "airspring",
+                "id": primal_names::AIRSPRING,
                 "name": "Ecology & Agriculture",
                 "description": "airSpring ecology primal (ET₀, water balance, crop modeling, soil moisture)",
                 "category": "science",
@@ -397,7 +398,7 @@ impl NicheHandler {
                 "parameters": []
             }),
             json!({
-                "id": "wetspring",
+                "id": primal_names::WETSPRING,
                 "name": "Life Science",
                 "description": "wetSpring life science primal (microbial ecology, analytical chemistry, FASTQ diversity)",
                 "category": "science",
@@ -411,7 +412,7 @@ impl NicheHandler {
                 "parameters": []
             }),
             json!({
-                "id": "neuralspring",
+                "id": primal_names::NEURALSPRING,
                 "name": "Machine Learning",
                 "description": "neuralSpring ML surrogates primal (spectral analysis, Anderson, Hessian, isomorphic learning)",
                 "category": "science",
@@ -447,14 +448,14 @@ impl NicheHandler {
             "ui-atomic" => "ui_atomic",
             "livespore" => "livespore_create",
             "gaming" => "gaming_niche_deploy",
-            "ludospring" => "ludospring_deploy",
-            "petaltongue" => "petaltongue_deploy",
+            primal_names::LUDOSPRING => "ludospring_deploy",
+            primal_names::PETALTONGUE => "petaltongue_deploy",
             "game-engine-tick" => "game_engine_tick",
             "surgical-vr" => "surgical_vr_deploy",
             "ecology-pipeline" => "cross_spring_ecology",
-            "hotspring" => "hotspring_deploy",
-            "groundspring" => "groundspring_deploy",
-            "healthspring" => "healthspring_deploy",
+            primal_names::HOTSPRING => "hotspring_deploy",
+            primal_names::GROUNDSPRING => "groundspring_deploy",
+            primal_names::HEALTHSPRING => "healthspring_deploy",
             "rootpulse" => "rootpulse_commit",
             "provenance-pipeline" => "provenance_pipeline",
             "rootpulse-branch" => "rootpulse_branch",
@@ -462,9 +463,9 @@ impl NicheHandler {
             "rootpulse-diff" => "rootpulse_diff",
             "rootpulse-federate" => "rootpulse_federate",
             "soil-microbiome" => "cross_spring_soil_microbiome",
-            "airspring" => "airspring_deploy",
-            "wetspring" => "wetspring_deploy",
-            "neuralspring" => "neuralspring_deploy",
+            primal_names::AIRSPRING => "airspring_deploy",
+            primal_names::WETSPRING => "wetspring_deploy",
+            primal_names::NEURALSPRING => "neuralspring_deploy",
             _ => anyhow::bail!("Unknown template: {template_id}"),
         };
 

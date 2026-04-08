@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.97 (2026-04-08) — Deep Debt Overstep Cleanup II: Safety Hardening, Smart Refactors, Agnostic Names
+
+### Safety hardening
+- `#![forbid(unsafe_code)]` added to **all 20+ binary entry points** (neural-api-server, neural-deploy, biomeos-rootfs, init, mkboot, verify-lineage, tower, biomeos-deploy, biomeos-verify, device_management_server, gaming-mesh, p2p-secure, harvest, all_demos, comprehensive_ecosystem_demo, ecosystem_health, integration_test_runner, songbird_universal_ui_demo, test_coverage)
+- `biomeos/src/main.rs` conditional `cfg_attr(not(test), forbid(...))` upgraded to unconditional `#![forbid(unsafe_code)]`
+- 6 submodule `#![deny(unsafe_code)]` attributes upgraded to `#![forbid(unsafe_code)]` for consistency
+
+### Hardcoding → primal_names constants
+- `niche.rs`: 8 template IDs (airspring, wetspring, neuralspring, hotspring, groundspring, healthspring, ludospring, petaltongue) and 8 deploy routing match arms → `primal_names::` constants
+
+### Smart refactors (3 large files)
+| File | Before | After | Extracted Modules |
+|------|--------|-------|-------------------|
+| `genome-deploy/src/lib.rs` | 860 LOC | 35 LOC | `types.rs`, `deployer.rs`, `tests/{mod,types_tests,deployer_tests,helpers}.rs` |
+| `primal_orchestrator/orchestrator.rs` | 836 LOC | 36 LOC | `orchestrator_lifecycle.rs`, `orchestrator_health.rs`, `dependency_resolution.rs`, `orchestrator_tests.rs` |
+| `neural_router/discovery.rs` | 843 LOC | 94 LOC | `discovery_registry.rs`, `discovery_primal.rs`, `discovery_composite.rs`, `discovery_tests.rs` |
+
+### Dependency cleanup
+- `biomeos-spore` self-referencing dev-dep: added explicit `version = "0.1.0"` to satisfy `cargo deny`
+- blake3 `cc` build-dep verified: `pure` feature means no C compilation; `cc` crate is build-tool only
+
+### Tests
+- All tests passing (0 failures)
+- Zero clippy warnings
+
+---
+
 ## v2.96 (2026-04-08) — GAP-02 + GAP-09: Deploy Parser Unification & Wire Method Correction
 
 ### GAP-02 (Medium) — Deploy path unified for both graph formats

@@ -10,9 +10,15 @@
 //! - Concurrent health monitoring
 //! - Automatic recovery
 
+mod dependency_resolution;
 mod health_monitor;
 mod orchestrator;
+mod orchestrator_health;
+mod orchestrator_lifecycle;
 mod state;
+
+#[cfg(test)]
+mod orchestrator_tests;
 
 pub use health_monitor::{PrimalHealthMonitor, PrimalHealthMonitorBuilder};
 pub use orchestrator::PrimalOrchestrator;

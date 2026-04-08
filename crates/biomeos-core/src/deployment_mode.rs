@@ -18,7 +18,7 @@
 //! - **Pure Rust**: No unsafe code, no external dependencies for detection
 //! - **Graceful**: Works in all environments, degrades gracefully
 
-#![deny(unsafe_code)] // Fast AND safe: Zero unsafe code, pure Rust system detection
+#![forbid(unsafe_code)] // Fast AND safe: Zero unsafe code, pure Rust system detection
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

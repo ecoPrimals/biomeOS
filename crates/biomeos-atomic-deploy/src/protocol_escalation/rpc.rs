@@ -3,7 +3,7 @@
 
 //! JSON-RPC transport and primal queries used during protocol escalation (JSON-RPC → tarpc).
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 use serde_json::{Value, json};
 use std::path::PathBuf;

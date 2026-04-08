@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+#![forbid(unsafe_code)]
+
 //! BiomeOS Federation Deployment CLI
 //!
 //! Pure Rust replacement for deploy-federation.sh

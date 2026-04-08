@@ -22,7 +22,7 @@
 //!     └── metrics: ConnectionMetrics (per-connection)
 //! ```
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

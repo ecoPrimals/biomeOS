@@ -6,7 +6,7 @@
 //! This module implements the escalation engine that manages runtime
 //! escalation of primal connections from JSON-RPC to tarpc.
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 use serde_json::Value;
 use std::sync::Arc;

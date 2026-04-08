@@ -14,7 +14,7 @@
 //! - `protocol.metrics` - Get metrics for a connection
 //! - `graph.protocol_map` - Get full Living Graph snapshot
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 use anyhow::{Result, anyhow};
 use serde_json::{Value, json};

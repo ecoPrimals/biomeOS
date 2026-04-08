@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+#![forbid(unsafe_code)]
+
 //! Tower CLI - Thin binary wrapper over `biomeos_core::tower_orchestration`.
 
 use std::path::PathBuf;

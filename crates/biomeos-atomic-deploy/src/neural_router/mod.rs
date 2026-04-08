@@ -8,9 +8,12 @@
 //!
 //! Pure Rust implementation of capability-based primal routing.
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 mod discovery;
+mod discovery_composite;
+mod discovery_primal;
+mod discovery_registry;
 mod forwarding;
 #[cfg(test)]
 mod forwarding_routing_tests;

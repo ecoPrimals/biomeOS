@@ -51,7 +51,7 @@ test-support = []
 default = []
 
 [dev-dependencies]
-biomeos-spore = { path = ".", features = ["test-support"] }
+biomeos-spore = { path = ".", version = "0.1.0", features = ["test-support"] }
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
