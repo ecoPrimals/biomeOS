@@ -98,19 +98,19 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated Mar 18, 2026)
+## 5. Deep Debt Metrics (Updated Apr 8, 2026)
 
 | Metric | Value |
 |--------|-------|
 | TODO markers in Rust source | 0 |
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND | 0 |
-| Unsafe code | 2 (test-only: `env::set_var` in Rust 2024) |
-| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 23 crates via workspace lint inheritance) |
+| Unsafe code | 0 (`#[forbid(unsafe_code)]` on all 26 crate roots + 4 binary roots, `mem::forget` eliminated) |
+| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 26 crates via workspace lint inheritance) |
 | Production unwrap() | 0 (all in test code) |
 | Shell-outs from Rust | 3 (`sudo ip link/addr/set` in deploy/network.rs -- requires root) |
-| `deny(unsafe_code)` / `forbid(unsafe_code)` crates | all production crates |
-| Mocks in production | 0 |
+| `deny(unsafe_code)` / `forbid(unsafe_code)` crates | all production crates + binary roots |
+| Mocks in production | 0 (test_support gated behind feature flag) |
 | Proptest IPC fuzz tests | 8 |
 | C-dep crates banned (deny.toml) | 15 |
 | Tests | 4,275 (0 failures, 167 ignored) |

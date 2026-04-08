@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v2.91)
+## Status: Production Ready (v2.95)
 
 | Metric | Value |
 |--------|-------|
@@ -12,8 +12,8 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
-| Tests | 7,638 passing (0 failures, 0 ignored, fully concurrent) — 90%+ line / function / region (llvm-cov) |
-| Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots) |
+| Tests | 7,658 passing (0 failures, 0 ignored, fully concurrent) — 90%+ line / function / region (llvm-cov) |
+| Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots including CLI bin) |
 | C Dependencies | 0 (blake3 pure, deny.toml enforced bans) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
 | Formatting | PASS |
@@ -252,7 +252,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,638 tests across 26 crates, fully concurrent)
+### Test (7,658 tests across 26 crates, fully concurrent)
 
 ```bash
 cargo test --workspace
@@ -346,9 +346,9 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v2.91)
+**Status**: Production Ready (v2.95)
 **Updated**: April 6, 2026
-**Tests**: 7,638 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, `-D warnings` | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
+**Tests**: 7,658 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, `-D warnings` | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---

@@ -1,7 +1,7 @@
 # biomeOS Scripts
 
 **Status**: Most scripts are deprecated — deployment is via `biomeos nucleus start` (Pure Rust)  
-**Updated**: March 31, 2026
+**Updated**: April 8, 2026
 
 ---
 
@@ -23,7 +23,7 @@
 | `stop_ecosystem.sh` | `biomeos nucleus stop` / `LifecycleManager::shutdown_all()` |
 | `deploy-*-lineage.sh` | Neural API graph-based deployment (`graphs/*.toml`) |
 | `harvest-primals.sh` | `tools/harvest` (biomeos-harvest binary) — `cargo run -p biomeos-harvest` |
-| `validate_*.sh` | `cargo test --workspace` (7,135 tests) |
+| `validate_*.sh` | `cargo test --workspace` (7,658 tests) |
 
 The Rust replacement (`biomeos nucleus start`) provides:
 - Binary discovery across `livespore-usb/`, `plasmidBin/`, `target/release/`, `$PATH`

@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: April 6, 2026
+**Updated**: April 8, 2026
 
 ---
 
@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v2.91) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v2.95) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -130,7 +130,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (7,638 tests — 0 ignored — fully concurrent)
+# Test (7,658 tests — 0 ignored — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -159,4 +159,4 @@ See `ARCHIVE_INDEX.md` in archive for details.
 **Active: 24 specs, handoffs in wateringHole (v2.43–v2.91), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed**
-**Tests: 7,638 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0**
+**Tests: 7,658 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0**
