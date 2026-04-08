@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 8, 2026 (v2.95: Deep debt overstep cleanup — unsafe code evolved, hardcoded primal names eliminated, production mocks isolated, entropy stubs evolved to real sysfs, dead code suppressions wired into pipeline, 3 large files smart-refactored, xattr/rustix duplicate eliminated, getrandom 0.2 direct dep removed)
-**Version**: 2.95
+**Updated**: April 8, 2026 (v2.96: GAP-02 + GAP-09 resolved — deploy path unified to accept both graph formats, capability translation wire methods corrected for sweetGrass braid domain, environment-dependent test flakiness eliminated)
+**Version**: 2.96
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,658 lib + bin + doc + proptest (0 failures, 0 ignored, fully concurrent) |
+| **Tests Passing** | 7,660 lib + bin + doc + proptest (0 failures, 0 ignored, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots including CLI bin, `mem::forget` eliminated) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |

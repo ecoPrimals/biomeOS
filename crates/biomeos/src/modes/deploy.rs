@@ -6,9 +6,10 @@
 //! Uses biomeos-graph for type-safe TOML graph loading and validation.
 
 use anyhow::{Context, Result};
+use biomeos_atomic_deploy::neural_graph::Graph as NeuralGraph;
 use biomeos_graph::GraphLoader;
 use std::path::PathBuf;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 /// Minimal valid graph TOML for testing
 #[cfg(test)]
@@ -24,6 +25,73 @@ name = "Node A"
 capability = "test.capability"
 "#;
 
+/// Minimal valid graph in neural_graph format for testing
+#[cfg(test)]
+pub(crate) const MINIMAL_NEURAL_GRAPH: &str = r#"
+[graph]
+id = "test-neural"
+version = "1.0.0"
+description = "Test neural-format graph"
+coordination = "Sequential"
+
+[[nodes]]
+id = "node-a"
+capabilities = ["test.capability"]
+
+[nodes.operation]
+name = "start"
+"#;
+
+struct LoadedGraphInfo {
+    id: String,
+    node_count: usize,
+    node_summaries: Vec<(String, String)>,
+}
+
+fn load_graph(path: &std::path::Path) -> Result<LoadedGraphInfo> {
+    if let Ok(dg) = GraphLoader::from_file(path) {
+        debug!("Loaded as DeploymentGraph format");
+        let node_summaries = dg
+            .nodes_in_order()
+            .into_iter()
+            .map(|n| {
+                let cap = n
+                    .capability
+                    .as_deref()
+                    .unwrap_or("(no capability)")
+                    .to_string();
+                (n.id.to_string(), cap)
+            })
+            .collect();
+        return Ok(LoadedGraphInfo {
+            id: dg.id().to_string(),
+            node_count: dg.nodes().len(),
+            node_summaries,
+        });
+    }
+
+    let ng = NeuralGraph::from_toml_file(path)
+        .with_context(|| format!("Failed to load graph: {}", path.display()))?;
+    debug!("Loaded as neural_graph format");
+    let node_summaries = ng
+        .nodes
+        .iter()
+        .map(|n| {
+            let cap = n
+                .capabilities
+                .first()
+                .cloned()
+                .unwrap_or_else(|| "(no capability)".to_string());
+            (n.id.clone(), cap)
+        })
+        .collect();
+    Ok(LoadedGraphInfo {
+        id: ng.id,
+        node_count: ng.nodes.len(),
+        node_summaries,
+    })
+}
+
 pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<()> {
     info!("🚀 biomeOS Deploy Mode");
     info!("Graph: {}", graph.display());
@@ -38,14 +106,11 @@ pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<(
         warn!("🧪 Dry run mode - showing what would happen");
     }
 
-    // Load graph with type-safe parsing (includes validation)
-    let deployment_graph = GraphLoader::from_file(&graph)
-        .with_context(|| format!("Failed to load graph: {}", graph.display()))?;
+    let loaded = load_graph(&graph)?;
 
     info!(
         "✅ Graph loaded and validated: {} ({} nodes)",
-        deployment_graph.id(),
-        deployment_graph.nodes().len()
+        loaded.id, loaded.node_count
     );
 
     if validate_only {
@@ -54,10 +119,9 @@ pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<(
     }
 
     if dry_run {
-        info!("Would execute {} nodes:", deployment_graph.nodes().len());
-        for node in deployment_graph.nodes_in_order() {
-            let cap = node.capability.as_deref().unwrap_or("(no capability)");
-            info!("  • Node '{}' (capability: {})", node.id, cap);
+        info!("Would execute {} nodes:", loaded.node_count);
+        for (id, cap) in &loaded.node_summaries {
+            info!("  • Node '{}' (capability: {})", id, cap);
         }
         return Ok(());
     }
@@ -131,5 +195,25 @@ mod tests {
 
         let result = run(graph_path, false, false).await;
         result.expect("full run should succeed (prints message, no actual deploy)");
+    }
+
+    #[tokio::test]
+    async fn test_run_neural_graph_format() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let graph_path = dir.path().join("neural.toml");
+        std::fs::write(&graph_path, MINIMAL_NEURAL_GRAPH).expect("write graph");
+
+        let result = run(graph_path, true, false).await;
+        result.expect("neural_graph format should load via fallback");
+    }
+
+    #[tokio::test]
+    async fn test_run_neural_graph_dry_run() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let graph_path = dir.path().join("neural.toml");
+        std::fs::write(&graph_path, MINIMAL_NEURAL_GRAPH).expect("write graph");
+
+        let result = run(graph_path, false, true).await;
+        result.expect("neural_graph dry_run should succeed");
     }
 }

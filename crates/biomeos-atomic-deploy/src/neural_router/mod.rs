@@ -59,7 +59,7 @@ pub struct NeuralRouter {
 
     /// Whether a lazy rescan has already been attempted this session.
     /// Prevents repeated rescans on every miss in a tight loop.
-    lazy_rescan_attempted: AtomicBool,
+    pub(crate) lazy_rescan_attempted: AtomicBool,
 
     /// Neural API's own socket path, excluded from auto-discovery to prevent
     /// self-registration pollution (GAP-MATRIX-08).

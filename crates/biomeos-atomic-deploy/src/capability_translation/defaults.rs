@@ -226,18 +226,20 @@ pub fn load_defaults_into_with(
             ],
         ),
         // Attribution / provenance domain (sweetGrass)
+        // Wire methods follow sweetGrass v0.7.5 convention: {domain}.{operation}
+        // See config/capability_registry.toml [translations.attribution]
         (
             SWEETGRASS,
             "attribution",
             &[
-                ("provenance.create_braid", "provenance.create_braid"),
-                ("provenance.get_braid", "provenance.get_braid"),
+                ("provenance.create_braid", "braid.create"),
+                ("provenance.get_braid", "braid.get"),
                 ("provenance.verify", "provenance.verify"),
-                ("attribution.create", "provenance.create_braid"),
-                ("attribution.get", "provenance.get_braid"),
+                ("attribution.create", "braid.create"),
+                ("attribution.get", "braid.get"),
                 ("attribution.verify", "provenance.verify"),
-                ("braid.create", "provenance.create_braid"),
-                ("braid.get", "provenance.get_braid"),
+                ("braid.create", "braid.create"),
+                ("braid.get", "braid.get"),
             ],
         ),
         // Legacy birdsong aliases → BearDog crypto (pre-capability naming)

@@ -19,6 +19,11 @@ fn create_test_server() -> (NeuralApiServer, tempfile::TempDir) {
     let temp = tempfile::tempdir().expect("temp dir");
     std::fs::create_dir_all(temp.path()).expect("create graphs dir");
     let server = NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"));
+    // Prevent lazy socket rescan from finding real primals running on this host.
+    server
+        .router
+        .lazy_rescan_attempted
+        .store(true, std::sync::atomic::Ordering::Relaxed);
     (server, temp)
 }
 

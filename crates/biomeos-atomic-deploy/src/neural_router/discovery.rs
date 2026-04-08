@@ -568,6 +568,10 @@ mod tests {
     #[tokio::test]
     async fn test_discover_by_category_empty_registry_security() {
         let router = NeuralRouter::new("empty-reg");
+        // Prevent lazy socket rescan from finding real primals running on this host.
+        router
+            .lazy_rescan_attempted
+            .store(true, std::sync::atomic::Ordering::Relaxed);
         let err = router.discover_capability("security").await.unwrap_err();
         assert!(
             err.to_string().contains("No primals") || err.to_string().contains("not registered"),

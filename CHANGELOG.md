@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.96 (2026-04-08) — GAP-02 + GAP-09: Deploy Parser Unification & Wire Method Correction
+
+### GAP-02 (Medium) — Deploy path unified for both graph formats
+- `biomeos deploy` now tries `GraphLoader` (DeploymentGraph `[[graph.nodes]]`) first, falls back to `neural_graph::Graph` (`[[nodes]]`)
+- `tower_atomic_bootstrap.toml` now loadable via `biomeos deploy --validate`
+- 2 new tests: `test_run_neural_graph_format`, `test_run_neural_graph_dry_run`
+
+### GAP-09 (Low) — Capability translation wire methods corrected
+- Attribution domain translations in `defaults.rs` now emit wire methods matching sweetGrass v0.7.5 API
+- `braid.create` → wire `braid.create` (was incorrectly mapping to `provenance.create_braid`)
+- `braid.get` → wire `braid.get` (was incorrectly mapping to `provenance.get_braid`)
+- Aligned with `config/capability_registry.toml` [translations.attribution] as source of truth
+
+### Test stability
+- `NeuralRouter::lazy_rescan_attempted` promoted to `pub(crate)` for test isolation
+- 2 environment-dependent tests now disable lazy socket rescan to prevent interference from running primals
+- Fixes flaky `test_discover_by_category_empty_registry_security` and `test_semantic_fallback_routes_through_capability_call`
+
+### Tests
+- **7,660** tests passing (0 failures)
+- Zero clippy warnings
+
+---
+
 ## v2.95 (2026-04-08) — Deep Debt Overstep Cleanup: Safety, Agnostic, Refactors, Dependencies
 
 ### Safety evolution
