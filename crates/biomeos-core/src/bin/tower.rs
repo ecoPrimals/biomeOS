@@ -84,6 +84,12 @@ enum Commands {
 )]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
+
+    if let Err(msg) = biomeos_core::btsp_client::validate_insecure_guard() {
+        anyhow::bail!(msg);
+    }
+    biomeos_core::btsp_client::log_security_posture();
+
     let cli = Cli::parse();
 
     match cli.command {

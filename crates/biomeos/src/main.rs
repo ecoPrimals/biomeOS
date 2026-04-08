@@ -415,6 +415,12 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     init_logging(&cli.log_level, cli.verbose)?;
+
+    if let Err(msg) = biomeos_core::btsp_client::validate_insecure_guard() {
+        anyhow::bail!(msg);
+    }
+    biomeos_core::btsp_client::log_security_posture();
+
     dispatch_mode(cli).await
 }
 

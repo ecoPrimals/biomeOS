@@ -10,6 +10,9 @@
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
 
+// BTSP client - Secure Socket Architecture (local IPC authentication)
+pub mod btsp_client;
+
 // Core universal manager (now modular)
 pub mod universal_biomeos_manager;
 

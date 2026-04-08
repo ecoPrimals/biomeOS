@@ -2,6 +2,21 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v2.98 (2026-04-08) — GAP-MATRIX-11: BTSP Insecure Guard + Security Posture Wiring
+
+### GAP-MATRIX-11 (Medium) — Socket naming alignment live-wired
+- `validate_insecure_guard()` wired into **all 3 server startup paths**: `biomeos` main, `neural-api-server` binary, `NeuralApiServer::serve()` lifecycle
+- `log_security_posture()` wired into all startup paths — operators see production/development/standalone mode on boot
+- `tower` binary also wired with guard + posture logging
+- `forwarding.rs` BTSP detection enhanced: logs security mode context (production warn when handshake not yet wired, development skip, authenticated pass)
+- 5 new btsp_client tests: domain-stem family-scoped detection, extract from domain-stem, edge cases, guard smoke test, security mode variant, posture no-panic
+
+### Tests
+- **7,669** tests passing (0 failures)
+- Zero clippy warnings
+
+---
+
 ## v2.97 (2026-04-08) — Deep Debt Overstep Cleanup II: Safety Hardening, Smart Refactors, Agnostic Names
 
 ### Safety hardening

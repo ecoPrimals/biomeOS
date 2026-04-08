@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 8, 2026 (v2.97: Deep debt overstep cleanup II — #![forbid(unsafe_code)] on all 20+ binaries, 3 large files smart-refactored, hardcoded primal names eliminated in niche templates, deny→forbid upgraded in 6 submodules, spore wildcard version fixed)
-**Version**: 2.97
+**Updated**: April 8, 2026 (v2.98: GAP-MATRIX-11 — BTSP insecure guard + security posture wired into all server startup paths, forwarding BTSP awareness enhanced)
+**Version**: 2.98
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,660+ lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,669 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -34,6 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **GAP-MATRIX-11 Resolution v2.98 (Apr 8)** | BTSP `validate_insecure_guard()` wired into all 3 server startup paths (`biomeos` main, `neural-api-server` binary, `NeuralApiServer::serve()`). `log_security_posture()` logs production/development/standalone mode on boot. Tower binary also wired. Forwarding BTSP detection enhanced with security mode context. 5 new tests. 7,669 tests (0 failures), clippy PASS. |
 | **Deep Debt Overstep Cleanup II v2.97 (Apr 8)** | `#![forbid(unsafe_code)]` added to all 20+ binary entry points, `main.rs` conditional forbid→unconditional, 6 submodule `deny→forbid` upgrades. `niche.rs` 8 hardcoded template IDs + 8 match arms→`primal_names::` constants. 3 large files smart-refactored: `genome-deploy/lib.rs` 860→35 LOC (`types.rs` + `deployer.rs` + `tests/`), `orchestrator.rs` 836→36 LOC (`lifecycle` + `health` + `deps` + `tests`), `discovery.rs` 843→94 LOC (`registry` + `primal` + `composite` + `tests`). `biomeos-spore` wildcard dev-dep version fixed. 7,660+ tests (0 failures), clippy PASS. |
 | **GAP-02 + GAP-09 Resolution v2.96 (Apr 8)** | **GAP-02:** `biomeos deploy` unified parser — tries `GraphLoader` (DeploymentGraph `[[graph.nodes]]`) first, falls back to `neural_graph::Graph` (`[[nodes]]`); 2 new tests. **GAP-09:** Attribution domain translation table corrected — `braid.create`/`braid.get` wire methods aligned with sweetGrass v0.7.5 API. `NeuralRouter::lazy_rescan_attempted` promoted to `pub(crate)` for test isolation; 2 environment-dependent tests hardened. 7,660 tests (0 failures), clippy PASS. |
 | **Deep Debt Evolution v2.95 (Apr 8)** | (1) **Safety:** `std::mem::forget` in `pathway_learner.rs` evolved to safe TempDir ownership; `#[forbid(unsafe_code)]` added to `biomeos-cli` binary crate root. (2) **Hardcoding → agnostic:** `enroll.rs` `"beardog"` literal replaced with `primal_names::BEARDOG` constant; `templates.rs` `"nestgate"` replaced with `primal_names::NESTGATE`. (3) **Mock isolation:** `biomeos-spore/test_support` gated behind `cfg(test) or feature = "test-support"` — no longer compiled in production builds. (4) **Entropy stubs → real implementations:** `get_disk_serial()` reads `/sys/block/*/serial` with model-hash fallback; `get_cpu_hash()` non-Linux fallback uses `ARCH+OS` hash; MAC fallback derives stable pseudo-MAC from hostname. (5) **Dead code evolution:** `parse_constraints`/`parse_retry_policy` wired into node parser pipeline (new `constraints: Option<NodeConstraints>` field on `PrimalNode`); `allow(dead_code)` suppressions removed. `allow(clippy::derive_partial_eq_without_eq)` → `expect` with documented reason on `Operation`; unnecessary copies removed from `PrimalNode`/`PrimalGraph`. (6) **3 large files smart-refactored:** `server_lifecycle.rs` 859→101 LOC (extracted `bootstrap.rs`, `discovery_init.rs`, `listeners.rs`, `translation_startup.rs`); `pathway_learner.rs` 857→217 LOC (extracted `pathway_analysis.rs`, `pathway_learner_tests.rs`); `atomic_client.rs` 843→487 LOC (extracted `atomic_transport.rs`, `atomic_rpc.rs`, `atomic_discovery.rs`). (7) **Dependency evolution:** `tar` default-features disabled → eliminates `xattr` + `rustix` 1.x duplicate; direct `getrandom` 0.2 dep removed → migrated to `rand::random` CSPRNG. 7,658 tests (0 failures), clippy PASS. |

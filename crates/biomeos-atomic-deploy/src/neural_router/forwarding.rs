@@ -15,6 +15,8 @@ use biomeos_types::tarpc_types::ProtocolPreference;
 
 use crate::living_graph::ProtocolMode;
 
+use biomeos_core::btsp_client;
+
 use super::NeuralRouter;
 
 /// Decode `security.*` tarpc params that carry raw bytes (base64 string or JSON byte array).
@@ -63,6 +65,33 @@ impl NeuralRouter {
                         debug!(
                             "tarpc forwarding failed for {}, falling back to JSON-RPC: {e}",
                             endpoint.display_string()
+                        );
+                    }
+                }
+            }
+        }
+
+        // Secure Socket Architecture: detect family-scoped sockets (GAP-MATRIX-11)
+        if let TransportEndpoint::UnixSocket { path } = endpoint {
+            if btsp_client::is_family_scoped_socket(path) {
+                match btsp_client::security_mode() {
+                    btsp_client::SecurityMode::Production { btsp_available } => {
+                        if btsp_available {
+                            debug!(
+                                "   🔒 BTSP-authenticated connection to {}",
+                                path.display()
+                            );
+                        } else {
+                            tracing::warn!(
+                                "   ⚠️ BTSP-required socket detected but handshake not yet wired: {}",
+                                path.display()
+                            );
+                        }
+                    }
+                    btsp_client::SecurityMode::Development => {
+                        debug!(
+                            "   🔓 Development mode — skipping BTSP for {}",
+                            path.display()
                         );
                     }
                 }

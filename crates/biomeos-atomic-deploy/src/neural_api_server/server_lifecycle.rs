@@ -32,6 +32,12 @@ impl NeuralApiServer {
     /// - UDS + TCP (when `tcp_port` is set)
     /// - TCP only (when `tcp_only` is true — mobile substrates)
     pub async fn serve(&self) -> Result<()> {
+        // 0. Validate BTSP insecure guard (GAP-MATRIX-11)
+        if let Err(msg) = biomeos_core::btsp_client::validate_insecure_guard() {
+            anyhow::bail!(msg);
+        }
+        biomeos_core::btsp_client::log_security_posture();
+
         // 1. Bind listeners EARLY so health probes see us immediately
         let uds_listener = if self.tcp_only {
             info!("📡 TCP-only mode — skipping Unix socket bind");
