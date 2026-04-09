@@ -172,7 +172,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("capability.register", Route::CapabilityRegister),
     ("capability.discover", Route::CapabilityDiscover),
     ("neural_api.discover_capability", Route::CapabilityDiscover),
-    ("capability.list", Route::CapabilityList),
+    ("capability.list", Route::CapabilityList), // legacy alias; prefer `capabilities.list`
     ("capabilities.list", Route::CapabilityList),
     ("capability.providers", Route::CapabilityProviders),
     ("capability.route", Route::CapabilityResolve),

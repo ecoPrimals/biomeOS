@@ -180,7 +180,7 @@ async fn test_handle_request_lifecycle_status_route() {
 #[tokio::test]
 async fn test_handle_request_capability_list_route() {
     let (server, _temp) = create_test_server();
-    let req = r#"{"jsonrpc":"2.0","method":"capability.list","id":14}"#;
+    let req = r#"{"jsonrpc":"2.0","method":"capabilities.list","id":14}"#;
     let result = server.handle_request_json(req).await;
     assert!(result.get("result").is_some());
     assert_eq!(result["id"], 14);

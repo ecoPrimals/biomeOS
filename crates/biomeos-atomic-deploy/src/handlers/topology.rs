@@ -157,9 +157,9 @@ impl TopologyHandler {
         Ok(primals)
     }
 
-    /// Query a primal for its capabilities via JSON-RPC `capability.list`.
+    /// Query a primal for its capabilities via JSON-RPC `capabilities.list`.
     ///
-    /// Connects to the primal's Unix socket, sends a `capability.list`
+    /// Connects to the primal's Unix socket, sends a `capabilities.list`
     /// request, and parses the response into a list of capability names.
     /// Falls back to an empty list on connection/parse errors so that
     /// topology discovery remains resilient.
@@ -255,18 +255,19 @@ impl TopologyHandler {
             }
         }
 
-        // Priority 4: /tmp/biomeos-$USER (user-namespaced)
+        // Priority 4: /tmp/biomeos-$USER (user-namespaced, via centralized constant)
         if let Ok(user) = std::env::var("USER") {
-            let path = PathBuf::from(format!("/tmp/biomeos-{user}"));
+            let path = biomeos_types::constants::runtime_paths::fallback_runtime_dir(&user);
             if !dirs.contains(&path) && path.exists() {
                 dirs.push(path);
             }
         }
 
-        // Priority 5: Legacy compatibility - /tmp (only if nothing else exists)
-        // This ensures backwards compatibility during migration
+        // Priority 5: fallback runtime base (only if nothing else exists)
         if dirs.is_empty() {
-            dirs.push(PathBuf::from("/tmp"));
+            let base =
+                PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE);
+            dirs.push(base);
         }
 
         dirs

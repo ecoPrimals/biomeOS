@@ -45,6 +45,7 @@ etcetera = { workspace = true }  # Pure Rust replacement for dirs
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+temp-env = { workspace = true }
 tempfile = { workspace = true }
 proptest = { workspace = true }
 

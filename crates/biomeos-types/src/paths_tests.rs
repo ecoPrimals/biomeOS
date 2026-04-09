@@ -317,3 +317,175 @@ fn test_state_dir_prefers_home_local_state_without_xdg_state() {
     .unwrap();
     assert_eq!(paths.state_dir(), &expected);
 }
+
+#[test]
+fn test_system_paths_new_reads_xdg_and_home_from_env() {
+    let temp = tempdir().unwrap();
+    let home = temp.path().join("home");
+    let run = temp.path().join("xdg-run");
+    let data = temp.path().join("xdg-data");
+    let cfg = temp.path().join("xdg-cfg");
+    let cache = temp.path().join("xdg-cache");
+    let state = temp.path().join("xdg-state");
+    for p in [&home, &run, &data, &cfg, &cache, &state] {
+        std::fs::create_dir_all(p).unwrap();
+    }
+
+    let paths = temp_env::with_vars(
+        [
+            ("HOME", Some(home.as_os_str())),
+            ("XDG_RUNTIME_DIR", Some(run.as_os_str())),
+            ("XDG_DATA_HOME", Some(data.as_os_str())),
+            ("XDG_CONFIG_HOME", Some(cfg.as_os_str())),
+            ("XDG_CACHE_HOME", Some(cache.as_os_str())),
+            ("XDG_STATE_HOME", Some(state.as_os_str())),
+        ],
+        SystemPaths::new,
+    )
+    .unwrap();
+
+    assert!(paths.runtime_dir().starts_with(&run));
+    assert!(paths.data_dir().starts_with(&data));
+    assert!(paths.config_dir().starts_with(&cfg));
+    assert!(paths.cache_dir().starts_with(&cache));
+    assert!(paths.state_dir().starts_with(&state));
+}
+
+#[test]
+fn test_runtime_dir_from_xdg_parent_some_joins_biomeos_leaf() {
+    let temp = tempdir().unwrap();
+    let parent = temp.path().join("xdg-runtime-parent");
+    let got = SystemPaths::runtime_dir_from_xdg_parent(Some(&parent));
+    assert_eq!(got, parent.join(primal_names::BIOMEOS));
+    assert!(got.ends_with(primal_names::BIOMEOS));
+}
+
+#[test]
+fn test_runtime_dir_from_xdg_parent_none_uses_temp_biomeos_username() {
+    let got = temp_env::with_vars(
+        [
+            ("USER", Some("envtestuser-paths".as_ref())),
+            ("USERNAME", None::<&std::ffi::OsStr>),
+        ],
+        || SystemPaths::runtime_dir_from_xdg_parent(None),
+    );
+    let lossy = got.to_string_lossy();
+    assert!(
+        lossy.contains("biomeos-envtestuser-paths"),
+        "expected USER in temp-dir fallback: {lossy}"
+    );
+    assert!(
+        lossy.contains("biomeos-"),
+        "expected temp-dir fallback prefix: {lossy}"
+    );
+}
+
+#[test]
+fn test_get_username_fallback_to_default_via_runtime_path() {
+    let path = temp_env::with_vars(
+        [
+            ("USER", None::<&std::ffi::OsStr>),
+            ("USERNAME", None::<&std::ffi::OsStr>),
+        ],
+        || SystemPaths::runtime_dir_from_xdg_parent(None),
+    );
+    assert!(
+        path.to_string_lossy()
+            .contains(&format!("{}-default", primal_names::BIOMEOS)),
+        "expected get_username() fallback 'default' in path: {}",
+        path.display()
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn test_ensure_dir_create_dir_failed_on_readonly_parent() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp = tempdir().unwrap();
+    let ro = temp.path().join("readonly-parent");
+    std::fs::create_dir_all(&ro).unwrap();
+    std::fs::set_permissions(&ro, std::fs::Permissions::from_mode(0o555)).unwrap();
+
+    let bad_runtime = ro.join("nested-biomeos");
+    let writable = temp.path().join("writable");
+    std::fs::create_dir_all(&writable).unwrap();
+    let bio = primal_names::BIOMEOS;
+    let data = writable.join("data").join(bio);
+    let cfg = writable.join("cfg").join(bio);
+    let cache = writable.join("cache").join(bio);
+    let state = writable.join("state").join(bio);
+
+    let err = SystemPaths::from_overrides(bad_runtime, data, cfg, cache, state).unwrap_err();
+    match err {
+        PathError::CreateDirFailed { path, .. } => {
+            assert!(
+                path.contains("nested-biomeos") || path.contains("readonly-parent"),
+                "unexpected path in error: {path}"
+            );
+        }
+        other => panic!("expected CreateDirFailed, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_path_error_invalid_path_and_no_home_debug_display() {
+    let inv = PathError::InvalidPath("x/y".to_string());
+    assert!(inv.to_string().contains("Invalid path"));
+    assert!(inv.to_string().contains("x/y"));
+    let inv_dbg = format!("{inv:?}");
+    assert!(inv_dbg.contains("InvalidPath") || inv_dbg.contains("x/y"));
+
+    let no_home = PathError::NoHomeDir;
+    assert_eq!(no_home.to_string(), "Failed to determine home directory");
+    assert!(format!("{no_home:?}").contains("NoHomeDir"));
+}
+
+#[test]
+fn test_safe_uid_is_u32_and_matches_system_paths_wrapper() {
+    let uid: u32 = safe_uid();
+    assert_eq!(uid, SystemPaths::safe_uid());
+    #[cfg(target_os = "linux")]
+    if std::path::Path::new("/proc/self/status").exists() {
+        assert_ne!(
+            uid, 65534,
+            "on Linux with /proc/self/status, expect parsed real uid, not nobody fallback"
+        );
+    }
+}
+
+/// Covers `get_runtime_dir` when `$XDG_RUNTIME_DIR` is unset (`temp_dir` + `biomeos-$USER`).
+#[test]
+fn test_new_lazy_runtime_without_xdg_runtime_dir() {
+    let paths = temp_env::with_var("XDG_RUNTIME_DIR", None::<&str>, SystemPaths::new_lazy);
+    let s = paths.runtime_dir().to_string_lossy();
+    assert!(
+        s.contains("biomeos-"),
+        "expected temp-style runtime dir when XDG_RUNTIME_DIR is unset: {s}"
+    );
+}
+
+/// Covers etcetera fallbacks in `get_*_dir` and `get_state_dir`'s `data_dir/state` path when
+/// `HOME` and XDG base vars are unset.
+#[test]
+fn test_new_lazy_etcetera_when_home_and_xdg_unset() {
+    let paths = temp_env::with_vars(
+        [
+            ("HOME", None::<&str>),
+            ("XDG_DATA_HOME", None::<&str>),
+            ("XDG_CONFIG_HOME", None::<&str>),
+            ("XDG_CACHE_HOME", None::<&str>),
+            ("XDG_STATE_HOME", None::<&str>),
+        ],
+        SystemPaths::new_lazy,
+    );
+    assert!(!paths.data_dir().as_os_str().is_empty());
+    assert!(!paths.config_dir().as_os_str().is_empty());
+    assert!(!paths.cache_dir().as_os_str().is_empty());
+    assert!(!paths.state_dir().as_os_str().is_empty());
+    assert!(
+        paths.state_dir().ends_with("state"),
+        "expected state_dir …/biomeos/state: {:?}",
+        paths.state_dir()
+    );
+}

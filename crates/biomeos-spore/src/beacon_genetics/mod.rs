@@ -47,7 +47,7 @@
 //! - `capability` - `CapabilityCaller` trait and `NeuralAPI` implementation
 //! - `manager` - `BeaconGeneticsManager` orchestration
 //!
-//! AGPL-3.0-only License
+//! AGPL-3.0-or-later License
 
 mod capability;
 mod derivation;

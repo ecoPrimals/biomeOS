@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use super::{test_config, RootFsBuilder, RootFsConfig};
+use super::{RootFsBuilder, RootFsConfig, test_config};
 
 #[tokio::test]
 async fn test_install_primals_with_files() {
@@ -74,9 +74,10 @@ fn test_install_services_with_service_file() {
     RootFsBuilder::install_services(&root, &services_dir).expect("install_services");
 
     assert!(root.join("etc/systemd/system/test.service").exists());
-    assert!(root
-        .join("etc/systemd/system/multi-user.target.wants/test.service")
-        .exists());
+    assert!(
+        root.join("etc/systemd/system/multi-user.target.wants/test.service")
+            .exists()
+    );
 }
 
 #[test]

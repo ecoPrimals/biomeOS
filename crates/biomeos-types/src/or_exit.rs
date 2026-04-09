@@ -58,6 +58,7 @@ impl<T> OrExit<T> for Option<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io;
 
     #[test]
     fn result_ok_returns_value() {
@@ -69,5 +70,55 @@ mod tests {
     fn option_some_returns_value() {
         let o: Option<&str> = Some("hello");
         assert_eq!(o.or_exit("should not exit"), "hello");
+    }
+
+    /// `OrExit` is implemented for `Result<T, E>` where `E: Display`; exercise distinct `E` types on the Ok path.
+    #[test]
+    fn or_exit_accepts_result_with_string_error_type() {
+        let r: Result<u32, String> = Ok(100);
+        assert_eq!(r.or_exit("ctx"), 100);
+    }
+
+    #[test]
+    fn or_exit_accepts_result_with_io_error_type() {
+        let r: Result<u32, io::Error> = Ok(200);
+        assert_eq!(r.or_exit("ctx"), 200);
+    }
+
+    #[test]
+    fn or_exit_accepts_result_with_anyhow_error_type() {
+        let r: Result<u32, anyhow::Error> = Ok(300);
+        assert_eq!(r.or_exit("ctx"), 300);
+    }
+
+    #[test]
+    fn or_exit_accepts_option_of_owned_string() {
+        let o: Option<String> = Some("owned".to_string());
+        assert_eq!(o.or_exit("ctx").as_str(), "owned");
+    }
+
+    #[test]
+    fn result_string_ok() {
+        let r: Result<String, String> = Ok("value".to_string());
+        assert_eq!(r.or_exit("ctx"), "value");
+    }
+
+    #[test]
+    fn option_u32_some() {
+        let o: Option<u32> = Some(7);
+        assert_eq!(o.or_exit("ctx"), 7);
+    }
+
+    #[test]
+    fn result_vec_u8_ok_str_err() {
+        let r: Result<Vec<u8>, &str> = Ok(vec![1, 2, 3]);
+        assert_eq!(r.or_exit("ctx"), vec![1, 2, 3]);
+    }
+
+    /// Zero-sized `T` in `Ok` — still returns through the success path.
+    #[test]
+    fn result_ok_zero_sized_value() {
+        let r: Result<(), String> = Ok(());
+        let () = r.or_exit("ctx");
     }
 }

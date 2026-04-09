@@ -22,7 +22,10 @@ use super::core::{PrimalType, ResourceRequirements};
 ///
 /// This trait defines the standard interface that all primal services must implement
 /// to participate in the biomeOS ecosystem.
-#[async_trait::async_trait]
+#[expect(
+    async_fn_in_trait,
+    reason = "trait is Send+Sync and all implementations are internal"
+)]
 pub trait UniversalPrimalService: Send + Sync {
     // === Core Identity & Metadata ===
 

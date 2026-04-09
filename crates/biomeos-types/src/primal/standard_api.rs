@@ -29,7 +29,6 @@
 //!
 //! struct MyPrimal;
 //!
-//! #[async_trait::async_trait]
 //! impl BiomeOSStandardAPI for MyPrimal {
 //!     async fn biomeos_identity(&self) -> Result<PrimalIdentity, Box<dyn std::error::Error + Send + Sync>> {
 //!         Ok(PrimalIdentity {
@@ -44,7 +43,6 @@
 //! }
 //! ```
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 // EVOLVED (Jan 27, 2026): Import from unified capabilities module
@@ -54,7 +52,10 @@ pub use crate::capability_taxonomy::CapabilityTaxonomy as PrimalCapability;
 ///
 /// All primals MUST implement these methods to participate in
 /// capability-based discovery and composition.
-#[async_trait]
+#[expect(
+    async_fn_in_trait,
+    reason = "trait is Send+Sync and all implementations are internal"
+)]
 pub trait BiomeOSStandardAPI: Send + Sync {
     /// Get primal identity (who am I?)
     ///

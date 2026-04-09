@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use biomeos_types::JsonRpcRequest;
 use serde_json::Value;
 use std::path::PathBuf;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 
@@ -46,7 +46,7 @@ pub async fn json_rpc_call(
         || "connection timeout".to_string(),
         std::string::ToString::to_string,
     );
-    let mut stream = stream.with_context(|| {
+    let stream = stream.with_context(|| {
         format!(
             "Failed to connect to Neural API at {} ({})",
             socket_path.display(),
@@ -58,24 +58,27 @@ pub async fn json_rpc_call(
 
     let request_bytes = serde_json::to_vec(&request).context("Failed to serialize request")?;
 
-    stream
+    let (reader, mut writer) = stream.into_split();
+
+    writer
         .write_all(&request_bytes)
         .await
         .context("Failed to write request")?;
-    stream
+    writer
         .write_all(b"\n")
         .await
         .context("Failed to write newline")?;
-    stream.flush().await.context("Failed to flush stream")?;
+    writer.flush().await.context("Failed to flush stream")?;
 
-    let mut response_bytes = Vec::new();
-    timeout(request_timeout, stream.read_to_end(&mut response_bytes))
+    let mut reader = BufReader::new(reader);
+    let mut response_line = String::new();
+    timeout(request_timeout, reader.read_line(&mut response_line))
         .await
         .context("Request timeout")?
         .context("Failed to read response")?;
 
     let response: Value =
-        serde_json::from_slice(&response_bytes).context("Failed to parse JSON-RPC response")?;
+        serde_json::from_str(&response_line).context("Failed to parse JSON-RPC response")?;
 
     if let Some(error) = response.get("error") {
         let code = error

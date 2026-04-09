@@ -7,19 +7,74 @@
 //! delimited JSON-RPC requests, and writes responses.
 
 use anyhow::Result;
+use biomeos_core::btsp_client::{self, BtspHandshakeError, HandshakeOutcome};
 use biomeos_types::jsonrpc::{JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use super::NeuralApiServer;
 
 impl NeuralApiServer {
-    /// Handle a Unix socket client connection.
+    /// Handle a Unix socket client connection (development mode, no BTSP).
     pub async fn handle_connection(&self, stream: UnixStream) -> Result<()> {
         self.handle_stream(BufReader::new(stream)).await
+    }
+
+    /// Handle a Unix socket connection with BTSP Phase 2 handshake.
+    ///
+    /// Attempts a server-side BTSP handshake. If the client sends a raw
+    /// JSON-RPC request instead of a `ClientHello`, the behaviour depends
+    /// on `enforce`: when true the connection is dropped; when false the
+    /// raw line is dispatched and the connection continues as cleartext.
+    pub async fn handle_connection_with_btsp(
+        &self,
+        stream: UnixStream,
+        enforce: bool,
+    ) -> Result<()> {
+        let mut reader = BufReader::new(stream);
+
+        match btsp_client::server_handshake(&mut reader).await {
+            Ok(HandshakeOutcome::Authenticated { session_id }) => {
+                debug!(session_id = %session_id, "BTSP authenticated — proceeding with JSON-RPC");
+            }
+            Ok(HandshakeOutcome::DevMode) => {
+                // No FAMILY_ID — proceed without handshake.
+            }
+            Ok(HandshakeOutcome::BearDogUnavailable) => {
+                warn!("BTSP: BearDog unavailable, proceeding without handshake");
+            }
+            Err(BtspHandshakeError::RawJsonRpc(first_line)) => {
+                if enforce {
+                    warn!(
+                        "BTSP enforced: rejecting unauthenticated connection (client sent raw JSON-RPC)"
+                    );
+                    return Ok(());
+                }
+                warn!("BTSP: client sent raw JSON-RPC without handshake (warn-only mode)");
+                if let Some(response_value) = self.dispatch_line(&first_line).await {
+                    let response_str = serde_json::to_string(&response_value)? + "\n";
+                    let stream = reader.get_mut();
+                    stream.write_all(response_str.as_bytes()).await?;
+                    stream.flush().await?;
+                }
+            }
+            Err(BtspHandshakeError::BearDogNotFound) => {
+                if enforce {
+                    warn!("BTSP enforced but BearDog not found — rejecting connection");
+                    return Ok(());
+                }
+                warn!("BTSP: BearDog not found, accepting connection without handshake");
+            }
+            Err(e) => {
+                warn!("BTSP handshake failed: {e}");
+                return Ok(());
+            }
+        }
+
+        self.handle_stream(reader).await
     }
 
     /// Handle a TCP client connection.

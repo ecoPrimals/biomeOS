@@ -428,16 +428,9 @@ Complete elimination of cross-primal hardcoding.
 ## Related Specifications
 
 - `specs/CAPABILITY_TRANSLATION_ARCHITECTURE.md` - Full translation design
-- `specs/GRAPH_BASED_ORCHESTRATION_SPEC.md` - Graph schema
 - `wateringHole/PRIMAL_IPC_PROTOCOL.md` - RPC patterns
-- `specs/BIOMEOS_AS_PRIMAL_SPECIALIZATION.md` - Neural API role
 
 ---
 
-**Status**: Active Development (v2.0.0)  
-**Priority**: Critical (unblocks HTTPS)  
-**Next**: Implement translation registry
-
----
-
-*The neural way: Connect concepts, not implementations* 🧠🦀
+**Status**: Implemented (v2.0.0 — translation registry shipped in v2.40, 290+ translations active)
+**Updated**: April 9, 2026

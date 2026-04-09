@@ -668,7 +668,7 @@ impl GraphExecutor {
             .unwrap_or_default();
 
         if caps.is_empty() {
-            caps = node.capabilities.clone();
+            caps.clone_from(&node.capabilities);
         }
 
         let neural_socket = context.get_socket_path("neural-api").await;

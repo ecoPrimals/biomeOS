@@ -120,12 +120,9 @@ pub fn extract_capabilities_from_response(resp: &serde_json::Value) -> Vec<Strin
         }
     }
 
-    // --- Legacy: result.methods ---
+    // --- Legacy / L2: result.methods (strings or {name}/{method} objects) ---
     if let Some(caps) = result["methods"].as_array() {
-        let parsed: Vec<String> = caps
-            .iter()
-            .filter_map(|c| c.as_str().map(String::from))
-            .collect();
+        let parsed = extract_from_array(caps);
         if !parsed.is_empty() {
             return parsed;
         }
@@ -176,8 +173,14 @@ pub fn extract_capabilities_from_response(resp: &serde_json::Value) -> Vec<Strin
                 }
                 if let Some(methods) = group["methods"].as_array() {
                     for m in methods {
-                        if let Some(method_name) = m.as_str() {
-                            names.push(format!("{cap_type}.{method_name}"));
+                        let method_name = m.as_str().map(String::from).or_else(|| {
+                            m.get("name")
+                                .or_else(|| m.get("method"))
+                                .and_then(serde_json::Value::as_str)
+                                .map(String::from)
+                        });
+                        if let Some(name) = method_name {
+                            names.push(format!("{cap_type}.{name}"));
                         }
                     }
                 }
@@ -609,5 +612,71 @@ mod tests {
             "result": { "methods": [] }
         });
         assert!(extract_capabilities_from_response(&resp).is_empty());
+    }
+
+    // ── L2/L3 Wire Standard: result.methods as objects ──
+
+    #[test]
+    fn l2_methods_as_objects_with_name_key() {
+        let resp = json!({
+            "result": {
+                "methods": [
+                    {"name": "crypto.sign", "version": "1.0"},
+                    {"name": "crypto.verify"},
+                    "health.check"
+                ]
+            }
+        });
+        assert_eq!(
+            extract_capabilities_from_response(&resp),
+            vec!["crypto.sign", "crypto.verify", "health.check"]
+        );
+    }
+
+    #[test]
+    fn l2_methods_as_objects_with_method_key() {
+        let resp = json!({
+            "result": {
+                "methods": [
+                    {"method": "storage.get"},
+                    {"method": "storage.put"}
+                ]
+            }
+        });
+        assert_eq!(
+            extract_capabilities_from_response(&resp),
+            vec!["storage.get", "storage.put"]
+        );
+    }
+
+    // ── L3 Wire Standard: provided_capabilities with method objects ──
+
+    #[test]
+    fn l3_provided_capabilities_methods_as_objects() {
+        let resp = json!({
+            "result": {
+                "provided_capabilities": [
+                    {
+                        "type": "security",
+                        "methods": [
+                            {"name": "sign", "cost": "low"},
+                            {"name": "verify", "cost": "low"},
+                            "encrypt"
+                        ]
+                    }
+                ]
+            }
+        });
+        let mut caps = extract_capabilities_from_response(&resp);
+        caps.sort();
+        assert_eq!(
+            caps,
+            vec![
+                "security",
+                "security.encrypt",
+                "security.sign",
+                "security.verify"
+            ]
+        );
     }
 }

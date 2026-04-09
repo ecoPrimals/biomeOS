@@ -5,7 +5,7 @@
 //!
 //! This module provides runtime discovery of primals without hardcoding paths.
 //!
-//! AGPL-3.0-only License
+//! AGPL-3.0-or-later License
 //!
 //! # Deep Debt Principles
 //!

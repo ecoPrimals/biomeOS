@@ -14,7 +14,6 @@ biomeos-chimera = { path = "../biomeos-chimera", version = "0.1.0" }
 
 # Async runtime
 tokio = { workspace = true }
-async-trait = { workspace = true }
 futures = { workspace = true }
 
 # Serialization

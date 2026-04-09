@@ -73,10 +73,28 @@ impl NeuralApiServer {
     }
 
     /// Accept UDS connections on a previously-bound listener.
+    ///
+    /// **BTSP Phase 2**: When `FAMILY_ID` is set, each accepted connection
+    /// undergoes a BTSP handshake before JSON-RPC processing begins. The
+    /// handshake crypto is delegated to BearDog via `btsp.session.create` /
+    /// `btsp.session.verify`. Clients that do not initiate a handshake
+    /// (legacy JSON-RPC) are handled according to [`btsp_enforce`]:
+    /// - enforce = true (default): connection rejected
+    /// - enforce = false: accepted with a warning (rollout compatibility)
+    ///
+    /// [`btsp_enforce`]: biomeos_core::btsp_client::btsp_enforce
     pub(crate) async fn accept_connections(&self, listener: UnixListener) -> Result<()> {
+        let btsp_active = biomeos_core::btsp_client::has_family_id();
+        let enforce = biomeos_core::btsp_client::btsp_enforce();
+
         info!(
-            "🧠 Neural API server accepting UDS connections (mode: {})",
-            self.mode_display_str().await
+            "🧠 Neural API server accepting UDS connections (mode: {}, BTSP: {})",
+            self.mode_display_str().await,
+            if btsp_active {
+                if enforce { "enforced" } else { "warn-only" }
+            } else {
+                "off (dev)"
+            }
         );
 
         loop {
@@ -84,7 +102,7 @@ impl NeuralApiServer {
                 Ok((stream, _addr)) => {
                     let server = self.clone();
                     tokio::spawn(async move {
-                        if let Err(e) = server.handle_connection(stream).await {
+                        if let Err(e) = server.handle_connection_with_btsp(stream, enforce).await {
                             error!("Connection error: {}", e);
                         }
                     });

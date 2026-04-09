@@ -262,4 +262,4 @@ ANONYMOUS → BEACON_KNOWN → LINEAGE_VERIFIED → FULL_TRUST
 ---
 
 **Author**: biomeOS Team  
-**License**: AGPL-3.0-only
+**License**: AGPL-3.0-or-later

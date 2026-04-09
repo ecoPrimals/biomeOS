@@ -83,17 +83,12 @@ biomeos nucleus start --mode tower --node-id tower-gate-b
 
 ```bash
 # From any LAN tower (e.g., Gate B)
-curl --unix-socket /tmp/songbird-tower-gate-b.sock \
-  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"],"timeout_ms":5000},"id":1}' \
-  | jq '.result.nodes'
+# Sockets are at $XDG_RUNTIME_DIR/biomeos/ (typically /run/user/$UID/biomeos/)
+SOCKET_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos"
+echo '{"jsonrpc":"2.0","method":"discovery.discover_all","params":{"family_tags":["${FAMILY_ID}"],"timeout_ms":5000},"id":1}' | \
+  nc -U "$SOCKET_DIR/songbird-${FAMILY_ID}.sock" -w 5 -q 1 | jq '.result'
 
 # Expected: 6 towers discovered
-# - tower-gate-b
-# - tower-gate-c
-# - tower-gate-d
-# - tower-gate-e
-# - tower-gate-a
-# - tower-gate-f
 ```
 
 ### **Phase 5: Deploy Compute Nodes (13 nodes on LAN)**
@@ -126,10 +121,9 @@ biomeos nucleus start --mode tower --node-id tower-gate-h
 ### **Phase 7: Verify Internet Federation**
 
 ```bash
-# From any LAN tower
-curl --unix-socket /tmp/songbird-tower-gate-b.sock \
-  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"],"timeout_ms":10000},"id":1}' \
-  | jq '.result.nodes | map(.node_id)'
+SOCKET_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos"
+echo '{"jsonrpc":"2.0","method":"discovery.discover_all","params":{"timeout_ms":10000},"id":1}' | \
+  nc -U "$SOCKET_DIR/songbird-${FAMILY_ID}.sock" -w 15 -q 1 | jq '.result.nodes | map(.node_id)'
 
 # Expected: 8 towers (6 LAN + 2 Internet)
 ```
@@ -154,29 +148,24 @@ biomeos nucleus start --mode tower --node-id tower-pixel8a
 
 ### **Test 1: Federation Discovery**
 ```bash
-# Count federated towers
-curl --unix-socket /tmp/songbird-tower-gate-b.sock \
-  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"]},"id":1}' \
-  | jq '.result.nodes | length'
+SOCKET_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos"
+
+echo '{"jsonrpc":"2.0","method":"discovery.discover_all","params":{},"id":1}' | \
+  nc -U "$SOCKET_DIR/songbird-${FAMILY_ID}.sock" -w 5 -q 1 | jq '.result.nodes | length'
 
 # Expected: 10 (6 LAN + 2 Internet + 2 Mobile)
 ```
 
-### **Test 2: Compute Node Discovery**
+### **Test 2: Capability Discovery**
 ```bash
-# List all compute nodes
-for tower in gate-b gate-c gate-d gate-e gate-a gate-f; do
-  curl --unix-socket /tmp/songbird-tower-$tower.sock \
-    -d '{"jsonrpc":"2.0","method":"list_compute_nodes","params":{},"id":1}' \
-    | jq ".result.nodes[] | {node_id, resource_type}"
-done
+echo '{"jsonrpc":"2.0","method":"capability.discover","params":{"capability":"compute"},"id":1}' | \
+  nc -U "$SOCKET_DIR/neural-api-${FAMILY_ID}.sock" -w 5 -q 1 | jq '.result'
 ```
 
 ### **Test 3: Submit Workload**
 ```bash
-# Submit test workload to Gate B GPU
-curl --unix-socket /tmp/compute-node-gate-b-rtx5090.sock \
-  -d '{"jsonrpc":"2.0","method":"workload.submit","params":{"runtime":"native","code":"println!(\"Hello from RTX 5090!\");","language":"rust"},"id":1}'
+echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"compute","operation":"dispatch","args":{"runtime":"native","language":"rust"}},"id":1}' | \
+  nc -U "$SOCKET_DIR/neural-api-${FAMILY_ID}.sock" -w 5 -q 1
 ```
 
 ### **Test 4: Genetic Lineage Verification**

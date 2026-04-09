@@ -23,17 +23,11 @@ These YAML files define complete biome configurations:
 
 ## Niche Templates
 
-The `niches/` subdirectory contains reusable niche definitions:
+See `niches/templates/` at repository root for the primary niche definitions.
+The `templates/niches/` subdirectory here contains supplementary templates:
 
-```
-niches/
-├── ai-research.yaml
-├── custom-generic.yaml
-├── federation-aware.yaml
-├── gaming-tournament.yaml
-├── research-lab.yaml
-└── web-development.yaml
-```
+- `spring-template.yaml` — Spring niche base template
+- `gaming.yaml` — Gaming niche configuration
 
 ## Test Configurations
 
@@ -45,10 +39,13 @@ niches/
 
 ```bash
 # Deploy a biome manifest
-cargo run -p biomeos-cli --bin biomeos -- deploy -m templates/biome.yaml
+biomeos deploy -m templates/biome.yaml
 
 # Use as a niche template
-cargo run -p biomeos-cli --bin biomeos -- niche deploy gaming-tournament
+biomeos niche deploy gaming-tournament
+
+# Or from source
+cargo run -p biomeos -- deploy -m templates/biome.yaml
 ```
 
 ## See Also

@@ -2,6 +2,38 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.00 (2026-04-09) — Deep Debt Cleanup IV: Dependency Evolution, Native Async Traits, Doc Ground Truth
+
+### Dependency cleanup
+- Removed unused `itertools` from `biomeos-core` (resolved 0.10/0.12 duplication)
+- Removed unused `async-trait` from `biomeos-niche`, `biomeos-chimera`, `biomeos-test-utils`
+
+### Async trait migration
+- `BiomeOSStandardAPI` and `UniversalPrimalService` migrated from `#[async_trait]` to native `async fn in trait` (Edition 2024)
+- Added `#[expect(async_fn_in_trait)]` with documented rationale (no `dyn Trait` usage)
+
+### Hardcoding evolution
+- `topology.rs` `get_socket_directories()`: hardcoded `/tmp/biomeos-{USER}` → `fallback_runtime_dir()` + `FALLBACK_RUNTIME_BASE`
+
+### Code cleanup
+- Deleted orphan `biomeos-graph/src/nucleus_executor.rs` (288 LOC, not compiled, stale imports)
+
+### License harmonization
+- `LICENSE-ORC`: `AGPL-3.0-only` → `AGPL-3.0-or-later` (now consistent with LICENSE, Cargo.toml, SPDX headers)
+- `CURRENT_STATUS.md` Standards Compliance: `AGPL-3.0-only` → scyBorg Triple-Copyleft
+- `docs/SPRING_NICHE_DEPLOYMENT_GUIDE.md`: `AGPL-3.0-only` → `AGPL-3.0-or-later`
+
+### Root doc cleanup
+- All root docs updated: version 2.99→3.00, date Apr 8→Apr 9, tests 7,695→7,724
+- `specs/README.md` last-updated date April 1→April 9
+- `specs/NEURAL_API_ROUTING_SPECIFICATION.md`: removed broken links to nonexistent specs, status updated from "Active Development" to "Implemented"
+- `DOCUMENTATION.md` handoff section updated with April 2026 handoffs (v2.90–v3.00)
+
+### Quality gates
+- 7,724 tests (0 failures), clippy PASS, fmt PASS, doc PASS
+
+---
+
 ## v2.99 (2026-04-08) — Deep Debt Overstep Cleanup III: Smart Refactors, Lint Hardening, Idiomatic Rust
 
 ### Smart refactors (3 large files)

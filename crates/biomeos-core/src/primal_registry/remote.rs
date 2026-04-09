@@ -74,14 +74,20 @@ pub fn cached_download_path(
     Ok(base.join(name))
 }
 
+fn github_api_base() -> String {
+    std::env::var("BIOMEOS_GITHUB_API_URL").unwrap_or_else(|_| "https://api.github.com".to_string())
+}
+
 pub async fn github_latest_release(org: &str, repo: &str) -> Result<GitHubRelease> {
-    let api_url = format!("https://api.github.com/repos/{org}/{repo}/releases/latest");
+    let base = github_api_base();
+    let api_url = format!("{base}/repos/{org}/{repo}/releases/latest");
     github_api_get(&api_url).await
 }
 
 pub async fn github_release_for_tag(org: &str, repo: &str, tag: &str) -> Result<GitHubRelease> {
     let enc = percent_encode_github_tag(tag);
-    let api_url = format!("https://api.github.com/repos/{org}/{repo}/releases/tags/{enc}");
+    let base = github_api_base();
+    let api_url = format!("{base}/repos/{org}/{repo}/releases/tags/{enc}");
     github_api_get(&api_url).await
 }
 

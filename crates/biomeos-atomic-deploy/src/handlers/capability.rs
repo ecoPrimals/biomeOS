@@ -348,7 +348,7 @@ impl CapabilityHandler {
 
     /// List all known capabilities with provider details and available operations.
     ///
-    /// JSON-RPC method: `capability.list`
+    /// JSON-RPC method: `capabilities.list`
     ///
     /// Returns a rich response including:
     /// - Per-capability provider information (primal, socket, registration time)

@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: April 8, 2026
+**Updated**: April 9, 2026
 
 ---
 
@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v2.99) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v3.00) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -54,24 +54,27 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 
 Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handoffs/`.
 
-### Recent (March 2026)
+### Recent (April 2026)
 
 | Document | Focus | Date |
 |----------|-------|------|
-| BIOMEOS_V273_CROSS_GATE_DEPLOYMENT_EVOLUTION | `route.register` batch API, `gate` field on GraphNode, GateRegistry, cross-gate executor forwarding, 7,186 tests | Mar 28, 2026 |
-| BIOMEOS_V272_ARM64_CROSS_COMPILATION | ARM64 cross-compilation (`aarch64-unknown-linux-musl`), 9.6 MB static binary, all 6 genomeBins ARM64-ready | Mar 28, 2026 |
-| BIOMEOS_V271_DEEP_DEBT_MULTI_TRANSPORT_EVOLUTION | Multi-transport IPC, deep debt resolution, zero-copy optimizations, BearDog client cleanup, 7,167 tests | Mar 28, 2026 |
-| BIOMEOS_V270_MULTI_TRANSPORT_IPC_EVOLUTION | Neural router Unix→universal transport, TransportEndpoint Serialize/Deserialize, P0/P1 gaps resolved | Mar 28, 2026 |
-| BIOMEOS_V269_ZEROCOPY_TOKIO_COVERAGE_EVOLUTION | Zero-copy Value::take(), tokio workspace unification, base64 upgrade, deny.toml cleanup | Mar 28, 2026 |
-| BIOMEOS_V268_DEEP_AUDIT_HARDCODING_EVOLUTION | Blocking-in-async fix, `/tmp` + IP centralization, license reconciliation, phase2 path cleanup | Mar 27, 2026 |
-| BIOMEOS_V267_REMAINING_DEBT_CLEANUP | Caller-agnostic lineage, roster evolution, comprehensive debt scan (0 TODO/FIXME/HACK) | Mar 22, 2026 |
-| BIOMEOS_V266_PRIMALSPRING_ALIGNED_CAPABILITY_DISCOVERY | 5-tier centralized discovery, GeneticLineage→BearDog, niche self-knowledge, Neural API early-bind | Mar 22, 2026 |
-| BIOMEOS_V265_DEEP_DEBT_EXECUTION_ZERO_COPY | Tower refactored, zero-copy, hardcode evolution, flaky test fixes | Mar 22, 2026 |
-| BIOMEOS_V264_FLAKY_TEST_HARDENING_COVERAGE_SERDE_YML | serde_yml migration, large file refactoring, flaky test hardening, 7,135 tests | Mar 22, 2026 |
-| BIOMEOS_V257_COVERAGE_PUSH_FILE_SPLITS | 6,998 tests, 90%+ coverage, 0 files >1000 LOC, CWD evolution | Mar 20, 2026 |
-| BIOMEOS_V255_COVERAGE_HARDENING | Deep debt audit, zero-copy JsonRpcVersion, large file refactoring | Mar 20, 2026 |
+| BIOMEOS_V300_DEEP_DEBT_CLEANUP_IV_DOC_EVOLUTION | Dep cleanup (itertools, async-trait×3), native async trait migration, hardcoding→constants, orphan deletion, license harmonization, root doc cleanup, 7,724 tests | Apr 9, 2026 |
+| BIOMEOS_V299_DEEP_DEBT_OVERSTEP_CLEANUP_III | 3 large files smart-refactored, #[allow]→#[expect], comprehensive zero-debt audit, 7,695 tests | Apr 8, 2026 |
+| BIOMEOS_V298_GAP_MATRIX_11_BTSP_INSECURE_GUARD | BTSP validate_insecure_guard() wired into all 3 server paths, security posture logging | Apr 8, 2026 |
+| BIOMEOS_V297_DEEP_DEBT_OVERSTEP_CLEANUP_II | #![forbid(unsafe_code)] on all binaries, niche hardcoding→constants, 3 large files refactored | Apr 8, 2026 |
+| BIOMEOS_V296_GAP02_GAP09_DEPLOY_WIRE_FIX | GAP-02 deploy parser unified, GAP-09 attribution domain corrected | Apr 8, 2026 |
+| BIOMEOS_V292_DEEP_DEBT_CAPABILITY_EVOLUTION | Probe stub→real JSON-RPC probes, 4-format capability parser, hardcoded primals→taxonomy | Apr 7, 2026 |
+| BIOMEOS_V291_DEEP_DEBT_LARGE_FILE_REFACTORING | 4 large files smart-refactored, 27 new tests, duplicate dep audit | Apr 6, 2026 |
+| BIOMEOS_V290_NEURAL_API_SEMANTIC_ROUTING_PROVENANCE_TRIO | Semantic method fallback, 32 provenance trio translations, composition health domain | Apr 6, 2026 |
+
+### Earlier (March 2026)
+
+| Document | Focus | Date |
+|----------|-------|------|
+| BIOMEOS_V273_CROSS_GATE_DEPLOYMENT_EVOLUTION | `route.register` batch API, cross-gate executor forwarding, 7,186 tests | Mar 28, 2026 |
+| BIOMEOS_V268_DEEP_AUDIT_HARDCODING_EVOLUTION | Blocking-in-async fix, `/tmp` + IP centralization, license reconciliation | Mar 27, 2026 |
+| BIOMEOS_V257_COVERAGE_PUSH_FILE_SPLITS | 6,998 tests, 90%+ coverage, 0 files >1000 LOC | Mar 20, 2026 |
 | BIOMEOS_V254_CONCURRENCY_EVOLUTION_COVERAGE_PUSH | Sleep elimination, concurrency evolution, 6,169 tests | Mar 19, 2026 |
-| BIOMEOS_V253_COORDINATION_EXTRICATION | Coordination pattern audit for primalSpring | Mar 18, 2026 |
 | BIOMEOS_V252_CAPABILITY_FIRST_DISCOVERY | Capability-named sockets, MCP aggregation, Provenance metadata type | Mar 18, 2026 |
 | BIOMEOS_V251_ECOSYSTEM_ABSORPTION | IPC resilience, proptest, MCP tools, capability cost/deps, 8 springs absorbed | Mar 18, 2026 |
 
@@ -130,7 +133,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (7,695 tests — 0 ignored — fully concurrent)
+# Test (7,724 tests — 0 ignored — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -155,8 +158,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of April 8, 2026 (v2.99)**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v2.99), 4 scripts**
+**Documentation current as of April 9, 2026 (v3.00)**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v3.00), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed**
-**Tests: 7,695 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0**
+**Tests: 7,724 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0**

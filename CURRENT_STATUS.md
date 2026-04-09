@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 8, 2026 (v2.99: Deep Debt Cleanup III — 3 more large files smart-refactored, all #[allow] → #[expect], comprehensive zero-debt audit)
-**Version**: 2.99
+**Updated**: April 9, 2026 (v3.00: Deep Debt Cleanup IV — unused dep removal (itertools, async-trait×3), async-trait→native async fn in trait migration, hardcoded /tmp/biomeos→centralized constants, orphan nucleus_executor.rs deleted, LICENSE-ORC license harmonized, root docs cleaned, 7,724 tests)
+**Version**: 3.00
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,695 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,724 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -866,7 +866,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 2. ~~**ARM64 biomeOS genomeBin**~~ - ✅ Built (`aarch64-unknown-linux-musl`, 9.6 MB stripped, static)
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
-5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v2.99, 7,695 tests) |
+5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.00, 7,724 tests) |
 
 ### Low Priority
 1. **API key encryption** - NestGate + BearDog secured storage
@@ -875,7 +875,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Apr 8, 2026)
 
-**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,695 total tests including doc-tests and proptests)
+**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,724 total tests including doc-tests and proptests)
 
 ### Coverage Distribution
 
@@ -947,7 +947,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 | Universal IPC v3.0 | Multi-transport (Unix/Abstract/TCP/HTTP JSON-RPC) |
 | PRIMAL_DEPLOYMENT_STANDARD v1.0 | Deterministic behavior |
 | Semantic Method Naming | capability.call routing |
-| AGPL-3.0-only License | Compliant |
+| scyBorg Triple-Copyleft | AGPL-3.0-or-later + ORC + CC-BY-SA 4.0 |
 | Evolved Genetic Model v2.0 | Mitochondrial + Nuclear |
 | XDG Base Directory | All paths via SystemPaths |
 
@@ -959,7 +959,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,695 tests — fully concurrent)
+# Test (7,724 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -981,8 +981,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v2.99 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
-**Tests**: 7,695 passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.00 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Tests**: 7,724 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode

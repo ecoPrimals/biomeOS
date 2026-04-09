@@ -6,7 +6,7 @@
 //! REST/WebSocket endpoints for genomeBin operations.
 //! Implements XDG-compliant file storage for genomeBins.
 //!
-//! AGPL-3.0-only License
+//! AGPL-3.0-or-later License
 
 mod build;
 mod retrieval;

@@ -71,16 +71,24 @@ impl NeuralRouter {
             }
         }
 
-        // Secure Socket Architecture: detect family-scoped sockets (GAP-MATRIX-11)
+        // Secure Socket Architecture: detect family-scoped sockets (GAP-MATRIX-11 / Phase 2)
         if let TransportEndpoint::UnixSocket { path } = endpoint {
             if btsp_client::is_family_scoped_socket(path) {
                 match btsp_client::security_mode() {
                     btsp_client::SecurityMode::Production { btsp_available } => {
                         if btsp_available {
-                            debug!("   🔒 BTSP-authenticated connection to {}", path.display());
-                        } else {
+                            debug!(
+                                "   🔒 BTSP: BearDog available for {} — handshake will be performed by AtomicClient",
+                                path.display()
+                            );
+                        } else if btsp_client::btsp_enforce() {
                             tracing::warn!(
-                                "   ⚠️ BTSP-required socket detected but handshake not yet wired: {}",
+                                "   ⚠️ BTSP enforced but BearDog unavailable for family-scoped socket: {}",
+                                path.display()
+                            );
+                        } else {
+                            debug!(
+                                "   ⚠️ BTSP: BearDog unavailable, proceeding without handshake to {}",
                                 path.display()
                             );
                         }

@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-use super::{test_config, RootFsBuilder, RootFsConfig};
+use super::{RootFsBuilder, RootFsConfig, test_config};
 
 #[test]
 fn test_builder_new() {

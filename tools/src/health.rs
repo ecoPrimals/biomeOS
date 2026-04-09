@@ -332,10 +332,10 @@ async fn check_sovereignty_features(config: &HealthConfig) -> Result<HealthResul
     let cargo_toml = workspace_path.join("Cargo.toml");
     if cargo_toml.exists() {
         let content = std::fs::read_to_string(&cargo_toml).unwrap_or_default();
-        if content.contains("AGPL-3.0-only") {
-            details.push("License: AGPL-3.0-only".to_string());
+        if content.contains("AGPL-3.0-or-later") {
+            details.push("License: AGPL-3.0-or-later".to_string());
         } else {
-            details.push("License: NOT AGPL-3.0-only — sovereignty violation".to_string());
+            details.push("License: NOT AGPL-3.0-or-later — sovereignty violation".to_string());
             warnings += 1;
         }
     }

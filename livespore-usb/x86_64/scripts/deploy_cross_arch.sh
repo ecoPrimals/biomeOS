@@ -11,7 +11,7 @@
 # Default target: /usr/local/bin (requires sudo)
 # User target: ~/.local/bin (no sudo required)
 #
-# AGPL-3.0-only License
+# AGPL-3.0-or-later License
 # =============================================================================
 
 set -euo pipefail

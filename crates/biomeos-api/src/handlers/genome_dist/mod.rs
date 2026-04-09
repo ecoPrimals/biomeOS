@@ -11,7 +11,7 @@
 //! - Public: manifest, version info, checksums
 //! - Dark Forest: binary downloads (lineage verification required)
 //!
-//! AGPL-3.0-only License
+//! AGPL-3.0-or-later License
 
 mod discovery;
 mod distribution;

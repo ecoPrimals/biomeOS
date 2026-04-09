@@ -133,7 +133,7 @@ impl AISuggestionManager {
         let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(2)));
         let _ = stream.set_write_timeout(Some(std::time::Duration::from_secs(2)));
 
-        let request = JsonRpcRequest::new("capability.list", serde_json::json!({}));
+        let request = JsonRpcRequest::new("capabilities.list", serde_json::json!({}));
 
         if let Ok(bytes) = serde_json::to_vec(&request) {
             let _ = stream.write_all(&bytes);

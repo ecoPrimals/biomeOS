@@ -374,7 +374,7 @@ This library follows strict principles:
 
 ## 📄 License
 
-AGPL-3.0-only (scyBorg provenance trio)
+AGPL-3.0-or-later (scyBorg triple-copyleft)
 
 ---
 

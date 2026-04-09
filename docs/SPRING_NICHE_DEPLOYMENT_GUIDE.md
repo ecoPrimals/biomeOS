@@ -27,7 +27,7 @@ with concrete file paths and validation commands.
 - Rust toolchain (stable, edition 2024)
 - biomeOS workspace checked out
 - `#![forbid(unsafe_code)]` in production crate roots (test-utils may use guarded unsafe)
-- scyBorg triple-copyleft license headers (AGPL-3.0-only + ORC + CC-BY-SA 4.0)
+- scyBorg triple-copyleft license headers (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---
 

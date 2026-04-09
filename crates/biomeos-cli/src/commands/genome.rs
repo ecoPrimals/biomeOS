@@ -5,7 +5,7 @@
 //!
 //! CLI interface for genomeBin operations.
 //!
-//! AGPL-3.0-only License
+//! AGPL-3.0-or-later License
 
 use anyhow::{Context, Result};
 use biomeos_genomebin_v3::{Arch, GenomeBin, GenomeBinBuilder, GenomeBinComposer};

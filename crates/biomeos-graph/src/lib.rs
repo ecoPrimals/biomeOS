@@ -72,7 +72,7 @@ pub use graph::{
     NodeConstraints, Operation, PrimalGraph, PrimalNode, PrimalSelector, RetryPolicy, TickConfig,
 };
 pub use loader::GraphLoader;
-pub use modification::GraphModification;
+pub use modification::{GraphModification, GraphModificationHandler, ModificationResult};
 pub use node::{GraphNode, NodeConfig, NodeParams};
 pub use pathway_learner::{
     GraphAnalysis, OptimizationSuggestion, OptimizationType, PathwayLearner,

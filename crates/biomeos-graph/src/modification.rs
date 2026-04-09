@@ -12,54 +12,84 @@
 //! - Type-safe modifications
 //! - Comprehensive validation
 
-#![allow(dead_code, missing_docs)]
-
 use crate::graph::{CoordinationPattern, EdgeType, GraphEdge, PrimalGraph, PrimalNode};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-/// A modification to apply to a graph
+/// A type-safe modification that can be applied to a [`PrimalGraph`].
+///
+/// Used by the AI advisor and graph pipeline to express structural changes
+/// (node/edge add/remove, coordination pattern change) without mutating graphs
+/// directly.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum GraphModification {
-    /// Add a new node to the graph
-    AddNode { node: PrimalNode },
+    /// Add a new node to the graph.
+    AddNode {
+        /// The node to insert.
+        node: PrimalNode,
+    },
 
-    /// Remove a node from the graph
-    RemoveNode { node_id: String },
-
-    /// Modify an existing node's operation
-    ModifyNodeOperation {
+    /// Remove a node (and its connected edges) from the graph.
+    RemoveNode {
+        /// ID of the node to remove.
         node_id: String,
+    },
+
+    /// Replace a node's operation method and optional parameters.
+    ModifyNodeOperation {
+        /// Target node ID.
+        node_id: String,
+        /// New semantic method name (`domain.operation`).
         new_method: String,
+        /// Optional replacement parameters.
         new_params: Option<serde_json::Value>,
     },
 
-    /// Add a dependency edge between two nodes
+    /// Insert a dependency edge between two existing nodes.
     AddEdge {
+        /// Source node ID.
         from: String,
+        /// Target node ID.
         to: String,
+        /// Edge classification.
         edge_type: EdgeType,
     },
 
-    /// Remove an edge
-    RemoveEdge { from: String, to: String },
+    /// Remove an edge between two nodes.
+    RemoveEdge {
+        /// Source node ID.
+        from: String,
+        /// Target node ID.
+        to: String,
+    },
 
-    /// Change the coordination pattern
-    ChangeCoordination { pattern: CoordinationPattern },
+    /// Replace the graph's coordination pattern.
+    ChangeCoordination {
+        /// New coordination strategy.
+        pattern: CoordinationPattern,
+    },
 }
 
-/// Result of applying a modification
+/// Outcome of applying one or more [`GraphModification`]s.
+///
+/// Carries the modified graph on success, or a diagnostic message on failure,
+/// plus any non-fatal warnings collected during application.
 #[derive(Debug, Clone)]
 pub struct ModificationResult {
+    /// Whether the modification was applied successfully.
     pub success: bool,
+    /// The resulting graph (present when `success` is true).
     pub graph: Option<PrimalGraph>,
+    /// Error description (present when `success` is false).
     pub error: Option<String>,
+    /// Non-fatal warnings collected during application.
     pub warnings: Vec<String>,
 }
 
 impl ModificationResult {
+    /// Construct a successful result with the modified graph and any warnings.
     pub fn success(graph: PrimalGraph, warnings: Vec<String>) -> Self {
         Self {
             success: true,
@@ -69,6 +99,7 @@ impl ModificationResult {
         }
     }
 
+    /// Construct a failure result with the given diagnostic message.
     pub fn failure(error: String) -> Self {
         Self {
             success: false,
@@ -79,7 +110,8 @@ impl ModificationResult {
     }
 }
 
-/// Handler for applying graph modifications
+/// Applies [`GraphModification`]s to a [`PrimalGraph`], validating integrity
+/// (no orphaned edges, no dependency cycles) after each change.
 pub struct GraphModificationHandler;
 
 impl GraphModificationHandler {

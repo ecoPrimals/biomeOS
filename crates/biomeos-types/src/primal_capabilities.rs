@@ -227,7 +227,7 @@ pub struct PrimalComplianceCheck {
     pub capability_list: bool,
     /// Uses semantic method naming (`domain.verb[.variant]`).
     pub semantic_naming: bool,
-    /// AGPL-3.0-only license.
+    /// AGPL-3.0-or-later license.
     pub agpl_license: bool,
 }
 

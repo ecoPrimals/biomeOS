@@ -21,7 +21,7 @@
 //! After enrollment, the device has its own unique seed that can prove
 //! ancestry to the family root, but cannot impersonate other devices.
 //!
-//! AGPL-3.0-only License
+//! AGPL-3.0-or-later License
 
 use anyhow::{Context, Result};
 use biomeos_spore::beacon_genetics::{

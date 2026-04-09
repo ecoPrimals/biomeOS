@@ -252,7 +252,7 @@ impl CapabilityClient {
 
     /// List all available capability translations.
     pub async fn list_translations(&self) -> Result<Value> {
-        let request = JsonRpcRequest::new("capability.list", json!({}));
+        let request = JsonRpcRequest::new("capabilities.list", json!({}));
         let response = self.send_request(request).await?;
         if let Some(error) = response.error {
             return Err(anyhow!("RPC error {}: {}", error.code, error.message));

@@ -1,6 +1,6 @@
 #!/bin/sh
 # genomeBin v4.1 Bootstrap Selector
-# AGPL-3.0-only License
+# AGPL-3.0-or-later License
 #
 # This script is embedded at the start of genomeBin v4.1 files.
 # It detects the current architecture and extracts the appropriate binary.

@@ -160,7 +160,7 @@ pub async fn layer3_capability_verification(
 
     if let Some(socket_path) = socket_path {
         let client = UnixSocketClient::new(socket_path);
-        let request = JsonRpcRequest::new("capability.list", serde_json::json!({}));
+        let request = JsonRpcRequest::new("capabilities.list", serde_json::json!({}));
 
         match client.call(request).await {
             Ok(response) => {

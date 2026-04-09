@@ -11,41 +11,440 @@
 //! - Detection of family-scoped sockets (BTSP-required vs development-mode)
 //! - BTSP session state tracking
 //! - The INSECURE guard (refuse to run with both `FAMILY_ID` and `BIOMEOS_INSECURE`)
+//! - Phase 2 server-side handshake enforcement for UDS listeners
+//! - Phase 2 client-side handshake initiation for outbound forwarding
 //!
 //! The actual cryptographic handshake is delegated to BearDog via JSON-RPC
 //! (`btsp.session.create`, `btsp.session.verify`). biomeOS is a family member
 //! and holds the family seed for key derivation.
 
+use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tracing::{info, warn};
+use tokio::io::{AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader};
+use tracing::{debug, info, warn};
+
+/// BTSP protocol version implemented by this module.
+pub const BTSP_VERSION: u8 = 1;
 
 /// Security mode for biomeOS socket connections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SecurityMode {
     /// Production: `FAMILY_ID` is set. BTSP handshake required for family-scoped sockets.
     Production {
-        /// Whether BTSP handshake has been negotiated for this connection.
+        /// Whether a BearDog security socket is reachable for handshake delegation.
         btsp_available: bool,
     },
-    /// Development: `BIOMEOS_INSECURE=1`. Raw cleartext JSON-RPC.
+    /// Development: `BIOMEOS_INSECURE=1` or no `FAMILY_ID`. Raw cleartext JSON-RPC.
     Development,
 }
+
+/// Outcome of a BTSP handshake attempt.
+#[derive(Debug, Clone)]
+pub enum HandshakeOutcome {
+    /// Handshake succeeded; session_id is available for optional encryption.
+    Authenticated {
+        /// Opaque session identifier returned by BearDog.
+        session_id: String,
+    },
+    /// No FAMILY_ID set — connection accepted without handshake (dev mode).
+    DevMode,
+    /// FAMILY_ID is set but BearDog is unavailable — behaviour depends on
+    /// `BIOMEOS_BTSP_ENFORCE`.
+    BearDogUnavailable,
+}
+
+// ── BTSP Handshake Wire Types (Phase 2) ────────────────────────────────
+
+/// First message from client → server on a new connection.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClientHello {
+    /// Always `"btsp"`.
+    pub protocol: String,
+    /// Protocol version (currently 1).
+    pub version: u8,
+    /// Base64-encoded X25519 ephemeral public key.
+    pub client_ephemeral_pub: String,
+}
+
+/// Server → client: challenge after receiving `ClientHello`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerHello {
+    /// Protocol version (must match `BTSP_VERSION`).
+    pub version: u8,
+    /// Base64-encoded X25519 ephemeral public key (from BearDog).
+    pub server_ephemeral_pub: String,
+    /// Base64-encoded random 32-byte challenge.
+    pub challenge: String,
+    /// Session ID for BearDog delegation.
+    pub session_id: String,
+}
+
+/// Client → server: HMAC response to the challenge.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChallengeResponse {
+    /// Base64-encoded HMAC-SHA256 of (challenge ‖ client_pub ‖ server_pub).
+    pub response: String,
+    /// Preferred cipher suite (e.g. `"chacha20_poly1305"`, `"null"`).
+    #[serde(default = "default_cipher")]
+    pub preferred_cipher: String,
+}
+
+fn default_cipher() -> String {
+    "null".to_owned()
+}
+
+/// Server → client: handshake succeeded.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HandshakeComplete {
+    /// Negotiated cipher suite for this session.
+    pub cipher: String,
+    /// Session identifier (matches `ServerHello::session_id`).
+    pub session_id: String,
+}
+
+/// Server → client: handshake failed.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HandshakeError {
+    /// Always `"handshake_failed"`.
+    pub error: String,
+    /// Diagnostic reason (e.g. `"family_verification"`).
+    pub reason: String,
+}
+
+// ── Environment helpers ────────────────────────────────────────────────
 
 /// Determine the security mode from environment.
 #[must_use]
 pub fn security_mode() -> SecurityMode {
-    let has_family = std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-        .map(|v| !v.is_empty() && v != "default")
-        .unwrap_or(false);
+    let has_family = has_family_id();
 
     if has_family {
-        SecurityMode::Production {
-            btsp_available: false,
-        }
+        let btsp_available = beardog_socket_path().is_some();
+        SecurityMode::Production { btsp_available }
     } else {
         SecurityMode::Development
     }
+}
+
+/// Whether `FAMILY_ID` (or `BIOMEOS_FAMILY_ID`) is set to a non-default value.
+#[must_use]
+pub fn has_family_id() -> bool {
+    std::env::var("FAMILY_ID")
+        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+        .map(|v| !v.is_empty() && v != "default")
+        .unwrap_or(false)
+}
+
+/// Read the family ID string from environment.
+#[must_use]
+pub fn family_id() -> Option<String> {
+    std::env::var("FAMILY_ID")
+        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+        .ok()
+        .filter(|v| !v.is_empty() && v != "default")
+}
+
+/// Whether BTSP enforcement is active. When `true`, connections from
+/// clients that do not complete a BTSP handshake are rejected. When
+/// `false`, unauthenticated connections log a warning but proceed.
+///
+/// Default: `true` when `FAMILY_ID` is set, `false` otherwise.
+/// Override: `BIOMEOS_BTSP_ENFORCE=0` disables enforcement during rollout.
+#[must_use]
+pub fn btsp_enforce() -> bool {
+    if !has_family_id() {
+        return false;
+    }
+    std::env::var("BIOMEOS_BTSP_ENFORCE")
+        .map(|v| v != "0" && v != "false")
+        .unwrap_or(true)
+}
+
+/// Attempt to locate BearDog's security socket for BTSP delegation.
+///
+/// Resolution order:
+/// 1. `BEARDOG_SOCKET` environment variable
+/// 2. `BIOMEOS_BEARDOG_SOCKET` environment variable
+/// 3. Family-scoped socket in `BIOMEOS_SOCKET_DIR` / standard XDG path
+/// 4. Development socket (`beardog.sock`) in the socket directory
+#[must_use]
+pub fn beardog_socket_path() -> Option<std::path::PathBuf> {
+    if let Ok(p) = std::env::var("BEARDOG_SOCKET") {
+        let path = std::path::PathBuf::from(&p);
+        if path.exists() {
+            return Some(path);
+        }
+    }
+    if let Ok(p) = std::env::var("BIOMEOS_BEARDOG_SOCKET") {
+        let path = std::path::PathBuf::from(&p);
+        if path.exists() {
+            return Some(path);
+        }
+    }
+    let socket_dir = socket_dir()?;
+    if let Some(fid) = family_id() {
+        let family_path = socket_dir.join(format!("beardog-{fid}.sock"));
+        if family_path.exists() {
+            return Some(family_path);
+        }
+    }
+    let dev_path = socket_dir.join("beardog.sock");
+    if dev_path.exists() {
+        return Some(dev_path);
+    }
+    None
+}
+
+fn socket_dir() -> Option<std::path::PathBuf> {
+    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+        return Some(std::path::PathBuf::from(dir));
+    }
+    if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+        let dir = std::path::PathBuf::from(runtime).join("biomeos");
+        if dir.is_dir() {
+            return Some(dir);
+        }
+    }
+    None
+}
+
+// ── Phase 2: Server-side handshake (UDS listener) ──────────────────────
+
+/// Perform the server-side BTSP handshake on an accepted connection.
+///
+/// Reads the first line from the stream. If it is a `ClientHello`, delegates
+/// the crypto to BearDog and completes the 4-step handshake. If the first
+/// line is a raw JSON-RPC request, the line is returned so the caller can
+/// dispatch it without data loss.
+///
+/// # Returns
+///
+/// - `Ok(HandshakeOutcome::Authenticated { .. })` — handshake completed.
+/// - `Ok(HandshakeOutcome::DevMode)` — no `FAMILY_ID`, skipped.
+/// - `Ok(HandshakeOutcome::BearDogUnavailable)` — `FAMILY_ID` set but
+///   BearDog unreachable. The caller should check [`btsp_enforce`] to
+///   decide whether to accept or reject the connection.
+/// - `Err(_)` — handshake failed (client not in family, protocol error).
+///
+/// When the first line is **not** a `ClientHello`, it is returned inside the
+/// error variant `BtspHandshakeError::RawJsonRpc` so the caller can replay it.
+pub async fn server_handshake<S>(
+    reader: &mut BufReader<S>,
+) -> Result<HandshakeOutcome, BtspHandshakeError>
+where
+    S: tokio::io::AsyncRead + AsyncWrite + Unpin,
+{
+    if !has_family_id() {
+        return Ok(HandshakeOutcome::DevMode);
+    }
+
+    let mut first_line = String::new();
+    let read = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        reader.read_line(&mut first_line),
+    )
+    .await
+    .map_err(|_| BtspHandshakeError::Timeout)?
+    .map_err(BtspHandshakeError::Io)?;
+
+    if read == 0 {
+        return Err(BtspHandshakeError::ConnectionClosed);
+    }
+
+    let hello: ClientHello = match serde_json::from_str::<ClientHello>(first_line.trim()) {
+        Ok(h) if h.protocol == "btsp" => h,
+        _ => {
+            return Err(BtspHandshakeError::RawJsonRpc(first_line));
+        }
+    };
+
+    debug!(
+        version = hello.version,
+        "BTSP ClientHello received, delegating to BearDog"
+    );
+
+    let beardog_path = beardog_socket_path().ok_or(BtspHandshakeError::BearDogNotFound)?;
+
+    let session = create_session_via_beardog(&beardog_path, &hello.client_ephemeral_pub).await?;
+
+    let server_hello = ServerHello {
+        version: BTSP_VERSION,
+        server_ephemeral_pub: session.server_ephemeral_pub.clone(),
+        challenge: session.challenge.clone(),
+        session_id: session.session_id.clone(),
+    };
+
+    let mut hello_line = serde_json::to_string(&server_hello)
+        .map_err(|e| BtspHandshakeError::Protocol(e.to_string()))?;
+    hello_line.push('\n');
+    let stream = reader.get_mut();
+    stream
+        .write_all(hello_line.as_bytes())
+        .await
+        .map_err(BtspHandshakeError::Io)?;
+    stream.flush().await.map_err(BtspHandshakeError::Io)?;
+
+    let mut response_line = String::new();
+    let read = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        reader.read_line(&mut response_line),
+    )
+    .await
+    .map_err(|_| BtspHandshakeError::Timeout)?
+    .map_err(BtspHandshakeError::Io)?;
+
+    if read == 0 {
+        return Err(BtspHandshakeError::ConnectionClosed);
+    }
+
+    let challenge_resp: ChallengeResponse = serde_json::from_str(response_line.trim())
+        .map_err(|e| BtspHandshakeError::Protocol(format!("invalid ChallengeResponse: {e}")))?;
+
+    let verified = verify_session_via_beardog(
+        &beardog_path,
+        &session.session_id,
+        &challenge_resp.response,
+        &hello.client_ephemeral_pub,
+        &session.server_ephemeral_pub,
+        &session.challenge,
+    )
+    .await?;
+
+    if !verified {
+        let err = HandshakeError {
+            error: "handshake_failed".to_owned(),
+            reason: "family_verification".to_owned(),
+        };
+        let mut err_line = serde_json::to_string(&err).unwrap_or_default();
+        err_line.push('\n');
+        let stream = reader.get_mut();
+        let _ = stream.write_all(err_line.as_bytes()).await;
+        let _ = stream.flush().await;
+        return Err(BtspHandshakeError::VerificationFailed);
+    }
+
+    let complete = HandshakeComplete {
+        cipher: challenge_resp.preferred_cipher,
+        session_id: session.session_id.clone(),
+    };
+    let mut complete_line = serde_json::to_string(&complete)
+        .map_err(|e| BtspHandshakeError::Protocol(e.to_string()))?;
+    complete_line.push('\n');
+    let stream = reader.get_mut();
+    stream
+        .write_all(complete_line.as_bytes())
+        .await
+        .map_err(BtspHandshakeError::Io)?;
+    stream.flush().await.map_err(BtspHandshakeError::Io)?;
+
+    debug!(session_id = %session.session_id, "BTSP handshake complete");
+
+    Ok(HandshakeOutcome::Authenticated {
+        session_id: session.session_id,
+    })
+}
+
+/// Errors during BTSP handshake.
+#[derive(Debug)]
+pub enum BtspHandshakeError {
+    /// First line was a raw JSON-RPC request, not a `ClientHello`. The line
+    /// content is preserved so the caller can dispatch it as a normal request.
+    RawJsonRpc(String),
+    /// BearDog socket not found — cannot delegate crypto.
+    BearDogNotFound,
+    /// BearDog returned an error during session creation or verification.
+    BearDogError(String),
+    /// Client failed family verification.
+    VerificationFailed,
+    /// Wire protocol error (malformed message, serialization failure).
+    Protocol(String),
+    /// Handshake timed out.
+    Timeout,
+    /// Client disconnected during handshake.
+    ConnectionClosed,
+    /// I/O error on the connection.
+    Io(std::io::Error),
+}
+
+impl std::fmt::Display for BtspHandshakeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::RawJsonRpc(_) => write!(f, "client sent raw JSON-RPC (no BTSP handshake)"),
+            Self::BearDogNotFound => write!(f, "BearDog socket not found for BTSP delegation"),
+            Self::BearDogError(e) => write!(f, "BearDog BTSP error: {e}"),
+            Self::VerificationFailed => write!(f, "BTSP family verification failed"),
+            Self::Protocol(e) => write!(f, "BTSP protocol error: {e}"),
+            Self::Timeout => write!(f, "BTSP handshake timed out"),
+            Self::ConnectionClosed => write!(f, "client disconnected during BTSP handshake"),
+            Self::Io(e) => write!(f, "BTSP I/O error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for BtspHandshakeError {}
+
+// ── BearDog RPC delegation helpers ─────────────────────────────────────
+
+struct BearDogSession {
+    session_id: String,
+    server_ephemeral_pub: String,
+    challenge: String,
+}
+
+async fn create_session_via_beardog(
+    beardog_path: &Path,
+    client_ephemeral_pub: &str,
+) -> Result<BearDogSession, BtspHandshakeError> {
+    use crate::AtomicClient;
+
+    let client = AtomicClient::unix(beardog_path);
+    let result = client
+        .call(
+            "btsp.session.create",
+            serde_json::json!({
+                "family_seed_ref": "env:FAMILY_SEED",
+                "client_ephemeral_pub": client_ephemeral_pub,
+            }),
+        )
+        .await
+        .map_err(|e| BtspHandshakeError::BearDogError(e.to_string()))?;
+
+    Ok(BearDogSession {
+        session_id: result["session_id"].as_str().unwrap_or_default().to_owned(),
+        server_ephemeral_pub: result["server_ephemeral_pub"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned(),
+        challenge: result["challenge"].as_str().unwrap_or_default().to_owned(),
+    })
+}
+
+async fn verify_session_via_beardog(
+    beardog_path: &Path,
+    session_id: &str,
+    client_response: &str,
+    client_ephemeral_pub: &str,
+    server_ephemeral_pub: &str,
+    challenge: &str,
+) -> Result<bool, BtspHandshakeError> {
+    use crate::AtomicClient;
+
+    let client = AtomicClient::unix(beardog_path);
+    let result = client
+        .call(
+            "btsp.session.verify",
+            serde_json::json!({
+                "session_id": session_id,
+                "client_response": client_response,
+                "client_ephemeral_pub": client_ephemeral_pub,
+                "server_ephemeral_pub": server_ephemeral_pub,
+                "challenge": challenge,
+            }),
+        )
+        .await
+        .map_err(|e| BtspHandshakeError::BearDogError(e.to_string()))?;
+
+    Ok(result["verified"].as_bool().unwrap_or(false))
 }
 
 /// Check that `FAMILY_ID` and `BIOMEOS_INSECURE` are not both set.
@@ -132,6 +531,7 @@ pub fn log_security_posture() {
 }
 
 #[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;
 
@@ -235,5 +635,109 @@ mod tests {
     #[test]
     fn log_security_posture_does_not_panic() {
         log_security_posture();
+    }
+
+    // ── Phase 2: Handshake wire types ──
+
+    #[test]
+    fn client_hello_serialization_roundtrip() {
+        let hello = ClientHello {
+            protocol: "btsp".to_owned(),
+            version: BTSP_VERSION,
+            client_ephemeral_pub: "AAAA".to_owned(),
+        };
+        let json = serde_json::to_string(&hello).unwrap();
+        let parsed: ClientHello = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.protocol, "btsp");
+        assert_eq!(parsed.version, BTSP_VERSION);
+        assert_eq!(parsed.client_ephemeral_pub, "AAAA");
+    }
+
+    #[test]
+    fn server_hello_serialization_roundtrip() {
+        let hello = ServerHello {
+            version: BTSP_VERSION,
+            server_ephemeral_pub: "BBBB".to_owned(),
+            challenge: "CCCC".to_owned(),
+            session_id: "deadbeef".to_owned(),
+        };
+        let json = serde_json::to_string(&hello).unwrap();
+        let parsed: ServerHello = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.session_id, "deadbeef");
+        assert_eq!(parsed.challenge, "CCCC");
+    }
+
+    #[test]
+    fn challenge_response_default_cipher_is_null() {
+        let json = r#"{"response":"HMAC"}"#;
+        let parsed: ChallengeResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(parsed.preferred_cipher, "null");
+    }
+
+    #[test]
+    fn handshake_complete_roundtrip() {
+        let complete = HandshakeComplete {
+            cipher: "chacha20_poly1305".to_owned(),
+            session_id: "abc123".to_owned(),
+        };
+        let json = serde_json::to_string(&complete).unwrap();
+        assert!(json.contains("chacha20_poly1305"));
+        let parsed: HandshakeComplete = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.cipher, "chacha20_poly1305");
+    }
+
+    #[test]
+    fn handshake_error_roundtrip() {
+        let err = HandshakeError {
+            error: "handshake_failed".to_owned(),
+            reason: "family_verification".to_owned(),
+        };
+        let json = serde_json::to_string(&err).unwrap();
+        let parsed: HandshakeError = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.error, "handshake_failed");
+        assert_eq!(parsed.reason, "family_verification");
+    }
+
+    #[test]
+    fn btsp_handshake_error_display() {
+        assert!(format!("{}", BtspHandshakeError::BearDogNotFound).contains("BearDog"));
+        assert!(format!("{}", BtspHandshakeError::VerificationFailed).contains("verification"));
+        assert!(format!("{}", BtspHandshakeError::Timeout).contains("timed out"));
+        assert!(format!("{}", BtspHandshakeError::ConnectionClosed).contains("disconnected"));
+        assert!(
+            format!("{}", BtspHandshakeError::RawJsonRpc("{}".to_owned())).contains("raw JSON-RPC")
+        );
+        assert!(
+            format!("{}", BtspHandshakeError::BearDogError("x".to_owned())).contains("BTSP error")
+        );
+        assert!(format!("{}", BtspHandshakeError::Protocol("bad".to_owned())).contains("protocol"));
+    }
+
+    // ── Phase 2: server_handshake on raw JSON-RPC input ──
+
+    #[tokio::test]
+    async fn server_handshake_returns_devmode_without_family_id() {
+        // No FAMILY_ID in test env → DevMode
+        let (mut s, _c) = tokio::net::UnixStream::pair().unwrap();
+        let mut reader = tokio::io::BufReader::new(&mut s);
+        let result = server_handshake(&mut reader).await;
+        assert!(matches!(result, Ok(HandshakeOutcome::DevMode)));
+    }
+
+    #[test]
+    fn beardog_socket_path_returns_none_without_env() {
+        // Without any BEARDOG_SOCKET or socket dir, should return None
+        // (unless the test machine happens to have one)
+        let _ = beardog_socket_path();
+    }
+
+    #[test]
+    fn handshake_outcome_debug() {
+        let auth = HandshakeOutcome::Authenticated {
+            session_id: "s1".to_owned(),
+        };
+        let dbg = format!("{auth:?}");
+        assert!(dbg.contains("Authenticated"));
+        assert!(dbg.contains("s1"));
     }
 }

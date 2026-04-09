@@ -131,6 +131,7 @@ dashmap = "5.5"
 hyper = { version = "1.0", features = ["full"] }
 
 # Testing
+temp-env = "0.3"
 tempfile = "3.8"
 criterion = "0.5"
 # dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
