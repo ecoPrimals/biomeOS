@@ -3,7 +3,7 @@
 
 //! Beacon Genetics Manager tests
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
 use super::super::capability::CapabilityCaller;
 use super::super::*;

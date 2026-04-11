@@ -81,7 +81,7 @@ pub(crate) async fn check_dependencies() -> Result<HealthCheck> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![expect(clippy::unwrap_used, reason = "test assertions")]
 
     use super::*;
 

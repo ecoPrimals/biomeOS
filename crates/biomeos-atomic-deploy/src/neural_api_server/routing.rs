@@ -12,9 +12,9 @@ use tracing::{debug, trace};
 use super::NeuralApiServer;
 use super::rpc::{DispatchOutcome, JsonRpcRequest};
 
-fn dispatch(result: Result<Value, anyhow::Error>, id: &Value) -> DispatchOutcome {
+fn dispatch(result: Result<Value, anyhow::Error>, id: Value) -> DispatchOutcome {
     match result {
-        Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id.clone())),
+        Ok(v) => DispatchOutcome::Success(super::rpc::success_response(v, id)),
         Err(e) => {
             // Preserve JSON-RPC error codes from primals (GAP-MATRIX-07b).
             // Without this, a primal returning -32601 "method not found" would be
@@ -26,13 +26,13 @@ fn dispatch(result: Result<Value, anyhow::Error>, id: &Value) -> DispatchOutcome
                 return DispatchOutcome::ApplicationError {
                     code: *code,
                     message: message.clone(),
-                    id: id.clone(),
+                    id,
                 };
             }
             DispatchOutcome::ApplicationError {
                 code: -32603,
                 message: format!("Internal error: {e}"),
-                id: id.clone(),
+                id,
             }
         }
     }
@@ -308,7 +308,7 @@ impl NeuralApiServer {
                             "operation": operation,
                             "args": params.clone().unwrap_or(serde_json::json!({}))
                         }));
-                        return dispatch(self.capability_handler.call(&cap_params).await, &id);
+                        return dispatch(self.capability_handler.call(&cap_params).await, id);
                     }
                 }
                 return DispatchOutcome::MethodNotFound {
@@ -319,109 +319,109 @@ impl NeuralApiServer {
         };
         let outcome = match route {
             // Graph
-            Route::GraphList => dispatch(self.graph_handler.list().await, &id),
-            Route::GraphGet => dispatch(self.graph_handler.get(params).await, &id),
-            Route::GraphSave => dispatch(self.graph_handler.save(params).await, &id),
-            Route::GraphExecute => dispatch(self.graph_handler.execute(params).await, &id),
+            Route::GraphList => dispatch(self.graph_handler.list().await, id),
+            Route::GraphGet => dispatch(self.graph_handler.get(params).await, id),
+            Route::GraphSave => dispatch(self.graph_handler.save(params).await, id),
+            Route::GraphExecute => dispatch(self.graph_handler.execute(params).await, id),
             Route::GraphExecutePipeline => {
-                dispatch(self.graph_handler.execute_pipeline(params).await, &id)
+                dispatch(self.graph_handler.execute_pipeline(params).await, id)
             }
-            Route::GraphStatus => dispatch(self.graph_handler.get_status(params).await, &id),
+            Route::GraphStatus => dispatch(self.graph_handler.get_status(params).await, id),
             Route::GraphStartContinuous => {
-                dispatch(self.graph_handler.start_continuous(params).await, &id)
+                dispatch(self.graph_handler.start_continuous(params).await, id)
             }
             Route::GraphPauseContinuous => {
-                dispatch(self.graph_handler.pause_continuous(params).await, &id)
+                dispatch(self.graph_handler.pause_continuous(params).await, id)
             }
             Route::GraphResumeContinuous => {
-                dispatch(self.graph_handler.resume_continuous(params).await, &id)
+                dispatch(self.graph_handler.resume_continuous(params).await, id)
             }
             Route::GraphStopContinuous => {
-                dispatch(self.graph_handler.stop_continuous(params).await, &id)
+                dispatch(self.graph_handler.stop_continuous(params).await, id)
             }
             Route::GraphSuggestOptimizations => {
-                dispatch(self.graph_handler.suggest_optimizations(params).await, &id)
+                dispatch(self.graph_handler.suggest_optimizations(params).await, id)
             }
             // Topology
-            Route::TopologyGet => dispatch(self.topology_handler.get().await, &id),
-            Route::TopologyPrimals => dispatch(self.topology_handler.get_primals().await, &id),
+            Route::TopologyGet => dispatch(self.topology_handler.get().await, id),
+            Route::TopologyPrimals => dispatch(self.topology_handler.get_primals().await, id),
             Route::TopologyProprioception => {
-                dispatch(self.topology_handler.get_proprioception().await, &id)
+                dispatch(self.topology_handler.get_proprioception().await, id)
             }
-            Route::TopologyMetrics => dispatch(self.topology_handler.get_metrics().await, &id),
-            Route::TopologyRescan => dispatch(self.rescan_primals().await, &id),
+            Route::TopologyMetrics => dispatch(self.topology_handler.get_metrics().await, id),
+            Route::TopologyRescan => dispatch(self.rescan_primals().await, id),
             // Niche
-            Route::NicheList => dispatch(self.niche_handler.list().await, &id),
-            Route::NicheDeploy => dispatch(self.niche_handler.deploy(params).await, &id),
+            Route::NicheList => dispatch(self.niche_handler.list().await, id),
+            Route::NicheDeploy => dispatch(self.niche_handler.deploy(params).await, id),
             // Lifecycle
-            Route::LifecycleStatus => dispatch(self.lifecycle_handler.status().await, &id),
-            Route::LifecycleGet => dispatch(self.lifecycle_handler.get(params).await, &id),
+            Route::LifecycleStatus => dispatch(self.lifecycle_handler.status().await, id),
+            Route::LifecycleGet => dispatch(self.lifecycle_handler.get(params).await, id),
             Route::LifecycleRegister => {
-                dispatch(self.lifecycle_handler.register(params).await, &id)
+                dispatch(self.lifecycle_handler.register(params).await, id)
             }
             Route::LifecycleResurrect => {
-                dispatch(self.lifecycle_handler.resurrect(params).await, &id)
+                dispatch(self.lifecycle_handler.resurrect(params).await, id)
             }
             Route::LifecycleApoptosis => {
-                dispatch(self.lifecycle_handler.apoptosis(params).await, &id)
+                dispatch(self.lifecycle_handler.apoptosis(params).await, id)
             }
             Route::LifecycleShutdownAll => {
-                dispatch(self.lifecycle_handler.shutdown_all().await, &id)
+                dispatch(self.lifecycle_handler.shutdown_all().await, id)
             }
             Route::LifecycleComposition => {
-                dispatch(self.lifecycle_handler.composition().await, &id)
+                dispatch(self.lifecycle_handler.composition().await, id)
             }
             // Protocol
-            Route::ProtocolStatus => dispatch(self.protocol_handler.status().await, &id),
-            Route::ProtocolEscalate => dispatch(self.protocol_handler.escalate(params).await, &id),
-            Route::ProtocolFallback => dispatch(self.protocol_handler.fallback(params).await, &id),
-            Route::ProtocolMetrics => dispatch(self.protocol_handler.metrics(params).await, &id),
+            Route::ProtocolStatus => dispatch(self.protocol_handler.status().await, id),
+            Route::ProtocolEscalate => dispatch(self.protocol_handler.escalate(params).await, id),
+            Route::ProtocolFallback => dispatch(self.protocol_handler.fallback(params).await, id),
+            Route::ProtocolMetrics => dispatch(self.protocol_handler.metrics(params).await, id),
             Route::ProtocolRegisterPrimal => {
-                dispatch(self.protocol_handler.register_primal(params).await, &id)
+                dispatch(self.protocol_handler.register_primal(params).await, id)
             }
             Route::ProtocolRegisterConnection => {
-                dispatch(self.protocol_handler.register_connection(params).await, &id)
+                dispatch(self.protocol_handler.register_connection(params).await, id)
             }
             Route::ProtocolRecordRequest => {
-                dispatch(self.protocol_handler.record_request(params).await, &id)
+                dispatch(self.protocol_handler.record_request(params).await, id)
             }
             Route::ProtocolStartMonitoring => {
-                dispatch(self.protocol_handler.start_monitoring().await, &id)
+                dispatch(self.protocol_handler.start_monitoring().await, id)
             }
             Route::ProtocolStopMonitoring => {
-                dispatch(self.protocol_handler.stop_monitoring().await, &id)
+                dispatch(self.protocol_handler.stop_monitoring().await, id)
             }
-            Route::GraphProtocolMap => dispatch(self.protocol_handler.protocol_map().await, &id),
+            Route::GraphProtocolMap => dispatch(self.protocol_handler.protocol_map().await, id),
             // Route (batch capability registration)
             Route::BatchRouteRegister => {
-                dispatch(self.capability_handler.register_route(params).await, &id)
+                dispatch(self.capability_handler.register_route(params).await, id)
             }
             // Capability
             Route::CapabilityRegister => {
-                dispatch(self.capability_handler.register(params).await, &id)
+                dispatch(self.capability_handler.register(params).await, id)
             }
             Route::CapabilityDiscover => {
-                dispatch(self.capability_handler.discover(params).await, &id)
+                dispatch(self.capability_handler.discover(params).await, id)
             }
-            Route::CapabilityList => dispatch(self.capability_handler.list().await, &id),
+            Route::CapabilityList => dispatch(self.capability_handler.list().await, id),
             Route::CapabilityProviders => {
-                dispatch(self.capability_handler.providers(params).await, &id)
+                dispatch(self.capability_handler.providers(params).await, id)
             }
-            Route::CapabilityResolve => dispatch(self.capability_handler.route(params).await, &id),
+            Route::CapabilityResolve => dispatch(self.capability_handler.route(params).await, id),
             Route::CapabilityResolveSingle => {
-                dispatch(self.capability_handler.resolve(params).await, &id)
+                dispatch(self.capability_handler.resolve(params).await, id)
             }
-            Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, &id),
-            Route::CapabilityCall => dispatch(self.capability_handler.call(params).await, &id),
+            Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, id),
+            Route::CapabilityCall => dispatch(self.capability_handler.call(params).await, id),
             Route::CapabilityDiscoverTranslations => dispatch(
                 self.capability_handler.discover_translations(params).await,
-                &id,
+                id,
             ),
             Route::CapabilityListTranslations => {
-                dispatch(self.capability_handler.list_translations().await, &id)
+                dispatch(self.capability_handler.list_translations().await, id)
             }
             // MCP
-            Route::McpToolsList => dispatch(self.capability_handler.mcp_tools_list().await, &id),
+            Route::McpToolsList => dispatch(self.capability_handler.mcp_tools_list().await, id),
             // Agent
             Route::Agent => dispatch(
                 super::agents::handle_agent_request(
@@ -430,34 +430,34 @@ impl NeuralApiServer {
                     params,
                 )
                 .await,
-                &id,
+                id,
             ),
             // Inference (canonical namespace)
             Route::InferenceSchedule => {
-                dispatch(self.inference_handler.schedule(params).await, &id)
+                dispatch(self.inference_handler.schedule(params).await, id)
             }
-            Route::InferenceGates => dispatch(self.inference_handler.gates(params).await, &id),
+            Route::InferenceGates => dispatch(self.inference_handler.gates(params).await, id),
             Route::InferenceRegisterProvider => {
-                dispatch(self.inference_handler.register_provider(params).await, &id)
+                dispatch(self.inference_handler.register_provider(params).await, id)
             }
             Route::InferenceProviders => {
-                dispatch(self.inference_handler.list_providers(params).await, &id)
+                dispatch(self.inference_handler.list_providers(params).await, id)
             }
             Route::InferenceComplete => {
-                dispatch(self.inference_handler.complete(params).await, &id)
+                dispatch(self.inference_handler.complete(params).await, id)
             }
             Route::InferenceEmbed => {
-                dispatch(self.inference_handler.embed(params).await, &id)
+                dispatch(self.inference_handler.embed(params).await, id)
             }
             Route::InferenceModels => {
-                dispatch(self.inference_handler.models(params).await, &id)
+                dispatch(self.inference_handler.models(params).await, id)
             }
             // Health probes (SEMANTIC_METHOD_NAMING_STANDARD.md compliance)
-            Route::HealthCheck => dispatch(self.health_check().await, &id),
-            Route::HealthLiveness => dispatch(self.health_liveness(), &id),
-            Route::HealthReadiness => dispatch(self.health_readiness().await, &id),
+            Route::HealthCheck => dispatch(self.health_check().await, id),
+            Route::HealthLiveness => dispatch(self.health_liveness(), id),
+            Route::HealthReadiness => dispatch(self.health_readiness().await, id),
             // Legacy
-            Route::ProxyHttp => dispatch(self.proxy_http(params).await, &id),
+            Route::ProxyHttp => dispatch(self.proxy_http(params).await, id),
             // Semantic capability routing: domain.operation → capability.call
             Route::SemanticCapabilityCall => {
                 if let Some((domain, operation)) = request.method.as_ref().split_once('.') {
@@ -466,7 +466,7 @@ impl NeuralApiServer {
                         "operation": operation,
                         "args": params.clone().unwrap_or(serde_json::json!({}))
                     }));
-                    dispatch(self.capability_handler.call(&cap_params).await, &id)
+                    dispatch(self.capability_handler.call(&cap_params).await, id)
                 } else {
                     return DispatchOutcome::MethodNotFound {
                         method: request.method.as_ref().to_string(),

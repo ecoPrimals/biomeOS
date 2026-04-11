@@ -4,7 +4,7 @@
 //! Model-cache CLI tests (part 1 of 2; see `model_cache_tests2.rs`).
 
 #![expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use super::*;
 use crate::ModelCacheCommand;

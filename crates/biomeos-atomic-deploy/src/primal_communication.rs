@@ -182,7 +182,7 @@ pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<Str
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
+    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
     use super::*;
     use biomeos_test_utils::MockJsonRpcServer;

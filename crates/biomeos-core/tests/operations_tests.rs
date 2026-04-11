@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#![allow(clippy::collapsible_if, clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::collapsible_if, clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Comprehensive tests for operations module

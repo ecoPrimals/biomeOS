@@ -49,7 +49,7 @@ pub enum BootError {
 
     /// Hardware detection failed
     #[error("hardware detection failed: {0}")]
-    HardwareDetection(#[source] Box<dyn std::error::Error + Send + Sync>),
+    HardwareDetection(#[source] anyhow::Error),
 
     /// Unsupported CPU architecture
     #[error("unsupported architecture: {0}")]
@@ -57,7 +57,7 @@ pub enum BootError {
 
     /// Network configuration failed
     #[error("network configuration failed: {0}")]
-    NetworkConfig(#[source] Box<dyn std::error::Error + Send + Sync>),
+    NetworkConfig(#[source] anyhow::Error),
 
     /// Failed to detect network interfaces
     #[error("failed to detect network interfaces")]

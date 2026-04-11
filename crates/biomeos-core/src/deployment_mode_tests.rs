@@ -3,7 +3,7 @@
 
 //! Tests for [`crate::deployment_mode`].
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
 use crate::deployment_mode::{DeploymentFromEnvParams, DeploymentMode, HostOS, IsolationLevel};
 use std::path::{Path, PathBuf};

@@ -222,7 +222,7 @@ pub struct ChimeraSummary {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![expect(clippy::unwrap_used, reason = "test assertions")]
 
     use super::*;
     use std::io::Write;

@@ -3,7 +3,7 @@
 
 //! Additional `AtomicClient` constructor and transport coverage (`atomic_client.rs`).
 
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use crate::TransportEndpoint;
 use crate::atomic_client::AtomicClient;

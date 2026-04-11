@@ -284,7 +284,7 @@ fn calculate_health_status(primals: &[TopologyNode]) -> HealthStatus {
 /// Build live topology from discovered primals
 async fn build_live_topology(
     discovery: &dyn biomeos_core::PrimalDiscovery,
-) -> Result<(Vec<TopologyNode>, Vec<TopologyEdge>), Box<dyn std::error::Error + Send + Sync>> {
+) -> anyhow::Result<(Vec<TopologyNode>, Vec<TopologyEdge>)> {
     // Discover all primals
     let discovered = discovery.discover_all().await?;
 

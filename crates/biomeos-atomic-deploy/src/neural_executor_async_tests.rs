@@ -4,7 +4,7 @@
 //! Async integration tests for GraphExecutor (split from `neural_executor_tests.rs`).
 //! Branch-coverage tests live in `neural_executor_async_tests2.rs`.
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
 use super::neural_executor::GraphExecutor;
 use crate::neural_graph::{Graph, GraphConfig, GraphNode};

@@ -3,7 +3,7 @@
 //
 // Test module for service/security.rs - included via #[path]
 
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use super::*;
 use std::collections::HashMap;

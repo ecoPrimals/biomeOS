@@ -66,7 +66,7 @@ pub fn extract_family_id(spore_path: &Path) -> Result<String, anyhow::Error> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
+    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
     use super::*;
     use std::fs;

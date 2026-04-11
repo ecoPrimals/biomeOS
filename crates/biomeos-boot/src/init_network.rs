@@ -69,12 +69,12 @@ impl NetworkManager {
         let mut interfaces = Vec::new();
         let mut entries = tokio::fs::read_dir(net_dir)
             .await
-            .map_err(|e| crate::init_error::BootError::NetworkConfig(Box::new(e)))?;
+            .map_err(|e| crate::init_error::BootError::NetworkConfig(e.into()))?;
 
         while let Some(entry) = entries
             .next_entry()
             .await
-            .map_err(|e| crate::init_error::BootError::NetworkConfig(Box::new(e)))?
+            .map_err(|e| crate::init_error::BootError::NetworkConfig(e.into()))?
         {
             let name = entry
                 .file_name()

@@ -4,7 +4,7 @@
 //! Capability handler tests - extracted to keep capability.rs under 1000 lines
 
 #![expect(clippy::unwrap_used, reason = "test")]
-#![allow(clippy::expect_used)]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 use biomeos_test_utils::MockJsonRpcServer;
 use serde_json::json;

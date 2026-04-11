@@ -3,8 +3,8 @@
 
 //! Unit tests for graph handlers (graph.list, graph.get, graph.save, graph.execute, graph.status).
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
-#![allow(clippy::type_complexity)]
+#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::type_complexity, reason = "test complex types")]
 
 mod continuous;
 mod coverage_more;

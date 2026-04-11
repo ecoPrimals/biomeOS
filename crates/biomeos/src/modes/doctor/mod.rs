@@ -108,7 +108,7 @@ pub(crate) async fn check_subsystem(name: &str, _detailed: bool) -> Result<Diagn
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![expect(clippy::unwrap_used, reason = "test assertions")]
 
     #[tokio::test]
     async fn test_run_unknown_subsystem_returns_error() {

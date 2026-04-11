@@ -4,14 +4,14 @@
 
 ---
 
-## Status: Production Ready (v3.02)
+## Status: Production Ready (v3.03)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 7/7 ecoBin v3.0 compliant (+ barraCuda, coralReef) |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned) |
+| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout) |
 | Tests | 7,749 passing (0 failures, 0 ignored, fully concurrent) — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 pure, deny.toml enforced bans) |

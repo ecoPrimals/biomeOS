@@ -118,7 +118,7 @@ pub fn uptime_seconds() -> u64 {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![expect(clippy::unwrap_used, reason = "test assertions")]
 
     use super::*;
 

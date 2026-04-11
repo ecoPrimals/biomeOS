@@ -2,6 +2,29 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.03 (2026-04-11) — Deep Debt Cleanup VI
+
+### Box<dyn Error> → anyhow evolution
+- `biomeos-api/handlers/topology.rs`: `build_live_topology()` return type evolved from `Box<dyn std::error::Error + Send + Sync>` to `anyhow::Result`
+- `biomeos-boot/init_error.rs`: `HardwareDetection` and `NetworkConfig` error variants evolved from `Box<dyn std::error::Error + Send + Sync>` to `anyhow::Error`
+- Updated callers in `init_hardware.rs` and `init_network.rs` (Box::new → .into())
+
+### #[allow(] → #[expect(] bulk migration
+- 119 test files migrated from `#[allow(clippy::unwrap_used, clippy::expect_used)]` to `#[expect(..., reason = "test assertions")]`
+- Only `biomeos-test-utils/src/lib.rs` retains `#[allow(` — intentionally, as crate-level library `#[expect]` would trigger unfulfilled-expect warnings
+- All `#[expect(` attributes include `reason = "..."` documentation
+
+### Hot-path clone reduction
+- `dispatch()` in Neural API routing evolved from `id: &Value` (3 clones) to `id: Value` (zero clones)
+- Eliminates one `Value::clone()` on every successful JSON-RPC request — the most common code path
+- All 50+ dispatch call sites updated to pass owned `id`
+- Error paths use move semantics instead of clone (mutually exclusive branches)
+
+### Quality gates
+- 7,749 tests (0 failures), clippy PASS (0 warnings, pedantic+nursery), fmt PASS
+
+---
+
 ## v3.02 (2026-04-11) — primalSpring Portability Debt Audit Response
 
 ### capability.resolve monitoring (biomeOS BM-* monitoring gap)

@@ -166,7 +166,7 @@ impl std::fmt::Display for ModelResolution {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
+    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
     use super::*;
 

@@ -34,7 +34,7 @@
 //! cargo bench --bench dark_forest_benches
 //! ```
 
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use biomeos_spore::DarkForestBeacon;
 use criterion::{Criterion, black_box, criterion_group, criterion_main};

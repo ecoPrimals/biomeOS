@@ -652,7 +652,7 @@ fn dispatch_preserves_primal_json_rpc_error_code() {
         message: "Method not found".to_string(),
     };
     let id = serde_json::json!(42);
-    let outcome = super::dispatch(Err(err.into()), &id);
+    let outcome = super::dispatch(Err(err.into()), id);
     match outcome {
         DispatchOutcome::ApplicationError { code, message, .. } => {
             assert_eq!(code, -32601, "primal error code must be preserved");
@@ -666,7 +666,7 @@ fn dispatch_preserves_primal_json_rpc_error_code() {
 fn dispatch_uses_generic_code_for_non_ipc_errors() {
     let err = anyhow::anyhow!("connection refused");
     let id = serde_json::json!(1);
-    let outcome = super::dispatch(Err(err), &id);
+    let outcome = super::dispatch(Err(err), id);
     match outcome {
         DispatchOutcome::ApplicationError { code, .. } => {
             assert_eq!(code, -32603, "non-IPC errors use generic code");

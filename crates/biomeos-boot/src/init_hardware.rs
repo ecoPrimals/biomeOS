@@ -77,7 +77,7 @@ pub async fn detect() -> Result<HardwareInfo> {
     #[cfg(target_os = "linux")]
     let (cpu_count, total_memory_gb) = {
         let cpu_count = read_cpu_count().ok_or_else(|| {
-            BootError::HardwareDetection(Box::new(std::io::Error::other("No CPUs detected")))
+            BootError::HardwareDetection(std::io::Error::other("No CPUs detected").into())
         })?;
         let total_memory = read_total_memory_kb().unwrap_or(0) * 1024; // Convert kB to bytes
         let total_memory_gb = total_memory / (1024 * 1024 * 1024);
@@ -90,7 +90,7 @@ pub async fn detect() -> Result<HardwareInfo> {
             .map(|p| p.get())
             .unwrap_or(1);
         let cpu_count = NonZeroUsize::new(n).ok_or_else(|| {
-            BootError::HardwareDetection(Box::new(std::io::Error::other("No CPUs detected")))
+            BootError::HardwareDetection(std::io::Error::other("No CPUs detected").into())
         })?;
         (cpu_count, 0u64)
     };

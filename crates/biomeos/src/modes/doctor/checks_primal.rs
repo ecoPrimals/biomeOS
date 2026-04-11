@@ -144,7 +144,7 @@ pub(crate) async fn check_plasmid_bin_at(base_dir: &Path) -> Result<HealthCheck>
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
+    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
     use super::*;
 

@@ -3,7 +3,7 @@
 
 //! Discovery tests - extracted to keep discovery/mod.rs under 1000 lines
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
