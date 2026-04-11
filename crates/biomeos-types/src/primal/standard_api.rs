@@ -30,7 +30,7 @@
 //! struct MyPrimal;
 //!
 //! impl BiomeOSStandardAPI for MyPrimal {
-//!     async fn biomeos_identity(&self) -> Result<PrimalIdentity, Box<dyn std::error::Error + Send + Sync>> {
+//!     async fn biomeos_identity(&self) -> anyhow::Result<PrimalIdentity> {
 //!         Ok(PrimalIdentity {
 //!             name: "my-primal".to_string(),
 //!             version: env!("CARGO_PKG_VERSION").to_string(),
@@ -45,7 +45,6 @@
 
 use serde::{Deserialize, Serialize};
 
-// EVOLVED (Jan 27, 2026): Import from unified capabilities module
 pub use crate::capability_taxonomy::CapabilityTaxonomy as PrimalCapability;
 
 /// Standard `BiomeOS` primal API
@@ -63,36 +62,28 @@ pub trait BiomeOSStandardAPI: Send + Sync {
     /// its name, version, and capabilities.
     ///
     /// **JSON-RPC**: `biomeos.identity`
-    async fn biomeos_identity(
-        &self,
-    ) -> Result<PrimalIdentity, Box<dyn std::error::Error + Send + Sync>>;
+    async fn biomeos_identity(&self) -> anyhow::Result<PrimalIdentity>;
 
     /// Get capabilities (what can I do?)
     ///
     /// Returns the list of capabilities this primal provides.
     ///
     /// **JSON-RPC**: `biomeos.capabilities`
-    async fn biomeos_capabilities(
-        &self,
-    ) -> Result<Vec<PrimalCapability>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn biomeos_capabilities(&self) -> anyhow::Result<Vec<PrimalCapability>>;
 
     /// Health check (how am I?)
     ///
     /// Returns the primal's current health status.
     ///
     /// **JSON-RPC**: `biomeos.health`
-    async fn biomeos_health(
-        &self,
-    ) -> Result<HealthStatus, Box<dyn std::error::Error + Send + Sync>>;
+    async fn biomeos_health(&self) -> anyhow::Result<HealthStatus>;
 
     /// Get known peers (who do I know?)
     ///
     /// Returns the list of other primals this primal has discovered.
     ///
     /// **JSON-RPC**: `biomeos.peers`
-    async fn biomeos_peers(
-        &self,
-    ) -> Result<Vec<PeerInfo>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn biomeos_peers(&self) -> anyhow::Result<Vec<PeerInfo>>;
 }
 
 /// Primal identity information

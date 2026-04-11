@@ -465,6 +465,61 @@ fn test_new_lazy_runtime_without_xdg_runtime_dir() {
     );
 }
 
+#[test]
+fn test_default_runtime_dir_uses_xdg() {
+    let dir = temp_env::with_var("XDG_RUNTIME_DIR", Some("/run/user/1000"), || {
+        SystemPaths::default_runtime_dir()
+    });
+    assert_eq!(dir, PathBuf::from("/run/user/1000/biomeos"));
+}
+
+#[test]
+fn test_default_runtime_dir_fallback() {
+    let dir = temp_env::with_vars(
+        [
+            ("XDG_RUNTIME_DIR", None::<&str>),
+            ("USER", Some("testuser")),
+        ],
+        SystemPaths::default_runtime_dir,
+    );
+    let s = dir.to_string_lossy();
+    assert!(
+        s.contains("biomeos-testuser"),
+        "expected temp fallback containing biomeos-testuser: {s}"
+    );
+}
+
+#[test]
+fn test_neural_api_socket_path() {
+    let path = temp_env::with_var("XDG_RUNTIME_DIR", Some("/run/user/1000"), || {
+        SystemPaths::neural_api_socket("nat0")
+    });
+    assert_eq!(
+        path,
+        PathBuf::from("/run/user/1000/biomeos/neural-api-nat0.sock")
+    );
+}
+
+#[test]
+fn test_neural_api_socket_fallback() {
+    let path = temp_env::with_vars(
+        [
+            ("XDG_RUNTIME_DIR", None::<&str>),
+            ("USER", Some("testuser")),
+        ],
+        || SystemPaths::neural_api_socket("family1"),
+    );
+    let s = path.to_string_lossy();
+    assert!(
+        s.ends_with("neural-api-family1.sock"),
+        "expected socket filename: {s}"
+    );
+    assert!(
+        s.contains("biomeos-testuser"),
+        "expected temp fallback dir: {s}"
+    );
+}
+
 /// Covers etcetera fallbacks in `get_*_dir` and `get_state_dir`'s `data_dir/state` path when
 /// `HOME` and XDG base vars are unset.
 #[test]

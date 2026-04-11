@@ -65,6 +65,7 @@ enum Route {
     LifecycleResurrect,
     LifecycleApoptosis,
     LifecycleShutdownAll,
+    LifecycleComposition,
     ProtocolStatus,
     ProtocolEscalate,
     ProtocolFallback,
@@ -81,6 +82,7 @@ enum Route {
     CapabilityList,
     CapabilityProviders,
     CapabilityResolve,
+    CapabilityResolveSingle,
     CapabilityMetrics,
     CapabilityCall,
     CapabilityDiscoverTranslations,
@@ -152,6 +154,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("lifecycle.resurrect", Route::LifecycleResurrect),
     ("lifecycle.apoptosis", Route::LifecycleApoptosis),
     ("lifecycle.shutdown_all", Route::LifecycleShutdownAll),
+    ("lifecycle.composition", Route::LifecycleComposition),
     // Protocol
     ("protocol.status", Route::ProtocolStatus),
     ("protocol.escalate", Route::ProtocolEscalate),
@@ -172,11 +175,13 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("capability.register", Route::CapabilityRegister),
     ("capability.discover", Route::CapabilityDiscover),
     ("neural_api.discover_capability", Route::CapabilityDiscover),
+    ("discovery.find_by_capability", Route::CapabilityDiscover),
     ("capability.list", Route::CapabilityList), // legacy alias; prefer `capabilities.list`
     ("capabilities.list", Route::CapabilityList),
     ("capability.providers", Route::CapabilityProviders),
     ("capability.route", Route::CapabilityResolve),
     ("neural_api.route_to_primal", Route::CapabilityResolve),
+    ("capability.resolve", Route::CapabilityResolveSingle),
     ("capability.metrics", Route::CapabilityMetrics),
     ("neural_api.get_routing_metrics", Route::CapabilityMetrics),
     ("capability.call", Route::CapabilityCall),
@@ -193,6 +198,9 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
         Route::CapabilityListTranslations,
     ),
     // Inference scheduling (cross-gate model orchestration)
+    // Canonical namespace: `inference.*` (per wateringHole SEMANTIC_METHOD_NAMING_STANDARD.md).
+    // `model.*` and `ai.*` are aliases that route through the semantic fallback to
+    // capability.call, which resolves to the same providers via CapabilityTranslationRegistry.
     ("inference.schedule", Route::InferenceSchedule),
     ("inference.gates", Route::InferenceGates),
     // MCP tool discovery (Squirrel alpha.13 aggregation)
@@ -351,6 +359,9 @@ impl NeuralApiServer {
             Route::LifecycleShutdownAll => {
                 dispatch(self.lifecycle_handler.shutdown_all().await, &id)
             }
+            Route::LifecycleComposition => {
+                dispatch(self.lifecycle_handler.composition().await, &id)
+            }
             // Protocol
             Route::ProtocolStatus => dispatch(self.protocol_handler.status().await, &id),
             Route::ProtocolEscalate => dispatch(self.protocol_handler.escalate(params).await, &id),
@@ -388,6 +399,9 @@ impl NeuralApiServer {
                 dispatch(self.capability_handler.providers(params).await, &id)
             }
             Route::CapabilityResolve => dispatch(self.capability_handler.route(params).await, &id),
+            Route::CapabilityResolveSingle => {
+                dispatch(self.capability_handler.resolve(params).await, &id)
+            }
             Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, &id),
             Route::CapabilityCall => dispatch(self.capability_handler.call(params).await, &id),
             Route::CapabilityDiscoverTranslations => dispatch(

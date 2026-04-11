@@ -359,7 +359,7 @@ fn register_api_routes(
 
     // Add rendezvous routes (Dark Forest beacon handshake for Pixel-USB)
     // Uses Tower Atomic capability routing — no direct primal socket wiring
-    let rendezvous_state = Arc::new(handlers::rendezvous::RendezvousState::new(""));
+    let rendezvous_state = Arc::new(handlers::rendezvous::RendezvousState::new());
 
     let router = router
         .route(

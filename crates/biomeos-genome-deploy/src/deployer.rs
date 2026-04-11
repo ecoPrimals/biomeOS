@@ -68,7 +68,7 @@ impl GenomeDeployer {
     /// Uses `$HOME` env instead of `dirs` crate (ecoBin: no C deps).
     pub(crate) fn default_install_dir(&self, primal_name: &str) -> PathBuf {
         let home_dir = || -> PathBuf {
-            std::env::var("HOME").map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from)
+            std::env::var("HOME").map_or_else(|_| std::env::temp_dir(), PathBuf::from)
         };
 
         let is_root = is_root_user();

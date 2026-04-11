@@ -75,11 +75,8 @@ pub struct RendezvousState {
 }
 
 impl RendezvousState {
-    /// Create a new rendezvous state
-    ///
-    /// Deep Debt Evolution: No socket parameter needed.
-    /// Discovery happens at runtime via `beacon_verification::discover_neural_api_socket()`.
-    pub fn new(_deprecated_socket: &str) -> Self {
+    /// Create a new rendezvous state via runtime discovery.
+    pub fn new() -> Self {
         let family_id = biomeos_core::family_discovery::get_family_id();
         let neural_api_socket = beacon_verification::discover_neural_api_socket(&family_id);
 

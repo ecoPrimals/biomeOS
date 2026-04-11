@@ -66,20 +66,20 @@ async fn spawn_neural_api_loopback_mock(
 
 #[test]
 fn test_rendezvous_state_creation() {
-    let state = RendezvousState::new("");
+    let state = RendezvousState::new();
     assert!(!state.family_id.is_empty());
 }
 
 #[test]
 fn test_rendezvous_state_clone() {
-    let state = RendezvousState::new("");
+    let state = RendezvousState::new();
     let cloned = state.clone();
     assert_eq!(cloned.family_id, state.family_id);
 }
 
 #[tokio::test]
 async fn test_clean_expired_removes_old_slots() {
-    let state = RendezvousState::new("");
+    let state = RendezvousState::new();
 
     // Add an expired slot
     let mut slots = state.slots.write().await;
@@ -104,7 +104,7 @@ async fn test_clean_expired_removes_old_slots() {
 
 #[tokio::test]
 async fn test_clean_expired_keeps_valid_slots() {
-    let state = RendezvousState::new("");
+    let state = RendezvousState::new();
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -134,7 +134,7 @@ async fn test_clean_expired_keeps_valid_slots() {
 
 #[tokio::test]
 async fn test_clean_expired_mixed_slots() {
-    let state = RendezvousState::new("");
+    let state = RendezvousState::new();
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -324,7 +324,7 @@ fn test_rendezvous_slot_serialization() {
 
 #[tokio::test]
 async fn test_multiple_lineage_groups() {
-    let state = RendezvousState::new("");
+    let state = RendezvousState::new();
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -427,7 +427,7 @@ fn test_rendezvous_check_request_empty_token() {
 
 #[tokio::test]
 async fn test_post_beacon_invalid_token_returns_forbidden() {
-    let state = Arc::new(RendezvousState::new(""));
+    let state = Arc::new(RendezvousState::new());
     let request = RendezvousPostRequest {
         encrypted_beacon: "fake-beacon-data".to_string(),
         dark_forest_token: "invalid-token-no-socket".to_string(),
@@ -446,7 +446,7 @@ async fn test_post_beacon_invalid_token_returns_forbidden() {
 
 #[tokio::test]
 async fn test_check_peer_invalid_token_returns_forbidden() {
-    let state = Arc::new(RendezvousState::new(""));
+    let state = Arc::new(RendezvousState::new());
     let request = RendezvousCheckRequest {
         dark_forest_token: "invalid-token".to_string(),
     };

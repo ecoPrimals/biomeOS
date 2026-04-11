@@ -383,7 +383,9 @@ fn fallback_lan_candidates() -> Vec<Candidate> {
 
 fn local_ipv4_via_udp() -> Option<Ipv4Addr> {
     let s = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
-    s.connect("8.8.8.8:80").ok()?;
+    // RFC 5737 documentation address — never routed, avoids phoning home
+    // to any third-party DNS provider (sovereignty-compliant).
+    s.connect("192.0.2.1:80").ok()?;
     match s.local_addr().ok()?.ip() {
         IpAddr::V4(v4) => Some(v4),
         IpAddr::V6(_) => None,

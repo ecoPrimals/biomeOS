@@ -4,7 +4,8 @@
 //! Capability routing and discovery handlers.
 //!
 //! This module handles all capability-related JSON-RPC methods:
-//! - `capability.discover` - Find primals for a capability
+//! - `capability.resolve` - Single-step "DNS" resolution for a capability (returns one endpoint)
+//! - `capability.discover` - Find primals for a capability (returns a list)
 //! - `capability.route` - Route requests to capability providers
 //! - `capability.register` - Register new capability providers
 //! - `capability.list` - List all known capabilities
@@ -70,6 +71,48 @@ impl CapabilityHandler {
     pub fn with_gate_registry(mut self, registry: Arc<GateRegistry>) -> Self {
         self.gate_registry = registry;
         self
+    }
+
+    /// Resolve the best provider for a capability in a single step.
+    ///
+    /// JSON-RPC method: `capability.resolve`
+    ///
+    /// This is the IPC equivalent of DNS resolution: given a capability domain,
+    /// returns the single best endpoint to call. Springs use this instead of
+    /// `capability.discover` (which returns a list) when they just need to route.
+    ///
+    /// # Parameters
+    /// - `capability` or `domain`: The capability to resolve (e.g., "crypto", "storage").
+    ///
+    /// # Returns
+    /// ```json
+    /// { "endpoint": "unix:///run/biomeos/security-family.sock",
+    ///   "primal": "beardog", "capability": "crypto", "resolved": true }
+    /// ```
+    pub async fn resolve(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let capability = params["capability"]
+            .as_str()
+            .or_else(|| params["domain"].as_str())
+            .context("Missing 'capability' or 'domain' parameter")?;
+
+        debug!("capability.resolve: {}", capability);
+
+        let atomic = self.router.discover_capability(capability).await?;
+
+        let primary_primal = atomic
+            .primals
+            .first()
+            .map(|p| &*p.name)
+            .unwrap_or("unknown");
+
+        Ok(json!({
+            "resolved": true,
+            "capability": capability,
+            "endpoint": atomic.primary_endpoint.display_string(),
+            "primal": primary_primal,
+            "provider_count": atomic.primals.len()
+        }))
     }
 
     /// Discover primals that provide a capability.

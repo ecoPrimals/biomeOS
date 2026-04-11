@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 9, 2026 (v3.00: Deep Debt Cleanup IV — unused dep removal (itertools, async-trait×3), async-trait→native async fn in trait migration, hardcoded /tmp/biomeos→centralized constants, orphan nucleus_executor.rs deleted, LICENSE-ORC license harmonized, root docs cleaned, 7,724 tests)
-**Version**: 3.00
+**Updated**: April 11, 2026 (v3.01: primalSpring Gap Resolution + Deep Debt Overstep V — `capability.resolve` single-step routing, `lifecycle.composition` for dashboards, deploy-time `consumed_capabilities` validation, `discovery.find_by_capability` canonical alias, `inference.*` canonical namespace documented, `deny.toml` spring compliance guidance, hardcoded `/tmp`→XDG `SystemPaths`, `8.8.8.8`→RFC 5737 sovereignty fix, `Box<dyn Error>`→`anyhow::Result` on `BiomeOSStandardAPI`, deprecated HTTP port/socket params removed, `Bytes::from(…to_vec())`→`copy_from_slice`, 7,726 tests)
+**Version**: 3.01
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,724 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,726 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |

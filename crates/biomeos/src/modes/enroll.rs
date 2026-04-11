@@ -58,11 +58,7 @@ pub struct EnrollArgs {
     pub lineage_seed: PathBuf,
 
     /// Security provider socket path (for seed derivation)
-    #[arg(
-        long = "security-provider-socket",
-        alias = "beardog-socket",
-        env = "SECURITY_PROVIDER_SOCKET"
-    )]
+    #[arg(long = "security-provider-socket", env = "SECURITY_PROVIDER_SOCKET")]
     pub security_socket: Option<String>,
 
     #[arg(skip)]

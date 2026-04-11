@@ -6,6 +6,7 @@
 //! Exposes lifecycle management operations via JSON-RPC:
 //! - `lifecycle.status` - Get status of all managed primals
 //! - `lifecycle.get` - Get detailed info for a specific primal
+//! - `lifecycle.composition` - Live composition state for dashboards (active/degraded/dead)
 //! - `lifecycle.resurrect` - Force resurrection of a degraded/dead primal
 //! - `lifecycle.apoptosis` - Initiate graceful shutdown
 //! - `lifecycle.register` - Register a primal for management
@@ -206,6 +207,59 @@ impl LifecycleHandler {
             "initiated": name,
             "reason": reason_str,
             "state": "apoptosis"
+        }))
+    }
+
+    /// Handle `lifecycle.composition` - Get live composition state for dashboards.
+    ///
+    /// Returns the current composition: which primals are up, which capabilities
+    /// are live, and per-primal health status. Designed for real-time monitoring
+    /// dashboards (ludoSpring, petalTongue).
+    ///
+    /// JSON-RPC method: `lifecycle.composition`
+    pub async fn composition(&self) -> Result<Value> {
+        let manager = self.manager.read().await;
+        let status = manager.get_status().await;
+
+        let mut active = Vec::new();
+        let mut degraded = Vec::new();
+        let mut dead = Vec::new();
+
+        for (name, state) in &status {
+            let entry = json!({
+                "name": name,
+                "state": state_to_string(state),
+            });
+            match state {
+                LifecycleState::Active { .. } => active.push(entry),
+                LifecycleState::Degraded { .. }
+                | LifecycleState::Incubating { .. }
+                | LifecycleState::Germinating => {
+                    degraded.push(entry);
+                }
+                LifecycleState::Apoptosis { .. } | LifecycleState::Dead { .. } => {
+                    dead.push(entry);
+                }
+            }
+        }
+
+        let total = status.len();
+        let health_ratio = if total == 0 {
+            1.0
+        } else {
+            active.len() as f64 / total as f64
+        };
+
+        Ok(json!({
+            "active": active,
+            "degraded": degraded,
+            "dead": dead,
+            "total": total,
+            "active_count": active.len(),
+            "degraded_count": degraded.len(),
+            "dead_count": dead.len(),
+            "health_ratio": health_ratio,
+            "composition_healthy": health_ratio >= 0.5,
         }))
     }
 

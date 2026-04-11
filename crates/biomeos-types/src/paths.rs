@@ -383,6 +383,29 @@ impl SystemPaths {
         self.state_dir.join("audit.log")
     }
 
+    /// Compute the default runtime directory path without creating it.
+    ///
+    /// Follows the same XDG logic as `new()`:
+    /// 1. `$XDG_RUNTIME_DIR/biomeos`
+    /// 2. `$TMPDIR/biomeos-$USER`
+    #[must_use]
+    pub fn default_runtime_dir() -> PathBuf {
+        if let Ok(xdg_runtime) = env::var("XDG_RUNTIME_DIR") {
+            PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS)
+        } else {
+            let username = Self::get_username();
+            env::temp_dir().join(format!("{}-{}", primal_names::BIOMEOS, username))
+        }
+    }
+
+    /// Compute the XDG-compliant Neural API socket path for a family.
+    ///
+    /// Returns `$RUNTIME_DIR/neural-api-{family_id}.sock` without creating directories.
+    #[must_use]
+    pub fn neural_api_socket(family_id: &str) -> PathBuf {
+        Self::default_runtime_dir().join(format!("neural-api-{family_id}.sock"))
+    }
+
     // =============================================================================
     // Helper Methods
     // =============================================================================

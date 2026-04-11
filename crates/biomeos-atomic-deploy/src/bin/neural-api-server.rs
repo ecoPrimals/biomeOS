@@ -47,7 +47,11 @@ async fn main() -> Result<()> {
     let socket_path = std::env::args()
         .position(|arg| arg == "--socket")
         .and_then(|i| std::env::args().nth(i + 1))
-        .unwrap_or_else(|| format!("/tmp/neural-api-{family_id}.sock"));
+        .unwrap_or_else(|| {
+            biomeos_types::paths::SystemPaths::neural_api_socket(&family_id)
+                .to_string_lossy()
+                .into_owned()
+        });
 
     if let Err(msg) = biomeos_core::btsp_client::validate_insecure_guard() {
         anyhow::bail!(msg);

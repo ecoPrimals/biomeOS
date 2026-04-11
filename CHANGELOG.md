@@ -2,6 +2,47 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.01 (2026-04-11) — primalSpring Gap Resolution + Deep Debt Overstep V
+
+### primalSpring cross-spring gap resolution (6 items)
+- `capability.resolve` single-step routing: new handler returns best provider endpoint for a capability (IPC DNS resolution)
+- `lifecycle.composition` for live dashboards: returns active/degraded/dead primals with health ratio
+- Deploy-time `consumed_capabilities` validation: graph loader verifies all consumed capabilities are satisfiable before launch
+- `discovery.find_by_capability` canonical alias added to Neural API routing table
+- Canonical `inference.*` namespace documented in `wateringHole/SEMANTIC_METHOD_NAMING_STANDARD.md` (§7)
+- `deny.toml` spring compliance guidance added to `SPRING_COMPOSITION_PATTERNS.md` (§12) and `SPRING_AUDIT_PROMPT.md`
+
+### Hardcoding → XDG-compliant / capability-based
+- `neural-api-server` + `neural-deploy`: `/tmp/neural-api-*.sock` → `SystemPaths::neural_api_socket()` (XDG-compliant)
+- `neural-deploy` monitor hints: `/tmp/primals/*.log` → `SystemPaths::default_runtime_dir()`
+- `genome-deploy/deployer.rs`: `PathBuf::from("/tmp")` → `std::env::temp_dir()`
+- `biomeos-verify`: `/tmp/biomeos-verify.log` → `std::env::temp_dir().join(...)`
+- `neural-deploy`: hardcoded `"nat0"` family → `family_discovery::get_family_id()`
+- `verify.rs`: hardcoded `"nat0"` → runtime `family_discovery::get_family_id()`
+- `enroll.rs`: removed `alias = "beardog-socket"` (primal-specific CLI alias)
+- `model_cache.rs`: "Use Songbird to fetch" → "Use mesh discovery to fetch"
+- `dns_sd.rs`: `8.8.8.8` Google DNS → RFC 5737 `192.0.2.1` (sovereignty-compliant)
+
+### API evolution
+- `BiomeOSStandardAPI` trait: `Box<dyn std::error::Error + Send + Sync>` → `anyhow::Result<T>`
+- `RendezvousState::new()`: removed deprecated `_deprecated_socket: &str` parameter
+- `ApiConfig`: removed `port_deprecated` field; HTTP port warning moved to `run()` entry point
+- `SystemPaths::default_runtime_dir()` + `neural_api_socket()`: new public API for XDG path computation
+
+### Zero-copy / allocation
+- `local_entropy.rs`: `Bytes::from(rand::random::<[u8; 32]>().to_vec())` → `Bytes::copy_from_slice(&...)`
+
+### Lint modernization
+- `api.rs` test module: `#![allow(clippy::unwrap_used)]` → `#![expect(..., reason = "test assertions")]`
+
+### Flaky test fix
+- `test_detect_ecosystem_coordinated_when_two_primals_respond`: mock server refactored to handle concurrent connections via `tokio::join!`
+
+### Quality gates
+- 7,726 tests (0 failures), clippy PASS, fmt PASS, doc PASS, `cargo deny check` PASS
+
+---
+
 ## v3.00 (2026-04-09) — Deep Debt Cleanup IV: Dependency Evolution, Native Async Traits, Doc Ground Truth
 
 ### Dependency cleanup

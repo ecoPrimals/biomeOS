@@ -47,9 +47,12 @@ async fn main() -> Result<()> {
         .iter()
         .position(|arg| arg == "--family-id")
         .and_then(|i| args.get(i + 1))
-        .map_or("nat0", std::string::String::as_str);
+        .cloned()
+        .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
 
-    let socket_path = format!("/tmp/neural-api-{family_id}.sock");
+    let socket_path = biomeos_types::paths::SystemPaths::neural_api_socket(&family_id)
+        .to_string_lossy()
+        .into_owned();
 
     info!("╔══════════════════════════════════════════════════════════════════════════╗");
     info!("║                                                                          ║");
@@ -125,12 +128,12 @@ async fn main() -> Result<()> {
     info!("  Execution ID: {}", execution_id);
     info!("  Started At: {}", started_at);
     info!("");
+    let runtime_dir = biomeos_types::paths::SystemPaths::default_runtime_dir();
     info!("Monitor progress:");
-    info!("  tail -f /tmp/primals/*.log");
+    info!("  tail -f {}/*.log", runtime_dir.display());
     info!("");
     info!("Check status:");
-    info!("  # Via neural-api-client (to be implemented)");
-    info!("  # or check primal sockets: ls -l /tmp/*.sock");
+    info!("  ls -l {}/*.sock", runtime_dir.display());
 
     Ok(())
 }

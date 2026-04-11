@@ -22,7 +22,7 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 #[command(about = "BiomeOS VM verification tool", long_about = None)]
 struct Cli {
     /// Path to serial log file
-    #[arg(short, long, default_value = "/tmp/biomeos-verify.log")]
+    #[arg(short, long, default_value_os_t = std::env::temp_dir().join("biomeos-verify.log"))]
     serial_log: PathBuf,
 
     /// Optional root filesystem directory to check for primals

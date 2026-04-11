@@ -105,38 +105,45 @@ async fn test_detect_ecosystem_coordinated_when_two_primals_respond() {
     let b_path = sock_b.clone();
     let s_path = sock_s.clone();
 
+    async fn serve_one_health_check(listener: &UnixListener) {
+        let (stream, _) = listener.accept().await.expect("accept");
+        let (mut r, mut w) = stream.into_split();
+        let mut line = String::new();
+        BufReader::new(&mut r)
+            .read_line(&mut line)
+            .await
+            .expect("read");
+        let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
+        let id = req.get("id").cloned();
+        let resp = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "result": { "status": "ok" }
+        });
+        let _ = w.write_all(format!("{resp}\n").as_bytes()).await;
+        let _ = w.flush().await;
+    }
+
     let server = tokio::spawn(async move {
         let listener_b = UnixListener::bind(&b_path).expect("bind beardog");
         let listener_s = UnixListener::bind(&s_path).expect("bind songbird");
         ready_c.notify_one();
 
-        // `detect_ecosystem` probes CORE_PRIMALS in order. `health_check` succeeds on the first
-        // successful JSON-RPC `health` call — one connection per primal, not two.
-        for listener in [&listener_b, &listener_s] {
-            let (stream, _) = listener.accept().await.expect("accept");
-            let (mut r, mut w) = stream.into_split();
-            let mut line = String::new();
-            BufReader::new(&mut r)
-                .read_line(&mut line)
-                .await
-                .expect("read");
-            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
-            let id = req.get("id").cloned();
-            let resp = serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": id,
-                "result": { "status": "ok" }
-            });
-            w.write_all(format!("{resp}\n").as_bytes())
-                .await
-                .expect("write");
-        }
+        // Handle both listeners concurrently so `detect_ecosystem` (which probes
+        // all primals in parallel) doesn't deadlock waiting for the sequential loop.
+        tokio::join!(
+            serve_one_health_check(&listener_b),
+            serve_one_health_check(&listener_s),
+        );
     });
 
     ready.notified().await;
 
     let state = detect_ecosystem(tmp.path(), family).await;
-    server.await.expect("server task");
+    // Server task may have finished or may still be waiting for the second
+    // connection. Abort cleanly either way.
+    server.abort();
+    let _ = server.await;
 
     match state {
         EcosystemState::Coordinated { active_primals } => {

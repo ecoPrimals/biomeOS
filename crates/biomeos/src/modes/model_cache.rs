@@ -39,7 +39,7 @@ fn print_resolve_model_resolution(model_id: &str, resolution: &ModelResolution) 
             println!("    Gate:   {}", entry.gate_id);
             println!("    Size:   {}", format_size_mb(entry.size_bytes));
             println!(
-                "    Transfer needed: Use Songbird to fetch from {}",
+                "    Transfer needed: Use mesh discovery to fetch from {}",
                 entry.gate_id
             );
         }

@@ -46,11 +46,17 @@ struct LoadedGraphInfo {
     id: String,
     node_count: usize,
     node_summaries: Vec<(String, String)>,
+    /// All capabilities provided by nodes in this graph.
+    provided_capabilities: Vec<String>,
+    /// All capabilities consumed/required by nodes in this graph.
+    consumed_capabilities: Vec<String>,
 }
 
 fn load_graph(path: &std::path::Path) -> Result<LoadedGraphInfo> {
     if let Ok(dg) = GraphLoader::from_file(path) {
         debug!("Loaded as DeploymentGraph format");
+        let mut provided = Vec::new();
+        let mut consumed = Vec::new();
         let node_summaries = dg
             .nodes_in_order()
             .into_iter()
@@ -60,6 +66,10 @@ fn load_graph(path: &std::path::Path) -> Result<LoadedGraphInfo> {
                     .as_deref()
                     .unwrap_or("(no capability)")
                     .to_string();
+                if cap != "(no capability)" {
+                    provided.push(cap.clone());
+                }
+                consumed.extend(n.operation_dependencies.iter().cloned());
                 (n.id.to_string(), cap)
             })
             .collect();
@@ -67,12 +77,16 @@ fn load_graph(path: &std::path::Path) -> Result<LoadedGraphInfo> {
             id: dg.id().to_string(),
             node_count: dg.nodes().len(),
             node_summaries,
+            provided_capabilities: provided,
+            consumed_capabilities: consumed,
         });
     }
 
     let ng = NeuralGraph::from_toml_file(path)
         .with_context(|| format!("Failed to load graph: {}", path.display()))?;
     debug!("Loaded as neural_graph format");
+    let mut provided = Vec::new();
+    let consumed = Vec::new();
     let node_summaries = ng
         .nodes
         .iter()
@@ -82,6 +96,7 @@ fn load_graph(path: &std::path::Path) -> Result<LoadedGraphInfo> {
                 .first()
                 .cloned()
                 .unwrap_or_else(|| "(no capability)".to_string());
+            provided.extend(n.capabilities.clone());
             (n.id.clone(), cap)
         })
         .collect();
@@ -89,7 +104,44 @@ fn load_graph(path: &std::path::Path) -> Result<LoadedGraphInfo> {
         id: ng.id,
         node_count: ng.nodes.len(),
         node_summaries,
+        provided_capabilities: provided,
+        consumed_capabilities: consumed,
     })
+}
+
+/// Check that all consumed capabilities declared by nodes are satisfiable by
+/// other nodes in the graph (or known ecosystem providers). Logs warnings for
+/// unsatisfied dependencies rather than failing hard, since external providers
+/// may satisfy them at runtime.
+fn validate_consumed_capabilities(info: &LoadedGraphInfo) {
+    if info.consumed_capabilities.is_empty() {
+        return;
+    }
+    let provided_set: std::collections::HashSet<&str> = info
+        .provided_capabilities
+        .iter()
+        .map(String::as_str)
+        .collect();
+
+    let mut unsatisfied = Vec::new();
+    for consumed in &info.consumed_capabilities {
+        if !provided_set.contains(consumed.as_str()) {
+            unsatisfied.push(consumed.as_str());
+        }
+    }
+
+    if unsatisfied.is_empty() {
+        info!(
+            "✅ All {} consumed capabilities satisfied within graph",
+            info.consumed_capabilities.len()
+        );
+    } else {
+        warn!(
+            "⚠️  {} consumed capabilities not provided by graph nodes (may be satisfied by external primals at runtime): {}",
+            unsatisfied.len(),
+            unsatisfied.join(", ")
+        );
+    }
 }
 
 pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<()> {
@@ -112,6 +164,8 @@ pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<(
         "✅ Graph loaded and validated: {} ({} nodes)",
         loaded.id, loaded.node_count
     );
+
+    validate_consumed_capabilities(&loaded);
 
     if validate_only {
         info!("✅ Graph validation complete!");

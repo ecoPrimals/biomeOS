@@ -67,7 +67,7 @@ impl LocalEntropy {
         let mac_address = Self::get_primary_mac_address().ok();
 
         // 5. Random nonce (32 bytes) — via OS CSPRNG through rand
-        let random_nonce = Bytes::from(rand::random::<[u8; 32]>().to_vec());
+        let random_nonce = Bytes::copy_from_slice(&rand::random::<[u8; 32]>());
 
         // 6. CPU hash (optional)
         let cpu_hash = Self::get_cpu_hash().ok();

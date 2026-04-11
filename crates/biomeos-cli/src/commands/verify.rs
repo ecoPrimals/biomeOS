@@ -437,7 +437,8 @@ pub async fn run_verify_lineage() -> Result<()> {
 
             println!("Testing: {node_a} <-> {node_b}");
 
-            match client.verify_same_family("nat0", hash_b, node_b).await {
+            let family_id = biomeos_core::family_discovery::get_family_id();
+            match client.verify_same_family(&family_id, hash_b, node_b).await {
                 Ok(response) => {
                     if response.is_family_member {
                         println!("  RELATED: {}", response.relationship);
