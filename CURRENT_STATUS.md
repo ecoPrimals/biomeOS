@@ -867,7 +867,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 2. ~~**ARM64 biomeOS genomeBin**~~ - ✅ Built (`aarch64-unknown-linux-musl`, 9.6 MB stripped, static)
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
-5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.00, 7,724 tests) |
+5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.03, 7,749 tests) |
 
 ### Low Priority
 1. **API key encryption** - NestGate + BearDog secured storage
@@ -982,7 +982,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.02 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Status**: Production Ready (v3.03 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
 **Tests**: 7,749 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
