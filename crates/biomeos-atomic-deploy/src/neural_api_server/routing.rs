@@ -92,6 +92,11 @@ enum Route {
     ProxyHttp,
     InferenceSchedule,
     InferenceGates,
+    InferenceRegisterProvider,
+    InferenceProviders,
+    InferenceComplete,
+    InferenceEmbed,
+    InferenceModels,
     SemanticCapabilityCall,
     HealthCheck,
     HealthLiveness,
@@ -197,12 +202,16 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
         "capability.list_translations",
         Route::CapabilityListTranslations,
     ),
-    // Inference scheduling (cross-gate model orchestration)
-    // Canonical namespace: `inference.*` (per wateringHole SEMANTIC_METHOD_NAMING_STANDARD.md).
+    // Inference (canonical `inference.*` namespace per wateringHole SEMANTIC_METHOD_NAMING_STANDARD §7).
     // `model.*` and `ai.*` are aliases that route through the semantic fallback to
     // capability.call, which resolves to the same providers via CapabilityTranslationRegistry.
     ("inference.schedule", Route::InferenceSchedule),
     ("inference.gates", Route::InferenceGates),
+    ("inference.register_provider", Route::InferenceRegisterProvider),
+    ("inference.providers", Route::InferenceProviders),
+    ("inference.complete", Route::InferenceComplete),
+    ("inference.embed", Route::InferenceEmbed),
+    ("inference.models", Route::InferenceModels),
     // MCP tool discovery (Squirrel alpha.13 aggregation)
     ("mcp.tools.list", Route::McpToolsList),
     ("mcp.tools_list", Route::McpToolsList),
@@ -423,11 +432,26 @@ impl NeuralApiServer {
                 .await,
                 &id,
             ),
-            // Inference scheduling
+            // Inference (canonical namespace)
             Route::InferenceSchedule => {
                 dispatch(self.inference_handler.schedule(params).await, &id)
             }
             Route::InferenceGates => dispatch(self.inference_handler.gates(params).await, &id),
+            Route::InferenceRegisterProvider => {
+                dispatch(self.inference_handler.register_provider(params).await, &id)
+            }
+            Route::InferenceProviders => {
+                dispatch(self.inference_handler.list_providers(params).await, &id)
+            }
+            Route::InferenceComplete => {
+                dispatch(self.inference_handler.complete(params).await, &id)
+            }
+            Route::InferenceEmbed => {
+                dispatch(self.inference_handler.embed(params).await, &id)
+            }
+            Route::InferenceModels => {
+                dispatch(self.inference_handler.models(params).await, &id)
+            }
             // Health probes (SEMANTIC_METHOD_NAMING_STANDARD.md compliance)
             Route::HealthCheck => dispatch(self.health_check().await, &id),
             Route::HealthLiveness => dispatch(self.health_liveness(), &id),

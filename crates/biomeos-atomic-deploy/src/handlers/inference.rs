@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Inference scheduling and cross-gate model orchestration.
+//! Inference scheduling, provider registration, and cross-gate model orchestration.
 //!
 //! Routes AI inference requests to the best available GPU gate by querying
 //! each gate's compute capabilities and selecting the optimal target based
 //! on VRAM, availability, and model requirements.
 //!
-//! # JSON-RPC Methods
+//! # JSON-RPC Methods (canonical `inference.*` namespace)
 //!
 //! - `inference.schedule` — schedule an inference job on the best gate
 //! - `inference.gates` — list gates with GPU/AI capabilities
+//! - `inference.register_provider` — register an inference backend (e.g. neuralSpring → Squirrel)
+//! - `inference.providers` — list registered inference providers
+//! - `inference.complete` — route a completion request to the best provider
+//! - `inference.embed` — route an embedding request to the best provider
+//! - `inference.models` — list models available across all providers
 //!
 //! # Architecture
 //!
@@ -32,6 +37,7 @@ use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 /// Registered gate with its known GPU/compute capabilities.
@@ -44,20 +50,37 @@ struct GateCapabilities {
     available: bool,
 }
 
+/// Registered inference provider (e.g. neuralSpring, Ollama wrapper).
+#[derive(Debug, Clone)]
+pub struct InferenceProvider {
+    /// Provider name (e.g. "neuralSpring", "ollama-local")
+    pub name: Arc<str>,
+    /// Transport endpoint string
+    pub endpoint: biomeos_core::TransportEndpoint,
+    /// Capabilities this provider offers (e.g. `complete`, `embed`, `models`)
+    pub capabilities: Vec<String>,
+    /// Registration timestamp
+    pub registered_at: chrono::DateTime<chrono::Utc>,
+    /// Health status from last probe
+    pub healthy: bool,
+}
+
 /// Inference scheduling handler.
 #[derive(Clone)]
 pub struct InferenceHandler {
     router: Arc<NeuralRouter>,
     gate_registry: Arc<GateRegistry>,
+    providers: Arc<RwLock<Vec<InferenceProvider>>>,
 }
 
 impl InferenceHandler {
     /// Create a new inference handler with access to routing and gate registry.
     #[must_use]
-    pub const fn new(router: Arc<NeuralRouter>, gate_registry: Arc<GateRegistry>) -> Self {
+    pub fn new(router: Arc<NeuralRouter>, gate_registry: Arc<GateRegistry>) -> Self {
         Self {
             router,
             gate_registry,
+            providers: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -180,6 +203,165 @@ impl InferenceHandler {
             "model": model,
             "latency_ms": latency_ms,
         }))
+    }
+
+    /// Register an inference provider.
+    ///
+    /// JSON-RPC method: `inference.register_provider`
+    ///
+    /// Springs (e.g. neuralSpring) call this to announce themselves as inference
+    /// backends. Squirrel and biomeOS can then route `inference.complete`,
+    /// `inference.embed`, etc. to the registered provider.
+    ///
+    /// # Parameters
+    /// - `name`: Provider name (e.g. "neuralSpring")
+    /// - `endpoint`: Transport endpoint (e.g. "/run/biomeos/neuralspring.sock")
+    /// - `capabilities` (optional): Array of supported operations (defaults to
+    ///   `["complete", "embed", "models"]`)
+    pub async fn register_provider(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let name = params["name"]
+            .as_str()
+            .context("Missing 'name' field")?;
+        let endpoint_str = params["endpoint"]
+            .as_str()
+            .context("Missing 'endpoint' field")?;
+
+        let endpoint = biomeos_core::TransportEndpoint::parse(endpoint_str)
+            .unwrap_or_else(|| biomeos_core::TransportEndpoint::UnixSocket {
+                path: std::path::PathBuf::from(endpoint_str),
+            });
+
+        let capabilities: Vec<String> = params
+            .get("capabilities")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_else(|| {
+                vec![
+                    "complete".to_owned(),
+                    "embed".to_owned(),
+                    "models".to_owned(),
+                ]
+            });
+
+        info!(
+            "🧠 Registering inference provider: {} @ {} (capabilities: {:?})",
+            name, endpoint_str, capabilities
+        );
+
+        let provider = InferenceProvider {
+            name: Arc::from(name),
+            endpoint: endpoint.clone(),
+            capabilities: capabilities.clone(),
+            registered_at: chrono::Utc::now(),
+            healthy: true,
+        };
+
+        let mut providers = self.providers.write().await;
+        providers.retain(|p| *p.name != *name);
+        providers.push(provider);
+
+        self.router
+            .register_capability("inference", name, endpoint, "inference.register_provider")
+            .await?;
+
+        Ok(json!({
+            "registered": true,
+            "name": name,
+            "endpoint": endpoint_str,
+            "capabilities": capabilities,
+        }))
+    }
+
+    /// List registered inference providers.
+    ///
+    /// JSON-RPC method: `inference.providers`
+    pub async fn list_providers(&self, _params: &Option<Value>) -> Result<Value> {
+        let providers = self.providers.read().await;
+        let entries: Vec<Value> = providers
+            .iter()
+            .map(|p| {
+                json!({
+                    "name": p.name,
+                    "endpoint": p.endpoint.display_string(),
+                    "capabilities": p.capabilities,
+                    "registered_at": p.registered_at.to_rfc3339(),
+                    "healthy": p.healthy,
+                })
+            })
+            .collect();
+
+        Ok(json!({
+            "providers": entries,
+            "count": entries.len(),
+        }))
+    }
+
+    /// Route a completion request to the best inference provider.
+    ///
+    /// JSON-RPC method: `inference.complete`
+    ///
+    /// Discovers registered inference providers and forwards the request.
+    /// Falls back to Squirrel via `capability.call` if no dedicated provider.
+    pub async fn complete(&self, params: &Option<Value>) -> Result<Value> {
+        self.forward_to_provider("complete", "inference.complete", params)
+            .await
+    }
+
+    /// Route an embedding request to the best inference provider.
+    ///
+    /// JSON-RPC method: `inference.embed`
+    pub async fn embed(&self, params: &Option<Value>) -> Result<Value> {
+        self.forward_to_provider("embed", "inference.embed", params)
+            .await
+    }
+
+    /// List models available across all inference providers.
+    ///
+    /// JSON-RPC method: `inference.models`
+    pub async fn models(&self, params: &Option<Value>) -> Result<Value> {
+        self.forward_to_provider("models", "inference.models", params)
+            .await
+    }
+
+    /// Forward a request to the best provider that supports the given operation.
+    async fn forward_to_provider(
+        &self,
+        operation: &str,
+        rpc_method: &str,
+        params: &Option<Value>,
+    ) -> Result<Value> {
+        let providers = self.providers.read().await;
+        let target = providers
+            .iter()
+            .find(|p| p.healthy && p.capabilities.iter().any(|c| c == operation));
+
+        if let Some(provider) = target {
+            let endpoint = provider.endpoint.clone();
+            let provider_name = provider.name.clone();
+            drop(providers);
+
+            debug!("🧠 {} → provider '{}'", rpc_method, provider_name);
+            let args = params.clone().unwrap_or(json!({}));
+            self.router
+                .forward_request(&endpoint, rpc_method, &args)
+                .await
+        } else {
+            drop(providers);
+            debug!(
+                "🧠 {} → no dedicated provider, routing via capability layer",
+                rpc_method
+            );
+            let atomic = self.router.discover_capability("inference").await?;
+            let args = params.clone().unwrap_or(json!({}));
+            self.router
+                .forward_request(&atomic.primary_endpoint, rpc_method, &args)
+                .await
+        }
     }
 
     /// Select the best gate for a given model based on VRAM requirements.
@@ -409,5 +591,101 @@ mod tests {
         let handler = make_handler();
         let err = handler.schedule(&Some(json!({}))).await.unwrap_err();
         assert!(err.to_string().contains("prompt") || err.to_string().contains("Missing"));
+    }
+
+    // --- inference.register_provider tests ---
+
+    #[tokio::test]
+    async fn test_register_provider_success() {
+        let handler = make_handler();
+        let params = Some(json!({
+            "name": "neuralSpring",
+            "endpoint": "/tmp/neural.sock",
+        }));
+        let result = handler.register_provider(&params).await.unwrap();
+        assert_eq!(result["registered"], true);
+        assert_eq!(result["name"], "neuralSpring");
+        let caps = result["capabilities"].as_array().unwrap();
+        assert!(caps.iter().any(|c| c == "complete"));
+        assert!(caps.iter().any(|c| c == "embed"));
+        assert!(caps.iter().any(|c| c == "models"));
+    }
+
+    #[tokio::test]
+    async fn test_register_provider_custom_capabilities() {
+        let handler = make_handler();
+        let params = Some(json!({
+            "name": "custom",
+            "endpoint": "/tmp/custom.sock",
+            "capabilities": ["complete", "fine_tune"]
+        }));
+        let result = handler.register_provider(&params).await.unwrap();
+        let caps = result["capabilities"].as_array().unwrap();
+        assert_eq!(caps.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_register_provider_missing_name_errors() {
+        let handler = make_handler();
+        let params = Some(json!({ "endpoint": "/tmp/x.sock" }));
+        assert!(handler.register_provider(&params).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_register_provider_missing_endpoint_errors() {
+        let handler = make_handler();
+        let params = Some(json!({ "name": "x" }));
+        assert!(handler.register_provider(&params).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_register_provider_missing_params() {
+        let handler = make_handler();
+        assert!(handler.register_provider(&None).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_register_provider_replaces_existing() {
+        let handler = make_handler();
+        let params1 = Some(json!({
+            "name": "neural",
+            "endpoint": "/tmp/neural1.sock",
+        }));
+        handler.register_provider(&params1).await.unwrap();
+
+        let params2 = Some(json!({
+            "name": "neural",
+            "endpoint": "/tmp/neural2.sock",
+        }));
+        handler.register_provider(&params2).await.unwrap();
+
+        let list = handler.list_providers(&None).await.unwrap();
+        assert_eq!(list["count"], 1, "re-registration should replace, not duplicate");
+    }
+
+    #[tokio::test]
+    async fn test_list_providers_empty() {
+        let handler = make_handler();
+        let result = handler.list_providers(&None).await.unwrap();
+        assert_eq!(result["count"], 0);
+        assert!(result["providers"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_list_providers_after_registration() {
+        let handler = make_handler();
+        handler
+            .register_provider(&Some(json!({
+                "name": "neuralSpring",
+                "endpoint": "/tmp/neural.sock",
+            })))
+            .await
+            .unwrap();
+
+        let result = handler.list_providers(&None).await.unwrap();
+        assert_eq!(result["count"], 1);
+        let providers = result["providers"].as_array().unwrap();
+        assert_eq!(providers[0]["name"], "neuralSpring");
+        assert!(providers[0]["healthy"].as_bool().unwrap());
     }
 }

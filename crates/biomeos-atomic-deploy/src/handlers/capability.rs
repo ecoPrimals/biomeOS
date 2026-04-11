@@ -90,6 +90,9 @@ impl CapabilityHandler {
     ///   "primal": "beardog", "capability": "crypto", "resolved": true }
     /// ```
     pub async fn resolve(&self, params: &Option<Value>) -> Result<Value> {
+        let start = std::time::Instant::now();
+        let request_id = uuid::Uuid::new_v4().to_string();
+
         let params = params.as_ref().context("Missing parameters")?;
         let capability = params["capability"]
             .as_str()
@@ -98,13 +101,43 @@ impl CapabilityHandler {
 
         debug!("capability.resolve: {}", capability);
 
-        let atomic = self.router.discover_capability(capability).await?;
+        let result = self.router.discover_capability(capability).await;
+
+        let latency = {
+            let e = start.elapsed();
+            e.as_secs() * 1000 + u64::from(e.subsec_millis())
+        };
+
+        let (success, error_msg) = match &result {
+            Ok(_) => (true, None),
+            Err(e) => (false, Some(e.to_string())),
+        };
+
+        self.router
+            .log_metric(RoutingMetrics {
+                request_id: Arc::from(request_id.as_str()),
+                capability: Arc::from(capability),
+                method: Arc::from("capability.resolve"),
+                routed_through: result
+                    .as_ref()
+                    .map(|a| a.primals.iter().map(|p| p.name.clone()).collect())
+                    .unwrap_or_default(),
+                latency_ms: latency,
+                success,
+                timestamp: chrono::Utc::now(),
+                error: error_msg,
+            })
+            .await;
+
+        let atomic = result?;
 
         let primary_primal = atomic
             .primals
             .first()
             .map(|p| &*p.name)
             .unwrap_or("unknown");
+
+        info!("   ✓ Resolved {} → {} in {}ms", capability, primary_primal, latency);
 
         Ok(json!({
             "resolved": true,

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 11, 2026 (v3.01: primalSpring Gap Resolution + Deep Debt Overstep V — `capability.resolve` single-step routing, `lifecycle.composition` for dashboards, deploy-time `consumed_capabilities` validation, `discovery.find_by_capability` canonical alias, `inference.*` canonical namespace documented, `deny.toml` spring compliance guidance, hardcoded `/tmp`→XDG `SystemPaths`, `8.8.8.8`→RFC 5737 sovereignty fix, `Box<dyn Error>`→`anyhow::Result` on `BiomeOSStandardAPI`, deprecated HTTP port/socket params removed, `Bytes::from(…to_vec())`→`copy_from_slice`, 7,726 tests)
-**Version**: 3.01
+**Updated**: April 11, 2026 (v3.02: primalSpring Portability Debt Audit Response — `capability.resolve` metrics/monitoring for spring consumption tracking, `inference.register_provider` wire method for Squirrel provider registration, canonical `inference.*` namespace expansion (`inference.complete`/`embed`/`models`/`providers`), 23 new tests, 7,749 tests)
+**Version**: 3.02
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates |
-| **Tests Passing** | 7,726 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,749 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -981,8 +981,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.00 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
-**Tests**: 7,724 passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.02 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Tests**: 7,749 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode

@@ -2,6 +2,39 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.02 (2026-04-11) — primalSpring Portability Debt Audit Response
+
+### capability.resolve monitoring (biomeOS BM-* monitoring gap)
+- `capability.resolve` now records `RoutingMetrics` on every call (success and failure)
+- Metrics include capability, latency, routed-through primals, and error messages
+- Springs consuming `capability.resolve` now appear in `capability.metrics` responses
+- Upgraded from `debug!` to `info!` on successful resolution for operational visibility
+
+### inference.register_provider wire method (Squirrel gap — RESOLVED)
+- New `inference.register_provider` JSON-RPC method: springs (e.g. neuralSpring) register as inference backends
+- Provider registry tracks name, endpoint, capabilities, health, and registration timestamp
+- Re-registration replaces existing entry (idempotent)
+- Registration also wires through `capability.register` for standard capability discovery
+
+### Canonical inference.* namespace expansion (Squirrel + neuralSpring gap — RESOLVED)
+- `inference.complete` — route completion requests to best registered provider
+- `inference.embed` — route embedding requests to best registered provider
+- `inference.models` — list models across all providers
+- `inference.providers` — list registered inference providers with health status
+- All methods fall back to capability-layer discovery when no dedicated provider is registered
+- 5 new routes in Neural API ROUTE_TABLE (7 total `inference.*` methods)
+
+### Tests
+- 8 new `capability.resolve` handler tests (missing params, domain alias, metrics logging, failure metrics)
+- 2 new `capability.resolve` routing tests (success path, missing capability error)
+- 6 new `inference.register_provider` handler tests (success, custom capabilities, missing fields, replacement, provider listing)
+- 7 new inference routing tests (`register_provider`, `providers`, `complete`, `embed`, `models`, missing params)
+
+### Quality gates
+- 7,749 tests (0 failures), clippy PASS, fmt PASS, doc PASS
+
+---
+
 ## v3.01 (2026-04-11) — primalSpring Gap Resolution + Deep Debt Overstep V
 
 ### primalSpring cross-spring gap resolution (6 items)

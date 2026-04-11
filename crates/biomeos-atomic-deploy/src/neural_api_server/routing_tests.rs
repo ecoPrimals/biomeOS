@@ -556,6 +556,94 @@ async fn test_handle_request_health_readiness() {
     assert!(result["result"]["mode"].is_string());
 }
 
+// --- capability.resolve route tests ---
+
+#[tokio::test]
+async fn test_handle_request_capability_resolve_route() {
+    let (server, _temp) = create_test_server();
+    server
+        .capability_handler
+        .register(&Some(serde_json::json!({
+            "capability": "crypto",
+            "primal": "beardog",
+            "socket": "/tmp/beardog.sock",
+            "source": "test"
+        })))
+        .await
+        .unwrap();
+
+    let req = r#"{"jsonrpc":"2.0","method":"capability.resolve","params":{"capability":"crypto"},"id":90}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("result").is_some(), "resolve should succeed: {result}");
+    assert_eq!(result["result"]["resolved"], true);
+    assert_eq!(result["result"]["primal"], "beardog");
+    assert_eq!(result["id"], 90);
+}
+
+#[tokio::test]
+async fn test_handle_request_capability_resolve_missing_capability_errors() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"capability.resolve","params":{},"id":91}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("error").is_some());
+}
+
+// --- inference.* canonical namespace route tests ---
+
+#[tokio::test]
+async fn test_handle_request_inference_register_provider_route() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"inference.register_provider","params":{"name":"neuralSpring","endpoint":"/tmp/neural.sock"},"id":92}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("result").is_some(), "register_provider should succeed: {result}");
+    assert_eq!(result["result"]["registered"], true);
+    assert_eq!(result["result"]["name"], "neuralSpring");
+}
+
+#[tokio::test]
+async fn test_handle_request_inference_providers_route() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"inference.providers","id":93}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("result").is_some());
+    assert_eq!(result["result"]["count"], 0);
+}
+
+#[tokio::test]
+async fn test_handle_request_inference_complete_no_provider() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"inference.complete","params":{"prompt":"hello"},"id":94}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(
+        result.get("error").is_some(),
+        "inference.complete with no provider should error"
+    );
+}
+
+#[tokio::test]
+async fn test_handle_request_inference_embed_no_provider() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"inference.embed","params":{"text":"test"},"id":95}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("error").is_some());
+}
+
+#[tokio::test]
+async fn test_handle_request_inference_models_no_provider() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"inference.models","id":96}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("error").is_some());
+}
+
+#[tokio::test]
+async fn test_handle_request_inference_register_provider_missing_name_errors() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"inference.register_provider","params":{"endpoint":"/tmp/x.sock"},"id":97}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(result.get("error").is_some());
+}
+
 #[test]
 fn dispatch_preserves_primal_json_rpc_error_code() {
     let err = biomeos_types::IpcError::JsonRpcError {
