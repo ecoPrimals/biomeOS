@@ -4,10 +4,12 @@
 // Sibling tests for `lifecycle.rs` (handler API surface).
 
 #![expect(clippy::unwrap_used, reason = "test")]
+#![expect(clippy::expect_used, reason = "test")]
 
 use serde_json::json;
 
 use super::lifecycle::LifecycleHandler;
+use crate::neural_graph::GraphNode;
 
 #[tokio::test]
 async fn status_empty_reports_zero_healthy() {
@@ -99,4 +101,134 @@ async fn apoptosis_default_reason_string_when_omitted() {
         .await
         .expect("apoptosis");
     assert_eq!(out["reason"], "user_request");
+}
+
+// =========================================================================
+// Enriched composition dashboard (lifecycle.composition)
+// =========================================================================
+
+fn make_graph_node(id: &str, depends_on: Vec<String>) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        depends_on,
+        ..Default::default()
+    }
+}
+
+#[tokio::test]
+async fn composition_enriched_includes_capabilities_and_edges() {
+    let handler = LifecycleHandler::new("test-family");
+
+    let mut node_with_caps = make_graph_node("beardog", vec![]);
+    node_with_caps.capabilities = vec!["crypto".to_string(), "security".to_string()];
+
+    handler
+        .register(&Some(json!({
+            "name": "beardog",
+            "socket_path": "/tmp/beardog.sock",
+            "pid": 100,
+            "deployment_node": serde_json::to_value(&node_with_caps).unwrap()
+        })))
+        .await
+        .expect("register beardog");
+
+    let songbird_node = make_graph_node("songbird", vec!["beardog".to_string()]);
+    handler
+        .register(&Some(json!({
+            "name": "songbird",
+            "socket_path": "/tmp/songbird.sock",
+            "pid": 200,
+            "deployment_node": serde_json::to_value(&songbird_node).unwrap()
+        })))
+        .await
+        .expect("register songbird");
+
+    let comp = handler.composition().await.expect("composition");
+
+    assert_eq!(comp["total"], 2);
+    let caps = comp["capabilities_live"]
+        .as_array()
+        .expect("capabilities array");
+    assert!(caps.iter().any(|c| c == "crypto"));
+    assert!(caps.iter().any(|c| c == "security"));
+
+    let edges = comp["dependency_graph"].as_array().expect("edges array");
+    assert!(
+        edges
+            .iter()
+            .any(|e| e["from"] == "beardog" && e["to"] == "songbird"),
+        "dependency edge beardog→songbird should exist"
+    );
+
+    let all_primals: Vec<&serde_json::Value> = comp["degraded"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .chain(comp["active"].as_array().unwrap().iter())
+        .chain(comp["dead"].as_array().unwrap().iter())
+        .collect();
+    for p in &all_primals {
+        assert!(p.get("capabilities").is_some());
+        assert!(p.get("health").is_some());
+        assert!(p.get("state_details").is_some());
+        assert!(p.get("depends_on").is_some());
+    }
+}
+
+#[tokio::test]
+async fn composition_empty_returns_healthy_defaults() {
+    let handler = LifecycleHandler::new("test-family");
+    let comp = handler.composition().await.expect("composition");
+    assert_eq!(comp["total"], 0);
+    assert_eq!(comp["health_ratio"], 1.0);
+    assert!(comp["composition_healthy"].as_bool().unwrap());
+    assert!(comp["capabilities_live"].as_array().unwrap().is_empty());
+    assert!(comp["dependency_graph"].as_array().unwrap().is_empty());
+}
+
+// =========================================================================
+// Composition health (COMPOSITION_HEALTH_STANDARD)
+// =========================================================================
+
+#[tokio::test]
+async fn composition_health_empty_returns_unavailable_subsystems() {
+    let handler = LifecycleHandler::new("test-family");
+    let health = handler.composition_health(&None).await.expect("health");
+    assert!(health["healthy"].as_bool().is_some());
+    assert!(health["deploy_graph"].as_str().is_some());
+    assert!(health["subsystems"].is_object());
+    let subs = health["subsystems"].as_object().unwrap();
+    assert_eq!(subs["tower"], "unavailable");
+    assert_eq!(subs["mesh"], "unavailable");
+}
+
+#[tokio::test]
+async fn composition_health_with_incubating_tower_shows_degraded() {
+    let handler = LifecycleHandler::new("test-family");
+
+    handler
+        .register(&Some(json!({
+            "name": "beardog-server",
+            "socket_path": "/tmp/beardog.sock",
+            "pid": 1
+        })))
+        .await
+        .expect("register beardog");
+    handler
+        .register(&Some(json!({
+            "name": "songbird-orch",
+            "socket_path": "/tmp/songbird.sock",
+            "pid": 2
+        })))
+        .await
+        .expect("register songbird");
+
+    let health = handler.composition_health(&None).await.expect("health");
+    let subs = health["subsystems"].as_object().unwrap();
+
+    assert_eq!(subs["tower"], "degraded");
+    assert_eq!(subs["mesh"], "degraded");
+    assert_eq!(subs["node"], "unavailable");
+    assert_eq!(subs["nest"], "unavailable");
+    assert!(!health["healthy"].as_bool().unwrap());
 }

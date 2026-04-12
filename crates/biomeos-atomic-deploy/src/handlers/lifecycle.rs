@@ -21,6 +21,7 @@ use tracing::{info, warn};
 
 use crate::lifecycle_manager::{ApoptosisReason, LifecycleManager, LifecycleState};
 use crate::neural_graph::GraphNode;
+use biomeos_types::primal_names;
 
 /// Lifecycle handler for Neural API
 #[derive(Clone)]
@@ -213,8 +214,9 @@ impl LifecycleHandler {
     /// Handle `lifecycle.composition` - Get live composition state for dashboards.
     ///
     /// Returns the current composition: which primals are up, which capabilities
-    /// are live, and per-primal health status. Designed for real-time monitoring
-    /// dashboards (ludoSpring, petalTongue).
+    /// are live, per-primal health status, dependency edges, and deploy graph
+    /// context. Designed for real-time monitoring dashboards (ludoSpring,
+    /// petalTongue) and spring composition validation.
     ///
     /// JSON-RPC method: `lifecycle.composition`
     pub async fn composition(&self) -> Result<Value> {
@@ -224,12 +226,56 @@ impl LifecycleHandler {
         let mut active = Vec::new();
         let mut degraded = Vec::new();
         let mut dead = Vec::new();
+        let mut all_capabilities: Vec<String> = Vec::new();
+        let mut dependency_edges: Vec<Value> = Vec::new();
 
         for (name, state) in &status {
+            let primal_info = manager.get_primal_info(name).await;
+
+            let (capabilities, health_detail, deps, depended_by) =
+                if let Some(ref info) = primal_info {
+                    let caps: Vec<String> = info
+                        .deployment_node
+                        .as_ref()
+                        .map(|n| n.capabilities.clone())
+                        .unwrap_or_default();
+
+                    let health = json!({
+                        "last_health_latency_ms": info.metrics.last_health_latency_ms,
+                        "health_failures": info.metrics.health_failures,
+                        "resurrection_count": info.metrics.resurrection_count,
+                        "total_uptime_secs": info.metrics.total_uptime_secs,
+                    });
+
+                    for dep in &info.depends_on {
+                        dependency_edges.push(json!({
+                            "from": dep,
+                            "to": name,
+                        }));
+                    }
+
+                    (
+                        caps,
+                        health,
+                        info.depends_on.clone(),
+                        info.depended_by.clone(),
+                    )
+                } else {
+                    (vec![], json!({}), vec![], vec![])
+                };
+
+            all_capabilities.extend(capabilities.iter().cloned());
+
             let entry = json!({
                 "name": name,
                 "state": state_to_string(state),
+                "state_details": state_details(state),
+                "capabilities": capabilities,
+                "health": health_detail,
+                "depends_on": deps,
+                "depended_by": depended_by,
             });
+
             match state {
                 LifecycleState::Active { .. } => active.push(entry),
                 LifecycleState::Degraded { .. }
@@ -242,6 +288,9 @@ impl LifecycleHandler {
                 }
             }
         }
+
+        all_capabilities.sort();
+        all_capabilities.dedup();
 
         let total = status.len();
         let health_ratio = if total == 0 {
@@ -260,6 +309,78 @@ impl LifecycleHandler {
             "dead_count": dead.len(),
             "health_ratio": health_ratio,
             "composition_healthy": health_ratio >= 0.5,
+            "capabilities_live": all_capabilities,
+            "dependency_graph": dependency_edges,
+        }))
+    }
+
+    /// Handle `composition.health` / `composition.tower_health` etc.
+    ///
+    /// Follows `COMPOSITION_HEALTH_STANDARD.md`: returns `healthy`, `deploy_graph`,
+    /// and `subsystems` map. Aggregates lifecycle state into subsystem health
+    /// for Tower, Node, Nest, and mesh layer visibility.
+    ///
+    /// Songbird mesh state is included when a discovery-capable primal is active.
+    pub async fn composition_health(&self, _params: &Option<Value>) -> Result<Value> {
+        let manager = self.manager.read().await;
+        let status = manager.get_status().await;
+
+        let mut subsystems: serde_json::Map<String, Value> = serde_json::Map::new();
+        let mut deploy_graph = String::from("unknown");
+        let mut all_healthy = true;
+
+        let tower_primals = [primal_names::BEARDOG, primal_names::SONGBIRD];
+        let node_primals = [primal_names::TOADSTOOL];
+        let nest_primals = [primal_names::NESTGATE];
+        let mesh_primals = [primal_names::SONGBIRD];
+
+        let subsystem_status = |names: &[&str]| -> &'static str {
+            let mut found_any = false;
+            for (name, state) in &status {
+                let lower = name.to_lowercase();
+                if names.iter().any(|n| lower.contains(n)) {
+                    found_any = true;
+                    if !matches!(state, LifecycleState::Active { .. }) {
+                        return "degraded";
+                    }
+                }
+            }
+            if found_any { "ok" } else { "unavailable" }
+        };
+
+        let tower = subsystem_status(&tower_primals);
+        let node = subsystem_status(&node_primals);
+        let nest = subsystem_status(&nest_primals);
+        let mesh = subsystem_status(&mesh_primals);
+
+        subsystems.insert("tower".to_string(), json!(tower));
+        subsystems.insert("node".to_string(), json!(node));
+        subsystems.insert("nest".to_string(), json!(nest));
+        subsystems.insert("mesh".to_string(), json!(mesh));
+
+        if tower != "ok" || mesh != "ok" {
+            all_healthy = false;
+        }
+
+        // Derive deploy graph from active composition
+        let active_count = status
+            .iter()
+            .filter(|(_, s)| matches!(s, LifecycleState::Active { .. }))
+            .count();
+
+        if active_count >= 5 {
+            deploy_graph = "nucleus_complete".to_string();
+        } else if active_count >= 3 {
+            deploy_graph = "nucleus_simple".to_string();
+        } else if active_count >= 2 {
+            deploy_graph = "tower_atomic".to_string();
+        }
+
+        Ok(json!({
+            "healthy": all_healthy,
+            "deploy_graph": deploy_graph,
+            "subsystems": subsystems,
+            "capabilities_count": status.len(),
         }))
     }
 

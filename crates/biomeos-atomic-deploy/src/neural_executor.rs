@@ -434,8 +434,11 @@ impl GraphExecutor {
         result
     }
 
-    /// Perform topological sort to determine execution phases
-    pub(crate) fn topological_sort(&self) -> Result<Vec<Vec<String>>> {
+    /// Perform topological sort to determine execution phases.
+    ///
+    /// Returns execution phases where each phase is a set of nodes that can
+    /// run in parallel. Useful for graph validation and composition inspection.
+    pub fn topological_sort(&self) -> Result<Vec<Vec<String>>> {
         let mut in_degree: HashMap<String, usize> = HashMap::new();
         let mut graph_map: HashMap<String, Vec<String>> = HashMap::new();
 

@@ -3,7 +3,8 @@
 
 //! Additional branch coverage for `handlers::graph` (CRUD edges, translation load, execute variants).
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 use super::*;
 use serde_json::json;

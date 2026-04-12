@@ -5,7 +5,8 @@
 //!
 //! Extracted from neural_executor.rs to keep file under 1000 lines.
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 use super::neural_executor::GraphExecutor;
 use crate::neural_graph::{Graph, GraphConfig, GraphNode, Operation};

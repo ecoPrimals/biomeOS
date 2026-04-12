@@ -24,7 +24,7 @@
 //!
 //! Total: 25 comprehensive integration tests
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use anyhow::Result;
 use biomeos_federation::security_client::SecurityProviderClient;

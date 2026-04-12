@@ -31,9 +31,11 @@ use super::types::{BroadcastKeys, EncryptedDiscoveryConfig, TransportHealth, Tun
 use super::{DiscoveryProvider, SecurityProvider};
 use biomeos_types::constants::ports;
 use crate::api_adapter::cli_adapter::CliAdapter;
+use crate::atomic_client::AtomicClient;
 use bytes::Bytes;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
+use serde_json::json;
 use std::time::SystemTime;
 use tracing::{debug, info};
 
@@ -91,18 +93,19 @@ impl SecurityProvider for CryptoSecurityAdapter {
 
         let output = result.stdout();
 
-        // Parse crypto primal output
         let tunnel_id = Self::parse_tunnel_id(output)?;
+        let encryption_key = Self::parse_field_bytes(output, "encryption_key")
+            .unwrap_or_default();
         let endpoint_a = super::TransportEndpoint {
             node_id: node_a.to_string(),
-            address: format!("btsp://{}", node_a),
+            address: format!("btsp://{node_a}"),
             port: ports::NEURAL_API,
             protocol: "btsp".to_string(),
             secure: true,
         };
         let endpoint_b = super::TransportEndpoint {
             node_id: node_b.to_string(),
-            address: format!("btsp://{}", node_b),
+            address: format!("btsp://{node_b}"),
             port: ports::NEURAL_API,
             protocol: "btsp".to_string(),
             secure: true,
@@ -112,7 +115,7 @@ impl SecurityProvider for CryptoSecurityAdapter {
             id: tunnel_id,
             endpoint_a,
             endpoint_b,
-            encryption_key: Bytes::new(), // Parsed from output in real impl
+            encryption_key,
             created_at: SystemTime::now(),
         })
     }
@@ -134,7 +137,6 @@ impl SecurityProvider for CryptoSecurityAdapter {
 
         let output = result.stdout();
 
-        // Parse status
         let status = if output.contains("healthy") {
             super::HealthStatus::Healthy
         } else if output.contains("degraded") {
@@ -143,9 +145,12 @@ impl SecurityProvider for CryptoSecurityAdapter {
             super::HealthStatus::Unhealthy
         };
 
+        let forward_secrecy = output.contains("forward_secrecy: true")
+            || output.contains("pfs: enabled");
+
         Ok(TunnelHealth {
             encryption_status: status,
-            forward_secrecy: true, // Parsed from output in real impl
+            forward_secrecy,
             last_key_rotation: None,
             status,
         })
@@ -214,14 +219,15 @@ impl SecurityProvider for CryptoSecurityAdapter {
         let output = result.stdout();
 
         let is_ancestor = output.contains("valid") || output.contains("verified");
+        let depth = Self::parse_field_u32(output, "depth").unwrap_or(1);
 
         Ok(super::LineageInfo {
             is_ancestor,
-            depth: 1, // Parsed from output in real impl
+            depth,
             proof: super::LineageProof {
                 lineage_id: requester.to_string(),
-                depth: 1,
-                proof: Bytes::new(),
+                depth,
+                proof: Self::parse_field_bytes(output, "proof").unwrap_or_default(),
                 timestamp: SystemTime::now(),
             },
         })
@@ -230,92 +236,121 @@ impl SecurityProvider for CryptoSecurityAdapter {
 
 impl CryptoSecurityAdapter {
     fn parse_tunnel_id(output: &str) -> Result<String> {
-        // Parse tunnel ID from crypto primal output
-        // Example: "tunnel_id: btsp-123-456"
-        output
-            .lines()
-            .find(|line| line.contains("tunnel_id"))
-            .and_then(|line| line.split(':').nth(1))
-            .map(|s| s.trim().to_string())
+        Self::parse_field_str(output, "tunnel_id")
             .context("Failed to parse tunnel_id from crypto primal output")
     }
 
     fn parse_broadcast_key(output: &str) -> Result<Bytes> {
-        let key_str = output
-            .lines()
-            .find(|line| line.contains("broadcast_key"))
-            .and_then(|line| line.split(':').nth(1))
-            .map(|s| s.trim())
+        let key_str = Self::parse_field_str(output, "broadcast_key")
             .context("Failed to parse broadcast_key from crypto primal output")?;
-
         Ok(Bytes::copy_from_slice(key_str.as_bytes()))
     }
-}
 
-/// Local registration payload for discovery transport APIs (until shared client types land).
-#[derive(Debug)]
-struct DiscoveryServiceMetadata {
-    version: String,
-    location: Option<String>,
-    tags: Vec<String>,
-}
-
-#[derive(Debug)]
-struct DiscoveryServiceRegistration {
-    service_name: String,
-    capabilities: Vec<String>,
-    endpoint: String,
-    metadata: DiscoveryServiceMetadata,
-}
-
-/// HTTP-oriented client for the discovery capability (transport registration, health).
-///
-/// This module is not yet wired into the main `p2p_coordination` build; it is kept as a
-/// reference implementation for capability-based discovery integration.
-#[derive(Debug, Default)]
-pub struct DiscoveryRegistryClient;
-
-impl DiscoveryRegistryClient {
-    /// Discover a discovery-capability endpoint for the given family.
-    pub async fn discover(_family_id: &str) -> anyhow::Result<Self> {
-        Ok(Self)
+    fn parse_field_str(output: &str, field: &str) -> Option<String> {
+        output
+            .lines()
+            .find(|line| line.contains(field))
+            .and_then(|line| line.split(':').nth(1))
+            .map(|s| s.trim().to_string())
     }
 
-    async fn register_service(&self, _service: &DiscoveryServiceRegistration) -> anyhow::Result<()> {
+    fn parse_field_u32(output: &str, field: &str) -> Option<u32> {
+        Self::parse_field_str(output, field)
+            .and_then(|s| s.parse().ok())
+    }
+
+    fn parse_field_bytes(output: &str, field: &str) -> Option<Bytes> {
+        Self::parse_field_str(output, field)
+            .map(|s| Bytes::copy_from_slice(s.as_bytes()))
+    }
+}
+
+/// JSON-RPC client for the discovery capability (transport registration, health).
+///
+/// Discovers a primal providing the `discovery` capability at runtime, then
+/// communicates via JSON-RPC. Zero hardcoded endpoints or primal names.
+#[derive(Debug)]
+pub struct DiscoveryRegistryClient {
+    client: AtomicClient,
+}
+
+impl DiscoveryRegistryClient {
+    /// Discover a discovery-capable primal for the given family via capability lookup.
+    pub async fn discover(family_id: &str) -> anyhow::Result<Self> {
+        let client = AtomicClient::discover_by_capability_with_opts(
+            super::CAPABILITY_DISCOVERY,
+            crate::atomic_client::DiscoverByCapabilityOpts {
+                family_id: Some(family_id),
+                ..Default::default()
+            },
+        )
+        .await
+        .context("No primal with 'discovery' capability found")?;
+        Ok(Self { client })
+    }
+
+    async fn register_service(
+        &self,
+        service_name: &str,
+        capabilities: &[&str],
+        endpoint: &str,
+        version: &str,
+    ) -> anyhow::Result<()> {
+        self.client
+            .call(
+                "transport.register",
+                json!({
+                    "service_name": service_name,
+                    "capabilities": capabilities,
+                    "endpoint": endpoint,
+                    "version": version,
+                }),
+            )
+            .await
+            .context("transport.register RPC failed")?;
         Ok(())
+    }
+
+    async fn enable_encrypted_mode(
+        &self,
+        mode: &str,
+        key_len: usize,
+    ) -> anyhow::Result<()> {
+        self.client
+            .call(
+                "discovery.encrypted_mode",
+                json!({ "mode": mode, "key_length": key_len }),
+            )
+            .await
+            .context("discovery.encrypted_mode RPC failed")?;
+        Ok(())
+    }
+
+    async fn check_health(&self, transport_id: &str) -> anyhow::Result<serde_json::Value> {
+        self.client
+            .call("transport.health", json!({ "transport_id": transport_id }))
+            .await
+            .context("transport.health RPC failed")
+    }
+
+    async fn test_broadcast(&self) -> anyhow::Result<serde_json::Value> {
+        self.client
+            .call("discovery.test_broadcast", json!({}))
+            .await
+            .context("discovery.test_broadcast RPC failed")
     }
 }
 
 /// Mesh/discovery adapter for discovery primal operations
 ///
-/// Implements DiscoveryProvider for any primal providing discovery capability.
-/// Uses HTTP APIs when the primal is HTTP-based (discovered at runtime).
+/// Implements `DiscoveryProvider` for any primal providing the `discovery` capability.
+/// Uses JSON-RPC via `AtomicClient` discovered at runtime — zero hardcoded endpoints.
 pub struct MeshDiscoveryAdapter {
     discovery_client: DiscoveryRegistryClient,
 }
 
 impl MeshDiscoveryAdapter {
-    /// Create a new mesh discovery adapter
-    ///
-    /// # Deprecated
-    /// This constructor uses hardcoded endpoints. Prefer using `from_discovery()` instead.
-    pub fn new(endpoint: String) -> Self {
-        // Note: This is a legacy constructor for backward compatibility
-        // The endpoint is ignored in favor of proper discovery
-        tracing::warn!(
-            "MeshDiscoveryAdapter::new() uses hardcoded endpoint '{}'. \
-             Consider using capability-based discovery instead.",
-            endpoint
-        );
-
-        // EVOLVED: Return error instead of panic for deprecated function
-        anyhow::bail!(
-            "MeshDiscoveryAdapter::new() is deprecated. \
-             Use DiscoveryRegistryClient::discover() for capability-based discovery."
-        )
-    }
-
-    /// Create adapter from a discovered discovery client (capability: discovery)
+    /// Create adapter by discovering a primal with the `discovery` capability at runtime.
     pub async fn from_discovery(family_id: &str) -> anyhow::Result<Self> {
         let discovery_client = DiscoveryRegistryClient::discover(family_id).await?;
         Ok(Self { discovery_client })
@@ -330,19 +365,11 @@ impl DiscoveryProvider for MeshDiscoveryAdapter {
             endpoint.node_id
         );
 
-        let service = DiscoveryServiceRegistration {
-            service_name: format!("transport-{}", endpoint.node_id),
-            capabilities: vec!["transport".to_string()],
-            endpoint: format!("{}:{}", endpoint.address, endpoint.port),
-            metadata: DiscoveryServiceMetadata {
-                version: "1.0.0".to_string(),
-                location: None,
-                tags: vec![],
-            },
-        };
+        let service_name = format!("transport-{}", endpoint.node_id);
+        let address = format!("{}:{}", endpoint.address, endpoint.port);
 
         self.discovery_client
-            .register_service(&service)
+            .register_service(&service_name, &["transport"], &address, "1.0.0")
             .await
             .context("Failed to register transport with discovery primal")?;
 
@@ -356,15 +383,13 @@ impl DiscoveryProvider for MeshDiscoveryAdapter {
             config.mode
         );
 
-        // In a real implementation, this would call discovery API to enable encrypted mode
-        // For now, we'll log that it would happen
-        info!("MeshDiscoveryAdapter: Encrypted mode would be enabled here");
-        info!("   Mode: {:?}", config.mode);
-        info!(
-            "   Encryption key size: {} bytes",
-            config.encryption_key.len()
-        );
+        let mode_str = format!("{:?}", config.mode);
+        self.discovery_client
+            .enable_encrypted_mode(&mode_str, config.encryption_key.len())
+            .await
+            .context("Failed to enable encrypted mode on discovery primal")?;
 
+        info!("MeshDiscoveryAdapter: Encrypted discovery mode enabled");
         Ok(())
     }
 
@@ -374,24 +399,60 @@ impl DiscoveryProvider for MeshDiscoveryAdapter {
             transport_id
         );
 
-        // In a real implementation, this would query discovery primal health API
-        // For now, return a healthy status
+        let response = self
+            .discovery_client
+            .check_health(transport_id)
+            .await
+            .context("Failed to query transport health from discovery primal")?;
+
+        let status_str = response
+            .get("status")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("unknown");
+
+        let status = match status_str {
+            "healthy" => super::HealthStatus::Healthy,
+            "degraded" => super::HealthStatus::Degraded,
+            _ => super::HealthStatus::Unhealthy,
+        };
+
         Ok(TransportHealth {
-            connection_status: super::HealthStatus::Healthy,
-            latency_ms: Some(10),
-            packet_loss: Some(0.0),
-            status: super::HealthStatus::Healthy,
+            connection_status: status,
+            latency_ms: response
+                .get("latency_ms")
+                .and_then(serde_json::Value::as_u64)
+                .and_then(|v| u32::try_from(v).ok()),
+            packet_loss: response
+                .get("packet_loss")
+                .and_then(serde_json::Value::as_f64)
+                .map(|v| v as f32),
+            status,
         })
     }
 
     async fn test_encrypted_broadcast(&self) -> Result<super::BroadcastTest> {
         info!("MeshDiscoveryAdapter: Testing encrypted broadcast");
 
-        // In a real implementation, this would test a broadcast through discovery primal
+        let response = self
+            .discovery_client
+            .test_broadcast()
+            .await
+            .context("Failed to test encrypted broadcast via discovery primal")?;
+
+        let success = response
+            .get("success")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+
+        let encrypted = response
+            .get("encrypted")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+
         Ok(super::BroadcastTest {
-            encrypted: true,
+            encrypted,
             timestamp: SystemTime::now(),
-            success: true,
+            success,
         })
     }
 }

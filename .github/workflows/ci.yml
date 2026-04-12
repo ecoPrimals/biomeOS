@@ -203,7 +203,7 @@ jobs:
           echo "Well-structured async coordination code may appropriately exceed this."
           echo "Refactor only if: multiple responsibilities, poor cohesion, or duplication."
           echo ""
-          OVERSIZED=$(find crates src -name '*.rs' -not -path '*/archive/*' -not -path '*/target/*' -exec wc -l {} + | awk '$1 > 1000 {print $2 " (" $1 " lines)"}')
+          OVERSIZED=$(find crates -name '*.rs' -not -path '*/archive/*' -not -path '*/target/*' -exec wc -l {} + | awk '$1 > 1000 {print $2 " (" $1 " lines)"}')
           if [ -n "$OVERSIZED" ]; then
             echo "ℹ️ Files exceeding 1000 line guideline:"
             echo "$OVERSIZED"

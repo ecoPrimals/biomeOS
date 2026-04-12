@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
-
 //! Integration tests for BiomeOS discovery system
 //!
 //! These tests validate the complete discovery workflow:
@@ -14,7 +12,6 @@
 //!
 //! **Concurrency-First Design**:
 //! - Service polling uses exponential backoff for efficiency
-#![expect(clippy::collapsible_if, reason = "test assertions")]
 //! - Minimal delays, fast failure detection
 //! - Optimized for concurrent test execution
 
@@ -54,7 +51,10 @@ async fn wait_for_service(url: &str, max_attempts: u32) -> bool {
     for attempt in 0..max_attempts {
         let url_clone = url.clone();
         let result = tokio::task::spawn_blocking(move || {
-            ureq::get(&url_clone).timeout(Duration::from_secs(1)).call()
+            ureq::get(&url_clone)
+                .timeout(Duration::from_secs(1))
+                .call()
+                .map_err(|e| e.to_string())
         })
         .await;
 

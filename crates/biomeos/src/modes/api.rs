@@ -67,7 +67,8 @@ pub async fn run(port: Option<u16>, socket: Option<PathBuf>, _unix_only: bool) -
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+    #![expect(clippy::unwrap_used, reason = "test assertions")]
+    #![expect(clippy::expect_used, reason = "test assertions")]
 
     use super::*;
 

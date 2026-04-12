@@ -220,17 +220,16 @@ impl InferenceHandler {
     ///   `["complete", "embed", "models"]`)
     pub async fn register_provider(&self, params: &Option<Value>) -> Result<Value> {
         let params = params.as_ref().context("Missing parameters")?;
-        let name = params["name"]
-            .as_str()
-            .context("Missing 'name' field")?;
+        let name = params["name"].as_str().context("Missing 'name' field")?;
         let endpoint_str = params["endpoint"]
             .as_str()
             .context("Missing 'endpoint' field")?;
 
-        let endpoint = biomeos_core::TransportEndpoint::parse(endpoint_str)
-            .unwrap_or_else(|| biomeos_core::TransportEndpoint::UnixSocket {
+        let endpoint = biomeos_core::TransportEndpoint::parse(endpoint_str).unwrap_or_else(|| {
+            biomeos_core::TransportEndpoint::UnixSocket {
                 path: std::path::PathBuf::from(endpoint_str),
-            });
+            }
+        });
 
         let capabilities: Vec<String> = params
             .get("capabilities")
@@ -660,7 +659,10 @@ mod tests {
         handler.register_provider(&params2).await.unwrap();
 
         let list = handler.list_providers(&None).await.unwrap();
-        assert_eq!(list["count"], 1, "re-registration should replace, not duplicate");
+        assert_eq!(
+            list["count"], 1,
+            "re-registration should replace, not duplicate"
+        );
     }
 
     #[tokio::test]

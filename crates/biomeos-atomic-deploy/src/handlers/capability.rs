@@ -137,7 +137,10 @@ impl CapabilityHandler {
             .map(|p| &*p.name)
             .unwrap_or("unknown");
 
-        info!("   ✓ Resolved {} → {} in {}ms", capability, primary_primal, latency);
+        info!(
+            "   ✓ Resolved {} → {} in {}ms",
+            capability, primary_primal, latency
+        );
 
         Ok(json!({
             "resolved": true,

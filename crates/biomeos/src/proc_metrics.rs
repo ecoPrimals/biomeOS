@@ -116,8 +116,6 @@ pub fn root_disk_bytes() -> Option<(u64, u64)> {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::unwrap_used, reason = "test assertions")]
-
     use super::*;
 
     const MEMINFO_SAMPLE: &str =

@@ -345,7 +345,8 @@ impl GraphParser {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "parser unit tests")]
+    #![expect(clippy::unwrap_used, reason = "parser unit tests")]
+    #![expect(clippy::expect_used, reason = "parser unit tests")]
 
     use super::*;
 

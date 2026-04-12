@@ -13,7 +13,8 @@
 //! - File I/O
 //! - Environment-specific configuration
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 #[cfg(test)]
 mod config_tests {

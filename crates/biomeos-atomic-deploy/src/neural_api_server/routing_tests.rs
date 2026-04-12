@@ -77,12 +77,20 @@ async fn test_semantic_fallback_dag_dehydrate() {
 }
 
 #[tokio::test]
-async fn test_semantic_fallback_composition_health() {
+async fn test_composition_health_route_returns_standard_shape() {
     let (server, _temp) = create_test_server();
     let req = r#"{"jsonrpc":"2.0","method":"composition.tower_health","params":{},"id":4}"#;
     let result = server.handle_request_json(req).await;
-    assert!(result.get("error").is_some());
-    assert_ne!(result["error"]["code"], -32601);
+    let inner = &result["result"];
+    assert!(inner["healthy"].is_boolean(), "should have healthy field");
+    assert!(
+        inner["deploy_graph"].is_string(),
+        "should have deploy_graph field"
+    );
+    assert!(
+        inner["subsystems"].is_object(),
+        "should have subsystems map"
+    );
 }
 
 #[tokio::test]
@@ -574,7 +582,10 @@ async fn test_handle_request_capability_resolve_route() {
 
     let req = r#"{"jsonrpc":"2.0","method":"capability.resolve","params":{"capability":"crypto"},"id":90}"#;
     let result = server.handle_request_json(req).await;
-    assert!(result.get("result").is_some(), "resolve should succeed: {result}");
+    assert!(
+        result.get("result").is_some(),
+        "resolve should succeed: {result}"
+    );
     assert_eq!(result["result"]["resolved"], true);
     assert_eq!(result["result"]["primal"], "beardog");
     assert_eq!(result["id"], 90);
@@ -595,7 +606,10 @@ async fn test_handle_request_inference_register_provider_route() {
     let (server, _temp) = create_test_server();
     let req = r#"{"jsonrpc":"2.0","method":"inference.register_provider","params":{"name":"neuralSpring","endpoint":"/tmp/neural.sock"},"id":92}"#;
     let result = server.handle_request_json(req).await;
-    assert!(result.get("result").is_some(), "register_provider should succeed: {result}");
+    assert!(
+        result.get("result").is_some(),
+        "register_provider should succeed: {result}"
+    );
     assert_eq!(result["result"]["registered"], true);
     assert_eq!(result["result"]["name"], "neuralSpring");
 }
@@ -612,7 +626,8 @@ async fn test_handle_request_inference_providers_route() {
 #[tokio::test]
 async fn test_handle_request_inference_complete_no_provider() {
     let (server, _temp) = create_test_server();
-    let req = r#"{"jsonrpc":"2.0","method":"inference.complete","params":{"prompt":"hello"},"id":94}"#;
+    let req =
+        r#"{"jsonrpc":"2.0","method":"inference.complete","params":{"prompt":"hello"},"id":94}"#;
     let result = server.handle_request_json(req).await;
     assert!(
         result.get("error").is_some(),

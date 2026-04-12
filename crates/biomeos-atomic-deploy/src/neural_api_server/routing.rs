@@ -66,6 +66,7 @@ enum Route {
     LifecycleApoptosis,
     LifecycleShutdownAll,
     LifecycleComposition,
+    CompositionHealth,
     ProtocolStatus,
     ProtocolEscalate,
     ProtocolFallback,
@@ -160,6 +161,12 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("lifecycle.apoptosis", Route::LifecycleApoptosis),
     ("lifecycle.shutdown_all", Route::LifecycleShutdownAll),
     ("lifecycle.composition", Route::LifecycleComposition),
+    // Composition health (COMPOSITION_HEALTH_STANDARD)
+    ("composition.health", Route::CompositionHealth),
+    ("composition.tower_health", Route::CompositionHealth),
+    ("composition.node_health", Route::CompositionHealth),
+    ("composition.nest_health", Route::CompositionHealth),
+    ("composition.nucleus_health", Route::CompositionHealth),
     // Protocol
     ("protocol.status", Route::ProtocolStatus),
     ("protocol.escalate", Route::ProtocolEscalate),
@@ -207,7 +214,10 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     // capability.call, which resolves to the same providers via CapabilityTranslationRegistry.
     ("inference.schedule", Route::InferenceSchedule),
     ("inference.gates", Route::InferenceGates),
-    ("inference.register_provider", Route::InferenceRegisterProvider),
+    (
+        "inference.register_provider",
+        Route::InferenceRegisterProvider,
+    ),
     ("inference.providers", Route::InferenceProviders),
     ("inference.complete", Route::InferenceComplete),
     ("inference.embed", Route::InferenceEmbed),
@@ -356,9 +366,7 @@ impl NeuralApiServer {
             // Lifecycle
             Route::LifecycleStatus => dispatch(self.lifecycle_handler.status().await, id),
             Route::LifecycleGet => dispatch(self.lifecycle_handler.get(params).await, id),
-            Route::LifecycleRegister => {
-                dispatch(self.lifecycle_handler.register(params).await, id)
-            }
+            Route::LifecycleRegister => dispatch(self.lifecycle_handler.register(params).await, id),
             Route::LifecycleResurrect => {
                 dispatch(self.lifecycle_handler.resurrect(params).await, id)
             }
@@ -368,8 +376,9 @@ impl NeuralApiServer {
             Route::LifecycleShutdownAll => {
                 dispatch(self.lifecycle_handler.shutdown_all().await, id)
             }
-            Route::LifecycleComposition => {
-                dispatch(self.lifecycle_handler.composition().await, id)
+            Route::LifecycleComposition => dispatch(self.lifecycle_handler.composition().await, id),
+            Route::CompositionHealth => {
+                dispatch(self.lifecycle_handler.composition_health(params).await, id)
             }
             // Protocol
             Route::ProtocolStatus => dispatch(self.protocol_handler.status().await, id),
@@ -433,9 +442,7 @@ impl NeuralApiServer {
                 id,
             ),
             // Inference (canonical namespace)
-            Route::InferenceSchedule => {
-                dispatch(self.inference_handler.schedule(params).await, id)
-            }
+            Route::InferenceSchedule => dispatch(self.inference_handler.schedule(params).await, id),
             Route::InferenceGates => dispatch(self.inference_handler.gates(params).await, id),
             Route::InferenceRegisterProvider => {
                 dispatch(self.inference_handler.register_provider(params).await, id)
@@ -443,15 +450,9 @@ impl NeuralApiServer {
             Route::InferenceProviders => {
                 dispatch(self.inference_handler.list_providers(params).await, id)
             }
-            Route::InferenceComplete => {
-                dispatch(self.inference_handler.complete(params).await, id)
-            }
-            Route::InferenceEmbed => {
-                dispatch(self.inference_handler.embed(params).await, id)
-            }
-            Route::InferenceModels => {
-                dispatch(self.inference_handler.models(params).await, id)
-            }
+            Route::InferenceComplete => dispatch(self.inference_handler.complete(params).await, id),
+            Route::InferenceEmbed => dispatch(self.inference_handler.embed(params).await, id),
+            Route::InferenceModels => dispatch(self.inference_handler.models(params).await, id),
             // Health probes (SEMANTIC_METHOD_NAMING_STANDARD.md compliance)
             Route::HealthCheck => dispatch(self.health_check().await, id),
             Route::HealthLiveness => dispatch(self.health_liveness(), id),

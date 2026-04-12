@@ -205,7 +205,7 @@ impl PrimalHealthMonitorBuilder {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+    #![expect(clippy::expect_used, reason = "test assertions")]
 
     use super::*;
     use std::time::Duration;

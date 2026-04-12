@@ -2,7 +2,6 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 #![expect(clippy::unwrap_used, reason = "test")]
-#![expect(clippy::expect_used, reason = "test assertions")]
 
 //! Unit tests for storage manifest types.
 

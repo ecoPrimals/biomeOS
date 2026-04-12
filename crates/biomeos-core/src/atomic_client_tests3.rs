@@ -3,8 +3,6 @@
 
 //! Additional `AtomicClient` constructor and transport coverage (`atomic_client.rs`).
 
-#![expect(clippy::unwrap_used, reason = "test assertions")]
-
 use crate::TransportEndpoint;
 use crate::atomic_client::AtomicClient;
 use std::path::PathBuf;

@@ -3,7 +3,8 @@
 
 //! Neural graph tests - extracted to keep neural_graph.rs under 1000 lines
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 use crate::neural_graph::*;
 

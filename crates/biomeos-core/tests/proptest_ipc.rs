@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
-
 //! Proptest IPC fuzzing — prevents DoS via malformed JSON-RPC input.
 //!
 //! Absorbed from wetSpring (7 tests), healthSpring (18 tests), primalSpring (5 tests),

@@ -5,7 +5,8 @@
 //!
 //! Extracted from capability_translation module to keep main module under 1000 LOC.
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::unwrap_used, reason = "test assertions")]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 use crate::capability_translation::{
     CapabilityTranslation, CapabilityTranslationRegistry, RegistryStats, resolve_primal_socket,

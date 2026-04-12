@@ -123,7 +123,8 @@ pub(crate) async fn check_graphs_dir_at(base_dir: &Path) -> Result<HealthCheck> 
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+    #![expect(clippy::unwrap_used, reason = "test assertions")]
+    #![expect(clippy::expect_used, reason = "test assertions")]
 
     use super::*;
 

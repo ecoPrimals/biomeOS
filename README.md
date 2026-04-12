@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v3.03)
+## Status: Production Ready (v3.04)
 
 | Metric | Value |
 |--------|-------|
@@ -12,25 +12,27 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout) |
-| Tests | 7,749 passing (0 failures, 0 ignored, fully concurrent) — 90%+ line / function / region (llvm-cov) |
+| Tests | 7,783 passing (0 failures, 0 ignored, fully concurrent) — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
-| C Dependencies | 0 (blake3 pure, deny.toml enforced bans) |
+| C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml enforced bans) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI + TCP-only mobile |
 | AI Bridge | Capability-routed to Squirrel (tag-in at runtime; biomeOS runs without AI primal) |
 | Neural API | 290+ capability translations, 26 domains, 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing |
+| Composition | Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` standard; `lifecycle.composition` enriched dashboard |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
-| Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
+| Lifecycle | Auto-monitoring, deep health checks, auto-resurrection, composition dashboard |
 | Files >1000 LOC | 0 (all under 1000 after smart domain extraction) |
 | Discovery | **Capability-based** per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — XDG sockets + `topology.rescan` + lazy rescan + `capability.register` + DNS-SD mDNS; no identity-based routing or deprecated discovery stubs |
-| Blocking Debt | 0 (BM-04 capability registration, BM-05 probe formats, TCP-only, gate routing, `#[serial]` elimination — all resolved) |
-| Dep Governance | All crates: dependencies centralized via `workspace = true` (intentional version pins only where required); `serial_test` removed; pure Rust stack (rustix, etcetera, ureq) |
+| Blocking Debt | 0 (composition e2e, dashboard completeness, BM-04, BM-05, TCP-only, gate routing, `#[serial]` — all resolved) |
+| Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; pure Rust stack (rustix, etcetera, ureq); blake3 pure-only |
 | TODO/FIXME/HACK | 0 in production code |
 | Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
+| Hardcoded Primal Names | 0 in production code (all use `primal_names::` constants from `biomeos-types`) |
 
 ---
 
@@ -252,7 +254,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,724 tests across 26 crates, fully concurrent)
+### Test (7,783 tests across 26 crates, fully concurrent)
 
 ```bash
 cargo test --workspace
@@ -346,9 +348,9 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v3.03)
-**Updated**: April 11, 2026
-**Tests**: 7,749 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, `-D warnings` | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
+**Status**: Production Ready (v3.04)
+**Updated**: April 12, 2026
+**Tests**: 7,783 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, `-D warnings` | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---

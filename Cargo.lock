@@ -672,6 +672,7 @@ dependencies = [
  "biomeos-nucleus",
  "biomeos-types",
  "chrono",
+ "criterion",
  "redb",
  "rustix 0.38.44",
  "serde",

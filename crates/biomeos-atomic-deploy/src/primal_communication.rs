@@ -14,6 +14,7 @@
 
 use anyhow::{Context, Result};
 use biomeos_core::atomic_client::AtomicClient;
+use biomeos_types::primal_names;
 use serde_json::json;
 use std::path::Path;
 use std::time::Duration;
@@ -144,8 +145,8 @@ pub async fn establish_btsp_tunnel(security_socket: &Path, family_id: &str) -> R
 pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<String> {
     // Discover security provider with automatic transport fallback
     // Provider name resolved from env, not hardcoded
-    let security_provider =
-        std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
+    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+        .unwrap_or_else(|_| primal_names::BEARDOG.to_string());
     let client = AtomicClient::discover(&security_provider)
         .await
         .context(format!(
@@ -182,7 +183,8 @@ pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<Str
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+    #![expect(clippy::unwrap_used, reason = "test assertions")]
+    #![expect(clippy::expect_used, reason = "test assertions")]
 
     use super::*;
     use biomeos_test_utils::MockJsonRpcServer;

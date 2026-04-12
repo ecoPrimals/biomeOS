@@ -206,7 +206,7 @@ pub fn cleanup_test_binaries() -> SporeResult<()> {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+    #![expect(clippy::unwrap_used, reason = "test assertions")]
 
     use super::*;
     use tempfile::TempDir;

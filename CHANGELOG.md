@@ -2,6 +2,58 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.04 (2026-04-12) — Composition Elevation + Deep Debt Cleanup VII
+
+### Multi-primal graph execution proven end-to-end
+- 15 new integration tests in `nucleus_composition_e2e.rs` validating `nucleus_complete.toml` and `gate2_nucleus.toml`
+- Level 1: TOML parsing, 5+ primal starts, capability population, dependency integrity
+- Level 2: Topological sort correctness, NUCLEUS architectural phase ordering, parallel phases
+- Level 3: Synthetic end-to-end execution flow, parallel phase speedup, all-nodes-complete validation
+- Level 4: gate2 deploy graph validation (parsing, sort, parallel deployment, primal count)
+- Level 5: Critical node failure correctly aborts downstream phases
+- `topological_sort` visibility elevated to `pub` for integration test access
+
+### `lifecycle.composition` dashboard enriched
+- Per-primal capabilities, health metrics (latency, failures, uptime), state details (started_at, reason)
+- Aggregated `capabilities_live` (deduplicated) and `dependency_graph` (edges array)
+- `depends_on` and `depended_by` relationship fields per primal
+
+### `composition.health` standard implemented
+- New `composition.health` route (+ aliases: `composition.tower_health`, `composition.node_health`, `composition.nest_health`, `composition.nucleus_health`)
+- Returns `healthy`, `deploy_graph`, `subsystems` (tower/node/nest/mesh status), `capabilities_count`
+- Follows `COMPOSITION_HEALTH_STANDARD.md` from wateringHole
+
+### Hardcoding elimination
+- `lifecycle.rs`: Subsystem primal arrays now use `primal_names::BEARDOG`, `primal_names::SONGBIRD`, etc. from `biomeos-types`
+- `primal_communication.rs`: BTSP security provider fallback now uses `primal_names::BEARDOG` constant
+- Zero hardcoded primal name strings remain in production code
+
+### Dependency governance
+- `blake3`: Added `default-features = false` to enforce pure Rust implementation (no C/assembly build)
+
+### Deep debt audit results (all clean)
+- Unsafe code: 0 blocks in production
+- TODO/FIXME/HACK: 0 in production
+- Production mocks: 0 (all mocks isolated to `#[cfg(test)]`)
+- `.unwrap()`/`.expect()` in production: 0 (all inside `#[cfg(test)]` modules)
+- Files >1000 LOC: 0 (largest: 919 LOC)
+- Banned crates in lockfile: 0 (`deny.toml` enforced)
+- `extern "C"` / `#[link`: 0 project-authored FFI
+
+### CI fix
+- Removed stale `src` path from `ci.yml` file-size check (only `crates` exists at repo root)
+
+### Doc alignment
+- All root docs updated to v3.04 / April 12, 2026 / 7,783 tests
+- `SECURITY.md` supported versions updated to v3.x
+- `DOCUMENTATION.md` handoff index updated through v3.04
+- `START_HERE.md`, `QUICK_START.md`, `CONTEXT.md` version/test count synchronized
+
+### Quality gates
+- 7,783 tests (0 failures), clippy PASS (0 warnings, pedantic+nursery), fmt PASS, docs PASS
+
+---
+
 ## v3.03 (2026-04-11) — Deep Debt Cleanup VI
 
 ### Box<dyn Error> → anyhow evolution
