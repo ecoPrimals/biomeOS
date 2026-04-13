@@ -24,6 +24,8 @@ pub mod cast;
 pub mod config;
 pub mod constants;
 pub mod defaults; // Runtime defaults (socket paths, etc.) with env var overrides
+#[cfg(test)]
+mod defaults_tests;
 pub mod env_config; // Centralized environment variable constants and typed accessors
 pub mod error;
 pub mod health;
@@ -35,6 +37,8 @@ pub mod manifest;
 /// MCP tool definitions for Squirrel AI discovery
 pub mod mcp;
 pub mod network_config; // Capability-based network configuration
+#[cfg(test)]
+mod network_config_tests;
 /// Zero-panic startup validation
 pub mod or_exit;
 /// XDG-compliant system paths

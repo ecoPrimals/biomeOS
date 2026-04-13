@@ -60,6 +60,8 @@ pub mod incubation;
 pub mod logs;
 pub mod manifest;
 pub mod neural_spore;
+#[cfg(test)]
+mod neural_spore_tests;
 pub mod refresh;
 pub mod seed;
 pub mod spore;

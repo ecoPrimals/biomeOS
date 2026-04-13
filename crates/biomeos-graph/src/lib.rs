@@ -47,6 +47,8 @@ mod continuous_tests;
 pub mod error;
 pub mod events;
 pub mod graph;
+#[cfg(test)]
+mod graph_tests;
 pub mod loader;
 pub mod metrics;
 mod modification;

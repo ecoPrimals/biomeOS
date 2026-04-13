@@ -331,4 +331,4 @@ async fn test_registered_capability_serialization() {
     assert_eq!(cap.primal_name.as_ref(), deserialized.primal_name.as_ref());
 }
 
-// Capability domain mapping tests are in crate::capability_domains::tests
+// Capability domain mapping tests are in crate::capability_domains_tests

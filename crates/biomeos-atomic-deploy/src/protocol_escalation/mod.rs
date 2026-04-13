@@ -25,6 +25,8 @@
 
 mod config;
 mod engine;
+#[cfg(test)]
+mod engine_tests;
 mod metrics;
 mod rpc;
 

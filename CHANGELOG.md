@@ -2,6 +2,31 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.06 (2026-04-13) — Deep Debt Resolution & Code Organization
+
+### Test extraction from production files
+- Extracted inline `#[cfg(test)]` modules from 8 files >800 LOC to sibling test files
+- `lifecycle.rs` (920 → 453), `capability_domains.rs` (812 → 309),
+  `engine.rs` (815 → 319), `graph.rs` (826 → 469), `defaults.rs` (810 → 386),
+  `network_config.rs` (820 → 432), `neural_spore.rs` (801 → 388),
+  `primal_registry/mod.rs` (823 → 486)
+- All production files now <835 LOC; no file exceeds 1000 LOC
+- Follows established sibling test file pattern (`capability.rs` → `capability_tests.rs`)
+
+### Hardcoding evolved to constants
+- `discovery_bootstrap.rs` now uses `primal_names::SONGBIRD` constant instead of
+  hardcoded string literal in error help text
+- Full audit confirmed: zero hardcoded primal name string literals in production code
+  (all 2,819 matches are in test assertions, constant definitions, or doc comments)
+
+### Deep debt audit — confirmed clean
+- Zero `unsafe` code in production (all mentions are documentation/comments)
+- Zero `TODO`/`FIXME`/`HACK`/`todo!()`/`unimplemented!()` in any .rs file
+- Zero `.unwrap()` in production code; all `.expect()` are documented invariants
+- Zero production mocks (all 538 mock references in test code only)
+- All external dependencies pure Rust; `deny.toml` enforces bans on C stacks
+- One acknowledged advisory (RUSTSEC-2025-0141 bincode v1 via tarpc — awaiting upstream)
+
 ## v3.05 (2026-04-13) — primalSpring Upstream Gap Resolution
 
 ### capability.call gate routing fixed (was silent fallback)

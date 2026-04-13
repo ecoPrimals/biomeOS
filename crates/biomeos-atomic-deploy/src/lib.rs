@@ -127,7 +127,9 @@ pub mod primal_launcher;
 pub mod security_jwt_client; // JWT secret provisioning via security provider (orchestrator) // EVOLVING: Legacy launcher → coordinator // NEW: Primal health verification and BTSP tunnel establishment
 
 // Neural API graph execution (TOML-based deterministic deployment)
-mod capability_domains; // Capability domain mappings for fallback resolution
+pub(crate) mod capability_domains; // Capability domain mappings for fallback resolution
+#[cfg(test)]
+mod capability_domains_tests;
 pub mod capability_handlers; // Extracted capability-based primal handlers
 pub mod capability_translation;
 #[cfg(test)]

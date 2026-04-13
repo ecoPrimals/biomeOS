@@ -174,14 +174,15 @@ impl DiscoveryBootstrap {
             "No universal adapter found. Set DISCOVERY_ENDPOINT environment variable or ensure Songbird is running.\n\
             \n\
             Quick fix:\n\
-            1. Start Songbird: cd ../songbird && cargo run\n\
-            2. Set endpoint: export DISCOVERY_ENDPOINT=\"unix://{}\"\n\
-            3. Or HTTP: export SONGBIRD_ENDPOINT=\"http://{}:{}\"\n\
+            1. Start Songbird: cd ../{songbird} && cargo run\n\
+            2. Set endpoint: export DISCOVERY_ENDPOINT=\"unix://{socket}\"\n\
+            3. Or HTTP: export SONGBIRD_ENDPOINT=\"http://{host}:{port}\"\n\
             \n\
             Note: Unix sockets are preferred for local communication (faster, more secure)",
-            example_socket.display(),
-            endpoints::DEFAULT_LOCALHOST,
-            network::DEFAULT_SONGBIRD_PORT
+            songbird = biomeos_types::primal_names::SONGBIRD,
+            socket = example_socket.display(),
+            host = endpoints::DEFAULT_LOCALHOST,
+            port = network::DEFAULT_SONGBIRD_PORT
         ))
     }
 
