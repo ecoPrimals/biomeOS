@@ -144,7 +144,7 @@ tokio-test = "0.4"
 walkdir = "2.4"
 # REMOVED: rfd (native file dialogs — unused, pulls C deps)
 # REMOVED: image (unused in workspace — no member references it)
-gethostname = "0.5"
+# REMOVED: gethostname (C dep — replaced by rustix::system::uname(), pure Rust)
 
 # HTTP stack building blocks (members merge feature flags as needed)
 hyper-util = { version = "0.1", default-features = false }
@@ -247,7 +247,6 @@ serde_json = { workspace = true }
 toml = { workspace = true }
 serde_yaml = { workspace = true }
 uuid = { workspace = true }
-gethostname = { workspace = true }
 clap = { workspace = true }
 axum = { workspace = true }
 

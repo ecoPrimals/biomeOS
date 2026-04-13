@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-#![expect(clippy::unwrap_used, reason = "benchmarks use unwrap for setup")]
+#![expect(
+    clippy::expect_used,
+    reason = "benchmarks use expect for known-good parse"
+)]
 
 //! Graph ingestion benchmarks
 //!
@@ -102,7 +105,8 @@ edge_type = "DependsOn"
 fn bench_parse_small_graph(c: &mut Criterion) {
     c.bench_function("graph_parse_small_2node", |b| {
         b.iter(|| {
-            biomeos_graph::parser::GraphParser::parse_toml(black_box(SMALL_GRAPH)).unwrap();
+            biomeos_graph::parser::GraphParser::parse_toml(black_box(SMALL_GRAPH))
+                .expect("static SMALL_GRAPH is valid TOML");
         });
     });
 }
@@ -110,7 +114,8 @@ fn bench_parse_small_graph(c: &mut Criterion) {
 fn bench_parse_medium_graph(c: &mut Criterion) {
     c.bench_function("graph_parse_medium_8node", |b| {
         b.iter(|| {
-            biomeos_graph::parser::GraphParser::parse_toml(black_box(MEDIUM_GRAPH)).unwrap();
+            biomeos_graph::parser::GraphParser::parse_toml(black_box(MEDIUM_GRAPH))
+                .expect("static MEDIUM_GRAPH is valid TOML");
         });
     });
 }
@@ -120,7 +125,8 @@ fn bench_parse_throughput(c: &mut Criterion) {
     group.throughput(criterion::Throughput::Bytes(MEDIUM_GRAPH.len() as u64));
     group.bench_function("medium_bytes_per_sec", |b| {
         b.iter(|| {
-            biomeos_graph::parser::GraphParser::parse_toml(black_box(MEDIUM_GRAPH)).unwrap();
+            biomeos_graph::parser::GraphParser::parse_toml(black_box(MEDIUM_GRAPH))
+                .expect("static MEDIUM_GRAPH is valid TOML");
         });
     });
     group.finish();

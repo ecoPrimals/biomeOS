@@ -2,6 +2,31 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.08 (2026-04-13) — Deep Debt: Zero C Dependencies & Idiomatic Evolution
+
+### gethostname C dependency eliminated
+- Replaced `gethostname` crate (libc FFI) with `rustix::system::uname()` (pure Rust)
+- Updated in `biomeos-spore`, `biomeos-system`, `biomeos-core`
+- **biomeOS now has zero C/FFI dependencies** — fully pure Rust ecosystem
+- `cargo tree -i gethostname` returns empty; `deny.toml` bans enforced
+
+### Idiomatic Rust evolution
+- `unreachable!()` in `modification.rs` evolved to `.expect()` with `#[expect]` lint
+- Bench `.unwrap()` in `graph_pipeline_benches.rs` evolved to `.expect()` with
+  descriptive invariant messages
+- All production `.expect()` calls (11 total) have descriptive reason strings
+
+### Deep debt audit — confirmed clean (comprehensive)
+- **Unsafe code**: 0 actual unsafe (51 `#![forbid(unsafe_code)]` policies)
+- **TODO/FIXME/HACK**: 0 anywhere in codebase
+- **`todo!()`/`unimplemented!()`**: 0
+- **Production mocks**: 0 (all in `biomeos-test-utils` or `#[cfg(test)]`)
+- **Hardcoded primal names**: 0 in production (all use `primal_names` constants)
+- **Hardcoded ports**: 0 scattered (centralized in `constants::ports`)
+- **Production `.unwrap()`**: 0
+- **C dependencies**: 0 (`gethostname` was the last, now eliminated)
+- **External deps**: All pure Rust; `blake3` uses `features = ["pure"]`
+
 ## v3.07 (2026-04-13) — Composition Correctness & Async Modernization
 
 ### graph.execute cross-gate validation

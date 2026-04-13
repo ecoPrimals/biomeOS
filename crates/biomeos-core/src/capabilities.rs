@@ -173,9 +173,10 @@ impl PrimalConfig {
             .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
             .unwrap_or_else(|| "unknown".to_string());
 
-        let hostname = gethostname::gethostname()
+        let hostname = rustix::system::uname()
+            .nodename()
             .to_str()
-            .map_or_else(|| "unknown".to_string(), String::from);
+            .map_or_else(|_| "unknown".to_string(), String::from);
 
         // Create unique ID: binary@hostname-random
         let random_suffix = uuid::Uuid::new_v4()

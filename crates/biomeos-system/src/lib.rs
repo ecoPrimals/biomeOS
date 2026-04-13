@@ -174,7 +174,10 @@ impl SystemInspector {
         if let Ok(hostname) = std::env::var("HOSTNAME") {
             Ok(hostname)
         } else {
-            Ok(gethostname::gethostname().to_string_lossy().to_string())
+            Ok(rustix::system::uname()
+                .nodename()
+                .to_string_lossy()
+                .into_owned())
         }
     }
 

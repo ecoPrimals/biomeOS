@@ -25,14 +25,13 @@ anyhow = { workspace = true }
 
 # File I/O and system
 rand = { workspace = true }  # For entropy generation only
-gethostname = { workspace = true }  # For node identification
 
 # Genetic derivation (sibling seeds)
 sha2 = { workspace = true }  # For SHA256-based seed derivation
 bytes = { workspace = true, features = ["serde"] }  # Zero-copy binary data
 serde_bytes = { workspace = true }  # For binary data serialization
 base64 = { workspace = true }  # For beacon encoding
-rustix = { workspace = true, features = ["fs", "process"] }  # statvfs + kill for rollback
+rustix = { workspace = true, features = ["fs", "process", "system"] }  # statvfs + kill + uname
 hex = { workspace = true }  # For hex encoding
 uuid = { workspace = true }  # For unique IDs
 async-fs = { workspace = true }  # For async file operations

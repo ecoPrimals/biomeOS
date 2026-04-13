@@ -47,9 +47,8 @@ hyper-util = { workspace = true, features = ["tokio", "client", "client-legacy",
 http-body-util = { workspace = true }
 zeroize = { workspace = true }
 rand = { workspace = true }
-gethostname = { workspace = true }
 glob = { workspace = true }
-rustix = { workspace = true, features = ["fs"] }  # statvfs for storage metrics
+rustix = { workspace = true, features = ["fs", "system"] }  # statvfs + uname
 biomeos-system = { path = "../biomeos-system", version = "0.1.0" }  # Real uptime and resource metrics
 
 # biomeOS dependencies

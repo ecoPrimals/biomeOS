@@ -29,8 +29,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 
 # System information utilities (pure Rust - ecoBin v3)
-gethostname = { workspace = true }
-rustix = { workspace = true, features = ["fs", "mount"] }
+rustix = { workspace = true, features = ["fs", "mount", "system"] }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
