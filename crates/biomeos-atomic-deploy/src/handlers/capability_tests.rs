@@ -700,7 +700,7 @@ async fn test_route_uses_default_empty_params_object() {
 }
 
 #[tokio::test]
-async fn test_call_with_unknown_gate_falls_through() {
+async fn test_call_with_unknown_gate_returns_error() {
     let dir = tempdir().expect("tempdir");
     let sock = dir.path().join("call-gate.sock");
     let _server = MockJsonRpcServer::spawn_echo_success(&sock, json!({ "via": "local" })).await;
@@ -722,10 +722,44 @@ async fn test_call_with_unknown_gate_falls_through() {
         "args": {},
         "gate": "nonexistent_gate_label"
     }));
+    let err = handler
+        .call(&params)
+        .await
+        .expect_err("unknown gate should error, not fall through");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("not registered"),
+        "Error should mention gate not registered: {msg}"
+    );
+}
+
+#[tokio::test]
+async fn test_call_with_local_gate_routes_locally() {
+    let dir = tempdir().expect("tempdir");
+    let sock = dir.path().join("call-local-gate.sock");
+    let _server = MockJsonRpcServer::spawn_echo_success(&sock, json!({ "via": "local" })).await;
+
+    let handler = make_handler();
+    handler
+        .register(&Some(json!({
+            "capability": "zcap",
+            "primal": "z",
+            "socket": sock.to_str().unwrap(),
+            "source": "t"
+        })))
+        .await
+        .unwrap();
+
+    let params = Some(json!({
+        "capability": "zcap",
+        "operation": "zcap.op",
+        "args": {},
+        "gate": "local"
+    }));
     let out = handler
         .call(&params)
         .await
-        .expect("call without remote gate");
+        .expect("gate='local' should route locally");
     assert_eq!(out["via"], "local");
 }
 

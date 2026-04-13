@@ -2,6 +2,40 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.05 (2026-04-13) — primalSpring Upstream Gap Resolution
+
+### capability.call gate routing fixed (was silent fallback)
+- `capability.call` now errors when a `gate` parameter is specified but the gate
+  is not registered, instead of silently falling through to local routing
+- `gate: "local"` explicitly routes locally (documented behavior)
+- Blocks multi-gate compositions were broken by silent fallback; now caught at call time
+
+### --port honored in api and nucleus modes
+- `biomeos api --port N` now binds TCP alongside UDS (was warn-only, ignored)
+- `biomeos nucleus --port N [--tcp-only]` flags added, wired through to Neural API
+- `biomeos-api` gains `serve_tcp()` for TCP listener binding alongside UDS
+- Unblocks mobile/Android deployment where Unix sockets are unavailable
+
+### Neural API co-launched in nucleus full mode
+- `biomeos nucleus --mode full` now starts the Neural API server alongside primals
+- Previously, only primals were started — biomeOS appeared DOWN to external probes
+  because `graph.deploy` and `capability.call` had nothing to connect to
+- Neural API inherits `--port`/`--tcp-only` from nucleus CLI for mobile substrates
+
+### Process logging for crash diagnosis
+- Primal process stdout/stderr redirected to `{socket_dir}/logs/{primal}.{stdout,stderr}.log`
+  instead of `/dev/null`
+- Nucleus summary now prints log directory path
+- Enables post-mortem diagnosis when primals crash during NUCLEUS startup
+
+### Tests
+- 7,784 passing (0 failures)
+- `test_call_with_unknown_gate_returns_error` replaces old silent-fallback test
+- `test_call_with_local_gate_routes_locally` validates explicit local routing
+- Nucleus CLI parse tests updated for new `--port`/`--tcp-only` fields
+
+---
+
 ## v3.04 (2026-04-12) — Composition Elevation + Deep Debt Cleanup VII
 
 ### Multi-primal graph execution proven end-to-end

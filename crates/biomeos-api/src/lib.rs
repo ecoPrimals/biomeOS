@@ -434,5 +434,21 @@ pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> an
     unix_server::serve_unix_socket(socket_path, app, None).await
 }
 
+/// Serve the API over TCP alongside the Unix socket.
+///
+/// Binds a TCP listener on `0.0.0.0:<port>` and serves the same JSON-RPC
+/// Axum router. Intended for mobile/Android substrates where Unix sockets
+/// are unavailable or for cross-gate orchestration.
+pub async fn serve_tcp(port: u16, app: Router) -> anyhow::Result<()> {
+    let addr: std::net::SocketAddr = ([0, 0, 0, 0], port).into();
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to bind TCP port {port}: {e}"))?;
+    tracing::info!("API TCP listener bound: 0.0.0.0:{port}");
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| anyhow::anyhow!("API TCP server error: {e}"))
+}
+
 #[cfg(test)]
 mod lib_tests;

@@ -267,10 +267,14 @@ fn test_cli_parse_nucleus() {
             mode,
             node_id,
             family_id,
+            port,
+            tcp_only,
         } => {
             assert_eq!(mode, "full");
             assert_eq!(node_id, "node1");
             assert!(family_id.is_none());
+            assert!(port.is_none());
+            assert!(!tcp_only);
         }
         _ => panic!("expected Nucleus mode"),
     }
@@ -293,6 +297,7 @@ fn test_cli_parse_nucleus_with_mode_and_family() {
             mode,
             node_id,
             family_id,
+            ..
         } => {
             assert_eq!(mode, "tower");
             assert_eq!(node_id, "n1");

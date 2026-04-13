@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v3.04) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v3.05) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,7 +58,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
-| BIOMEOS_V304_COMPOSITION_ELEVATION_DEEP_DEBT_CLEANUP | Composition e2e proven (15 integration tests), `composition.health` standard, `lifecycle.composition` enriched dashboard, hardcoding→`primal_names::` constants, blake3 pure-only, deep debt cleanup VII, 7,783 tests | Apr 12, 2026 |
+| BIOMEOS_V304_COMPOSITION_ELEVATION_DEEP_DEBT_CLEANUP | Composition e2e proven (15 integration tests), `composition.health` standard, `lifecycle.composition` enriched dashboard, hardcoding→`primal_names::` constants, blake3 pure-only, deep debt cleanup VII, 7,784 tests | Apr 12, 2026 |
 | BIOMEOS_V303_DEEP_DEBT_CLEANUP_VI | `Box<dyn Error>`→anyhow, `#[allow]`→`#[expect]` bulk migration, hot-path clone reduction, 7,749 tests | Apr 11, 2026 |
 | BIOMEOS_V302_PORTABILITY_DEBT_INFERENCE_WIRE | `capability.resolve` metrics, `inference.register_provider`, expanded `inference.*` routes, 7,749 tests | Apr 11, 2026 |
 | BIOMEOS_V301_PRIMALSPRING_GAP_RESOLUTION_DEEP_DEBT_V | 7 primalSpring gaps resolved, capability.resolve, consumed_capabilities, lifecycle.composition, deep debt overstep V, 7,726 tests | Apr 11, 2026 |
@@ -133,7 +133,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (7,783 tests — 0 ignored — fully concurrent)
+# Test (7,784 tests — 0 ignored — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -158,8 +158,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of April 12, 2026 (v3.04)**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v3.04), 4 scripts**
+**Documentation current as of April 12, 2026 (v3.05)**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v3.05), 4 scripts**
 **Deploy graphs: 40 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed**
-**Tests: 7,783 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0**
+**Tests: 7,784 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0**

@@ -360,7 +360,14 @@ fn test_resolve_socket_dir_default() {
 
 #[tokio::test]
 async fn test_run_fails_on_invalid_mode() {
-    let result = run("invalid_mode_xyz".to_string(), "node1".to_string(), None).await;
+    let result = run(
+        "invalid_mode_xyz".to_string(),
+        "node1".to_string(),
+        None,
+        None,
+        false,
+    )
+    .await;
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(

@@ -268,6 +268,7 @@ pub(crate) fn format_nucleus_summary(
     lines.push(format!("  Family:  {family_id}"));
     lines.push(format!("  Node:    {node_id}"));
     lines.push(format!("  Sockets: {}", socket_dir.display()));
+    lines.push(format!("  Logs:    {}/logs/", socket_dir.display()));
     lines.push("  Health:  monitoring active (10s interval)".to_string());
     lines.push(String::new());
     for (name, pid) in children {
@@ -285,7 +286,13 @@ pub(crate) fn format_nucleus_summary(
 
 /// Run the nucleus startup
 #[expect(clippy::too_many_lines, reason = "nucleus startup flow")]
-pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Result<()> {
+pub async fn run(
+    mode: String,
+    node_id: String,
+    family_id: Option<String>,
+    tcp_port: Option<u16>,
+    tcp_only: bool,
+) -> Result<()> {
     let config = resolve_startup_config(&mode, &node_id, family_id.as_deref())?;
     let mode = config.mode;
     let family_id = config.family_id;
@@ -408,6 +415,40 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
 
     // Start background health monitoring (checks all registered primals periodically)
     lifecycle.start_monitoring().await?;
+
+    // In Full mode, start the Neural API server alongside the primals so that
+    // graph.deploy, capability.call, and composition health are reachable.
+    // Without this, biomeOS appears DOWN to external probes.
+    if mode == NucleusMode::Full {
+        let graphs_dir = PathBuf::from("graphs");
+        let neural_socket = socket_dir.join(format!("neural-api-{family_id}.sock"));
+        info!("Starting Neural API server (Full NUCLEUS)...");
+        if tcp_only {
+            info!("  Transport: TCP-only (port {})", tcp_port.unwrap_or(0));
+        } else if let Some(port) = tcp_port {
+            info!("  Socket: {}", neural_socket.display());
+            info!("  TCP Port: {port} (alongside UDS)");
+        } else {
+            info!("  Socket: {}", neural_socket.display());
+        }
+        let neural_family = family_id.clone();
+        let neural_tcp_port = tcp_port;
+        let neural_tcp_only = tcp_only;
+        tokio::spawn(async move {
+            if let Err(e) = super::neural_api::run(
+                graphs_dir,
+                neural_family,
+                Some(neural_socket),
+                neural_tcp_port,
+                neural_tcp_only,
+            )
+            .await
+            {
+                tracing::error!("Neural API server exited with error: {e}");
+            }
+        });
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
 
     // Print summary
     let mode_label = match &ecosystem {
@@ -621,11 +662,24 @@ async fn start_primal(
         }
     }
 
-    let child = tokio_cmd
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .with_context(|| format!("Failed to spawn {name}"))?;
+    let log_dir = socket_dir.join("logs");
+    let _ = std::fs::create_dir_all(&log_dir);
+    let stdout_path = log_dir.join(format!("{name}.stdout.log"));
+    let stderr_path = log_dir.join(format!("{name}.stderr.log"));
+
+    let child = if let (Ok(out), Ok(err)) = (
+        std::fs::File::create(&stdout_path),
+        std::fs::File::create(&stderr_path),
+    ) {
+        tokio_cmd.stdout(out).stderr(err).spawn()
+    } else {
+        warn!("Could not create log files for {name}, output discarded");
+        tokio_cmd
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+    }
+    .with_context(|| format!("Failed to spawn {name}"))?;
 
     Ok(child)
 }

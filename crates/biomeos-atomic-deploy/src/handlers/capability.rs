@@ -639,14 +639,16 @@ impl CapabilityHandler {
             .cloned()
             .unwrap_or(json!({}));
 
-        // Cross-gate routing: if `gate` is specified and resolves to a remote
-        // endpoint, forward the entire capability.call to that gate's biomeOS
-        // Neural API instead of routing locally.
+        // Cross-gate routing: if `gate` is specified, forward to that gate's
+        // biomeOS Neural API. Fail explicitly if the gate is not registered —
+        // silent fallback to local routing would break multi-gate compositions.
         if let Some(gate_name) = params["gate"].as_str() {
-            if let Some(remote_endpoint) = self.gate_registry.resolve(gate_name) {
+            if gate_name == "local" {
+                trace!("capability.call: gate='local', routing locally");
+            } else if let Some(remote_endpoint) = self.gate_registry.resolve(gate_name) {
                 let semantic_name = format!("{capability}.{operation}");
                 debug!(
-                    "   🌉 Cross-gate routing: {semantic_name} → gate '{gate_name}' @ {}",
+                    "   Cross-gate routing: {semantic_name} → gate '{gate_name}' @ {}",
                     remote_endpoint.display_string()
                 );
 
@@ -662,8 +664,15 @@ impl CapabilityHandler {
                     .await?;
 
                 let latency = start.elapsed().as_millis();
-                trace!("   ✓ {semantic_name} completed in {latency}ms via gate '{gate_name}'");
+                trace!("   {semantic_name} completed in {latency}ms via gate '{gate_name}'");
                 return Ok(result);
+            } else {
+                anyhow::bail!(
+                    "Gate '{gate_name}' is not registered. \
+                     Register it via graph env or route.register before targeting it. \
+                     Known gates: {:?}",
+                    self.gate_registry.gate_names()
+                );
             }
         }
 

@@ -28,14 +28,11 @@ pub(crate) fn resolve_api_config(
 
 /// Run the biomeOS API server
 ///
-/// Starts the Unix-socket-only JSON-RPC API server using the biomeos-api library.
-/// HTTP bridge is removed — all communication is via Unix socket (TRUE PRIMAL).
+/// Starts the JSON-RPC API server. Default transport is Unix socket (TRUE
+/// PRIMAL). When `--port` is provided, a TCP listener is bound alongside UDS
+/// for mobile/Android substrates where Unix sockets are unavailable.
 pub async fn run(port: Option<u16>, socket: Option<PathBuf>, _unix_only: bool) -> Result<()> {
-    info!("🌐 biomeOS API Server (UniBin mode)");
-
-    if let Some(p) = port {
-        warn!("--port {p} is deprecated — biomeOS uses Unix socket only (TRUE PRIMAL)");
-    }
+    info!("biomeOS API Server (UniBin mode)");
 
     let state = biomeos_api::AppState::builder()
         .config_from_env()
@@ -56,9 +53,19 @@ pub async fn run(port: Option<u16>, socket: Option<PathBuf>, _unix_only: bool) -
 
     info!("biomeOS API Server starting");
     info!("  Socket: {}", socket_path.display());
-    info!("  Security: Owner-only (0600) + Dark Forest gate");
+    if let Some(p) = port {
+        info!("  TCP Port: {p} (alongside UDS for mobile/cross-gate)");
+    }
     info!("  Protocol: JSON-RPC 2.0");
-    info!("  Port-free: TRUE PRIMAL architecture");
+
+    if let Some(tcp_port) = port {
+        let tcp_app = app.clone();
+        tokio::spawn(async move {
+            if let Err(e) = biomeos_api::serve_tcp(tcp_port, tcp_app).await {
+                tracing::error!("API TCP server error: {e}");
+            }
+        });
+    }
 
     biomeos_api::serve_unix_socket(&socket_path, app).await?;
 

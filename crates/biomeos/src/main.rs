@@ -205,6 +205,14 @@ enum Mode {
         /// Family ID (auto-derived from .family.seed if not specified)
         #[arg(long)]
         family_id: Option<String>,
+
+        /// TCP port for Neural API (mobile/cross-gate orchestration, alongside UDS)
+        #[arg(long)]
+        port: Option<u16>,
+
+        /// TCP-only mode: skip Unix socket for Neural API (mobile substrates)
+        #[arg(long, requires = "port")]
+        tcp_only: bool,
     },
 }
 
@@ -407,7 +415,9 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             mode: nucleus_mode,
             node_id,
             family_id,
-        } => modes::nucleus::run(nucleus_mode, node_id, family_id).await,
+            port,
+            tcp_only,
+        } => modes::nucleus::run(nucleus_mode, node_id, family_id, port, tcp_only).await,
     }
 }
 
