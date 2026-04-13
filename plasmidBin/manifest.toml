@@ -7,8 +7,8 @@
 # Author: biomeOS Neural API
 
 [manifest]
-version = "1.0.0"
-generated = "2026-01-27T10:05:29-05:00"
+version = "0.23.0"
+generated = "2026-01-28T00:00:00-05:00"
 checksum_algorithm = "md5"
 
 # ============================================================================
@@ -20,7 +20,7 @@ source = "plasmidBin/primals/beardog/beardog-active"
 target = "primals/beardog"
 md5 = "bf3c9015b16cb1f5ddaa1abbb50ce736"
 size = 7207608
-version = "beardog 0.9.0"
+version = "beardog 0.16.0"
 description = "BearDog security primal - crypto, trust, genetics"
 
 [system.songbird]
@@ -28,7 +28,7 @@ source = "plasmidBin/primals/songbird/songbird-active"
 target = "primals/songbird"
 md5 = "c689394868ea4cd9967556a163679382"
 size = 22124976
-version = "songbird 3.33.0"
+version = "songbird 8.14.0"
 description = "Songbird network primal - HTTP/TLS, federation, discovery"
 
 [system.deploy_script]

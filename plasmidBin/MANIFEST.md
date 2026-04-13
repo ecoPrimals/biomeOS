@@ -1,9 +1,9 @@
 # 🧬 plasmidBin Manifest
 
-**Version**: v0.18.0  
-**Date**: January 19, 2026 (15:00 UTC)  
+**Version**: v0.23.0  
+**Date**: January 28, 2026  
 **Purpose**: Stable deployment binaries for spore creation  
-**Status**: 🎊 **7/7 CORE PRIMALS ECOBIN!** 🎊 (100%! Squirrel A++ Complete!)
+**Status**: 7/7 Core Primals ecoBin (100%)
 
 ---
 
@@ -292,8 +292,8 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 
 ---
 
-**Last Updated**: January 19, 2026 (sourDough Harvest - 7/8 ecoBins! 88%!)  
-**Version**: v0.17.0  
+**Last Updated**: April 12, 2026 (aligned with biomeOS v3.04)  
+**Version**: v0.23.0  
 **Maintainer**: biomeOS Team
 
 ---
