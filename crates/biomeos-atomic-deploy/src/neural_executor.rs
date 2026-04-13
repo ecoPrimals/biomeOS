@@ -294,8 +294,21 @@ impl GraphExecutor {
         capability_registry: &CapabilityRegistry,
     ) -> Result<serde_json::Value> {
         if let Some(ref gate) = node.gate {
-            if let Some(remote_endpoint) = gate_registry.resolve(gate) {
+            if gate == "local" {
+                // Explicit local execution — fall through to local handlers
+            } else if let Some(remote_endpoint) = gate_registry.resolve(gate) {
                 return Self::forward_to_remote_gate(node, remote_endpoint.clone(), gate).await;
+            } else {
+                anyhow::bail!(
+                    "Node '{}' targets gate '{}' but it is not registered. \
+                     Register it via [graph.env] (e.g. {} = \"tcp://host:port\") \
+                     or use gate = \"local\" for explicit local execution. \
+                     Known gates: {:?}",
+                    node.id,
+                    gate,
+                    gate,
+                    gate_registry.gate_names()
+                );
             }
         }
 

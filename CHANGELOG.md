@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.07 (2026-04-13) — Composition Correctness & Async Modernization
+
+### graph.execute cross-gate validation
+- `graph.execute` now **errors** when a node targets a gate that is not registered,
+  instead of silently falling through to local execution
+- Matches `capability.call` behavior (v3.05): unregistered gates fail explicitly
+- `gate = "local"` supported for intentional local execution
+- Closes primalSpring audit gap: gate2/Pixel deploy validation
+
+### Songbird mesh state probing
+- `composition.health` mesh subsystem now probes Songbird's `mesh.status` IPC
+  when Songbird is active, returning peer count, mesh epoch, and partition info
+- Falls back gracefully to process-liveness when `mesh.status` is unavailable
+- Mesh response is now a structured object (`{status, detail, peer_count, mesh_state}`)
+  instead of a flat string
+
+### async-trait modernization (Edition 2024)
+- `PrimalOperationExecutor` trait migrated from `#[async_trait]` to native RPITIT
+  (`impl Future<Output = ...> + Send`) — zero-cost async, no heap allocation
+- `async-trait` removed entirely from `biomeos-types` Cargo.toml (unused)
+- `async-trait` moved to dev-dependencies in `biomeos-api` (test-only usage)
+- Remaining 71 `#[async_trait]` usages blocked by `dyn Trait` dispatch;
+  future migration requires enum dispatch conversion
+
 ## v3.06 (2026-04-13) — Deep Debt Resolution & Code Organization
 
 ### Test extraction from production files

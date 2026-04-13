@@ -36,9 +36,6 @@ biomeos-genome-factory = { path = "../biomeos-genome-factory", version = "1.0.0"
 biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 neural-api-client = { path = "../neural-api-client" }
 
-# Async utilities
-async-trait = { workspace = true }
-
 # Logging
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -65,6 +62,7 @@ async-stream = { workspace = true }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+async-trait = { workspace = true }
 # Testing utilities
 tokio-test = { workspace = true }
 http-body-util = { workspace = true }

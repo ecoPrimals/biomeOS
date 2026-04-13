@@ -199,7 +199,7 @@ async fn composition_health_empty_returns_unavailable_subsystems() {
     assert!(health["subsystems"].is_object());
     let subs = health["subsystems"].as_object().unwrap();
     assert_eq!(subs["tower"], "unavailable");
-    assert_eq!(subs["mesh"], "unavailable");
+    assert_eq!(subs["mesh"]["status"], "unavailable");
 }
 
 #[tokio::test]
@@ -227,7 +227,7 @@ async fn composition_health_with_incubating_tower_shows_degraded() {
     let subs = health["subsystems"].as_object().unwrap();
 
     assert_eq!(subs["tower"], "degraded");
-    assert_eq!(subs["mesh"], "degraded");
+    assert_eq!(subs["mesh"]["status"], "degraded");
     assert_eq!(subs["node"], "unavailable");
     assert_eq!(subs["nest"], "unavailable");
     assert!(!health["healthy"].as_bool().unwrap());

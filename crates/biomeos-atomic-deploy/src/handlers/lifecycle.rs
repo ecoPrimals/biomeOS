@@ -21,6 +21,7 @@ use tracing::{info, warn};
 
 use crate::lifecycle_manager::{ApoptosisReason, LifecycleManager, LifecycleState};
 use crate::neural_graph::GraphNode;
+use biomeos_core::atomic_client::AtomicClient;
 use biomeos_types::primal_names;
 
 /// Lifecycle handler for Neural API
@@ -351,14 +352,29 @@ impl LifecycleHandler {
         let tower = subsystem_status(&tower_primals);
         let node = subsystem_status(&node_primals);
         let nest = subsystem_status(&nest_primals);
-        let mesh = subsystem_status(&mesh_primals);
+        let mesh_process = subsystem_status(&mesh_primals);
 
         subsystems.insert("tower".to_string(), json!(tower));
         subsystems.insert("node".to_string(), json!(node));
         subsystems.insert("nest".to_string(), json!(nest));
-        subsystems.insert("mesh".to_string(), json!(mesh));
 
-        if tower != "ok" || mesh != "ok" {
+        // Enrich mesh subsystem: when Songbird is alive, probe actual mesh state
+        // rather than just reporting process liveness.
+        let mesh_detail = if mesh_process == "ok" {
+            match self.probe_songbird_mesh(&manager).await {
+                Ok(detail) => detail,
+                Err(_) => json!({ "status": "ok", "detail": "process_alive" }),
+            }
+        } else {
+            json!({ "status": mesh_process })
+        };
+        subsystems.insert("mesh".to_string(), mesh_detail.clone());
+
+        let mesh_healthy = mesh_detail
+            .get("status")
+            .and_then(|s| s.as_str())
+            .is_some_and(|s| s == "ok");
+        if tower != "ok" || !mesh_healthy {
             all_healthy = false;
         }
 
@@ -395,6 +411,54 @@ impl LifecycleHandler {
             "shutdown": "complete",
             "message": "All primals have been shut down"
         }))
+    }
+
+    /// Probe Songbird's actual mesh state via `mesh.status` IPC.
+    ///
+    /// Returns enriched mesh detail including peer count, mesh epoch, and
+    /// partition info when available. Falls back gracefully if Songbird
+    /// does not support `mesh.status` or the call times out.
+    async fn probe_songbird_mesh(&self, manager: &LifecycleManager) -> Result<Value> {
+        let songbird = manager
+            .get_primal_info(primal_names::SONGBIRD)
+            .await
+            .context("Songbird not registered")?;
+
+        let client = AtomicClient::unix(&songbird.socket_path)
+            .with_timeout(std::time::Duration::from_secs(2));
+
+        match client.call("mesh.status", json!({})).await {
+            Ok(mesh_state) => {
+                let peer_count = mesh_state
+                    .get("peer_count")
+                    .or_else(|| mesh_state.get("peers"))
+                    .and_then(|v| v.as_u64().or_else(|| v.as_array().map(|a| a.len() as u64)));
+
+                let healthy = peer_count.unwrap_or(0) > 0
+                    || mesh_state
+                        .get("status")
+                        .and_then(|s| s.as_str())
+                        .is_some_and(|s| s == "ok" || s == "healthy");
+
+                Ok(json!({
+                    "status": if healthy { "ok" } else { "degraded" },
+                    "detail": "mesh_probed",
+                    "peer_count": peer_count,
+                    "mesh_state": mesh_state,
+                }))
+            }
+            Err(e) => {
+                info!(
+                    "Songbird mesh.status probe unavailable: {e}; \
+                     falling back to process liveness"
+                );
+                Ok(json!({
+                    "status": "ok",
+                    "detail": "process_alive_mesh_unprobed",
+                    "probe_error": e.to_string(),
+                }))
+            }
+        }
     }
 }
 

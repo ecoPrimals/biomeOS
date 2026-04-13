@@ -8,13 +8,15 @@
 use crate::graph::Operation;
 use anyhow::Result;
 
-/// Trait for executing operations on primals
-#[async_trait::async_trait]
+/// Trait for executing operations on primals.
+///
+/// Uses native `async fn` in trait (RPITIT, Edition 2024) — no `#[async_trait]`
+/// needed since this trait is never used as `dyn PrimalOperationExecutor`.
 pub trait PrimalOperationExecutor: Send + Sync {
     /// Execute an operation on a primal
-    async fn execute_operation(
+    fn execute_operation(
         &self,
         primal_id: &str,
         operation: &Operation,
-    ) -> Result<serde_json::Value>;
+    ) -> impl std::future::Future<Output = Result<serde_json::Value>> + Send;
 }

@@ -43,7 +43,6 @@ impl MockPrimalExecutor {
     }
 }
 
-#[async_trait::async_trait]
 impl PrimalOperationExecutor for MockPrimalExecutor {
     async fn execute_operation(
         &self,

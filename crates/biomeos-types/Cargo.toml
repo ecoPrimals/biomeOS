@@ -34,7 +34,6 @@ anyhow = { workspace = true }
 
 # Async support
 tokio = { workspace = true }
-async-trait = { workspace = true }
 
 # Collections and utilities
 indexmap = { workspace = true }
