@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 11, 2026 (v3.03: Deep Debt Cleanup VI — `Box<dyn Error>` → `anyhow` evolution (topology.rs, init_error.rs + callers), `#[allow(` → `#[expect(` migration (119 test files), `dispatch()` hot-path clone elimination (owned `Value` id), 7,749 tests)
-**Version**: 3.03
+**Updated**: April 13, 2026 (v3.06: Deep debt resolution — 8 files >800 LOC refactored via test extraction, hardcoding evolved to constants, full audit confirms zero unsafe/TODO/FIXME/unwrap/production mocks, 7,784 tests)
+**Version**: 3.06
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -867,7 +867,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 2. ~~**ARM64 biomeOS genomeBin**~~ - ✅ Built (`aarch64-unknown-linux-musl`, 9.6 MB stripped, static)
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
-5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.03, 7,749 tests) |
+5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.06, 7,784 tests) |
 
 ### Low Priority
 1. **API key encryption** - NestGate + BearDog secured storage
@@ -982,11 +982,11 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.03 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
-**Tests**: 7,749 passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.06 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Tests**: 7,784 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
 **Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination
-**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage)
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all files <835 LOC)
 **Bypasses**: 0 active (all 6 evolved)

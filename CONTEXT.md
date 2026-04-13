@@ -48,7 +48,7 @@ multiple gates (devices).
 
 - Does not provide cryptography (that is BearDog)
 - Does not perform network discovery or TLS (that is Songbird)
-- Does not manage storage (that is NestGate / Squirrel)
+- Does not manage storage (that is NestGate)
 - Does not run GPU compute (that is ToadStool / coralReef)
 - Does not serve a web UI (that is petalTongue)
 - Does not contain any primal-specific business logic — it is the substrate

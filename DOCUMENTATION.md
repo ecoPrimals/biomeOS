@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: April 12, 2026
+**Updated**: April 13, 2026
 
 ---
 
@@ -15,7 +15,7 @@
 | See what changed | [CHANGELOG.md](CHANGELOG.md) |
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
-| Deployment graphs (40 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
+| Deployment graphs (42 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
 | See evolution handoffs (v2.43–v3.06) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
