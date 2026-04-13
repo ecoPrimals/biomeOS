@@ -1,7 +1,7 @@
 # biomeOS Deployment Graphs
 
-**Updated**: March 16, 2026
-**Status**: 42 deploy graphs (4 core + 36 domain + 2 Pipeline), all XDG-compliant, all tests passing
+**Updated**: April 13, 2026
+**Status**: 42 deploy graphs (4 core + 36 domain + 2 Pipeline), all XDG-compliant, all tests passing, 290+ capability translations across 26 domains
 
 ---
 
@@ -129,4 +129,4 @@ Deploy the trio: `graph.execute provenance_trio_deploy` (requires Tower running)
 
 ---
 
-**Tests**: 4,224 passing | **Core graphs**: 4 | **Domain graphs**: 34 | **Pipeline graphs**: 2
+**Tests**: 7,784 passing | **Core graphs**: 4 | **Domain graphs**: 36 | **Pipeline graphs**: 2

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
 **Updated**: April 13, 2026 (v3.08: Deep debt resolution — 8 files >800 LOC refactored via test extraction, hardcoding evolved to constants, full audit confirms zero unsafe/TODO/FIXME/unwrap/production mocks, 7,784 tests)
-**Version**: 3.07
+**Version**: 3.08
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---
@@ -17,12 +17,12 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 7,749 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,784 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
-| **C dependencies** | 0 (zstd-sys eliminated → lz4_flex, deny.toml enforced) |
+| **C dependencies** | 0 (gethostname → rustix::system::uname(), zstd-sys → lz4_flex, deny.toml enforced) |
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
@@ -876,7 +876,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Apr 8, 2026)
 
-**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,724 total tests including doc-tests and proptests)
+**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,784 total tests including doc-tests and proptests)
 
 ### Coverage Distribution
 
@@ -960,7 +960,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,724 tests — fully concurrent)
+# Test (7,784 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
