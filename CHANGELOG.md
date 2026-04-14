@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.11 (2026-04-12) — TCP-Only Graph Bootstrap Fix & Self-Knowledge Evolution
+
+### TCP-only graph bootstrap: 4 root causes resolved
+- `graph.load` routed as local handler (eliminates self-referential capability.call loop)
+- `NeuralApiServer.graphs_dir` resolved to absolute path at construction (fixes
+  relative-path mismatch between server and GraphHandler)
+- Self-registration uses TCP endpoint when `--tcp-only` is active (was always UDS)
+- `graph.list` logs `warn!` when TOML fails both parsers (silent failures now visible)
+
+### Bonus: auto-scan all graphs on startup
+- `load_translations_from_all_graphs()` scans `graphs_dir` for capability translations
+  beyond the bootstrap graph — ensures full route table before clients connect
+
+### Self-knowledge & capability-based naming evolution
+- Hardcoded "BearDog" in BTSP forwarding logs → "security provider"
+- String literal `"biomeos"` in capability domains → `primal_names::BIOMEOS` constant
+- Discovery error "ensure Songbird is running" → "ensure the network primal is running"
+- Bootstrap TCP host configurable via `BIOMEOS_BIND_ADDRESS` env (was hardcoded 127.0.0.1)
+
+### Deep debt audit results (confirmed clean)
+- 0 unsafe code, 0 TODO/FIXME, 0 production mocks, 0 hardcoded primal names
+- `serde_yaml_ng` `unsafe-libyaml` confirmed c2rust (Rust, not C link) — tracked for
+  `serde-saphyr` migration when stable
+- `blake3` `features=["pure"]` verified — no `cc` crate needed
+- All `#[expect(dead_code)]` items justified (test serde structs, reserved fields)
+
+7,000+ tests, 0 failures. clippy clean. fmt clean.
+
 ## v3.10 (2026-04-12) — Deep Debt: Smart Refactoring & Capability-Based Evolution
 
 ### Smart file refactoring (5 files >800L resolved)
