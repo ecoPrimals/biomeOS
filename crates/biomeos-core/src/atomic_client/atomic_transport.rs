@@ -37,6 +37,25 @@ pub(crate) async fn jsonrpc_unix(path: &Path, request: JsonRpcRequest) -> Result
     send_jsonrpc_line(stream, request).await
 }
 
+/// Connect to a Unix socket, perform a BTSP client handshake via BearDog
+/// delegation, then send a JSON-RPC request over the authenticated channel.
+pub(crate) async fn jsonrpc_unix_btsp(
+    path: &Path,
+    request: JsonRpcRequest,
+) -> Result<JsonRpcResponse> {
+    let stream = UnixStream::connect(path).await.context(format!(
+        "BTSP: failed to connect to Unix socket: {}",
+        path.display()
+    ))?;
+
+    let reader = crate::btsp_client::perform_client_handshake(stream)
+        .await
+        .map_err(|e| anyhow::anyhow!("BTSP client handshake failed for {}: {e}", path.display()))?;
+
+    let inner = reader.into_inner();
+    send_jsonrpc_line(inner, request).await
+}
+
 pub(crate) async fn jsonrpc_tcp(
     host: &str,
     port: u16,

@@ -29,7 +29,7 @@ mod routing;
 mod rpc;
 mod server_lifecycle;
 mod translation_loader;
-mod translation_startup;
+pub(crate) mod translation_startup;
 
 // Re-export types that may be needed externally
 pub use rpc::{

@@ -194,6 +194,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("capability.route", Route::CapabilityResolve),
     ("neural_api.route_to_primal", Route::CapabilityResolve),
     ("capability.resolve", Route::CapabilityResolveSingle),
+    ("ipc.resolve", Route::CapabilityResolveSingle),
     ("capability.metrics", Route::CapabilityMetrics),
     ("neural_api.get_routing_metrics", Route::CapabilityMetrics),
     ("capability.call", Route::CapabilityCall),

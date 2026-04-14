@@ -255,7 +255,18 @@ impl TopologyHandler {
             }
         }
 
-        // Priority 4: /tmp/biomeos-$USER (user-namespaced, via centralized constant)
+        // Priority 4: /tmp/biomeos-{FAMILY_ID} (family-scoped, Docker/NUCLEUS deployments)
+        for key in ["BIOMEOS_FAMILY_ID", "FAMILY_ID"] {
+            if let Ok(fid) = std::env::var(key) {
+                let path = biomeos_types::constants::runtime_paths::fallback_runtime_dir(&fid);
+                if !dirs.contains(&path) && path.exists() {
+                    dirs.push(path);
+                }
+                break;
+            }
+        }
+
+        // Priority 5: /tmp/biomeos-$USER (user-namespaced, via centralized constant)
         if let Ok(user) = std::env::var("USER") {
             let path = biomeos_types::constants::runtime_paths::fallback_runtime_dir(&user);
             if !dirs.contains(&path) && path.exists() {
@@ -263,7 +274,16 @@ impl TopologyHandler {
             }
         }
 
-        // Priority 5: fallback runtime base (only if nothing else exists)
+        // Priority 6: /tmp/biomeos-default (common NUCLEUS default)
+        {
+            let default_path =
+                biomeos_types::constants::runtime_paths::fallback_runtime_dir("default");
+            if !dirs.contains(&default_path) && default_path.exists() {
+                dirs.push(default_path);
+            }
+        }
+
+        // Priority 7: fallback runtime base (only if nothing else exists)
         if dirs.is_empty() {
             let base =
                 PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE);

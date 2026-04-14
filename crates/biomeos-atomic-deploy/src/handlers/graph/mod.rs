@@ -123,7 +123,14 @@ impl GraphHandler {
         translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
         metrics_db_path: Option<PathBuf>,
     ) -> Self {
-        let graphs_dir = graphs_dir.into();
+        let graphs_dir: PathBuf = graphs_dir.into();
+        let graphs_dir = if graphs_dir.is_relative() {
+            std::env::current_dir()
+                .map(|cwd| cwd.join(&graphs_dir))
+                .unwrap_or(graphs_dir)
+        } else {
+            graphs_dir
+        };
         let runtime_graphs_dir = graphs_dir.parent().map_or_else(
             || graphs_dir.join("runtime_graphs"),
             |parent| parent.join("runtime_graphs"),
@@ -165,13 +172,17 @@ impl GraphHandler {
     pub async fn list(&self) -> Result<Value> {
         let mut graphs = Vec::new();
         let mut seen_ids = std::collections::HashSet::new();
+        let mut any_dir_readable = false;
 
         for (dir, tier) in [
             (&self.runtime_graphs_dir, "runtime"),
             (&self.graphs_dir, "nucleus"),
         ] {
             let entries = match std::fs::read_dir(dir) {
-                Ok(e) => e,
+                Ok(e) => {
+                    any_dir_readable = true;
+                    e
+                }
                 Err(_) => continue,
             };
 
@@ -212,6 +223,14 @@ impl GraphHandler {
                     }
                 }
             }
+        }
+
+        if !any_dir_readable {
+            tracing::debug!(
+                graphs_dir = %self.graphs_dir.display(),
+                runtime_dir = %self.runtime_graphs_dir.display(),
+                "graph.list: no readable graphs directory found"
+            );
         }
 
         Ok(json!(graphs))

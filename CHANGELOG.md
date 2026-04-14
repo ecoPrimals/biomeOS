@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.09 (2026-04-12) — NUCLEUS Composition: 5 Forwarding Gaps Resolved
+
+### BTSP client-side handshake for socket forwarding (Gap 1)
+- `forward_request` now performs BTSP client handshake on family-scoped sockets
+- Client handshake delegates all crypto (X25519 keygen, HKDF derive, HMAC challenge)
+  to BearDog via JSON-RPC — biomeOS remains pure Rust, no crypto dependencies
+- `AtomicClient::call_btsp()` public API for authenticated IPC over Unix sockets
+- Graceful fallback to raw JSON-RPC when handshake fails or BearDog unavailable
+
+### Method-prefix mangling fixed (Gap 2)
+- `capability.call` no longer re-prefixes multi-segment methods
+- `tensor.stats.mean` correctly forwards `stats.mean` to barraCuda (not `tensor.stats.mean`)
+- Single-segment operations (`crypto.sha256`) remain unaffected
+
+### Socket discovery for FAMILY_ID/default (Gap 3)
+- `get_socket_directories()` now scans `/tmp/biomeos-{FAMILY_ID}` and
+  `/tmp/biomeos-default/` in addition to XDG and USER-based paths
+- loamSpine, rhizoCrypt, and other primals discoverable in Docker/NUCLEUS deployments
+
+### `ipc.resolve` wired (Gap 4)
+- `ipc.resolve` added to Neural API route table as alias for `capability.resolve`
+- primalSpring can now use canonical `ipc.resolve` for capability→endpoint resolution
+
+### `graph.list` path resolution in tcp-only mode (Gap 5)
+- `graphs_dir` resolved to absolute path at `GraphHandler` construction time
+- Prevents relative-path failures when process cwd differs from launch dir
+
 ## v3.08 (2026-04-13) — Deep Debt: Zero C Dependencies & Idiomatic Evolution
 
 ### gethostname C dependency eliminated

@@ -365,6 +365,47 @@ impl AtomicClient {
         response.result.ok_or(IpcError::MissingResult { primal })
     }
 
+    /// Call a JSON-RPC method over a BTSP-authenticated channel.
+    ///
+    /// Only meaningful for `UnixSocket` endpoints pointing at family-scoped
+    /// sockets. Falls back to raw JSON-RPC for non-Unix transports.
+    pub async fn call_btsp(&self, method: &str, params: Value) -> Result<Value, IpcError> {
+        let request = JsonRpcRequest::new(method, params);
+        let primal = self.endpoint.to_string();
+
+        let response = match timeout(self.timeout, self.call_btsp_impl(request)).await {
+            Ok(Ok(resp)) => resp,
+            Ok(Err(e)) => {
+                return Err(IpcError::ConnectionFailed { primal, source: e });
+            }
+            Err(_) => {
+                return Err(IpcError::Timeout {
+                    primal,
+                    timeout_ms: self.timeout.as_millis() as u64,
+                });
+            }
+        };
+
+        if let Some(error) = response.error {
+            return Err(IpcError::JsonRpcError {
+                primal,
+                code: error.code as i32,
+                message: error.message,
+            });
+        }
+
+        response.result.ok_or(IpcError::MissingResult { primal })
+    }
+
+    async fn call_btsp_impl(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
+        match &self.endpoint {
+            TransportEndpoint::UnixSocket { path } => {
+                atomic_transport::jsonrpc_unix_btsp(path, request).await
+            }
+            _ => self.call_impl(request).await,
+        }
+    }
+
     /// Internal implementation of the JSON-RPC call
     ///
     /// Dispatches to the appropriate transport based on endpoint type.

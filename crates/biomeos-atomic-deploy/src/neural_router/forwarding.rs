@@ -71,16 +71,44 @@ impl NeuralRouter {
             }
         }
 
-        // Secure Socket Architecture: detect family-scoped sockets (GAP-MATRIX-11 / Phase 2)
+        // Secure Socket Architecture: BTSP client handshake for family-scoped sockets
         if let TransportEndpoint::UnixSocket { path } = endpoint {
             if btsp_client::is_family_scoped_socket(path) {
                 match btsp_client::security_mode() {
                     btsp_client::SecurityMode::Production { btsp_available } => {
                         if btsp_available {
                             debug!(
-                                "   🔒 BTSP: BearDog available for {} — handshake will be performed by AtomicClient",
+                                "   🔒 BTSP: performing client handshake for {}",
                                 path.display()
                             );
+
+                            let btsp_client = AtomicClient::from_endpoint(endpoint.clone())
+                                .with_timeout(self.request_timeout);
+                            match btsp_client.call_btsp(method, params.clone()).await {
+                                Ok(value) => {
+                                    let latency = start.elapsed().as_millis() as u64;
+                                    debug!("   ✓ Forwarded (BTSP) in {}ms", latency);
+                                    if let Some(graph) = &self.living_graph {
+                                        let primal_label = self.primal_label_for_endpoint(endpoint);
+                                        if let Some(label) = primal_label {
+                                            graph
+                                                .record_request(
+                                                    "neural-api",
+                                                    &label,
+                                                    latency * 1000,
+                                                    true,
+                                                )
+                                                .await;
+                                        }
+                                    }
+                                    return Ok(value);
+                                }
+                                Err(e) => {
+                                    debug!(
+                                        "   ⚠️ BTSP handshake failed, falling back to raw JSON-RPC: {e}"
+                                    );
+                                }
+                            }
                         } else if btsp_client::btsp_enforce() {
                             tracing::warn!(
                                 "   ⚠️ BTSP enforced but BearDog unavailable for family-scoped socket: {}",
@@ -115,8 +143,6 @@ impl NeuralRouter {
         let result = match client.try_call(method, params.clone()).await {
             Ok(value) => value,
             Err(e @ IpcError::JsonRpcError { .. }) => {
-                // Primal responded with a JSON-RPC error (e.g. -32601 method not found).
-                // Propagate as-is so callers can distinguish "primal rejected" from "primal down".
                 return Err(e.into());
             }
             Err(e) => {

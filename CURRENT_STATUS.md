@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 13, 2026 (v3.08: Deep debt resolution — 8 files >800 LOC refactored via test extraction, hardcoding evolved to constants, full audit confirms zero unsafe/TODO/FIXME/unwrap/production mocks, 7,784 tests)
-**Version**: 3.08
+**Updated**: April 12, 2026 (v3.09: 5 NUCLEUS forwarding gaps resolved — BTSP client handshake, method-prefix fix, socket discovery, ipc.resolve, graph.list path resolution; 7,784 tests)
+**Version**: 3.09
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
 ---

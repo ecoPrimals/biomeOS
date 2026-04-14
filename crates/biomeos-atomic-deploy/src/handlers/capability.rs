@@ -39,7 +39,7 @@ use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, trace};
 
 /// Capability handler with all capability-related operations.
 #[derive(Clone)]
@@ -716,17 +716,27 @@ impl CapabilityHandler {
                 Ok(result)
             }
             None => {
-                // No translation - try direct routing
                 drop(registry);
-                warn!(
+                debug!(
                     "No translation for {}, attempting direct route",
                     semantic_name
                 );
 
                 let atomic = self.router.discover_capability(capability).await?;
 
+                // When the operation already contains dots (e.g. "stats.mean"
+                // from an original "tensor.stats.mean" call), forwarding the
+                // reconstructed semantic_name would re-prefix the domain and
+                // produce a method the primal doesn't recognise. Forward just
+                // the operation portion so the primal sees its own method name.
+                let forward_method = if operation.contains('.') {
+                    &operation
+                } else {
+                    &semantic_name
+                };
+
                 self.router
-                    .forward_request(&atomic.primary_endpoint, &semantic_name, &args)
+                    .forward_request(&atomic.primary_endpoint, forward_method, &args)
                     .await
             }
         }
