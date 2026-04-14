@@ -31,6 +31,7 @@
 //! Backward-compatible: dotted capability names (`"crypto.sha256"`) split on
 //! first dot; `"params"` accepted as alias for `"args"`.
 
+use super::capability_heuristics;
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::gate_registry::GateRegistry;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
@@ -471,13 +472,14 @@ impl CapabilityHandler {
                 .map(|(semantic, _actual)| {
                     json!({
                         "operation": semantic,
-                        "estimated_latency_ms": Self::estimate_operation_latency(cap_name, semantic),
-                        "requires_gpu": Self::operation_requires_gpu(cap_name),
+                        "estimated_latency_ms": capability_heuristics::estimate_operation_latency(cap_name, semantic),
+                        "requires_gpu": capability_heuristics::operation_requires_gpu(cap_name),
                     })
                 })
                 .collect();
 
-            let operation_dependencies = Self::build_operation_dependencies(cap_name, &operations);
+            let operation_dependencies =
+                capability_heuristics::build_operation_dependencies(cap_name, &operations);
 
             all_domains.push(cap_name);
 
@@ -489,7 +491,7 @@ impl CapabilityHandler {
                 "operation_count": operations.len(),
                 "cost_estimates": cost_estimates,
                 "operation_dependencies": operation_dependencies,
-                "locality": Self::capability_locality(cap_name),
+                "locality": capability_heuristics::capability_locality(cap_name),
             }));
         }
 
@@ -499,69 +501,6 @@ impl CapabilityHandler {
             "count": all_domains.len(),
             "domains": all_domains,
         }))
-    }
-
-    /// Heuristic latency estimate based on capability domain.
-    ///
-    /// Returns estimated milliseconds. These are conservative defaults —
-    /// primals can override via `capability.register` metadata.
-    fn estimate_operation_latency(capability: &str, operation: &str) -> u64 {
-        match capability {
-            "compute" | "shader" => {
-                if operation.contains("status") || operation.contains("cancel") {
-                    5
-                } else {
-                    500
-                }
-            }
-            "ai" | "ml" => 1000,
-            "storage" | "dag" => 50,
-            "crypto" | "security" => 10,
-            "health" => 5,
-            "network" | "relay" | "stun" | "punch" => 100,
-            _ => 50,
-        }
-    }
-
-    /// Whether a capability domain typically requires GPU resources.
-    fn operation_requires_gpu(capability: &str) -> bool {
-        matches!(capability, "compute" | "shader" | "ai" | "ml")
-    }
-
-    /// Capability locality: "local" for same-host IPC, "mesh" for cross-node.
-    fn capability_locality(capability: &str) -> &'static str {
-        match capability {
-            "relay" | "stun" | "punch" | "peer" | "discovery" => "mesh",
-            _ => "local",
-        }
-    }
-
-    /// Build operation dependency DAG edges for a capability domain.
-    ///
-    /// Returns `[{"from": "op_a", "to": "op_b"}]` meaning `op_a` must
-    /// complete before `op_b` can run.
-    fn build_operation_dependencies(capability: &str, operations: &[String]) -> Vec<Value> {
-        let mut deps = Vec::new();
-
-        let dependency_rules: &[(&str, &str)] = match capability {
-            "compute" => &[("compile", "dispatch"), ("dispatch", "status")],
-            "dag" => &[
-                ("session.create", "session.merge"),
-                ("session.create", "node.add"),
-            ],
-            "crypto" => &[("generate_key", "sign"), ("generate_key", "encrypt")],
-            _ => &[],
-        };
-
-        for (from, to) in dependency_rules {
-            let has_from = operations.iter().any(|o| o.ends_with(from));
-            let has_to = operations.iter().any(|o| o.ends_with(to));
-            if has_from && has_to {
-                deps.push(json!({"from": from, "to": to}));
-            }
-        }
-
-        deps
     }
 
     /// Get providers for a capability.

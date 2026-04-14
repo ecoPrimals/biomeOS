@@ -170,10 +170,6 @@ impl GraphModificationHandler {
     }
 
     /// Apply multiple modifications in sequence
-    #[expect(
-        clippy::expect_used,
-        reason = "success == true guarantees graph is Some"
-    )]
     pub fn apply_batch(
         graph: &PrimalGraph,
         modifications: &[GraphModification],
@@ -185,9 +181,14 @@ impl GraphModificationHandler {
             match Self::apply(&current_graph, modification) {
                 Ok(result) => {
                     if result.success {
-                        current_graph = result
-                            .graph
-                            .expect("successful modification always produces a graph");
+                        current_graph = match result.graph {
+                            Some(g) => g,
+                            None => {
+                                return Ok(ModificationResult::failure(format!(
+                                    "Batch modification {i} succeeded but produced no graph"
+                                )));
+                            }
+                        };
                         all_warnings.extend(result.warnings);
                     } else {
                         return Ok(ModificationResult::failure(format!(

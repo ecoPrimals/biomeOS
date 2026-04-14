@@ -32,6 +32,7 @@
 //! they can do, not what they're named.
 
 pub mod capability;
+pub(crate) mod capability_heuristics;
 #[cfg(test)]
 mod capability_tests;
 pub mod graph;
@@ -46,8 +47,6 @@ pub mod protocol;
 #[cfg(test)]
 mod protocol_tests;
 pub mod topology;
-#[cfg(test)]
-mod topology_tests;
 
 pub use capability::CapabilityHandler;
 pub use graph::{ExecutionStatus, GraphHandler};

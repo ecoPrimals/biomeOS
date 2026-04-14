@@ -292,7 +292,7 @@ impl DiscoveryBootstrap {
 
         let discovery_port: u16 = std::env::var("BIOMEOS_DISCOVERY_PORT")
             .and_then(|p| p.parse().map_err(|_| std::env::VarError::NotPresent))
-            .unwrap_or(9199);
+            .unwrap_or(biomeos_types::constants::network::DEFAULT_BROADCAST_DISCOVERY_PORT);
 
         // Bind to any available port for sending
         let socket = UdpSocket::bind("0.0.0.0:0")

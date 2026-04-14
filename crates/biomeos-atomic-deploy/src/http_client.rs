@@ -53,19 +53,23 @@ impl BiomeOsHttpClient {
         use crate::nucleation::SocketNucleation;
 
         let discovery_provider = std::env::var("DISCOVERY_PROVIDER")
+            .or_else(|_| std::env::var("BIOMEOS_NETWORK_PROVIDER"))
             .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
-        let discovery_socket = std::env::var(biomeos_types::defaults::env_vars::socket_env_key(
-            primal_names::SONGBIRD,
-        ))
-        .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
-        .unwrap_or_else(|_| {
-            let family_id = biomeos_core::family_discovery::get_family_id();
-            let mut nucleation = SocketNucleation::default();
-            nucleation
-                .assign_socket(&discovery_provider, &family_id)
-                .to_string_lossy()
-                .into_owned()
-        });
+        let discovery_socket = std::env::var("BIOMEOS_DISCOVERY_SOCKET")
+            .or_else(|_| {
+                std::env::var(biomeos_types::defaults::env_vars::socket_env_key(
+                    &discovery_provider,
+                ))
+            })
+            .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
+            .unwrap_or_else(|_| {
+                let family_id = biomeos_core::family_discovery::get_family_id();
+                let mut nucleation = SocketNucleation::default();
+                nucleation
+                    .assign_socket(&discovery_provider, &family_id)
+                    .to_string_lossy()
+                    .into_owned()
+            });
 
         info!("🌐 biomeOS HTTP client initialized (via Tower Atomic)");
         debug!("   Discovery socket: {}", discovery_socket);

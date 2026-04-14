@@ -330,10 +330,19 @@ impl LifecycleHandler {
         let mut deploy_graph = String::from("unknown");
         let mut all_healthy = true;
 
-        let tower_primals = [primal_names::BEARDOG, primal_names::SONGBIRD];
-        let node_primals = [primal_names::TOADSTOOL];
-        let nest_primals = [primal_names::NESTGATE];
-        let mesh_primals = [primal_names::SONGBIRD];
+        let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+            .unwrap_or_else(|_| primal_names::BEARDOG.to_string());
+        let discovery_provider = std::env::var("BIOMEOS_NETWORK_PROVIDER")
+            .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
+        let compute_provider = std::env::var("BIOMEOS_COMPUTE_PROVIDER")
+            .unwrap_or_else(|_| primal_names::TOADSTOOL.to_string());
+        let storage_provider = std::env::var("BIOMEOS_STORAGE_PROVIDER")
+            .unwrap_or_else(|_| primal_names::NESTGATE.to_string());
+
+        let tower_primals: Vec<&str> = vec![&security_provider, &discovery_provider];
+        let node_primals: Vec<&str> = vec![&compute_provider];
+        let nest_primals: Vec<&str> = vec![&storage_provider];
+        let mesh_primals: Vec<&str> = vec![&discovery_provider];
 
         let subsystem_status = |names: &[&str]| -> &'static str {
             let mut found_any = false;
@@ -361,7 +370,10 @@ impl LifecycleHandler {
         // Enrich mesh subsystem: when Songbird is alive, probe actual mesh state
         // rather than just reporting process liveness.
         let mesh_detail = if mesh_process == "ok" {
-            match self.probe_songbird_mesh(&manager).await {
+            match self
+                .probe_mesh_provider(&manager, &discovery_provider)
+                .await
+            {
                 Ok(detail) => detail,
                 Err(_) => json!({ "status": "ok", "detail": "process_alive" }),
             }
@@ -413,19 +425,23 @@ impl LifecycleHandler {
         }))
     }
 
-    /// Probe Songbird's actual mesh state via `mesh.status` IPC.
+    /// Probe the mesh provider's actual mesh state via `mesh.status` IPC.
     ///
-    /// Returns enriched mesh detail including peer count, mesh epoch, and
-    /// partition info when available. Falls back gracefully if Songbird
-    /// does not support `mesh.status` or the call times out.
-    async fn probe_songbird_mesh(&self, manager: &LifecycleManager) -> Result<Value> {
-        let songbird = manager
-            .get_primal_info(primal_names::SONGBIRD)
+    /// The mesh provider is resolved from `BIOMEOS_NETWORK_PROVIDER` (defaulting
+    /// to the canonical discovery primal). Returns enriched mesh detail including
+    /// peer count, mesh epoch, and partition info when available.
+    async fn probe_mesh_provider(
+        &self,
+        manager: &LifecycleManager,
+        mesh_provider: &str,
+    ) -> Result<Value> {
+        let provider_info = manager
+            .get_primal_info(mesh_provider)
             .await
-            .context("Songbird not registered")?;
+            .with_context(|| format!("Mesh provider '{mesh_provider}' not registered"))?;
 
-        let client = AtomicClient::unix(&songbird.socket_path)
-            .with_timeout(std::time::Duration::from_secs(2));
+        let client = AtomicClient::unix(&provider_info.socket_path)
+            .with_timeout(biomeos_types::constants::timeouts::DEFAULT_IPC_TIMEOUT);
 
         match client.call("mesh.status", json!({})).await {
             Ok(mesh_state) => {

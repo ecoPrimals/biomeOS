@@ -2,6 +2,40 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.10 (2026-04-12) — Deep Debt: Smart Refactoring & Capability-Based Evolution
+
+### Smart file refactoring (5 files >800L resolved)
+- `btsp_client.rs` (887→701): tests extracted to `btsp_client_tests.rs`
+- `topology.rs` (813→487): tests extracted to `topology_tests.rs` (merged with existing coverage)
+- `capability.rs` (844→782): heuristic helpers extracted to `capability_heuristics.rs`
+- `manifest/storage.rs` (828→split): directory module with `volume.rs`, `secret.rs`, `config.rs`
+- `manifest/networking_services.rs` (812→split): directory module with `dns_ipam.rs`, `mesh.rs`, `routing.rs`, `traffic.rs`
+
+### Hardcoding → capability-based evolution
+- `beardog_socket_path()` → `security_provider_socket_path()`: resolves via
+  `BIOMEOS_SECURITY_PROVIDER` env, no hardcoded primal name in socket lookup
+- Legacy `beardog_socket_path()` retained as deprecated alias for backward compat
+- `BearDogError` → `SecurityProviderError` in BTSP handshake error types
+- Discovery broadcast port: inline `9199` → `network::DEFAULT_BROADCAST_DISCOVERY_PORT`
+- Lifecycle mesh probe: `probe_songbird_mesh()` → `probe_mesh_provider()`, resolves
+  provider via `BIOMEOS_NETWORK_PROVIDER` env instead of hardcoded Songbird
+- HTTP client: `DISCOVERY_PROVIDER` now checks `BIOMEOS_NETWORK_PROVIDER` and uses
+  provider-scoped socket env key (`BIOMEOS_DISCOVERY_SOCKET`)
+- Lifecycle subsystem detection: tower/node/nest/mesh primals resolved from
+  `BIOMEOS_SECURITY_PROVIDER`, `BIOMEOS_NETWORK_PROVIDER`, `BIOMEOS_COMPUTE_PROVIDER`,
+  `BIOMEOS_STORAGE_PROVIDER` with canonical fallbacks
+- New centralized constant: `timeouts::DEFAULT_IPC_TIMEOUT` (2s)
+
+### Dependency evolution
+- `tools/Cargo.toml`: `reqwest` stripped of `rustls-tls` feature (removes ring C/asm
+  dependency); local demos don't need TLS
+- `biomeos-graph/Cargo.toml`: `criterion` aligned to `workspace = true` (version consistency)
+
+### Idiomatic Rust
+- `modification.rs`: `apply_batch()` `.expect()` → proper `match` with recoverable error
+
+7,784 tests, 0 failures. clippy clean. fmt clean.
+
 ## v3.09 (2026-04-12) — NUCLEUS Composition: 5 Forwarding Gaps Resolved
 
 ### BTSP client-side handshake for socket forwarding (Gap 1)

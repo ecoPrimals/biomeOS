@@ -152,6 +152,9 @@ pub mod timeouts {
     /// Default validation timeout
     pub const DEFAULT_VALIDATION_TIMEOUT: Duration = Duration::from_secs(30);
 
+    /// Default IPC probe timeout (local socket round-trip, should be fast)
+    pub const DEFAULT_IPC_TIMEOUT: Duration = Duration::from_secs(2);
+
     /// Default health check timeout
     pub const DEFAULT_HEALTH_CHECK_TIMEOUT: Duration = Duration::from_secs(10);
 
