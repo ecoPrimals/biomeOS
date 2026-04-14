@@ -122,7 +122,14 @@ impl NeuralApiServer {
     ) -> Self {
         use crate::nucleation::SocketStrategy;
 
-        let graphs_dir = graphs_dir.into();
+        let graphs_dir: PathBuf = graphs_dir.into();
+        let graphs_dir = if graphs_dir.is_relative() {
+            std::env::current_dir()
+                .map(|cwd| cwd.join(&graphs_dir))
+                .unwrap_or(graphs_dir)
+        } else {
+            graphs_dir
+        };
         let family_id_str = family_id.into();
         let router = Arc::new(NeuralRouter::new(&family_id_str));
         let executions = Arc::new(RwLock::new(HashMap::new()));

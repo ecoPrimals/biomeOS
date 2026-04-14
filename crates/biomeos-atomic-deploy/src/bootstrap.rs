@@ -26,17 +26,14 @@ use tracing::{debug, error, info, warn};
 /// Register biomeOS in the capability registry
 ///
 /// Registers core capabilities that biomeOS provides to the ecosystem.
-///
-/// # Arguments
-/// * `router` - Neural Router for capability registration
-/// * `family_id` - Family ID for this server
-/// * `socket_path` - Socket path for this server
-/// * `mode` - Current operating mode
+/// When `tcp_port` is `Some`, registers a TCP endpoint instead of UDS —
+/// essential for TCP-only mode where the UDS socket is never bound.
 pub async fn register_self_in_registry(
     router: &Arc<NeuralRouter>,
     family_id: &str,
     socket_path: &PathBuf,
     mode: &RwLock<BiomeOsMode>,
+    tcp_port: Option<u16>,
 ) -> Result<()> {
     let mode_guard = mode.read().await;
     let source = match *mode_guard {
@@ -48,17 +45,32 @@ pub async fn register_self_in_registry(
     let primal_name = format!("biomeos-{family_id}");
     let capabilities = biomeos_types::primal_names::BIOMEOS_SELF_CAPABILITIES;
 
-    // Register each capability (data-driven from niche self-knowledge)
-    for &capability in capabilities {
-        router
-            .register_capability_unix(capability, &primal_name, socket_path, source)
-            .await?;
+    if let Some(port) = tcp_port {
+        let endpoint = biomeos_core::TransportEndpoint::TcpSocket {
+            host: "127.0.0.1".into(),
+            port,
+        };
+        for &capability in capabilities {
+            router
+                .register_capability(capability, &primal_name, endpoint.clone(), source)
+                .await?;
+        }
+        info!(
+            "✅ biomeOS registered {} capabilities via TCP :{}",
+            capabilities.len(),
+            port
+        );
+    } else {
+        for &capability in capabilities {
+            router
+                .register_capability_unix(capability, &primal_name, socket_path, source)
+                .await?;
+        }
+        info!(
+            "✅ biomeOS registered {} capabilities via UDS",
+            capabilities.len()
+        );
     }
-
-    info!(
-        "✅ biomeOS registered {} capabilities in registry",
-        capabilities.len()
-    );
     Ok(())
 }
 
@@ -396,7 +408,7 @@ mod tests {
         let router = Arc::new(NeuralRouter::new("test-family"));
         let mode = RwLock::new(BiomeOsMode::Bootstrap);
 
-        register_self_in_registry(&router, "test-family", &socket_path, &mode)
+        register_self_in_registry(&router, "test-family", &socket_path, &mode, None)
             .await
             .expect("Registration should succeed");
 
@@ -425,7 +437,7 @@ mod tests {
         let router = Arc::new(NeuralRouter::new("coord-family"));
         let mode = RwLock::new(BiomeOsMode::Coordinated);
 
-        register_self_in_registry(&router, "coord-family", &socket_path, &mode)
+        register_self_in_registry(&router, "coord-family", &socket_path, &mode, None)
             .await
             .expect("Registration should succeed");
 
@@ -508,7 +520,7 @@ mod tests {
         let router = Arc::new(NeuralRouter::new("path-family"));
         let mode = RwLock::new(BiomeOsMode::Bootstrap);
 
-        register_self_in_registry(&router, "path-family", &socket_path, &mode)
+        register_self_in_registry(&router, "path-family", &socket_path, &mode, None)
             .await
             .expect("register");
 

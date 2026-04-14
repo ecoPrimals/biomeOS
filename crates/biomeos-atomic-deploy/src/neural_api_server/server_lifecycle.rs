@@ -89,6 +89,12 @@ impl NeuralApiServer {
         // ALWAYS load semantic translations from Tower Atomic graph
         self.load_translations_on_startup().await?;
 
+        // 4b. Auto-scan ALL graphs in graphs_dir for capability translations.
+        // This ensures primals declared in deployment graphs (not just the bootstrap
+        // graph) are registered in the capability router — critical for TCP-only mode
+        // where the full route table must be populated before any client connects.
+        self.load_translations_from_all_graphs().await;
+
         // 5. Auto-discover running primals and register their capabilities
         self.discover_and_register_primals().await;
 

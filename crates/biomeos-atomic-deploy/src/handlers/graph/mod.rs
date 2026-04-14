@@ -191,36 +191,49 @@ impl GraphHandler {
                 if path.extension().and_then(|s| s.to_str()) != Some("toml") {
                     continue;
                 }
-                if let Ok(graph) = Graph::from_toml_file(&path) {
-                    if seen_ids.insert(graph.id.clone()) {
-                        graphs.push(json!({
-                            "id": graph.id,
-                            "version": graph.version,
-                            "description": graph.description,
-                            "node_count": graph.nodes.len(),
-                            "coordination": graph.coordination.as_deref().unwrap_or("sequential"),
-                            "continuous": graph.is_continuous(),
-                            "tier": tier,
-                            "estimated_time_ms": null,
-                            "tags": []
-                        }));
+                match Graph::from_toml_file(&path) {
+                    Ok(graph) => {
+                        if seen_ids.insert(graph.id.clone()) {
+                            graphs.push(json!({
+                                "id": graph.id,
+                                "version": graph.version,
+                                "description": graph.description,
+                                "node_count": graph.nodes.len(),
+                                "coordination": graph.coordination.as_deref().unwrap_or("sequential"),
+                                "continuous": graph.is_continuous(),
+                                "tier": tier,
+                                "estimated_time_ms": null,
+                                "tags": []
+                            }));
+                        }
                     }
-                } else if let Ok(dg) = biomeos_graph::GraphLoader::from_file(&path) {
-                    let def = &dg.definition;
-                    let id_str = def.id.as_str().to_string();
-                    if seen_ids.insert(id_str.clone()) {
-                        graphs.push(json!({
-                            "id": id_str,
-                            "version": if def.version.is_empty() { "0.0.0" } else { &def.version },
-                            "description": def.description,
-                            "node_count": def.nodes.len(),
-                            "coordination": format!("{:?}", def.coordination).to_lowercase(),
-                            "continuous": matches!(def.coordination, biomeos_graph::CoordinationPattern::Continuous),
-                            "tier": tier,
-                            "estimated_time_ms": null,
-                            "tags": []
-                        }));
-                    }
+                    Err(neural_err) => match biomeos_graph::GraphLoader::from_file(&path) {
+                        Ok(dg) => {
+                            let def = &dg.definition;
+                            let id_str = def.id.as_str().to_string();
+                            if seen_ids.insert(id_str.clone()) {
+                                graphs.push(json!({
+                                    "id": id_str,
+                                    "version": if def.version.is_empty() { "0.0.0" } else { &def.version },
+                                    "description": def.description,
+                                    "node_count": def.nodes.len(),
+                                    "coordination": format!("{:?}", def.coordination).to_lowercase(),
+                                    "continuous": matches!(def.coordination, biomeos_graph::CoordinationPattern::Continuous),
+                                    "tier": tier,
+                                    "estimated_time_ms": null,
+                                    "tags": []
+                                }));
+                            }
+                        }
+                        Err(deploy_err) => {
+                            tracing::warn!(
+                                path = %path.display(),
+                                neural_err = %neural_err,
+                                deploy_err = %deploy_err,
+                                "graph.list: TOML file failed both parsers — skipping"
+                            );
+                        }
+                    },
                 }
             }
         }

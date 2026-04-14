@@ -112,6 +112,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("graph.list", Route::GraphList),
     ("neural_api.get_graph", Route::GraphGet),
     ("graph.get", Route::GraphGet),
+    ("graph.load", Route::GraphGet),
     ("neural_api.save_graph", Route::GraphSave),
     ("graph.save", Route::GraphSave),
     ("neural_api.execute_graph", Route::GraphExecute),

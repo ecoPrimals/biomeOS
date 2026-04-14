@@ -112,6 +112,63 @@ impl NeuralApiServer {
         }
         Ok(())
     }
+
+    /// Scan all `.toml` graphs in `graphs_dir` and load their capability
+    /// translations into the router.  Graphs that fail to parse are logged
+    /// at warn level and skipped.  The bootstrap graph (`tower_atomic_bootstrap`)
+    /// is skipped because its translations are already loaded by
+    /// [`Self::load_translations_on_startup`].
+    pub(crate) async fn load_translations_from_all_graphs(&self) {
+        let entries = match std::fs::read_dir(&self.graphs_dir) {
+            Ok(e) => e,
+            Err(e) => {
+                warn!(
+                    "⚠️  Cannot scan graphs_dir {}: {}",
+                    self.graphs_dir.display(),
+                    e
+                );
+                return;
+            }
+        };
+
+        let mut loaded = 0u32;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("toml") {
+                continue;
+            }
+            if path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .is_some_and(|s| s == "tower_atomic_bootstrap")
+            {
+                continue;
+            }
+            match crate::neural_graph::Graph::from_toml_file(&path) {
+                Ok(graph) => {
+                    if let Err(e) = self.load_translations_from_graph(&graph).await {
+                        warn!(
+                            "⚠️  Failed to load translations from {}: {}",
+                            path.display(),
+                            e
+                        );
+                    } else {
+                        loaded += 1;
+                    }
+                }
+                Err(_) => {
+                    // Not a neural-graph format; deployment-graph nodes don't carry
+                    // capability translations so we skip silently.
+                }
+            }
+        }
+        if loaded > 0 {
+            info!(
+                "📚 Loaded capability translations from {} additional graphs",
+                loaded
+            );
+        }
+    }
 }
 
 #[cfg(test)]

@@ -43,12 +43,13 @@ impl NeuralApiServer {
         info!("🌍 No existing ecosystem detected");
         info!("🏗️  Creating ecosystem foundation...");
 
-        // Register biomeOS in its own capability registry
+        let tcp_self = if self.tcp_only { self.tcp_port } else { None };
         crate::bootstrap::register_self_in_registry(
             &self.router,
             &self.family_id,
             &self.socket_path,
             &self.mode,
+            tcp_self,
         )
         .await?;
 
@@ -121,12 +122,13 @@ impl NeuralApiServer {
             }
         }
 
-        // Register in ecosystem
+        let tcp_self = if self.tcp_only { self.tcp_port } else { None };
         crate::bootstrap::register_self_in_registry(
             &self.router,
             &self.family_id,
             &self.socket_path,
             &self.mode,
+            tcp_self,
         )
         .await?;
 
