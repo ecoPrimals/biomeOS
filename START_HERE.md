@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: April 13, 2026
-**Status**: Production Ready (v3.08) — 7,784 tests (0 failures, 0 ignored, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery, `-D warnings`), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded primal names, `#[expect(reason)]` throughout, capability-based discovery compliant, composition e2e proven, workspace dependency governance (`workspace = true`), 0 blocking debt, all files <835 LOC, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: April 12, 2026
+**Status**: Production Ready (v3.10) — 7,784 tests (0 failures, 0 ignored, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery, `-D warnings`), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded primal names, `#[expect(reason)]` throughout, capability-based discovery compliant, composition e2e proven, workspace dependency governance (`workspace = true`), 0 blocking debt, all files <835 LOC, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.08 — zero blocking debt)
+**Status**: Production Ready (v3.10 — zero blocking debt)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
@@ -178,4 +178,4 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile)
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Tests**: 7,784 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0
-**Updated**: April 13, 2026
+**Updated**: April 12, 2026

@@ -867,7 +867,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 2. ~~**ARM64 biomeOS genomeBin**~~ - ✅ Built (`aarch64-unknown-linux-musl`, 9.6 MB stripped, static)
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
-5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.08, 7,784 tests) |
+5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.10, 7,784 tests) |
 
 ### Low Priority
 1. **API key encryption** - NestGate + BearDog secured storage
@@ -982,11 +982,11 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.08 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Status**: Production Ready (v3.10 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
 **Tests**: 7,784 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
 **Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination
-**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all files <835 LOC)
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all files <835 LOC, capability-based resolution)
 **Bypasses**: 0 active (all 6 evolved)

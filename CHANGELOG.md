@@ -3163,4 +3163,4 @@ BirdSong Discovery → USB Songbird (discovered peer)
 
 ---
 
-For detailed session reports, see `docs/archive/`.
+For detailed session reports, see `ecoPrimals/wateringHole/handoffs/`.
