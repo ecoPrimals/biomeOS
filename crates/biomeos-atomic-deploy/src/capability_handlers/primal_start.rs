@@ -97,6 +97,23 @@ pub async fn primal_start_capability(
     let mut cmd = tokio::process::Command::new(&binary_full_path);
     cmd.arg(mode);
 
+    // TCP-only cascade: when parent biomeOS runs --tcp-only, child primals
+    // bind TCP instead of UDS (Android/Windows/cross-gate deployment).
+    let tcp_port = if context.tcp_only {
+        let port = context.next_tcp_port();
+        cmd.arg("--port").arg(port.to_string());
+        cmd.env("PRIMAL_TRANSPORT", "tcp");
+        cmd.env("PRIMAL_TCP_PORT", port.to_string());
+        info!(
+            "   📡 TCP-only cascade: {} will bind TCP :{port}",
+            primal_name
+        );
+        context.register_tcp_port(primal_name, port).await;
+        Some(port)
+    } else {
+        None
+    };
+
     configure_primal_sockets(&mut cmd, primal_name, &socket_path, &family_id, context).await;
 
     cmd.env("FAMILY_ID", &family_id);
@@ -164,20 +181,28 @@ pub async fn primal_start_capability(
     // 6. Relay stdout/stderr to logs
     spawn_output_relays(&mut child, primal_name);
 
-    // 7. Wait for socket
-    let socket_confirmed = wait_for_socket_with_timeout(&socket_path, 30).await;
+    // 7. Wait for socket (TCP port in tcp_only mode, UDS path otherwise)
+    let socket_confirmed = if let Some(port) = tcp_port {
+        crate::executor::primal_spawner::wait_for_tcp_port(port, 300)
+            .await
+            .is_ok()
+    } else {
+        wait_for_socket_with_timeout(&socket_path, 30).await
+    };
 
     if socket_confirmed {
-        info!("   ✅ Socket available: {}", socket_path);
+        let endpoint_label = tcp_port
+            .map(|p| format!("tcp://127.0.0.1:{p}"))
+            .unwrap_or_else(|| socket_path.clone());
+        info!("   ✅ Endpoint available: {}", endpoint_label);
 
-        // Log capability registration (actual registration via RPC)
         if !node.capabilities.is_empty() {
             info!(
                 "   📝 Registering {} capabilities...",
                 node.capabilities.len()
             );
             for cap in &node.capabilities {
-                info!("      - {} → {} @ {}", cap, primal_name, socket_path);
+                info!("      - {} → {} @ {}", cap, primal_name, endpoint_label);
             }
         }
 
@@ -189,10 +214,11 @@ pub async fn primal_start_capability(
             "family_id": family_id,
             "pid": pid,
             "socket": socket_path,
+            "tcp_port": tcp_port,
             "socket_confirmed": true
         }))
     } else {
-        warn!("   ⚠️  Socket not found after 3s: {}", socket_path);
+        warn!("   ⚠️  Endpoint not available after timeout: {}", socket_path);
 
         Ok(json!({
             "started": true,

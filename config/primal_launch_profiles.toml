@@ -33,6 +33,8 @@ BEARDOG_MODE = "direct"
 SONGBIRD_SECURITY_PROVIDER = "beardog"
 [profiles.songbird.env_sockets]
 BEARDOG_SOCKET = "beardog"
+SECURITY_PROVIDER_SOCKET = "beardog"
+CRYPTO_PROVIDER_SOCKET = "beardog"
 NEURAL_API_SOCKET = "neural-api"
 FAMILY_ID = "$family_id"
 

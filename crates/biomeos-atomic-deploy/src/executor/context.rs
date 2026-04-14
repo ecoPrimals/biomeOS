@@ -59,6 +59,8 @@ pub struct ExecutionContext {
     /// Next TCP port to auto-assign to child primals in TCP-only mode.
     /// Starts at a base (e.g. 9900) and increments per primal.
     pub tcp_port_counter: Arc<std::sync::atomic::AtomicU16>,
+    /// Registry of primal → TCP port assignments (populated during spawn in tcp_only mode).
+    pub tcp_port_registry: Arc<Mutex<HashMap<String, u16>>>,
 }
 
 impl std::fmt::Debug for ExecutionContext {
@@ -110,6 +112,7 @@ impl ExecutionContext {
             circuit_breakers: Arc::new(Mutex::new(HashMap::new())),
             tcp_only: false,
             tcp_port_counter: Arc::new(std::sync::atomic::AtomicU16::new(9900)),
+            tcp_port_registry: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -137,6 +140,19 @@ impl ExecutionContext {
     pub fn next_tcp_port(&self) -> u16 {
         self.tcp_port_counter
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// Record a TCP port assignment for a primal (call after spawning in tcp_only mode).
+    pub async fn register_tcp_port(&self, primal_name: &str, port: u16) {
+        self.tcp_port_registry
+            .lock()
+            .await
+            .insert(primal_name.to_string(), port);
+    }
+
+    /// Look up the TCP port assigned to a previously spawned primal.
+    pub async fn get_tcp_port(&self, primal_name: &str) -> Option<u16> {
+        self.tcp_port_registry.lock().await.get(primal_name).copied()
     }
 
     /// Set socket nucleation for deterministic socket path assignment

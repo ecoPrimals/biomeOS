@@ -44,6 +44,36 @@ impl NeuralApiServer {
         }
     }
 
+    /// Resolve the TCP port for a primal based on the deterministic port counter.
+    ///
+    /// In TCP-only mode, `ExecutionContext::next_tcp_port()` assigns ports starting
+    /// at 9900. The bootstrap graph spawns primals in order, so we mirror that
+    /// assignment: beardog→9900, songbird→9901, etc. For unknown primals, default
+    /// to 9900 (first slot).
+    fn resolve_tcp_port_for_primal(&self, primal: &str) -> u16 {
+        use std::sync::atomic::{AtomicU16, Ordering};
+        static TRANSLATION_PORT_COUNTER: AtomicU16 = AtomicU16::new(0);
+
+        let base_port: u16 = 9900;
+        let known_ports: &[(&str, u16)] = &[
+            ("beardog", base_port),
+            ("songbird", base_port + 1),
+            ("squirrel", base_port + 2),
+            ("toadstool", base_port + 3),
+            ("barracuda", base_port + 4),
+            ("coralreef", base_port + 5),
+            ("nestgate", base_port + 6),
+        ];
+
+        for &(name, port) in known_ports {
+            if primal.contains(name) {
+                return port;
+            }
+        }
+
+        base_port + TRANSLATION_PORT_COUNTER.fetch_add(1, Ordering::Relaxed)
+    }
+
     /// Load capability translations from a graph
     ///
     /// Extracts `capabilities_provided` from each node and registers translations.
@@ -114,21 +144,48 @@ impl NeuralApiServer {
                 // Register capability CATEGORIES from the capabilities field
                 // This enables capability.call("crypto", "sha256") to route to BearDog
                 for capability in &node.capabilities {
-                    info!(
-                        "📝 Registering capability category: {} → {} @ {}",
-                        capability, primal, socket_path
-                    );
-                    if let Err(e) = self
-                        .router
-                        .register_capability_unix(
-                            capability,
-                            primal,
-                            &socket_path,
-                            "graph_translation",
-                        )
-                        .await
-                    {
-                        warn!("Failed to register capability {}: {}", capability, e);
+                    if self.tcp_only {
+                        let tcp_port = self.resolve_tcp_port_for_primal(primal);
+                        let host: std::sync::Arc<str> = std::env::var("BIOMEOS_BIND_ADDRESS")
+                            .unwrap_or_else(|_| "127.0.0.1".to_string())
+                            .into();
+                        let endpoint = biomeos_core::TransportEndpoint::TcpSocket {
+                            host: host.clone(),
+                            port: tcp_port,
+                        };
+                        info!(
+                            "📝 Registering capability category: {} → {} @ tcp://{}:{}",
+                            capability, primal, host, tcp_port
+                        );
+                        if let Err(e) = self
+                            .router
+                            .register_capability(
+                                capability,
+                                primal,
+                                endpoint,
+                                "graph_translation_tcp",
+                            )
+                            .await
+                        {
+                            warn!("   ⚠️  Failed to register {}: {}", capability, e);
+                        }
+                    } else {
+                        info!(
+                            "📝 Registering capability category: {} → {} @ {}",
+                            capability, primal, socket_path
+                        );
+                        if let Err(e) = self
+                            .router
+                            .register_capability_unix(
+                                capability,
+                                primal,
+                                &socket_path,
+                                "graph_translation",
+                            )
+                            .await
+                        {
+                            warn!("Failed to register capability {}: {}", capability, e);
+                        }
                     }
                 }
             }
