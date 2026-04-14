@@ -111,12 +111,12 @@ impl NeuralRouter {
                             }
                         } else if btsp_client::btsp_enforce() {
                             tracing::warn!(
-                                "   ⚠️ BTSP enforced but BearDog unavailable for family-scoped socket: {}",
+                                "   ⚠️ BTSP enforced but security provider unavailable for family-scoped socket: {}",
                                 path.display()
                             );
                         } else {
                             debug!(
-                                "   ⚠️ BTSP: BearDog unavailable, proceeding without handshake to {}",
+                                "   ⚠️ BTSP: security provider unavailable, proceeding without handshake to {}",
                                 path.display()
                             );
                         }

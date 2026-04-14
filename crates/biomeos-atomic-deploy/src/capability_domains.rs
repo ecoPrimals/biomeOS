@@ -13,8 +13,9 @@
 //! The mapping is SEMANTIC → PROVIDER (not implementation-specific).
 
 use biomeos_types::primal_names::{
-    AIRSPRING, BARRACUDA, BEARDOG, CORALREEF, HEALTHSPRING, LOAMSPINE, LUDOSPRING, NESTGATE,
-    NEURALSPRING, PETALTONGUE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL, WETSPRING,
+    AIRSPRING, BARRACUDA, BEARDOG, BIOMEOS, CORALREEF, HEALTHSPRING, LOAMSPINE, LUDOSPRING,
+    NESTGATE, NEURALSPRING, PETALTONGUE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
+    WETSPRING,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -209,7 +210,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     // Canonical namespace for composed system health: tower, webb, service,
     // nucleus, and spring-specific health aggregation.
     CapabilityDomain {
-        provider: "biomeos",
+        provider: BIOMEOS,
         capabilities: &["composition"],
     },
 ];

@@ -46,10 +46,10 @@ pub async fn register_self_in_registry(
     let capabilities = biomeos_types::primal_names::BIOMEOS_SELF_CAPABILITIES;
 
     if let Some(port) = tcp_port {
-        let endpoint = biomeos_core::TransportEndpoint::TcpSocket {
-            host: "127.0.0.1".into(),
-            port,
-        };
+        let host: std::sync::Arc<str> = std::env::var("BIOMEOS_BIND_ADDRESS")
+            .unwrap_or_else(|_| "127.0.0.1".to_string())
+            .into();
+        let endpoint = biomeos_core::TransportEndpoint::TcpSocket { host, port };
         for &capability in capabilities {
             router
                 .register_capability(capability, &primal_name, endpoint.clone(), source)
@@ -216,8 +216,8 @@ pub async fn transition_to_coordinated_with_runtime_dir(
         }
         Err(e) => {
             warn!(
-                "⚠️ BearDog health check failed: {} (continuing with degraded security)",
-                e
+                "⚠️ {} health check failed: {} (continuing with degraded security)",
+                security_provider, e
             );
         }
     }

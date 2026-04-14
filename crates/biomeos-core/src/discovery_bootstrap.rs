@@ -168,18 +168,18 @@ impl DiscoveryBootstrap {
         // All methods failed
         tracing::error!("❌ No universal adapter found through any discovery method");
 
-        let example_socket = biomeos_types::SystemPaths::new_lazy()
-            .primal_socket(biomeos_types::primal_names::SONGBIRD);
+        let discovery_primal = biomeos_types::primal_names::SONGBIRD;
+        let example_socket = biomeos_types::SystemPaths::new_lazy().primal_socket(discovery_primal);
         Err(anyhow::anyhow!(
-            "No universal adapter found. Set DISCOVERY_ENDPOINT environment variable or ensure Songbird is running.\n\
+            "No discovery provider found. Set DISCOVERY_ENDPOINT or ensure the network primal is running.\n\
             \n\
             Quick fix:\n\
-            1. Start Songbird: cd ../{songbird} && cargo run\n\
+            1. Start the discovery provider: cd ../{primal} && cargo run\n\
             2. Set endpoint: export DISCOVERY_ENDPOINT=\"unix://{socket}\"\n\
             3. Or HTTP: export SONGBIRD_ENDPOINT=\"http://{host}:{port}\"\n\
             \n\
             Note: Unix sockets are preferred for local communication (faster, more secure)",
-            songbird = biomeos_types::primal_names::SONGBIRD,
+            primal = discovery_primal,
             socket = example_socket.display(),
             host = endpoints::DEFAULT_LOCALHOST,
             port = network::DEFAULT_SONGBIRD_PORT
@@ -547,7 +547,7 @@ mod tests {
         match result {
             Err(e) => {
                 let error_msg = e.to_string();
-                assert!(error_msg.contains("No universal adapter found"));
+                assert!(error_msg.contains("No discovery provider found"));
                 assert!(error_msg.contains("DISCOVERY_ENDPOINT"));
             }
             Ok(endpoint) => {
