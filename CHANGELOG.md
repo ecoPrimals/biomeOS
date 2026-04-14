@@ -2,6 +2,35 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.12 (2026-04-14) — Composition Forwarding Architecture + graph.list Recursive Scan
+
+### Forwarding architecture: Tower Atomic relay preference
+- `capability.call` now routes through Tower Atomic (Songbird relay + BearDog secure
+  transport) when available, resolving BTSP rejection, socket path mismatch, and method
+  prefix issues in one architectural change
+- Fallback to direct socket routing preserved for bootstrap/degraded mode
+
+### Socket path discovery fix
+- `/tmp/biomeos` (FALLBACK_RUNTIME_BASE) added as regular scan directory in topology
+  socket discovery — deploy creates sockets there, but only `/tmp/biomeos-default/`
+  was scanned previously
+
+### Method prefix stripping
+- Direct routing fallback forwards `{operation}` only (not `{domain}.{operation}`)
+- Target primals know their own domain; specific method names are handled via
+  translation registry entries
+
+### graph.list recursive scanning
+- `graph.list` now walks the full directory tree (recursive `read_dir`) under both
+  `graphs_dir` and `runtime_graphs_dir` — graphs in subdirectories are no longer invisible
+- Added info-level logging showing scanned directories and file counts
+
+### Diagnostics
+- BTSP handshake failure upgraded from `debug!` to `warn!` with socket path for
+  production visibility
+
+45 test suites, 0 failures. clippy clean. fmt clean.
+
 ## v3.11 (2026-04-12) — TCP-Only Graph Bootstrap Fix & Self-Knowledge Evolution
 
 ### TCP-only graph bootstrap: 4 root causes resolved

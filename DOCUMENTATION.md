@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (42 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v3.11) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v3.12) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,6 +58,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V312_COMPOSITION_FORWARDING_GRAPH_LIST_FIX | Composition forwarding via Tower Atomic relay (BTSP, socket path, method prefix), graph.list recursive scan, primalSpring benchScale validation | Apr 14, 2026 |
 | BIOMEOS_V311_TCP_ONLY_GRAPH_BOOTSTRAP_FIX | TCP-only graph bootstrap: 4 root causes (graph.load loop, graphs_dir resolution, TCP self-registration, silent parse failures), auto-scan all graphs on startup | Apr 12, 2026 |
 | BIOMEOS_V311_DEEP_DEBT_SELF_KNOWLEDGE_EVOLUTION | Deep debt audit + self-knowledge evolution: capability-based naming, resolved provider logs, configurable TCP host, dependency analysis | Apr 12, 2026 |
 | BIOMEOS_V310_DEEP_DEBT_HANDOFF | Smart refactoring (5 files >800L), hardcoding to capability-based resolution, dependency evolution, idiomatic Rust, 7,784 tests | Apr 12, 2026 |
@@ -161,8 +162,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of April 12, 2026 (v3.11)**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v3.11), 4 scripts**
+**Documentation current as of April 14, 2026 (v3.12)**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v3.12), 4 scripts**
 **Deploy graphs: 42 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed**
 **Tests: 7,784 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0**

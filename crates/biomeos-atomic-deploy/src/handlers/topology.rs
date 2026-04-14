@@ -283,7 +283,19 @@ impl TopologyHandler {
             }
         }
 
-        // Priority 7: fallback runtime base (only if nothing else exists)
+        // Priority 7: /tmp/biomeos (base deploy layout without family suffix)
+        // Deploy scripts often create sockets in FALLBACK_RUNTIME_BASE directly
+        // (empty family_id), whereas NUCLEUS defaults family_id="default" →
+        // /tmp/biomeos-default. Both must be scanned to avoid socket mismatch.
+        {
+            let base =
+                PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE);
+            if !dirs.contains(&base) && base.exists() {
+                dirs.push(base);
+            }
+        }
+
+        // Priority 8: fallback runtime base (only if nothing else exists)
         if dirs.is_empty() {
             let base =
                 PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE);

@@ -1,6 +1,6 @@
 # biomeOS - Current Status
 
-**Updated**: April 12, 2026 (v3.11: TCP-only graph bootstrap fix, self-knowledge evolution — capability-based naming, 4 root causes resolved; 7,000+ tests)
+**Updated**: April 14, 2026 (v3.12: composition forwarding via Tower Atomic relay, graph.list recursive scan — primalSpring benchScale validation; 7,000+ tests)
 **Version**: 3.10
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 
@@ -982,7 +982,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.11 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Status**: Production Ready (v3.12 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
 **Tests**: 7,784 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0

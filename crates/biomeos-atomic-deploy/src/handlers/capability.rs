@@ -617,10 +617,36 @@ impl CapabilityHandler {
 
         trace!("capability.call: {}.{}", capability, &operation);
 
-        // Construct semantic name
         let semantic_name = format!("{}.{}", capability, &operation);
 
-        // Look up translation
+        // Tower Atomic relay: prefer routing through Songbird when available.
+        // Songbird handles BTSP handshake, correct socket resolution, and method
+        // translation — resolving composition gaps from primalSpring benchScale
+        // validation (BTSP rejection, socket path mismatch, method prefix).
+        if let Ok(tower) = self.router.discover_tower_atomic().await {
+            match self
+                .router
+                .forward_request(&tower.primary_endpoint, &semantic_name, &args)
+                .await
+            {
+                Ok(value) => {
+                    let latency = start.elapsed().as_millis();
+                    trace!(
+                        "   ✓ {} completed in {}ms via Tower Atomic relay",
+                        semantic_name, latency
+                    );
+                    return Ok(value);
+                }
+                Err(e) => {
+                    debug!(
+                        "Tower Atomic relay failed for {}: {}, falling back to direct routing",
+                        semantic_name, e
+                    );
+                }
+            }
+        }
+
+        // Direct routing fallback: look up translation
         let registry = self.translation_registry.read().await;
         let translation = registry.get_translation(&semantic_name);
 
@@ -663,16 +689,11 @@ impl CapabilityHandler {
 
                 let atomic = self.router.discover_capability(capability).await?;
 
-                // When the operation already contains dots (e.g. "stats.mean"
-                // from an original "tensor.stats.mean" call), forwarding the
-                // reconstructed semantic_name would re-prefix the domain and
-                // produce a method the primal doesn't recognise. Forward just
-                // the operation portion so the primal sees its own method name.
-                let forward_method = if operation.contains('.') {
-                    &operation
-                } else {
-                    &semantic_name
-                };
+                // Forward just the operation: the target primal already knows
+                // its own domain. Sending the full semantic_name ({domain}.{op})
+                // causes method-not-found on primals that register only {op}.
+                // Primals needing a specific method name register translations.
+                let forward_method = &operation;
 
                 self.router
                     .forward_request(&atomic.primary_endpoint, forward_method, &args)

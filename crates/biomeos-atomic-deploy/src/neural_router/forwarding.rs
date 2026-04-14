@@ -104,8 +104,9 @@ impl NeuralRouter {
                                     return Ok(value);
                                 }
                                 Err(e) => {
-                                    debug!(
-                                        "   ⚠️ BTSP handshake failed, falling back to raw JSON-RPC: {e}"
+                                    tracing::warn!(
+                                        "   ⚠️ BTSP handshake failed for {}, falling back to raw JSON-RPC: {e}",
+                                        path.display()
                                     );
                                 }
                             }

@@ -91,6 +91,22 @@ pub struct GraphHandler {
     pub(super) metrics_db_path: Option<PathBuf>,
 }
 
+/// Recursively collect all `.toml` files under `dir`, including subdirectories.
+fn collect_toml_files_recursive(dir: &std::path::Path, files: &mut Vec<PathBuf>) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_toml_files_recursive(&path, files);
+        } else if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+            files.push(path);
+        }
+    }
+}
+
 impl GraphHandler {
     /// Create a new graph handler.
     ///
@@ -178,19 +194,20 @@ impl GraphHandler {
             (&self.runtime_graphs_dir, "runtime"),
             (&self.graphs_dir, "nucleus"),
         ] {
-            let entries = match std::fs::read_dir(dir) {
-                Ok(e) => {
-                    any_dir_readable = true;
-                    e
-                }
-                Err(_) => continue,
-            };
+            if !dir.is_dir() {
+                continue;
+            }
+            any_dir_readable = true;
+            let mut toml_files = Vec::new();
+            collect_toml_files_recursive(dir, &mut toml_files);
 
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) != Some("toml") {
-                    continue;
-                }
+            info!(
+                "graph.list: scanning {} ({} .toml files found)",
+                dir.display(),
+                toml_files.len()
+            );
+
+            for path in toml_files {
                 match Graph::from_toml_file(&path) {
                     Ok(graph) => {
                         if seen_ids.insert(graph.id.clone()) {
