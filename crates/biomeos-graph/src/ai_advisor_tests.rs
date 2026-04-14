@@ -91,14 +91,13 @@ fn test_detect_parallelization() {
     let advisor = AiGraphAdvisor::new();
     let graph = create_test_graph();
 
-    let suggestion = advisor.detect_parallelization_opportunity(&graph);
+    let suggestions = advisor.get_local_suggestions(&graph);
+    let suggestion = suggestions
+        .iter()
+        .find(|s| s.suggestion_type == SuggestionType::PerformanceImprovement);
     assert!(suggestion.is_some());
 
     let suggestion = suggestion.unwrap();
-    assert_eq!(
-        suggestion.suggestion_type,
-        SuggestionType::PerformanceImprovement
-    );
     assert!(suggestion.confidence > 0.8);
     assert!(!suggestion.evidence.is_empty());
 }
@@ -125,11 +124,11 @@ fn test_detect_missing_error_handling() {
         });
     }
 
-    let suggestion = advisor.detect_missing_error_handling(&graph);
+    let suggestions = advisor.get_local_suggestions(&graph);
+    let suggestion = suggestions
+        .iter()
+        .find(|s| s.suggestion_type == SuggestionType::BestPractice);
     assert!(suggestion.is_some());
-
-    let suggestion = suggestion.unwrap();
-    assert_eq!(suggestion.suggestion_type, SuggestionType::BestPractice);
 }
 #[tokio::test]
 async fn test_get_local_suggestions() {
@@ -245,7 +244,12 @@ fn test_detect_parallelization_skipped_when_edges_present() {
         to: "node2".to_string(),
         edge_type: EdgeType::DataFlow,
     });
-    assert!(advisor.detect_parallelization_opportunity(&graph).is_none());
+    let suggestions = advisor.get_local_suggestions(&graph);
+    assert!(
+        !suggestions
+            .iter()
+            .any(|s| s.suggestion_type == SuggestionType::PerformanceImprovement)
+    );
 }
 #[test]
 fn test_detect_coordination_dag_when_parallel_has_many_edges() {
@@ -304,9 +308,11 @@ fn test_detect_coordination_dag_when_parallel_has_many_edges() {
             },
         ],
     };
-    let s = advisor.detect_coordination_improvements(&graph);
+    let suggestions = advisor.get_local_suggestions(&graph);
+    let s = suggestions
+        .iter()
+        .find(|s| s.suggestion_type == SuggestionType::Optimization);
     assert!(s.is_some());
-    assert_eq!(s.unwrap().suggestion_type, SuggestionType::Optimization);
 }
 #[test]
 fn test_detect_single_node_with_edge_suggests_remove_edge() {
@@ -337,9 +343,11 @@ fn test_detect_single_node_with_edge_suggests_remove_edge() {
             edge_type: EdgeType::DataFlow,
         }],
     };
-    let s = advisor.detect_coordination_improvements(&graph);
+    let suggestions = advisor.get_local_suggestions(&graph);
+    let s = suggestions
+        .iter()
+        .find(|s| s.suggestion_type == SuggestionType::BestPractice);
     assert!(s.is_some());
-    assert_eq!(s.unwrap().suggestion_type, SuggestionType::BestPractice);
 }
 #[tokio::test]
 async fn test_learn_from_event_graph_events_ok() {

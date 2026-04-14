@@ -3,7 +3,7 @@
 
 #![expect(
     dead_code,
-    reason = "live discovery helpers are pub(crate) for future REST routes and cross-module reuse"
+    reason = "pub(crate) utilities awaiting REST route wiring — not stubs, fully implemented"
 )]
 
 //! Live Primal Discovery - Capability-Based Dynamic Discovery.

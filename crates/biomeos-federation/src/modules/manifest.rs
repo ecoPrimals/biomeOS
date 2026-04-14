@@ -106,7 +106,7 @@ pub fn validate_manifest(manifest_path: &PathBuf) -> Result<()> {
         .with_context(|| format!("Failed to read manifest: {}", manifest_path.display()))?;
 
     // Basic YAML validation
-    let _: serde_yaml::Value = serde_yaml::from_str(&content)
+    let _: serde_json::Value = serde_yaml::from_str(&content)
         .with_context(|| format!("Invalid YAML in manifest: {}", manifest_path.display()))?;
 
     info!("✓ Manifest validation passed: {}", manifest_path.display());

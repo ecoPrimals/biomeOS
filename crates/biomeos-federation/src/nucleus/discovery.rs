@@ -15,9 +15,9 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::{debug, warn};
 
-/// Songbird discovery response for a service
+/// Service info returned by the discovery provider (capability-agnostic).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SongbirdServiceInfo {
+pub struct DiscoveredServiceInfo {
     pub id: String,
     pub name: String,
     pub address: String,
@@ -26,14 +26,14 @@ pub struct SongbirdServiceInfo {
     pub health: String,
 }
 
-/// Songbird discovery response
+/// Discovery response containing discovered services.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SongbirdDiscoveryResponse {
-    pub services: Vec<SongbirdServiceInfo>,
+pub struct DiscoveryResponse {
+    pub services: Vec<DiscoveredServiceInfo>,
 }
 
-/// Convert `SongbirdServiceInfo` address/port to `PrimalEndpoint` (testable pure function)
-pub fn service_address_to_endpoint(service: &SongbirdServiceInfo) -> PrimalEndpoint {
+/// Convert discovered service address/port to `PrimalEndpoint` (testable pure function).
+pub fn service_address_to_endpoint(service: &DiscoveredServiceInfo) -> PrimalEndpoint {
     if service.address.starts_with('/') {
         PrimalEndpoint::UnixSocket {
             path: PathBuf::from(&service.address),
@@ -63,7 +63,7 @@ pub async fn layer1_physical_discovery_songbird(
     match songbird.call(request).await {
         Ok(response) => {
             let result_value = response.result.unwrap_or_default();
-            match serde_json::from_value::<SongbirdDiscoveryResponse>(result_value) {
+            match serde_json::from_value::<DiscoveryResponse>(result_value) {
                 Ok(discovery) => {
                     debug!("Songbird discovered {} services", discovery.services.len());
 
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_service_address_to_endpoint_unix() {
-        let service = SongbirdServiceInfo {
+        let service = DiscoveredServiceInfo {
             id: "s1".to_string(),
             name: "test".to_string(),
             address: "/tmp/biomeos.sock".to_string(),
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_service_address_to_endpoint_http() {
-        let service = SongbirdServiceInfo {
+        let service = DiscoveredServiceInfo {
             id: "s2".to_string(),
             name: "http-svc".to_string(),
             address: "127.0.0.1".to_string(),
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_service_address_to_endpoint_unix_relative_path() {
-        let service = SongbirdServiceInfo {
+        let service = DiscoveredServiceInfo {
             id: "s3".to_string(),
             name: "rel".to_string(),
             address: "/var/run/sock".to_string(),
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn test_songbird_service_info_serde() {
         let json = r#"{"id":"s1","name":"songbird","address":"127.0.0.1","port":9000,"tags":["discovery"],"health":"healthy"}"#;
-        let info: SongbirdServiceInfo = serde_json::from_str(json).expect("deserialize");
+        let info: DiscoveredServiceInfo = serde_json::from_str(json).expect("deserialize");
         assert_eq!(info.name, "songbird");
         assert_eq!(info.port, 9000);
         assert_eq!(info.tags, vec!["discovery"]);
@@ -190,14 +190,14 @@ mod tests {
     #[test]
     fn test_songbird_discovery_response_serde() {
         let json = r#"{"services":[{"id":"s1","name":"test","address":"/tmp/test.sock","port":0,"tags":[],"health":"ok"}]}"#;
-        let resp: SongbirdDiscoveryResponse = serde_json::from_str(json).expect("deserialize");
+        let resp: DiscoveryResponse = serde_json::from_str(json).expect("deserialize");
         assert_eq!(resp.services.len(), 1);
         assert_eq!(resp.services[0].name, "test");
     }
 
     #[test]
     fn test_service_address_to_endpoint_http_hostname() {
-        let service = SongbirdServiceInfo {
+        let service = DiscoveredServiceInfo {
             id: "h1".to_string(),
             name: "host".to_string(),
             address: "songbird.internal".to_string(),
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn test_service_address_to_endpoint_unix_preserves_non_slash_as_http() {
         // Only paths starting with '/' become Unix sockets; hostnames stay HTTP.
-        let service = SongbirdServiceInfo {
+        let service = DiscoveredServiceInfo {
             id: "rel".to_string(),
             name: "n".to_string(),
             address: "relative-not-unix".to_string(),
@@ -233,13 +233,13 @@ mod tests {
     #[test]
     fn test_songbird_discovery_response_empty_services() {
         let json = r#"{"services":[]}"#;
-        let resp: SongbirdDiscoveryResponse = serde_json::from_str(json).expect("deserialize");
+        let resp: DiscoveryResponse = serde_json::from_str(json).expect("deserialize");
         assert!(resp.services.is_empty());
     }
 
     #[test]
     fn test_songbird_service_info_roundtrip() {
-        let orig = SongbirdServiceInfo {
+        let orig = DiscoveredServiceInfo {
             id: "id".to_string(),
             name: "n".to_string(),
             address: "10.0.0.1".to_string(),
@@ -248,7 +248,7 @@ mod tests {
             health: "degraded".to_string(),
         };
         let v = serde_json::to_value(&orig).expect("serialize");
-        let back: SongbirdServiceInfo = serde_json::from_value(v).expect("deserialize");
+        let back: DiscoveredServiceInfo = serde_json::from_value(v).expect("deserialize");
         assert_eq!(orig.id, back.id);
         assert_eq!(orig.tags, back.tags);
     }

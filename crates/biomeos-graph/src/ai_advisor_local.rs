@@ -7,7 +7,6 @@ use crate::modification::GraphModification;
 use biomeos_types::Uuid;
 
 #[derive(Debug, Clone)]
-#[expect(dead_code, reason = "populated for future local fallback suggestions")]
 pub(super) struct LocalPattern {
     pub(super) name: String,
     pub(super) description: String,
@@ -38,26 +37,38 @@ impl super::AiGraphAdvisor {
     pub(super) fn get_local_suggestions(&self, graph: &PrimalGraph) -> Vec<AiSuggestion> {
         let mut suggestions = Vec::new();
 
-        if let Some(suggestion) = self.detect_parallelization_opportunity(graph) {
-            suggestions.push(suggestion);
-        }
-
-        if let Some(suggestion) = self.detect_missing_error_handling(graph) {
-            suggestions.push(suggestion);
-        }
-
-        if let Some(suggestion) = self.detect_coordination_improvements(graph) {
-            suggestions.push(suggestion);
+        for pattern in &self.local_patterns {
+            let detected = match pattern.name.as_str() {
+                "parallelization" => Self::detect_parallelization_opportunity(
+                    graph,
+                    pattern.confidence,
+                    &pattern.description,
+                ),
+                "error_handling" => Self::detect_missing_error_handling(
+                    graph,
+                    pattern.confidence,
+                    &pattern.description,
+                ),
+                "coordination" => Self::detect_coordination_improvements(
+                    graph,
+                    pattern.confidence,
+                    &pattern.description,
+                ),
+                _ => None,
+            };
+            if let Some(s) = detected {
+                suggestions.push(s);
+            }
         }
 
         suggestions
     }
 
-    pub(super) fn detect_parallelization_opportunity(
-        &self,
+    fn detect_parallelization_opportunity(
         graph: &PrimalGraph,
+        confidence: f64,
+        description: &str,
     ) -> Option<AiSuggestion> {
-        let _ = self;
         if matches!(graph.coordination, CoordinationPattern::Sequential) && graph.nodes.len() > 2 {
             let has_dependencies = !graph.edges.is_empty();
 
@@ -72,11 +83,11 @@ impl super::AiGraphAdvisor {
                         "Graph has {} nodes with no dependencies, could execute in parallel for better performance",
                         graph.nodes.len()
                     ),
-                    confidence: 0.85,
+                    confidence,
                     evidence: vec![
+                        description.to_string(),
                         format!("{} independent nodes", graph.nodes.len()),
                         "No edges defining dependencies".to_string(),
-                        "Sequential execution not required".to_string(),
                     ],
                     impact: ImpactEstimate {
                         performance: 0.7,
@@ -91,11 +102,11 @@ impl super::AiGraphAdvisor {
         None
     }
 
-    pub(super) fn detect_missing_error_handling(
-        &self,
+    fn detect_missing_error_handling(
         graph: &PrimalGraph,
+        confidence: f64,
+        description: &str,
     ) -> Option<AiSuggestion> {
-        let _ = self;
         let has_retry = false;
 
         if !has_retry && graph.nodes.len() > 3 {
@@ -119,9 +130,9 @@ impl super::AiGraphAdvisor {
                     },
                 },
                 reasoning: "No error handling nodes detected. Consider adding error handling for better reliability.".to_string(),
-                confidence: 0.70,
+                confidence,
                 evidence: vec![
-                    "No nodes with retry policies".to_string(),
+                    description.to_string(),
                     format!("Graph has {} nodes that could fail", graph.nodes.len()),
                 ],
                 impact: ImpactEstimate {
@@ -136,11 +147,11 @@ impl super::AiGraphAdvisor {
         None
     }
 
-    pub(super) fn detect_coordination_improvements(
-        &self,
+    fn detect_coordination_improvements(
         graph: &PrimalGraph,
+        confidence: f64,
+        description: &str,
     ) -> Option<AiSuggestion> {
-        let _ = self;
         if matches!(graph.coordination, CoordinationPattern::Parallel) && graph.edges.len() > 2 {
             return Some(AiSuggestion {
                 id: format!("local_dag_{}", Uuid::new_v4()),
@@ -152,10 +163,10 @@ impl super::AiGraphAdvisor {
                     "Parallel graph has {} edges defining dependencies. Consider DAG coordination for proper dependency ordering.",
                     graph.edges.len()
                 ),
-                confidence: 0.75,
+                confidence,
                 evidence: vec![
+                    description.to_string(),
                     format!("{} edges in parallel graph", graph.edges.len()),
-                    "Dependencies should be respected".to_string(),
                     "DAG provides optimal parallel execution with dependencies".to_string(),
                 ],
                 impact: ImpactEstimate {

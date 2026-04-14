@@ -43,11 +43,7 @@ pub struct AiGraphAdvisor {
     /// Timeout for Squirrel requests
     squirrel_timeout: Duration,
 
-    /// Local suggestion cache (fallback when Squirrel unavailable)
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "populated for future local fallback suggestions")
-    )]
+    /// Local suggestion patterns (fallback when AI provider unavailable)
     local_patterns: Vec<LocalPattern>,
 }
 

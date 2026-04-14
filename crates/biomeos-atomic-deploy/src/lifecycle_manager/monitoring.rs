@@ -110,7 +110,9 @@ impl LifecycleManager {
                         last_health_check: chrono::Utc::now(),
                     };
                 }
-                _ => {}
+                other => {
+                    tracing::trace!("{name} healthy in state {other:?} — no transition");
+                }
             }
 
             debug!(

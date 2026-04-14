@@ -2,6 +2,32 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.15 (2026-04-14) — Pure Rust YAML, Dead Code Evolution, Agnostic Naming
+
+Deep debt cleanup — eliminates last C dependency and evolves production code.
+
+### Zero C Dependencies
+- **Replaced `serde_yaml_ng` (unsafe-libyaml C binding) with `serde-saphyr` (pure Rust YAML)**
+  - Drop-in API-compatible for `from_str`, `to_string`, `Error`
+  - `serde_yaml::Value` usages evolved to `serde_json::Value` (serde-compatible superset)
+  - `unsafe-libyaml` added to `deny.toml` ban list to prevent regression
+  - biomeOS now has **zero C library dependencies** in the shipped binary
+
+### Dead Code Evolution
+- `AiGraphAdvisor::local_patterns` and `LocalPattern` — wired into `get_local_suggestions` as pattern-driven fallback with configurable confidence; detection methods refactored to associated functions taking pattern description/confidence
+- `AISuggestionManager::family_id` — wired into request logging for family-scoped AI context
+- `live_discovery.rs` — annotation refined (fully implemented, awaiting REST route wiring)
+
+### Capability-Agnostic Naming
+- `biomeos-federation/subfederation/beardog.rs` → `security.rs` — module name no longer embeds primal identity
+- `SongbirdServiceInfo` → `DiscoveredServiceInfo` — capability-agnostic discovery type
+- `SongbirdDiscoveryResponse` → `DiscoveryResponse`
+
+### Silent Catch-All Evolution
+- Config feature match: `_ => {}` → `debug!("ignoring unknown feature flag: {other:?}")`
+- Lifecycle monitoring: `_ => {}` → `trace!("{name} healthy in state {other:?} — no transition")`
+- Suggestion feedback: `_ => {}` → `debug!("Suggestion ... feedback {:?} — kept active")`
+
 ## v3.14 (2026-04-14) — TCP-Only Cross-Architecture Composition Fixes
 
 Addresses 4 gaps identified by primalSpring v0.9.14 exp096 (Pixel cross-arch bonding).

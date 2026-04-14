@@ -49,8 +49,8 @@ pub struct ConfigMetadata {
 pub enum ConfigData {
     /// String value
     String(String),
-    /// YAML value
-    Yaml(serde_yaml::Value),
+    /// YAML value (stored as JSON Value since both are serde-compatible)
+    Yaml(serde_json::Value),
     /// JSON value
     Json(serde_json::Value),
     /// TOML value

@@ -28,11 +28,7 @@ pub struct AISuggestionManager {
     /// not specifically "Squirrel".
     ai_provider_socket: Option<std::path::PathBuf>,
 
-    /// Family ID (for family-scoped AI suggestions)
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "reserved for future AI RPC family-scoped context")
-    )]
+    /// Family ID (passed to AI provider for family-scoped suggestions)
     pub(crate) family_id: String,
 
     /// Active suggestions
@@ -158,7 +154,7 @@ impl AISuggestionManager {
         &mut self,
         context: &SuggestionContext,
     ) -> Result<Vec<AISuggestion>> {
-        info!("🤖 Requesting AI suggestions...");
+        info!("🤖 Requesting AI suggestions (family: {})", self.family_id);
 
         if self.ai_provider_socket.is_none() {
             warn!("No AI provider available, using local heuristics");
@@ -200,7 +196,12 @@ impl AISuggestionManager {
             SuggestionFeedback::Accepted | SuggestionFeedback::Rejected { .. } => {
                 self.active_suggestions.remove(suggestion_id);
             }
-            _ => {}
+            other => {
+                debug!(
+                    "Suggestion {suggestion_id} feedback {:?} — kept active",
+                    other
+                );
+            }
         }
 
         Ok(())

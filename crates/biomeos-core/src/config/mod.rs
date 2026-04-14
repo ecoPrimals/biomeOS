@@ -87,7 +87,9 @@ impl BiomeOSConfigBuilder {
                 self.config.features.experimental = true;
                 self.config.features.debug = true; // Enable debug for multi-tenant testing
             }
-            _ => {} // Unknown feature, ignore
+            other => {
+                tracing::debug!("ignoring unknown feature flag: {other:?}");
+            }
         }
         self
     }

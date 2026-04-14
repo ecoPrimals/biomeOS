@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! `BearDog` integration for sub-federation cryptographic operations
+//! Security provider integration for sub-federation cryptographic operations.
 //!
-//! Lineage verification and key derivation via JSON-RPC.
+//! Lineage verification and key derivation via capability-routed JSON-RPC.
 
 use crate::{FederationError, FederationResult};
 use biomeos_core::atomic_client::AtomicClient;

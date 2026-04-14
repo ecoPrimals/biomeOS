@@ -251,7 +251,7 @@ fn volume_type_ephemeral_roundtrip() {
 
 #[test]
 fn config_data_yaml_json_toml_roundtrip() {
-    let y = ConfigData::Yaml(serde_yaml::Value::String("x".into()));
+    let y = ConfigData::Yaml(serde_json::Value::String("x".into()));
     let j = ConfigData::Json(serde_json::json!({"a": 1}));
     let t = ConfigData::Toml("k = 1".into());
     for data in [y, j, t] {

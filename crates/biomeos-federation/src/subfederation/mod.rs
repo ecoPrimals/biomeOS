@@ -6,8 +6,8 @@
 //! Hierarchical federation on top of genetic lineage baseline.
 //! Sub-federations allow granular access control and isolation.
 
-mod beardog;
 mod manager;
+mod security;
 mod types;
 
 #[cfg(test)]

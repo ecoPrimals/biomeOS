@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v3.14)
+## Status: Production Ready (v3.15)
 
 | Metric | Value |
 |--------|-------|
@@ -348,8 +348,8 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v3.14)
-**Updated**: April 14, 2026
+**Status**: Production Ready (v3.15)
+**Updated**: April 15, 2026
 **Tests**: 7,784 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, `-D warnings` | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 

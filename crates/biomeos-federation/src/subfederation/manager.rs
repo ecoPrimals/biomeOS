@@ -99,7 +99,7 @@ impl SubFederationManager {
 
         if let Some(ref s) = self.neural_api_socket_override {
             if let Err(e) =
-                super::beardog::verify_member_lineage_with(s.as_str(), &parent_family, &members)
+                super::security::verify_member_lineage_with(s.as_str(), &parent_family, &members)
                     .await
             {
                 warn!(
@@ -107,7 +107,8 @@ impl SubFederationManager {
                     name, e
                 );
             }
-        } else if let Err(e) = super::beardog::verify_member_lineage(&parent_family, &members).await
+        } else if let Err(e) =
+            super::security::verify_member_lineage(&parent_family, &members).await
         {
             warn!(
                 "Lineage verification failed for sub-federation '{}': {}",
@@ -124,9 +125,9 @@ impl SubFederationManager {
         );
 
         let key_result = if let Some(ref s) = self.neural_api_socket_override {
-            super::beardog::request_subfederation_key_with(s.as_str(), &parent_family, &name).await
+            super::security::request_subfederation_key_with(s.as_str(), &parent_family, &name).await
         } else {
-            super::beardog::request_subfederation_key(&parent_family, &name).await
+            super::security::request_subfederation_key(&parent_family, &name).await
         };
         match key_result {
             Ok(key_ref) => {

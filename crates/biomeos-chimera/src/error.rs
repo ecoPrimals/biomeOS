@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_yaml_error_conversion() {
-        let yaml_err = serde_yaml::from_str::<serde_yaml::Value>("invalid: [yaml: [");
+        let yaml_err = serde_yaml::from_str::<serde_json::Value>("invalid: [yaml: [");
         let err: ChimeraError = yaml_err.unwrap_err().into();
         let msg = err.to_string();
         assert!(!msg.is_empty());

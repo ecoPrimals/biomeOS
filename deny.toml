@@ -44,6 +44,7 @@ deny = [
     { crate = "libgit2-sys", wrappers = [] },
     { crate = "libssh2-sys", wrappers = [] },
     { crate = "users", wrappers = [] },       # RUSTSEC-2024-0399 + RUSTSEC-2025-0040: unmaintained, use rustix
+    { crate = "unsafe-libyaml", wrappers = [] },  # C libyaml binding; replaced by pure-Rust serde-saphyr (v3.15)
 ]
 
 [sources]
