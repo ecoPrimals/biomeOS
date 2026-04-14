@@ -72,7 +72,7 @@
 | **JSON-RPC types** | `JSONRPC_VERSION` const + zero-alloc `JsonRpcVersion` marker type (was `String`), `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
 | **Zero-copy** | `JsonRpcVersion` (zero-size, zero-alloc serde), `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client, primal SDK IPC); `Arc<str>` for identifiers + `PrimalManifest` + `PrimalConnections` keys + `OptimizationType` graph nodes + WebSocket subscription IDs; `Arc<SubscriptionFilter>` for subscriptions; `Value::take()` on Songbird discovery + provider hot paths (eliminates subtree clone); `TransportEndpoint` (tagged enum, zero `PathBuf` allocation for abstract/TCP/HTTP transports) |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
-| **Dep policy** | `deny.toml` (cargo-deny 0.19) bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys; YAML via `serde_yaml_ng` (pure Rust — `unsafe-libyaml` is a Rust translation, not C FFI); tokio-tungstenite 0.24 aligned with axum 0.7 |
+| **Dep policy** | `deny.toml` (cargo-deny 0.19) bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys, unsafe-libyaml; YAML via `serde-saphyr` (pure Rust YAML 1.2, replaced `serde_yaml_ng`/`unsafe-libyaml` in v3.15); tokio-tungstenite 0.24 aligned with axum 0.7 |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
@@ -281,7 +281,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 | **Hardcoded primal names** | `trust.rs`, `beardog.rs`, `primal_spawner.rs`, `orchestrator.rs`: string literals → `primal_names::*` constants |
 | **Doc-tests** | New doctests on `identifiers.rs`, `error/core.rs`, `paths.rs`, `config/mod.rs`, `transport.rs`, `atomic_client.rs`, `capability.rs` |
 | **Deployments doc** | `basement-hpc/README.md`: hardcoded home-directory paths → `$BIOMEOS_REPO` |
-| **Tests** | 7,209 passing (0 failures), 135 ignored, 0 Clippy warnings |
+| **Tests (at v2.77)** | 7,209 passing, 135 ignored — now 7,784+ / 0 ignored as of v3.15 |
 
 ### Deep Audit + Hardcoding Evolution — v2.68 (Mar 27, 2026)
 
@@ -294,7 +294,7 @@ Comprehensive audit against all wateringHole standards + systematic evolution ex
 | **Hardcoded `/tmp`** | 4 production sites centralized: `capability_discovery.rs` tier 4, `tower_orchestration.rs` pid/socket fallbacks, `node_handlers.rs` Neural API fallback, `subfederation/beardog.rs` Neural API fallback → all use `constants::runtime_paths::FALLBACK_RUNTIME_BASE` + `fallback_runtime_dir()` helper |
 | **Hardcoded IPs** | 6 production sites evolved: `strategy.rs` TCP fallback (2×), `stun_extension.rs`, `federation/config.rs`, `config/network.rs`, `system/network.rs` → all use `endpoints::DEFAULT_LOCALHOST` / `PRODUCTION_BIND_ADDRESS` constants |
 | **New constants** | `biomeos-types::constants::runtime_paths` module: `FALLBACK_RUNTIME_BASE`, `SOCKET_SUBDIR`, `BIOMEOS_SUBDIR`, `fallback_runtime_dir(family_id)` |
-| **License** | `LICENSE-CC-BY-SA` reconciled: `AGPL-3.0-or-later` → `AGPL-3.0-only` (matches Cargo.toml + SPDX headers) |
+| **License (at v2.68)** | `LICENSE-CC-BY-SA` reconciled; subsequently updated to `AGPL-3.0-or-later` in v2.88 per scyBorg standard |
 | **llvm-cov** | Stale profdata cleaned (529 spurious warnings from old `phase2/biomeOS/` paths) |
 | **Dep audit** | `blake3`+`cc` acceptable (perf-critical genome hashing), `tokio-process` 0.2 legacy identified in `biomeos-deploy`, `bincode` v1 RUSTSEC-2025-0141 documented (blocked by tarpc) |
 | **Mock audit** | Zero production mocks confirmed (274 hits all test-gated: `#[cfg(test)]`, `*_tests.rs`, `biomeos-test-utils`) |
