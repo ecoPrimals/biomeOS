@@ -33,6 +33,7 @@
 
 pub mod capability;
 pub(crate) mod capability_heuristics;
+mod capability_mcp;
 #[cfg(test)]
 mod capability_tests;
 pub mod graph;

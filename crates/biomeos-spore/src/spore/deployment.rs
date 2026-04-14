@@ -11,6 +11,8 @@
 use tokio::fs as async_fs;
 use tracing::info;
 
+use biomeos_types::primal_names;
+
 use super::core::Spore;
 use crate::error::SporeResult;
 
@@ -29,6 +31,8 @@ impl DeploymentOps for Spore {
     async fn create_deployment_script(&self) -> SporeResult<()> {
         info!("Creating deployment script");
 
+        let security = primal_names::BEARDOG;
+        let discovery = primal_names::SONGBIRD;
         let script = format!(
             r#"#!/usr/bin/env bash
 #
@@ -67,13 +71,13 @@ if [ ! -f "bin/tower" ]; then
     exit 1
 fi
 
-if [ ! -f "primals/beardog-server" ]; then
-    echo "❌ Error: beardog-server not found"
+if [ ! -f "primals/{security}-server" ]; then
+    echo "❌ Error: {security}-server not found"
     exit 1
 fi
 
-if [ ! -f "primals/songbird" ]; then
-    echo "❌ Error: songbird not found"
+if [ ! -f "primals/{discovery}" ]; then
+    echo "❌ Error: {discovery} not found"
     exit 1
 fi
 
@@ -115,7 +119,12 @@ else
     exec ./bin/tower run --config tower.toml
 fi
 "#,
-            self.config.label, self.config.node_id, self.config.label, self.config.node_id,
+            self.config.label,
+            self.config.node_id,
+            self.config.label,
+            self.config.node_id,
+            security = security,
+            discovery = discovery,
         );
 
         let script_path = self.root_path.join("deploy.sh");

@@ -1,6 +1,6 @@
 # biomeOS - Current Status
 
-**Updated**: April 14, 2026 (v3.12: composition forwarding via Tower Atomic relay, graph.list recursive scan — primalSpring benchScale validation; 7,000+ tests)
+**Updated**: April 12, 2026 (v3.13: deep debt evolution — hardcoding→capability-based, deprecated API removal, learn_from_event wired, topology live probes, capability.rs refactored; 7,000+ tests)
 **Version**: 3.10
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
 

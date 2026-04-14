@@ -126,8 +126,8 @@ fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
         println!("    tower/");
         println!("      tower (binary)");
         println!("    primals/");
-        println!("      beardog-server (binary)");
-        println!("      songbird (binary)");
+        println!("      <security-provider> (binary)");
+        println!("      <discovery-provider> (binary)");
         println!("    MANIFEST.toml (optional)");
         println!();
         return Ok(());

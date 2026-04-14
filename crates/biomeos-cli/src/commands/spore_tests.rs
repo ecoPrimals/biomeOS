@@ -330,7 +330,11 @@ BEARDOG_NODE_ID = "test-node"
 fn test_format_spore_create_summary_has_security_section() {
     let lines = format_spore_create_summary(&serde_json::json!({}));
     assert!(lines.iter().any(|l| l.contains("0600")));
-    assert!(lines.iter().any(|l| l.contains("BearDog")));
+    assert!(
+        lines
+            .iter()
+            .any(|l| l.contains("Security provider") || l.contains("cryptography"))
+    );
 }
 
 #[test]

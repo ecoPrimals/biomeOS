@@ -2,6 +2,42 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.13 (2026-04-12) — Deep Debt Evolution: Hardcoding→Capability-Based + Incomplete→Complete
+
+### Hardcoded primal names → capability-based constants
+- Spore `config.rs`, `deployment.rs`, `verify.rs` evolved from string literals ("beardog-server",
+  "songbird") to `primal_names::BEARDOG` / `primal_names::SONGBIRD` constants
+- CLI UX strings evolved from specific primal names to capability-role descriptions
+  ("discovery provider", "security provider", "deployment provider")
+- `cli/commands/verify.rs` binary list now shows `<security-provider>` / `<discovery-provider>`
+  instead of hardcoded names
+
+### Deprecated API removal
+- Removed `beardog_socket_path()` from `btsp_client.rs` — zero callers, previously deprecated
+  in favor of `security_provider_socket_path()`
+
+### Incomplete implementation → complete: `learn_from_event`
+- `AiGraphAdvisor::learn_from_event` evolved from no-op (built context then discarded it)
+  to functional implementation: logs events at debug level, forwards to Squirrel AI
+  provider via RPC when available
+
+### Topology: hardcoded "healthy" → live endpoint probe
+- `topology.rs` `discover_active_primals` now calls `NeuralRouter::check_endpoint_health`
+  to determine actual reachability instead of returning hardcoded `"healthy"` for every
+  discovered socket
+
+### File-size governance: capability.rs 804→744L
+- Extracted `mcp_tools_list` into `handlers/capability_mcp.rs` — smart split keeping the
+  method logically grouped with its MCP domain rather than arbitrary line splitting
+
+### Dependency audit confirmed clean
+- `tools/` workspace: `reqwest` with `default-features = false` confirmed ring-free
+  (no TLS/C/asm in dependency tree)
+- Main workspace: zero `unsafe`, `#![forbid(unsafe_code)]` on all crate roots, zero
+  `ring`/`openssl` deps, `blake3` pure-only feature confirmed
+
+123 test suites, 0 failures. clippy clean. fmt clean.
+
 ## v3.12 (2026-04-14) — Composition Forwarding Architecture + graph.list Recursive Scan
 
 ### Forwarding architecture: Tower Atomic relay preference

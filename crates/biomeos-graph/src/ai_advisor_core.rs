@@ -214,21 +214,46 @@ impl super::AiGraphAdvisor {
         }
     }
 
-    /// Learn from graph events
+    /// Learn from graph events by forwarding to Squirrel when available.
+    /// Events are logged at debug level regardless for observability.
     pub async fn learn_from_event(&self, event: &GraphEvent) -> Result<()> {
-        match event {
-            GraphEvent::NodeFailed { node_id, error, .. } => {
-                let context = HashMap::from([
+        let (event_type, context) = match event {
+            GraphEvent::NodeFailed { node_id, error, .. } => (
+                "node_failed",
+                HashMap::from([
                     ("node_id".to_string(), node_id.clone()),
                     ("error".to_string(), error.clone()),
-                ]);
+                ]),
+            ),
+            GraphEvent::DecisionMade { reasoning, .. } => (
+                "decision_made",
+                HashMap::from([("reasoning".to_string(), reasoning.join("; "))]),
+            ),
+            _ => return Ok(()),
+        };
 
-                let _ = context;
+        debug!(
+            event_type,
+            context = ?context,
+            squirrel_available = self.squirrel_available,
+            "AI advisor: learned from graph event"
+        );
+
+        if let Some(ref socket) = self.ai_socket_path {
+            if self.squirrel_available {
+                let params = serde_json::json!({
+                    "event_type": event_type,
+                    "context": context,
+                });
+                if let Err(e) = timeout(
+                    self.squirrel_timeout,
+                    call_unix_socket_rpc::<serde_json::Value>(socket, "ai.learn_event", params),
+                )
+                .await
+                {
+                    debug!("AI advisor: learn_event RPC did not complete: {e}");
+                }
             }
-            GraphEvent::DecisionMade { reasoning, .. } => {
-                let _ = reasoning;
-            }
-            _ => {}
         }
 
         Ok(())

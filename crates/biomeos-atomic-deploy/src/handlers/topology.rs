@@ -119,11 +119,19 @@ impl TopologyHandler {
                                 .await
                                 .unwrap_or_default();
 
+                            let endpoint =
+                                biomeos_core::TransportEndpoint::UnixSocket { path: path.clone() };
+                            let healthy =
+                                crate::neural_router::NeuralRouter::check_endpoint_health(
+                                    &endpoint,
+                                )
+                                .await;
+
                             primals.push(json!({
                                 "id": filename.trim_end_matches(".sock"),
                                 "primal_type": primal_name,
                                 "socket_path": socket_path,
-                                "health": "healthy", // Could ping socket for real health
+                                "health": if healthy { "healthy" } else { "unreachable" },
                                 "capabilities": capabilities,
                                 "resource_usage": null
                             }));

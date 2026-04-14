@@ -55,18 +55,18 @@ pub(crate) fn format_ai_response(intent: &AiIntent) -> Vec<String> {
             "🏥 Health Status Analysis".to_string(),
             "• Checking system health via Universal BiomeOS Manager...".to_string(),
             "• Aggregating health data from discovered primals...".to_string(),
-            "• Delegating detailed health checks to Songbird discovery...".to_string(),
+            "• Delegating detailed health checks to discovery provider...".to_string(),
         ],
         AiIntent::Discover => vec![
             "🔍 Primal Discovery".to_string(),
             "• Initiating capability-based discovery...".to_string(),
             "• Scanning for available primals in ecosystem...".to_string(),
-            "• Using Songbird service discovery for coordination...".to_string(),
+            "• Using service discovery for coordination...".to_string(),
         ],
         AiIntent::Deploy => vec![
             "🚀 Deployment Analysis".to_string(),
             "• Analyzing biome.yaml manifest...".to_string(),
-            "• Delegating manifest parsing to Toadstool...".to_string(),
+            "• Delegating manifest parsing to deployment provider...".to_string(),
             "• Coordinating deployment via Universal Adapter...".to_string(),
         ],
         AiIntent::Status | AiIntent::Unknown => vec![

@@ -8,6 +8,7 @@ use tokio::fs;
 use tracing::info;
 
 use crate::error::SporeResult;
+use biomeos_types::primal_names;
 
 /// Result of spore verification
 #[derive(Debug, Clone)]
@@ -241,9 +242,11 @@ impl SporeVerification {
     }
 
     async fn check_binaries(spore_path: &Path, result: &mut VerificationResult) {
+        let security_path = format!("primals/{}", primal_names::BEARDOG);
+        let discovery_path = format!("primals/{}", primal_names::SONGBIRD);
         let binaries = [
-            ("primals/beardog", "BearDog binary"),
-            ("primals/songbird", "Songbird binary"),
+            (security_path.as_str(), "Security provider binary"),
+            (discovery_path.as_str(), "Discovery provider binary"),
             ("bin/tower", "Tower binary"),
         ];
 
@@ -537,8 +540,8 @@ BEARDOG_FAMILY_SEED_FILE = "/biomeOS/secrets/.family.seed"
             .checks
             .iter()
             .filter(|c| {
-                c.name == "BearDog binary"
-                    || c.name == "Songbird binary"
+                c.name == "Security provider binary"
+                    || c.name == "Discovery provider binary"
                     || c.name == "Tower binary"
             })
             .collect();

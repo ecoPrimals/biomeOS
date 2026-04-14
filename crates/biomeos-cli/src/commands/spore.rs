@@ -119,7 +119,7 @@ pub(crate) fn format_spore_create_summary(spore_info: &Value) -> Vec<String> {
     lines.push(String::new());
     lines.push("🔐 Security:".to_string());
     lines.push("   • Seed file permissions: 0600 (owner only)".to_string());
-    lines.push("   • BearDog will handle all cryptography".to_string());
+    lines.push("   • Security provider will handle all cryptography".to_string());
     lines.push("   • No secrets exposed in configuration".to_string());
 
     lines
@@ -182,7 +182,7 @@ pub async fn handle_spore_clone(from: PathBuf, to: PathBuf, node_id: String) -> 
     println!("   Location: {}", sibling.root_path().display());
     println!("\n🧬 Genetic Lineage:");
     println!("   • Same family seed (siblings!)");
-    println!("   • BearDog will recognize as family");
+    println!("   • Security provider will recognize as family");
     println!("   • Cryptographic trust enabled");
 
     Ok(())
@@ -240,8 +240,8 @@ pub async fn handle_spore_info(mount: PathBuf) -> Result<()> {
 
     println!("\n🏗️  Architecture:");
     println!("   • biomeOS: Orchestration layer (this spore)");
-    println!("   • BearDog: Security layer (handles crypto)");
-    println!("   • Songbird: Discovery layer (UDP multicast)");
+    println!("   • Security layer: handles crypto (discovered at runtime)");
+    println!("   • Discovery layer: UDP multicast (discovered at runtime)");
 
     Ok(())
 }

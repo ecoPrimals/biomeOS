@@ -11,6 +11,8 @@
 use tokio::fs as async_fs;
 use tracing::{debug, info};
 
+use biomeos_types::primal_names;
+
 use super::core::Spore;
 use crate::error::SporeResult;
 
@@ -42,9 +44,11 @@ impl ConfigOps for Spore {
 
     /// Generate tower.toml content
     fn generate_tower_toml(&self) -> String {
+        let security = primal_names::BEARDOG;
+        let discovery = primal_names::SONGBIRD;
         format!(
             r#"# BiomeOS Tower Configuration v0.4.0
-# Generated spore: {}
+# Generated spore: {label}
 # Port-Free Architecture - Unix Sockets + UDP Multicast
 # Secure Genetic Lineage - File-based seed (not exposed in config)
 
@@ -52,22 +56,21 @@ impl ConfigOps for Spore {
 family = "test_family"
 concurrent_startup = true
 
-# BearDog v0.15.0 - Security Primal (Port-Free!)
+# Security Primal (Port-Free!)
 [[primals]]
-binary = "./primals/beardog-server"
+binary = "./primals/{security}-server"
 provides = ["Security", "Encryption", "Trust"]
 requires = []
 
 [primals.env]
-# ✅ SECURE: File-based seed (BearDog v0.15.0 reads the file)
 BEARDOG_FAMILY_SEED_FILE = "./.family.seed"
 BEARDOG_FAMILY_ID = "test_family"
 BEARDOG_NODE_ID = "{node_id}"
 RUST_LOG = "info"
 
-# Songbird v3.19.0 - Discovery Orchestrator (UDP Multicast + BTSP)
+# Discovery Orchestrator (UDP Multicast + BTSP)
 [[primals]]
-binary = "./primals/songbird"
+binary = "./primals/{discovery}"
 provides = ["Discovery"]
 requires = ["Security"]
 
@@ -75,15 +78,15 @@ requires = ["Security"]
 SONGBIRD_FAMILY_ID = "test_family"
 SONGBIRD_NODE_ID = "{node_id}"
 SONGBIRD_TAGS = "btsp_enabled"
-# Protocol-aware endpoint URLs:
-#   - "unix://..." = Auto-detect (server determines protocol)
-SECURITY_ENDPOINT = "unix:///tmp/beardog-{family_id}-{node_id}.sock"
-SONGBIRD_SECURITY_PROVIDER = "unix:///tmp/beardog-{family_id}-{node_id}.sock"
+SECURITY_ENDPOINT = "unix:///tmp/{security}-{family_id}-{node_id}.sock"
+SONGBIRD_SECURITY_PROVIDER = "unix:///tmp/{security}-{family_id}-{node_id}.sock"
 RUST_LOG = "info"
 "#,
-            self.config.label,
+            label = self.config.label,
             node_id = self.config.node_id,
             family_id = self.config.family_id,
+            security = security,
+            discovery = discovery,
         )
     }
 }

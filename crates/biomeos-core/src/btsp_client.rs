@@ -203,13 +203,6 @@ pub fn security_provider_socket_path() -> Option<std::path::PathBuf> {
     None
 }
 
-/// Legacy alias — prefer [`security_provider_socket_path`].
-#[must_use]
-#[deprecated(note = "use security_provider_socket_path() — capability-based resolution")]
-pub fn beardog_socket_path() -> Option<std::path::PathBuf> {
-    security_provider_socket_path()
-}
-
 fn socket_dir() -> Option<std::path::PathBuf> {
     if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
         return Some(std::path::PathBuf::from(dir));
