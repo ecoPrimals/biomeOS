@@ -87,6 +87,7 @@ pub async fn execute_bootstrap_sequence(
     graphs_dir: &std::path::Path,
     family_id: &str,
     nucleation: &Arc<RwLock<SocketNucleation>>,
+    tcp_only: bool,
 ) -> Result<()> {
     // Load tower_atomic_bootstrap.toml
     let bootstrap_graph_path = graphs_dir.join("tower_atomic_bootstrap.toml");
@@ -104,15 +105,29 @@ pub async fn execute_bootstrap_sequence(
     );
     let graph = crate::neural_graph::Graph::from_toml_file(&bootstrap_graph_path)?;
 
-    // Prepare environment
+    // Prepare environment — inherit key vars from the process environment so
+    // the graph executor (and primals it spawns) can find binaries, runtime dirs,
+    // and genetic lineage material on any platform.
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), family_id.to_string());
     env.insert("BIOMEOS_FAMILY_ID".to_string(), family_id.to_string());
     env.insert("BIOMEOS_MODE".to_string(), "bootstrap".to_string());
 
-    // Create executor with nucleation
+    for key in [
+        "BIOMEOS_PLASMID_BIN_DIR",
+        "ECOPRIMALS_PLASMID_BIN",
+        "XDG_RUNTIME_DIR",
+        "FAMILY_SEED",
+        "BIOMEOS_SOCKET_DIR",
+    ] {
+        if let Ok(val) = std::env::var(key) {
+            env.insert(key.to_string(), val);
+        }
+    }
+
+    // Create executor with nucleation (and TCP-only if parent is in TCP mode)
     info!("🧬 Creating graph executor with socket nucleation...");
-    let executor = GraphExecutor::with_nucleation(graph, env, nucleation.clone());
+    let executor = GraphExecutor::with_nucleation(graph, env, nucleation.clone(), tcp_only);
 
     // Execute graph
     info!("🚀 Executing bootstrap graph...");
@@ -362,6 +377,7 @@ mod tests {
             &Arc::new(RwLock::new(
                 SocketNucleation::new(SocketStrategy::default()),
             )),
+            false,
         )
         .await;
 
@@ -389,6 +405,7 @@ mod tests {
             &Arc::new(RwLock::new(
                 SocketNucleation::new(SocketStrategy::default()),
             )),
+            false,
         )
         .await;
 

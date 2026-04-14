@@ -155,7 +155,8 @@ impl LifecycleManager {
             .unwrap_or("server");
 
         // Spawn primal
-        let child = primal_spawner::spawn_primal_process(name, mode, &context, node).await?;
+        let (child, _tcp_port) =
+            primal_spawner::spawn_primal_process(name, mode, &context, node).await?;
 
         let pid = child.id();
 

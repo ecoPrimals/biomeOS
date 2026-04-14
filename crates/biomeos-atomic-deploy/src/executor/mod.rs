@@ -27,5 +27,7 @@ pub mod types;
 // Re-export commonly used types
 pub use context::{ExecutionContext, NodeStatus};
 pub use node_handlers::substitute_env;
-pub use primal_spawner::{discover_primal_binary, spawn_primal_process, wait_for_socket};
+pub use primal_spawner::{
+    discover_primal_binary, spawn_primal_process, wait_for_socket, wait_for_tcp_port,
+};
 pub use types::{ExecutionReport, PhaseResult, PhaseResultSummary};

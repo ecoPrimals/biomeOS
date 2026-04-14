@@ -224,7 +224,7 @@ async fn test_execution_context_with_nucleation() {
     let env = HashMap::new();
     let nucleation = Arc::new(tokio::sync::RwLock::new(SocketNucleation::default()));
 
-    let executor = GraphExecutor::with_nucleation(graph, env, nucleation);
+    let executor = GraphExecutor::with_nucleation(graph, env, nucleation, false);
     assert_eq!(executor.max_parallelism, 3);
 }
 

@@ -118,7 +118,7 @@ pub async fn primal_start_capability(
         primal_name, mode, socket_path
     );
 
-    // Pass environment variables from graph TOML
+    // Pass environment variables from graph TOML (with ${VAR} substitution)
     if let Some(ref operation) = node.operation {
         if let Some(ref env_map) = operation.environment {
             info!(
@@ -126,12 +126,20 @@ pub async fn primal_start_capability(
                 env_map.len()
             );
             for (key, value) in env_map {
+                let expanded =
+                    crate::executor::substitute_env(value, &std::collections::HashMap::new());
+                let expanded =
+                    crate::executor::primal_spawner::substitute_from_process_env(&expanded);
                 info!(
                     "   Setting env: {}={}",
                     key,
-                    if key.contains("KEY") { "***" } else { value }
+                    if key.contains("KEY") || key.contains("SEED") {
+                        "***"
+                    } else {
+                        &expanded
+                    }
                 );
-                cmd.env(key, value);
+                cmd.env(key, &expanded);
             }
         }
     }

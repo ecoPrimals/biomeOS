@@ -54,6 +54,11 @@ pub struct ExecutionContext {
     /// Per-primal circuit breakers for resilient RPC dispatch.
     /// Created lazily on first access per primal target.
     pub circuit_breakers: Arc<Mutex<HashMap<String, Arc<CircuitBreaker>>>>,
+    /// When true, primals should bind TCP instead of UDS (Android/Windows/cross-gate).
+    pub tcp_only: bool,
+    /// Next TCP port to auto-assign to child primals in TCP-only mode.
+    /// Starts at a base (e.g. 9900) and increments per primal.
+    pub tcp_port_counter: Arc<std::sync::atomic::AtomicU16>,
 }
 
 impl std::fmt::Debug for ExecutionContext {
@@ -63,6 +68,7 @@ impl std::fmt::Debug for ExecutionContext {
             .field("checkpoint_dir", &self.checkpoint_dir)
             .field("family_id", &self.family_id)
             .field("nucleation", &self.nucleation.is_some())
+            .field("tcp_only", &self.tcp_only)
             .finish_non_exhaustive()
     }
 }
@@ -102,6 +108,8 @@ impl ExecutionContext {
             nucleation: None,
             family_id,
             circuit_breakers: Arc::new(Mutex::new(HashMap::new())),
+            tcp_only: false,
+            tcp_port_counter: Arc::new(std::sync::atomic::AtomicU16::new(9900)),
         }
     }
 
@@ -117,6 +125,18 @@ impl ExecutionContext {
                 Arc::new(CircuitBreaker::new(5, Duration::from_secs(30)).with_success_threshold(2))
             })
             .clone()
+    }
+
+    /// Enable TCP-only transport for child primals (Android/Windows/cross-gate).
+    pub fn with_tcp_only(mut self) -> Self {
+        self.tcp_only = true;
+        self
+    }
+
+    /// Allocate the next auto-assigned TCP port for a child primal.
+    pub fn next_tcp_port(&self) -> u16 {
+        self.tcp_port_counter
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Set socket nucleation for deterministic socket path assignment

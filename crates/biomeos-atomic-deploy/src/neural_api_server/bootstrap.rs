@@ -71,6 +71,7 @@ impl NeuralApiServer {
             &self.graphs_dir,
             &self.family_id,
             &self.nucleation,
+            self.tcp_only,
         )
         .await
         {

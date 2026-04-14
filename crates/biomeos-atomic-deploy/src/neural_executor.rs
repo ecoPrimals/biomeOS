@@ -69,11 +69,16 @@ impl GraphExecutor {
         graph: Graph,
         env: HashMap<String, String>,
         nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>,
+        tcp_only: bool,
     ) -> Self {
         let gate_registry = Arc::new(GateRegistry::from_graph_env(&env));
+        let mut context = ExecutionContext::new(env).with_nucleation(nucleation);
+        if tcp_only {
+            context = context.with_tcp_only();
+        }
         Self {
             graph,
-            context: ExecutionContext::new(env).with_nucleation(nucleation),
+            context,
             max_parallelism: 3,
             metrics: None,
             gate_registry,

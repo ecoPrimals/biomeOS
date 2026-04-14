@@ -21,6 +21,23 @@ use tracing::{debug, info, warn};
 use super::context::ExecutionContext;
 use crate::neural_graph::GraphNode;
 
+/// Resolve any remaining `${VAR}` patterns against the process environment.
+/// Called after `substitute_env` (which uses the ExecutionContext map) so that
+/// graph TOML values like `${XDG_RUNTIME_DIR}` resolve even when the context
+/// map doesn't carry them explicitly.
+pub(crate) fn substitute_from_process_env(s: &str) -> String {
+    let mut result = s.to_string();
+    while let Some(start) = result.find("${") {
+        let Some(end) = result[start..].find('}') else {
+            break;
+        };
+        let var_name = &result[start + 2..start + end];
+        let replacement = std::env::var(var_name).unwrap_or_default();
+        result.replace_range(start..=start + end, &replacement);
+    }
+    result
+}
+
 /// Discover binary path for a primal using capability-based discovery
 ///
 /// **TRUE PRIMAL Principle**: No hardcoded paths! Discovery is:
@@ -166,13 +183,13 @@ async fn discover_primal_binary_impl(
 ///
 /// # Returns
 ///
-/// Spawned child process with stdout/stderr captured
+/// `(Child, Option<u16>)` — spawned process + TCP port if launched in TCP-only mode.
 pub async fn spawn_primal_process(
     primal_name: &str,
     mode: &str,
     context: &ExecutionContext,
     node: &GraphNode,
-) -> Result<Child> {
+) -> Result<(Child, Option<u16>)> {
     info!("   Spawning primal: {} (mode: {})", primal_name, mode);
 
     // 1. Discover binary path
@@ -192,10 +209,27 @@ pub async fn spawn_primal_process(
     let mut cmd = Command::new(&binary_path);
     cmd.arg(mode);
 
-    // Add primal-specific socket configuration
+    // TCP-only cascade: when parent biomeOS runs --tcp-only, child primals
+    // bind TCP instead of UDS (Android/Windows/cross-gate deployment).
+    let tcp_port = if context.tcp_only {
+        let port = context.next_tcp_port();
+        cmd.arg("--port").arg(port.to_string());
+        cmd.env("PRIMAL_TRANSPORT", "tcp");
+        cmd.env("PRIMAL_TCP_PORT", port.to_string());
+        info!(
+            "   📡 TCP-only cascade: {} will bind TCP :{port}",
+            primal_name
+        );
+        Some(port)
+    } else {
+        None
+    };
+
+    // Add primal-specific socket configuration (UDS paths — still useful for
+    // env vars even in TCP mode, and required for UDS mode).
     configure_primal_sockets(&mut cmd, primal_name, &socket_path, family_id, context).await;
 
-    // 5. Pass environment variables from graph TOML
+    // 5. Pass environment variables from graph TOML (with ${VAR} substitution)
     if let Some(ref operation) = node.operation {
         if let Some(ref env_map) = operation.environment {
             info!(
@@ -203,12 +237,18 @@ pub async fn spawn_primal_process(
                 env_map.len()
             );
             for (key, value) in env_map {
+                let expanded = super::substitute_env(value, context.env());
+                let expanded = substitute_from_process_env(&expanded);
                 info!(
                     "   Setting env: {}={}",
                     key,
-                    if key.contains("KEY") { "***" } else { value }
+                    if key.contains("KEY") || key.contains("SEED") {
+                        "***"
+                    } else {
+                        &expanded
+                    }
                 );
-                cmd.env(key, value);
+                cmd.env(key, &expanded);
             }
         }
     }
@@ -248,7 +288,7 @@ pub async fn spawn_primal_process(
     let pid = child.id().unwrap_or(0);
     info!("   Process started: PID {}", pid);
 
-    Ok(child)
+    Ok((child, tcp_port))
 }
 
 /// Data-driven primal launch profile (loaded from `config/primal_launch_profiles.toml`)
@@ -403,6 +443,25 @@ pub async fn wait_for_socket_with_poll_interval(
 
     anyhow::bail!(
         "Socket did not become available: {socket_path} (timeout after {timeout_attempts} attempts)"
+    )
+}
+
+/// Wait for a TCP port to become connectable.
+pub async fn wait_for_tcp_port(port: u16, timeout_attempts: u32) -> Result<()> {
+    use tokio::net::TcpStream;
+
+    debug!("   Waiting for TCP port: {port}");
+
+    for attempt in 1..=timeout_attempts {
+        if TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
+            info!("   ✅ TCP port available: :{port} (after {attempt} attempts)");
+            return Ok(());
+        }
+        tokio::time::sleep(DEFAULT_SOCKET_POLL_INTERVAL).await;
+    }
+
+    anyhow::bail!(
+        "TCP port :{port} did not become available (timeout after {timeout_attempts} attempts)"
     )
 }
 

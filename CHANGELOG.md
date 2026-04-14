@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.14 (2026-04-14) — TCP-Only Cross-Architecture Composition Fixes
+
+Addresses 4 gaps identified by primalSpring v0.9.14 exp096 (Pixel cross-arch bonding).
+
+### Gap 1: TCP Endpoint Propagation
+- `discover_and_register_primals` now branches on `tcp_only`: probes TCP ports 9900+ instead of scanning for `.sock` files
+- Added `probe_tcp_capabilities` — JSON-RPC `capabilities.list` over TCP for endpoint discovery
+- `NeuralRouter` registers `TransportEndpoint::TcpSocket` for discovered TCP primals
+- `capability.call` routing now uses registered TCP transport on Android/Windows
+
+### Gap 2: Graph Environment Variable Substitution
+- Graph TOML `operation.environment` values now undergo `${VAR}` expansion before `Command::env()`
+- Two-pass resolution: `substitute_env` (ExecutionContext map) then `substitute_from_process_env` (process env fallback)
+- Applied in both `primal_spawner` and `capability_handlers/primal_start`
+- Primals now receive real values for `${FAMILY_ID}`, `${XDG_RUNTIME_DIR}`, etc.
+
+### Gap 3: Bootstrap Environment Inheritance
+- `execute_bootstrap_sequence` now propagates `BIOMEOS_PLASMID_BIN_DIR`, `ECOPRIMALS_PLASMID_BIN`, `XDG_RUNTIME_DIR`, `FAMILY_SEED`, `BIOMEOS_SOCKET_DIR` from process env into `ExecutionContext`
+- Graph executor can now find primal binaries on non-standard platforms (Android, cross-gate)
+
+### Gap 4: --tcp-only Cascade to Child Primals
+- `ExecutionContext` gained `tcp_only: bool` and `tcp_port_counter: AtomicU16` fields
+- `GraphExecutor::with_nucleation` accepts `tcp_only` and propagates to context
+- When `tcp_only`, `spawn_primal_process` injects `--port <auto>` and `PRIMAL_TRANSPORT=tcp` into child process
+- Added `wait_for_tcp_port` for TCP readiness checks (replaces `wait_for_socket` in TCP mode)
+- `primal_launch` returns `tcp_port` in its output JSON for downstream registration
+
 ## v3.13 (2026-04-12) — Deep Debt Evolution: Hardcoding→Capability-Based + Incomplete→Complete
 
 ### Hardcoded primal names → capability-based constants

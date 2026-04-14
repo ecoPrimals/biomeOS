@@ -114,11 +114,16 @@ pub async fn primal_launch(node: &GraphNode, context: &ExecutionContext) -> Resu
     info!("🚀 Launching primal: {} at {}", primal_name, socket_path);
 
     // Spawn the process using the spawner (handles discovery internally)
-    let child =
+    let (child, tcp_port) =
         super::primal_spawner::spawn_primal_process(primal_name, mode, context, node).await?;
 
-    // Wait for socket to be available (300 attempts = 30 seconds at 100ms each)
-    super::primal_spawner::wait_for_socket(&socket_path, 300).await?;
+    if let Some(port) = tcp_port {
+        // TCP-only: wait for TCP port readiness instead of UDS socket
+        super::primal_spawner::wait_for_tcp_port(port, 300).await?;
+    } else {
+        // UDS: wait for socket file to appear
+        super::primal_spawner::wait_for_socket(&socket_path, 300).await?;
+    }
 
     // Get the binary path for the response
     let binary_path = super::primal_spawner::discover_primal_binary(primal_name, context).await?;
@@ -132,6 +137,7 @@ pub async fn primal_launch(node: &GraphNode, context: &ExecutionContext) -> Resu
     Ok(json!({
         "primal": primal_name,
         "socket": socket_path,
+        "tcp_port": tcp_port,
         "binary": binary_path.display().to_string(),
         "status": "running"
     }))
