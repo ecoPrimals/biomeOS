@@ -133,14 +133,45 @@ impl GraphExecutor {
 
             match self.execute_phase(phase_num, phase_nodes).await {
                 Ok(phase_result) => {
+                    // Collect per-node success/failure details
+                    for node_id in phase_nodes {
+                        let found_in_errors = phase_result
+                            .errors
+                            .iter()
+                            .any(|(eid, _)| eid == node_id);
+                        if found_in_errors {
+                            if let Some((_, msg)) = phase_result.errors.iter().find(|(eid, _)| eid == node_id) {
+                                report.failed_nodes.push((node_id.clone(), msg.clone()));
+                            }
+                        } else {
+                            report.completed_nodes.push(node_id.clone());
+                        }
+                    }
+
+                    let phase_failed = phase_result.failed > 0;
                     report.add_phase_result(&phase_result);
+
+                    if phase_failed {
+                        report.success = false;
+                        report.error = Some(format!(
+                            "Phase {} failed: {} nodes failed",
+                            phase_num + 1,
+                            phase_result.failed
+                        ));
+
+                        if self.graph.config.rollback_on_failure {
+                            warn!("🔄 Rolling back deployment...");
+                            self.rollback().await?;
+                        }
+
+                        break;
+                    }
                 }
                 Err(e) => {
                     error!("❌ Phase {} failed: {}", phase_num + 1, e);
                     report.success = false;
                     report.error = Some(e.to_string());
 
-                    // Rollback if enabled
                     if self.graph.config.rollback_on_failure {
                         warn!("🔄 Rolling back deployment...");
                         self.rollback().await?;
@@ -281,7 +312,6 @@ impl GraphExecutor {
             for (node_id, error_msg) in &phase_result.errors {
                 error!("   • {}: {}", node_id, error_msg);
             }
-            anyhow::bail!("Phase failed: {} nodes failed", phase_result.failed);
         }
 
         Ok(phase_result)

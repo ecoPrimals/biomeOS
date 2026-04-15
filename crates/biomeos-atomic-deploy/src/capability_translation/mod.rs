@@ -260,13 +260,28 @@ impl CapabilityTranslationRegistry {
     where
         F: Fn(&str, &str) -> String,
     {
+        self.load_from_config_for_family(config_path, socket_resolver, None)
+    }
+
+    /// Load translations from a TOML configuration file, using an explicit family_id.
+    pub fn load_from_config_for_family<F>(
+        &mut self,
+        config_path: impl AsRef<std::path::Path>,
+        socket_resolver: F,
+        family_id_override: Option<&str>,
+    ) -> Result<usize>
+    where
+        F: Fn(&str, &str) -> String,
+    {
         let config_content = std::fs::read_to_string(config_path.as_ref())
             .map_err(|e| anyhow!("Failed to read capability config: {e}"))?;
 
         let config: toml::Value = toml::from_str(&config_content)
             .map_err(|e| anyhow!("Failed to parse capability config: {e}"))?;
 
-        let family_id = biomeos_core::family_discovery::get_family_id();
+        let family_id = family_id_override
+            .map(String::from)
+            .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
         let mut count = 0;
 
         if let Some(translations) = config.get("translations").and_then(|t| t.as_table()) {
@@ -308,6 +323,11 @@ impl CapabilityTranslationRegistry {
     /// Load default translations with automatic socket resolution
     pub fn load_defaults(&mut self) -> usize {
         defaults::load_defaults_into(self)
+    }
+
+    /// Load defaults using an explicit family_id (avoids env/file discovery).
+    pub fn load_defaults_for_family(&mut self, family_id: &str) -> usize {
+        defaults::load_defaults_into_for_family(self, family_id)
     }
 
     /// [`load_defaults`](Self::load_defaults) with per-call environment overrides (for tests).

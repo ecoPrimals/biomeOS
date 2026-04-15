@@ -26,6 +26,12 @@ pub struct ExecutionReport {
     /// Total nodes executed (computed from `phase_results`)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nodes_executed: Option<usize>,
+    /// Node IDs that completed successfully
+    #[serde(default)]
+    pub completed_nodes: Vec<String>,
+    /// Node IDs that failed, with error messages
+    #[serde(default)]
+    pub failed_nodes: Vec<(String, String)>,
     /// Error message if failed
     pub error: Option<String>,
 }
@@ -64,6 +70,8 @@ impl ExecutionReport {
             phase_results: Vec::new(),
             phases_executed: None,
             nodes_executed: None,
+            completed_nodes: Vec::new(),
+            failed_nodes: Vec::new(),
             error: None,
         }
     }

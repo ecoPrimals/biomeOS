@@ -141,6 +141,12 @@ impl GraphHandler {
                         } else {
                             "failed".to_string()
                         };
+                        exec_status.completed_nodes = report.completed_nodes;
+                        exec_status.failed_nodes = report
+                            .failed_nodes
+                            .iter()
+                            .map(|(id, _)| id.clone())
+                            .collect();
                         exec_status.duration_ms = start.elapsed().as_millis() as u64;
                         exec_status.error = report.error;
                     }

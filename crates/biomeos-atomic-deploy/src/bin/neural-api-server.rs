@@ -38,7 +38,6 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|| "graphs".to_string());
 
     // Family ID: CLI arg > env var > .family.seed file > "default"
-    // NOTE: Removed "nat0" hardcoding - use proper Dark Forest family discovery
     let family_id = std::env::args()
         .position(|arg| arg == "--family-id")
         .and_then(|i| std::env::args().nth(i + 1))

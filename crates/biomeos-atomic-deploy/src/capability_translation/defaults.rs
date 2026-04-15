@@ -44,6 +44,14 @@ pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize
     load_defaults_into_with(registry, &HashMap::new())
 }
 
+/// Load defaults using an explicit family_id (avoids env/file discovery).
+pub fn load_defaults_into_for_family(
+    registry: &mut CapabilityTranslationRegistry,
+    family_id: &str,
+) -> usize {
+    load_defaults_into_for_family_with(registry, family_id, &HashMap::new())
+}
+
 /// Same as [`load_defaults_into`], but `env_overrides` supplies synthetic values for tests.
 ///
 /// For each key, `Some(value)` sets the variable; `None` forces unset (no process env fallback).
@@ -53,6 +61,23 @@ pub fn load_defaults_into_with(
     env_overrides: &HashMap<&str, Option<&str>>,
 ) -> usize {
     let family_id = biomeos_core::family_discovery::get_family_id();
+    load_defaults_core(registry, &family_id, env_overrides)
+}
+
+/// Core implementation: load defaults using an explicit family_id and env overrides.
+pub fn load_defaults_into_for_family_with(
+    registry: &mut CapabilityTranslationRegistry,
+    family_id: &str,
+    env_overrides: &HashMap<&str, Option<&str>>,
+) -> usize {
+    load_defaults_core(registry, family_id, env_overrides)
+}
+
+fn load_defaults_core(
+    registry: &mut CapabilityTranslationRegistry,
+    family_id: &str,
+    env_overrides: &HashMap<&str, Option<&str>>,
+) -> usize {
     let mut count = 0;
 
     // Provider resolution is env-first.

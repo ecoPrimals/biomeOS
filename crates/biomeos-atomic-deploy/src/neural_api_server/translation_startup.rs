@@ -19,10 +19,10 @@ impl NeuralApiServer {
         // 1. Load hardcoded default translations (always available)
         {
             let mut registry = self.translation_registry.write().await;
-            let default_count = registry.load_defaults();
+            let default_count = registry.load_defaults_for_family(&self.family_id);
             info!(
-                "📚 Loaded {} default capability translations",
-                default_count
+                "📚 Loaded {} default capability translations (family: {})",
+                default_count, self.family_id
             );
         }
 
@@ -31,9 +31,13 @@ impl NeuralApiServer {
             let config_path = self.graphs_dir.join("../config/capability_registry.toml");
             if config_path.exists() {
                 let mut registry = self.translation_registry.write().await;
-                match registry.load_from_config(&config_path, |provider, family_id| {
-                    crate::capability_translation::resolve_primal_socket(provider, family_id)
-                }) {
+                match registry.load_from_config_for_family(
+                    &config_path,
+                    |provider, family_id| {
+                        crate::capability_translation::resolve_primal_socket(provider, family_id)
+                    },
+                    Some(&self.family_id),
+                ) {
                     Ok(count) => info!(
                         "📚 Loaded {} translations from capability_registry.toml",
                         count
@@ -46,7 +50,7 @@ impl NeuralApiServer {
                 if let Ok(config_content) = std::fs::read_to_string(&config_path) {
                     if let Ok(config) = config_content.parse::<toml::Value>() {
                         if let Some(domains) = config.get("domains").and_then(|d| d.as_table()) {
-                            let family_id = biomeos_core::family_discovery::get_family_id();
+                            let family_id = self.family_id.clone();
                             for (domain_name, domain_cfg) in domains {
                                 let provider = domain_cfg
                                     .get("provider")
