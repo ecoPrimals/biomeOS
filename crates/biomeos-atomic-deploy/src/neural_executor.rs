@@ -37,7 +37,7 @@ use crate::neural_graph::{Graph, GraphNode};
 // Re-export from executor module (single source of truth)
 // This eliminates duplicate type definitions and ensures consistency
 pub use crate::executor::context::{ExecutionContext, NodeStatus};
-pub use crate::executor::types::{ExecutionReport, PhaseResult};
+pub use crate::executor::types::{ExecutionReport, GeneticsTierValidationReport, PhaseResult};
 
 /// Graph executor
 pub struct GraphExecutor {
@@ -117,6 +117,16 @@ impl GraphExecutor {
         let start_time = std::time::Instant::now();
         let mut report = ExecutionReport::new(self.graph.id.clone());
 
+        if let Some(tier) = self.graph.genetics_tier {
+            let validation = GeneticsTierValidationReport::pending_bear_dog_probe(tier);
+            warn!(
+                graph_id = %self.graph.id,
+                required_tier = %validation.required_tier,
+                "Genetics tier preflight: family infrastructure not verified against declared tier (BearDog genetics.tier_available pending)"
+            );
+            report.genetics_tier_validation = Some(validation);
+        }
+
         // Topological sort to get execution phases
         let phases = self.topological_sort()?;
 
@@ -135,12 +145,12 @@ impl GraphExecutor {
                 Ok(phase_result) => {
                     // Collect per-node success/failure details
                     for node_id in phase_nodes {
-                        let found_in_errors = phase_result
-                            .errors
-                            .iter()
-                            .any(|(eid, _)| eid == node_id);
+                        let found_in_errors =
+                            phase_result.errors.iter().any(|(eid, _)| eid == node_id);
                         if found_in_errors {
-                            if let Some((_, msg)) = phase_result.errors.iter().find(|(eid, _)| eid == node_id) {
+                            if let Some((_, msg)) =
+                                phase_result.errors.iter().find(|(eid, _)| eid == node_id)
+                            {
                                 report.failed_nodes.push((node_id.clone(), msg.clone()));
                             }
                         } else {

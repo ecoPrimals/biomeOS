@@ -70,8 +70,9 @@ pub use continuous::{ContinuousExecutor, SessionState, TickClock};
 pub use error::{GraphError, Result};
 pub use events::{GraphEvent, GraphEventBroadcaster};
 pub use graph::{
-    CoordinationPattern, DeploymentGraph, EdgeType, GraphEdge, GraphId, GraphMetadata,
-    NodeConstraints, Operation, PrimalGraph, PrimalNode, PrimalSelector, RetryPolicy, TickConfig,
+    AtomicComposition, CoordinationPattern, DeploymentGraph, EdgeType, GeneticsTier, GraphEdge,
+    GraphId, GraphMetadata, NodeConstraints, Operation, PrimalGraph, PrimalNode, PrimalSelector,
+    RetryPolicy, TickConfig,
 };
 pub use loader::GraphLoader;
 pub use modification::{GraphModification, GraphModificationHandler, ModificationResult};
@@ -79,7 +80,7 @@ pub use node::{GraphNode, NodeConfig, NodeParams};
 pub use pathway_learner::{
     GraphAnalysis, OptimizationSuggestion, OptimizationType, PathwayLearner,
 };
-pub use pipeline::{NodeThroughput, PipelineExecutor, PipelineResult, StreamItem};
+pub use pipeline::{NodeThroughput, PipelineExecutor, PipelineNodeId, PipelineResult, StreamItem};
 pub use sensor::{SensorEvent, SensorEventBus, SensorSource};
 pub use validation::GraphValidator;
 

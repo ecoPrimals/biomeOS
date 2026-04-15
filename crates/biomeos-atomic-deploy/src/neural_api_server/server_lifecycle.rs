@@ -50,11 +50,15 @@ impl NeuralApiServer {
         };
 
         let tcp_listener = if let Some(port) = self.tcp_port {
-            let addr: std::net::SocketAddr = ([0, 0, 0, 0], port).into();
+            let addr = biomeos_types::constants::endpoints::production_tcp_bind_addr(port);
             let listener = tokio::net::TcpListener::bind(addr)
                 .await
                 .context(format!("Failed to bind TCP listener on port {port}"))?;
-            info!("📡 Neural API TCP listener bound: 0.0.0.0:{}", port);
+            info!(
+                "📡 Neural API TCP listener bound: {}:{}",
+                biomeos_types::constants::endpoints::PRODUCTION_BIND_ADDRESS,
+                port
+            );
             Some(listener)
         } else {
             None

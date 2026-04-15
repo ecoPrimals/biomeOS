@@ -4,6 +4,7 @@
 //! Graph data structures for Neural API
 
 use anyhow::Context;
+use biomeos_graph::GeneticsTier;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -28,6 +29,9 @@ pub struct Graph {
     /// Used for gate endpoint definitions and variable substitution.
     #[serde(default)]
     pub env: HashMap<String, String>,
+    /// Declared in `[graph.metadata]` — required genetics tier for this deployment graph.
+    #[serde(default)]
+    pub genetics_tier: Option<GeneticsTier>,
 }
 
 impl Graph {
@@ -174,6 +178,18 @@ impl Graph {
             })
             .unwrap_or_default();
 
+        let genetics_tier = graph_table
+            .get("metadata")
+            .and_then(|m| m.get("genetics_tier"))
+            .map(|v| {
+                let s = v
+                    .as_str()
+                    .context("graph.metadata.genetics_tier must be a string")?;
+                s.parse::<GeneticsTier>()
+                    .map_err(|e| anyhow::anyhow!("Invalid graph.metadata.genetics_tier: {e}"))
+            })
+            .transpose()?;
+
         Ok(Self {
             id,
             version,
@@ -182,6 +198,7 @@ impl Graph {
             config,
             coordination,
             env,
+            genetics_tier,
         })
     }
 

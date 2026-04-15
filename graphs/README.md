@@ -129,4 +129,4 @@ Deploy the trio: `graph.execute provenance_trio_deploy` (requires Tower running)
 
 ---
 
-**Tests**: 7,784 passing | **Core graphs**: 4 | **Domain graphs**: 36 | **Pipeline graphs**: 2
+**Tests**: 7,811 passing | **Core graphs**: 4 | **Domain graphs**: 36 | **Pipeline graphs**: 2

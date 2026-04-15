@@ -567,5 +567,5 @@ impl ActionHandler {
 // ============================================================================
 
 #[cfg(test)]
-#[path = "action_handler_tests.rs"]
+#[path = "action_handler_tests/mod.rs"]
 mod tests;

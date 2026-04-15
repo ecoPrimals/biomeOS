@@ -367,7 +367,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires petalTongue socket"]
+    #[ignore = "Requires live PetalTongue Unix socket"]
     async fn test_start_tracking() {
         let mut adapter = MotionCaptureAdapter::with_defaults();
         let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");
@@ -375,7 +375,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires petalTongue socket"]
+    #[ignore = "Requires live PetalTongue Unix socket"]
     async fn test_calibrate() {
         let adapter = MotionCaptureAdapter::with_defaults();
         let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");

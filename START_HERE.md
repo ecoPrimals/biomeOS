@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: April 15, 2026
-**Status**: Production Ready (v3.15) — 7,784+ tests (0 failures, 0 ignored, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery, `-D warnings`), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded primal names, `#[expect(reason)]` throughout, capability-based discovery compliant, composition e2e proven, workspace dependency governance (`workspace = true`), 0 blocking debt, all files <835 LOC, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.16) — 7,811 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery, `-D warnings`), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, primalSpring Phase 43 gaps resolved, `GeneticsTier` enforcement, `AtomicComposition` auto-resolution, `capability.call` routing contract formalized, all production files <800 LOC, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 files >1000 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 7,784 tests (0 failures, 0 ignored), 90%+ line / function / region (llvm-cov), fully concurrent suite
+8. **Tested**: 7,811 tests (0 failures, 0 ignored), 90%+ line / function / region (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.15 — zero blocking debt)
+**Status**: Production Ready (v3.16 — zero blocking debt)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
@@ -177,5 +177,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Lifecycle**: Deep health monitoring + auto-resurrection + composition dashboard
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile)
 **Primals**: 7/7 ecoBin v3.0 compliant
-**Tests**: 7,784 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0
+**Tests**: 7,811 passing (0 ignored), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0
 **Updated**: April 15, 2026

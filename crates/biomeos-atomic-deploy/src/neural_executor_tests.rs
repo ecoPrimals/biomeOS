@@ -10,6 +10,7 @@
 
 use super::neural_executor::GraphExecutor;
 use crate::neural_graph::{Graph, GraphConfig, GraphNode, Operation};
+use biomeos_graph::GeneticsTier;
 use std::collections::HashMap;
 
 #[test]
@@ -75,6 +76,7 @@ fn test_graph_executor_creation() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let env = HashMap::new();
     let executor = GraphExecutor::new(graph, env);
@@ -102,6 +104,7 @@ fn test_topological_sort_simple() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
 
     let env = HashMap::new();
@@ -127,6 +130,7 @@ fn test_topological_sort_parallel() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
 
     let env = HashMap::new();
@@ -153,6 +157,7 @@ fn test_topological_sort_cycle_detection() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
 
     let env = HashMap::new();
@@ -172,6 +177,7 @@ fn test_topological_sort_empty_graph() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
 
     let env = HashMap::new();
@@ -195,6 +201,7 @@ fn test_topological_sort_complex_dependencies() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
 
     let env = HashMap::new();
@@ -220,6 +227,7 @@ async fn test_execution_context_with_nucleation() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let env = HashMap::new();
     let nucleation = Arc::new(tokio::sync::RwLock::new(SocketNucleation::default()));
@@ -248,6 +256,7 @@ fn test_topological_sort_single_node() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -271,6 +280,7 @@ fn test_topological_sort_deep_chain() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -298,6 +308,7 @@ fn test_topological_sort_wide_graph() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -328,6 +339,7 @@ fn test_topological_sort_diamond_with_tail() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -403,6 +415,7 @@ fn test_executor_with_custom_env() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
 
     let executor = GraphExecutor::new(graph, env);
@@ -420,6 +433,7 @@ fn test_topological_sort_self_cycle() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -440,6 +454,7 @@ fn test_topological_sort_three_node_cycle() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -472,6 +487,7 @@ fn test_topological_sort_unreachable_node() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -520,6 +536,7 @@ fn test_topological_sort_depends_on_missing_node_id() {
         config: GraphConfig::default(),
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let err = executor.topological_sort().unwrap_err();
@@ -577,6 +594,7 @@ async fn test_execute_single_log_info_node_succeeds() {
         },
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");
@@ -599,6 +617,7 @@ async fn test_execute_two_phase_log_chain() {
         },
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");
@@ -619,6 +638,7 @@ async fn test_execute_filesystem_missing_path_fails() {
         },
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute returns report");
@@ -638,6 +658,7 @@ async fn test_execute_optional_filesystem_skip_keeps_success() {
         },
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");
@@ -666,8 +687,32 @@ async fn test_execute_unknown_operation_yields_skipped_json() {
         },
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");
+    assert!(report.success);
+}
+
+#[tokio::test]
+async fn execute_records_genetics_tier_preflight_in_report() {
+    let graph = Graph {
+        id: "tier-test".to_string(),
+        version: "1.0.0".to_string(),
+        description: String::new(),
+        nodes: vec![],
+        config: GraphConfig::default(),
+        coordination: None,
+        env: HashMap::new(),
+        genetics_tier: Some(GeneticsTier::Nuclear),
+    };
+    let mut ex = GraphExecutor::new(graph, HashMap::new());
+    let report = ex.execute().await.expect("execute");
+    let v = report
+        .genetics_tier_validation
+        .as_ref()
+        .expect("genetics tier preflight should be recorded");
+    assert_eq!(v.required_tier, "nuclear");
+    assert!(!v.infrastructure_verified);
     assert!(report.success);
 }

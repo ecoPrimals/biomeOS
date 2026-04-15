@@ -8,6 +8,9 @@
 
 use anyhow::Result;
 use biomeos_core::SocketDiscovery;
+use biomeos_types::primal_names::{
+    BARRACUDA, BEARDOG, CORALREEF, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL,
+};
 use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
@@ -56,13 +59,13 @@ impl NeuralApiServer {
 
         let base_port: u16 = 9900;
         let known_ports: &[(&str, u16)] = &[
-            ("beardog", base_port),
-            ("songbird", base_port + 1),
-            ("squirrel", base_port + 2),
-            ("toadstool", base_port + 3),
-            ("barracuda", base_port + 4),
-            ("coralreef", base_port + 5),
-            ("nestgate", base_port + 6),
+            (BEARDOG, base_port),
+            (SONGBIRD, base_port + 1),
+            (SQUIRREL, base_port + 2),
+            (TOADSTOOL, base_port + 3),
+            (BARRACUDA, base_port + 4),
+            (CORALREEF, base_port + 5),
+            (NESTGATE, base_port + 6),
         ];
 
         for &(name, port) in known_ports {
@@ -147,7 +150,9 @@ impl NeuralApiServer {
                     if self.tcp_only {
                         let tcp_port = self.resolve_tcp_port_for_primal(primal);
                         let host: std::sync::Arc<str> = std::env::var("BIOMEOS_BIND_ADDRESS")
-                            .unwrap_or_else(|_| "127.0.0.1".to_string())
+                            .unwrap_or_else(|_| {
+                                biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
+                            })
                             .into();
                         let endpoint = biomeos_core::TransportEndpoint::TcpSocket {
                             host: host.clone(),
@@ -358,6 +363,7 @@ mod tests {
             config: crate::neural_graph::GraphConfig::default(),
             coordination: None,
             env: HashMap::new(),
+            genetics_tier: None,
         };
         server
             .load_translations_from_graph(&graph)
@@ -391,6 +397,7 @@ mod tests {
             config: crate::neural_graph::GraphConfig::default(),
             coordination: None,
             env: HashMap::new(),
+            genetics_tier: None,
         };
         server
             .load_translations_from_graph(&graph)

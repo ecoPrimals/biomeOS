@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2024–2026 ecoPrimals Project
+// Copyright 2025-2026 ecoPrimals Project
 
 //! Pipeline coordination executor for streaming graph execution.
 //!
@@ -45,6 +45,47 @@ use crate::error::GraphError;
 use crate::events::{GraphEvent, GraphEventBroadcaster};
 use crate::graph::DeploymentGraph;
 use crate::node::GraphNode;
+
+/// Cheaply cloneable pipeline node identifier (`Arc<str>`), passed on every stream item.
+///
+/// Used as the first argument to [`PipelineExecutor::run`] so hot loops avoid cloning
+/// heap-allocated [`String`] values per item.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct PipelineNodeId(Arc<str>);
+
+impl PipelineNodeId {
+    /// Wrap a node id string (typically from [`crate::node::GraphNode::id`]).
+    #[must_use]
+    pub fn new(id: impl AsRef<str>) -> Self {
+        Self(Arc::from(id.as_ref()))
+    }
+
+    /// Reuse an existing shared id (avoids reallocating when the same `Arc` is already held).
+    #[must_use]
+    pub fn from_arc(id: Arc<str>) -> Self {
+        Self(id)
+    }
+
+    /// Borrow the underlying id.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for PipelineNodeId {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for PipelineNodeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 /// An item flowing through a streaming pipeline.
 ///
@@ -136,7 +177,7 @@ const DEFAULT_CHANNEL_CAPACITY: usize = 64;
 pub struct PipelineExecutor {
     graph: DeploymentGraph,
     broadcaster: GraphEventBroadcaster,
-    node_order: Vec<String>,
+    node_order: Vec<PipelineNodeId>,
     channel_capacity: usize,
 }
 
@@ -147,7 +188,10 @@ impl PipelineExecutor {
     /// at most one predecessor, and there's exactly one source node).
     #[must_use]
     pub fn new(graph: DeploymentGraph, broadcaster: GraphEventBroadcaster) -> Self {
-        let node_order = Self::compute_linear_order(&graph);
+        let node_order = Self::compute_node_order(&graph)
+            .into_iter()
+            .map(PipelineNodeId::from_arc)
+            .collect();
         Self {
             graph,
             broadcaster,
@@ -180,15 +224,15 @@ impl PipelineExecutor {
     )]
     pub async fn run<F, Fut>(self, node_executor: F) -> Result<PipelineResult, GraphError>
     where
-        F: Fn(String, GraphNode, StreamItem) -> Fut + Send + Sync + 'static,
+        F: Fn(PipelineNodeId, GraphNode, StreamItem) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = StreamItem> + Send,
     {
-        let graph_id = self.graph.id().to_string();
+        let graph_id: Arc<str> = Arc::from(self.graph.id().as_str());
         let start = Instant::now();
 
         info!(
             "🔗 Pipeline starting: {} ({} nodes, capacity {})",
-            graph_id,
+            graph_id.as_ref(),
             self.node_order.len(),
             self.channel_capacity,
         );
@@ -196,7 +240,7 @@ impl PipelineExecutor {
         let _ = self
             .broadcaster
             .broadcast(GraphEvent::SessionStarted {
-                graph_id: graph_id.clone(),
+                graph_id: graph_id.as_ref().to_string(),
                 target_hz: 0.0,
                 timestamp: Utc::now(),
             })
@@ -204,7 +248,7 @@ impl PipelineExecutor {
 
         if self.node_order.is_empty() {
             return Ok(PipelineResult {
-                graph_id,
+                graph_id: graph_id.as_ref().to_string(),
                 items_in: 0,
                 items_out: 0,
                 items_dropped: 0,
@@ -238,8 +282,8 @@ impl PipelineExecutor {
 
         let executor = Arc::new(node_executor);
         let mut handles = Vec::with_capacity(n);
-        let node_ids: Vec<String> = self.node_order.clone();
-        let stats_map: Arc<tokio::sync::Mutex<HashMap<String, NodeThroughput>>> =
+        let node_ids: Vec<PipelineNodeId> = self.node_order.clone();
+        let stats_map: Arc<tokio::sync::Mutex<HashMap<PipelineNodeId, NodeThroughput>>> =
             Arc::new(tokio::sync::Mutex::new(HashMap::new()));
 
         // Spawn a task for each node.
@@ -253,9 +297,9 @@ impl PipelineExecutor {
         for i in 0..n {
             let node_id = node_ids[i].clone();
             let node = self
-                .find_node(&node_id)
+                .find_node(node_id.as_str())
                 .cloned()
-                .ok_or_else(|| GraphError::NodeNotFound(node_id.clone()))?;
+                .ok_or_else(|| GraphError::NodeNotFound(node_id.as_str().to_string()))?;
 
             let mut rx = receivers.remove(0);
             let tx = senders[i + 1].clone();
@@ -401,24 +445,29 @@ impl PipelineExecutor {
             }
         }
 
-        let node_stats = match Arc::try_unwrap(stats_map) {
+        let node_stats_raw = match Arc::try_unwrap(stats_map) {
             Ok(mutex) => mutex.into_inner(),
             Err(arc) => arc.lock().await.clone(),
         };
 
+        let node_stats: HashMap<String, NodeThroughput> = node_stats_raw
+            .into_iter()
+            .map(|(k, v)| (k.as_str().to_string(), v))
+            .collect();
+
         let items_in = node_stats
-            .get(&node_ids[0])
+            .get(node_ids[0].as_str())
             .map_or(0, |s| s.items_processed + s.items_errored);
 
         let duration_ms = start.elapsed().as_millis() as u64;
 
         info!(
             "🔗 Pipeline complete: {} — {items_in} in, {items_out} out, {items_dropped} dropped, {duration_ms}ms",
-            graph_id,
+            graph_id.as_ref(),
         );
 
         Ok(PipelineResult {
-            graph_id,
+            graph_id: graph_id.as_ref().to_string(),
             items_in,
             items_out,
             items_dropped,
@@ -430,12 +479,8 @@ impl PipelineExecutor {
         })
     }
 
-    /// Compute linear execution order from the dependency graph.
-    ///
-    /// For a valid pipeline, this produces a topological sort where each node
-    /// has at most one dependency. Falls back to node definition order if
-    /// dependencies don't form a clean chain.
-    fn compute_linear_order(graph: &DeploymentGraph) -> Vec<String> {
+    /// Linear node order as shared ids (`Arc<str>`): one allocation per id, reused by [`PipelineNodeId`].
+    fn compute_node_order(graph: &DeploymentGraph) -> Vec<Arc<str>> {
         let nodes = &graph.definition.nodes;
         if nodes.is_empty() {
             return vec![];
@@ -453,7 +498,10 @@ impl PipelineExecutor {
 
         if sources.len() != 1 {
             // Not a clean linear chain — fall back to definition order
-            return nodes.iter().map(|n| n.id.as_str().to_string()).collect();
+            return nodes
+                .iter()
+                .map(|n| Arc::<str>::from(n.id.as_str()))
+                .collect();
         }
 
         // Build successor map: parent → child
@@ -468,7 +516,7 @@ impl PipelineExecutor {
         let mut order = Vec::with_capacity(nodes.len());
         let mut current = sources[0];
         loop {
-            order.push(current.to_string());
+            order.push(Arc::from(current));
             match successors.get(current) {
                 Some(next) if id_to_node.contains_key(next) => current = next,
                 _ => break,
@@ -476,6 +524,19 @@ impl PipelineExecutor {
         }
 
         order
+    }
+
+    /// Compute linear execution order from the dependency graph.
+    ///
+    /// For a valid pipeline, this produces a topological sort where each node
+    /// has at most one dependency. Falls back to node definition order if
+    /// dependencies don't form a clean chain.
+    #[cfg(test)]
+    fn compute_linear_order(graph: &DeploymentGraph) -> Vec<String> {
+        Self::compute_node_order(graph)
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect()
     }
 
     /// Find a node by ID in the graph.
@@ -489,263 +550,5 @@ impl PipelineExecutor {
 }
 
 #[cfg(test)]
-mod tests {
-    #![expect(clippy::unwrap_used, reason = "test assertions")]
-    #![expect(clippy::expect_used, reason = "test assertions")]
-
-    use super::*;
-    use crate::events::GraphEventBroadcaster;
-    use crate::graph::{
-        CoordinationPattern, DeploymentGraph, GraphDefinition, GraphId, GraphMetadata,
-    };
-    use crate::node::{GraphNode, NodeId};
-
-    fn make_pipeline_graph(nodes: Vec<GraphNode>) -> DeploymentGraph {
-        DeploymentGraph {
-            definition: GraphDefinition {
-                id: GraphId::new("test-pipeline").unwrap(),
-                name: "Test Pipeline".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Test streaming pipeline".to_string(),
-                metadata: GraphMetadata::default(),
-                coordination: CoordinationPattern::Pipeline,
-                tick: None,
-                env: HashMap::new(),
-                nodes,
-                outputs: HashMap::new(),
-            },
-        }
-    }
-
-    fn make_node(id: &str, depends_on: Vec<&str>) -> GraphNode {
-        GraphNode {
-            id: NodeId::new(id).unwrap(),
-            name: id.to_string(),
-            node_type: crate::node::NodeType::default(),
-            capability: Some(format!("test.{id}")),
-            required: true,
-            order: 0,
-            depends_on: depends_on.into_iter().map(String::from).collect(),
-            condition: None,
-            config: crate::node::NodeConfig::default(),
-            params: crate::node::NodeParams::default(),
-            feedback_to: None,
-            budget_ms: None,
-            fallback: None,
-            cost_estimate_ms: None,
-            operation_dependencies: Vec::new(),
-            gate: None,
-        }
-    }
-
-    #[test]
-    fn test_linear_order_simple_chain() {
-        let graph = make_pipeline_graph(vec![
-            make_node("fetch", vec![]),
-            make_node("parse", vec!["fetch"]),
-            make_node("analyze", vec!["parse"]),
-        ]);
-        let order = PipelineExecutor::compute_linear_order(&graph);
-        assert_eq!(order, vec!["fetch", "parse", "analyze"]);
-    }
-
-    #[test]
-    fn test_linear_order_single_node() {
-        let graph = make_pipeline_graph(vec![make_node("solo", vec![])]);
-        let order = PipelineExecutor::compute_linear_order(&graph);
-        assert_eq!(order, vec!["solo"]);
-    }
-
-    #[test]
-    fn test_linear_order_empty_graph() {
-        let graph = make_pipeline_graph(vec![]);
-        let order = PipelineExecutor::compute_linear_order(&graph);
-        assert!(order.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_passthrough_single_item() {
-        use std::sync::atomic::{AtomicU32, Ordering};
-
-        let graph = make_pipeline_graph(vec![
-            make_node("source", vec![]),
-            make_node("transform", vec!["source"]),
-            make_node("sink", vec!["transform"]),
-        ]);
-
-        let broadcaster = GraphEventBroadcaster::new(16);
-        let executor = PipelineExecutor::new(graph, broadcaster);
-        let source_calls = Arc::new(AtomicU32::new(0));
-        let sc = source_calls.clone();
-
-        let result = executor
-            .run(move |node_id, _node, item| {
-                let sc = sc.clone();
-                async move {
-                    match node_id.as_str() {
-                        "source" => {
-                            let n = sc.fetch_add(1, Ordering::SeqCst);
-                            if n == 0 {
-                                StreamItem::Data(serde_json::json!({"source": "item1"}))
-                            } else {
-                                StreamItem::End
-                            }
-                        }
-                        "transform" => {
-                            if let StreamItem::Data(mut v) = item {
-                                v["transformed"] = serde_json::json!(true);
-                                StreamItem::Data(v)
-                            } else {
-                                item
-                            }
-                        }
-                        "sink" => item,
-                        _ => StreamItem::End,
-                    }
-                }
-            })
-            .await
-            .expect("pipeline run");
-
-        assert!(result.success);
-        assert_eq!(result.items_out, 1);
-        assert!(result.outputs[0]["transformed"].as_bool().unwrap());
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_multi_item_source() {
-        use std::sync::atomic::{AtomicU32, Ordering};
-
-        let graph = make_pipeline_graph(vec![
-            make_node("producer", vec![]),
-            make_node("doubler", vec!["producer"]),
-        ]);
-
-        let broadcaster = GraphEventBroadcaster::new(16);
-        let executor = PipelineExecutor::new(graph, broadcaster);
-
-        let call_count = Arc::new(AtomicU32::new(0));
-        let cc = call_count.clone();
-
-        let result = executor
-            .run(move |node_id, _node, item| {
-                let cc = cc.clone();
-                async move {
-                    match node_id.as_str() {
-                        "producer" => {
-                            // Source is re-called with Data(Null) until it returns End
-                            let n = cc.fetch_add(1, Ordering::SeqCst);
-                            if n < 5 {
-                                StreamItem::Data(serde_json::json!({"n": n}))
-                            } else {
-                                StreamItem::End
-                            }
-                        }
-                        "doubler" => {
-                            if let StreamItem::Data(v) = item {
-                                let n = v["n"].as_u64().unwrap_or(0);
-                                StreamItem::Data(serde_json::json!({"n": n * 2}))
-                            } else {
-                                StreamItem::End
-                            }
-                        }
-                        _ => StreamItem::End,
-                    }
-                }
-            })
-            .await
-            .expect("pipeline run");
-
-        assert!(result.success);
-        assert_eq!(result.items_out, 5);
-        assert_eq!(result.outputs[0]["n"].as_u64().unwrap(), 0); // 0 * 2
-        assert_eq!(result.outputs[1]["n"].as_u64().unwrap(), 2); // 1 * 2
-        assert_eq!(result.outputs[2]["n"].as_u64().unwrap(), 4); // 2 * 2
-        assert_eq!(result.outputs[3]["n"].as_u64().unwrap(), 6); // 3 * 2
-        assert_eq!(result.outputs[4]["n"].as_u64().unwrap(), 8); // 4 * 2
-    }
-
-    #[tokio::test]
-    async fn test_pipeline_error_passthrough() {
-        use std::sync::atomic::{AtomicU32, Ordering};
-
-        let graph = make_pipeline_graph(vec![
-            make_node("source", vec![]),
-            make_node("sink", vec!["source"]),
-        ]);
-
-        let broadcaster = GraphEventBroadcaster::new(16);
-        let executor = PipelineExecutor::new(graph, broadcaster);
-        let call_count = Arc::new(AtomicU32::new(0));
-        let cc = call_count.clone();
-
-        let result = executor
-            .run(move |node_id, _node, item| {
-                let cc = cc.clone();
-                async move {
-                    match node_id.as_str() {
-                        "source" => {
-                            let n = cc.fetch_add(1, Ordering::SeqCst);
-                            if n == 0 {
-                                // First call: produce an error
-                                StreamItem::Error {
-                                    node_id: "source".to_string(),
-                                    message: "test error".to_string(),
-                                }
-                            } else {
-                                StreamItem::End
-                            }
-                        }
-                        // Sink passes everything through
-                        _ => item,
-                    }
-                }
-            })
-            .await
-            .expect("pipeline run");
-
-        assert!(result.success);
-        assert_eq!(result.items_dropped, 1);
-        assert_eq!(result.items_out, 0);
-    }
-
-    #[test]
-    fn test_stream_item_is_data() {
-        assert!(StreamItem::Data(serde_json::json!(1)).is_data());
-        assert!(!StreamItem::End.is_data());
-        assert!(
-            !StreamItem::Error {
-                node_id: "x".into(),
-                message: "y".into()
-            }
-            .is_data()
-        );
-    }
-
-    #[test]
-    fn test_stream_item_into_data() {
-        let item = StreamItem::Data(serde_json::json!(42));
-        assert_eq!(item.into_data(), Some(serde_json::json!(42)));
-        assert!(StreamItem::End.into_data().is_none());
-    }
-
-    #[test]
-    fn test_stream_item_serde_roundtrip() {
-        let items = vec![
-            StreamItem::Data(serde_json::json!({"key": "value"})),
-            StreamItem::End,
-            StreamItem::Error {
-                node_id: "node1".into(),
-                message: "failed".into(),
-            },
-        ];
-        for item in items {
-            let json = serde_json::to_string(&item).unwrap();
-            let back: StreamItem = serde_json::from_str(&json).unwrap();
-            assert_eq!(
-                serde_json::to_string(&item).unwrap(),
-                serde_json::to_string(&back).unwrap()
-            );
-        }
-    }
-}
+#[path = "pipeline_tests.rs"]
+mod tests;

@@ -351,6 +351,7 @@ fn build_synthetic_nucleus() -> NeuralGraph {
         },
         coordination: Some("Sequential".to_string()),
         env: HashMap::new(),
+        genetics_tier: None,
     }
 }
 
@@ -560,6 +561,7 @@ async fn test_nucleus_critical_node_failure_aborts_graph() {
         },
         coordination: None,
         env: HashMap::new(),
+        genetics_tier: None,
     };
 
     let mut executor = NeuralGraphExecutor::new(graph, HashMap::new());

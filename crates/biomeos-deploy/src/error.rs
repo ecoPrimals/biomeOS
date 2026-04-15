@@ -39,9 +39,9 @@ pub enum DeployError {
     TopologyParse {
         /// Path to the topology file
         path: PathBuf,
-        /// Underlying YAML parse error
+        /// Underlying YAML parse error (boxed to keep enum small)
         #[source]
-        source: serde_yaml::Error,
+        source: Box<serde_yaml::Error>,
     },
 
     /// Topology validation errors

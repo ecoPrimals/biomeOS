@@ -81,6 +81,9 @@ impl Default for MetricsConfig {
     }
 }
 
+/// Default StatsD UDP endpoint for local metrics export configs.
+pub use crate::constants::endpoints::DEFAULT_STATSD_UDP_ENDPOINT;
+
 #[expect(
     clippy::expect_used,
     reason = "test assertions use unwrap/expect for clarity"

@@ -9,7 +9,7 @@ use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
 use biomeos_graph::events::GraphEventBroadcaster;
 use biomeos_graph::graph::{CoordinationPattern, DeploymentGraph};
-use biomeos_graph::pipeline::{PipelineExecutor, StreamItem};
+use biomeos_graph::pipeline::{PipelineExecutor, PipelineNodeId, StreamItem};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use tokio::sync::RwLock;
@@ -93,7 +93,7 @@ impl GraphHandler {
     async fn execute_pipeline_node(
         router: &NeuralRouter,
         translation_registry: &RwLock<CapabilityTranslationRegistry>,
-        node_id: String,
+        node_id: PipelineNodeId,
         node: &biomeos_graph::node::GraphNode,
         item: StreamItem,
     ) -> StreamItem {
@@ -101,8 +101,8 @@ impl GraphHandler {
             Some(c) => c.clone(),
             None => {
                 return StreamItem::Error {
-                    node_id: node_id.clone(),
-                    message: format!("Node '{node_id}' has no capability"),
+                    node_id: node_id.as_str().to_string(),
+                    message: format!("Node '{}' has no capability", node_id.as_str()),
                 };
             }
         };
@@ -114,7 +114,7 @@ impl GraphHandler {
 
         let call_params = json!({
             "capability": capability,
-            "node_id": node_id,
+            "node_id": node_id.as_str(),
             "input": input,
         });
 
@@ -131,9 +131,13 @@ impl GraphHandler {
             match router.forward_request(&ep, &method, &call_params).await {
                 Ok(result) => StreamItem::Data(result),
                 Err(e) => {
-                    debug!("Pipeline node '{}' capability call failed: {}", node_id, e);
+                    debug!(
+                        "Pipeline node '{}' capability call failed: {}",
+                        node_id.as_str(),
+                        e
+                    );
                     StreamItem::Error {
-                        node_id,
+                        node_id: node_id.as_str().to_string(),
                         message: format!("{e}"),
                     }
                 }
@@ -151,15 +155,19 @@ impl GraphHandler {
                     {
                         Ok(result) => StreamItem::Data(result),
                         Err(e) => StreamItem::Error {
-                            node_id,
+                            node_id: node_id.as_str().to_string(),
                             message: format!("{e}"),
                         },
                     }
                 }
                 Err(e) => {
-                    debug!("Pipeline node '{}' discovery failed: {}", node_id, e);
+                    debug!(
+                        "Pipeline node '{}' discovery failed: {}",
+                        node_id.as_str(),
+                        e
+                    );
                     StreamItem::Error {
-                        node_id,
+                        node_id: node_id.as_str().to_string(),
                         message: format!("Capability not found: {capability}: {e}"),
                     }
                 }

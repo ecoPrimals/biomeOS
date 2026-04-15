@@ -51,7 +51,7 @@ async fn setup_test_manager() -> (UniversalBiomeOSManager, MockServer) {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "Requires actual HTTP endpoints"]
+#[ignore = "Stale: get_service_logs/exec/scale use AtomicClient (Unix socket); wiremock HTTP is unused"]
 async fn test_service_logs_real_http_success() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -91,7 +91,7 @@ async fn test_service_logs_real_http_success() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "Requires actual HTTP endpoints"]
+#[ignore = "Stale: get_service_logs/exec/scale use AtomicClient (Unix socket); wiremock HTTP is unused"]
 async fn test_service_logs_graceful_degradation() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -119,7 +119,7 @@ async fn test_service_logs_graceful_degradation() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "Requires actual HTTP endpoints"]
+#[ignore = "Stale: get_service_logs/exec/scale use AtomicClient (Unix socket); wiremock HTTP is unused"]
 async fn test_command_execution_real_http_success() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -179,7 +179,7 @@ async fn test_command_execution_with_error() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "Requires actual HTTP endpoints"]
+#[ignore = "Stale: get_service_logs/exec/scale use AtomicClient (Unix socket); wiremock HTTP is unused"]
 async fn test_service_scaling_real_http_success() {
     let (manager, mock_server) = setup_test_manager().await;
 

@@ -18,6 +18,7 @@
 //! (`btsp.session.create`, `btsp.session.verify`). biomeOS is a family member
 //! and holds the family seed for key derivation.
 
+use biomeos_types::primal_names;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tokio::io::{AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader};
@@ -187,7 +188,7 @@ pub fn security_provider_socket_path() -> Option<std::path::PathBuf> {
     }
 
     let provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-        .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string());
+        .unwrap_or_else(|_| primal_names::BEARDOG.to_string());
 
     let socket_dir = socket_dir()?;
     if let Some(fid) = family_id() {
@@ -497,8 +498,7 @@ pub fn is_family_scoped_socket(path: &Path) -> bool {
     let Some(stem) = filename.strip_suffix(".sock") else {
         return false;
     };
-    // Family-scoped: at least one hyphen and the suffix is not empty
-    // e.g., "beardog-8ff3b864a4bc589a" has primal "beardog" and fid "8ff3b864a4bc589a"
+    // Family-scoped: `{canonical_primal_id}-{family_id}.sock` (see `primal_names`).
     stem.contains('-') && stem.split('-').count() >= 2
 }
 

@@ -131,6 +131,8 @@ fn test_graph_metadata_default() {
     assert!(meta.author.is_none());
     assert!(meta.created.is_none());
     assert!(meta.category.is_none());
+    assert!(meta.composition.is_none());
+    assert!(meta.genetics_tier.is_none());
     assert!(meta.extra.is_empty());
 }
 
@@ -141,11 +143,67 @@ fn test_graph_metadata_serde() {
         author: Some("biomeOS".to_string()),
         created: Some("2026-01-01".to_string()),
         category: Some(GraphCategory::Deployment),
+        composition: None,
+        genetics_tier: Some(GeneticsTier::MitoBeacon),
         extra: HashMap::new(),
     };
     let json = serde_json::to_string(&meta).unwrap();
     assert!(json.contains("family-123"));
     assert!(json.contains("biomeOS"));
+    assert!(json.contains("mito_beacon"));
+}
+
+// =========================================================================
+// GeneticsTier tests
+// =========================================================================
+
+#[test]
+fn test_genetics_tier_json_roundtrip() {
+    for tier in [
+        GeneticsTier::None,
+        GeneticsTier::Tag,
+        GeneticsTier::MitoBeacon,
+        GeneticsTier::Nuclear,
+    ] {
+        let json = serde_json::to_string(&tier).unwrap();
+        let back: GeneticsTier = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, tier);
+    }
+}
+
+#[test]
+fn test_genetics_tier_ordering() {
+    assert!(GeneticsTier::None < GeneticsTier::Tag);
+    assert!(GeneticsTier::Tag < GeneticsTier::MitoBeacon);
+    assert!(GeneticsTier::MitoBeacon < GeneticsTier::Nuclear);
+}
+
+#[test]
+fn test_genetics_tier_from_str() {
+    assert_eq!("none".parse::<GeneticsTier>().unwrap(), GeneticsTier::None);
+    assert_eq!(
+        "mito_beacon".parse::<GeneticsTier>().unwrap(),
+        GeneticsTier::MitoBeacon
+    );
+    assert!("bogus".parse::<GeneticsTier>().is_err());
+}
+
+#[test]
+fn test_graph_metadata_genetics_tier_from_toml() {
+    let toml_str = r#"
+        [graph]
+        id = "g"
+        name = "G"
+        version = "1.0.0"
+
+        [graph.metadata]
+        genetics_tier = "mito_beacon"
+    "#;
+    let g: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(
+        g.definition.metadata.genetics_tier,
+        Some(GeneticsTier::MitoBeacon)
+    );
 }
 
 // =========================================================================
@@ -355,4 +413,227 @@ fn test_deployment_graph_with_outputs() {
         graph.definition.outputs.get("result_path"),
         Some(&"/tmp/result".to_string())
     );
+}
+
+// =========================================================================
+// AtomicComposition / resolve_composition tests
+// =========================================================================
+
+#[test]
+fn test_resolve_composition_explicit_nucleus_in_metadata_toml() {
+    let toml_str = r#"
+            [graph]
+            id = "comp-explicit"
+            name = "Explicit"
+            version = "1.0.0"
+
+            [graph.metadata]
+            composition = "nucleus"
+
+            [[graph.nodes]]
+            id = "a"
+            name = "A"
+            capability = "crypto.sign"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Nucleus);
+}
+
+#[test]
+fn test_resolve_composition_infers_tower() {
+    let toml_str = r#"
+            [graph]
+            id = "tower-infer"
+            name = "Tower"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "a"
+            name = "A"
+            capability = "discovery.ping"
+
+            [[graph.nodes]]
+            id = "b"
+            name = "B"
+            capability = "crypto.blake3_hash"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Tower);
+}
+
+#[test]
+fn test_resolve_composition_infers_node_from_compute() {
+    let toml_str = r#"
+            [graph]
+            id = "node-infer"
+            name = "Node"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "work"
+            name = "Work"
+            capability = "ml.compute.forward"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Node);
+}
+
+#[test]
+fn test_resolve_composition_infers_node_from_gpu() {
+    let toml_str = r#"
+            [graph]
+            id = "gpu-infer"
+            name = "GPU"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "g"
+            name = "G"
+            capability = "render.gpu.submit"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Node);
+}
+
+#[test]
+fn test_resolve_composition_infers_nest_from_storage() {
+    let toml_str = r#"
+            [graph]
+            id = "nest-infer"
+            name = "Nest"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "store"
+            name = "Store"
+            capability = "nest.storage.put"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Nest);
+}
+
+#[test]
+fn test_resolve_composition_infers_nest_from_persistence() {
+    let toml_str = r#"
+            [graph]
+            id = "persist-infer"
+            name = "Persist"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "p"
+            name = "P"
+            capability = "db.persistence.snapshot"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Nest);
+}
+
+#[test]
+fn test_resolve_composition_infers_nucleus_from_ai_segment() {
+    let toml_str = r#"
+            [graph]
+            id = "ai-infer"
+            name = "AI"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "brain"
+            name = "Brain"
+            capability = "squirrel.ai.embed"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Nucleus);
+}
+
+#[test]
+fn test_resolve_composition_infers_nucleus_from_orchestration_substring() {
+    let toml_str = r#"
+            [graph]
+            id = "orch-infer"
+            name = "Orch"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "o"
+            name = "O"
+            capability = "workflow.orchestration.start"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Nucleus);
+}
+
+#[test]
+fn test_resolve_composition_nucleus_overrides_nest_and_node_signals() {
+    let toml_str = r#"
+            [graph]
+            id = "full-stack"
+            name = "Full"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "x"
+            name = "X"
+            capability = "nest.storage.get"
+
+            [[graph.nodes]]
+            id = "y"
+            name = "Y"
+            capability = "batch.compute.run"
+
+            [[graph.nodes]]
+            id = "z"
+            name = "Z"
+            capability = "agent.ai.reason"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Nucleus);
+}
+
+#[test]
+fn test_resolve_composition_nest_takes_priority_over_compute_only() {
+    let toml_str = r#"
+            [graph]
+            id = "nest-vs-node"
+            name = "Both"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "s"
+            name = "S"
+            capability = "block.storage.write"
+
+            [[graph.nodes]]
+            id = "c"
+            name = "C"
+            capability = "task.compute.execute"
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Nest);
+}
+
+#[test]
+fn test_resolve_composition_from_operation_dependencies() {
+    let toml_str = r#"
+            [graph]
+            id = "deps-only"
+            name = "Deps"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "n"
+            name = "N"
+            operation_dependencies = ["pool.gpu.alloc"]
+        "#;
+    let graph: DeploymentGraph = toml::from_str(toml_str).unwrap();
+    assert_eq!(graph.resolve_composition(), AtomicComposition::Node);
+}
+
+#[test]
+fn test_atomic_composition_serde_roundtrip() {
+    let c = AtomicComposition::Nest;
+    let json = serde_json::to_string(&c).unwrap();
+    assert_eq!(json, "\"nest\"");
+    let back: AtomicComposition = serde_json::from_str(&json).unwrap();
+    assert_eq!(back, AtomicComposition::Nest);
 }

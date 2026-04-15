@@ -6,7 +6,36 @@
 //! This module contains result types and report structures used throughout
 //! the graph execution system.
 
+use biomeos_graph::GeneticsTier;
 use serde::{Deserialize, Serialize};
+
+/// Result of genetics tier preflight (until BearDog exposes `genetics.tier_available`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GeneticsTierValidationReport {
+    /// Declared tier (snake_case), stable for JSON consumers.
+    pub required_tier: String,
+    /// Whether the host family was verified to meet the tier (false until BearDog probing exists).
+    #[serde(default)]
+    pub infrastructure_verified: bool,
+    /// Human-readable note for operators and telemetry.
+    pub note: String,
+}
+
+impl GeneticsTierValidationReport {
+    /// Advisory-only validation while infrastructure probing is unavailable.
+    #[must_use]
+    pub fn pending_bear_dog_probe(required: GeneticsTier) -> Self {
+        let required_tier = required.as_str().to_string();
+        let note = format!(
+            "Graph declares genetics_tier '{required_tier}'; family infrastructure was not verified against BearDog (pending genetics.tier_available). Deployment continues with this advisory."
+        );
+        Self {
+            required_tier,
+            infrastructure_verified: false,
+            note,
+        }
+    }
+}
 
 /// Execution report for a completed graph execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +63,9 @@ pub struct ExecutionReport {
     pub failed_nodes: Vec<(String, String)>,
     /// Error message if failed
     pub error: Option<String>,
+    /// Genetics tier preflight (when the graph declares `[graph.metadata].genetics_tier`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub genetics_tier_validation: Option<GeneticsTierValidationReport>,
 }
 
 /// Serializable summary of a phase result
@@ -73,6 +105,7 @@ impl ExecutionReport {
             completed_nodes: Vec::new(),
             failed_nodes: Vec::new(),
             error: None,
+            genetics_tier_validation: None,
         }
     }
 

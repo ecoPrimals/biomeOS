@@ -12,6 +12,9 @@
     reason = "test assertions use unwrap/expect for clarity"
 )]
 
+use biomeos_test_utils::MockJsonRpcServer;
+use serde_json::json;
+
 use crate::neural_api_server::NeuralApiServer;
 use crate::neural_api_server::rpc::DispatchOutcome;
 
@@ -657,6 +660,51 @@ async fn test_handle_request_inference_register_provider_missing_name_errors() {
     let req = r#"{"jsonrpc":"2.0","method":"inference.register_provider","params":{"endpoint":"/tmp/x.sock"},"id":97}"#;
     let result = server.handle_request_json(req).await;
     assert!(result.get("error").is_some());
+}
+
+#[tokio::test]
+async fn test_handle_request_capability_call_includes_routing_trace_when_enabled() {
+    let (server, _temp) = create_test_server();
+    let dir = tempfile::tempdir().expect("tempdir");
+    let sock = dir.path().join("routing-trace.sock");
+    let _mock = MockJsonRpcServer::spawn_echo_success(&sock, json!({ "hashed": "z" })).await;
+
+    server
+        .capability_handler
+        .register(&Some(json!({
+            "capability": "crypto",
+            "primal": "beardog",
+            "socket": sock.to_str().unwrap(),
+            "source": "routing_test",
+            "semantic_mappings": { "sha256": "crypto.blake3_hash" }
+        })))
+        .await
+        .expect("register");
+
+    let req = json!({
+        "jsonrpc": "2.0",
+        "method": "capability.call",
+        "params": {
+            "capability": "crypto",
+            "operation": "sha256",
+            "args": {},
+            "_routing_trace": true
+        },
+        "id": 42
+    })
+    .to_string();
+
+    let result = server.handle_request_json(&req).await;
+    assert!(
+        result.get("_routing_trace").is_some(),
+        "expected top-level _routing_trace: {result}"
+    );
+    assert_eq!(result["result"]["hashed"], "z");
+    assert_eq!(result["id"], 42);
+    let phases = result["_routing_trace"]["phases"]
+        .as_array()
+        .expect("phases");
+    assert_eq!(phases.len(), 3);
 }
 
 #[test]

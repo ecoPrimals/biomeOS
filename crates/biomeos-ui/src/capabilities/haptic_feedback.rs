@@ -362,7 +362,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires petalTongue socket"]
+    #[ignore = "Requires live PetalTongue Unix socket"]
     async fn test_discover() {
         let mut pipeline = HapticPipeline::new();
         let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");

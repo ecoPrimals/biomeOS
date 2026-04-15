@@ -440,11 +440,14 @@ pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> an
 /// Axum router. Intended for mobile/Android substrates where Unix sockets
 /// are unavailable or for cross-gate orchestration.
 pub async fn serve_tcp(port: u16, app: Router) -> anyhow::Result<()> {
-    let addr: std::net::SocketAddr = ([0, 0, 0, 0], port).into();
+    let addr = biomeos_types::constants::endpoints::production_tcp_bind_addr(port);
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to bind TCP port {port}: {e}"))?;
-    tracing::info!("API TCP listener bound: 0.0.0.0:{port}");
+    tracing::info!(
+        "API TCP listener bound: {}:{port}",
+        biomeos_types::constants::endpoints::PRODUCTION_BIND_ADDRESS
+    );
     axum::serve(listener, app)
         .await
         .map_err(|e| anyhow::anyhow!("API TCP server error: {e}"))

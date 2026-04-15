@@ -88,7 +88,7 @@ impl Topology {
         let topology: Self =
             serde_yaml::from_str(&contents).map_err(|e| DeployError::TopologyParse {
                 path: path_ref.to_path_buf(),
-                source: e,
+                source: Box::new(e),
             })?;
 
         topology.validate()?;

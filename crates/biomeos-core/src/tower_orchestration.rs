@@ -174,7 +174,7 @@ pub async fn config_to_primal(config: &TowerPrimalConfig) -> Result<Arc<dyn crat
     }
 
     if let Some(protocol) = &config.protocol {
-        builder = builder.env_var("IPC_PROTOCOL".to_string(), protocol.clone());
+        builder = builder.env_var("IPC_PROTOCOL", protocol.as_str());
     }
 
     if config.http_port > 0 {

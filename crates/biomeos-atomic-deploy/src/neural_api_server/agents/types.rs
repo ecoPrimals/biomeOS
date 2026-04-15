@@ -137,7 +137,7 @@ impl PlasmodiumAgent {
 
     /// Split this agent by removing a gate (returns the split-off agent)
     pub fn split(&mut self, gate_id: &str) -> Option<Self> {
-        if !self.gates.contains(&gate_id.to_string()) {
+        if !self.gates.iter().any(|g| g == gate_id) {
             return None;
         }
 

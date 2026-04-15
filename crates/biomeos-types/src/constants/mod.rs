@@ -134,6 +134,30 @@ pub mod endpoints {
 
     /// Capability query endpoint path (Songbird exposes this)
     pub const CAPABILITY_QUERY_ENDPOINT: &str = "/capabilities";
+
+    /// Default StatsD / DogStatsD UDP endpoint (local relay).
+    ///
+    /// Port must stay in sync with [`super::ports::STATSD`].
+    pub const DEFAULT_STATSD_UDP_ENDPOINT: &str = "udp://localhost:8125";
+
+    /// Default Zipkin HTTP collector URL (local development).
+    ///
+    /// Port must stay in sync with [`super::ports::ZIPKIN_HTTP`].
+    pub const DEFAULT_ZIPKIN_HTTP_ENDPOINT: &str = "http://localhost:9411";
+
+    /// Default Songbird-style HTTP registry base URL (local development).
+    ///
+    /// Port must stay in sync with [`super::ports::REGISTRY_HTTP`].
+    pub const DEFAULT_REGISTRY_HTTP_URL: &str = "http://localhost:9999/registry";
+
+    /// TCP bind address for all interfaces at `port` (`0.0.0.0:port`).
+    #[must_use]
+    pub const fn production_tcp_bind_addr(port: u16) -> std::net::SocketAddr {
+        std::net::SocketAddr::new(
+            std::net::IpAddr::V4(std::net::Ipv4Addr::new(0, 0, 0, 0)),
+            port,
+        )
+    }
 }
 
 /// Timeout and duration constants
@@ -279,6 +303,15 @@ pub mod ports {
 
     /// Default TCP port scan start for socket discovery
     pub const TCP_PORT_SCAN_START: u16 = 9100;
+
+    /// StatsD / DogStatsD standard UDP port
+    pub const STATSD: u16 = 8125;
+
+    /// Default Zipkin HTTP collector port
+    pub const ZIPKIN_HTTP: u16 = 9411;
+
+    /// Default local HTTP service registry (Songbird-style) port
+    pub const REGISTRY_HTTP: u16 = 9999;
 
     /// Default port for test environments (avoids colliding with dev/production ports)
     pub const TEST_DEFAULT: u16 = 8083;
@@ -703,6 +736,18 @@ mod tests {
     #[test]
     fn test_ports_test_default() {
         assert_eq!(ports::TEST_DEFAULT, 8083);
+    }
+
+    #[test]
+    fn test_observability_and_registry_ports_match_endpoint_strings() {
+        assert_eq!(ports::STATSD, 8125);
+        assert_eq!(ports::ZIPKIN_HTTP, 9411);
+        assert_eq!(ports::REGISTRY_HTTP, 9999);
+        assert!(endpoints::DEFAULT_STATSD_UDP_ENDPOINT.contains("8125"));
+        assert!(endpoints::DEFAULT_ZIPKIN_HTTP_ENDPOINT.contains("9411"));
+        assert!(endpoints::DEFAULT_REGISTRY_HTTP_URL.contains("9999"));
+        let addr = endpoints::production_tcp_bind_addr(9000);
+        assert_eq!(addr.port(), 9000);
     }
 
     #[test]

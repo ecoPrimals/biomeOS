@@ -74,7 +74,9 @@ impl NeuralApiServer {
         if self.tcp_only {
             // TCP-only: probe ports 9900..9920 for primals launched by bootstrap
             let host: std::sync::Arc<str> = std::env::var("BIOMEOS_BIND_ADDRESS")
-                .unwrap_or_else(|_| "127.0.0.1".to_string())
+                .unwrap_or_else(|_| {
+                    biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
+                })
                 .into();
 
             for port in 9900..9920u16 {

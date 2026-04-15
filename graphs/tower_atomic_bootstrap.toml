@@ -22,6 +22,9 @@ id = "tower_atomic_bootstrap"
 description = "Genesis: Create Tower Atomic (ecosystem security foundation)"
 coordination = "Sequential"  # BearDog must start before Songbird
 
+[graph.metadata]
+genetics_tier = "mito_beacon"
+
 # Phase 1: Germinate BearDog (Crypto Foundation)
 [[nodes]]
 id = "germinate_beardog"

@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use tempfile::TempDir;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires sudo
+#[ignore = "Requires sudo, qemu-nbd, mkfs.ext4, and qemu-img (see module docs)"]
 async fn test_minimal_rootfs_build() -> Result<()> {
     // Setup
     let temp_dir = TempDir::new()?;
@@ -49,7 +49,7 @@ async fn test_minimal_rootfs_build() -> Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires sudo
+#[ignore = "Requires sudo, qemu-nbd, mkfs.ext4, qemu-img, and optional ../../plasmidBin (see module docs)"]
 async fn test_rootfs_with_primals() -> Result<()> {
     // Skip if plasmidBin doesn't exist
     let primals_dir = PathBuf::from("../../plasmidBin");
@@ -87,7 +87,7 @@ async fn test_rootfs_with_primals() -> Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires sudo
+#[ignore = "Requires sudo and concurrent NBD devices (qemu-nbd); stress-style integration (see module docs)"]
 async fn test_rootfs_concurrent_builds() -> Result<()> {
     // Test that multiple builds can run concurrently
     // Each should get its own NBD device
@@ -132,7 +132,7 @@ async fn test_rootfs_concurrent_builds() -> Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires sudo
+#[ignore = "Requires sudo and block-device stack for RootFsBuilder error-path integration (see module docs)"]
 async fn test_rootfs_error_handling() -> Result<()> {
     // Test that errors are handled gracefully and cleanup happens
     

@@ -6,11 +6,12 @@
 //! Routes JSON-RPC requests to appropriate handlers based on method name.
 //! Uses a table-driven handler registry for O(1) lookup.
 
-use serde_json::Value;
+use serde_json::{Value, json};
 use tracing::{debug, trace};
 
 use super::NeuralApiServer;
 use super::rpc::{DispatchOutcome, JsonRpcRequest};
+use crate::handlers::capability::CapabilityCallOutcome;
 
 fn dispatch(result: Result<Value, anyhow::Error>, id: Value) -> DispatchOutcome {
     match result {
@@ -20,6 +21,40 @@ fn dispatch(result: Result<Value, anyhow::Error>, id: Value) -> DispatchOutcome 
             // Without this, a primal returning -32601 "method not found" would be
             // swallowed into a generic -32603 "Internal error", making the caller
             // unable to distinguish "primal rejected request" from "primal is down".
+            if let Some(biomeos_types::IpcError::JsonRpcError { code, message, .. }) =
+                e.downcast_ref::<biomeos_types::IpcError>()
+            {
+                return DispatchOutcome::ApplicationError {
+                    code: *code,
+                    message: message.clone(),
+                    id,
+                };
+            }
+            DispatchOutcome::ApplicationError {
+                code: -32603,
+                message: format!("Internal error: {e}"),
+                id,
+            }
+        }
+    }
+}
+
+fn dispatch_capability_call(
+    result: Result<CapabilityCallOutcome, anyhow::Error>,
+    id: Value,
+) -> DispatchOutcome {
+    match result {
+        Ok(outcome) => {
+            let mut map = serde_json::Map::new();
+            map.insert("jsonrpc".to_string(), json!("2.0"));
+            map.insert("result".to_string(), outcome.result);
+            if let Some(trace) = outcome.routing_trace {
+                map.insert("_routing_trace".to_string(), trace);
+            }
+            map.insert("id".to_string(), id);
+            DispatchOutcome::Success(Value::Object(map))
+        }
+        Err(e) => {
             if let Some(biomeos_types::IpcError::JsonRpcError { code, message, .. }) =
                 e.downcast_ref::<biomeos_types::IpcError>()
             {
@@ -315,12 +350,26 @@ impl NeuralApiServer {
                             "📡 Semantic fallback: {}.{} → capability.call",
                             domain, operation
                         );
-                        let cap_params = Some(serde_json::json!({
+                        let mut args_obj = params.clone().unwrap_or(json!({}));
+                        let trace_flag = args_obj
+                            .as_object()
+                            .and_then(|o| o.get("_routing_trace"))
+                            .cloned();
+                        if let Some(o) = args_obj.as_object_mut() {
+                            o.remove("_routing_trace");
+                        }
+                        let mut cap_params = json!({
                             "capability": domain,
                             "operation": operation,
-                            "args": params.clone().unwrap_or(serde_json::json!({}))
-                        }));
-                        return dispatch(self.capability_handler.call(&cap_params).await, id);
+                            "args": args_obj
+                        });
+                        if let Some(t) = trace_flag {
+                            cap_params["_routing_trace"] = t;
+                        }
+                        return dispatch_capability_call(
+                            self.capability_handler.call(&Some(cap_params)).await,
+                            id,
+                        );
                     }
                 }
                 return DispatchOutcome::MethodNotFound {
@@ -423,7 +472,9 @@ impl NeuralApiServer {
                 dispatch(self.capability_handler.resolve(params).await, id)
             }
             Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, id),
-            Route::CapabilityCall => dispatch(self.capability_handler.call(params).await, id),
+            Route::CapabilityCall => {
+                dispatch_capability_call(self.capability_handler.call(params).await, id)
+            }
             Route::CapabilityDiscoverTranslations => dispatch(
                 self.capability_handler.discover_translations(params).await,
                 id,
@@ -464,12 +515,26 @@ impl NeuralApiServer {
             // Semantic capability routing: domain.operation → capability.call
             Route::SemanticCapabilityCall => {
                 if let Some((domain, operation)) = request.method.as_ref().split_once('.') {
-                    let cap_params = Some(serde_json::json!({
+                    let mut args_obj = params.clone().unwrap_or(json!({}));
+                    let trace_flag = args_obj
+                        .as_object()
+                        .and_then(|o| o.get("_routing_trace"))
+                        .cloned();
+                    if let Some(o) = args_obj.as_object_mut() {
+                        o.remove("_routing_trace");
+                    }
+                    let mut cap_params = json!({
                         "capability": domain,
                         "operation": operation,
-                        "args": params.clone().unwrap_or(serde_json::json!({}))
-                    }));
-                    dispatch(self.capability_handler.call(&cap_params).await, id)
+                        "args": args_obj
+                    });
+                    if let Some(t) = trace_flag {
+                        cap_params["_routing_trace"] = t;
+                    }
+                    dispatch_capability_call(
+                        self.capability_handler.call(&Some(cap_params)).await,
+                        id,
+                    )
                 } else {
                     return DispatchOutcome::MethodNotFound {
                         method: request.method.as_ref().to_string(),

@@ -352,8 +352,8 @@ impl PrimalBuilder {
 
     /// Set the path to the primal binary
     #[must_use]
-    pub fn binary_path(mut self, path: String) -> Self {
-        self.binary_path = Some(path);
+    pub fn binary_path(mut self, path: impl Into<String>) -> Self {
+        self.binary_path = Some(path.into());
         self
     }
 
@@ -380,8 +380,8 @@ impl PrimalBuilder {
 
     /// Add an environment variable for the primal process
     #[must_use]
-    pub fn env_var(mut self, key: String, value: String) -> Self {
-        self.env_vars.insert(key, value);
+    pub fn env_var(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.env_vars.insert(key.into(), value.into());
         self
     }
 

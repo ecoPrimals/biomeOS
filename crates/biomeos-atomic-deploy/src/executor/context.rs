@@ -152,7 +152,11 @@ impl ExecutionContext {
 
     /// Look up the TCP port assigned to a previously spawned primal.
     pub async fn get_tcp_port(&self, primal_name: &str) -> Option<u16> {
-        self.tcp_port_registry.lock().await.get(primal_name).copied()
+        self.tcp_port_registry
+            .lock()
+            .await
+            .get(primal_name)
+            .copied()
     }
 
     /// Set socket nucleation for deterministic socket path assignment

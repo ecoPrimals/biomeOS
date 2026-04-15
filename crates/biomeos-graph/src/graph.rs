@@ -171,6 +171,70 @@ impl std::fmt::Display for GraphId {
     }
 }
 
+/// Atomic deployment composition class (which primal bundles are required).
+///
+/// - **Tower**: BearDog + Songbird (crypto + discovery) — minimum viable.
+/// - **Node**: Tower + Toadstool (+ compute).
+/// - **Nest**: Tower + NestGate (+ storage).
+/// - **Nucleus**: All primals (+ AI orchestration via Squirrel).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AtomicComposition {
+    /// Crypto + discovery baseline.
+    Tower,
+    /// Adds compute (Toadstool).
+    Node,
+    /// Adds storage (NestGate).
+    Nest,
+    /// Full stack including AI orchestration.
+    Nucleus,
+}
+
+/// Genetic security tier required by a deployment graph.
+///
+/// Maps to the beacon genetics model from the Dark Forest security system.
+/// Higher tiers require more infrastructure (BearDog crypto primitives).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GeneticsTier {
+    /// No genetic verification required (development/testing only)
+    #[default]
+    None,
+    /// Tag-based identity — lightweight, no cryptographic proof
+    Tag,
+    /// Mitochondrial beacon — HMAC-based family verification
+    MitoBeacon,
+    /// Full nuclear genetics — ed25519 keypair + lineage chain
+    Nuclear,
+}
+
+impl GeneticsTier {
+    /// Stable snake_case name (matches `serde` and TOML).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Tag => "tag",
+            Self::MitoBeacon => "mito_beacon",
+            Self::Nuclear => "nuclear",
+        }
+    }
+}
+
+impl std::str::FromStr for GeneticsTier {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "none" => Ok(Self::None),
+            "tag" => Ok(Self::Tag),
+            "mito_beacon" => Ok(Self::MitoBeacon),
+            "nuclear" => Ok(Self::Nuclear),
+            _ => Err(format!("unknown genetics_tier: {s}")),
+        }
+    }
+}
+
 /// Metadata about the graph.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct GraphMetadata {
@@ -189,6 +253,16 @@ pub struct GraphMetadata {
     /// Category (deployment, validation, etc.)
     #[serde(default)]
     pub category: Option<GraphCategory>,
+
+    /// Explicit atomic composition class. If absent, auto-resolved from node capabilities.
+    #[serde(default)]
+    pub composition: Option<AtomicComposition>,
+
+    /// Required genetics tier for this graph's security model.
+    /// If set, the executor validates that the family's genetic infrastructure
+    /// meets this tier before allowing deployment.
+    #[serde(default)]
+    pub genetics_tier: Option<GeneticsTier>,
 
     /// Additional metadata
     #[serde(flatten)]
@@ -466,4 +540,76 @@ impl DeploymentGraph {
 
         result
     }
+
+    /// Auto-resolve the atomic composition from node capabilities.
+    ///
+    /// Returns the explicitly declared [`GraphMetadata::composition`] when set; otherwise
+    /// infers the minimal class from capability strings on each [`GraphNode`].
+    #[must_use]
+    pub fn resolve_composition(&self) -> AtomicComposition {
+        if let Some(comp) = self.definition.metadata.composition {
+            return comp;
+        }
+        infer_atomic_composition_from_nodes(&self.definition.nodes)
+    }
+}
+
+/// Infer atomic composition from node `capability` strings (and `operation_dependencies`).
+fn infer_atomic_composition_from_nodes(nodes: &[GraphNode]) -> AtomicComposition {
+    let mut any_nucleus = false;
+    let mut any_nest = false;
+    let mut any_node = false;
+
+    for n in nodes {
+        if let Some(ref cap) = n.capability {
+            if capability_signals_nucleus(cap) {
+                any_nucleus = true;
+            }
+            if capability_signals_nest(cap) {
+                any_nest = true;
+            }
+            if capability_signals_compute_tier(cap) {
+                any_node = true;
+            }
+        }
+        for dep in &n.operation_dependencies {
+            if capability_signals_nucleus(dep) {
+                any_nucleus = true;
+            }
+            if capability_signals_nest(dep) {
+                any_nest = true;
+            }
+            if capability_signals_compute_tier(dep) {
+                any_node = true;
+            }
+        }
+    }
+
+    if any_nucleus {
+        AtomicComposition::Nucleus
+    } else if any_nest {
+        AtomicComposition::Nest
+    } else if any_node {
+        AtomicComposition::Node
+    } else {
+        AtomicComposition::Tower
+    }
+}
+
+fn capability_signals_nucleus(cap: &str) -> bool {
+    let lower = cap.to_ascii_lowercase();
+    if lower.contains("orchestration") {
+        return true;
+    }
+    lower.split('.').any(|seg| seg == "ai")
+}
+
+fn capability_signals_nest(cap: &str) -> bool {
+    let lower = cap.to_ascii_lowercase();
+    lower.contains("storage") || lower.contains("persistence")
+}
+
+fn capability_signals_compute_tier(cap: &str) -> bool {
+    let lower = cap.to_ascii_lowercase();
+    lower.contains("compute") || lower.contains("gpu")
 }

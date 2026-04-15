@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: April 15, 2026 (v3.15: TCP-only cross-arch composition fixes; 7,000+ tests)
-**Version**: 3.15
-**Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing
+**Updated**: April 15, 2026 (v3.16: primalSpring Phase 43 gap resolution — genetics tier, deploy class, routing contract, deep debt cleanup; 7,811 tests)
+**Version**: 3.16
+**Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - primalSpring Phase 43 Gaps RESOLVED
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 7,784 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,811 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -34,6 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **primalSpring Phase 43 Gap Resolution + Deep Debt v3.16 (Apr 15)** | **5 primalSpring audit gaps resolved**: (1) `GeneticsTier` enum (`None`/`Tag`/`MitoBeacon`/`Nuclear`) added to `GraphMetadata`, executor preflight validation with structured report, `nucleus_complete.toml`→`nuclear`, `tower_atomic_bootstrap.toml`→`mito_beacon`. (2) Tick-loop scheduling confirmed complete (TickClock + ContinuousExecutor + auto-redirect from `graph.execute`). (3) `AtomicComposition` auto-resolution from node capabilities (Tower/Node/Nest/Nucleus inference), `DeploymentGraph::resolve_composition()`. (4) `capability.call` routing contract formalized — `specs/CAPABILITY_CALL_ROUTING_CONTRACT.md`, `RoutingPhase` enum, `_routing_trace` in responses. (5) async-trait migration documented as blocked by dyn Trait. **Deep debt cleanup**: `capability.rs` 873→553 LOC (extracted `capability_call.rs`), 3 test files split (capability_tests 1005→481+236+312, realtime_tests 965→503+474, action_handler_tests 939→407+536). All hardcoded IPs/ports→`constants::` (`production_tcp_bind_addr` const fn, observability endpoints, port constants). All string-literal primal names→`primal_names::` constants. blake3 `pure` feature verified. All production files <800 LOC. 7,811 tests (0 failures), clippy PASS, deny PASS, doc PASS. |
 | **Deep Debt Cleanup VI v3.03 (Apr 11)** | `Box<dyn Error>` → `anyhow` evolution in topology.rs + init_error.rs. 119 test files `#[allow(` → `#[expect(` with reasons. Hot-path `dispatch()` clone elimination (owned `Value` id, 0 clones on success path). 7,749 tests (0 failures), clippy PASS. |
 | **Deep Debt Overstep Cleanup III v2.99 (Apr 8)** | 3 large files smart-refactored: `rootfs/builder.rs` 846→12 LOC (5 submodules + test dir), `ai_advisor.rs` 836→53 LOC (5 submodules), `bootable.rs` 833→24 LOC (5 submodules + tests). All remaining `#[allow(` → `#[expect(` (4 migrated). Clippy modernizations: `.map().unwrap_or(false)` → `.is_some_and()`, `Copy::clone()` → deref, `"".to_string()` → `String::new()`. Comprehensive zero-debt audit confirms: 0 unsafe, 0 production mocks, 0 TODO/FIXME, 0 hardcoded primal names in production, 0 external C deps. 7,695 tests (0 failures), clippy PASS. |
 | **GAP-MATRIX-11 Resolution v2.98 (Apr 8)** | BTSP `validate_insecure_guard()` wired into all 3 server startup paths (`biomeos` main, `neural-api-server` binary, `NeuralApiServer::serve()`). `log_security_posture()` logs production/development/standalone mode on boot. Tower binary also wired. Forwarding BTSP detection enhanced with security mode context. 5 new tests. 7,669 tests (0 failures), clippy PASS. |
@@ -281,7 +282,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 | **Hardcoded primal names** | `trust.rs`, `beardog.rs`, `primal_spawner.rs`, `orchestrator.rs`: string literals → `primal_names::*` constants |
 | **Doc-tests** | New doctests on `identifiers.rs`, `error/core.rs`, `paths.rs`, `config/mod.rs`, `transport.rs`, `atomic_client.rs`, `capability.rs` |
 | **Deployments doc** | `basement-hpc/README.md`: hardcoded home-directory paths → `$BIOMEOS_REPO` |
-| **Tests (at v2.77)** | 7,209 passing, 135 ignored — now 7,784+ / 0 ignored as of v3.15 |
+| **Tests (at v2.77)** | 7,209 passing, 135 ignored — now 7,811+ / 0 ignored as of v3.16 |
 
 ### Deep Audit + Hardcoding Evolution — v2.68 (Mar 27, 2026)
 
@@ -867,7 +868,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 2. ~~**ARM64 biomeOS genomeBin**~~ - ✅ Built (`aarch64-unknown-linux-musl`, 9.6 MB stripped, static)
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
-5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.15, 7,000+ tests) |
+5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.16, 7,000+ tests) |
 
 ### Low Priority
 1. **API key encryption** - NestGate + BearDog secured storage
@@ -876,7 +877,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Apr 8, 2026)
 
-**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,784 total tests including doc-tests and proptests)
+**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,811 total tests including doc-tests and proptests)
 
 ### Coverage Distribution
 
@@ -960,7 +961,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,784 tests — fully concurrent)
+# Test (7,811 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -982,11 +983,11 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.15 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Status**: Production Ready (v3.16 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
 **Tests**: 7,000+ passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
 **Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination
-**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all files <835 LOC, capability-based resolution)
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution)
 **Bypasses**: 0 active (all 6 evolved)

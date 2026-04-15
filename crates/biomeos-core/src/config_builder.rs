@@ -69,7 +69,7 @@ impl BiomeOSConfigBuilder {
             std::env::var("BIOMEOS_BIND_ADDRESS").unwrap_or_else(|_| {
                 warn!("BIOMEOS_BIND_ADDRESS not set. Unix socket preferred for IPC.");
                 warn!("For HTTP bridge: export BIOMEOS_BIND_ADDRESS=127.0.0.1");
-                "127.0.0.1".to_string() // Fallback to localhost for development only
+                biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
             });
 
         builder.config.network.port = std::env::var("BIOMEOS_PORT")
@@ -120,7 +120,7 @@ impl BiomeOSConfigBuilder {
             std::env::var("BIOMEOS_TEST_BIND").unwrap_or_else(|_| {
                 warn!("BIOMEOS_TEST_BIND not set. Using Unix sockets for test isolation.");
                 warn!("For network tests: export BIOMEOS_TEST_BIND=127.0.0.1");
-                "127.0.0.1".to_string() // Fallback for tests that need network
+                biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
             });
 
         builder.config.network.port = std::env::var("BIOMEOS_TEST_PORT")

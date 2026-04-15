@@ -652,7 +652,7 @@ fn test_collect_ips_for_vm_names_first_fails_second_ok() {
 }
 
 #[tokio::test]
-#[ignore = "requires benchscale and libvirt"]
+#[ignore = "Requires benchscale VM harness and libvirt"]
 async fn test_full_lifecycle() -> Result<()> {
     // Only run if benchscale is available AND libvirt testing is enabled
     if std::env::var("BENCHSCALE_TEST_LIBVIRT").is_err() {

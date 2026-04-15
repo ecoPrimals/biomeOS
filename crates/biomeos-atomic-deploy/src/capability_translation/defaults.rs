@@ -345,7 +345,7 @@ fn load_defaults_core(
             continue;
         }
 
-        let socket = socket::resolve_primal_socket(actual_provider, &family_id);
+        let socket = socket::resolve_primal_socket(actual_provider, family_id);
 
         for (semantic, method) in *translations {
             registry.register_translation(

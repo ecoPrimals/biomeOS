@@ -317,7 +317,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires petalTongue socket"]
+    #[ignore = "Requires live PetalTongue Unix socket"]
     async fn test_negotiate() {
         let adapter = StereoRenderAdapter::with_defaults();
         let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");
@@ -325,7 +325,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires petalTongue socket"]
+    #[ignore = "Requires live PetalTongue Unix socket"]
     async fn test_begin_session_and_submit_frame() {
         let mut adapter = StereoRenderAdapter::with_defaults();
         let client = crate::primal_client::PrimalClient::with_socket("ui", "/tmp/ui.sock");

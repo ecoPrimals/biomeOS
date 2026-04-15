@@ -699,7 +699,7 @@ async fn test_call_unix_socket_rpc_read_times_out_paused_clock() {
 }
 
 #[tokio::test]
-#[ignore = "waits for 30s socket read timeout"]
+#[ignore = "Slow: exercises ~30s socket read timeout path; run with --ignored"]
 async fn test_call_unix_socket_rpc_read_times_out() {
     let temp = tempfile::tempdir().expect("temp dir");
     let socket_path = temp.path().join("nucleus_hang.sock");

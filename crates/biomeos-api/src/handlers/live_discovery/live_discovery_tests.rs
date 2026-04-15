@@ -269,6 +269,7 @@ async fn test_discover_primal_health_check_success_unix() {
     let sock_str = sock_path.to_str().expect("utf8 path").to_string();
 
     let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+    let (done_tx, done_rx) = tokio::sync::oneshot::channel::<()>();
     let path_for_server = sock_path.clone();
     tokio::spawn(async move {
         let listener = UnixListener::bind(&path_for_server).expect("bind");
@@ -290,10 +291,13 @@ async fn test_discover_primal_health_check_success_unix() {
         let s = serde_json::to_string(&body).expect("json");
         stream.write_all(s.as_bytes()).await.expect("write");
         stream.flush().await.ok();
+        // Keep stream alive until client has consumed the response
+        let _ = done_rx.await;
     });
 
     ready_rx.await.expect("listener ready");
     let info = discover_primal(&sock_str).await.expect("discover primal");
+    let _ = done_tx.send(());
     assert_eq!(info.name, "unix-test-primal");
     assert_eq!(info.version, "3.0.0");
     assert_eq!(info.health, "ok");

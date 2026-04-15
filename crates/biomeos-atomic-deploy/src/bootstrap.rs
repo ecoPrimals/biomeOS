@@ -47,7 +47,7 @@ pub async fn register_self_in_registry(
 
     if let Some(port) = tcp_port {
         let host: std::sync::Arc<str> = std::env::var("BIOMEOS_BIND_ADDRESS")
-            .unwrap_or_else(|_| "127.0.0.1".to_string())
+            .unwrap_or_else(|_| biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string())
             .into();
         let endpoint = biomeos_core::TransportEndpoint::TcpSocket { host, port };
         for &capability in capabilities {

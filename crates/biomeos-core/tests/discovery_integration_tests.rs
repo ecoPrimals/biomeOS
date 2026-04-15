@@ -5,9 +5,9 @@
 
 //! Discovery Integration Tests
 //!
-//! Tests for the primal discovery service integration.
-//! Note: Many of these tests are marked as `#[ignore]` until the full Songbird
-//! integration is complete. They document the expected API behavior.
+//! Tests for the primal discovery service integration and HTTP endpoint probing
+//! (with wiremock). Registry mocks are not always wired into the socket-based
+//! discovery path; assertions allow empty or unix-socket results accordingly.
 
 use biomeos_core::universal_biomeos_manager::*;
 use biomeos_types::BiomeOSConfig;
@@ -17,10 +17,7 @@ use wiremock::{
     matchers::{method, path},
 };
 
-/// Test the registry discovery with a mock server
-/// NOTE: This test is ignored until Songbird integration is complete.
-/// The discovery service currently returns placeholder results.
-#[ignore = "Pending Songbird integration — discovery returns placeholder results"]
+/// Test the registry discovery with a mock server (mock may not drive socket discovery).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_registry_discovery_success() {
     // Create mock registry server
@@ -96,9 +93,7 @@ async fn test_registry_discovery_malformed_response() {
     let _ = results;
 }
 
-/// Test discovery of orchestration services
-/// NOTE: Ignored until Songbird integration is complete.
-#[ignore = "Pending Songbird integration"]
+/// Test discovery of orchestration services (mock HTTP; discovery path may differ).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_capability_based_orchestration_discovery_success() {
     let mock_server = MockServer::start().await;
@@ -126,9 +121,7 @@ async fn test_capability_based_orchestration_discovery_success() {
     assert!(results.is_empty() || results.iter().any(|e| e.contains("8099")));
 }
 
-/// Test endpoint probing with health response
-/// NOTE: Ignored until endpoint probing is fully implemented.
-#[ignore = "Pending endpoint probing implementation"]
+/// Test endpoint probing with health response (wiremock).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_probe_endpoint_success() {
     let mock_server = MockServer::start().await;

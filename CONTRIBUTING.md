@@ -28,7 +28,7 @@ cargo fmt --all -- --check         # 0 diffs
 | **Unsafe** | `#![forbid(unsafe_code)]` on all crate roots; `#![deny(unsafe_code)]` only for crates with justified test-only `#[allow]` |
 | **Error handling** | `Result<T, E>` everywhere; no `.unwrap()` in library/production code; workspace denies `unwrap_used`/`expect_used` |
 | **Documentation** | `#![warn(missing_docs)]` on all library crates; doc-tests count as tests |
-| **File size** | No file over 1000 lines; refactor at logical boundaries, not arbitrary splits |
+| **File size** | No production file over 800 lines; refactor at logical boundaries, not arbitrary splits |
 | **TODO/FIXME** | No TODO, FIXME, HACK, or XXX in committed code |
 | **Commented code** | No commented-out code |
 | **License headers** | `// SPDX-License-Identifier: AGPL-3.0-or-later` + `// Copyright 2025-2026 ecoPrimals Project` on every `.rs` file |

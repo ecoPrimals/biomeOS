@@ -14,7 +14,7 @@ use biomeos_manifest::niche::NicheManifest;
 use std::path::Path;
 
 #[test]
-#[ignore = "Requires tower_deploy.toml - niches need graph format update"]
+#[ignore = "Niche TOMLs reference graph files missing from repo (GraphNotFound, e.g. graphs/tower_deploy.toml)"]
 fn test_parse_tower_niche() {
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -47,7 +47,7 @@ fn test_parse_tower_niche() {
 }
 
 #[test]
-#[ignore = "Requires node_deploy.toml - niches need graph format update"]
+#[ignore = "Niche TOMLs reference graph files missing from repo (GraphNotFound, e.g. graphs/node_deploy.toml)"]
 fn test_parse_compute_node_niche() {
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -68,7 +68,7 @@ fn test_parse_compute_node_niche() {
 }
 
 #[test]
-#[ignore = "Requires nest_deploy.toml - niches need graph format update"]
+#[ignore = "Niche TOMLs reference graph files missing from repo (GraphNotFound, e.g. graphs/nest_deploy.toml)"]
 fn test_parse_nest_niche() {
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -91,7 +91,7 @@ fn test_parse_nest_niche() {
 }
 
 #[test]
-#[ignore = "Requires node_deploy.toml - niches need graph format update"]
+#[ignore = "Niche TOMLs reference graph files missing from repo (GraphNotFound, e.g. graphs/node_deploy.toml)"]
 fn test_backward_compatibility_no_graphs() {
     // Compute and nest niches don't have graphs yet (backward compatible!)
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -110,7 +110,7 @@ fn test_backward_compatibility_no_graphs() {
 }
 
 #[test]
-#[ignore = "Requires tower_deploy.toml - niches need graph format update"]
+#[ignore = "Niche TOMLs reference graph files missing from repo (GraphNotFound, e.g. graphs/tower_deploy.toml)"]
 fn test_get_graph_by_name() {
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()

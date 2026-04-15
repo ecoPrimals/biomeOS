@@ -313,6 +313,7 @@ mod tests {
             config: GraphConfig::default(),
             coordination: None,
             env: HashMap::new(),
+            genetics_tier: None,
         };
         handler.load_translations_from_graph(&graph).await.unwrap();
     }
@@ -332,6 +333,7 @@ mod tests {
             config: GraphConfig::default(),
             coordination: None,
             env: HashMap::new(),
+            genetics_tier: None,
         };
         GraphHandler::register_capabilities_from_graph(&router, &graph, "fam").await;
     }

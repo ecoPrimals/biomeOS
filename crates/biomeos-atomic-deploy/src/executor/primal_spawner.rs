@@ -12,6 +12,7 @@
 //! - Output stream capture and relay
 
 use anyhow::{Context, Result};
+use biomeos_types::primal_names::SONGBIRD;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -369,7 +370,7 @@ pub(crate) async fn configure_primal_sockets(
     if context.tcp_only {
         // Songbird uses --listen for TCP IPC; other primals use --socket with
         // abstract-namespace fallback. Pass the UDS path as well for env compat.
-        if primal_name == "songbird" {
+        if primal_name == SONGBIRD {
             if let Some(port) = context.get_tcp_port(primal_name).await {
                 cmd.arg("--listen").arg(format!("127.0.0.1:{port}"));
                 info!("   📡 TCP-only: songbird --listen 127.0.0.1:{port}");
@@ -426,7 +427,10 @@ pub(crate) async fn configure_primal_sockets(
                 if let Some(port) = context.get_tcp_port(socket_ref).await {
                     let tcp_addr = format!("tcp://127.0.0.1:{port}");
                     cmd.arg(flag).arg(&tcp_addr);
-                    info!("   📡 TCP-only: {} → {} @ {}", primal_name, socket_ref, tcp_addr);
+                    info!(
+                        "   📡 TCP-only: {} → {} @ {}",
+                        primal_name, socket_ref, tcp_addr
+                    );
                 } else {
                     let resolved = context.get_socket_path(socket_ref).await;
                     cmd.arg(flag).arg(&resolved);
@@ -491,7 +495,10 @@ pub async fn wait_for_tcp_port(port: u16, timeout_attempts: u32) -> Result<()> {
     debug!("   Waiting for TCP port: {port}");
 
     for attempt in 1..=timeout_attempts {
-        if TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
+        if TcpStream::connect((biomeos_types::constants::endpoints::DEFAULT_LOCALHOST, port))
+            .await
+            .is_ok()
+        {
             info!("   ✅ TCP port available: :{port} (after {attempt} attempts)");
             return Ok(());
         }

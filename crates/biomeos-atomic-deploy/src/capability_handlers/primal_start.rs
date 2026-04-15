@@ -192,7 +192,12 @@ pub async fn primal_start_capability(
 
     if socket_confirmed {
         let endpoint_label = tcp_port
-            .map(|p| format!("tcp://127.0.0.1:{p}"))
+            .map(|p| {
+                format!(
+                    "tcp://{}:{p}",
+                    biomeos_types::constants::endpoints::DEFAULT_LOCALHOST
+                )
+            })
             .unwrap_or_else(|| socket_path.clone());
         info!("   ✅ Endpoint available: {}", endpoint_label);
 
@@ -218,7 +223,10 @@ pub async fn primal_start_capability(
             "socket_confirmed": true
         }))
     } else {
-        warn!("   ⚠️  Endpoint not available after timeout: {}", socket_path);
+        warn!(
+            "   ⚠️  Endpoint not available after timeout: {}",
+            socket_path
+        );
 
         Ok(json!({
             "started": true,

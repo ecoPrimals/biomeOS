@@ -31,9 +31,15 @@
 //! This enables TRUE PRIMAL architecture where primals are discovered by what
 //! they can do, not what they're named.
 
+/// Capability routing (`capability_call` submodule: `capability.call`, translation lists).
 pub mod capability;
+#[cfg(test)]
+mod capability_call_tests;
 pub(crate) mod capability_heuristics;
+#[cfg(test)]
+mod capability_list_tests;
 mod capability_mcp;
+pub mod capability_routing;
 #[cfg(test)]
 mod capability_tests;
 pub mod graph;
@@ -49,7 +55,8 @@ pub mod protocol;
 mod protocol_tests;
 pub mod topology;
 
-pub use capability::CapabilityHandler;
+pub use capability::{CapabilityCallOutcome, CapabilityHandler};
+pub use capability_routing::RoutingPhase;
 pub use graph::{ExecutionStatus, GraphHandler};
 pub use inference::InferenceHandler;
 pub use lifecycle::LifecycleHandler;

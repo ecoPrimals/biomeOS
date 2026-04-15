@@ -7,6 +7,7 @@
 #![expect(clippy::expect_used, reason = "test assertions")]
 
 use crate::neural_graph::*;
+use biomeos_graph::GeneticsTier;
 
 #[test]
 fn test_from_toml_str_missing_graph_section() {
@@ -108,6 +109,7 @@ fn test_parse_nucleus_complete() {
     let graph = Graph::from_toml_file(&graphs_dir.join("nucleus_complete.toml")).unwrap();
     assert_eq!(graph.id, "nucleus_complete");
     assert_eq!(graph.version, "2.0.0");
+    assert_eq!(graph.genetics_tier, Some(GeneticsTier::Nuclear));
     assert!(
         graph.nodes.len() >= 10,
         "Expected at least 10 nodes, got {}",
@@ -209,6 +211,7 @@ fn test_parse_tower_atomic_bootstrap() {
     let graphs_dir = find_graphs_dir();
     let graph = Graph::from_toml_file(&graphs_dir.join("tower_atomic_bootstrap.toml")).unwrap();
     assert_eq!(graph.id, "tower_atomic_bootstrap");
+    assert_eq!(graph.genetics_tier, Some(GeneticsTier::MitoBeacon));
     assert!(
         graph.nodes.len() >= 4,
         "Expected at least 4 nodes, got {}",

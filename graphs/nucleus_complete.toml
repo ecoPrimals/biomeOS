@@ -40,6 +40,9 @@ version = "2.0.0"
 description = "Complete NUCLEUS: All 5 primals with Sovereign Onion + Mesh (biomeOS Neural API routes capabilities)"
 coordination = "Sequential"
 
+[graph.metadata]
+genetics_tier = "nuclear"
+
 # =============================================================================
 # PHASE 1: TOWER ATOMIC (Crypto + Network Foundation)
 # =============================================================================

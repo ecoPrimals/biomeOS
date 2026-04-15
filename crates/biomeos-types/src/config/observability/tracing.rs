@@ -212,6 +212,9 @@ impl Default for TracingResourceConfig {
     }
 }
 
+/// Default Zipkin HTTP collector URL for local tracing configs.
+pub use crate::constants::endpoints::DEFAULT_ZIPKIN_HTTP_ENDPOINT;
+
 #[expect(
     clippy::expect_used,
     reason = "test assertions use unwrap/expect for clarity"

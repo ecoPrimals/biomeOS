@@ -419,6 +419,7 @@ mod tests {
             config: GraphConfig::default(),
             coordination: None,
             env: HashMap::new(),
+            genetics_tier: None,
         };
 
         manager.store_deployment_graph("tower-graph", graph).await;
