@@ -1,3 +1,5 @@
+# Source of truth: biomeOS/graphs/ (runtime execution format with [[nodes]])
+# Validation/structural variant: primalSpring/graphs/nucleus_complete.toml
 # NUCLEUS Complete Deployment Graph
 # =============================================================================
 #

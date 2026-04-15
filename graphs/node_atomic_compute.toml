@@ -1,3 +1,5 @@
+# Source of truth: biomeOS/graphs/ (runtime execution format with [[nodes]])
+# Validation/structural variant: primalSpring/graphs/node_atomic_compute.toml
 # =============================================================================
 # Node Atomic Compute Graph
 # =============================================================================

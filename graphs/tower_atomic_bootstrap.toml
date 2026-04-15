@@ -1,3 +1,5 @@
+# Source of truth: biomeOS/graphs/ (runtime execution format with [[nodes]])
+# Validation/structural variant: primalSpring/graphs/tower_atomic_bootstrap.toml
 # Tower Atomic Bootstrap Graph
 # Used by biomeOS in Bootstrap Mode to create the ecosystem foundation
 #

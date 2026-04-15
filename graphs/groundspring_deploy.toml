@@ -1,3 +1,5 @@
+# Source of truth: biomeOS/graphs/ (runtime execution format with [[nodes]])
+# Validation/structural variant: primalSpring/graphs/spring_deploy/groundspring_deploy.toml
 # groundSpring Deployment Graph
 # Deploys groundSpring measurement/sensing primal atop Node Atomic
 #

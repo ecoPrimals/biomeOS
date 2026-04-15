@@ -1,3 +1,5 @@
+# Source of truth: biomeOS/graphs/ (runtime execution format with [[nodes]])
+# Validation/structural variant: primalSpring/graphs/spring_deploy/wetspring_deploy.toml
 # =============================================================================
 # wetSpring Deploy Graph
 # =============================================================================
