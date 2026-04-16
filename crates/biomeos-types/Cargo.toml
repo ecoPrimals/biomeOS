@@ -6,7 +6,7 @@ authors = ["biomeOS Team"]
 description = "Unified type system for the biomeOS ecosystem"
 license.workspace = true
 rust-version.workspace = true
-repository = "https://github.com/your-org/biomeos"
+repository = "https://github.com/ecoPrimals/biomeOS"
 
 [dependencies]
 # Serialization
@@ -32,9 +32,6 @@ url = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
-# Async support
-tokio = { workspace = true }
-
 # Collections and utilities
 indexmap = { workspace = true }
 
@@ -48,10 +45,5 @@ temp-env = { workspace = true }
 tempfile = { workspace = true }
 proptest = { workspace = true }
 
-[features]
-default = []
-# Optional features for advanced functionality
-validation = []
-metrics = [] 
 [lints]
 workspace = true

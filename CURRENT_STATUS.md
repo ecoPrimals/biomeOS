@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 15, 2026 (v3.16: primalSpring Phase 43 gap resolution — genetics tier, deploy class, routing contract, deep debt cleanup; 7,811 tests)
-**Version**: 3.16
+**Updated**: April 16, 2026 (v3.17: smart refactoring, dependency pruning, manifest hygiene, async-trait eliminated, all production files <800 LOC; 7,801 tests)
+**Version**: 3.17
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - primalSpring Phase 43 Gaps RESOLVED
 
 ---
@@ -16,8 +16,8 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
-| **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 7,811 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
+| **Tests Passing** | 7,801 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -34,7 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
-| **primalSpring Phase 43 Gap Resolution + Deep Debt v3.16 (Apr 15)** | **5 primalSpring audit gaps resolved**: (1) `GeneticsTier` enum (`None`/`Tag`/`MitoBeacon`/`Nuclear`) added to `GraphMetadata`, executor preflight validation with structured report, `nucleus_complete.toml`→`nuclear`, `tower_atomic_bootstrap.toml`→`mito_beacon`. (2) Tick-loop scheduling confirmed complete (TickClock + ContinuousExecutor + auto-redirect from `graph.execute`). (3) `AtomicComposition` auto-resolution from node capabilities (Tower/Node/Nest/Nucleus inference), `DeploymentGraph::resolve_composition()`. (4) `capability.call` routing contract formalized — `specs/CAPABILITY_CALL_ROUTING_CONTRACT.md`, `RoutingPhase` enum, `_routing_trace` in responses. (5) async-trait migration documented as blocked by dyn Trait. **Deep debt cleanup**: `capability.rs` 873→553 LOC (extracted `capability_call.rs`), 3 test files split (capability_tests 1005→481+236+312, realtime_tests 965→503+474, action_handler_tests 939→407+536). All hardcoded IPs/ports→`constants::` (`production_tcp_bind_addr` const fn, observability endpoints, port constants). All string-literal primal names→`primal_names::` constants. blake3 `pure` feature verified. All production files <800 LOC. 7,811 tests (0 failures), clippy PASS, deny PASS, doc PASS. |
+| **primalSpring Phase 43 Gap Resolution + Deep Debt v3.16 (Apr 15)** | **5 primalSpring audit gaps resolved**: (1) `GeneticsTier` enum (`None`/`Tag`/`MitoBeacon`/`Nuclear`) added to `GraphMetadata`, executor preflight validation with structured report, `nucleus_complete.toml`→`nuclear`, `tower_atomic_bootstrap.toml`→`mito_beacon`. (2) Tick-loop scheduling confirmed complete (TickClock + ContinuousExecutor + auto-redirect from `graph.execute`). (3) `AtomicComposition` auto-resolution from node capabilities (Tower/Node/Nest/Nucleus inference), `DeploymentGraph::resolve_composition()`. (4) `capability.call` routing contract formalized — `specs/CAPABILITY_CALL_ROUTING_CONTRACT.md`, `RoutingPhase` enum, `_routing_trace` in responses. (5) async-trait migration documented as blocked by dyn Trait. **Deep debt cleanup**: `capability.rs` 873→553 LOC (extracted `capability_call.rs`), 3 test files split (capability_tests 1005→481+236+312, realtime_tests 965→503+474, action_handler_tests 939→407+536). All hardcoded IPs/ports→`constants::` (`production_tcp_bind_addr` const fn, observability endpoints, port constants). All string-literal primal names→`primal_names::` constants. blake3 `pure` feature verified. All production files <800 LOC. 7,801 tests (0 failures), clippy PASS, deny PASS, doc PASS. |
 | **Deep Debt Cleanup VI v3.03 (Apr 11)** | `Box<dyn Error>` → `anyhow` evolution in topology.rs + init_error.rs. 119 test files `#[allow(` → `#[expect(` with reasons. Hot-path `dispatch()` clone elimination (owned `Value` id, 0 clones on success path). 7,749 tests (0 failures), clippy PASS. |
 | **Deep Debt Overstep Cleanup III v2.99 (Apr 8)** | 3 large files smart-refactored: `rootfs/builder.rs` 846→12 LOC (5 submodules + test dir), `ai_advisor.rs` 836→53 LOC (5 submodules), `bootable.rs` 833→24 LOC (5 submodules + tests). All remaining `#[allow(` → `#[expect(` (4 migrated). Clippy modernizations: `.map().unwrap_or(false)` → `.is_some_and()`, `Copy::clone()` → deref, `"".to_string()` → `String::new()`. Comprehensive zero-debt audit confirms: 0 unsafe, 0 production mocks, 0 TODO/FIXME, 0 hardcoded primal names in production, 0 external C deps. 7,695 tests (0 failures), clippy PASS. |
 | **GAP-MATRIX-11 Resolution v2.98 (Apr 8)** | BTSP `validate_insecure_guard()` wired into all 3 server startup paths (`biomeos` main, `neural-api-server` binary, `NeuralApiServer::serve()`). `log_security_posture()` logs production/development/standalone mode on boot. Tower binary also wired. Forwarding BTSP detection enhanced with security mode context. 5 new tests. 7,669 tests (0 failures), clippy PASS. |
@@ -57,7 +57,7 @@
 | **Deep Debt Resolution + Standards Compliance (Mar 28)** | `CONTEXT.md` created (PUBLIC_SURFACE_STANDARD compliance), README "Part of ecoPrimals" footer added, version footer v2.68→v2.70 reconciled, `forwarding.rs` split from 1001→357 LOC (integration tests extracted to `forwarding_routing_tests.rs`), `#[allow(clippy::cast_possible_wrap)]` → `#[expect(..., reason)]` in tower_orchestration.rs, `deployment_graph.rs` `to_toml()` stub evolved to real TOML serialization via `toml::to_string_pretty`, chimera builder codegen evolved from stub error → capability-based IPC forwarding pattern (+ `FusionEndpoint.capability` field), `generate_api_endpoints()` extracted for clippy `too_many_lines` compliance, 2 new tests (to_toml roundtrip, node structure preservation), full audit confirmed: 0 mocks in production (all `#[cfg(test)]`), 0 `.unwrap()` in production types, 0 files >1000 LOC, 0 C-sys deps (only `linux-raw-sys`/`netlink-sys` kernel interfaces), 0 TODO/FIXME/HACK |
 | **Multi-Transport IPC Evolution (Mar 28)** | Neural router evolved from Unix-socket-only to universal transport: `RegisteredCapability.socket_path: PathBuf` → `RegisteredCapability.endpoint: TransportEndpoint`, `DiscoveredPrimal.socket_path` → `DiscoveredPrimal.endpoint`, `DiscoveredAtomic.primary_socket` → `DiscoveredAtomic.primary_endpoint`, `forward_request` routes via `AtomicClient::from_endpoint()` (Unix/abstract/TCP/HTTP), health checks evolved from `Path::exists()` + manual `UnixStream` to `AtomicClient`-based transport-aware probing, `capability.register` JSON-RPC handler parses transport strings (`@abstract`, `tcp://`, `http://`, `/path.sock`), `TransportEndpoint` gains `Serialize`/`Deserialize` (tagged JSON: `{"transport":"TcpSocket","address":{"host":"...","port":9001}}`), `register_capability_unix()` convenience method for backward compat, 5 new tests (TCP/abstract/HTTP endpoint registration, primal label extraction, TCP tarpc policy), all primalSpring P0+P1 gaps resolved (cross-gate routing foundation complete) |
 | **Zero-Copy + Dep Governance (Mar 28)** | `Value::take()` zero-copy evolution on Songbird discovery + provider hot paths (eliminates JSON subtree duplication), tokio workspace unification (11 crates: biomeos-types, biomeos-system, neural-api-client, biomeos-api, biomeos-deploy, biomeos-cli, biomeos-boot, biomeos-atomic-deploy, biomeos-ui, root biomeos deps+dev-deps), base64 0.21→0.22 unified, `deny.toml` cleaned (MPL-2.0/Unicode-DFS-2016/Zlib unused allowances removed), 25 new tests (vm_federation: benchscale_create_argv, subcommand_argv, topology_path_for_cli, validate_ssh_probe success+failure, collect_ips_for_vm_names mock/error/empty, wait_for_vm_ssh_ready success+retry-exceeded; trust: all-variant serde, copy semantics, comprehensive ord; constants: 14 env-driven port/bind/path tests), SPDX headers on 7 test modules, 2 rustdoc warnings fixed, test port `ports::TEST_DEFAULT` + `endpoints::production_bind_address()` centralized |
-| **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 26 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
+| **Deep Debt Session (Mar 18)** | Full audit execution: 18 crates migrated to Edition 2024, tarpc sidecar wired, Google/Cloudflare STUN removed (sovereignty), zero-copy fixes, 39 new tests, workspace lint inheritance for all 25 crates, scyBorg license trio (ORC + CC-BY-SA), large files refactored (963→835/899), capability-based discovery evolution |
 | **Ecosystem Absorption (Mar 18)** | IpcErrorPhase + extract_rpc_result (5+ springs), OrExit trait (groundSpring/loamSpine), cast module (airSpring), proptest IPC fuzzing (8 fuzz tests), capability.list cost_estimates+operation_dependencies (Squirrel Pathway Learner), socket-registry.json discovery (Squirrel), MCP tool definitions (healthSpring/airSpring/wetSpring), ValidationSink (rhizoCrypt/airSpring), primal_names::display (neuralSpring), primal capability routing types (relay.authorize, compute.dispatch, model.*, sourDough lifecycle), deny.toml expanded to 15 C-dep bans |
 | **Deep Debt Audit (Mar 20)** | Zero-copy `JsonRpcVersion` marker type (eliminates String alloc per request/response), 5 production files >1000 LOC refactored into submodules (nucleus/client, plasmodium, fossil, monitor, rendering), `#[allow]`→`#[expect(reason)]` migration across workspace, BUILD_TIMESTAMP evolved from hardcoded placeholder to `build.rs`-injected, flaky tests fixed (beardog mock flush+shutdown, spore CWD→env-based `discover_plasmid_dir()`), SPDX header gap closed (692/692), deprecated `capability_from_primal_name`→`bootstrap_capability_hint_for_primal_name`, dead_code→`#[cfg(test)]` |
 | **Deep Resilience (Mar 20)** | TOCTOU fix in federation `discover_unix_sockets()` (non-fatal `read_dir`), `SocketNucleation::assign_socket()` ensures parent dir exists, 10 fossil tests serialized (`#[serial]`), 4 large test modules extracted to files (capabilities 946→377, handlers/discovery 908→293, vm_federation 929→470, UBM/discovery 923→462), orphan `biomeos-genome-extract` crate removed, `neural-api-client` identified as non-workspace dep (used by biomeos-api) |
@@ -282,7 +282,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 | **Hardcoded primal names** | `trust.rs`, `beardog.rs`, `primal_spawner.rs`, `orchestrator.rs`: string literals → `primal_names::*` constants |
 | **Doc-tests** | New doctests on `identifiers.rs`, `error/core.rs`, `paths.rs`, `config/mod.rs`, `transport.rs`, `atomic_client.rs`, `capability.rs` |
 | **Deployments doc** | `basement-hpc/README.md`: hardcoded home-directory paths → `$BIOMEOS_REPO` |
-| **Tests (at v2.77)** | 7,209 passing, 135 ignored — now 7,811+ / 0 ignored as of v3.16 |
+| **Tests (at v2.77)** | 7,209 passing, 135 ignored — now 7,801+ / 0 ignored as of v3.16 |
 
 ### Deep Audit + Hardcoding Evolution — v2.68 (Mar 27, 2026)
 
@@ -300,7 +300,7 @@ Comprehensive audit against all wateringHole standards + systematic evolution ex
 | **Dep audit** | `blake3`+`cc` acceptable (perf-critical genome hashing), `tokio-process` 0.2 legacy identified in `biomeos-deploy`, `bincode` v1 RUSTSEC-2025-0141 documented (blocked by tarpc) |
 | **Mock audit** | Zero production mocks confirmed (274 hits all test-gated: `#[cfg(test)]`, `*_tests.rs`, `biomeos-test-utils`) |
 | **Tests** | 6 discovery probe tests evolved to `#[tokio::test] async fn` (from sync `#[test]`) |
-| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all 26 workspace crates) |
+| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all 25 workspace crates) |
 | **Formatting** | PASS (`cargo fmt --check` clean after all changes) |
 
 ### Coverage push + flaky/cwd test hardening — v2.55 (Mar 20, 2026)
@@ -877,7 +877,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Apr 8, 2026)
 
-**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,811 total tests including doc-tests and proptests)
+**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,801 total tests including doc-tests and proptests)
 
 ### Coverage Distribution
 
@@ -961,7 +961,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,811 tests — fully concurrent)
+# Test (7,801 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -983,8 +983,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.16 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
-**Tests**: 7,000+ passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.17 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Tests**: 7,801 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode

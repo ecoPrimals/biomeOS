@@ -6,7 +6,7 @@ authors = ["biomeOS Team"]
 description = "Manifest management utilities for biomeOS using the unified type system"
 license.workspace = true
 rust-version.workspace = true
-repository = "https://github.com/your-org/biomeos"
+repository = "https://github.com/ecoPrimals/biomeOS"
 
 [dependencies]
 # Unified types from biomeos ecosystem

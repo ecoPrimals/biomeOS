@@ -106,7 +106,7 @@ Active scripts (shell scripts that remain in the repository):
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND | 0 |
 | Unsafe code | 0 (`#[forbid(unsafe_code)]` on all 26 crate roots + 4 binary roots, `mem::forget` eliminated) |
-| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 26 crates via workspace lint inheritance) |
+| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 25 crates via workspace lint inheritance) |
 | Production unwrap() | 0 (all in test code) |
 | Shell-outs from Rust | 3 (`sudo ip link/addr/set` in deploy/network.rs -- requires root) |
 | `deny(unsafe_code)` / `forbid(unsafe_code)` crates | all production crates + binary roots |

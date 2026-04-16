@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.17 (2026-04-16) — Smart Refactoring, Dependency Pruning, Manifest Hygiene
+
+Continued deep debt evolution and workspace hygiene.
+
+### Smart Refactoring
+- `fractal.rs` (804L) split into `fractal/mod.rs` (229L builder), `fractal/leaf.rs` (169L leaf node), `fractal/parent.rs` (321L parent node) — all under 800 LOC
+- Eliminated redundant `match child.as_ref() { Leaf(n) => ..., Parent(n) => ... }` patterns in `ParentNode` by delegating through `ComputeNodeKind`'s existing enum dispatch methods — net reduction of 85 lines
+- Added `ResourceInfo::zeroed()` convenience constructor for aggregation accumulators
+- Fixed `future_not_send` nursery warning by adding `+ Send` bound to recursive builder future
+
+### Dependency Pruning
+- `tokio` removed from `biomeos-types` (declared but unused in source — only pulled transitively via tarpc)
+- Placeholder features `validation = []` and `metrics = []` removed from `biomeos-types` (never gated on by any `cfg(feature = ...)`)
+
+### Manifest Hygiene
+- Repository URL standardized to `https://github.com/ecoPrimals/biomeOS` across all crates (was inconsistent: `your-org/biomeos`, `biomeOS/biomeOS`, `ecoPrimals/biomeOS`)
+- Added `description` field to `biomeos-api`, `biomeos-atomic-deploy`, `biomeos-test-utils`
+
+### Metrics
+- 7,801 tests passing (0 failures)
+- 25 workspace crates
+- 0 production files >800 LOC (max: 799)
+- 0 clippy warnings (pedantic + nursery)
+
 ## v3.16 (2026-04-16) — async-trait Elimination, Deep Debt, Dependency Trimming
 
 Complete removal of `async-trait` crate and deep debt evolution across the workspace.

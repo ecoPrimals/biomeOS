@@ -206,6 +206,18 @@ pub struct ResourceInfo {
 }
 
 impl ResourceInfo {
+    /// All fields zero — useful as an accumulator starting point.
+    #[must_use]
+    pub const fn zeroed() -> Self {
+        Self {
+            cpu_cores: 0,
+            memory_mb: 0,
+            gpu_count: 0,
+            gpu_memory_mb: 0,
+            disk_mb: 0,
+        }
+    }
+
     /// Aggregate resources (for parent nodes)
     pub const fn aggregate(&mut self, other: &Self) {
         self.cpu_cores += other.cpu_cores;

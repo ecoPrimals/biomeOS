@@ -4,14 +4,14 @@
 
 ---
 
-## Status: Production Ready (v3.16)
+## Status: Production Ready (v3.17)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 7/7 ecoBin v3.0 compliant (+ barraCuda, coralReef) |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate) |
+| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced) |
 | Tests | 7,801 passing (0 failures, fully concurrent) — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 18-crate ban list enforced) |
@@ -30,7 +30,7 @@
 | Files >800 LOC | 0 production files (all under 800 after smart domain extraction) |
 | Discovery | **Capability-based** per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — XDG sockets + `topology.rescan` + lazy rescan + `capability.register` + DNS-SD mDNS; no identity-based routing or deprecated discovery stubs |
 | Blocking Debt | 0 (all primalSpring Phase 43 gaps resolved: genetics tier, deploy class, routing contract, tick-loop) |
-| Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated (RPITIT/generics/enum dispatch/manual desugar); pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`) |
+| Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated (RPITIT/generics/enum dispatch/manual desugar); pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`); unused `tokio` removed from types crate; placeholder features pruned; repository URLs standardized |
 | TODO/FIXME/HACK | 0 in production code |
 | Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
@@ -256,7 +256,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,811 tests across 26 crates, fully concurrent)
+### Test (7,801 tests across 25 crates, fully concurrent)
 
 ```bash
 cargo test --workspace
@@ -283,7 +283,7 @@ cargo doc --workspace      # 0 missing_docs warnings
 
 ```
 biomeOS/
-├── crates/                    # Rust workspace (26 crates, all lint-inherited)
+├── crates/                    # Rust workspace (25 crates, all lint-inherited)
 │   ├── biomeos/               # Main binary (CLI + nucleus modes)
 │   ├── biomeos-core/          # Core orchestration + discovery + plasmodium
 │   ├── biomeos-types/         # Shared types, SystemPaths, capability taxonomy
@@ -303,7 +303,7 @@ biomeOS/
 │   ├── biomeos-primal-sdk/    # Primal development SDK
 │   ├── biomeos-genome-deploy/  # genomeBin deployment
 │   ├── neural-api-client-sync/ # Synchronous Neural API client
-│   └── ...                    # + 8 more (manifest, niche, chimera, test-utils, etc.)
+│   └── ...                    # + 7 more (manifest, niche, chimera, test-utils, etc.)
 ├── livespore-usb/             # USB deployment
 │   ├── x86_64/                # Intel/AMD binaries
 │   └── aarch64/               # ARM64 binaries
@@ -350,7 +350,7 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v3.16)
+**Status**: Production Ready (v3.17)
 **Updated**: April 16, 2026
 **Tests**: 7,801 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
