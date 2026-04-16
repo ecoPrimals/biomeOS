@@ -16,7 +16,6 @@ use crate::capability::{CapabilityInfo, CapabilityLayer, CapabilityVerification}
 use crate::discovery::{DiscoveredPrimal, DiscoveryRequest, PhysicalDiscovery};
 use crate::identity::{IdentityLayer, IdentityProof, IdentityVerification};
 use crate::trust::{TrustEvaluation, TrustLayer, TrustLevel};
-use async_trait::async_trait;
 use biomeos_test_utils::ready_signal;
 use biomeos_types::CapabilityTaxonomy;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
@@ -61,7 +60,6 @@ struct MockPhysical {
     out: Vec<DiscoveredPrimal>,
 }
 
-#[async_trait]
 impl PhysicalDiscovery for MockPhysical {
     async fn discover_by_capability(
         &self,
@@ -84,7 +82,6 @@ struct MockIdentity {
     proof: IdentityProof,
 }
 
-#[async_trait]
 impl IdentityLayer for MockIdentity {
     async fn request_proof(&self, _endpoint: &str, _challenge: &str) -> Result<IdentityProof> {
         Err(Error::discovery_failed("mock", None))
@@ -110,11 +107,15 @@ impl IdentityLayer for MockIdentity {
     }
 }
 
-struct MockCapability;
+struct MockCap {
+    fail: bool,
+}
 
-#[async_trait]
-impl CapabilityLayer for MockCapability {
+impl CapabilityLayer for MockCap {
     async fn query_capabilities(&self, _endpoint: &str) -> Result<CapabilityInfo> {
+        if self.fail {
+            return Err(Error::discovery_failed("cap query", None));
+        }
         Ok(CapabilityInfo {
             primal: "p".to_string(),
             version: "1".to_string(),
@@ -129,6 +130,9 @@ impl CapabilityLayer for MockCapability {
         _discovered: &DiscoveredPrimal,
         _identity: &IdentityProof,
     ) -> Result<CapabilityVerification> {
+        if self.fail {
+            return Err(Error::capability_mismatch(vec![], vec![]));
+        }
         Ok(CapabilityVerification {
             verified: true,
             expected: vec![],
@@ -138,29 +142,11 @@ impl CapabilityLayer for MockCapability {
     }
 }
 
-struct MockCapabilityFail;
-
-#[async_trait]
-impl CapabilityLayer for MockCapabilityFail {
-    async fn query_capabilities(&self, _endpoint: &str) -> Result<CapabilityInfo> {
-        Err(Error::discovery_failed("cap query", None))
-    }
-
-    async fn verify_capabilities(
-        &self,
-        _discovered: &DiscoveredPrimal,
-        _identity: &IdentityProof,
-    ) -> Result<CapabilityVerification> {
-        Err(Error::capability_mismatch(vec![], vec![]))
-    }
-}
-
 struct MockIdentityAcceptName {
     accept: &'static str,
     proof: IdentityProof,
 }
 
-#[async_trait]
 impl IdentityLayer for MockIdentityAcceptName {
     async fn request_proof(&self, _endpoint: &str, _challenge: &str) -> Result<IdentityProof> {
         Err(Error::discovery_failed("mock", None))
@@ -187,7 +173,6 @@ struct MockTrust {
     err: bool,
 }
 
-#[async_trait]
 impl TrustLayer for MockTrust {
     async fn evaluate_trust(
         &self,
@@ -214,7 +199,7 @@ fn test_client(
     primal_for_proof: &str,
     cap_fail: bool,
     trust_err: bool,
-) -> NucleusClient {
+) -> NucleusClient<MockPhysical, MockIdentity, MockCap, MockTrust> {
     let proof = sample_proof(primal_for_proof);
     NucleusClient::from_layers_for_test(
         Arc::new(MockPhysical { out: primals }),
@@ -222,11 +207,7 @@ fn test_client(
             ok: identity_ok,
             proof,
         }),
-        if cap_fail {
-            Arc::new(MockCapabilityFail) as Arc<dyn CapabilityLayer>
-        } else {
-            Arc::new(MockCapability) as Arc<dyn CapabilityLayer>
-        },
+        Arc::new(MockCap { fail: cap_fail }),
         Arc::new(MockTrust { err: trust_err }),
         Arc::new(Registry::new()),
     )
@@ -300,7 +281,7 @@ async fn test_discover_second_primal_after_first_skipped() {
             accept: "good",
             proof: sample_proof("good"),
         }),
-        Arc::new(MockCapability),
+        Arc::new(MockCap { fail: false }),
         Arc::new(MockTrust { err: false }),
         Arc::new(Registry::new()),
     );

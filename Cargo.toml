@@ -88,7 +88,7 @@ categories = ["os", "distributed-systems", "virtualization"]
 
 [workspace.dependencies]
 # Core dependencies
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", default-features = false, features = ["rt-multi-thread", "macros", "sync", "time"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bytes = "1.0"
@@ -114,7 +114,6 @@ ureq = { version = "2.9", default-features = false, features = ["json"] }
 
 # Async and futures
 futures = "0.3"
-async-trait = "0.1"
 
 # Serialization
 toml = "0.8"
@@ -124,11 +123,10 @@ tarpc = { version = "0.37", features = ["serde-transport", "serde-transport-binc
 tokio-serde = { version = "0.9", features = ["bincode"] }
 
 # Utilities
-itertools = "0.12"
 dashmap = "5.5"
 
 # Networking
-hyper = { version = "1.0", features = ["full"] }
+hyper = { version = "1.0", default-features = false, features = ["client", "server", "http1"] }
 
 # Testing
 temp-env = "0.3"
@@ -234,8 +232,7 @@ biomeos-graph = { path = "crates/biomeos-graph", version = "0.1.0" }  # Neural A
 # biomeos-ui = { path = "crates/biomeos-ui" }  # Archived 2025-12-23
 
 # Async runtime
-tokio = { workspace = true }
-async-trait = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "fs", "process"] }
 
 # Error handling
 anyhow = { workspace = true }
@@ -267,7 +264,7 @@ etcetera = { workspace = true }  # Pure Rust replacement for dirs
 chrono = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "test-util"] }
 tokio-test = { workspace = true }
 anyhow = { workspace = true }
 tempfile = { workspace = true }

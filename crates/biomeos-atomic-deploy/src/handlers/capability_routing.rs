@@ -51,7 +51,7 @@ pub fn routing_trace_value(phases: &[RoutingPhase], domain_capability: &str) -> 
                 method: meth,
             } => {
                 phase_names.push("route_resolved");
-                capability = cap.clone();
+                capability.clone_from(cap);
                 provider = Some(pr.clone());
                 method = Some(meth.clone());
             }

@@ -4,7 +4,7 @@
 #![expect(clippy::unwrap_used, reason = "test")]
 
 use super::*;
-use crate::ComputeNode;
+use crate::ComputeNodeKind;
 use crate::node::Runtime;
 use std::sync::Arc;
 
@@ -128,7 +128,8 @@ async fn test_leaf_spawn_sub_node_errors() {
         gpu_memory_mb: 0,
         disk_mb: 1000,
     };
-    let leaf: Arc<dyn ComputeNode> = Arc::new(LeafNode::new(config, resources));
+    let leaf: Arc<ComputeNodeKind> =
+        Arc::new(ComputeNodeKind::Leaf(LeafNode::new(config, resources)));
     let err = leaf
         .spawn_sub_node(NodeConfig {
             node_id: "child".to_string(),

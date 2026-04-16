@@ -5,7 +5,6 @@ use super::*;
 use std::time::SystemTime;
 
 struct MockSecurityProvider;
-#[async_trait::async_trait]
 impl SecurityProvider for MockSecurityProvider {
     async fn request_tunnel(
         &self,
@@ -72,7 +71,6 @@ impl SecurityProvider for MockSecurityProvider {
 }
 
 struct MockDiscoveryProvider;
-#[async_trait::async_trait]
 impl DiscoveryProvider for MockDiscoveryProvider {
     async fn register_transport(&self, _endpoint: &TransportEndpoint) -> Result<()> {
         Ok(())
@@ -106,7 +104,6 @@ impl DiscoveryProvider for MockDiscoveryProvider {
 }
 
 struct MockRoutingProvider;
-#[async_trait::async_trait]
 impl RoutingProvider for MockRoutingProvider {
     async fn request_relay(
         &self,
@@ -139,9 +136,9 @@ impl RoutingProvider for MockRoutingProvider {
 
 #[test]
 fn test_p2p_coordinator_new_with_explicit_providers() {
-    let security: Arc<dyn SecurityProvider> = Arc::new(MockSecurityProvider);
-    let discovery: Arc<dyn DiscoveryProvider> = Arc::new(MockDiscoveryProvider);
-    let routing: Option<Arc<dyn RoutingProvider>> = Some(Arc::new(MockRoutingProvider));
+    let security = Arc::new(MockSecurityProvider);
+    let discovery = Arc::new(MockDiscoveryProvider);
+    let routing = Some(Arc::new(MockRoutingProvider));
     let coordinator = P2PCoordinator::new(security, discovery, routing);
     drop(coordinator);
 }
@@ -150,7 +147,7 @@ fn test_p2p_coordinator_new_with_explicit_providers() {
 fn test_p2p_coordinator_new_without_routing() {
     let security = Arc::new(MockSecurityProvider);
     let discovery = Arc::new(MockDiscoveryProvider);
-    let coordinator = P2PCoordinator::new(security, discovery, None);
+    let coordinator = P2PCoordinator::new(security, discovery, None::<Arc<MockRoutingProvider>>);
     drop(coordinator);
 }
 
@@ -159,7 +156,7 @@ async fn test_create_secure_tunnel() {
     let coordinator = P2PCoordinator::new(
         Arc::new(MockSecurityProvider),
         Arc::new(MockDiscoveryProvider),
-        None,
+        None::<Arc<MockRoutingProvider>>,
     );
     let proof = LineageProof {
         lineage_id: "family-1".to_string(),
@@ -180,7 +177,7 @@ async fn test_enable_encrypted_discovery() {
     let coordinator = P2PCoordinator::new(
         Arc::new(MockSecurityProvider),
         Arc::new(MockDiscoveryProvider),
-        None,
+        None::<Arc<MockRoutingProvider>>,
     );
     let mode = coordinator
         .enable_encrypted_discovery("family-123")
@@ -211,7 +208,7 @@ async fn test_coordinate_relay_without_routing_fails() {
     let coordinator = P2PCoordinator::new(
         Arc::new(MockSecurityProvider),
         Arc::new(MockDiscoveryProvider),
-        None,
+        None::<Arc<MockRoutingProvider>>,
     );
     let result = coordinator.coordinate_relay("requester", "target").await;
     match result {
@@ -228,7 +225,7 @@ async fn test_monitor_tunnel_healthy() {
     let coordinator = P2PCoordinator::new(
         Arc::new(MockSecurityProvider),
         Arc::new(MockDiscoveryProvider),
-        None,
+        None::<Arc<MockRoutingProvider>>,
     );
     let health = coordinator
         .monitor_tunnel("tunnel-1")
@@ -243,7 +240,7 @@ async fn test_monitor_tunnel_unhealthy() {
     let coordinator = P2PCoordinator::new(
         Arc::new(MockSecurityProvider),
         Arc::new(MockDiscoveryProvider),
-        None,
+        None::<Arc<MockRoutingProvider>>,
     );
     let health = coordinator
         .monitor_tunnel("bad-tunnel")
@@ -443,7 +440,6 @@ fn test_compute_status_security_healthy_transport_degraded() {
 #[tokio::test]
 async fn test_monitor_tunnel_security_provider_error_message() {
     struct BadSec;
-    #[async_trait::async_trait]
     impl SecurityProvider for BadSec {
         async fn request_tunnel(
             &self,
@@ -463,7 +459,11 @@ async fn test_monitor_tunnel_security_provider_error_message() {
             anyhow::bail!("skip")
         }
     }
-    let coordinator = P2PCoordinator::new(Arc::new(BadSec), Arc::new(MockDiscoveryProvider), None);
+    let coordinator = P2PCoordinator::new(
+        Arc::new(BadSec),
+        Arc::new(MockDiscoveryProvider),
+        None::<Arc<MockRoutingProvider>>,
+    );
     let err = coordinator
         .monitor_tunnel("tid")
         .await
@@ -475,7 +475,6 @@ async fn test_monitor_tunnel_security_provider_error_message() {
 #[tokio::test]
 async fn test_monitor_tunnel_discovery_provider_error_message() {
     struct BadDisc;
-    #[async_trait::async_trait]
     impl DiscoveryProvider for BadDisc {
         async fn register_transport(&self, _: &TransportEndpoint) -> Result<()> {
             Ok(())
@@ -490,7 +489,11 @@ async fn test_monitor_tunnel_discovery_provider_error_message() {
             anyhow::bail!("skip")
         }
     }
-    let coordinator = P2PCoordinator::new(Arc::new(MockSecurityProvider), Arc::new(BadDisc), None);
+    let coordinator = P2PCoordinator::new(
+        Arc::new(MockSecurityProvider),
+        Arc::new(BadDisc),
+        None::<Arc<MockRoutingProvider>>,
+    );
     let err = coordinator
         .monitor_tunnel("tid")
         .await
@@ -558,7 +561,6 @@ fn test_compute_status_security_unhealthy_transport_degraded() {
 #[tokio::test]
 async fn test_create_secure_tunnel_propagates_btsp_error() {
     struct FailSec;
-    #[async_trait::async_trait]
     impl SecurityProvider for FailSec {
         async fn request_tunnel(
             &self,
@@ -578,7 +580,11 @@ async fn test_create_secure_tunnel_propagates_btsp_error() {
             anyhow::bail!("skip")
         }
     }
-    let coordinator = P2PCoordinator::new(Arc::new(FailSec), Arc::new(MockDiscoveryProvider), None);
+    let coordinator = P2PCoordinator::new(
+        Arc::new(FailSec),
+        Arc::new(MockDiscoveryProvider),
+        None::<Arc<MockRoutingProvider>>,
+    );
     let proof = LineageProof {
         lineage_id: "x".to_string(),
         depth: 0,
@@ -596,7 +602,6 @@ async fn test_create_secure_tunnel_propagates_btsp_error() {
 #[tokio::test]
 async fn test_enable_encrypted_discovery_propagates_error() {
     struct FailKeys;
-    #[async_trait::async_trait]
     impl SecurityProvider for FailKeys {
         async fn request_tunnel(
             &self,
@@ -616,8 +621,11 @@ async fn test_enable_encrypted_discovery_propagates_error() {
             anyhow::bail!("skip")
         }
     }
-    let coordinator =
-        P2PCoordinator::new(Arc::new(FailKeys), Arc::new(MockDiscoveryProvider), None);
+    let coordinator = P2PCoordinator::new(
+        Arc::new(FailKeys),
+        Arc::new(MockDiscoveryProvider),
+        None::<Arc<MockRoutingProvider>>,
+    );
     let err = coordinator
         .enable_encrypted_discovery("fam")
         .await
@@ -689,7 +697,6 @@ fn test_compute_status_security_unhealthy_transport_healthy() {
 #[tokio::test]
 async fn test_enable_encrypted_discovery_fails_when_discovery_enable_errors() {
     struct FailEncrypted;
-    #[async_trait::async_trait]
     impl DiscoveryProvider for FailEncrypted {
         async fn register_transport(&self, _: &TransportEndpoint) -> Result<()> {
             Ok(())
@@ -707,7 +714,7 @@ async fn test_enable_encrypted_discovery_fails_when_discovery_enable_errors() {
     let coordinator = P2PCoordinator::new(
         Arc::new(MockSecurityProvider),
         Arc::new(FailEncrypted),
-        None,
+        None::<Arc<MockRoutingProvider>>,
     );
     let err = coordinator
         .enable_encrypted_discovery("fam")
@@ -722,7 +729,6 @@ async fn test_enable_encrypted_discovery_fails_when_discovery_enable_errors() {
 #[tokio::test]
 async fn test_coordinate_relay_propagates_when_routing_request_relay_fails() {
     struct FailRelay;
-    #[async_trait::async_trait]
     impl RoutingProvider for FailRelay {
         async fn request_relay(&self, _: &str, _: &str, _: LineageInfo) -> Result<RelayOffer> {
             anyhow::bail!("relay-offer-fail")

@@ -39,7 +39,6 @@ use tracing::debug;
 /// Callers pass dotted semantic names (e.g. `"beacon.encrypt"`); the
 /// implementation splits them into the canonical `{ capability, operation, args }`
 /// format before forwarding to the Neural API.
-#[async_trait::async_trait]
 pub trait CapabilityCaller: Send + Sync {
     /// Call a semantic capability.
     ///
@@ -49,11 +48,11 @@ pub trait CapabilityCaller: Send + Sync {
     ///
     /// # Returns
     /// Result from the provider primal
-    async fn call(
+    fn call(
         &self,
         capability: &str,
         params: serde_json::Value,
-    ) -> Result<serde_json::Value, String>;
+    ) -> impl std::future::Future<Output = Result<serde_json::Value, String>> + Send;
 }
 
 /// Default capability caller using `AtomicClient` to neuralAPI
@@ -84,7 +83,6 @@ impl NeuralApiCapabilityCaller {
     }
 }
 
-#[async_trait::async_trait]
 impl CapabilityCaller for NeuralApiCapabilityCaller {
     async fn call(
         &self,
@@ -198,7 +196,6 @@ impl DirectBeardogCaller {
     }
 }
 
-#[async_trait::async_trait]
 impl CapabilityCaller for DirectBeardogCaller {
     async fn call(
         &self,
@@ -318,20 +315,15 @@ mod tests {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // CapabilityCaller trait object tests
+    // CapabilityCaller trait - static dispatch (RPITIT)
     // ═══════════════════════════════════════════════════════════════
 
-    /// Verify that callers can be used as trait objects
     #[test]
-    fn test_caller_as_boxed_trait() {
-        let _caller: Box<dyn CapabilityCaller> =
-            Box::new(NeuralApiCapabilityCaller::new("/tmp/test.sock"));
-        // Just ensure the boxing works — the trait is object-safe
-    }
-
-    #[test]
-    fn test_direct_caller_as_boxed_trait() {
-        let _caller: Box<dyn CapabilityCaller> =
-            Box::new(DirectBeardogCaller::new("/tmp/beardog.sock"));
+    fn test_callers_implement_trait() {
+        fn assert_caller<C: CapabilityCaller>(_c: &C) {}
+        let neural = NeuralApiCapabilityCaller::new("/tmp/test.sock");
+        assert_caller(&neural);
+        let direct = DirectBeardogCaller::new("/tmp/beardog.sock");
+        assert_caller(&direct);
     }
 }

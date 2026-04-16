@@ -3,9 +3,9 @@
 
 //! Primal lifecycle state and `ManagedPrimal` trait
 
+use std::future::Future;
+use std::pin::Pin;
 use std::time::Duration;
-
-use async_trait::async_trait;
 
 use biomeos_types::identifiers::{Endpoint, PrimalId};
 
@@ -33,7 +33,6 @@ pub enum PrimalState {
 }
 
 /// Represents a primal that can be orchestrated
-#[async_trait]
 pub trait ManagedPrimal: Send + Sync {
     /// Get the primal's ID
     fn id(&self) -> &PrimalId;
@@ -45,16 +44,22 @@ pub trait ManagedPrimal: Send + Sync {
     fn requires(&self) -> &[Capability];
 
     /// Get the primal's endpoint (if running)
-    async fn endpoint(&self) -> Option<Endpoint>;
+    fn endpoint(&self) -> Pin<Box<dyn Future<Output = Option<Endpoint>> + Send + '_>>;
 
     /// Start the primal
-    async fn start(&self) -> biomeos_types::error::BiomeResult<()>;
+    fn start(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = biomeos_types::error::BiomeResult<()>> + Send + '_>>;
 
     /// Stop the primal
-    async fn stop(&self) -> biomeos_types::error::BiomeResult<()>;
+    fn stop(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = biomeos_types::error::BiomeResult<()>> + Send + '_>>;
 
     /// Check if the primal is healthy
-    async fn health_check(&self) -> biomeos_types::error::BiomeResult<HealthStatus>;
+    fn health_check(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = biomeos_types::error::BiomeResult<HealthStatus>> + Send + '_>>;
 
     /// Get the startup timeout
     fn startup_timeout(&self) -> Duration {

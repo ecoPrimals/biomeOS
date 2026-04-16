@@ -162,9 +162,10 @@ async fn test_probe_endpoint_unreachable() {
     let config = BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).unwrap();
 
-    // Probe a non-existent endpoint — real probe now fails properly
+    // Probe a non-existent HTTP endpoint — real probe now connects and fails
     let result = manager.probe_endpoint("http://localhost:99999").await;
-
-    // TCP/HTTP endpoints return a basic probe result (no connection attempt yet)
-    assert!(result.is_ok());
+    assert!(
+        result.is_err(),
+        "unreachable HTTP endpoint should return an error"
+    );
 }

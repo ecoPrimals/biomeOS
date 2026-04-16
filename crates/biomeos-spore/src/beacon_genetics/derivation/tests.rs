@@ -37,7 +37,6 @@ mod derivation_tests {
         }
     }
 
-    #[async_trait::async_trait]
     impl CapabilityCaller for MockCaller {
         async fn call(
             &self,

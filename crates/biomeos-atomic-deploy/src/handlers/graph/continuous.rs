@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use biomeos_graph::continuous::{ContinuousExecutor, SessionCommand};
 use biomeos_graph::events::GraphEventBroadcaster;
 use biomeos_graph::graph::DeploymentGraph;
+use biomeos_types::SystemPaths;
 use serde_json::{Value, json};
 use tracing::{debug, info, warn};
 
@@ -41,6 +42,9 @@ impl GraphHandler {
         if *coordination != biomeos_graph::graph::CoordinationPattern::Continuous {
             anyhow::bail!("Graph '{graph_id}' has coordination '{coordination:?}', not Continuous");
         }
+
+        self.load_translations_from_deployment_graph(&deployment_graph)
+            .await;
 
         let session_id = format!("{graph_id}-{}", chrono::Utc::now().timestamp_millis());
         let broadcaster = GraphEventBroadcaster::new(16);
@@ -199,5 +203,47 @@ impl GraphHandler {
 
         info!("🛑 Stopped continuous session: {}", session_id);
         Ok(json!({"session_id": session_id, "command": "stop"}))
+    }
+
+    /// Register capability translations from a `DeploymentGraph` so that
+    /// `capability.call` can route to providers declared in continuous graphs,
+    /// matching the parity of `load_translations_from_graph` on the sequential path.
+    async fn load_translations_from_deployment_graph(&self, graph: &DeploymentGraph) {
+        let runtime_dir = SystemPaths::new()
+            .map(|p| p.runtime_dir().to_string_lossy().to_string())
+            .unwrap_or_else(|_| {
+                std::env::var("BIOMEOS_RUNTIME_DIR")
+                    .or_else(|_| std::env::var("TMPDIR"))
+                    .unwrap_or_else(|_| "/tmp".to_string())
+            });
+
+        let mut registry = self.translation_registry.write().await;
+
+        for node in graph.nodes() {
+            if let Some(ref capability) = node.capability {
+                let (domain, operation) = capability
+                    .split_once('.')
+                    .unwrap_or((capability.as_str(), "default"));
+
+                let semantic_name = format!("{domain}.{operation}");
+                let method = format!("{domain}.invoke");
+                let primal_name = node.name.clone();
+                let socket_path =
+                    format!("{}/{}-{}.sock", runtime_dir, primal_name, self.family_id);
+
+                debug!(
+                    "   Continuous graph: registering {} → {}:{} @ {}",
+                    semantic_name, primal_name, method, socket_path
+                );
+
+                registry.register_translation(
+                    &semantic_name,
+                    &primal_name,
+                    &method,
+                    &socket_path,
+                    None,
+                );
+            }
+        }
     }
 }

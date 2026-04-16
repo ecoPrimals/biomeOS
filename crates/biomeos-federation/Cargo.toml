@@ -9,7 +9,7 @@ description = "biomeOS federation and sub-federation management"
 
 [dependencies]
 # Async runtime
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "fs"] }
 
 # Serialization
 serde = { workspace = true }

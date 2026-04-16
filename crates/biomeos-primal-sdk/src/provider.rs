@@ -25,7 +25,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 /// A data provider that springs use to abstract their data source.
@@ -37,11 +36,9 @@ use serde::{Deserialize, Serialize};
 ///
 /// ```rust,no_run
 /// use biomeos_primal_sdk::provider::{Provider, ProviderError};
-/// use async_trait::async_trait;
 ///
 /// struct MyProvider;
 ///
-/// #[async_trait]
 /// impl Provider for MyProvider {
 ///     fn name(&self) -> &str { "my-provider" }
 ///     fn is_available(&self) -> bool { true }
@@ -55,7 +52,6 @@ use serde::{Deserialize, Serialize};
 ///     }
 /// }
 /// ```
-#[async_trait]
 pub trait Provider: Send + Sync {
     /// Human-readable provider name (e.g. `"biomeOS"`, `"http"`, `"file"`).
     fn name(&self) -> &str;
@@ -68,11 +64,11 @@ pub trait Provider: Send + Sync {
     /// # Errors
     ///
     /// Returns [`ProviderError`] if the operation fails.
-    async fn fetch(
+    fn fetch(
         &self,
         operation: &str,
         params: serde_json::Value,
-    ) -> Result<serde_json::Value, ProviderError>;
+    ) -> impl std::future::Future<Output = Result<serde_json::Value, ProviderError>> + Send;
 }
 
 /// Errors from a [`Provider`] operation.
@@ -159,7 +155,6 @@ impl BiomeosProvider {
     }
 }
 
-#[async_trait]
 impl Provider for BiomeosProvider {
     fn name(&self) -> &'static str {
         "biomeOS"
@@ -249,7 +244,7 @@ pub mod provenance {
     ///
     /// Returns an error if the Neural API is unreachable or the call fails.
     pub async fn begin_experiment_session(
-        provider: &dyn Provider,
+        provider: &impl Provider,
         experiment_id: &str,
         agent_did: Option<&str>,
     ) -> Result<serde_json::Value, ProviderError> {
@@ -268,7 +263,7 @@ pub mod provenance {
     ///
     /// Returns an error if the Neural API is unreachable or the call fails.
     pub async fn record_step(
-        provider: &dyn Provider,
+        provider: &impl Provider,
         session_id: &str,
         step_name: &str,
         data: serde_json::Value,
@@ -287,7 +282,7 @@ pub mod provenance {
     ///
     /// Returns an error if the Neural API is unreachable or the call fails.
     pub async fn complete_experiment(
-        provider: &dyn Provider,
+        provider: &impl Provider,
         session_id: &str,
     ) -> Result<serde_json::Value, ProviderError> {
         let params = serde_json::json!({
@@ -345,7 +340,6 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl Provider for MockProvider {
         fn name(&self) -> &'static str {
             "mock"
@@ -479,7 +473,7 @@ mod tests {
 
     #[test]
     fn fallback_provider_chain() {
-        let providers: Vec<Arc<dyn Provider>> = vec![
+        let providers: Vec<Arc<MockProvider>> = vec![
             Arc::new(MockProvider::new(false, serde_json::json!({}))),
             Arc::new(MockProvider::new(
                 true,

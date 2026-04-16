@@ -34,7 +34,6 @@ use crate::api_adapter::cli_adapter::CliAdapter;
 use crate::atomic_client::AtomicClient;
 use bytes::Bytes;
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use serde_json::json;
 use std::time::SystemTime;
 use tracing::{debug, info};
@@ -54,7 +53,6 @@ impl CryptoSecurityAdapter {
     }
 }
 
-#[async_trait]
 impl SecurityProvider for CryptoSecurityAdapter {
     async fn request_tunnel(
         &self,
@@ -357,7 +355,6 @@ impl MeshDiscoveryAdapter {
     }
 }
 
-#[async_trait]
 impl DiscoveryProvider for MeshDiscoveryAdapter {
     async fn register_transport(&self, endpoint: &super::TransportEndpoint) -> Result<()> {
         info!(

@@ -13,12 +13,12 @@
 
 /// Fractal recursive node construction
 pub mod fractal;
-/// Core compute node trait and data types
+/// Core compute node dispatch and data types
 pub mod node;
 
 // Re-export core types
 pub use node::{
-    CapacityInfo, ComputeNode, HealthStatus, NodeConfig, NodeMetrics, NodeTopology,
+    CapacityInfo, ComputeNodeKind, HealthStatus, NodeConfig, NodeMetrics, NodeTopology,
     ResourceAllocation, ResourceInfo, ResourceType, Runtime, TreeMetrics, UtilizationInfo,
     Workload, WorkloadId, WorkloadInfo, WorkloadStatus,
 };

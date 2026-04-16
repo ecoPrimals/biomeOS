@@ -13,7 +13,6 @@
 //!
 //! This layer coordinates those APIs over the `"encryption"` capability socket.
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
@@ -60,20 +59,29 @@ pub struct IdentityVerification {
 }
 
 /// Identity verification layer (delegates to the security provider)
-#[async_trait]
 pub trait IdentityLayer: Send + Sync {
     /// Request identity proof from a primal
     ///
     /// Delegates to the primal's `identity.get_proof` API
-    async fn request_proof(&self, endpoint: &str, challenge: &str) -> Result<IdentityProof>;
+    fn request_proof(
+        &self,
+        endpoint: &str,
+        challenge: &str,
+    ) -> impl std::future::Future<Output = Result<IdentityProof>> + Send;
 
     /// Verify identity proof
     ///
     /// Delegates to `security.verify_primal_identity` on the security provider
-    async fn verify_proof(&self, proof: &IdentityProof) -> Result<IdentityVerification>;
+    fn verify_proof(
+        &self,
+        proof: &IdentityProof,
+    ) -> impl std::future::Future<Output = Result<IdentityVerification>> + Send;
 
     /// Full verification flow (request + verify)
-    async fn verify_identity(&self, discovered: &DiscoveredPrimal) -> Result<IdentityVerification>;
+    fn verify_identity(
+        &self,
+        discovered: &DiscoveredPrimal,
+    ) -> impl std::future::Future<Output = Result<IdentityVerification>> + Send;
 }
 
 /// Identity layer implementation
@@ -194,7 +202,6 @@ impl IdentityLayerImpl {
     }
 }
 
-#[async_trait]
 impl IdentityLayer for IdentityLayerImpl {
     async fn verify_identity(&self, discovered: &DiscoveredPrimal) -> Result<IdentityVerification> {
         // Generate challenge

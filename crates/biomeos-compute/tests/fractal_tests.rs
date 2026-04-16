@@ -114,21 +114,19 @@ async fn test_isomorphic_interface() {
         .await
         .expect("Failed to build fractal");
 
-    // Root node should implement ComputeNode
-    let _: &dyn ComputeNode = root.as_ref();
+    // Root and descendants share the same `ComputeNodeKind` surface
+    let _: &ComputeNodeKind = root.as_ref();
 
-    // Children should also implement ComputeNode
     let children = root.get_children().await.expect("Failed to get children");
     for child in children {
-        let _: &dyn ComputeNode = child.as_ref();
+        let _: &ComputeNodeKind = child.as_ref();
 
-        // Grandchildren too
         let grandchildren = child
             .get_children()
             .await
             .expect("Failed to get grandchildren");
         for grandchild in grandchildren {
-            let _: &dyn ComputeNode = grandchild.as_ref();
+            let _: &ComputeNodeKind = grandchild.as_ref();
         }
     }
 
@@ -275,8 +273,8 @@ async fn test_leaf_node_direct() {
         disk_mb: 10000,
     };
 
-    let leaf: std::sync::Arc<dyn ComputeNode> =
-        std::sync::Arc::new(LeafNode::new(config, resources));
+    let leaf: std::sync::Arc<ComputeNodeKind> =
+        std::sync::Arc::new(ComputeNodeKind::Leaf(LeafNode::new(config, resources)));
 
     // Verify it's a leaf
     assert!(leaf.is_leaf());

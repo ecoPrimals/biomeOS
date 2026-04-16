@@ -8,12 +8,12 @@
 
 use std::{
     fs::OpenOptions,
+    future::Future,
+    pin::Pin,
     process::{Child, Command, Stdio},
     sync::Arc,
     time::Duration,
 };
-
-use async_trait::async_trait;
 use tokio::sync::Mutex;
 use tracing::{info, warn};
 
@@ -91,7 +91,6 @@ impl GenericManagedPrimal {
     }
 }
 
-#[async_trait]
 impl ManagedPrimal for GenericManagedPrimal {
     fn id(&self) -> &PrimalId {
         &self.id
@@ -105,206 +104,216 @@ impl ManagedPrimal for GenericManagedPrimal {
         &self.config.requires
     }
 
-    async fn endpoint(&self) -> Option<Endpoint> {
-        // EVOLUTION: Prefer Unix socket over HTTP
-        // Unix sockets are the primary IPC mechanism for biomeOS.
-        // HTTP is only for temporary bridge to PetalTongue.
-        //
-        // Priority:
-        // 1. Unix socket (from PRIMAL_SOCKET_PATH env)
-        // 2. HTTP (legacy, deprecated)
-        //
-        // Deep Debt Principle: Unix socket first, HTTP bridge is temporary.
+    fn endpoint(&self) -> Pin<Box<dyn Future<Output = Option<Endpoint>> + Send + '_>> {
+        Box::pin(async move {
+            // EVOLUTION: Prefer Unix socket over HTTP
+            // Unix sockets are the primary IPC mechanism for biomeOS.
+            // HTTP is only for temporary bridge to PetalTongue.
+            //
+            // Priority:
+            // 1. Unix socket (from PRIMAL_SOCKET_PATH env)
+            // 2. HTTP (legacy, deprecated)
+            //
+            // Deep Debt Principle: Unix socket first, HTTP bridge is temporary.
 
-        if let Some(ref p) = self.socket_path_override
-            && let Ok(endpoint) = Endpoint::new(format!("unix://{}", p.display()))
-        {
-            return Some(endpoint);
-        }
-
-        // Try Unix socket first
-        if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH")
-            && let Ok(endpoint) = Endpoint::new(format!("unix://{socket_path}"))
-        {
-            return Some(endpoint);
-        }
-
-        // Fallback to HTTP if configured (deprecated)
-        if self.config.http_port > 0 {
-            warn!(
-                "⚠️  Primal {} using deprecated HTTP endpoint. Evolve to Unix socket!",
-                self.id
-            );
-            warn!(
-                "   Set PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
-                self.config.id
-            );
-            // Use RuntimeConfig for bind address and port resolution
-            use biomeos_types::defaults::RuntimeConfig;
-            let runtime_config = RuntimeConfig::from_env();
-            let bind_addr = runtime_config.bind_address();
-            let http_port = runtime_config.http_port();
-            let url = format!("http://{bind_addr}:{http_port}");
-            Endpoint::new(&url).ok()
-        } else {
-            None
-        }
-    }
-
-    async fn start(&self) -> BiomeResult<()> {
-        info!("🚀 Starting primal: {}", self.id);
-
-        let mut process_guard = self.process.lock().await;
-        if process_guard.is_some() {
-            warn!("Primal {} already running", self.id);
-            return Ok(());
-        }
-
-        // Build environment variables from config
-        let mut cmd = Command::new(&self.config.binary_path);
-
-        // Add HTTP port if specified
-        if self.config.http_port > 0 {
-            cmd.env("HTTP_PORT", self.config.http_port.to_string());
-        }
-
-        // Add all primal-specific environment variables
-        for (key, value) in &self.config.env_config {
-            cmd.env(key, value);
-        }
-
-        // Add capabilities for downstream discovery
-        if !self.config.provides.is_empty() {
-            let provides_str = self
-                .config
-                .provides
-                .iter()
-                .map(std::string::ToString::to_string)
-                .collect::<Vec<_>>()
-                .join(",");
-            cmd.env("PRIMAL_PROVIDES", provides_str);
-        }
-
-        // Logs redirected to per-primal files
-        // instead of /dev/null to enable observability and debugging!
-        // Use XDG-compliant paths via SystemPaths
-        let node_id = std::env::var("SONGBIRD_NODE_ID")
-            .or_else(|_| std::env::var("NODE_ID"))
-            .unwrap_or_else(|_| "unknown".to_string());
-
-        // Use SystemPaths for XDG-compliant log location
-        let log_path = if let Ok(paths) = SystemPaths::new() {
-            paths.log_file(&format!("{}-{}", self.id, node_id))
-        } else {
-            // EVOLVED: Environment-driven fallback (no hardcoded /tmp)
-            // Respects BIOMEOS_LOG_DIR or falls back to writable directory
-            let log_dir = std::env::var("BIOMEOS_LOG_DIR")
-                .or_else(|_| std::env::var("XDG_STATE_HOME").map(|p| format!("{p}/biomeos/logs")))
-                .or_else(|_| {
-                    std::env::var("HOME").map(|p| format!("{p}/.local/state/biomeos/logs"))
-                })
-                .unwrap_or_else(|_| {
-                    warn!("No XDG paths available, using current directory for logs");
-                    "./logs".to_string()
-                });
-
-            std::fs::create_dir_all(&log_dir).ok();
-            std::path::PathBuf::from(format!("{}/{}-{}.log", log_dir, self.id, node_id))
-        };
-
-        // Ensure log directory exists
-        if let Some(parent) = log_path.parent() {
-            std::fs::create_dir_all(parent).ok();
-        }
-        let log_file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_path)
-            .map_err(|e| {
-                BiomeError::internal_error(
-                    format!("Failed to create log file {}: {}", log_path.display(), e),
-                    Some("log_file_creation_failure"),
-                )
-            })?;
-
-        info!("📝 Primal logs will be written to: {}", log_path.display());
-
-        let child = cmd
-            .stdout(Stdio::from(log_file.try_clone().map_err(|e| {
-                BiomeError::internal_error(
-                    format!("Failed to clone log file handle: {e}"),
-                    Some("log_file_clone_failure"),
-                )
-            })?))
-            .stderr(Stdio::from(log_file))
-            .spawn()
-            .map_err(|e| {
-                BiomeError::internal_error(
-                    format!("Failed to spawn primal {}: {}", self.id, e),
-                    Some("process_spawn_failure"),
-                )
-            })?;
-
-        *process_guard = Some(child);
-
-        info!("✅ Primal {} process started", self.id);
-        Ok(())
-    }
-
-    async fn stop(&self) -> BiomeResult<()> {
-        info!("🛑 Stopping primal: {}", self.id);
-
-        let mut process_guard = self.process.lock().await;
-        if let Some(mut child) = process_guard.take() {
-            child.kill().map_err(|e| {
-                BiomeError::internal_error(
-                    format!("Failed to kill {}: {}", self.id, e),
-                    Some("process_kill_failure"),
-                )
-            })?;
-            child.wait().map_err(|e| {
-                BiomeError::internal_error(
-                    format!("Failed to wait for {}: {}", self.id, e),
-                    Some("process_wait_failure"),
-                )
-            })?;
-        }
-
-        info!("✅ Primal {} stopped", self.id);
-        Ok(())
-    }
-
-    async fn health_check(&self) -> BiomeResult<HealthStatus> {
-        // Process-based health check with proper zombie reaping
-        let mut process_guard = self.process.lock().await;
-
-        if let Some(child) = process_guard.as_mut() {
-            // Check if process actually exited (and reap zombie if it did)
-            match child.try_wait() {
-                Ok(Some(exit_status)) => {
-                    // Process exited! Reap the zombie and mark unhealthy
-                    info!(
-                        "⚠️  Primal {} exited with status: {:?}",
-                        self.id, exit_status
-                    );
-                    *process_guard = None; // Clear the handle
-
-                    Ok(HealthStatus::Unhealthy)
-                }
-                Ok(None) => {
-                    // Process still running - healthy
-                    Ok(HealthStatus::Healthy)
-                }
-                Err(e) => {
-                    // Error checking process status
-                    warn!("Failed to check process status for {}: {}", self.id, e);
-                    Ok(HealthStatus::Unhealthy)
-                }
+            if let Some(ref p) = self.socket_path_override
+                && let Ok(endpoint) = Endpoint::new(format!("unix://{}", p.display()))
+            {
+                return Some(endpoint);
             }
-        } else {
-            // No process handle - unhealthy
-            Ok(HealthStatus::Unhealthy)
-        }
+
+            // Try Unix socket first
+            if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH")
+                && let Ok(endpoint) = Endpoint::new(format!("unix://{socket_path}"))
+            {
+                return Some(endpoint);
+            }
+
+            // Fallback to HTTP if configured (deprecated)
+            if self.config.http_port > 0 {
+                warn!(
+                    "⚠️  Primal {} using deprecated HTTP endpoint. Evolve to Unix socket!",
+                    self.id
+                );
+                warn!(
+                    "   Set PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
+                    self.config.id
+                );
+                // Use RuntimeConfig for bind address and port resolution
+                use biomeos_types::defaults::RuntimeConfig;
+                let runtime_config = RuntimeConfig::from_env();
+                let bind_addr = runtime_config.bind_address();
+                let http_port = runtime_config.http_port();
+                let url = format!("http://{bind_addr}:{http_port}");
+                Endpoint::new(&url).ok()
+            } else {
+                None
+            }
+        })
+    }
+
+    fn start(&self) -> Pin<Box<dyn Future<Output = BiomeResult<()>> + Send + '_>> {
+        Box::pin(async move {
+            info!("🚀 Starting primal: {}", self.id);
+
+            let mut process_guard = self.process.lock().await;
+            if process_guard.is_some() {
+                warn!("Primal {} already running", self.id);
+                return Ok(());
+            }
+
+            // Build environment variables from config
+            let mut cmd = Command::new(&self.config.binary_path);
+
+            // Add HTTP port if specified
+            if self.config.http_port > 0 {
+                cmd.env("HTTP_PORT", self.config.http_port.to_string());
+            }
+
+            // Add all primal-specific environment variables
+            for (key, value) in &self.config.env_config {
+                cmd.env(key, value);
+            }
+
+            // Add capabilities for downstream discovery
+            if !self.config.provides.is_empty() {
+                let provides_str = self
+                    .config
+                    .provides
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(",");
+                cmd.env("PRIMAL_PROVIDES", provides_str);
+            }
+
+            // Logs redirected to per-primal files
+            // instead of /dev/null to enable observability and debugging!
+            // Use XDG-compliant paths via SystemPaths
+            let node_id = std::env::var("SONGBIRD_NODE_ID")
+                .or_else(|_| std::env::var("NODE_ID"))
+                .unwrap_or_else(|_| "unknown".to_string());
+
+            // Use SystemPaths for XDG-compliant log location
+            let log_path = if let Ok(paths) = SystemPaths::new() {
+                paths.log_file(&format!("{}-{}", self.id, node_id))
+            } else {
+                // EVOLVED: Environment-driven fallback (no hardcoded /tmp)
+                // Respects BIOMEOS_LOG_DIR or falls back to writable directory
+                let log_dir = std::env::var("BIOMEOS_LOG_DIR")
+                    .or_else(|_| {
+                        std::env::var("XDG_STATE_HOME").map(|p| format!("{p}/biomeos/logs"))
+                    })
+                    .or_else(|_| {
+                        std::env::var("HOME").map(|p| format!("{p}/.local/state/biomeos/logs"))
+                    })
+                    .unwrap_or_else(|_| {
+                        warn!("No XDG paths available, using current directory for logs");
+                        "./logs".to_string()
+                    });
+
+                std::fs::create_dir_all(&log_dir).ok();
+                std::path::PathBuf::from(format!("{}/{}-{}.log", log_dir, self.id, node_id))
+            };
+
+            // Ensure log directory exists
+            if let Some(parent) = log_path.parent() {
+                std::fs::create_dir_all(parent).ok();
+            }
+            let log_file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&log_path)
+                .map_err(|e| {
+                    BiomeError::internal_error(
+                        format!("Failed to create log file {}: {}", log_path.display(), e),
+                        Some("log_file_creation_failure"),
+                    )
+                })?;
+
+            info!("📝 Primal logs will be written to: {}", log_path.display());
+
+            let child = cmd
+                .stdout(Stdio::from(log_file.try_clone().map_err(|e| {
+                    BiomeError::internal_error(
+                        format!("Failed to clone log file handle: {e}"),
+                        Some("log_file_clone_failure"),
+                    )
+                })?))
+                .stderr(Stdio::from(log_file))
+                .spawn()
+                .map_err(|e| {
+                    BiomeError::internal_error(
+                        format!("Failed to spawn primal {}: {}", self.id, e),
+                        Some("process_spawn_failure"),
+                    )
+                })?;
+
+            *process_guard = Some(child);
+
+            info!("✅ Primal {} process started", self.id);
+            Ok(())
+        })
+    }
+
+    fn stop(&self) -> Pin<Box<dyn Future<Output = BiomeResult<()>> + Send + '_>> {
+        Box::pin(async move {
+            info!("🛑 Stopping primal: {}", self.id);
+
+            let mut process_guard = self.process.lock().await;
+            if let Some(mut child) = process_guard.take() {
+                child.kill().map_err(|e| {
+                    BiomeError::internal_error(
+                        format!("Failed to kill {}: {}", self.id, e),
+                        Some("process_kill_failure"),
+                    )
+                })?;
+                child.wait().map_err(|e| {
+                    BiomeError::internal_error(
+                        format!("Failed to wait for {}: {}", self.id, e),
+                        Some("process_wait_failure"),
+                    )
+                })?;
+            }
+
+            info!("✅ Primal {} stopped", self.id);
+            Ok(())
+        })
+    }
+
+    fn health_check(&self) -> Pin<Box<dyn Future<Output = BiomeResult<HealthStatus>> + Send + '_>> {
+        Box::pin(async move {
+            // Process-based health check with proper zombie reaping
+            let mut process_guard = self.process.lock().await;
+
+            if let Some(child) = process_guard.as_mut() {
+                // Check if process actually exited (and reap zombie if it did)
+                match child.try_wait() {
+                    Ok(Some(exit_status)) => {
+                        // Process exited! Reap the zombie and mark unhealthy
+                        info!(
+                            "⚠️  Primal {} exited with status: {:?}",
+                            self.id, exit_status
+                        );
+                        *process_guard = None; // Clear the handle
+
+                        Ok(HealthStatus::Unhealthy)
+                    }
+                    Ok(None) => {
+                        // Process still running - healthy
+                        Ok(HealthStatus::Healthy)
+                    }
+                    Err(e) => {
+                        // Error checking process status
+                        warn!("Failed to check process status for {}: {}", self.id, e);
+                        Ok(HealthStatus::Unhealthy)
+                    }
+                }
+            } else {
+                // No process handle - unhealthy
+                Ok(HealthStatus::Unhealthy)
+            }
+        })
     }
 
     fn startup_timeout(&self) -> Duration {

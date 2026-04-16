@@ -159,9 +159,13 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("neural_api.execute_pipeline", Route::GraphExecutePipeline),
     // Continuous session management
     ("graph.start_continuous", Route::GraphStartContinuous),
+    ("neural_api.start_continuous", Route::GraphStartContinuous),
     ("graph.pause_continuous", Route::GraphPauseContinuous),
+    ("neural_api.pause_continuous", Route::GraphPauseContinuous),
     ("graph.resume_continuous", Route::GraphResumeContinuous),
+    ("neural_api.resume_continuous", Route::GraphResumeContinuous),
     ("graph.stop_continuous", Route::GraphStopContinuous),
+    ("neural_api.stop_continuous", Route::GraphStopContinuous),
     // Pathway Learner
     (
         "graph.suggest_optimizations",

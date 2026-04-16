@@ -18,7 +18,6 @@
 //! - Uses `SystemPaths` for XDG compliance
 //! - Runtime discovery, no hardcoded paths
 
-use async_trait::async_trait;
 use biomeos_types::{CapabilityTaxonomy, SystemPaths, primal_names};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -83,25 +82,30 @@ pub struct DiscoveredPrimal {
 }
 
 /// Physical discovery layer (delegates to the discovery provider)
-#[async_trait]
 pub trait PhysicalDiscovery: Send + Sync {
     /// Discover primals by capability
     ///
     /// Delegates to `discover_by_capability` on the discovery provider
-    async fn discover_by_capability(
+    fn discover_by_capability(
         &self,
         request: &DiscoveryRequest,
-    ) -> Result<Vec<DiscoveredPrimal>>;
+    ) -> impl std::future::Future<Output = Result<Vec<DiscoveredPrimal>>> + Send;
 
     /// Discover primals by family
     ///
     /// Delegates to `discover_by_family` on the discovery provider
-    async fn discover_by_family(&self, family_id: &str) -> Result<Vec<DiscoveredPrimal>>;
+    fn discover_by_family(
+        &self,
+        family_id: &str,
+    ) -> impl std::future::Future<Output = Result<Vec<DiscoveredPrimal>>> + Send;
 
     /// Announce this primal's capabilities
     ///
     /// Delegates to `announce_capabilities` on the discovery provider
-    async fn announce(&self, primal_info: &DiscoveredPrimal) -> Result<()>;
+    fn announce(
+        &self,
+        primal_info: &DiscoveredPrimal,
+    ) -> impl std::future::Future<Output = Result<()>> + Send;
 }
 
 /// Discovery layer implementation (mesh discovery provider via Unix socket)
@@ -209,7 +213,6 @@ impl DiscoveryLayer {
     }
 }
 
-#[async_trait]
 impl PhysicalDiscovery for DiscoveryLayer {
     async fn discover_by_capability(
         &self,

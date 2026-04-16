@@ -249,29 +249,46 @@ async fn test_get_discovered_primals_live_mode_success() {
     use biomeos_core::{DiscoveryResult, HealthStatus, PrimalDiscovery, PrimalType};
     use biomeos_types::{Endpoint, FamilyId, PrimalId};
     use semver::Version;
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::Arc;
 
     struct MockDiscovery {
         primals: Vec<biomeos_core::DiscoveredPrimal>,
     }
 
-    #[async_trait::async_trait]
     impl PrimalDiscovery for MockDiscovery {
-        async fn discover(
+        fn discover(
             &self,
             _endpoint: &Endpoint,
-        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(biomeos_core::DiscoveryError::NotFound {
-                endpoint: "mock".to_string(),
+        ) -> Pin<
+            Box<dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>> + Send + '_>,
+        > {
+            Box::pin(async move {
+                Err(biomeos_core::DiscoveryError::NotFound {
+                    endpoint: "mock".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-            Ok(self.primals.clone())
+        fn discover_all(
+            &self,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            let primals = self.primals.clone();
+            Box::pin(async move { Ok(primals) })
         }
 
-        async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Healthy)
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Healthy) })
         }
     }
 
@@ -339,29 +356,47 @@ async fn test_get_discovered_primals_live_mode_failure() {
     use crate::AppState;
     use biomeos_core::{DiscoveryError, DiscoveryResult, HealthStatus, PrimalDiscovery};
     use biomeos_types::{Endpoint, PrimalId};
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::Arc;
 
     struct FailingDiscovery;
 
-    #[async_trait::async_trait]
     impl PrimalDiscovery for FailingDiscovery {
-        async fn discover(
+        fn discover(
             &self,
             _endpoint: &Endpoint,
-        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(DiscoveryError::NotFound {
-                endpoint: "mock".to_string(),
+        ) -> Pin<
+            Box<dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>> + Send + '_>,
+        > {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "mock".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-            Err(DiscoveryError::NotFound {
-                endpoint: "discovery failed".to_string(),
+        fn discover_all(
+            &self,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "discovery failed".to_string(),
+                })
             })
         }
 
-        async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Unknown)
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Unknown) })
         }
     }
 
@@ -383,77 +418,100 @@ async fn test_get_discovered_primals_live_mode_failure() {
 }
 
 #[tokio::test]
+#[expect(clippy::too_many_lines, reason = "comprehensive health status test")]
 async fn test_get_discovered_primals_health_status_conversion() {
     use crate::AppState;
     use biomeos_core::{DiscoveryResult, HealthStatus, PrimalDiscovery, PrimalType};
     use biomeos_types::{Endpoint, PrimalId};
     use semver::Version;
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::Arc;
 
     struct MockDiscovery;
 
-    #[async_trait::async_trait]
     impl PrimalDiscovery for MockDiscovery {
-        async fn discover(
+        fn discover(
             &self,
             _endpoint: &Endpoint,
-        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(biomeos_core::DiscoveryError::NotFound {
-                endpoint: "mock".to_string(),
+        ) -> Pin<
+            Box<dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>> + Send + '_>,
+        > {
+            Box::pin(async move {
+                Err(biomeos_core::DiscoveryError::NotFound {
+                    endpoint: "mock".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-            Ok(vec![
-                biomeos_core::DiscoveredPrimal {
-                    id: PrimalId::new_unchecked("healthy"),
-                    name: "Healthy".to_string(),
-                    primal_type: PrimalType::Security,
-                    version: Version::parse("1.0.0").expect("valid version"),
-                    health: HealthStatus::Healthy,
-                    capabilities: vec![],
-                    endpoint: Endpoint::new("unix:///tmp/healthy.sock").expect("valid endpoint"),
-                    metadata: serde_json::json!({}),
-                    family_id: None,
-                },
-                biomeos_core::DiscoveredPrimal {
-                    id: PrimalId::new_unchecked("degraded"),
-                    name: "Degraded".to_string(),
-                    primal_type: PrimalType::Security,
-                    version: Version::parse("1.0.0").expect("valid version"),
-                    health: HealthStatus::Degraded,
-                    capabilities: vec![],
-                    endpoint: Endpoint::new("unix:///tmp/degraded.sock").expect("valid endpoint"),
-                    metadata: serde_json::json!({}),
-                    family_id: None,
-                },
-                biomeos_core::DiscoveredPrimal {
-                    id: PrimalId::new_unchecked("unhealthy"),
-                    name: "Unhealthy".to_string(),
-                    primal_type: PrimalType::Security,
-                    version: Version::parse("1.0.0").expect("valid version"),
-                    health: HealthStatus::Unhealthy,
-                    capabilities: vec![],
-                    endpoint: Endpoint::new("unix:///tmp/unhealthy.sock").expect("valid endpoint"),
-                    metadata: serde_json::json!({}),
-                    family_id: None,
-                },
-                biomeos_core::DiscoveredPrimal {
-                    id: PrimalId::new_unchecked("unknown"),
-                    name: "Unknown".to_string(),
-                    primal_type: PrimalType::Security,
-                    version: Version::parse("1.0.0").expect("valid version"),
-                    health: HealthStatus::Unknown,
-                    capabilities: vec![],
-                    endpoint: Endpoint::new("unix:///tmp/unknown.sock").expect("valid endpoint"),
-                    metadata: serde_json::json!({}),
-                    family_id: None,
-                },
-            ])
+        fn discover_all(
+            &self,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            Box::pin(async move {
+                Ok(vec![
+                    biomeos_core::DiscoveredPrimal {
+                        id: PrimalId::new_unchecked("healthy"),
+                        name: "Healthy".to_string(),
+                        primal_type: PrimalType::Security,
+                        version: Version::parse("1.0.0").expect("valid version"),
+                        health: HealthStatus::Healthy,
+                        capabilities: vec![],
+                        endpoint: Endpoint::new("unix:///tmp/healthy.sock")
+                            .expect("valid endpoint"),
+                        metadata: serde_json::json!({}),
+                        family_id: None,
+                    },
+                    biomeos_core::DiscoveredPrimal {
+                        id: PrimalId::new_unchecked("degraded"),
+                        name: "Degraded".to_string(),
+                        primal_type: PrimalType::Security,
+                        version: Version::parse("1.0.0").expect("valid version"),
+                        health: HealthStatus::Degraded,
+                        capabilities: vec![],
+                        endpoint: Endpoint::new("unix:///tmp/degraded.sock")
+                            .expect("valid endpoint"),
+                        metadata: serde_json::json!({}),
+                        family_id: None,
+                    },
+                    biomeos_core::DiscoveredPrimal {
+                        id: PrimalId::new_unchecked("unhealthy"),
+                        name: "Unhealthy".to_string(),
+                        primal_type: PrimalType::Security,
+                        version: Version::parse("1.0.0").expect("valid version"),
+                        health: HealthStatus::Unhealthy,
+                        capabilities: vec![],
+                        endpoint: Endpoint::new("unix:///tmp/unhealthy.sock")
+                            .expect("valid endpoint"),
+                        metadata: serde_json::json!({}),
+                        family_id: None,
+                    },
+                    biomeos_core::DiscoveredPrimal {
+                        id: PrimalId::new_unchecked("unknown"),
+                        name: "Unknown".to_string(),
+                        primal_type: PrimalType::Security,
+                        version: Version::parse("1.0.0").expect("valid version"),
+                        health: HealthStatus::Unknown,
+                        capabilities: vec![],
+                        endpoint: Endpoint::new("unix:///tmp/unknown.sock")
+                            .expect("valid endpoint"),
+                        metadata: serde_json::json!({}),
+                        family_id: None,
+                    },
+                ])
+            })
         }
 
-        async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Healthy)
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Healthy) })
         }
     }
 
@@ -516,50 +574,68 @@ async fn test_get_discovered_primals_trust_level_with_family() {
     use biomeos_core::{DiscoveryResult, HealthStatus, PrimalDiscovery, PrimalType};
     use biomeos_types::{Endpoint, FamilyId, PrimalId};
     use semver::Version;
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::Arc;
 
     struct MockDiscovery;
 
-    #[async_trait::async_trait]
     impl PrimalDiscovery for MockDiscovery {
-        async fn discover(
+        fn discover(
             &self,
             _endpoint: &Endpoint,
-        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(biomeos_core::DiscoveryError::NotFound {
-                endpoint: "mock".to_string(),
+        ) -> Pin<
+            Box<dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>> + Send + '_>,
+        > {
+            Box::pin(async move {
+                Err(biomeos_core::DiscoveryError::NotFound {
+                    endpoint: "mock".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-            Ok(vec![
-                biomeos_core::DiscoveredPrimal {
-                    id: PrimalId::new_unchecked("with-family"),
-                    name: "WithFamily".to_string(),
-                    primal_type: PrimalType::Security,
-                    version: Version::parse("1.0.0").expect("valid"),
-                    health: HealthStatus::Healthy,
-                    capabilities: vec![Capability::from("security")],
-                    endpoint: Endpoint::new("unix:///tmp/with.sock").expect("valid"),
-                    metadata: serde_json::json!({}),
-                    family_id: Some(FamilyId::new("family-1")),
-                },
-                biomeos_core::DiscoveredPrimal {
-                    id: PrimalId::new_unchecked("no-family"),
-                    name: "NoFamily".to_string(),
-                    primal_type: PrimalType::Security,
-                    version: Version::parse("1.0.0").expect("valid"),
-                    health: HealthStatus::Healthy,
-                    capabilities: vec![],
-                    endpoint: Endpoint::new("unix:///tmp/no.sock").expect("valid"),
-                    metadata: serde_json::json!({}),
-                    family_id: None,
-                },
-            ])
+        fn discover_all(
+            &self,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            Box::pin(async move {
+                Ok(vec![
+                    biomeos_core::DiscoveredPrimal {
+                        id: PrimalId::new_unchecked("with-family"),
+                        name: "WithFamily".to_string(),
+                        primal_type: PrimalType::Security,
+                        version: Version::parse("1.0.0").expect("valid"),
+                        health: HealthStatus::Healthy,
+                        capabilities: vec![Capability::from("security")],
+                        endpoint: Endpoint::new("unix:///tmp/with.sock").expect("valid"),
+                        metadata: serde_json::json!({}),
+                        family_id: Some(FamilyId::new("family-1")),
+                    },
+                    biomeos_core::DiscoveredPrimal {
+                        id: PrimalId::new_unchecked("no-family"),
+                        name: "NoFamily".to_string(),
+                        primal_type: PrimalType::Security,
+                        version: Version::parse("1.0.0").expect("valid"),
+                        health: HealthStatus::Healthy,
+                        capabilities: vec![],
+                        endpoint: Endpoint::new("unix:///tmp/no.sock").expect("valid"),
+                        metadata: serde_json::json!({}),
+                        family_id: None,
+                    },
+                ])
+            })
         }
 
-        async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Healthy)
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Healthy) })
         }
     }
 

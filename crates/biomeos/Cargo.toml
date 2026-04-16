@@ -25,7 +25,7 @@ biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 clap = { workspace = true, features = ["color"] }
 
 # Async runtime
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "fs", "process", "signal"] }
 
 # Error handling
 anyhow = { workspace = true }

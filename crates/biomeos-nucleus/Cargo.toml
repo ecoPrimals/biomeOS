@@ -9,8 +9,7 @@ rust-version.workspace = true
 
 [dependencies]
 # Async runtime
-tokio = { workspace = true }
-async-trait = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util"] }
 futures = { workspace = true }
 
 # Serialization

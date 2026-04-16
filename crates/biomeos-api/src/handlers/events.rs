@@ -331,36 +331,50 @@ fn current_timestamp() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use biomeos_core::{DiscoveryError, DiscoveryResult, PrimalDiscovery, PrimalType};
     use biomeos_types::{Endpoint, FamilyId, PrimalId};
     use semver::Version;
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::Arc;
 
     struct MockDiscovery {
         primals: Vec<biomeos_core::DiscoveredPrimal>,
     }
 
-    #[async_trait]
     impl PrimalDiscovery for MockDiscovery {
-        async fn discover(
+        fn discover(
             &self,
             _endpoint: &biomeos_types::Endpoint,
-        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(DiscoveryError::NotFound {
-                endpoint: "mock".to_string(),
+        ) -> Pin<
+            Box<dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>> + Send + '_>,
+        > {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "mock".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-            Ok(self.primals.clone())
+        fn discover_all(
+            &self,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            let primals = self.primals.clone();
+            Box::pin(async move { Ok(primals) })
         }
 
-        async fn check_health(
+        fn check_health(
             &self,
             _id: &PrimalId,
-        ) -> DiscoveryResult<biomeos_core::HealthStatus> {
-            Ok(biomeos_core::HealthStatus::Healthy)
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<biomeos_core::HealthStatus>> + Send + '_>>
+        {
+            Box::pin(async move { Ok(biomeos_core::HealthStatus::Healthy) })
         }
     }
 
@@ -647,21 +661,42 @@ mod tests {
     #[tokio::test]
     async fn test_detect_and_emit_changes_discovery_error_returns_heartbeat() {
         struct FailingDiscovery;
-        #[async_trait]
         impl PrimalDiscovery for FailingDiscovery {
-            async fn discover(
+            fn discover(
                 &self,
                 _: &biomeos_types::Endpoint,
-            ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-                Err(DiscoveryError::NotFound {
-                    endpoint: "fail".to_string(),
+            ) -> Pin<
+                Box<
+                    dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>>
+                        + Send
+                        + '_,
+                >,
+            > {
+                Box::pin(async move {
+                    Err(DiscoveryError::NotFound {
+                        endpoint: "fail".to_string(),
+                    })
                 })
             }
-            async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-                Err(DiscoveryError::Network("simulated failure".to_string()))
+            fn discover_all(
+                &self,
+            ) -> Pin<
+                Box<
+                    dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                        + Send
+                        + '_,
+                >,
+            > {
+                Box::pin(
+                    async move { Err(DiscoveryError::Network("simulated failure".to_string())) },
+                )
             }
-            async fn check_health(&self, _: &PrimalId) -> DiscoveryResult<HealthStatus> {
-                Ok(HealthStatus::Healthy)
+            fn check_health(
+                &self,
+                _: &PrimalId,
+            ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>>
+            {
+                Box::pin(async move { Ok(HealthStatus::Healthy) })
             }
         }
         let state = Arc::new(

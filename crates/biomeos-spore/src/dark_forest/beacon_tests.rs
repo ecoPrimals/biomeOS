@@ -113,7 +113,6 @@ impl MockDarkForestCaller {
     }
 }
 
-#[async_trait::async_trait]
 impl CapabilityCaller for MockDarkForestCaller {
     async fn call(
         &self,
@@ -132,7 +131,7 @@ fn make_beacon(
     caller: MockDarkForestCaller,
     family_seed_b64: &str,
     node_id: &str,
-) -> DarkForestBeacon {
+) -> DarkForestBeacon<MockDarkForestCaller> {
     DarkForestBeacon {
         capability_caller: Arc::new(caller),
         family_seed_b64: family_seed_b64.to_string(),

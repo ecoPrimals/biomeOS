@@ -293,3 +293,69 @@ async fn test_get_status_continuous_session() {
     assert_eq!(status_result["continuous"], true);
     assert!(status_result["started_at"].as_str().is_some());
 }
+
+// ── graph.execute redirect ──────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_execute_redirects_continuous_to_start_continuous() {
+    let temp = tempdir().expect("tempdir");
+    let graphs_dir = temp.path().join("graphs");
+    std::fs::create_dir_all(&graphs_dir).unwrap();
+    std::fs::write(
+        graphs_dir.join("redirect-test.toml"),
+        CONTINUOUS_GRAPH_TOML.replace("continuous-test", "redirect-test"),
+    )
+    .unwrap();
+
+    let (handler, _) = make_handler(&graphs_dir);
+
+    let params = Some(json!({"graph_id": "redirect-test"}));
+    let result = handler.execute(&params).await.expect("execute");
+    assert!(
+        result["session_id"].as_str().is_some(),
+        "graph.execute on a continuous graph should redirect to start_continuous and return a session_id"
+    );
+    assert_eq!(result["graph_id"], "redirect-test");
+}
+
+// ── translation loading ─────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_start_continuous_loads_translations() {
+    let temp = tempdir().expect("tempdir");
+    let graphs_dir = temp.path().join("graphs");
+    std::fs::create_dir_all(&graphs_dir).unwrap();
+
+    let graph_toml = r#"
+[graph]
+id = "trans-test"
+name = "Translation Test"
+version = "1.0.0"
+coordination = "continuous"
+
+[graph.tick]
+target_hz = 10.0
+
+[[graph.nodes]]
+id = "crypto-node"
+name = "CryptoNode"
+capability = "crypto.encrypt"
+"#;
+
+    std::fs::write(graphs_dir.join("trans-test.toml"), graph_toml).unwrap();
+
+    let (handler, _, registry) = make_handler_with_registry(&graphs_dir);
+
+    let params = Some(json!({"graph_id": "trans-test"}));
+    handler
+        .start_continuous(&params)
+        .await
+        .expect("start_continuous");
+
+    let reg = registry.read().await;
+    let translation = reg.get_translation("crypto.encrypt");
+    assert!(
+        translation.is_some(),
+        "start_continuous should register translations from the graph's node capabilities"
+    );
+}

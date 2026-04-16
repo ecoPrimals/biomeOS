@@ -28,7 +28,7 @@ biomeos-manifest = { path = "../biomeos-manifest", version = "0.1.0" }
 biomeos-genome-factory = { path = "../biomeos-genome-factory", version = "1.0.0" }
 biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 clap = { workspace = true, features = ["color"] }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "fs"] }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

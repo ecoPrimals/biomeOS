@@ -31,17 +31,27 @@ use super::types::{BeaconPlaintext, EncryptedBeacon};
 /// - Production: `NeuralApiCapabilityCaller` → Neural API → discovered primal
 /// - Bootstrap: `DirectBeardogCaller` → direct socket (enrollment only)
 /// - Testing: `MockCapabilityCaller` → deterministic responses
-#[derive(Clone)]
-pub struct DarkForestBeacon {
+pub struct DarkForestBeacon<C: CapabilityCaller = crate::beacon_genetics::NeuralApiCapabilityCaller>
+{
     /// Capability caller for crypto operations (primal-agnostic)
-    pub(crate) capability_caller: Arc<dyn CapabilityCaller>,
+    pub(crate) capability_caller: Arc<C>,
     /// Family seed (base64)
     pub(crate) family_seed_b64: String,
     /// Node ID
     pub(crate) node_id: String,
 }
 
-impl DarkForestBeacon {
+impl<C: CapabilityCaller> Clone for DarkForestBeacon<C> {
+    fn clone(&self) -> Self {
+        Self {
+            capability_caller: self.capability_caller.clone(),
+            family_seed_b64: self.family_seed_b64.clone(),
+            node_id: self.node_id.clone(),
+        }
+    }
+}
+
+impl<C: CapabilityCaller> DarkForestBeacon<C> {
     /// Create a new Dark Forest beacon manager with capability routing
     ///
     /// # Arguments
@@ -49,7 +59,7 @@ impl DarkForestBeacon {
     /// * `seed_path` - Path to .family.seed file
     /// * `node_id` - This node's identifier
     pub async fn new<P: AsRef<Path>>(
-        capability_caller: Arc<dyn CapabilityCaller>,
+        capability_caller: Arc<C>,
         seed_path: P,
         node_id: &str,
     ) -> SporeResult<Self> {
@@ -68,36 +78,6 @@ impl DarkForestBeacon {
             family_seed_b64,
             node_id: node_id.to_string(),
         })
-    }
-
-    /// Create with Neural API capability routing (preferred for production).
-    ///
-    /// Routes all crypto operations through the Neural API's capability
-    /// translation layer, enabling primal-agnostic operation.
-    pub async fn from_neural_api<P: AsRef<Path>>(
-        neural_api_socket: &str,
-        seed_path: P,
-        node_id: &str,
-    ) -> SporeResult<Self> {
-        let caller = Arc::new(crate::beacon_genetics::NeuralApiCapabilityCaller::new(
-            neural_api_socket,
-        ));
-        Self::new(caller, seed_path, node_id).await
-    }
-
-    /// Create from a security-provider Unix socket path (bootstrap only).
-    ///
-    /// Wraps the socket path in a `DirectBeardogCaller`. Prefer
-    /// [`from_neural_api`](Self::from_neural_api) for production use.
-    pub async fn from_security_socket<P: AsRef<Path>>(
-        security_socket: &str,
-        seed_path: P,
-        node_id: &str,
-    ) -> SporeResult<Self> {
-        let caller = Arc::new(crate::beacon_genetics::DirectBeardogCaller::new(
-            security_socket,
-        ));
-        Self::new(caller, seed_path, node_id).await
     }
 
     /// Derive family broadcast key from seed
@@ -562,6 +542,40 @@ impl DarkForestBeacon {
         info!("✅ Pure noise beacon decrypted - family member found");
 
         Ok(Some(beacon))
+    }
+}
+
+impl DarkForestBeacon<crate::beacon_genetics::NeuralApiCapabilityCaller> {
+    /// Create with Neural API capability routing (preferred for production).
+    ///
+    /// Routes all crypto operations through the Neural API's capability
+    /// translation layer, enabling primal-agnostic operation.
+    pub async fn from_neural_api<P: AsRef<Path>>(
+        neural_api_socket: &str,
+        seed_path: P,
+        node_id: &str,
+    ) -> SporeResult<Self> {
+        let caller = Arc::new(crate::beacon_genetics::NeuralApiCapabilityCaller::new(
+            neural_api_socket,
+        ));
+        Self::new(caller, seed_path, node_id).await
+    }
+}
+
+impl DarkForestBeacon<crate::beacon_genetics::DirectBeardogCaller> {
+    /// Create from a security-provider Unix socket path (bootstrap only).
+    ///
+    /// Wraps the socket path in a `DirectBeardogCaller`. Prefer
+    /// [`from_neural_api`](DarkForestBeacon::from_neural_api) for production use.
+    pub async fn from_security_socket<P: AsRef<Path>>(
+        security_socket: &str,
+        seed_path: P,
+        node_id: &str,
+    ) -> SporeResult<Self> {
+        let caller = Arc::new(crate::beacon_genetics::DirectBeardogCaller::new(
+            security_socket,
+        ));
+        Self::new(caller, seed_path, node_id).await
     }
 }
 

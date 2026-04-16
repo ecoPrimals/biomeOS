@@ -15,13 +15,12 @@ path = "src/bin/tower.rs"
 # Core async and serialization
 anyhow = { workspace = true }
 thiserror = { workspace = true }
-async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "fs", "process", "signal"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 # reqwest = { workspace = true, optional = true }  # REMOVED: Deprecated HTTP transport, use Tower Atomic (Songbird + BearDog)

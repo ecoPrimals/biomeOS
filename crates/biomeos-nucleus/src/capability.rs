@@ -6,7 +6,6 @@
 //! Verifies that discovered primals actually have the capabilities they claim.
 //! This is done by direct query to the primal's Unix socket.
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
@@ -41,47 +40,46 @@ pub struct CapabilityVerification {
 }
 
 /// Capability verification layer
-#[async_trait]
 pub trait CapabilityLayer: Send + Sync {
     /// Query capabilities from a primal
-    async fn query_capabilities(&self, endpoint: &str) -> Result<CapabilityInfo>;
+    fn query_capabilities(
+        &self,
+        endpoint: &str,
+    ) -> impl std::future::Future<Output = Result<CapabilityInfo>> + Send;
 
     /// Verify capabilities match expected
-    async fn verify_capabilities(
+    fn verify_capabilities(
         &self,
         discovered: &DiscoveredPrimal,
         _identity: &IdentityProof,
-    ) -> Result<CapabilityVerification> {
-        // Get primary endpoint
-        let endpoint = discovered
-            .endpoints
-            .first()
-            .ok_or_else(|| Error::invalid_response(&discovered.primal, "No endpoints available"))?;
+    ) -> impl std::future::Future<Output = Result<CapabilityVerification>> + Send {
+        async {
+            let endpoint = discovered.endpoints.first().ok_or_else(|| {
+                Error::invalid_response(&discovered.primal, "No endpoints available")
+            })?;
 
-        // Query actual capabilities
-        let actual_caps = self.query_capabilities(&endpoint.address).await?;
+            let actual_caps = self.query_capabilities(&endpoint.address).await?;
 
-        // Verify capabilities match
-        let expected = &discovered.capabilities;
-        let actual = &actual_caps.capabilities;
+            let expected = &discovered.capabilities;
+            let actual = &actual_caps.capabilities;
 
-        // Check if all expected capabilities are present
-        if expected.iter().any(|cap| !actual.contains(cap)) {
-            return Err(Error::capability_mismatch(expected.clone(), actual.clone()));
+            if expected.iter().any(|cap| !actual.contains(cap)) {
+                return Err(Error::capability_mismatch(expected.clone(), actual.clone()));
+            }
+
+            info!(
+                primal = %discovered.primal,
+                capabilities = ?actual,
+                "Capability verification successful"
+            );
+
+            Ok(CapabilityVerification {
+                verified: true,
+                expected: expected.clone(),
+                actual: actual.clone(),
+                message: "All capabilities verified".to_string(),
+            })
         }
-
-        info!(
-            primal = %discovered.primal,
-            capabilities = ?actual,
-            "Capability verification successful"
-        );
-
-        Ok(CapabilityVerification {
-            verified: true,
-            expected: expected.clone(),
-            actual: actual.clone(),
-            message: "All capabilities verified".to_string(),
-        })
     }
 }
 
@@ -102,7 +100,6 @@ impl Default for CapabilityLayerImpl {
     }
 }
 
-#[async_trait]
 impl CapabilityLayer for CapabilityLayerImpl {
     async fn query_capabilities(&self, endpoint: &str) -> Result<CapabilityInfo> {
         debug!(endpoint = %endpoint, "Querying capabilities from primal");

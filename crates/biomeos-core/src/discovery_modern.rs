@@ -56,9 +56,10 @@
 //! - **Testability**: Easy to mock for unit tests
 //! - **Extensibility**: New discovery methods via trait implementation
 
-use async_trait::async_trait;
 use biomeos_types::{Endpoint, FamilyId, PrimalId};
 use serde::{Deserialize, Serialize};
+use std::future::Future;
+use std::pin::Pin;
 use std::time::Duration;
 use thiserror::Error;
 
@@ -226,28 +227,40 @@ pub struct DiscoveredPrimal {
 }
 
 /// Trait for discovering primals in the ecosystem
-#[async_trait]
 pub trait PrimalDiscovery: Send + Sync {
     /// Discover a specific primal by endpoint
-    async fn discover(&self, endpoint: &Endpoint) -> DiscoveryResult<DiscoveredPrimal>;
+    fn discover(
+        &self,
+        endpoint: &Endpoint,
+    ) -> Pin<Box<dyn Future<Output = DiscoveryResult<DiscoveredPrimal>> + Send + '_>>;
 
     /// Discover all available primals
-    async fn discover_all(&self) -> DiscoveryResult<Vec<DiscoveredPrimal>>;
+    fn discover_all(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<DiscoveredPrimal>>> + Send + '_>>;
 
     /// Check if a primal is healthy
-    async fn check_health(&self, id: &PrimalId) -> DiscoveryResult<HealthStatus>;
+    fn check_health(
+        &self,
+        id: &PrimalId,
+    ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>>;
 
     /// Get capabilities of a primal
-    async fn get_capabilities(&self, id: &PrimalId) -> DiscoveryResult<Vec<Capability>> {
-        // Default implementation: discover and extract capabilities
-        let primals = self.discover_all().await?;
-        primals
-            .into_iter()
-            .find(|p| &p.id == id)
-            .map(|p| p.capabilities)
-            .ok_or_else(|| DiscoveryError::NotFound {
-                endpoint: id.as_str().to_string(),
-            })
+    fn get_capabilities(
+        &self,
+        id: &PrimalId,
+    ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<Capability>>> + Send + '_>> {
+        let id = id.clone();
+        Box::pin(async move {
+            let primals = self.discover_all().await?;
+            primals
+                .into_iter()
+                .find(|p| p.id == id)
+                .map(|p| p.capabilities)
+                .ok_or_else(|| DiscoveryError::NotFound {
+                    endpoint: id.as_str().to_string(),
+                })
+        })
     }
 }
 
@@ -294,54 +307,69 @@ impl Default for CompositeDiscovery {
     }
 }
 
-#[async_trait]
 impl PrimalDiscovery for CompositeDiscovery {
-    async fn discover_all(&self) -> DiscoveryResult<Vec<DiscoveredPrimal>> {
-        use std::collections::HashMap;
+    fn discover_all(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<DiscoveredPrimal>>> + Send + '_>> {
+        Box::pin(async move {
+            use std::collections::HashMap;
 
-        let mut all_primals = Vec::new();
+            let mut all_primals = Vec::new();
 
-        // Collect from all sources
-        for source in &self.sources {
-            match source.discover_all().await {
-                Ok(primals) => all_primals.extend(primals),
-                Err(e) => {
-                    tracing::warn!("Discovery source failed: {}", e);
+            // Collect from all sources
+            for source in &self.sources {
+                match source.discover_all().await {
+                    Ok(primals) => all_primals.extend(primals),
+                    Err(e) => {
+                        tracing::warn!("Discovery source failed: {}", e);
+                    }
                 }
             }
-        }
 
-        // Deduplicate by ID (last wins)
-        let mut unique: HashMap<PrimalId, DiscoveredPrimal> = HashMap::new();
-        for primal in all_primals {
-            unique.insert(primal.id.clone(), primal);
-        }
-
-        Ok(unique.into_values().collect())
-    }
-
-    async fn discover(&self, endpoint: &Endpoint) -> DiscoveryResult<DiscoveredPrimal> {
-        // Try each source until one succeeds
-        for source in &self.sources {
-            if let Ok(primal) = source.discover(endpoint).await {
-                return Ok(primal);
+            // Deduplicate by ID (last wins)
+            let mut unique: HashMap<PrimalId, DiscoveredPrimal> = HashMap::new();
+            for primal in all_primals {
+                unique.insert(primal.id.clone(), primal);
             }
-        }
 
-        Err(DiscoveryError::NotFound {
-            endpoint: endpoint.as_str().to_string(),
+            Ok(unique.into_values().collect())
         })
     }
 
-    async fn check_health(&self, id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-        // Try each source until one succeeds
-        for source in &self.sources {
-            if let Ok(health) = source.check_health(id).await {
-                return Ok(health);
+    fn discover(
+        &self,
+        endpoint: &Endpoint,
+    ) -> Pin<Box<dyn Future<Output = DiscoveryResult<DiscoveredPrimal>> + Send + '_>> {
+        let endpoint = endpoint.clone();
+        Box::pin(async move {
+            // Try each source until one succeeds
+            for source in &self.sources {
+                if let Ok(primal) = source.discover(&endpoint).await {
+                    return Ok(primal);
+                }
             }
-        }
 
-        Ok(HealthStatus::Unknown)
+            Err(DiscoveryError::NotFound {
+                endpoint: endpoint.as_str().to_string(),
+            })
+        })
+    }
+
+    fn check_health(
+        &self,
+        id: &PrimalId,
+    ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+        let id = id.clone();
+        Box::pin(async move {
+            // Try each source until one succeeds
+            for source in &self.sources {
+                if let Ok(health) = source.check_health(&id).await {
+                    return Ok(health);
+                }
+            }
+
+            Ok(HealthStatus::Unknown)
+        })
     }
 }
 
@@ -358,23 +386,32 @@ mod tests {
         primals: Vec<DiscoveredPrimal>,
     }
 
-    #[async_trait]
     impl PrimalDiscovery for MockDiscovery {
-        async fn discover(&self, _endpoint: &Endpoint) -> DiscoveryResult<DiscoveredPrimal> {
-            self.primals
-                .first()
-                .cloned()
-                .ok_or_else(|| DiscoveryError::NotFound {
+        fn discover(
+            &self,
+            _endpoint: &Endpoint,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<DiscoveredPrimal>> + Send + '_>> {
+            let first = self.primals.first().cloned();
+            Box::pin(async move {
+                first.ok_or_else(|| DiscoveryError::NotFound {
                     endpoint: "mock".to_string(),
                 })
+            })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<DiscoveredPrimal>> {
-            Ok(self.primals.clone())
+        fn discover_all(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<DiscoveredPrimal>>> + Send + '_>>
+        {
+            let primals = self.primals.clone();
+            Box::pin(async move { Ok(primals) })
         }
 
-        async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Healthy)
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Healthy) })
         }
     }
 
@@ -504,40 +541,60 @@ mod tests {
     /// Source whose [`PrimalDiscovery::discover_all`] fails (covers warn + continue in composite).
     struct DiscoverAllFails;
 
-    #[async_trait]
     impl PrimalDiscovery for DiscoverAllFails {
-        async fn discover(&self, _: &Endpoint) -> DiscoveryResult<DiscoveredPrimal> {
-            Err(DiscoveryError::NotFound {
-                endpoint: "none".to_string(),
+        fn discover(
+            &self,
+            _: &Endpoint,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<DiscoveredPrimal>> + Send + '_>> {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "none".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<DiscoveredPrimal>> {
-            Err(DiscoveryError::Network("source down".to_string()))
+        fn discover_all(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<DiscoveredPrimal>>> + Send + '_>>
+        {
+            Box::pin(async move { Err(DiscoveryError::Network("source down".to_string())) })
         }
 
-        async fn check_health(&self, _: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Err(DiscoveryError::Network("source down".to_string()))
+        fn check_health(
+            &self,
+            _: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Err(DiscoveryError::Network("source down".to_string())) })
         }
     }
 
     /// [`PrimalDiscovery::discover`] always fails (for chaining tests).
     struct DiscoverEndpointAlwaysFails;
 
-    #[async_trait]
     impl PrimalDiscovery for DiscoverEndpointAlwaysFails {
-        async fn discover(&self, _: &Endpoint) -> DiscoveryResult<DiscoveredPrimal> {
-            Err(DiscoveryError::NotFound {
-                endpoint: "none".to_string(),
+        fn discover(
+            &self,
+            _: &Endpoint,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<DiscoveredPrimal>> + Send + '_>> {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "none".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<DiscoveredPrimal>> {
-            Ok(vec![])
+        fn discover_all(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<DiscoveredPrimal>>> + Send + '_>>
+        {
+            Box::pin(async move { Ok(vec![]) })
         }
 
-        async fn check_health(&self, _: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Unknown)
+        fn check_health(
+            &self,
+            _: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Unknown) })
         }
     }
 

@@ -27,15 +27,15 @@ use std::time::SystemTime;
 /// Coordinates secure tunnel creation between:
 /// - Any security primal (provides encryption)
 /// - Any discovery primal (provides transport registration)
-pub struct BtspCoordinator {
+pub struct BtspCoordinator<S: SecurityProvider, D: DiscoveryProvider> {
     /// Security provider (agnostic - works with any security primal)
-    security: Arc<dyn SecurityProvider>,
+    security: Arc<S>,
 
     /// Discovery provider (agnostic - works with any discovery primal)
-    discovery: Arc<dyn DiscoveryProvider>,
+    discovery: Arc<D>,
 }
 
-impl BtspCoordinator {
+impl<S: SecurityProvider, D: DiscoveryProvider> BtspCoordinator<S, D> {
     /// Create a new BTSP coordinator
     ///
     /// # Arguments
@@ -47,7 +47,7 @@ impl BtspCoordinator {
     ///
     /// This constructor is **agnostic** - it accepts any primal that implements
     /// the required traits, regardless of what it's called.
-    pub fn new(security: Arc<dyn SecurityProvider>, discovery: Arc<dyn DiscoveryProvider>) -> Self {
+    pub fn new(security: Arc<S>, discovery: Arc<D>) -> Self {
         Self {
             security,
             discovery,
@@ -132,7 +132,7 @@ impl BtspCoordinator {
             .context("Discovery provider health check failed")?;
 
         // Compute overall status
-        let status = Self::compute_overall_status(&security_health, &transport_health);
+        let status = compute_overall_status(&security_health, &transport_health);
 
         Ok(super::OverallHealth {
             tunnel_id: tunnel_id.to_string(),
@@ -228,18 +228,18 @@ impl BtspCoordinator {
         tracing::debug!("Transport path optimized");
         Ok(())
     }
+}
 
-    const fn compute_overall_status(
-        security: &TunnelHealth,
-        transport: &TransportHealth,
-    ) -> super::HealthStatus {
-        use super::HealthStatus;
+const fn compute_overall_status(
+    security: &TunnelHealth,
+    transport: &TransportHealth,
+) -> super::HealthStatus {
+    use super::HealthStatus;
 
-        match (security.status, transport.status) {
-            (HealthStatus::Healthy, HealthStatus::Healthy) => HealthStatus::Healthy,
-            (HealthStatus::Unhealthy, _) | (_, HealthStatus::Unhealthy) => HealthStatus::Unhealthy,
-            _ => HealthStatus::Degraded,
-        }
+    match (security.status, transport.status) {
+        (HealthStatus::Healthy, HealthStatus::Healthy) => HealthStatus::Healthy,
+        (HealthStatus::Unhealthy, _) | (_, HealthStatus::Unhealthy) => HealthStatus::Unhealthy,
+        _ => HealthStatus::Degraded,
     }
 }
 
@@ -278,7 +278,7 @@ mod tests {
         let security = healthy_tunnel();
         let transport = healthy_transport();
         assert_eq!(
-            BtspCoordinator::compute_overall_status(&security, &transport),
+            super::compute_overall_status(&security, &transport),
             HealthStatus::Healthy
         );
     }
@@ -291,7 +291,7 @@ mod tests {
         };
         let transport = healthy_transport();
         assert_eq!(
-            BtspCoordinator::compute_overall_status(&security, &transport),
+            super::compute_overall_status(&security, &transport),
             HealthStatus::Degraded
         );
     }
@@ -304,7 +304,7 @@ mod tests {
             ..healthy_transport()
         };
         assert_eq!(
-            BtspCoordinator::compute_overall_status(&security, &transport),
+            super::compute_overall_status(&security, &transport),
             HealthStatus::Unhealthy
         );
     }
@@ -317,7 +317,7 @@ mod tests {
         };
         let transport = healthy_transport();
         assert_eq!(
-            BtspCoordinator::compute_overall_status(&security, &transport),
+            super::compute_overall_status(&security, &transport),
             HealthStatus::Unhealthy
         );
     }
@@ -333,7 +333,7 @@ mod tests {
             ..healthy_transport()
         };
         assert_eq!(
-            BtspCoordinator::compute_overall_status(&security, &transport),
+            super::compute_overall_status(&security, &transport),
             HealthStatus::Degraded
         );
     }
@@ -346,7 +346,7 @@ mod tests {
             ..healthy_transport()
         };
         assert_eq!(
-            BtspCoordinator::compute_overall_status(&security, &transport),
+            super::compute_overall_status(&security, &transport),
             HealthStatus::Degraded
         );
     }

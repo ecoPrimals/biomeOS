@@ -6,6 +6,8 @@
     reason = "test assertions use unwrap/expect for clarity"
 )]
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
@@ -26,7 +28,6 @@ struct MockPrimal {
     requires: Vec<Capability>,
 }
 
-#[async_trait::async_trait]
 impl ManagedPrimal for MockPrimal {
     fn id(&self) -> &PrimalId {
         &self.id
@@ -37,17 +38,17 @@ impl ManagedPrimal for MockPrimal {
     fn requires(&self) -> &[Capability] {
         &self.requires
     }
-    async fn endpoint(&self) -> Option<Endpoint> {
-        None
+    fn endpoint(&self) -> Pin<Box<dyn Future<Output = Option<Endpoint>> + Send + '_>> {
+        Box::pin(async move { None })
     }
-    async fn start(&self) -> BiomeResult<()> {
-        Ok(())
+    fn start(&self) -> Pin<Box<dyn Future<Output = BiomeResult<()>> + Send + '_>> {
+        Box::pin(async move { Ok(()) })
     }
-    async fn stop(&self) -> BiomeResult<()> {
-        Ok(())
+    fn stop(&self) -> Pin<Box<dyn Future<Output = BiomeResult<()>> + Send + '_>> {
+        Box::pin(async move { Ok(()) })
     }
-    async fn health_check(&self) -> BiomeResult<HealthStatus> {
-        Ok(HealthStatus::Healthy)
+    fn health_check(&self) -> Pin<Box<dyn Future<Output = BiomeResult<HealthStatus>> + Send + '_>> {
+        Box::pin(async move { Ok(HealthStatus::Healthy) })
     }
 }
 
@@ -77,7 +78,6 @@ impl InstrumentedPrimal {
     }
 }
 
-#[async_trait::async_trait]
 impl ManagedPrimal for InstrumentedPrimal {
     fn id(&self) -> &PrimalId {
         &self.id
@@ -88,31 +88,37 @@ impl ManagedPrimal for InstrumentedPrimal {
     fn requires(&self) -> &[Capability] {
         &self.requires
     }
-    async fn endpoint(&self) -> Option<Endpoint> {
-        None
+    fn endpoint(&self) -> Pin<Box<dyn Future<Output = Option<Endpoint>> + Send + '_>> {
+        Box::pin(async move { None })
     }
-    async fn start(&self) -> BiomeResult<()> {
-        self.start_count.fetch_add(1, Ordering::SeqCst);
-        if self.fail_start.load(Ordering::SeqCst) {
-            return Err(BiomeError::internal_error(
-                "mock start failure",
-                Some("test"),
-            ));
-        }
-        self.started.store(true, Ordering::SeqCst);
-        Ok(())
+    fn start(&self) -> Pin<Box<dyn Future<Output = BiomeResult<()>> + Send + '_>> {
+        Box::pin(async move {
+            self.start_count.fetch_add(1, Ordering::SeqCst);
+            if self.fail_start.load(Ordering::SeqCst) {
+                return Err(BiomeError::internal_error(
+                    "mock start failure",
+                    Some("test"),
+                ));
+            }
+            self.started.store(true, Ordering::SeqCst);
+            Ok(())
+        })
     }
-    async fn stop(&self) -> BiomeResult<()> {
-        self.stop_count.fetch_add(1, Ordering::SeqCst);
-        self.started.store(false, Ordering::SeqCst);
-        Ok(())
+    fn stop(&self) -> Pin<Box<dyn Future<Output = BiomeResult<()>> + Send + '_>> {
+        Box::pin(async move {
+            self.stop_count.fetch_add(1, Ordering::SeqCst);
+            self.started.store(false, Ordering::SeqCst);
+            Ok(())
+        })
     }
-    async fn health_check(&self) -> BiomeResult<HealthStatus> {
-        if self.fail_health.load(Ordering::SeqCst) {
-            Ok(HealthStatus::Unhealthy)
-        } else {
-            Ok(HealthStatus::Healthy)
-        }
+    fn health_check(&self) -> Pin<Box<dyn Future<Output = BiomeResult<HealthStatus>> + Send + '_>> {
+        Box::pin(async move {
+            if self.fail_health.load(Ordering::SeqCst) {
+                Ok(HealthStatus::Unhealthy)
+            } else {
+                Ok(HealthStatus::Healthy)
+            }
+        })
     }
     fn startup_timeout(&self) -> Duration {
         Duration::from_secs(2)

@@ -25,15 +25,20 @@ use super::family_seed;
 /// - No reimplementation: Delegates to `BearDog` and Songbird
 /// - Fast AND safe: Zero unsafe code, async throughout
 /// - Capability-based: Selects by what primals can do
-pub struct NucleusClient {
+pub struct NucleusClient<
+    D: PhysicalDiscovery = DiscoveryLayer,
+    I: IdentityLayer = IdentityLayerImpl,
+    C: CapabilityLayer = CapabilityLayerImpl,
+    T: TrustLayer = TrustLayerImpl,
+> {
     /// Layer 1: Physical discovery (Songbird)
-    discovery: Arc<dyn PhysicalDiscovery>,
+    discovery: Arc<D>,
     /// Layer 2: Identity verification (`BearDog`)
-    identity: Arc<dyn IdentityLayer>,
+    identity: Arc<I>,
     /// Layer 3: Capability verification
-    capability: Arc<dyn CapabilityLayer>,
+    capability: Arc<C>,
     /// Layer 4: Trust evaluation (`BearDog`)
-    trust: Arc<dyn TrustLayer>,
+    trust: Arc<T>,
     /// Layer 5: Registry and tracking
     registry: Arc<Registry>,
 }
@@ -52,10 +57,10 @@ impl NucleusClient {
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Client (5-layer secure discovery)");
 
-        let discovery = Arc::new(DiscoveryLayer::new().await?) as Arc<dyn PhysicalDiscovery>;
-        let identity = Arc::new(IdentityLayerImpl::new().await?) as Arc<dyn IdentityLayer>;
-        let capability = Arc::new(CapabilityLayerImpl::new()) as Arc<dyn CapabilityLayer>;
-        let trust = Arc::new(TrustLayerImpl::new().await?) as Arc<dyn TrustLayer>;
+        let discovery = Arc::new(DiscoveryLayer::new().await?);
+        let identity = Arc::new(IdentityLayerImpl::new().await?);
+        let capability = Arc::new(CapabilityLayerImpl::new());
+        let trust = Arc::new(TrustLayerImpl::new().await?);
         let registry = Arc::new(Registry::new());
 
         info!("✅ NUCLEUS Client initialized successfully");
@@ -68,7 +73,11 @@ impl NucleusClient {
             registry,
         })
     }
+}
 
+impl<D: PhysicalDiscovery, I: IdentityLayer, C: CapabilityLayer, T: TrustLayer>
+    NucleusClient<D, I, C, T>
+{
     /// Discover and verify primals
     ///
     /// Runs all 5 NUCLEUS layers:
@@ -192,16 +201,14 @@ impl NucleusClient {
     pub fn registry(&self) -> Arc<Registry> {
         self.registry.clone()
     }
-}
 
-#[cfg(test)]
-impl NucleusClient {
     /// Construct with injected layers (unit tests only).
+    #[cfg(test)]
     pub(crate) fn from_layers_for_test(
-        discovery: Arc<dyn PhysicalDiscovery>,
-        identity: Arc<dyn IdentityLayer>,
-        capability: Arc<dyn CapabilityLayer>,
-        trust: Arc<dyn TrustLayer>,
+        discovery: Arc<D>,
+        identity: Arc<I>,
+        capability: Arc<C>,
+        trust: Arc<T>,
         registry: Arc<Registry>,
     ) -> Self {
         Self {

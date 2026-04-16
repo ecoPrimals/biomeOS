@@ -46,7 +46,6 @@ pub use btsp::BtspCoordinator;
 pub use types::*;
 
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -63,60 +62,81 @@ pub const CAPABILITY_ROUTING: &str = "routing";
 ///
 /// This trait is **agnostic** - it works with any primal providing crypto/security
 /// capability (discovered at runtime).
-#[async_trait]
 pub trait SecurityProvider: Send + Sync {
     /// Request a secure tunnel between two nodes
-    async fn request_tunnel(
+    fn request_tunnel(
         &self,
         node_a: &str,
         node_b: &str,
         proof: &LineageProof,
-    ) -> Result<TunnelRequest>;
+    ) -> impl std::future::Future<Output = Result<TunnelRequest>> + Send;
 
     /// Check tunnel health
-    async fn check_tunnel_health(&self, tunnel_id: &str) -> Result<TunnelHealth>;
+    fn check_tunnel_health(
+        &self,
+        tunnel_id: &str,
+    ) -> impl std::future::Future<Output = Result<TunnelHealth>> + Send;
 
     /// Generate encryption keys for broadcast discovery
-    async fn generate_broadcast_keys(&self, family_id: &str) -> Result<BroadcastKeys>;
+    fn generate_broadcast_keys(
+        &self,
+        family_id: &str,
+    ) -> impl std::future::Future<Output = Result<BroadcastKeys>> + Send;
 
     /// Verify lineage relationship between nodes
-    async fn verify_lineage(&self, requester: &str, target: &str) -> Result<LineageInfo>;
+    fn verify_lineage(
+        &self,
+        requester: &str,
+        target: &str,
+    ) -> impl std::future::Future<Output = Result<LineageInfo>> + Send;
 }
 
 /// Trait for any primal that can provide discovery capabilities
 ///
 /// This trait is **agnostic** - it works with any primal providing discovery
 /// capability (discovered at runtime).
-#[async_trait]
 pub trait DiscoveryProvider: Send + Sync {
     /// Register a secure transport endpoint
-    async fn register_transport(&self, endpoint: &TransportEndpoint) -> Result<()>;
+    fn register_transport(
+        &self,
+        endpoint: &TransportEndpoint,
+    ) -> impl std::future::Future<Output = Result<()>> + Send;
 
     /// Enable encrypted discovery mode
-    async fn enable_encrypted_mode(&self, config: EncryptedDiscoveryConfig) -> Result<()>;
+    fn enable_encrypted_mode(
+        &self,
+        config: EncryptedDiscoveryConfig,
+    ) -> impl std::future::Future<Output = Result<()>> + Send;
 
     /// Check transport health
-    async fn check_transport_health(&self, transport_id: &str) -> Result<TransportHealth>;
+    fn check_transport_health(
+        &self,
+        transport_id: &str,
+    ) -> impl std::future::Future<Output = Result<TransportHealth>> + Send;
 
     /// Test encrypted broadcast
-    async fn test_encrypted_broadcast(&self) -> Result<BroadcastTest>;
+    fn test_encrypted_broadcast(
+        &self,
+    ) -> impl std::future::Future<Output = Result<BroadcastTest>> + Send;
 }
 
 /// Trait for any primal that can provide routing capabilities
 ///
 /// This trait is **agnostic** - works with any routing primal
-#[async_trait]
 pub trait RoutingProvider: Send + Sync {
     /// Request a lineage-gated relay
-    async fn request_relay(
+    fn request_relay(
         &self,
         requester: &str,
         target: &str,
         lineage: LineageInfo,
-    ) -> Result<RelayOffer>;
+    ) -> impl std::future::Future<Output = Result<RelayOffer>> + Send;
 
     /// Accept a relay offer
-    async fn accept_relay(&self, offer: &RelayOffer) -> Result<RelayConnection>;
+    fn accept_relay(
+        &self,
+        offer: &RelayOffer,
+    ) -> impl std::future::Future<Output = Result<RelayConnection>> + Send;
 }
 
 /// Main P2P coordinator that discovers and coordinates primals
@@ -124,15 +144,19 @@ pub trait RoutingProvider: Send + Sync {
 /// This coordinator is **capability-based**: it discovers what primals can do,
 /// not what they're called. It works with any combination of primals that provide
 /// the required capabilities.
-pub struct P2PCoordinator {
+pub struct P2PCoordinator<
+    S: SecurityProvider = socket_providers::SocketSecurityProvider,
+    D: DiscoveryProvider = socket_providers::SocketDiscoveryProvider,
+    R: RoutingProvider = socket_providers::SocketRoutingProvider,
+> {
     /// Security provider (discovered by capability)
-    security: Arc<dyn SecurityProvider>,
+    security: Arc<S>,
 
     /// Discovery provider (discovered by capability)
-    discovery: Arc<dyn DiscoveryProvider>,
+    discovery: Arc<D>,
 
     /// Optional routing provider (discovered by capability)
-    routing: Option<Arc<dyn RoutingProvider>>,
+    routing: Option<Arc<R>>,
 }
 
 /// Configuration for [`P2PCoordinator::new_from_discovery_with_config`]: explicit strict mode and
@@ -190,7 +214,7 @@ impl P2PCoordinator {
     /// Works with `BearDog` or any compatible security primal.
     async fn discover_security_provider(
         config: &P2pDiscoveryConfig,
-    ) -> Result<Arc<dyn SecurityProvider>> {
+    ) -> Result<Arc<SocketSecurityProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
         tracing::info!("🔐 Discovering security provider (capability: security)");
@@ -247,7 +271,7 @@ impl P2PCoordinator {
     /// Works with Songbird or any compatible discovery primal.
     async fn discover_discovery_provider(
         config: &P2pDiscoveryConfig,
-    ) -> Result<Arc<dyn DiscoveryProvider>> {
+    ) -> Result<Arc<SocketDiscoveryProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
         tracing::info!("🔍 Discovering discovery provider (capability: discovery)");
@@ -302,7 +326,7 @@ impl P2PCoordinator {
     /// Discover a primal that provides routing capabilities (optional)
     async fn discover_routing_provider(
         config: &P2pDiscoveryConfig,
-    ) -> Result<Arc<dyn RoutingProvider>> {
+    ) -> Result<Arc<SocketRoutingProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
         tracing::info!("🔀 Discovering routing provider (capability: routing)");
@@ -330,13 +354,11 @@ impl P2PCoordinator {
 
         anyhow::bail!("No routing provider found (optional)")
     }
+}
 
+impl<S: SecurityProvider, D: DiscoveryProvider, R: RoutingProvider> P2PCoordinator<S, D, R> {
     /// Create coordinator with explicit providers (for testing/advanced usage)
-    pub fn new(
-        security: Arc<dyn SecurityProvider>,
-        discovery: Arc<dyn DiscoveryProvider>,
-        routing: Option<Arc<dyn RoutingProvider>>,
-    ) -> Self {
+    pub fn new(security: Arc<S>, discovery: Arc<D>, routing: Option<Arc<R>>) -> Self {
         Self {
             security,
             discovery,

@@ -12,7 +12,7 @@ tower = { workspace = true, features = ["util"] }
 tower-http = { workspace = true, features = ["cors", "trace", "set-header", "limit"] }
 
 # Async runtime
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "fs", "signal"] }
 tokio-stream = { workspace = true }
 tokio-util = { workspace = true, features = ["compat", "io"] }
 futures = { workspace = true }
@@ -62,7 +62,6 @@ async-stream = { workspace = true }
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
-async-trait = { workspace = true }
 # Testing utilities
 tokio-test = { workspace = true }
 http-body-util = { workspace = true }

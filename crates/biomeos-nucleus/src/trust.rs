@@ -13,7 +13,6 @@
 //!
 //! This layer coordinates those APIs over the `"encryption"` capability socket.
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
@@ -62,17 +61,16 @@ pub struct TrustEvaluation {
 }
 
 /// Trust evaluation layer (delegates to the security provider)
-#[async_trait]
 pub trait TrustLayer: Send + Sync {
     /// Evaluate trust for a discovered primal
     ///
     /// Delegates to `federation.verify_family_member` on the security provider
-    async fn evaluate_trust(
+    fn evaluate_trust(
         &self,
         discovered: &DiscoveredPrimal,
         identity: &IdentityProof,
         family_seed: &[u8],
-    ) -> Result<TrustEvaluation>;
+    ) -> impl std::future::Future<Output = Result<TrustEvaluation>> + Send;
 }
 
 /// Trust layer implementation
@@ -118,7 +116,6 @@ impl TrustLayerImpl {
     }
 }
 
-#[async_trait]
 impl TrustLayer for TrustLayerImpl {
     async fn evaluate_trust(
         &self,

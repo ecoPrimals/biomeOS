@@ -13,7 +13,6 @@
 //! JSON-RPC methods, regardless of what the primal is called.
 
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use bytes::Bytes;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
@@ -124,7 +123,6 @@ impl SocketSecurityProvider {
     }
 }
 
-#[async_trait]
 impl SecurityProvider for SocketSecurityProvider {
     async fn request_tunnel(
         &self,
@@ -296,7 +294,6 @@ impl SocketDiscoveryProvider {
     }
 }
 
-#[async_trait]
 impl DiscoveryProvider for SocketDiscoveryProvider {
     async fn register_transport(&self, endpoint: &TransportEndpoint) -> Result<()> {
         self.rpc
@@ -396,7 +393,6 @@ impl SocketRoutingProvider {
     }
 }
 
-#[async_trait]
 impl RoutingProvider for SocketRoutingProvider {
     async fn request_relay(
         &self,

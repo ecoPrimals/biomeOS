@@ -372,8 +372,9 @@ pub(crate) async fn configure_primal_sockets(
         // abstract-namespace fallback. Pass the UDS path as well for env compat.
         if primal_name == SONGBIRD {
             if let Some(port) = context.get_tcp_port(primal_name).await {
-                cmd.arg("--listen").arg(format!("127.0.0.1:{port}"));
-                info!("   📡 TCP-only: songbird --listen 127.0.0.1:{port}");
+                let host = biomeos_types::constants::DEFAULT_LOCALHOST;
+                cmd.arg("--listen").arg(format!("{host}:{port}"));
+                info!("   TCP-only: songbird --listen {host}:{port}");
             }
         } else {
             cmd.arg(socket_flag).arg(socket_path);
@@ -407,9 +408,10 @@ pub(crate) async fn configure_primal_sockets(
                 cmd.env(env_name, family_id);
             } else if context.tcp_only {
                 if let Some(port) = context.get_tcp_port(socket_ref).await {
-                    let tcp_addr = format!("tcp://127.0.0.1:{port}");
+                    let host = biomeos_types::constants::DEFAULT_LOCALHOST;
+                    let tcp_addr = format!("tcp://{host}:{port}");
                     cmd.env(env_name, &tcp_addr);
-                    info!("   📡 TCP-only env: {env_name}={tcp_addr}");
+                    info!("   TCP-only env: {env_name}={tcp_addr}");
                 } else {
                     let resolved = context.get_socket_path(socket_ref).await;
                     cmd.env(env_name, &resolved);
@@ -425,10 +427,11 @@ pub(crate) async fn configure_primal_sockets(
         for (flag, socket_ref) in &p.cli_sockets {
             if context.tcp_only {
                 if let Some(port) = context.get_tcp_port(socket_ref).await {
-                    let tcp_addr = format!("tcp://127.0.0.1:{port}");
+                    let host = biomeos_types::constants::DEFAULT_LOCALHOST;
+                    let tcp_addr = format!("tcp://{host}:{port}");
                     cmd.arg(flag).arg(&tcp_addr);
                     info!(
-                        "   📡 TCP-only: {} → {} @ {}",
+                        "   TCP-only: {} → {} @ {}",
                         primal_name, socket_ref, tcp_addr
                     );
                 } else {

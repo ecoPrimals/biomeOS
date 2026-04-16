@@ -153,10 +153,7 @@ pub mod endpoints {
     /// TCP bind address for all interfaces at `port` (`0.0.0.0:port`).
     #[must_use]
     pub const fn production_tcp_bind_addr(port: u16) -> std::net::SocketAddr {
-        std::net::SocketAddr::new(
-            std::net::IpAddr::V4(std::net::Ipv4Addr::new(0, 0, 0, 0)),
-            port,
-        )
+        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), port)
     }
 }
 

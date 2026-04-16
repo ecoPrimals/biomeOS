@@ -318,29 +318,46 @@ async fn test_get_topology_live_mode_with_mock() {
     use biomeos_core::{DiscoveryResult, HealthStatus, PrimalDiscovery, PrimalType};
     use biomeos_types::{Endpoint, FamilyId, PrimalId};
     use semver::Version;
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::Arc;
 
     struct MockDiscovery {
         primals: Vec<biomeos_core::DiscoveredPrimal>,
     }
 
-    #[async_trait::async_trait]
     impl PrimalDiscovery for MockDiscovery {
-        async fn discover(
+        fn discover(
             &self,
             _endpoint: &Endpoint,
-        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(biomeos_core::DiscoveryError::NotFound {
-                endpoint: "mock".to_string(),
+        ) -> Pin<
+            Box<dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>> + Send + '_>,
+        > {
+            Box::pin(async move {
+                Err(biomeos_core::DiscoveryError::NotFound {
+                    endpoint: "mock".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-            Ok(self.primals.clone())
+        fn discover_all(
+            &self,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            let primals = self.primals.clone();
+            Box::pin(async move { Ok(primals) })
         }
 
-        async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Healthy)
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Healthy) })
         }
     }
 
@@ -399,29 +416,47 @@ async fn test_get_topology_live_mode_discovery_failure_fallback() {
     use crate::AppState;
     use biomeos_core::{DiscoveryError, DiscoveryResult, HealthStatus, PrimalDiscovery};
     use biomeos_types::{Endpoint, PrimalId};
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::Arc;
 
     struct FailingDiscovery;
 
-    #[async_trait::async_trait]
     impl PrimalDiscovery for FailingDiscovery {
-        async fn discover(
+        fn discover(
             &self,
             _endpoint: &Endpoint,
-        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(DiscoveryError::NotFound {
-                endpoint: "mock".to_string(),
+        ) -> Pin<
+            Box<dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>> + Send + '_>,
+        > {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "mock".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-            Err(DiscoveryError::NotFound {
-                endpoint: "discovery failed".to_string(),
+        fn discover_all(
+            &self,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "discovery failed".to_string(),
+                })
             })
         }
 
-        async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Unknown)
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Unknown) })
         }
     }
 

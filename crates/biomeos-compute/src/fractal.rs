@@ -16,7 +16,7 @@
 // =============================================================================
 
 use crate::node::{
-    CapacityInfo, ComputeNode, HealthStatus, NodeConfig, NodeMetrics, NodeTopology,
+    CapacityInfo, ComputeNodeKind, HealthStatus, NodeConfig, NodeMetrics, NodeTopology,
     ResourceAllocation, ResourceInfo, ResourceType, TreeMetrics, UtilizationInfo, Workload,
     WorkloadId, WorkloadInfo, WorkloadStatus,
 };
@@ -98,7 +98,7 @@ impl FractalBuilder {
     }
 
     /// Build the fractal structure
-    pub async fn build(self) -> Result<Arc<dyn ComputeNode>> {
+    pub async fn build(self) -> Result<Arc<ComputeNodeKind>> {
         info!(
             "Building fractal compute structure: root={}, topology={:?}, depth={}",
             self.root_id, self.topology, self.depth
@@ -131,7 +131,7 @@ impl FractalBuilder {
         config: NodeConfig,
         resources: ResourceInfo,
         current_depth: usize,
-    ) -> BoxFuture<'_, Result<Arc<dyn ComputeNode>>> {
+    ) -> BoxFuture<'_, Result<Arc<ComputeNodeKind>>> {
         Box::pin(async move {
             debug!(
                 "Building node: {} at depth {}",
@@ -141,7 +141,9 @@ impl FractalBuilder {
             // If we've reached max depth, create a leaf node
             if current_depth >= self.depth {
                 debug!("Creating leaf node: {}", config.node_id);
-                return Ok(Arc::new(LeafNode::new(config, resources)) as Arc<dyn ComputeNode>);
+                return Ok(Arc::new(ComputeNodeKind::Leaf(LeafNode::new(
+                    config, resources,
+                ))));
             }
 
             // Otherwise, create a parent node with children
@@ -175,7 +177,9 @@ impl FractalBuilder {
                 config.node_id,
                 children.len()
             );
-            Ok(Arc::new(ParentNode::new(config, resources, children)) as Arc<dyn ComputeNode>)
+            Ok(Arc::new(ComputeNodeKind::Parent(ParentNode::new(
+                config, resources, children,
+            ))))
         })
     }
 
@@ -252,6 +256,7 @@ pub struct LeafNode {
     workloads: tokio::sync::RwLock<Vec<WorkloadInfo>>,
 }
 
+#[allow(missing_docs)]
 impl LeafNode {
     /// Create a new leaf node with the given configuration and resources
     #[must_use]
@@ -262,35 +267,32 @@ impl LeafNode {
             workloads: tokio::sync::RwLock::new(Vec::new()),
         }
     }
-}
 
-#[async_trait::async_trait]
-impl ComputeNode for LeafNode {
-    fn node_id(&self) -> &str {
+    pub fn node_id(&self) -> &str {
         &self.config.node_id
     }
 
-    fn parent_id(&self) -> Option<&str> {
+    pub fn parent_id(&self) -> Option<&str> {
         self.config.parent_id.as_deref()
     }
 
-    fn depth(&self) -> usize {
+    pub fn depth(&self) -> usize {
         self.config.depth
     }
 
-    fn topology(&self) -> NodeTopology {
+    pub fn topology(&self) -> NodeTopology {
         NodeTopology::Leaf
     }
 
-    fn get_child_count(&self) -> usize {
+    pub fn get_child_count(&self) -> usize {
         0
     }
 
-    async fn get_resources(&self) -> Result<ResourceInfo> {
+    pub async fn get_resources(&self) -> Result<ResourceInfo> {
         Ok(self.resources)
     }
 
-    async fn get_capacity(&self) -> Result<CapacityInfo> {
+    pub async fn get_capacity(&self) -> Result<CapacityInfo> {
         let workloads = self.workloads.read().await;
         Ok(CapacityInfo {
             max_concurrent_workloads: 4,
@@ -300,7 +302,7 @@ impl ComputeNode for LeafNode {
         })
     }
 
-    async fn get_utilization(&self) -> Result<UtilizationInfo> {
+    pub async fn get_utilization(&self) -> Result<UtilizationInfo> {
         let workloads = self.workloads.read().await;
         let active_count = workloads
             .iter()
@@ -315,7 +317,7 @@ impl ComputeNode for LeafNode {
         })
     }
 
-    async fn submit_workload(&self, workload: Workload) -> Result<WorkloadId> {
+    pub async fn submit_workload(&self, workload: Workload) -> Result<WorkloadId> {
         let mut workloads = self.workloads.write().await;
 
         let info = WorkloadInfo {
@@ -337,7 +339,7 @@ impl ComputeNode for LeafNode {
         Ok(workload.id)
     }
 
-    async fn cancel_workload(&self, id: &WorkloadId) -> Result<()> {
+    pub async fn cancel_workload(&self, id: &WorkloadId) -> Result<()> {
         let mut workloads = self.workloads.write().await;
         if let Some(workload) = workloads.iter_mut().find(|w| &w.id == id) {
             workload.status = WorkloadStatus::Cancelled;
@@ -345,7 +347,7 @@ impl ComputeNode for LeafNode {
         Ok(())
     }
 
-    async fn get_workload_status(&self, id: &WorkloadId) -> Result<WorkloadStatus> {
+    pub async fn get_workload_status(&self, id: &WorkloadId) -> Result<WorkloadStatus> {
         let workloads = self.workloads.read().await;
         workloads
             .iter()
@@ -354,28 +356,28 @@ impl ComputeNode for LeafNode {
             .context("Workload not found")
     }
 
-    async fn list_workloads(&self) -> Result<Vec<WorkloadInfo>> {
+    pub async fn list_workloads(&self) -> Result<Vec<WorkloadInfo>> {
         let workloads = self.workloads.read().await;
         Ok(workloads.clone())
     }
 
-    async fn spawn_sub_node(&self, _config: NodeConfig) -> Result<Arc<dyn ComputeNode>> {
+    pub async fn spawn_sub_node(&self, _config: NodeConfig) -> Result<Arc<ComputeNodeKind>> {
         anyhow::bail!("Leaf nodes cannot spawn sub-nodes")
     }
 
-    async fn get_children(&self) -> Result<Vec<Arc<dyn ComputeNode>>> {
+    pub async fn get_children(&self) -> Result<Vec<Arc<ComputeNodeKind>>> {
         Ok(Vec::new())
     }
 
-    async fn get_all_descendants(&self) -> Result<Vec<Arc<dyn ComputeNode>>> {
+    pub async fn get_all_descendants(&self) -> Result<Vec<Arc<ComputeNodeKind>>> {
         Ok(Vec::new())
     }
 
-    async fn health_check(&self) -> Result<HealthStatus> {
+    pub async fn health_check(&self) -> Result<HealthStatus> {
         Ok(HealthStatus::Healthy)
     }
 
-    async fn get_metrics(&self) -> Result<NodeMetrics> {
+    pub async fn get_metrics(&self) -> Result<NodeMetrics> {
         let workloads = self.workloads.read().await;
         let completed = workloads
             .iter()
@@ -393,7 +395,7 @@ impl ComputeNode for LeafNode {
         })
     }
 
-    async fn get_subtree_metrics(&self) -> Result<TreeMetrics> {
+    pub async fn get_subtree_metrics(&self) -> Result<TreeMetrics> {
         Ok(TreeMetrics {
             total_nodes: 1,
             total_workloads_active: self.get_utilization().await?.active_workloads,
@@ -417,16 +419,17 @@ pub struct ParentNode {
     config: NodeConfig,
     /// Planned: wire up for resource reservation/limits in Phase 3.
     _resources: ResourceInfo,
-    children: Vec<Arc<dyn ComputeNode>>,
+    children: Vec<Arc<ComputeNodeKind>>,
 }
 
+#[allow(missing_docs)]
 impl ParentNode {
     /// Create a new parent node with the given configuration, resources, and children
     #[must_use]
     pub fn new(
         config: NodeConfig,
         resources: ResourceInfo,
-        children: Vec<Arc<dyn ComputeNode>>,
+        children: Vec<Arc<ComputeNodeKind>>,
     ) -> Self {
         Self {
             config,
@@ -434,250 +437,364 @@ impl ParentNode {
             children,
         }
     }
-}
 
-#[async_trait::async_trait]
-impl ComputeNode for ParentNode {
-    fn node_id(&self) -> &str {
+    pub fn node_id(&self) -> &str {
         &self.config.node_id
     }
 
-    fn parent_id(&self) -> Option<&str> {
+    pub fn parent_id(&self) -> Option<&str> {
         self.config.parent_id.as_deref()
     }
 
-    fn depth(&self) -> usize {
+    pub fn depth(&self) -> usize {
         self.config.depth
     }
 
-    fn topology(&self) -> NodeTopology {
+    pub fn topology(&self) -> NodeTopology {
         self.config.topology
     }
 
-    fn get_child_count(&self) -> usize {
+    pub fn get_child_count(&self) -> usize {
         self.children.len()
     }
 
-    async fn get_resources(&self) -> Result<ResourceInfo> {
-        // Aggregate children's resources
-        let mut total = ResourceInfo {
-            cpu_cores: 0,
-            memory_mb: 0,
-            gpu_count: 0,
-            gpu_memory_mb: 0,
-            disk_mb: 0,
-        };
+    /// Recursive tree aggregation: returns a boxed future so the async state machine stays finite
+    /// (same role `async_trait` served for `dyn ComputeNode`).
+    pub fn get_resources(&self) -> BoxFuture<'_, Result<ResourceInfo>> {
+        let children = self.children.clone();
+        Box::pin(async move {
+            let mut total = ResourceInfo {
+                cpu_cores: 0,
+                memory_mb: 0,
+                gpu_count: 0,
+                gpu_memory_mb: 0,
+                disk_mb: 0,
+            };
 
-        for child in &self.children {
-            let child_resources = child.get_resources().await?;
-            total.aggregate(&child_resources);
-        }
+            for child in &children {
+                let child_resources = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_resources().await?,
+                    ComputeNodeKind::Parent(n) => n.get_resources().await?,
+                };
+                total.aggregate(&child_resources);
+            }
 
-        Ok(total)
-    }
-
-    async fn get_capacity(&self) -> Result<CapacityInfo> {
-        // Aggregate children's capacity
-        let mut total_slots = 0;
-        let mut available_slots = 0;
-        let mut total_resources = ResourceInfo {
-            cpu_cores: 0,
-            memory_mb: 0,
-            gpu_count: 0,
-            gpu_memory_mb: 0,
-            disk_mb: 0,
-        };
-        let mut available_resources = ResourceInfo {
-            cpu_cores: 0,
-            memory_mb: 0,
-            gpu_count: 0,
-            gpu_memory_mb: 0,
-            disk_mb: 0,
-        };
-
-        for child in &self.children {
-            let capacity = child.get_capacity().await?;
-            total_slots += capacity.max_concurrent_workloads;
-            available_slots += capacity.available_slots;
-            total_resources.aggregate(&capacity.total_resources);
-            available_resources.aggregate(&capacity.available_resources);
-        }
-
-        Ok(CapacityInfo {
-            max_concurrent_workloads: total_slots,
-            available_slots,
-            total_resources,
-            available_resources,
+            Ok(total)
         })
     }
 
-    async fn get_utilization(&self) -> Result<UtilizationInfo> {
-        // Aggregate children's utilization
-        let mut total_active = 0;
-        let mut avg_cpu = 0.0;
-        let mut avg_memory = 0.0;
-        let mut avg_gpu = 0.0;
+    pub fn get_capacity(&self) -> BoxFuture<'_, Result<CapacityInfo>> {
+        let children = self.children.clone();
+        Box::pin(async move {
+            let mut total_slots = 0;
+            let mut available_slots = 0;
+            let mut total_resources = ResourceInfo {
+                cpu_cores: 0,
+                memory_mb: 0,
+                gpu_count: 0,
+                gpu_memory_mb: 0,
+                disk_mb: 0,
+            };
+            let mut available_resources = ResourceInfo {
+                cpu_cores: 0,
+                memory_mb: 0,
+                gpu_count: 0,
+                gpu_memory_mb: 0,
+                disk_mb: 0,
+            };
 
-        for child in &self.children {
-            let util = child.get_utilization().await?;
-            total_active += util.active_workloads;
-            avg_cpu += util.cpu_utilization_percent;
-            avg_memory += util.memory_utilization_percent;
-            avg_gpu += util.gpu_utilization_percent;
-        }
+            for child in &children {
+                let capacity = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_capacity().await?,
+                    ComputeNodeKind::Parent(n) => n.get_capacity().await?,
+                };
+                total_slots += capacity.max_concurrent_workloads;
+                available_slots += capacity.available_slots;
+                total_resources.aggregate(&capacity.total_resources);
+                available_resources.aggregate(&capacity.available_resources);
+            }
 
-        let count = self.children.len() as f64;
-        Ok(UtilizationInfo {
-            cpu_utilization_percent: avg_cpu / count,
-            memory_utilization_percent: avg_memory / count,
-            gpu_utilization_percent: avg_gpu / count,
-            active_workloads: total_active,
+            Ok(CapacityInfo {
+                max_concurrent_workloads: total_slots,
+                available_slots,
+                total_resources,
+                available_resources,
+            })
         })
     }
 
-    async fn submit_workload(&self, workload: Workload) -> Result<WorkloadId> {
-        // Find least loaded child and submit there
-        let mut best_child = None;
-        let mut min_load = usize::MAX;
+    pub fn get_utilization(&self) -> BoxFuture<'_, Result<UtilizationInfo>> {
+        let children = self.children.clone();
+        Box::pin(async move {
+            let mut total_active = 0;
+            let mut avg_cpu = 0.0;
+            let mut avg_memory = 0.0;
+            let mut avg_gpu = 0.0;
 
-        for child in &self.children {
-            let util = child.get_utilization().await?;
-            if util.active_workloads < min_load {
-                min_load = util.active_workloads;
-                best_child = Some(child);
+            for child in &children {
+                let util = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_utilization().await?,
+                    ComputeNodeKind::Parent(n) => n.get_utilization().await?,
+                };
+                total_active += util.active_workloads;
+                avg_cpu += util.cpu_utilization_percent;
+                avg_memory += util.memory_utilization_percent;
+                avg_gpu += util.gpu_utilization_percent;
             }
-        }
 
-        match best_child {
-            Some(child) => {
-                debug!(
-                    "Routing workload {} to child {}",
-                    workload.id,
-                    child.node_id()
-                );
-                child.submit_workload(workload).await
+            let count = children.len().max(1) as f64;
+            Ok(UtilizationInfo {
+                cpu_utilization_percent: avg_cpu / count,
+                memory_utilization_percent: avg_memory / count,
+                gpu_utilization_percent: avg_gpu / count,
+                active_workloads: total_active,
+            })
+        })
+    }
+
+    pub fn submit_workload(&self, workload: Workload) -> BoxFuture<'_, Result<WorkloadId>> {
+        let children = self.children.clone();
+        Box::pin(async move {
+            let mut best: Option<&Arc<ComputeNodeKind>> = None;
+            let mut min_load = usize::MAX;
+
+            for child in &children {
+                let util = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_utilization().await?,
+                    ComputeNodeKind::Parent(n) => n.get_utilization().await?,
+                };
+                if util.active_workloads < min_load {
+                    min_load = util.active_workloads;
+                    best = Some(child);
+                }
             }
-            None => anyhow::bail!("No children available"),
-        }
-    }
 
-    async fn cancel_workload(&self, id: &WorkloadId) -> Result<()> {
-        // Try to cancel in all children
-        for child in &self.children {
-            let _ = child.cancel_workload(id).await;
-        }
-        Ok(())
-    }
-
-    async fn get_workload_status(&self, id: &WorkloadId) -> Result<WorkloadStatus> {
-        // Search all children
-        for child in &self.children {
-            if let Ok(status) = child.get_workload_status(id).await {
-                return Ok(status);
+            match best {
+                Some(child) => {
+                    debug!(
+                        "Routing workload {} to child {}",
+                        workload.id,
+                        child.node_id()
+                    );
+                    match child.as_ref() {
+                        ComputeNodeKind::Leaf(n) => n.submit_workload(workload).await,
+                        ComputeNodeKind::Parent(n) => n.submit_workload(workload).await,
+                    }
+                }
+                None => anyhow::bail!("No children available"),
             }
-        }
-        anyhow::bail!("Workload not found in any child")
+        })
     }
 
-    async fn list_workloads(&self) -> Result<Vec<WorkloadInfo>> {
-        let mut all_workloads = Vec::new();
-        for child in &self.children {
-            all_workloads.extend(child.list_workloads().await?);
-        }
-        Ok(all_workloads)
+    pub fn cancel_workload(&self, id: &WorkloadId) -> BoxFuture<'_, Result<()>> {
+        let children = self.children.clone();
+        let id = id.clone();
+        Box::pin(async move {
+            for child in &children {
+                match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => {
+                        let _ = n.cancel_workload(&id).await;
+                    }
+                    ComputeNodeKind::Parent(n) => {
+                        let _ = n.cancel_workload(&id).await;
+                    }
+                }
+            }
+            Ok(())
+        })
     }
 
-    async fn spawn_sub_node(&self, _config: NodeConfig) -> Result<Arc<dyn ComputeNode>> {
+    pub fn get_workload_status(&self, id: &WorkloadId) -> BoxFuture<'_, Result<WorkloadStatus>> {
+        let children = self.children.clone();
+        let id = id.clone();
+        Box::pin(async move {
+            for child in &children {
+                let res = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_workload_status(&id).await,
+                    ComputeNodeKind::Parent(n) => n.get_workload_status(&id).await,
+                };
+                if let Ok(status) = res {
+                    return Ok(status);
+                }
+            }
+            anyhow::bail!("Workload not found in any child")
+        })
+    }
+
+    pub fn list_workloads(&self) -> BoxFuture<'_, Result<Vec<WorkloadInfo>>> {
+        let children = self.children.clone();
+        Box::pin(async move {
+            let mut all_workloads = Vec::new();
+            for child in &children {
+                let chunk = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.list_workloads().await?,
+                    ComputeNodeKind::Parent(n) => n.list_workloads().await?,
+                };
+                all_workloads.extend(chunk);
+            }
+            Ok(all_workloads)
+        })
+    }
+
+    pub async fn spawn_sub_node(&self, _config: NodeConfig) -> Result<Arc<ComputeNodeKind>> {
         anyhow::bail!(
             "ParentNode children are immutable after construction — \
              use ParentNodeBuilder to define topology at creation time"
         )
     }
 
-    async fn get_children(&self) -> Result<Vec<Arc<dyn ComputeNode>>> {
+    pub async fn get_children(&self) -> Result<Vec<Arc<ComputeNodeKind>>> {
         Ok(self.children.clone())
     }
 
-    async fn get_all_descendants(&self) -> Result<Vec<Arc<dyn ComputeNode>>> {
-        let mut descendants = Vec::new();
-        for child in &self.children {
-            descendants.push(child.clone());
-            descendants.extend(child.get_all_descendants().await?);
-        }
-        Ok(descendants)
-    }
-
-    async fn health_check(&self) -> Result<HealthStatus> {
-        // Check all children
-        for child in &self.children {
-            let status = child.health_check().await?;
-            if !matches!(status, HealthStatus::Healthy) {
-                return Ok(HealthStatus::Degraded {
-                    reason: format!("Child {} unhealthy", child.node_id()),
-                });
+    pub fn get_all_descendants(&self) -> BoxFuture<'_, Result<Vec<Arc<ComputeNodeKind>>>> {
+        let children = self.children.clone();
+        Box::pin(async move {
+            let mut descendants = Vec::new();
+            for child in &children {
+                descendants.push(child.clone());
+                let sub = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_all_descendants().await?,
+                    ComputeNodeKind::Parent(n) => n.get_all_descendants().await?,
+                };
+                descendants.extend(sub);
             }
-        }
-        Ok(HealthStatus::Healthy)
-    }
-
-    async fn get_metrics(&self) -> Result<NodeMetrics> {
-        // Aggregate children's metrics
-        let mut total_submitted = 0;
-        let mut total_completed = 0;
-        let mut total_failed = 0;
-        let mut total_time = 0;
-
-        for child in &self.children {
-            let metrics = child.get_metrics().await?;
-            total_submitted += metrics.workloads_submitted;
-            total_completed += metrics.workloads_completed;
-            total_failed += metrics.workloads_failed;
-            total_time += metrics.total_execution_time_ms;
-        }
-
-        let avg_time = if total_completed > 0 {
-            total_time as f64 / total_completed as f64
-        } else {
-            0.0
-        };
-
-        Ok(NodeMetrics {
-            node_id: self.config.node_id.clone(),
-            workloads_submitted: total_submitted,
-            workloads_completed: total_completed,
-            workloads_failed: total_failed,
-            total_execution_time_ms: total_time,
-            average_execution_time_ms: avg_time,
-            current_utilization: self.get_utilization().await?,
+            Ok(descendants)
         })
     }
 
-    async fn get_subtree_metrics(&self) -> Result<TreeMetrics> {
-        let mut total_nodes = 1; // Self
-        let mut total_active = 0;
-        let mut total_completed = 0;
-        let mut aggregate_resources = ResourceInfo {
-            cpu_cores: 0,
-            memory_mb: 0,
-            gpu_count: 0,
-            gpu_memory_mb: 0,
-            disk_mb: 0,
-        };
+    pub fn health_check(&self) -> BoxFuture<'_, Result<HealthStatus>> {
+        let children = self.children.clone();
+        Box::pin(async move {
+            for child in &children {
+                let status = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.health_check().await?,
+                    ComputeNodeKind::Parent(n) => n.health_check().await?,
+                };
+                if !matches!(status, HealthStatus::Healthy) {
+                    return Ok(HealthStatus::Degraded {
+                        reason: format!("Child {} unhealthy", child.node_id()),
+                    });
+                }
+            }
+            Ok(HealthStatus::Healthy)
+        })
+    }
 
-        for child in &self.children {
-            let child_metrics = child.get_subtree_metrics().await?;
-            total_nodes += child_metrics.total_nodes;
-            total_active += child_metrics.total_workloads_active;
-            total_completed += child_metrics.total_workloads_completed;
-            aggregate_resources.aggregate(&child_metrics.aggregate_resources);
-        }
+    pub fn get_metrics(&self) -> BoxFuture<'_, Result<NodeMetrics>> {
+        let children = self.children.clone();
+        let node_id = self.config.node_id.clone();
+        Box::pin(async move {
+            let mut total_submitted = 0;
+            let mut total_completed = 0;
+            let mut total_failed = 0;
+            let mut total_time = 0;
 
-        Ok(TreeMetrics {
-            total_nodes,
-            total_workloads_active: total_active,
-            total_workloads_completed: total_completed,
-            aggregate_resources,
-            aggregate_utilization: self.get_utilization().await?,
+            for child in &children {
+                let metrics = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_metrics().await?,
+                    ComputeNodeKind::Parent(n) => n.get_metrics().await?,
+                };
+                total_submitted += metrics.workloads_submitted;
+                total_completed += metrics.workloads_completed;
+                total_failed += metrics.workloads_failed;
+                total_time += metrics.total_execution_time_ms;
+            }
+
+            let avg_time = if total_completed > 0 {
+                total_time as f64 / total_completed as f64
+            } else {
+                0.0
+            };
+
+            let mut total_active = 0;
+            let mut avg_cpu = 0.0;
+            let mut avg_memory = 0.0;
+            let mut avg_gpu = 0.0;
+            for child in &children {
+                let util = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_utilization().await?,
+                    ComputeNodeKind::Parent(n) => n.get_utilization().await?,
+                };
+                total_active += util.active_workloads;
+                avg_cpu += util.cpu_utilization_percent;
+                avg_memory += util.memory_utilization_percent;
+                avg_gpu += util.gpu_utilization_percent;
+            }
+            let count = children.len().max(1) as f64;
+            let current_utilization = UtilizationInfo {
+                cpu_utilization_percent: avg_cpu / count,
+                memory_utilization_percent: avg_memory / count,
+                gpu_utilization_percent: avg_gpu / count,
+                active_workloads: total_active,
+            };
+
+            Ok(NodeMetrics {
+                node_id,
+                workloads_submitted: total_submitted,
+                workloads_completed: total_completed,
+                workloads_failed: total_failed,
+                total_execution_time_ms: total_time,
+                average_execution_time_ms: avg_time,
+                current_utilization,
+            })
+        })
+    }
+
+    pub fn get_subtree_metrics(&self) -> BoxFuture<'_, Result<TreeMetrics>> {
+        let children = self.children.clone();
+        Box::pin(async move {
+            let mut total_nodes = 1_usize;
+            let mut total_active = 0;
+            let mut total_completed = 0;
+            let mut aggregate_resources = ResourceInfo {
+                cpu_cores: 0,
+                memory_mb: 0,
+                gpu_count: 0,
+                gpu_memory_mb: 0,
+                disk_mb: 0,
+            };
+
+            for child in &children {
+                let child_metrics = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_subtree_metrics().await?,
+                    ComputeNodeKind::Parent(n) => n.get_subtree_metrics().await?,
+                };
+                total_nodes += child_metrics.total_nodes;
+                total_active += child_metrics.total_workloads_active;
+                total_completed += child_metrics.total_workloads_completed;
+                aggregate_resources.aggregate(&child_metrics.aggregate_resources);
+            }
+
+            let mut avg_cpu = 0.0;
+            let mut avg_memory = 0.0;
+            let mut avg_gpu = 0.0;
+            let mut total_active_u = 0;
+            for child in &children {
+                let util = match child.as_ref() {
+                    ComputeNodeKind::Leaf(n) => n.get_utilization().await?,
+                    ComputeNodeKind::Parent(n) => n.get_utilization().await?,
+                };
+                total_active_u += util.active_workloads;
+                avg_cpu += util.cpu_utilization_percent;
+                avg_memory += util.memory_utilization_percent;
+                avg_gpu += util.gpu_utilization_percent;
+            }
+            let count = children.len().max(1) as f64;
+            let aggregate_utilization = UtilizationInfo {
+                cpu_utilization_percent: avg_cpu / count,
+                memory_utilization_percent: avg_memory / count,
+                gpu_utilization_percent: avg_gpu / count,
+                active_workloads: total_active_u,
+            };
+
+            Ok(TreeMetrics {
+                total_nodes,
+                total_workloads_active: total_active,
+                total_workloads_completed: total_completed,
+                aggregate_resources,
+                aggregate_utilization,
+            })
         })
     }
 }

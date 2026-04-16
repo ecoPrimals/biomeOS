@@ -2,6 +2,48 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.16 (2026-04-16) — async-trait Elimination, Deep Debt, Dependency Trimming
+
+Complete removal of `async-trait` crate and deep debt evolution across the workspace.
+
+### async-trait Elimination (7-phase migration)
+- **Phase 1**: `Provider` trait — RPITIT, helper functions genericized
+- **Phase 2**: `NucleusClient<D,I,C,T>` — 4 layer traits to RPITIT with default type params
+- **Phase 3**: `CapabilityCaller` — generics extended to `BeaconGeneticsManager` and `DarkForestBeacon`
+- **Phase 4**: P2P coordinators — `SecurityProvider`, `DiscoveryProvider`, `RoutingProvider` genericized
+- **Phase 5**: `ComputeNode` trait replaced with `ComputeNodeKind` enum dispatch (zero-overhead)
+- **Phase 6**: `ManagedPrimal` and `PrimalDiscovery` — manual `Pin<Box<dyn Future>>` desugaring (dyn-safe)
+- **Phase 7**: `async-trait` removed from all Cargo.toml files workspace-wide
+
+### Smart Refactoring
+- `node.rs` (854L) split into `node/mod.rs` (188L dispatch), `node/types.rs` (407L data types), `node/tests.rs` (163L deduplicated tests) — all under 800 LOC
+- 14 duplicate test functions eliminated
+
+### Stub Evolution
+- TCP/HTTP endpoint probe: replaced synthetic stub with real JSON-RPC probing (TCP line-delimited + HTTP/1.1 POST)
+- Probe now connects, sends `identity.get` and `capabilities.list`, parses real responses
+
+### Hardcoding Removal
+- All `127.0.0.1` literals in `primal_spawner.rs` replaced with `constants::DEFAULT_LOCALHOST`
+- `compute_overall_status` extracted from generic impl to module-level `const fn`
+
+### Dependency Trimming
+- `itertools` removed (unused workspace dependency)
+- `tokio`: workspace default changed from `features = ["full"]` to per-crate minimal feature sets (`rt-multi-thread`, `macros`, `sync`, `time` baseline)
+- `hyper`: changed from `features = ["full"]` to `client`, `server`, `http1`
+
+### Clippy Evolution
+- `Ipv4Addr::new(0,0,0,0)` → `Ipv4Addr::UNSPECIFIED`
+- Redundant `+ Sync` supertrait bounds removed from `Provider` helpers
+- `clippy::manual_map` resolved in capability extraction
+- All workspace warnings resolved (0 warnings, 0 errors)
+
+### Metrics
+- 7,801 tests passing (0 failures)
+- 25 workspace crates
+- 0 `async-trait` usage remaining (only doc comments reference it historically)
+- 0 clippy warnings (pedantic + nursery)
+
 ## v3.15 (2026-04-14) — Pure Rust YAML, Dead Code Evolution, Agnostic Naming
 
 Deep debt cleanup — eliminates last C dependency and evolves production code.

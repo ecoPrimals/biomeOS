@@ -364,26 +364,42 @@ mod tests {
     use super::*;
     use biomeos_core::{DiscoveryResult, HealthStatus};
     use biomeos_types::PrimalId;
+    use std::future::Future;
+    use std::pin::Pin;
 
     struct MockDiscovery;
 
-    #[async_trait::async_trait]
     impl PrimalDiscovery for MockDiscovery {
-        async fn discover(
+        fn discover(
             &self,
             _endpoint: &biomeos_types::Endpoint,
-        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(biomeos_core::DiscoveryError::NotFound {
-                endpoint: "test_mock".to_string(),
+        ) -> Pin<
+            Box<dyn Future<Output = DiscoveryResult<biomeos_core::DiscoveredPrimal>> + Send + '_>,
+        > {
+            Box::pin(async move {
+                Err(biomeos_core::DiscoveryError::NotFound {
+                    endpoint: "test_mock".to_string(),
+                })
             })
         }
 
-        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
-            Ok(vec![])
+        fn discover_all(
+            &self,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            Box::pin(async move { Ok(vec![]) })
         }
 
-        async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
-            Ok(HealthStatus::Healthy)
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Healthy) })
         }
     }
 

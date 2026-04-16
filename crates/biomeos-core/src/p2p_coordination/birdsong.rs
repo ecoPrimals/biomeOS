@@ -34,15 +34,15 @@ use std::sync::Arc;
 /// - Any security primal (provides lineage verification and encryption)
 /// - Any discovery primal (provides broadcast discovery)
 /// - Any routing primal (optional, for lineage-gated relay)
-pub struct BirdSongCoordinator {
+pub struct BirdSongCoordinator<S: SecurityProvider, D: DiscoveryProvider> {
     /// Security provider (agnostic - works with any security primal)
-    security: Arc<dyn SecurityProvider>,
+    security: Arc<S>,
 
     /// Discovery provider (agnostic - works with any discovery primal)
-    discovery: Arc<dyn DiscoveryProvider>,
+    discovery: Arc<D>,
 }
 
-impl BirdSongCoordinator {
+impl<S: SecurityProvider, D: DiscoveryProvider> BirdSongCoordinator<S, D> {
     /// Create a new `BirdSong` coordinator
     ///
     /// # Arguments
@@ -54,7 +54,7 @@ impl BirdSongCoordinator {
     ///
     /// This constructor is **agnostic** - it accepts any primal that implements
     /// the required traits, regardless of what it's called.
-    pub fn new(security: Arc<dyn SecurityProvider>, discovery: Arc<dyn DiscoveryProvider>) -> Self {
+    pub fn new(security: Arc<S>, discovery: Arc<D>) -> Self {
         Self {
             security,
             discovery,
@@ -128,11 +128,11 @@ impl BirdSongCoordinator {
     /// 2. Routing provider requests relay from ancestor
     /// 3. Routing provider accepts relay offer
     /// 4. Return relay information
-    pub async fn coordinate_relay(
+    pub async fn coordinate_relay<R: RoutingProvider>(
         &self,
         requester: &str,
         target: &str,
-        routing: Arc<dyn RoutingProvider>,
+        routing: Arc<R>,
     ) -> Result<RelayInfo> {
         // Step 1: Verify lineage relationship
         let lineage = self
@@ -222,13 +222,11 @@ mod tests {
         BroadcastKeys, BroadcastTest, LineageInfo, LineageProof, RelayConnection, RelayOffer,
         RelayStatus, TransportEndpoint, TransportHealth, TunnelHealth, TunnelRequest,
     };
-    use async_trait::async_trait;
     use biomeos_types::constants::ports;
     use std::time::SystemTime;
 
     struct MockSecurityProvider;
 
-    #[async_trait]
     impl SecurityProvider for MockSecurityProvider {
         async fn request_tunnel(
             &self,
@@ -275,7 +273,6 @@ mod tests {
         success: bool,
     }
 
-    #[async_trait]
     impl DiscoveryProvider for MockDiscoveryProvider {
         async fn register_transport(&self, _endpoint: &TransportEndpoint) -> Result<()> {
             Ok(())
@@ -408,7 +405,6 @@ mod tests {
 
     struct MockRoutingProvider;
 
-    #[async_trait]
     impl super::RoutingProvider for MockRoutingProvider {
         async fn request_relay(
             &self,
@@ -461,7 +457,6 @@ mod tests {
 
     struct MockSecurityProviderNonAncestor;
 
-    #[async_trait]
     impl SecurityProvider for MockSecurityProviderNonAncestor {
         async fn request_tunnel(
             &self,

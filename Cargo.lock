@@ -324,7 +324,6 @@ name = "biomeos"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "axum",
  "biomeos-atomic-deploy",
  "biomeos-chimera",
@@ -362,7 +361,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
- "async-trait",
  "axum",
  "base64",
  "biomeos-core",
@@ -528,7 +526,6 @@ name = "biomeos-compute"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "biomeos-types",
  "bytes",
  "chrono",
@@ -548,7 +545,6 @@ name = "biomeos-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "base64",
  "biomeos-graph",
  "biomeos-manifest",
@@ -757,7 +753,6 @@ name = "biomeos-nucleus"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "base64",
  "biomeos-test-utils",
  "biomeos-types",
@@ -784,7 +779,6 @@ name = "biomeos-primal-sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "biomeos-test-utils",
  "biomeos-types",
  "bytes",
@@ -807,7 +801,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-fs",
- "async-trait",
  "base64",
  "biomeos-core",
  "biomeos-spore",

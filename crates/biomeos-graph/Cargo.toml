@@ -20,7 +20,7 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 # Async & Events (for events.rs GraphEventBroadcaster)
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["net", "io-util", "process"] }
 chrono = { workspace = true }
 tracing = { workspace = true }
 

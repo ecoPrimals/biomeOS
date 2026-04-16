@@ -13,11 +13,12 @@ use crate::concurrent_startup::{DependencyGraph, start_in_waves};
 use crate::discovery_modern::HealthStatus;
 use crate::primal_orchestrator::{ManagedPrimal, PrimalHealthMonitor, PrimalOrchestrator};
 use crate::retry::RetryPolicy;
-use async_trait::async_trait;
 use biomeos_types::PrimalId;
 use biomeos_types::error::BiomeResult;
 use biomeos_types::identifiers::Endpoint;
 use std::collections::{HashMap, HashSet};
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -38,7 +39,6 @@ impl MockPrimal {
     }
 }
 
-#[async_trait]
 impl ManagedPrimal for MockPrimal {
     fn id(&self) -> &PrimalId {
         &self.id
@@ -49,17 +49,17 @@ impl ManagedPrimal for MockPrimal {
     fn requires(&self) -> &[Capability] {
         &self.requires
     }
-    async fn endpoint(&self) -> Option<Endpoint> {
-        None
+    fn endpoint(&self) -> Pin<Box<dyn Future<Output = Option<Endpoint>> + Send + '_>> {
+        Box::pin(async move { None })
     }
-    async fn start(&self) -> BiomeResult<()> {
-        Ok(())
+    fn start(&self) -> Pin<Box<dyn Future<Output = BiomeResult<()>> + Send + '_>> {
+        Box::pin(async move { Ok(()) })
     }
-    async fn stop(&self) -> BiomeResult<()> {
-        Ok(())
+    fn stop(&self) -> Pin<Box<dyn Future<Output = BiomeResult<()>> + Send + '_>> {
+        Box::pin(async move { Ok(()) })
     }
-    async fn health_check(&self) -> BiomeResult<HealthStatus> {
-        Ok(HealthStatus::Healthy)
+    fn health_check(&self) -> Pin<Box<dyn Future<Output = BiomeResult<HealthStatus>> + Send + '_>> {
+        Box::pin(async move { Ok(HealthStatus::Healthy) })
     }
 }
 

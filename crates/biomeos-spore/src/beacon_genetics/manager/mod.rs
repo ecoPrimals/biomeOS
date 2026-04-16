@@ -22,11 +22,11 @@ use super::types::{
 };
 
 /// Manages beacon genetics (address book, seeds, meetings)
-pub struct BeaconGeneticsManager {
+pub struct BeaconGeneticsManager<C: CapabilityCaller = NeuralApiCapabilityCaller> {
     /// Root path for beacon storage
     pub(crate) root_path: PathBuf,
     /// Capability caller (neuralAPI or mock)
-    capability_caller: Box<dyn CapabilityCaller>,
+    capability_caller: C,
     /// Cached manifest
     pub(crate) manifest: Option<BeaconGeneticsManifest>,
 }
@@ -36,18 +36,14 @@ impl BeaconGeneticsManager {
     #[must_use]
     pub fn new(root_path: &Path) -> Self {
         let neural_socket = NeuralApiCapabilityCaller::default_socket();
-        Self::with_capability_caller(
-            root_path,
-            Box::new(NeuralApiCapabilityCaller::new(&neural_socket)),
-        )
+        Self::with_capability_caller(root_path, NeuralApiCapabilityCaller::new(&neural_socket))
     }
+}
 
+impl<C: CapabilityCaller> BeaconGeneticsManager<C> {
     /// Create with custom capability caller (for testing)
     #[must_use]
-    pub fn with_capability_caller(
-        root_path: &Path,
-        capability_caller: Box<dyn CapabilityCaller>,
-    ) -> Self {
+    pub fn with_capability_caller(root_path: &Path, capability_caller: C) -> Self {
         Self {
             root_path: root_path.to_path_buf(),
             capability_caller,
