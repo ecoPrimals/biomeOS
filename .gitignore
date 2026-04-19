@@ -82,6 +82,8 @@ visualizations/*.png
 *.pem
 *.env
 *secret*
+!**/secret.rs
+!**/secret/
 *credential*
 secrets/
 certs/

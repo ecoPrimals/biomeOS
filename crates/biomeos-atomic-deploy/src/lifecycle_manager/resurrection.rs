@@ -154,13 +154,25 @@ impl LifecycleManager {
             .and_then(|v| v.as_str())
             .unwrap_or("server");
 
-        // Spawn primal
-        let (child, _tcp_port) =
+        let (child, tcp_port) =
             primal_spawner::spawn_primal_process(name, mode, &context, node).await?;
 
         let pid = child.id();
 
-        // Update primal state
+        // Wait for the primal to be ready, then register capabilities
+        let socket_path = context.get_socket_path(name).await;
+        if let Some(port) = tcp_port {
+            let _ = primal_spawner::wait_for_tcp_port(port, 300).await;
+        } else {
+            let _ = primal_spawner::wait_for_socket(&socket_path, 300).await;
+        }
+        if let Some(ref router) = context.neural_router {
+            let socket = std::path::PathBuf::from(&socket_path);
+            router
+                .register_spawned_primal(name, Some(&socket), tcp_port)
+                .await;
+        }
+
         let mut primals = self.primals.write().await;
         if let Some(primal) = primals.get_mut(name) {
             primal.pid = pid;

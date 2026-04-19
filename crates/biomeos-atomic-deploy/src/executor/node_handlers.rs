@@ -118,14 +118,20 @@ pub async fn primal_launch(node: &GraphNode, context: &ExecutionContext) -> Resu
         super::primal_spawner::spawn_primal_process(primal_name, mode, context, node).await?;
 
     if let Some(port) = tcp_port {
-        // TCP-only: wait for TCP port readiness instead of UDS socket
         super::primal_spawner::wait_for_tcp_port(port, 300).await?;
     } else {
-        // UDS: wait for socket file to appear
         super::primal_spawner::wait_for_socket(&socket_path, 300).await?;
     }
 
-    // Get the binary path for the response
+    // Post-spawn: register capabilities with the Neural API router so the
+    // primal is immediately routable via capability.call.
+    if let Some(ref router) = context.neural_router {
+        let socket = std::path::PathBuf::from(&socket_path);
+        router
+            .register_spawned_primal(primal_name, Some(&socket), tcp_port)
+            .await;
+    }
+
     let binary_path = super::primal_spawner::discover_primal_binary(primal_name, context).await?;
 
     info!(

@@ -61,6 +61,8 @@ pub struct ExecutionContext {
     pub tcp_port_counter: Arc<std::sync::atomic::AtomicU16>,
     /// Registry of primal → TCP port assignments (populated during spawn in tcp_only mode).
     pub tcp_port_registry: Arc<Mutex<HashMap<String, u16>>>,
+    /// Optional reference to the Neural API router for post-spawn capability registration.
+    pub neural_router: Option<Arc<crate::neural_router::NeuralRouter>>,
 }
 
 impl std::fmt::Debug for ExecutionContext {
@@ -71,6 +73,7 @@ impl std::fmt::Debug for ExecutionContext {
             .field("family_id", &self.family_id)
             .field("nucleation", &self.nucleation.is_some())
             .field("tcp_only", &self.tcp_only)
+            .field("neural_router", &self.neural_router.is_some())
             .finish_non_exhaustive()
     }
 }
@@ -113,6 +116,7 @@ impl ExecutionContext {
             tcp_only: false,
             tcp_port_counter: Arc::new(std::sync::atomic::AtomicU16::new(9900)),
             tcp_port_registry: Arc::new(Mutex::new(HashMap::new())),
+            neural_router: None,
         }
     }
 
@@ -136,10 +140,37 @@ impl ExecutionContext {
         self
     }
 
+    /// Attach the Neural API router for post-spawn capability registration.
+    pub fn with_neural_router(mut self, router: Arc<crate::neural_router::NeuralRouter>) -> Self {
+        self.neural_router = Some(router);
+        self
+    }
+
     /// Allocate the next auto-assigned TCP port for a child primal.
+    ///
+    /// Probes each candidate port with a trial `TcpListener::bind` and skips
+    /// ports that are already occupied, preventing conflicts when multiple
+    /// biomeOS instances (or external services) share the same port range.
     pub fn next_tcp_port(&self) -> u16 {
-        self.tcp_port_counter
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        loop {
+            let port = self
+                .tcp_port_counter
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            if port == 0 || port > 65_500 {
+                tracing::error!("TCP port counter exhausted ({port})");
+                return port;
+            }
+            let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
+            match std::net::TcpListener::bind(addr) {
+                Ok(listener) => {
+                    drop(listener);
+                    return port;
+                }
+                Err(_) => {
+                    tracing::debug!("TCP port {port} already in use, skipping");
+                }
+            }
+        }
     }
 
     /// Record a TCP port assignment for a primal (call after spawning in tcp_only mode).
@@ -538,5 +569,25 @@ mod tests {
         // Cloned context should see the same output (shared Arc)
         let output = ctx2.get_output("node1").await;
         assert_eq!(output, Some(serde_json::json!("hello")));
+    }
+
+    #[test]
+    fn test_next_tcp_port_skips_occupied_ports() {
+        // Bind a port to simulate occupation
+        let occupied =
+            std::net::TcpListener::bind("0.0.0.0:0").expect("bind ephemeral for test");
+        let occupied_port = occupied.local_addr().unwrap().port();
+
+        let ctx = ExecutionContext::new(HashMap::new());
+        // Point the counter at the occupied port
+        ctx.tcp_port_counter
+            .store(occupied_port, std::sync::atomic::Ordering::Relaxed);
+
+        let assigned = ctx.next_tcp_port();
+        // Must skip the occupied port and return the next available one
+        assert_ne!(assigned, occupied_port);
+        assert!(assigned > occupied_port);
+
+        drop(occupied);
     }
 }

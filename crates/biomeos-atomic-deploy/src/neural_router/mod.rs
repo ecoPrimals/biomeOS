@@ -191,6 +191,72 @@ impl NeuralRouter {
         self.metrics.write().await.clear();
     }
 
+    /// Probe a newly-spawned primal and register its capabilities.
+    ///
+    /// Call after `wait_for_socket` / `wait_for_tcp_port` succeeds so the
+    /// primal is guaranteed to be listening. This bridges the gap where
+    /// primals spawned after boot discovery (or between lazy rescans) would
+    /// otherwise remain invisible to `capability.call` routing.
+    pub async fn register_spawned_primal(
+        &self,
+        primal_name: &str,
+        socket_path: Option<&std::path::Path>,
+        tcp_port: Option<u16>,
+    ) -> usize {
+        use biomeos_core::socket_discovery::cap_probe::probe_unix_socket_capabilities_list;
+
+        let capabilities: Vec<String> = if let Some(port) = tcp_port {
+            let addr = format!("{}:{}", biomeos_types::constants::DEFAULT_LOCALHOST, port);
+            crate::neural_api_server::discovery_init::probe_tcp_capabilities_public(&addr).await
+        } else if let Some(path) = socket_path {
+            probe_unix_socket_capabilities_list(path).await
+        } else {
+            return 0;
+        };
+
+        if capabilities.is_empty() {
+            debug!(
+                "Post-spawn probe for {} returned no capabilities",
+                primal_name
+            );
+            return 0;
+        }
+
+        let mut registered = 0;
+        for cap in &capabilities {
+            let result = if let Some(port) = tcp_port {
+                let endpoint = biomeos_core::TransportEndpoint::TcpSocket {
+                    host: Arc::from(biomeos_types::constants::DEFAULT_LOCALHOST),
+                    port,
+                };
+                self.register_capability(cap, primal_name, endpoint, "post-spawn")
+                    .await
+            } else if let Some(path) = socket_path {
+                self.register_capability_unix(cap, primal_name, path, "post-spawn")
+                    .await
+            } else {
+                continue;
+            };
+
+            if let Err(e) = result {
+                warn!(
+                    "Failed to register {}.{} post-spawn: {}",
+                    primal_name, cap, e
+                );
+            } else {
+                registered += 1;
+            }
+        }
+
+        if registered > 0 {
+            info!(
+                "✅ Post-spawn registered {} capabilities for {}",
+                registered, primal_name
+            );
+        }
+        registered
+    }
+
     /// Invalidate discovery cache (force rediscovery)
     pub async fn invalidate_cache(&self) {
         self.discovered_primals.write().await.clear();

@@ -8,6 +8,10 @@ use tracing::{debug, info, warn};
 use super::NeuralApiServer;
 
 /// Probe a TCP endpoint for capabilities via JSON-RPC `capabilities.list`.
+pub(crate) async fn probe_tcp_capabilities_public(addr: &str) -> Vec<String> {
+    probe_tcp_capabilities(addr).await
+}
+
 async fn probe_tcp_capabilities(addr: &str) -> Vec<String> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpStream;

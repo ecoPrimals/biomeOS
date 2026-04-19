@@ -22,7 +22,7 @@
 pub mod agents;
 mod bootstrap;
 mod connection;
-mod discovery_init;
+pub(crate) mod discovery_init;
 mod listeners;
 mod proxy;
 mod routing;
