@@ -1,0 +1,52 @@
+# Nucleus-mode Launch Profiles — data-driven per-primal configuration
+#
+# Instead of hardcoded match blocks on primal names, primals declare their
+# nucleus-mode launch requirements here. Any primal not listed gets the
+# [default] profile.
+#
+# Fields:
+#   subcommand          — CLI subcommand (default: "server")
+#   pass_socket_flag    — pass --socket <path> (default: true)
+#   pass_family_id_flag — pass --family-id <id> (default: false)
+#   env_vars            — static env vars to set
+#   capability_sockets  — env vars whose values are socket paths resolved by capability
+#                         key = env var name, value = capability name (resolved via taxonomy)
+#   pass_ai_model       — forward AI_DEFAULT_MODEL env var if set (default: false)
+#   pass_ai_providers   — forward AI_HTTP_PROVIDERS when API keys are present (default: false)
+#   generate_jwt_secret — auto-generate a JWT secret for this primal (default: false)
+
+[default]
+subcommand = "server"
+pass_socket_flag = true
+pass_family_id_flag = false
+pass_ai_model = false
+pass_ai_providers = false
+generate_jwt_secret = false
+
+[profiles.songbird]
+subcommand = "server"
+pass_family_id_flag = false
+[profiles.songbird.capability_sockets]
+SONGBIRD_SECURITY_PROVIDER = "security"
+BIOMEOS_SECURITY_SOCKET = "security"
+BEARDOG_SOCKET = "security"
+
+[profiles.nestgate]
+subcommand = "daemon"
+pass_socket_flag = false
+pass_family_id_flag = true
+generate_jwt_secret = true
+[profiles.nestgate.env_vars]
+NESTGATE_JWT_SECRET_KEY = "NESTGATE_JWT_SECRET"
+
+[profiles.toadstool]
+subcommand = "server"
+[profiles.toadstool.env_vars]
+TOADSTOOL_FAMILY_ID = "$family_id"
+
+[profiles.squirrel]
+subcommand = "server"
+pass_ai_model = true
+pass_ai_providers = true
+[profiles.squirrel.capability_sockets]
+BIOMEOS_DISCOVERY_SOCKET = "discovery"

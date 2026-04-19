@@ -76,14 +76,15 @@ impl NeuralApiServer {
         let mut total_primals = 0usize;
 
         if self.tcp_only {
-            // TCP-only: probe ports 9900..9920 for primals launched by bootstrap
+            use biomeos_types::constants::ports::{TCP_SPAWN_BASE, TCP_SPAWN_SCAN_RANGE};
+
             let host: std::sync::Arc<str> = std::env::var("BIOMEOS_BIND_ADDRESS")
                 .unwrap_or_else(|_| {
                     biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
                 })
                 .into();
 
-            for port in 9900..9920u16 {
+            for port in TCP_SPAWN_BASE..(TCP_SPAWN_BASE + TCP_SPAWN_SCAN_RANGE) {
                 let addr = format!("{}:{}", &host, port);
                 let capabilities = probe_tcp_capabilities(&addr).await;
                 if capabilities.is_empty() {

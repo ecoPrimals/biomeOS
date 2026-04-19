@@ -26,6 +26,7 @@ SERVICE_MESH_ENDPOINT = "neural-api"
 
 [profiles.songbird]
 pass_family_id = false
+tcp_listen_flag = "--listen"
 [profiles.songbird.cli_sockets]
 "--beardog-socket" = "beardog"
 [profiles.songbird.extra_env]

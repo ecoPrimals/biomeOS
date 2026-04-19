@@ -114,7 +114,9 @@ impl ExecutionContext {
             family_id,
             circuit_breakers: Arc::new(Mutex::new(HashMap::new())),
             tcp_only: false,
-            tcp_port_counter: Arc::new(std::sync::atomic::AtomicU16::new(9900)),
+            tcp_port_counter: Arc::new(std::sync::atomic::AtomicU16::new(
+                biomeos_types::constants::ports::TCP_SPAWN_BASE,
+            )),
             tcp_port_registry: Arc::new(Mutex::new(HashMap::new())),
             neural_router: None,
         }
@@ -574,8 +576,7 @@ mod tests {
     #[test]
     fn test_next_tcp_port_skips_occupied_ports() {
         // Bind a port to simulate occupation
-        let occupied =
-            std::net::TcpListener::bind("0.0.0.0:0").expect("bind ephemeral for test");
+        let occupied = std::net::TcpListener::bind("0.0.0.0:0").expect("bind ephemeral for test");
         let occupied_port = occupied.local_addr().unwrap().port();
 
         let ctx = ExecutionContext::new(HashMap::new());

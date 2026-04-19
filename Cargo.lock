@@ -460,7 +460,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
- "walkdir",
  "which",
 ]
 
@@ -609,7 +608,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
- "walkdir",
 ]
 
 [[package]]
@@ -744,7 +742,6 @@ dependencies = [
  "tokio-test",
  "tracing",
  "uuid",
- "walkdir",
  "which",
 ]
 

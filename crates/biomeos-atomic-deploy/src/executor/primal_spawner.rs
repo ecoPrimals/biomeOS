@@ -12,7 +12,6 @@
 //! - Output stream capture and relay
 
 use anyhow::{Context, Result};
-use biomeos_types::primal_names::SONGBIRD;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -299,6 +298,9 @@ struct LaunchProfile {
     socket_flag: Option<String>,
     pass_family_id: Option<bool>,
     env_socket: Option<String>,
+    /// CLI flag for TCP listen address (TCP-only mode). When set, the primal
+    /// receives `--<flag> host:port` instead of the UDS socket path.
+    tcp_listen_flag: Option<String>,
     #[serde(default)]
     extra_env: HashMap<String, String>,
     #[serde(default)]
@@ -324,6 +326,7 @@ fn load_launch_profiles() -> LaunchProfilesConfig {
                 socket_flag: Some("--socket".to_string()),
                 pass_family_id: Some(true),
                 env_socket: Some("PRIMAL_SOCKET".to_string()),
+                tcp_listen_flag: None,
                 extra_env: HashMap::new(),
                 env_sockets: HashMap::new(),
                 cli_sockets: HashMap::new(),
@@ -365,16 +368,15 @@ pub(crate) async fn configure_primal_sockets(
         .and_then(|p| p.env_socket.as_deref())
         .or(defaults.env_socket.as_deref());
 
-    // Primary socket CLI flag — in TCP-only mode, use --listen for primals
-    // that support it (the TCP port was already assigned via --port above).
+    // Primary socket CLI flag — in TCP-only mode, use the profile's
+    // tcp_listen_flag if the primal declares one.
+    let tcp_listen_flag = profile.and_then(|p| p.tcp_listen_flag.as_deref());
     if context.tcp_only {
-        // Songbird uses --listen for TCP IPC; other primals use --socket with
-        // abstract-namespace fallback. Pass the UDS path as well for env compat.
-        if primal_name == SONGBIRD {
+        if let Some(listen_flag) = tcp_listen_flag {
             if let Some(port) = context.get_tcp_port(primal_name).await {
                 let host = biomeos_types::constants::DEFAULT_LOCALHOST;
-                cmd.arg("--listen").arg(format!("{host}:{port}"));
-                info!("   TCP-only: songbird --listen {host}:{port}");
+                cmd.arg(listen_flag).arg(format!("{host}:{port}"));
+                info!("   TCP-only: {} {} {host}:{port}", primal_name, listen_flag);
             }
         } else {
             cmd.arg(socket_flag).arg(socket_path);

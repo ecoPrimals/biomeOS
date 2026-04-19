@@ -32,7 +32,6 @@ rustix = { workspace = true, features = ["process"] }
 rtnetlink = { workspace = true }
 
 # Path and file utilities
-walkdir = { workspace = true }
 tempfile = { workspace = true }
 
 # CLI

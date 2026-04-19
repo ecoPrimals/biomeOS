@@ -301,6 +301,15 @@ pub mod ports {
     /// Default TCP port scan start for socket discovery
     pub const TCP_PORT_SCAN_START: u16 = 9100;
 
+    /// Base TCP port for child-primal spawn allocation (TCP-only mode).
+    ///
+    /// `ExecutionContext::next_tcp_port()` starts here and increments.
+    /// Discovery probes `TCP_SPAWN_BASE..TCP_SPAWN_BASE + TCP_SPAWN_SCAN_RANGE`.
+    pub const TCP_SPAWN_BASE: u16 = 9900;
+
+    /// Number of ports to scan during TCP-only auto-discovery.
+    pub const TCP_SPAWN_SCAN_RANGE: u16 = 20;
+
     /// StatsD / DogStatsD standard UDP port
     pub const STATSD: u16 = 8125;
 

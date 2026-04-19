@@ -182,68 +182,132 @@ pub(crate) fn build_primal_command(
     build_primal_command_with(&config)
 }
 
+/// Nucleus-mode launch profile (loaded from `config/nucleus_launch_profiles.toml`).
+#[derive(Debug, Clone, serde::Deserialize)]
+struct NucleusLaunchProfile {
+    subcommand: Option<String>,
+    pass_socket_flag: Option<bool>,
+    pass_family_id_flag: Option<bool>,
+    pass_ai_model: Option<bool>,
+    pass_ai_providers: Option<bool>,
+    generate_jwt_secret: Option<bool>,
+    #[serde(default)]
+    env_vars: HashMap<String, String>,
+    #[serde(default)]
+    capability_sockets: HashMap<String, String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct NucleusLaunchConfig {
+    default: NucleusLaunchProfile,
+    #[serde(default)]
+    profiles: HashMap<String, NucleusLaunchProfile>,
+}
+
+static NUCLEUS_PROFILES_TOML: &str =
+    include_str!("../../../../config/nucleus_launch_profiles.toml");
+
+fn load_nucleus_profiles() -> NucleusLaunchConfig {
+    toml::from_str(NUCLEUS_PROFILES_TOML).unwrap_or_else(|e| {
+        warn!("Failed to parse nucleus launch profiles: {}", e);
+        NucleusLaunchConfig {
+            default: NucleusLaunchProfile {
+                subcommand: Some("server".to_string()),
+                pass_socket_flag: Some(true),
+                pass_family_id_flag: Some(false),
+                pass_ai_model: Some(false),
+                pass_ai_providers: Some(false),
+                generate_jwt_secret: Some(false),
+                env_vars: HashMap::new(),
+                capability_sockets: HashMap::new(),
+            },
+            profiles: HashMap::new(),
+        }
+    })
+}
+
 pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std::process::Command {
     let socket_path = config
         .socket_dir
         .join(format!("{}-{}.sock", config.name, config.family_id));
     let mut cmd = std::process::Command::new(config.binary);
 
-    // Convention: every primal gets its own socket env key via socket_env_key()
     let self_socket_key = socket_env_key(config.name);
     cmd.env(&self_socket_key, socket_path.as_os_str());
 
-    match config.name {
-        SONGBIRD => {
-            let security_socket =
-                socket_path_for_capability(config.socket_dir, config.family_id, "security");
-            cmd.arg("server")
-                .arg("--socket")
-                .arg(&socket_path)
-                .env("SONGBIRD_SECURITY_PROVIDER", &security_socket)
-                .env("BIOMEOS_SECURITY_SOCKET", &security_socket)
-                .env(socket_env_key(BEARDOG), &security_socket);
+    let profiles = load_nucleus_profiles();
+    let profile = profiles.profiles.get(config.name);
+    let defaults = &profiles.default;
+
+    let subcommand = profile
+        .and_then(|p| p.subcommand.as_deref())
+        .or(defaults.subcommand.as_deref())
+        .unwrap_or("server");
+    cmd.arg(subcommand);
+
+    let pass_socket = profile
+        .and_then(|p| p.pass_socket_flag)
+        .or(defaults.pass_socket_flag)
+        .unwrap_or(true);
+    if pass_socket {
+        cmd.arg("--socket").arg(socket_path.as_os_str());
+    }
+
+    let pass_family_id = profile
+        .and_then(|p| p.pass_family_id_flag)
+        .or(defaults.pass_family_id_flag)
+        .unwrap_or(false);
+    if pass_family_id {
+        cmd.arg("--family-id").arg(config.family_id);
+    }
+
+    // Capability-resolved socket env vars (e.g. SONGBIRD_SECURITY_PROVIDER → security socket)
+    let cap_sockets = profile.map_or(&defaults.capability_sockets, |p| &p.capability_sockets);
+    for (env_key, capability) in cap_sockets {
+        let resolved = socket_path_for_capability(config.socket_dir, config.family_id, capability);
+        cmd.env(env_key, &resolved);
+    }
+
+    // Static env vars from profile (with $family_id substitution)
+    let env_vars = profile.map_or(&defaults.env_vars, |p| &p.env_vars);
+    for (key, value) in env_vars {
+        let resolved = value.replace("$family_id", config.family_id);
+        cmd.env(key, &resolved);
+    }
+
+    // JWT secret generation
+    let gen_jwt = profile
+        .and_then(|p| p.generate_jwt_secret)
+        .or(defaults.generate_jwt_secret)
+        .unwrap_or(false);
+    if gen_jwt {
+        cmd.env("NESTGATE_JWT_SECRET", generate_jwt_secret());
+    }
+
+    // AI model passthrough
+    let pass_ai_model = profile
+        .and_then(|p| p.pass_ai_model)
+        .or(defaults.pass_ai_model)
+        .unwrap_or(false);
+    if pass_ai_model {
+        if let Some(model) = config.ai_default_model {
+            cmd.env("AI_DEFAULT_MODEL", model);
+        } else if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
+            cmd.env("AI_DEFAULT_MODEL", model);
         }
-        NESTGATE => {
-            // NestGate upstream bug: socket_only has inverted semantics.
-            // Upstream uses `enable_http = config.socket_only` (should be `!config.socket_only`).
-            // Ref: wateringHole/handoffs/NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md Bug 1.
-            // Compatibility: we want socket-only (no HTTP). With the bug, passing --socket-only
-            // enables HTTP. So we omit --socket-only to achieve socket-only mode.
-            cmd.arg("daemon")
-                .arg("--family-id")
-                .arg(config.family_id)
-                .env("NESTGATE_JWT_SECRET", generate_jwt_secret());
-        }
-        TOADSTOOL => {
-            cmd.arg("server")
-                .arg("--socket")
-                .arg(socket_path.as_os_str())
-                .env("TOADSTOOL_FAMILY_ID", config.family_id);
-        }
-        SQUIRREL => {
-            let discovery_socket =
-                socket_path_for_capability(config.socket_dir, config.family_id, "discovery");
-            cmd.arg("server")
-                .arg("--socket")
-                .arg(socket_path.as_os_str())
-                .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket);
-            // AI_DEFAULT_MODEL: Squirrel reads this at startup for default model override.
-            // Ref: wateringHole/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md Item 1.
-            if let Some(model) = config.ai_default_model {
-                cmd.env("AI_DEFAULT_MODEL", model);
-            } else if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
-                cmd.env("AI_DEFAULT_MODEL", model);
-            }
-            if config.anthropic_api_key.is_some() || config.openai_api_key.is_some() {
-                cmd.env(
-                    "AI_HTTP_PROVIDERS",
-                    config.ai_http_providers.unwrap_or("anthropic,openai"),
-                );
-            }
-        }
-        _ => {
-            cmd.arg("server").arg("--socket").arg(&socket_path);
-        }
+    }
+
+    // AI HTTP providers passthrough
+    let pass_ai_providers = profile
+        .and_then(|p| p.pass_ai_providers)
+        .or(defaults.pass_ai_providers)
+        .unwrap_or(false);
+    if pass_ai_providers && (config.anthropic_api_key.is_some() || config.openai_api_key.is_some())
+    {
+        cmd.env(
+            "AI_HTTP_PROVIDERS",
+            config.ai_http_providers.unwrap_or("anthropic,openai"),
+        );
     }
 
     cmd.env("FAMILY_ID", config.family_id)

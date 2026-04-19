@@ -8,9 +8,6 @@
 
 use anyhow::Result;
 use biomeos_core::SocketDiscovery;
-use biomeos_types::primal_names::{
-    BARRACUDA, BEARDOG, CORALREEF, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL,
-};
 use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
@@ -47,34 +44,18 @@ impl NeuralApiServer {
         }
     }
 
-    /// Resolve the TCP port for a primal based on the deterministic port counter.
+    /// Resolve the TCP port for a primal using the sequential spawn counter.
     ///
-    /// In TCP-only mode, `ExecutionContext::next_tcp_port()` assigns ports starting
-    /// at 9900. The bootstrap graph spawns primals in order, so we mirror that
-    /// assignment: beardog→9900, songbird→9901, etc. For unknown primals, default
-    /// to 9900 (first slot).
-    fn resolve_tcp_port_for_primal(&self, primal: &str) -> u16 {
+    /// Mirrors `ExecutionContext::next_tcp_port()` — both start from
+    /// `TCP_SPAWN_BASE` and increment. This removes the hardcoded primal→port
+    /// table in favour of a deterministic, order-based allocation that works
+    /// for any primal, not just the seven originally hard-wired.
+    fn resolve_tcp_port_for_primal(&self, _primal: &str) -> u16 {
         use std::sync::atomic::{AtomicU16, Ordering};
         static TRANSLATION_PORT_COUNTER: AtomicU16 = AtomicU16::new(0);
 
-        let base_port: u16 = 9900;
-        let known_ports: &[(&str, u16)] = &[
-            (BEARDOG, base_port),
-            (SONGBIRD, base_port + 1),
-            (SQUIRREL, base_port + 2),
-            (TOADSTOOL, base_port + 3),
-            (BARRACUDA, base_port + 4),
-            (CORALREEF, base_port + 5),
-            (NESTGATE, base_port + 6),
-        ];
-
-        for &(name, port) in known_ports {
-            if primal.contains(name) {
-                return port;
-            }
-        }
-
-        base_port + TRANSLATION_PORT_COUNTER.fetch_add(1, Ordering::Relaxed)
+        let offset = TRANSLATION_PORT_COUNTER.fetch_add(1, Ordering::Relaxed);
+        biomeos_types::constants::ports::TCP_SPAWN_BASE + offset
     }
 
     /// Load capability translations from a graph
