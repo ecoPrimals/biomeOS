@@ -18,7 +18,10 @@ pub struct LeafNode {
     workloads: tokio::sync::RwLock<Vec<WorkloadInfo>>,
 }
 
-#[allow(missing_docs)]
+#[expect(
+    missing_docs,
+    reason = "fractal compute methods are internal and self-documenting"
+)]
 impl LeafNode {
     /// Create a new leaf node with the given configuration and resources.
     #[must_use]

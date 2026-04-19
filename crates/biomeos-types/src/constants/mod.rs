@@ -58,11 +58,17 @@ pub mod endpoints {
     use super::env_vars;
     use std::env;
 
-    /// Default localhost address (for binding) - fallback only
+    /// Default localhost address (IPv4, for binding) - fallback only
     pub const DEFAULT_LOCALHOST: &str = "127.0.0.1";
+
+    /// Default localhost address (IPv6, for binding) - fallback only
+    pub const DEFAULT_LOCALHOST_V6: &str = "::1";
 
     /// Production bind address (for accepting connections) - fallback only
     pub const PRODUCTION_BIND_ADDRESS: &str = "0.0.0.0";
+
+    /// Ephemeral UDP bind address — binds any available port on all IPv4 interfaces.
+    pub const EPHEMERAL_UDP_BIND: &str = "0.0.0.0:0";
 
     /// Get bind address from an optional value (same semantics as env `BIND_ADDRESS`).
     #[must_use]
@@ -358,6 +364,12 @@ pub mod security {
 /// These define the standardized base paths used when XDG runtime directories
 /// are unavailable (tier 4 of the `PRIMAL_IPC_PROTOCOL.md` discovery chain).
 pub mod runtime_paths {
+    /// Linux runtime directory prefix (tier 3 in socket discovery).
+    ///
+    /// Used when `$XDG_RUNTIME_DIR` is not set but the system provides
+    /// `/run/user/{uid}` directories. Append `/biomeos/` for socket paths.
+    pub const LINUX_RUNTIME_DIR_PREFIX: &str = "/run/user";
+
     /// Base path for the `/tmp` fallback tier in socket discovery.
     ///
     /// Used as tier 4 when `$XDG_RUNTIME_DIR` is not set. Family-scoped

@@ -871,6 +871,65 @@ capabilities = [
 "hardware.apply" = { provider = "toadstool", method = "compute.hardware.apply" }
 
 # ------------------------------------------------------------------------------
+# Tensor / Math / Statistics / Noise Domain (barraCuda)
+# GPU-accelerated math, tensor operations, statistics, noise, activation
+# functions, linear algebra, and spectral analysis.
+# Source: barraCuda Sprint 44 (39 JSON-RPC methods)
+# ------------------------------------------------------------------------------
+
+[domains.tensor]
+provider = "barracuda"
+capabilities = [
+    "tensor.create", "tensor.matmul", "tensor.matmul_inline", "tensor.add",
+    "tensor.scale", "tensor.clamp", "tensor.reduce", "tensor.sigmoid",
+    "tensor.transpose", "tensor.batch.submit",
+    "math.sigmoid", "math.log2", "math.relu", "math.tanh", "math.softmax",
+    "stats.mean", "stats.std_dev", "stats.weighted_mean", "stats.variance",
+    "stats.median", "stats.correlation",
+    "noise.perlin2d", "noise.perlin3d", "noise.simplex2d", "noise.simplex3d",
+    "activation.fitts", "activation.hick",
+    "linalg.solve", "linalg.eigenvalues",
+    "spectral.fft", "spectral.power_spectrum",
+    "rng.uniform", "rng.normal", "rng.seed",
+]
+
+[translations.tensor]
+"tensor.create" = { provider = "barracuda", method = "tensor.create" }
+"tensor.matmul" = { provider = "barracuda", method = "tensor.matmul" }
+"tensor.matmul_inline" = { provider = "barracuda", method = "tensor.matmul_inline" }
+"tensor.add" = { provider = "barracuda", method = "tensor.add" }
+"tensor.scale" = { provider = "barracuda", method = "tensor.scale" }
+"tensor.clamp" = { provider = "barracuda", method = "tensor.clamp" }
+"tensor.reduce" = { provider = "barracuda", method = "tensor.reduce" }
+"tensor.sigmoid" = { provider = "barracuda", method = "tensor.sigmoid" }
+"tensor.transpose" = { provider = "barracuda", method = "tensor.transpose" }
+"tensor.batch.submit" = { provider = "barracuda", method = "tensor.batch.submit" }
+"math.sigmoid" = { provider = "barracuda", method = "math.sigmoid" }
+"math.log2" = { provider = "barracuda", method = "math.log2" }
+"math.relu" = { provider = "barracuda", method = "math.relu" }
+"math.tanh" = { provider = "barracuda", method = "math.tanh" }
+"math.softmax" = { provider = "barracuda", method = "math.softmax" }
+"stats.mean" = { provider = "barracuda", method = "stats.mean" }
+"stats.std_dev" = { provider = "barracuda", method = "stats.std_dev" }
+"stats.weighted_mean" = { provider = "barracuda", method = "stats.weighted_mean" }
+"stats.variance" = { provider = "barracuda", method = "stats.variance" }
+"stats.median" = { provider = "barracuda", method = "stats.median" }
+"stats.correlation" = { provider = "barracuda", method = "stats.correlation" }
+"noise.perlin2d" = { provider = "barracuda", method = "noise.perlin2d" }
+"noise.perlin3d" = { provider = "barracuda", method = "noise.perlin3d" }
+"noise.simplex2d" = { provider = "barracuda", method = "noise.simplex2d" }
+"noise.simplex3d" = { provider = "barracuda", method = "noise.simplex3d" }
+"activation.fitts" = { provider = "barracuda", method = "activation.fitts" }
+"activation.hick" = { provider = "barracuda", method = "activation.hick" }
+"linalg.solve" = { provider = "barracuda", method = "linalg.solve" }
+"linalg.eigenvalues" = { provider = "barracuda", method = "linalg.eigenvalues" }
+"spectral.fft" = { provider = "barracuda", method = "spectral.fft" }
+"spectral.power_spectrum" = { provider = "barracuda", method = "spectral.power_spectrum" }
+"rng.uniform" = { provider = "barracuda", method = "rng.uniform" }
+"rng.normal" = { provider = "barracuda", method = "rng.normal" }
+"rng.seed" = { provider = "barracuda", method = "rng.seed" }
+
+# ------------------------------------------------------------------------------
 # Health Domain (Cross-Cutting — All Primals)
 # Standard liveness/readiness probe protocol adopted across the ecosystem.
 # Every primal SHOULD implement health.liveness and health.readiness.

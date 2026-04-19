@@ -278,9 +278,10 @@ pub fn resolve_socket_with_env(
     }
 
     // Tier 3: /run/user/{uid} — derive from XDG_RUNTIME_DIR or procfs
+    const LINUX_RUNTIME_DIR_PREFIX: &str = "/run/user";
     let uid = uid_from_runtime_dir();
     let p = PathBuf::from(format!(
-        "/run/user/{uid}/biomeos/neural-api-{family_id}.sock"
+        "{LINUX_RUNTIME_DIR_PREFIX}/{uid}/biomeos/neural-api-{family_id}.sock"
     ));
     if p.exists() {
         return Some(p);

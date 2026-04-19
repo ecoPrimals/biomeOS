@@ -20,9 +20,13 @@
 //!   starting only supplementary primals (e.g., adding Toadstool to an existing
 //!   Tower).
 
+#[path = "nucleus_launch.rs"]
+mod nucleus_launch;
+
 use anyhow::{Context, Result};
 use biomeos_types::defaults::env_vars::socket_env_key;
 use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
+use nucleus_launch::load_nucleus_profiles;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -180,50 +184,6 @@ pub(crate) fn build_primal_command(
         ai_default_model: None,
     };
     build_primal_command_with(&config)
-}
-
-/// Nucleus-mode launch profile (loaded from `config/nucleus_launch_profiles.toml`).
-#[derive(Debug, Clone, serde::Deserialize)]
-struct NucleusLaunchProfile {
-    subcommand: Option<String>,
-    pass_socket_flag: Option<bool>,
-    pass_family_id_flag: Option<bool>,
-    pass_ai_model: Option<bool>,
-    pass_ai_providers: Option<bool>,
-    generate_jwt_secret: Option<bool>,
-    #[serde(default)]
-    env_vars: HashMap<String, String>,
-    #[serde(default)]
-    capability_sockets: HashMap<String, String>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-struct NucleusLaunchConfig {
-    default: NucleusLaunchProfile,
-    #[serde(default)]
-    profiles: HashMap<String, NucleusLaunchProfile>,
-}
-
-static NUCLEUS_PROFILES_TOML: &str =
-    include_str!("../../../../config/nucleus_launch_profiles.toml");
-
-fn load_nucleus_profiles() -> NucleusLaunchConfig {
-    toml::from_str(NUCLEUS_PROFILES_TOML).unwrap_or_else(|e| {
-        warn!("Failed to parse nucleus launch profiles: {}", e);
-        NucleusLaunchConfig {
-            default: NucleusLaunchProfile {
-                subcommand: Some("server".to_string()),
-                pass_socket_flag: Some(true),
-                pass_family_id_flag: Some(false),
-                pass_ai_model: Some(false),
-                pass_ai_providers: Some(false),
-                generate_jwt_secret: Some(false),
-                env_vars: HashMap::new(),
-                capability_sockets: HashMap::new(),
-            },
-            profiles: HashMap::new(),
-        }
-    })
 }
 
 pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std::process::Command {

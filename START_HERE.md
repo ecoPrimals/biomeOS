@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: April 20, 2026
-**Status**: Production Ready (v3.19) — 7,802 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, all primalSpring audit gaps resolved, data-driven launch profiles (nucleus + spawner), post-spawn auto-registration, TCP port conflict avoidance, TOML-driven primal configuration, unused deps pruned, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.20) — 7,802 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, all primalSpring audit gaps resolved, data-driven launch profiles (nucleus + spawner), post-spawn auto-registration, TCP port conflict avoidance, TOML-driven primal configuration, unused deps pruned, hardcoded IPs centralized, tensor/math/stats capability translations (barraCuda 33 methods), nucleus_complete.toml expanded (NestGate streaming + barraCuda/coralReef graph nodes), scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -14,7 +14,7 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Primals**: Self-contained Rust binaries with specific capabilities
 - **Atomics**: Primal combinations (Tower = BearDog + Songbird)
 - **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
-- **Neural API**: Semantic routing via `capability.call` (290+ translations, 26 domains, part of biomeOS)
+- **Neural API**: Semantic routing via `capability.call` (320+ translations, 27 domains incl. tensor, part of biomeOS)
 - **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
@@ -167,11 +167,11 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.19 — zero blocking debt)
+**Status**: Production Ready (v3.20 — zero blocking debt)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
-**Neural API**: 290+ semantic translations, 26 capability domains, lazy rescan, cross-gate routing, post-spawn auto-registration (part of biomeOS)
+**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor), lazy rescan, cross-gate routing, post-spawn auto-registration (part of biomeOS)
 **Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` standard; enriched `lifecycle.composition` dashboard
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection + composition dashboard

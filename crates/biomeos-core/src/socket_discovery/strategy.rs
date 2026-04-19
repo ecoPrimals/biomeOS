@@ -93,7 +93,9 @@ impl DiscoveryStrategy {
             query_registry: true,
             enable_tcp_fallback: true, // TCP is primary for cross-device
             tcp_port_start: ports::TCP_PORT_SCAN_START,
-            tcp_fallback_host: Arc::from("0.0.0.0"), // Listen on all interfaces
+            tcp_fallback_host: Arc::from(
+                biomeos_types::constants::endpoints::PRODUCTION_BIND_ADDRESS,
+            ),
             scan_sockets: false,
             enable_cache: true,
             cache_ttl_secs: 30, // Shorter TTL for dynamic environments

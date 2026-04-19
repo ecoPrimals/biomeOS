@@ -10,7 +10,7 @@
 //! This unblocks chimera compositions and garden deployments.
 //!
 //! Three levels:
-//! 1. Parse the canonical `nucleus_complete.toml` and verify all 11 nodes load
+//! 1. Parse the canonical `nucleus_complete.toml` and verify all 13 nodes load
 //! 2. Verify topological sort produces correct phased execution order
 //! 3. Execute a synthetic NUCLEUS-shaped graph end-to-end, proving the executor
 //!    handles multi-phase parallel composition correctly
@@ -29,6 +29,8 @@ const NUCLEUS_NODE_IDS: &[&str] = &[
     "node_toadstool",
     "node_validate",
     "nest_nestgate",
+    "register_barracuda",
+    "register_coralreef",
     "germinate_squirrel",
     "nucleus_validate",
     "announce_relay",

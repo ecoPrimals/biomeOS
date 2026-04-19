@@ -295,7 +295,7 @@ impl DiscoveryBootstrap {
             .unwrap_or(biomeos_types::constants::network::DEFAULT_BROADCAST_DISCOVERY_PORT);
 
         // Bind to any available port for sending
-        let socket = UdpSocket::bind("0.0.0.0:0")
+        let socket = UdpSocket::bind(biomeos_types::constants::endpoints::EPHEMERAL_UDP_BIND)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to bind UDP socket: {e}"))?;
         socket

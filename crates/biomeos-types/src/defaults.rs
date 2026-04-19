@@ -362,7 +362,7 @@ impl RuntimeConfig {
         env.get("BIOMEOS_BIND_ADDRESS")
             .or_else(|| env.get("BIND_ADDRESS"))
             .cloned()
-            .unwrap_or_else(|| "::1".to_string())
+            .unwrap_or_else(|| crate::constants::endpoints::DEFAULT_LOCALHOST_V6.to_string())
     }
 }
 

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 20, 2026 (v3.19: data-driven launch profiles, port constants, post-spawn auto-registration, TCP conflict avoidance, dependency pruning, secret module fix; 7,802 tests)
-**Version**: 3.19
+**Updated**: April 20, 2026 (v3.20: nucleus.rs smart refactor, hardcoded IPs centralized, #[allow]→#[expect] migration, tensor translations (33 methods), nucleus_complete.toml expanded (NestGate streaming + barraCuda/coralReef nodes); 7,802 tests)
+**Version**: 3.20
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps RESOLVED
 
 ---
@@ -26,7 +26,7 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 26 domains (+ health cross-cutting, genetic/lineage added), 290+ translations |
+| **Capability Domains** | 27 domains (+ tensor/math/stats, health cross-cutting, genetic/lineage added), 320+ translations |
 | **Deploy Graphs** | 40 (+ 2 Pipeline coordination graphs, all parseable via unified schema) |
 | **Niche Templates** | 20 (+ rootpulse-branch, rootpulse-merge, rootpulse-diff, rootpulse-federate, soil-microbiome) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
@@ -34,6 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **Deep Debt Evolution v3.20 (Apr 20)** | **Smart refactor**: `nucleus.rs` 820→780 LOC — extracted `NucleusLaunchProfile`/`NucleusLaunchConfig`/`load_nucleus_profiles()` into `nucleus_launch.rs` sibling module. **Hardcoded IP centralization**: Added `DEFAULT_LOCALHOST_V6` (`::1`), `EPHEMERAL_UDP_BIND` (`0.0.0.0:0`), `LINUX_RUNTIME_DIR_PREFIX` (`/run/user`) constants in `biomeos-types::constants`; replaced literals in `discovery_bootstrap.rs`, `strategy.rs`, `defaults.rs`, `neural-api-client-sync/lib.rs`. **`#[allow]`→`#[expect]`**: Migrated `biomeos-compute/fractal/{parent,leaf}.rs`. **Tensor translations**: Added `[domains.tensor]` + `[translations.tensor]` (33 methods) to `capability_registry.toml` covering barraCuda's full JSON-RPC surface (tensor ops, math, stats, noise, activation, linalg, spectral, rng). **Graph evolution**: `nucleus_complete.toml` — added 4 NestGate streaming ops (`store_blob`, `retrieve_range`, `object.size`, `namespaces.list`), separate `register_barracuda` (30 capabilities) and `register_coralreef` (7 capabilities) nodes; validation depends_on updated; e2e test NUCLEUS_NODE_IDS 11→13. All tests pass, clippy 0 warnings. |
 | **Data-Driven Launch Profiles + Port Constants + Dep Pruning v3.19 (Apr 20)** | **Hardcoding evolution**: (1) `TCP_SPAWN_BASE` (9900) and `TCP_SPAWN_SCAN_RANGE` (20) defined in `biomeos-types::constants::ports`, replacing hardcoded port literals in `context.rs`, `discovery_init.rs`, `translation_loader.rs`. (2) `translation_loader.rs` 7-primal hardcoded port table replaced with agnostic sequential counter. (3) `primal_spawner.rs` `LaunchProfile` extended with `tcp_listen_flag: Option<String>`, eliminating `if primal_name == SONGBIRD` check; driven by `primal_launch_profiles.toml`. (4) `nucleus.rs` 67-line `match config.name` block replaced by data-driven `nucleus_launch_profiles.toml` (subcommand, socket flag, family-id flag, capability sockets, env vars, JWT generation, AI passthrough). **Dep pruning**: unused `walkdir` removed from `biomeos-deploy`, `biomeos-boot`, `biomeos-niche`. All tests pass, clippy 0 warnings. |
 | **Spring Audit Fixes v3.18 (Apr 20)** | **3 primalSpring downstream audit items resolved**: (1) `biomeos-types` missing `secret` module — `.gitignore` `*secret*` rule was blocking `secret.rs`; added negation rules `!**/secret.rs` and `!**/secret/`. (2) TCP port binding conflicts — `ExecutionContext::next_tcp_port()` now probes each candidate with `TcpListener::bind`, skipping occupied ports. (3) Running primals not auto-registered — `NeuralRouter::register_spawned_primal()` added; integrated into both `node_handlers.rs` (spawn) and `resurrection.rs` (auto-heal) paths; `discovery_init` visibility elevated to `pub(crate)`. 7,802 tests, clippy PASS. |
 | **primalSpring Phase 43 Gap Resolution + Deep Debt v3.16 (Apr 15)** | **5 primalSpring audit gaps resolved**: (1) `GeneticsTier` enum (`None`/`Tag`/`MitoBeacon`/`Nuclear`) added to `GraphMetadata`, executor preflight validation with structured report, `nucleus_complete.toml`→`nuclear`, `tower_atomic_bootstrap.toml`→`mito_beacon`. (2) Tick-loop scheduling confirmed complete (TickClock + ContinuousExecutor + auto-redirect from `graph.execute`). (3) `AtomicComposition` auto-resolution from node capabilities (Tower/Node/Nest/Nucleus inference), `DeploymentGraph::resolve_composition()`. (4) `capability.call` routing contract formalized — `specs/CAPABILITY_CALL_ROUTING_CONTRACT.md`, `RoutingPhase` enum, `_routing_trace` in responses. (5) async-trait migration documented as blocked by dyn Trait. **Deep debt cleanup**: `capability.rs` 873→553 LOC (extracted `capability_call.rs`), 3 test files split (capability_tests 1005→481+236+312, realtime_tests 965→503+474, action_handler_tests 939→407+536). All hardcoded IPs/ports→`constants::` (`production_tcp_bind_addr` const fn, observability endpoints, port constants). All string-literal primal names→`primal_names::` constants. blake3 `pure` feature verified. All production files <800 LOC. 7,801 tests (0 failures), clippy PASS, deny PASS, doc PASS. |
@@ -79,7 +80,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 290+ capability translations, JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations, circuit-breaker protected RPC |
+| **Neural API** | 320+ capability translations (27 domains), JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations, circuit-breaker protected RPC |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
 | **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |
@@ -247,7 +248,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 
 ### 5. Neural API - Semantic Capability Routing
 
-- 290+ capability translations across 26 domains
+- 320+ capability translations across 27 domains
 - `capability.call` routes semantic names to provider-specific methods
 - `proxy_http` delegates HTTPS through Songbird + BearDog TLS
 - Capability domains: crypto, security, http, mesh, stun, relay, onion, compute, storage, ai, inference, ephemeral_workspace (rhizoCrypt), permanent_storage (LoamSpine), attribution (sweetGrass), game, medical
@@ -963,7 +964,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,801 tests — fully concurrent)
+# Test (7,802 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -985,11 +986,11 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.19 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Status**: Production Ready (v3.20 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
 **Tests**: 7,802 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
-**Neural API**: 290+ translations, 26 domains, proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination, post-spawn auto-registration
-**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution, data-driven launch profiles)
+**Neural API**: 320+ translations, 27 domains (+ tensor), proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination, post-spawn auto-registration
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution, data-driven launch profiles, hardcoded IPs centralized)
 **Bypasses**: 0 active (all 6 evolved)

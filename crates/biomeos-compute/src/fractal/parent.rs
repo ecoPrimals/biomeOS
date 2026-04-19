@@ -26,7 +26,10 @@ pub struct ParentNode {
     children: Vec<Arc<ComputeNodeKind>>,
 }
 
-#[allow(missing_docs)]
+#[expect(
+    missing_docs,
+    reason = "fractal compute methods are internal and self-documenting"
+)]
 impl ParentNode {
     /// Create a new parent node with the given configuration, resources, and children.
     #[must_use]
