@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: April 16, 2026
+**Updated**: April 20, 2026
 
 ---
 
@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (42 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v3.17) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v3.19) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,6 +58,8 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V319_DATA_DRIVEN_LAUNCH_PROFILES | Data-driven launch profiles (nucleus + spawner TOML), port constants, translation_loader agnostic counter, walkdir pruned from 3 crates | Apr 20, 2026 |
+| BIOMEOS_V318_SPRING_AUDIT_FIXES | .gitignore secret module fix, TCP port conflict avoidance (bind-probe), post-spawn Neural API auto-registration, discovery_init pub(crate) | Apr 20, 2026 |
 | BIOMEOS_V313_DEEP_DEBT_EVOLUTION | Deep debt cleanup: hardcoding→capability-based (spore/CLI/verify), deprecated API removal, learn_from_event wired, topology live probes, capability.rs 804→744L, tools/ ring-free | Apr 12, 2026 |
 | BIOMEOS_V312_COMPOSITION_FORWARDING_GRAPH_LIST_FIX | Composition forwarding via Tower Atomic relay (BTSP, socket path, method prefix), graph.list recursive scan, primalSpring benchScale validation | Apr 14, 2026 |
 | BIOMEOS_V311_TCP_ONLY_GRAPH_BOOTSTRAP_FIX | TCP-only graph bootstrap: 4 root causes (graph.load loop, graphs_dir resolution, TCP self-registration, silent parse failures), auto-scan all graphs on startup | Apr 12, 2026 |
@@ -138,7 +140,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (7,801 tests — 0 ignored — fully concurrent)
+# Test (7,802 tests — 0 ignored — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -163,8 +165,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of April 15, 2026 (v3.16)**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v3.16), 4 scripts**
+**Documentation current as of April 20, 2026 (v3.19)**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v3.19), 4 scripts**
 **Deploy graphs: 42 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed**
-**Tests: 7,801 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0**
+**Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles**
+**Tests: 7,802 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0**
