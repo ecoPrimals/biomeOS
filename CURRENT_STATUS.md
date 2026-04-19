@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: April 20, 2026 (v3.20: nucleus.rs smart refactor, hardcoded IPs centralized, #[allow]→#[expect] migration, tensor translations (33 methods), nucleus_complete.toml expanded (NestGate streaming + barraCuda/coralReef nodes); 7,802 tests)
-**Version**: 3.20
-**Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps RESOLVED
+**Updated**: April 19, 2026 (v3.21: cross-arch armv7 fix (cast.rs u64 bounds), all hardcoded IPs centralized (dns_sd.rs, init.rs), all runtime paths centralized (path_builder.rs→ANDROID_RUNTIME_BASE/FALLBACK_RUNTIME_BASE/LINUX_RUNTIME_DIR_PREFIX, defaults.rs), RFC5737_ROUTE_PROBE constant; 7,802 tests)
+**Version**: 3.21
+**Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps RESOLVED (incl. armv7 cross-arch)
 
 ---
 
@@ -11,7 +11,7 @@
 | Metric | Status |
 |--------|--------|
 | **genomeBins** | 7/7 components ready (7 primals + orchestrator; barraCuda + coralReef added) |
-| **Cross-Arch** | x86_64 + aarch64 (USB + Pixel) |
+| **Cross-Arch** | x86_64 + aarch64 + armv7 (USB + Pixel + Raspberry Pi) |
 | **IPC Standard** | Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) |
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
@@ -34,6 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **Deep Debt Evolution v3.21 (Apr 19)** | **Cross-arch fix**: `cast.rs` `usize_f64` — `MAX_EXACT` changed from `1_usize << 53` (overflows on armv7 32-bit) to `1_u64 << 53`; comparison casts `v as u64`; tests use `cfg!(target_pointer_width)` for conditional assertions. Unblocks armv7 builds. **Hardcoded IP completion**: `dns_sd.rs` — 4 raw IP literals (`"0.0.0.0:0"` ×2, `"127.0.0.1"/"::1"`, `"192.0.2.1:80"`) → `EPHEMERAL_UDP_BIND`, `DEFAULT_LOCALHOST`/`DEFAULT_LOCALHOST_V6`, new `RFC5737_ROUTE_PROBE` constant. `init.rs` — `"127.0.0.1:0"` → `DEFAULT_LOCALHOST` constant. **Runtime path centralization**: `path_builder.rs` — `/run/user/{uid}/biomeos` (×2) → `LINUX_RUNTIME_DIR_PREFIX` + `BIOMEOS_SUBDIR`, `/data/local/tmp/biomeos` → new `ANDROID_RUNTIME_BASE` constant, `/tmp/biomeos` → `FALLBACK_RUNTIME_BASE`. `defaults.rs` — `/run/user/{uid}/biomeos` → `LINUX_RUNTIME_DIR_PREFIX` + `BIOMEOS_SUBDIR`. All tests pass, clippy 0 warnings. |
 | **Deep Debt Evolution v3.20 (Apr 20)** | **Smart refactor**: `nucleus.rs` 820→780 LOC — extracted `NucleusLaunchProfile`/`NucleusLaunchConfig`/`load_nucleus_profiles()` into `nucleus_launch.rs` sibling module. **Hardcoded IP centralization**: Added `DEFAULT_LOCALHOST_V6` (`::1`), `EPHEMERAL_UDP_BIND` (`0.0.0.0:0`), `LINUX_RUNTIME_DIR_PREFIX` (`/run/user`) constants in `biomeos-types::constants`; replaced literals in `discovery_bootstrap.rs`, `strategy.rs`, `defaults.rs`, `neural-api-client-sync/lib.rs`. **`#[allow]`→`#[expect]`**: Migrated `biomeos-compute/fractal/{parent,leaf}.rs`. **Tensor translations**: Added `[domains.tensor]` + `[translations.tensor]` (33 methods) to `capability_registry.toml` covering barraCuda's full JSON-RPC surface (tensor ops, math, stats, noise, activation, linalg, spectral, rng). **Graph evolution**: `nucleus_complete.toml` — added 4 NestGate streaming ops (`store_blob`, `retrieve_range`, `object.size`, `namespaces.list`), separate `register_barracuda` (30 capabilities) and `register_coralreef` (7 capabilities) nodes; validation depends_on updated; e2e test NUCLEUS_NODE_IDS 11→13. All tests pass, clippy 0 warnings. |
 | **Data-Driven Launch Profiles + Port Constants + Dep Pruning v3.19 (Apr 20)** | **Hardcoding evolution**: (1) `TCP_SPAWN_BASE` (9900) and `TCP_SPAWN_SCAN_RANGE` (20) defined in `biomeos-types::constants::ports`, replacing hardcoded port literals in `context.rs`, `discovery_init.rs`, `translation_loader.rs`. (2) `translation_loader.rs` 7-primal hardcoded port table replaced with agnostic sequential counter. (3) `primal_spawner.rs` `LaunchProfile` extended with `tcp_listen_flag: Option<String>`, eliminating `if primal_name == SONGBIRD` check; driven by `primal_launch_profiles.toml`. (4) `nucleus.rs` 67-line `match config.name` block replaced by data-driven `nucleus_launch_profiles.toml` (subcommand, socket flag, family-id flag, capability sockets, env vars, JWT generation, AI passthrough). **Dep pruning**: unused `walkdir` removed from `biomeos-deploy`, `biomeos-boot`, `biomeos-niche`. All tests pass, clippy 0 warnings. |
 | **Spring Audit Fixes v3.18 (Apr 20)** | **3 primalSpring downstream audit items resolved**: (1) `biomeos-types` missing `secret` module — `.gitignore` `*secret*` rule was blocking `secret.rs`; added negation rules `!**/secret.rs` and `!**/secret/`. (2) TCP port binding conflicts — `ExecutionContext::next_tcp_port()` now probes each candidate with `TcpListener::bind`, skipping occupied ports. (3) Running primals not auto-registered — `NeuralRouter::register_spawned_primal()` added; integrated into both `node_handlers.rs` (spawn) and `resurrection.rs` (auto-heal) paths; `discovery_init` visibility elevated to `pub(crate)`. 7,802 tests, clippy PASS. |
@@ -986,11 +987,11 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.20 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt)
+**Status**: Production Ready (v3.21 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt, armv7 cross-arch resolved)
 **Tests**: 7,802 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
 **Neural API**: 320+ translations, 27 domains (+ tensor), proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination, post-spawn auto-registration
-**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution, data-driven launch profiles, hardcoded IPs centralized)
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution, data-driven launch profiles, all IPs + runtime paths centralized to constants, cross-arch safe)
 **Bypasses**: 0 active (all 6 evolved)

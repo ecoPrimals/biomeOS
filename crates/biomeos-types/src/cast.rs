@@ -37,9 +37,10 @@ impl std::error::Error for CastError {}
 /// `usize` to `f64`. Lossless for values up to 2^53.
 ///
 /// Returns `Err` if the value exceeds `f64`'s exact integer range.
+/// Uses `u64` for the bound so this compiles on 32-bit targets (armv7).
 pub fn usize_f64(v: usize) -> Result<f64, CastError> {
-    const MAX_EXACT: usize = 1_usize << 53;
-    if v <= MAX_EXACT {
+    const MAX_EXACT: u64 = 1_u64 << 53;
+    if (v as u64) <= MAX_EXACT {
         #[expect(clippy::cast_precision_loss, reason = "guarded by MAX_EXACT check")]
         let r = v as f64;
         Ok(r)
@@ -154,14 +155,23 @@ mod tests {
 
     #[test]
     fn usize_f64_max_exact() {
-        let max = 1_usize << 53;
-        assert!(usize_f64(max).is_ok());
+        // On 32-bit, usize::MAX < 2^53 so all values are exact;
+        // on 64-bit, test the actual boundary.
+        if cfg!(target_pointer_width = "64") {
+            let max = 1_usize << 53;
+            assert!(usize_f64(max).is_ok());
+        } else {
+            assert!(usize_f64(usize::MAX).is_ok());
+        }
     }
 
     #[test]
     fn usize_f64_overflow() {
-        let big = (1_usize << 53) + 1;
-        assert!(usize_f64(big).is_err());
+        if cfg!(target_pointer_width = "64") {
+            let big = (1_usize << 53) + 1;
+            assert!(usize_f64(big).is_err());
+        }
+        // On 32-bit, usize can never exceed 2^53, so overflow is impossible.
     }
 
     #[test]

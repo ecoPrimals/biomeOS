@@ -222,7 +222,7 @@ async fn probe_liveness_jsonrpc(
 }
 
 async fn browse_mdns_instances() -> anyhow::Result<Vec<Candidate>> {
-    let socket = UdpSocket::bind("0.0.0.0:0").await?;
+    let socket = UdpSocket::bind(biomeos_types::constants::endpoints::EPHEMERAL_UDP_BIND).await?;
     let mdns: SocketAddr = MDNS_ADDR.parse()?;
     let id: u16 = rand::random::<u16>();
     let query = build_ptr_query(SERVICE_PTR, id);
@@ -351,7 +351,10 @@ fn fallback_lan_candidates() -> Vec<Candidate> {
     // discover peers on the real LAN; assuming another primal on 127.0.0.1
     // violates the self-knowledge principle.
     if std::env::var("BIOMEOS_ALLOW_LOOPBACK_DISCOVERY").is_ok() {
-        for host in &["127.0.0.1", "::1"] {
+        for host in &[
+            biomeos_types::constants::endpoints::DEFAULT_LOCALHOST,
+            biomeos_types::constants::endpoints::DEFAULT_LOCALHOST_V6,
+        ] {
             v.push(Candidate {
                 host: (*host).to_string(),
                 port: base_port,
@@ -382,10 +385,10 @@ fn fallback_lan_candidates() -> Vec<Candidate> {
 }
 
 fn local_ipv4_via_udp() -> Option<Ipv4Addr> {
-    let s = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
-    // RFC 5737 documentation address — never routed, avoids phoning home
-    // to any third-party DNS provider (sovereignty-compliant).
-    s.connect("192.0.2.1:80").ok()?;
+    let s =
+        std::net::UdpSocket::bind(biomeos_types::constants::endpoints::EPHEMERAL_UDP_BIND).ok()?;
+    s.connect(biomeos_types::constants::network::RFC5737_ROUTE_PROBE)
+        .ok()?;
     match s.local_addr().ok()?.ip() {
         IpAddr::V4(v4) => Some(v4),
         IpAddr::V6(_) => None,

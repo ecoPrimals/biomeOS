@@ -34,6 +34,13 @@ pub const DEFAULT_SONGBIRD_PORT: u16 = ports::API_DEFAULT;
 /// Default broadcast discovery port (fallback only)
 pub const DEFAULT_BROADCAST_DISCOVERY_PORT: u16 = 9199;
 
+/// RFC 5737 TEST-NET address used as a route probe target.
+///
+/// Connecting a UDP socket to this unroutable address reveals the local
+/// interface IP without sending any traffic. Sovereignty-compliant: avoids
+/// phoning home to any third-party DNS or STUN provider.
+pub const RFC5737_ROUTE_PROBE: &str = "192.0.2.1:80";
+
 /// Default dev server port (common Flask/alternative HTTP fallback)
 pub const DEFAULT_DEV_PORT: u16 = 5000;
 

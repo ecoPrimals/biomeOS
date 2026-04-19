@@ -335,7 +335,11 @@ struct HardwareInfo {
 async fn configure_network() -> Result<()> {
     info!("🌐 Verifying network connectivity...");
 
-    let loopback_ok = std::net::TcpListener::bind("127.0.0.1:0").is_ok();
+    let loopback_ok = std::net::TcpListener::bind(format!(
+        "{}:0",
+        biomeos_types::constants::endpoints::DEFAULT_LOCALHOST
+    ))
+    .is_ok();
     if loopback_ok {
         info!("✅ Loopback interface available");
     } else {

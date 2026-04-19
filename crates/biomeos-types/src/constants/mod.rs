@@ -370,9 +370,12 @@ pub mod runtime_paths {
     /// `/run/user/{uid}` directories. Append `/biomeos/` for socket paths.
     pub const LINUX_RUNTIME_DIR_PREFIX: &str = "/run/user";
 
+    /// Android runtime directory for biomeOS sockets and data (tier 4).
+    pub const ANDROID_RUNTIME_BASE: &str = "/data/local/tmp/biomeos";
+
     /// Base path for the `/tmp` fallback tier in socket discovery.
     ///
-    /// Used as tier 4 when `$XDG_RUNTIME_DIR` is not set. Family-scoped
+    /// Used as tier 5 when `$XDG_RUNTIME_DIR` is not set. Family-scoped
     /// variants append `-{family_id}` (e.g., `/tmp/biomeos-nat0`).
     pub const FALLBACK_RUNTIME_BASE: &str = "/tmp/biomeos";
 

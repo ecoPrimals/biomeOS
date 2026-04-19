@@ -4,14 +4,14 @@
 
 ---
 
-## Status: Production Ready (v3.20)
+## Status: Production Ready (v3.21)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 7/7 ecoBin v3.0 compliant (+ barraCuda, coralReef) |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, hardcoded IPs centralized to constants) |
+| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, hardcoded IPs centralized to constants, cross-arch armv7 build fix, all runtime paths centralized) |
 | Tests | 7,802 passing (0 failures, fully concurrent) — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 18-crate ban list enforced) |
@@ -34,7 +34,8 @@
 | TODO/FIXME/HACK | 0 in production code |
 | Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
-| Hardcoded Values | 0 hardcoded primal names, IPs, or ports in production code (all use `primal_names::` and `constants::` from `biomeos-types`); nucleus/spawner match blocks replaced by TOML-driven launch profiles; IPv6 loopback, ephemeral UDP bind, and Linux runtime paths all centralized |
+| Hardcoded Values | 0 hardcoded primal names, IPs, ports, or filesystem paths in production code (all use `primal_names::` and `constants::` from `biomeos-types`); nucleus/spawner match blocks replaced by TOML-driven launch profiles; all IPs (`127.0.0.1`, `::1`, `0.0.0.0:0`, `192.0.2.1:80`) + all runtime paths (`/run/user`, `/data/local/tmp/biomeos`, `/tmp/biomeos`) centralized to constants |
+| Cross-Arch | x86_64 + aarch64 + armv7 (32-bit safe: `cast.rs` `u64` bounds, conditional tests) |
 
 ---
 
@@ -350,8 +351,8 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v3.20)
-**Updated**: April 20, 2026
+**Status**: Production Ready (v3.21)
+**Updated**: April 19, 2026
 **Tests**: 7,802 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 

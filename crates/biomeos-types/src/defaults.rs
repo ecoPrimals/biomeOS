@@ -212,7 +212,11 @@ impl RuntimeConfig {
             })
             .unwrap_or_else(|| {
                 if let Some(uid) = env.get("UID").or_else(|| env.get("EUID")) {
-                    let uid_path = PathBuf::from(format!("/run/user/{uid}/biomeos"));
+                    let uid_path = PathBuf::from(format!(
+                        "{}/{uid}/{}",
+                        crate::constants::runtime_paths::LINUX_RUNTIME_DIR_PREFIX,
+                        crate::constants::runtime_paths::BIOMEOS_SUBDIR,
+                    ));
                     if uid_path.parent().is_some_and(Path::exists) {
                         return uid_path;
                     }

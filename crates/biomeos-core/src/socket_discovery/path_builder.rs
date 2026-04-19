@@ -5,6 +5,7 @@
 //!
 //! Extracted from engine.rs to keep files under 1000 lines.
 
+use biomeos_types::constants::runtime_paths;
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -28,6 +29,7 @@ pub fn build_socket_path(
     primal_socket: Option<&str>,
     xdg_runtime_dir: Option<&Path>,
 ) -> PathBuf {
+    const BIOMEOS: &str = runtime_paths::BIOMEOS_SUBDIR;
     let socket_name = format!("{primal_name}-{family_id}.sock");
 
     // Tier 1: Explicit override via PRIMAL_SOCKET
@@ -54,7 +56,10 @@ pub fn build_socket_path(
 
     // Tier 3: Linux /run/user/$UID/biomeos/
     if let Ok(uid) = env::var("UID") {
-        let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
+        let run_user = PathBuf::from(format!(
+            "{}/{uid}/{BIOMEOS}",
+            runtime_paths::LINUX_RUNTIME_DIR_PREFIX,
+        ));
         if run_user.parent().is_some_and(std::path::Path::exists) {
             std::fs::create_dir_all(&run_user).ok();
             return run_user.join(&socket_name);
@@ -66,7 +71,10 @@ pub fn build_socket_path(
         use std::os::unix::fs::MetadataExt;
         if let Ok(meta) = std::fs::metadata("/proc/self") {
             let uid = meta.uid();
-            let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
+            let run_user = PathBuf::from(format!(
+                "{}/{uid}/{BIOMEOS}",
+                runtime_paths::LINUX_RUNTIME_DIR_PREFIX,
+            ));
             if run_user.parent().is_some_and(std::path::Path::exists) {
                 std::fs::create_dir_all(&run_user).ok();
                 return run_user.join(&socket_name);
@@ -75,14 +83,14 @@ pub fn build_socket_path(
     }
 
     // Tier 4: Android /data/local/tmp/biomeos/
-    let android_dir = PathBuf::from("/data/local/tmp/biomeos");
+    let android_dir = PathBuf::from(runtime_paths::ANDROID_RUNTIME_BASE);
     if android_dir.parent().is_some_and(std::path::Path::exists) {
         std::fs::create_dir_all(&android_dir).ok();
         return android_dir.join(&socket_name);
     }
 
     // Tier 5: Fallback to /tmp/biomeos/
-    let fallback_dir = PathBuf::from("/tmp/biomeos");
+    let fallback_dir = PathBuf::from(runtime_paths::FALLBACK_RUNTIME_BASE);
     std::fs::create_dir_all(&fallback_dir).ok();
     fallback_dir.join(&socket_name)
 }
