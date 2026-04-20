@@ -113,6 +113,7 @@ log "Running Provenance Trio E2E tests..."
 
 cd "$PROJECT_DIR"
 FAMILY_ID="$FAMILY_ID" cargo test \
+    -p biomeos-atomic-deploy \
     --test provenance_trio_e2e \
     -- --test-threads=1 --ignored --nocapture 2>&1
 

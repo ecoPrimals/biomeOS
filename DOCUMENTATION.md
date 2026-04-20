@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: April 19, 2026
+**Updated**: April 20, 2026
 
 ---
 
@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (42 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v3.21) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v3.22) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,6 +58,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V322_DEEP_DEBT_EVOLUTION | UDS dual-protocol auto-detect (HTTP + raw JSON-RPC), Box\<dyn Error\>→anyhow in chimera codegen, stale demos removed (songbird_universal_ui_demo + reqwest), tools primal lists synced with registry, 4 tools compile fixes | Apr 20, 2026 |
 | BIOMEOS_V321_DEEP_DEBT_EVOLUTION | Cross-arch armv7 fix (cast.rs u64), hardcoded IPs completed (dns_sd.rs, init.rs), runtime paths centralized (path_builder.rs, defaults.rs), ANDROID_RUNTIME_BASE + RFC5737_ROUTE_PROBE constants | Apr 19, 2026 |
 | BIOMEOS_V320_DEEP_DEBT_EVOLUTION | nucleus.rs smart refactor (820→780L), hardcoded IPs→constants, #[allow]→#[expect], tensor translations (33 methods), nucleus_complete.toml expanded (NestGate streaming + barraCuda/coralReef nodes) | Apr 20, 2026 |
 | BIOMEOS_V319_DATA_DRIVEN_LAUNCH_PROFILES | Data-driven launch profiles (nucleus + spawner TOML), port constants, translation_loader agnostic counter, walkdir pruned from 3 crates | Apr 20, 2026 |
@@ -167,8 +168,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of April 19, 2026 (v3.21)**
-**Active: 24 specs, handoffs in wateringHole (v2.43–v3.21), 4 scripts**
+**Documentation current as of April 20, 2026 (v3.22)**
+**Active: 24 specs, handoffs in wateringHole (v2.43–v3.22), 4 scripts**
 **Deploy graphs: 42 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe**
+**Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect**
 **Tests: 7,802 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0**

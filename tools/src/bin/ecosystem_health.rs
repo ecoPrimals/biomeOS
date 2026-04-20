@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
         .init();
 
     let config = HealthConfig {
-        workspace_root: cli.workspace,
+        workspace_root: cli.workspace.into(),
         detailed_checks: cli.detailed,
         check_external_deps: cli.external,
         timeout_seconds: cli.timeout,
@@ -113,7 +113,7 @@ async fn run_comprehensive_health_check(config: &HealthConfig) -> Result<()> {
     let results = check_ecosystem_health(config).await?;
     
     // Analyze results
-    let healthy_count = results.iter().filter(|r| r.status == HealthStatus::Healthy).count();
+    let _healthy_count = results.iter().filter(|r| r.status == HealthStatus::Healthy).count();
     let warning_count = results.iter().filter(|r| r.status == HealthStatus::Warning).count();
     let critical_count = results.iter().filter(|r| r.status == HealthStatus::Critical).count();
     
@@ -269,18 +269,20 @@ async fn check_dependencies_only(config: &HealthConfig) -> Result<()> {
 async fn check_ecosystem_only(_config: &HealthConfig) -> Result<()> {
     print_section("🌍 ECOSYSTEM COMPONENTS HEALTH CHECK");
     
-    let components = vec![
-        ("🔍 Toadstool", "toadstool", "Universal Compute"),
-        ("🎵 Songbird", "songbird", "Service Mesh"),
-        ("🏠 NestGate", "nestgate", "Storage System"),
-        ("🐿️ Squirrel", "squirrel", "MCP Platform"),
-        ("🐻 BearDog", "bearDog2/beardog", "Security Framework"),
+    let components: Vec<(&str, &str, &str)> = vec![
+        ("🔍", "toadstool", "Universal Compute"),
+        ("🎵", "songbird", "Service Mesh"),
+        ("🏠", "nestgate", "Storage System"),
+        ("🐿️", "squirrel", "MCP Platform"),
+        ("🐻", "beardog", "Security Framework"),
+        ("🦈", "barracuda", "GPU Math & Tensors"),
+        ("🪸", "coralreef", "Shader Compilation"),
     ];
     
     println!("Ecosystem Component Status:");
     
-    for (icon, _path, description) in components {
-        println!("  {} {}: Discovery available", icon, description);
+    for (icon, id, description) in &components {
+        println!("  {icon} {id} ({description}): Discovery available");
     }
     
     biomeos_tools::print_info("🔄 All components ready for ecosystem integration");

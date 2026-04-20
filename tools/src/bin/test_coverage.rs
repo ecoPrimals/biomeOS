@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
         .init();
 
     let config = TestConfig {
-        workspace_root: cli.workspace,
+        workspace_root: cli.workspace.into(),
         coverage_threshold: cli.threshold,
         test_timeout: cli.timeout,
         parallel: cli.parallel,

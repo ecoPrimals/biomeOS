@@ -3,13 +3,18 @@
 
 //! Unix socket server for biomeOS API
 //!
-//! Provides secure, port-free communication via Unix sockets with JSON-RPC 2.0.
+//! Provides secure, port-free communication via Unix sockets.
+//! Supports both HTTP (axum) and raw JSON-RPC (NDJSON) transports via
+//! first-byte auto-detection: if the first byte is `{`, the connection
+//! is handled as newline-delimited JSON-RPC; otherwise it is passed to
+//! hyper/axum as HTTP.
 
 use anyhow::{Context, Result};
 use axum::Router;
 use std::path::Path;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 /// Serve an Axum router over a Unix socket
 ///
@@ -17,7 +22,7 @@ use tracing::{info, warn};
 /// - Port-free architecture (no TCP ports!)
 /// - Secure by default (filesystem permissions)
 /// - Fast (0.1ms overhead vs 10ms HTTP)
-/// - Isomorphic (same API as HTTP)
+/// - Dual-protocol: HTTP (axum) and raw JSON-RPC via first-byte auto-detect
 ///
 /// # Arguments
 ///
@@ -57,51 +62,36 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
         socket_path.display()
     );
     info!("   Security: Owner-only (0600 permissions)");
-    info!("   Protocol: JSON-RPC 2.0 over Unix socket");
+    info!("   Protocol: HTTP + raw JSON-RPC (auto-detect)");
     info!("   Port-free: ✅ TRUE PRIMAL architecture!");
 
     if let Some(f) = on_ready {
         f();
     }
 
-    // Serve connections
     loop {
         match listener.accept().await {
             Ok((stream, _addr)) => {
                 let app = app.clone();
 
                 tokio::spawn(async move {
-                    let stream = hyper_util::rt::TokioIo::new(stream);
-                    let hyper_service = hyper::service::service_fn(
-                        move |request: hyper::Request<hyper::body::Incoming>| {
-                            // Convert hyper request to axum request
-                            let (parts, body) = request.into_parts();
-                            let body = axum::body::Body::new(body);
-                            let request = axum::http::Request::from_parts(parts, body);
+                    let mut reader = BufReader::new(stream);
 
-                            // Clone app for this request
-                            let mut app = app.clone();
+                    let is_jsonrpc = match reader.fill_buf().await {
+                        Ok(buf) if !buf.is_empty() => buf[0] == b'{' || buf[0] == b'[',
+                        _ => false,
+                    };
 
-                            async move {
-                                // Use tower::Service::call directly
-                                // Axum Router::call returns Result<Response, Infallible> — always Ok
-                                use tower::Service;
-                                let response = match app.call(request).await {
-                                    Ok(resp) => resp,
-                                    Err(infallible) => match infallible {},
-                                };
-                                Ok::<_, hyper::Error>(response)
-                            }
-                        },
-                    );
-
-                    if let Err(e) = hyper_util::server::conn::auto::Builder::new(
-                        hyper_util::rt::TokioExecutor::new(),
-                    )
-                    .serve_connection(stream, hyper_service)
-                    .await
-                    {
-                        warn!("Error serving connection: {}", e);
+                    if is_jsonrpc {
+                        debug!("UDS auto-detect: raw JSON-RPC connection");
+                        if let Err(e) = handle_raw_jsonrpc(reader).await {
+                            debug!("Raw JSON-RPC connection ended: {e}");
+                        }
+                    } else {
+                        // BufReader<UnixStream> implements AsyncRead + AsyncWrite,
+                        // so any bytes already buffered by fill_buf are replayed to
+                        // hyper transparently.
+                        serve_http_connection(reader, app).await;
                     }
                 });
             }
@@ -110,6 +100,139 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
             }
         }
     }
+}
+
+async fn serve_http_connection(stream: BufReader<tokio::net::UnixStream>, app: Router) {
+    let stream = hyper_util::rt::TokioIo::new(stream);
+    let hyper_service =
+        hyper::service::service_fn(move |request: hyper::Request<hyper::body::Incoming>| {
+            let (parts, body) = request.into_parts();
+            let body = axum::body::Body::new(body);
+            let request = axum::http::Request::from_parts(parts, body);
+            let mut app = app.clone();
+
+            async move {
+                use tower::Service;
+                let response = match app.call(request).await {
+                    Ok(resp) => resp,
+                    Err(infallible) => match infallible {},
+                };
+                Ok::<_, hyper::Error>(response)
+            }
+        });
+
+    if let Err(e) =
+        hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new())
+            .serve_connection(stream, hyper_service)
+            .await
+    {
+        warn!("Error serving HTTP connection: {}", e);
+    }
+}
+
+/// Handle a raw JSON-RPC (NDJSON) connection.
+///
+/// Responds to standard primal discovery methods (`health.check`,
+/// `health.liveness`, `identity.get`, `capabilities.list`) so that
+/// spring probes and discovery sweeps see biomeOS as alive rather than
+/// receiving HTTP 400.
+async fn handle_raw_jsonrpc(mut reader: BufReader<tokio::net::UnixStream>) -> Result<()> {
+    let mut line = String::new();
+
+    loop {
+        line.clear();
+        let n = reader.read_line(&mut line).await?;
+        if n == 0 {
+            break;
+        }
+
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        let response = dispatch_jsonrpc_line(trimmed);
+        let mut out = serde_json::to_string(&response)?;
+        out.push('\n');
+        reader.get_mut().write_all(out.as_bytes()).await?;
+        reader.get_mut().flush().await?;
+    }
+
+    Ok(())
+}
+
+fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
+    let null = serde_json::Value::Null;
+    let Ok(req) = serde_json::from_str::<serde_json::Value>(line) else {
+        return jsonrpc_error(&null, -32700, "Parse error");
+    };
+
+    let id = req.get("id").unwrap_or(&null);
+    let method = req
+        .get("method")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("");
+
+    match method {
+        "health" | "health.check" | "health.liveness" | "health.status" => {
+            let result = serde_json::json!({ "status": "healthy", "primal": "biomeos" });
+            jsonrpc_ok(id, &result)
+        }
+        "identity.get" | "identity" => {
+            let result = serde_json::json!({
+                "primal": "biomeos",
+                "role": "orchestrator",
+                "version": env!("CARGO_PKG_VERSION"),
+                "transport": "http+jsonrpc",
+                "note": "biomeOS is an HTTP API server; use HTTP POST for full API, or the neural-api socket for capability.call routing"
+            });
+            jsonrpc_ok(id, &result)
+        }
+        "capabilities.list" | "capability.list" => {
+            let result = serde_json::json!({
+                "primal": "biomeos",
+                "methods": [
+                    "health.check",
+                    "health.liveness",
+                    "identity.get",
+                    "capabilities.list"
+                ],
+                "http_api": [
+                    "/api/v1/health",
+                    "/api/v1/topology",
+                    "/api/v1/genome/list",
+                    "/api/v1/trust/identity",
+                    "/api/v1/events/stream"
+                ],
+                "note": "Full API available via HTTP over this socket. Neural API (capability.call, graph.execute) is on the neural-api socket."
+            });
+            jsonrpc_ok(id, &result)
+        }
+        _ => jsonrpc_error(
+            id,
+            -32601,
+            &format!(
+                "Method not found: {method}. biomeOS API uses HTTP transport; \
+                 for capability.call routing use the neural-api socket"
+            ),
+        ),
+    }
+}
+
+fn jsonrpc_ok(id: &serde_json::Value, result: &serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "jsonrpc": "2.0",
+        "result": result,
+        "id": id
+    })
+}
+
+fn jsonrpc_error(id: &serde_json::Value, code: i32, message: &str) -> serde_json::Value {
+    serde_json::json!({
+        "jsonrpc": "2.0",
+        "error": { "code": code, "message": message },
+        "id": id
+    })
 }
 
 #[cfg(test)]
@@ -261,5 +384,180 @@ mod tests {
 
         server_handle.abort();
         let _ = server_handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_raw_jsonrpc_health_check() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let socket_path = tmp.path().join("jsonrpc-health.sock");
+
+        let app = Router::new().route("/health", get(|| async { "ok" }));
+
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
+        let server_handle =
+            tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+
+        ready_rx.wait().await.expect("server should signal");
+
+        let mut stream = tokio::net::UnixStream::connect(&socket_path)
+            .await
+            .expect("connect");
+
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"health.check\",\"params\":{},\"id\":1}\n";
+        stream.write_all(req).await.expect("write");
+        stream.flush().await.expect("flush");
+
+        let mut buf = vec![0u8; 4096];
+        let n = stream.read(&mut buf).await.expect("read");
+        let resp: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse response");
+
+        assert_eq!(resp["jsonrpc"], "2.0");
+        assert_eq!(resp["id"], 1);
+        assert_eq!(resp["result"]["status"], "healthy");
+        assert_eq!(resp["result"]["primal"], "biomeos");
+
+        server_handle.abort();
+        let _ = server_handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_raw_jsonrpc_identity_get() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let socket_path = tmp.path().join("jsonrpc-identity.sock");
+
+        let app = Router::new();
+
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
+        let server_handle =
+            tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+
+        ready_rx.wait().await.expect("server should signal");
+
+        let mut stream = tokio::net::UnixStream::connect(&socket_path)
+            .await
+            .expect("connect");
+
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"identity.get\",\"params\":{},\"id\":42}\n";
+        stream.write_all(req).await.expect("write");
+        stream.flush().await.expect("flush");
+
+        let mut buf = vec![0u8; 4096];
+        let n = stream.read(&mut buf).await.expect("read");
+        let resp: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse response");
+
+        assert_eq!(resp["jsonrpc"], "2.0");
+        assert_eq!(resp["id"], 42);
+        assert_eq!(resp["result"]["primal"], "biomeos");
+        assert_eq!(resp["result"]["role"], "orchestrator");
+
+        server_handle.abort();
+        let _ = server_handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_raw_jsonrpc_capabilities_list() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let socket_path = tmp.path().join("jsonrpc-caps.sock");
+
+        let app = Router::new();
+
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
+        let server_handle =
+            tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+
+        ready_rx.wait().await.expect("server should signal");
+
+        let mut stream = tokio::net::UnixStream::connect(&socket_path)
+            .await
+            .expect("connect");
+
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let req =
+            b"{\"jsonrpc\":\"2.0\",\"method\":\"capabilities.list\",\"params\":{},\"id\":99}\n";
+        stream.write_all(req).await.expect("write");
+        stream.flush().await.expect("flush");
+
+        let mut buf = vec![0u8; 4096];
+        let n = stream.read(&mut buf).await.expect("read");
+        let resp: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse response");
+
+        assert_eq!(resp["jsonrpc"], "2.0");
+        assert_eq!(resp["id"], 99);
+        assert!(resp["result"]["methods"].is_array());
+        assert!(resp["result"]["http_api"].is_array());
+
+        server_handle.abort();
+        let _ = server_handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_raw_jsonrpc_unknown_method_returns_error() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let socket_path = tmp.path().join("jsonrpc-unknown.sock");
+
+        let app = Router::new();
+
+        let path = socket_path.clone();
+        let (mut ready_tx, ready_rx) = ready_signal();
+        let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
+        let server_handle =
+            tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+
+        ready_rx.wait().await.expect("server should signal");
+
+        let mut stream = tokio::net::UnixStream::connect(&socket_path)
+            .await
+            .expect("connect");
+
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"graph.execute\",\"params\":{},\"id\":7}\n";
+        stream.write_all(req).await.expect("write");
+        stream.flush().await.expect("flush");
+
+        let mut buf = vec![0u8; 4096];
+        let n = stream.read(&mut buf).await.expect("read");
+        let resp: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse response");
+
+        assert_eq!(resp["jsonrpc"], "2.0");
+        assert_eq!(resp["id"], 7);
+        assert_eq!(resp["error"]["code"], -32601);
+        assert!(
+            resp["error"]["message"]
+                .as_str()
+                .expect("message")
+                .contains("neural-api socket")
+        );
+
+        server_handle.abort();
+        let _ = server_handle.await;
+    }
+
+    #[test]
+    fn test_dispatch_jsonrpc_line_parse_error() {
+        let resp = dispatch_jsonrpc_line("not json at all");
+        assert_eq!(resp["error"]["code"], -32700);
+    }
+
+    #[test]
+    fn test_dispatch_jsonrpc_line_health_aliases() {
+        for method in &["health", "health.check", "health.liveness", "health.status"] {
+            let req = format!(
+                r#"{{"jsonrpc":"2.0","method":"{}","params":{{}},"id":1}}"#,
+                method
+            );
+            let resp = dispatch_jsonrpc_line(&req);
+            assert_eq!(
+                resp["result"]["status"], "healthy",
+                "{method} should return healthy"
+            );
+        }
     }
 }

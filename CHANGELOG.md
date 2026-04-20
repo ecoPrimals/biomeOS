@@ -2,6 +2,48 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.22 (2026-04-20) — UDS Dual-Protocol, Box\<dyn Error\> Elimination, Debris Cleanup
+
+Resolved primalSpring audit item #7 and continued deep debt evolution.
+
+### UDS Dual-Protocol Auto-Detect
+- `biomeos-api/unix_server.rs` — first-byte protocol detection: `{`/`[` → raw JSON-RPC, else → HTTP
+- New `handle_raw_jsonrpc()` dispatches NDJSON line-by-line with responses for `health.*`, `identity.get`, `capabilities.list`
+- `BufReader<UnixStream>` passed directly to hyper (zero buffered-byte loss on HTTP path)
+- JSON-RPC probes to the biomeOS API socket now get proper JSON-RPC responses instead of HTTP 400
+- 6 new tests for dual-protocol detection
+
+### Error Handling Evolution
+- `chimera/builder.rs` codegen: `Box<dyn std::error::Error>` → `anyhow::Result<()>` / `anyhow::bail!`
+
+### Stale Code Removal
+- Deleted `songbird_universal_ui_demo.rs` (420L non-functional demo relying on removed `reqwest` dep)
+- Deleted `comprehensive_ecosystem_demo.rs` (251L materially stale narrative; claims Songbird/ToadStool gaps resolved months ago)
+- Removed `reqwest` dependency from `tools/Cargo.toml`
+- Removed `[[bin]]` entries for deleted demos
+
+### Registry Sync & Compile Fixes
+- `harvest/main.rs` `KNOWN_PRIMALS` synced with `biomeos-types::primal_names`
+- `ecosystem_health.rs` display tuples expanded (barracuda, coralreef); stale path removed
+- 4 tools binaries: `String` → `PathBuf` compile fixes (`cli.workspace.into()`)
+
+### Script Fixes
+- `scripts/test_provenance_trio_e2e.sh` — added `-p biomeos-atomic-deploy` to cargo test invocation
+- `scripts/README.md` — corrected harvest invocation path
+
+### Workspace Hygiene
+- `tools/Cargo.toml` edition 2021 → 2024 (consistency with main workspace)
+
+### Metrics
+- 7,802 tests passing (0 failures)
+- 0 clippy warnings (pedantic + nursery)
+- 0 `Box<dyn Error>` in production code (doctests/tests use standard pattern)
+- 0 stale/broken demo binaries
+
+## v3.18–v3.21 (2026-04-19–20) — See CURRENT_STATUS.md
+
+Detailed changelogs for v3.18–v3.21 are in `CURRENT_STATUS.md` deep debt evolution table.
+
 ## v3.17 (2026-04-16) — Smart Refactoring, Dependency Pruning, Manifest Hygiene
 
 Continued deep debt evolution and workspace hygiene.

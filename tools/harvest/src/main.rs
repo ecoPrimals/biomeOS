@@ -34,15 +34,24 @@ use walkdir::WalkDir;
 
 /// Bootstrap-time primal roster for harvest operations.
 ///
-/// Canonical source of truth: `biomeos-types::primal_names::CORE_PRIMALS` + UI primal.
+/// Canonical source of truth: `biomeos-types::primal_names::{CORE_PRIMALS, PROVENANCE_PRIMALS}`.
 /// This standalone tool does not depend on `biomeos-types` to keep compile times fast.
 /// Keep in sync manually; all names must be lowercase (filesystem convention).
+/// Last synced: 2026-04-20.
 const KNOWN_PRIMALS: &[&str] = &[
+    // Tower atomic (CORE_PRIMALS)
     "beardog",
     "songbird",
     "toadstool",
+    "barracuda",
+    "coralreef",
     "nestgate",
     "squirrel",
+    // Provenance trio
+    "loamspine",
+    "rhizocrypt",
+    "sweetgrass",
+    // UI
     "petaltongue",
 ];
 

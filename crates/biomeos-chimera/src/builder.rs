@@ -245,14 +245,14 @@ impl ComponentInstance {
         }
     }
 
-    pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn start(&mut self) -> anyhow::Result<()> {
         let child = Command::new(&self.binary_path)
             .spawn()?;
         self.process = Some(child);
         Ok(())
     }
 
-    pub async fn stop(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn stop(&mut self) -> anyhow::Result<()> {
         if let Some(ref mut child) = self.process {
             child.kill()?;
             child.wait()?;
@@ -298,11 +298,8 @@ impl ComponentInstance {
             } else {
                 &endpoint.returns
             };
-            writeln!(
-                code,
-                ") -> Result<{return_type}, Box<dyn std::error::Error>> {{"
-            )
-            .expect("write to String cannot fail");
+            writeln!(code, ") -> anyhow::Result<{return_type}> {{")
+                .expect("write to String cannot fail");
             if let Some(cap) = &endpoint.capability {
                 writeln!(
                     code,
@@ -316,7 +313,7 @@ impl ComponentInstance {
                 )
                 .expect("write to String cannot fail");
             } else {
-                code.push_str("        Err(\"Fusion logic not implemented — set 'capability' in chimera definition to enable IPC forwarding\".into())\n");
+                code.push_str("        anyhow::bail!(\"Fusion logic not implemented — set 'capability' in chimera definition to enable IPC forwarding\")\n");
             }
             code.push_str("    }\n\n");
         }

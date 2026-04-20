@@ -9,7 +9,7 @@ rust-version = "1.87"
 [package]
 name = "biomeos-tools"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors.workspace = true
 license.workspace = true
 rust-version.workspace = true
@@ -31,14 +31,6 @@ path = "src/bin/test_coverage.rs"
 name = "ecosystem-health"
 path = "src/bin/ecosystem_health.rs"
 
-[[bin]]
-name = "songbird_universal_ui_demo"
-path = "src/bin/songbird_universal_ui_demo.rs"
-
-[[bin]]
-name = "comprehensive_ecosystem_demo"
-path = "src/bin/comprehensive_ecosystem_demo.rs"
-
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
@@ -52,9 +44,5 @@ tempfile = "3.8"
 walkdir = "2.4"
 tokio-test = "0.4"
 criterion = "0.5"
-
-# songbird_universal_ui_demo uses HTTP client (legacy pattern — prefer AtomicClient for new work)
-# default-features = false: no TLS stack needed for local demos (avoids ring C/asm dependency)
-reqwest = { version = "0.12", default-features = false }
 
 biomeos-core = { path = "../crates/biomeos-core" } 

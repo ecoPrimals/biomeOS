@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
         .init();
 
     let config = IntegrationConfig {
-        workspace_root: cli.workspace,
+        workspace_root: cli.workspace.into(),
         timeout_seconds: cli.timeout,
         parallel_tests: cli.parallel,
         verbose: cli.verbose,

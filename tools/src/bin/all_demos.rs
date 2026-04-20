@@ -66,7 +66,7 @@ async fn main() -> Result<()> {
         .init();
 
     let config = DemoConfig {
-        workspace_root: cli.workspace,
+        workspace_root: cli.workspace.into(),
         auto_advance: cli.auto_advance,
         interactive: !cli.non_interactive,
         verbose: cli.verbose,
