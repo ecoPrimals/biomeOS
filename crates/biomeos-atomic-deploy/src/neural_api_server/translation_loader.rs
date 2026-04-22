@@ -268,6 +268,7 @@ mod tests {
             id: "node2".to_string(),
             operation: Some(Operation {
                 name: "op".to_string(),
+                target: None,
                 params,
                 environment: None,
             }),
@@ -288,6 +289,7 @@ mod tests {
             id: "node3".to_string(),
             operation: Some(Operation {
                 name: "op".to_string(),
+                target: None,
                 params,
                 environment: None,
             }),
@@ -308,6 +310,7 @@ mod tests {
             id: "node4".to_string(),
             operation: Some(Operation {
                 name: "op".to_string(),
+                target: None,
                 params,
                 environment: None,
             }),
@@ -325,6 +328,7 @@ mod tests {
             id: "node5".to_string(),
             operation: Some(Operation {
                 name: "op".to_string(),
+                target: None,
                 params,
                 environment: None,
             }),

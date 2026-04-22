@@ -303,6 +303,18 @@ async fn test_handle_request_topology_primals_route() {
 }
 
 #[tokio::test]
+async fn test_handle_request_primal_list_routes_to_topology_primals() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"primal.list","id":70}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(
+        result.get("result").is_some(),
+        "primal.list should route to TopologyPrimals, got: {result}"
+    );
+    assert!(result["result"]["primals"].is_array());
+}
+
+#[tokio::test]
 async fn test_handle_request_topology_proprioception_route() {
     let (server, _temp) = create_test_server();
     let req = r#"{"jsonrpc":"2.0","method":"topology.proprioception","id":51}"#;

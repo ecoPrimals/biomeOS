@@ -191,22 +191,34 @@ impl GraphExecutor {
     ) -> Result<serde_json::Value> {
         use std::time::Duration;
 
+        let op = node.operation.as_ref();
+
         let target = node
             .config
             .get("target")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("rpc_call requires 'target' config (primal name)"))?;
+            .or_else(|| op.and_then(|o| o.target.as_deref()))
+            .ok_or_else(|| {
+                anyhow::anyhow!("rpc_call requires 'target' (in config or operation)")
+            })?;
 
         let method = node
             .config
             .get("method")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("rpc_call requires 'method' config"))?;
+            .or_else(|| {
+                op.and_then(|o| o.params.get("method"))
+                    .and_then(|v| v.as_str())
+            })
+            .ok_or_else(|| {
+                anyhow::anyhow!("rpc_call requires 'method' (in config or operation.params)")
+            })?;
 
         let params = node
             .config
             .get("params")
             .cloned()
+            .or_else(|| op.and_then(|o| o.params.get("params")).cloned())
             .unwrap_or_else(|| serde_json::json!({}));
 
         let params_str = serde_json::to_string(&params)?;

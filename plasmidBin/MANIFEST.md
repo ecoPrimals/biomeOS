@@ -41,11 +41,11 @@ plasmidBin/
 
 ## 🔄 **Workflow**
 
-### **1. Harvest Binaries** (from Phase 1 primals)
+### **1. Harvest Binaries** (from primal workspaces)
 
 ```bash
-# Run harvest script to copy latest binaries
-./scripts/harvest-primals.sh
+# Via harvest tool (run from tools/harvest/)
+cd tools/harvest && cargo run -- local --all
 
 # Or manually copy
 cp /path/to/ecoPrimals/primals/beardog/target/release/beardog-server plasmidBin/primals/
@@ -249,9 +249,9 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 
 ## 🚀 **Next Steps**
 
-1. **Harvest all Phase 1 binaries**
-   - Run `./scripts/harvest-primals.sh`
-   - Or manually copy from Phase 1 projects
+1. **Harvest all primal binaries**
+   - Run `cd tools/harvest && cargo run -- local --all`
+   - Or manually copy from primal workspaces
 
 2. **Test spore creation**
    - Create test spore: `cargo run --bin biomeos -- spore create /tmp/test-spore`
@@ -266,7 +266,7 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 ## 📚 **References**
 
 - **Spore System**: `crates/biomeos-spore/`
-- **Harvest Script**: `scripts/harvest-primals.sh`
+- **Harvest Tool**: `tools/harvest/` (`biomeos-harvest`)
 - **Niche Manifests**: `niches/*.toml`
 - **BYOB Spec**: `specs/BYOB_BUILD_YOUR_OWN_BIOME_SPECIFICATION.md`
 

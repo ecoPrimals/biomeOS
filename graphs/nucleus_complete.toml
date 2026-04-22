@@ -235,6 +235,7 @@ timeout_ms = 30000
 id = "init_sovereign_onion"
 depends_on = ["tower_songbird"]
 output = "onion_initialized"
+fallback = "skip"  # Tor may not be available; NUCLEUS must tolerate this
 
 [nodes.operation]
 name = "rpc_call"

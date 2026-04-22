@@ -292,6 +292,7 @@ impl Graph {
         } else {
             Some(Operation {
                 name: "capability_call".to_string(),
+                target: None,
                 params: {
                     let mut p = HashMap::new();
                     p.insert(
@@ -476,10 +477,13 @@ pub struct PrimalSelector {
 }
 
 /// Operation definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Operation {
     /// Operation/capability name (e.g., "crypto.encrypt")
     pub name: String,
+    /// Target primal for RPC operations (e.g., "songbird" for `rpc_call` nodes).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
     /// Parameters for the operation
     #[serde(default)]
     pub params: HashMap<String, serde_json::Value>,

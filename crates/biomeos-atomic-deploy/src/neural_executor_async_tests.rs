@@ -86,6 +86,7 @@ async fn test_execute_filesystem_check_exists() {
     let mut node = create_test_node("fs_check", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "filesystem.check_exists".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -124,6 +125,7 @@ async fn test_execute_log_warn_node() {
     let mut node = create_test_node("warn_node", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "log.warn".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -159,6 +161,7 @@ async fn test_execute_log_error_node() {
     let mut node = create_test_node("error_node", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "log.error".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -194,6 +197,7 @@ async fn test_execute_node_failure_reports_error() {
     let mut node = create_test_node("fail_node", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "filesystem.check_exists".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -229,6 +233,7 @@ async fn test_execute_rollback_on_failure() {
     let mut node = create_test_node("fail_node", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "filesystem.check_exists".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -318,6 +323,7 @@ async fn test_execute_verification_check_sockets_false() {
     let mut node = create_test_node("verify_node", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "verification".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -351,6 +357,7 @@ async fn test_execute_health_check_all_no_socket_dir() {
     let mut node = create_test_node("health_all", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "health.check_all".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -385,6 +392,7 @@ async fn test_execute_health_check_all_with_temp_dir() {
     let mut node = create_test_node("health_all", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "health.check_all".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -420,6 +428,7 @@ async fn test_execute_rpc_call_connection_refused() {
     let mut node = create_test_node("rpc_node", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "rpc_call".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -477,6 +486,7 @@ async fn test_execute_log_info_node() {
     let mut node = create_test_node("info_node", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "log.info".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -512,6 +522,7 @@ async fn test_execute_optional_node_failure_skipped() {
     let mut node = create_test_node("optional_fail", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "rpc_call".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -561,6 +572,7 @@ async fn test_execute_capability_call_no_provider() {
     let mut node = create_test_node("cap_call", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "capability_call".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -606,6 +618,7 @@ async fn test_executor_with_metrics() {
     let mut node = create_test_node("log1", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "log.info".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -649,6 +662,7 @@ async fn test_execute_rpc_call_params_env_substitution() {
     let mut node = create_test_node("rpc_sub", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "rpc_call".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -704,6 +718,7 @@ async fn test_execute_parallel_nodes_with_max_parallelism_one() {
         let mut node = create_test_node(&format!("n{i}"), vec![]);
         node.operation = Some(crate::neural_graph::Operation {
             name: "log.info".to_string(),
+            target: None,
             params: HashMap::new(),
             environment: None,
         });
@@ -745,6 +760,7 @@ async fn test_execute_failure_without_rollback_flag() {
     let mut node = create_test_node("fail_node", vec![]);
     node.operation = Some(crate::neural_graph::Operation {
         name: "filesystem.check_exists".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });

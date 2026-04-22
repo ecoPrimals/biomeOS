@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: April 21, 2026
-**Status**: Production Ready (v3.23) — 7,802+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, BTSP ClientHello recognition on API socket, graph startup diagnostics, coralReef + NestGate streaming translations complete, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: April 22, 2026
+**Status**: Production Ready (v3.24) — 7,814+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, `primal.list` on neural-api + API socket, graph executor operation fallback, bootstrap tolerance for optional nodes, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 7,802 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
+8. **Tested**: 7,814+ tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
@@ -167,16 +167,16 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.23 — zero blocking debt, deep debt audit CLEAN, all primalSpring Phase 45b gaps addressed)
+**Status**: Production Ready (v3.24 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
-**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), lazy rescan, cross-gate routing, post-spawn auto-registration (part of biomeOS)
-**Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` standard; enriched `lifecycle.composition` dashboard
+**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), `primal.list` + `topology.primals`, lazy rescan, cross-gate routing, post-spawn auto-registration (part of biomeOS)
+**Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` standard; `rpc_call` operation fallback; bootstrap tolerance (`fallback = "skip"`)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection + composition dashboard
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 7,802 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 (IPs, paths, primal names all centralized) | **Box\<dyn Error\>**: 0 | **Production files >800L**: 0
-**Updated**: April 21, 2026
+**Tests**: 7,814 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 (IPs, paths, primal names all centralized) | **Box\<dyn Error\>**: 0 | **Production files >800L**: 0
+**Updated**: April 22, 2026

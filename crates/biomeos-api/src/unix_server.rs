@@ -211,6 +211,17 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
             });
             jsonrpc_ok(id, &result)
         }
+        "primal.list" | "topology.primals" => {
+            let result = serde_json::json!({
+                "primals": [
+                    { "name": "biomeos", "role": "orchestrator", "status": "alive" }
+                ],
+                "count": 1,
+                "note": "biomeOS API socket reports itself only. \
+                         For full topology use the neural-api socket (topology.primals)"
+            });
+            jsonrpc_ok(id, &result)
+        }
         "capabilities.list" | "capability.list" => {
             let result = serde_json::json!({
                 "primal": "biomeos",
@@ -218,7 +229,8 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
                     "health.check",
                     "health.liveness",
                     "identity.get",
-                    "capabilities.list"
+                    "capabilities.list",
+                    "primal.list"
                 ],
                 "http_api": [
                     "/api/v1/health",
@@ -605,5 +617,32 @@ mod tests {
                 "{method} should return healthy"
             );
         }
+    }
+
+    #[test]
+    fn test_dispatch_jsonrpc_line_primal_list() {
+        let req = r#"{"jsonrpc":"2.0","method":"primal.list","params":{},"id":1}"#;
+        let resp = dispatch_jsonrpc_line(req);
+        assert!(resp["result"]["primals"].is_array());
+        assert_eq!(resp["result"]["count"], 1);
+    }
+
+    #[test]
+    fn test_dispatch_jsonrpc_line_topology_primals_alias() {
+        let req = r#"{"jsonrpc":"2.0","method":"topology.primals","params":{},"id":2}"#;
+        let resp = dispatch_jsonrpc_line(req);
+        assert!(resp["result"]["primals"].is_array());
+    }
+
+    #[test]
+    fn test_dispatch_jsonrpc_line_capabilities_list_includes_primal_list() {
+        let req = r#"{"jsonrpc":"2.0","method":"capabilities.list","params":{},"id":1}"#;
+        let resp = dispatch_jsonrpc_line(req);
+        let methods = resp["result"]["methods"].as_array().expect("methods array");
+        let has_primal_list = methods.iter().any(|m| m.as_str() == Some("primal.list"));
+        assert!(
+            has_primal_list,
+            "capabilities.list should advertise primal.list"
+        );
     }
 }

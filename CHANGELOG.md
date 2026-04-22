@@ -2,6 +2,36 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.24 (2026-04-22) — primal.list, Graph Executor Fix, Bootstrap Tolerance
+
+Addresses primalSpring downstream audit: Neural API protocol gaps and graph bootstrapping failures.
+
+### `primal.list` Method (Neural API + API Socket)
+- Added `("primal.list", Route::TopologyPrimals)` to neural-api `ROUTE_TABLE` — routes to `TopologyHandler::get_primals()` (same as `topology.primals`)
+- Added `primal.list` + `topology.primals` dispatch arms to `biomeos-api/unix_server.rs` with self-report response
+- Updated `capabilities.list` to advertise `primal.list`
+- 4 new tests covering both sockets
+
+### Graph Executor `rpc_call` Operation Fallback
+- `node_rpc_call` now reads `target`, `method`, `params` from `node.operation` (and `operation.params`) as fallback when `node.config` is empty — fixes graph TOML nodes that define operations in `[nodes.operation]` rather than `[nodes.config]`
+- Added `target: Option<String>` field to `Operation` struct (with `Default` derive)
+- All 4 graph TOMLs (`tower_atomic_bootstrap.toml`, `nucleus_complete.toml`, `pixel8a-deploy/`, `livespore-usb/`) now properly parsed
+
+### Bootstrap Tolerance
+- `init_sovereign_onion` and `init_beacon_mesh` graph nodes now have `fallback = "skip"` — Tor may not be available, bootstrap must succeed without it
+- Graph executor already handles `is_optional()` → skipped nodes are marked `Completed({"skipped": true})`
+
+### Audit Findings
+- `health.liveness`: already correct on both sockets (neural-api returns `{"status":"alive","version":"..."}`, API socket returns `{"status":"healthy","primal":"biomeos"}`)
+- BTSP ClientHello redirect: correct by design (API socket redirects to neural-api which handles BTSP via `server_handshake()`)
+- Deep debt audit: 0 unsafe, 0 TODO/FIXME, 0 mocks in prod, 0 files >800L, 0 hardcoded primal names, all deps pure Rust (except rtnetlink thin FFI)
+
+### Metrics
+- 7,814+ tests passing (0 failures)
+- 0 clippy warnings (pedantic + nursery)
+
+---
+
 ## v3.23 (2026-04-21) — BTSP Wire-Format Fix, Graph Diagnostics, Registry Completion, Deep Debt Audit
 
 Addresses primalSpring Phase 45b BTSP escalation findings, completes capability registry gaps, and passes comprehensive deep debt audit.

@@ -722,6 +722,7 @@ mod tests {
         let mut node = make_minimal_node("test-node");
         node.operation = Some(crate::neural_graph::Operation {
             name: "test".to_string(),
+            target: None,
             params: HashMap::new(),
             environment: Some({
                 let mut m = HashMap::new();

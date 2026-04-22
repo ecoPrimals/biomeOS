@@ -143,6 +143,7 @@ mod tests {
 
         let operation = Some(Operation {
             name: "health_check".to_string(),
+            target: None,
             params,
             environment: None,
         });

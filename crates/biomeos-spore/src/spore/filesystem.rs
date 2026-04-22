@@ -88,7 +88,7 @@ impl FilesystemOps for Spore {
         // Verify nucleus exists
         if !nucleus_dir.exists() {
             return Err(SporeError::BinaryNotFound(
-                "plasmidBin/ directory not found - run 'cargo run -p biomeos-harvest' first"
+                "plasmidBin/ directory not found - run harvest from tools/harvest/ first"
                     .to_string(),
             ));
         }

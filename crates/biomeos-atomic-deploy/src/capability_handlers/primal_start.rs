@@ -323,6 +323,7 @@ mod tests {
 
         let operation = Some(Operation {
             name: "start".to_string(),
+            target: None,
             params,
             environment: env_vars,
         });
@@ -346,6 +347,7 @@ mod tests {
             id: "test".to_string(),
             operation: Some(Operation {
                 name: "start".to_string(),
+                target: None,
                 params: HashMap::new(),
                 environment: None,
             }),
@@ -372,6 +374,7 @@ mod tests {
             }),
             operation: Some(Operation {
                 name: "start".to_string(),
+                target: None,
                 params: HashMap::new(),
                 environment: None,
             }),

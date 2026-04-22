@@ -558,6 +558,7 @@ fn node_log_info(id: &str, depends_on: Vec<String>, message: &str) -> GraphNode 
         depends_on,
         operation: Some(Operation {
             name: "log.info".to_string(),
+            target: None,
             params: HashMap::new(),
             environment: None,
         }),
@@ -572,6 +573,7 @@ fn node_fs_check(id: &str, optional: bool) -> GraphNode {
         depends_on: vec![],
         operation: Some(Operation {
             name: "filesystem.check_exists".to_string(),
+            target: None,
             params: HashMap::new(),
             environment: None,
         }),
@@ -676,6 +678,7 @@ async fn test_execute_unknown_operation_yields_skipped_json() {
             depends_on: vec![],
             operation: Some(Operation {
                 name: "not.a.real.handler".to_string(),
+                target: None,
                 params: HashMap::new(),
                 environment: None,
             }),

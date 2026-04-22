@@ -316,7 +316,7 @@ pub(super) fn discover_plasmid_dir_with_override(
 
     Err(anyhow::anyhow!(
         "plasmidBin not found. Set BIOMEOS_PLASMID_DIR or run from the workspace root. \
-         Run 'cargo run -p biomeos-harvest' to build binaries first."
+         Run harvest from tools/harvest/ to build binaries first."
     ))
 }
 

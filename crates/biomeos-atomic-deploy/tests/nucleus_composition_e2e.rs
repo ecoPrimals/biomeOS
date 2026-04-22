@@ -270,6 +270,7 @@ fn build_synthetic_nucleus() -> NeuralGraph {
         );
         Some(Operation {
             name: "log.info".to_string(),
+            target: None,
             params,
             environment: None,
         })
@@ -510,6 +511,7 @@ async fn test_nucleus_critical_node_failure_aborts_graph() {
 
     let fail_op = Some(Operation {
         name: "filesystem.check_exists".to_string(),
+        target: None,
         params: HashMap::new(),
         environment: None,
     });
@@ -522,6 +524,7 @@ async fn test_nucleus_critical_node_failure_aborts_graph() {
         );
         Some(Operation {
             name: "log.info".to_string(),
+            target: None,
             params,
             environment: None,
         })

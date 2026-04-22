@@ -113,7 +113,7 @@ Active scripts (shell scripts that remain in the repository):
 | Mocks in production | 0 (test_support gated behind feature flag; all stubs resolved) |
 | Proptest IPC fuzz tests | 8 |
 | C-dep crates banned (deny.toml) | 15 |
-| Tests | 7,802+ (0 failures, fully concurrent) |
+| Tests | 7,814+ (0 failures, fully concurrent) |
 | Coverage | 90%+ line / function / region (llvm-cov) |
 | Production files >800 LOC | 0 (all 5 files >800L are test-only) |
 | Hardcoded primal strings | 0 (centralized `primal_names` constants) |

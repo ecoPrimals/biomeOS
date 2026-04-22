@@ -1,8 +1,8 @@
 # Neural API Routing Specification
 
 **Version**: 2.0.0 - **Capability Translation Evolution**  
-**Status**: Active Development  
-**Last Updated**: January 21, 2026  
+**Status**: Implemented  
+**Last Updated**: April 22, 2026  
 **See Also**: `specs/CAPABILITY_TRANSLATION_ARCHITECTURE.md`
 
 ---
@@ -432,5 +432,5 @@ Complete elimination of cross-primal hardcoding.
 
 ---
 
-**Status**: Implemented (v2.0.0 — translation registry shipped in v2.40, 290+ translations active)
-**Updated**: April 9, 2026
+**Status**: Implemented (v2.0.0 — translation registry shipped in v2.40, 320+ translations active across 27 domains)
+**Updated**: April 22, 2026

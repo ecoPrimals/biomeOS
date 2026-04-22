@@ -415,24 +415,25 @@ family_id = "${FAMILY_ID}"
 id = "init_sovereign_onion"
 depends_on = ["germinate_songbird"]
 output = "onion_initialized"
+fallback = "skip"  # Tor may not be available; bootstrap must tolerate this
 
 [nodes.operation]
 name = "rpc_call"
-target = "songbird"  # Target the Songbird primal
+target = "songbird"
 
-# Call onion.start to create .onion identity
 [nodes.operation.params]
 method = "onion.start"
 params = { port = 8080 }
 
 [nodes.constraints]
-timeout_ms = 30000  # 30s for identity generation
+timeout_ms = 30000
 
 # Phase 2b: Initialize Beacon Mesh with Onion Bootstrap
 [[nodes]]
 id = "init_beacon_mesh"
 depends_on = ["init_sovereign_onion"]
 output = "mesh_initialized"
+fallback = "skip"  # Depends on onion; skip if onion was skipped
 
 [nodes.operation]
 name = "rpc_call"
