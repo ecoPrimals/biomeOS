@@ -98,31 +98,32 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated Apr 8, 2026)
+## 5. Deep Debt Metrics (Updated Apr 21, 2026 — v3.23)
 
 | Metric | Value |
 |--------|-------|
 | TODO markers in Rust source | 0 |
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
-| FIXME/HACK/WORKAROUND | 0 |
-| Unsafe code | 0 (`#[forbid(unsafe_code)]` on all 26 crate roots + 4 binary roots, `mem::forget` eliminated) |
-| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 25 crates via workspace lint inheritance) |
+| FIXME/HACK/WORKAROUND/XXX | 0 |
+| Unsafe code | 0 (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary roots) |
+| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 25 crates via workspace lint inheritance, `-D warnings`) |
 | Production unwrap() | 0 (all in test code) |
-| Shell-outs from Rust | 3 (`sudo ip link/addr/set` in deploy/network.rs -- requires root) |
-| `deny(unsafe_code)` / `forbid(unsafe_code)` crates | all production crates + binary roots |
-| Mocks in production | 0 (test_support gated behind feature flag) |
+| Shell-outs from Rust | 3 (`sudo ip link/addr/set` in deploy/network.rs — requires root) |
+| `forbid(unsafe_code)` crates | all production crates + binary roots |
+| Mocks in production | 0 (test_support gated behind feature flag; all stubs resolved) |
 | Proptest IPC fuzz tests | 8 |
 | C-dep crates banned (deny.toml) | 15 |
-| Tests | 4,275 (0 failures, 167 ignored) |
-| Region coverage | 75.21% (llvm-cov) |
-| Files >1000 LOC | 0 |
+| Tests | 7,802+ (0 failures, fully concurrent) |
+| Coverage | 90%+ line / function / region (llvm-cov) |
+| Production files >800 LOC | 0 (all 5 files >800L are test-only) |
 | Hardcoded primal strings | 0 (centralized `primal_names` constants) |
+| Hardcoded paths/ports | 0 (centralized in `biomeos-types::constants`) |
 | Zero-copy payloads | `bytes::Bytes` with base64 serde |
-| Bypasses | 5 (all documented with evolution paths) |
-| Workspace tests passing | 1,789 |
-| Specs | 19 active / 47 archived |
-| Handoffs | 14 active / 14 archived |
-| Scripts | 10 active / 35 archived |
+| Bypasses | 0 blocking (Tower routing is documented evolution target) |
+| Box\<dyn Error\> in production | 0 (all anyhow::Result) |
+| Deprecated APIs | 0 |
+| Capability translations | 320+ across 27 domains (+ shader) |
+| BTSP wire-format | ClientHello recognition on API socket + Neural API handshake verified |
 
 ---
 

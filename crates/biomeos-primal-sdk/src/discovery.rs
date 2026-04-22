@@ -276,12 +276,15 @@ impl PrimalDiscovery {
     }
 
     fn method_for_dir(dir: &std::path::Path) -> DiscoveryMethod {
+        use biomeos_types::constants::runtime_paths;
         let path_str = dir.to_string_lossy();
-        if path_str.contains("XDG_RUNTIME_DIR") || path_str.contains("/run/user/") {
+        if path_str.contains("XDG_RUNTIME_DIR")
+            || path_str.contains(runtime_paths::LINUX_RUNTIME_DIR_PREFIX)
+        {
             DiscoveryMethod::XdgRuntime
-        } else if path_str.contains("/data/local/tmp") {
+        } else if path_str.contains(runtime_paths::ANDROID_RUNTIME_BASE) {
             DiscoveryMethod::AndroidData
-        } else if path_str.starts_with("/tmp") {
+        } else if path_str.starts_with(runtime_paths::FALLBACK_RUNTIME_BASE) {
             DiscoveryMethod::TmpFallback
         } else {
             DiscoveryMethod::RunUser

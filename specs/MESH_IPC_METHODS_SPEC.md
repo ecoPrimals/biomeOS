@@ -1,7 +1,7 @@
 # Mesh IPC Methods Specification
 
 **Created**: February 6, 2026  
-**Status**: SPECIFICATION - Ready for Implementation  
+**Status**: SPECIFICATION - Mesh IPC methods defined; P2P Sovereign Onion production-ready (v3.23)  
 **Related**: `wateringHole/handoffs/SOVEREIGN_BEACON_MESH_HANDOFF_FEB06_2026.md`
 
 ---
@@ -448,4 +448,4 @@ echo '{"jsonrpc":"2.0","method":"mesh.find_path","params":{"target_node_id":"pix
 
 ---
 
-*Specification complete. Ready for implementation.*
+*Specification complete. Mesh IPC implemented in v3.x — see CURRENT_STATUS.md for live state.*

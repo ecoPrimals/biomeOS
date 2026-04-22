@@ -8,7 +8,7 @@
 
 ## 🎯 The Complete Vision
 
-### **Three Niches, Five Primals, One Protocol**
+### **Three Niches, Seven Primals, One Protocol**
 
 | Niche | Primals | Purpose | NUCLEUS Role |
 |-------|---------|---------|-----------|

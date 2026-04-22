@@ -486,8 +486,8 @@ async fn test_https_via_translation() {
 
 ---
 
-**Status**: Ready for implementation  
-**Priority**: Critical (unblocks HTTPS)  
+**Status**: IMPLEMENTED (v3.20+) — 320+ semantic translations across 27 domains  
+**Priority**: Complete  
 **Complexity**: Medium (2-3 hours)  
 **Impact**: Foundational for TRUE PRIMAL pattern
 

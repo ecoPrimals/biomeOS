@@ -24,6 +24,49 @@ pub use super::bootstrap::{
 };
 
 impl NeuralApiServer {
+    /// Log a startup inventory of all discoverable graphs so that
+    /// deployment problems (wrong path, unparseable TOMLs, empty dir)
+    /// are immediately visible in logs.
+    async fn log_graph_inventory(&self) {
+        let graphs_dir = &self.graphs_dir;
+        let graphs_dir_exists = graphs_dir.is_dir();
+
+        match self.graph_handler.list().await {
+            Ok(list) => {
+                let count = list.as_array().map_or(0, Vec::len);
+                info!(
+                    "📊 Graph inventory: {} graphs available (graphs_dir={} [{}])",
+                    count,
+                    graphs_dir.display(),
+                    if graphs_dir_exists { "OK" } else { "MISSING" },
+                );
+                if count == 0 && graphs_dir_exists {
+                    warn!(
+                        "⚠️  graphs_dir exists but graph.list returned 0 graphs — \
+                         check that TOML files are parseable as neural_graph or DeploymentGraph"
+                    );
+                }
+                if count == 0 && !graphs_dir_exists {
+                    warn!(
+                        "⚠️  graphs_dir {} does not exist — graph.list will return [] \
+                         and the route table will be empty. \
+                         Use --graphs-dir to point to the correct directory.",
+                        graphs_dir.display()
+                    );
+                }
+            }
+            Err(e) => {
+                warn!("⚠️  Failed to list graphs during startup inventory: {e}");
+            }
+        }
+
+        let cap_count = self.router.list_capabilities().await.len();
+        info!(
+            "📊 Route table: {} registered capabilities after graph + primal loading",
+            cap_count
+        );
+    }
+
     /// Start the Neural API server
     ///
     /// Binds the socket **first** so external probes (primalSpring, health
@@ -90,7 +133,7 @@ impl NeuralApiServer {
             warn!("⚠️ Failed to start lifecycle monitoring: {}", e);
         }
 
-        // ALWAYS load semantic translations from Tower Atomic graph
+        // 4a. ALWAYS load semantic translations from Tower Atomic graph
         self.load_translations_on_startup().await?;
 
         // 4b. Auto-scan ALL graphs in graphs_dir for capability translations.
@@ -98,6 +141,9 @@ impl NeuralApiServer {
         // graph) are registered in the capability router — critical for TCP-only mode
         // where the full route table must be populated before any client connects.
         self.load_translations_from_all_graphs().await;
+
+        // 4c. Log graph inventory so deployment issues are immediately visible.
+        self.log_graph_inventory().await;
 
         // 5. Auto-discover running primals and register their capabilities
         self.discover_and_register_primals().await;

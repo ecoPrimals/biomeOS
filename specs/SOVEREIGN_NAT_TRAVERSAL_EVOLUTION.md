@@ -407,4 +407,4 @@ No external dependencies. No C code. Pure Rust. Family-owned infrastructure.
 
 ---
 
-**Next Action**: Create Songbird PR to expose `stun.serve` JSON-RPC method
+**Status**: NAT traversal 4-tier strategy implemented (v3.x) — LAN/punch/coordinated/relay operational. See CURRENT_STATUS.md for live state.

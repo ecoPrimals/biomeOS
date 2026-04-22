@@ -28,7 +28,9 @@ serde_json = { workspace = true }
 # System interaction (process signals via rustix)
 rustix = { workspace = true, features = ["process"] }
 
-# Network interface management (pure Rust, replaces sudo ip)
+# Network bridge management (pure Rust via Netlink, replaces shell-outs to `ip`/`brctl`).
+# Transitive dep on `netlink-sys` — thin FFI for AF_NETLINK kernel socket,
+# comparable to rustix's linux-raw-sys. No userspace C library.
 rtnetlink = { workspace = true }
 
 # Path and file utilities
@@ -46,7 +48,6 @@ biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
-
 
 [lints]
 workspace = true

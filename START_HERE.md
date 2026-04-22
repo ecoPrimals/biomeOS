@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: April 20, 2026
-**Status**: Production Ready (v3.22) — 7,802 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production (IPs, paths, primal names all centralized), `#[expect(reason)]` throughout, capability-based discovery compliant, all primalSpring audit gaps resolved (incl. armv7 cross-arch + UDS dual-protocol), data-driven launch profiles (nucleus + spawner), post-spawn auto-registration, TCP port conflict avoidance, TOML-driven primal configuration, unused deps pruned, all runtime paths centralized, UDS dual-protocol auto-detect (HTTP + raw JSON-RPC), zero `Box<dyn Error>` across all crates, stale demos cleaned, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: April 21, 2026
+**Status**: Production Ready (v3.23) — 7,802+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, BTSP ClientHello recognition on API socket, graph startup diagnostics, coralReef + NestGate streaming translations complete, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -167,16 +167,16 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.22 — zero blocking debt, all primalSpring audit gaps resolved)
+**Status**: Production Ready (v3.23 — zero blocking debt, deep debt audit CLEAN, all primalSpring Phase 45b gaps addressed)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
-**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor), lazy rescan, cross-gate routing, post-spawn auto-registration (part of biomeOS)
+**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), lazy rescan, cross-gate routing, post-spawn auto-registration (part of biomeOS)
 **Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` standard; enriched `lifecycle.composition` dashboard
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection + composition dashboard
-**IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect
+**IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 7,802 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 (IPs, paths, primal names all centralized) | **Box\<dyn Error\>**: 0
-**Updated**: April 20, 2026
+**Tests**: 7,802 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 (IPs, paths, primal names all centralized) | **Box\<dyn Error\>**: 0 | **Production files >800L**: 0
+**Updated**: April 21, 2026

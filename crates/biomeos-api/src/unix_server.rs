@@ -4,10 +4,12 @@
 //! Unix socket server for biomeOS API
 //!
 //! Provides secure, port-free communication via Unix sockets.
-//! Supports both HTTP (axum) and raw JSON-RPC (NDJSON) transports via
-//! first-byte auto-detection: if the first byte is `{`, the connection
-//! is handled as newline-delimited JSON-RPC; otherwise it is passed to
-//! hyper/axum as HTTP.
+//! Supports HTTP (axum), raw JSON-RPC (NDJSON), and BTSP recognition
+//! via first-byte auto-detection: if the first byte is `{`, the first
+//! line is inspected — BTSP `ClientHello` is answered with a redirect
+//! to the neural-api socket; otherwise the connection is handled as
+//! newline-delimited JSON-RPC.  Non-`{` bytes are passed to hyper/axum
+//! as HTTP.
 
 use anyhow::{Context, Result};
 use axum::Router;
@@ -166,6 +168,27 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
     let Ok(req) = serde_json::from_str::<serde_json::Value>(line) else {
         return jsonrpc_error(&null, -32700, "Parse error");
     };
+
+    // BTSP ClientHello detection: `{"protocol":"btsp",...}` has no `method`
+    // or `jsonrpc` field. Respond with a structured redirect so the caller
+    // knows to use the neural-api socket for BTSP-authenticated channels.
+    if req.get("protocol").and_then(serde_json::Value::as_str) == Some("btsp") {
+        debug!("BTSP ClientHello received on API socket — redirecting to neural-api");
+        let id = req.get("id").unwrap_or(&null);
+        return serde_json::json!({
+            "jsonrpc": "2.0",
+            "error": {
+                "code": -32001,
+                "message": "BTSP not supported on biomeOS API socket. \
+                    Use the neural-api socket for BTSP-authenticated connections.",
+                "data": {
+                    "protocol": "btsp",
+                    "redirect": "neural-api"
+                }
+            },
+            "id": id
+        });
+    }
 
     let id = req.get("id").unwrap_or(&null);
     let method = req
@@ -544,6 +567,29 @@ mod tests {
     fn test_dispatch_jsonrpc_line_parse_error() {
         let resp = dispatch_jsonrpc_line("not json at all");
         assert_eq!(resp["error"]["code"], -32700);
+    }
+
+    #[test]
+    fn test_dispatch_jsonrpc_line_btsp_client_hello_returns_redirect() {
+        let hello = r#"{"protocol":"btsp","version":1,"client_ephemeral_pub":"AAAA"}"#;
+        let resp = dispatch_jsonrpc_line(hello);
+        assert_eq!(resp["error"]["code"], -32001);
+        assert!(
+            resp["error"]["message"]
+                .as_str()
+                .expect("message")
+                .contains("neural-api")
+        );
+        assert_eq!(resp["error"]["data"]["protocol"], "btsp");
+        assert_eq!(resp["error"]["data"]["redirect"], "neural-api");
+    }
+
+    #[test]
+    fn test_dispatch_jsonrpc_line_btsp_minimal_hello_returns_redirect() {
+        let hello = r#"{"protocol":"btsp"}"#;
+        let resp = dispatch_jsonrpc_line(hello);
+        assert_eq!(resp["error"]["code"], -32001);
+        assert_eq!(resp["error"]["data"]["redirect"], "neural-api");
     }
 
     #[test]

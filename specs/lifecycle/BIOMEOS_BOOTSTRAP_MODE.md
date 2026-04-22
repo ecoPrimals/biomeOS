@@ -610,5 +610,5 @@ Future (Nested):
 *Specification: January 21, 2026*  
 *Type: Bootstrap Lifecycle*  
 *Status: Groundwork for implementation*  
-*Next: Implement mode detection and socket assignment*
+*Status: IMPLEMENTED (v3.x) — mode detection and socket assignment operational*
 

@@ -139,6 +139,13 @@ capabilities = [
 "storage.retrieve" = { provider = "nestgate", method = "storage.retrieve" }
 "storage.delete" = { provider = "nestgate", method = "storage.delete" }
 "storage.list" = { provider = "nestgate", method = "storage.list" }
+# Streaming / large-object operations (NestGate Session 43h)
+"storage.store_blob" = { provider = "nestgate", method = "store_blob" }
+"storage.retrieve_blob" = { provider = "nestgate", method = "retrieve_blob" }
+"storage.retrieve_range" = { provider = "nestgate", method = "retrieve_range" }
+"storage.object.size" = { provider = "nestgate", method = "object.size" }
+"storage.namespaces.list" = { provider = "nestgate", method = "namespaces.list" }
+"storage.stats" = { provider = "nestgate", method = "stats" }
 
 # ------------------------------------------------------------------------------
 # Compute Domain (ToadStool)
@@ -928,6 +935,29 @@ capabilities = [
 "rng.uniform" = { provider = "barracuda", method = "rng.uniform" }
 "rng.normal" = { provider = "barracuda", method = "rng.normal" }
 "rng.seed" = { provider = "barracuda", method = "rng.seed" }
+
+# ------------------------------------------------------------------------------
+# Shader / WGSL Domain (coralReef)
+# GPU shader compilation, validation, optimization, and WGSL parsing.
+# Source: coralReef Iter 80+ (multi-stage ML pipeline, CompilationInfo IPC)
+# ------------------------------------------------------------------------------
+
+[domains.shader]
+provider = "coralreef"
+capabilities = [
+    "shader.compile.wgsl", "shader.compile.spirv", "shader.validate",
+    "shader.optimize", "shader.list",
+    "wgsl.parse", "wgsl.validate",
+]
+
+[translations.shader]
+"shader.compile.wgsl" = { provider = "coralreef", method = "shader.compile.wgsl" }
+"shader.compile.spirv" = { provider = "coralreef", method = "shader.compile.spirv" }
+"shader.validate" = { provider = "coralreef", method = "shader.validate" }
+"shader.optimize" = { provider = "coralreef", method = "shader.optimize" }
+"shader.list" = { provider = "coralreef", method = "shader.list" }
+"wgsl.parse" = { provider = "coralreef", method = "wgsl.parse" }
+"wgsl.validate" = { provider = "coralreef", method = "wgsl.validate" }
 
 # ------------------------------------------------------------------------------
 # Health Domain (Cross-Cutting — All Primals)

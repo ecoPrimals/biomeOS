@@ -2,6 +2,51 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.23 (2026-04-21) — BTSP Wire-Format Fix, Graph Diagnostics, Registry Completion, Deep Debt Audit
+
+Addresses primalSpring Phase 45b BTSP escalation findings, completes capability registry gaps, and passes comprehensive deep debt audit.
+
+### BTSP ClientHello Recognition (API Socket)
+- `biomeos-api/unix_server.rs` — BTSP `{"protocol":"btsp",...}` on the API socket now returns a structured `-32001` error with redirect to the neural-api socket, instead of a generic "Method not found"
+- Neural API socket BTSP handshake verified correct: `server_handshake()` properly parses primalSpring's `ClientHello` wire format (`protocol`, `version`, `client_ephemeral_pub`)
+- 2 new unit tests for BTSP detection (full and minimal ClientHello)
+
+### Graph Bootstrapping Diagnostics
+- `server_lifecycle.rs` — added `log_graph_inventory()` called after translation loading
+- Logs graph count, `graphs_dir` path and existence, `runtime_graphs_dir` state
+- Warns explicitly when graphs_dir is missing or exists but contains 0 parseable graphs
+- Logs registered capabilities count after full bootstrap
+
+### Capability Registry Completion
+- `capability_registry.toml` — added `[domains.shader]` + `[translations.shader]` (7 coralReef methods: `shader.compile.wgsl`, `shader.compile.spirv`, `shader.validate`, `shader.optimize`, `shader.list`, `wgsl.parse`, `wgsl.validate`)
+- `capability_registry.toml` — added 6 NestGate streaming operations: `storage.store_blob`, `storage.retrieve_blob`, `storage.retrieve_range`, `storage.object.size`, `storage.namespaces.list`, `storage.stats`
+
+### Deep Debt Audit (Comprehensive)
+- **0 unsafe** in production — `#![forbid(unsafe_code)]` on all crate roots + all 20+ binaries
+- **0 TODO/FIXME/HACK/XXX** markers in production code
+- **0 `todo!()`/`unimplemented!()`** in production
+- **0 production files >800L** — all 5 files exceeding 800L are test-only modules
+- **0 hardcoded primal names** — all use `primal_names` constants from `biomeos-types`
+- **All ports/paths centralized** in `biomeos-types::constants`
+- **Mocks isolated to test modules only** — no mocks in production code
+
+### Hardcoding Elimination
+- `biomeos-primal-sdk/discovery.rs` — replaced `/run/user/`, `/data/local/tmp`, `/tmp` string literals in `method_for_dir()` with `runtime_paths::{LINUX_RUNTIME_DIR_PREFIX, ANDROID_RUNTIME_BASE, FALLBACK_RUNTIME_BASE}` constants
+
+### Dependency Hygiene
+- `rtnetlink` (`netlink-sys`) analyzed: thin FFI for AF_NETLINK kernel socket (not a userspace C library). Deep integration in `biomeos-deploy` for Linux bridge management. Documented rationale in `Cargo.toml`.
+- All other dependencies are pure Rust
+
+### Gap Status
+- UPSTREAM_GAP_STATUS medium-priority items (missing coralReef translations, NestGate streaming ops) → RESOLVED
+- Graph bootstrapping "tier-one blocker" documented against v3.09 — code-level investigation confirms v3.22+ dual-parser fallback and recursive directory scan should resolve. Startup diagnostics added for runtime verification.
+- Tower routing delegation (biomeOS → Songbird/BearDog) documented as architectural evolution path (not a v3.x code fix)
+
+### Metrics
+- 7,802+ tests passing (0 failures)
+- 0 clippy warnings (pedantic + nursery)
+- 0 C deps (blake3 pure-only; rtnetlink thin FFI documented)
+
 ## v3.22 (2026-04-20) — UDS Dual-Protocol, Box\<dyn Error\> Elimination, Debris Cleanup
 
 Resolved primalSpring audit item #7 and continued deep debt evolution.
