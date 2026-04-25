@@ -142,7 +142,14 @@ impl NeuralApiServer {
         // where the full route table must be populated before any client connects.
         self.load_translations_from_all_graphs().await;
 
-        // 4c. Log graph inventory so deployment issues are immediately visible.
+        // 4c. Pre-register capabilities declared in graph nodes so the route
+        // table is populated even before primals are discovered via live sockets.
+        // This is the critical bridge: graphs define which primals provide which
+        // capabilities, and we register expected socket paths now. Live discovery
+        // (step 5) will update endpoints for any primals that are already running.
+        self.register_capabilities_from_graphs().await;
+
+        // 4d. Log graph inventory so deployment issues are immediately visible.
         self.log_graph_inventory().await;
 
         // 5. Auto-discover running primals and register their capabilities

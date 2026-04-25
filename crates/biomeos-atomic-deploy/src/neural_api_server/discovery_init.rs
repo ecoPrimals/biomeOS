@@ -198,6 +198,125 @@ impl NeuralApiServer {
         crate::neural_router::probe_primal_capabilities_standalone(socket_path).await
     }
 
+    /// Pre-register capabilities from graph node definitions into the router.
+    ///
+    /// Scans all parseable graphs in `graphs_dir`, extracts node capabilities
+    /// and primal names, computes expected socket paths using the family ID and
+    /// standard socket directory, and registers them in the `NeuralRouter`.
+    ///
+    /// This populates the route table at startup so that `capability.call` can
+    /// resolve primals even before live socket discovery runs. When primals come
+    /// online, `discover_and_register_primals()` or `capability.register` will
+    /// update the endpoints with confirmed addresses.
+    pub(crate) async fn register_capabilities_from_graphs(&self) {
+        let mut total_caps = 0usize;
+        let mut total_nodes = 0usize;
+
+        let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
+        let base_dir = socket_dirs
+            .first()
+            .cloned()
+            .unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
+
+        let graph_dirs = [&self.graphs_dir];
+        for dir in &graph_dirs {
+            let entries = match std::fs::read_dir(dir) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) != Some("toml") {
+                    continue;
+                }
+                let graph = match crate::neural_graph::Graph::from_toml_file(&path) {
+                    Ok(g) => g,
+                    Err(_) => continue,
+                };
+
+                for node in &graph.nodes {
+                    let primal_name = if let Some(ref sel) = node.primal {
+                        if let Some(ref name) = sel.by_name {
+                            name.clone()
+                        } else if let Some(ref cap) = sel.by_capability {
+                            cap.clone()
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    };
+
+                    if node.capabilities.is_empty() && node.capabilities_provided.is_none() {
+                        continue;
+                    }
+
+                    let socket_path =
+                        base_dir.join(format!("{}-{}.sock", primal_name, self.family_id));
+
+                    let mut registered = 0usize;
+
+                    for cap in &node.capabilities {
+                        if let Err(e) = self
+                            .router
+                            .register_capability_unix(
+                                cap,
+                                &primal_name,
+                                &socket_path,
+                                "graph-bootstrap",
+                            )
+                            .await
+                        {
+                            debug!("   Graph pre-register {}.{}: {}", primal_name, cap, e);
+                        } else {
+                            registered += 1;
+                        }
+                    }
+
+                    if let Some(ref provided) = node.capabilities_provided {
+                        for cap in provided.keys() {
+                            if let Err(e) = self
+                                .router
+                                .register_capability_unix(
+                                    cap,
+                                    &primal_name,
+                                    &socket_path,
+                                    "graph-bootstrap",
+                                )
+                                .await
+                            {
+                                debug!("   Graph pre-register {}.{}: {}", primal_name, cap, e);
+                            } else {
+                                registered += 1;
+                            }
+                        }
+                    }
+
+                    if registered > 0 {
+                        total_caps += registered;
+                        total_nodes += 1;
+                        debug!(
+                            "   📋 Graph pre-registered {} — {} capabilities ({})",
+                            primal_name,
+                            registered,
+                            socket_path.display(),
+                        );
+                    }
+                }
+            }
+        }
+
+        if total_nodes > 0 {
+            info!(
+                "📋 Graph bootstrap: pre-registered {} capabilities from {} graph nodes",
+                total_caps, total_nodes
+            );
+        } else {
+            debug!("📋 Graph bootstrap: no graph nodes with capabilities found");
+        }
+    }
+
     /// Re-scan socket directories and register any newly-appeared primals.
     ///
     /// JSON-RPC method: `topology.rescan`

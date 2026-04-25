@@ -50,6 +50,7 @@ use crate::protocol_escalation::{EscalationConfig, ProtocolEscalationManager};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use tokio::sync::RwLock;
 
 /// Neural API server state
@@ -78,6 +79,11 @@ pub struct NeuralApiServer {
 
     /// Operating mode (Bootstrap or Coordinated)
     pub(super) mode: Arc<RwLock<BiomeOsMode>>,
+
+    /// Runtime BTSP enforcement flag.  Starts `false` (cleartext bootstrap).
+    /// Set to `true` by the `btsp.escalate` RPC or automatically after
+    /// Tower health is confirmed. Once set, new connections are BTSP-enforced.
+    pub(super) btsp_escalated: Arc<AtomicBool>,
 
     /// Socket nucleation (deterministic assignment)
     pub(super) nucleation: Arc<RwLock<SocketNucleation>>,
@@ -185,6 +191,7 @@ impl NeuralApiServer {
             tcp_only: false,
             router,
             mode: Arc::new(RwLock::new(BiomeOsMode::Bootstrap)),
+            btsp_escalated: Arc::new(AtomicBool::new(false)),
             nucleation: Arc::new(RwLock::new(SocketNucleation::new(
                 SocketStrategy::XdgRuntime,
             ))),

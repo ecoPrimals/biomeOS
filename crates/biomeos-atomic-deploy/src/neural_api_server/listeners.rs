@@ -52,6 +52,47 @@ impl NeuralApiServer {
         }))
     }
 
+    /// Escalate BTSP enforcement at runtime.
+    ///
+    /// Called after Tower (BearDog + Songbird) is confirmed healthy.
+    /// All subsequent UDS connections will require BTSP authentication.
+    /// This is a one-way transition: once escalated, cannot be de-escalated.
+    ///
+    /// JSON-RPC method: `btsp.escalate`
+    pub(crate) fn btsp_escalate(&self) -> Result<serde_json::Value> {
+        let was = self
+            .btsp_escalated
+            .swap(true, std::sync::atomic::Ordering::SeqCst);
+        if was {
+            info!("🔐 BTSP escalation: already enforced (no-op)");
+        } else {
+            info!("🔐 BTSP escalated: new connections now require BTSP authentication");
+        }
+        Ok(serde_json::json!({
+            "escalated": true,
+            "previously_escalated": was,
+            "family_id": self.family_id,
+        }))
+    }
+
+    /// Report current BTSP enforcement state.
+    ///
+    /// JSON-RPC method: `btsp.status`
+    pub(crate) fn btsp_status(&self) -> Result<serde_json::Value> {
+        let has_family = biomeos_core::btsp_client::has_family_id();
+        let static_enforce = biomeos_core::btsp_client::btsp_enforce();
+        let runtime_escalated = self
+            .btsp_escalated
+            .load(std::sync::atomic::Ordering::Relaxed);
+        let effective = static_enforce || runtime_escalated;
+        Ok(serde_json::json!({
+            "has_family_id": has_family,
+            "static_enforce": static_enforce,
+            "runtime_escalated": runtime_escalated,
+            "effective_enforce": effective,
+        }))
+    }
+
     /// Bind the Unix socket so the path exists for external probes.
     ///
     /// Called early in `serve()` before bootstrap or translation loading,
@@ -85,22 +126,29 @@ impl NeuralApiServer {
     /// [`btsp_enforce`]: biomeos_core::btsp_client::btsp_enforce
     pub(crate) async fn accept_connections(&self, listener: UnixListener) -> Result<()> {
         let btsp_active = biomeos_core::btsp_client::has_family_id();
-        let enforce = biomeos_core::btsp_client::btsp_enforce();
+        let static_enforce = biomeos_core::btsp_client::btsp_enforce();
 
         info!(
             "🧠 Neural API server accepting UDS connections (mode: {}, BTSP: {})",
             self.mode_display_str().await,
             if btsp_active {
-                if enforce { "enforced" } else { "warn-only" }
+                if static_enforce {
+                    "enforced"
+                } else {
+                    "warn-only (escalatable)"
+                }
             } else {
                 "off (dev)"
             }
         );
 
+        let escalated = self.btsp_escalated.clone();
         loop {
             match listener.accept().await {
                 Ok((stream, _addr)) => {
                     let server = self.clone();
+                    let enforce =
+                        static_enforce || escalated.load(std::sync::atomic::Ordering::Relaxed);
                     tokio::spawn(async move {
                         if let Err(e) = server.handle_connection_with_btsp(stream, enforce).await {
                             error!("Connection error: {}", e);

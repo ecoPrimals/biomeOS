@@ -2,6 +2,38 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.25 (2026-04-25) — Graph Bootstrap Pre-Registration, BTSP Escalation
+
+### Graph bootstrapping (Gap 1 — primalSpring Phase 45c audit)
+- **`register_capabilities_from_graphs()`**: New startup step in `discovery_init.rs`.
+  Scans all parseable graphs in `graphs_dir`, extracts node capabilities and primal
+  names (from `primal.by_capability` / `primal.by_name`), computes expected socket paths
+  from family ID + standard socket directory, and pre-registers them in the NeuralRouter.
+  This populates the route table at startup so `capability.call` can resolve primals
+  (e.g., `tensor` → barraCuda, `storage` → NestGate) even before live socket discovery.
+- Startup sequence updated: graph pre-registration runs after translation loading (4b)
+  and before live socket discovery (5). Live discovery updates endpoints for running primals.
+
+### BTSP escalation (Gap 2 — primalSpring Phase 45c audit)
+- **`btsp.escalate`** JSON-RPC method: Sets a runtime `AtomicBool` flag that makes all
+  subsequent UDS connections require BTSP authentication. One-way transition (cleartext →
+  enforced). Called after Tower (BearDog + Songbird) is confirmed healthy.
+- **`btsp.status`** JSON-RPC method: Reports current BTSP enforcement state including
+  `has_family_id`, `static_enforce`, `runtime_escalated`, and `effective_enforce`.
+- `accept_connections` now checks both the static `btsp_enforce()` AND the runtime
+  `btsp_escalated` flag on each connection accept.
+- Route table: Added `btsp.escalate` → `BtspEscalate`, `btsp.status` → `BtspStatus`.
+
+### Tensor translations (Gap 3 — already resolved)
+- `capability_registry.toml` already contains `[domains.tensor]` + `[translations.tensor]`
+  with 33 entries covering all barraCuda Sprint 44 methods (tensor, math, stats, noise,
+  activation, linalg, spectral, rng). No code change needed.
+
+### Verification
+- `cargo test --workspace`: 7,814 pass, 0 failures
+- `cargo clippy -- -D warnings`: 0 warnings
+- `cargo fmt --check`: clean
+
 ## v3.24 (2026-04-22) — primal.list, Graph Executor Fix, Bootstrap Tolerance
 
 Addresses primalSpring downstream audit: Neural API protocol gaps and graph bootstrapping failures.
