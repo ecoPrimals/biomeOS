@@ -183,6 +183,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("neural_api.get_primals", Route::TopologyPrimals),
     ("topology.primals", Route::TopologyPrimals),
     ("primal.list", Route::TopologyPrimals),
+    ("list", Route::TopologyPrimals),
     (
         "neural_api.get_proprioception",
         Route::TopologyProprioception,

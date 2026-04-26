@@ -130,10 +130,25 @@ impl NeuralRouter {
         };
 
         let mut registry = self.capability_registry.write().await;
-        registry
-            .entry(capability.to_string())
-            .or_default()
-            .push(registration);
+        let providers = registry.entry(capability.to_string()).or_default();
+
+        if let Some(existing) = providers
+            .iter_mut()
+            .find(|r| r.primal_name == registration.primal_name)
+        {
+            debug!(
+                "   Updating {} endpoint for {} (was {}, now {})",
+                existing.primal_name,
+                existing.capability,
+                existing.endpoint.display_string(),
+                registration.endpoint.display_string(),
+            );
+            existing.endpoint = registration.endpoint;
+            existing.registered_at = registration.registered_at;
+            existing.source = registration.source;
+        } else {
+            providers.push(registration);
+        }
 
         Ok(())
     }

@@ -212,22 +212,22 @@ impl Graph {
 
     /// Convert a `[[graph.nodes]]` (`DeploymentGraph`) node into the `neural_graph` `GraphNode` schema.
     ///
-    /// `DeploymentGraph` nodes have: id, name, capability, `depends_on`, `feedback_to`,
-    /// `budget_ms`, config.primal, params.*
-    ///
-    /// Neural graph nodes have: id, operation.name, operation.params, `constraints.timeout_ms`,
-    /// `depends_on`, capabilities, config.*
+    /// Accepts both biomeOS-native fields (`id`, `capability`, `config.primal`) and
+    /// primalSpring cell-graph fields (`name`, `binary`, `by_capability`, `order`),
+    /// mapping the latter into the canonical format.
     fn convert_deployment_node(node_value: &toml::Value) -> anyhow::Result<GraphNode> {
         let table = node_value.as_table().context("Node must be a TOML table")?;
 
         let id = table
             .get("id")
+            .or_else(|| table.get("name"))
             .and_then(|v| v.as_str())
-            .context("Node missing 'id'")?
+            .context("Node missing 'id' (or 'name')")?
             .to_string();
 
         let capability = table
             .get("capability")
+            .or_else(|| table.get("by_capability"))
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
@@ -279,13 +279,32 @@ impl Graph {
             })
             .unwrap_or_default();
 
-        // Extract primal hint from [graph.nodes.config]
+        // Extract primal hint from [graph.nodes.config] or top-level `binary`
         let primal_name = table
             .get("config")
             .and_then(|v| v.as_table())
             .and_then(|t| t.get("primal"))
             .and_then(|v| v.as_str())
+            .or_else(|| table.get("binary").and_then(|v| v.as_str()))
             .map(String::from);
+
+        let primal_selector = if table
+            .get("by_capability")
+            .and_then(|v| v.as_str())
+            .is_some()
+        {
+            Some(PrimalSelector {
+                by_capability: Some(capability.clone()),
+                by_name: primal_name.clone(),
+            })
+        } else if primal_name.is_some() {
+            Some(PrimalSelector {
+                by_capability: None,
+                by_name: primal_name.clone(),
+            })
+        } else {
+            None
+        };
 
         let operation = if capability.is_empty() {
             None
@@ -313,23 +332,31 @@ impl Graph {
             retry: None,
         });
 
+        let mut config = HashMap::new();
+        if let Some(ft) = feedback_to {
+            config.insert("feedback_to".to_string(), serde_json::Value::String(ft));
+        }
+        if let Some(ref pn) = primal_name {
+            config.insert("primal".to_string(), serde_json::Value::String(pn.clone()));
+        }
+        if !name.is_empty() {
+            config.insert("name".to_string(), serde_json::Value::String(name));
+        }
+        if !capability.is_empty() {
+            config.insert(
+                "capability".to_string(),
+                serde_json::Value::String(capability.clone()),
+            );
+        }
+        if !params.is_empty() {
+            config.insert("params".to_string(), serde_json::json!(params));
+        }
+
         let capabilities = if capability.is_empty() {
             vec![]
         } else {
             vec![capability]
         };
-
-        // Store feedback_to and primal hint in node config for downstream use
-        let mut config = HashMap::new();
-        if let Some(ft) = feedback_to {
-            config.insert("feedback_to".to_string(), serde_json::Value::String(ft));
-        }
-        if let Some(pn) = primal_name {
-            config.insert("primal".to_string(), serde_json::Value::String(pn));
-        }
-        if !name.is_empty() {
-            config.insert("name".to_string(), serde_json::Value::String(name));
-        }
 
         let cost_estimate_ms = table
             .get("cost_estimate_ms")
@@ -350,7 +377,7 @@ impl Graph {
 
         Ok(GraphNode {
             id,
-            primal: None,
+            primal: primal_selector,
             output: None,
             operation,
             constraints,

@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.26 (2026-04-26) — Socket Family-ID Fix, Graph Schema Alignment, `list` Method
+
+### Socket family-ID mismatch (PG-41 — primalSpring Live Composition Validation)
+- **`NeuralRouter::register_capability()`**: Changed from append-only to upsert semantics.
+  When a capability is registered for a primal that already has an entry, the endpoint is
+  **updated** instead of appended. This ensures live socket discovery (step 5) overwrites
+  graph-bootstrap entries (step 4c) when the actual socket has a different family-ID suffix
+  (e.g., `barracuda-nucleus01.sock` replaces `barracuda-default.sock`). Previous behavior:
+  first-registered entry won (`providers[0]`), so graph bootstrap's `{primal}-{family_id}.sock`
+  stayed as primary even when the live socket had a different family.
+
+### Graph schema alignment (PG-39 — primalSpring Live Composition Validation)
+- **`convert_deployment_node()`**: Extended to accept primalSpring cell-graph fields:
+  - `name` falls back to `id` when `id` is absent (primalSpring uses `name` as node identity).
+  - `by_capability` falls back to `capability` (primalSpring semantic field mapping).
+  - `binary` maps to `config["primal"]` and populates `PrimalSelector.by_name`.
+  - `PrimalSelector` is now constructed from `by_capability`/`binary` instead of always `None`.
+  - **`config["capability"]` + `config["params"]`** are now populated during conversion.
+    Fixes `node_capability_call_with_registry` which reads from `config`, not `operation.params`.
+
+### Neural API bare `list` method (petalTongue DataService compatibility)
+- Added `("list", Route::TopologyPrimals)` to `ROUTE_TABLE`. Single-word methods don't trigger
+  the semantic capability fallback (requires a dot), so `list` was returning `MethodNotFound`.
+  Now maps to the same handler as `primal.list` / `topology.primals`.
+
+### Verification
+- `cargo check --workspace`: 0 errors
+- `cargo clippy --workspace -- -D warnings`: 0 warnings
+- `cargo fmt --check`: clean
+- All test failures are pre-existing (environment-dependent discovery tests with live sockets)
+
 ## v3.25 (2026-04-25) — Graph Bootstrap Pre-Registration, BTSP Escalation
 
 ### Graph bootstrapping (Gap 1 — primalSpring Phase 45c audit)
