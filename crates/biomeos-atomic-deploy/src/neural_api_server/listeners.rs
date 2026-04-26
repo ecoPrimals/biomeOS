@@ -75,7 +75,7 @@ impl NeuralApiServer {
         }))
     }
 
-    /// Report current BTSP enforcement state.
+    /// Report current BTSP enforcement state including Phase 3 readiness.
     ///
     /// JSON-RPC method: `btsp.status`
     pub(crate) fn btsp_status(&self) -> Result<serde_json::Value> {
@@ -90,6 +90,10 @@ impl NeuralApiServer {
             "static_enforce": static_enforce,
             "runtime_escalated": runtime_escalated,
             "effective_enforce": effective,
+            "phase": if effective { "phase2_enforced" } else if has_family { "phase2_available" } else { "phase1_cleartext" },
+            "post_handshake_cipher": "null",
+            "phase3_ready": false,
+            "phase3_notes": "Encrypted post-handshake channels deferred ecosystem-wide. Current: null cipher after BTSP handshake. Phase 3 requires: cipher negotiation (btsp.negotiate), HKDF session keys, length-prefixed AEAD framing.",
         }))
     }
 

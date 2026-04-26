@@ -139,6 +139,7 @@ enum Route {
     HealthReadiness,
     BtspEscalate,
     BtspStatus,
+    GraphTickStatus,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -168,6 +169,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("neural_api.resume_continuous", Route::GraphResumeContinuous),
     ("graph.stop_continuous", Route::GraphStopContinuous),
     ("neural_api.stop_continuous", Route::GraphStopContinuous),
+    ("graph.tick_status", Route::GraphTickStatus),
     // Pathway Learner
     (
         "graph.suggest_optimizations",
@@ -411,6 +413,7 @@ impl NeuralApiServer {
             Route::GraphStopContinuous => {
                 dispatch(self.graph_handler.stop_continuous(params).await, id)
             }
+            Route::GraphTickStatus => dispatch(self.graph_handler.tick_status().await, id),
             Route::GraphSuggestOptimizations => {
                 dispatch(self.graph_handler.suggest_optimizations(params).await, id)
             }

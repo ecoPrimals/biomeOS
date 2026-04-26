@@ -2,6 +2,38 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.27 (2026-04-26) — Cellular Deploy, Tick Loop Relay, BTSP Phase 3 Readiness
+
+### Cellular deployment maturity (primalSpring audit item 1)
+- **`biomeos deploy <graph>`**: No longer a stub. Now discovers the running neural-api
+  socket (via `resolve_neural_api_socket` from family ID / env / standard locations),
+  connects via `AtomicClient`, and sends `graph.execute` with the graph ID and absolute
+  path. Cell graphs from `plasmidBin/cells/` can now deploy through `cell_launcher.sh`
+  → `biomeos deploy` → neural-api lifecycle management (start, health, rollback).
+- Made `socket_discovery::neural_api` module `pub` for external socket resolution.
+
+### Graph execution tick loop (primalSpring audit item 2)
+- **`GraphHandler::event_broadcaster`**: Optional shared `GraphEventBroadcaster` field.
+  When set via `with_event_broadcaster()`, continuous sessions relay tick events
+  (`TickCompleted`, `SessionStarted`, etc.) from their per-session broadcaster to the
+  shared one, making the tick loop observable to WebSocket/SSE subscribers.
+- **`graph.tick_status`**: New JSON-RPC method returning all active continuous sessions
+  with state, graph ID, start time, and whether a shared broadcaster is wired.
+- Route: `graph.tick_status` → `Route::GraphTickStatus`.
+
+### BTSP Phase 3 preparation (primalSpring audit item 3)
+- **`btsp.status`**: Enhanced response with Phase 3 readiness fields:
+  `phase` (phase1_cleartext / phase2_available / phase2_enforced),
+  `post_handshake_cipher` ("null"), `phase3_ready` (false), `phase3_notes` (documents
+  what Phase 3 requires: cipher negotiation, HKDF session keys, AEAD framing).
+  Ecosystem-wide Phase 3 remains deferred; this surfaces readiness state for monitoring.
+
+### Verification
+- `cargo check --workspace`: 0 errors
+- `cargo clippy --workspace -- -D warnings`: 0 warnings
+- `cargo fmt --check`: clean
+- All test failures are pre-existing (environment-dependent discovery tests)
+
 ## v3.26 (2026-04-26) — Socket Family-ID Fix, Graph Schema Alignment, `list` Method
 
 ### Socket family-ID mismatch (PG-41 — primalSpring Live Composition Validation)

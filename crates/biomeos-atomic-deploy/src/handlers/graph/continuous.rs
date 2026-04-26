@@ -47,8 +47,21 @@ impl GraphHandler {
             .await;
 
         let session_id = format!("{graph_id}-{}", chrono::Utc::now().timestamp_millis());
-        let broadcaster = GraphEventBroadcaster::new(16);
-        let mut executor = ContinuousExecutor::new(deployment_graph, broadcaster);
+        let session_broadcaster = GraphEventBroadcaster::new(16);
+
+        if let Some(ref shared) = self.event_broadcaster {
+            let mut rx = session_broadcaster.subscribe();
+            let shared = shared.clone();
+            let sid = session_id.clone();
+            tokio::spawn(async move {
+                while let Ok(event) = rx.recv().await {
+                    debug!("   [tick relay {}] {:?}", sid, event);
+                    let _ = shared.broadcast(event).await;
+                }
+            });
+        }
+
+        let mut executor = ContinuousExecutor::new(deployment_graph, session_broadcaster);
 
         let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel::<SessionCommand>(16);
         let state_rx = executor.state_receiver();

@@ -7,6 +7,8 @@
 
 use anyhow::{Context, Result};
 use biomeos_atomic_deploy::neural_graph::Graph as NeuralGraph;
+use biomeos_core::atomic_client::AtomicClient;
+use biomeos_core::socket_discovery::neural_api::resolve_neural_api_socket;
 use biomeos_graph::GraphLoader;
 use std::path::PathBuf;
 use tracing::{debug, info, warn};
@@ -180,12 +182,48 @@ pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<(
         return Ok(());
     }
 
-    // Full deployment requires Neural API
-    info!("⚠️  Full deployment execution requires Neural API integration");
-    info!("   Use: biomeos neural-api (in separate terminal)");
-    info!("   Then: Send deployment request via JSON-RPC");
+    let family_id = biomeos_core::family_discovery::get_family_id();
+    let socket = resolve_neural_api_socket(&family_id, None, None);
 
-    Ok(())
+    let Some(socket) = socket else {
+        info!("⚠️  No running neural-api found");
+        info!("   Start it: biomeos neural-api");
+        info!("   Or set NEURAL_API_SOCKET to the socket path");
+        anyhow::bail!("Cannot deploy: neural-api socket not found (checked family '{family_id}')");
+    };
+
+    info!("📡 Connecting to neural-api at {}", socket.display());
+
+    let graph_abs = std::fs::canonicalize(&graph)
+        .with_context(|| format!("Cannot resolve graph path: {}", graph.display()))?;
+
+    let client = AtomicClient::unix(&socket);
+    let result = client
+        .call(
+            "graph.execute",
+            serde_json::json!({
+                "graph_id": loaded.id,
+                "graph_path": graph_abs.to_string_lossy(),
+            }),
+        )
+        .await;
+
+    match result {
+        Ok(response) => {
+            info!("✅ Deployment submitted: {}", loaded.id);
+            if let Some(status) = response.get("status").and_then(|v| v.as_str()) {
+                info!("   Status: {status}");
+            }
+            if let Some(session) = response.get("session_id").and_then(|v| v.as_str()) {
+                info!("   Session: {session}");
+            }
+            debug!("   Response: {response}");
+            Ok(())
+        }
+        Err(e) => {
+            anyhow::bail!("Deployment failed: {e}");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -242,13 +280,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_run_full_execution() {
+    async fn test_run_full_execution_without_neural_api() {
         let dir = tempfile::tempdir().expect("temp dir");
         let graph_path = dir.path().join("graph.toml");
         std::fs::write(&graph_path, MINIMAL_VALID_GRAPH).expect("write graph");
 
         let result = run(graph_path, false, false).await;
-        result.expect("full run should succeed (prints message, no actual deploy)");
+        let err = result.expect_err("should fail without neural-api running");
+        assert!(
+            err.to_string().contains("neural-api socket not found"),
+            "should report missing socket: {err}"
+        );
     }
 
     #[tokio::test]

@@ -62,7 +62,7 @@ pub mod cap_probe;
 mod capability_sockets;
 mod engine;
 mod engine_probes;
-mod neural_api;
+pub mod neural_api;
 mod path_builder;
 mod registry_queries;
 mod result;

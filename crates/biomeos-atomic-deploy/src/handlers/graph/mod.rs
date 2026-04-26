@@ -24,6 +24,7 @@ use crate::neural_graph::Graph;
 use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
 use biomeos_graph::continuous::SessionState;
+use biomeos_graph::events::GraphEventBroadcaster;
 use biomeos_graph::graph::DeploymentGraph;
 use biomeos_types::{SystemPaths, constants::files, defaults::DEFAULT_SOCKET_DIR};
 use serde::{Deserialize, Serialize};
@@ -89,6 +90,10 @@ pub struct GraphHandler {
     pub(super) translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
     /// Override neural metrics DB path (e.g. tests); when `None`, use XDG data dir.
     pub(super) metrics_db_path: Option<PathBuf>,
+    /// Shared event broadcaster for continuous tick events.
+    /// When set, continuous sessions relay `TickCompleted` / session lifecycle events
+    /// to this broadcaster so WebSocket/SSE subscribers can observe the tick loop.
+    pub(super) event_broadcaster: Option<Arc<GraphEventBroadcaster>>,
 }
 
 /// Recursively collect all `.toml` files under `dir`, including subdirectories.
@@ -160,7 +165,14 @@ impl GraphHandler {
             router,
             translation_registry,
             metrics_db_path,
+            event_broadcaster: None,
         }
+    }
+
+    /// Set a shared event broadcaster for continuous session tick events.
+    pub fn with_event_broadcaster(mut self, broadcaster: Arc<GraphEventBroadcaster>) -> Self {
+        self.event_broadcaster = Some(broadcaster);
+        self
     }
 
     /// Resolve a graph ID to a file path, searching runtime graphs first,
@@ -425,5 +437,27 @@ impl GraphHandler {
             .as_str()
             .context("Missing session_id")?
             .to_string())
+    }
+
+    /// Report status of all active continuous sessions.
+    ///
+    /// JSON-RPC method: `graph.tick_status`
+    pub async fn tick_status(&self) -> Result<Value> {
+        let sessions = self.continuous_sessions.read().await;
+        let mut session_list = Vec::new();
+        for (sid, session) in sessions.iter() {
+            let state = *session.state_rx.borrow();
+            session_list.push(json!({
+                "session_id": sid,
+                "graph_id": session.graph_id,
+                "state": format!("{state:?}"),
+                "started_at": session.started_at,
+            }));
+        }
+        Ok(json!({
+            "sessions": session_list,
+            "count": session_list.len(),
+            "has_shared_broadcaster": self.event_broadcaster.is_some(),
+        }))
     }
 }
