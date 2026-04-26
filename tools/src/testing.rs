@@ -2,7 +2,7 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Testing Module
-//! 
+//!
 //! Enhanced testing utilities and coverage analysis for biomeOS.
 
 use anyhow::Result;
@@ -37,14 +37,14 @@ impl Default for TestConfig {
 /// Run comprehensive test suite
 pub async fn run_all_tests(config: &TestConfig) -> Result<()> {
     print_section("biomeOS COMPREHENSIVE TEST SUITE");
-    
+
     let workspace_path = &config.workspace_root;
 
     run_unit_tests(workspace_path).await?;
     run_integration_tests(workspace_path).await?;
     run_ui_tests(workspace_path).await?;
     run_benchmarks(workspace_path).await?;
-    
+
     print_success("All test suites completed successfully");
     Ok(())
 }
@@ -52,13 +52,14 @@ pub async fn run_all_tests(config: &TestConfig) -> Result<()> {
 /// Run unit tests for all packages
 async fn run_unit_tests(workspace_path: &Path) -> Result<()> {
     print_section("Unit Tests");
-    
+
     execute_command(
         "cargo",
         &["test", "--workspace", "--lib"],
-        Some(workspace_path)
-    ).await?;
-    
+        Some(workspace_path),
+    )
+    .await?;
+
     print_success("Unit tests passed");
     Ok(())
 }
@@ -66,13 +67,14 @@ async fn run_unit_tests(workspace_path: &Path) -> Result<()> {
 /// Run integration tests
 async fn run_integration_tests(workspace_path: &Path) -> Result<()> {
     print_section("Integration Tests");
-    
+
     execute_command(
         "cargo",
         &["test", "--workspace", "--test", "*"],
-        Some(workspace_path)
-    ).await?;
-    
+        Some(workspace_path),
+    )
+    .await?;
+
     print_success("Integration tests passed");
     Ok(())
 }
@@ -80,21 +82,18 @@ async fn run_integration_tests(workspace_path: &Path) -> Result<()> {
 /// Run UI-specific tests
 async fn run_ui_tests(workspace_path: &Path) -> Result<()> {
     print_section("UI Tests");
-    
+
     // Test UI compilation
-    execute_command(
-        "cargo",
-        &["test", "-p", "biomeos-ui"],
-        Some(workspace_path)
-    ).await?;
-    
+    execute_command("cargo", &["test", "-p", "biomeos-ui"], Some(workspace_path)).await?;
+
     // Test UI binary builds
     execute_command(
         "cargo",
         &["build", "-p", "biomeos-ui"],
-        Some(workspace_path)
-    ).await?;
-    
+        Some(workspace_path),
+    )
+    .await?;
+
     print_success("UI tests passed");
     Ok(())
 }
@@ -102,13 +101,9 @@ async fn run_ui_tests(workspace_path: &Path) -> Result<()> {
 /// Run benchmark tests
 async fn run_benchmarks(workspace_path: &Path) -> Result<()> {
     print_section("Benchmark Tests");
-    
-    execute_command(
-        "cargo",
-        &["bench", "--workspace"],
-        Some(workspace_path)
-    ).await?;
-    
+
+    execute_command("cargo", &["bench", "--workspace"], Some(workspace_path)).await?;
+
     print_success("Benchmarks completed");
     Ok(())
 }
@@ -165,4 +160,4 @@ fn extract_llvm_cov_region_percent(output: &str) -> f64 {
         }
     }
     0.0
-} 
+}

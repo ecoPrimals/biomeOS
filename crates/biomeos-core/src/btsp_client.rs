@@ -18,6 +18,7 @@
 //! (`btsp.session.create`, `btsp.session.verify`). biomeOS is a family member
 //! and holds the family seed for key derivation.
 
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use biomeos_types::primal_names;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -132,7 +133,7 @@ pub fn security_mode() -> SecurityMode {
 pub fn has_family_id() -> bool {
     std::env::var("FAMILY_ID")
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-        .map(|v| !v.is_empty() && v != "default")
+        .map(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID)
         .unwrap_or(false)
 }
 
@@ -142,7 +143,7 @@ pub fn family_id() -> Option<String> {
     std::env::var("FAMILY_ID")
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
         .ok()
-        .filter(|v| !v.is_empty() && v != "default")
+        .filter(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID)
 }
 
 /// Whether BTSP enforcement is active. When `true`, connections from
@@ -356,45 +357,34 @@ where
 }
 
 /// Errors during BTSP handshake.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum BtspHandshakeError {
     /// First line was a raw JSON-RPC request, not a `ClientHello`. The line
     /// content is preserved so the caller can dispatch it as a normal request.
+    #[error("client sent raw JSON-RPC (no BTSP handshake)")]
     RawJsonRpc(String),
     /// Security provider socket not found — cannot delegate crypto.
+    #[error("security provider socket not found for BTSP delegation")]
     BearDogNotFound,
     /// Security provider returned an error during session creation or verification.
+    #[error("BTSP security provider error: {0}")]
     SecurityProviderError(String),
     /// Client failed family verification.
+    #[error("BTSP family verification failed")]
     VerificationFailed,
     /// Wire protocol error (malformed message, serialization failure).
+    #[error("BTSP protocol error: {0}")]
     Protocol(String),
     /// Handshake timed out.
+    #[error("BTSP handshake timed out")]
     Timeout,
     /// Client disconnected during handshake.
+    #[error("client disconnected during BTSP handshake")]
     ConnectionClosed,
     /// I/O error on the connection.
+    #[error("BTSP I/O error: {0}")]
     Io(std::io::Error),
 }
-
-impl std::fmt::Display for BtspHandshakeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::RawJsonRpc(_) => write!(f, "client sent raw JSON-RPC (no BTSP handshake)"),
-            Self::BearDogNotFound => {
-                write!(f, "security provider socket not found for BTSP delegation")
-            }
-            Self::SecurityProviderError(e) => write!(f, "BTSP security provider error: {e}"),
-            Self::VerificationFailed => write!(f, "BTSP family verification failed"),
-            Self::Protocol(e) => write!(f, "BTSP protocol error: {e}"),
-            Self::Timeout => write!(f, "BTSP handshake timed out"),
-            Self::ConnectionClosed => write!(f, "client disconnected during BTSP handshake"),
-            Self::Io(e) => write!(f, "BTSP I/O error: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for BtspHandshakeError {}
 
 // ── Security provider RPC delegation helpers ──────────────────────────
 
@@ -471,7 +461,7 @@ async fn verify_session_via_security_provider(
 pub fn validate_insecure_guard() -> Result<(), String> {
     let has_family = std::env::var("FAMILY_ID")
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-        .map(|v| !v.is_empty() && v != "default")
+        .map(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID)
         .unwrap_or(false);
     let insecure = std::env::var("BIOMEOS_INSECURE")
         .map(|v| v == "1" || v == "true")

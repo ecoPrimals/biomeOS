@@ -55,13 +55,6 @@ members = [
     "crates/biomeos-compute",  # Isomorphic & fractal compute architecture
     "crates/biomeos-graph",  # Graph-based orchestration for Neural API
     "crates/biomeos-ui",  # Interactive UI orchestration - network effect of multiple primals
-    # "ui",  # Archived 2025-12-23: UI evolved into petalTongue primal (../petalTongue/)
-    # Showcase crates archived - moved to showcase/ directory history
-    # "showcase/03-p2p-coordination/01-btsp-tunnel-coordination",
-    # "showcase/03-p2p-coordination/02-birdsong-encryption",
-    # "showcase/03-p2p-coordination/03-lineage-gated-relay",
-    # "showcase/03-p2p-coordination/04-multi-tower-federation",
-    # "showcase/03-p2p-coordination/05-full-ecosystem-integration",
     "crates/biomeos-boot",
     "crates/biomeos-deploy", "crates/biomeos-test-utils", "crates/biomeos-nucleus",
     "crates/biomeos-atomic-deploy",  # Genetic lineage atomic deployment (modern Rust, no bash)
@@ -174,6 +167,9 @@ rustix = "0.38"
 which = "6"
 flate2 = "1.0"
 tar = { version = "0.4", default-features = false }
+# Linux RTNETLINK: bridge/link ops in biomeos-deploy (transitive netlink-sys, netlink-packet-*).
+# Accepted stack — kernel AF_NETLINK socket, no userspace C libs (e.g. libnl).
+rtnetlink = "0.20"
 
 # CLI / TUI helpers
 indicatif = "0.17"
@@ -187,7 +183,6 @@ redb = "2.4"
 lz4_flex = "0.11"
 hex = "0.4"
 mdns-sd = "0.11"
-rtnetlink = "0.20"
 
 # Async I/O & bytes helpers
 async-fs = "2.1"

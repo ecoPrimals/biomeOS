@@ -2,6 +2,59 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.28 (2026-04-26) — Deep Debt Cleanup: Constants, Errors, Executor, Events
+
+### Centralized DEFAULT_FAMILY_ID constant
+- Added `DEFAULT_FAMILY_ID` to `biomeos-types/src/defaults.rs` and replaced ~20
+  hardcoded `"default"` family-ID fallbacks across 16 files in biomeos-core,
+  biomeos-primal-sdk, biomeos-spore, biomeos-cli, biomeos-ui, biomeos-atomic-deploy,
+  biomeos-graph, and family_discovery. Test-only literals left as-is.
+
+### Primal name literals in tools
+- Added `biomeos-types` dependency to `tools/harvest` and `tools/` workspaces.
+  Replaced raw string primal-name literals in `harvest/main.rs` and
+  `ecosystem_health.rs` with `primal_names::*` constants. Synced the harvest roster
+  with the full canonical set (added skunkBat, sourDough, primalSpring, etc.).
+
+### thiserror migration
+- Migrated 4 manual `impl Display + impl Error` types to `#[derive(thiserror::Error)]`:
+  `NeuralError` (neural-api-client-sync), `BtspHandshakeError` (btsp_client),
+  `CastError` (biomeos-types/cast), `EnrollmentValidationError` (enroll.rs).
+  Added `thiserror = { workspace = true }` to neural-api-client-sync.
+
+### Real system queries in ecosystem_health
+- `check_sovereignty_only`: replaced canned output with live socket discovery + UDS
+  connect probes. Lists `*.sock` in `BIOMEOS_SOCKET_DIR`, reports reachable/unreachable.
+- `run_continuous_monitoring`: replaced hardcoded "2.1GB / 16GB", "15%" with real
+  `/proc/meminfo`, `/proc/loadavg`, `df`, and `/proc/net/route` reads.
+
+### GraphExecutor clone reduction
+- `execute()` now builds `HashMap<String, Arc<GraphNode>>` once upfront. Phase workers
+  share `Arc` references (cheap ref-count clone) instead of deep-copying `GraphNode`
+  per `tokio::spawn`. Phase node lookup is O(1) HashMap instead of linear Vec scan.
+
+### Split detect_and_emit_changes
+- Extracted `build_primal_snapshot`, `detect_new_primal_events`,
+  `detect_primal_update_events`, `detect_primal_removals`, `detect_heartbeat_event`
+  from the monolithic 160-line function. Removed `#[expect(clippy::too_many_lines)]`.
+  Pre-computed owned strings eliminate per-event clones.
+
+### Deduplicated path constants
+- `neural-api-client-sync`: replaced local `LINUX_RUNTIME_DIR_PREFIX` with
+  `biomeos_types::constants::runtime_paths::LINUX_RUNTIME_DIR_PREFIX`.
+- `continuous.rs`: replaced raw `"/tmp"` fallback with `DEFAULT_SOCKET_DIR`.
+
+### rtnetlink documented
+- Confirmed `rtnetlink` is actively used in `biomeos-deploy/src/network.rs` for
+  Linux bridge management. Documented as accepted thin FFI for kernel AF_NETLINK
+  in both workspace and crate Cargo.toml. Reorganized under "OS interfaces" section.
+
+### Verification
+- `cargo check --workspace`: 0 errors
+- `cargo clippy --workspace -- -D warnings`: 0 warnings
+- `cargo fmt --check`: clean
+- All test failures are pre-existing (environment-dependent discovery tests)
+
 ## v3.27 (2026-04-26) — Cellular Deploy, Tick Loop Relay, BTSP Phase 3 Readiness
 
 ### Cellular deployment maturity (primalSpring audit item 1)

@@ -4,6 +4,7 @@
 //! Primal endpoint discovery by name (socket discovery + env overrides).
 
 use anyhow::Result;
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use tracing::{debug, trace};
 
 use crate::socket_discovery::{SocketDiscovery, TransportEndpoint};
@@ -18,7 +19,7 @@ pub(crate) fn family_id_for_discovery(family_id_override: Option<&str>) -> Strin
         .or_else(|_| std::env::var("NODE_FAMILY_ID"))
         .unwrap_or_else(|_| {
             trace!("No FAMILY_ID set, using 'default' for discovery");
-            "default".to_string()
+            DEFAULT_FAMILY_ID.to_string()
         })
 }
 

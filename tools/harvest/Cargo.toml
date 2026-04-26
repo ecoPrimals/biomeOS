@@ -21,6 +21,7 @@ toml = "0.8"
 walkdir = "2.4"
 sha2 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
+biomeos-types = { path = "../../crates/biomeos-types" }
 
 [profile.release]
 opt-level = 3

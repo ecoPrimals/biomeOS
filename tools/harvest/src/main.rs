@@ -31,28 +31,41 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::SystemTime;
 use walkdir::WalkDir;
+use biomeos_types::primal_names;
 
 /// Bootstrap-time primal roster for harvest operations.
 ///
-/// Canonical source of truth: `biomeos-types::primal_names::{CORE_PRIMALS, PROVENANCE_PRIMALS}`.
-/// This standalone tool does not depend on `biomeos-types` to keep compile times fast.
-/// Keep in sync manually; all names must be lowercase (filesystem convention).
-/// Last synced: 2026-04-20.
+/// Canonical source of truth: `biomeos_types::primal_names` (kept in sync via shared constants).
+/// All names are lowercase (filesystem convention).
 const KNOWN_PRIMALS: &[&str] = &[
-    // Tower atomic (CORE_PRIMALS)
-    "beardog",
-    "songbird",
-    "toadstool",
-    "barracuda",
-    "coralreef",
-    "nestgate",
-    "squirrel",
-    // Provenance trio
-    "loamspine",
-    "rhizocrypt",
-    "sweetgrass",
-    // UI
-    "petaltongue",
+    // Core (Tower + Node + Nest)
+    primal_names::BEARDOG,
+    primal_names::SONGBIRD,
+    primal_names::TOADSTOOL,
+    primal_names::BARRACUDA,
+    primal_names::CORALREEF,
+    primal_names::NESTGATE,
+    primal_names::SQUIRREL,
+    // Provenance
+    primal_names::LOAMSPINE,
+    primal_names::RHIZOCRYPT,
+    primal_names::SWEETGRASS,
+    // Springs
+    primal_names::AIRSPRING,
+    primal_names::WETSPRING,
+    primal_names::NEURALSPRING,
+    primal_names::GROUNDSPRING,
+    primal_names::HOTSPRING,
+    primal_names::HEALTHSPRING,
+    primal_names::LUDOSPRING,
+    // Auxiliary
+    primal_names::PETALTONGUE,
+    primal_names::SKUNKBAT,
+    primal_names::SOURDOUGH,
+    primal_names::PRIMALSPRING,
+    // Pseudo / coordination
+    primal_names::BIOMEOS,
+    primal_names::BIOMEOS_DEVICE_MANAGEMENT,
 ];
 
 #[derive(Parser)]

@@ -28,9 +28,9 @@ serde_json = { workspace = true }
 # System interaction (process signals via rustix)
 rustix = { workspace = true, features = ["process"] }
 
-# Network bridge management (pure Rust via Netlink, replaces shell-outs to `ip`/`brctl`).
-# Transitive dep on `netlink-sys` — thin FFI for AF_NETLINK kernel socket,
-# comparable to rustix's linux-raw-sys. No userspace C library.
+# Linux bridge create/delete/address in `src/network.rs` via `rtnetlink` (async RTNETLINK).
+# Transitive: `netlink-sys` (FFI to AF_NETLINK), `netlink-packet-{route,core}` (rtnetlink wire format).
+# Accepted stack — kernel netlink, no userspace C libs; comparable in spirit to rustix + raw syscalls.
 rtnetlink = { workspace = true }
 
 # Path and file utilities

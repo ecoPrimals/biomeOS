@@ -11,13 +11,18 @@ use axum::{
 };
 use futures::stream::{self, Stream, StreamExt as FuturesStreamExt};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::Infallible, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::Infallible,
+    sync::Arc,
+    time::Duration,
+};
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt as TokioStreamExt;
 use tracing::{info, warn};
 
 use crate::AppState;
-use biomeos_core::HealthStatus;
+use biomeos_core::{DiscoveredPrimal, HealthStatus};
 
 /// Event types that can be streamed
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -156,15 +161,156 @@ pub async fn event_stream(
     Sse::new(merged).keep_alive(KeepAlive::default())
 }
 
+/// Build a snapshot of the current primal state for the next change-detection pass.
+fn build_primal_snapshot(primal: &DiscoveredPrimal, name: String) -> PrimalSnapshot {
+    PrimalSnapshot {
+        name,
+        health: primal.health,
+        family_id: primal
+            .family_id
+            .as_ref()
+            .map(std::string::ToString::to_string),
+        capabilities_count: primal.capabilities.len(),
+    }
+}
+
+/// Events for a primal that was not in the previous map (discovery).
+fn detect_new_primal_events(
+    primal: &DiscoveredPrimal,
+    primal_id: &str,
+    name: &str,
+) -> Vec<EcosystemEvent> {
+    let mut out = Vec::new();
+    info!("🆕 SSE: New primal discovered: {}", name);
+    out.push(EcosystemEvent::PrimalDiscovered {
+        primal_id: primal_id.to_string(),
+        name: name.to_string(),
+        primal_type: format!("{:?}", primal.primal_type),
+        family_id: primal
+            .family_id
+            .as_ref()
+            .map(std::string::ToString::to_string),
+        capabilities: primal
+            .capabilities
+            .iter()
+            .map(|c| format!("{c:?}"))
+            .collect(),
+    });
+
+    if let Some(family_id) = &primal.family_id {
+        out.push(EcosystemEvent::FamilyJoined {
+            primal_id: primal_id.to_string(),
+            name: name.to_string(),
+            family_id: family_id.as_str().to_string(),
+        });
+    }
+    out
+}
+
+/// Health, capability, and family delta events for a known primal.
+fn detect_primal_update_events(
+    primal: &DiscoveredPrimal,
+    prev_snapshot: &PrimalSnapshot,
+    primal_id: &str,
+    name: &str,
+) -> Vec<EcosystemEvent> {
+    let mut out = Vec::new();
+
+    if prev_snapshot.health != primal.health {
+        info!(
+            "💊 SSE: Health changed for {}: {:?} -> {:?}",
+            name, prev_snapshot.health, primal.health
+        );
+        out.push(EcosystemEvent::HealthChanged {
+            primal_id: primal_id.to_string(),
+            name: name.to_string(),
+            old_health: format!("{:?}", prev_snapshot.health),
+            new_health: format!("{:?}", primal.health),
+        });
+    }
+
+    let cap_count = primal.capabilities.len();
+    if prev_snapshot.capabilities_count != cap_count {
+        info!(
+            "🔒 SSE: Capabilities updated for {}: {} -> {}",
+            name, prev_snapshot.capabilities_count, cap_count
+        );
+        out.push(EcosystemEvent::TrustUpdated {
+            primal_id: primal_id.to_string(),
+            name: name.to_string(),
+            trust_level: cap_count as u8,
+        });
+    }
+
+    let prev_family = prev_snapshot.family_id.as_deref();
+    let curr_family = primal
+        .family_id
+        .as_ref()
+        .map(biomeos_types::FamilyId::as_str);
+
+    if prev_family != curr_family {
+        if let Some(family_id) = &primal.family_id {
+            info!("👨‍👩‍👧‍👦 SSE: Family joined for {}: {}", name, family_id);
+            out.push(EcosystemEvent::FamilyJoined {
+                primal_id: primal_id.to_string(),
+                name: name.to_string(),
+                family_id: family_id.to_string(),
+            });
+        }
+    }
+    out
+}
+
+/// Primals present in the previous map but not in the current discovery set.
+fn detect_primal_removals(
+    prev: &mut HashMap<String, PrimalSnapshot>,
+    current_ids: &HashSet<String>,
+    current_primals_len: usize,
+) -> Vec<EcosystemEvent> {
+    let mut out = Vec::new();
+    prev.retain(|id, snapshot| {
+        if current_ids.contains(id) {
+            true
+        } else {
+            info!("👋 SSE: Primal removed: {}", snapshot.name);
+            out.push(EcosystemEvent::TopologyChanged {
+                nodes: current_primals_len,
+                edges: 0, // We'd need topology calculation for accurate count
+                change: "primal_removed".to_string(),
+            });
+            false
+        }
+    });
+    out
+}
+
+/// Terminal heartbeat for a successful discovery result.
+fn detect_heartbeat_event(current_primals: &[DiscoveredPrimal]) -> EcosystemEvent {
+    let healthy_count = current_primals
+        .iter()
+        .filter(|p| matches!(p.health, HealthStatus::Healthy))
+        .count();
+    let families: Vec<String> = current_primals
+        .iter()
+        .filter_map(|p| p.family_id.as_ref().map(std::string::ToString::to_string))
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    EcosystemEvent::Heartbeat {
+        timestamp: current_timestamp(),
+        primals_count: current_primals.len(),
+        healthy_count,
+        families,
+    }
+}
+
 /// Detect changes in the ecosystem and emit appropriate events
-#[expect(clippy::too_many_lines, reason = "change detection logic")]
 async fn detect_and_emit_changes(
     state: Arc<AppState>,
     previous_state: Arc<RwLock<EcosystemState>>,
 ) -> Vec<EcosystemEvent> {
     let mut events = Vec::new();
 
-    // Discover current primals
     let current_primals = match state.discovery().discover_all().await {
         Ok(primals) => primals,
         Err(e) => {
@@ -178,144 +324,42 @@ async fn detect_and_emit_changes(
         }
     };
 
-    // Lock previous state
     let mut prev = previous_state.write().await;
 
-    // Detect changes
     for primal in &current_primals {
         let primal_id = primal.id.to_string();
-        let name = primal.name.as_str();
+        let name = primal.name.clone();
 
         match prev.primals.get(&primal_id) {
             None => {
-                // New primal discovered!
-                info!("🆕 SSE: New primal discovered: {}", name);
-                events.push(EcosystemEvent::PrimalDiscovered {
-                    primal_id: primal_id.clone(),
-                    name: primal.name.clone(),
-                    primal_type: format!("{:?}", primal.primal_type),
-                    family_id: primal
-                        .family_id
-                        .as_ref()
-                        .map(std::string::ToString::to_string),
-                    capabilities: primal
-                        .capabilities
-                        .iter()
-                        .map(|c| format!("{c:?}"))
-                        .collect(),
-                });
-
-                // If it has a family, emit family joined event
-                if let Some(family_id) = &primal.family_id {
-                    events.push(EcosystemEvent::FamilyJoined {
-                        primal_id: primal_id.clone(),
-                        name: primal.name.clone(),
-                        family_id: family_id.as_str().to_string(),
-                    });
-                }
+                events.extend(detect_new_primal_events(
+                    primal,
+                    primal_id.as_str(),
+                    name.as_str(),
+                ));
             }
             Some(prev_snapshot) => {
-                // Check for health changes
-                if prev_snapshot.health != primal.health {
-                    info!(
-                        "💊 SSE: Health changed for {}: {:?} -> {:?}",
-                        name, prev_snapshot.health, primal.health
-                    );
-                    events.push(EcosystemEvent::HealthChanged {
-                        primal_id: primal_id.clone(),
-                        name: primal.name.clone(),
-                        old_health: format!("{:?}", prev_snapshot.health),
-                        new_health: format!("{:?}", primal.health),
-                    });
-                }
-
-                // Check for capability changes (could indicate trust changes)
-                let cap_count = primal.capabilities.len();
-                if prev_snapshot.capabilities_count != cap_count {
-                    info!(
-                        "🔒 SSE: Capabilities updated for {}: {} -> {}",
-                        name, prev_snapshot.capabilities_count, cap_count
-                    );
-                    // Emit as trust update (more capabilities = higher trust)
-                    events.push(EcosystemEvent::TrustUpdated {
-                        primal_id: primal_id.clone(),
-                        name: primal.name.clone(),
-                        trust_level: cap_count as u8,
-                    });
-                }
-
-                // Check for family changes
-                let prev_family = prev_snapshot.family_id.as_deref();
-                let curr_family = primal
-                    .family_id
-                    .as_ref()
-                    .map(biomeos_types::FamilyId::as_str);
-
-                if prev_family != curr_family {
-                    if let Some(family_id) = &primal.family_id {
-                        info!("👨‍👩‍👧‍👦 SSE: Family joined for {}: {}", name, family_id);
-                        events.push(EcosystemEvent::FamilyJoined {
-                            primal_id: primal_id.clone(),
-                            name: primal.name.clone(),
-                            family_id: family_id.to_string(),
-                        });
-                    }
-                }
+                events.extend(detect_primal_update_events(
+                    primal,
+                    prev_snapshot,
+                    primal_id.as_str(),
+                    name.as_str(),
+                ));
             }
         }
 
-        // Update snapshot
-        prev.primals.insert(
-            primal_id,
-            PrimalSnapshot {
-                name: primal.name.clone(),
-                health: primal.health,
-                family_id: primal
-                    .family_id
-                    .as_ref()
-                    .map(std::string::ToString::to_string),
-                capabilities_count: primal.capabilities.len(),
-            },
-        );
+        let snapshot = build_primal_snapshot(primal, name);
+        prev.primals.insert(primal_id, snapshot);
     }
 
-    // Check for removed primals
-    let current_ids: std::collections::HashSet<_> =
-        current_primals.iter().map(|p| p.id.to_string()).collect();
+    let current_ids: HashSet<String> = current_primals.iter().map(|p| p.id.to_string()).collect();
+    events.extend(detect_primal_removals(
+        &mut prev.primals,
+        &current_ids,
+        current_primals.len(),
+    ));
 
-    prev.primals.retain(|id, snapshot| {
-        if current_ids.contains(id) {
-            true
-        } else {
-            info!("👋 SSE: Primal removed: {}", snapshot.name);
-            events.push(EcosystemEvent::TopologyChanged {
-                nodes: current_primals.len(),
-                edges: 0, // We'd need topology calculation for accurate count
-                change: "primal_removed".to_string(),
-            });
-            false
-        }
-    });
-
-    // Always end with heartbeat
-    let healthy_count = current_primals
-        .iter()
-        .filter(|p| matches!(p.health, HealthStatus::Healthy))
-        .count();
-
-    let families: Vec<String> = current_primals
-        .iter()
-        .filter_map(|p| p.family_id.as_ref().map(std::string::ToString::to_string))
-        .collect::<std::collections::HashSet<_>>()
-        .into_iter()
-        .collect();
-
-    events.push(EcosystemEvent::Heartbeat {
-        timestamp: current_timestamp(),
-        primals_count: current_primals.len(),
-        healthy_count,
-        families,
-    });
+    events.push(detect_heartbeat_event(&current_primals));
 
     events
 }

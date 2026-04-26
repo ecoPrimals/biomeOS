@@ -2,7 +2,7 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Health Module
-//! 
+//!
 //! Ecosystem health monitoring and diagnostics for biomeOS.
 
 use anyhow::Result;
@@ -74,40 +74,46 @@ pub struct HealthResult {
 pub async fn check_ecosystem_health(config: &HealthConfig) -> Result<Vec<HealthResult>> {
     print_section("🏥 biomeOS ECOSYSTEM HEALTH CHECK");
     print_info("Performing comprehensive system diagnostics...");
-    
+
     let mut results = Vec::new();
-    
+
     // Check biomeOS core
     results.push(check_biomeos_core(config).await?);
-    
+
     // Check UI system
     results.push(check_ui_system(config).await?);
-    
+
     // Check build system
     results.push(check_build_system(config).await?);
-    
+
     // Check dependencies
     results.push(check_dependencies(config).await?);
-    
+
     // Check ecosystem components
     results.extend(check_ecosystem_components(config).await?);
-    
+
     // Check sovereignty features
     results.push(check_sovereignty_features(config).await?);
-    
+
     // Print summary
     print_health_summary(&results);
-    
+
     Ok(results)
 }
 
 /// Check biomeOS core health
 async fn check_biomeos_core(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking biomeOS core...");
-    
+
     let workspace_path = &config.workspace_root;
 
-    match execute_command("cargo", &["check", "-p", "biomeos-core"], Some(workspace_path)).await {
+    match execute_command(
+        "cargo",
+        &["check", "-p", "biomeos-core"],
+        Some(workspace_path),
+    )
+    .await
+    {
         Ok(_) => Ok(HealthResult {
             component: "biomeOS Core".to_string(),
             status: HealthStatus::Healthy,
@@ -133,10 +139,16 @@ async fn check_biomeos_core(config: &HealthConfig) -> Result<HealthResult> {
 /// Check UI system health
 async fn check_ui_system(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking UI system...");
-    
+
     let workspace_path = &config.workspace_root;
 
-    match execute_command("cargo", &["check", "-p", "biomeos-ui"], Some(workspace_path)).await {
+    match execute_command(
+        "cargo",
+        &["check", "-p", "biomeos-ui"],
+        Some(workspace_path),
+    )
+    .await
+    {
         Ok(_) => Ok(HealthResult {
             component: "UI System".to_string(),
             status: HealthStatus::Healthy,
@@ -162,7 +174,7 @@ async fn check_ui_system(config: &HealthConfig) -> Result<HealthResult> {
 /// Check build system health
 async fn check_build_system(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking build system...");
-    
+
     let workspace_path = &config.workspace_root;
 
     match execute_command("cargo", &["check", "--workspace"], Some(workspace_path)).await {
@@ -191,7 +203,7 @@ async fn check_build_system(config: &HealthConfig) -> Result<HealthResult> {
 /// Check dependencies health
 async fn check_dependencies(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking dependencies...");
-    
+
     let workspace_path = &config.workspace_root;
 
     match execute_command("cargo", &["outdated", "--workspace"], Some(workspace_path)).await {
@@ -217,16 +229,14 @@ async fn check_dependencies(config: &HealthConfig) -> Result<HealthResult> {
                     ],
                 })
             }
-        },
+        }
         Err(_) => {
             // cargo-outdated might not be installed
             Ok(HealthResult {
                 component: "Dependencies".to_string(),
                 status: HealthStatus::Unknown,
                 message: "Unable to check dependency status".to_string(),
-                details: vec![
-                    "ℹ️ Install cargo-outdated for dependency checking".to_string(),
-                ],
+                details: vec!["ℹ️ Install cargo-outdated for dependency checking".to_string()],
             })
         }
     }
@@ -265,12 +275,11 @@ async fn check_ecosystem_components(_config: &HealthConfig) -> Result<Vec<Health
     if let Ok(entries) = std::fs::read_dir(&runtime_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            let looks_like_socket = path
-                .extension()
-                .map_or(true, |ext| ext == "sock")
-                && path.file_name().and_then(|n| n.to_str()).map_or(false, |n| {
-                    n.contains('-') || n.ends_with(".sock")
-                });
+            let looks_like_socket = path.extension().map_or(true, |ext| ext == "sock")
+                && path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map_or(false, |n| n.contains('-') || n.ends_with(".sock"));
             if looks_like_socket {
                 if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
                     let primal_name = name.split('-').next().unwrap_or(name);
@@ -310,8 +319,20 @@ async fn check_sovereignty_features(config: &HealthConfig) -> Result<HealthResul
     let mut warnings = 0u32;
 
     // Check for forbidden C-binding crates in the dep tree
-    let forbidden = ["openssl-sys", "ring", "aws-lc-sys", "native-tls", "zstd-sys"];
-    match execute_command("cargo", &["tree", "--workspace", "--prefix", "none"], Some(workspace_path)).await {
+    let forbidden = [
+        "openssl-sys",
+        "ring",
+        "aws-lc-sys",
+        "native-tls",
+        "zstd-sys",
+    ];
+    match execute_command(
+        "cargo",
+        &["tree", "--workspace", "--prefix", "none"],
+        Some(workspace_path),
+    )
+    .await
+    {
         Ok(tree_output) => {
             for dep in &forbidden {
                 if tree_output.contains(dep) {
@@ -341,7 +362,13 @@ async fn check_sovereignty_features(config: &HealthConfig) -> Result<HealthResul
     }
 
     // Check for unsafe code policy
-    let forbid_count = match execute_command("grep", &["-r", "forbid(unsafe_code)", "crates/"], Some(workspace_path)).await {
+    let forbid_count = match execute_command(
+        "grep",
+        &["-r", "forbid(unsafe_code)", "crates/"],
+        Some(workspace_path),
+    )
+    .await
+    {
         Ok(output) => output.lines().count(),
         Err(_) => 0,
     };
@@ -364,39 +391,39 @@ async fn check_sovereignty_features(config: &HealthConfig) -> Result<HealthResul
 /// Print health summary
 fn print_health_summary(results: &[HealthResult]) {
     print_section("📊 HEALTH SUMMARY");
-    
+
     let mut healthy = 0;
     let mut warnings = 0;
     let mut critical = 0;
     let mut unknown = 0;
-    
+
     for result in results {
         match result.status {
             HealthStatus::Healthy => {
                 print_success(&format!("{}: {}", result.component, result.message));
                 healthy += 1;
-            },
+            }
             HealthStatus::Warning => {
                 print_warning(&format!("{}: {}", result.component, result.message));
                 warnings += 1;
-            },
+            }
             HealthStatus::Critical => {
                 print_error(&format!("{}: {}", result.component, result.message));
                 critical += 1;
-            },
+            }
             HealthStatus::Unknown => {
                 print_info(&format!("{}: {}", result.component, result.message));
                 unknown += 1;
-            },
+            }
         }
     }
-    
+
     println!("\n📈 OVERALL STATUS:");
     println!("  ✅ Healthy: {}", healthy);
     println!("  ⚠️ Warnings: {}", warnings);
     println!("  ❌ Critical: {}", critical);
     println!("  ❓ Unknown: {}", unknown);
-    
+
     let overall_status = if critical > 0 {
         "🔴 CRITICAL - Immediate attention required"
     } else if warnings > 0 {
@@ -406,6 +433,6 @@ fn print_health_summary(results: &[HealthResult]) {
     } else {
         "🟢 HEALTHY - All systems operational"
     };
-    
+
     println!("\n🎯 ECOSYSTEM STATUS: {}", overall_status);
-} 
+}

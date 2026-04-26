@@ -4,10 +4,10 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-//! Synchronous Neural API client for biomeOS — zero-tokio, std + `serde_json` only.
+//! Synchronous Neural API client for biomeOS — zero-tokio, std + `serde_json` + `thiserror`.
 //!
 //! Minimal synchronous JSON-RPC 2.0 client that talks to the biomeOS Neural API.
-//! Zero external dependencies beyond `std` + `serde_json`.
+//! Uses `std`, `serde`/`serde_json`, and `thiserror` (no async runtime).
 //!
 //! # Discovery
 //!
@@ -29,6 +29,7 @@
 //! }));
 //! ```
 
+use biomeos_types::constants::runtime_paths::LINUX_RUNTIME_DIR_PREFIX;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
@@ -51,15 +52,19 @@ pub struct CallResult {
 }
 
 /// Error from Neural API communication.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum NeuralError {
     /// Neural API socket not found (biomeOS not running).
+    #[error("Neural API not found: {0}")]
     NotFound(String),
     /// Connection failed.
+    #[error("Connection error: {0}")]
     Connection(std::io::Error),
     /// JSON serialization/deserialization error.
+    #[error("JSON error: {0}")]
     Json(String),
     /// JSON-RPC error response from the Neural API.
+    #[error("RPC error {code}: {message}")]
     Rpc {
         /// JSON-RPC error code.
         code: i64,
@@ -67,22 +72,9 @@ pub enum NeuralError {
         message: String,
     },
     /// Timeout waiting for response.
+    #[error("Timeout")]
     Timeout,
 }
-
-impl std::fmt::Display for NeuralError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::NotFound(msg) => write!(f, "Neural API not found: {msg}"),
-            Self::Connection(e) => write!(f, "Connection error: {e}"),
-            Self::Json(msg) => write!(f, "JSON error: {msg}"),
-            Self::Rpc { code, message } => write!(f, "RPC error {code}: {message}"),
-            Self::Timeout => write!(f, "Timeout"),
-        }
-    }
-}
-
-impl std::error::Error for NeuralError {}
 
 impl NeuralBridge {
     /// Discover the Neural API socket using biomeOS 5-tier resolution.
@@ -278,7 +270,6 @@ pub fn resolve_socket_with_env(
     }
 
     // Tier 3: /run/user/{uid} — derive from XDG_RUNTIME_DIR or procfs
-    const LINUX_RUNTIME_DIR_PREFIX: &str = "/run/user";
     let uid = uid_from_runtime_dir();
     let p = PathBuf::from(format!(
         "{LINUX_RUNTIME_DIR_PREFIX}/{uid}/biomeos/neural-api-{family_id}.sock"

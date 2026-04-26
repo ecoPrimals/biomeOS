@@ -57,6 +57,12 @@ use std::path::{Path, PathBuf};
 /// 5. This fallback (development only)
 pub const DEFAULT_SOCKET_DIR: &str = "/tmp";
 
+/// Fallback family ID when no env var or seed file is available.
+///
+/// Used instead of scattering the literal `"default"` across call sites.
+/// Overridden by `FAMILY_ID` / `BIOMEOS_FAMILY_ID` or `.family.seed`.
+pub const DEFAULT_FAMILY_ID: &str = "default";
+
 /// Default Neural API socket name
 pub const DEFAULT_NEURAL_API_SOCKET: &str = "neural-api.sock";
 

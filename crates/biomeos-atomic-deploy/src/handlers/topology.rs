@@ -24,6 +24,7 @@
 use crate::neural_router::NeuralRouter;
 use anyhow::Result;
 use biomeos_types::SystemPaths;
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -285,7 +286,7 @@ impl TopologyHandler {
         // Priority 6: /tmp/biomeos-default (common NUCLEUS default)
         {
             let default_path =
-                biomeos_types::constants::runtime_paths::fallback_runtime_dir("default");
+                biomeos_types::constants::runtime_paths::fallback_runtime_dir(DEFAULT_FAMILY_ID);
             if !dirs.contains(&default_path) && default_path.exists() {
                 dirs.push(default_path);
             }

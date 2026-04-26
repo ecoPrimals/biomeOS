@@ -13,6 +13,7 @@
 use crate::primal_client::PrimalConnections;
 use anyhow::Result;
 use biomeos_types::CapabilityTaxonomy;
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use tracing::{debug, info, warn};
 
 /// Runtime-captured discovery configuration.
@@ -85,7 +86,7 @@ impl Discovery {
     pub async fn discover_primals() -> Result<DiscoveryResult> {
         let family_id = std::env::var("FAMILY_ID")
             .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-            .unwrap_or_else(|_| "default".to_string());
+            .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
         Self::discover_primals_with(&family_id, None).await
     }
 

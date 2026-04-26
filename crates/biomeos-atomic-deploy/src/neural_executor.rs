@@ -130,6 +130,15 @@ impl GraphExecutor {
         // Topological sort to get execution phases
         let phases = self.topological_sort()?;
 
+        // One deep clone per node into Arc; phase workers share the Arc (cheap ref-count),
+        // avoiding per-spawn `GraphNode` clones from linear `Vec` scans.
+        let node_map: HashMap<String, Arc<GraphNode>> = self
+            .graph
+            .nodes
+            .iter()
+            .map(|n| (n.id.clone(), Arc::new(n.clone())))
+            .collect();
+
         info!("   Execution plan: {} phases", phases.len());
 
         // Execute each phase
@@ -141,7 +150,7 @@ impl GraphExecutor {
                 phase_nodes.len()
             );
 
-            match self.execute_phase(phase_num, phase_nodes).await {
+            match self.execute_phase(phase_num, phase_nodes, &node_map).await {
                 Ok(phase_result) => {
                     // Collect per-node success/failure details
                     for node_id in phase_nodes {
@@ -219,7 +228,12 @@ impl GraphExecutor {
     }
 
     /// Execute a single phase (parallel execution of independent nodes)
-    async fn execute_phase(&mut self, phase_index: usize, nodes: &[String]) -> Result<PhaseResult> {
+    async fn execute_phase(
+        &mut self,
+        phase_index: usize,
+        nodes: &[String],
+        node_map: &HashMap<String, Arc<GraphNode>>,
+    ) -> Result<PhaseResult> {
         self.save_checkpoint_before_phase(phase_index).await?;
 
         let phase_start = std::time::Instant::now();
@@ -234,11 +248,8 @@ impl GraphExecutor {
         let execution_id = chrono::Utc::now().timestamp_millis();
 
         for node_id in nodes {
-            let node = self
-                .graph
-                .nodes
-                .iter()
-                .find(|n| &n.id == node_id)
+            let node = node_map
+                .get(node_id)
                 .ok_or_else(|| anyhow::anyhow!("Node not found: {node_id}"))?
                 .clone();
 
@@ -275,8 +286,8 @@ impl GraphExecutor {
                     self.context.set_output(&node_id, output).await;
                 }
                 Err(e) => {
-                    let node = self.graph.nodes.iter().find(|n| n.id == node_id);
-                    if node.is_some_and(|n| n.is_optional()) {
+                    let optional = node_map.get(&node_id).is_some_and(|n| n.is_optional());
+                    if optional {
                         debug!("Optional node {} failed, skipping: {}", node_id, e);
                         phase_result.completed += 1;
                         let skip_value = serde_json::json!({"skipped": true});
@@ -496,6 +507,11 @@ impl GraphExecutor {
     ///
     /// Returns execution phases where each phase is a set of nodes that can
     /// run in parallel. Useful for graph validation and composition inspection.
+    ///
+    /// **Note:** This path clones node IDs in several places for Kahn’s algorithm. A
+    /// future pass could store graph edges with `&str` / `Arc<str>` keys to cut
+    /// string churn; phase execution is optimized separately via the `node_map`
+    /// built in `GraphExecutor::execute`.
     pub fn topological_sort(&self) -> Result<Vec<Vec<String>>> {
         let mut in_degree: HashMap<String, usize> = HashMap::new();
         let mut graph_map: HashMap<String, Vec<String>> = HashMap::new();

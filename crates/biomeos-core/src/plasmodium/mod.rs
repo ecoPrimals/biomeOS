@@ -44,6 +44,7 @@ mod tests;
 pub use types::*;
 
 use anyhow::Result;
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use tracing::{info, warn};
 
 /// Explicit env-like inputs for [`Plasmodium`] without mutating process environment (tests, embedding).
@@ -92,7 +93,7 @@ impl Plasmodium {
             (None, Some(n)) => n.clone(),
             (None, None) => std::env::var("FAMILY_ID")
                 .or_else(|_| std::env::var("NODE_FAMILY_ID"))
-                .unwrap_or_else(|_| "default".to_string()),
+                .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string()),
         };
 
         let local_gate_id = overrides

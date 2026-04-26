@@ -9,6 +9,7 @@ use biomeos_graph::continuous::{ContinuousExecutor, SessionCommand};
 use biomeos_graph::events::GraphEventBroadcaster;
 use biomeos_graph::graph::DeploymentGraph;
 use biomeos_types::SystemPaths;
+use biomeos_types::defaults::DEFAULT_SOCKET_DIR;
 use serde_json::{Value, json};
 use tracing::{debug, info, warn};
 
@@ -227,7 +228,7 @@ impl GraphHandler {
             .unwrap_or_else(|_| {
                 std::env::var("BIOMEOS_RUNTIME_DIR")
                     .or_else(|_| std::env::var("TMPDIR"))
-                    .unwrap_or_else(|_| "/tmp".to_string())
+                    .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.to_string())
             });
 
         let mut registry = self.translation_registry.write().await;

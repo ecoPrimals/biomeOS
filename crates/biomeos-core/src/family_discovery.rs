@@ -18,6 +18,7 @@
 //! - The genesis seed (first 32 bytes) is shared among family members
 //! - The node key (bytes 32-63) is unique per node
 
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use bytes::Bytes;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
@@ -104,7 +105,7 @@ impl Default for FamilyDiscoveryConfig {
         Self {
             seed_file_paths: seed_paths,
             allow_default: true, // Allow default in dev
-            default_family: "default".to_string(),
+            default_family: DEFAULT_FAMILY_ID.to_string(),
             family_id_override: None,
             biomeos_family_id_override: None,
         }
@@ -250,13 +251,13 @@ fn read_family_seed(path: &Path) -> Option<DiscoveredFamily> {
 /// Get family ID string, falling back to default if not found
 #[must_use]
 pub fn get_family_id() -> String {
-    discover_family().map_or_else(|| "default".to_string(), |f| f.id)
+    discover_family().map_or_else(|| DEFAULT_FAMILY_ID.to_string(), |f| f.id)
 }
 
 /// Get family ID with custom configuration
 #[must_use]
 pub fn get_family_id_with_config(config: &FamilyDiscoveryConfig) -> String {
-    discover_family_with_config(config).map_or_else(|| "default".to_string(), |f| f.id)
+    discover_family_with_config(config).map_or_else(|| DEFAULT_FAMILY_ID.to_string(), |f| f.id)
 }
 
 /// Get family ID from environment or default
@@ -288,7 +289,7 @@ pub fn get_family_id_from_env_with(
                 std::env::var("BIOMEOS_FAMILY_ID").ok()
             }
         })
-        .unwrap_or_else(|| "default".to_string())
+        .unwrap_or_else(|| DEFAULT_FAMILY_ID.to_string())
 }
 
 #[cfg(test)]

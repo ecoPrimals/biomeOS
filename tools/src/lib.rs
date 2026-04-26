@@ -2,7 +2,7 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! biomeOS Development Tools
-//! 
+//!
 //! Pure Rust tooling for biomeOS development, testing, and ecosystem management.
 //! Eliminates shell scripts in favor of "Rust until the very edge" philosophy.
 
@@ -37,27 +37,31 @@ pub fn discover_workspace_root() -> Result<PathBuf> {
     }
 }
 
-pub mod integration;
-pub mod testing;
 pub mod demos;
 pub mod health;
+pub mod integration;
+pub mod testing;
 
 /// Execute a command and return its output
-pub async fn execute_command(cmd: &str, args: &[&str], working_dir: Option<&Path>) -> Result<String> {
+pub async fn execute_command(
+    cmd: &str,
+    args: &[&str],
+    working_dir: Option<&Path>,
+) -> Result<String> {
     let mut command = AsyncCommand::new(cmd);
     command.args(args);
-    
+
     if let Some(dir) = working_dir {
         command.current_dir(dir);
     }
-    
+
     command.stdout(Stdio::piped());
     command.stderr(Stdio::piped());
-    
+
     info!("Executing: {} {}", cmd, args.join(" "));
-    
+
     let output = command.output().await?;
-    
+
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(stdout.to_string())
@@ -106,4 +110,4 @@ pub fn print_warning(message: &str) {
 /// Print an info message
 pub fn print_info(message: &str) {
     print_status("ℹ️", "INFO", message);
-} 
+}

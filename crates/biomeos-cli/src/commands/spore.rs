@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use biomeos_spore::{Spore, SporeConfig, SporeType, SporeVerification};
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use biomeos_types::primal_names::CORE_PRIMALS;
 use serde_json::Value;
 
@@ -140,7 +141,7 @@ pub async fn handle_spore_create(
     println!("   Mount: {}", mount.display());
     println!("   Type: {} {}", spore_type.emoji(), spore_type);
 
-    let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "default".to_string());
+    let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
 
     let config = SporeConfig {
         label: label.clone(),

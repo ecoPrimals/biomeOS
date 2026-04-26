@@ -90,6 +90,8 @@ pub use transport::TransportEndpoint;
 use std::env;
 use std::path::{Path, PathBuf};
 
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
+
 // ============================================================================
 // CONVENIENCE FUNCTIONS (for quick migrations from hardcoded paths)
 // ============================================================================
@@ -152,7 +154,7 @@ pub async fn discover_endpoint_with_family(
         .map(String::from)
         .or_else(|| env::var("FAMILY_ID").ok())
         .or_else(|| env::var("BIOMEOS_FAMILY_ID").ok())
-        .unwrap_or_else(|| "default".to_string());
+        .unwrap_or_else(|| DEFAULT_FAMILY_ID.to_string());
 
     let discovery = SocketDiscovery::new(family_id);
     discovery.discover_with_fallback(primal_name).await
@@ -165,7 +167,7 @@ pub async fn discover_endpoint_with_family(
 pub async fn discover_endpoint_by_capability(capability: &str) -> Option<TransportEndpoint> {
     let family_id = env::var("FAMILY_ID")
         .or_else(|_| env::var("BIOMEOS_FAMILY_ID"))
-        .unwrap_or_else(|_| "default".to_string());
+        .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
 
     let discovery = SocketDiscovery::new(family_id);
     discovery

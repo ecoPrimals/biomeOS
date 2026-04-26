@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: April 22, 2026
-**Status**: Production Ready (v3.24) — 7,814+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, `primal.list` on neural-api + API socket, graph executor operation fallback, bootstrap tolerance for optional nodes, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: April 26, 2026
+**Status**: Production Ready (v3.28) — 7,814+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, `primal.list` on neural-api + API socket, graph executor operation fallback, bootstrap tolerance for optional nodes, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.24 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed)
+**Status**: Production Ready (v3.28 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model

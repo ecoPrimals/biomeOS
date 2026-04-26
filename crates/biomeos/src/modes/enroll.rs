@@ -80,22 +80,13 @@ pub(crate) fn resolve_device_id(device_id: Option<&str>) -> String {
 }
 
 /// Validation error for enrollment paths
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub(crate) enum EnrollmentValidationError {
+    #[error("Device already enrolled. Use --force to re-enroll")]
     AlreadyEnrolled,
+    #[error("Family seed not found")]
     FamilySeedNotFound,
 }
-
-impl std::fmt::Display for EnrollmentValidationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::AlreadyEnrolled => write!(f, "Device already enrolled. Use --force to re-enroll"),
-            Self::FamilySeedNotFound => write!(f, "Family seed not found"),
-        }
-    }
-}
-
-impl std::error::Error for EnrollmentValidationError {}
 
 /// Validate enrollment paths before enrollment.
 /// Returns Err if family seed is missing, or if lineage exists and force is false.

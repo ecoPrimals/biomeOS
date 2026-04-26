@@ -17,6 +17,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 
 /// Typed capability client for structured primal-to-primal IPC.
@@ -303,7 +304,7 @@ fn resolve_neural_api_socket() -> Result<PathBuf> {
     }
 
     // Also try family_id suffix (neural-api-{family}.sock)
-    let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "default".to_string());
+    let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
     let socket_dir = config.socket_dir();
     let path_with_family = socket_dir.join(format!("neural-api-{family_id}.sock"));
     if path_with_family.exists() {

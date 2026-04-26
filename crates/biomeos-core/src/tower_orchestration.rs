@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use tracing::{error, info, warn};
 
 use crate::{
@@ -37,7 +38,7 @@ pub fn pid_file_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
 
     let family_id = env("BIOMEOS_FAMILY_ID")
         .or_else(|| env("FAMILY_ID"))
-        .unwrap_or_else(|| "default".to_string());
+        .unwrap_or_else(|| DEFAULT_FAMILY_ID.to_string());
 
     runtime_paths::fallback_runtime_dir(&family_id).join("tower.pid")
 }
@@ -63,7 +64,7 @@ pub fn socket_dir_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
 
     let family_id = env("BIOMEOS_FAMILY_ID")
         .or_else(|| env("FAMILY_ID"))
-        .unwrap_or_else(|| "default".to_string());
+        .unwrap_or_else(|| DEFAULT_FAMILY_ID.to_string());
 
     runtime_paths::fallback_runtime_dir(&family_id).join(runtime_paths::SOCKET_SUBDIR)
 }

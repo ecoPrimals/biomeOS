@@ -13,6 +13,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use tracing::debug;
 
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use biomeos_types::identifiers::PrimalId;
 
 use crate::socket_discovery::SocketDiscovery;
@@ -139,7 +140,7 @@ impl PrimalHealthMonitor {
             );
             let family_id = std::env::var("FAMILY_ID")
                 .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-                .unwrap_or_else(|_| "default".to_string());
+                .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
             let discovery = SocketDiscovery::new(family_id);
             discovery
                 .build_socket_path(id.as_ref())

@@ -15,6 +15,7 @@
 //! - **Capability-Based**: Discover by capability, not by name
 
 use anyhow::Result;
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -116,7 +117,7 @@ impl PrimalDiscovery {
         cap: PrimalCapability,
         socket_dir: &Path,
     ) -> Result<DiscoveredPrimal> {
-        let discovery = Self::new("default");
+        let discovery = Self::new(DEFAULT_FAMILY_ID);
         discovery
             .discover_capability_in(cap.clone(), socket_dir)
             .await?

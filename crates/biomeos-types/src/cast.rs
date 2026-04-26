@@ -9,10 +9,9 @@
 //! Each function documents the precision/range trade-off so callers understand
 //! what they're opting into.
 
-use std::fmt;
-
 /// Error returned when a numeric cast would lose data.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("cast overflow: {from_type} -> {to_type} (value: {value})")]
 pub struct CastError {
     /// Source type name.
     pub from_type: &'static str,
@@ -21,18 +20,6 @@ pub struct CastError {
     /// String representation of the value that could not be converted.
     pub value: String,
 }
-
-impl fmt::Display for CastError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "cast overflow: {} -> {} (value: {})",
-            self.from_type, self.to_type, self.value
-        )
-    }
-}
-
-impl std::error::Error for CastError {}
 
 /// `usize` to `f64`. Lossless for values up to 2^53.
 ///

@@ -158,6 +158,7 @@ pub mod presets {
         BiomeOSConfig, BiomeOSConfigBuilder, BiomeResult, DiscoveryMethod, Environment,
         OrganizationScale, timeouts,
     };
+    use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 
     /// Development configuration preset
     pub fn development() -> BiomeResult<BiomeOSConfig> {
@@ -220,7 +221,7 @@ pub mod presets {
                 use crate::socket_discovery::SocketDiscovery;
                 let family_id = std::env::var("FAMILY_ID")
                     .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-                    .unwrap_or_else(|_| "default".to_string());
+                    .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
                 let discovery = SocketDiscovery::new(family_id);
                 format!(
                     "unix://{}",

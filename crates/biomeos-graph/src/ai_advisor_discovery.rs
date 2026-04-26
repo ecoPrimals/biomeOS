@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use biomeos_types::SystemPaths;
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use std::path::{Path, PathBuf};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -12,7 +13,7 @@ use tracing::debug;
 pub(super) fn family_id_for_sockets() -> String {
     std::env::var("FAMILY_ID")
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-        .unwrap_or_else(|_| "default".to_string())
+        .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string())
 }
 
 fn is_ai_capability(name: &str) -> bool {

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 26, 2026 (v3.27: cellular deploy via neural-api, tick loop event relay, BTSP Phase 3 readiness; 7,814+ tests)
-**Version**: 3.27
+**Updated**: April 26, 2026 (v3.28: deep debt cleanup — centralised constants, thiserror migration, real system queries, Arc executor, event refactor; 7,814+ tests)
+**Version**: 3.28
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Deep Debt Audit CLEAN
 
 ---
@@ -22,7 +22,7 @@
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
-| **C dependencies** | 0 (gethostname → rustix::system::uname(), zstd-sys → lz4_flex, deny.toml enforced) |
+| **C dependencies** | 0 production C deps (gethostname → rustix::system::uname(), zstd-sys → lz4_flex, deny.toml enforced). `rtnetlink` (kernel AF_NETLINK, documented thin FFI) is the only C-adjacent transitive. |
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
@@ -34,6 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **Deep Debt Cleanup v3.28 (Apr 26)** | **Centralised constants**: `DEFAULT_FAMILY_ID` added to `biomeos-types/defaults.rs`, ~20 hardcoded `"default"` fallbacks replaced across 16 files. **Primal names in tools**: `tools/harvest` and `tools/ecosystem_health` migrated from raw strings to `primal_names::*` constants; harvest roster synced with canonical set. **thiserror migration**: `NeuralError`, `BtspHandshakeError`, `CastError`, `EnrollmentValidationError` evolved from manual `impl Display+Error` to `#[derive(thiserror::Error)]`. **Real system queries**: `ecosystem_health.rs` mock sovereignty→live UDS probe, mock resources→`/proc/meminfo`+`/proc/loadavg`+`df`+`/proc/net/route`. **Arc executor**: `GraphExecutor` builds `HashMap<String, Arc<GraphNode>>` once; phase workers share Arc refs (O(1) lookup, no deep clone). **Event refactor**: `detect_and_emit_changes` split into 5 subfunctions, `#[expect(clippy::too_many_lines)]` removed, per-event clones eliminated. **Path dedup**: `neural-api-client-sync` local `LINUX_RUNTIME_DIR_PREFIX`→import; `continuous.rs` `/tmp`→`DEFAULT_SOCKET_DIR`. **rtnetlink**: confirmed active in `biomeos-deploy/network.rs`, documented as accepted thin FFI. |
 | **Deep Debt Evolution v3.27 (Apr 26)** | **Cellular deploy**: `biomeos deploy <graph>` now discovers running neural-api socket and sends `graph.execute` via AtomicClient. Cell graphs from plasmidBin deploy through `cell_launcher.sh` → `biomeos deploy` → neural-api lifecycle. `socket_discovery::neural_api` module made public. **Tick loop relay**: `GraphHandler.event_broadcaster` optional shared broadcaster wires continuous session tick events to WebSocket/SSE subscribers. New `graph.tick_status` JSON-RPC method reports active sessions. **BTSP Phase 3 readiness**: `btsp.status` enhanced with `phase`, `post_handshake_cipher`, `phase3_ready`, `phase3_notes` fields. Documents Phase 3 requirements (cipher negotiation, HKDF keys, AEAD framing). |
 | **Deep Debt Evolution v3.26 (Apr 26)** | **Socket family-ID fix (PG-41)**: `NeuralRouter::register_capability()` changed from append-only to upsert — live discovery now overwrites graph-bootstrap entries when the actual socket has a different family-ID suffix. Fixes `barracuda-default.sock` vs `barracuda-nucleus01.sock` mismatch. **Graph schema alignment (PG-39)**: `convert_deployment_node()` accepts primalSpring cell-graph fields (`name`→`id` fallback, `by_capability`→`capability`, `binary`→primal selector). `config["capability"]`+`config["params"]` now populated during conversion, fixing `node_capability_call_with_registry` read path. `PrimalSelector` constructed from available fields. **Bare `list` method**: Added to ROUTE_TABLE as alias for `topology.primals`, fixing petalTongue DataService "unknown method: list" error. |
 | **Deep Debt Evolution v3.25 (Apr 25)** | **Graph bootstrap pre-registration**: `register_capabilities_from_graphs()` — new startup step pre-registers graph node capabilities into NeuralRouter with expected socket paths. Route table populated at startup from graph definitions, not just live socket discovery. Fixes `capability.call` returning "Primal not found" before primals are discovered. **BTSP escalation**: `btsp.escalate` + `btsp.status` JSON-RPC methods. Runtime `AtomicBool` flag enables post-Tower BTSP enforcement on new connections. Accept loop checks both static `btsp_enforce()` and runtime flag. One-way cleartext→enforced transition. **Tensor translations**: Gap 3 confirmed already resolved — `[translations.tensor]` has 33 entries. 7,814+ tests (0 failures). |

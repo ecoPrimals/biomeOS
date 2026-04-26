@@ -7,6 +7,7 @@
 //! Shared types for spore operations
 
 use crate::spore_types::SporeType;
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use serde::{Deserialize, Serialize};
 
 /// Configuration for spore creation
@@ -48,7 +49,7 @@ pub fn default_family_id_with(env_value: Option<&str>, skip_env: bool) -> String
                 std::env::var("FAMILY_ID").ok()
             }
         })
-        .unwrap_or_else(|| "default".to_string())
+        .unwrap_or_else(|| DEFAULT_FAMILY_ID.to_string())
 }
 
 #[cfg(test)]

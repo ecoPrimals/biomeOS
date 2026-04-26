@@ -3,6 +3,7 @@
 
 //! Model cache type definitions
 
+use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -45,7 +46,7 @@ fn resolve_family_id_from_env() -> String {
     std::env::var("FAMILY_ID")
         .or_else(|_| std::env::var("NODE_FAMILY_ID"))
         .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-        .unwrap_or_else(|_| "default".to_string())
+        .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string())
 }
 
 fn resolve_gate_id_from_env() -> String {

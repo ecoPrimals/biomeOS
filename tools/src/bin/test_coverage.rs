@@ -4,20 +4,22 @@
 #![forbid(unsafe_code)]
 
 //! Test Coverage Analyzer
-//! 
+//!
 //! Pure Rust test coverage analysis and reporting tool.
 //! Ensures biomeOS meets 50%+ test coverage requirements.
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
 use biomeos_tools::{
-    testing::{TestConfig, run_all_tests, generate_coverage_report},
     print_section, print_success,
+    testing::{TestConfig, generate_coverage_report, run_all_tests},
 };
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "test-coverage")]
-#[command(about = "biomeOS Test Coverage Analyzer - Ensuring quality through comprehensive testing")]
+#[command(
+    about = "biomeOS Test Coverage Analyzer - Ensuring quality through comprehensive testing"
+)]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]
@@ -63,9 +65,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_env_filter("info")
-        .init();
+    tracing_subscriber::fmt().with_env_filter("info").init();
 
     let config = TestConfig {
         workspace_root: cli.workspace.into(),
@@ -105,42 +105,43 @@ async fn main() -> Result<()> {
 async fn run_comprehensive_testing(config: &TestConfig) -> Result<()> {
     print_section("🧪 COMPREHENSIVE TESTING SUITE");
     biomeos_tools::print_info("Running all tests and generating coverage report...");
-    
+
     // Run all tests
     run_all_tests(config).await?;
-    
+
     // Generate coverage report
     let coverage = generate_coverage_report(config).await?;
-    
+
     // Print final summary
     print_final_summary(coverage, config.coverage_threshold);
-    
+
     Ok(())
 }
 
 /// Run coverage analysis only
 async fn run_coverage_only(config: &TestConfig) -> Result<()> {
     print_section("📊 COVERAGE ANALYSIS ONLY");
-    
+
     let coverage = generate_coverage_report(config).await?;
-    
+
     print_coverage_summary(coverage, config.coverage_threshold);
-    
+
     Ok(())
 }
 
 /// Run unit tests only
 async fn run_unit_tests_only(config: &TestConfig) -> Result<()> {
     print_section("🔬 UNIT TESTS ONLY");
-    
+
     let workspace_path = std::path::Path::new(&config.workspace_root);
-    
+
     biomeos_tools::execute_command(
         "cargo",
         &["test", "--workspace", "--lib"],
-        Some(&workspace_path)
-    ).await?;
-    
+        Some(&workspace_path),
+    )
+    .await?;
+
     print_success("Unit tests completed successfully");
     Ok(())
 }
@@ -148,15 +149,16 @@ async fn run_unit_tests_only(config: &TestConfig) -> Result<()> {
 /// Run integration tests only
 async fn run_integration_tests_only(config: &TestConfig) -> Result<()> {
     print_section("🔗 INTEGRATION TESTS ONLY");
-    
+
     let workspace_path = std::path::Path::new(&config.workspace_root);
-    
+
     biomeos_tools::execute_command(
         "cargo",
         &["test", "--workspace", "--test", "*"],
-        Some(&workspace_path)
-    ).await?;
-    
+        Some(&workspace_path),
+    )
+    .await?;
+
     print_success("Integration tests completed successfully");
     Ok(())
 }
@@ -164,23 +166,25 @@ async fn run_integration_tests_only(config: &TestConfig) -> Result<()> {
 /// Run UI tests only
 async fn run_ui_tests_only(config: &TestConfig) -> Result<()> {
     print_section("🎨 UI TESTS ONLY");
-    
+
     let workspace_path = std::path::Path::new(&config.workspace_root);
-    
+
     // Test UI compilation and functionality
     biomeos_tools::execute_command(
         "cargo",
         &["test", "-p", "biomeos-ui"],
-        Some(&workspace_path)
-    ).await?;
-    
+        Some(&workspace_path),
+    )
+    .await?;
+
     // Test UI builds
     biomeos_tools::execute_command(
         "cargo",
         &["build", "-p", "biomeos-ui"],
-        Some(&workspace_path)
-    ).await?;
-    
+        Some(&workspace_path),
+    )
+    .await?;
+
     print_success("UI tests completed successfully");
     Ok(())
 }
@@ -188,15 +192,12 @@ async fn run_ui_tests_only(config: &TestConfig) -> Result<()> {
 /// Run benchmarks only
 async fn run_benchmarks_only(config: &TestConfig) -> Result<()> {
     print_section("⚡ BENCHMARKS ONLY");
-    
+
     let workspace_path = std::path::Path::new(&config.workspace_root);
-    
-    biomeos_tools::execute_command(
-        "cargo",
-        &["bench", "--workspace"],
-        Some(&workspace_path)
-    ).await?;
-    
+
+    biomeos_tools::execute_command("cargo", &["bench", "--workspace"], Some(&workspace_path))
+        .await?;
+
     print_success("Benchmarks completed successfully");
     Ok(())
 }
@@ -204,46 +205,47 @@ async fn run_benchmarks_only(config: &TestConfig) -> Result<()> {
 /// Check if coverage meets threshold
 async fn check_coverage_threshold(config: &TestConfig) -> Result<()> {
     print_section("✅ COVERAGE THRESHOLD CHECK");
-    
+
     let coverage = generate_coverage_report(config).await?;
-    
+
     if coverage >= config.coverage_threshold {
         print_success(&format!(
-            "🎯 PASSED: Coverage {:.1}% meets threshold of {:.1}%", 
-            coverage, 
-            config.coverage_threshold
+            "🎯 PASSED: Coverage {:.1}% meets threshold of {:.1}%",
+            coverage, config.coverage_threshold
         ));
         println!("\n✅ QUALITY GATE: PASSED");
     } else {
         biomeos_tools::print_error(&format!(
-            "❌ FAILED: Coverage {:.1}% below threshold of {:.1}%", 
-            coverage, 
-            config.coverage_threshold
+            "❌ FAILED: Coverage {:.1}% below threshold of {:.1}%",
+            coverage, config.coverage_threshold
         ));
         println!("\n❌ QUALITY GATE: FAILED");
-        println!("📋 ACTION REQUIRED: Add more tests to reach {:.1}% coverage", config.coverage_threshold);
-        
+        println!(
+            "📋 ACTION REQUIRED: Add more tests to reach {:.1}% coverage",
+            config.coverage_threshold
+        );
+
         // Suggest specific areas needing tests
         suggest_testing_improvements();
-        
+
         anyhow::bail!("Coverage threshold not met");
     }
-    
+
     Ok(())
 }
 
 /// Print final testing summary
 fn print_final_summary(coverage: f64, threshold: f64) {
     print_section("📈 TESTING SUMMARY");
-    
+
     println!("🧪 Test Results:");
     println!("  ✅ Unit Tests: PASSED");
     println!("  ✅ Integration Tests: PASSED");
     println!("  ✅ UI Tests: PASSED");
     println!("  ✅ Build Tests: PASSED");
-    
+
     print_coverage_summary(coverage, threshold);
-    
+
     if coverage >= threshold {
         println!("\n🎉 SUCCESS: All tests passed and coverage target achieved!");
         println!("🚀 biomeOS is ready for production deployment");
@@ -258,24 +260,24 @@ fn print_coverage_summary(coverage: f64, threshold: f64) {
     println!("\n📊 Coverage Analysis:");
     println!("  Current Coverage: {:.1}%", coverage);
     println!("  Target Threshold: {:.1}%", threshold);
-    
+
     let status = if coverage >= threshold {
         "✅ PASSED"
     } else {
         "❌ NEEDS IMPROVEMENT"
     };
-    
+
     println!("  Status: {}", status);
-    
+
     // Coverage quality assessment
     let quality = match coverage {
         c if c >= 90.0 => "🟢 EXCELLENT",
-        c if c >= 80.0 => "🟡 GOOD", 
+        c if c >= 80.0 => "🟡 GOOD",
         c if c >= 70.0 => "🟡 ACCEPTABLE",
         c if c >= 50.0 => "🟠 MINIMUM",
-        _ => "🔴 POOR"
+        _ => "🔴 POOR",
     };
-    
+
     println!("  Quality: {}", quality);
 }
 
@@ -289,7 +291,7 @@ fn suggest_testing_improvements() {
     println!("  📊 Add performance regression tests");
     println!("  🔒 Add security-focused tests");
     println!("  🌐 Add cross-platform compatibility tests");
-    
+
     println!("\n🎯 PRIORITY AREAS:");
     println!("  1. biomeOS core functionality");
     println!("  2. Crypto lock system");
@@ -297,4 +299,4 @@ fn suggest_testing_improvements() {
     println!("  4. AI cat door protection");
     println!("  5. UI state management");
     println!("  6. API error handling");
-} 
+}
