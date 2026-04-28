@@ -460,4 +460,53 @@ impl GraphHandler {
             "has_shared_broadcaster": self.event_broadcaster.is_some(),
         }))
     }
+
+    /// Verify graph integrity (content hash + signature check).
+    ///
+    /// Params: `{ "path": "/path/to/graph.toml" }` or `{ "id": "graph-id" }`
+    pub async fn verify_graph(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+
+        let path = if let Some(p) = params.get("path").and_then(|v| v.as_str()) {
+            PathBuf::from(p)
+        } else if let Some(graph_id) = params.get("id").and_then(|v| v.as_str()) {
+            self.resolve_graph_path(graph_id)
+                .ok_or_else(|| anyhow::anyhow!("Graph not found: {graph_id}"))?
+        } else {
+            anyhow::bail!("graph.verify requires 'path' or 'id' parameter");
+        };
+
+        let content = std::fs::read_to_string(&path)
+            .map_err(|e| anyhow::anyhow!("Failed to read graph: {e}"))?;
+
+        // Try typed parse for metadata
+        let (embedded_hash, embedded_sig, embedded_signer, genetics_tier) =
+            if let Ok(graph) = biomeos_graph::GraphLoader::from_str(&content, Some(&path)) {
+                (
+                    graph.definition.metadata.content_hash.clone(),
+                    graph.definition.metadata.signature.clone(),
+                    graph.definition.metadata.signed_by.clone(),
+                    graph.definition.metadata.genetics_tier,
+                )
+            } else {
+                (None, None, None, None)
+            };
+
+        let report = biomeos_graph::verify_integrity(
+            &content,
+            embedded_hash.as_deref(),
+            embedded_sig.as_deref(),
+            embedded_signer.as_deref(),
+        );
+
+        Ok(json!({
+            "path": path.display().to_string(),
+            "content_hash": report.computed_hash,
+            "hash_match": report.hash_match,
+            "signature_valid": report.signature_valid,
+            "signer": report.signer,
+            "genetics_tier": genetics_tier.map(|t| format!("{t:?}")),
+            "acceptable": report.acceptable_for_tier(genetics_tier),
+        }))
+    }
 }

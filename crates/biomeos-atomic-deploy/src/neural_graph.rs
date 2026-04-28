@@ -42,8 +42,21 @@ impl Graph {
             .with_context(|| format!("Failed to read file: {}", path.display()))?;
         tracing::debug!("   File size: {} bytes", contents.len());
 
-        Self::from_toml_str(&contents)
-            .with_context(|| format!("Failed to parse TOML from: {}", path.display()))
+        let mut graph = Self::from_toml_str(&contents)
+            .with_context(|| format!("Failed to parse TOML from: {}", path.display()))?;
+
+        // Derive ID from filename if parser defaulted to "unknown"
+        if graph.id == "unknown" {
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                let derived = stem.to_lowercase().replace(' ', "-");
+                if !derived.is_empty() {
+                    graph.id = derived;
+                    tracing::debug!(derived_id = %graph.id, "Derived neural graph ID from filename");
+                }
+            }
+        }
+
+        Ok(graph)
     }
 
     /// Load graph from TOML string
@@ -128,6 +141,17 @@ impl Graph {
 
         tracing::info!("✅ Parsed {} nodes successfully", nodes.len());
 
+        // Integrity check: warn if unsigned
+        let integrity = biomeos_graph::integrity::verify_integrity(
+            toml, None, // neural_graph doesn't have typed metadata fields for hash
+            None, None,
+        );
+        tracing::debug!(
+            graph_id = %id,
+            content_hash = %integrity.computed_hash,
+            "Graph integrity: content hash computed"
+        );
+
         // Extract execution config
         let config = if let Some(exec_table) = value.get("execution").and_then(|v| v.as_table()) {
             GraphConfig {
@@ -170,6 +194,7 @@ impl Graph {
 
         let env: HashMap<String, String> = graph_table
             .get("env")
+            .or_else(|| graph_table.get("environment"))
             .and_then(|v| v.as_table())
             .map(|t| {
                 t.iter()
@@ -352,11 +377,23 @@ impl Graph {
             config.insert("params".to_string(), serde_json::json!(params));
         }
 
-        let capabilities = if capability.is_empty() {
+        let mut capabilities = if capability.is_empty() {
             vec![]
         } else {
             vec![capability]
         };
+
+        // Merge capabilities from node-level array (primalSpring v2.0 format)
+        if let Some(caps_array) = table.get("capabilities").and_then(|v| v.as_array()) {
+            for cap_val in caps_array {
+                if let Some(cap_str) = cap_val.as_str() {
+                    let s = cap_str.to_string();
+                    if !capabilities.contains(&s) {
+                        capabilities.push(s);
+                    }
+                }
+            }
+        }
 
         let cost_estimate_ms = table
             .get("cost_estimate_ms")

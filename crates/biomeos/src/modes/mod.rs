@@ -9,6 +9,7 @@ pub mod continuous;
 pub mod deploy;
 pub mod doctor;
 pub mod enroll;
+pub mod graph_ops;
 pub mod model_cache;
 pub mod neural_api;
 pub mod nucleus;

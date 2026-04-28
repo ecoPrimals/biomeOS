@@ -2,6 +2,45 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.29 (2026-04-28) — primalSpring Phase 55: Graph Signing, Schema Alignment, NUCLEUS Evolution
+
+### Graph signing infrastructure
+- Added `content_hash`, `signature`, `signed_by` fields to `GraphMetadata`
+  (BLAKE3 hash + Ed25519 signature + signer public key).
+- New `biomeos-graph::integrity` module: `compute_content_hash()`,
+  `verify_integrity()`, `IntegrityReport` with tier-aware acceptance policy.
+- `GraphLoader::parse_and_validate()` now verifies content hash (rejects
+  mismatches) and enforces signature requirements for `mito_beacon`/`nuclear`
+  genetics tiers. Unsigned graphs accepted with debug log at lower tiers.
+- `neural_graph::from_toml_str()` computes and logs content hash.
+- New `graph.verify` JSON-RPC method returns integrity report (hash match,
+  signature validity, signer key, tier acceptability).
+- New `biomeos graph sign <path>` CLI: reads TOML, computes hash, delegates
+  `crypto.sign` to BearDog, writes signed metadata back.
+- New `biomeos graph verify <path>` CLI: offline integrity check.
+- `biomeos deploy` gains `--skip-signature-check` flag (development escape).
+- Added `blake3` and `ed25519-dalek` workspace deps to `biomeos-graph`.
+
+### Graph schema alignment (gap closure)
+- `neural_graph.rs`: `[graph.environment]` accepted as alias for `[graph.env]`.
+- `convert_deployment_node()`: per-node `capabilities = [...]` arrays merged
+  into `GraphNode.capabilities` (de-duplicated with single-capability field).
+- `GraphId::unset()` sentinel + `Default` impl. `GraphDefinition.id` now
+  `#[serde(default)]` — primalSpring graphs without `graph.id` parse
+  successfully (ID derived from filename).
+- `GraphLoader` + `neural_graph::from_toml_file()` derive ID from filename
+  when absent (lowercase, spaces→hyphens).
+
+### NUCLEUS evolution architecture
+- `NeuralApiServer` gains `coordination_pubkey: Arc<RwLock<Option<String>>>`.
+- `derive_coordination_key()` called after primal discovery — resolves
+  `crypto.sign` provider, calls BearDog `crypto.derive_public_key` with
+  `purpose = "coordination"`, caches hex public key. Degrades gracefully
+  if BearDog is unreachable.
+- New `specs/BIOMEOS_NUCLEUS_EVOLUTION.md`: documents current delegation model,
+  Phase 1 (key caching, v3.29), Phase 2 (embedded beardog-crypto library),
+  Phase 3 (full Tower embedding). Trade-off analysis included.
+
 ## v3.28 (2026-04-26) — Deep Debt Cleanup: Constants, Errors, Executor, Events
 
 ### Centralized DEFAULT_FAMILY_ID constant

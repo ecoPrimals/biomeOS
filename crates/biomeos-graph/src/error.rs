@@ -42,6 +42,10 @@ pub enum GraphError {
     /// Node not found in graph
     #[error("Node not found: {0}")]
     NodeNotFound(String),
+
+    /// Graph integrity check failed (hash mismatch or invalid signature)
+    #[error("Integrity error: {0}")]
+    Integrity(String),
 }
 
 #[cfg(test)]
@@ -94,6 +98,12 @@ mod tests {
     fn test_node_not_found_display() {
         let err = GraphError::NodeNotFound("missing-node".to_string());
         assert_eq!(err.to_string(), "Node not found: missing-node");
+    }
+
+    #[test]
+    fn test_integrity_error_display() {
+        let err = GraphError::Integrity("hash mismatch".to_string());
+        assert_eq!(err.to_string(), "Integrity error: hash mismatch");
     }
 
     #[test]

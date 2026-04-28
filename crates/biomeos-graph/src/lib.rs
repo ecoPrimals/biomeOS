@@ -49,6 +49,7 @@ pub mod events;
 pub mod graph;
 #[cfg(test)]
 mod graph_tests;
+pub mod integrity;
 pub mod loader;
 pub mod metrics;
 mod modification;
@@ -74,6 +75,7 @@ pub use graph::{
     GraphId, GraphMetadata, NodeConstraints, Operation, PrimalGraph, PrimalNode, PrimalSelector,
     RetryPolicy, TickConfig,
 };
+pub use integrity::{IntegrityReport, compute_content_hash, verify_integrity};
 pub use loader::GraphLoader;
 pub use modification::{GraphModification, GraphModificationHandler, ModificationResult};
 pub use node::{GraphNode, NodeConfig, NodeParams};

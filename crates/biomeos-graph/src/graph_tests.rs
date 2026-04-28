@@ -133,6 +133,9 @@ fn test_graph_metadata_default() {
     assert!(meta.category.is_none());
     assert!(meta.composition.is_none());
     assert!(meta.genetics_tier.is_none());
+    assert!(meta.content_hash.is_none());
+    assert!(meta.signature.is_none());
+    assert!(meta.signed_by.is_none());
     assert!(meta.extra.is_empty());
 }
 
@@ -145,6 +148,9 @@ fn test_graph_metadata_serde() {
         category: Some(GraphCategory::Deployment),
         composition: None,
         genetics_tier: Some(GeneticsTier::MitoBeacon),
+        content_hash: None,
+        signature: None,
+        signed_by: None,
         extra: HashMap::new(),
     };
     let json = serde_json::to_string(&meta).unwrap();

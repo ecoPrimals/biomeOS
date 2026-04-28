@@ -102,6 +102,17 @@ enum Mode {
         /// Dry run (show what would happen)
         #[arg(short = 'n', long)]
         dry_run: bool,
+
+        /// Skip signature verification (development only)
+        #[arg(long)]
+        skip_signature_check: bool,
+    },
+
+    /// Graph operations - Sign and verify deployment graphs
+    #[command(name = "graph")]
+    Graph {
+        #[command(subcommand)]
+        command: GraphCommand,
     },
 
     /// API server mode - HTTP/WebSocket API
@@ -213,6 +224,24 @@ enum Mode {
         /// TCP-only mode: skip Unix socket for Neural API (mobile substrates)
         #[arg(long, requires = "port")]
         tcp_only: bool,
+    },
+}
+
+/// Graph subcommands — sign and verify deployment graphs
+#[derive(Debug, Subcommand)]
+enum GraphCommand {
+    /// Sign a graph TOML via BearDog delegation
+    #[command(name = "sign")]
+    Sign {
+        /// Path to the graph TOML file
+        path: PathBuf,
+    },
+
+    /// Verify a graph's integrity (content hash + signature)
+    #[command(name = "verify")]
+    Verify {
+        /// Path to the graph TOML file
+        path: PathBuf,
     },
 }
 
@@ -393,7 +422,12 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             graph,
             validate_only,
             dry_run,
+            skip_signature_check: _, // TODO: plumb into GraphLoader when tier enforcement is active
         } => modes::deploy::run(graph, validate_only, dry_run).await,
+        Mode::Graph { command } => match command {
+            GraphCommand::Sign { path } => modes::graph_ops::sign(path).await,
+            GraphCommand::Verify { path } => modes::graph_ops::verify(path).await,
+        },
         Mode::Api {
             port,
             socket,

@@ -170,6 +170,7 @@ fn test_cli_parse_deploy() {
             graph,
             validate_only,
             dry_run,
+            ..
         } => {
             assert_eq!(graph, &PathBuf::from("graph.json"));
             assert!(!*validate_only);

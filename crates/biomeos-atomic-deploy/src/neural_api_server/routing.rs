@@ -140,6 +140,7 @@ enum Route {
     BtspEscalate,
     BtspStatus,
     GraphTickStatus,
+    GraphVerify,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -170,6 +171,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("graph.stop_continuous", Route::GraphStopContinuous),
     ("neural_api.stop_continuous", Route::GraphStopContinuous),
     ("graph.tick_status", Route::GraphTickStatus),
+    ("graph.verify", Route::GraphVerify),
     // Pathway Learner
     (
         "graph.suggest_optimizations",
@@ -414,6 +416,9 @@ impl NeuralApiServer {
                 dispatch(self.graph_handler.stop_continuous(params).await, id)
             }
             Route::GraphTickStatus => dispatch(self.graph_handler.tick_status().await, id),
+            Route::GraphVerify => {
+                dispatch(self.graph_handler.verify_graph(&request.params).await, id)
+            }
             Route::GraphSuggestOptimizations => {
                 dispatch(self.graph_handler.suggest_optimizations(params).await, id)
             }

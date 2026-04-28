@@ -65,7 +65,7 @@ impl GraphLoader {
     /// Parse and validate a graph.
     fn parse_and_validate(&self, content: &str, source: Option<&Path>) -> Result<DeploymentGraph> {
         // Step 1: Parse TOML into typed struct
-        let graph: DeploymentGraph = toml::from_str(content).map_err(|e| {
+        let mut graph: DeploymentGraph = toml::from_str(content).map_err(|e| {
             let location =
                 source.map_or_else(|| "<string>".to_string(), |p| p.display().to_string());
             GraphError::Parse(format!("Failed to parse {location} as graph: {e}"))
@@ -73,6 +73,58 @@ impl GraphLoader {
 
         // Step 2: Validate structure
         self.validator.validate(&graph)?;
+
+        // If graph ID was not specified, derive from filename
+        if graph.definition.id.is_unset() {
+            if let Some(path) = source {
+                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    let derived = stem.to_lowercase().replace(' ', "-");
+                    if let Ok(id) = crate::graph::GraphId::new(&derived) {
+                        graph.definition.id = id;
+                        tracing::debug!(
+                            derived_id = %graph.definition.id,
+                            "Derived graph ID from filename"
+                        );
+                    }
+                }
+            }
+        }
+
+        // Step 3: Integrity check (content hash + signature)
+        let report = crate::integrity::verify_integrity(
+            content,
+            graph.definition.metadata.content_hash.as_deref(),
+            graph.definition.metadata.signature.as_deref(),
+            graph.definition.metadata.signed_by.as_deref(),
+        );
+
+        if report.hash_match == Some(false) {
+            return Err(GraphError::Integrity(format!(
+                "content hash mismatch in {}: expected {}, computed {}",
+                source.map_or("<string>", |p| p.to_str().unwrap_or("<path>")),
+                graph
+                    .definition
+                    .metadata
+                    .content_hash
+                    .as_deref()
+                    .unwrap_or("?"),
+                report.computed_hash,
+            )));
+        }
+
+        if !report.acceptable_for_tier(graph.definition.metadata.genetics_tier) {
+            return Err(GraphError::Integrity(format!(
+                "graph requires genetics_tier {:?} but is unsigned or has invalid signature",
+                graph.definition.metadata.genetics_tier,
+            )));
+        }
+
+        if graph.definition.metadata.signature.is_none() {
+            tracing::debug!(
+                graph_id = %graph.definition.id,
+                "Graph is unsigned — acceptable for current genetics tier"
+            );
+        }
 
         Ok(graph)
     }
@@ -190,15 +242,19 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_required_fields() {
-        // Missing id field (the only truly required field)
+    fn test_missing_id_uses_default() {
         let toml = r#"
             [graph]
             name = "has-name-but-no-id"
             version = "1.0.0"
         "#;
         let result = GraphLoader::from_str(toml, None);
-        assert!(result.is_err());
+        assert!(
+            result.is_ok(),
+            "graph.id should default to _unset: {result:?}"
+        );
+        let graph = result.unwrap();
+        assert!(graph.definition.id.is_unset() || graph.definition.id.as_str() == "_unset");
     }
 
     #[test]

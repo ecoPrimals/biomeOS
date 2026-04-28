@@ -325,6 +325,62 @@ impl NeuralApiServer {
     /// or trigger re-discovery after new primals start. This is the on-demand
     /// complement to startup auto-discovery (Option 1) and `capability.register`
     /// (Option 2). All three paths converge at the same `NeuralRouter`.
+    /// Derive the `coordination` purpose key from BearDog and cache it.
+    ///
+    /// Called once during startup after primals are discovered. If BearDog is
+    /// unreachable the key stays `None` — graph signing degrades gracefully to
+    /// unsigned mode rather than blocking the server.
+    pub(crate) async fn derive_coordination_key(&self) {
+        use biomeos_core::atomic_client::AtomicClient;
+
+        let providers = self.router.get_capability_providers("crypto.sign").await;
+        let Some(providers) = providers else {
+            debug!("crypto.sign not routable — skipping coordination key derivation");
+            return;
+        };
+        let Some(provider) = providers.first() else {
+            debug!("crypto.sign has no providers — skipping coordination key derivation");
+            return;
+        };
+
+        let socket_path = match &provider.endpoint {
+            biomeos_core::TransportEndpoint::UnixSocket { path } => path.clone(),
+            _ => {
+                debug!("crypto.sign provider is not UDS — skipping coordination key derivation");
+                return;
+            }
+        };
+
+        let client =
+            AtomicClient::unix(&socket_path).with_timeout(std::time::Duration::from_secs(5));
+        let result = client
+            .call(
+                "crypto.derive_public_key",
+                serde_json::json!({"purpose": "coordination"}),
+            )
+            .await;
+
+        match result {
+            Ok(resp) => {
+                if let Some(pubkey) = resp.get("public_key").and_then(|v| v.as_str()) {
+                    let mut key = self.coordination_pubkey.write().await;
+                    *key = Some(pubkey.to_string());
+                    info!(
+                        "Coordination purpose key cached: {}…",
+                        &pubkey[..std::cmp::min(16, pubkey.len())]
+                    );
+                } else {
+                    warn!("crypto.derive_public_key response missing 'public_key' field");
+                }
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to derive coordination key: {e} — graph signing will require manual key"
+                );
+            }
+        }
+    }
+
     pub(crate) async fn rescan_primals(&self) -> anyhow::Result<serde_json::Value> {
         let before = self.router.list_capabilities().await.len();
         self.discover_and_register_primals().await;

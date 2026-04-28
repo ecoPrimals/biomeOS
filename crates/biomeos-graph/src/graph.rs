@@ -79,6 +79,7 @@ impl Default for TickConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphDefinition {
     /// Unique identifier for the graph
+    #[serde(default)]
     pub id: GraphId,
 
     /// Human-readable name (defaults to graph id if absent)
@@ -148,6 +149,25 @@ impl GraphId {
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    /// Sentinel value for graphs with no explicit ID.
+    /// Used when loading primalSpring cell graphs that omit `graph.id`.
+    #[must_use]
+    pub fn unset() -> Self {
+        Self("_unset".to_string())
+    }
+
+    /// Whether this ID is the unset sentinel.
+    #[must_use]
+    pub fn is_unset(&self) -> bool {
+        self.0 == "_unset"
+    }
+}
+
+impl Default for GraphId {
+    fn default() -> Self {
+        Self::unset()
     }
 }
 
@@ -263,6 +283,23 @@ pub struct GraphMetadata {
     /// meets this tier before allowing deployment.
     #[serde(default)]
     pub genetics_tier: Option<GeneticsTier>,
+
+    /// BLAKE3 content hash of the graph TOML (excludes signing metadata).
+    ///
+    /// Computed over the canonical TOML with `content_hash`, `signature`, and
+    /// `signed_by` stripped from `[graph.metadata]`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<String>,
+
+    /// Ed25519 signature of `content_hash`, hex-encoded.
+    ///
+    /// Produced by the `coordination` purpose key via BearDog delegation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<String>,
+
+    /// Hex-encoded public key of the signer for offline verification.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signed_by: Option<String>,
 
     /// Additional metadata
     #[serde(flatten)]

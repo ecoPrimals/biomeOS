@@ -115,6 +115,13 @@ pub struct NeuralApiServer {
 
     /// Plasmodium agent registry (meld/split/mix routing contexts)
     pub(super) agent_registry: agents::AgentRegistry,
+
+    /// Cached `coordination` purpose key (hex-encoded public key).
+    ///
+    /// Derived from BearDog via `crypto.derive_public_key` after Tower health
+    /// is confirmed. Used for graph signing and verification without
+    /// re-deriving on every operation.
+    pub(super) coordination_pubkey: Arc<RwLock<Option<String>>>,
 }
 
 impl NeuralApiServer {
@@ -204,6 +211,7 @@ impl NeuralApiServer {
             protocol_handler,
             inference_handler,
             agent_registry: agents::AgentRegistry::new(),
+            coordination_pubkey: Arc::new(RwLock::new(None)),
         }
     }
 
