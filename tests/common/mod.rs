@@ -6,7 +6,12 @@
 //! Provides modern testing patterns, mock objects, and shared utilities
 //! that align with the refactored biomeOS architecture.
 
-#![allow(dead_code, clippy::unwrap_used, clippy::expect_used)] // Test utilities may not all be used in every test
+#![expect(
+    dead_code,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test utilities — not all used in every test"
+)]
 
 use anyhow::Result;
 use biomeos_core::UniversalBiomeOSManager;

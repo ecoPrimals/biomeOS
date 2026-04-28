@@ -94,13 +94,16 @@ impl GraphHandler {
             let socket_dir = SystemPaths::new()
                 .map(|p| p.runtime_dir().to_string_lossy().to_string())
                 .unwrap_or_else(|_| {
-                    std::env::var("BIOMEOS_SOCKET_DIR").unwrap_or_else(|_| "/tmp".to_string())
+                    std::env::var("BIOMEOS_SOCKET_DIR")
+                        .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.to_string())
                 });
             env.insert("SOCKET_DIR".to_string(), socket_dir);
             env.insert(
                 "JWT_SECRET".to_string(),
-                std::env::var("JWT_SECRET")
-                    .unwrap_or_else(|_| "CHANGE_ME_IN_PRODUCTION".to_string()),
+                std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+                    tracing::warn!("JWT_SECRET not set — using family-derived fallback");
+                    format!("biomeos-jwt-{}", family_id_owned)
+                }),
             );
 
             let metrics_db_path = SystemPaths::new()
@@ -120,8 +123,12 @@ impl GraphHandler {
                     .unwrap_or_default()
             };
 
-            let mut executor = GraphExecutor::new(graph.clone(), env)
-                .with_capability_registry(capability_registry);
+            // Clone needed: executor consumes graph, but post-execution
+            // capability registration needs the node list.
+            let graph_ref = graph.clone();
+
+            let mut executor =
+                GraphExecutor::new(graph, env).with_capability_registry(capability_registry);
             if let Ok(m) = metrics {
                 executor = executor.with_metrics(m);
             }
@@ -130,8 +137,12 @@ impl GraphHandler {
             match executor.execute().await {
                 Ok(report) => {
                     if report.success {
-                        Self::register_capabilities_from_graph(&router, &graph, &family_id_owned)
-                            .await;
+                        Self::register_capabilities_from_graph(
+                            &router,
+                            &graph_ref,
+                            &family_id_owned,
+                        )
+                        .await;
                     }
 
                     let mut status = executions.write().await;

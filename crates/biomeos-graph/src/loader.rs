@@ -14,6 +14,8 @@ use crate::{Result, error::GraphError, graph::DeploymentGraph, validation::Graph
 pub struct GraphLoader {
     /// Validator for structural checks
     validator: GraphValidator,
+    /// Skip integrity (hash + signature) verification. Development only.
+    skip_integrity: bool,
 }
 
 impl Default for GraphLoader {
@@ -28,7 +30,19 @@ impl GraphLoader {
     pub fn new() -> Self {
         Self {
             validator: GraphValidator::new(),
+            skip_integrity: false,
         }
+    }
+
+    /// Skip integrity verification (content hash and signature checks).
+    ///
+    /// For development/testing only. In production, unsigned graphs are
+    /// accepted at `None`/`Tag` genetics tiers; this flag bypasses checks
+    /// entirely.
+    #[must_use]
+    pub fn with_skip_integrity(mut self, skip: bool) -> Self {
+        self.skip_integrity = skip;
+        self
     }
 
     /// Load a graph from a TOML file.
@@ -52,6 +66,14 @@ impl GraphLoader {
             .map_err(|e| GraphError::Io(format!("Failed to read {}: {}", path.display(), e)))?;
 
         Self::from_str(&content, Some(path))
+    }
+
+    /// Load a graph from a TOML file using this loader's configuration.
+    pub fn load_file(&self, path: impl AsRef<Path>) -> Result<DeploymentGraph> {
+        let path = path.as_ref();
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| GraphError::Io(format!("Failed to read {}: {}", path.display(), e)))?;
+        self.parse_and_validate(&content, Some(path))
     }
 
     /// Load a graph from a TOML string.
@@ -91,39 +113,41 @@ impl GraphLoader {
         }
 
         // Step 3: Integrity check (content hash + signature)
-        let report = crate::integrity::verify_integrity(
-            content,
-            graph.definition.metadata.content_hash.as_deref(),
-            graph.definition.metadata.signature.as_deref(),
-            graph.definition.metadata.signed_by.as_deref(),
-        );
-
-        if report.hash_match == Some(false) {
-            return Err(GraphError::Integrity(format!(
-                "content hash mismatch in {}: expected {}, computed {}",
-                source.map_or("<string>", |p| p.to_str().unwrap_or("<path>")),
-                graph
-                    .definition
-                    .metadata
-                    .content_hash
-                    .as_deref()
-                    .unwrap_or("?"),
-                report.computed_hash,
-            )));
-        }
-
-        if !report.acceptable_for_tier(graph.definition.metadata.genetics_tier) {
-            return Err(GraphError::Integrity(format!(
-                "graph requires genetics_tier {:?} but is unsigned or has invalid signature",
-                graph.definition.metadata.genetics_tier,
-            )));
-        }
-
-        if graph.definition.metadata.signature.is_none() {
-            tracing::debug!(
-                graph_id = %graph.definition.id,
-                "Graph is unsigned — acceptable for current genetics tier"
+        if !self.skip_integrity {
+            let report = crate::integrity::verify_integrity(
+                content,
+                graph.definition.metadata.content_hash.as_deref(),
+                graph.definition.metadata.signature.as_deref(),
+                graph.definition.metadata.signed_by.as_deref(),
             );
+
+            if report.hash_match == Some(false) {
+                return Err(GraphError::Integrity(format!(
+                    "content hash mismatch in {}: expected {}, computed {}",
+                    source.map_or("<string>", |p| p.to_str().unwrap_or("<path>")),
+                    graph
+                        .definition
+                        .metadata
+                        .content_hash
+                        .as_deref()
+                        .unwrap_or("?"),
+                    report.computed_hash,
+                )));
+            }
+
+            if !report.acceptable_for_tier(graph.definition.metadata.genetics_tier) {
+                return Err(GraphError::Integrity(format!(
+                    "graph requires genetics_tier {:?} but is unsigned or has invalid signature",
+                    graph.definition.metadata.genetics_tier,
+                )));
+            }
+
+            if graph.definition.metadata.signature.is_none() {
+                tracing::debug!(
+                    graph_id = %graph.definition.id,
+                    "Graph is unsigned — acceptable for current genetics tier"
+                );
+            }
         }
 
         Ok(graph)

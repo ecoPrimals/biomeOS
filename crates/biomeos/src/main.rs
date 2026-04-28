@@ -422,8 +422,8 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             graph,
             validate_only,
             dry_run,
-            skip_signature_check: _, // TODO: plumb into GraphLoader when tier enforcement is active
-        } => modes::deploy::run(graph, validate_only, dry_run).await,
+            skip_signature_check,
+        } => modes::deploy::run(graph, validate_only, dry_run, skip_signature_check).await,
         Mode::Graph { command } => match command {
             GraphCommand::Sign { path } => modes::graph_ops::sign(path).await,
             GraphCommand::Verify { path } => modes::graph_ops::verify(path).await,

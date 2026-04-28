@@ -118,7 +118,7 @@ pub fn extract_rpc_error(response: &JsonRpcResponse, primal: &str) -> Option<Rpc
 ///
 /// Carries the IPC phase, the primal that produced it, and the optional
 /// JSON-RPC error code for downstream classification.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub struct RpcExtractionError {
     /// Phase of the IPC call where extraction failed.
     pub phase: IpcErrorPhase,
@@ -161,8 +161,6 @@ impl fmt::Display for RpcExtractionError {
         }
     }
 }
-
-impl std::error::Error for RpcExtractionError {}
 
 #[cfg(test)]
 #[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]

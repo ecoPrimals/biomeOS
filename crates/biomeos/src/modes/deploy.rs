@@ -54,8 +54,9 @@ struct LoadedGraphInfo {
     consumed_capabilities: Vec<String>,
 }
 
-fn load_graph(path: &std::path::Path) -> Result<LoadedGraphInfo> {
-    if let Ok(dg) = GraphLoader::from_file(path) {
+fn load_graph(path: &std::path::Path, skip_integrity: bool) -> Result<LoadedGraphInfo> {
+    let loader = GraphLoader::new().with_skip_integrity(skip_integrity);
+    if let Ok(dg) = loader.load_file(path) {
         debug!("Loaded as DeploymentGraph format");
         let mut provided = Vec::new();
         let mut consumed = Vec::new();
@@ -146,7 +147,12 @@ fn validate_consumed_capabilities(info: &LoadedGraphInfo) {
     }
 }
 
-pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<()> {
+pub async fn run(
+    graph: PathBuf,
+    validate_only: bool,
+    dry_run: bool,
+    skip_signature_check: bool,
+) -> Result<()> {
     info!("🚀 biomeOS Deploy Mode");
     info!("Graph: {}", graph.display());
 
@@ -160,7 +166,11 @@ pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<(
         warn!("🧪 Dry run mode - showing what would happen");
     }
 
-    let loaded = load_graph(&graph)?;
+    if skip_signature_check {
+        warn!("⚠️  Signature verification skipped (--skip-signature-check)");
+    }
+
+    let loaded = load_graph(&graph, skip_signature_check)?;
 
     info!(
         "✅ Graph loaded and validated: {} ({} nodes)",
@@ -236,6 +246,7 @@ mod tests {
             PathBuf::from("/nonexistent/path/to/graph.toml"),
             false,
             false,
+            false,
         )
         .await;
         let err = result.expect_err("missing file should error");
@@ -251,7 +262,7 @@ mod tests {
         let graph_path = dir.path().join("graph.toml");
         std::fs::write(&graph_path, MINIMAL_VALID_GRAPH).expect("write graph");
 
-        let result = run(graph_path, true, false).await;
+        let result = run(graph_path, true, false, false).await;
         result.expect("validate_only should succeed");
     }
 
@@ -261,7 +272,7 @@ mod tests {
         let graph_path = dir.path().join("graph.toml");
         std::fs::write(&graph_path, MINIMAL_VALID_GRAPH).expect("write graph");
 
-        let result = run(graph_path, false, true).await;
+        let result = run(graph_path, false, true, false).await;
         result.expect("dry_run should succeed");
     }
 
@@ -271,7 +282,7 @@ mod tests {
         let graph_path = dir.path().join("invalid.toml");
         std::fs::write(&graph_path, "not valid toml {{{").expect("write invalid");
 
-        let result = run(graph_path, false, false).await;
+        let result = run(graph_path, false, false, false).await;
         let err = result.expect_err("invalid graph should error");
         assert!(
             err.to_string().contains("parse") || err.to_string().contains("Failed to load"),
@@ -285,7 +296,7 @@ mod tests {
         let graph_path = dir.path().join("graph.toml");
         std::fs::write(&graph_path, MINIMAL_VALID_GRAPH).expect("write graph");
 
-        let result = run(graph_path, false, false).await;
+        let result = run(graph_path, false, false, false).await;
         let err = result.expect_err("should fail without neural-api running");
         assert!(
             err.to_string().contains("neural-api socket not found"),
@@ -299,7 +310,7 @@ mod tests {
         let graph_path = dir.path().join("neural.toml");
         std::fs::write(&graph_path, MINIMAL_NEURAL_GRAPH).expect("write graph");
 
-        let result = run(graph_path, true, false).await;
+        let result = run(graph_path, true, false, false).await;
         result.expect("neural_graph format should load via fallback");
     }
 
@@ -309,7 +320,7 @@ mod tests {
         let graph_path = dir.path().join("neural.toml");
         std::fs::write(&graph_path, MINIMAL_NEURAL_GRAPH).expect("write graph");
 
-        let result = run(graph_path, false, true).await;
+        let result = run(graph_path, false, true, false).await;
         result.expect("neural_graph dry_run should succeed");
     }
 }

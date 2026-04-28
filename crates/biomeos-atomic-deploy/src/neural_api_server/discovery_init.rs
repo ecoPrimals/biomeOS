@@ -213,10 +213,9 @@ impl NeuralApiServer {
         let mut total_nodes = 0usize;
 
         let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
-        let base_dir = socket_dirs
-            .first()
-            .cloned()
-            .unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
+        let base_dir = socket_dirs.first().cloned().unwrap_or_else(|| {
+            std::path::PathBuf::from(biomeos_types::defaults::DEFAULT_SOCKET_DIR)
+        });
 
         let graph_dirs = [&self.graphs_dir];
         for dir in &graph_dirs {

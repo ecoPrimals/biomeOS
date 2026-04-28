@@ -13,10 +13,9 @@
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
-// test-only crate — expect/unwrap are idiomatic in test infrastructure.
-// #![allow] rather than #![expect] because the non-test production surface
-// of this crate has zero unwrap/expect calls; the submodule test blocks
-// carry their own #[expect] attributes.
+// test-only crate — #[allow] rather than #[expect] because the library
+// surface is compiled without cfg(test), so the lint is never triggered
+// at the crate level. Submodule test blocks carry their own #[expect].
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 pub mod assertions;

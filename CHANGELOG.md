@@ -2,6 +2,46 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.30 (2026-04-28) — Deep Debt Cleanup: File Split, Error Evolution, Hardcoding, Lint Hardening
+
+### events.rs smart refactor (831→385 LOC)
+- Extracted 456-line test module into `events_tests.rs` sibling file.
+  Production code now well under the 800L target.
+
+### RpcExtractionError thiserror migration
+- `biomeos-types/src/ipc.rs`: replaced manual `impl Error` with
+  `#[derive(thiserror::Error)]` while keeping the conditional Display
+  impl for code-aware formatting. Last manual Error impl eliminated.
+
+### JWT placeholder evolution
+- `execute.rs`: replaced `"CHANGE_ME_IN_PRODUCTION"` JWT fallback with
+  family-derived value (`biomeos-jwt-{family_id}`). No longer a known
+  constant; unique per family.
+
+### /tmp fallback centralization
+- `discovery_init.rs` and `execute.rs`: replaced raw `"/tmp"` literals
+  with `DEFAULT_SOCKET_DIR` constant.
+
+### skip_signature_check plumbing
+- `GraphLoader` gains `with_skip_integrity(bool)` builder + `load_file()`
+  instance method. `biomeos deploy --skip-signature-check` flag now fully
+  wired through `run()` → `load_graph()` → `GraphLoader`.
+
+### #[allow] → #[expect(reason)] migration
+- 8 root `tests/*.rs` files + `tests/common/mod.rs` migrated from bare
+  `#[allow(...)]` to `#[expect(..., reason = "...")]`.
+- `biomeos-test-utils` documented as exception (lib surface never triggers
+  the lint in non-test compilation).
+
+### Graph executor clone documentation
+- `execute.rs`: `graph.clone()` now documented with rationale (executor
+  consumes graph, post-execution capability registration needs node list).
+
+### Dependency version consistency
+- `neural-api-client/Cargo.toml`: added `version = "0.1.0"` to
+  `biomeos-types` path dep. `biomeos-api/Cargo.toml`: added version to
+  `neural-api-client` path dep.
+
 ## v3.29 (2026-04-28) — primalSpring Phase 55: Graph Signing, Schema Alignment, NUCLEUS Evolution
 
 ### Graph signing infrastructure
