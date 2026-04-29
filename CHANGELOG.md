@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.31 (2026-04-29) — Phase 56 Gap Resolution: Capability Routing, Graph Unification, Executor Dispatch
+
+### GAP-13: Fix storage capability routing (P1)
+- `capability_call.rs`: when a translation exists (e.g., `storage.store` → NestGate),
+  the handler now prefers the provider declared in the translation registry over
+  `providers[0]` (discovery insertion order). Fixes `storage` routing to ToadStool
+  when ToadStool also advertises storage capabilities.
+
+### GAP-14: Unified graph parser (P1)
+- `graph.save` now wraps serialized TOML under `[graph]` so saved files round-trip
+  through both `Graph::from_toml_str` and `DeploymentGraph` parsing.
+- Added `load_as_deployment_graph()` dual-parser: tries `DeploymentGraph` first,
+  falls back to `Graph::from_toml_str` + `neural_to_deployment()` converter.
+- `graph.start_continuous` and `graph.execute_pipeline` now use this unified loader.
+
+### GAP-15: Fix graph.start_continuous for runtime-injected graphs (P1)
+- Runtime graphs saved via `graph.save` can now be started as continuous sessions.
+  The `[graph]`-wrapped save format + dual-parse loader eliminates the schema mismatch.
+
+### GAP-16: Fix graph.execute node dispatch (P2)
+- Added `register_only` as alias for `register_capabilities` in the executor.
+- Nodes with a capability selector (`by_capability` or non-empty `capabilities` list)
+  now dispatch as `capability_call` even if the operation name is unrecognized,
+  instead of being silently skipped.
+
+### Symlink absorption
+- `capability.resolve` RPC already exists in the Neural API route table.
+  With GAP-13's routing fix, the resolution chain now correctly prefers
+  the translation registry's provider. Springs can use `capability.resolve`
+  instead of filesystem symlinks for capability→socket discovery.
+
 ## v3.30 (2026-04-28) — Deep Debt Cleanup: File Split, Error Evolution, Hardcoding, Lint Hardening
 
 ### events.rs smart refactor (831→385 LOC)

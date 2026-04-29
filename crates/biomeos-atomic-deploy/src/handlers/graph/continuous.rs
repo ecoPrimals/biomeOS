@@ -18,7 +18,8 @@ impl GraphHandler {
     ///
     /// JSON-RPC method: `graph.start_continuous`
     ///
-    /// Loads the graph from disk as a `DeploymentGraph`, creates a
+    /// Loads the graph from disk as a `DeploymentGraph` (trying both native
+    /// deployment format and neural API format via dual-parse), creates a
     /// `ContinuousExecutor`, and runs it in a background task. Returns
     /// a `session_id` that can be used for pause/resume/stop.
     pub async fn start_continuous(&self, params: &Option<Value>) -> Result<Value> {
@@ -36,8 +37,7 @@ impl GraphHandler {
         let toml_str = std::fs::read_to_string(&graph_path)
             .with_context(|| format!("Failed to read: {}", graph_path.display()))?;
 
-        let deployment_graph: DeploymentGraph = toml::from_str(&toml_str)
-            .with_context(|| format!("Failed to parse DeploymentGraph: {graph_id}"))?;
+        let deployment_graph = Self::load_as_deployment_graph(&toml_str, graph_id)?;
 
         let coordination = &deployment_graph.definition.coordination;
         if *coordination != biomeos_graph::graph::CoordinationPattern::Continuous {

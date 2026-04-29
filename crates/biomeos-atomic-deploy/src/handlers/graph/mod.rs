@@ -190,6 +190,95 @@ impl GraphHandler {
         None
     }
 
+    /// Load a graph from disk as a `DeploymentGraph`, trying both formats.
+    ///
+    /// 1. Try `toml::from_str::<DeploymentGraph>` (native `[graph]` + `[[graph.nodes]]`)
+    /// 2. On failure, try `Graph::from_toml_str` and convert to `DeploymentGraph`
+    ///
+    /// This dual-parse strategy lets `graph.start_continuous` and `graph.execute_pipeline`
+    /// consume both pre-authored deployment graphs AND runtime-saved graphs (via `graph.save`).
+    pub(super) fn load_as_deployment_graph(
+        toml_str: &str,
+        graph_id: &str,
+    ) -> Result<DeploymentGraph> {
+        if let Ok(dg) = toml::from_str::<DeploymentGraph>(toml_str) {
+            return Ok(dg);
+        }
+
+        let graph = Graph::from_toml_str(toml_str).with_context(|| {
+            format!("Failed to parse graph '{graph_id}' as either DeploymentGraph or neural Graph")
+        })?;
+
+        Self::neural_to_deployment(&graph)
+    }
+
+    /// Convert a neural API `Graph` to a `DeploymentGraph`.
+    fn neural_to_deployment(graph: &Graph) -> Result<DeploymentGraph> {
+        use biomeos_graph::graph::{CoordinationPattern, GraphDefinition, GraphId, GraphMetadata};
+        use biomeos_graph::node::{GraphNode as DNode, NodeConfig, NodeId, NodeParams, NodeType};
+
+        let coordination = match graph.coordination.as_deref() {
+            Some(c) if c.eq_ignore_ascii_case("continuous") => CoordinationPattern::Continuous,
+            Some(c) if c.eq_ignore_ascii_case("pipeline") => CoordinationPattern::Pipeline,
+            Some(c) if c.eq_ignore_ascii_case("parallel") => CoordinationPattern::Parallel,
+            Some(c) if c.eq_ignore_ascii_case("conditional_dag") => {
+                CoordinationPattern::ConditionalDag
+            }
+            _ => CoordinationPattern::Sequential,
+        };
+
+        let nodes: Vec<DNode> = graph
+            .nodes
+            .iter()
+            .enumerate()
+            .filter_map(|(i, n)| {
+                let capability = n
+                    .operation
+                    .as_ref()
+                    .map(|op| op.name.clone())
+                    .or_else(|| n.capabilities.first().cloned());
+
+                let fallback_id = format!("node-{i}");
+                let id = NodeId::new(&n.id)
+                    .or_else(|_| NodeId::new(&fallback_id))
+                    .ok()?;
+                Some(DNode {
+                    id,
+                    name: n.id.clone(),
+                    node_type: NodeType::default(),
+                    capability,
+                    required: true,
+                    order: i32::try_from(i).unwrap_or(0),
+                    depends_on: n.depends_on.clone(),
+                    condition: None,
+                    config: NodeConfig::default(),
+                    params: NodeParams::default(),
+                    feedback_to: None,
+                    budget_ms: None,
+                    fallback: n.fallback.clone(),
+                    cost_estimate_ms: n.cost_estimate_ms,
+                    operation_dependencies: n.operation_dependencies.clone(),
+                    gate: n.gate.clone(),
+                })
+            })
+            .collect();
+
+        Ok(DeploymentGraph {
+            definition: GraphDefinition {
+                id: GraphId::new(&graph.id).unwrap_or_else(|_| GraphId::unset()),
+                name: graph.description.clone(),
+                version: graph.version.clone(),
+                description: graph.description.clone(),
+                metadata: GraphMetadata::default(),
+                coordination,
+                tick: None,
+                env: graph.env.clone(),
+                nodes,
+                outputs: HashMap::new(),
+            },
+        })
+    }
+
     // -----------------------------------------------------------------
     // CRUD operations
     // -----------------------------------------------------------------
@@ -327,8 +416,15 @@ impl GraphHandler {
 
         let graph_path = self.runtime_graphs_dir.join(format!("{}.toml", graph.id));
 
-        let toml_str =
-            toml::to_string_pretty(&graph).context("Failed to serialize graph to TOML")?;
+        // Wrap under [graph] so the file round-trips through both
+        // `Graph::from_toml_str` (expects `[graph]` table) and
+        // `toml::from_str::<DeploymentGraph>` (expects `[graph]` + `[[graph.nodes]]`).
+        let graph_value =
+            toml::Value::try_from(&graph).context("Failed to serialize graph to TOML value")?;
+        let mut wrapper = toml::map::Map::new();
+        wrapper.insert("graph".to_string(), graph_value);
+        let toml_str = toml::to_string_pretty(&toml::Value::Table(wrapper))
+            .context("Failed to serialize graph to TOML")?;
 
         std::fs::write(&graph_path, toml_str).context("Failed to write graph file")?;
 

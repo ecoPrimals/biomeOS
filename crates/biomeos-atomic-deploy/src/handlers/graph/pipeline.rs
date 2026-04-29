@@ -8,7 +8,7 @@ use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
 use biomeos_graph::events::GraphEventBroadcaster;
-use biomeos_graph::graph::{CoordinationPattern, DeploymentGraph};
+use biomeos_graph::graph::CoordinationPattern;
 use biomeos_graph::pipeline::{PipelineExecutor, PipelineNodeId, StreamItem};
 use serde_json::{Value, json};
 use std::path::PathBuf;
@@ -20,7 +20,8 @@ impl GraphHandler {
     ///
     /// JSON-RPC method: `graph.execute_pipeline`
     ///
-    /// Loads the graph as a `DeploymentGraph`, validates that it uses
+    /// Loads the graph as a `DeploymentGraph` (trying both native deployment
+    /// format and neural API format via dual-parse), validates that it uses
     /// `Pipeline` coordination, then runs it via `PipelineExecutor`.
     /// The source node produces items, each transform node processes them,
     /// and the result collects all outputs.
@@ -41,8 +42,7 @@ impl GraphHandler {
         let toml_str = std::fs::read_to_string(&graph_path)
             .with_context(|| format!("Failed to read: {}", graph_path.display()))?;
 
-        let deployment_graph: DeploymentGraph = toml::from_str(&toml_str)
-            .with_context(|| format!("Failed to parse DeploymentGraph: {graph_id}"))?;
+        let deployment_graph = Self::load_as_deployment_graph(&toml_str, graph_id)?;
 
         if deployment_graph.definition.coordination != CoordinationPattern::Pipeline {
             anyhow::bail!(

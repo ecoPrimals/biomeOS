@@ -196,21 +196,34 @@ impl CapabilityHandler {
                 let forward_method = trans.actual_method.clone();
                 let provider_from_trans = trans.provider.clone();
 
-                // Drop the read lock before making the call
                 drop(registry);
 
-                // Discover primal socket
                 let atomic = self.router.discover_capability(capability).await?;
-                let primary_name = atomic
-                    .primals
-                    .first()
-                    .map(|p| p.name.to_string())
-                    .unwrap_or_else(|| provider_from_trans.clone());
 
-                // Forward request
+                // Prefer the provider declared in the translation registry.
+                // Without this, `providers[0]` (discovery order) wins and a
+                // domain like "storage" can route to ToadStool instead of
+                // NestGate when ToadStool also advertises storage capabilities.
+                let (endpoint, primary_name) = if let Some(preferred) = atomic
+                    .primals
+                    .iter()
+                    .find(|p| p.name.eq_ignore_ascii_case(&provider_from_trans))
+                {
+                    (preferred.endpoint.clone(), preferred.name.to_string())
+                } else {
+                    (
+                        atomic.primary_endpoint.clone(),
+                        atomic
+                            .primals
+                            .first()
+                            .map(|p| p.name.to_string())
+                            .unwrap_or_else(|| provider_from_trans.clone()),
+                    )
+                };
+
                 let result = self
                     .router
-                    .forward_request(&atomic.primary_endpoint, &forward_method, &args)
+                    .forward_request(&endpoint, &forward_method, &args)
                     .await?;
 
                 let elapsed_ms = elapsed_ms_since(start);

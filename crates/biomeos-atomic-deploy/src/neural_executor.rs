@@ -408,10 +408,32 @@ impl GraphExecutor {
             "capability_call" => {
                 Self::node_capability_call_with_registry(node, context, capability_registry).await
             }
-            "register_capabilities" => node_handlers::register_capabilities(node, context).await,
+            "register_capabilities" | "register_only" => {
+                node_handlers::register_capabilities(node, context).await
+            }
             _ => {
-                warn!("Unknown node type: {}, skipping", node_type_str);
-                Ok(serde_json::json!({"skipped": true}))
+                // Nodes with a capability or primal selector containing a capability
+                // should dispatch as capability_call even if the operation name is
+                // not literally "capability_call". This handles desktop/spring graphs
+                // where nodes declare `by_capability` and get converted with varying
+                // operation names.
+                let has_capability = node
+                    .primal
+                    .as_ref()
+                    .is_some_and(|p| p.by_capability.is_some())
+                    || node.capabilities.first().is_some_and(|c| !c.is_empty());
+
+                if has_capability {
+                    debug!(
+                        "Node '{}' has capability — dispatching as capability_call (was: {})",
+                        node.id, node_type_str
+                    );
+                    Self::node_capability_call_with_registry(node, context, capability_registry)
+                        .await
+                } else {
+                    warn!("Unknown node type: {}, skipping", node_type_str);
+                    Ok(serde_json::json!({"skipped": true}))
+                }
             }
         };
 
