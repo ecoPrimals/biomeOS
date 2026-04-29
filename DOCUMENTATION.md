@@ -168,7 +168,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of April 29, 2026 (v3.31)**
+**Documentation current as of April 29, 2026 (v3.32)**
 **Active: 25 specs, handoffs in wateringHole (v2.43–v3.30), 4 scripts**
 **Deploy graphs: 42 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP ClientHello recognition; `primal.list` on neural-api; bootstrap tolerance; graph signing (BLAKE3+Ed25519); coordination key caching**

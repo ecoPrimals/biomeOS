@@ -148,6 +148,7 @@ mod neural_executor_async_tests;
 #[cfg(test)]
 mod neural_executor_async_tests2;
 mod neural_executor_node_impls;
+mod neural_executor_rollback;
 #[cfg(test)]
 mod neural_executor_tests;
 pub mod neural_graph;

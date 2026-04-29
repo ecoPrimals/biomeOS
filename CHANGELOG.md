@@ -2,6 +2,22 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.32 (2026-04-29) — Deep Debt Cleanup: Executor Refactor, Hardcoding Elimination, Dependency Bump
+
+### Smart refactor: neural_executor.rs (816→628 lines)
+- Extracted rollback logic (resolve_node_type, rollback, rollback_primal_lifecycle,
+  rollback_register_capabilities) into `neural_executor_rollback.rs` — a cohesive
+  module for reverse-topological-order node rollback.
+- Removed unused `JsonRpcRequest` import, widened field visibility to `pub(crate)`.
+
+### Hardcoded `/tmp` fallback elimination
+- `execute.rs` `register_capabilities_from_graph` and `load_translations_from_graph`
+  now use `DEFAULT_SOCKET_DIR` constant instead of bare `"/tmp"` string literals.
+  Aligns with the centralized constant in `biomeos-types::defaults`.
+
+### Dependency evolution
+- Bumped `serde-saphyr` from 0.0.23 to 0.0.24 (pure-Rust YAML; latest stable).
+
 ## v3.31 (2026-04-29) — Phase 56 Gap Resolution: Capability Routing, Graph Unification, Executor Dispatch
 
 ### GAP-13: Fix storage capability routing (P1)

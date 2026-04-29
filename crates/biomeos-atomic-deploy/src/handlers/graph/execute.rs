@@ -200,7 +200,7 @@ impl GraphHandler {
                 .unwrap_or_else(|_| {
                     std::env::var("BIOMEOS_RUNTIME_DIR")
                         .or_else(|_| std::env::var("TMPDIR"))
-                        .unwrap_or_else(|_| "/tmp".to_string())
+                        .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.to_string())
                 });
 
             let socket_path = format!("{runtime_dir}/{primal_name}-{family_id}.sock");
@@ -240,7 +240,7 @@ impl GraphHandler {
                     .unwrap_or_else(|_| {
                         std::env::var("BIOMEOS_RUNTIME_DIR")
                             .or_else(|_| std::env::var("TMPDIR"))
-                            .unwrap_or_else(|_| "/tmp".to_string())
+                            .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.to_string())
                     });
                 let socket_path =
                     format!("{}/{}-{}.sock", runtime_dir, primal_name, self.family_id);
