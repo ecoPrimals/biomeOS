@@ -1,7 +1,7 @@
 # biomeOS Scripts
 
 **Status**: Most scripts are deprecated — deployment is via `biomeos nucleus start` (Pure Rust)  
-**Updated**: April 20, 2026
+**Updated**: April 29, 2026
 
 ---
 
