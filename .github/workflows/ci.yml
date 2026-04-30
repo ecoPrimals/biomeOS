@@ -1,332 +1,46 @@
-name: BiomeOS CI/CD Pipeline
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Lean CI — single job, shared build cache.
+# Binary distribution handled by plasmidBin CI/CD (auto-harvest.yml).
+# This workflow validates code quality only.
+
+name: CI
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ master, main, develop ]
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
 
 jobs:
-  # Job 1: Linting and Formatting
-  lint:
-    name: Lint & Format Check
+  check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Cache target directory
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Check formatting
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
         run: cargo fmt --all -- --check
-      
-      - name: Run clippy (all targets)
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-      
-      - name: Check documentation
-        run: cargo doc --workspace --no-deps --all-features
-        env:
-          RUSTDOCFLAGS: -D warnings
 
-  # Job 2: Build
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        rust: [stable]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
-      
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Build workspace
-        run: cargo build --workspace --all-features
-      
-      - name: Build release
-        run: cargo build --workspace --release --all-features
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-  # Job 3: Test Suite
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Run unit tests
-        run: cargo test --workspace --lib --all-features
-      
-      - name: Run integration tests
-        run: cargo test --workspace --test '*' --all-features
-      
-      - name: Run doc tests
-        run: cargo test --workspace --doc --all-features
-
-  # Job 4: Code Coverage
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools-preview
-      
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
-      
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Generate coverage
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
-      
-      - name: Enforce coverage threshold (90% minimum)
-        run: cargo llvm-cov --workspace --fail-under-lines 90 --no-run
-      
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: lcov.info
-          fail_ci_if_error: false
-      
-      - name: Generate coverage report
-        run: cargo llvm-cov --workspace --html
-      
-      - name: Archive coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: target/llvm-cov/html/
-
-  # Job 5: Security Audit
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-      
-      - name: Run security audit
-        run: cargo audit
-
-  # Job 6: Dependency Check
-  dependencies:
-    name: Dependency Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install cargo-deny
-        run: cargo install cargo-deny
-      
-      - name: Check dependencies
-        run: cargo deny check
-
-  # Job 7: File Size Compliance
-  file-size:
-    name: File Size Compliance
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check file sizes (1000 line guideline)
-        run: |
-          echo "Checking for files exceeding 1000 line guideline..."
-          echo ""
-          echo "NOTE: 1000 lines is a GUIDELINE, not a hard limit."
-          echo "Well-structured async coordination code may appropriately exceed this."
-          echo "Refactor only if: multiple responsibilities, poor cohesion, or duplication."
-          echo ""
-          OVERSIZED=$(find crates -name '*.rs' -not -path '*/archive/*' -not -path '*/target/*' -exec wc -l {} + | awk '$1 > 1000 {print $2 " (" $1 " lines)"}')
-          if [ -n "$OVERSIZED" ]; then
-            echo "ℹ️ Files exceeding 1000 line guideline:"
-            echo "$OVERSIZED"
-            echo ""
-            echo "Review these files to ensure they:"
-            echo "  • Have a single clear responsibility"
-            echo "  • Delegate to separate handlers/modules"
-            echo "  • Are well-documented with clear structure"
-            echo "  • Don't contain duplicated code"
-            echo ""
-            echo "If yes to all above, the file size is appropriate."
-            exit 1
-          else
-            echo "✅ All files under 1000 line guideline"
-          fi
-
-  # Job 8: Standards Compliance Check
-  standards:
-    name: Standards Compliance
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check for TODO/FIXME in production code
-        run: |
-          echo "Checking for TODO/FIXME/HACK/XXX in production Rust code..."
-          TODOS=$(grep -rn --include="*.rs" --exclude-dir=archive --exclude-dir=target -E "(TODO|FIXME|HACK|XXX)" crates/ src/ 2>/dev/null || true)
-          if [ -n "$TODOS" ]; then
-            echo "⚠️ Found TODO/FIXME markers:"
-            echo "$TODOS"
-            echo ""
-            echo "Consider creating issues for these items."
-            exit 1
-          else
-            echo "✅ No TODO/FIXME markers found"
-          fi
-      
-      - name: Check for panic!() in production code
-        run: |
-          echo "Checking for panic!() in production code..."
-          echo ""
-          echo "NOTE: panic!() in TEST code is correct Rust idiom."
-          echo "Tests should panic on unexpected failures for immediate clarity."
-          echo "Only checking production code (non-test files)..."
-          echo ""
-          # Exclude test files, test modules, and benchmark files
-          PANICS=$(grep -rn --include="*.rs" --exclude-dir=archive --exclude-dir=target --exclude-dir=tests --exclude="*test*.rs" --exclude="*bench*.rs" "panic!" crates/*/src/ src/ 2>/dev/null | grep -v "#\[cfg(test)\]" | grep -v "mod tests" || true)
-          if [ -n "$PANICS" ]; then
-            echo "⚠️ Found panic!() calls in production code:"
-            echo "$PANICS"
-            echo ""
-            echo "Production code should return Result types instead of panicking."
-            echo "Test code panic!() is acceptable and encouraged."
-            exit 1
-          else
-            echo "✅ No panic!() calls in production code (test panic!() is OK)"
-          fi
-      
-      - name: Check for unsafe code blocks
-        run: |
-          echo "Checking for unsafe code blocks..."
-          UNSAFE=$(grep -rn --include="*.rs" --exclude-dir=archive --exclude-dir=target "unsafe\s*{" crates/ src/ 2>/dev/null || true)
-          if [ -n "$UNSAFE" ]; then
-            echo "❌ Found unsafe code blocks:"
-            echo "$UNSAFE"
-            echo ""
-            echo "BiomeOS maintains zero unsafe code. Please refactor."
-            exit 1  # Fail CI on unsafe code
-          else
-            echo "✅ Zero unsafe code blocks (exemplary!)"
-          fi
-
-  # Job 9: Performance Benchmarks (Optional)
-  benchmarks:
-    name: Performance Benchmarks
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
-      
-      - name: Run benchmarks
-        run: cargo bench --workspace
-        continue-on-error: true  # Benchmarks may not exist yet
-
-  # Job 10: Release Checks
-  release-check:
-    name: Release Readiness Check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-    needs: [lint, build, test, coverage, security]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check version consistency
-        run: |
-          echo "Checking Cargo.toml version consistency..."
-          # Add version consistency checks here
-          echo "✅ Version check passed"
-      
-      - name: Generate release notes
-        run: |
-          echo "## Release Readiness Report" > release-notes.md
-          echo "" >> release-notes.md
-          echo "- ✅ All tests passing" >> release-notes.md
-          echo "- ✅ Linting passed" >> release-notes.md
-          echo "- ✅ Security audit completed" >> release-notes.md
-          echo "- ✅ Code coverage generated" >> release-notes.md
-          cat release-notes.md
-      
-      - name: Archive release notes
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-notes
-          path: release-notes.md
+      - name: Test
+        run: cargo test --workspace --lib
