@@ -94,12 +94,14 @@ fn test_cli_parse_neural_api() {
             socket,
             port,
             tcp_only,
+            btsp_optional,
         } => {
             assert_eq!(graphs_dir, &PathBuf::from("graphs"));
             assert!(family_id.is_none());
             assert!(socket.is_none());
             assert!(port.is_none());
             assert!(!tcp_only);
+            assert!(!btsp_optional);
         }
         _ => panic!("expected NeuralApi mode"),
     }
@@ -124,6 +126,7 @@ fn test_cli_parse_neural_api_with_opts() {
             socket,
             port,
             tcp_only,
+            btsp_optional,
         } => {
             assert_eq!(graphs_dir, &PathBuf::from("/tmp/graphs"));
             assert_eq!(family_id.as_deref(), Some("fam1"));
@@ -133,6 +136,7 @@ fn test_cli_parse_neural_api_with_opts() {
             );
             assert!(port.is_none());
             assert!(!tcp_only);
+            assert!(!btsp_optional);
         }
         _ => panic!("expected NeuralApi mode"),
     }

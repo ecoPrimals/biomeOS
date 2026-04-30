@@ -87,6 +87,12 @@ enum Mode {
         /// TCP-only mode: skip Unix socket, bind TCP only (mobile substrates)
         #[arg(long, requires = "port")]
         tcp_only: bool,
+
+        /// Disable BTSP enforcement for unauthenticated JSON-RPC clients.
+        /// Equivalent to BIOMEOS_BTSP_ENFORCE=0. Use during development or
+        /// when downstream springs have not yet implemented the BTSP handshake.
+        #[arg(long)]
+        btsp_optional: bool,
     },
 
     /// Deploy mode - Execute deployment graph
@@ -403,6 +409,7 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             socket,
             port,
             tcp_only,
+            btsp_optional,
         } => {
             let config = modes::neural_api::resolve_neural_api_config(
                 graphs_dir,
@@ -415,6 +422,7 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 Some(config.socket_path),
                 port,
                 tcp_only,
+                btsp_optional,
             )
             .await
         }

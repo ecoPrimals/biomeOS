@@ -61,6 +61,7 @@ pub async fn run(
     socket: Option<PathBuf>,
     tcp_port: Option<u16>,
     tcp_only: bool,
+    btsp_optional: bool,
 ) -> Result<()> {
     let socket_path = resolve_socket_path(socket, &family_id);
 
@@ -81,9 +82,15 @@ pub async fn run(
     } else {
         info!("  Socket Path: {}", socket_path.display());
     }
+    if btsp_optional {
+        info!("  BTSP: optional (unauthenticated JSON-RPC accepted)");
+    }
     info!("");
 
     let mut server = NeuralApiServer::new(graphs_dir, family_id, socket_path);
+    if btsp_optional {
+        server = server.with_btsp_optional();
+    }
     if tcp_only {
         if let Some(port) = tcp_port {
             server = server.with_tcp_only(port);

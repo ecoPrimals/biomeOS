@@ -2,6 +2,23 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.33 (2026-04-30) — Phase 57 Audit Response: BTSP Opt-Out, Diagnostic Rejection, Spring Compatibility
+
+### GAP-17/18: Fix graph.list and health.liveness silent failures (P1)
+- Root cause: BTSP enforcement silently dropped connections from clients sending
+  raw JSON-RPC (no handshake). `handle_connection_with_btsp` returned `Ok(())`
+  with zero bytes written — clients saw empty responses / timeouts.
+- BTSP rejection now sends a JSON-RPC error (-32000) explaining the requirement
+  and how to bypass it. Clients get actionable diagnostics instead of silence.
+
+### GAP-19: Add --btsp-optional flag for neural-api mode (P1)
+- New CLI flag: `biomeos neural-api --btsp-optional` disables BTSP enforcement
+  for the server session. Equivalent to `BIOMEOS_BTSP_ENFORCE=0` but explicit.
+- `NeuralApiServer::with_btsp_optional()` builder method for programmatic use.
+- `btsp.status` RPC reflects the optional state.
+- Startup banner logs "BTSP: optional (--btsp-optional)" when active.
+- Springs can validate against neural-api without implementing full BTSP handshake.
+
 ## v3.32 (2026-04-29) — Deep Debt Cleanup: Executor Refactor, Hardcoding Elimination, Dependency Bump
 
 ### Smart refactor: neural_executor.rs (816→628 lines)

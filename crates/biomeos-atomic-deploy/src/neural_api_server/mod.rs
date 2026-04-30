@@ -85,6 +85,10 @@ pub struct NeuralApiServer {
     /// Tower health is confirmed. Once set, new connections are BTSP-enforced.
     pub(super) btsp_escalated: Arc<AtomicBool>,
 
+    /// When `true`, BTSP enforcement is disabled regardless of `FAMILY_ID`
+    /// or `btsp_escalated`. Set via `--btsp-optional` CLI flag.
+    pub(super) btsp_optional: bool,
+
     /// Socket nucleation (deterministic assignment)
     pub(super) nucleation: Arc<RwLock<SocketNucleation>>,
 
@@ -199,6 +203,7 @@ impl NeuralApiServer {
             router,
             mode: Arc::new(RwLock::new(BiomeOsMode::Bootstrap)),
             btsp_escalated: Arc::new(AtomicBool::new(false)),
+            btsp_optional: false,
             nucleation: Arc::new(RwLock::new(SocketNucleation::new(
                 SocketStrategy::XdgRuntime,
             ))),
@@ -227,6 +232,13 @@ impl NeuralApiServer {
     pub fn with_tcp_only(mut self, port: u16) -> Self {
         self.tcp_port = Some(port);
         self.tcp_only = true;
+        self
+    }
+
+    /// Disable BTSP enforcement (accept unauthenticated JSON-RPC).
+    #[must_use]
+    pub fn with_btsp_optional(mut self) -> Self {
+        self.btsp_optional = true;
         self
     }
 }

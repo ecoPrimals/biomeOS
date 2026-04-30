@@ -80,10 +80,15 @@ impl NeuralApiServer {
     /// JSON-RPC method: `btsp.status`
     pub(crate) fn btsp_status(&self) -> Result<serde_json::Value> {
         let has_family = biomeos_core::btsp_client::has_family_id();
-        let static_enforce = biomeos_core::btsp_client::btsp_enforce();
-        let runtime_escalated = self
-            .btsp_escalated
-            .load(std::sync::atomic::Ordering::Relaxed);
+        let static_enforce = if self.btsp_optional {
+            false
+        } else {
+            biomeos_core::btsp_client::btsp_enforce()
+        };
+        let runtime_escalated = !self.btsp_optional
+            && self
+                .btsp_escalated
+                .load(std::sync::atomic::Ordering::Relaxed);
         let effective = static_enforce || runtime_escalated;
         Ok(serde_json::json!({
             "has_family_id": has_family,
@@ -130,12 +135,18 @@ impl NeuralApiServer {
     /// [`btsp_enforce`]: biomeos_core::btsp_client::btsp_enforce
     pub(crate) async fn accept_connections(&self, listener: UnixListener) -> Result<()> {
         let btsp_active = biomeos_core::btsp_client::has_family_id();
-        let static_enforce = biomeos_core::btsp_client::btsp_enforce();
+        let static_enforce = if self.btsp_optional {
+            false
+        } else {
+            biomeos_core::btsp_client::btsp_enforce()
+        };
 
         info!(
             "🧠 Neural API server accepting UDS connections (mode: {}, BTSP: {})",
             self.mode_display_str().await,
-            if btsp_active {
+            if self.btsp_optional {
+                "optional (--btsp-optional)"
+            } else if btsp_active {
                 if static_enforce {
                     "enforced"
                 } else {
@@ -147,12 +158,13 @@ impl NeuralApiServer {
         );
 
         let escalated = self.btsp_escalated.clone();
+        let btsp_opt = self.btsp_optional;
         loop {
             match listener.accept().await {
                 Ok((stream, _addr)) => {
                     let server = self.clone();
-                    let enforce =
-                        static_enforce || escalated.load(std::sync::atomic::Ordering::Relaxed);
+                    let enforce = !btsp_opt
+                        && (static_enforce || escalated.load(std::sync::atomic::Ordering::Relaxed));
                     tokio::spawn(async move {
                         if let Err(e) = server.handle_connection_with_btsp(stream, enforce).await {
                             error!("Connection error: {}", e);

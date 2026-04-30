@@ -51,6 +51,25 @@ impl NeuralApiServer {
                     warn!(
                         "BTSP enforced: rejecting unauthenticated connection (client sent raw JSON-RPC)"
                     );
+                    let id = serde_json::from_str::<Value>(&first_line)
+                        .ok()
+                        .and_then(|v| v.get("id").cloned())
+                        .unwrap_or(Value::Null);
+                    let err_resp = JsonRpcResponse::error(
+                        id,
+                        biomeos_types::jsonrpc::JsonRpcError {
+                            code: -32000,
+                            message: "BTSP handshake required. Start biomeOS with \
+                                      --btsp-optional or set BIOMEOS_BTSP_ENFORCE=0 \
+                                      to allow unauthenticated connections."
+                                .to_string(),
+                            data: None,
+                        },
+                    );
+                    let err_str = serde_json::to_string(&err_resp)? + "\n";
+                    let stream = reader.get_mut();
+                    stream.write_all(err_str.as_bytes()).await?;
+                    stream.flush().await?;
                     return Ok(());
                 }
                 warn!("BTSP: client sent raw JSON-RPC without handshake (warn-only mode)");
