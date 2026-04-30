@@ -60,10 +60,7 @@ struct Cli {
 enum Mode {
     /// CLI mode - System management commands (default)
     #[command(name = "cli")]
-    Cli {
-        // EVOLVED (Jan 27, 2026): Bridge to full CLI functionality
-        // Shows system status and available commands
-    },
+    Cli {},
 
     /// Genome mode - Build and manage genomeBins (self-extracting multi-arch binaries)
     #[command(name = "genome")]

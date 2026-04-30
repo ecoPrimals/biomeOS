@@ -14,7 +14,7 @@
 //! Instead of hardcoding socket patterns for specific primals,
 //! we dynamically discover active sockets and query capabilities.
 //!
-//! # XDG Compliance (EVOLVED Jan 27, 2026)
+//! # XDG Compliance
 //!
 //! Socket discovery uses `SystemPaths` for XDG-compliant path resolution:
 //! 1. `$XDG_RUNTIME_DIR/biomeos/` (preferred)
@@ -90,7 +90,6 @@ impl TopologyHandler {
     /// This is the capability-based approach - we don't hardcode primal names,
     /// we discover what's running.
     ///
-    /// EVOLVED (Jan 27, 2026): Uses XDG-compliant socket discovery via `SystemPaths`
     async fn discover_active_primals(&self) -> Result<Vec<Value>> {
         let mut primals = Vec::new();
 
@@ -232,8 +231,6 @@ impl TopologyHandler {
     }
 
     /// Get XDG-compliant socket directories for primal discovery
-    ///
-    /// EVOLVED (Jan 27, 2026): No more hardcoded `/tmp` - uses `SystemPaths`
     ///
     /// # Priority Order
     /// 1. XDG runtime directory: `$XDG_RUNTIME_DIR/biomeos/`

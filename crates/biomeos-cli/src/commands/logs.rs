@@ -225,8 +225,6 @@ async fn handle_archive(node_id: String) -> Result<()> {
 }
 
 /// Handle fossil cleanup
-///
-/// EVOLVED (Jan 27, 2026): Complete implementation
 async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
     use chrono::{Duration, Utc};
 

@@ -51,9 +51,6 @@ use ui_sync::UISync;
 // PRIMAL CLIENTS - Using AtomicClient for Pure Rust JSON-RPC
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// ✅ EVOLVED (Jan 27, 2026): Extracted to primal_client module for reuse
-// ✅ EVOLVED (Jan 30, 2026): Refactored into domain-driven modules
-//
 // All primal communication uses:
 // - Pure Rust Unix socket JSON-RPC (no C dependencies)
 // - Capability-based discovery via SystemPaths

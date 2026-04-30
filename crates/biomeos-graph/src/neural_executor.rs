@@ -565,8 +565,6 @@ impl GraphExecutor {
     }
 
     /// Rollback deployment
-    ///
-    /// EVOLVED (Jan 27, 2026): Complete rollback implementation
     async fn rollback(&self) -> Result<()> {
         info!("🔄 Starting rollback...");
 

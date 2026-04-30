@@ -3,8 +3,6 @@
 
 //! Capability-oriented JSON-RPC clients for BiomeOS UI
 //!
-//! EVOLVED (Jan 27, 2026): Extracted from orchestrator.rs for reuse
-//!
 //! This module provides thin wrappers around [`AtomicClient`] for talking to
 //! ecosystem services over Unix sockets. Callers should think in **capabilities**
 //! (discovery, security, storage, …), not fixed primal product names.

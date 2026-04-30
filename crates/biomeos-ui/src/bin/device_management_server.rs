@@ -13,8 +13,6 @@
 //! - Advertises device.management capability via Songbird UDP multicast
 //! - Serves live data to petalTongue GUI
 //!
-//! EVOLVED (Jan 27, 2026): Integrated with Songbird for capability advertisement
-//!
 //! Implementation: [`biomeos_ui::device_management_server`].
 
 use anyhow::Result;

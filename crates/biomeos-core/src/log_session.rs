@@ -4,8 +4,6 @@
 //! Log session tracking for Tower
 //!
 //! Tracks active primal sessions and integrates with the fossil record system.
-//!
-//! EVOLVED (Jan 27, 2026): Full integration with `biomeos_spore::logs::LogManager`
 
 use biomeos_types::identifiers::PrimalId;
 use std::collections::HashMap;
@@ -74,8 +72,6 @@ impl LogSessionTracker {
     }
 
     /// Archive all active sessions (called on shutdown)
-    ///
-    /// EVOLVED (Jan 27, 2026): Full integration with `biomeos_spore::logs::LogManager`
     pub async fn archive_all_sessions(&self, reason: &str) -> anyhow::Result<()> {
         use biomeos_types::SystemPaths;
 

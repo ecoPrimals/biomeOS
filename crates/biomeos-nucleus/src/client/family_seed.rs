@@ -9,8 +9,6 @@ use tracing::{debug, warn};
 
 /// Load family seed from secure storage for trust evaluation.
 ///
-/// EVOLVED (Jan 27, 2026): Capability-based secure storage access
-///
 /// # Priority Sources
 /// 1. `BIOMEOS_FAMILY_SEED` environment variable (base64-encoded)
 /// 2. XDG runtime dir: `$XDG_RUNTIME_DIR/biomeos/family.seed`

@@ -3,8 +3,6 @@
 
 //! Verify lineage mode - Validate genetic lineage
 //!
-//! EVOLVED (Jan 27, 2026): Complete lineage verification implementation
-//!
 //! # Deep Debt Principles
 //! - Capability-based: Discovers BearDog for cryptographic verification
 //! - No hardcoding: Socket paths via SystemPaths

@@ -2,6 +2,24 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.35 (2026-04-30) — Deep Debt Cleanup: Stale Comment Purge, node_handlers Refactor, Dead Code Gating
+
+### Stale EVOLVED comment cleanup (~30 markers removed)
+- Removed all dated `EVOLVED (Jan/Feb 2026)` comments from production code
+  across 14 files in 9 crates. These served as refactor markers during the
+  Jan 2026 debt sweep but had become noise.
+
+### Smart refactor: node_handlers.rs (791→504 lines, −36%)
+- Extracted 287-line `#[cfg(test)] mod tests` block into dedicated
+  `executor/node_handlers_tests.rs` file.
+- Added `resolve_family_id()` helper to DRY 3 duplicated family-ID
+  resolution patterns (env lookup → runtime discovery fallback).
+- Registered new test module in `executor/mod.rs`.
+
+### Dead code gating
+- `load_graphs_from_dir` narrowed from `pub` to `#[cfg(test)] pub(crate)`
+  — was only called from its own test module, never from production code.
+
 ## v3.34 (2026-04-30) — Deep Debt Cleanup: Hardcoding Elimination, Lint Hygiene
 
 ### Hardcoded path elimination

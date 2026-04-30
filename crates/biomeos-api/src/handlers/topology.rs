@@ -174,9 +174,6 @@ pub async fn get_topology(
 /// **Production**: Real topology is built from discovered primals via `build_live_topology()`
 /// **Development**: Set `BIOMEOS_STANDALONE_MODE=true` to use this standalone topology.
 ///
-/// EVOLVED (Feb 2026): Capability-based topology - primals are described by
-/// their capabilities, not hardcoded names. The standalone topology now uses
-/// generic capability categories.
 fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
     // Get node ID from environment or use default
     let node_id = std::env::var("BIOMEOS_NODE_ID").unwrap_or_else(|_| "standalone".to_string());
@@ -335,7 +332,6 @@ async fn build_live_topology(
                 metadata: Some(NodeMetadata {
                     version: Some(primal.version.to_string()),
                     family_id: primal.family_id.as_ref().map(|f| f.as_str().to_string()),
-                    // EVOLVED (Jan 27, 2026): Extract node_id from primal ID pattern
                     node_id: extract_node_id_from_primal(primal.id.as_str()),
                     trust_level: if primal.family_id.is_some() {
                         Some(3)
@@ -361,7 +357,6 @@ async fn build_live_topology(
                         to: target.id.as_str().to_string(),
                         edge_type: "capability_invocation".to_string(),
                         capability: Some("encryption".to_string()),
-                        // EVOLVED (Jan 27, 2026): Collect real metrics from connection
                         metrics: collect_edge_metrics(primal.id.as_str(), target.id.as_str()),
                     });
                 }
@@ -373,8 +368,6 @@ async fn build_live_topology(
 }
 
 /// Extract `node_id` from primal ID pattern
-///
-/// EVOLVED (Jan 27, 2026): Parses common primal ID patterns
 ///
 /// Patterns supported:
 /// - `{primal}-{family_id}-{node_id}` → `node_id`
@@ -396,9 +389,6 @@ fn extract_node_id_from_primal(primal_id: &str) -> Option<String> {
 }
 
 /// Collect real metrics for an edge between primals
-///
-/// EVOLVED (Jan 27, 2026): Measures actual connection latency
-/// EVOLVED (Feb 2026): Capability-based latency estimation
 ///
 /// Returns metrics if measurement is possible, None otherwise.
 /// Latency estimates are based on capability types, not primal names.

@@ -143,7 +143,6 @@ impl<D: PhysicalDiscovery, I: IdentityLayer, C: CapabilityLayer, T: TrustLayer>
             };
 
             // Layer 4: Trust Evaluation (BearDog)
-            // EVOLVED (Jan 27, 2026): Get family seed from secure storage
             // Priority: 1) Environment variable (for bootstrap)
             //           2) Default empty (graceful degradation - Known trust level)
             let family_seed = family_seed::load_family_seed_from_storage();

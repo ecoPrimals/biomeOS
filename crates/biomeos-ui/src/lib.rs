@@ -73,7 +73,7 @@ pub mod capabilities; // ✅ TRUE PRIMAL capability-based architecture!
 pub mod device_management_server;
 pub mod events;
 pub mod orchestrator;
-pub mod primal_client; // EVOLVED (Jan 27, 2026): Extracted from orchestrator
+pub mod primal_client;
 pub mod realtime;
 pub mod state;
 pub mod suggestions;

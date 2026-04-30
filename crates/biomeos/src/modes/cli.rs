@@ -3,7 +3,6 @@
 
 //! CLI mode - System management commands
 //!
-//! EVOLVED (Jan 27, 2026): Provides a bridge to the full biomeos-cli functionality.
 //! The CLI commands are implemented in biomeos-cli and can be invoked via:
 //! - Direct invocation: `biomeos cli <command>`
 //! - Standalone binary: `biomeos <command>` (via PATH/symlink)
@@ -19,8 +18,6 @@ use colored::Colorize;
 pub struct CliCommand;
 
 /// Run CLI mode
-///
-/// EVOLVED (Jan 27, 2026): Now provides helpful guidance and quick commands
 pub async fn run(_command: CliCommand) -> Result<()> {
     println!("{}", "🧠 biomeOS CLI Mode".bright_cyan().bold());
     println!();

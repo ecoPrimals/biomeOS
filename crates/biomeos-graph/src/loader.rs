@@ -155,7 +155,8 @@ impl GraphLoader {
 }
 
 /// Load multiple graphs from a directory.
-pub fn load_graphs_from_dir(dir: impl AsRef<Path>) -> Result<Vec<DeploymentGraph>> {
+#[cfg(test)]
+pub(crate) fn load_graphs_from_dir(dir: impl AsRef<Path>) -> Result<Vec<DeploymentGraph>> {
     let dir = dir.as_ref();
     let mut graphs = Vec::new();
 

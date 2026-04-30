@@ -3,8 +3,6 @@
 
 //! Graph executor module
 //!
-//! **EVOLVED:** Smart domain-based splitting for maintainability.
-//!
 //! This module provides graph execution capabilities with:
 //! - Topological sorting for dependency resolution
 //! - Parallel execution within phases
@@ -23,6 +21,8 @@ pub mod types;
 
 #[cfg(test)]
 pub mod tests;
+#[cfg(test)]
+mod node_handlers_tests;
 
 // Re-export commonly used types
 pub use context::{ExecutionContext, NodeStatus, RollbackAction};
