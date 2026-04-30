@@ -2,7 +2,14 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 #![forbid(unsafe_code)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        reason = "tests use unwrap/expect for concise assertions"
+    )
+)]
 
 //! biomeOS Universal Nucleus & Orchestrator
 //!

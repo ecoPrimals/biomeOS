@@ -120,7 +120,10 @@ impl PrimalCoordinator {
             atomic_name: atomic_name.to_string(),
             required_primals: required_primals.iter().map(|s| s.to_string()).collect(),
             start_commands,
-            verification: format!("ls /run/user/$(id -u)/*{family_id}*.sock"),
+            verification: format!(
+                "ls {}/$(id -u)/*{family_id}*.sock",
+                biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
+            ),
             expected_sockets,
         }
     }

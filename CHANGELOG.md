@@ -2,6 +2,26 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.34 (2026-04-30) — Deep Debt Cleanup: Hardcoding Elimination, Lint Hygiene
+
+### Hardcoded path elimination
+- Replaced 2 remaining bare `"/tmp"` fallbacks with `DEFAULT_SOCKET_DIR` constant
+  (`cli.rs` status scan, `node_handlers.rs` socket resolution).
+- Centralized 5 scattered `/run/user/{uid}/biomeos` patterns to use
+  `LINUX_RUNTIME_DIR_PREFIX` constant from `biomeos-types::runtime_paths`:
+  `deployment_mode.rs`, `orchestrator.rs`, `family_seed.rs`,
+  `device_management_server/mod.rs`, `primal_coordinator.rs`.
+- Zero hardcoded filesystem paths remain in production code outside the
+  canonical constants modules (`defaults.rs`, `constants/mod.rs`, `path_builder.rs`).
+
+### Lint hygiene: #[allow] reason annotations
+- Added `reason = "..."` to the crate-root `#![allow]` in `biomeos-test-utils`.
+- Converted 7 `#![cfg_attr(test, allow(...))]` attributes to include
+  `reason = "tests use unwrap/expect for concise assertions"` across
+  `biomeos`, `biomeos-atomic-deploy`, `biomeos-deploy`, `biomeos-api`,
+  `biomeos-spore`, `biomeos-ui`, `biomeos-cli`.
+- All `#[allow]` / `#[cfg_attr(test, allow(...))]` now carry explicit reason.
+
 ## v3.33 (2026-04-30) — Phase 57 Audit Response: BTSP Opt-Out, Diagnostic Rejection, Spring Compatibility
 
 ### GAP-17/18: Fix graph.list and health.liveness silent failures (P1)

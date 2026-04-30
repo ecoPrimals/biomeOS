@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: April 30, 2026 (v3.33: Phase 57 — --btsp-optional flag, BTSP rejection diagnostics, spring compatibility; 8,064+ tests)
-**Version**: 3.33
+**Updated**: April 30, 2026 (v3.34: deep debt — hardcoding elimination /tmp + /run/user → constants, #[allow(reason)] across all crate roots; 8,064+ tests)
+**Version**: 3.34
 **Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Phase 56 Audit Gaps Addressed - Graph Integrity Verification Active
 
 ---

@@ -234,7 +234,10 @@ impl DeploymentMode {
             PathBuf::from(xdg).join("biomeos")
         } else {
             let uid = uid_for_run_user_path.unwrap_or_else(Self::get_uid);
-            PathBuf::from(format!("/run/user/{uid}/biomeos"))
+            PathBuf::from(format!(
+                "{}/{uid}/biomeos",
+                biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
+            ))
         }
     }
 

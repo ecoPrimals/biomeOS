@@ -309,10 +309,9 @@ fn build_socket_path(primal_name: &str, family_id: &str, env: &HashMap<String, S
             .to_string();
     }
 
-    // Fallback to SOCKET_DIR or /tmp
     let socket_dir = env.get("SOCKET_DIR")
         .cloned()
-        .unwrap_or_else(|| "/tmp".to_string());
+        .unwrap_or_else(|| biomeos_types::defaults::DEFAULT_SOCKET_DIR.to_string());
 
     format!("{}/{}-{}.sock", socket_dir, primal_name, family_id)
 }

@@ -9,7 +9,14 @@
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        reason = "tests use unwrap/expect for concise assertions"
+    )
+)]
 
 /// CLI command implementations
 pub mod commands;

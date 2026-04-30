@@ -133,7 +133,10 @@ impl DeploymentConfig {
                             Err(std::env::VarError::NotPresent)
                         });
                     match uid {
-                        Ok(uid) => PathBuf::from(format!("/run/user/{uid}")),
+                        Ok(uid) => PathBuf::from(format!(
+                            "{}/{uid}",
+                            biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
+                        )),
                         Err(_) => std::env::temp_dir().join("biomeos"),
                     }
                 }),

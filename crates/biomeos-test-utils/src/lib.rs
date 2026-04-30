@@ -13,10 +13,11 @@
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
-// test-only crate — #[allow] rather than #[expect] because the library
-// surface is compiled without cfg(test), so the lint is never triggered
-// at the crate level. Submodule test blocks carry their own #[expect].
-#![allow(clippy::expect_used, clippy::unwrap_used)]
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test-only crate: #[allow] over #[expect] because library surface compiles without cfg(test)"
+)]
 
 pub mod assertions;
 pub mod fixtures;

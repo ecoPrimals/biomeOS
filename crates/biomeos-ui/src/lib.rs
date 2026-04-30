@@ -11,7 +11,14 @@
     reason = "primal names and biomeOS terms are domain vocabulary, not code references"
 )]
 #![forbid(unsafe_code)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        reason = "tests use unwrap/expect for concise assertions"
+    )
+)]
 
 //! ## Network Effect Architecture
 //!

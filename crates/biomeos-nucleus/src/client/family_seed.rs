@@ -69,8 +69,10 @@ pub fn load_family_seed_from_storage_with(
             .filter(|s| !s.is_empty());
 
         if let Some(uid) = uid_opt {
-            let seed_path =
-                std::path::PathBuf::from(format!("/run/user/{uid}/biomeos/family.seed"));
+            let seed_path = std::path::PathBuf::from(format!(
+                "{}/{uid}/biomeos/family.seed",
+                biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
+            ));
             if let Ok(seed) = std::fs::read(&seed_path) {
                 debug!(
                     "Family seed loaded from user runtime dir: {}",

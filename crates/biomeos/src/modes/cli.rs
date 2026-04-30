@@ -71,7 +71,7 @@ async fn show_system_summary() -> Result<()> {
         std::env::var("XDG_RUNTIME_DIR")
             .map(|d| format!("{d}/biomeos"))
             .ok(),
-        Some("/tmp".to_string()),
+        Some(biomeos_types::defaults::DEFAULT_SOCKET_DIR.to_string()),
     ];
 
     let mut primal_count = 0;

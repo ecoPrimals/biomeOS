@@ -15,7 +15,14 @@
 
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        reason = "tests use unwrap/expect for concise assertions"
+    )
+)]
 // Crate-specific lint expectations — orchestration crate with complex async,
 // Arc-heavy coordination, and trait-method signatures that trigger pedantic/nursery.
 // Using #[expect] so clippy reports when a suppression becomes unnecessary.

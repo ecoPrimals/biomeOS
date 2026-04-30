@@ -79,7 +79,10 @@ fn device_management_socket_path() -> Result<String> {
             "Cannot resolve socket path: set XDG_RUNTIME_DIR or ensure UID is discoverable (UID/EUID or /proc/self on Unix)"
         )
     })?;
-    Ok(format!("/run/user/{uid}/biomeos-device-management.sock"))
+    Ok(format!(
+        "{}/{uid}/biomeos-device-management.sock",
+        biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
+    ))
 }
 
 /// Run the device management server: bind Unix socket, register with Songbird, accept connections.
