@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: April 30, 2026
-**Status**: Production Ready (v3.35) — 7,814+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, `primal.list` on neural-api + API socket, graph executor operation fallback, bootstrap tolerance for optional nodes, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.35) — 8,064+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, `primal.list` on neural-api + API socket, graph executor operation fallback, bootstrap tolerance for optional nodes, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.28 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed)
+**Status**: Production Ready (v3.35 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
@@ -178,5 +178,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 7,814 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 (IPs, paths, primal names all centralized) | **Box\<dyn Error\>**: 0 | **Production files >800L**: 0
-**Updated**: April 22, 2026
+**Tests**: 8,064+ passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 (IPs, paths, primal names all centralized) | **Box\<dyn Error\>**: 0 | **Production files >800L**: 0
+**Updated**: April 30, 2026
