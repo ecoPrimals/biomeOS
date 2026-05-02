@@ -51,10 +51,6 @@ impl BtspCipher {
 /// The server uses `server_to_client` to encrypt outgoing frames and
 /// `client_to_server` to decrypt incoming frames. Keys are zeroized on drop.
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
-#[allow(
-    dead_code,
-    reason = "keys consumed by encrypted framing layer (Phase 3 wire evolution)"
-)]
 pub struct SessionKeys {
     pub client_to_server: [u8; 32],
     pub server_to_client: [u8; 32],
@@ -106,10 +102,6 @@ pub fn derive_session_keys(
 /// Encrypt a plaintext frame using ChaCha20-Poly1305.
 ///
 /// Returns the wire frame: `[4B length BE u32][12B nonce][ciphertext + 16B tag]`
-#[allow(
-    dead_code,
-    reason = "consumed when connection loop switches to encrypted framing"
-)]
 pub fn encrypt_frame(key: &[u8; 32], plaintext: &[u8]) -> Result<Vec<u8>, FrameError> {
     use chacha20poly1305::aead::Aead;
     use chacha20poly1305::{ChaCha20Poly1305, KeyInit};
@@ -138,10 +130,6 @@ pub fn encrypt_frame(key: &[u8; 32], plaintext: &[u8]) -> Result<Vec<u8>, FrameE
 /// Decrypt a received frame (nonce || ciphertext+tag) using ChaCha20-Poly1305.
 ///
 /// Input is the payload after the 4-byte length header: `[12B nonce][ciphertext + tag]`.
-#[allow(
-    dead_code,
-    reason = "consumed when connection loop switches to encrypted framing"
-)]
 pub fn decrypt_frame(key: &[u8; 32], frame_payload: &[u8]) -> Result<Vec<u8>, FrameError> {
     use chacha20poly1305::aead::Aead;
     use chacha20poly1305::{ChaCha20Poly1305, KeyInit};
@@ -161,7 +149,6 @@ pub fn decrypt_frame(key: &[u8; 32], frame_payload: &[u8]) -> Result<Vec<u8>, Fr
 
 /// Errors from encrypted frame operations.
 #[derive(Debug, thiserror::Error)]
-#[allow(dead_code, reason = "consumed by encrypt_frame/decrypt_frame")]
 pub enum FrameError {
     #[error("encryption failed")]
     Encryption,

@@ -4,18 +4,21 @@
 //! Connection handling for Neural API Server
 //!
 //! Handles incoming connections (Unix socket **and** TCP), reads newline-
-//! delimited JSON-RPC requests, and writes responses.
+//! delimited JSON-RPC requests, and writes responses. After a successful
+//! BTSP Phase 3 negotiate, the connection switches to length-prefixed
+//! ChaCha20-Poly1305 encrypted framing.
 
 use anyhow::Result;
 use biomeos_core::btsp_client::{self, BtspHandshakeError, HandshakeOutcome};
 use biomeos_types::jsonrpc::{JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
-use tokio::io::{AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
+use super::btsp_negotiate::{self, BtspCipher, SessionKeys};
 
 impl NeuralApiServer {
     /// Handle a Unix socket client connection (development mode, no BTSP).
@@ -102,7 +105,7 @@ impl NeuralApiServer {
             }
         }
 
-        self.handle_stream(reader).await
+        self.handle_stream_with_negotiate(reader).await
     }
 
     /// Handle a TCP client connection.
@@ -110,7 +113,182 @@ impl NeuralApiServer {
         self.handle_stream(BufReader::new(stream)).await
     }
 
-    /// Transport-agnostic connection handler.
+    /// Post-handshake handler that checks for Phase 3 negotiate on the first line.
+    ///
+    /// If the first message is `btsp.negotiate` and results in an encrypted cipher,
+    /// the connection switches to length-prefixed ChaCha20-Poly1305 framing.
+    /// Otherwise it falls through to the NDJSON plaintext loop.
+    async fn handle_stream_with_negotiate<S>(&self, mut reader: BufReader<S>) -> Result<()>
+    where
+        S: tokio::io::AsyncRead + AsyncWrite + Unpin,
+    {
+        let mut first_line = String::new();
+
+        let read_result = timeout(
+            Duration::from_millis(100),
+            reader.read_line(&mut first_line),
+        )
+        .await;
+
+        match read_result {
+            Ok(Ok(n)) if n > 0 => {
+                if let Some(keys) = self.try_phase3_negotiate(&first_line, &mut reader).await? {
+                    return self.handle_encrypted_stream(reader, keys).await;
+                }
+                if let Some(response_value) = self.dispatch_line(&first_line).await {
+                    let response_str = serde_json::to_string(&response_value)? + "\n";
+                    let stream = reader.get_mut();
+                    stream.write_all(response_str.as_bytes()).await?;
+                    stream.flush().await?;
+                }
+            }
+            Ok(Ok(_) | Err(_)) | Err(_) => {
+                return Ok(());
+            }
+        }
+
+        self.handle_stream(reader).await
+    }
+
+    /// Check if a line is a `btsp.negotiate` request. If so, dispatch it and
+    /// return the derived `SessionKeys` when the cipher is not null.
+    ///
+    /// The negotiate response is written back on the plaintext channel before
+    /// the connection transitions to encrypted framing.
+    async fn try_phase3_negotiate<S>(
+        &self,
+        line: &str,
+        reader: &mut BufReader<S>,
+    ) -> Result<Option<SessionKeys>>
+    where
+        S: tokio::io::AsyncRead + AsyncWrite + Unpin,
+    {
+        let parsed: Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => return Ok(None),
+        };
+
+        let method = parsed.get("method").and_then(|v| v.as_str());
+        if method != Some("btsp.negotiate") {
+            return Ok(None);
+        }
+
+        let id = parsed.get("id").cloned().unwrap_or(Value::Null);
+        let params = parsed.get("params").cloned().unwrap_or(Value::Null);
+
+        let negotiate_result = btsp_negotiate::handle_negotiate(&self.btsp_sessions, &params).await;
+
+        let response = match &negotiate_result {
+            Ok(result_value) => {
+                serde_json::json!({"jsonrpc": "2.0", "result": result_value, "id": id})
+            }
+            Err(e) => serde_json::to_value(JsonRpcResponse::error(
+                id,
+                biomeos_types::jsonrpc::JsonRpcError {
+                    code: -32602,
+                    message: e.to_string(),
+                    data: None,
+                },
+            ))?,
+        };
+
+        let response_str = serde_json::to_string(&response)? + "\n";
+        let stream = reader.get_mut();
+        stream.write_all(response_str.as_bytes()).await?;
+        stream.flush().await?;
+
+        let Ok(result_value) = negotiate_result else {
+            return Ok(None);
+        };
+
+        let cipher_str = result_value
+            .get("cipher")
+            .and_then(|v| v.as_str())
+            .unwrap_or("null");
+
+        if BtspCipher::from_str_loose(cipher_str) != BtspCipher::ChaCha20Poly1305 {
+            return Ok(None);
+        }
+
+        let session_id = params
+            .get("session_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        let sessions = self.btsp_sessions.read().await;
+        let keys = sessions
+            .get(session_id)
+            .and_then(|s| s.session_keys.clone());
+
+        if let Some(ref k) = keys {
+            info!(session_id = %session_id, "Phase 3 negotiate succeeded — switching to encrypted framing");
+            debug!(session_id = %session_id, "Derived directional keys: {k:?}");
+        }
+
+        Ok(keys)
+    }
+
+    /// Encrypted frame loop — replaces NDJSON after successful Phase 3 negotiate.
+    ///
+    /// Wire format per `BTSP_PROTOCOL_STANDARD.md`:
+    ///   Read:  `[4B BE u32 len][payload]` → `decrypt_frame(c2s_key, payload)` → JSON-RPC
+    ///   Write: JSON-RPC → `encrypt_frame(s2c_key, plaintext)` → `[4B len][payload]`
+    async fn handle_encrypted_stream<S>(
+        &self,
+        mut reader: BufReader<S>,
+        keys: SessionKeys,
+    ) -> Result<()>
+    where
+        S: tokio::io::AsyncRead + AsyncWrite + Unpin,
+    {
+        let mut len_buf = [0u8; 4];
+
+        loop {
+            let read_result =
+                timeout(Duration::from_secs(30), reader.read_exact(&mut len_buf)).await;
+
+            match read_result {
+                Ok(Ok(_)) => {}
+                Ok(Err(_)) | Err(_) => break,
+            }
+
+            let frame_len = u32::from_be_bytes(len_buf) as usize;
+            if frame_len > 16 * 1024 * 1024 {
+                warn!(frame_len, "Encrypted frame too large — dropping connection");
+                break;
+            }
+
+            let mut payload = vec![0u8; frame_len];
+            timeout(Duration::from_secs(30), reader.read_exact(&mut payload))
+                .await
+                .map_err(|_| anyhow::anyhow!("Timeout reading encrypted frame payload"))??;
+
+            let plaintext = match btsp_negotiate::decrypt_frame(&keys.client_to_server, &payload) {
+                Ok(pt) => pt,
+                Err(e) => {
+                    warn!("Decryption failed: {e} — dropping connection");
+                    break;
+                }
+            };
+
+            let line = String::from_utf8_lossy(&plaintext);
+
+            if let Some(response_value) = self.dispatch_line(&line).await {
+                let response_bytes = serde_json::to_vec(&response_value)?;
+
+                let frame = btsp_negotiate::encrypt_frame(&keys.server_to_client, &response_bytes)
+                    .map_err(|e| anyhow::anyhow!("Encryption failed: {e}"))?;
+
+                let stream = reader.get_mut();
+                stream.write_all(&frame).await?;
+                stream.flush().await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Plaintext NDJSON connection handler.
     ///
     /// Reads JSON-RPC requests line-by-line. Supports both single request
     /// objects and JSON-RPC 2.0 Section 6 batch arrays. Batch elements are
@@ -198,11 +376,114 @@ impl NeuralApiServer {
 #[cfg(test)]
 mod tests {
     use crate::neural_api_server::NeuralApiServer;
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+    use crate::neural_api_server::btsp_negotiate;
+    use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
 
     fn create_test_server() -> NeuralApiServer {
         let temp = tempfile::tempdir().expect("temp dir");
         NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"))
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_frame_roundtrip_via_handle_encrypted_stream() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        let keys = btsp_negotiate::derive_session_keys(&[0xAAu8; 32], &[1u8; 12], &[2u8; 12]);
+        let client_keys = keys.clone();
+
+        let client_task = tokio::spawn(async move {
+            let request = r#"{"jsonrpc":"2.0","method":"health.liveness","id":1}"#;
+            let frame =
+                btsp_negotiate::encrypt_frame(&client_keys.client_to_server, request.as_bytes())
+                    .expect("encrypt");
+            client_stream.write_all(&frame).await.expect("write frame");
+            client_stream.flush().await.expect("flush");
+
+            let mut len_buf = [0u8; 4];
+            client_stream
+                .read_exact(&mut len_buf)
+                .await
+                .expect("read len");
+            let resp_len = u32::from_be_bytes(len_buf) as usize;
+            let mut payload = vec![0u8; resp_len];
+            client_stream
+                .read_exact(&mut payload)
+                .await
+                .expect("read payload");
+            let plaintext = btsp_negotiate::decrypt_frame(&client_keys.server_to_client, &payload)
+                .expect("decrypt");
+            String::from_utf8(plaintext).expect("utf8")
+        });
+
+        let reader = tokio::io::BufReader::new(server_stream);
+        server
+            .handle_encrypted_stream(reader, keys)
+            .await
+            .expect("handle_encrypted_stream");
+
+        let response = client_task.await.expect("client task");
+        assert!(response.contains("jsonrpc"), "response: {response}");
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_stream_wrong_key_drops_connection() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        let server_keys =
+            btsp_negotiate::derive_session_keys(&[0xAAu8; 32], &[1u8; 12], &[2u8; 12]);
+        let wrong_keys = btsp_negotiate::derive_session_keys(&[0xBBu8; 32], &[3u8; 12], &[4u8; 12]);
+
+        let client_task = tokio::spawn(async move {
+            let request = r#"{"jsonrpc":"2.0","method":"health.liveness","id":1}"#;
+            let frame =
+                btsp_negotiate::encrypt_frame(&wrong_keys.client_to_server, request.as_bytes())
+                    .expect("encrypt");
+            client_stream.write_all(&frame).await.expect("write frame");
+            client_stream.flush().await.expect("flush");
+
+            let mut buf = [0u8; 4];
+            let result = client_stream.read_exact(&mut buf).await;
+            result.is_err() || buf == [0u8; 4]
+        });
+
+        let reader = tokio::io::BufReader::new(server_stream);
+        server
+            .handle_encrypted_stream(reader, server_keys)
+            .await
+            .expect("should gracefully close");
+
+        let dropped = client_task.await.expect("client task");
+        assert!(dropped, "connection should be dropped on bad key");
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_stream_oversized_frame_drops_connection() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        let keys = btsp_negotiate::derive_session_keys(&[0xCCu8; 32], &[5u8; 12], &[6u8; 12]);
+
+        let client_task = tokio::spawn(async move {
+            let huge_len: u32 = 20_000_000;
+            client_stream
+                .write_all(&huge_len.to_be_bytes())
+                .await
+                .expect("write oversized len");
+            client_stream.flush().await.expect("flush");
+        });
+
+        let reader = tokio::io::BufReader::new(server_stream);
+        server
+            .handle_encrypted_stream(reader, keys)
+            .await
+            .expect("should gracefully close on oversized frame");
+
+        client_task.await.expect("client task");
     }
 
     #[tokio::test]
