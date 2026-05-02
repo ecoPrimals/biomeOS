@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 7,814+ tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
+8. **Tested**: 8,064+ tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
