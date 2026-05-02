@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.35 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed)
+**Status**: Production Ready (v3.37 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed, BTSP Phase 3 HKDF ready)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
