@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.39 (2026-05-02) — Capability-Based Identity Evolution
+
+### Hardcoded primal identities eliminated from production code
+- **Orchestrator roles**: `BEARDOG_SERVER_ROLE` / `SONGBIRD_ORCHESTRATOR_ROLE` replaced
+  with `SECURITY_PROVIDER_ROLE` / `MESH_ORCHESTRATOR_ROLE`. `required_primals()` renamed
+  to `required_roles()` returning capability-domain strings (`security-server`,
+  `mesh-orchestrator`, `compute-executor`, `storage-provider`).
+- **BTSP API**: `BearDogUnavailable` → `SecurityProviderUnavailable`,
+  `BearDogNotFound` → `SecurityProviderNotFound`. All doc comments, log messages, and
+  error contexts now reference "security provider" instead of a specific primal identity.
+- **CLI/UI**: Dashboard redirect references "visualization primal" and
+  `biomeos discover --capability visualization` instead of hardcoded primal name.
+  Device management server connection logs are primal-agnostic.
+- **Niche templates**: All 12 template descriptions evolved from primal-name references
+  (e.g., "BearDog + Songbird") to capability-domain descriptions (e.g., "crypto +
+  mesh orchestration").
+- **Dead code removed**: `ManagedBearDog` and `ManagedSongbird` legacy type aliases
+  deleted from production code and re-exports.
+- **Env vars**: `BEARDOG_FAMILY_ID` / `BEARDOG_NODE_ID` → `FAMILY_ID` / `NODE_ID`.
+  `SONGBIRD_SECURITY_PROVIDER` → `SECURITY_PROVIDER_SOCKET`.
+- 20 production files touched, 6,826 lib tests pass (0 failures).
+
 ## v3.38 (2026-05-02) — BTSP Phase 3 FULL: Encrypted Framing + Spec Alignment
 
 ### BTSP Phase 3 — FULL implementation (biomeOS is now 9th of 13 primals)

@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 2, 2026 (v3.38: BTSP Phase 3 FULL — encrypted framing, base64 nonces, zeroize, flaky test fix; 8,076+ tests)
-**Version**: 3.38
-**Status**: PRODUCTION READY - BTSP Phase 3 FULL (9th of 13 primals) - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
+**Updated**: May 2, 2026 (v3.39: capability-based identity evolution — hardcoded primal names eliminated from production code; 8,076+ tests)
+**Version**: 3.39
+**Status**: PRODUCTION READY - BTSP Phase 3 FULL (9th of 13 primals) - Capability-Based Identity (zero hardcoded primal names in production) - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,064+ lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 8,076+ lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -974,7 +974,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (8,064+ tests — fully concurrent)
+# Test (8,076+ tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -996,8 +996,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.35 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt, all primalSpring audit gaps resolved)
-**Tests**: 8,064+ passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.39 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt, all primalSpring audit gaps resolved)
+**Tests**: 8,076+ passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode

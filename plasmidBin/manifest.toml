@@ -1,7 +1,7 @@
 # LiveSpore System Manifest
 #
 # This manifest defines the expected state of system files on a LiveSpore.
-# Used by livespore_validate.toml to verify and update spores.
+# Used by LiveSpore validation tooling to verify and update spores.
 #
 # Generated: 2026-01-27T10:05:29-05:00
 # Author: biomeOS Neural API
