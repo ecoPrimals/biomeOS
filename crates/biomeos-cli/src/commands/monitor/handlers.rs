@@ -65,13 +65,13 @@ pub async fn handle_monitor(
     Ok(())
 }
 
-/// Handle dashboard command — redirects to petalTongue (the universal UI primal).
+/// Handle dashboard command — redirects to the visualization capability primal.
 pub async fn handle_dashboard(_interval: u64, _refresh: bool) -> Result<()> {
     warn!(
         "The built-in TUI dashboard has been removed.\n\
-         petalTongue is the universal UI primal for the ecoPrimals ecosystem.\n\
+         The visualization primal provides the universal UI for the ecoPrimals ecosystem.\n\
          \n\
-           To launch petalTongue:  biomeos start petaltongue"
+           To discover the active UI:  biomeos discover --capability visualization"
     );
     Ok(())
 }

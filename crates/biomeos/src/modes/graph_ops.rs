@@ -3,8 +3,8 @@
 
 //! Graph operations — sign and verify deployment graphs.
 //!
-//! Signing delegates to BearDog via the `crypto.sign` capability routed
-//! through the Neural API, keeping biomeOS sovereign (no embedded keys).
+//! Signing delegates to the security provider via the `crypto.sign` capability
+//! routed through the Neural API, keeping biomeOS sovereign (no embedded keys).
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -16,7 +16,7 @@ use biomeos_core::socket_discovery::neural_api::resolve_neural_api_socket;
 use biomeos_graph::integrity::compute_content_hash;
 use tracing::info;
 
-/// Sign a graph TOML file via BearDog delegation.
+/// Sign a graph TOML file via security provider delegation.
 ///
 /// Reads the file, computes its BLAKE3 content hash, sends it to
 /// `crypto.sign` via the Neural API, and writes the resulting
@@ -44,7 +44,7 @@ pub async fn sign(path: PathBuf) -> Result<()> {
             }),
         )
         .await
-        .context("crypto.sign RPC failed — is BearDog healthy?")?;
+        .context("crypto.sign RPC failed — is the security provider healthy?")?;
 
     let signature = response
         .get("signature")

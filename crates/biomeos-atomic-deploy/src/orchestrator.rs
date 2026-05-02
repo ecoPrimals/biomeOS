@@ -14,15 +14,15 @@ use tracing::{debug, info, warn};
 
 use crate::health_check::HealthChecker;
 use crate::primal_launcher::{PrimalInstance, PrimalLauncher};
-use biomeos_types::primal_names;
 
-/// Deployment role identifiers — primal name + role suffix.
+/// Capability-based deployment role requirements.
 ///
-/// Evolution: these should be replaced by capability-based requirements
-/// (e.g., "needs security capability" instead of "needs beardog-server")
-/// resolved at runtime via the Neural API capability router.
-const BEARDOG_SERVER_ROLE: &str = "beardog-server";
-const SONGBIRD_ORCHESTRATOR_ROLE: &str = "songbird-orchestrator";
+/// Atomics require capabilities (not specific primals). At deployment time
+/// these resolve to whichever primal provides the capability via Neural API
+/// discovery. The constants use the canonical capability domain names from
+/// `capability_registry.toml`.
+const SECURITY_PROVIDER_ROLE: &str = "security-server";
+const MESH_ORCHESTRATOR_ROLE: &str = "mesh-orchestrator";
 
 /// Atomic type for deployment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,26 +46,27 @@ impl AtomicType {
         }
     }
 
-    /// Get required primals for this atomic.
+    /// Get required capability roles for this atomic.
     ///
-    /// Evolution: migrate to capability-based requirements resolved via
-    /// Neural API discovery rather than fixed primal role names.
+    /// Returns capability-based role requirements rather than hardcoded primal
+    /// names. At deployment time, the Neural API resolves each role to the
+    /// primal that provides it via `capability.discover`.
     #[must_use]
-    pub fn required_primals(&self) -> Vec<&'static str> {
+    pub fn required_roles(&self) -> Vec<&'static str> {
         match self {
-            Self::Tower => vec![BEARDOG_SERVER_ROLE, SONGBIRD_ORCHESTRATOR_ROLE],
+            Self::Tower => vec![SECURITY_PROVIDER_ROLE, MESH_ORCHESTRATOR_ROLE],
             Self::Node => {
                 vec![
-                    BEARDOG_SERVER_ROLE,
-                    SONGBIRD_ORCHESTRATOR_ROLE,
-                    primal_names::TOADSTOOL,
+                    SECURITY_PROVIDER_ROLE,
+                    MESH_ORCHESTRATOR_ROLE,
+                    "compute-executor",
                 ]
             }
             Self::Nest => {
                 vec![
-                    BEARDOG_SERVER_ROLE,
-                    SONGBIRD_ORCHESTRATOR_ROLE,
-                    primal_names::NESTGATE,
+                    SECURITY_PROVIDER_ROLE,
+                    MESH_ORCHESTRATOR_ROLE,
+                    "storage-provider",
                 ]
             }
         }
@@ -203,7 +204,7 @@ impl DeploymentOrchestrator {
         // Step 3: Launch primals with genetic lineage
         let mut instances = Vec::new();
 
-        for primal_name in atomic_type.required_primals() {
+        for primal_name in atomic_type.required_roles() {
             match self
                 .launch_primal_with_lineage(primal_name, atomic_type, &child_seed_path)
                 .await
@@ -317,27 +318,22 @@ impl DeploymentOrchestrator {
             "BEARDOG_FAMILY_SEED_FILE".to_string(),
             child_seed_path.display().to_string(),
         );
-        env.insert(
-            "BEARDOG_FAMILY_ID".to_string(),
-            self.config.family_id.clone(),
-        );
-        env.insert(
-            "BEARDOG_NODE_ID".to_string(),
-            atomic_type.node_id().to_string(),
-        );
+        env.insert("FAMILY_ID".to_string(), self.config.family_id.clone());
+        env.insert("NODE_ID".to_string(), atomic_type.node_id().to_string());
 
         let socket_env = biomeos_types::defaults::env_vars::socket_env_key(primal_name);
         env.insert(socket_env, socket_path.display().to_string());
 
-        // For Songbird, set security provider (BearDog)
-        if primal_name == SONGBIRD_ORCHESTRATOR_ROLE {
+        // For mesh orchestrators, set the security provider socket.
+        // Resolved by capability domain rather than primal identity.
+        if primal_name == MESH_ORCHESTRATOR_ROLE {
             let security_socket = self.config.runtime_dir.join(format!(
                 "{}-{}.sock",
-                primal_names::BEARDOG,
+                SECURITY_PROVIDER_ROLE,
                 atomic_type.node_id()
             ));
             env.insert(
-                "SONGBIRD_SECURITY_PROVIDER".to_string(),
+                "SECURITY_PROVIDER_SOCKET".to_string(),
                 security_socket.display().to_string(),
             );
         }

@@ -78,7 +78,7 @@ impl NicheHandler {
             json!({
                 "id": "tower-atomic",
                 "name": "Tower Atomic",
-                "description": "Security + Discovery atomic pair (BearDog + Songbird)",
+                "description": "Security + Discovery atomic pair (crypto + mesh orchestration)",
                 "category": "infrastructure",
                 "required_resources": {
                     "cpu_cores": 2,
@@ -92,7 +92,7 @@ impl NicheHandler {
             json!({
                 "id": "ui-atomic",
                 "name": "UI Atomic",
-                "description": "User interface and AI layer (Squirrel + petalTongue)",
+                "description": "User interface and AI layer (interaction + visualization capabilities)",
                 "category": "user-interface",
                 "required_resources": {
                     "cpu_cores": 2,
@@ -123,7 +123,7 @@ impl NicheHandler {
             json!({
                 "id": "gaming",
                 "name": "Game Engine",
-                "description": "Interactive game engine niche (ludoSpring + petalTongue + Tower)",
+                "description": "Interactive game engine niche (game science + visualization + security)",
                 "category": "gaming",
                 "required_resources": {
                     "cpu_cores": 4,
@@ -154,7 +154,7 @@ impl NicheHandler {
             json!({
                 "id": primal_names::PETALTONGUE,
                 "name": "Visualization",
-                "description": "petalTongue universal visualization primal",
+                "description": "Universal visualization primal (GUI, TUI, web, headless rendering)",
                 "category": "visualization",
                 "required_resources": {
                     "cpu_cores": 2,
@@ -187,7 +187,7 @@ impl NicheHandler {
             json!({
                 "id": "surgical-vr",
                 "name": "Surgical VR Training",
-                "description": "Immersive surgical simulation (healthSpring + petalTongue + ludoSpring)",
+                "description": "Immersive surgical simulation (medical + visualization + game science)",
                 "category": "medical",
                 "required_resources": {
                     "cpu_cores": 8,
@@ -261,7 +261,7 @@ impl NicheHandler {
             json!({
                 "id": "rootpulse",
                 "name": "RootPulse",
-                "description": "Emergent version control: rhizoCrypt (DAG) + LoamSpine (linear) + sweetGrass (attribution)",
+                "description": "Emergent version control: DAG provenance + linear history + attribution tracking",
                 "category": "provenance",
                 "required_resources": {
                     "cpu_cores": 2,
@@ -271,7 +271,7 @@ impl NicheHandler {
                 },
                 "graph_id": "rootpulse_commit",
                 "parameters": [
-                    { "name": "SESSION_ID", "required": true, "description": "rhizoCrypt session to commit" },
+                    { "name": "SESSION_ID", "required": true, "description": "Provenance session to commit" },
                     { "name": "AGENT_DID", "required": false, "description": "Agent DID for signing" }
                 ]
             }),
@@ -288,7 +288,7 @@ impl NicheHandler {
                 },
                 "graph_id": "provenance_pipeline",
                 "parameters": [
-                    { "name": "SESSION_ID", "required": true, "description": "rhizoCrypt session to dehydrate" },
+                    { "name": "SESSION_ID", "required": true, "description": "Provenance session to dehydrate" },
                     { "name": "EXPERIMENT_ID", "required": true, "description": "Experiment identifier" },
                     { "name": "AGENT_DID", "required": false, "description": "Agent DID for signing" }
                 ]
@@ -326,7 +326,7 @@ impl NicheHandler {
                 "parameters": [
                     { "name": "SOURCE_SPINE_ID", "required": true, "description": "Branch spine to merge from" },
                     { "name": "TARGET_SPINE_ID", "required": true, "description": "Target spine to merge into" },
-                    { "name": "SOURCE_SESSION_ID", "required": true, "description": "rhizoCrypt session for source" },
+                    { "name": "SOURCE_SESSION_ID", "required": true, "description": "Provenance session for source" },
                     { "name": "AGENT_DID", "required": false, "description": "Agent DID for attribution" }
                 ]
             }),
@@ -345,14 +345,14 @@ impl NicheHandler {
                 "parameters": [
                     { "name": "COMMIT_A", "required": true, "description": "First commit to compare" },
                     { "name": "COMMIT_B", "required": true, "description": "Second commit to compare" },
-                    { "name": "SESSION_A", "required": true, "description": "rhizoCrypt session for commit A" },
-                    { "name": "SESSION_B", "required": true, "description": "rhizoCrypt session for commit B" }
+                    { "name": "SESSION_A", "required": true, "description": "Provenance session for commit A" },
+                    { "name": "SESSION_B", "required": true, "description": "Provenance session for commit B" }
                 ]
             }),
             json!({
                 "id": "rootpulse-federate",
                 "name": "RootPulse Federate",
-                "description": "Synchronize provenance across peer nodes via Songbird discovery",
+                "description": "Synchronize provenance across peer nodes via mesh discovery",
                 "category": "provenance",
                 "required_resources": {
                     "cpu_cores": 2,

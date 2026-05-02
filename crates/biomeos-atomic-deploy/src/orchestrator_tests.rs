@@ -35,33 +35,32 @@ fn test_atomic_type_node_id() {
 }
 
 #[test]
-fn test_atomic_type_required_primals() {
+fn test_atomic_type_required_roles() {
     assert_eq!(
-        AtomicType::Tower.required_primals(),
-        vec!["beardog-server", "songbird-orchestrator"]
+        AtomicType::Tower.required_roles(),
+        vec!["security-server", "mesh-orchestrator"]
     );
     assert_eq!(
-        AtomicType::Node.required_primals(),
-        vec!["beardog-server", "songbird-orchestrator", "toadstool"]
+        AtomicType::Node.required_roles(),
+        vec!["security-server", "mesh-orchestrator", "compute-executor"]
     );
     assert_eq!(
-        AtomicType::Nest.required_primals(),
-        vec!["beardog-server", "songbird-orchestrator", "nestgate"]
+        AtomicType::Nest.required_roles(),
+        vec!["security-server", "mesh-orchestrator", "storage-provider"]
     );
 }
 
 #[test]
-fn test_atomic_type_all_share_beardog_and_songbird() {
-    // Verify every atomic type requires the base primals
+fn test_atomic_type_all_share_security_and_mesh() {
     for atomic in [AtomicType::Tower, AtomicType::Node, AtomicType::Nest] {
-        let primals = atomic.required_primals();
+        let roles = atomic.required_roles();
         assert!(
-            primals.contains(&"beardog-server"),
-            "{atomic:?} must require beardog-server"
+            roles.contains(&"security-server"),
+            "{atomic:?} must require security-server"
         );
         assert!(
-            primals.contains(&"songbird-orchestrator"),
-            "{atomic:?} must require songbird-orchestrator"
+            roles.contains(&"mesh-orchestrator"),
+            "{atomic:?} must require mesh-orchestrator"
         );
     }
 }
@@ -401,10 +400,10 @@ async fn test_deploy_all_three_phases_ok_when_launches_degraded() {
 }
 
 #[test]
-fn test_atomic_type_required_primals_count() {
-    assert_eq!(AtomicType::Tower.required_primals().len(), 2);
-    assert_eq!(AtomicType::Node.required_primals().len(), 3);
-    assert_eq!(AtomicType::Nest.required_primals().len(), 3);
+fn test_atomic_type_required_roles_count() {
+    assert_eq!(AtomicType::Tower.required_roles().len(), 2);
+    assert_eq!(AtomicType::Node.required_roles().len(), 3);
+    assert_eq!(AtomicType::Nest.required_roles().len(), 3);
 }
 
 #[test]

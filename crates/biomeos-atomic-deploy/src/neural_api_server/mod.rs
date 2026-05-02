@@ -123,7 +123,7 @@ pub struct NeuralApiServer {
 
     /// Cached `coordination` purpose key (hex-encoded public key).
     ///
-    /// Derived from BearDog via `crypto.derive_public_key` after Tower health
+    /// Derived from the security provider via `crypto.derive_public_key` after Tower health
     /// is confirmed. Used for graph signing and verification without
     /// re-deriving on every operation.
     pub(super) coordination_pubkey: Arc<RwLock<Option<String>>>,

@@ -52,8 +52,8 @@ impl NeuralApiServer {
             Ok(HandshakeOutcome::DevMode) => {
                 // No FAMILY_ID — proceed without handshake.
             }
-            Ok(HandshakeOutcome::BearDogUnavailable) => {
-                warn!("BTSP: BearDog unavailable, proceeding without handshake");
+            Ok(HandshakeOutcome::SecurityProviderUnavailable) => {
+                warn!("BTSP: security provider unavailable, proceeding without handshake");
             }
             Err(BtspHandshakeError::RawJsonRpc(first_line)) => {
                 if enforce {
@@ -89,12 +89,12 @@ impl NeuralApiServer {
                     stream.flush().await?;
                 }
             }
-            Err(BtspHandshakeError::BearDogNotFound) => {
+            Err(BtspHandshakeError::SecurityProviderNotFound) => {
                 if enforce {
-                    warn!("BTSP enforced but BearDog not found — rejecting connection");
+                    warn!("BTSP enforced but security provider not found — rejecting connection");
                     return Ok(());
                 }
-                warn!("BTSP: BearDog not found, accepting connection without handshake");
+                warn!("BTSP: security provider not found, accepting connection without handshake");
             }
             Err(e) => {
                 warn!("BTSP handshake failed: {e}");

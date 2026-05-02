@@ -159,10 +159,7 @@ pub use family_credentials::FamilyCredentials;
 pub use log_session::{LogSessionTracker, PrimalSession};
 pub use primal_discovery::{PrimalMetadata, discover_primals, query_primal_metadata};
 pub use primal_impls::{
-    // New generic primal system
     GenericManagedPrimal,
-    ManagedBearDog,
-    ManagedSongbird,
     PrimalBuilder,
     // Convenience builders
     create_ai_service,

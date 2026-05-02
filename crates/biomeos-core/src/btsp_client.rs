@@ -14,9 +14,9 @@
 //! - Phase 2 server-side handshake enforcement for UDS listeners
 //! - Phase 2 client-side handshake initiation for outbound forwarding
 //!
-//! The actual cryptographic handshake is delegated to BearDog via JSON-RPC
-//! (`btsp.session.create`, `btsp.session.verify`). biomeOS is a family member
-//! and holds the family seed for key derivation.
+//! The actual cryptographic handshake is delegated to the security provider
+//! via JSON-RPC (`btsp.session.create`, `btsp.session.verify`). biomeOS is a
+//! family member and holds the family seed for key derivation.
 
 use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use biomeos_types::primal_names;
@@ -33,7 +33,7 @@ pub const BTSP_VERSION: u8 = 1;
 pub enum SecurityMode {
     /// Production: `FAMILY_ID` is set. BTSP handshake required for family-scoped sockets.
     Production {
-        /// Whether a BearDog security socket is reachable for handshake delegation.
+        /// Whether a security provider socket is reachable for handshake delegation.
         btsp_available: bool,
     },
     /// Development: `BIOMEOS_INSECURE=1` or no `FAMILY_ID`. Raw cleartext JSON-RPC.
@@ -45,18 +45,18 @@ pub enum SecurityMode {
 pub enum HandshakeOutcome {
     /// Handshake succeeded; session_id is available for optional encryption.
     Authenticated {
-        /// Opaque session identifier returned by BearDog.
+        /// Opaque session identifier returned by the security provider.
         session_id: String,
-        /// Session key from BearDog's `btsp.session.verify` response.
-        /// `None` if BearDog didn't return key material (older versions).
+        /// Session key from the security provider's `btsp.session.verify` response.
+        /// `None` if the provider didn't return key material (older versions).
         /// Used by Phase 3 HKDF key derivation.
         handshake_key: Option<[u8; 32]>,
     },
     /// No FAMILY_ID set — connection accepted without handshake (dev mode).
     DevMode,
-    /// FAMILY_ID is set but BearDog is unavailable — behaviour depends on
-    /// `BIOMEOS_BTSP_ENFORCE`.
-    BearDogUnavailable,
+    /// FAMILY_ID is set but security provider is unavailable — behaviour
+    /// depends on `BIOMEOS_BTSP_ENFORCE`.
+    SecurityProviderUnavailable,
 }
 
 // ── BTSP Handshake Wire Types (Phase 2) ────────────────────────────────
@@ -77,11 +77,11 @@ pub struct ClientHello {
 pub struct ServerHello {
     /// Protocol version (must match `BTSP_VERSION`).
     pub version: u8,
-    /// Base64-encoded X25519 ephemeral public key (from BearDog).
+    /// Base64-encoded X25519 ephemeral public key (from security provider).
     pub server_ephemeral_pub: String,
     /// Base64-encoded random 32-byte challenge.
     pub challenge: String,
-    /// Session ID for BearDog delegation.
+    /// Session ID for security provider delegation.
     pub session_id: String,
 }
 
@@ -227,7 +227,7 @@ fn socket_dir() -> Option<std::path::PathBuf> {
 /// Perform the server-side BTSP handshake on an accepted connection.
 ///
 /// Reads the first line from the stream. If it is a `ClientHello`, delegates
-/// the crypto to BearDog and completes the 4-step handshake. If the first
+/// the crypto to the security provider and completes the 4-step handshake. If the first
 /// line is a raw JSON-RPC request, the line is returned so the caller can
 /// dispatch it without data loss.
 ///
@@ -235,8 +235,8 @@ fn socket_dir() -> Option<std::path::PathBuf> {
 ///
 /// - `Ok(HandshakeOutcome::Authenticated { .. })` — handshake completed.
 /// - `Ok(HandshakeOutcome::DevMode)` — no `FAMILY_ID`, skipped.
-/// - `Ok(HandshakeOutcome::BearDogUnavailable)` — `FAMILY_ID` set but
-///   BearDog unreachable. The caller should check [`btsp_enforce`] to
+/// - `Ok(HandshakeOutcome::SecurityProviderUnavailable)` — `FAMILY_ID` set
+///   but security provider unreachable. The caller should check [`btsp_enforce`] to
 ///   decide whether to accept or reject the connection.
 /// - `Err(_)` — handshake failed (client not in family, protocol error).
 ///
@@ -274,11 +274,11 @@ where
 
     debug!(
         version = hello.version,
-        "BTSP ClientHello received, delegating to BearDog"
+        "BTSP ClientHello received, delegating to security provider"
     );
 
     let provider_path =
-        security_provider_socket_path().ok_or(BtspHandshakeError::BearDogNotFound)?;
+        security_provider_socket_path().ok_or(BtspHandshakeError::SecurityProviderNotFound)?;
 
     let session =
         create_session_via_security_provider(&provider_path, &hello.client_ephemeral_pub).await?;
@@ -370,7 +370,7 @@ pub enum BtspHandshakeError {
     RawJsonRpc(String),
     /// Security provider socket not found — cannot delegate crypto.
     #[error("security provider socket not found for BTSP delegation")]
-    BearDogNotFound,
+    SecurityProviderNotFound,
     /// Security provider returned an error during session creation or verification.
     #[error("BTSP security provider error: {0}")]
     SecurityProviderError(String),
@@ -430,7 +430,7 @@ async fn create_session_via_security_provider(
 /// Result of session verification including optional key material.
 struct VerifyResult {
     verified: bool,
-    /// 32-byte session key from BearDog, if provided.
+    /// 32-byte session key from the security provider, if provided.
     handshake_key: Option<[u8; 32]>,
 }
 
@@ -563,20 +563,20 @@ pub fn log_security_posture() {
 // ── Phase 2: Client-side handshake (outbound forwarding) ───────────────
 
 /// Perform a client-side BTSP handshake on an already-connected Unix
-/// stream, delegating all cryptographic operations to BearDog.
+/// stream, delegating all cryptographic operations to the security provider.
 ///
 /// Returns the stream wrapped in a `BufReader` so the caller can
 /// immediately send JSON-RPC lines over the authenticated channel.
 ///
 /// # Errors
 ///
-/// Returns `BtspHandshakeError` when BearDog is unreachable, the remote
+/// Returns `BtspHandshakeError` when the security provider is unreachable, the remote
 /// primal rejects the handshake, or a timeout occurs.
 pub async fn perform_client_handshake(
     stream: tokio::net::UnixStream,
 ) -> Result<tokio::io::BufReader<tokio::net::UnixStream>, BtspHandshakeError> {
     let provider_path =
-        security_provider_socket_path().ok_or(BtspHandshakeError::BearDogNotFound)?;
+        security_provider_socket_path().ok_or(BtspHandshakeError::SecurityProviderNotFound)?;
     let bd = crate::AtomicClient::unix(&provider_path);
 
     let (client_pub, client_secret) = client_keygen(&bd).await?;

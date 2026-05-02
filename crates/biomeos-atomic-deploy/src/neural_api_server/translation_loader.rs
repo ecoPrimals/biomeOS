@@ -126,7 +126,7 @@ impl NeuralApiServer {
                     .to_string();
 
                 // Register capability CATEGORIES from the capabilities field
-                // This enables capability.call("crypto", "sha256") to route to BearDog
+                // This enables capability.call("crypto", "sha256") to route to the security provider
                 for capability in &node.capabilities {
                     if self.tcp_only {
                         let tcp_port = self.resolve_tcp_port_for_primal(primal);

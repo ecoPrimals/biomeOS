@@ -426,7 +426,7 @@ impl Default for PrimalBuilder {
     }
 }
 
-/// Convenience function: Create a security provider (e.g., BearDog-like)
+/// Convenience function: Create a security provider primal instance.
 pub fn create_security_provider(
     binary_path: String,
     http_port: u16,
@@ -489,13 +489,6 @@ pub fn create_storage_provider(
         .http_port(http_port)
         .build()
 }
-
-// Legacy compatibility (DEPRECATED - use GenericManagedPrimal instead)
-
-/// Legacy alias — use [`GenericManagedPrimal`] instead
-pub type ManagedBearDog = GenericManagedPrimal;
-/// Legacy alias — use [`GenericManagedPrimal`] instead
-pub type ManagedSongbird = GenericManagedPrimal;
 
 #[cfg(test)]
 #[expect(

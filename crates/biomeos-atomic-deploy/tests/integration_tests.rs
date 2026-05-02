@@ -52,20 +52,20 @@ fn test_atomic_types() {
 
     for atomic in atomics {
         let node_id = atomic.node_id();
-        let primals = atomic.required_primals();
+        let roles = atomic.required_roles();
 
-        // All atomics need at least BearDog and Songbird
-        assert!(primals.contains(&"beardog-server"));
-        assert!(primals.contains(&"songbird-orchestrator"));
+        // All atomics need security and mesh orchestration capabilities
+        assert!(roles.contains(&"security-server"));
+        assert!(roles.contains(&"mesh-orchestrator"));
 
-        // Node has ToadStool
+        // Node needs compute capability
         if matches!(atomic, AtomicType::Node) {
-            assert!(primals.contains(&"toadstool"));
+            assert!(roles.contains(&"compute-executor"));
         }
 
-        // Nest has NestGate
+        // Nest needs storage capability
         if matches!(atomic, AtomicType::Nest) {
-            assert!(primals.contains(&"nestgate"));
+            assert!(roles.contains(&"storage-provider"));
         }
 
         // Node IDs should be lowercase

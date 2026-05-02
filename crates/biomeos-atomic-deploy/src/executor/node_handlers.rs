@@ -60,7 +60,7 @@ pub async fn crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) ->
     let security_socket = discover_capability_provider(context, "security").await;
 
     if let Some(socket_path) = security_socket {
-        // Use BearDog for real crypto derivation
+        // Use security provider for real crypto derivation
         info!(
             "🔐 Using security provider at {} for seed derivation",
             socket_path

@@ -163,7 +163,9 @@ fn handshake_error_roundtrip() {
 
 #[test]
 fn btsp_handshake_error_display() {
-    assert!(format!("{}", BtspHandshakeError::BearDogNotFound).contains("security provider"));
+    assert!(
+        format!("{}", BtspHandshakeError::SecurityProviderNotFound).contains("security provider")
+    );
     assert!(format!("{}", BtspHandshakeError::VerificationFailed).contains("verification"));
     assert!(format!("{}", BtspHandshakeError::Timeout).contains("timed out"));
     assert!(format!("{}", BtspHandshakeError::ConnectionClosed).contains("disconnected"));

@@ -7,7 +7,7 @@
 //! to upgrade the connection from authenticated-plaintext (NULL cipher) to
 //! ChaCha20-Poly1305 encrypted framing.
 //!
-//! Nonces and keys are base64-encoded on the wire (aligned with BearDog,
+//! Nonces and keys are base64-encoded on the wire (aligned with the security provider,
 //! sweetGrass, and primalSpring). Hex-encoded `client_nonce` is auto-detected
 //! for backward compatibility with barraCuda-style clients.
 //!
@@ -187,8 +187,8 @@ pub struct BtspSessionState {
     /// Server nonce generated during negotiate (base64-encoded).
     pub server_nonce: Option<String>,
 
-    /// Handshake key from BearDog's `btsp.session.verify` response.
-    /// `None` when BearDog didn't return key material (older versions).
+    /// Handshake key from the security provider's `btsp.session.verify` response.
+    /// `None` when the provider didn't return key material (older versions).
     handshake_key: Option<[u8; 32]>,
 
     /// Derived session keys (populated after successful Phase 3 negotiate

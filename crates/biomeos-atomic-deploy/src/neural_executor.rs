@@ -121,7 +121,7 @@ impl GraphExecutor {
             warn!(
                 graph_id = %self.graph.id,
                 required_tier = %validation.required_tier,
-                "Genetics tier preflight: family infrastructure not verified against declared tier (BearDog genetics.tier_available pending)"
+                "Genetics tier preflight: family infrastructure not verified against declared tier (security provider genetics.tier_available pending)"
             );
             report.genetics_tier_validation = Some(validation);
         }

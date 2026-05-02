@@ -5,7 +5,7 @@
 //!
 //! This module contains all node-specific executors organized by domain:
 //! - Filesystem operations
-//! - Cryptographic operations (via BearDog)
+//! - Cryptographic operations (via security provider)
 //! - Primal lifecycle management
 //! - Health checks
 //! - Lineage verification
@@ -70,8 +70,8 @@ pub async fn node_filesystem_check_exists(
 /// Node executor: crypto.derive_child_seed
 ///
 /// # Deep Debt Principles
-/// - No reimplementation: BearDog handles all cryptographic operations
-/// - Capability-based: Discovers BearDog by capability, not hardcoded name
+/// - No reimplementation: security provider handles all cryptographic operations
+/// - Capability-based: discovers provider by capability, not hardcoded name
 /// - Pure Rust: JSON-RPC over Unix socket (no HTTP/TLS)
 pub async fn node_crypto_derive_seed(
     node: &GraphNode,

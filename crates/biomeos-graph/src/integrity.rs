@@ -4,7 +4,7 @@
 //! Graph integrity verification.
 //!
 //! Provides content hashing and signature verification for deployment graphs.
-//! Signing is delegated to BearDog (Tower atomic) via `crypto.sign` — biomeOS
+//! Signing is delegated to the security provider (Tower atomic) via `crypto.sign` — biomeOS
 //! never holds private keys. Verification uses the public key embedded in
 //! `[graph.metadata.signed_by]`.
 

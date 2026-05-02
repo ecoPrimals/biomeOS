@@ -54,7 +54,7 @@ impl NeuralApiServer {
 
     /// Escalate BTSP enforcement at runtime.
     ///
-    /// Called after Tower (BearDog + Songbird) is confirmed healthy.
+    /// Called after Tower (security + mesh orchestration) is confirmed healthy.
     /// All subsequent UDS connections will require BTSP authentication.
     /// This is a one-way transition: once escalated, cannot be de-escalated.
     ///
@@ -127,7 +127,7 @@ impl NeuralApiServer {
     ///
     /// **BTSP Phase 2**: When `FAMILY_ID` is set, each accepted connection
     /// undergoes a BTSP handshake before JSON-RPC processing begins. The
-    /// handshake crypto is delegated to BearDog via `btsp.session.create` /
+    /// handshake crypto is delegated to the security provider via `btsp.session.create` /
     /// `btsp.session.verify`. Clients that do not initiate a handshake
     /// (legacy JSON-RPC) are handled according to [`btsp_enforce`]:
     /// - enforce = true (default): connection rejected
