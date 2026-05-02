@@ -37,9 +37,17 @@ impl NeuralApiServer {
         let mut reader = BufReader::new(stream);
 
         match btsp_client::server_handshake(&mut reader).await {
-            Ok(HandshakeOutcome::Authenticated { session_id }) => {
-                debug!(session_id = %session_id, "BTSP authenticated — proceeding with JSON-RPC");
-                super::btsp_negotiate::register_session(&self.btsp_sessions, session_id).await;
+            Ok(HandshakeOutcome::Authenticated {
+                session_id,
+                handshake_key,
+            }) => {
+                debug!(session_id = %session_id, has_key = handshake_key.is_some(), "BTSP authenticated — proceeding with JSON-RPC");
+                super::btsp_negotiate::register_session(
+                    &self.btsp_sessions,
+                    session_id,
+                    handshake_key,
+                )
+                .await;
             }
             Ok(HandshakeOutcome::DevMode) => {
                 // No FAMILY_ID — proceed without handshake.

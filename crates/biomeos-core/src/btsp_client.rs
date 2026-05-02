@@ -47,6 +47,10 @@ pub enum HandshakeOutcome {
     Authenticated {
         /// Opaque session identifier returned by BearDog.
         session_id: String,
+        /// Session key from BearDog's `btsp.session.verify` response.
+        /// `None` if BearDog didn't return key material (older versions).
+        /// Used by Phase 3 HKDF key derivation.
+        handshake_key: Option<[u8; 32]>,
     },
     /// No FAMILY_ID set — connection accepted without handshake (dev mode).
     DevMode,
@@ -312,7 +316,7 @@ where
     let challenge_resp: ChallengeResponse = serde_json::from_str(response_line.trim())
         .map_err(|e| BtspHandshakeError::Protocol(format!("invalid ChallengeResponse: {e}")))?;
 
-    let verified = verify_session_via_security_provider(
+    let verify_result = verify_session_via_security_provider(
         &provider_path,
         &session.session_id,
         &challenge_resp.response,
@@ -322,7 +326,7 @@ where
     )
     .await?;
 
-    if !verified {
+    if !verify_result.verified {
         let err = HandshakeError {
             error: "handshake_failed".to_owned(),
             reason: "family_verification".to_owned(),
@@ -353,6 +357,7 @@ where
 
     Ok(HandshakeOutcome::Authenticated {
         session_id: session.session_id,
+        handshake_key: verify_result.handshake_key,
     })
 }
 
@@ -422,6 +427,13 @@ async fn create_session_via_security_provider(
     })
 }
 
+/// Result of session verification including optional key material.
+struct VerifyResult {
+    verified: bool,
+    /// 32-byte session key from BearDog, if provided.
+    handshake_key: Option<[u8; 32]>,
+}
+
 async fn verify_session_via_security_provider(
     provider_path: &Path,
     session_id: &str,
@@ -429,7 +441,7 @@ async fn verify_session_via_security_provider(
     client_ephemeral_pub: &str,
     server_ephemeral_pub: &str,
     challenge: &str,
-) -> Result<bool, BtspHandshakeError> {
+) -> Result<VerifyResult, BtspHandshakeError> {
     use crate::AtomicClient;
 
     let client = AtomicClient::unix(provider_path);
@@ -447,7 +459,23 @@ async fn verify_session_via_security_provider(
         .await
         .map_err(|e| BtspHandshakeError::SecurityProviderError(e.to_string()))?;
 
-    Ok(result["verified"].as_bool().unwrap_or(false))
+    let verified = result["verified"].as_bool().unwrap_or(false);
+
+    let handshake_key = result
+        .get("session_key")
+        .and_then(|v| v.as_str())
+        .and_then(|hex| {
+            let bytes: Vec<u8> = (0..hex.len())
+                .step_by(2)
+                .filter_map(|i| u8::from_str_radix(hex.get(i..i + 2)?, 16).ok())
+                .collect();
+            <[u8; 32]>::try_from(bytes.as_slice()).ok()
+        });
+
+    Ok(VerifyResult {
+        verified,
+        handshake_key,
+    })
 }
 
 /// Check that `FAMILY_ID` and `BIOMEOS_INSECURE` are not both set.

@@ -41,6 +41,63 @@ impl BtspCipher {
     }
 }
 
+/// Directional session keys derived via HKDF-SHA256 after Phase 3 negotiate.
+///
+/// The server uses `server_to_client` to encrypt outgoing frames and
+/// `client_to_server` to decrypt incoming frames.
+#[derive(Clone)]
+#[allow(
+    dead_code,
+    reason = "keys consumed by encrypted framing layer (Phase 3 wire evolution)"
+)]
+pub struct SessionKeys {
+    pub client_to_server: [u8; 32],
+    pub server_to_client: [u8; 32],
+}
+
+impl std::fmt::Debug for SessionKeys {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SessionKeys")
+            .field("client_to_server", &"[REDACTED]")
+            .field("server_to_client", &"[REDACTED]")
+            .finish()
+    }
+}
+
+/// Derive directional session keys via HKDF-SHA256.
+///
+/// ```text
+/// salt = client_nonce || server_nonce
+/// c2s = HKDF-SHA256(ikm=handshake_key, salt, info="btsp-session-v1-c2s")
+/// s2c = HKDF-SHA256(ikm=handshake_key, salt, info="btsp-session-v1-s2c")
+/// ```
+pub fn derive_session_keys(
+    handshake_key: &[u8; 32],
+    client_nonce: &[u8],
+    server_nonce: &[u8],
+) -> SessionKeys {
+    use hkdf::Hkdf;
+    use sha2::Sha256;
+
+    let mut salt = Vec::with_capacity(client_nonce.len() + server_nonce.len());
+    salt.extend_from_slice(client_nonce);
+    salt.extend_from_slice(server_nonce);
+
+    let hk = Hkdf::<Sha256>::new(Some(&salt), handshake_key);
+
+    let mut c2s = [0u8; 32];
+    // HKDF-SHA256 expand for 32 bytes is infallible (max OKM = 255 * 32 = 8160).
+    let _ = hk.expand(b"btsp-session-v1-c2s", &mut c2s);
+
+    let mut s2c = [0u8; 32];
+    let _ = hk.expand(b"btsp-session-v1-s2c", &mut s2c);
+
+    SessionKeys {
+        client_to_server: c2s,
+        server_to_client: s2c,
+    }
+}
+
 /// Per-session state stored after Phase 2 handshake completes.
 #[derive(Debug, Clone)]
 pub struct BtspSessionState {
@@ -54,6 +111,14 @@ pub struct BtspSessionState {
 
     /// Server nonce generated during negotiate (hex-encoded).
     pub server_nonce: Option<String>,
+
+    /// Handshake key from BearDog's `btsp.session.verify` response.
+    /// `None` when BearDog didn't return key material (older versions).
+    handshake_key: Option<[u8; 32]>,
+
+    /// Derived session keys (populated after successful Phase 3 negotiate
+    /// when both `handshake_key` and `client_nonce` are available).
+    pub session_keys: Option<SessionKeys>,
 }
 
 /// Thread-safe store of active BTSP sessions, keyed by `session_id`.
@@ -65,7 +130,11 @@ pub fn new_session_store() -> BtspSessionStore {
 }
 
 /// Register a session after successful Phase 2 handshake.
-pub async fn register_session(store: &BtspSessionStore, session_id: impl Into<String>) {
+pub async fn register_session(
+    store: &BtspSessionStore,
+    session_id: impl Into<String>,
+    handshake_key: Option<[u8; 32]>,
+) {
     let id = session_id.into();
     let mut sessions = store.write().await;
     sessions.insert(
@@ -74,6 +143,8 @@ pub async fn register_session(store: &BtspSessionStore, session_id: impl Into<St
             session_id: id,
             cipher: BtspCipher::Null,
             server_nonce: None,
+            handshake_key,
+            session_keys: None,
         },
     );
 }
@@ -82,6 +153,8 @@ pub async fn register_session(store: &BtspSessionStore, session_id: impl Into<St
 ///
 /// Validates the session, generates a server nonce, and returns the negotiated
 /// cipher. If the requested cipher is not supported, falls back to `"null"`.
+/// When both `handshake_key` (from Phase 2) and `client_nonce` (from params)
+/// are available, derives directional session keys via HKDF-SHA256.
 pub async fn handle_negotiate(
     store: &BtspSessionStore,
     params: &serde_json::Value,
@@ -96,14 +169,30 @@ pub async fn handle_negotiate(
         .and_then(|v| v.as_str())
         .unwrap_or("null");
 
-    let cipher = BtspCipher::from_str_loose(preferred);
+    let client_nonce_hex = params
+        .get("client_nonce")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
+    let mut cipher = BtspCipher::from_str_loose(preferred);
 
     let server_nonce = generate_server_nonce();
+    let server_nonce_bytes = hex_decode(&server_nonce);
 
     let mut sessions = store.write().await;
     let session = sessions
         .get_mut(session_id)
         .ok_or_else(|| anyhow::anyhow!("Unknown session_id: {session_id}"))?;
+
+    if cipher == BtspCipher::ChaCha20Poly1305 {
+        if let (Some(hk), Some(cn_hex)) = (&session.handshake_key, &client_nonce_hex) {
+            let client_nonce_bytes = hex_decode(cn_hex);
+            let keys = derive_session_keys(hk, &client_nonce_bytes, &server_nonce_bytes);
+            session.session_keys = Some(keys);
+        } else {
+            cipher = BtspCipher::Null;
+        }
+    }
 
     session.cipher = cipher;
     session.server_nonce = Some(server_nonce.clone());
@@ -130,6 +219,13 @@ fn hex_encode(bytes: &[u8]) -> String {
         let _ = write!(s, "{b:02x}");
     }
     s
+}
+
+fn hex_decode(hex: &str) -> Vec<u8> {
+    (0..hex.len())
+        .step_by(2)
+        .filter_map(|i| u8::from_str_radix(hex.get(i..i + 2)?, 16).ok())
+        .collect()
 }
 
 #[cfg(test)]
@@ -164,14 +260,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_register_and_negotiate() {
+    async fn test_register_and_negotiate_with_key() {
         let store = new_session_store();
-
-        register_session(&store, "test-session-123".to_string()).await;
+        let fake_key = [0xABu8; 32];
+        register_session(&store, "test-session-123", Some(fake_key)).await;
 
         let params = serde_json::json!({
             "session_id": "test-session-123",
             "preferred_cipher": "chacha20-poly1305",
+            "client_nonce": "aabbccdd11223344aabbccdd",
             "bond_type": "Covalent"
         });
 
@@ -179,6 +276,43 @@ mod tests {
         assert_eq!(result["cipher"], "chacha20-poly1305");
         assert_eq!(result["allowed"], true);
         assert!(result["server_nonce"].as_str().unwrap().len() == 24);
+
+        let sessions = store.read().await;
+        let sess = sessions.get("test-session-123").unwrap();
+        assert!(sess.session_keys.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_negotiate_no_handshake_key_falls_back_to_null() {
+        let store = new_session_store();
+        register_session(&store, "sess-no-key", None).await;
+
+        let params = serde_json::json!({
+            "session_id": "sess-no-key",
+            "preferred_cipher": "chacha20-poly1305",
+            "client_nonce": "aabbccdd11223344aabbccdd"
+        });
+
+        let result = handle_negotiate(&store, &params).await.unwrap();
+        assert_eq!(result["cipher"], "null");
+
+        let sessions = store.read().await;
+        assert!(sessions.get("sess-no-key").unwrap().session_keys.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_negotiate_no_client_nonce_falls_back_to_null() {
+        let store = new_session_store();
+        let fake_key = [0xBBu8; 32];
+        register_session(&store, "sess-no-nonce", Some(fake_key)).await;
+
+        let params = serde_json::json!({
+            "session_id": "sess-no-nonce",
+            "preferred_cipher": "chacha20-poly1305"
+        });
+
+        let result = handle_negotiate(&store, &params).await.unwrap();
+        assert_eq!(result["cipher"], "null");
     }
 
     #[tokio::test]
@@ -197,7 +331,7 @@ mod tests {
     #[tokio::test]
     async fn test_negotiate_null_fallback() {
         let store = new_session_store();
-        register_session(&store, "sess-1".to_string()).await;
+        register_session(&store, "sess-1", None).await;
 
         let params = serde_json::json!({
             "session_id": "sess-1",
@@ -219,5 +353,55 @@ mod tests {
 
         let result = handle_negotiate(&store, &params).await;
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_derive_session_keys_deterministic() {
+        let key = [0xCCu8; 32];
+        let cn = [1u8; 12];
+        let sn = [2u8; 12];
+
+        let k1 = derive_session_keys(&key, &cn, &sn);
+        let k2 = derive_session_keys(&key, &cn, &sn);
+        assert_eq!(k1.client_to_server, k2.client_to_server);
+        assert_eq!(k1.server_to_client, k2.server_to_client);
+    }
+
+    #[test]
+    fn test_derive_session_keys_directional() {
+        let key = [0xDDu8; 32];
+        let cn = [3u8; 12];
+        let sn = [4u8; 12];
+
+        let keys = derive_session_keys(&key, &cn, &sn);
+        assert_ne!(keys.client_to_server, keys.server_to_client);
+    }
+
+    #[test]
+    fn test_derive_session_keys_different_nonces_produce_different_keys() {
+        let key = [0xEEu8; 32];
+        let cn1 = [5u8; 12];
+        let cn2 = [6u8; 12];
+        let sn = [7u8; 12];
+
+        let k1 = derive_session_keys(&key, &cn1, &sn);
+        let k2 = derive_session_keys(&key, &cn2, &sn);
+        assert_ne!(k1.client_to_server, k2.client_to_server);
+    }
+
+    #[test]
+    fn test_session_keys_debug_redacted() {
+        let keys = derive_session_keys(&[0u8; 32], &[1u8; 12], &[2u8; 12]);
+        let dbg = format!("{keys:?}");
+        assert!(dbg.contains("REDACTED"));
+        assert!(!dbg.contains(&format!("{:02x}", keys.client_to_server[0])));
+    }
+
+    #[test]
+    fn test_hex_roundtrip() {
+        let original = [0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x23];
+        let encoded = hex_encode(&original);
+        let decoded = hex_decode(&encoded);
+        assert_eq!(&original[..], &decoded[..]);
     }
 }

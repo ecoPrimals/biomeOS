@@ -199,6 +199,7 @@ fn security_provider_socket_path_returns_none_without_env() {
 fn handshake_outcome_debug() {
     let auth = HandshakeOutcome::Authenticated {
         session_id: "s1".to_owned(),
+        handshake_key: None,
     };
     let dbg = format!("{auth:?}");
     assert!(dbg.contains("Authenticated"));

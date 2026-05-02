@@ -186,9 +186,19 @@ async fn call_neural_api(
     neural_socket: &str,
     request: &JsonRpcRequest,
 ) -> Result<serde_json::Value> {
-    let stream = UnixStream::connect(neural_socket)
+    let connect_timeout = Duration::from_millis(
+        biomeos_types::constants::timeouts::DEFAULT_CONNECTION_TIMEOUT_MS,
+    );
+    let read_timeout = Duration::from_secs(30);
+
+    let stream = timeout(connect_timeout, UnixStream::connect(neural_socket))
         .await
-        .context(format!("Failed to connect to Neural API at {neural_socket}"))?;
+        .context(format!(
+            "Connect timeout ({connect_timeout:?}) to Neural API at {neural_socket}"
+        ))?
+        .context(format!(
+            "Failed to connect to Neural API at {neural_socket}"
+        ))?;
 
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -198,7 +208,11 @@ async fn call_neural_api(
     writer.flush().await?;
 
     let mut response_line = String::new();
-    reader.read_line(&mut response_line).await?;
+    timeout(read_timeout, reader.read_line(&mut response_line))
+        .await
+        .context(format!(
+            "Read timeout ({read_timeout:?}) from Neural API at {neural_socket}"
+        ))??;
 
     let response: serde_json::Value = serde_json::from_str(response_line.trim())?;
     Ok(response)

@@ -436,22 +436,29 @@ async fn discover_capability_provider(
 ///
 /// **Deep Debt Principle**: Pure JSON-RPC, no HTTP dependencies.
 async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<Value> {
+    use tokio::time::timeout;
+
+    let connect_timeout =
+        Duration::from_millis(biomeos_types::constants::timeouts::DEFAULT_CONNECTION_TIMEOUT_MS);
+    let read_timeout = biomeos_types::constants::DEFAULT_REQUEST_TIMEOUT;
+
     let request_json = serde_json::to_string(request)?;
-    let stream = UnixStream::connect(socket_path)
+    let stream = timeout(connect_timeout, UnixStream::connect(socket_path))
         .await
+        .with_context(|| format!("Connect timeout ({connect_timeout:?}) to {socket_path}"))?
         .with_context(|| format!("Failed to connect to {socket_path}"))?;
 
     let (read_half, mut write_half) = stream.into_split();
 
-    // Send request
     write_half.write_all(request_json.as_bytes()).await?;
     write_half.write_all(b"\n").await?;
     write_half.flush().await?;
 
-    // Read response
     let mut reader = BufReader::new(read_half);
     let mut response_line = String::new();
-    reader.read_line(&mut response_line).await?;
+    timeout(read_timeout, reader.read_line(&mut response_line))
+        .await
+        .with_context(|| format!("Read timeout ({read_timeout:?}) from {socket_path}"))??;
 
     let response: Value = serde_json::from_str(&response_line)
         .with_context(|| format!("Invalid JSON response from {socket_path}"))?;

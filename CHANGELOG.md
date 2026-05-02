@@ -2,6 +2,39 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.37 (2026-05-02) — BTSP Phase 3 HKDF Key Derivation + Socket Timeout Debt
+
+### BTSP Phase 3 — HKDF-SHA256 session key derivation
+- `handle_negotiate()` now derives directional session keys (`SessionKeys`) via
+  HKDF-SHA256 when both `handshake_key` (from BearDog) and `client_nonce` (from
+  params) are available.
+- `derive_session_keys(handshake_key, client_nonce, server_nonce)` — pure function
+  producing `client_to_server` and `server_to_client` 32-byte keys using
+  `btsp-session-v1-c2s` / `btsp-session-v1-s2c` info strings.
+- `HandshakeOutcome::Authenticated` now carries `handshake_key: Option<[u8; 32]>`
+  extracted from BearDog's `btsp.session.verify` response.
+- `verify_session_via_security_provider` evolved to extract optional `session_key`
+  hex field from BearDog's response.
+- Graceful degradation: when `handshake_key` is `None` (older BearDog) or
+  `client_nonce` is missing, cipher negotiation falls back to `"null"`.
+- `SessionKeys` Debug impl redacts key material for safe logging.
+- 7 new unit tests: deterministic derivation, directional key separation,
+  nonce sensitivity, debug redaction, hex roundtrip, no-key fallback,
+  no-nonce fallback.
+
+### Socket timeout debt resolved
+- `call_primal_rpc` (biomeos-atomic-deploy executor): added 5s connect timeout +
+  30s read timeout. Previously could hang indefinitely on dead/slow sockets.
+- `call_neural_api` (biomeos-graph executor): same 5s connect + 30s read timeout.
+  Uses `DEFAULT_CONNECTION_TIMEOUT_MS` from constants.
+
+### Lint hygiene: stale `#[expect]` purge
+- Removed unfulfilled `#[expect(clippy::expect_used)]` from 7 test files and
+  `tests/common/mod.rs` — tests evolved past `.expect()` usage.
+- Removed unfulfilled `#[expect(clippy::unwrap_used)]` from `integrity.rs`,
+  `e2e_testing_suite.rs`, `simple_e2e_tests.rs`, `chaos_testing.rs`,
+  `e2e_vm_federation_validation.rs` — tests evolved past `.unwrap()` usage.
+
 ## v3.36 (2026-05-02) — BTSP Phase 3: btsp.negotiate + Deep Debt Sweep
 
 ### BTSP Phase 3 — `btsp.negotiate` server handler
