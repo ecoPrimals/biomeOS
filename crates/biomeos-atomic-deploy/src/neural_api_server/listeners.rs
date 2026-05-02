@@ -78,7 +78,7 @@ impl NeuralApiServer {
     /// Report current BTSP enforcement state including Phase 3 readiness.
     ///
     /// JSON-RPC method: `btsp.status`
-    pub(crate) fn btsp_status(&self) -> Result<serde_json::Value> {
+    pub(crate) async fn btsp_status(&self) -> Result<serde_json::Value> {
         let has_family = biomeos_core::btsp_client::has_family_id();
         let static_enforce = if self.btsp_optional {
             false
@@ -96,9 +96,10 @@ impl NeuralApiServer {
             "runtime_escalated": runtime_escalated,
             "effective_enforce": effective,
             "phase": if effective { "phase2_enforced" } else if has_family { "phase2_available" } else { "phase1_cleartext" },
-            "post_handshake_cipher": "null",
-            "phase3_ready": false,
-            "phase3_notes": "Encrypted post-handshake channels deferred ecosystem-wide. Current: null cipher after BTSP handshake. Phase 3 requires: cipher negotiation (btsp.negotiate), HKDF session keys, length-prefixed AEAD framing.",
+            "post_handshake_cipher": "chacha20-poly1305",
+            "phase3_ready": true,
+            "supported_ciphers": ["chacha20-poly1305", "null"],
+            "active_sessions": self.btsp_sessions.read().await.len(),
         }))
     }
 

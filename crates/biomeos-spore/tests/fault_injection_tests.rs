@@ -281,8 +281,8 @@ async fn test_empty_primals_directory() {
 
     let result = Spore::create(mount_point.clone(), config).await;
 
-    // EVOLVED: Spore creation behavior depends on how plasmidBin is discovered
-    // The test validates that the function handles the case gracefully (no panic)
+    // Spore creation behavior depends on how plasmidBin is discovered.
+    // The test validates that the function handles the case gracefully (no panic).
     // - May find primals from a default location if current_dir doesn't have them
     // - May fail if no primals found at all
     // - May succeed with partial/empty set (validation at deploy time)

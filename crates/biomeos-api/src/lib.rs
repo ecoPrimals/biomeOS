@@ -92,9 +92,7 @@ async fn websocket_handler(
     ws.on_upgrade(|socket| handle_websocket(socket, state))
 }
 
-/// Handle WebSocket connection
-///
-/// EVOLVED (Mar 11, 2026): Push-based graph events from `GraphEventBroadcaster`.
+/// Handle WebSocket connection.
 ///
 /// After subscribe, graph events are pushed in real-time as JSON-RPC notifications.
 async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppState>) {

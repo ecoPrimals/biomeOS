@@ -84,10 +84,6 @@ impl AdapterCache {
     }
 }
 
-// EVOLVED: Removed panicking Default impl
-// Use AdapterCache::new() explicitly for proper error handling
-// If you need a Default, create infallible fallback with in-memory only cache
-
 /// Save adapter to cache (convenience function)
 pub fn save_adapter(adapter: &PrimalAdapter) -> Result<()> {
     let cache = AdapterCache::new()?;

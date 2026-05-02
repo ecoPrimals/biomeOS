@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Core graph execution logic
+//! Core graph execution logic.
 //!
-//! **EVOLVED:** Smart refactored for maintainability.
-//!
-//! This module contains the main GraphExecutor implementation and orchestration logic.
+//! Contains the main `GraphExecutor` implementation and orchestration logic.
 //! Node-specific handlers are in the `node_handlers` module.
 
 use super::{

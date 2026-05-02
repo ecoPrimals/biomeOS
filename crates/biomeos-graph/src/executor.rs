@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Graph executor for deterministic deployment orchestration
+//! Graph executor for deterministic deployment orchestration.
 //!
-//! **EVOLVED:** Now uses focused modules for maintainability.
-//!
-//! This module executes Neural API graphs with:
+//! Executes Neural API graphs with:
 //! - Topological sorting for dependency resolution (via `TopologicalSorter`)
 //! - Parallel execution within phases
 //! - Checkpoint/rollback support (via `RollbackManager`)

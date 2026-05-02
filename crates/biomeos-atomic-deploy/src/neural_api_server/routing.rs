@@ -139,6 +139,7 @@ enum Route {
     HealthReadiness,
     BtspEscalate,
     BtspStatus,
+    BtspNegotiate,
     GraphTickStatus,
     GraphVerify,
 }
@@ -293,6 +294,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     // BTSP escalation (cleartext → enforced after Tower healthy)
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
+    ("btsp.negotiate", Route::BtspNegotiate),
     // Mesh & NAT (explicit semantic capability routes for known domains)
     ("mesh.status", Route::SemanticCapabilityCall),
     ("mesh.find_path", Route::SemanticCapabilityCall),
@@ -530,7 +532,15 @@ impl NeuralApiServer {
             Route::HealthLiveness => dispatch(self.health_liveness(), id),
             Route::HealthReadiness => dispatch(self.health_readiness().await, id),
             Route::BtspEscalate => dispatch(self.btsp_escalate(), id),
-            Route::BtspStatus => dispatch(self.btsp_status(), id),
+            Route::BtspStatus => dispatch(self.btsp_status().await, id),
+            Route::BtspNegotiate => dispatch(
+                super::btsp_negotiate::handle_negotiate(
+                    &self.btsp_sessions,
+                    &params.clone().unwrap_or(serde_json::json!({})),
+                )
+                .await,
+                id,
+            ),
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, id),
             // Semantic capability routing: domain.operation → capability.call

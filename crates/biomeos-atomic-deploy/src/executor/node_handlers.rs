@@ -416,9 +416,8 @@ async fn discover_capability_provider(
         return Some(endpoint.clone());
     }
 
-    // 3. No hardcoded fallback - require explicit configuration
-    // EVOLVED: Removed hardcoded capability→primal mappings
-    // TRUE PRIMAL principle: No compile-time knowledge of specific primal names
+    // 3. No hardcoded fallback — require explicit configuration.
+    // TRUE PRIMAL principle: no compile-time knowledge of specific primal names.
     debug!(
         "No provider found for capability '{}'. \
          Resolution options: \

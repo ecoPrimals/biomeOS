@@ -198,8 +198,7 @@ impl ManagedPrimal for GenericManagedPrimal {
             let log_path = if let Ok(paths) = SystemPaths::new() {
                 paths.log_file(&format!("{}-{}", self.id, node_id))
             } else {
-                // EVOLVED: Environment-driven fallback (no hardcoded /tmp)
-                // Respects BIOMEOS_LOG_DIR or falls back to writable directory
+                // Respects BIOMEOS_LOG_DIR or falls back to writable directory.
                 let log_dir = std::env::var("BIOMEOS_LOG_DIR")
                     .or_else(|_| {
                         std::env::var("XDG_STATE_HOME").map(|p| format!("{p}/biomeos/logs"))

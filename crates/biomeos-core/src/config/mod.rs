@@ -210,9 +210,8 @@ pub mod presets {
     /// Production should use discovery-based endpoint resolution.
     pub fn local() -> BiomeResult<BiomeOSConfig> {
         // EVOLUTION: Environment-only, no localhost fallbacks
-        // Primals discover each other via Unix sockets (preferred) or environment
-        // EVOLVED: Use runtime discovery instead of requiring env var
-        // If no discovery endpoint set, use Songbird socket discovery
+        // Primals discover each other via Unix sockets (preferred) or environment.
+        // If no discovery endpoint set, use Songbird socket discovery.
         let discovery_endpoint = std::env::var("DISCOVERY_ENDPOINT")
             .or_else(|_| std::env::var("BIOMEOS_DISCOVERY_ENDPOINT"))
             .unwrap_or_else(|_| {

@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Execution types and results
+//! Execution types and results.
 //!
-//! **EVOLVED:** Domain-based splitting for maintainability.
-//!
-//! This module contains execution report types and phase result types
+//! Contains execution report types and phase result types
 //! used throughout the graph execution system.
 
 use serde::{Deserialize, Serialize};

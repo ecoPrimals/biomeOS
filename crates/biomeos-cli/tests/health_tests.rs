@@ -4,12 +4,10 @@
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 #![expect(clippy::expect_used, reason = "test assertions")]
 
-//! Integration tests for biomeos-cli health commands
+//! Integration tests for biomeos-cli health commands.
 //!
-//! EVOLVED (Jan 28, 2026): Concurrency-First Design
-//!
-//! Tests the health command handlers using mock primal servers over Unix sockets.
-//! This replaces the deprecated HTTP/reqwest approach with Pure Rust JSON-RPC.
+//! Tests the health command handlers using mock primal servers over Unix sockets
+//! via Pure Rust JSON-RPC.
 //!
 //! ## Deep Debt Principles
 //! - No C dependencies: Pure Rust Unix socket communication

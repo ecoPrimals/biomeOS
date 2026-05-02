@@ -4,12 +4,9 @@
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 #![expect(clippy::expect_used, reason = "test assertions")]
 
-//! Integration tests for biomeos-cli discovery commands
-//!
-//! EVOLVED (Jan 28, 2026): Concurrency-First Design
+//! Integration tests for biomeos-cli discovery commands.
 //!
 //! Tests service discovery functionality with mock primals over Unix sockets.
-//! This replaces the deprecated HTTP/reqwest approach.
 //!
 //! ## Deep Debt Principles
 //! - Capability-based: Primals discovered by what they can do

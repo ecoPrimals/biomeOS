@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: April 30, 2026 (v3.35: deep debt — stale EVOLVED purge, node_handlers 791→504L refactor, dead code gating; 8,064+ tests)
-**Version**: 3.35
-**Status**: PRODUCTION READY - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Phase 57 Audit Gaps Addressed - Graph Integrity Verification Active
+**Updated**: May 2, 2026 (v3.36: BTSP Phase 3 btsp.negotiate + deep debt sweep; 8,064+ tests)
+**Version**: 3.36
+**Status**: PRODUCTION READY - BTSP Phase 3 Ready - Capability-Based Discovery Compliant - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Phase 57 Audit Gaps Addressed - Graph Integrity Verification Active
 
 ---
 

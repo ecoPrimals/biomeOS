@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.36 (2026-05-02) — BTSP Phase 3: btsp.negotiate + Deep Debt Sweep
+
+### BTSP Phase 3 — `btsp.negotiate` server handler
+- Added `btsp.negotiate` JSON-RPC method to Neural API route table.
+- Implements cipher negotiation: validates session, generates 12-byte server nonce,
+  returns `{"cipher":"chacha20-poly1305","server_nonce":"<hex>","allowed":true}`.
+- Graceful NULL cipher fallback for unsupported ciphers — zero breakage for
+  Phase 2 clients.
+- New `btsp_negotiate` module with `BtspSessionStore`, `BtspSessionState`,
+  `BtspCipher` enum, and `handle_negotiate()` handler.
+- Sessions registered automatically after successful Phase 2 handshake.
+- `btsp.status` now reports `"phase3_ready": true`, active session count,
+  and supported cipher list.
+- Added workspace deps: `chacha20poly1305 = "0.10"`, `hkdf = "0.12"`.
+- 5 new unit tests for negotiate handler (cipher parsing, nonce format,
+  session validation, NULL fallback, missing params).
+
+### Stale EVOLVED comment purge (14 markers removed)
+- Removed all remaining `EVOLVED` comments across 14 files in 8 crates:
+  `deployment_mode.rs`, `lib.rs` (biomeos-api), `config/mod.rs`,
+  `translation_loader.rs`, `node_handlers.rs`, `primal_impls.rs`,
+  `cache.rs`, `executor.rs`, `executor/core.rs`, `executor/types.rs`,
+  plus 4 test files.
+
 ## v3.35 (2026-04-30) — Deep Debt Cleanup: Stale Comment Purge, node_handlers Refactor, Dead Code Gating
 
 ### Stale EVOLVED comment cleanup (~30 markers removed)

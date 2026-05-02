@@ -30,8 +30,8 @@ async fn test_missing_plasmidbin() {
 
     let result = Spore::create(mount_point, config).await;
 
-    // EVOLVED: Behavior depends on plasmidBin discovery (may use fallback paths)
-    // Test validates graceful handling (no panic), not specific error
+    // Behavior depends on plasmidBin discovery (may use fallback paths).
+    // Test validates graceful handling (no panic), not specific error.
     match result {
         Ok(_) => {
             println!("ℹ️ Spore created (plasmidBin found via fallback discovery)");

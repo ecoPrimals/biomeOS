@@ -454,8 +454,8 @@ impl DeploymentMode {
             return Ok(PathBuf::from(home).join(".local/share/biomeos"));
         }
 
-        // 4. EVOLVED: Use current directory as last resort (writable, platform-agnostic)
-        // This works on all platforms including Android, Windows, etc.
+        // 4. Current directory as last resort (writable, platform-agnostic).
+        // Works on all platforms including Android, Windows, etc.
         std::env::current_dir()
             .map(|p| p.join(".biomeos"))
             .context("Failed to determine install directory - no HOME or XDG paths available")

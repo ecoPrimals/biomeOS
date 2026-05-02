@@ -21,6 +21,7 @@
 
 pub mod agents;
 mod bootstrap;
+pub(crate) mod btsp_negotiate;
 mod connection;
 pub(crate) mod discovery_init;
 mod listeners;
@@ -126,6 +127,11 @@ pub struct NeuralApiServer {
     /// is confirmed. Used for graph signing and verification without
     /// re-deriving on every operation.
     pub(super) coordination_pubkey: Arc<RwLock<Option<String>>>,
+
+    /// BTSP Phase 3 session store: tracks authenticated sessions for
+    /// cipher negotiation. Sessions are registered after Phase 2 handshake
+    /// and upgraded via `btsp.negotiate`.
+    pub(super) btsp_sessions: btsp_negotiate::BtspSessionStore,
 }
 
 impl NeuralApiServer {
@@ -217,6 +223,7 @@ impl NeuralApiServer {
             inference_handler,
             agent_registry: agents::AgentRegistry::new(),
             coordination_pubkey: Arc::new(RwLock::new(None)),
+            btsp_sessions: btsp_negotiate::new_session_store(),
         }
     }
 

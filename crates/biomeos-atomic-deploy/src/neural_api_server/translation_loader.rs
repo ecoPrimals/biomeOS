@@ -78,8 +78,8 @@ impl NeuralApiServer {
                 node.capabilities_provided.is_some()
             );
 
-            // EVOLVED: Get primal name - capability-based resolution via domain mappings
-            // Uses capability_domains.rs for well-known capability → primal mappings
+            // Capability-based resolution via domain mappings
+            // (capability_domains.rs for well-known capability → primal mappings).
             // This is robust and doesn't require runtime Songbird queries
             let primal_name = if let Some(primal_cfg) = &node.primal {
                 if let Some(cap) = &primal_cfg.by_capability {
