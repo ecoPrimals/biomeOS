@@ -141,7 +141,7 @@ impl Plasmodium {
                 // Try Songbird HTTP JSON-RPC first by extracting the host
                 let ssh_target = &peer.address[4..];
                 let host = ssh_target.split('@').next_back().unwrap_or(ssh_target);
-                // Evolved: No SSH fallback — use Songbird mesh RPC only
+                // Songbird mesh RPC only (SSH transport removed)
                 self.query_remote_gate(host, &peer.node_id).await
             } else {
                 // HTTP JSON-RPC query via Songbird gateway (covalent bond transport)

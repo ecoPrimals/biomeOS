@@ -266,7 +266,7 @@ impl ExecutionContext {
     /// Save checkpoint to disk (completed node statuses and outputs).
     pub async fn save_checkpoint(&self) -> Result<()> {
         if let Some(ref checkpoint_dir) = self.checkpoint_dir {
-            std::fs::create_dir_all(checkpoint_dir)?;
+            tokio::fs::create_dir_all(checkpoint_dir).await?;
 
             let statuses = self.status.lock().await;
             let outputs = self.outputs.lock().await;
@@ -278,10 +278,11 @@ impl ExecutionContext {
                 "family_id": self.family_id.as_ref(),
             });
 
-            std::fs::write(
+            tokio::fs::write(
                 checkpoint_path,
                 serde_json::to_string_pretty(&checkpoint_data)?,
-            )?;
+            )
+            .await?;
         }
         Ok(())
     }
@@ -291,8 +292,11 @@ impl ExecutionContext {
         if let Some(ref checkpoint_dir) = self.checkpoint_dir {
             let checkpoint_path = checkpoint_dir.join("execution_state.json");
 
-            if checkpoint_path.exists() {
-                let data = std::fs::read_to_string(checkpoint_path)?;
+            if tokio::fs::try_exists(&checkpoint_path)
+                .await
+                .unwrap_or(false)
+            {
+                let data = tokio::fs::read_to_string(checkpoint_path).await?;
                 let checkpoint: serde_json::Value = serde_json::from_str(&data)?;
 
                 if let Some(statuses) = checkpoint.get("statuses") {
