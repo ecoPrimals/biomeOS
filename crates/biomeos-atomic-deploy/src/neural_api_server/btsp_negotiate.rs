@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BTSP Phase 3 — Cipher negotiation and session key derivation.
+//! BTSP Phase 3 — Cipher negotiation, HKDF key derivation, and encrypted framing.
 //!
 //! After a successful Phase 2 handshake, the client may send `btsp.negotiate`
 //! to upgrade the connection from authenticated-plaintext (NULL cipher) to
 //! ChaCha20-Poly1305 encrypted framing.
+//!
+//! Nonces and keys are base64-encoded on the wire (aligned with BearDog,
+//! sweetGrass, and primalSpring). Hex-encoded `client_nonce` is auto-detected
+//! for backward compatibility with barraCuda-style clients.
 //!
 //! If the client does not negotiate (or requests `"null"`), the connection
 //! stays on plaintext NDJSON — backward-compatible with Phase 2 clients.
@@ -13,6 +17,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Supported BTSP cipher suites.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,7 +35,7 @@ impl BtspCipher {
         }
     }
 
-    /// Parse a cipher name from the client's `preferred_cipher` field.
+    /// Parse a cipher name from the client's `preferred_cipher` or `ciphers[]`.
     pub fn from_str_loose(s: &str) -> Self {
         let lower = s.to_ascii_lowercase();
         if lower.contains("chacha20") {
@@ -44,8 +49,8 @@ impl BtspCipher {
 /// Directional session keys derived via HKDF-SHA256 after Phase 3 negotiate.
 ///
 /// The server uses `server_to_client` to encrypt outgoing frames and
-/// `client_to_server` to decrypt incoming frames.
-#[derive(Clone)]
+/// `client_to_server` to decrypt incoming frames. Keys are zeroized on drop.
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 #[allow(
     dead_code,
     reason = "keys consumed by encrypted framing layer (Phase 3 wire evolution)"
@@ -98,6 +103,76 @@ pub fn derive_session_keys(
     }
 }
 
+/// Encrypt a plaintext frame using ChaCha20-Poly1305.
+///
+/// Returns the wire frame: `[4B length BE u32][12B nonce][ciphertext + 16B tag]`
+#[allow(
+    dead_code,
+    reason = "consumed when connection loop switches to encrypted framing"
+)]
+pub fn encrypt_frame(key: &[u8; 32], plaintext: &[u8]) -> Result<Vec<u8>, FrameError> {
+    use chacha20poly1305::aead::Aead;
+    use chacha20poly1305::{ChaCha20Poly1305, KeyInit};
+
+    let cipher = ChaCha20Poly1305::new(key.into());
+
+    let mut nonce_bytes = [0u8; 12];
+    rand::Rng::fill(&mut rand::rng(), &mut nonce_bytes);
+    let nonce = chacha20poly1305::Nonce::from(nonce_bytes);
+
+    let ciphertext = cipher
+        .encrypt(&nonce, plaintext)
+        .map_err(|_| FrameError::Encryption)?;
+
+    let frame_len: u32 = (12 + ciphertext.len())
+        .try_into()
+        .map_err(|_| FrameError::FrameTooLarge)?;
+
+    let mut frame = Vec::with_capacity(4 + 12 + ciphertext.len());
+    frame.extend_from_slice(&frame_len.to_be_bytes());
+    frame.extend_from_slice(&nonce_bytes);
+    frame.extend_from_slice(&ciphertext);
+    Ok(frame)
+}
+
+/// Decrypt a received frame (nonce || ciphertext+tag) using ChaCha20-Poly1305.
+///
+/// Input is the payload after the 4-byte length header: `[12B nonce][ciphertext + tag]`.
+#[allow(
+    dead_code,
+    reason = "consumed when connection loop switches to encrypted framing"
+)]
+pub fn decrypt_frame(key: &[u8; 32], frame_payload: &[u8]) -> Result<Vec<u8>, FrameError> {
+    use chacha20poly1305::aead::Aead;
+    use chacha20poly1305::{ChaCha20Poly1305, KeyInit};
+
+    if frame_payload.len() < 12 + 16 {
+        return Err(FrameError::FrameTooShort);
+    }
+
+    let (nonce_bytes, ciphertext) = frame_payload.split_at(12);
+    let nonce = chacha20poly1305::Nonce::from_slice(nonce_bytes);
+    let cipher = ChaCha20Poly1305::new(key.into());
+
+    cipher
+        .decrypt(nonce, ciphertext)
+        .map_err(|_| FrameError::Decryption)
+}
+
+/// Errors from encrypted frame operations.
+#[derive(Debug, thiserror::Error)]
+#[allow(dead_code, reason = "consumed by encrypt_frame/decrypt_frame")]
+pub enum FrameError {
+    #[error("encryption failed")]
+    Encryption,
+    #[error("decryption failed (invalid key or corrupted frame)")]
+    Decryption,
+    #[error("frame too large for u32 length header")]
+    FrameTooLarge,
+    #[error("frame too short (need at least 12B nonce + 16B tag)")]
+    FrameTooShort,
+}
+
 /// Per-session state stored after Phase 2 handshake completes.
 #[derive(Debug, Clone)]
 pub struct BtspSessionState {
@@ -109,7 +184,7 @@ pub struct BtspSessionState {
     /// Negotiated cipher (starts as Null, upgraded by `btsp.negotiate`).
     pub cipher: BtspCipher,
 
-    /// Server nonce generated during negotiate (hex-encoded).
+    /// Server nonce generated during negotiate (base64-encoded).
     pub server_nonce: Option<String>,
 
     /// Handshake key from BearDog's `btsp.session.verify` response.
@@ -151,10 +226,13 @@ pub async fn register_session(
 
 /// Handle `btsp.negotiate` JSON-RPC method.
 ///
-/// Validates the session, generates a server nonce, and returns the negotiated
-/// cipher. If the requested cipher is not supported, falls back to `"null"`.
-/// When both `handshake_key` (from Phase 2) and `client_nonce` (from params)
-/// are available, derives directional session keys via HKDF-SHA256.
+/// Validates the session, generates a 32-byte server nonce (base64-encoded),
+/// and returns the negotiated cipher. If the requested cipher is not supported,
+/// falls back to `"null"`. When both `handshake_key` (from Phase 2) and
+/// `client_nonce` (from params) are available, derives directional session
+/// keys via HKDF-SHA256.
+///
+/// Accepts `client_nonce` in either base64 or hex encoding (auto-detected).
 pub async fn handle_negotiate(
     store: &BtspSessionStore,
     params: &serde_json::Value,
@@ -164,20 +242,17 @@ pub async fn handle_negotiate(
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("btsp.negotiate requires 'session_id' parameter"))?;
 
-    let preferred = params
-        .get("preferred_cipher")
-        .and_then(|v| v.as_str())
-        .unwrap_or("null");
+    let preferred = resolve_preferred_cipher(params);
 
-    let client_nonce_hex = params
+    let client_nonce_raw = params
         .get("client_nonce")
         .and_then(|v| v.as_str())
-        .map(String::from);
+        .map(decode_nonce);
 
-    let mut cipher = BtspCipher::from_str_loose(preferred);
+    let mut cipher = BtspCipher::from_str_loose(&preferred);
 
-    let server_nonce = generate_server_nonce();
-    let server_nonce_bytes = hex_decode(&server_nonce);
+    let server_nonce_bytes = generate_server_nonce_bytes();
+    let server_nonce_b64 = base64_encode(&server_nonce_bytes);
 
     let mut sessions = store.write().await;
     let session = sessions
@@ -185,9 +260,8 @@ pub async fn handle_negotiate(
         .ok_or_else(|| anyhow::anyhow!("Unknown session_id: {session_id}"))?;
 
     if cipher == BtspCipher::ChaCha20Poly1305 {
-        if let (Some(hk), Some(cn_hex)) = (&session.handshake_key, &client_nonce_hex) {
-            let client_nonce_bytes = hex_decode(cn_hex);
-            let keys = derive_session_keys(hk, &client_nonce_bytes, &server_nonce_bytes);
+        if let (Some(hk), Some(cn_bytes)) = (&session.handshake_key, &client_nonce_raw) {
+            let keys = derive_session_keys(hk, cn_bytes, &server_nonce_bytes);
             session.session_keys = Some(keys);
         } else {
             cipher = BtspCipher::Null;
@@ -195,30 +269,67 @@ pub async fn handle_negotiate(
     }
 
     session.cipher = cipher;
-    session.server_nonce = Some(server_nonce.clone());
+    session.server_nonce = Some(server_nonce_b64.clone());
 
     Ok(serde_json::json!({
         "cipher": cipher.as_str(),
-        "server_nonce": server_nonce,
+        "server_nonce": server_nonce_b64,
         "allowed": true,
     }))
 }
 
-/// Generate a random 12-byte nonce, hex-encoded.
-fn generate_server_nonce() -> String {
-    use rand::Rng;
-    let mut nonce = [0u8; 12];
-    rand::rng().fill(&mut nonce);
-    hex_encode(&nonce)
+/// Resolve the preferred cipher from params.
+///
+/// Supports both `"preferred_cipher"` (string) and `"ciphers"` (array) fields,
+/// matching the wire formats used by different primals.
+fn resolve_preferred_cipher(params: &serde_json::Value) -> String {
+    if let Some(s) = params.get("preferred_cipher").and_then(|v| v.as_str()) {
+        return s.to_string();
+    }
+    if let Some(arr) = params.get("ciphers").and_then(|v| v.as_array()) {
+        for c in arr {
+            if let Some(s) = c.as_str() {
+                if BtspCipher::from_str_loose(s) == BtspCipher::ChaCha20Poly1305 {
+                    return s.to_string();
+                }
+            }
+        }
+    }
+    "null".to_string()
 }
 
-fn hex_encode(bytes: &[u8]) -> String {
-    use std::fmt::Write;
-    let mut s = String::with_capacity(bytes.len() * 2);
-    for b in bytes {
-        let _ = write!(s, "{b:02x}");
+/// Generate a random 32-byte server nonce (raw bytes).
+fn generate_server_nonce_bytes() -> [u8; 32] {
+    use rand::Rng;
+    let mut nonce = [0u8; 32];
+    rand::rng().fill(&mut nonce);
+    nonce
+}
+
+fn base64_encode(bytes: &[u8]) -> String {
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD.encode(bytes)
+}
+
+fn base64_decode(s: &str) -> Option<Vec<u8>> {
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD.decode(s).ok()
+}
+
+/// Decode a nonce string, auto-detecting base64 vs hex encoding.
+///
+/// Heuristic: if the string contains `+`, `/`, `=`, or non-hex chars, treat
+/// as base64. If it's all hex digits, check length — hex-encoded bytes produce
+/// an even-length string of exactly `2 * byte_count`.
+fn decode_nonce(s: &str) -> Vec<u8> {
+    let is_all_hex = s.len().is_multiple_of(2) && s.chars().all(|c| c.is_ascii_hexdigit());
+    if is_all_hex && s.len() >= 24 {
+        hex_decode(s)
+    } else if let Some(decoded) = base64_decode(s) {
+        decoded
+    } else {
+        hex_decode(s)
     }
-    s
 }
 
 fn hex_decode(hex: &str) -> Vec<u8> {
@@ -253,33 +364,82 @@ mod tests {
     }
 
     #[test]
-    fn test_server_nonce_format() {
-        let nonce = generate_server_nonce();
-        assert_eq!(nonce.len(), 24); // 12 bytes × 2 hex chars
-        assert!(nonce.chars().all(|c| c.is_ascii_hexdigit()));
+    fn test_server_nonce_is_32_bytes_base64() {
+        let nonce_bytes = generate_server_nonce_bytes();
+        assert_eq!(nonce_bytes.len(), 32);
+        let encoded = base64_encode(&nonce_bytes);
+        assert_eq!(encoded.len(), 44); // 32 bytes → 44 base64 chars
+        let decoded = base64_decode(&encoded).unwrap();
+        assert_eq!(decoded, nonce_bytes);
     }
 
     #[tokio::test]
-    async fn test_register_and_negotiate_with_key() {
+    async fn test_register_and_negotiate_with_key_base64_nonce() {
         let store = new_session_store();
         let fake_key = [0xABu8; 32];
-        register_session(&store, "test-session-123", Some(fake_key)).await;
+        register_session(&store, "test-session-b64", Some(fake_key)).await;
 
+        let client_nonce = base64_encode(&[0x11u8; 32]);
         let params = serde_json::json!({
-            "session_id": "test-session-123",
+            "session_id": "test-session-b64",
             "preferred_cipher": "chacha20-poly1305",
-            "client_nonce": "aabbccdd11223344aabbccdd",
+            "client_nonce": client_nonce,
             "bond_type": "Covalent"
         });
 
         let result = handle_negotiate(&store, &params).await.unwrap();
         assert_eq!(result["cipher"], "chacha20-poly1305");
         assert_eq!(result["allowed"], true);
-        assert!(result["server_nonce"].as_str().unwrap().len() == 24);
+        let sn = result["server_nonce"].as_str().unwrap();
+        let sn_decoded = base64_decode(sn).unwrap();
+        assert_eq!(sn_decoded.len(), 32);
 
         let sessions = store.read().await;
-        let sess = sessions.get("test-session-123").unwrap();
+        let sess = sessions.get("test-session-b64").unwrap();
         assert!(sess.session_keys.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_negotiate_with_hex_client_nonce_compat() {
+        let store = new_session_store();
+        let fake_key = [0xABu8; 32];
+        register_session(&store, "test-session-hex", Some(fake_key)).await;
+
+        let params = serde_json::json!({
+            "session_id": "test-session-hex",
+            "preferred_cipher": "chacha20-poly1305",
+            "client_nonce": "aabbccdd11223344aabbccdd11223344",
+            "bond_type": "Covalent"
+        });
+
+        let result = handle_negotiate(&store, &params).await.unwrap();
+        assert_eq!(result["cipher"], "chacha20-poly1305");
+
+        let sessions = store.read().await;
+        assert!(
+            sessions
+                .get("test-session-hex")
+                .unwrap()
+                .session_keys
+                .is_some()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_negotiate_ciphers_array_param() {
+        let store = new_session_store();
+        let fake_key = [0xCCu8; 32];
+        register_session(&store, "sess-arr", Some(fake_key)).await;
+
+        let client_nonce = base64_encode(&[0x22u8; 32]);
+        let params = serde_json::json!({
+            "session_id": "sess-arr",
+            "ciphers": ["chacha20-poly1305"],
+            "client_nonce": client_nonce
+        });
+
+        let result = handle_negotiate(&store, &params).await.unwrap();
+        assert_eq!(result["cipher"], "chacha20-poly1305");
     }
 
     #[tokio::test]
@@ -287,10 +447,11 @@ mod tests {
         let store = new_session_store();
         register_session(&store, "sess-no-key", None).await;
 
+        let client_nonce = base64_encode(&[0x33u8; 32]);
         let params = serde_json::json!({
             "session_id": "sess-no-key",
             "preferred_cipher": "chacha20-poly1305",
-            "client_nonce": "aabbccdd11223344aabbccdd"
+            "client_nonce": client_nonce
         });
 
         let result = handle_negotiate(&store, &params).await.unwrap();
@@ -398,10 +559,89 @@ mod tests {
     }
 
     #[test]
+    fn test_encrypt_decrypt_roundtrip() {
+        let key = [0xAAu8; 32];
+        let plaintext = b"hello btsp phase 3";
+        let frame = encrypt_frame(&key, plaintext).unwrap();
+
+        assert_eq!(
+            u32::from_be_bytes([frame[0], frame[1], frame[2], frame[3]]) as usize,
+            frame.len() - 4
+        );
+
+        let payload = &frame[4..];
+        let decrypted = decrypt_frame(&key, payload).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_decrypt_wrong_key_fails() {
+        let key1 = [0xAAu8; 32];
+        let key2 = [0xBBu8; 32];
+        let frame = encrypt_frame(&key1, b"secret message").unwrap();
+        let payload = &frame[4..];
+        let result = decrypt_frame(&key2, payload);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decrypt_truncated_frame_fails() {
+        let result = decrypt_frame(&[0u8; 32], &[0u8; 10]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_encrypt_produces_unique_nonces() {
+        let key = [0xCCu8; 32];
+        let f1 = encrypt_frame(&key, b"msg1").unwrap();
+        let f2 = encrypt_frame(&key, b"msg1").unwrap();
+        assert_ne!(&f1[4..16], &f2[4..16]);
+    }
+
+    #[test]
+    fn test_decode_nonce_base64() {
+        let original = vec![0x11u8; 32];
+        let b64 = base64_encode(&original);
+        let decoded = decode_nonce(&b64);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_decode_nonce_hex() {
+        let hex_str = "aabbccdd11223344aabbccdd11223344";
+        let decoded = decode_nonce(hex_str);
+        assert_eq!(decoded.len(), 16);
+        assert_eq!(decoded[0], 0xaa);
+        assert_eq!(decoded[1], 0xbb);
+    }
+
+    #[test]
+    fn test_resolve_preferred_cipher_string() {
+        let params = serde_json::json!({"preferred_cipher": "chacha20-poly1305"});
+        assert_eq!(resolve_preferred_cipher(&params), "chacha20-poly1305");
+    }
+
+    #[test]
+    fn test_resolve_preferred_cipher_array() {
+        let params = serde_json::json!({"ciphers": ["chacha20-poly1305"]});
+        assert_eq!(resolve_preferred_cipher(&params), "chacha20-poly1305");
+    }
+
+    #[test]
+    fn test_resolve_preferred_cipher_empty() {
+        let params = serde_json::json!({});
+        assert_eq!(resolve_preferred_cipher(&params), "null");
+    }
+
+    #[test]
     fn test_hex_roundtrip() {
         let original = [0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x23];
-        let encoded = hex_encode(&original);
-        let decoded = hex_decode(&encoded);
+        let mut s = String::with_capacity(original.len() * 2);
+        for b in &original {
+            use std::fmt::Write;
+            let _ = write!(s, "{b:02x}");
+        }
+        let decoded = hex_decode(&s);
         assert_eq!(&original[..], &decoded[..]);
     }
 }

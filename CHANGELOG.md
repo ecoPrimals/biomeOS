@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.38 (2026-05-02) — BTSP Phase 3 FULL: Encrypted Framing + Spec Alignment
+
+### BTSP Phase 3 — FULL implementation (biomeOS is now 9th of 13 primals)
+- **Nonce encoding aligned**: server nonce now base64-encoded (was hex), matching
+  BearDog/sweetGrass/primalSpring convergence. 32-byte nonces (was 12).
+- **Client nonce auto-detection**: accepts both base64 and hex-encoded `client_nonce`
+  for backward compatibility with barraCuda-style clients.
+- **`ciphers[]` array param**: `btsp.negotiate` now accepts both `preferred_cipher`
+  (string) and `ciphers` (array) wire formats used by different primals.
+- **Encrypted framing**: `encrypt_frame(key, plaintext)` and `decrypt_frame(key, payload)`
+  using ChaCha20-Poly1305 AEAD. Wire format: `[4B len BE u32][12B nonce][ciphertext + 16B tag]`.
+- **Secure key erasure**: `SessionKeys` now derives `Zeroize`/`ZeroizeOnDrop`
+  (from `zeroize` crate) for cryptographic hygiene on drop.
+- **`FrameError` typed errors**: `Encryption`, `Decryption`, `FrameTooLarge`, `FrameTooShort`.
+- 25 Phase 3 tests (up from 13): encrypt/decrypt roundtrip, wrong-key rejection,
+  truncated frame rejection, unique nonce generation, base64/hex nonce detection,
+  `ciphers[]` array param, 32-byte base64 nonce format verification.
+
+### Flaky graph list tests fixed
+- 7 graph CRUD tests (`test_list_multiple_graphs_sorted_by_read_dir`,
+  `test_list_toml_parse_error_skips_file_quietly`, `test_graph_handler_list_empty`,
+  `test_list_with_valid_graphs`, `test_list_skips_invalid_toml`,
+  `test_list_skips_non_toml_files`, `test_list_includes_continuous_field`) were
+  flaky due to concurrent test temp directory sibling contamination. Fixed by
+  isolating `graphs_dir` into a subdirectory within the temp dir, preventing
+  `runtime_graphs` sibling from picking up other tests' TOML files.
+
 ## v3.37 (2026-05-02) — BTSP Phase 3 HKDF Key Derivation + Socket Timeout Debt
 
 ### BTSP Phase 3 — HKDF-SHA256 session key derivation

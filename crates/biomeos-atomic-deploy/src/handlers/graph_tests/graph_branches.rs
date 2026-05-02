@@ -46,17 +46,19 @@ async fn test_execute_loads_translations_when_nodes_have_capabilities() {
 #[tokio::test]
 async fn test_list_multiple_graphs_sorted_by_read_dir() {
     let temp = tempdir().expect("tempdir");
+    let graphs_dir = temp.path().join("nucleus");
+    std::fs::create_dir_all(&graphs_dir).expect("mkdir");
     std::fs::write(
-        temp.path().join("a_first.toml"),
+        graphs_dir.join("a_first.toml"),
         graph_toml_with_id("graph_a"),
     )
     .expect("write");
     std::fs::write(
-        temp.path().join("z_second.toml"),
+        graphs_dir.join("z_second.toml"),
         graph_toml_with_id("graph_z"),
     )
     .expect("write");
-    let (handler, _) = make_handler(temp.path());
+    let (handler, _) = make_handler(&graphs_dir);
 
     let result = handler.list().await.expect("list");
     let arr = result.as_array().expect("array");
@@ -202,13 +204,15 @@ async fn test_graph_status_priority_over_continuous_when_same_id() {
 #[tokio::test]
 async fn test_list_toml_parse_error_skips_file_quietly() {
     let temp = tempdir().expect("tempdir");
+    let graphs_dir = temp.path().join("nucleus");
+    std::fs::create_dir_all(&graphs_dir).expect("mkdir");
     std::fs::write(
-        temp.path().join("good.toml"),
+        graphs_dir.join("good.toml"),
         graph_toml_with_id("only_good"),
     )
     .expect("write");
-    std::fs::write(temp.path().join("bad.toml"), "[[[broken").expect("write");
-    let (handler, _) = make_handler(temp.path());
+    std::fs::write(graphs_dir.join("bad.toml"), "[[[broken").expect("write");
+    let (handler, _) = make_handler(&graphs_dir);
 
     let arr = handler.list().await.expect("list");
     assert_eq!(arr.as_array().unwrap().len(), 1);

@@ -31,7 +31,9 @@ async fn test_graph_handler_clone() {
 #[tokio::test]
 async fn test_graph_handler_list_empty() {
     let temp = tempdir().expect("tempdir");
-    let (handler, _) = make_handler(temp.path());
+    let graphs_dir = temp.path().join("nucleus");
+    std::fs::create_dir_all(&graphs_dir).expect("mkdir");
+    let (handler, _) = make_handler(&graphs_dir);
     let result = handler.list().await.expect("list");
     assert!(result.as_array().expect("array").is_empty());
 }
@@ -39,9 +41,10 @@ async fn test_graph_handler_list_empty() {
 #[tokio::test]
 async fn test_list_with_valid_graphs() {
     let temp = tempdir().expect("tempdir");
-    let path = temp.path().join("test_graph.toml");
-    std::fs::write(&path, MINIMAL_GRAPH_TOML).expect("write graph");
-    let (handler, _) = make_handler(temp.path());
+    let graphs_dir = temp.path().join("nucleus");
+    std::fs::create_dir_all(&graphs_dir).expect("mkdir");
+    std::fs::write(graphs_dir.join("test_graph.toml"), MINIMAL_GRAPH_TOML).expect("write graph");
+    let (handler, _) = make_handler(&graphs_dir);
 
     let result = handler.list().await.expect("list");
     let arr = result.as_array().expect("array");
@@ -54,9 +57,10 @@ async fn test_list_with_valid_graphs() {
 #[tokio::test]
 async fn test_list_skips_invalid_toml() {
     let temp = tempdir().expect("tempdir");
-    let path = temp.path().join("invalid.toml");
-    std::fs::write(&path, "not valid toml {{{").expect("write");
-    let (handler, _) = make_handler(temp.path());
+    let graphs_dir = temp.path().join("nucleus");
+    std::fs::create_dir_all(&graphs_dir).expect("mkdir");
+    std::fs::write(graphs_dir.join("invalid.toml"), "not valid toml {{{").expect("write");
+    let (handler, _) = make_handler(&graphs_dir);
 
     let result = handler.list().await.expect("list");
     let arr = result.as_array().expect("array");
@@ -66,9 +70,10 @@ async fn test_list_skips_invalid_toml() {
 #[tokio::test]
 async fn test_list_skips_non_toml_files() {
     let temp = tempdir().expect("tempdir");
-    let path = temp.path().join("other.txt");
-    std::fs::write(&path, "hello").expect("write");
-    let (handler, _) = make_handler(temp.path());
+    let graphs_dir = temp.path().join("nucleus");
+    std::fs::create_dir_all(&graphs_dir).expect("mkdir");
+    std::fs::write(graphs_dir.join("other.txt"), "hello").expect("write");
+    let (handler, _) = make_handler(&graphs_dir);
 
     let result = handler.list().await.expect("list");
     assert!(result.as_array().expect("array").is_empty());
@@ -125,7 +130,8 @@ capabilities = []
 #[tokio::test]
 async fn test_list_includes_continuous_field() {
     let temp = tempdir().expect("tempdir");
-    let path = temp.path().join("continuous_list.toml");
+    let graphs_dir = temp.path().join("nucleus");
+    std::fs::create_dir_all(&graphs_dir).expect("mkdir");
     let continuous_toml = r#"
 [graph]
 id = "continuous_list"
@@ -140,8 +146,8 @@ target_hz = 60.0
 id = "n1"
 name = "Node 1"
 "#;
-    std::fs::write(&path, continuous_toml).expect("write");
-    let (handler, _) = make_handler(temp.path());
+    std::fs::write(graphs_dir.join("continuous_list.toml"), continuous_toml).expect("write");
+    let (handler, _) = make_handler(&graphs_dir);
 
     let result = handler.list().await.expect("list");
     let arr = result.as_array().expect("array");

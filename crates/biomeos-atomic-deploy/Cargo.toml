@@ -25,6 +25,7 @@ base64 = { workspace = true }  # For JWT secret encoding
 sha2 = { workspace = true }  # BTSP Phase 3 key derivation
 hkdf = { workspace = true }  # BTSP Phase 3 session key derivation
 chacha20poly1305 = { workspace = true }  # BTSP Phase 3 AEAD framing
+zeroize = { workspace = true }  # Secure key erasure for session keys
 
 # biomeOS crates
 biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }
