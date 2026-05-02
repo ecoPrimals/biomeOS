@@ -19,6 +19,13 @@ All notable changes to biomeOS will be documented in this file.
 - 5 new unit tests for negotiate handler (cipher parsing, nonce format,
   session validation, NULL fallback, missing params).
 
+### Smart refactor: test file splitting (929→609, 825→561)
+- `neural_executor_async_tests2.rs` (929→609 lines): extracted utility/sync
+  tests into `neural_executor_utility_tests.rs` (327 lines).
+- `neural_graph_tests.rs` (825→561 lines): extracted cross-gate tests into
+  `neural_graph_cross_gate_tests.rs` (271 lines).
+- `btsp_negotiate::register_session` evolved to `impl Into<String>` parameter.
+
 ### Stale EVOLVED comment purge (14 markers removed)
 - Removed all remaining `EVOLVED` comments across 14 files in 8 crates:
   `deployment_mode.rs`, `lib.rs` (biomeos-api), `config/mod.rs`,

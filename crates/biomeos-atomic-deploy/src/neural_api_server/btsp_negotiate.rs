@@ -65,12 +65,13 @@ pub fn new_session_store() -> BtspSessionStore {
 }
 
 /// Register a session after successful Phase 2 handshake.
-pub async fn register_session(store: &BtspSessionStore, session_id: String) {
+pub async fn register_session(store: &BtspSessionStore, session_id: impl Into<String>) {
+    let id = session_id.into();
     let mut sessions = store.write().await;
     sessions.insert(
-        session_id.clone(),
+        id.clone(),
         BtspSessionState {
-            session_id,
+            session_id: id,
             cipher: BtspCipher::Null,
             server_nonce: None,
         },

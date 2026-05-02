@@ -158,7 +158,11 @@ mod neural_executor_node_impls;
 mod neural_executor_rollback;
 #[cfg(test)]
 mod neural_executor_tests;
+#[cfg(test)]
+mod neural_executor_utility_tests;
 pub mod neural_graph;
+#[cfg(test)]
+mod neural_graph_cross_gate_tests;
 #[cfg(test)]
 mod neural_graph_tests;
 pub mod neural_router;
