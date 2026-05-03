@@ -208,10 +208,9 @@ impl SporeVerification {
 
         // Check content
         if let Ok(content) = fs::read_to_string(&config_path).await {
-            // Verify it references BEARDOG_FAMILY_SEED_FILE (not raw seed)
-            let uses_file_ref = content.contains("BEARDOG_FAMILY_SEED_FILE");
-            let has_raw_seed = content.contains("BEARDOG_FAMILY_SEED =")
-                && !content.contains("BEARDOG_FAMILY_SEED_FILE");
+            let uses_file_ref = content.contains("FAMILY_SEED_FILE");
+            let has_raw_seed =
+                content.contains("FAMILY_SEED =") && !content.contains("FAMILY_SEED_FILE");
 
             result.add_check(
                 "Config uses seed file",
@@ -219,7 +218,7 @@ impl SporeVerification {
                 if uses_file_ref {
                     None
                 } else {
-                    Some("Should reference BEARDOG_FAMILY_SEED_FILE".to_string())
+                    Some("Should reference FAMILY_SEED_FILE".to_string())
                 },
             );
 
@@ -227,7 +226,7 @@ impl SporeVerification {
                 "Config not exposing raw seed",
                 !has_raw_seed,
                 if has_raw_seed {
-                    Some("Should use BEARDOG_FAMILY_SEED_FILE, not raw seed".to_string())
+                    Some("Should use FAMILY_SEED_FILE, not raw seed".to_string())
                 } else {
                     None
                 },
@@ -493,13 +492,12 @@ mod tests {
         }
         std::fs::write(spore.join(".family.seed"), [0u8; 32]).expect("write seed");
 
-        // Write tower.toml that references BEARDOG_FAMILY_SEED_FILE
         let config_content = r#"
 [tower]
 name = "test"
 
 [environment]
-BEARDOG_FAMILY_SEED_FILE = "/biomeOS/secrets/.family.seed"
+FAMILY_SEED_FILE = "/biomeOS/secrets/.family.seed"
 "#;
         std::fs::write(spore.join("tower.toml"), config_content).expect("write config");
 
@@ -529,7 +527,7 @@ BEARDOG_FAMILY_SEED_FILE = "/biomeOS/secrets/.family.seed"
         std::fs::write(spore.join(".family.seed"), [0u8; 32]).expect("write seed");
         std::fs::write(
             spore.join("tower.toml"),
-            "BEARDOG_FAMILY_SEED_FILE = \"/secrets/.family.seed\"\n",
+            "FAMILY_SEED_FILE = \"/secrets/.family.seed\"\n",
         )
         .expect("write config");
 
@@ -563,7 +561,7 @@ BEARDOG_FAMILY_SEED_FILE = "/biomeOS/secrets/.family.seed"
         std::fs::write(spore.join(".family.seed"), [0u8; 32]).expect("write seed");
         std::fs::write(
             spore.join("tower.toml"),
-            "BEARDOG_FAMILY_SEED_FILE = \"/secrets/.family.seed\"\n",
+            "FAMILY_SEED_FILE = \"/secrets/.family.seed\"\n",
         )
         .expect("write config");
 

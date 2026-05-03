@@ -71,16 +71,16 @@ pub mod env_vars {
     /// Neural API socket path environment variable
     pub const NEURAL_API_SOCKET: &str = "NEURAL_API_SOCKET";
 
-    /// `BearDog` socket path environment variable
+    /// Security provider (BearDog) socket path environment variable
     pub const BEARDOG_SOCKET: &str = "BEARDOG_SOCKET";
 
-    /// Songbird socket path environment variable
+    /// Discovery provider (Songbird) socket path environment variable
     pub const SONGBIRD_SOCKET: &str = "SONGBIRD_SOCKET";
 
-    /// Squirrel socket path environment variable
+    /// AI bridge (Squirrel) socket path environment variable
     pub const SQUIRREL_SOCKET: &str = "SQUIRREL_SOCKET";
 
-    /// `NestGate` socket path environment variable
+    /// Storage provider (NestGate) socket path environment variable
     pub const NESTGATE_SOCKET: &str = "NESTGATE_SOCKET";
 
     /// `ToadStool` socket path environment variable

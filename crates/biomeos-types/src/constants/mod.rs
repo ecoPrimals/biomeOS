@@ -106,16 +106,13 @@ pub mod endpoints {
     // "Primals do NOT have hardcoded knowledge of other primals"
     //
     // Instead, use:
-    // 1. Environment variables (e.g., TOADSTOOL_ENDPOINT, SONGBIRD_ENDPOINT)
-    // 2. Capability-based discovery via Songbird
+    // 1. Capability-based env vars (e.g., DISCOVERY_ENDPOINT, SECURITY_ENDPOINT)
+    // 2. Capability-based discovery via the discovery provider
     // 3. mDNS automatic discovery
     //
     // For local development, set environment variables:
-    //   export SONGBIRD_ENDPOINT="http://localhost:{API_DEFAULT}"
-    //   export TOADSTOOL_ENDPOINT="http://localhost:{HTTP_BRIDGE}"
-    //   export NESTGATE_ENDPOINT="http://localhost:{METRICS}"
-    //   export BEARDOG_ENDPOINT="http://localhost:{NEURAL_API}"
-    //   export SQUIRREL_ENDPOINT="http://localhost:{WEBSOCKET}"
+    //   export DISCOVERY_ENDPOINT="unix:///run/biomeos/<family>/discovery.sock"
+    //   export SECURITY_ENDPOINT="unix:///run/biomeos/<family>/security.sock"
 
     // API PATH CONSTANTS - These ARE appropriate as constants
     // since they define the primal's own API contract

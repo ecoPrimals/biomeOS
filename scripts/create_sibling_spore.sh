@@ -266,10 +266,10 @@ SPORE_ROOT="$(cd "$(dirname "$0")" && pwd)"
 NODE_ID="__NODE_ID__"
 FAMILY_ID="__FAMILY_ID__"
 
-# Environment for BearDog
-export BEARDOG_FAMILY_SEED_FILE="$SPORE_ROOT/.family.seed"
-export BEARDOG_FAMILY_ID="$FAMILY_ID"
-export BEARDOG_NODE_ID="$NODE_ID"
+# Family credentials
+export FAMILY_SEED_FILE="$SPORE_ROOT/.family.seed"
+export FAMILY_ID="$FAMILY_ID"
+export NODE_ID="$NODE_ID"
 
 # Socket paths (per-node to allow multiple spores)
 export NEURAL_API_SOCKET="/tmp/neural-api-$NODE_ID.sock"
@@ -282,7 +282,7 @@ export CAPABILITY_SECURITY_ENDPOINT="unix://$NEURAL_API_SOCKET"
 export BEARDOG_MODE="neural"
 
 echo "🚀 Starting LiveSpore: $NODE_ID (family: $FAMILY_ID)"
-echo "   Seed: $BEARDOG_FAMILY_SEED_FILE"
+echo "   Seed: $FAMILY_SEED_FILE"
 echo "   Sockets: /tmp/*-$NODE_ID.sock"
 
 # Cleanup any existing sockets

@@ -189,18 +189,12 @@ impl FamilyCredentials {
     /// Load credentials from environment variables
     ///
     /// Expects:
-    /// - `FAMILY_ID` or `BEARDOG_FAMILY_ID`
-    /// - `FAMILY_SEED` or `BEARDOG_FAMILY_SEED`
+    /// - `FAMILY_ID`
+    /// - `FAMILY_SEED`
     pub fn from_env() -> Result<Self, BirdSongError> {
         Self::from_env_values(
-            std::env::var("FAMILY_ID")
-                .ok()
-                .or_else(|| std::env::var("BEARDOG_FAMILY_ID").ok())
-                .as_deref(),
-            std::env::var("FAMILY_SEED")
-                .ok()
-                .or_else(|| std::env::var("BEARDOG_FAMILY_SEED").ok())
-                .as_deref(),
+            std::env::var("FAMILY_ID").ok().as_deref(),
+            std::env::var("FAMILY_SEED").ok().as_deref(),
         )
     }
 
@@ -210,14 +204,12 @@ impl FamilyCredentials {
         family_seed: Option<&str>,
     ) -> Result<Self, BirdSongError> {
         let family_id_str = family_id.ok_or_else(|| {
-            BirdSongError::InvalidCredentials(
-                "Missing FAMILY_ID or BEARDOG_FAMILY_ID environment variable".to_string(),
-            )
+            BirdSongError::InvalidCredentials("Missing FAMILY_ID environment variable".to_string())
         })?;
 
         let family_seed = family_seed.ok_or_else(|| {
             BirdSongError::InvalidCredentials(
-                "Missing FAMILY_SEED or BEARDOG_FAMILY_SEED environment variable".to_string(),
+                "Missing FAMILY_SEED environment variable".to_string(),
             )
         })?;
 

@@ -28,8 +28,8 @@ pub(super) trait ConfigOps {
 impl ConfigOps for Spore {
     /// Create tower.toml configuration
     ///
-    /// **Note**: Uses `BEARDOG_FAMILY_SEED_FILE` to reference the seed file.
-    /// `BearDog` will read and process the seed at runtime.
+    /// **Note**: Uses `FAMILY_SEED_FILE` to reference the seed file.
+    /// The security provider reads and processes the seed at runtime.
     async fn create_tower_config(&self) -> SporeResult<()> {
         info!("Creating tower.toml configuration");
 
@@ -63,9 +63,9 @@ provides = ["Security", "Encryption", "Trust"]
 requires = []
 
 [primals.env]
-BEARDOG_FAMILY_SEED_FILE = "./.family.seed"
-BEARDOG_FAMILY_ID = "test_family"
-BEARDOG_NODE_ID = "{node_id}"
+FAMILY_SEED_FILE = "./.family.seed"
+FAMILY_ID = "test_family"
+NODE_ID = "{node_id}"
 RUST_LOG = "info"
 
 # Discovery Orchestrator (UDP Multicast + BTSP)
@@ -75,11 +75,11 @@ provides = ["Discovery"]
 requires = ["Security"]
 
 [primals.env]
-SONGBIRD_FAMILY_ID = "test_family"
-SONGBIRD_NODE_ID = "{node_id}"
-SONGBIRD_TAGS = "btsp_enabled"
+FAMILY_ID = "test_family"
+NODE_ID = "{node_id}"
+DISCOVERY_TAGS = "btsp_enabled"
 SECURITY_ENDPOINT = "unix:///tmp/{security}-{family_id}-{node_id}.sock"
-SONGBIRD_SECURITY_PROVIDER = "unix:///tmp/{security}-{family_id}-{node_id}.sock"
+SECURITY_PROVIDER = "unix:///tmp/{security}-{family_id}-{node_id}.sock"
 RUST_LOG = "info"
 "#,
             label = self.config.label,
@@ -136,6 +136,6 @@ mod config_tests {
         assert!(s.contains("spore-lbl"), "{s}");
         assert!(s.contains("nid-99"), "{s}");
         assert!(s.contains("fam-88"), "{s}");
-        assert!(s.contains("BEARDOG_NODE_ID = \"nid-99\""), "{s}");
+        assert!(s.contains("NODE_ID = \"nid-99\""), "{s}");
     }
 }

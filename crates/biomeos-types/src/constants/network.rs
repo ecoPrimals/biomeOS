@@ -129,12 +129,12 @@ pub fn beardog_port_from(val: Option<&str>) -> u16 {
         .unwrap_or(DEFAULT_BEARDOG_PORT)
 }
 
-/// Get `BearDog` port from environment or fallback to default
+/// Get security provider port from environment or fallback to default.
 ///
-/// Checks `BEARDOG_PORT` environment variable first.
+/// Checks `SECURITY_PORT` environment variable first.
 #[must_use]
 pub fn beardog_port() -> u16 {
-    beardog_port_from(env::var(env_vars::BEARDOG_PORT).ok().as_deref())
+    beardog_port_from(env::var(env_vars::SECURITY_PORT).ok().as_deref())
 }
 
 /// Songbird port from an optional value (same parse rules as `SONGBIRD_PORT` / MCP env vars).
@@ -144,13 +144,13 @@ pub fn songbird_port_from(val: Option<&str>) -> u16 {
         .unwrap_or(DEFAULT_SONGBIRD_PORT)
 }
 
-/// Get Songbird port from environment or fallback to default
+/// Get discovery provider port from environment or fallback to default.
 ///
-/// Checks `SONGBIRD_PORT` or `MCP_PORT` environment variable first.
+/// Checks `DISCOVERY_PORT` or `MCP_PORT` environment variable first.
 #[must_use]
 pub fn songbird_port() -> u16 {
     songbird_port_from(
-        env::var(env_vars::SONGBIRD_PORT)
+        env::var(env_vars::DISCOVERY_PORT)
             .or_else(|_| env::var(env_vars::MCP_WEBSOCKET_PORT))
             .or_else(|_| env::var("MCP_PORT"))
             .ok()

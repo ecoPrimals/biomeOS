@@ -12,6 +12,8 @@
 
 // BTSP client - Secure Socket Architecture (local IPC authentication)
 pub mod btsp_client;
+pub mod btsp_client_phase3;
+pub mod btsp_crypto;
 
 // Core universal manager (now modular)
 pub mod universal_biomeos_manager;

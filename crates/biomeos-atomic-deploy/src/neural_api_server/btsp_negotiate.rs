@@ -1,164 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! BTSP Phase 3 — Cipher negotiation, HKDF key derivation, and encrypted framing.
+//! BTSP Phase 3 — Server-side session management and negotiate handler.
 //!
-//! After a successful Phase 2 handshake, the client may send `btsp.negotiate`
-//! to upgrade the connection from authenticated-plaintext (NULL cipher) to
-//! ChaCha20-Poly1305 encrypted framing.
+//! Crypto primitives (`SessionKeys`, `encrypt_frame`, `decrypt_frame`, etc.)
+//! live in `biomeos_core::btsp_crypto` — shared by both server and client.
 //!
-//! Nonces and keys are base64-encoded on the wire (aligned with the security provider,
-//! sweetGrass, and primalSpring). Hex-encoded `client_nonce` is auto-detected
-//! for backward compatibility with barraCuda-style clients.
+//! This module handles server-specific concerns: session store, session
+//! registration after Phase 2, and the `btsp.negotiate` JSON-RPC handler.
 //!
-//! If the client does not negotiate (or requests `"null"`), the connection
-//! stays on plaintext NDJSON — backward-compatible with Phase 2 clients.
+//! Nonces and keys are base64-encoded on the wire. Hex-encoded `client_nonce`
+//! is auto-detected for backward compatibility with barraCuda-style clients.
 
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
-/// Supported BTSP cipher suites.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BtspCipher {
-    Null,
-    ChaCha20Poly1305,
-}
-
-impl BtspCipher {
-    /// Wire name per `BTSP_PROTOCOL_STANDARD.md`.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Null => "null",
-            Self::ChaCha20Poly1305 => "chacha20-poly1305",
-        }
-    }
-
-    /// Parse a cipher name from the client's `preferred_cipher` or `ciphers[]`.
-    pub fn from_str_loose(s: &str) -> Self {
-        let lower = s.to_ascii_lowercase();
-        if lower.contains("chacha20") {
-            Self::ChaCha20Poly1305
-        } else {
-            Self::Null
-        }
-    }
-}
-
-/// Directional session keys derived via HKDF-SHA256 after Phase 3 negotiate.
-///
-/// The server uses `server_to_client` to encrypt outgoing frames and
-/// `client_to_server` to decrypt incoming frames. Keys are zeroized on drop.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
-pub struct SessionKeys {
-    pub client_to_server: [u8; 32],
-    pub server_to_client: [u8; 32],
-}
-
-impl std::fmt::Debug for SessionKeys {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SessionKeys")
-            .field("client_to_server", &"[REDACTED]")
-            .field("server_to_client", &"[REDACTED]")
-            .finish()
-    }
-}
-
-/// Derive directional session keys via HKDF-SHA256.
-///
-/// ```text
-/// salt = client_nonce || server_nonce
-/// c2s = HKDF-SHA256(ikm=handshake_key, salt, info="btsp-session-v1-c2s")
-/// s2c = HKDF-SHA256(ikm=handshake_key, salt, info="btsp-session-v1-s2c")
-/// ```
-pub fn derive_session_keys(
-    handshake_key: &[u8; 32],
-    client_nonce: &[u8],
-    server_nonce: &[u8],
-) -> SessionKeys {
-    use hkdf::Hkdf;
-    use sha2::Sha256;
-
-    let mut salt = Vec::with_capacity(client_nonce.len() + server_nonce.len());
-    salt.extend_from_slice(client_nonce);
-    salt.extend_from_slice(server_nonce);
-
-    let hk = Hkdf::<Sha256>::new(Some(&salt), handshake_key);
-
-    let mut c2s = [0u8; 32];
-    // HKDF-SHA256 expand for 32 bytes is infallible (max OKM = 255 * 32 = 8160).
-    let _ = hk.expand(b"btsp-session-v1-c2s", &mut c2s);
-
-    let mut s2c = [0u8; 32];
-    let _ = hk.expand(b"btsp-session-v1-s2c", &mut s2c);
-
-    SessionKeys {
-        client_to_server: c2s,
-        server_to_client: s2c,
-    }
-}
-
-/// Encrypt a plaintext frame using ChaCha20-Poly1305.
-///
-/// Returns the wire frame: `[4B length BE u32][12B nonce][ciphertext + 16B tag]`
-pub fn encrypt_frame(key: &[u8; 32], plaintext: &[u8]) -> Result<Vec<u8>, FrameError> {
-    use chacha20poly1305::aead::Aead;
-    use chacha20poly1305::{ChaCha20Poly1305, KeyInit};
-
-    let cipher = ChaCha20Poly1305::new(key.into());
-
-    let mut nonce_bytes = [0u8; 12];
-    rand::Rng::fill(&mut rand::rng(), &mut nonce_bytes);
-    let nonce = chacha20poly1305::Nonce::from(nonce_bytes);
-
-    let ciphertext = cipher
-        .encrypt(&nonce, plaintext)
-        .map_err(|_| FrameError::Encryption)?;
-
-    let frame_len: u32 = (12 + ciphertext.len())
-        .try_into()
-        .map_err(|_| FrameError::FrameTooLarge)?;
-
-    let mut frame = Vec::with_capacity(4 + 12 + ciphertext.len());
-    frame.extend_from_slice(&frame_len.to_be_bytes());
-    frame.extend_from_slice(&nonce_bytes);
-    frame.extend_from_slice(&ciphertext);
-    Ok(frame)
-}
-
-/// Decrypt a received frame (nonce || ciphertext+tag) using ChaCha20-Poly1305.
-///
-/// Input is the payload after the 4-byte length header: `[12B nonce][ciphertext + tag]`.
-pub fn decrypt_frame(key: &[u8; 32], frame_payload: &[u8]) -> Result<Vec<u8>, FrameError> {
-    use chacha20poly1305::aead::Aead;
-    use chacha20poly1305::{ChaCha20Poly1305, KeyInit};
-
-    if frame_payload.len() < 12 + 16 {
-        return Err(FrameError::FrameTooShort);
-    }
-
-    let (nonce_bytes, ciphertext) = frame_payload.split_at(12);
-    let nonce = chacha20poly1305::Nonce::from_slice(nonce_bytes);
-    let cipher = ChaCha20Poly1305::new(key.into());
-
-    cipher
-        .decrypt(nonce, ciphertext)
-        .map_err(|_| FrameError::Decryption)
-}
-
-/// Errors from encrypted frame operations.
-#[derive(Debug, thiserror::Error)]
-pub enum FrameError {
-    #[error("encryption failed")]
-    Encryption,
-    #[error("decryption failed (invalid key or corrupted frame)")]
-    Decryption,
-    #[error("frame too large for u32 length header")]
-    FrameTooLarge,
-    #[error("frame too short (need at least 12B nonce + 16B tag)")]
-    FrameTooShort,
-}
+pub use biomeos_core::btsp_crypto::{
+    BtspCipher, SessionKeys, decrypt_frame, derive_session_keys, encrypt_frame,
+};
 
 /// Per-session state stored after Phase 2 handshake completes.
 #[derive(Debug, Clone)]

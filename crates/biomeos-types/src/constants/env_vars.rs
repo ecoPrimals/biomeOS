@@ -18,17 +18,17 @@ pub const HTTPS_PORT: &str = "HTTPS_PORT";
 /// MCP WebSocket port environment variable
 pub const MCP_WEBSOCKET_PORT: &str = "MCP_WEBSOCKET_PORT";
 
-/// `BearDog` endpoint URL environment variable
-pub const BEARDOG_ENDPOINT: &str = "BEARDOG_ENDPOINT";
+/// Security provider endpoint URL environment variable
+pub const SECURITY_ENDPOINT: &str = "SECURITY_ENDPOINT";
 
-/// `BearDog` port environment variable
-pub const BEARDOG_PORT: &str = "BEARDOG_PORT";
+/// Security provider port environment variable
+pub const SECURITY_PORT: &str = "SECURITY_PORT";
 
-/// Songbird endpoint URL environment variable
-pub const SONGBIRD_ENDPOINT: &str = "SONGBIRD_ENDPOINT";
+/// Discovery provider endpoint URL environment variable
+pub const DISCOVERY_ENDPOINT: &str = "DISCOVERY_ENDPOINT";
 
-/// Songbird port environment variable
-pub const SONGBIRD_PORT: &str = "SONGBIRD_PORT";
+/// Discovery provider port environment variable
+pub const DISCOVERY_PORT: &str = "DISCOVERY_PORT";
 
 /// Connection timeout environment variable
 pub const CONNECTION_TIMEOUT: &str = "CONNECTION_TIMEOUT";

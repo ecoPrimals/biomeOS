@@ -314,8 +314,8 @@ provides = ["Security"]
 protocol = "tarpc"
 
 [primals.env]
-BEARDOG_FAMILY_ID = "1894e909e454"
-BEARDOG_NODE_ID = "tower1"
+FAMILY_ID = "1894e909e454"
+NODE_ID = "tower1"
 
 [[primals]]
 binary = "./primals/songbird"
@@ -324,7 +324,7 @@ requires = ["Security"]
 protocol = "jsonrpc"
 
 [primals.env]
-SONGBIRD_NODE_ID = "tower1"
+NODE_ID = "tower1"
 SECURITY_ENDPOINT = "jsonrpc+unix:///tmp/beardog.sock"
 "#;
 

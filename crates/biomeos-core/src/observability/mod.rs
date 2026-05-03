@@ -14,9 +14,10 @@
 //!
 //! # Architecture
 //!
-//! Similar to Songbird's compute bridge, this module provides
-//! a sovereignty-respecting bridge between `BiomeOS` and observability.
-//! It never hardcodes backends or forces external export.
+//! This module provides a sovereignty-respecting bridge between
+//! `BiomeOS` and observability. It never hardcodes backends or forces
+//! external export. Security and discovery endpoints are resolved via
+//! capability-based env vars at runtime.
 //!
 //! # Example
 //!
@@ -263,7 +264,7 @@ impl MinimalObserver {
     }
 
     /// Like [`Self::share_with_family`], but supplies optional endpoint overrides
-    /// (instead of reading `BEARDOG_ENDPOINT` / `SONGBIRD_ENDPOINT` from the environment).
+    /// (instead of reading `SECURITY_ENDPOINT` / `DISCOVERY_ENDPOINT` from the environment).
     pub fn share_with_family_using_endpoints(
         &self,
         security_endpoint: Option<&str>,
@@ -295,7 +296,11 @@ impl MinimalObserver {
         Ok(true)
     }
 
-    /// Share metrics securely via the security provider (`BearDog`) and discovery-based routing
+    /// Share metrics securely via the security provider and discovery-based routing.
+    ///
+    /// Resolves endpoints via capability-based env vars:
+    /// - `SECURITY_ENDPOINT` — encryption provider
+    /// - `DISCOVERY_ENDPOINT` — discovery/routing provider
     #[expect(
         clippy::unused_self,
         reason = "method for future use or API consistency"
@@ -309,60 +314,46 @@ impl MinimalObserver {
     ) -> Result<()> {
         debug!("📊 Preparing metrics for secure sharing");
 
-        // Serialize metrics for transmission
         let metrics_json = serde_json::to_string(metrics).context("Failed to serialize metrics")?;
 
-        // Step 1: Encrypt via BearDog (if available)
-        let beardog_resolved = security_endpoint_override
+        let security_endpoint = security_endpoint_override
             .map(String::from)
-            .or_else(|| std::env::var("BEARDOG_ENDPOINT").ok());
-        let _encrypted_payload = if let Some(security_endpoint) = beardog_resolved {
-            debug!("🔒 Encrypting metrics via BearDog at {}", security_endpoint);
-
-            // In production, this would:
-            // 1. Call BearDog's encryption API
-            // 2. Use lineage-based keys
-            // 3. Return encrypted payload
-
-            // For now, we prepare the structure for encryption
+            .or_else(|| std::env::var("SECURITY_ENDPOINT").ok());
+        let _encrypted_payload = if let Some(endpoint) = security_endpoint {
+            debug!(
+                "🔒 Encrypting metrics via security provider at {}",
+                endpoint
+            );
             format!(
                 "{{\"encrypted\": true, \"lineage\": \"{}\", \"data\": \"<encrypted>\"}}",
                 family.lineage_id
             )
         } else {
-            // Without BearDog, we can't share securely (sovereignty principle)
-            warn!("⚠️  BearDog not available - cannot share metrics securely");
-            return Err(anyhow::anyhow!("BearDog required for secure sharing"));
+            warn!("⚠️  Security provider not available - cannot share metrics securely");
+            return Err(anyhow::anyhow!(
+                "Security provider required for secure sharing. Set SECURITY_ENDPOINT."
+            ));
         };
 
-        // Step 2: Route via discovery endpoint (if available)
-        let songbird_resolved = discovery_endpoint_override
+        let discovery_endpoint = discovery_endpoint_override
             .map(String::from)
-            .or_else(|| std::env::var("SONGBIRD_ENDPOINT").ok());
-        if let Some(discovery_endpoint) = songbird_resolved {
+            .or_else(|| std::env::var("DISCOVERY_ENDPOINT").ok());
+        if let Some(endpoint) = discovery_endpoint {
             debug!(
-                "📡 Routing encrypted metrics via discovery endpoint at {}",
-                discovery_endpoint
+                "📡 Routing encrypted metrics via discovery provider at {}",
+                endpoint
             );
-
-            // In production, this would:
-            // 1. Call the discovery provider's routing API
-            // 2. Send to family endpoint
-            // 3. Verify delivery
-
             info!(
                 "✅ Metrics shared securely with family {} via discovery routing",
                 family.endpoint.as_deref().unwrap_or("unknown")
             );
         } else {
-            // Without a discovery endpoint, we can't route (sovereignty principle)
-            warn!("⚠️  Discovery routing endpoint not available - cannot route metrics");
+            warn!("⚠️  Discovery provider not available - cannot route metrics");
             return Err(anyhow::anyhow!(
-                "Discovery routing endpoint required for routing"
+                "Discovery provider required for routing. Set DISCOVERY_ENDPOINT."
             ));
         }
 
-        // Step 3: Log sharing event (local audit trail)
         debug!(
             "📊 Shared metrics to family at {} (size: {} bytes)",
             family.endpoint.as_deref().unwrap_or("unknown"),
@@ -544,7 +535,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_share_with_family_no_beardog_fails() {
+    async fn test_share_with_family_no_security_provider_fails() {
         let observer = MinimalObserver::family_federation(
             "family-x".to_string(),
             Some("http://localhost:8080".to_string()),
@@ -552,19 +543,29 @@ mod tests {
         .unwrap();
         let result = observer.share_with_family_using_endpoints(None, None);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("BearDog"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Security provider")
+        );
     }
 
     #[tokio::test]
-    async fn test_share_with_family_beardog_but_no_songbird_fails() {
+    async fn test_share_with_family_security_but_no_discovery_fails() {
         let observer = MinimalObserver::family_federation(
             "family-y".to_string(),
             Some("http://localhost:8080".to_string()),
         )
         .unwrap();
-        let result = observer.share_with_family_using_endpoints(Some("/tmp/beardog.sock"), None);
+        let result = observer.share_with_family_using_endpoints(Some("/tmp/security.sock"), None);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Discovery"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Discovery provider")
+        );
     }
 
     #[test]

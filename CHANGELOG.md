@@ -2,6 +2,45 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.41 (2026-05-03) — Client-Side Phase 3 + Hardcoded Env Var Elimination
+
+### Client-side BTSP Phase 3 outbound encrypted framing
+- `btsp_crypto.rs` (new): shared crypto primitives extracted from `btsp_negotiate.rs`
+  into `biomeos-core`. `BtspCipher`, `SessionKeys`, `derive_session_keys`,
+  `encrypt_frame`, `decrypt_frame` — single canonical implementation for both
+  server and client.
+- `btsp_client_phase3.rs` (new): client-side Phase 3 negotiation. Sends
+  `btsp.negotiate` after Phase 2 handshake, derives `SessionKeys` via HKDF,
+  returns `ClientPhase3Outcome::Encrypted` or `::Plaintext` for graceful fallback.
+- `atomic_transport.rs`: `jsonrpc_unix_btsp` now calls `perform_client_handshake_phase3`.
+  New `send_encrypted_jsonrpc` for length-prefixed encrypted frame I/O.
+- `node_handlers.rs`: `call_primal_rpc` uses Phase 3 with `call_primal_rpc_encrypted`
+  / `call_primal_rpc_plaintext` helpers. Graceful fallback to plaintext.
+- `capability_translation/mod.rs` and `neural_router/forwarding.rs` gain Phase 3
+  implicitly via `AtomicClient::call_btsp()`.
+- 7 new tests (5 crypto, 2 transport).
+
+### Hardcoded primal-name env vars eliminated
+- `family_credentials.rs`: `BEARDOG_FAMILY_ID`/`BEARDOG_FAMILY_SEED` fallbacks
+  removed. Only `FAMILY_ID`/`FAMILY_SEED` accepted.
+- `discovery_bootstrap.rs`: `SONGBIRD_ENDPOINT` fallback removed. Only
+  `DISCOVERY_ENDPOINT` accepted. `DEFAULT_SONGBIRD_PORT` → `DEFAULT_DISCOVERY_PORT`.
+- `observability/mod.rs`: `BEARDOG_ENDPOINT`/`SONGBIRD_ENDPOINT` → `SECURITY_ENDPOINT`
+  / `DISCOVERY_ENDPOINT`. All hardcoded primal names removed from production logic.
+- `env_vars.rs`: `BEARDOG_ENDPOINT`/`BEARDOG_PORT`/`SONGBIRD_ENDPOINT`/`SONGBIRD_PORT`
+  → `SECURITY_ENDPOINT`/`SECURITY_PORT`/`DISCOVERY_ENDPOINT`/`DISCOVERY_PORT`.
+- `network.rs`: port resolution functions read from capability-based env vars.
+- Spore system: tower.toml templates use `FAMILY_SEED_FILE`/`FAMILY_ID`/`NODE_ID`.
+- `deployment_graph.rs`: deployment nodes use `FAMILY_ID`/`NODE_ID`.
+- `tower_config.rs`, `verify.rs`, `seed.rs`: all updated.
+
+### Codebase health
+- 7,866 tests (0 failures, fully concurrent).
+- 0 production files >800 LOC.
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo check` + `clippy -D warnings` + `cargo fmt --check`: all clean.
+- All external dependencies pure Rust ecosystem standard.
+
 ## v3.40 (2026-05-03) — BTSP Phase 3 Live + BTSP-Aware Capability Resolution
 
 ### Phase 3 encrypted framing wired into connection loop

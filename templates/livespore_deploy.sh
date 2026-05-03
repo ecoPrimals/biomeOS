@@ -58,9 +58,9 @@ echo "✅ Genetic lineage verified (64 bytes)"
 echo "   [0-31]  genesis   - Shared family root"
 echo "   [32-63] node_key  - Unique node identity"
 
-# Export seed as base64 for BearDog
-export BEARDOG_FAMILY_SEED=$(base64 -w0 "$SEED_FILE")
-export BEARDOG_GENESIS_SEED=$(head -c 32 "$SEED_FILE" | base64 -w0)
+# Export seed as base64 for security provider
+export FAMILY_SEED=$(base64 -w0 "$SEED_FILE")
+export GENESIS_SEED=$(head -c 32 "$SEED_FILE" | base64 -w0)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STEP 2: HANDLE FAT32 FILESYSTEM (USB limitation)
@@ -84,8 +84,8 @@ chmod 600 "$WORK_DIR/.family.seed"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export BEARDOG_SOCKET="/tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock"
 export SONGBIRD_SOCKET="/tmp/songbird-${FAMILY_ID}-${NODE_ID}.sock"
-export BEARDOG_FAMILY_ID="$FAMILY_ID"
-export BEARDOG_NODE_ID="$NODE_ID"
+export FAMILY_ID="$FAMILY_ID"
+export NODE_ID="$NODE_ID"
 export FAMILY_ID="$FAMILY_ID"
 
 echo ""

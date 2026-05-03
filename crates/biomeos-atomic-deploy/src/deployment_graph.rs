@@ -72,8 +72,8 @@ impl AtomicDeploymentGraph {
                 "primal": "beardog-server",
                 "atomic": "tower",
                 "env": {
-                    "BEARDOG_FAMILY_ID": family_id,
-                    "BEARDOG_NODE_ID": "tower"
+                    "FAMILY_ID": family_id,
+                    "NODE_ID": "tower"
                 }
             }),
         });

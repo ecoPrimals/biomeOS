@@ -22,10 +22,8 @@ rustix = { workspace = true, features = ["process"] }
 regex = { workspace = true }  # For socket pattern matching
 rand = { workspace = true }  # For JWT secret generation
 base64 = { workspace = true }  # For JWT secret encoding
-sha2 = { workspace = true }  # BTSP Phase 3 key derivation
-hkdf = { workspace = true }  # BTSP Phase 3 session key derivation
-chacha20poly1305 = { workspace = true }  # BTSP Phase 3 AEAD framing
-zeroize = { workspace = true }  # Secure key erasure for session keys
+# BTSP Phase 3 crypto now via biomeos-core::btsp_crypto (hkdf, chacha20poly1305, sha2)
+# zeroize now via biomeos-core::btsp_crypto (SessionKeys derives Zeroize)
 
 # biomeOS crates
 biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }

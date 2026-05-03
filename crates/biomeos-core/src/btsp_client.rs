@@ -13,6 +13,7 @@
 //! - The INSECURE guard (refuse to run with both `FAMILY_ID` and `BIOMEOS_INSECURE`)
 //! - Phase 2 server-side handshake enforcement for UDS listeners
 //! - Phase 2 client-side handshake initiation for outbound forwarding
+//! - Phase 3 client-side negotiate + encrypted framing for outbound calls
 //!
 //! The actual cryptographic handshake is delegated to the security provider
 //! via JSON-RPC (`btsp.session.create`, `btsp.session.verify`). biomeOS is a
@@ -604,7 +605,9 @@ pub async fn perform_client_handshake(
     Ok(reader)
 }
 
-async fn client_keygen(bd: &crate::AtomicClient) -> Result<(String, String), BtspHandshakeError> {
+pub(crate) async fn client_keygen(
+    bd: &crate::AtomicClient,
+) -> Result<(String, String), BtspHandshakeError> {
     let kp = bd
         .call("x25519_generate_ephemeral", serde_json::json!({}))
         .await
@@ -653,14 +656,14 @@ async fn client_challenge_response(
         .ok_or_else(|| BtspHandshakeError::Protocol("missing hmac from response".into()))
 }
 
-fn serialize_line(value: &impl serde::Serialize) -> Result<String, BtspHandshakeError> {
+pub(crate) fn serialize_line(value: &impl serde::Serialize) -> Result<String, BtspHandshakeError> {
     let mut s =
         serde_json::to_string(value).map_err(|e| BtspHandshakeError::Protocol(e.to_string()))?;
     s.push('\n');
     Ok(s)
 }
 
-async fn write_line_to(
+pub(crate) async fn write_line_to(
     reader: &mut tokio::io::BufReader<tokio::net::UnixStream>,
     data: &str,
 ) -> Result<(), BtspHandshakeError> {
@@ -677,7 +680,7 @@ async fn write_line_to(
         .map_err(BtspHandshakeError::Io)
 }
 
-async fn read_json_line<T: serde::de::DeserializeOwned>(
+pub(crate) async fn read_json_line<T: serde::de::DeserializeOwned>(
     reader: &mut tokio::io::BufReader<tokio::net::UnixStream>,
 ) -> Result<T, BtspHandshakeError> {
     use tokio::io::AsyncBufReadExt;

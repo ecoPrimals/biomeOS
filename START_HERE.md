@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: May 3, 2026
-**Status**: Production Ready (v3.40) — BTSP Phase 3 LIVE (encrypted framing wired into connection loop, BTSP-aware capability resolution on all paths), capability-based identity (zero hardcoded primal names in production), 7,859 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.41) — BTSP Phase 3 FULL (server-side + client-side outbound encrypted framing), capability-based identity (zero hardcoded primal names or env vars in production), 7,866 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 

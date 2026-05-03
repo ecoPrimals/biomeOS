@@ -440,7 +440,6 @@ async fn discover_capability_provider(
 async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<Value> {
     use biomeos_core::btsp_client;
     use std::path::Path;
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
     use tokio::time::timeout;
 
     let connect_timeout =
@@ -465,15 +464,31 @@ async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<
     .with_context(|| format!("Connect timeout ({connect_timeout:?}) to {socket_path}"))?
     .with_context(|| format!("Failed to connect to {socket_path}"))?;
 
-    let stream = if use_btsp {
-        debug!("Executor RPC: BTSP handshake for {socket_path}");
-        match btsp_client::perform_client_handshake(stream).await {
-            Ok(reader) => reader.into_inner(),
+    if use_btsp {
+        debug!("Executor RPC: BTSP handshake + Phase 3 for {socket_path}");
+        match biomeos_core::btsp_client_phase3::perform_client_handshake_phase3(stream).await {
+            Ok(biomeos_core::btsp_client_phase3::ClientPhase3Outcome::Encrypted {
+                keys,
+                stream,
+            }) => {
+                return call_primal_rpc_encrypted(
+                    stream,
+                    &request_json,
+                    &keys,
+                    read_timeout,
+                    socket_path,
+                )
+                .await;
+            }
+            Ok(biomeos_core::btsp_client_phase3::ClientPhase3Outcome::Plaintext { stream }) => {
+                return call_primal_rpc_plaintext(stream, &request_json, read_timeout, socket_path)
+                    .await;
+            }
             Err(e) => {
                 warn!(
                     "Executor RPC: BTSP handshake failed for {socket_path}, falling back to cleartext: {e}"
                 );
-                timeout(
+                let stream = timeout(
                     connect_timeout,
                     tokio::net::UnixStream::connect(socket_path),
                 )
@@ -481,12 +496,24 @@ async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<
                 .with_context(|| {
                     format!("Reconnect timeout ({connect_timeout:?}) to {socket_path}")
                 })?
-                .with_context(|| format!("Failed to reconnect to {socket_path}"))?
+                .with_context(|| format!("Failed to reconnect to {socket_path}"))?;
+                return call_primal_rpc_plaintext(stream, &request_json, read_timeout, socket_path)
+                    .await;
             }
         }
-    } else {
-        stream
-    };
+    }
+
+    call_primal_rpc_plaintext(stream, &request_json, read_timeout, socket_path).await
+}
+
+async fn call_primal_rpc_plaintext(
+    stream: tokio::net::UnixStream,
+    request_json: &str,
+    read_timeout: Duration,
+    socket_path: &str,
+) -> Result<Value> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+    use tokio::time::timeout;
 
     let (read_half, mut write_half) = stream.into_split();
 
@@ -502,6 +529,49 @@ async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<
 
     let response: Value = serde_json::from_str(&response_line)
         .with_context(|| format!("Invalid JSON response from {socket_path}"))?;
+
+    Ok(response)
+}
+
+async fn call_primal_rpc_encrypted(
+    stream: tokio::net::UnixStream,
+    request_json: &str,
+    keys: &biomeos_core::btsp_crypto::SessionKeys,
+    read_timeout: Duration,
+    socket_path: &str,
+) -> Result<Value> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::time::timeout;
+
+    let frame =
+        biomeos_core::btsp_crypto::encrypt_frame(&keys.client_to_server, request_json.as_bytes())
+            .map_err(|e| anyhow::anyhow!("encrypt_frame failed for {socket_path}: {e}"))?;
+
+    let (mut read_half, mut write_half) = stream.into_split();
+    write_half.write_all(&frame).await?;
+    write_half.flush().await?;
+
+    let mut len_buf = [0u8; 4];
+    timeout(read_timeout, read_half.read_exact(&mut len_buf))
+        .await
+        .with_context(|| format!("Read timeout ({read_timeout:?}) from {socket_path}"))??;
+
+    let payload_len = u32::from_be_bytes(len_buf) as usize;
+    if payload_len > 16 * 1024 * 1024 {
+        anyhow::bail!("Response frame too large from {socket_path}: {payload_len} bytes");
+    }
+
+    let mut payload = vec![0u8; payload_len];
+    read_half
+        .read_exact(&mut payload)
+        .await
+        .with_context(|| format!("Failed to read response frame from {socket_path}"))?;
+
+    let plaintext = biomeos_core::btsp_crypto::decrypt_frame(&keys.server_to_client, &payload)
+        .map_err(|e| anyhow::anyhow!("decrypt_frame failed for {socket_path}: {e}"))?;
+
+    let response: Value = serde_json::from_slice(&plaintext)
+        .with_context(|| format!("Invalid decrypted JSON response from {socket_path}"))?;
 
     Ok(response)
 }

@@ -76,13 +76,12 @@ impl DiscoveryBootstrap {
     ///
     /// Tries multiple methods in order:
     /// 1. `DISCOVERY_ENDPOINT` environment variable
-    /// 2. `SONGBIRD_ENDPOINT` environment variable (legacy)
-    /// 3. mDNS/Bonjour discovery
+    /// 2. mDNS/Bonjour discovery
     /// 4. UDP broadcast discovery
     /// 5. Multicast discovery
     ///
     /// # Returns
-    /// The endpoint URL of the universal adapter (default port: `network::DEFAULT_SONGBIRD_PORT`)
+    /// The endpoint URL of the discovery provider (default port: `network::DEFAULT_DISCOVERY_PORT`)
     ///
     /// # Errors
     /// Returns an error if no universal adapter can be found through any method.
@@ -121,7 +120,7 @@ impl DiscoveryBootstrap {
         }
         if let Some(endpoint) = alternate_discovery_endpoint {
             tracing::info!(
-                "✅ Found universal adapter via SONGBIRD_ENDPOINT: {}",
+                "✅ Found discovery provider via alternate endpoint: {}",
                 endpoint
             );
             return Ok(endpoint.to_string());
@@ -130,14 +129,7 @@ impl DiscoveryBootstrap {
         if !skip_env {
             if let Ok(endpoint) = env::var("DISCOVERY_ENDPOINT") {
                 tracing::info!(
-                    "✅ Found universal adapter via DISCOVERY_ENDPOINT: {}",
-                    endpoint
-                );
-                return Ok(endpoint);
-            }
-            if let Ok(endpoint) = env::var("SONGBIRD_ENDPOINT") {
-                tracing::info!(
-                    "✅ Found universal adapter via SONGBIRD_ENDPOINT: {}",
+                    "✅ Found discovery provider via DISCOVERY_ENDPOINT: {}",
                     endpoint
                 );
                 return Ok(endpoint);
@@ -168,21 +160,17 @@ impl DiscoveryBootstrap {
         // All methods failed
         tracing::error!("❌ No universal adapter found through any discovery method");
 
-        let discovery_primal = biomeos_types::primal_names::SONGBIRD;
-        let example_socket = biomeos_types::SystemPaths::new_lazy().primal_socket(discovery_primal);
         Err(anyhow::anyhow!(
-            "No discovery provider found. Set DISCOVERY_ENDPOINT or ensure the network primal is running.\n\
+            "No discovery provider found. Set DISCOVERY_ENDPOINT or ensure the discovery primal is running.\n\
             \n\
             Quick fix:\n\
-            1. Start the discovery provider: cd ../{primal} && cargo run\n\
-            2. Set endpoint: export DISCOVERY_ENDPOINT=\"unix://{socket}\"\n\
-            3. Or HTTP: export SONGBIRD_ENDPOINT=\"http://{host}:{port}\"\n\
+            1. Start the discovery primal\n\
+            2. Set endpoint: export DISCOVERY_ENDPOINT=\"unix://<socket-path>\"\n\
+            3. Or HTTP: export DISCOVERY_ENDPOINT=\"http://{host}:{port}\"\n\
             \n\
             Note: Unix sockets are preferred for local communication (faster, more secure)",
-            primal = discovery_primal,
-            socket = example_socket.display(),
             host = endpoints::DEFAULT_LOCALHOST,
-            port = network::DEFAULT_SONGBIRD_PORT
+            port = network::DEFAULT_DISCOVERY_PORT
         ))
     }
 
@@ -216,7 +204,7 @@ impl DiscoveryBootstrap {
 
         if !skip_probe && allow_loopback {
             const CANDIDATE_PORTS: &[u16] = &[
-                network::DEFAULT_SONGBIRD_PORT,
+                network::DEFAULT_DISCOVERY_PORT,
                 network::DEFAULT_BROADCAST_DISCOVERY_PORT,
                 network::DEFAULT_HTTP_PORT,
                 network::DEFAULT_DEV_PORT,
