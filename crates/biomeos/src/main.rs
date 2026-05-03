@@ -261,7 +261,7 @@ enum RootPulseCommand {
     /// Commit a session (dehydrate + sign + store + commit + attribute)
     #[command(name = "commit")]
     Commit {
-        /// rhizoCrypt session ID to commit
+        /// Provenance session ID to commit
         #[arg(long)]
         session_id: String,
         /// Agent DID performing the commit

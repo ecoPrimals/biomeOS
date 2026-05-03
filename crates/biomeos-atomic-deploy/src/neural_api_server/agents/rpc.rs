@@ -156,7 +156,7 @@ pub async fn handle_agent_request(
                         },
                         "dispatch": {
                             // For local routes: call the primal socket directly
-                            // For remote routes: proxy via Songbird mesh relay
+                            // For remote routes: proxy via mesh relay
                             "method": format!("{}.{}", capability, operation),
                             "transport": if route.is_local { "unix_socket" } else { "mesh_relay" },
                             "target": route.socket,

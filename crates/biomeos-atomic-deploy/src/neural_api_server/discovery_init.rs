@@ -324,11 +324,11 @@ impl NeuralApiServer {
     /// or trigger re-discovery after new primals start. This is the on-demand
     /// complement to startup auto-discovery (Option 1) and `capability.register`
     /// (Option 2). All three paths converge at the same `NeuralRouter`.
-    /// Derive the `coordination` purpose key from BearDog and cache it.
+    /// Derive the `coordination` purpose key from the security provider and cache it.
     ///
-    /// Called once during startup after primals are discovered. If BearDog is
-    /// unreachable the key stays `None` — graph signing degrades gracefully to
-    /// unsigned mode rather than blocking the server.
+    /// Called once during startup after primals are discovered. If the security
+    /// provider is unreachable the key stays `None` — graph signing degrades
+    /// gracefully to unsigned mode rather than blocking the server.
     pub(crate) async fn derive_coordination_key(&self) {
         use biomeos_core::atomic_client::AtomicClient;
 

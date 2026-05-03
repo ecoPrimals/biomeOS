@@ -315,7 +315,7 @@ impl DeploymentOrchestrator {
         // Build environment with genetic lineage
         let mut env = std::collections::HashMap::new();
         env.insert(
-            "BEARDOG_FAMILY_SEED_FILE".to_string(),
+            "SECURITY_PROVIDER_FAMILY_SEED_FILE".to_string(),
             child_seed_path.display().to_string(),
         );
         env.insert("FAMILY_ID".to_string(), self.config.family_id.clone());

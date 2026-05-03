@@ -13,9 +13,9 @@
 //! Agent = { name, family_id, routing_table }
 //!
 //! routing_table maps capability domains to gate:socket targets:
-//!   "crypto.*"  -> local:beardog.sock
-//!   "compute.*" -> remote:gate2/toadstool.sock (via Songbird mesh)
-//!   "storage.*" -> remote:gate2/nestgate.sock (via Songbird mesh)
+//!   "crypto.*"  -> local:security-provider.sock
+//!   "compute.*" -> remote:gate2/compute-provider.sock (via mesh relay)
+//!   "storage.*" -> remote:gate2/storage-provider.sock (via mesh relay)
 //! ```
 //!
 //! ## Meld/Split/Mix

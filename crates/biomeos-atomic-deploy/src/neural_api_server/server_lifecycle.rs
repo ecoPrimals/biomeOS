@@ -155,7 +155,7 @@ impl NeuralApiServer {
         // 5. Auto-discover running primals and register their capabilities
         self.discover_and_register_primals().await;
 
-        // 5b. Derive coordination purpose key from BearDog (if reachable)
+        // 5b. Derive coordination purpose key from security provider (if reachable)
         self.derive_coordination_key().await;
 
         // 6. Accept connections on bound listener(s)

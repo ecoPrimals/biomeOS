@@ -102,7 +102,7 @@ impl CapabilityHandler {
     /// # Returns
     /// ```json
     /// { "endpoint": "unix:///run/biomeos/security-family.sock",
-    ///   "primal": "beardog", "capability": "crypto", "resolved": true }
+    ///   "primal": "security-provider", "capability": "crypto", "resolved": true }
     /// ```
     pub async fn resolve(&self, params: &Option<Value>) -> Result<Value> {
         let start = std::time::Instant::now();
@@ -342,7 +342,7 @@ impl CapabilityHandler {
     /// JSON-RPC method: `route.register`
     ///
     /// # Parameters
-    /// - `primal`: Primal name (e.g., "beardog")
+    /// - `primal`: Primal name (e.g., "security-provider")
     /// - `transport`: Transport endpoint string (e.g., "<tcp://192.0.2.100:9001>")
     /// - `capabilities`: Array of capability names to register
     /// - `gate`: Gate label (optional, stored as source metadata)
@@ -447,13 +447,13 @@ impl CapabilityHandler {
     /// Returns a rich response including:
     /// - Per-capability provider information (primal, socket, registration time)
     /// - Available operations (from the capability translation registry)
-    /// - `cost_estimates` per operation (latency hints for Squirrel Pathway Learner)
+    /// - `cost_estimates` per operation (latency hints for pathway learning)
     /// - `operation_dependencies` DAG edges (prerequisite operations)
     /// - `domains` and `locality` metadata for ecosystem introspection
     /// - Total counts
     ///
-    /// Extended with cost/dependency metadata absorbed from Squirrel, loamSpine,
-    /// sweetGrass, and rhizoCrypt `capability.list` schemas.
+    /// Extended with cost/dependency metadata absorbed from downstream primal
+    /// `capability.list` schemas (AI, provenance, networking, crypto domains).
     pub async fn list(&self) -> Result<Value> {
         let capabilities = self.router.list_capabilities().await;
         let registry = self.translation_registry.read().await;

@@ -11,24 +11,9 @@
 //! Provides capability-based runtime discovery utilities used by API handlers
 //! and future REST routes. Functions are `pub` for cross-module use.
 
-// =============================================================================
-// Live Primal Discovery - Capability-Based Dynamic Discovery
-// =============================================================================
-//
-// ARCHITECTURE: Uses JSON-RPC 2.0 over Unix sockets for primal discovery.
-// This is the Pure Rust path - no HTTP/TLS dependencies (reqwest, openssl).
-//
-// Deep Debt Evolution (Feb 2026):
-//   - BEFORE: Hardcoded primal names (beardog, songbird)
-//   - AFTER: Capability-based discovery - primals self-report their identities
-//
-// Principle: Primal code only has self-knowledge and discovers others at runtime.
-//            No hardcoded primal names - all discovery is dynamic.
-//
-// This module provides utility functions used by other handlers and by future
-// REST API routes for live primal querying. Functions are pub for cross-module use.
-//
-// =============================================================================
+// Architecture: JSON-RPC 2.0 over Unix sockets for primal discovery.
+// Pure Rust path — no HTTP/TLS dependencies.
+// Capability-based: primals self-report identities at runtime.
 
 use anyhow::{Context, Result};
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
@@ -233,12 +218,7 @@ struct CapabilityDomainMapping {
     capabilities: &'static [&'static str],
 }
 
-/// Capability domain mappings - CAPABILITY-FIRST, no primal name knowledge
-///
-/// Removed hardcoded primal names ("beardog", "songbird") from keywords.
-/// Discovery now works purely by capability semantics. Primals self-report
-/// their capabilities; the discovery system matches by what they CAN DO,
-/// not what they ARE CALLED.
+/// Capability domain mappings — primal-agnostic, keyword-based.
 const CAPABILITY_DOMAINS: &[CapabilityDomainMapping] = &[
     // Security/Cryptography domain (capability-only, no primal names)
     CapabilityDomainMapping {
@@ -269,7 +249,6 @@ const CAPABILITY_DOMAINS: &[CapabilityDomainMapping] = &[
         capabilities: &["discovery", "http.request", "http.get", "http.post"],
     },
     // Storage domain
-    // Includes "toadstool" as a well-known storage primal
     CapabilityDomainMapping {
         keywords: &[
             "storage", "persist", "store", "data", "cache", "db", "archive", "backup",

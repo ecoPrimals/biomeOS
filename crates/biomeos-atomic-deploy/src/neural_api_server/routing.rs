@@ -272,7 +272,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("inference.complete", Route::InferenceComplete),
     ("inference.embed", Route::InferenceEmbed),
     ("inference.models", Route::InferenceModels),
-    // MCP tool discovery (Squirrel alpha.13 aggregation)
+    // MCP tool discovery (AI provider aggregation)
     ("mcp.tools.list", Route::McpToolsList),
     ("mcp.tools_list", Route::McpToolsList),
     // Agent

@@ -80,15 +80,12 @@ impl NeuralApiServer {
 
             // Capability-based resolution via domain mappings
             // (capability_domains.rs for well-known capability → primal mappings).
-            // This is robust and doesn't require runtime Songbird queries
+            // This is robust and doesn't require runtime discovery queries
             let primal_name = if let Some(primal_cfg) = &node.primal {
                 if let Some(cap) = &primal_cfg.by_capability {
-                    // ROBUST SOLUTION: Use capability domain mappings to resolve primal name
-                    // This maps semantic capability names to actual primal names:
-                    //   "security" → "beardog"
-                    //   "http"     → "songbird"
-                    //   "storage"  → "nestgate"
-                    //   etc.
+                    // Use capability domain mappings to resolve primal name
+                    // Maps semantic capability names to canonical providers via
+                    // capability_domains.rs (e.g. "security" → provider, "storage" → provider)
                     //
                     // The mapping is defined in capability_domains.rs and can be extended
                     // or loaded from config/capability_registry.toml in the future.

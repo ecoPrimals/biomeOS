@@ -169,21 +169,18 @@ pub fn btsp_enforce() -> bool {
 /// Locate the security provider socket for BTSP delegation.
 ///
 /// The security provider is resolved via `BIOMEOS_SECURITY_PROVIDER` (defaulting
-/// to the canonical `beardog` constant). This function does not hardcode which
-/// primal provides security — it discovers the socket by provider name.
+/// to the canonical security provider constant from `primal_names`). This function
+/// does not hardcode which primal provides security — it discovers the socket by
+/// capability-based provider name.
 ///
 /// Resolution order:
 /// 1. `BIOMEOS_SECURITY_SOCKET` environment variable (explicit path)
-/// 2. `BEARDOG_SOCKET` / `BIOMEOS_BEARDOG_SOCKET` (legacy compat)
+/// 2. `SECURITY_PROVIDER_SOCKET` (capability-based, preferred)
 /// 3. Family-scoped socket `{provider}-{fid}.sock` in socket dir
 /// 4. Development socket `{provider}.sock` in socket dir
 #[must_use]
 pub fn security_provider_socket_path() -> Option<std::path::PathBuf> {
-    for env_key in [
-        "BIOMEOS_SECURITY_SOCKET",
-        "BEARDOG_SOCKET",
-        "BIOMEOS_BEARDOG_SOCKET",
-    ] {
+    for env_key in ["BIOMEOS_SECURITY_SOCKET", "SECURITY_PROVIDER_SOCKET"] {
         if let Ok(p) = std::env::var(env_key) {
             let path = std::path::PathBuf::from(&p);
             if path.exists() {

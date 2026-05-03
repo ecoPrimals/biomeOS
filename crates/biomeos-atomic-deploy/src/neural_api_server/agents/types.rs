@@ -17,7 +17,7 @@ pub struct CapabilityRoute {
     /// Gate that provides this capability (e.g., "tower", "gate2")
     pub gate_id: String,
 
-    /// Primal name (e.g., "beardog", "songbird")
+    /// Primal name (e.g., "security-provider", "mesh-orchestrator")
     pub primal: String,
 
     /// Socket path (local Unix socket or remote via mesh)

@@ -16,13 +16,13 @@ use super::NeuralApiServer;
 use crate::neural_router::RoutingMetrics;
 
 impl NeuralApiServer {
-    /// Proxy HTTP request through Tower Atomic (Songbird + `BearDog`)
+    /// Proxy HTTP request through Tower Atomic (mesh + security providers)
     ///
     /// This enables primals to make HTTP/HTTPS requests without direct dependencies
     /// on HTTP libraries or C crypto libraries (like ring).
     ///
     /// # TRUE PRIMAL Pattern
-    /// Squirrel doesn't know about Songbird or `BearDog` - it just asks Neural API
+    /// Primals don't know about specific providers — they ask Neural API
     /// for "`secure_http`" capability, and the router discovers + forwards.
     pub async fn proxy_http(&self, params: &Option<Value>) -> Result<Value> {
         let start = std::time::Instant::now();
@@ -48,7 +48,7 @@ impl NeuralApiServer {
 
         debug!("   Discovered: {:?} primals", atomic.primals.len());
 
-        // Forward to Songbird (handles HTTP/TLS)
+        // Forward to mesh provider (handles HTTP/TLS)
         let http_params = json!({
             "method": method,
             "url": url,
