@@ -487,6 +487,170 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_negotiate_then_encrypted_stream_end_to_end() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        let handshake_key = [0xDDu8; 32];
+        let session_id = "e2e-test-session";
+
+        btsp_negotiate::register_session(&server.btsp_sessions, session_id, Some(handshake_key))
+            .await;
+
+        let client_nonce = [0x11u8; 32];
+        let client_nonce_b64 = {
+            use base64::Engine;
+            base64::engine::general_purpose::STANDARD.encode(client_nonce)
+        };
+
+        let client_task = tokio::spawn(async move {
+            let negotiate_req = format!(
+                r#"{{"jsonrpc":"2.0","method":"btsp.negotiate","params":{{"session_id":"{}","preferred_cipher":"chacha20-poly1305","client_nonce":"{}","bond_type":"Covalent"}},"id":1}}"#,
+                session_id, client_nonce_b64
+            );
+            client_stream
+                .write_all((negotiate_req + "\n").as_bytes())
+                .await
+                .expect("write negotiate");
+            client_stream.flush().await.expect("flush");
+
+            let mut reader = tokio::io::BufReader::new(&mut client_stream);
+            let mut negotiate_resp = String::new();
+            reader
+                .read_line(&mut negotiate_resp)
+                .await
+                .expect("read negotiate response");
+
+            let resp: serde_json::Value =
+                serde_json::from_str(&negotiate_resp).expect("parse negotiate response");
+            let result = resp.get("result").expect("has result");
+            assert_eq!(result["cipher"], "chacha20-poly1305");
+
+            let server_nonce_b64 = result["server_nonce"].as_str().expect("server_nonce");
+            let server_nonce = {
+                use base64::Engine;
+                base64::engine::general_purpose::STANDARD
+                    .decode(server_nonce_b64)
+                    .expect("decode server nonce")
+            };
+
+            let keys =
+                btsp_negotiate::derive_session_keys(&handshake_key, &client_nonce, &server_nonce);
+
+            let request = r#"{"jsonrpc":"2.0","method":"health.liveness","id":2}"#;
+            let frame = btsp_negotiate::encrypt_frame(&keys.client_to_server, request.as_bytes())
+                .expect("encrypt");
+
+            let client_stream = reader.into_inner();
+            client_stream.write_all(&frame).await.expect("write frame");
+            client_stream.flush().await.expect("flush");
+
+            let mut len_buf = [0u8; 4];
+            client_stream
+                .read_exact(&mut len_buf)
+                .await
+                .expect("read len");
+            let resp_len = u32::from_be_bytes(len_buf) as usize;
+            let mut payload = vec![0u8; resp_len];
+            client_stream
+                .read_exact(&mut payload)
+                .await
+                .expect("read payload");
+            let plaintext =
+                btsp_negotiate::decrypt_frame(&keys.server_to_client, &payload).expect("decrypt");
+            String::from_utf8(plaintext).expect("utf8")
+        });
+
+        let reader = tokio::io::BufReader::new(server_stream);
+        server
+            .handle_stream_with_negotiate(reader)
+            .await
+            .expect("handle_stream_with_negotiate");
+
+        let response = client_task.await.expect("client task");
+        assert!(
+            response.contains("jsonrpc"),
+            "encrypted response should be valid JSON-RPC: {response}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_negotiate_null_cipher_stays_on_ndjson() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        btsp_negotiate::register_session(&server.btsp_sessions, "null-sess", None).await;
+
+        let client_task = tokio::spawn(async move {
+            let negotiate_req = r#"{"jsonrpc":"2.0","method":"btsp.negotiate","params":{"session_id":"null-sess","preferred_cipher":"chacha20-poly1305","client_nonce":"AAAA"},"id":1}"#;
+            client_stream
+                .write_all((negotiate_req.to_string() + "\n").as_bytes())
+                .await
+                .expect("write negotiate");
+            client_stream.flush().await.expect("flush");
+
+            let mut reader = tokio::io::BufReader::new(&mut client_stream);
+            let mut negotiate_resp = String::new();
+            reader
+                .read_line(&mut negotiate_resp)
+                .await
+                .expect("read negotiate response");
+
+            let resp: serde_json::Value =
+                serde_json::from_str(&negotiate_resp).expect("parse negotiate response");
+            assert_eq!(
+                resp["result"]["cipher"], "null",
+                "should fall back to null without handshake key"
+            );
+
+            negotiate_resp
+        });
+
+        let reader = tokio::io::BufReader::new(server_stream);
+        server
+            .handle_stream_with_negotiate(reader)
+            .await
+            .expect("handle_stream_with_negotiate");
+
+        client_task.await.expect("client task");
+    }
+
+    #[tokio::test]
+    async fn test_non_negotiate_first_line_stays_on_ndjson() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        let client_task = tokio::spawn(async move {
+            let request = r#"{"jsonrpc":"2.0","method":"health.liveness","id":1}"#;
+            client_stream
+                .write_all((request.to_string() + "\n").as_bytes())
+                .await
+                .expect("write");
+            client_stream.flush().await.expect("flush");
+
+            let mut reader = tokio::io::BufReader::new(&mut client_stream);
+            let mut resp = String::new();
+            reader.read_line(&mut resp).await.expect("read response");
+            resp
+        });
+
+        let reader = tokio::io::BufReader::new(server_stream);
+        server
+            .handle_stream_with_negotiate(reader)
+            .await
+            .expect("handle_stream_with_negotiate");
+
+        let response = client_task.await.expect("client task");
+        assert!(
+            response.contains("jsonrpc"),
+            "NDJSON response expected: {response}"
+        );
+    }
+
+    #[tokio::test]
     async fn test_handle_connection_unknown_method_returns_error_response() {
         let (server_stream, mut client_stream) =
             tokio::net::UnixStream::pair().expect("UnixStream::pair");

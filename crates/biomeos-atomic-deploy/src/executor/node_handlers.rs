@@ -15,8 +15,6 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
 use tracing::{debug, error, info, warn};
 
 use super::context::ExecutionContext;
@@ -432,21 +430,63 @@ async fn discover_capability_provider(
     None
 }
 
-/// Call a primal via JSON-RPC over Unix socket
+/// Call a primal via JSON-RPC over Unix socket with BTSP awareness.
 ///
-/// **Deep Debt Principle**: Pure JSON-RPC, no HTTP dependencies.
+/// Uses BTSP handshake for family-scoped sockets in production mode,
+/// falls back to cleartext JSON-RPC for development or non-family sockets.
+///
+/// Returns the full JSON-RPC response envelope (preserving `result`/`error`
+/// fields for callers that inspect the envelope shape).
 async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<Value> {
+    use biomeos_core::btsp_client;
+    use std::path::Path;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
     use tokio::time::timeout;
 
     let connect_timeout =
         Duration::from_millis(biomeos_types::constants::timeouts::DEFAULT_CONNECTION_TIMEOUT_MS);
     let read_timeout = biomeos_types::constants::DEFAULT_REQUEST_TIMEOUT;
-
     let request_json = serde_json::to_string(request)?;
-    let stream = timeout(connect_timeout, UnixStream::connect(socket_path))
-        .await
-        .with_context(|| format!("Connect timeout ({connect_timeout:?}) to {socket_path}"))?
-        .with_context(|| format!("Failed to connect to {socket_path}"))?;
+
+    let path = Path::new(socket_path);
+    let use_btsp = btsp_client::is_family_scoped_socket(path)
+        && matches!(
+            btsp_client::security_mode(),
+            btsp_client::SecurityMode::Production {
+                btsp_available: true
+            }
+        );
+
+    let stream = timeout(
+        connect_timeout,
+        tokio::net::UnixStream::connect(socket_path),
+    )
+    .await
+    .with_context(|| format!("Connect timeout ({connect_timeout:?}) to {socket_path}"))?
+    .with_context(|| format!("Failed to connect to {socket_path}"))?;
+
+    let stream = if use_btsp {
+        debug!("Executor RPC: BTSP handshake for {socket_path}");
+        match btsp_client::perform_client_handshake(stream).await {
+            Ok(reader) => reader.into_inner(),
+            Err(e) => {
+                warn!(
+                    "Executor RPC: BTSP handshake failed for {socket_path}, falling back to cleartext: {e}"
+                );
+                timeout(
+                    connect_timeout,
+                    tokio::net::UnixStream::connect(socket_path),
+                )
+                .await
+                .with_context(|| {
+                    format!("Reconnect timeout ({connect_timeout:?}) to {socket_path}")
+                })?
+                .with_context(|| format!("Failed to reconnect to {socket_path}"))?
+            }
+        }
+    } else {
+        stream
+    };
 
     let (read_half, mut write_half) = stream.into_split();
 
@@ -454,7 +494,7 @@ async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<
     write_half.write_all(b"\n").await?;
     write_half.flush().await?;
 
-    let mut reader = BufReader::new(read_half);
+    let mut reader = tokio::io::BufReader::new(read_half);
     let mut response_line = String::new();
     timeout(read_timeout, reader.read_line(&mut response_line))
         .await

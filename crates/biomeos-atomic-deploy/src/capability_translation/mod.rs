@@ -176,7 +176,10 @@ impl CapabilityTranslationRegistry {
         }
     }
 
-    /// Call a capability with automatic translation
+    /// Call a capability with automatic translation.
+    ///
+    /// Uses BTSP-authenticated channels for family-scoped sockets in production
+    /// mode, falling back to cleartext JSON-RPC otherwise.
     pub async fn call_capability(
         &self,
         semantic: &str,
@@ -187,7 +190,7 @@ impl CapabilityTranslationRegistry {
             .ok_or_else(|| anyhow!("No provider for capability: {semantic}"))?;
 
         info!(
-            "🔄 Translating {} → {} (provider: {}, socket: {})",
+            "Translating {} → {} (provider: {}, socket: {})",
             semantic, translation.actual_method, translation.provider, translation.socket
         );
         debug!("   Params (semantic): {}", params);
@@ -214,25 +217,67 @@ impl CapabilityTranslationRegistry {
         let client = AtomicClient::unix(&translation.socket);
 
         info!(
-            "→ Provider RPC: method={}, socket={}",
+            "Provider RPC: method={}, socket={}",
             translation.actual_method, translation.socket
         );
-        trace!("→ Params: {}", mapped_params);
+        trace!("Params: {}", mapped_params);
 
-        let result = client
-            .call(&translation.actual_method, mapped_params)
-            .await
-            .map_err(|e| {
-                anyhow!(
-                    "Provider {} error for {}: {}",
-                    translation.provider,
-                    semantic,
-                    e
-                )
-            })?;
+        let socket_path = std::path::Path::new(&translation.socket);
+        let result = if biomeos_core::btsp_client::is_family_scoped_socket(socket_path) {
+            match biomeos_core::btsp_client::security_mode() {
+                biomeos_core::btsp_client::SecurityMode::Production { btsp_available }
+                    if btsp_available =>
+                {
+                    debug!("BTSP handshake for capability {semantic}");
+                    match client
+                        .call_btsp(&translation.actual_method, mapped_params.clone())
+                        .await
+                    {
+                        Ok(value) => value,
+                        Err(e) => {
+                            debug!("BTSP failed for {semantic}, falling back to cleartext: {e}");
+                            client
+                                .call(&translation.actual_method, mapped_params)
+                                .await
+                                .map_err(|e| {
+                                    anyhow!(
+                                        "Provider {} error for {}: {}",
+                                        translation.provider,
+                                        semantic,
+                                        e
+                                    )
+                                })?
+                        }
+                    }
+                }
+                _ => client
+                    .call(&translation.actual_method, mapped_params)
+                    .await
+                    .map_err(|e| {
+                        anyhow!(
+                            "Provider {} error for {}: {}",
+                            translation.provider,
+                            semantic,
+                            e
+                        )
+                    })?,
+            }
+        } else {
+            client
+                .call(&translation.actual_method, mapped_params)
+                .await
+                .map_err(|e| {
+                    anyhow!(
+                        "Provider {} error for {}: {}",
+                        translation.provider,
+                        semantic,
+                        e
+                    )
+                })?
+        };
 
-        info!("← Provider RPC response received");
-        trace!("← Result: {}", result);
+        info!("Provider RPC response received");
+        trace!("Result: {}", result);
 
         Ok(result)
     }
