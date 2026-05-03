@@ -2,6 +2,46 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.40 (2026-05-03) — BTSP Phase 3 Live + BTSP-Aware Capability Resolution
+
+### Phase 3 encrypted framing wired into connection loop
+- `connection.rs` now detects `btsp.negotiate` as the first post-handshake message.
+  If negotiation succeeds with a real cipher, the connection switches to
+  length-prefixed encrypted framing (ChaCha20-Poly1305 AEAD); if negotiation
+  returns `"null"` or the first message is not `btsp.negotiate`, the connection
+  stays on plaintext NDJSON. 16 MB frame guard, 30 s read timeout.
+- `btsp_negotiate.rs`: `dead_code` annotations removed — `SessionKeys`,
+  `encrypt_frame`, `decrypt_frame`, `FrameError` are now live production code.
+- 7 new connection tests: roundtrip encrypted stream, wrong-key rejection,
+  oversized frame protection, full negotiate-then-encrypted e2e, null-cipher
+  fallback, non-negotiate-first-line fallback.
+
+### BTSP-aware resolution for all capability paths
+- `executor/node_handlers.rs` (`call_primal_rpc`): family-scoped sockets now
+  perform `btsp_client::perform_client_handshake` before sending JSON-RPC.
+  Falls back to cleartext on handshake failure. Preserves raw JSON-RPC
+  envelope contract for existing callers.
+- `capability_translation/mod.rs` (`call_capability`): uses
+  `AtomicClient::call_btsp()` for family-scoped sockets in production mode,
+  with cleartext fallback.
+
+### Remaining hardcoded primal names eliminated
+- `orchestrator.rs`: `BEARDOG_FAMILY_SEED_FILE` → `SECURITY_PROVIDER_FAMILY_SEED_FILE`.
+- `btsp_client.rs`: `BEARDOG_SOCKET` / `BIOMEOS_BEARDOG_SOCKET` env var
+  fallbacks removed; only `SECURITY_PROVIDER_SOCKET` retained.
+- `primal_impls.rs`: `SONGBIRD_NODE_ID` removed; `NODE_ID` is canonical.
+- `config/mod.rs`: `DISCOVERY_PROVIDER` env var for mesh orchestrator
+  resolution, defaulting to `primal_names` constant.
+- `main.rs`: "rhizoCrypt session" → "Provenance session" in CLI help.
+- 14 neural_api_server modules: comments updated from hardcoded primal names
+  to capability-domain language.
+
+### Codebase health
+- 7,859 tests (0 failures, fully concurrent).
+- 0 production files >800 LOC.
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo check` + `clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.39 (2026-05-02) — Capability-Based Identity Evolution
 
 ### Hardcoded primal identities eliminated from production code

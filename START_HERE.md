@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: May 2, 2026
-**Status**: Production Ready (v3.39) — Capability-based identity (zero hardcoded primal names in production), BTSP Phase 3 FULL (ChaCha20-Poly1305 encrypted framing, HKDF-SHA256 key derivation, base64 nonces, Zeroize), 8,076+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: May 3, 2026
+**Status**: Production Ready (v3.40) — BTSP Phase 3 LIVE (encrypted framing wired into connection loop, BTSP-aware capability resolution on all paths), capability-based identity (zero hardcoded primal names in production), 7,859 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.39 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed, BTSP Phase 3 FULL, capability-based identity)
+**Status**: Production Ready (v3.40 — zero blocking debt, deep debt audit CLEAN, all primalSpring audit gaps addressed, BTSP Phase 3 LIVE, capability-based identity, BTSP-aware capability resolution)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
@@ -178,5 +178,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 8,076+ passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 (IPs, paths, primal names all centralized) | **Box\<dyn Error\>**: 0 | **Production files >800L**: 0
+**Tests**: 7,859 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 (IPs, paths, primal names all centralized) | **Box\<dyn Error\>**: 0 | **Production files >800L**: 0
 **Updated**: May 2, 2026

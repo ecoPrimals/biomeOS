@@ -48,7 +48,7 @@ Coverage, security audit, and `cargo deny` are run locally on demand — not in 
 |-------|--------|
 | Formatting | Enforced (`cargo fmt`) |
 | Linting | Enforced (`clippy -D warnings`, pedantic+nursery via workspace lints) |
-| Tests | 8,076+ passing (0 failures, fully concurrent) |
+| Tests | 7,859 passing (0 failures, fully concurrent) |
 | Coverage | 90%+ line / function / region (llvm-cov, local) |
 | Unsafe code | 0 (`#[forbid(unsafe_code)]` on all crate roots) |
 | TODO/FIXME/HACK | 0 in production code |

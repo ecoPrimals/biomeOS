@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 2, 2026 (v3.39: capability-based identity evolution — hardcoded primal names eliminated from production code; 8,076+ tests)
-**Version**: 3.39
-**Status**: PRODUCTION READY - BTSP Phase 3 FULL (9th of 13 primals) - Capability-Based Identity (zero hardcoded primal names in production) - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
+**Updated**: May 3, 2026 (v3.40: BTSP Phase 3 live — encrypted framing wired into connection loop, BTSP-aware capability resolution on all paths; 7,859 tests)
+**Version**: 3.40
+**Status**: PRODUCTION READY - BTSP Phase 3 LIVE (encrypted framing active in connection loop) - BTSP-Aware Capability Resolution (all capability paths) - Capability-Based Identity (zero hardcoded primal names in production) - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,076+ lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,859 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -34,6 +34,7 @@
 | **Discovery Model** | 5-tier capability-first protocol (centralized) + taxonomy + manifest fallback |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **BTSP Phase 3 Live v3.40 (May 3)** | **Encrypted framing wired**: `connection.rs` detects `btsp.negotiate` post-handshake, switches to ChaCha20-Poly1305 length-prefixed framing or falls back to NDJSON. `dead_code` annotations removed from `encrypt_frame`/`decrypt_frame`/`SessionKeys`/`FrameError`. **BTSP-aware resolution**: `call_primal_rpc` performs client handshake for family-scoped sockets. `call_capability` uses `call_btsp()` in production. Both paths have cleartext fallback. **Hardcoded names**: `BEARDOG_FAMILY_SEED_FILE`→`SECURITY_PROVIDER_FAMILY_SEED_FILE`, `BEARDOG_SOCKET`/`BIOMEOS_BEARDOG_SOCKET` removed, `SONGBIRD_NODE_ID` removed, `DISCOVERY_PROVIDER` env var, 14 comment files updated. 7,859 tests (0 failures), all production files <800 LOC. |
 | **Deep Debt Cleanup v3.30 (Apr 28)** | **events.rs refactor**: 831→385 LOC, test module extracted to sibling file. **thiserror**: `RpcExtractionError` manual Error→derive. **JWT evolution**: `CHANGE_ME_IN_PRODUCTION`→family-derived fallback. **/tmp centralization**: 2 remaining `/tmp` literals→`DEFAULT_SOCKET_DIR`. **skip-signature plumbing**: `GraphLoader.with_skip_integrity()` + `load_file()`, CLI flag fully wired. **#[expect] hardening**: 9 root test files migrated from `#[allow]`. **Dep versions**: `neural-api-client` + `biomeos-api` path dep versions added. |
 | **primalSpring Phase 55 v3.29 (Apr 28)** | **Graph signing**: `GraphMetadata` gains `content_hash`/`signature`/`signed_by`. New `biomeos-graph::integrity` module (BLAKE3+Ed25519). `GraphLoader` verifies hash and enforces signature for `mito_beacon`+`nuclear` tiers. `graph.verify` JSON-RPC method. `biomeos graph sign/verify` CLI. **Schema alignment**: `[graph.environment]` alias, per-node `capabilities = [...]` merge, optional `graph.id` with filename derivation. **NUCLEUS evolution**: `coordination_pubkey` cached in `NeuralApiServer` via BearDog RPC. `specs/BIOMEOS_NUCLEUS_EVOLUTION.md` design spec (3-phase roadmap). |
 | **Deep Debt Cleanup v3.28 (Apr 26)** | **Centralised constants**: `DEFAULT_FAMILY_ID` added to `biomeos-types/defaults.rs`, ~20 hardcoded `"default"` fallbacks replaced across 16 files. **Primal names in tools**: `tools/harvest` and `tools/ecosystem_health` migrated from raw strings to `primal_names::*` constants; harvest roster synced with canonical set. **thiserror migration**: `NeuralError`, `BtspHandshakeError`, `CastError`, `EnrollmentValidationError` evolved from manual `impl Display+Error` to `#[derive(thiserror::Error)]`. **Real system queries**: `ecosystem_health.rs` mock sovereignty→live UDS probe, mock resources→`/proc/meminfo`+`/proc/loadavg`+`df`+`/proc/net/route`. **Arc executor**: `GraphExecutor` builds `HashMap<String, Arc<GraphNode>>` once; phase workers share Arc refs (O(1) lookup, no deep clone). **Event refactor**: `detect_and_emit_changes` split into 5 subfunctions, `#[expect(clippy::too_many_lines)]` removed, per-event clones eliminated. **Path dedup**: `neural-api-client-sync` local `LINUX_RUNTIME_DIR_PREFIX`→import; `continuous.rs` `/tmp`→`DEFAULT_SOCKET_DIR`. **rtnetlink**: confirmed active in `biomeos-deploy/network.rs`, documented as accepted thin FFI. |
@@ -974,7 +975,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (8,076+ tests — fully concurrent)
+# Test (7,859 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -996,8 +997,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.39 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt, all primalSpring audit gaps resolved)
-**Tests**: 8,076+ passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.40 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt, all primalSpring audit gaps resolved, BTSP Phase 3 LIVE)
+**Tests**: 7,859 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
