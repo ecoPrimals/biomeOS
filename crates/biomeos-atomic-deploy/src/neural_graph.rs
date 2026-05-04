@@ -238,8 +238,8 @@ impl Graph {
     /// Convert a `[[graph.nodes]]` (`DeploymentGraph`) node into the `neural_graph` `GraphNode` schema.
     ///
     /// Accepts both biomeOS-native fields (`id`, `capability`, `config.primal`) and
-    /// primalSpring cell-graph fields (`name`, `binary`, `by_capability`, `order`),
-    /// mapping the latter into the canonical format.
+    /// primalSpring cell-graph fields (`name`, `binary`, `by_capability`, `order`,
+    /// `security_model`), mapping the latter into the canonical format.
     fn convert_deployment_node(node_value: &toml::Value) -> anyhow::Result<GraphNode> {
         let table = node_value.as_table().context("Node must be a TOML table")?;
 
@@ -375,6 +375,12 @@ impl Graph {
         }
         if !params.is_empty() {
             config.insert("params".to_string(), serde_json::json!(params));
+        }
+        if let Some(security_model) = table.get("security_model").and_then(|v| v.as_str()) {
+            config.insert(
+                "security_model".to_string(),
+                serde_json::Value::String(security_model.to_string()),
+            );
         }
 
         let mut capabilities = if capability.is_empty() {

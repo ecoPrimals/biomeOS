@@ -235,7 +235,19 @@ impl GraphHandler {
                 let capability = n
                     .operation
                     .as_ref()
-                    .map(|op| op.name.clone())
+                    .and_then(|op| {
+                        op.params
+                            .get("capability")
+                            .and_then(|v| v.as_str())
+                            .map(String::from)
+                            .or_else(|| {
+                                if op.name == "capability_call" {
+                                    None
+                                } else {
+                                    Some(op.name.clone())
+                                }
+                            })
+                    })
                     .or_else(|| n.capabilities.first().cloned());
 
                 let fallback_id = format!("node-{i}");

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: May 3, 2026 (v3.41: Client-side Phase 3 outbound encrypted framing + hardcoded env var elimination; 7,866 tests)
-**Version**: 3.41
+**Updated**: May 4, 2026 (v3.42: Deep debt audit — final BEARDOG_NODE_ID elimination, coordinator transport migration, graph schema alignment; 7,866 tests)
+**Version**: 3.42
 **Status**: PRODUCTION READY - BTSP Phase 3 FULL (server-side + client-side outbound encrypted framing) - Capability-Based Identity (zero hardcoded primal names or env vars in production) - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
 
 ---

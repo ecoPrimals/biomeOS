@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: May 3, 2026
+**Updated**: May 4, 2026
 
 ---
 
@@ -54,7 +54,13 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 
 Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handoffs/`.
 
-### Recent (April 2026)
+### Recent (May 2026)
+
+| Document | Focus | Date |
+|----------|-------|------|
+| BIOMEOS_V342_COORDINATOR_TRANSPORT_GRAPH_SCHEMA_HANDOFF | Coordinator transport migration to `call_btsp`, graph schema PG-39 fix, final BEARDOG_NODE_ID sweep, 7,866 tests | May 4, 2026 |
+
+### April 2026
 
 | Document | Focus | Date |
 |----------|-------|------|
@@ -143,7 +149,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (7,859 tests — 0 ignored — fully concurrent)
+# Test (7,866 tests — 0 ignored — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -168,8 +174,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of May 3, 2026 (v3.40)**
-**Active: 25 specs, handoffs in wateringHole (v2.43–v3.40), 4 scripts**
+**Documentation current as of May 4, 2026 (v3.42)**
+**Active: 25 specs, handoffs in wateringHole (v2.43–v3.42), 4 scripts**
 **Deploy graphs: 42 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE (encrypted framing in connection loop); BTSP-aware capability resolution; `primal.list` on neural-api; bootstrap tolerance; graph signing (BLAKE3+Ed25519); coordination key caching**
-**Tests: 7,859 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**
+**Tests: 7,866 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**

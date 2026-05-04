@@ -293,17 +293,16 @@ impl SporeVerifier {
             .and_then(|p| p.as_array())
             .and_then(|arr| arr.first())
             .and_then(|primal| primal.get("env"))
-            .and_then(|env| env.get("BEARDOG_NODE_ID").or_else(|| env.get("SONGBIRD_NODE_ID")))
+            .and_then(|env| env.get("NODE_ID"))
             .and_then(|v| v.as_str())
             .or_else(|| {
-                // Fallback: try old format
                 tower_toml
                     .get("tower")
                     .and_then(|t| t.get("NODE_ID"))
                     .or_else(|| tower_toml.get("node_id"))
                     .and_then(|v| v.as_str())
             })
-            .ok_or_else(|| anyhow::anyhow!("node_id not found in tower.toml (tried primals.env.BEARDOG_NODE_ID, tower.NODE_ID, node_id)"))?
+            .ok_or_else(|| anyhow::anyhow!("node_id not found in tower.toml (tried primals.env.NODE_ID, tower.NODE_ID, node_id)"))?
             .to_string();
 
         Ok(node_id)
@@ -491,7 +490,7 @@ mod tests {
 [[primals]]
 name = "beardog"
 [primals.env]
-BEARDOG_NODE_ID = "test-node-123"
+NODE_ID = "test-node-123"
 "#;
         std::fs::write(&tower_toml, content).unwrap();
 
@@ -501,7 +500,7 @@ BEARDOG_NODE_ID = "test-node-123"
             .and_then(|p| p.as_array())
             .and_then(|arr| arr.first())
             .and_then(|primal| primal.get("env"))
-            .and_then(|env| env.get("BEARDOG_NODE_ID"))
+            .and_then(|env| env.get("NODE_ID"))
             .and_then(|v| v.as_str());
 
         assert_eq!(node_id, Some("test-node-123"));

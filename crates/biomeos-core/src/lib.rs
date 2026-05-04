@@ -117,7 +117,7 @@ pub mod sovereignty_guardian;
 )]
 mod sovereignty_guardian_tests;
 
-// NUCLEUS model cache (NestGate-integrated, filesystem fallback)
+// NUCLEUS model cache (storage-provider integrated, filesystem fallback)
 pub mod model_cache;
 
 // Plasmodium - Over-NUCLEUS coordination (slime mold collective)

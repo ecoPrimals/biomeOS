@@ -353,11 +353,12 @@ impl NeuralApiServer {
         let client =
             AtomicClient::unix(&socket_path).with_timeout(std::time::Duration::from_secs(5));
         let result = client
-            .call(
+            .call_btsp(
                 "crypto.derive_public_key",
                 serde_json::json!({"purpose": "coordination"}),
             )
-            .await;
+            .await
+            .map_err(|e| anyhow::anyhow!(e));
 
         match result {
             Ok(resp) => {

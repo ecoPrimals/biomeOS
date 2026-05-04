@@ -271,8 +271,7 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
     }
 
     cmd.env("FAMILY_ID", config.family_id)
-        .env("NODE_ID", config.node_id)
-        .env("BEARDOG_NODE_ID", config.node_id);
+        .env("NODE_ID", config.node_id);
     cmd
 }
 

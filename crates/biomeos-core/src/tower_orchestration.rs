@@ -282,9 +282,7 @@ pub async fn run_tower(
         }
     });
 
-    let node_id = env("NODE_ID")
-        .or_else(|| env("BEARDOG_NODE_ID"))
-        .unwrap_or_else(|| "unknown-node".to_string());
+    let node_id = env("NODE_ID").unwrap_or_else(|| "unknown-node".to_string());
     let log_tracker = Arc::new(LogSessionTracker::new(node_id));
 
     tokio::signal::ctrl_c().await?;
@@ -358,9 +356,7 @@ pub async fn start_tower_legacy(
         }
     });
 
-    let node_id = env("NODE_ID")
-        .or_else(|| env("BEARDOG_NODE_ID"))
-        .unwrap_or_else(|| "unknown-node".to_string());
+    let node_id = env("NODE_ID").unwrap_or_else(|| "unknown-node".to_string());
     let log_tracker = Arc::new(LogSessionTracker::new(node_id));
 
     tokio::signal::ctrl_c().await?;

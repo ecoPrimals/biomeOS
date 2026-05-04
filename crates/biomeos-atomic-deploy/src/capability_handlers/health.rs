@@ -23,11 +23,12 @@ use super::discovery::{known_primal_names, resolve_capability_to_primal};
 pub async fn call_primal_health(socket_path: &str) -> Result<bool> {
     use biomeos_core::atomic_client::AtomicClient;
 
-    // Create AtomicClient from socket path (supports Unix sockets)
     let client = AtomicClient::unix(socket_path);
 
-    // Use health.check method (semantic naming standard)
-    let response = client.call("health.check", json!({})).await?;
+    let response: serde_json::Value = client
+        .call_btsp("health.check", json!({}))
+        .await
+        .map_err(anyhow::Error::from)?;
 
     Ok(response
         .get("healthy")

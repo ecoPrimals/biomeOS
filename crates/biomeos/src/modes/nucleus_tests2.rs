@@ -690,10 +690,10 @@ fn test_build_primal_command_with_all_env_keys_set() {
         .find(|(k, _)| k == &std::ffi::OsStr::new("NODE_ID"));
     assert!(node.is_some());
     assert_eq!(node.unwrap().1.unwrap().to_string_lossy(), "node-42");
-    let beardog_node = envs
+    let node_id_env = envs
         .iter()
-        .find(|(k, _)| k == &std::ffi::OsStr::new("BEARDOG_NODE_ID"));
-    assert!(beardog_node.is_some());
+        .find(|(k, _)| k == &std::ffi::OsStr::new("NODE_ID"));
+    assert!(node_id_env.is_some());
 }
 
 #[test]

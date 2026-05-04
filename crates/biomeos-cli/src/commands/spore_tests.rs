@@ -313,7 +313,7 @@ node_id = "test-node"
 family_id = "test-family"
 
 [primals.env]
-BEARDOG_NODE_ID = "test-node"
+NODE_ID = "test-node"
 "#,
     )
     .expect("tower.toml");
@@ -495,7 +495,7 @@ node_id = "test-node"
 family_id = "test-family"
 
 [primals.env]
-BEARDOG_NODE_ID = "test-node"
+NODE_ID = "test-node"
 "#,
     )
     .expect("tower.toml");
@@ -587,7 +587,7 @@ node_id = "stale-node"
 family_id = "fam"
 
 [primals.env]
-BEARDOG_NODE_ID = "stale-node"
+NODE_ID = "stale-node"
 "#,
     )
     .expect("tower.toml");

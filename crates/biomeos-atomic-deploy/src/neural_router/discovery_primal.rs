@@ -91,7 +91,10 @@ impl NeuralRouter {
 
         let client = AtomicClient::from_endpoint(endpoint.clone()).with_timeout(health_timeout);
 
-        match client.call("health.check", serde_json::json!({})).await {
+        match client
+            .call_btsp("health.check", serde_json::json!({}))
+            .await
+        {
             Ok(response) => response
                 .get("healthy")
                 .and_then(|h| h.as_bool())
@@ -111,6 +114,7 @@ impl NeuralRouter {
     /// Uses `AtomicClient::from_endpoint` which handles all transports
     /// correctly. No `Path::exists()` guard — abstract sockets and TCP
     /// endpoints are probed via connection attempt + JSON-RPC call.
+    /// BTSP Phase 3 negotiation is attempted on Unix socket endpoints.
     pub(crate) async fn check_endpoint_health(endpoint: &TransportEndpoint) -> bool {
         use tokio::time::{Duration, timeout};
 
@@ -118,7 +122,10 @@ impl NeuralRouter {
             let client =
                 AtomicClient::from_endpoint(endpoint.clone()).with_timeout(Duration::from_secs(2));
 
-            let response = client.call("health.check", serde_json::json!({})).await?;
+            let response = client
+                .call_btsp("health.check", serde_json::json!({}))
+                .await
+                .map_err(|e| anyhow::anyhow!(e))?;
             Ok::<bool, anyhow::Error>(
                 response
                     .get("healthy")

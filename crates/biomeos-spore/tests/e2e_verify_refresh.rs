@@ -88,7 +88,7 @@ family_id = "test-family"
 node_id = "test-node"
 
 [primals.env]
-BEARDOG_NODE_ID = "test-node"
+NODE_ID = "test-node"
 "#;
     fs::write(spore_path.join("tower.toml"), tower_toml)
         .await
@@ -177,7 +177,7 @@ family_id = "test-family"
 node_id = "test-node"
 
 [primals.env]
-BEARDOG_NODE_ID = "test-node"
+NODE_ID = "test-node"
 "#;
     fs::write(spore_path.join("tower.toml"), tower_toml)
         .await
@@ -324,7 +324,7 @@ family_id = "test-family"
 node_id = "test-node"
 
 [primals.env]
-BEARDOG_NODE_ID = "test-node"
+NODE_ID = "test-node"
 "#;
     fs::write(spore_path.join("tower.toml"), tower_toml)
         .await
@@ -368,7 +368,7 @@ family_id = "test-family"
 node_id = "test-node-{i}"
 
 [primals.env]
-BEARDOG_NODE_ID = "test-node-{i}"
+NODE_ID = "test-node-{i}"
 "#
         );
         fs::write(spore_path.join("tower.toml"), tower_toml)

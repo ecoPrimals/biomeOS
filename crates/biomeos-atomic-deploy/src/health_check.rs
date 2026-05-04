@@ -178,13 +178,12 @@ impl HealthChecker {
     ///
     /// Uses `AtomicClient` with configurable timeout for health checks.
     async fn rpc_ping(&self, socket_path: &Path, method: &str) -> Result<serde_json::Value> {
-        // Create AtomicClient with configured timeout
         let client = AtomicClient::unix(socket_path).with_timeout(self.rpc_timeout);
 
-        // Call the health method
         client
-            .call(method, json!({}))
+            .call_btsp(method, json!({}))
             .await
+            .map_err(|e| anyhow::anyhow!(e))
             .context("RPC ping failed")
     }
 

@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 3, 2026 (v3.41: BTSP Phase 3 full (server + client), hardcoded env var elimination, capability-based identity complete, 7,866 tests)
+**Updated**: May 4, 2026 (v3.42: final BEARDOG_NODE_ID sweep, coordinator transport migration, graph schema alignment, 7,866 tests)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---

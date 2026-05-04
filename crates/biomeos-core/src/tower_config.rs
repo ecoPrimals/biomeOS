@@ -260,7 +260,7 @@ provides = ["Security"]
 protocol = "tarpc"
 
 [primals.env]
-BEARDOG_NODE_ID = "test"
+NODE_ID = "test"
 "#;
 
         let config = TowerConfig::from_toml(toml).unwrap();
@@ -293,7 +293,7 @@ binary = "./primals/beardog"
 provides = ["Security"]
 
 [primals.env]
-BEARDOG_NODE_ID = "test"
+NODE_ID = "test"
 "#;
 
         let config = TowerConfig::from_toml(toml).unwrap();
@@ -388,7 +388,7 @@ provides = ["Security"]
 http_port = 9000
 
 [primals.env]
-BEARDOG_NODE_ID = "tower1"
+NODE_ID = "tower1"
 "#;
 
         let config = TowerConfig::from_toml(toml).unwrap();

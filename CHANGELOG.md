@@ -2,6 +2,43 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.42 (2026-05-04) — Final Hardcoded Env Var Sweep + Coordinator Transport + Graph Schema
+
+### Coordinator transport migration (primalSpring Phase 58 HIGH)
+- `discovery_init.rs`: `derive_coordination_key` now uses `call_btsp` for
+  security provider crypto operations (encrypted when Phase 3 supported).
+- `capability_handlers/health.rs`: `call_primal_health` uses `call_btsp` for
+  health probes.
+- `health_check.rs`: `rpc_ping` uses `call_btsp` for lifecycle health pings.
+- `neural_router/discovery_primal.rs`: `quick_health_check` and
+  `check_endpoint_health` use `call_btsp` for discovery probes.
+
+### Graph schema alignment PG-39 (primalSpring Phase 58 LOW)
+- `handlers/graph/mod.rs`: `neural_to_deployment` fixed — capability field now
+  extracts the real capability string from `operation.params["capability"]`
+  instead of using `"capability_call"`.
+- `neural_graph.rs`: `convert_deployment_node` now passes through
+  `security_model` field from primalSpring graph definitions.
+
+### Final BEARDOG_NODE_ID elimination
+- `tower_orchestration.rs`: removed 2 `BEARDOG_NODE_ID` env var fallbacks;
+  `NODE_ID` is now the sole env var.
+- `nucleus.rs`: removed redundant `.env("BEARDOG_NODE_ID", ...)` from primal
+  spawner. Only `NODE_ID` is set.
+- `verification.rs`: updated node-id extraction to look for `NODE_ID` instead
+  of `BEARDOG_NODE_ID` in tower config parsing.
+- `lib.rs`: comment "NestGate-integrated" → "storage-provider integrated".
+- 7 test files updated to use agnostic `NODE_ID` in test data.
+
+### Codebase health
+- 7,866 tests (0 failures, fully concurrent).
+- 0 production files >800 LOC (largest: 798).
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- 0 hardcoded primal names or env vars in production code.
+- 52 external dependencies — all pure Rust ecosystem standard.
+  Zero C-wrappers, pure RustCrypto (no openssl/ring).
+- `cargo check` + `clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.41 (2026-05-03) — Client-Side Phase 3 + Hardcoded Env Var Elimination
 
 ### Client-side BTSP Phase 3 outbound encrypted framing
