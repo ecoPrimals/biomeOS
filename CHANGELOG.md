@@ -2,6 +2,22 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.43 (2026-05-05) — Discovery Schema Alignment + primalSpring Phase 59 Audit
+
+### capability.discover response schema alignment
+- `registry_queries.rs`: `discover_via_registry_by_capability` now reads the
+  live Neural API response format (`primary_endpoint`, `primals[].name`)
+  instead of the stale schema (`primary_socket`, `provider`). Backward-
+  compatible fallback for legacy format. Endpoint strings parsed via
+  `TransportEndpoint::parse()` for full transport support (Unix/TCP/HTTP).
+- 1 new test: `discover_via_registry_by_capability_live_format`.
+
+### Codebase health
+- 7,867 tests (0 failures, fully concurrent).
+- 0 production files >800 LOC, 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- 0 hardcoded primal names or env vars in production code.
+- `cargo check` + `clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.42 (2026-05-04) — Final Hardcoded Env Var Sweep + Coordinator Transport + Graph Schema
 
 ### Coordinator transport migration (primalSpring Phase 58 HIGH)

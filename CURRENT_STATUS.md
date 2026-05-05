@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: May 4, 2026 (v3.42: Deep debt audit — final BEARDOG_NODE_ID elimination, coordinator transport migration, graph schema alignment; 7,866 tests)
-**Version**: 3.42
+**Updated**: May 5, 2026 (v3.43: Discovery schema alignment — registry_queries.rs reads live Neural API response format; 7,867 tests)
+**Version**: 3.43
 **Status**: PRODUCTION READY - BTSP Phase 3 FULL (server-side + client-side outbound encrypted framing) - Capability-Based Identity (zero hardcoded primal names or env vars in production) - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
 
 ---

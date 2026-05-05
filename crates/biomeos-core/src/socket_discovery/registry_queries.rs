@@ -87,12 +87,16 @@ impl SocketDiscovery {
             .await
         {
             Ok(result) => {
-                let endpoint = if let Some(socket_path) =
-                    result.get("primary_socket").and_then(|s| s.as_str())
+                let endpoint = if let Some(ep) = result
+                    .get("primary_endpoint")
+                    .or_else(|| result.get("primary_socket"))
+                    .and_then(|s| s.as_str())
                 {
-                    TransportEndpoint::UnixSocket {
-                        path: PathBuf::from(socket_path),
-                    }
+                    TransportEndpoint::parse(ep).or_else(|| {
+                        Some(TransportEndpoint::UnixSocket {
+                            path: PathBuf::from(ep),
+                        })
+                    })?
                 } else if let Some(tcp) = result.get("tcp_endpoint").and_then(|s| s.as_str()) {
                     TransportEndpoint::parse(tcp)?
                 } else {
@@ -100,8 +104,12 @@ impl SocketDiscovery {
                 };
 
                 let primal_name: Option<Arc<str>> = result
-                    .get("provider")
-                    .and_then(|p| p.as_str())
+                    .get("primals")
+                    .and_then(|p| p.as_array())
+                    .and_then(|arr| arr.first())
+                    .and_then(|p| p.get("name"))
+                    .and_then(|n| n.as_str())
+                    .or_else(|| result.get("provider").and_then(|p| p.as_str()))
                     .map(Arc::from);
 
                 let mut socket =
@@ -419,6 +427,35 @@ mod tests {
         match &found.endpoint {
             TransportEndpoint::UnixSocket { path } => {
                 assert_eq!(path, &PathBuf::from("/tmp/cap.sock"));
+            }
+            other => panic!("expected UnixSocket, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn discover_via_registry_by_capability_live_format() {
+        let result_json = serde_json::json!({
+            "capability": "crypto",
+            "primary_endpoint": "/tmp/beardog.sock",
+            "primals": [
+                {"name": "beardog", "endpoint": "/tmp/beardog.sock", "healthy": true, "capabilities": ["crypto"]}
+            ]
+        });
+        let line = format!(
+            "{{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}}\n",
+            result_json
+        );
+        let (_dir, sock) = spawn_neural_api_mock(line).await;
+        let discovery = SocketDiscovery::new("fam").with_neural_api(sock.clone());
+        let found = discovery
+            .discover_via_registry_by_capability("crypto")
+            .await
+            .expect("discovered via live format");
+        assert_eq!(found.primal_name.as_deref(), Some("beardog"));
+        assert!(found.capabilities.contains(&"crypto".to_string()));
+        match &found.endpoint {
+            TransportEndpoint::UnixSocket { path } => {
+                assert_eq!(path, &PathBuf::from("/tmp/beardog.sock"));
             }
             other => panic!("expected UnixSocket, got {other:?}"),
         }
