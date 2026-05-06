@@ -92,7 +92,7 @@ enum Mode {
         #[arg(long, requires = "port")]
         tcp_only: bool,
 
-        /// TCP bind address (default: 0.0.0.0). Use 127.0.0.1 for localhost only.
+        /// TCP bind address (default: 127.0.0.1). Use 0.0.0.0 for all interfaces.
         #[arg(long)]
         bind: Option<String>,
 
@@ -140,7 +140,7 @@ enum Mode {
         #[arg(long)]
         socket: Option<PathBuf>,
 
-        /// TCP bind address (default: 0.0.0.0). Use 127.0.0.1 for localhost only.
+        /// TCP bind address (default: 127.0.0.1). Use 0.0.0.0 for all interfaces.
         #[arg(long)]
         bind: Option<String>,
 
@@ -242,6 +242,10 @@ enum Mode {
         /// TCP-only mode: skip Unix socket for Neural API (mobile substrates)
         #[arg(long, requires = "port")]
         tcp_only: bool,
+
+        /// TCP bind address (default: 127.0.0.1). Use 0.0.0.0 for all interfaces.
+        #[arg(long)]
+        bind: Option<String>,
     },
 }
 
@@ -474,7 +478,8 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             family_id,
             port,
             tcp_only,
-        } => modes::nucleus::run(nucleus_mode, node_id, family_id, port, tcp_only).await,
+            bind,
+        } => modes::nucleus::run(nucleus_mode, node_id, family_id, port, tcp_only, bind).await,
     }
 }
 

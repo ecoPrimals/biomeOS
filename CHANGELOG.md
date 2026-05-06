@@ -2,24 +2,25 @@
 
 All notable changes to biomeOS will be documented in this file.
 
-## v3.44 (2026-05-06) — `--bind` Flag Standardization (PG-55)
+## v3.44 (2026-05-06) — `--bind` Flag Standardization + Localhost Default (PG-55 FULL)
 
 ### TCP bind address override (projectNUCLEUS Phase 2a security)
-- **PG-55 resolved for biomeOS**: All TCP bind paths now accept `--bind <host>`
-  to override the default `0.0.0.0` (all-interfaces) binding.
-- `biomeos-types`: new `tcp_bind_addr_with_host(Option<&str>, u16)` helper
-  parses IP or `host:port` with fallback to `0.0.0.0:port`.
-- `NeuralApiServer`: new `bind_address: Option<String>` field + `with_bind_address()`
-  builder. `server_lifecycle.rs` uses the override when binding TCP.
+- **PG-55 fully resolved for biomeOS**: All TCP bind paths now accept
+  `--bind <host>` and default to `127.0.0.1` (localhost-only).
+  Use `--bind 0.0.0.0` to explicitly opt in to all-interfaces binding.
+- `biomeos-types`: new `default_tcp_bind_addr(port)` returns `127.0.0.1:port`.
+  `tcp_bind_addr_with_host(None, port)` now falls back to localhost, not `0.0.0.0`.
+- `NeuralApiServer`: new `bind_address: Option<String>` field + `with_bind_address()`.
 - `biomeos neural-api --bind <host>`: CLI flag threads through to the server.
 - `neural-api-server` standalone binary: `--bind <host>` support added.
-- `biomeos api --bind <host>`: CLI flag added for the API server TCP path.
+- `biomeos api --bind <host>`: CLI flag for the API server TCP path.
+- `biomeos nucleus --bind <host>`: Nucleus mode now forwards `--bind` to the
+  embedded Neural API server (was previously hardcoded to `None`).
 - `biomeos_api::serve_tcp()`: now accepts `bind_host: Option<&str>`.
-- Nucleus mode passes `None` (default behavior preserved).
-- 5 new tests for `tcp_bind_addr_with_host` (None, localhost, IPv6, full addr, invalid).
+- 6 new tests for bind address helpers.
 
 ### Codebase health
-- 6,841 lib tests (0 failures, fully concurrent).
+- 6,842 lib tests (0 failures, fully concurrent).
 - 0 unsafe, 0 TODO/FIXME, 0 production mocks.
 - `cargo clippy -D warnings` + `cargo fmt --check`: all clean.
 

@@ -315,6 +315,7 @@ pub async fn run(
     family_id: Option<String>,
     tcp_port: Option<u16>,
     tcp_only: bool,
+    bind: Option<String>,
 ) -> Result<()> {
     let config = resolve_startup_config(&mode, &node_id, family_id.as_deref())?;
     let mode = config.mode;
@@ -454,9 +455,13 @@ pub async fn run(
         } else {
             info!("  Socket: {}", neural_socket.display());
         }
+        if let Some(ref addr) = bind {
+            info!("  Bind Address: {addr}");
+        }
         let neural_family = family_id.clone();
         let neural_tcp_port = tcp_port;
         let neural_tcp_only = tcp_only;
+        let neural_bind = bind.clone();
         tokio::spawn(async move {
             if let Err(e) = super::neural_api::run(
                 graphs_dir,
@@ -464,7 +469,7 @@ pub async fn run(
                 Some(neural_socket),
                 neural_tcp_port,
                 neural_tcp_only,
-                None,
+                neural_bind,
                 false,
             )
             .await

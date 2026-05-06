@@ -159,11 +159,21 @@ pub mod endpoints {
         std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), port)
     }
 
+    /// Default TCP bind address — localhost only.
+    ///
+    /// Primals bind `127.0.0.1` by default so TCP listeners are not exposed
+    /// on LAN. Use `--bind 0.0.0.0` to opt in to all-interfaces binding.
+    #[must_use]
+    pub const fn default_tcp_bind_addr(port: u16) -> std::net::SocketAddr {
+        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST), port)
+    }
+
     /// TCP bind address with an optional host override.
     ///
     /// If `bind_host` is `Some`, parses it as an IP address and binds to
-    /// `host:port`. If `None`, falls back to `0.0.0.0:port`.
+    /// `host:port`. If `None`, falls back to `127.0.0.1:port` (localhost).
     /// Accepts `"127.0.0.1"`, `"::1"`, `"0.0.0.0"`, or any valid IP.
+    /// Pass `"0.0.0.0"` explicitly to bind all interfaces.
     #[must_use]
     pub fn tcp_bind_addr_with_host(bind_host: Option<&str>, port: u16) -> std::net::SocketAddr {
         match bind_host {
@@ -173,10 +183,10 @@ pub mod endpoints {
                 } else if let Ok(ip) = host.parse::<std::net::IpAddr>() {
                     std::net::SocketAddr::new(ip, port)
                 } else {
-                    production_tcp_bind_addr(port)
+                    default_tcp_bind_addr(port)
                 }
             }
-            None => production_tcp_bind_addr(port),
+            None => default_tcp_bind_addr(port),
         }
     }
 }
@@ -549,11 +559,15 @@ mod tests {
     fn test_tcp_bind_addr_with_host() {
         let default = endpoints::tcp_bind_addr_with_host(None, 9000);
         assert_eq!(default.port(), 9000);
-        assert_eq!(default.ip(), std::net::Ipv4Addr::UNSPECIFIED);
+        assert_eq!(default.ip(), std::net::Ipv4Addr::LOCALHOST);
 
         let localhost = endpoints::tcp_bind_addr_with_host(Some("127.0.0.1"), 9000);
         assert_eq!(localhost.port(), 9000);
         assert_eq!(localhost.ip(), std::net::Ipv4Addr::LOCALHOST);
+
+        let all_interfaces = endpoints::tcp_bind_addr_with_host(Some("0.0.0.0"), 9000);
+        assert_eq!(all_interfaces.port(), 9000);
+        assert_eq!(all_interfaces.ip(), std::net::Ipv4Addr::UNSPECIFIED);
 
         let ipv6 = endpoints::tcp_bind_addr_with_host(Some("::1"), 8080);
         assert_eq!(ipv6.port(), 8080);
@@ -564,7 +578,14 @@ mod tests {
 
         let invalid = endpoints::tcp_bind_addr_with_host(Some("not-an-ip"), 9000);
         assert_eq!(invalid.port(), 9000);
-        assert_eq!(invalid.ip(), std::net::Ipv4Addr::UNSPECIFIED);
+        assert_eq!(invalid.ip(), std::net::Ipv4Addr::LOCALHOST);
+    }
+
+    #[test]
+    fn test_default_tcp_bind_addr_is_localhost() {
+        let addr = endpoints::default_tcp_bind_addr(8080);
+        assert_eq!(addr.ip(), std::net::Ipv4Addr::LOCALHOST);
+        assert_eq!(addr.port(), 8080);
     }
 
     #[test]

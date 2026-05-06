@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 6, 2026 (v3.44: `--bind` flag standardization PG-55 — Neural API + API server TCP bind override; 6,841 lib tests)
+**Updated**: May 6, 2026 (v3.44: `--bind` flag + localhost default, PG-55 FULL — all TCP paths default 127.0.0.1, Nucleus forwards --bind; 6,842 lib tests)
 **Version**: 3.44
-**Status**: PRODUCTION READY - BTSP Phase 3 FULL (server-side + client-side outbound encrypted framing) - Capability-Based Identity (zero hardcoded primal names or env vars in production) - PG-55 Resolved (`--bind` flag for TCP bind control) - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
+**Status**: PRODUCTION READY - BTSP Phase 3 FULL (server-side + client-side outbound encrypted framing) - Capability-Based Identity (zero hardcoded primal names or env vars in production) - PG-55 FULL (`--bind` flag + localhost default + Nucleus forwarding) - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 6,841+ lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 6,842+ lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
