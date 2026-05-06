@@ -92,6 +92,10 @@ enum Mode {
         #[arg(long, requires = "port")]
         tcp_only: bool,
 
+        /// TCP bind address (default: 0.0.0.0). Use 127.0.0.1 for localhost only.
+        #[arg(long)]
+        bind: Option<String>,
+
         /// Disable BTSP enforcement for unauthenticated JSON-RPC clients.
         /// Equivalent to BIOMEOS_BTSP_ENFORCE=0. Use during development or
         /// when downstream springs have not yet implemented the BTSP handshake.
@@ -135,6 +139,10 @@ enum Mode {
         /// Unix socket path (Unix socket mode, preferred)
         #[arg(long)]
         socket: Option<PathBuf>,
+
+        /// TCP bind address (default: 0.0.0.0). Use 127.0.0.1 for localhost only.
+        #[arg(long)]
+        bind: Option<String>,
 
         /// Disable HTTP, Unix socket only
         #[arg(long)]
@@ -413,6 +421,7 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             socket,
             port,
             tcp_only,
+            bind,
             btsp_optional,
         } => {
             let config = modes::neural_api::resolve_neural_api_config(
@@ -426,6 +435,7 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 Some(config.socket_path),
                 port,
                 tcp_only,
+                bind,
                 btsp_optional,
             )
             .await
@@ -443,8 +453,9 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
         Mode::Api {
             port,
             socket,
+            bind,
             unix_only,
-        } => modes::api::run(port, socket, unix_only).await,
+        } => modes::api::run(port, socket, unix_only, bind).await,
         Mode::VerifyLineage { path, detailed } => modes::verify_lineage::run(path, detailed).await,
         Mode::Doctor {
             detailed,

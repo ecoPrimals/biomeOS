@@ -75,6 +75,10 @@ pub struct NeuralApiServer {
     /// SELinux denies `sock_file create`).
     pub(super) tcp_only: bool,
 
+    /// Optional TCP bind host override (e.g. `"127.0.0.1"`).
+    /// Defaults to `0.0.0.0` when `None`.
+    pub(super) bind_address: Option<String>,
+
     /// Neural Router for capability-based routing
     pub(super) router: Arc<NeuralRouter>,
 
@@ -206,6 +210,7 @@ impl NeuralApiServer {
             socket_path: socket_path.into(),
             tcp_port: None,
             tcp_only: false,
+            bind_address: None,
             router,
             mode: Arc::new(RwLock::new(BiomeOsMode::Bootstrap)),
             btsp_escalated: Arc::new(AtomicBool::new(false)),
@@ -239,6 +244,15 @@ impl NeuralApiServer {
     pub fn with_tcp_only(mut self, port: u16) -> Self {
         self.tcp_port = Some(port);
         self.tcp_only = true;
+        self
+    }
+
+    /// Override TCP bind address (default: `0.0.0.0`).
+    ///
+    /// Use `"127.0.0.1"` to restrict to localhost only.
+    #[must_use]
+    pub fn with_bind_address(mut self, addr: String) -> Self {
+        self.bind_address = Some(addr);
         self
     }
 

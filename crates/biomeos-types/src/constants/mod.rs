@@ -158,6 +158,27 @@ pub mod endpoints {
     pub const fn production_tcp_bind_addr(port: u16) -> std::net::SocketAddr {
         std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), port)
     }
+
+    /// TCP bind address with an optional host override.
+    ///
+    /// If `bind_host` is `Some`, parses it as an IP address and binds to
+    /// `host:port`. If `None`, falls back to `0.0.0.0:port`.
+    /// Accepts `"127.0.0.1"`, `"::1"`, `"0.0.0.0"`, or any valid IP.
+    #[must_use]
+    pub fn tcp_bind_addr_with_host(bind_host: Option<&str>, port: u16) -> std::net::SocketAddr {
+        match bind_host {
+            Some(host) => {
+                if let Ok(addr) = host.parse::<std::net::SocketAddr>() {
+                    addr
+                } else if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                    std::net::SocketAddr::new(ip, port)
+                } else {
+                    production_tcp_bind_addr(port)
+                }
+            }
+            None => production_tcp_bind_addr(port),
+        }
+    }
 }
 
 /// Timeout and duration constants
@@ -522,6 +543,28 @@ mod tests {
         assert_eq!(endpoints::HEALTH_ENDPOINT, "/health");
         assert_eq!(endpoints::METRICS_ENDPOINT, "/metrics");
         assert_eq!(endpoints::DISCOVERY_ENDPOINT, "/discovery");
+    }
+
+    #[test]
+    fn test_tcp_bind_addr_with_host() {
+        let default = endpoints::tcp_bind_addr_with_host(None, 9000);
+        assert_eq!(default.port(), 9000);
+        assert_eq!(default.ip(), std::net::Ipv4Addr::UNSPECIFIED);
+
+        let localhost = endpoints::tcp_bind_addr_with_host(Some("127.0.0.1"), 9000);
+        assert_eq!(localhost.port(), 9000);
+        assert_eq!(localhost.ip(), std::net::Ipv4Addr::LOCALHOST);
+
+        let ipv6 = endpoints::tcp_bind_addr_with_host(Some("::1"), 8080);
+        assert_eq!(ipv6.port(), 8080);
+        assert!(ipv6.ip().is_loopback());
+
+        let full_addr = endpoints::tcp_bind_addr_with_host(Some("10.0.0.1:3000"), 9000);
+        assert_eq!(full_addr.port(), 3000);
+
+        let invalid = endpoints::tcp_bind_addr_with_host(Some("not-an-ip"), 9000);
+        assert_eq!(invalid.port(), 9000);
+        assert_eq!(invalid.ip(), std::net::Ipv4Addr::UNSPECIFIED);
     }
 
     #[test]

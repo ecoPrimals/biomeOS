@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 5, 2026 (v3.43: discovery schema alignment, primalSpring Phase 59 audit response, 7,867 tests)
+**Updated**: May 6, 2026 (v3.44: `--bind` flag standardization PG-55, projectNUCLEUS Phase 2a security, 6,841+ tests)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---

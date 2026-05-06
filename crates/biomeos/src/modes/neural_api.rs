@@ -61,6 +61,7 @@ pub async fn run(
     socket: Option<PathBuf>,
     tcp_port: Option<u16>,
     tcp_only: bool,
+    bind: Option<String>,
     btsp_optional: bool,
 ) -> Result<()> {
     let socket_path = resolve_socket_path(socket, &family_id);
@@ -82,6 +83,9 @@ pub async fn run(
     } else {
         info!("  Socket Path: {}", socket_path.display());
     }
+    if let Some(ref addr) = bind {
+        info!("  Bind Address: {addr}");
+    }
     if btsp_optional {
         info!("  BTSP: optional (unauthenticated JSON-RPC accepted)");
     }
@@ -90,6 +94,9 @@ pub async fn run(
     let mut server = NeuralApiServer::new(graphs_dir, family_id, socket_path);
     if btsp_optional {
         server = server.with_btsp_optional();
+    }
+    if let Some(addr) = bind {
+        server = server.with_bind_address(addr);
     }
     if tcp_only {
         if let Some(port) = tcp_port {

@@ -464,6 +464,7 @@ pub async fn run(
                 Some(neural_socket),
                 neural_tcp_port,
                 neural_tcp_only,
+                None,
                 false,
             )
             .await

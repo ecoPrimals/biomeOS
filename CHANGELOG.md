@@ -2,6 +2,27 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.44 (2026-05-06) — `--bind` Flag Standardization (PG-55)
+
+### TCP bind address override (projectNUCLEUS Phase 2a security)
+- **PG-55 resolved for biomeOS**: All TCP bind paths now accept `--bind <host>`
+  to override the default `0.0.0.0` (all-interfaces) binding.
+- `biomeos-types`: new `tcp_bind_addr_with_host(Option<&str>, u16)` helper
+  parses IP or `host:port` with fallback to `0.0.0.0:port`.
+- `NeuralApiServer`: new `bind_address: Option<String>` field + `with_bind_address()`
+  builder. `server_lifecycle.rs` uses the override when binding TCP.
+- `biomeos neural-api --bind <host>`: CLI flag threads through to the server.
+- `neural-api-server` standalone binary: `--bind <host>` support added.
+- `biomeos api --bind <host>`: CLI flag added for the API server TCP path.
+- `biomeos_api::serve_tcp()`: now accepts `bind_host: Option<&str>`.
+- Nucleus mode passes `None` (default behavior preserved).
+- 5 new tests for `tcp_bind_addr_with_host` (None, localhost, IPv6, full addr, invalid).
+
+### Codebase health
+- 6,841 lib tests (0 failures, fully concurrent).
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.43 (2026-05-05) — Discovery Schema Alignment + primalSpring Phase 59 Audit
 
 ### capability.discover response schema alignment

@@ -52,6 +52,10 @@ async fn main() -> Result<()> {
                 .into_owned()
         });
 
+    let bind_address = std::env::args()
+        .position(|arg| arg == "--bind")
+        .and_then(|i| std::env::args().nth(i + 1));
+
     if let Err(msg) = biomeos_core::btsp_client::validate_insecure_guard() {
         anyhow::bail!(msg);
     }
@@ -69,14 +73,19 @@ async fn main() -> Result<()> {
     info!("  Graphs Directory: {}", graphs_dir);
     info!("  Family ID: {}", family_id);
     info!("  Socket Path: {}", socket_path);
+    if let Some(ref addr) = bind_address {
+        info!("  Bind Address: {addr}");
+    }
     info!("");
 
-    // Create Neural API server
-    let server = NeuralApiServer::new(
+    let mut server = NeuralApiServer::new(
         PathBuf::from(&graphs_dir),
         family_id,
         PathBuf::from(&socket_path),
     );
+    if let Some(addr) = bind_address {
+        server = server.with_bind_address(addr);
+    }
 
     // Start server
     info!("🚀 Starting Neural API server...");

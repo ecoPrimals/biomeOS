@@ -31,7 +31,12 @@ pub(crate) fn resolve_api_config(
 /// Starts the JSON-RPC API server. Default transport is Unix socket (TRUE
 /// PRIMAL). When `--port` is provided, a TCP listener is bound alongside UDS
 /// for mobile/Android substrates where Unix sockets are unavailable.
-pub async fn run(port: Option<u16>, socket: Option<PathBuf>, _unix_only: bool) -> Result<()> {
+pub async fn run(
+    port: Option<u16>,
+    socket: Option<PathBuf>,
+    _unix_only: bool,
+    bind: Option<String>,
+) -> Result<()> {
     info!("biomeOS API Server (UniBin mode)");
 
     let state = biomeos_api::AppState::builder()
@@ -56,12 +61,16 @@ pub async fn run(port: Option<u16>, socket: Option<PathBuf>, _unix_only: bool) -
     if let Some(p) = port {
         info!("  TCP Port: {p} (alongside UDS for mobile/cross-gate)");
     }
+    if let Some(ref addr) = bind {
+        info!("  Bind Address: {addr}");
+    }
     info!("  Protocol: JSON-RPC 2.0");
 
     if let Some(tcp_port) = port {
         let tcp_app = app.clone();
+        let bind_host = bind.clone();
         tokio::spawn(async move {
-            if let Err(e) = biomeos_api::serve_tcp(tcp_port, tcp_app).await {
+            if let Err(e) = biomeos_api::serve_tcp(tcp_port, tcp_app, bind_host.as_deref()).await {
                 tracing::error!("API TCP server error: {e}");
             }
         });

@@ -441,18 +441,15 @@ pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> an
 
 /// Serve the API over TCP alongside the Unix socket.
 ///
-/// Binds a TCP listener on `0.0.0.0:<port>` and serves the same JSON-RPC
-/// Axum router. Intended for mobile/Android substrates where Unix sockets
-/// are unavailable or for cross-gate orchestration.
-pub async fn serve_tcp(port: u16, app: Router) -> anyhow::Result<()> {
-    let addr = biomeos_types::constants::endpoints::production_tcp_bind_addr(port);
+/// Binds a TCP listener and serves the same JSON-RPC Axum router.
+/// If `bind_host` is `None`, binds `0.0.0.0:<port>` (all interfaces).
+/// Pass `Some("127.0.0.1")` to restrict to localhost only.
+pub async fn serve_tcp(port: u16, app: Router, bind_host: Option<&str>) -> anyhow::Result<()> {
+    let addr = biomeos_types::constants::endpoints::tcp_bind_addr_with_host(bind_host, port);
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to bind TCP port {port}: {e}"))?;
-    tracing::info!(
-        "API TCP listener bound: {}:{port}",
-        biomeos_types::constants::endpoints::PRODUCTION_BIND_ADDRESS
-    );
+        .map_err(|e| anyhow::anyhow!("Failed to bind TCP on {addr}: {e}"))?;
+    tracing::info!("API TCP listener bound: {addr}");
     axum::serve(listener, app)
         .await
         .map_err(|e| anyhow::anyhow!("API TCP server error: {e}"))
