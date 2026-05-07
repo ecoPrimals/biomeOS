@@ -93,7 +93,7 @@ mod tests {
         let temp = tempfile::tempdir().expect("temp dir");
         let socket_dir = temp.path().to_path_buf();
 
-        let result = run(None, Some(socket_dir), true).await;
+        let result = run(None, Some(socket_dir), true, None).await;
         assert!(
             result.is_err(),
             "run with directory as socket path should fail: {:?}",
@@ -111,7 +111,7 @@ mod tests {
     async fn test_run_fails_when_socket_path_parent_nonexistent() {
         let socket_path = PathBuf::from("/nonexistent-parent-xyz-12345/biomeos.sock");
 
-        let result = run(None, Some(socket_path), true).await;
+        let result = run(None, Some(socket_path), true, None).await;
         assert!(
             result.is_err(),
             "run with nonexistent parent should fail: {:?}",
@@ -125,7 +125,8 @@ mod tests {
         let socket_path = temp.path().join("api.sock");
         let path_for_spawn = socket_path.clone();
 
-        let run_handle = tokio::spawn(async move { run(None, Some(path_for_spawn), true).await });
+        let run_handle =
+            tokio::spawn(async move { run(None, Some(path_for_spawn), true, None).await });
 
         // Wait for server to bind (socket file appears)
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);

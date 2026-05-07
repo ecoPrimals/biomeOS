@@ -94,6 +94,7 @@ fn test_cli_parse_neural_api() {
             socket,
             port,
             tcp_only,
+            bind,
             btsp_optional,
         } => {
             assert_eq!(graphs_dir, &PathBuf::from("graphs"));
@@ -101,6 +102,7 @@ fn test_cli_parse_neural_api() {
             assert!(socket.is_none());
             assert!(port.is_none());
             assert!(!tcp_only);
+            assert!(bind.is_none());
             assert!(!btsp_optional);
         }
         _ => panic!("expected NeuralApi mode"),
@@ -126,10 +128,12 @@ fn test_cli_parse_neural_api_with_opts() {
             socket,
             port,
             tcp_only,
+            bind,
             btsp_optional,
         } => {
             assert_eq!(graphs_dir, &PathBuf::from("/tmp/graphs"));
             assert_eq!(family_id.as_deref(), Some("fam1"));
+            let _ = bind;
             assert_eq!(
                 socket.as_ref().map(PathBuf::as_path),
                 Some(std::path::Path::new("/tmp/api.sock"))
@@ -213,10 +217,12 @@ fn test_cli_parse_api() {
         Mode::Api {
             port,
             socket,
+            bind,
             unix_only,
         } => {
             assert!(port.is_none());
             assert!(socket.is_none());
+            assert!(bind.is_none());
             assert!(!*unix_only);
         }
         _ => panic!("expected Api mode"),
@@ -230,8 +236,10 @@ fn test_cli_parse_api_with_port_and_socket() {
         Mode::Api {
             port,
             socket,
+            bind,
             unix_only,
         } => {
+            let _ = bind;
             assert_eq!(*port, Some(8080));
             assert_eq!(
                 socket.as_ref().map(PathBuf::as_path),
@@ -274,12 +282,14 @@ fn test_cli_parse_nucleus() {
             family_id,
             port,
             tcp_only,
+            bind,
         } => {
             assert_eq!(mode, "full");
             assert_eq!(node_id, "node1");
             assert!(family_id.is_none());
             assert!(port.is_none());
             assert!(!tcp_only);
+            assert!(bind.is_none());
         }
         _ => panic!("expected Nucleus mode"),
     }
@@ -619,6 +629,63 @@ fn test_cli_parse_fails_deploy_missing_graph() {
 fn test_cli_parse_fails_rootpulse_commit_missing_args() {
     let result = Cli::try_parse_from(["biomeos", "rootpulse", "commit"]);
     assert!(result.is_err());
+}
+
+#[test]
+fn test_cli_parse_graph_execute() {
+    let cli = Cli::parse_from([
+        "biomeos",
+        "graph",
+        "execute",
+        "rootpulse_commit",
+        "--param",
+        "SESSION_ID=abc123",
+        "--param",
+        "AGENT_DID=did:key:z6Mk",
+        "--dry-run",
+    ]);
+    match cli.mode {
+        Mode::Graph {
+            command:
+                GraphCommand::Execute {
+                    graph,
+                    params,
+                    dry_run,
+                    ..
+                },
+        } => {
+            assert_eq!(graph, "rootpulse_commit");
+            assert_eq!(params.len(), 2);
+            assert!(dry_run);
+        }
+        _ => panic!("Expected Graph Execute"),
+    }
+}
+
+#[test]
+fn test_cli_parse_graph_execute_toml_path() {
+    let cli = Cli::parse_from([
+        "biomeos",
+        "graph",
+        "execute",
+        "graphs/rootpulse_commit.toml",
+    ]);
+    match cli.mode {
+        Mode::Graph {
+            command:
+                GraphCommand::Execute {
+                    graph,
+                    params,
+                    dry_run,
+                    ..
+                },
+        } => {
+            assert_eq!(graph, "graphs/rootpulse_commit.toml");
+            assert!(params.is_empty());
+            assert!(!dry_run);
+        }
+        _ => panic!("Expected Graph Execute"),
+    }
 }
 
 #[tokio::test]

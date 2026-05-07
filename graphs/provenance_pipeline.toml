@@ -9,6 +9,15 @@
 #
 # Required: Tower (BearDog + Songbird) + rhizoCrypt + NestGate + LoamSpine
 # Optional: sweetGrass (attribution), petalTongue (visualization)
+#
+# Required input variables:
+#   ${SESSION_ID}      — rhizoCrypt DAG session ID (string)
+#   ${EXPERIMENT_ID}   — experiment identifier (string)
+#   ${SPINE_ID}        — LoamSpine spine ID (string)
+#   ${FAMILY_ID}       — ecoPrimals family ID (string)
+#   ${AGENT_DID}       — committer DID, e.g. did:key:z6Mk... (string)
+#
+# Method names validated against primalSpring capability_registry.toml (May 7, 2026).
 
 [graph]
 id = "provenance_pipeline"
@@ -53,7 +62,7 @@ timeout_ms = 5000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 2: DEHYDRATE EXPERIMENT SESSION
-# Extract results from ephemeral DAG
+# Method: dag.dehydration.trigger (rhizoCrypt)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -66,7 +75,7 @@ capabilities = ["dehydration"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "dag.dehydrate"
+capability = "dag.dehydration.trigger"
 params = { session_id = "${SESSION_ID}" }
 
 [nodes.constraints]
@@ -74,6 +83,7 @@ timeout_ms = 60000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 3: SIGN AND STORE
+# Method: crypto.sign (BearDog) — param is `message`, not `data`.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -87,7 +97,7 @@ name = "capability_call"
 
 [nodes.operation.params]
 capability = "crypto.sign"
-params = { data = "${DEHYDRATION_SUMMARY}", did = "${AGENT_DID}" }
+params = { message = "${DEHYDRATION_SUMMARY}" }
 
 [nodes.constraints]
 timeout_ms = 10000
@@ -111,6 +121,8 @@ timeout_ms = 30000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 4: PERMANENT COMMIT
+# Method: session.commit (LoamSpine) — NOT commit.session.
+# Params: spine_id, session_id, session_hash, committer.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -123,14 +135,15 @@ capabilities = ["permanent_storage"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "commit.session"
-params = { summary = "${SIGNED_RESULTS}", content_hash = "${CONTENT_HASH}" }
+capability = "session.commit"
+params = { spine_id = "${SPINE_ID}", session_id = "${SESSION_ID}", session_hash = "${CONTENT_HASH}", committer = "${AGENT_DID}" }
 
 [nodes.constraints]
 timeout_ms = 30000
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PHASE 5: ATTRIBUTION (optional)
+# PHASE 5: ATTRIBUTION (sweetGrass, optional)
+# Method: braid.create (sweetGrass) — NOT provenance.create_braid.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -143,8 +156,8 @@ capabilities = ["attribution"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "provenance.create_braid"
-params = { commit_ref = "${COMMIT_REF}", experiment_id = "${EXPERIMENT_ID}", agents = "${AGENT_SUMMARIES}" }
+capability = "braid.create"
+params = { data_hash = "${COMMIT_REF}", source = "provenance:${EXPERIMENT_ID}", description = "Provenance attribution for experiment ${EXPERIMENT_ID}", mime_type = "application/json", size = 0 }
 
 [nodes.constraints]
 timeout_ms = 15000

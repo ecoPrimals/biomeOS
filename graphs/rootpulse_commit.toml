@@ -6,6 +6,18 @@
 #
 # Required: Tower (BearDog + Songbird) + rhizoCrypt + NestGate + LoamSpine
 # Optional: sweetGrass (attribution)
+#
+# Prerequisites:
+#   A LoamSpine spine must already exist (created via rootpulse_branch or spine.create).
+#   An active rhizoCrypt DAG session must exist (created via dag.session.create).
+#
+# Required input variables:
+#   ${SESSION_ID}  — rhizoCrypt DAG session ID (string)
+#   ${SPINE_ID}    — LoamSpine spine ID (string)
+#   ${FAMILY_ID}   — ecoPrimals family ID (string)
+#   ${AGENT_DID}   — committer DID, e.g. did:key:z6Mk... (string)
+#
+# Method names validated against primalSpring capability_registry.toml (May 7, 2026).
 
 [graph]
 id = "rootpulse_commit"
@@ -50,7 +62,8 @@ timeout_ms = 5000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 2: DEHYDRATE (rhizoCrypt)
-# Compute Merkle root, extract frontier, produce DehydrationSummary
+# Compute Merkle root, extract frontier, produce DehydrationSummary.
+# Method: dag.dehydration.trigger (rhizoCrypt)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -63,7 +76,7 @@ capabilities = ["dehydration"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "dag.dehydrate"
+capability = "dag.dehydration.trigger"
 params = { session_id = "${SESSION_ID}" }
 
 [nodes.constraints]
@@ -71,7 +84,10 @@ timeout_ms = 30000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 3: SIGN (BearDog)
-# Cryptographically sign the dehydration summary
+# Cryptographically sign the dehydration summary.
+# Method: crypto.sign (BearDog)
+# Param: `message` (base64-encoded payload), NOT `data`.
+# Returns: { signature, public_key }
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -85,14 +101,15 @@ name = "capability_call"
 
 [nodes.operation.params]
 capability = "crypto.sign"
-params = { data = "${DEHYDRATION_SUMMARY}", did = "${AGENT_DID}" }
+params = { message = "${DEHYDRATION_SUMMARY}" }
 
 [nodes.constraints]
 timeout_ms = 10000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 4: STORE CONTENT (NestGate)
-# Persist payload content to content-addressed storage
+# Persist payload content to content-addressed storage.
+# Method: storage.store (NestGate)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -114,7 +131,9 @@ timeout_ms = 30000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 5: COMMIT TO PERMANENT HISTORY (LoamSpine)
-# Append to linear immutable history
+# Append to linear immutable history.
+# Method: session.commit (LoamSpine) — NOT commit.session.
+# Params: spine_id, session_id, session_hash, committer (DID string).
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -127,15 +146,17 @@ capabilities = ["permanent_storage"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "commit.session"
-params = { summary = "${SIGNED_SUMMARY}", content_hash = "${CONTENT_STORED}" }
+capability = "session.commit"
+params = { spine_id = "${SPINE_ID}", session_id = "${SESSION_ID}", session_hash = "${CONTENT_STORED}", committer = "${AGENT_DID}" }
 
 [nodes.constraints]
 timeout_ms = 30000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 6: ATTRIBUTE (sweetGrass) — optional
-# Create provenance braid for semantic attribution
+# Create provenance braid for semantic attribution.
+# Method: braid.create (sweetGrass) — NOT provenance.create_braid.
+# Params: data_hash, source, description, mime_type, size.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -148,9 +169,8 @@ capabilities = ["attribution"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "provenance.create_braid"
-params = { commit_ref = "${COMMIT_REF}", agents = "${AGENT_SUMMARIES}" }
+capability = "braid.create"
+params = { data_hash = "${COMMIT_REF}", source = "rootpulse:commit", description = "RootPulse commit attribution for session ${SESSION_ID}", mime_type = "application/json", size = 0 }
 
 [nodes.constraints]
 timeout_ms = 15000
-# sweetGrass is optional — workflow succeeds even if attribution unavailable

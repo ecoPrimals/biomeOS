@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: May 6, 2026
-**Status**: Production Ready (v3.44) — PG-55 FULL (`--bind` flag + localhost default + Nucleus forwarding), BTSP Phase 3 FULL, capability-based identity (zero hardcoded primal names or env vars in production), 6,842+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: May 7, 2026
+**Status**: Production Ready (v3.45) — RootPulse RP-1–RP-5 resolved (graph method alignment + standalone executor), PG-55 FULL, BTSP Phase 3 FULL, capability-based identity, 6,842+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 

@@ -2,6 +2,39 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.45 (2026-05-07) — RootPulse Graph Method Alignment + Standalone Executor (RP-1 through RP-5)
+
+### RootPulse graph method/param alignment (RP-1 HIGH, RP-2 HIGH)
+- All 6 graph files updated to match primalSpring `capability_registry.toml`:
+  - `crypto.sign`: param `data` → `message`, removed stale `did` param.
+  - `commit.session` → `session.commit` with correct params (`spine_id`, `session_id`,
+    `session_hash`, `committer`).
+  - `provenance.create_braid` → `braid.create` with correct params (`data_hash`, `source`,
+    `description`, `mime_type`, `size`).
+  - `dag.dehydrate` → `dag.dehydration.trigger`.
+  - `dag`/`get_merkle_root` → `dag.merkle.root`.
+  - `entry`/`get_tip` → `entry.get`.
+  - `crypto`/`verify_ed25519` → `crypto.verify`.
+- All graphs now document required input variables with types.
+- All graphs document `${SPINE_ID}` as a required prerequisite (RP-2).
+
+### Standalone graph executor (RP-4 MEDIUM)
+- New CLI: `biomeos graph execute <graph_id_or_path> --param KEY=VALUE [--dry-run]`.
+- Accepts a graph ID (e.g. `rootpulse_commit`) or a TOML file path.
+- Sends `graph.execute` JSON-RPC to the Neural API server.
+- `--dry-run` shows what would be sent without executing.
+- 2 new CLI parse tests.
+
+### Type and lifecycle documentation (RP-3, RP-5 MEDIUM)
+- Graph headers document variable types (string, integer) and prerequisites.
+- Phase comments document method owner, canonical param names, and wire contract
+  notes (e.g. "BearDog signs the dehydration merkle root, not the LoamSpine entry").
+
+### Codebase health
+- 6,842 lib tests + 474 bin tests (0 failures, fully concurrent).
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.44 (2026-05-06) — `--bind` Flag Standardization + Localhost Default (PG-55 FULL)
 
 ### TCP bind address override (projectNUCLEUS Phase 2a security)

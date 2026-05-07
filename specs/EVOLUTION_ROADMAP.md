@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 6, 2026 (v3.44: `--bind` flag standardization PG-55, projectNUCLEUS Phase 2a security, 6,841+ tests)
+**Updated**: May 7, 2026 (v3.45: RootPulse graph method alignment RP-1–RP-5, standalone graph executor, 6,842+ tests)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---

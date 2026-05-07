@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Graph operations — sign and verify deployment graphs.
+//! Graph operations — sign, verify, and execute deployment graphs.
 //!
 //! Signing delegates to the security provider via the `crypto.sign` capability
 //! routed through the Neural API, keeping biomeOS sovereign (no embedded keys).
+//!
+//! `execute` sends a graph to the Neural API server's `graph.execute` endpoint,
+//! enabling standalone execution of any TOML graph with CLI-supplied parameters.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -104,6 +107,94 @@ pub async fn verify(path: PathBuf) -> Result<()> {
     }
 
     info!("Graph integrity OK");
+    Ok(())
+}
+
+/// Execute a graph against the live Neural API server.
+///
+/// `graph` can be a graph ID (e.g. `rootpulse_commit`) or a path to a TOML
+/// file. Parameters are key=value pairs passed as `--param KEY=VALUE`.
+pub async fn execute(
+    graph: String,
+    params: Vec<String>,
+    socket: Option<PathBuf>,
+    family_id: Option<String>,
+    dry_run: bool,
+) -> Result<()> {
+    let graph_id = if std::path::Path::new(&graph)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"))
+    {
+        let content = std::fs::read_to_string(&graph)
+            .with_context(|| format!("Cannot read graph: {graph}"))?;
+        let parsed: toml::Value =
+            toml::from_str(&content).with_context(|| format!("Invalid TOML: {graph}"))?;
+        parsed
+            .get("graph")
+            .and_then(|g| g.get("id"))
+            .and_then(|id| id.as_str())
+            .map_or_else(
+                || {
+                    std::path::Path::new(&graph)
+                        .file_stem()
+                        .map_or_else(|| graph.clone(), |s| s.to_string_lossy().into_owned())
+                },
+                String::from,
+            )
+    } else {
+        graph.clone()
+    };
+
+    let mut param_map = serde_json::Map::new();
+    for kv in &params {
+        let (key, value) = kv
+            .split_once('=')
+            .with_context(|| format!("Invalid param format (expected KEY=VALUE): {kv}"))?;
+        param_map.insert(
+            key.to_string(),
+            serde_json::Value::String(value.to_string()),
+        );
+    }
+
+    let family = family_id.unwrap_or_else(get_family_id);
+    param_map
+        .entry("FAMILY_ID".to_string())
+        .or_insert_with(|| serde_json::Value::String(family.clone()));
+
+    let socket_path = socket.unwrap_or_else(|| {
+        biomeos_types::SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family}"))
+    });
+
+    info!("Executing graph: {graph_id}");
+    info!("  socket: {}", socket_path.display());
+    info!("  params: {}", serde_json::to_string_pretty(&param_map)?);
+
+    if dry_run {
+        info!("  [dry run] Would send graph.execute — not sending.");
+        return Ok(());
+    }
+
+    let client = AtomicClient::unix(&socket_path);
+    let response = client
+        .call(
+            "graph.execute",
+            serde_json::json!({
+                "graph_id": graph_id,
+                "params": param_map,
+            }),
+        )
+        .await
+        .context("graph.execute RPC failed")?;
+
+    if let Some(error) = response.get("error") {
+        anyhow::bail!("Graph execution failed: {error}");
+    }
+
+    info!("Graph executed successfully");
+    if let Some(result) = response.get("result") {
+        info!("  result: {}", serde_json::to_string_pretty(result)?);
+    }
+
     Ok(())
 }
 

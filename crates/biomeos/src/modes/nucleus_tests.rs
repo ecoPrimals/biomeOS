@@ -366,6 +366,7 @@ async fn test_run_fails_on_invalid_mode() {
         None,
         None,
         false,
+        None,
     )
     .await;
     assert!(result.is_err());

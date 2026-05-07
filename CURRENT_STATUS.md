@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 6, 2026 (v3.44: `--bind` flag + localhost default, PG-55 FULL — all TCP paths default 127.0.0.1, Nucleus forwards --bind; 6,842 lib tests)
-**Version**: 3.44
-**Status**: PRODUCTION READY - BTSP Phase 3 FULL (server-side + client-side outbound encrypted framing) - Capability-Based Identity (zero hardcoded primal names or env vars in production) - PG-55 FULL (`--bind` flag + localhost default + Nucleus forwarding) - Zero Blocking Debt - Fully Concurrent Testing - All primalSpring Audit Gaps Addressed - Graph Integrity Verification Active
+**Updated**: May 7, 2026 (v3.45: RootPulse graph method alignment RP-1–RP-5, standalone `biomeos graph execute` CLI; 6,842+ lib tests)
+**Version**: 3.45
+**Status**: PRODUCTION READY - BTSP Phase 3 FULL - Capability-Based Identity - PG-55 FULL - RootPulse RP-1–RP-5 Resolved (graph methods aligned to primalSpring registry, standalone executor, type docs) - Zero Blocking Debt - Fully Concurrent Testing - Graph Integrity Verification Active
 
 ---
 

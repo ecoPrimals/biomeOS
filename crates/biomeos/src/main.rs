@@ -249,7 +249,7 @@ enum Mode {
     },
 }
 
-/// Graph subcommands — sign and verify deployment graphs
+/// Graph subcommands — sign, verify, and execute deployment graphs
 #[derive(Debug, Subcommand)]
 enum GraphCommand {
     /// Sign a graph TOML via BearDog delegation
@@ -264,6 +264,29 @@ enum GraphCommand {
     Verify {
         /// Path to the graph TOML file
         path: PathBuf,
+    },
+
+    /// Execute a graph TOML against the live Neural API server
+    #[command(name = "execute")]
+    Execute {
+        /// Path to the graph TOML file (or graph ID from the graphs directory)
+        graph: String,
+
+        /// Parameters as key=value pairs (e.g. --param SESSION_ID=abc123)
+        #[arg(long = "param", value_name = "KEY=VALUE")]
+        params: Vec<String>,
+
+        /// Neural API socket path (auto-discovered from family if not set)
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID
+        #[arg(long)]
+        family_id: Option<String>,
+
+        /// Dry run — show what would be sent without executing
+        #[arg(short = 'n', long)]
+        dry_run: bool,
     },
 }
 
@@ -453,6 +476,13 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
         Mode::Graph { command } => match command {
             GraphCommand::Sign { path } => modes::graph_ops::sign(path).await,
             GraphCommand::Verify { path } => modes::graph_ops::verify(path).await,
+            GraphCommand::Execute {
+                graph,
+                params,
+                socket,
+                family_id,
+                dry_run,
+            } => modes::graph_ops::execute(graph, params, socket, family_id, dry_run).await,
         },
         Mode::Api {
             port,

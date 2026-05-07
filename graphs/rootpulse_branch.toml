@@ -11,6 +11,13 @@
 #
 # Required: Tower (BearDog + Songbird) + rhizoCrypt + LoamSpine
 # Optional: sweetGrass (attribution)
+#
+# Required input variables:
+#   ${PARENT_COMMIT_ID} — commit ID to branch from (string)
+#   ${BRANCH_NAME}      — human-readable branch name (string)
+#   ${AGENT_DID}        — creator DID, e.g. did:key:z6Mk... (string)
+#
+# Method names validated against primalSpring capability_registry.toml (May 7, 2026).
 
 [graph]
 id = "rootpulse_branch"
@@ -19,6 +26,8 @@ coordination = "Sequential"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 1: VALIDATE SOURCE COMMIT
+# Verify the parent commit exists via LoamSpine session.state.
+# Method: session.state (LoamSpine)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -47,16 +56,16 @@ capabilities = ["permanent_storage"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "commit"
-operation = "session"
-args = { action = "get", commit_id = "${PARENT_COMMIT_ID}" }
+capability = "session.state"
+params = { session_id = "${PARENT_COMMIT_ID}" }
 
 [nodes.constraints]
 timeout_ms = 10000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 2: CREATE NEW SESSION (rhizoCrypt)
-# Fork a new ephemeral workspace from the parent state
+# Fork a new ephemeral workspace from the parent state.
+# Method: dag.session.create (rhizoCrypt)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -69,16 +78,16 @@ capabilities = ["dag"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "dag"
-operation = "create_session"
-args = { metadata = { type = "branch", parent_commit = "${PARENT_COMMIT_ID}", branch_name = "${BRANCH_NAME}" } }
+capability = "dag.session.create"
+params = { metadata = { type = "branch", parent_commit = "${PARENT_COMMIT_ID}", branch_name = "${BRANCH_NAME}" } }
 
 [nodes.constraints]
 timeout_ms = 10000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 3: CREATE NEW SPINE (LoamSpine)
-# A new linear history rooted at the parent commit
+# A new linear history rooted at the parent commit.
+# Method: spine.create (LoamSpine)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -91,15 +100,15 @@ capabilities = ["permanent_storage"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "spine"
-operation = "create"
-args = { name = "${BRANCH_NAME}", root_commit = "${PARENT_COMMIT_ID}", metadata = { type = "branch", created_by = "${AGENT_DID}" } }
+capability = "spine.create"
+params = { name = "${BRANCH_NAME}", root_commit = "${PARENT_COMMIT_ID}", metadata = { type = "branch", created_by = "${AGENT_DID}" } }
 
 [nodes.constraints]
 timeout_ms = 15000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 4: RECORD BRANCH PROVENANCE (sweetGrass, optional)
+# Method: braid.create (sweetGrass) — NOT provenance.create_braid.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -112,9 +121,8 @@ capabilities = ["attribution"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "provenance"
-operation = "create_braid"
-args = { metadata = { type = "branch", branch_name = "${BRANCH_NAME}", parent_commit = "${PARENT_COMMIT_ID}", session_id = "${BRANCH_SESSION}", spine_id = "${BRANCH_SPINE}" }, agents = [{ did = "${AGENT_DID}", role = "branch_creator", contribution = 1.0 }] }
+capability = "braid.create"
+params = { data_hash = "${PARENT_COMMIT_ID}", source = "rootpulse:branch", description = "Branch '${BRANCH_NAME}' from commit ${PARENT_COMMIT_ID}", mime_type = "application/json", size = 0 }
 
 [nodes.constraints]
 timeout_ms = 15000

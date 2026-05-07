@@ -12,6 +12,15 @@
 #
 # Required: Tower (BearDog) + rhizoCrypt + LoamSpine
 # Optional: sweetGrass (attribution)
+#
+# Required input variables:
+#   ${COMMIT_A}   — first commit ID to compare (string)
+#   ${COMMIT_B}   — second commit ID to compare (string)
+#   ${SESSION_A}  — rhizoCrypt session ID for commit A (string)
+#   ${SESSION_B}  — rhizoCrypt session ID for commit B (string)
+#   ${AGENT_DID}  — reviewer DID, e.g. did:key:z6Mk... (string)
+#
+# Method names validated against primalSpring capability_registry.toml (May 7, 2026).
 
 [graph]
 id = "rootpulse_diff"
@@ -47,9 +56,8 @@ capabilities = ["permanent_storage"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "spine"
-operation = "get"
-args = { commit_id = "${COMMIT_A}" }
+capability = "spine.get"
+params = { commit_id = "${COMMIT_A}" }
 
 [nodes.constraints]
 timeout_ms = 10000
@@ -64,15 +72,15 @@ capabilities = ["permanent_storage"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "spine"
-operation = "get"
-args = { commit_id = "${COMMIT_B}" }
+capability = "spine.get"
+params = { commit_id = "${COMMIT_B}" }
 
 [nodes.constraints]
 timeout_ms = 10000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 2: COMPARE MERKLE TREES (rhizoCrypt)
+# Method: dag.merkle.root (rhizoCrypt)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -85,9 +93,8 @@ capabilities = ["dag"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "dag"
-operation = "get_merkle_root"
-args = { session_id = "${SESSION_A}" }
+capability = "dag.merkle.root"
+params = { session_id = "${SESSION_A}" }
 
 [nodes.constraints]
 timeout_ms = 15000
@@ -102,16 +109,16 @@ capabilities = ["dag"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "dag"
-operation = "get_merkle_root"
-args = { session_id = "${SESSION_B}" }
+capability = "dag.merkle.root"
+params = { session_id = "${SESSION_B}" }
 
 [nodes.constraints]
 timeout_ms = 15000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 3: COMPUTE DIFF
-# Query vertices that differ between the two sessions
+# Query vertices that differ between the two sessions.
+# Method: dag.vertex.get (rhizoCrypt) with diff filter.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -124,15 +131,15 @@ capabilities = ["dag"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "dag"
-operation = "query_vertices"
-args = { base_session = "${SESSION_A}", target_session = "${SESSION_B}", filter = "changed" }
+capability = "dag.vertex.get"
+params = { base_session = "${SESSION_A}", target_session = "${SESSION_B}", filter = "changed" }
 
 [nodes.constraints]
 timeout_ms = 30000
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PHASE 4: DIFF PROVENANCE (optional)
+# PHASE 4: DIFF PROVENANCE (sweetGrass, optional)
+# Method: braid.create (sweetGrass) — NOT provenance.create_braid.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -145,9 +152,8 @@ capabilities = ["attribution"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "provenance"
-operation = "create_braid"
-args = { metadata = { type = "diff", commit_a = "${COMMIT_A}", commit_b = "${COMMIT_B}", changes = "${DIFF_RESULT}" }, agents = [{ did = "${AGENT_DID}", role = "reviewer", contribution = 1.0 }] }
+capability = "braid.create"
+params = { data_hash = "${DIFF_RESULT}", source = "rootpulse:diff", description = "Diff between commits ${COMMIT_A} and ${COMMIT_B}", mime_type = "application/json", size = 0 }
 
 [nodes.constraints]
 timeout_ms = 15000

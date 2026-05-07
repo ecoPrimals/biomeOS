@@ -15,6 +15,16 @@
 #
 # Required: Tower (BearDog + Songbird) + LoamSpine
 # Optional: rhizoCrypt (session verification), sweetGrass (attribution)
+#
+# Required input variables:
+#   ${SPINE_ID}      — local spine ID to synchronize (string)
+#   ${AGENT_DID}     — federator DID, e.g. did:key:z6Mk... (string)
+#
+# Output variables produced:
+#   ${PEER_COUNT}      — number of peers discovered (integer)
+#   ${ENTRIES_SYNCED}  — number of entries synchronized (integer)
+#
+# Method names validated against primalSpring capability_registry.toml (May 7, 2026).
 
 [graph]
 id = "rootpulse_federate"
@@ -51,16 +61,16 @@ capabilities = ["discovery"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "discovery"
-operation = "find_primals"
-args = { capability = "permanent_storage", min_peers = 1, timeout_ms = 10000 }
+capability = "discovery.find_primals"
+params = { capability = "permanent_storage", min_peers = 1, timeout_ms = 10000 }
 
 [nodes.constraints]
 timeout_ms = 15000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 2: EXCHANGE TIPS
-# Get the local spine tip and request tips from all discovered peers
+# Get the local spine tip and request tips from all discovered peers.
+# Method: entry.get (LoamSpine) for local tip.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -73,9 +83,8 @@ capabilities = ["permanent_storage"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "entry"
-operation = "get_tip"
-args = { spine_id = "${SPINE_ID}" }
+capability = "entry.get"
+params = { spine_id = "${SPINE_ID}", position = "tip" }
 
 [nodes.constraints]
 timeout_ms = 10000
@@ -89,16 +98,16 @@ output = "peer_tips"
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "network"
-operation = "beacon_exchange"
-args = { peers = "${PEER_LIST}", payload = { type = "tip_exchange", spine_id = "${SPINE_ID}", local_tip = "${LOCAL_TIP}" } }
+capability = "network.beacon_exchange"
+params = { peers = "${PEER_LIST}", payload = { type = "tip_exchange", spine_id = "${SPINE_ID}", local_tip = "${LOCAL_TIP}" } }
 
 [nodes.constraints]
 timeout_ms = 30000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 3: FETCH MISSING ENTRIES
-# Compare tips and fetch entries the local node doesn't have
+# Compare tips and fetch entries the local node doesn't have.
+# Method: spine.get (LoamSpine)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -110,16 +119,16 @@ output = "missing_entries"
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "spine"
-operation = "get"
-args = { spine_id = "${SPINE_ID}", action = "diff", local_tip = "${LOCAL_TIP}", peer_tips = "${PEER_TIPS}" }
+capability = "spine.get"
+params = { spine_id = "${SPINE_ID}", action = "diff", local_tip = "${LOCAL_TIP}", peer_tips = "${PEER_TIPS}" }
 
 [nodes.constraints]
 timeout_ms = 15000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 4: VERIFY AND APPEND
-# Verify signatures on foreign entries and append to local spine
+# Verify signatures on foreign entries and append to local spine.
+# Methods: crypto.verify (BearDog), entry.append (LoamSpine)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -132,9 +141,8 @@ capabilities = ["crypto"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "crypto"
-operation = "verify_ed25519"
-args = { entries = "${MISSING_ENTRIES}" }
+capability = "crypto.verify"
+params = { entries = "${MISSING_ENTRIES}" }
 
 [nodes.constraints]
 timeout_ms = 30000
@@ -149,15 +157,15 @@ capabilities = ["permanent_storage"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "entry"
-operation = "append"
-args = { spine_id = "${SPINE_ID}", entries = "${VERIFIED_ENTRIES}", source = "federation" }
+capability = "entry.append"
+params = { spine_id = "${SPINE_ID}", entries = "${VERIFIED_ENTRIES}", source = "federation" }
 
 [nodes.constraints]
 timeout_ms = 30000
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 5: FEDERATION PROVENANCE (sweetGrass, optional)
+# Method: braid.create (sweetGrass) — NOT provenance.create_braid.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 [[nodes]]
@@ -170,9 +178,8 @@ capabilities = ["attribution"]
 name = "capability_call"
 
 [nodes.operation.params]
-capability = "provenance"
-operation = "create_braid"
-args = { metadata = { type = "federation", spine_id = "${SPINE_ID}", peer_count = "${PEER_COUNT}", entries_synchronized = "${ENTRIES_SYNCED}" }, agents = [{ did = "${AGENT_DID}", role = "federator", contribution = 1.0 }] }
+capability = "braid.create"
+params = { data_hash = "${APPENDED}", source = "rootpulse:federate", description = "Federation sync for spine ${SPINE_ID} with ${PEER_COUNT} peers, ${ENTRIES_SYNCED} entries", mime_type = "application/json", size = 0 }
 
 [nodes.constraints]
 timeout_ms = 15000
