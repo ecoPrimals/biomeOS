@@ -60,12 +60,30 @@ impl CapabilityHandler {
             );
         };
 
+        // JH-2: extract resource envelope timeout cap from enriched params.
+        // The routing layer injects `_resource_envelope` when the caller's
+        // ionic token carries resource constraints.
+        let timeout_cap = params
+            .get("_resource_envelope")
+            .and_then(|e| e.get("timeout_ms"))
+            .and_then(|v| v.as_u64())
+            .map(std::time::Duration::from_millis);
+
         // Accept both "args" and "params" (backward compat for older callers)
-        let args = params
+        let mut args = params
             .get("args")
             .or_else(|| params.get("params"))
             .cloned()
             .unwrap_or(json!({}));
+
+        // JH-2: forward the resource envelope inside args so downstream
+        // primals (e.g. ToadStool) can enforce cpu/mem/timeout_ms at their
+        // compute dispatch level.
+        if let Some(envelope) = params.get("_resource_envelope") {
+            if let Some(obj) = args.as_object_mut() {
+                obj.insert("_resource_envelope".to_string(), envelope.clone());
+            }
+        }
 
         // Cross-gate routing: if `gate` is specified, forward to that gate's
         // biomeOS Neural API. Fail explicitly if the gate is not registered —
@@ -88,7 +106,12 @@ impl CapabilityHandler {
 
                 let result = self
                     .router
-                    .forward_request(remote_endpoint, "capability.call", &remote_call)
+                    .forward_request_with_timeout(
+                        remote_endpoint,
+                        "capability.call",
+                        &remote_call,
+                        timeout_cap,
+                    )
                     .await?;
 
                 let elapsed_ms = elapsed_ms_since(start);
@@ -135,7 +158,12 @@ impl CapabilityHandler {
         if let Ok(tower) = self.router.discover_tower_atomic().await {
             match self
                 .router
-                .forward_request(&tower.primary_endpoint, &semantic_name, &args)
+                .forward_request_with_timeout(
+                    &tower.primary_endpoint,
+                    &semantic_name,
+                    &args,
+                    timeout_cap,
+                )
                 .await
             {
                 Ok(value) => {
@@ -223,7 +251,7 @@ impl CapabilityHandler {
 
                 let result = self
                     .router
-                    .forward_request(&endpoint, &forward_method, &args)
+                    .forward_request_with_timeout(&endpoint, &forward_method, &args, timeout_cap)
                     .await?;
 
                 let elapsed_ms = elapsed_ms_since(start);
@@ -278,7 +306,12 @@ impl CapabilityHandler {
 
                 let result = self
                     .router
-                    .forward_request(&atomic.primary_endpoint, &forward_method, &args)
+                    .forward_request_with_timeout(
+                        &atomic.primary_endpoint,
+                        &forward_method,
+                        &args,
+                        timeout_cap,
+                    )
                     .await?;
 
                 let elapsed_ms = elapsed_ms_since(start);

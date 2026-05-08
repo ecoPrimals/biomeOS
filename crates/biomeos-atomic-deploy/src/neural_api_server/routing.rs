@@ -414,6 +414,12 @@ impl NeuralApiServer {
                         if let Some(t) = trace_flag {
                             cap_params["_routing_trace"] = t;
                         }
+                        // JH-2: inject resource envelope for downstream enforcement
+                        if let Some(ref claims) = caller.claims {
+                            if let Some(ref env) = claims.resources {
+                                cap_params["_resource_envelope"] = env.to_forwarding_value();
+                            }
+                        }
                         return dispatch_capability_call(
                             self.capability_handler.call(&Some(cap_params)).await,
                             id,
@@ -525,7 +531,8 @@ impl NeuralApiServer {
             }
             Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, id),
             Route::CapabilityCall => {
-                dispatch_capability_call(self.capability_handler.call(params).await, id)
+                let enriched = self.enrich_with_envelope(params, &caller);
+                dispatch_capability_call(self.capability_handler.call(&enriched).await, id)
             }
             Route::CapabilityDiscoverTranslations => dispatch(
                 self.capability_handler.discover_translations(params).await,
@@ -599,6 +606,7 @@ impl NeuralApiServer {
                         .cloned();
                     if let Some(o) = args_obj.as_object_mut() {
                         o.remove("_routing_trace");
+                        o.remove("_bearer_token");
                     }
                     let mut cap_params = json!({
                         "capability": domain,
@@ -607,6 +615,12 @@ impl NeuralApiServer {
                     });
                     if let Some(t) = trace_flag {
                         cap_params["_routing_trace"] = t;
+                    }
+                    // JH-2: inject resource envelope for downstream enforcement
+                    if let Some(ref claims) = caller.claims {
+                        if let Some(ref env) = claims.resources {
+                            cap_params["_resource_envelope"] = env.to_forwarding_value();
+                        }
                     }
                     dispatch_capability_call(
                         self.capability_handler.call(&Some(cap_params)).await,
@@ -629,6 +643,30 @@ impl NeuralApiServer {
     /// Backward-compatible wrapper that converts `DispatchOutcome` to `Value`.
     pub async fn handle_request_json(&self, request_line: &str) -> Value {
         self.handle_request(request_line).await.into_response()
+    }
+
+    /// Inject `_resource_envelope` into capability call params when the caller
+    /// has an ionic token with a resource envelope (JH-2).
+    ///
+    /// Downstream primals (e.g. ToadStool) read `_resource_envelope` to
+    /// enforce `cpu`, `mem`, and `timeout_ms` at the compute dispatch level.
+    fn enrich_with_envelope(
+        &self,
+        params: &Option<Value>,
+        caller: &CallerContext,
+    ) -> Option<Value> {
+        let Some(ref claims) = caller.claims else {
+            return params.clone();
+        };
+        let Some(ref env) = claims.resources else {
+            return params.clone();
+        };
+
+        let mut enriched = params.clone().unwrap_or(json!({}));
+        if let Some(obj) = enriched.as_object_mut() {
+            obj.insert("_resource_envelope".to_string(), env.to_forwarding_value());
+        }
+        Some(enriched)
     }
 }
 

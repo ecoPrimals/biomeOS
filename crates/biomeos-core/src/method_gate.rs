@@ -80,6 +80,10 @@ pub struct ResourceEnvelope {
     /// Maximum CPU cores (fractional, e.g. 2.5).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu: Option<f64>,
+    /// Maximum dispatch timeout in milliseconds.
+    /// When set, biomeOS caps the forwarding timeout to this value.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_ms: Option<u64>,
     /// Explicit method allowlist. When present, only these methods
     /// (checked *in addition to* scope patterns) are permitted.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -202,6 +206,30 @@ impl IonicTokenClaims {
             return true;
         };
         allowlist.iter().any(|m| m == method)
+    }
+
+    /// Get the dispatch timeout cap from the resource envelope (if any).
+    ///
+    /// Returns `None` when no envelope or no `timeout_ms` is set.
+    #[must_use]
+    pub fn dispatch_timeout_ms(&self) -> Option<u64> {
+        self.resources.as_ref().and_then(|e| e.timeout_ms)
+    }
+}
+
+impl ResourceEnvelope {
+    /// Serialize this envelope as a JSON value suitable for injection into
+    /// forwarded request params (`_resource_envelope`).
+    ///
+    /// Downstream primals (e.g. ToadStool) read this field to enforce
+    /// `cpu`, `mem`, and `timeout_ms` at the compute dispatch level.
+    #[must_use]
+    pub fn to_forwarding_value(&self) -> serde_json::Value {
+        serde_json::json!({
+            "mem": self.mem,
+            "cpu": self.cpu,
+            "timeout_ms": self.timeout_ms,
+        })
     }
 }
 
@@ -492,8 +520,14 @@ impl MethodGate {
             result["subject"] = serde_json::json!(claims.sub);
             result["scope"] = serde_json::json!(claims.scope);
             result["expired"] = serde_json::json!(claims.is_expired());
-            if claims.resources.is_some() {
+            if let Some(ref env) = claims.resources {
                 result["has_resource_envelope"] = serde_json::json!(true);
+                result["resource_envelope"] = serde_json::json!({
+                    "mem": env.mem,
+                    "cpu": env.cpu,
+                    "timeout_ms": env.timeout_ms,
+                    "method_allowlist_count": env.method_allowlist.as_ref().map(Vec::len),
+                });
             }
         }
         result
@@ -930,5 +964,120 @@ mod tests {
         assert_eq!(result["has_token"], true);
         assert_eq!(result["peer_uid"], 1000);
         assert_eq!(result["peer_pid"], 1234);
+    }
+
+    // ── JH-2 cpu/timeout_ms enforcement ──
+
+    #[test]
+    fn dispatch_timeout_ms_from_envelope() {
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "worker",
+            "scope": ["*"],
+            "exp": 9999999999u64,
+            "resources": { "timeout_ms": 5000 }
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert_eq!(claims.dispatch_timeout_ms(), Some(5000));
+    }
+
+    #[test]
+    fn dispatch_timeout_ms_none_when_absent() {
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "worker",
+            "scope": ["*"],
+            "exp": 9999999999u64,
+            "resources": { "mem": 4096 }
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert_eq!(claims.dispatch_timeout_ms(), None);
+    }
+
+    #[test]
+    fn dispatch_timeout_ms_none_without_envelope() {
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "worker",
+            "scope": ["*"],
+            "exp": 9999999999u64
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert_eq!(claims.dispatch_timeout_ms(), None);
+    }
+
+    #[test]
+    fn resource_envelope_to_forwarding_value() {
+        let env = ResourceEnvelope {
+            mem: Some(1024),
+            cpu: Some(2.0),
+            timeout_ms: Some(10_000),
+            method_allowlist: None,
+        };
+        let val = env.to_forwarding_value();
+        assert_eq!(val["mem"], 1024);
+        assert_eq!(val["cpu"], 2.0);
+        assert_eq!(val["timeout_ms"], 10_000);
+    }
+
+    #[test]
+    fn resource_envelope_forwarding_value_null_fields() {
+        let env = ResourceEnvelope::default();
+        let val = env.to_forwarding_value();
+        assert!(val["mem"].is_null());
+        assert!(val["cpu"].is_null());
+        assert!(val["timeout_ms"].is_null());
+    }
+
+    #[test]
+    fn auth_check_includes_resource_envelope_details() {
+        let gate = MethodGate::new(EnforcementMode::Enforced);
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "researcher",
+            "scope": ["compute.*"],
+            "exp": 9999999999u64,
+            "resources": {
+                "mem": 4096,
+                "cpu": 2.5,
+                "timeout_ms": 30000
+            }
+        }));
+        let caller = CallerContext::loopback().with_bearer_token(token);
+        let result = gate.handle_auth_check(&caller);
+        assert_eq!(result["has_resource_envelope"], true);
+        let env = &result["resource_envelope"];
+        assert_eq!(env["mem"], 4096);
+        assert_eq!(env["cpu"], 2.5);
+        assert_eq!(env["timeout_ms"], 30000);
+    }
+
+    #[test]
+    fn cpu_field_in_resource_envelope_parses() {
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "jupyter-user",
+            "scope": ["compute.*"],
+            "exp": 9999999999u64,
+            "resources": {
+                "cpu": 2.0,
+                "mem": 2147483648u64,
+                "timeout_ms": 60000
+            }
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        let env = claims.resources.unwrap();
+        assert_eq!(env.cpu, Some(2.0));
+        assert_eq!(env.mem, Some(2_147_483_648));
+        assert_eq!(env.timeout_ms, Some(60_000));
+    }
+
+    #[test]
+    fn resource_allowed_cpu_over_limit_rejected() {
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "user",
+            "scope": ["*"],
+            "exp": 9999999999u64,
+            "resources": { "cpu": 2.0 }
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert!(!claims.resource_allowed(None, Some(4.0)));
+        assert!(claims.resource_allowed(None, Some(1.5)));
+        assert!(claims.resource_allowed(None, Some(2.0)));
     }
 }

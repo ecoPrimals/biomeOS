@@ -170,6 +170,77 @@ impl NeuralRouter {
         Ok(result)
     }
 
+    /// Forward with an envelope-derived timeout cap (JH-2).
+    ///
+    /// If `timeout_cap` is `Some`, the actual forwarding timeout is
+    /// `min(self.request_timeout, timeout_cap)`. This ensures scoped
+    /// tokens with `timeout_ms` cannot exceed the system default but
+    /// *can* impose a tighter deadline.
+    pub async fn forward_request_with_timeout(
+        &self,
+        endpoint: &TransportEndpoint,
+        method: &str,
+        params: &Value,
+        timeout_cap: Option<std::time::Duration>,
+    ) -> Result<Value> {
+        if let Some(cap) = timeout_cap {
+            let effective = self.request_timeout.min(cap);
+            return self
+                .forward_request_inner(endpoint, method, params, effective)
+                .await;
+        }
+        self.forward_request(endpoint, method, params).await
+    }
+
+    /// Inner forwarding with an explicit timeout (used by `forward_request_with_timeout`).
+    async fn forward_request_inner(
+        &self,
+        endpoint: &TransportEndpoint,
+        method: &str,
+        params: &Value,
+        timeout: std::time::Duration,
+    ) -> Result<Value> {
+        let start = std::time::Instant::now();
+
+        debug!(
+            "   → Forwarding via JSON-RPC (timeout {}ms): {} to {}",
+            timeout.as_millis(),
+            method,
+            endpoint.display_string()
+        );
+
+        let client = AtomicClient::from_endpoint(endpoint.clone()).with_timeout(timeout);
+
+        let result = match client.try_call(method, params.clone()).await {
+            Ok(value) => value,
+            Err(e @ IpcError::JsonRpcError { .. }) => {
+                return Err(e.into());
+            }
+            Err(e) => {
+                return Err(anyhow::Error::from(e).context(format!(
+                    "Failed to forward {} to {} (timeout {}ms)",
+                    method,
+                    endpoint.display_string(),
+                    timeout.as_millis()
+                )));
+            }
+        };
+
+        let latency = start.elapsed().as_millis() as u64;
+        debug!("   ✓ Forwarded successfully in {}ms", latency);
+
+        if let Some(graph) = &self.living_graph {
+            let primal_label = self.primal_label_for_endpoint(endpoint);
+            if let Some(label) = primal_label {
+                graph
+                    .record_request("neural-api", &label, latency * 1000, true)
+                    .await;
+            }
+        }
+
+        Ok(result)
+    }
+
     /// Extract a human-readable primal label from an endpoint for metrics
     pub(crate) fn primal_label_for_endpoint(&self, endpoint: &TransportEndpoint) -> Option<String> {
         match endpoint {

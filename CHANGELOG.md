@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.48 (2026-05-08) — cpu/timeout_ms Dispatch Enforcement (JH-2 Remainder)
+
+### Resource envelope dispatch enforcement (JH-2 remainder — joint with ToadStool)
+- `ResourceEnvelope` extended with `timeout_ms: Option<u64>` field.
+  Scoped tokens can now carry a dispatch timeout cap (e.g. `timeout_ms: 5000`).
+- `IonicTokenClaims::dispatch_timeout_ms()` — extracts the timeout cap from the envelope.
+- `ResourceEnvelope::to_forwarding_value()` — serializes `mem`, `cpu`, `timeout_ms`
+  for injection into forwarded params as `_resource_envelope`.
+- `NeuralRouter::forward_request_with_timeout()` — new forwarding variant that
+  accepts an optional `Duration` cap. Effective timeout is `min(system_default, cap)`.
+- `CapabilityHandler::call()` now:
+  - Extracts `_resource_envelope.timeout_ms` from enriched params.
+  - Uses `forward_request_with_timeout()` at all 4 forwarding points (cross-gate,
+    Tower Atomic relay, translated, and direct routing).
+  - Injects `_resource_envelope` into forwarded `args` so downstream primals
+    (e.g. ToadStool) can enforce `cpu`/`mem`/`timeout_ms` at their dispatch level.
+- `routing.rs` enrichment:
+  - `enrich_with_envelope()` helper injects `_resource_envelope` into capability
+    call params when caller has an ionic token with resource constraints.
+  - Applied to `Route::CapabilityCall`, semantic fallback, and `Route::SemanticCapabilityCall`.
+  - `_bearer_token` stripped from `SemanticCapabilityCall` args (same fix as semantic fallback).
+- `auth.check` introspection now returns full `resource_envelope` details:
+  `{ mem, cpu, timeout_ms, method_allowlist_count }`.
+- 8 new unit tests covering `dispatch_timeout_ms()`, `to_forwarding_value()`,
+  `resource_allowed()` with CPU, and enriched `auth.check` response.
+
+### Codebase health
+- 7,919 lib + bin tests (0 failures, fully concurrent).
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.47 (2026-05-08) — Resource Envelope Enforcement (JH-2) + Composition Hot-Reload (JH-3)
 
 ### Token-carried resource envelope (JH-2 HIGH — now unblocked by BearDog JH-1)
