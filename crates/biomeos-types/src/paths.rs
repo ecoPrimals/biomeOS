@@ -168,7 +168,10 @@ impl SystemPaths {
         }
     }
 
-    /// Create `SystemPaths` with XDG env overrides (for testing without mutating env)
+    /// Create `SystemPaths` with explicit XDG directory overrides.
+    ///
+    /// Avoids reading `XDG_RUNTIME_DIR`/`XDG_DATA_HOME` from the process
+    /// environment. Used by containers, sandboxes, and deterministic builds.
     pub fn new_with_xdg_overrides(
         xdg_runtime_dir: Option<impl AsRef<Path>>,
         xdg_data_home: Option<impl AsRef<Path>>,

@@ -384,7 +384,7 @@ impl SecureNucleusDiscovery {
     ///
     /// This method is only available in test builds and allows
     /// injecting verified primals directly into the registry for testing.
-    #[doc(hidden)]
+    #[cfg(any(test, feature = "test-helpers"))]
     #[must_use]
     pub fn inject_primal_for_testing(mut self, primal: VerifiedPrimal) -> Self {
         self.verified_primals

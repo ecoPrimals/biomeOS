@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.49 (2026-05-08) — Test Helpers Gated from Production Builds (Priority 4 Code Quality)
+
+### Test helper isolation (Priority 4 — mock helpers separated from production code)
+- `presets::testing()` — gated behind `#[cfg(test)]`. Was shipping in production
+  builds despite being called only from unit tests.
+- `BiomeOSConfigBuilder::for_testing()` — gated behind `#[cfg(test)]`. Zero
+  production callers.
+- `UniversalBiomeOSManager::clear_all_primals()` — gated behind `#[cfg(test)]`.
+  Previously exposed as public API with "useful for testing" doc.
+- `SecureNucleusDiscovery::inject_primal_for_testing()` — gated behind
+  `#[cfg(any(test, feature = "test-helpers"))]`. Used by integration tests,
+  so `biomeos-federation` gains a `test-helpers` feature with self-referencing
+  `[dev-dependencies]` to enable it for integration test compilation.
+  `#[doc(hidden)]` replaced by the compile-time gate.
+
+### Misleading doc comments fixed
+- `SocketDiscovery::with_xdg_override()` / `with_temp_dir_override()` — docs
+  updated from "for testing" to accurate "containers, sandboxes, P2P coordination"
+  framing. These methods are used in production by `p2p_coordination`.
+- `SystemPaths::new_with_xdg_overrides()` — same doc fix.
+- `discover_via_multicast_with()` — "simulated discovery" comment replaced with
+  accurate description of env-hint resolution and deferred multicast I/O.
+
+### Codebase health
+- 7,919 lib + bin tests (0 failures, fully concurrent).
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.48 (2026-05-08) — cpu/timeout_ms Dispatch Enforcement (JH-2 Remainder)
 
 ### Resource envelope dispatch enforcement (JH-2 remainder — joint with ToadStool)

@@ -46,10 +46,10 @@ pub struct SocketDiscovery {
     /// Neural API socket (for capability registry queries)
     pub(crate) neural_api_socket: Option<PathBuf>,
 
-    /// Override for `XDG_RUNTIME_DIR` (for testing without env mutation)
+    /// Override for `XDG_RUNTIME_DIR` (containers, sandboxes, P2P coordination)
     pub(crate) xdg_runtime_dir_override: Option<PathBuf>,
 
-    /// Override for temp dir / TMPDIR (for testing without env mutation)
+    /// Override for temp dir / `TMPDIR` (containers, sandboxes, P2P coordination)
     pub(crate) temp_dir_override: Option<PathBuf>,
 }
 
@@ -85,13 +85,19 @@ impl SocketDiscovery {
         self
     }
 
-    /// Set `XDG_RUNTIME_DIR` override (for testing without env mutation)
+    /// Override `XDG_RUNTIME_DIR` for socket discovery.
+    ///
+    /// Used by P2P coordination, containers, and sandboxed environments
+    /// that need deterministic paths without mutating process-global env vars.
     pub fn with_xdg_override(mut self, path: impl AsRef<Path>) -> Self {
         self.xdg_runtime_dir_override = Some(path.as_ref().to_path_buf());
         self
     }
 
-    /// Set temp dir override / TMPDIR (for testing without env mutation)
+    /// Override temp dir (`TMPDIR`) for socket discovery.
+    ///
+    /// Used by P2P coordination, containers, and sandboxed environments
+    /// that need deterministic paths without mutating process-global env vars.
     pub fn with_temp_dir_override(mut self, path: impl AsRef<Path>) -> Self {
         self.temp_dir_override = Some(path.as_ref().to_path_buf());
         self

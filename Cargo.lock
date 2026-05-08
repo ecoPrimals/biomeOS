@@ -629,6 +629,7 @@ dependencies = [
  "anyhow",
  "base64",
  "biomeos-core",
+ "biomeos-federation",
  "biomeos-test-utils",
  "biomeos-types",
  "bytes",

@@ -169,12 +169,13 @@ impl UniversalBiomeOSManager {
         compute_primal_statistics(registry.values().cloned())
     }
 
-    /// Clear all registered primals (useful for testing)
+    /// Clear all registered primals (test-only, not compiled into production builds).
+    #[cfg(test)]
     pub async fn clear_all_primals(&self) -> Result<()> {
         let mut registry = self.registered_primals.write().await;
         let count = registry.len();
         registry.clear();
-        tracing::info!("🧹 Cleared {} registered primals", count);
+        tracing::info!("Cleared {} registered primals", count);
         Ok(())
     }
 }

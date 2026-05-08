@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 8, 2026 (v3.48: JH-2 cpu/timeout_ms dispatch enforcement; ResourceEnvelope forwarded to downstream primals; timeout capping on all capability.call paths; 7,919 tests)
-**Version**: 3.48
-**Status**: PRODUCTION READY - BTSP Phase 3 FULL - Capability-Based Identity - PG-55 FULL - JH-0 MethodGate WIRED - JH-2 Resource Envelope ENFORCED (cpu+timeout_ms) - JH-3 composition.reload LIVE - RootPulse RP-1–RP-5 Resolved - Zero Blocking Debt - Fully Concurrent Testing - Graph Integrity Verification Active
+**Updated**: May 8, 2026 (v3.49: Priority 4 test helper isolation — mock/testing helpers gated from production builds; misleading doc comments fixed; 7,919 tests)
+**Version**: 3.49
+**Status**: PRODUCTION READY - BTSP Phase 3 FULL - Capability-Based Identity - PG-55 FULL - JH-0 MethodGate WIRED - JH-2 Resource Envelope ENFORCED (cpu+timeout_ms) - JH-3 composition.reload LIVE - RootPulse RP-1–RP-5 Resolved - Zero Blocking Debt - Fully Concurrent Testing - Graph Integrity Verification Active - Priority 4 Test Isolation CLEAN
 
 ---
 

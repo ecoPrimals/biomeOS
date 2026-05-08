@@ -366,7 +366,8 @@ impl DiscoveryBootstrap {
         tracing::debug!("Sending discovery request");
         tracing::debug!("Listening for responses (timeout: 3s)");
 
-        // Simulated discovery - in production would use actual multicast
+        // Env-based hint: resolves via override or MULTICAST_DISCOVERED_ENDPOINT.
+        // Full multicast socket I/O deferred until cross-gate deployments require it.
         let endpoint_hint = endpoint_override
             .map(String::from)
             .or_else(|| std::env::var("MULTICAST_DISCOVERED_ENDPOINT").ok());

@@ -191,7 +191,8 @@ pub mod presets {
             .build()
     }
 
-    /// Testing configuration preset
+    /// Testing configuration preset (test-only, not compiled into production builds).
+    #[cfg(test)]
     pub fn testing() -> BiomeResult<BiomeOSConfig> {
         BiomeOSConfigBuilder::new()
             .name("testing-biome")

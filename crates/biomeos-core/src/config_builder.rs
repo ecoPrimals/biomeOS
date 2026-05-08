@@ -102,7 +102,8 @@ impl BiomeOSConfigBuilder {
         builder
     }
 
-    /// Configure for testing environment
+    /// Configure for testing environment (test-only, not compiled into production builds).
+    #[cfg(test)]
     #[must_use]
     pub fn for_testing() -> Self {
         let mut builder = Self::new();
