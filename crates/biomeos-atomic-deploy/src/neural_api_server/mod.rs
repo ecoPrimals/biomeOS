@@ -136,6 +136,10 @@ pub struct NeuralApiServer {
     /// cipher negotiation. Sessions are registered after Phase 2 handshake
     /// and upgraded via `btsp.negotiate`.
     pub(super) btsp_sessions: btsp_negotiate::BtspSessionStore,
+
+    /// Pre-dispatch method gate (JH-0). Checks caller authorization
+    /// before routing to handlers. Starts in permissive mode.
+    pub(super) method_gate: biomeos_core::MethodGate,
 }
 
 impl NeuralApiServer {
@@ -229,6 +233,7 @@ impl NeuralApiServer {
             agent_registry: agents::AgentRegistry::new(),
             coordination_pubkey: Arc::new(RwLock::new(None)),
             btsp_sessions: btsp_negotiate::new_session_store(),
+            method_gate: biomeos_core::MethodGate::from_env(),
         }
     }
 

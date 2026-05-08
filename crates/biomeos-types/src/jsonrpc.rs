@@ -291,6 +291,30 @@ impl JsonRpcError {
             data: details.map(|d| serde_json::json!({"details": d})),
         }
     }
+
+    /// Create a permission denied error (-32001).
+    ///
+    /// Used by the `MethodGate` when a caller lacks scope for a protected method.
+    #[must_use]
+    pub fn permission_denied(method: &str) -> Self {
+        Self {
+            code: -32_001,
+            message: format!("Permission denied: method '{method}' requires a capability token"),
+            data: Some(serde_json::json!({"method": method})),
+        }
+    }
+
+    /// Create an unauthorized error (-32000).
+    ///
+    /// Used when caller identity cannot be established at all.
+    #[must_use]
+    pub fn unauthorized(reason: &str) -> Self {
+        Self {
+            code: -32_000,
+            message: format!("Unauthorized: {reason}"),
+            data: None,
+        }
+    }
 }
 
 #[cfg(test)]

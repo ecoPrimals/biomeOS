@@ -90,6 +90,9 @@ pub mod primal_registry;
 // Lab integration module (benchScale)
 pub mod lab;
 
+// Pre-dispatch method gate (JH-0 ecosystem standard)
+pub mod method_gate;
+
 // Pathway-learning metrics for Neural API Phase 2
 pub mod metrics_collector;
 
@@ -181,6 +184,9 @@ pub use socket_discovery::{
 };
 pub use tower_config::PrimalConfig as TowerPrimalConfig;
 pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};
+
+// Method gate re-exports (JH-0)
+pub use method_gate::{CallerContext, ConnectionOrigin, EnforcementMode, MethodGate};
 
 // Connection strategy re-exports
 pub use connection_strategy::{

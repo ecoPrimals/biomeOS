@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.46 (2026-05-07) — MethodGate Pre-Dispatch Authorization (JH-0)
+
+### MethodGate pattern adoption (JH-0 ecosystem standard)
+- New `biomeos-core::method_gate` module with full gate implementation:
+  - `MethodGate` — pre-dispatch authorization check, reads `BIOMEOS_AUTH_MODE` env var.
+  - `CallerContext` — bearer token, peer credentials, connection origin.
+  - `classify_method()` — Public/Protected classification for all methods.
+  - `EnforcementMode` — `Permissive` (default, log-only) / `Enforced` (reject with -32001).
+  - `PeerCredentials`, `ConnectionOrigin` — structured caller identity.
+- Gate wired into `NeuralApiServer::handle_request()` in `routing.rs`:
+  - Every RPC call passes through `method_gate.check()` before the dispatch table.
+  - Bearer tokens extracted from `_bearer_token` field in request params.
+  - Protected methods rejected with `-32001 PERMISSION_DENIED` in enforced mode.
+- Three new `auth.*` introspection methods registered:
+  - `auth.check` — returns `{ authenticated, mode }`.
+  - `auth.mode` — returns current enforcement mode.
+  - `auth.peer_info` — returns connection origin, token presence, peer UID/PID.
+- Error code constructors added to `biomeos-types::JsonRpcError`:
+  - `permission_denied(method)` → `-32001` with method in data payload.
+  - `unauthorized(reason)` → `-32000`.
+- 26 new unit tests for the gate module covering classification, enforcement,
+  auth introspection, and token handling.
+
+### Codebase health
+- 7,897 lib + bin tests (0 failures, fully concurrent).
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.45 (2026-05-07) — RootPulse Graph Method Alignment + Standalone Executor (RP-1 through RP-5)
 
 ### RootPulse graph method/param alignment (RP-1 HIGH, RP-2 HIGH)

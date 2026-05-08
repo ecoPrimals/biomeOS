@@ -6,6 +6,7 @@
 //! Routes JSON-RPC requests to appropriate handlers based on method name.
 //! Uses a table-driven handler registry for O(1) lookup.
 
+use biomeos_core::method_gate::CallerContext;
 use serde_json::{Value, json};
 use tracing::{debug, trace};
 
@@ -142,6 +143,9 @@ enum Route {
     BtspNegotiate,
     GraphTickStatus,
     GraphVerify,
+    AuthCheck,
+    AuthMode,
+    AuthPeerInfo,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -291,6 +295,10 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("health.check", Route::HealthCheck),
     ("health.liveness", Route::HealthLiveness),
     ("health.readiness", Route::HealthReadiness),
+    // Auth introspection (JH-0 method gate)
+    ("auth.check", Route::AuthCheck),
+    ("auth.mode", Route::AuthMode),
+    ("auth.peer_info", Route::AuthPeerInfo),
     // BTSP escalation (cleartext → enforced after Tower healthy)
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
@@ -350,6 +358,25 @@ impl NeuralApiServer {
         let id = request.id.clone().unwrap_or(serde_json::Value::Null);
         debug!("📥 Request: {} (id: {})", request.method, id);
         trace!("📥 Full request: {}", request_line.trim());
+
+        // JH-0: extract bearer token from request params if present.
+        let caller = request
+            .params
+            .as_ref()
+            .and_then(|p| p.get("_bearer_token"))
+            .and_then(|t| t.as_str())
+            .map_or_else(CallerContext::loopback, |tok| {
+                CallerContext::loopback().with_bearer_token(tok.to_owned())
+            });
+
+        // JH-0: pre-dispatch method gate check.
+        if let Err(gate_err) = self.method_gate.check(request.method.as_ref(), &caller) {
+            return DispatchOutcome::ApplicationError {
+                code: gate_err.code as i32,
+                message: gate_err.message,
+                id,
+            };
+        }
 
         let params = &request.params;
 
@@ -541,6 +568,19 @@ impl NeuralApiServer {
                 .await,
                 id,
             ),
+            // Auth introspection (JH-0 method gate)
+            Route::AuthCheck => {
+                let result = self.method_gate.handle_auth_check(&caller);
+                DispatchOutcome::Success(super::rpc::success_response(result, id))
+            }
+            Route::AuthMode => {
+                let result = self.method_gate.handle_auth_mode();
+                DispatchOutcome::Success(super::rpc::success_response(result, id))
+            }
+            Route::AuthPeerInfo => {
+                let result = self.method_gate.handle_auth_peer_info(&caller);
+                DispatchOutcome::Success(super::rpc::success_response(result, id))
+            }
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, id),
             // Semantic capability routing: domain.operation → capability.call
