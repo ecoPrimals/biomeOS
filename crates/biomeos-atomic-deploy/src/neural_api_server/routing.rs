@@ -146,6 +146,7 @@ enum Route {
     AuthCheck,
     AuthMode,
     AuthPeerInfo,
+    CompositionReload,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -299,6 +300,8 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("auth.check", Route::AuthCheck),
     ("auth.mode", Route::AuthMode),
     ("auth.peer_info", Route::AuthPeerInfo),
+    // Composition hot-reload (JH-3)
+    ("composition.reload", Route::CompositionReload),
     // BTSP escalation (cleartext → enforced after Tower healthy)
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
@@ -401,6 +404,7 @@ impl NeuralApiServer {
                             .cloned();
                         if let Some(o) = args_obj.as_object_mut() {
                             o.remove("_routing_trace");
+                            o.remove("_bearer_token");
                         }
                         let mut cap_params = json!({
                             "capability": domain,
@@ -581,6 +585,8 @@ impl NeuralApiServer {
                 let result = self.method_gate.handle_auth_peer_info(&caller);
                 DispatchOutcome::Success(super::rpc::success_response(result, id))
             }
+            // Composition hot-reload (JH-3)
+            Route::CompositionReload => dispatch(self.lifecycle_handler.reload(params).await, id),
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, id),
             // Semantic capability routing: domain.operation → capability.call

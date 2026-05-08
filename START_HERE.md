@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: May 7, 2026
-**Status**: Production Ready (v3.46) — JH-0 MethodGate wired (permissive default, auth.check/mode/peer_info), RootPulse RP-1–RP-5 resolved, PG-55 FULL, BTSP Phase 3 FULL, capability-based identity, 7,897 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.47) — JH-2 resource envelope enforcement + JH-3 composition.reload, JH-0 MethodGate wired, ionic token scope/expiry/allowlist, RootPulse RP-1–RP-5 resolved, PG-55 FULL, BTSP Phase 3 FULL, capability-based identity, 7,911 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps (blake3 pure-only), 0 unsafe prod (`#[forbid(unsafe_code)]` all crate roots + all 20+ binaries), 0 deprecated APIs, 0 TODO/FIXME, 0 hardcoded values in production, `#[expect(reason)]` throughout, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 

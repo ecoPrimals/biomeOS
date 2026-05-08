@@ -2,6 +2,40 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.47 (2026-05-08) — Resource Envelope Enforcement (JH-2) + Composition Hot-Reload (JH-3)
+
+### Token-carried resource envelope (JH-2 HIGH — now unblocked by BearDog JH-1)
+- Ionic token claims parsed locally from bearer tokens:
+  - `IonicTokenClaims` — decoded payload with `iss`, `sub`, `scope`, `iat`, `exp`, `jti`.
+  - `ResourceEnvelope` — `mem` (bytes), `cpu` (cores), `method_allowlist`.
+  - `scope_covers_method()` — primalSpring-standard glob matching (`*`, `prefix.*`, exact).
+  - Base64 decoding with standard/no-pad/URL-safe fallbacks.
+- `CallerContext` now carries parsed `claims: Option<IonicTokenClaims>`.
+  `with_bearer_token()` auto-parses ionic format tokens.
+- `MethodGate::check()` enhanced for enforced mode:
+  - Token expiry checked (reject expired tokens).
+  - Scope coverage verified (reject tokens whose scope doesn't cover the method).
+  - Resource envelope `method_allowlist` enforced (reject methods not in allowlist).
+  - All checks log-only in permissive mode, reject with `-32001` in enforced mode.
+- `auth.check` introspection enriched: returns `subject`, `scope`, `expired`,
+  `has_resource_envelope` when an ionic token is present.
+- `_bearer_token` stripped from semantic-fallback args before forwarding to primals
+  (prevents token leakage through `capability.call` semantic routing).
+- 40 unit tests (14 new) covering scope matching, token parsing, resource envelope
+  checks, expiry, allowlist enforcement, and enriched introspection.
+
+### Composition hot-reload (JH-3 MEDIUM)
+- New `composition.reload` JSON-RPC method in the Neural API route table.
+- Accepts `{ "name": "primal_name", "socket_path": "/optional/new.sock" }`.
+- Flow: verify registered → apoptosis → brief drain pause → re-register → health check.
+- Returns `{ reloaded, name, socket_path, healthy }`.
+- Enables per-primal swap without tearing down the full NUCLEUS stack.
+
+### Codebase health
+- 7,911 lib + bin tests (0 failures, fully concurrent).
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.46 (2026-05-07) — MethodGate Pre-Dispatch Authorization (JH-0)
 
 ### MethodGate pattern adoption (JH-0 ecosystem standard)

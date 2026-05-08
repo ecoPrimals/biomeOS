@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 7, 2026 (v3.46: JH-0 MethodGate pre-dispatch authorization wired, auth.check/mode/peer_info, 7,897 tests)
+**Updated**: May 8, 2026 (v3.47: JH-2 resource envelope enforcement + JH-3 composition.reload, ionic token claims/scope, 7,911 tests)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---

@@ -185,8 +185,11 @@ pub use socket_discovery::{
 pub use tower_config::PrimalConfig as TowerPrimalConfig;
 pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};
 
-// Method gate re-exports (JH-0)
-pub use method_gate::{CallerContext, ConnectionOrigin, EnforcementMode, MethodGate};
+// Method gate re-exports (JH-0, JH-2)
+pub use method_gate::{
+    CallerContext, ConnectionOrigin, EnforcementMode, IonicTokenClaims, MethodGate,
+    ResourceEnvelope, scope_covers_method,
+};
 
 // Connection strategy re-exports
 pub use connection_strategy::{

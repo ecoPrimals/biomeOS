@@ -11,6 +11,7 @@
 //! - `lifecycle.apoptosis` - Initiate graceful shutdown
 //! - `lifecycle.register` - Register a primal for management
 //! - `lifecycle.shutdown_all` - Initiate system-wide shutdown
+//! - `composition.reload` - Hot-swap a single primal without full restart (JH-3)
 
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
@@ -422,6 +423,89 @@ impl LifecycleHandler {
         Ok(json!({
             "shutdown": "complete",
             "message": "All primals have been shut down"
+        }))
+    }
+
+    /// Handle `composition.reload` — hot-swap a single primal without restarting
+    /// the full composition (JH-3).
+    ///
+    /// Steps:
+    /// 1. Verify the named primal is currently registered.
+    /// 2. Gracefully stop it (apoptosis with `reload` reason).
+    /// 3. Wait briefly for process exit.
+    /// 4. Re-register at the new socket path (or the same one).
+    /// 5. Health-check the restarted primal.
+    /// 6. Return success/failure.
+    ///
+    /// Params: `{ "name": "primal_name", "socket_path": "/new/path.sock" (optional) }`
+    pub async fn reload(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let name = params["name"]
+            .as_str()
+            .context("Missing 'name' parameter")?;
+
+        info!("🔄 Composition reload requested for '{name}'");
+
+        let manager = self.manager.read().await;
+
+        let existing = manager.get_primal_info(name).await;
+        let (old_socket, old_pid, old_node) = match existing {
+            Some(info) => (
+                info.socket_path.clone(),
+                info.pid,
+                info.deployment_node.clone(),
+            ),
+            None => {
+                return Ok(json!({
+                    "reloaded": false,
+                    "error": format!("Primal '{name}' is not registered in the composition"),
+                }));
+            }
+        };
+
+        let new_socket = params["socket_path"]
+            .as_str()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| old_socket.clone());
+
+        manager
+            .apoptosis(name, ApoptosisReason::UserRequest)
+            .await
+            .ok();
+
+        drop(manager);
+
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+
+        let manager = self.manager.read().await;
+        manager
+            .register_primal(name, new_socket.clone(), old_pid, old_node)
+            .await?;
+
+        drop(manager);
+
+        let healthy = {
+            let client = AtomicClient::unix(&new_socket)
+                .with_timeout(biomeos_types::constants::timeouts::DEFAULT_IPC_TIMEOUT);
+            match client.call("health.check", json!({})).await {
+                Ok(_) => true,
+                Err(e) => {
+                    warn!("🔄 Reload health check failed for '{name}': {e}");
+                    false
+                }
+            }
+        };
+
+        info!(
+            "🔄 Composition reload for '{name}': healthy={healthy}, socket={}",
+            new_socket.display()
+        );
+
+        Ok(json!({
+            "reloaded": true,
+            "name": name,
+            "socket_path": new_socket.display().to_string(),
+            "healthy": healthy,
         }))
     }
 

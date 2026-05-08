@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 7, 2026 (v3.46: MethodGate pre-dispatch authorization JH-0, auth.check/mode/peer_info introspection, BIOMEOS_AUTH_MODE enforcement; 7,897 tests)
-**Version**: 3.46
-**Status**: PRODUCTION READY - BTSP Phase 3 FULL - Capability-Based Identity - PG-55 FULL - JH-0 MethodGate WIRED (permissive default, enforced via BIOMEOS_AUTH_MODE) - RootPulse RP-1–RP-5 Resolved - Zero Blocking Debt - Fully Concurrent Testing - Graph Integrity Verification Active
+**Updated**: May 8, 2026 (v3.47: JH-2 resource envelope enforcement + JH-3 composition.reload hot-swap; ionic token claims parsing, scope matching, method allowlist; 7,911 tests)
+**Version**: 3.47
+**Status**: PRODUCTION READY - BTSP Phase 3 FULL - Capability-Based Identity - PG-55 FULL - JH-0 MethodGate WIRED - JH-2 Resource Envelope ENFORCED - JH-3 composition.reload LIVE - RootPulse RP-1–RP-5 Resolved - Zero Blocking Debt - Fully Concurrent Testing - Graph Integrity Verification Active
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 7,897 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,911 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |

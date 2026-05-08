@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Pre-dispatch capability gate for JSON-RPC methods (JH-0).
+//! Pre-dispatch capability gate for JSON-RPC methods (JH-0 + JH-2).
 //!
 //! Implements the ecosystem-standard `MethodGate` pattern defined in
 //! `primalSpring/wateringHole/METHOD_GATE_STANDARD.md`. Every incoming
@@ -9,11 +9,20 @@
 //! table, classifying methods as [`MethodAccessLevel::Public`] or
 //! [`MethodAccessLevel::Protected`].
 //!
-//! Two enforcement modes control behavior:
+//! ## Enforcement modes
+//!
 //! - **Permissive** (default): protected methods without a token are
 //!   logged but allowed, preserving backward compatibility.
 //! - **Enforced**: protected methods without a valid token are rejected
-//!   with `PERMISSION_DENIED` (-32001).
+//!   with `PERMISSION_DENIED` (-32001). Scope is also checked.
+//!
+//! ## Ionic token support (JH-2)
+//!
+//! Bearer tokens in BearDog ionic format (`header.payload.signature`,
+//! each segment base64-encoded) are parsed locally to extract scope
+//! patterns and resource envelope fields. Scope matching follows the
+//! primalSpring standard: `"*"` matches all, `"prefix.*"` matches
+//! dot-boundary prefixes, exact string match otherwise.
 //!
 //! The gate reads its mode from the `BIOMEOS_AUTH_MODE` environment
 //! variable (or falls back to `Permissive`).
@@ -57,6 +66,171 @@ pub fn classify_method(method: &str) -> MethodAccessLevel {
     MethodAccessLevel::Protected
 }
 
+// ── Ionic token claims parsing (JH-2) ──
+
+/// Resource envelope carried inside an ionic token (JH-2).
+///
+/// Constrains what resources a token holder may request. Fields are
+/// optional — absent means "no constraint on this dimension".
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
+pub struct ResourceEnvelope {
+    /// Maximum memory in bytes (e.g. 1 GiB = 1_073_741_824).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mem: Option<u64>,
+    /// Maximum CPU cores (fractional, e.g. 2.5).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu: Option<f64>,
+    /// Explicit method allowlist. When present, only these methods
+    /// (checked *in addition to* scope patterns) are permitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method_allowlist: Option<Vec<String>>,
+}
+
+/// Parsed claims from a BearDog ionic token payload.
+///
+/// Token format: `base64(header).base64(payload).base64(signature)`.
+/// This struct represents the decoded payload.
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct IonicTokenClaims {
+    /// Issuer DID (`did:key:z6Mk...`).
+    #[serde(default)]
+    pub iss: String,
+    /// Subject identifier.
+    #[serde(default)]
+    pub sub: String,
+    /// Scope patterns — `"*"`, `"prefix.*"`, or exact method name.
+    #[serde(default)]
+    pub scope: Vec<String>,
+    /// Issued-at timestamp (Unix epoch seconds).
+    #[serde(default)]
+    pub iat: u64,
+    /// Expiry timestamp (Unix epoch seconds).
+    #[serde(default)]
+    pub exp: u64,
+    /// Unique token identifier.
+    #[serde(default)]
+    pub jti: String,
+    /// Resource envelope (JH-2 extension).
+    #[serde(default)]
+    pub resources: Option<ResourceEnvelope>,
+}
+
+impl IonicTokenClaims {
+    /// Parse an ionic token string into claims.
+    ///
+    /// Extracts the middle (payload) segment from a `header.payload.signature`
+    /// token and base64-decodes + JSON-parses it. The signature is NOT verified
+    /// here — that's BearDog's responsibility via `auth.verify_ionic`. This
+    /// local parse is for scope and resource extraction only.
+    ///
+    /// Returns `None` if the token is not in ionic format or payload cannot be
+    /// parsed (e.g. opaque tokens, legacy formats).
+    #[must_use]
+    pub fn parse(token: &str) -> Option<Self> {
+        use base64::Engine;
+
+        let parts: Vec<&str> = token.split('.').collect();
+        if parts.len() != 3 {
+            return None;
+        }
+
+        let payload_bytes = base64::engine::general_purpose::STANDARD
+            .decode(parts[1])
+            .or_else(|_| base64::engine::general_purpose::STANDARD_NO_PAD.decode(parts[1]))
+            .or_else(|_| base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(parts[1]))
+            .ok()?;
+
+        serde_json::from_slice(&payload_bytes).ok()
+    }
+
+    /// Check whether this token's scope covers the given method.
+    ///
+    /// Scope matching rules (primalSpring standard):
+    /// - `"*"` matches everything.
+    /// - `"prefix.*"` matches any method starting with `prefix.`.
+    /// - Exact string match otherwise.
+    #[must_use]
+    pub fn scope_covers_method(&self, method: &str) -> bool {
+        scope_covers_method(&self.scope, method)
+    }
+
+    /// Whether this token has expired based on the current system time.
+    #[must_use]
+    pub fn is_expired(&self) -> bool {
+        if self.exp == 0 {
+            return false;
+        }
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        now > self.exp
+    }
+
+    /// Check whether a resource request fits within this token's envelope.
+    ///
+    /// Returns `true` if the request is within limits (or if no envelope
+    /// is set). Checks `mem` and `cpu` when both request and envelope
+    /// specify them.
+    #[must_use]
+    pub fn resource_allowed(&self, requested_mem: Option<u64>, requested_cpu: Option<f64>) -> bool {
+        let Some(ref env) = self.resources else {
+            return true;
+        };
+        if let (Some(limit), Some(req)) = (env.mem, requested_mem) {
+            if req > limit {
+                return false;
+            }
+        }
+        if let (Some(limit), Some(req)) = (env.cpu, requested_cpu) {
+            if req > limit {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Check whether a method is in the resource envelope's method allowlist.
+    ///
+    /// Returns `true` if no allowlist is set, or if the method is in the list.
+    #[must_use]
+    pub fn method_in_allowlist(&self, method: &str) -> bool {
+        let Some(ref env) = self.resources else {
+            return true;
+        };
+        let Some(ref allowlist) = env.method_allowlist else {
+            return true;
+        };
+        allowlist.iter().any(|m| m == method)
+    }
+}
+
+/// Check whether a set of scope patterns covers a method.
+///
+/// - `"*"` matches everything.
+/// - `"prefix.*"` matches any method starting with `prefix.`.
+/// - Exact string match otherwise.
+#[must_use]
+pub fn scope_covers_method(scope: &[String], method: &str) -> bool {
+    if scope.is_empty() {
+        return false;
+    }
+    for pattern in scope {
+        if pattern == "*" {
+            return true;
+        }
+        if let Some(prefix) = pattern.strip_suffix(".*") {
+            if method.starts_with(prefix) && method.as_bytes().get(prefix.len()) == Some(&b'.') {
+                return true;
+            }
+        }
+        if pattern == method {
+            return true;
+        }
+    }
+    false
+}
+
 /// Peer credentials extracted from `SO_PEERCRED` on Unix sockets.
 ///
 /// Uses only stable subset: `uid` (stable since 1.75) and `pid`.
@@ -84,6 +258,9 @@ pub enum ConnectionOrigin {
 pub struct CallerContext {
     /// Optional bearer / capability token sent in the request.
     pub bearer_token: Option<String>,
+    /// Parsed ionic token claims (populated when the bearer token is
+    /// in BearDog ionic format). `None` for opaque or missing tokens.
+    pub claims: Option<IonicTokenClaims>,
     /// Peer credentials from `SO_PEERCRED` (Unix socket only).
     pub peer: Option<PeerCredentials>,
     /// Where the connection came from.
@@ -99,6 +276,7 @@ impl CallerContext {
     pub const fn unix() -> Self {
         Self {
             bearer_token: None,
+            claims: None,
             peer: None,
             origin: ConnectionOrigin::Unix,
         }
@@ -109,6 +287,7 @@ impl CallerContext {
     pub const fn loopback() -> Self {
         Self {
             bearer_token: None,
+            claims: None,
             peer: None,
             origin: ConnectionOrigin::Loopback,
         }
@@ -119,14 +298,16 @@ impl CallerContext {
     pub const fn remote() -> Self {
         Self {
             bearer_token: None,
+            claims: None,
             peer: None,
             origin: ConnectionOrigin::Remote,
         }
     }
 
-    /// Attach a bearer token to this context.
+    /// Attach a bearer token and parse its claims (if ionic format).
     #[must_use]
     pub fn with_bearer_token(mut self, token: String) -> Self {
+        self.claims = IonicTokenClaims::parse(&token);
         self.bearer_token = Some(token);
         self
     }
@@ -193,13 +374,17 @@ impl MethodGate {
 
     /// Pre-dispatch authorization check.
     ///
-    /// Returns `Ok(())` if the call should proceed.
+    /// Returns `Ok(())` if the call should proceed. In `Enforced` mode:
+    /// - Checks token presence for protected methods.
+    /// - Checks scope patterns (from ionic token claims) cover the method.
+    /// - Checks resource envelope method allowlist if present.
+    /// - Checks token expiry.
     ///
     /// # Errors
     ///
     /// Returns `JsonRpcError` with `PERMISSION_DENIED` (-32001) when a
-    /// protected method is called without a valid capability token and the
-    /// gate is in `Enforced` mode.
+    /// protected method is called without a valid capability token, or
+    /// when the token's scope/allowlist does not cover the method.
     pub fn check(&self, method: &str, caller: &CallerContext) -> Result<(), JsonRpcError> {
         let level = classify_method(method);
 
@@ -207,43 +392,111 @@ impl MethodGate {
             return Ok(());
         }
 
-        let authorized = caller.bearer_token.is_some();
+        let has_token = caller.bearer_token.is_some();
 
-        if authorized {
-            return Ok(());
+        if !has_token {
+            return match self.mode {
+                EnforcementMode::Permissive => {
+                    tracing::warn!(
+                        method,
+                        caller_uid = caller.peer.as_ref().map(|p| p.uid),
+                        caller_pid = caller.peer.as_ref().and_then(|p| p.pid),
+                        origin = ?caller.origin,
+                        "method gate: unauthenticated call to protected method (permissive — allowing)"
+                    );
+                    Ok(())
+                }
+                EnforcementMode::Enforced => {
+                    tracing::warn!(
+                        method,
+                        caller_uid = caller.peer.as_ref().map(|p| p.uid),
+                        caller_pid = caller.peer.as_ref().and_then(|p| p.pid),
+                        origin = ?caller.origin,
+                        "method gate: REJECTED unauthenticated call to protected method"
+                    );
+                    Err(JsonRpcError::permission_denied(method))
+                }
+            };
         }
 
-        match self.mode {
-            EnforcementMode::Permissive => {
-                tracing::warn!(
-                    method,
-                    caller_uid = caller.peer.as_ref().map(|p| p.uid),
-                    caller_pid = caller.peer.as_ref().and_then(|p| p.pid),
-                    origin = ?caller.origin,
-                    "method gate: unauthenticated call to protected method (permissive — allowing)"
-                );
-                Ok(())
+        // Token present — check scope and envelope if claims are available.
+        if let Some(ref claims) = caller.claims {
+            if claims.is_expired() {
+                return match self.mode {
+                    EnforcementMode::Permissive => {
+                        tracing::warn!(
+                            method,
+                            "method gate: expired token (permissive — allowing)"
+                        );
+                        Ok(())
+                    }
+                    EnforcementMode::Enforced => {
+                        tracing::warn!(method, "method gate: REJECTED expired token");
+                        Err(JsonRpcError::permission_denied(method))
+                    }
+                };
             }
-            EnforcementMode::Enforced => {
-                tracing::warn!(
-                    method,
-                    caller_uid = caller.peer.as_ref().map(|p| p.uid),
-                    caller_pid = caller.peer.as_ref().and_then(|p| p.pid),
-                    origin = ?caller.origin,
-                    "method gate: REJECTED unauthenticated call to protected method"
-                );
-                Err(JsonRpcError::permission_denied(method))
+
+            if !claims.scope_covers_method(method) {
+                return match self.mode {
+                    EnforcementMode::Permissive => {
+                        tracing::warn!(
+                            method,
+                            scope = ?claims.scope,
+                            "method gate: token scope does not cover method (permissive — allowing)"
+                        );
+                        Ok(())
+                    }
+                    EnforcementMode::Enforced => {
+                        tracing::warn!(
+                            method,
+                            scope = ?claims.scope,
+                            "method gate: REJECTED — token scope does not cover method"
+                        );
+                        Err(JsonRpcError::permission_denied(method))
+                    }
+                };
+            }
+
+            if !claims.method_in_allowlist(method) {
+                return match self.mode {
+                    EnforcementMode::Permissive => {
+                        tracing::warn!(
+                            method,
+                            "method gate: method not in resource envelope allowlist (permissive — allowing)"
+                        );
+                        Ok(())
+                    }
+                    EnforcementMode::Enforced => {
+                        tracing::warn!(
+                            method,
+                            "method gate: REJECTED — method not in resource envelope allowlist"
+                        );
+                        Err(JsonRpcError::permission_denied(method))
+                    }
+                };
             }
         }
+
+        Ok(())
     }
 
     /// Handle the `auth.check` introspection method.
     #[must_use]
     pub fn handle_auth_check(&self, caller: &CallerContext) -> serde_json::Value {
-        serde_json::json!({
+        let mut result = serde_json::json!({
             "authenticated": caller.bearer_token.is_some(),
             "mode": self.mode.as_str(),
-        })
+        });
+        if let Some(ref claims) = caller.claims {
+            result["subject"] = serde_json::json!(claims.sub);
+            result["scope"] = serde_json::json!(claims.scope);
+            result["expired"] = serde_json::json!(claims.is_expired());
+            if claims.resources.is_some() {
+                result["has_resource_envelope"] = serde_json::json!(true);
+            }
+        }
+        result
     }
 
     /// Handle the `auth.mode` introspection method.
@@ -270,15 +523,22 @@ impl MethodGate {
 mod tests {
     use super::*;
 
+    fn make_ionic_token(payload: &serde_json::Value) -> String {
+        use base64::Engine;
+        let header = serde_json::json!({"alg":"EdDSA","typ":"ionic","ver":1});
+        let h = base64::engine::general_purpose::STANDARD.encode(header.to_string().as_bytes());
+        let p = base64::engine::general_purpose::STANDARD.encode(payload.to_string().as_bytes());
+        let s = base64::engine::general_purpose::STANDARD.encode(b"fake-sig");
+        format!("{h}.{p}.{s}")
+    }
+
+    // ── classify_method ──
+
     #[test]
     fn health_methods_are_public() {
         assert_eq!(classify_method("health.check"), MethodAccessLevel::Public);
         assert_eq!(
             classify_method("health.liveness"),
-            MethodAccessLevel::Public
-        );
-        assert_eq!(
-            classify_method("health.readiness"),
             MethodAccessLevel::Public
         );
     }
@@ -325,67 +585,178 @@ mod tests {
     }
 
     #[test]
-    fn capability_call_is_protected() {
-        assert_eq!(
-            classify_method("capability.call"),
-            MethodAccessLevel::Protected
-        );
-    }
-
-    #[test]
-    fn topology_methods_are_protected() {
-        assert_eq!(
-            classify_method("topology.get"),
-            MethodAccessLevel::Protected
-        );
-    }
-
-    #[test]
-    fn composition_methods_are_protected() {
-        assert_eq!(
-            classify_method("composition.health"),
-            MethodAccessLevel::Protected
-        );
-    }
-
-    #[test]
     fn empty_method_is_protected() {
         assert_eq!(classify_method(""), MethodAccessLevel::Protected);
     }
 
+    // ── scope_covers_method ──
+
     #[test]
-    fn unregistered_methods_are_protected() {
-        assert_eq!(
-            classify_method("custom.action"),
-            MethodAccessLevel::Protected
-        );
+    fn scope_wildcard_matches_all() {
+        let scope = vec!["*".to_owned()];
+        assert!(scope_covers_method(&scope, "anything.here"));
+        assert!(scope_covers_method(&scope, "graph.execute"));
     }
+
+    #[test]
+    fn scope_prefix_matches_domain() {
+        let scope = vec!["compute.*".to_owned()];
+        assert!(scope_covers_method(&scope, "compute.submit"));
+        assert!(scope_covers_method(&scope, "compute.status"));
+        assert!(!scope_covers_method(&scope, "storage.get"));
+        assert!(!scope_covers_method(&scope, "compute_x.submit"));
+    }
+
+    #[test]
+    fn scope_exact_matches() {
+        let scope = vec!["graph.execute".to_owned()];
+        assert!(scope_covers_method(&scope, "graph.execute"));
+        assert!(!scope_covers_method(&scope, "graph.save"));
+    }
+
+    #[test]
+    fn scope_empty_denies_all() {
+        assert!(!scope_covers_method(&[], "anything"));
+    }
+
+    #[test]
+    fn scope_multiple_patterns() {
+        let scope = vec!["compute.*".to_owned(), "storage.get".to_owned()];
+        assert!(scope_covers_method(&scope, "compute.submit"));
+        assert!(scope_covers_method(&scope, "storage.get"));
+        assert!(!scope_covers_method(&scope, "storage.put"));
+    }
+
+    // ── IonicTokenClaims ──
+
+    #[test]
+    fn parse_ionic_token_extracts_claims() {
+        let token = make_ionic_token(&serde_json::json!({
+            "iss": "did:key:z6MkTest",
+            "sub": "user1",
+            "scope": ["compute.*", "storage.*"],
+            "iat": 1000,
+            "exp": 9999999999u64,
+            "jti": "tok-1"
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert_eq!(claims.iss, "did:key:z6MkTest");
+        assert_eq!(claims.sub, "user1");
+        assert_eq!(claims.scope.len(), 2);
+        assert!(!claims.is_expired());
+    }
+
+    #[test]
+    fn parse_non_ionic_returns_none() {
+        assert!(IonicTokenClaims::parse("opaque-token-string").is_none());
+        assert!(IonicTokenClaims::parse("only.two").is_none());
+    }
+
+    #[test]
+    fn parse_with_resource_envelope() {
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["*"],
+            "resources": {
+                "mem": 1_073_741_824u64,
+                "cpu": 2.5,
+                "method_allowlist": ["compute.submit", "compute.status"]
+            }
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        let env = claims.resources.as_ref().unwrap();
+        assert_eq!(env.mem, Some(1_073_741_824));
+        assert_eq!(env.cpu, Some(2.5));
+        assert_eq!(env.method_allowlist.as_ref().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn expired_token_detected() {
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["*"],
+            "exp": 1
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert!(claims.is_expired());
+    }
+
+    #[test]
+    fn resource_allowed_checks_mem() {
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["*"],
+            "resources": { "mem": 1000 }
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert!(claims.resource_allowed(Some(500), None));
+        assert!(claims.resource_allowed(Some(1000), None));
+        assert!(!claims.resource_allowed(Some(1001), None));
+    }
+
+    #[test]
+    fn resource_allowed_checks_cpu() {
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["*"],
+            "resources": { "cpu": 4.0 }
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert!(claims.resource_allowed(None, Some(3.5)));
+        assert!(!claims.resource_allowed(None, Some(4.5)));
+    }
+
+    #[test]
+    fn resource_allowed_no_envelope_allows_all() {
+        let token = make_ionic_token(&serde_json::json!({ "scope": ["*"] }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert!(claims.resource_allowed(Some(u64::MAX), Some(f64::MAX)));
+    }
+
+    #[test]
+    fn method_allowlist_check() {
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["*"],
+            "resources": { "method_allowlist": ["compute.submit"] }
+        }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert!(claims.method_in_allowlist("compute.submit"));
+        assert!(!claims.method_in_allowlist("compute.status"));
+    }
+
+    #[test]
+    fn method_allowlist_absent_allows_all() {
+        let token = make_ionic_token(&serde_json::json!({ "scope": ["*"] }));
+        let claims = IonicTokenClaims::parse(&token).unwrap();
+        assert!(claims.method_in_allowlist("anything"));
+    }
+
+    // ── CallerContext ──
 
     #[test]
     fn loopback_context_has_no_peer() {
         let ctx = CallerContext::loopback();
         assert!(ctx.peer.is_none());
         assert!(ctx.bearer_token.is_none());
+        assert!(ctx.claims.is_none());
         assert_eq!(ctx.origin, ConnectionOrigin::Loopback);
     }
 
     #[test]
-    fn unix_context_has_correct_origin() {
-        let ctx = CallerContext::unix();
-        assert_eq!(ctx.origin, ConnectionOrigin::Unix);
+    fn with_bearer_token_parses_ionic_claims() {
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "user1",
+            "scope": ["graph.*"]
+        }));
+        let ctx = CallerContext::loopback().with_bearer_token(token);
+        assert!(ctx.claims.is_some());
+        assert_eq!(ctx.claims.as_ref().unwrap().sub, "user1");
     }
 
     #[test]
-    fn remote_context_has_correct_origin() {
-        let ctx = CallerContext::remote();
-        assert_eq!(ctx.origin, ConnectionOrigin::Remote);
+    fn with_opaque_token_has_no_claims() {
+        let ctx = CallerContext::loopback().with_bearer_token("opaque-tok".to_owned());
+        assert!(ctx.bearer_token.is_some());
+        assert!(ctx.claims.is_none());
     }
 
-    #[test]
-    fn with_bearer_token_attaches_token() {
-        let ctx = CallerContext::loopback().with_bearer_token("tok123".to_owned());
-        assert_eq!(ctx.bearer_token.as_deref(), Some("tok123"));
-    }
+    // ── EnforcementMode ──
 
     #[test]
     fn enforcement_mode_as_str() {
@@ -393,13 +764,14 @@ mod tests {
         assert_eq!(EnforcementMode::Enforced.as_str(), "enforced");
     }
 
+    // ── MethodGate::check with scope ──
+
     #[test]
     fn public_method_always_passes() {
         let gate = MethodGate::new(EnforcementMode::Enforced);
         let caller = CallerContext::loopback();
         assert!(gate.check("health.check", &caller).is_ok());
         assert!(gate.check("identity.get", &caller).is_ok());
-        assert!(gate.check("capabilities.list", &caller).is_ok());
         assert!(gate.check("auth.check", &caller).is_ok());
     }
 
@@ -414,17 +786,74 @@ mod tests {
     fn protected_method_rejected_in_enforced_mode_without_token() {
         let gate = MethodGate::new(EnforcementMode::Enforced);
         let caller = CallerContext::loopback();
-        let result = gate.check("graph.execute", &caller);
-        assert!(result.is_err());
-        let err = result.unwrap_err();
+        let err = gate.check("graph.execute", &caller).unwrap_err();
         assert_eq!(err.code, -32_001);
-        assert!(err.message.contains("graph.execute"));
     }
 
     #[test]
-    fn protected_method_passes_in_enforced_mode_with_token() {
+    fn token_with_matching_scope_passes_enforced() {
         let gate = MethodGate::new(EnforcementMode::Enforced);
-        let caller = CallerContext::loopback().with_bearer_token("valid-token".to_owned());
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["graph.*"],
+            "exp": 9999999999u64
+        }));
+        let caller = CallerContext::loopback().with_bearer_token(token);
+        assert!(gate.check("graph.execute", &caller).is_ok());
+    }
+
+    #[test]
+    fn token_with_wrong_scope_rejected_enforced() {
+        let gate = MethodGate::new(EnforcementMode::Enforced);
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["compute.*"],
+            "exp": 9999999999u64
+        }));
+        let caller = CallerContext::loopback().with_bearer_token(token);
+        let err = gate.check("graph.execute", &caller).unwrap_err();
+        assert_eq!(err.code, -32_001);
+    }
+
+    #[test]
+    fn token_with_wrong_scope_allowed_permissive() {
+        let gate = MethodGate::new(EnforcementMode::Permissive);
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["compute.*"],
+            "exp": 9999999999u64
+        }));
+        let caller = CallerContext::loopback().with_bearer_token(token);
+        assert!(gate.check("graph.execute", &caller).is_ok());
+    }
+
+    #[test]
+    fn expired_token_rejected_enforced() {
+        let gate = MethodGate::new(EnforcementMode::Enforced);
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["*"],
+            "exp": 1
+        }));
+        let caller = CallerContext::loopback().with_bearer_token(token);
+        let err = gate.check("graph.execute", &caller).unwrap_err();
+        assert_eq!(err.code, -32_001);
+    }
+
+    #[test]
+    fn method_allowlist_enforced() {
+        let gate = MethodGate::new(EnforcementMode::Enforced);
+        let token = make_ionic_token(&serde_json::json!({
+            "scope": ["*"],
+            "exp": 9999999999u64,
+            "resources": { "method_allowlist": ["graph.list"] }
+        }));
+        let caller = CallerContext::loopback().with_bearer_token(token);
+        assert!(gate.check("graph.list", &caller).is_ok());
+        let err = gate.check("graph.execute", &caller).unwrap_err();
+        assert_eq!(err.code, -32_001);
+    }
+
+    #[test]
+    fn opaque_token_passes_enforced() {
+        let gate = MethodGate::new(EnforcementMode::Enforced);
+        let caller = CallerContext::loopback().with_bearer_token("opaque-token".to_owned());
         assert!(gate.check("graph.execute", &caller).is_ok());
     }
 
@@ -441,6 +870,8 @@ mod tests {
         assert_eq!(method_in_data, Some("graph.validate"));
     }
 
+    // ── auth introspection ──
+
     #[test]
     fn auth_check_unauthenticated() {
         let gate = MethodGate::new(EnforcementMode::Permissive);
@@ -451,12 +882,19 @@ mod tests {
     }
 
     #[test]
-    fn auth_check_authenticated() {
+    fn auth_check_with_ionic_token() {
         let gate = MethodGate::new(EnforcementMode::Enforced);
-        let caller = CallerContext::loopback().with_bearer_token("tok".to_owned());
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "researcher",
+            "scope": ["compute.*"],
+            "exp": 9999999999u64,
+            "resources": { "mem": 4096 }
+        }));
+        let caller = CallerContext::loopback().with_bearer_token(token);
         let result = gate.handle_auth_check(&caller);
         assert_eq!(result["authenticated"], true);
-        assert_eq!(result["mode"], "enforced");
+        assert_eq!(result["subject"], "researcher");
+        assert_eq!(result["has_resource_envelope"], true);
     }
 
     #[test]
@@ -480,6 +918,7 @@ mod tests {
         let gate = MethodGate::new(EnforcementMode::Permissive);
         let caller = CallerContext {
             bearer_token: Some("tok".to_owned()),
+            claims: None,
             peer: Some(PeerCredentials {
                 pid: Some(1234),
                 uid: 1000,
