@@ -2,6 +2,45 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.50 (2026-05-09) — Gate-Aware Token Forwarding + primalSpring Contract Alignment
+
+### Gate-aware `capability.call` forwarding (exp111)
+- `_bearer_token` is now propagated through all capability routing paths:
+  semantic fallback, `Route::CapabilityCall`, and `Route::SemanticCapabilityCall`.
+- `enrich_with_envelope()` renamed to `enrich_for_forwarding()` — injects both
+  `_resource_envelope` and `_bearer_token` from `CallerContext`.
+- `CapabilityHandler::call()` now injects `_bearer_token` into forwarded `args`
+  alongside `_resource_envelope`, enabling downstream primals in enforced mode
+  to perform their own MethodGate authorization check.
+- Previously, the v3.47 token-leak fix stripped `_bearer_token` from forwarded
+  args but didn't re-inject it, causing `-32001 PERMISSION_DENIED` rejections
+  on downstream primals running with `BIOMEOS_AUTH_MODE=enforced`.
+
+### `composition.reload` contract alignment (exp109)
+- Response now includes `"status": "reloaded"` and `"topology_version": N`
+  fields matching primalSpring's `CompositionContext::reload()` expectations.
+- `LifecycleHandler` gains a monotonic `topology_version` counter (AtomicU64),
+  incremented on register and reload operations.
+- `lifecycle.register` response also includes `topology_version`.
+
+### `auth.check` primalSpring contract alignment
+- Response now includes all primalSpring-expected fields:
+  `verified` (bool), `enforcement` (alias for `mode`), `scopes` (alias for
+  `scope`), and `expires_in` (seconds until token expiry).
+- Backward-compatible: existing `mode`, `scope`, `expired` fields preserved.
+
+### `TokenVerifier` trait (primalSpring pattern adoption)
+- New `TokenVerifier` trait in `biomeos-core::method_gate` for abstracting
+  token verification. Production uses `LocalClaimsVerifier` (parse-only),
+  tests use `NoopVerifier` (behind `#[cfg(any(test, feature = "test-helpers"))]`).
+- `biomeos-core` gains `test-helpers` feature for `NoopVerifier` access.
+- `LocalClaimsVerifier`, `TokenVerifier` re-exported from `biomeos-core`.
+
+### Codebase health
+- 7,924 lib + bin tests (0 failures, fully concurrent).
+- 0 unsafe, 0 TODO/FIXME, 0 production mocks.
+- `cargo clippy -D warnings` + `cargo fmt --check`: all clean.
+
 ## v3.49 (2026-05-08) — Test Helpers Gated from Production Builds (Priority 4 Code Quality)
 
 ### Test helper isolation (Priority 4 — mock helpers separated from production code)

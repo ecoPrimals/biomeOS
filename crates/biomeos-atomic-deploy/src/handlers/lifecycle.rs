@@ -29,6 +29,9 @@ use biomeos_types::primal_names;
 #[derive(Clone)]
 pub struct LifecycleHandler {
     manager: Arc<RwLock<LifecycleManager>>,
+    /// Monotonic topology version, incremented on each composition change
+    /// (register, reload, apoptosis). Used by `composition.reload` contract.
+    topology_version: Arc<std::sync::atomic::AtomicU64>,
 }
 
 impl LifecycleHandler {
@@ -37,12 +40,22 @@ impl LifecycleHandler {
     pub fn new(family_id: &str) -> Self {
         Self {
             manager: Arc::new(RwLock::new(LifecycleManager::new(family_id))),
+            topology_version: Arc::new(std::sync::atomic::AtomicU64::new(1)),
         }
     }
 
     /// Create with an existing manager
-    pub const fn with_manager(manager: Arc<RwLock<LifecycleManager>>) -> Self {
-        Self { manager }
+    pub fn with_manager(manager: Arc<RwLock<LifecycleManager>>) -> Self {
+        Self {
+            manager,
+            topology_version: Arc::new(std::sync::atomic::AtomicU64::new(1)),
+        }
+    }
+
+    fn bump_topology(&self) -> u64 {
+        self.topology_version
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            + 1
     }
 
     /// Start monitoring loop
@@ -145,13 +158,18 @@ impl LifecycleHandler {
             .await?;
         drop(manager); // Explicit drop for clarity
 
-        info!("🌱 Registered primal via API: {}", name);
+        let version = self.bump_topology();
+        info!(
+            "🌱 Registered primal via API: {} (topology v{version})",
+            name
+        );
 
         Ok(json!({
             "registered": name,
             "socket_path": socket_path,
             "pid": pid,
-            "state": "incubating"
+            "state": "incubating",
+            "topology_version": version,
         }))
     }
 
@@ -496,16 +514,20 @@ impl LifecycleHandler {
             }
         };
 
+        let version = self.bump_topology();
+
         info!(
-            "🔄 Composition reload for '{name}': healthy={healthy}, socket={}",
+            "🔄 Composition reload for '{name}': healthy={healthy}, socket={}, topology v{version}",
             new_socket.display()
         );
 
         Ok(json!({
+            "status": "reloaded",
             "reloaded": true,
             "name": name,
             "socket_path": new_socket.display().to_string(),
             "healthy": healthy,
+            "topology_version": version,
         }))
     }
 

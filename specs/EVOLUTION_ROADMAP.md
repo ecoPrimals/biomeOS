@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 8, 2026 (v3.49: Priority 4 test helper isolation + JH-2 cpu/timeout_ms dispatch enforcement, 7,919 tests)
+**Updated**: May 9, 2026 (v3.50: Gate-aware token forwarding, primalSpring contract alignment, TokenVerifier trait, 7,924 tests)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---

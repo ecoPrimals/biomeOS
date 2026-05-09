@@ -420,6 +420,11 @@ impl NeuralApiServer {
                                 cap_params["_resource_envelope"] = env.to_forwarding_value();
                             }
                         }
+                        // exp111: propagate bearer token so downstream primals
+                        // in enforced mode can perform their own MethodGate check.
+                        if let Some(ref token) = caller.bearer_token {
+                            cap_params["_bearer_token"] = json!(token);
+                        }
                         return dispatch_capability_call(
                             self.capability_handler.call(&Some(cap_params)).await,
                             id,
@@ -531,7 +536,7 @@ impl NeuralApiServer {
             }
             Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, id),
             Route::CapabilityCall => {
-                let enriched = self.enrich_with_envelope(params, &caller);
+                let enriched = self.enrich_for_forwarding(params, &caller);
                 dispatch_capability_call(self.capability_handler.call(&enriched).await, id)
             }
             Route::CapabilityDiscoverTranslations => dispatch(
@@ -622,6 +627,10 @@ impl NeuralApiServer {
                             cap_params["_resource_envelope"] = env.to_forwarding_value();
                         }
                     }
+                    // exp111: propagate bearer token for downstream gate checks
+                    if let Some(ref token) = caller.bearer_token {
+                        cap_params["_bearer_token"] = json!(token);
+                    }
                     dispatch_capability_call(
                         self.capability_handler.call(&Some(cap_params)).await,
                         id,
@@ -645,27 +654,31 @@ impl NeuralApiServer {
         self.handle_request(request_line).await.into_response()
     }
 
-    /// Inject `_resource_envelope` into capability call params when the caller
-    /// has an ionic token with a resource envelope (JH-2).
+    /// Enrich capability call params with forwarding context (JH-2, exp111).
     ///
-    /// Downstream primals (e.g. ToadStool) read `_resource_envelope` to
-    /// enforce `cpu`, `mem`, and `timeout_ms` at the compute dispatch level.
-    fn enrich_with_envelope(
+    /// Injects two fields into the params before they reach `CapabilityHandler::call()`:
+    /// - `_resource_envelope` — downstream primals enforce cpu/mem/timeout_ms.
+    /// - `_bearer_token` — downstream primals in enforced mode need the caller's
+    ///   token for their own MethodGate check. Without this, any primal running
+    ///   in enforced mode rejects forwarded calls with `-32001`.
+    fn enrich_for_forwarding(
         &self,
         params: &Option<Value>,
         caller: &CallerContext,
     ) -> Option<Value> {
-        let Some(ref claims) = caller.claims else {
-            return params.clone();
-        };
-        let Some(ref env) = claims.resources else {
-            return params.clone();
-        };
-
         let mut enriched = params.clone().unwrap_or(json!({}));
+
         if let Some(obj) = enriched.as_object_mut() {
-            obj.insert("_resource_envelope".to_string(), env.to_forwarding_value());
+            if let Some(ref claims) = caller.claims {
+                if let Some(ref env) = claims.resources {
+                    obj.insert("_resource_envelope".to_string(), env.to_forwarding_value());
+                }
+            }
+            if let Some(ref token) = caller.bearer_token {
+                obj.insert("_bearer_token".to_string(), json!(token));
+            }
         }
+
         Some(enriched)
     }
 }

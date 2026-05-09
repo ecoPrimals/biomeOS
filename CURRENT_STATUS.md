@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 8, 2026 (v3.49: Priority 4 test helper isolation — mock/testing helpers gated from production builds; misleading doc comments fixed; 7,919 tests)
-**Version**: 3.49
-**Status**: PRODUCTION READY - BTSP Phase 3 FULL - Capability-Based Identity - PG-55 FULL - JH-0 MethodGate WIRED - JH-2 Resource Envelope ENFORCED (cpu+timeout_ms) - JH-3 composition.reload LIVE - RootPulse RP-1–RP-5 Resolved - Zero Blocking Debt - Fully Concurrent Testing - Graph Integrity Verification Active - Priority 4 Test Isolation CLEAN
+**Updated**: May 9, 2026 (v3.50: Gate-aware token forwarding for enforced-mode primals; composition.reload contract alignment; auth.check primalSpring contract; TokenVerifier trait; 7,924 tests)
+**Version**: 3.50
+**Status**: PRODUCTION READY - BTSP Phase 3 FULL - Capability-Based Identity - PG-55 FULL - JH-0 MethodGate WIRED - JH-2 Resource Envelope ENFORCED (cpu+timeout_ms) - JH-3 composition.reload LIVE (contract-aligned) - Gate-Aware Token Forwarding - RootPulse RP-1–RP-5 Resolved - Zero Blocking Debt - Fully Concurrent Testing - Graph Integrity Verification Active - Priority 4 Test Isolation CLEAN
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 7,919 lib + bin + doc + proptest (0 failures, fully concurrent) |
+| **Tests Passing** | 7,924 lib + bin + doc + proptest (0 failures, fully concurrent) |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |

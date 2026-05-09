@@ -85,6 +85,16 @@ impl CapabilityHandler {
             }
         }
 
+        // exp111: forward bearer token inside args so downstream primals in
+        // enforced mode can perform their own MethodGate authorization check.
+        // Without this, any primal running with BIOMEOS_AUTH_MODE=enforced
+        // rejects forwarded calls with -32001 PERMISSION_DENIED.
+        if let Some(token) = params.get("_bearer_token") {
+            if let Some(obj) = args.as_object_mut() {
+                obj.insert("_bearer_token".to_string(), token.clone());
+            }
+        }
+
         // Cross-gate routing: if `gate` is specified, forward to that gate's
         // biomeOS Neural API. Fail explicitly if the gate is not registered —
         // silent fallback to local routing would break multi-gate compositions.

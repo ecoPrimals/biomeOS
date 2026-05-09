@@ -76,7 +76,7 @@ proptest = { workspace = true }
 
 [features]
 default = []
-# http-transport = [] # REMOVED: HTTP transport removed, use atomic_client
+test-helpers = []
 
 [lints]
 workspace = true

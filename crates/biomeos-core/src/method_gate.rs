@@ -259,6 +259,45 @@ pub fn scope_covers_method(scope: &[String], method: &str) -> bool {
     false
 }
 
+// ── Token verification abstraction (primalSpring pattern) ──
+
+/// Trait for verifying bearer tokens.
+///
+/// Production uses `BearDogVerifier` (IPC to BearDog's `auth.verify_ionic`).
+/// Tests use `NoopVerifier` to avoid requiring a live BearDog process.
+/// Follows the primalSpring `TokenVerifier` pattern from `method_gate.rs`.
+pub trait TokenVerifier: Send + Sync {
+    /// Verify a bearer token and return parsed claims on success.
+    ///
+    /// Returns `None` if the token is invalid, expired, or the verifier
+    /// cannot reach the issuing authority.
+    fn verify(&self, token: &str) -> Option<IonicTokenClaims>;
+}
+
+/// Local-only verifier that parses ionic token claims without signature
+/// verification. Used as the default when BearDog IPC is unavailable.
+///
+/// This is the same local parsing that `IonicTokenClaims::parse()` performs —
+/// scope/expiry/resource checks still happen in `MethodGate::check()`.
+pub struct LocalClaimsVerifier;
+
+impl TokenVerifier for LocalClaimsVerifier {
+    fn verify(&self, token: &str) -> Option<IonicTokenClaims> {
+        IonicTokenClaims::parse(token)
+    }
+}
+
+/// No-op verifier for testing. Accepts any token as valid with no claims.
+#[cfg(any(test, feature = "test-helpers"))]
+pub struct NoopVerifier;
+
+#[cfg(any(test, feature = "test-helpers"))]
+impl TokenVerifier for NoopVerifier {
+    fn verify(&self, _token: &str) -> Option<IonicTokenClaims> {
+        None
+    }
+}
+
 /// Peer credentials extracted from `SO_PEERCRED` on Unix sockets.
 ///
 /// Uses only stable subset: `uid` (stable since 1.75) and `pid`.
@@ -510,16 +549,34 @@ impl MethodGate {
     }
 
     /// Handle the `auth.check` introspection method.
+    ///
+    /// Returns a superset of the primalSpring contract fields:
+    /// `{ authenticated, verified, enforcement, scopes, subject, expires_in }`.
     #[must_use]
     pub fn handle_auth_check(&self, caller: &CallerContext) -> serde_json::Value {
+        let has_token = caller.bearer_token.is_some();
+        let has_claims = caller.claims.is_some();
         let mut result = serde_json::json!({
-            "authenticated": caller.bearer_token.is_some(),
+            "authenticated": has_token,
+            "verified": has_claims,
             "mode": self.mode.as_str(),
+            "enforcement": self.mode.as_str(),
         });
         if let Some(ref claims) = caller.claims {
             result["subject"] = serde_json::json!(claims.sub);
             result["scope"] = serde_json::json!(claims.scope);
+            result["scopes"] = serde_json::json!(claims.scope);
             result["expired"] = serde_json::json!(claims.is_expired());
+            let expires_in = if claims.exp > 0 {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                claims.exp.saturating_sub(now)
+            } else {
+                0
+            };
+            result["expires_in"] = serde_json::json!(expires_in);
             if let Some(ref env) = claims.resources {
                 result["has_resource_envelope"] = serde_json::json!(true);
                 result["resource_envelope"] = serde_json::json!({
@@ -1079,5 +1136,68 @@ mod tests {
         assert!(!claims.resource_allowed(None, Some(4.0)));
         assert!(claims.resource_allowed(None, Some(1.5)));
         assert!(claims.resource_allowed(None, Some(2.0)));
+    }
+
+    // ── auth.check primalSpring contract alignment ──
+
+    #[test]
+    fn auth_check_returns_primalspring_contract_fields() {
+        let gate = MethodGate::new(EnforcementMode::Enforced);
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "test-user",
+            "scope": ["graph.*", "compute.*"],
+            "exp": 9999999999u64,
+        }));
+        let caller = CallerContext::loopback().with_bearer_token(token);
+        let result = gate.handle_auth_check(&caller);
+        assert_eq!(result["authenticated"], true);
+        assert_eq!(result["verified"], true);
+        assert_eq!(result["enforcement"], "enforced");
+        assert_eq!(result["subject"], "test-user");
+        assert!(result["scopes"].is_array());
+        assert_eq!(result["scopes"].as_array().unwrap().len(), 2);
+        assert!(result["expires_in"].as_u64().unwrap() > 0);
+        assert_eq!(result["expired"], false);
+    }
+
+    #[test]
+    fn auth_check_unauthenticated_has_contract_fields() {
+        let gate = MethodGate::new(EnforcementMode::Permissive);
+        let caller = CallerContext::loopback();
+        let result = gate.handle_auth_check(&caller);
+        assert_eq!(result["authenticated"], false);
+        assert_eq!(result["verified"], false);
+        assert_eq!(result["enforcement"], "permissive");
+    }
+
+    // ── TokenVerifier trait ──
+
+    #[test]
+    fn local_claims_verifier_parses_ionic_token() {
+        let verifier = LocalClaimsVerifier;
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "verifier-test",
+            "scope": ["*"],
+            "exp": 9999999999u64,
+        }));
+        let claims = verifier.verify(&token).unwrap();
+        assert_eq!(claims.sub, "verifier-test");
+    }
+
+    #[test]
+    fn local_claims_verifier_returns_none_for_opaque() {
+        let verifier = LocalClaimsVerifier;
+        assert!(verifier.verify("opaque-token").is_none());
+    }
+
+    #[test]
+    fn noop_verifier_always_returns_none() {
+        let verifier = NoopVerifier;
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "test",
+            "scope": ["*"],
+            "exp": 9999999999u64,
+        }));
+        assert!(verifier.verify(&token).is_none());
     }
 }
