@@ -12,6 +12,7 @@
 //! - `capability.providers` - Get providers for a capability
 //! - `capability.call` - Semantic capability invocation
 //! - `route.register` - Batch-register all capabilities for a remote primal
+//! - `method.register` - Spring method registration into semantic routing (GAP-09)
 //!
 //! # Architecture
 //!
@@ -405,6 +406,104 @@ impl CapabilityHandler {
             "gate": gate,
             "endpoint": transport_str,
             "capabilities": registered
+        }))
+    }
+
+    /// Register spring-originated IPC methods into the semantic routing layer.
+    ///
+    /// JSON-RPC method: `method.register` (GAP-09)
+    ///
+    /// Springs call this to register their methods by name. The domain prefix
+    /// (e.g. `game` from `game.start`) becomes the capability. Each unique
+    /// domain is registered as a capability for the given transport endpoint,
+    /// and each method is registered as a semantic mapping.
+    ///
+    /// # Parameters
+    /// - `primal`: Primal/spring name
+    /// - `transport`: Transport endpoint string (socket path or `tcp://host:port`)
+    /// - `methods`: Array of method name strings (e.g. `["game.start", "game.join"]`)
+    /// - `source`: Registration source (optional, defaults to `"method.register"`)
+    pub async fn register_methods(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+
+        let primal_name = params["primal"]
+            .as_str()
+            .context("Missing 'primal' field")?;
+        let transport_str = params["transport"]
+            .as_str()
+            .context("Missing 'transport' field")?;
+        let methods = params["methods"]
+            .as_array()
+            .context("Missing or invalid 'methods' array")?;
+
+        if methods.is_empty() {
+            anyhow::bail!("'methods' array must not be empty");
+        }
+
+        let source = params
+            .get("source")
+            .and_then(|v| v.as_str())
+            .unwrap_or("method.register");
+
+        let endpoint = biomeos_core::TransportEndpoint::parse(transport_str)
+            .with_context(|| format!("Failed to parse transport endpoint: {transport_str}"))?;
+
+        let mut domains: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
+
+        for method_value in methods {
+            let method = method_value
+                .as_str()
+                .with_context(|| format!("Each method must be a string, got: {method_value}"))?;
+
+            if let Some((domain, operation)) = method.split_once('.') {
+                if !domain.is_empty() && !operation.is_empty() {
+                    domains
+                        .entry(domain.to_owned())
+                        .or_default()
+                        .push(operation.to_owned());
+                }
+            }
+        }
+
+        if domains.is_empty() {
+            anyhow::bail!("No valid 'domain.operation' methods found in array");
+        }
+
+        let mut registered_count = 0usize;
+        let mut registered_domains = Vec::new();
+
+        for (domain, operations) in &domains {
+            self.router
+                .register_capability(domain, primal_name, endpoint.clone(), source)
+                .await?;
+
+            let mut registry = self.translation_registry.write().await;
+            for op in operations {
+                let semantic_name = format!("{domain}.{op}");
+                let actual_method = format!("{domain}.{op}");
+                registry.register_translation(
+                    &semantic_name,
+                    primal_name,
+                    &actual_method,
+                    transport_str,
+                    None,
+                );
+                registered_count += 1;
+            }
+            registered_domains.push(domain.as_str());
+        }
+
+        info!(
+            "📝 method.register: {registered_count} methods across {} domains for {primal_name} @ {transport_str}",
+            domains.len()
+        );
+
+        Ok(json!({
+            "registered": registered_count,
+            "domains": registered_domains,
+            "primal": primal_name,
+            "endpoint": transport_str,
         }))
     }
 

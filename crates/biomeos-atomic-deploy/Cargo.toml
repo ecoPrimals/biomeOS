@@ -34,6 +34,7 @@ biomeos-primal-sdk = { path = "../biomeos-primal-sdk", version = "0.1.0" }
 tarpc = { workspace = true }
 tokio-serde = { workspace = true }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
+biomeos-system = { path = "../biomeos-system", version = "0.1.0" }
 chrono = { workspace = true }
 futures = { workspace = true }
 uuid = { workspace = true }  # For request ID generation

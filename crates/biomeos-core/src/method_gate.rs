@@ -298,6 +298,78 @@ impl TokenVerifier for NoopVerifier {
     }
 }
 
+/// BearDog IPC verifier for cross-primal token federation (JH-11).
+///
+/// Calls `auth.verify_ionic` on BearDog via IPC to cryptographically verify
+/// a bearer token's signature. Falls back to `LocalClaimsVerifier` (parse-only)
+/// if BearDog is unreachable, ensuring graceful degradation.
+///
+/// This is step 1 of the federation roadmap — verify-then-forward. Step 2
+/// (offline verification via shared-key distribution) requires BearDog to
+/// ship key distribution, which is tracked as JH-11 on BearDog's side.
+#[derive(Clone)]
+pub struct BearDogVerifier {
+    socket_path: std::path::PathBuf,
+}
+
+impl BearDogVerifier {
+    /// Create a new verifier targeting a BearDog socket.
+    pub fn new(socket_path: std::path::PathBuf) -> Self {
+        Self { socket_path }
+    }
+
+    /// Resolve the BearDog socket from environment or XDG defaults.
+    pub fn from_env() -> Option<Self> {
+        let path = std::env::var("BEARDOG_SOCKET")
+            .ok()
+            .map(std::path::PathBuf::from)
+            .or_else(|| {
+                biomeos_types::paths::SystemPaths::new()
+                    .ok()
+                    .map(|p| p.primal_socket("bearDog"))
+            })?;
+        Some(Self::new(path))
+    }
+
+    /// Async verification via IPC to BearDog's `auth.verify_ionic`.
+    ///
+    /// Returns parsed claims if BearDog confirms the token is valid.
+    /// Falls back to local parsing if BearDog is unreachable.
+    pub async fn verify_async(&self, token: &str) -> Option<IonicTokenClaims> {
+        use crate::atomic_client::AtomicClient;
+        use serde_json::json;
+
+        let client = AtomicClient::unix(&self.socket_path)
+            .with_timeout(biomeos_types::constants::timeouts::DEFAULT_IPC_TIMEOUT);
+
+        match client
+            .call("auth.verify_ionic", json!({ "token": token }))
+            .await
+        {
+            Ok(result) => {
+                if result.get("valid").and_then(serde_json::Value::as_bool) == Some(true) {
+                    IonicTokenClaims::parse(token)
+                } else {
+                    None
+                }
+            }
+            Err(_) => {
+                // BearDog unreachable — degrade to local parsing.
+                // In enforced mode, the MethodGate will still check expiry/scope.
+                IonicTokenClaims::parse(token)
+            }
+        }
+    }
+}
+
+impl TokenVerifier for BearDogVerifier {
+    /// Sync fallback — parses locally (no IPC). Use `verify_async` for
+    /// full federation verification in async contexts.
+    fn verify(&self, token: &str) -> Option<IonicTokenClaims> {
+        IonicTokenClaims::parse(token)
+    }
+}
+
 /// Peer credentials extracted from `SO_PEERCRED` on Unix sockets.
 ///
 /// Uses only stable subset: `uid` (stable since 1.75) and `pid`.
@@ -1199,5 +1271,51 @@ mod tests {
             "exp": 9999999999u64,
         }));
         assert!(verifier.verify(&token).is_none());
+    }
+
+    // ── BearDogVerifier (JH-11) ──
+
+    #[test]
+    fn beardog_verifier_sync_falls_back_to_local_parse() {
+        let verifier = BearDogVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "federation-test",
+            "scope": ["compute.*"],
+            "exp": 9999999999u64,
+        }));
+        let claims = verifier.verify(&token).unwrap();
+        assert_eq!(claims.sub, "federation-test");
+    }
+
+    #[test]
+    fn beardog_verifier_sync_returns_none_for_opaque() {
+        let verifier = BearDogVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
+        assert!(verifier.verify("opaque-token-xyz").is_none());
+    }
+
+    #[tokio::test]
+    async fn beardog_verifier_async_degrades_gracefully_when_unreachable() {
+        let verifier = BearDogVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
+        let token = make_ionic_token(&serde_json::json!({
+            "sub": "async-fallback",
+            "scope": ["*"],
+            "exp": 9999999999u64,
+        }));
+        let claims = verifier.verify_async(&token).await;
+        assert!(claims.is_some(), "should degrade to local parse");
+        assert_eq!(claims.unwrap().sub, "async-fallback");
+    }
+
+    #[test]
+    fn beardog_verifier_from_env_does_not_panic() {
+        // from_env reads BEARDOG_SOCKET or XDG paths; verify it doesn't panic.
+        let _ = BearDogVerifier::from_env();
+    }
+
+    #[test]
+    fn beardog_verifier_clone() {
+        let v = BearDogVerifier::new(std::path::PathBuf::from("/tmp/bd.sock"));
+        let v2 = v.clone();
+        assert_eq!(v.socket_path, v2.socket_path);
     }
 }

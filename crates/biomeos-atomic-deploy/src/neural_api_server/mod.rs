@@ -140,6 +140,11 @@ pub struct NeuralApiServer {
     /// Pre-dispatch method gate (JH-0). Checks caller authorization
     /// before routing to handlers. Starts in permissive mode.
     pub(super) method_gate: biomeos_core::MethodGate,
+
+    /// Optional BearDog verifier for cross-primal token federation (JH-11).
+    /// When present, forwarded `_bearer_token` values are verified via IPC
+    /// before propagation to downstream primals.
+    pub(super) beardog_verifier: Option<biomeos_core::BearDogVerifier>,
 }
 
 impl NeuralApiServer {
@@ -234,6 +239,7 @@ impl NeuralApiServer {
             coordination_pubkey: Arc::new(RwLock::new(None)),
             btsp_sessions: btsp_negotiate::new_session_store(),
             method_gate: biomeos_core::MethodGate::from_env(),
+            beardog_verifier: biomeos_core::BearDogVerifier::from_env(),
         }
     }
 

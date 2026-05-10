@@ -147,6 +147,9 @@ enum Route {
     AuthMode,
     AuthPeerInfo,
     CompositionReload,
+    CompositionStatus,
+    CompositionDeploy,
+    MethodRegister,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -302,6 +305,12 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("auth.peer_info", Route::AuthPeerInfo),
     // Composition hot-reload (JH-3)
     ("composition.reload", Route::CompositionReload),
+    // Composition status (pappusCast adaptive daemons)
+    ("composition.status", Route::CompositionStatus),
+    // Composition deploy (alias for graph.execute — primalSpring contract)
+    ("composition.deploy", Route::CompositionDeploy),
+    // Spring method registration (GAP-09)
+    ("method.register", Route::MethodRegister),
     // BTSP escalation (cleartext → enforced after Tower healthy)
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
@@ -420,10 +429,15 @@ impl NeuralApiServer {
                                 cap_params["_resource_envelope"] = env.to_forwarding_value();
                             }
                         }
-                        // exp111: propagate bearer token so downstream primals
-                        // in enforced mode can perform their own MethodGate check.
+                        // exp111 + JH-11: propagate bearer token with verification
                         if let Some(ref token) = caller.bearer_token {
                             cap_params["_bearer_token"] = json!(token);
+                            let verified = if let Some(ref v) = self.beardog_verifier {
+                                v.verify_async(token).await.is_some()
+                            } else {
+                                false
+                            };
+                            cap_params["_token_verified"] = json!(verified);
                         }
                         return dispatch_capability_call(
                             self.capability_handler.call(&Some(cap_params)).await,
@@ -536,7 +550,7 @@ impl NeuralApiServer {
             }
             Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, id),
             Route::CapabilityCall => {
-                let enriched = self.enrich_for_forwarding(params, &caller);
+                let enriched = self.enrich_for_forwarding(params, &caller).await;
                 dispatch_capability_call(self.capability_handler.call(&enriched).await, id)
             }
             Route::CapabilityDiscoverTranslations => dispatch(
@@ -599,6 +613,16 @@ impl NeuralApiServer {
             }
             // Composition hot-reload (JH-3)
             Route::CompositionReload => dispatch(self.lifecycle_handler.reload(params).await, id),
+            // Composition status (pappusCast adaptive daemons)
+            Route::CompositionStatus => {
+                dispatch(self.lifecycle_handler.composition_status().await, id)
+            }
+            // Composition deploy (alias for graph.execute — primalSpring contract)
+            Route::CompositionDeploy => dispatch(self.graph_handler.execute(params).await, id),
+            // Spring method registration (GAP-09)
+            Route::MethodRegister => {
+                dispatch(self.capability_handler.register_methods(params).await, id)
+            }
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, id),
             // Semantic capability routing: domain.operation → capability.call
@@ -627,9 +651,15 @@ impl NeuralApiServer {
                             cap_params["_resource_envelope"] = env.to_forwarding_value();
                         }
                     }
-                    // exp111: propagate bearer token for downstream gate checks
+                    // exp111 + JH-11: propagate bearer token with verification
                     if let Some(ref token) = caller.bearer_token {
                         cap_params["_bearer_token"] = json!(token);
+                        let verified = if let Some(ref v) = self.beardog_verifier {
+                            v.verify_async(token).await.is_some()
+                        } else {
+                            false
+                        };
+                        cap_params["_token_verified"] = json!(verified);
                     }
                     dispatch_capability_call(
                         self.capability_handler.call(&Some(cap_params)).await,
@@ -654,14 +684,15 @@ impl NeuralApiServer {
         self.handle_request(request_line).await.into_response()
     }
 
-    /// Enrich capability call params with forwarding context (JH-2, exp111).
+    /// Enrich capability call params with forwarding context (JH-2, JH-11, exp111).
     ///
-    /// Injects two fields into the params before they reach `CapabilityHandler::call()`:
+    /// Injects fields into the params before they reach `CapabilityHandler::call()`:
     /// - `_resource_envelope` — downstream primals enforce cpu/mem/timeout_ms.
     /// - `_bearer_token` — downstream primals in enforced mode need the caller's
-    ///   token for their own MethodGate check. Without this, any primal running
-    ///   in enforced mode rejects forwarded calls with `-32001`.
-    fn enrich_for_forwarding(
+    ///   token for their own MethodGate check.
+    /// - `_token_verified` — boolean indicating whether biomeOS verified the
+    ///   token against BearDog via IPC (JH-11 federation step 1).
+    async fn enrich_for_forwarding(
         &self,
         params: &Option<Value>,
         caller: &CallerContext,
@@ -676,6 +707,14 @@ impl NeuralApiServer {
             }
             if let Some(ref token) = caller.bearer_token {
                 obj.insert("_bearer_token".to_string(), json!(token));
+
+                // JH-11: verify the token with BearDog before forwarding
+                let verified = if let Some(ref verifier) = self.beardog_verifier {
+                    verifier.verify_async(token).await.is_some()
+                } else {
+                    false
+                };
+                obj.insert("_token_verified".to_string(), json!(verified));
             }
         }
 

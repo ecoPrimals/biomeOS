@@ -719,6 +719,135 @@ async fn test_handle_request_capability_call_includes_routing_trace_when_enabled
     assert_eq!(phases.len(), 3);
 }
 
+// --- composition.status route tests ---
+
+#[tokio::test]
+async fn test_handle_request_composition_status_returns_expected_shape() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"composition.status","id":100}"#;
+    let result = server.handle_request_json(req).await;
+    let inner = &result["result"];
+    assert!(inner["active_users"].is_number(), "expected active_users");
+    assert!(
+        inner["primal_health"].is_array(),
+        "expected primal_health array"
+    );
+    assert!(
+        inner["resource_pressure"].is_object(),
+        "expected resource_pressure object"
+    );
+    assert!(
+        inner["total_primals"].is_number(),
+        "expected total_primals count"
+    );
+    assert!(
+        inner["topology_version"].is_number(),
+        "expected topology_version"
+    );
+}
+
+// --- composition.deploy route tests ---
+
+#[tokio::test]
+async fn test_handle_request_composition_deploy_routes_to_graph_execute() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"composition.deploy","params":{"graph_id":"nonexistent"},"id":101}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(
+        result.get("error").is_some() || result.get("result").is_some(),
+        "composition.deploy should route to graph.execute"
+    );
+    assert_ne!(
+        result.get("error").and_then(|e| e["code"].as_i64()),
+        Some(-32601),
+        "composition.deploy must not be MethodNotFound"
+    );
+}
+
+// --- method.register route tests (GAP-09) ---
+
+#[tokio::test]
+async fn test_handle_request_method_register_registers_domains() {
+    let (server, _temp) = create_test_server();
+    let req = json!({
+        "jsonrpc": "2.0",
+        "method": "method.register",
+        "params": {
+            "primal": "ludoSpring",
+            "transport": "/tmp/ludo.sock",
+            "methods": ["game.start", "game.join", "game.end", "score.get", "score.leaderboard"]
+        },
+        "id": 102
+    })
+    .to_string();
+
+    let result = server.handle_request_json(&req).await;
+    let inner = &result["result"];
+    assert_eq!(inner["registered"], 5, "should register 5 methods");
+    assert_eq!(inner["primal"], "ludoSpring");
+    let domains = inner["domains"].as_array().expect("domains array");
+    assert!(domains.len() == 2, "should have 2 domains: game + score");
+}
+
+#[tokio::test]
+async fn test_handle_request_method_register_empty_methods_errors() {
+    let (server, _temp) = create_test_server();
+    let req = json!({
+        "jsonrpc": "2.0",
+        "method": "method.register",
+        "params": {
+            "primal": "test",
+            "transport": "/tmp/test.sock",
+            "methods": []
+        },
+        "id": 103
+    })
+    .to_string();
+
+    let result = server.handle_request_json(&req).await;
+    assert!(result.get("error").is_some());
+}
+
+#[tokio::test]
+async fn test_handle_request_method_register_makes_methods_semantically_routable() {
+    let (server, _temp) = create_test_server();
+    let dir = tempfile::tempdir().expect("tempdir");
+    let sock = dir.path().join("ludo.sock");
+    let _mock = MockJsonRpcServer::spawn_echo_success(&sock, json!({"started": true})).await;
+
+    let reg_req = json!({
+        "jsonrpc": "2.0",
+        "method": "method.register",
+        "params": {
+            "primal": "ludoSpring",
+            "transport": sock.to_str().unwrap(),
+            "methods": ["game.start"]
+        },
+        "id": 104
+    })
+    .to_string();
+
+    let reg_result = server.handle_request_json(&reg_req).await;
+    assert!(
+        reg_result.get("result").is_some(),
+        "registration should succeed"
+    );
+
+    let call_req = json!({
+        "jsonrpc": "2.0",
+        "method": "game.start",
+        "params": {},
+        "id": 105
+    })
+    .to_string();
+
+    let call_result = server.handle_request_json(&call_req).await;
+    assert!(
+        call_result.get("result").is_some(),
+        "game.start should route via semantic fallback after method.register: {call_result}"
+    );
+}
+
 #[test]
 fn dispatch_preserves_primal_json_rpc_error_code() {
     let err = biomeos_types::IpcError::JsonRpcError {

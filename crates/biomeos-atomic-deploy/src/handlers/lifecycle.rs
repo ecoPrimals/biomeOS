@@ -12,6 +12,7 @@
 //! - `lifecycle.register` - Register a primal for management
 //! - `lifecycle.shutdown_all` - Initiate system-wide shutdown
 //! - `composition.reload` - Hot-swap a single primal without full restart (JH-3)
+//! - `composition.status` - Adaptive daemon surface: active_users, primal_health, resource_pressure
 
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
@@ -331,6 +332,80 @@ impl LifecycleHandler {
             "composition_healthy": health_ratio >= 0.5,
             "capabilities_live": all_capabilities,
             "dependency_graph": dependency_edges,
+        }))
+    }
+
+    /// Handle `composition.status` — adaptive daemon surface for pappusCast.
+    ///
+    /// Returns `{ active_users, primal_health, resource_pressure }` so
+    /// projectNUCLEUS can drive adaptive daemons without scraping JupyterHub.
+    ///
+    /// - `active_users`: count of primals in Active state (proxy for load).
+    /// - `primal_health`: per-primal `{ name, state, latency_ms, failures }`.
+    /// - `resource_pressure`: host CPU / memory / disk from `/proc`.
+    ///
+    /// JSON-RPC method: `composition.status`
+    pub async fn composition_status(&self) -> Result<Value> {
+        let manager = self.manager.read().await;
+        let status = manager.get_status().await;
+
+        let mut primal_health = Vec::with_capacity(status.len());
+        let mut active_count: u64 = 0;
+
+        for (name, state) in &status {
+            let info = manager.get_primal_info(name).await;
+
+            let (latency_ms, failures, resurrection_count) = if let Some(ref i) = info {
+                (
+                    i.metrics.last_health_latency_ms,
+                    i.metrics.health_failures,
+                    i.metrics.resurrection_count,
+                )
+            } else {
+                (0, 0, 0)
+            };
+
+            let state_str = state_to_string(state);
+            if state_str == "active" {
+                active_count += 1;
+            }
+
+            primal_health.push(json!({
+                "name": name,
+                "state": state_str,
+                "latency_ms": latency_ms,
+                "failures": failures,
+                "resurrection_count": resurrection_count,
+            }));
+        }
+
+        let resource_pressure = match biomeos_system::SystemInspector::get_resource_usage().await {
+            Ok(metrics) => json!({
+                "cpu": metrics.cpu_usage,
+                "memory": metrics.memory_usage,
+                "disk": metrics.disk_usage,
+            }),
+            Err(e) => {
+                warn!("Resource metrics unavailable: {e}");
+                json!({
+                    "cpu": null,
+                    "memory": null,
+                    "disk": null,
+                    "error": e.to_string(),
+                })
+            }
+        };
+
+        let topology = self
+            .topology_version
+            .load(std::sync::atomic::Ordering::Relaxed);
+
+        Ok(json!({
+            "active_users": active_count,
+            "primal_health": primal_health,
+            "resource_pressure": resource_pressure,
+            "total_primals": status.len(),
+            "topology_version": topology,
         }))
     }
 

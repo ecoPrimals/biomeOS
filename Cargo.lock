@@ -420,6 +420,7 @@ dependencies = [
  "biomeos-graph",
  "biomeos-primal-sdk",
  "biomeos-spore",
+ "biomeos-system",
  "biomeos-test-utils",
  "biomeos-types",
  "bytes",
