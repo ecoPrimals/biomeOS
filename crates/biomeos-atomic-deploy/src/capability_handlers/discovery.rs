@@ -138,6 +138,24 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_capability_to_primal_content() {
+        assert_eq!(
+            resolve_capability_to_primal("content"),
+            Some("nestgate"),
+            "Content capability maps to nestgate"
+        );
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_content_addressed() {
+        assert_eq!(
+            resolve_capability_to_primal("content_addressed"),
+            Some("nestgate"),
+            "Content-addressed capability maps to nestgate"
+        );
+    }
+
+    #[test]
     fn test_resolve_capability_to_primal_ai() {
         assert_eq!(
             resolve_capability_to_primal("ai"),

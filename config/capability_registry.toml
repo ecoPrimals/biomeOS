@@ -132,6 +132,24 @@ capabilities = [
     "persistence"
 ]
 
+[domains.content]
+provider = "nestgate"
+capabilities = [
+    "content",
+    "content_addressed",
+    "publishing"
+]
+
+[translations.content]
+"content.put" = { provider = "nestgate", method = "content.put" }
+"content.get" = { provider = "nestgate", method = "content.get" }
+"content.exists" = { provider = "nestgate", method = "content.exists" }
+"content.list" = { provider = "nestgate", method = "content.list" }
+"content.publish" = { provider = "nestgate", method = "content.publish" }
+"content.resolve" = { provider = "nestgate", method = "content.resolve" }
+"content.promote" = { provider = "nestgate", method = "content.promote" }
+"content.collections" = { provider = "nestgate", method = "content.collections" }
+
 [translations.storage]
 "storage.put" = { provider = "nestgate", method = "storage.store" }
 "storage.get" = { provider = "nestgate", method = "storage.retrieve" }

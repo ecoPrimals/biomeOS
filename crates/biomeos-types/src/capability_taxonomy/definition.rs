@@ -487,7 +487,9 @@ impl CapabilityTaxonomy {
             "compression" => Some(Self::Compression),
             "replication" => Some(Self::Replication),
             "deduplication" | "dedup" => Some(Self::Deduplication),
-            "content_addressed" | "contentaddressed" => Some(Self::ContentAddressed),
+            "content_addressed" | "contentaddressed" | "content" | "publishing" => {
+                Some(Self::ContentAddressed)
+            }
 
             "visual_rendering" | "visualrendering" | "rendering" | "visualization" | "ui" => {
                 Some(Self::VisualRendering)

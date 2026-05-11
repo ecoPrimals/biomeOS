@@ -64,6 +64,19 @@ fn test_capability_to_provider_storage_domain() {
 }
 
 #[test]
+fn test_capability_to_provider_content_domain() {
+    assert_eq!(capability_to_provider_fallback("content"), Some("nestgate"));
+    assert_eq!(
+        capability_to_provider_fallback("content_addressed"),
+        Some("nestgate")
+    );
+    assert_eq!(
+        capability_to_provider_fallback("publishing"),
+        Some("nestgate")
+    );
+}
+
+#[test]
 fn test_capability_to_provider_compute_domain() {
     assert_eq!(
         capability_to_provider_fallback("compute"),

@@ -179,6 +179,21 @@ fn load_defaults_core(
                 ("storage.retrieve", "storage.retrieve"),
             ],
         ),
+        // Content domain (NestGate content-addressed storage)
+        (
+            NESTGATE,
+            "content",
+            &[
+                ("content.put", "content.put"),
+                ("content.get", "content.get"),
+                ("content.exists", "content.exists"),
+                ("content.list", "content.list"),
+                ("content.publish", "content.publish"),
+                ("content.resolve", "content.resolve"),
+                ("content.promote", "content.promote"),
+                ("content.collections", "content.collections"),
+            ],
+        ),
         // Compute domain
         (
             TOADSTOOL,

@@ -59,6 +59,11 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
         provider: NESTGATE,
         capabilities: &["storage", "versioning", "persistence"],
     },
+    // Content domain (NestGate) — content-addressed storage, publishing, collections
+    CapabilityDomain {
+        provider: NESTGATE,
+        capabilities: &["content", "content_addressed", "publishing"],
+    },
     // Compute domain (ToadStool)
     CapabilityDomain {
         provider: TOADSTOOL,

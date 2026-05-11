@@ -355,14 +355,21 @@ impl LifecycleHandler {
         for (name, state) in &status {
             let info = manager.get_primal_info(name).await;
 
-            let (latency_ms, failures, resurrection_count) = if let Some(ref i) = info {
+            let (latency_ms, failures, resurrection_count, capabilities) = if let Some(ref i) = info
+            {
+                let caps: Vec<String> = i
+                    .deployment_node
+                    .as_ref()
+                    .map(|n| n.capabilities.clone())
+                    .unwrap_or_default();
                 (
                     i.metrics.last_health_latency_ms,
                     i.metrics.health_failures,
                     i.metrics.resurrection_count,
+                    caps,
                 )
             } else {
-                (0, 0, 0)
+                (0, 0, 0, vec![])
             };
 
             let state_str = state_to_string(state);
@@ -376,6 +383,7 @@ impl LifecycleHandler {
                 "latency_ms": latency_ms,
                 "failures": failures,
                 "resurrection_count": resurrection_count,
+                "capabilities": capabilities,
             }));
         }
 
