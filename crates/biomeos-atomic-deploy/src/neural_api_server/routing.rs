@@ -149,6 +149,7 @@ enum Route {
     CompositionReload,
     CompositionStatus,
     CompositionDeploy,
+    CompositionDeployShadow,
     MethodRegister,
 }
 
@@ -309,6 +310,8 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("composition.status", Route::CompositionStatus),
     // Composition deploy (alias for graph.execute — primalSpring contract)
     ("composition.deploy", Route::CompositionDeploy),
+    // Composition deploy shadow (dry-run validation for projectNUCLEUS H2)
+    ("composition.deploy.shadow", Route::CompositionDeployShadow),
     // Spring method registration (GAP-09)
     ("method.register", Route::MethodRegister),
     // BTSP escalation (cleartext → enforced after Tower healthy)
@@ -619,6 +622,10 @@ impl NeuralApiServer {
             }
             // Composition deploy (alias for graph.execute — primalSpring contract)
             Route::CompositionDeploy => dispatch(self.graph_handler.execute(params).await, id),
+            // Composition deploy shadow (dry-run validation)
+            Route::CompositionDeployShadow => {
+                dispatch(self.graph_handler.shadow_deploy(params).await, id)
+            }
             // Spring method registration (GAP-09)
             Route::MethodRegister => {
                 dispatch(self.capability_handler.register_methods(params).await, id)

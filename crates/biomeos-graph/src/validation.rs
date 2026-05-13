@@ -68,6 +68,26 @@ impl GraphValidator {
         Ok(())
     }
 
+    /// Check node ID uniqueness only.
+    pub fn validate_unique_ids(graph: &DeploymentGraph) -> Result<()> {
+        Self::validate_unique_node_ids(graph)
+    }
+
+    /// Check that all dependency references resolve.
+    pub fn validate_deps_exist(graph: &DeploymentGraph) -> Result<()> {
+        Self::validate_dependencies_exist(graph)
+    }
+
+    /// Check for dependency cycles.
+    pub fn validate_acyclic(graph: &DeploymentGraph) -> Result<()> {
+        Self::validate_no_cycles(graph)
+    }
+
+    /// Check capability namespace format (soft lint).
+    pub fn validate_caps(&self, graph: &DeploymentGraph) -> Result<()> {
+        self.validate_capabilities(graph)
+    }
+
     /// Ensure all node IDs are unique within the graph.
     fn validate_unique_node_ids(graph: &DeploymentGraph) -> Result<()> {
         let mut seen = HashSet::new();
