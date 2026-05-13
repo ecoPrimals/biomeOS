@@ -200,7 +200,8 @@ impl NeuralApiServer {
             executions.clone(),
         );
 
-        let lifecycle_handler = LifecycleHandler::new(&family_id_str);
+        let lifecycle_handler =
+            LifecycleHandler::new(&family_id_str).with_executions(executions.clone());
 
         let living_graph = Arc::new(LivingGraph::new(&family_id_str));
 

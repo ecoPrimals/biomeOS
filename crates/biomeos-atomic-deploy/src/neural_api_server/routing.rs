@@ -150,6 +150,7 @@ enum Route {
     CompositionStatus,
     CompositionDeploy,
     CompositionDeployShadow,
+    SpringStatus,
     MethodRegister,
 }
 
@@ -312,6 +313,8 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("composition.deploy", Route::CompositionDeploy),
     // Composition deploy shadow (dry-run validation for projectNUCLEUS H2)
     ("composition.deploy.shadow", Route::CompositionDeployShadow),
+    // Spring status for Tier 2 notebook integration (projectNUCLEUS)
+    ("biomeos.spring_status", Route::SpringStatus),
     // Spring method registration (GAP-09)
     ("method.register", Route::MethodRegister),
     // BTSP escalation (cleartext → enforced after Tower healthy)
@@ -626,6 +629,8 @@ impl NeuralApiServer {
             Route::CompositionDeployShadow => {
                 dispatch(self.graph_handler.shadow_deploy(params).await, id)
             }
+            // Spring status (Tier 2 notebook integration)
+            Route::SpringStatus => dispatch(self.lifecycle_handler.spring_status().await, id),
             // Spring method registration (GAP-09)
             Route::MethodRegister => {
                 dispatch(self.capability_handler.register_methods(params).await, id)

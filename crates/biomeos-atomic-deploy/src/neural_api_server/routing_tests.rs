@@ -945,6 +945,104 @@ capabilities = ["security"]
     );
 }
 
+// --- biomeos.spring_status route tests ---
+
+#[tokio::test]
+async fn test_spring_status_returns_expected_shape() {
+    let (server, _temp) = create_test_server();
+    let req = json!({
+        "jsonrpc": "2.0",
+        "method": "biomeos.spring_status",
+        "params": {},
+        "id": 120
+    })
+    .to_string();
+
+    let result = server.handle_request_json(&req).await;
+    let inner = &result["result"];
+
+    assert!(
+        inner["primals"].is_array(),
+        "expected primals array: {result}"
+    );
+    let primals = inner["primals"].as_array().unwrap();
+    assert!(
+        !primals.is_empty(),
+        "primals array should list known primals"
+    );
+
+    // Every entry should have required fields
+    for p in primals {
+        assert!(p["name"].is_string(), "missing name: {p}");
+        assert!(p["display_name"].is_string(), "missing display_name: {p}");
+        assert!(
+            p["binary_available"].is_boolean(),
+            "missing binary_available: {p}"
+        );
+        assert!(p["capabilities"].is_array(), "missing capabilities: {p}");
+    }
+
+    assert!(
+        inner["workload_count"].is_number(),
+        "expected workload_count"
+    );
+    assert!(
+        inner["workloads_running"].is_number(),
+        "expected workloads_running"
+    );
+    assert!(
+        inner["topology_version"].is_number(),
+        "expected topology_version"
+    );
+}
+
+#[tokio::test]
+async fn test_spring_status_includes_core_primals() {
+    let (server, _temp) = create_test_server();
+    let req = json!({
+        "jsonrpc": "2.0",
+        "method": "biomeos.spring_status",
+        "params": {},
+        "id": 121
+    })
+    .to_string();
+
+    let result = server.handle_request_json(&req).await;
+    let primals = result["result"]["primals"].as_array().unwrap();
+    let names: Vec<&str> = primals.iter().filter_map(|p| p["name"].as_str()).collect();
+
+    // Core primals must appear
+    assert!(names.contains(&"beardog"), "missing beardog");
+    assert!(names.contains(&"songbird"), "missing songbird");
+    assert!(names.contains(&"nestgate"), "missing nestgate");
+    assert!(names.contains(&"toadstool"), "missing toadstool");
+    // Provenance trio
+    assert!(names.contains(&"rhizocrypt"), "missing rhizocrypt");
+    assert!(names.contains(&"loamspine"), "missing loamspine");
+    assert!(names.contains(&"sweetgrass"), "missing sweetgrass");
+}
+
+#[tokio::test]
+async fn test_spring_status_has_display_names() {
+    let (server, _temp) = create_test_server();
+    let req = json!({
+        "jsonrpc": "2.0",
+        "method": "biomeos.spring_status",
+        "params": {},
+        "id": 122
+    })
+    .to_string();
+
+    let result = server.handle_request_json(&req).await;
+    let primals = result["result"]["primals"].as_array().unwrap();
+
+    let beardog = primals.iter().find(|p| p["name"] == "beardog").unwrap();
+    assert_eq!(beardog["display_name"], "BearDog");
+
+    let nestgate = primals.iter().find(|p| p["name"] == "nestgate").unwrap();
+    assert_eq!(nestgate["display_name"], "NestGate");
+}
+
 // --- method.register route tests (GAP-09) ---
 
 #[tokio::test]

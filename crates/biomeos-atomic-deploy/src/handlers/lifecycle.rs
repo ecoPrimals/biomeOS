@@ -33,6 +33,10 @@ pub struct LifecycleHandler {
     /// Monotonic topology version, incremented on each composition change
     /// (register, reload, apoptosis). Used by `composition.reload` contract.
     topology_version: Arc<std::sync::atomic::AtomicU64>,
+    /// Shared graph execution status map (for workload counts in `spring_status`).
+    executions: Option<
+        Arc<RwLock<std::collections::HashMap<String, crate::handlers::graph::ExecutionStatus>>>,
+    >,
 }
 
 impl LifecycleHandler {
@@ -42,6 +46,7 @@ impl LifecycleHandler {
         Self {
             manager: Arc::new(RwLock::new(LifecycleManager::new(family_id))),
             topology_version: Arc::new(std::sync::atomic::AtomicU64::new(1)),
+            executions: None,
         }
     }
 
@@ -50,7 +55,19 @@ impl LifecycleHandler {
         Self {
             manager,
             topology_version: Arc::new(std::sync::atomic::AtomicU64::new(1)),
+            executions: None,
         }
+    }
+
+    /// Wire the shared graph executions map (enables workload counts in `spring_status`).
+    pub fn with_executions(
+        mut self,
+        executions: Arc<
+            RwLock<std::collections::HashMap<String, crate::handlers::graph::ExecutionStatus>>,
+        >,
+    ) -> Self {
+        self.executions = Some(executions);
+        self
     }
 
     fn bump_topology(&self) -> u64 {
@@ -415,6 +432,153 @@ impl LifecycleHandler {
             "total_primals": status.len(),
             "topology_version": topology,
         }))
+    }
+
+    /// Spring status for Tier 2 notebook integration.
+    ///
+    /// Returns per-primal availability: binary on disk, runtime state,
+    /// capabilities, workload count, and last health-check timestamp.
+    /// Designed for projectNUCLEUS downstream consumers that need to know
+    /// which primals are usable from a JupyterHub session.
+    ///
+    /// JSON-RPC method: `biomeos.spring_status`
+    ///
+    /// # Response shape
+    /// ```json
+    /// {
+    ///   "primals": [
+    ///     {
+    ///       "name": "beardog",
+    ///       "display_name": "BearDog",
+    ///       "binary_available": true,
+    ///       "binary_path": "/opt/plasmidBin/primals/beardog",
+    ///       "runtime_state": "active",
+    ///       "capabilities": ["security", "crypto"],
+    ///       "last_health_check": "2026-05-13T17:00:00Z"
+    ///     }
+    ///   ],
+    ///   "workload_count": 3,
+    ///   "workloads_running": 1,
+    ///   "topology_version": 7
+    /// }
+    /// ```
+    pub async fn spring_status(&self) -> Result<Value> {
+        let manager = self.manager.read().await;
+        let status = manager.get_status().await;
+
+        let all_primals: Vec<&str> = biomeos_types::primal_names::CORE_PRIMALS
+            .iter()
+            .chain(biomeos_types::primal_names::PROVENANCE_PRIMALS.iter())
+            .chain(biomeos_types::primal_names::SPRING_PRIMALS.iter())
+            .chain(biomeos_types::primal_names::AUXILIARY_PRIMALS.iter())
+            .copied()
+            .collect();
+
+        let binary_search_dirs = Self::binary_search_dirs();
+
+        let mut primals_out = Vec::with_capacity(all_primals.len());
+
+        for &primal_name in &all_primals {
+            let (binary_available, binary_path) =
+                Self::probe_binary(primal_name, &binary_search_dirs);
+
+            let display_name = biomeos_types::primal_names::display::for_id(primal_name)
+                .unwrap_or(primal_name)
+                .to_string();
+
+            let (runtime_state, capabilities, last_health_ts) =
+                if let Some(state) = status.iter().find(|(n, _)| n.as_str() == primal_name) {
+                    let info = manager.get_primal_info(primal_name).await;
+                    let caps: Vec<String> = info
+                        .as_ref()
+                        .and_then(|i| i.deployment_node.as_ref())
+                        .map(|n| n.capabilities.clone())
+                        .unwrap_or_default();
+                    let state_str = state_to_string(state.1);
+                    let ts = if state_str == "active" {
+                        chrono::Utc::now().to_rfc3339()
+                    } else {
+                        String::new()
+                    };
+                    (Some(state_str), caps, ts)
+                } else {
+                    (None, vec![], String::new())
+                };
+
+            primals_out.push(json!({
+                "name": primal_name,
+                "display_name": display_name,
+                "binary_available": binary_available,
+                "binary_path": binary_path,
+                "runtime_state": runtime_state,
+                "capabilities": capabilities,
+                "last_health_check": if last_health_ts.is_empty() { Value::Null } else { Value::String(last_health_ts) },
+            }));
+        }
+
+        let (workload_count, workloads_running) = if let Some(ref execs) = self.executions {
+            let map = execs.read().await;
+            let total = map.len() as u64;
+            let running = map.values().filter(|e| e.state == "running").count() as u64;
+            (total, running)
+        } else {
+            (0, 0)
+        };
+
+        let topology = self
+            .topology_version
+            .load(std::sync::atomic::Ordering::Relaxed);
+
+        Ok(json!({
+            "primals": primals_out,
+            "workload_count": workload_count,
+            "workloads_running": workloads_running,
+            "topology_version": topology,
+        }))
+    }
+
+    /// Collect plasmidBin search directories (same search order as primal_spawner).
+    fn binary_search_dirs() -> Vec<PathBuf> {
+        [
+            std::env::var("ECOPRIMALS_PLASMID_BIN")
+                .ok()
+                .map(PathBuf::from),
+            std::env::var("BIOMEOS_PLASMID_BIN_DIR")
+                .ok()
+                .map(PathBuf::from),
+            Some(PathBuf::from("./plasmidBin")),
+            Some(PathBuf::from("../plasmidBin")),
+            Some(PathBuf::from("../../plasmidBin")),
+        ]
+        .into_iter()
+        .flatten()
+        .filter(|p| p.exists())
+        .collect()
+    }
+
+    /// Probe for a primal binary on disk, returning (found, path_or_null).
+    fn probe_binary(primal_name: &str, search_dirs: &[PathBuf]) -> (bool, Value) {
+        let arch = std::env::consts::ARCH;
+        let os = std::env::consts::OS;
+
+        let patterns = [
+            format!("{primal_name}_{arch}_{os}_musl/{primal_name}"),
+            format!("{primal_name}_{arch}_{os}/{primal_name}"),
+            format!("primals/{primal_name}/{primal_name}"),
+            format!("primals/{primal_name}"),
+            format!("{primal_name}/{primal_name}"),
+            primal_name.to_string(),
+        ];
+
+        for dir in search_dirs {
+            for pat in &patterns {
+                let candidate = dir.join(pat);
+                if candidate.exists() && candidate.is_file() {
+                    return (true, json!(candidate.display().to_string()));
+                }
+            }
+        }
+        (false, Value::Null)
     }
 
     /// Handle `composition.health` / `composition.tower_health` etc.
