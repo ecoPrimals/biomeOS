@@ -184,7 +184,12 @@ impl NeuralApiServer {
 
         let capability_handler =
             CapabilityHandler::new(router.clone(), translation_registry.clone())
-                .with_gate_registry(Arc::clone(&gate_registry));
+                .with_gate_registry(Arc::clone(&gate_registry))
+                .with_signal_dispatch(
+                    graphs_dir.clone(),
+                    family_id_str.clone(),
+                    Arc::new(graph_handler.clone()),
+                );
 
         let topology_handler = TopologyHandler::new(
             family_id_str.clone(),

@@ -46,6 +46,10 @@ pub struct GraphExecutor {
     metrics: Option<MetricsCollector>,
     gate_registry: Arc<GateRegistry>,
     pub(crate) capability_registry: Arc<CapabilityRegistry>,
+    /// When set, metrics are recorded under this namespace prefix
+    /// (e.g. "signal:tower.publish") so PathwayLearner can group
+    /// signal executions separately from regular graph runs.
+    signal_namespace: Option<String>,
 }
 
 impl GraphExecutor {
@@ -60,6 +64,7 @@ impl GraphExecutor {
             metrics: None,
             gate_registry,
             capability_registry: Arc::new(CapabilityRegistry::default()),
+            signal_namespace: None,
         }
     }
 
@@ -82,6 +87,7 @@ impl GraphExecutor {
             metrics: None,
             gate_registry,
             capability_registry: Arc::new(CapabilityRegistry::default()),
+            signal_namespace: None,
         }
     }
 
@@ -92,6 +98,17 @@ impl GraphExecutor {
     #[must_use]
     pub fn with_metrics(mut self, metrics: MetricsCollector) -> Self {
         self.metrics = Some(metrics);
+        self
+    }
+
+    /// Tag this execution with a signal namespace for PathwayLearner grouping.
+    ///
+    /// Metrics are recorded under `{namespace}:{graph_id}` instead of plain
+    /// `{graph_id}`, allowing PathwayLearner to analyze signal execution
+    /// patterns independently from regular graph runs.
+    #[must_use]
+    pub fn with_signal_namespace(mut self, namespace: String) -> Self {
+        self.signal_namespace = Some(namespace);
         self
     }
 
@@ -210,14 +227,22 @@ impl GraphExecutor {
 
         // Record graph-level metrics for PathwayLearner
         if let Some(ref collector) = self.metrics {
+            let metrics_graph_name = match &self.signal_namespace {
+                Some(ns) => format!("{ns}:{}", self.graph.id),
+                None => self.graph.id.clone(),
+            };
             let graph_result = GraphResult {
                 success: report.success,
                 node_results: HashMap::new(),
-                errors: vec![],
+                errors: report
+                    .failed_nodes
+                    .iter()
+                    .map(|(id, err)| format!("{id}: {err}"))
+                    .collect(),
                 duration_ms: report.duration_ms,
             };
             if let Err(e) =
-                collector.record_execution(&self.graph.id, &graph_result, report.duration_ms, None)
+                collector.record_execution(&metrics_graph_name, &graph_result, report.duration_ms, None)
             {
                 warn!("Failed to record graph metrics: {e}");
             }
@@ -307,12 +332,29 @@ impl GraphExecutor {
 
             // Record per-node metrics for PathwayLearner
             if let Some(ref collector) = self.metrics {
+                let node_ref = node_map.get(&node_id);
+                let primal_id_str = node_ref
+                    .and_then(|n| {
+                        n.primal.as_ref().and_then(|p| {
+                            p.by_name
+                                .as_deref()
+                                .or(p.by_capability.as_deref())
+                        })
+                    })
+                    .unwrap_or("");
+                let operation_str = node_ref
+                    .and_then(|n| n.operation.as_ref().map(|o| o.name.as_str()))
+                    .unwrap_or("");
+                let metrics_graph_name = match &self.signal_namespace {
+                    Some(ns) => format!("{ns}:{graph_id}"),
+                    None => graph_id.clone(),
+                };
                 if let Err(e) = collector.record_node_execution(&NodeExecutionParams {
                     execution_id,
-                    graph_name: &graph_id,
+                    graph_name: &metrics_graph_name,
                     node_id: &node_id,
-                    primal_id: "",
-                    operation: "",
+                    primal_id: primal_id_str,
+                    operation: operation_str,
                     success,
                     duration_ms,
                     error: None,

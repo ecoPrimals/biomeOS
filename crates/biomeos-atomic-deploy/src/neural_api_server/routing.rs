@@ -155,6 +155,7 @@ enum Route {
     SignalDispatch,
     SignalList,
     SignalSchema,
+    PrimalAnnounce,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -316,6 +317,9 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("composition.deploy", Route::CompositionDeploy),
     // Composition deploy shadow (dry-run validation for projectNUCLEUS H2)
     ("composition.deploy.shadow", Route::CompositionDeployShadow),
+    // Primal self-announcement (atomic registration)
+    ("primal.announce", Route::PrimalAnnounce),
+    ("neural_api.primal_announce", Route::PrimalAnnounce),
     // Atomic signal dispatch (composition collapse layer)
     ("signal.dispatch", Route::SignalDispatch),
     ("neural_api.signal_dispatch", Route::SignalDispatch),
@@ -639,6 +643,17 @@ impl NeuralApiServer {
             Route::CompositionDeployShadow => {
                 dispatch(self.graph_handler.shadow_deploy(params).await, id)
             }
+            // Primal self-announcement (atomic registration)
+            Route::PrimalAnnounce => dispatch(
+                crate::handlers::announce::handle_announce(
+                    &self.router,
+                    &self.translation_registry,
+                    &self.lifecycle_handler,
+                    params,
+                )
+                .await,
+                id,
+            ),
             // Atomic signal dispatch (composition collapse)
             Route::SignalDispatch => dispatch(
                 crate::handlers::signal::dispatch(

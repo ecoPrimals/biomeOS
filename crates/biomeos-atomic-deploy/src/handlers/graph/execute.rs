@@ -83,6 +83,13 @@ impl GraphHandler {
         let family_id_owned = family_id_param.to_string();
         let router = self.router.clone();
 
+        let signal_namespace = raw_params
+            .as_ref()
+            .and_then(|p| p.get("signal_context"))
+            .and_then(|sc| sc.get("metrics_namespace"))
+            .and_then(|ns| ns.as_str())
+            .map(String::from);
+
         tokio::spawn(async move {
             let mut env = HashMap::new();
             env.insert("FAMILY_ID".to_string(), family_id_owned.clone());
@@ -131,6 +138,9 @@ impl GraphHandler {
                 GraphExecutor::new(graph, env).with_capability_registry(capability_registry);
             if let Ok(m) = metrics {
                 executor = executor.with_metrics(m);
+            }
+            if let Some(ns) = signal_namespace {
+                executor = executor.with_signal_namespace(ns);
             }
             let start = std::time::Instant::now();
 

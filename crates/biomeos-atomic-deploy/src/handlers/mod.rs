@@ -31,6 +31,8 @@
 //! This enables TRUE PRIMAL architecture where primals are discovered by what
 //! they can do, not what they're named.
 
+/// Primal self-announcement (`primal.announce`).
+pub mod announce;
 /// Capability routing (`capability_call` submodule: `capability.call`, translation lists).
 pub mod capability;
 #[cfg(test)]
