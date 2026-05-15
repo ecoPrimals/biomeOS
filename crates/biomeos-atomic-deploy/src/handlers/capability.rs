@@ -33,6 +33,7 @@
 //! first dot; `"params"` accepted as alias for `"args"`.
 
 use super::capability_heuristics;
+use super::graph::GraphHandler;
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::gate_registry::GateRegistry;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
@@ -68,6 +69,18 @@ pub struct CapabilityHandler {
 
     /// Gate registry for cross-gate capability forwarding
     gate_registry: Arc<GateRegistry>,
+
+    /// Graphs directory for signal dispatch (composition collapse layer).
+    /// When a capability.call targets a signal tier (tower/node/nest/meta),
+    /// the handler loads the corresponding signal graph instead of routing
+    /// to a nonexistent "tower" primal.
+    pub(crate) graphs_dir: Option<PathBuf>,
+
+    /// Family ID for signal graph execution context.
+    pub(crate) family_id: String,
+
+    /// Graph handler reference for delegating signal execution.
+    pub(crate) graph_handler: Option<Arc<GraphHandler>>,
 }
 
 impl CapabilityHandler {
@@ -80,12 +93,28 @@ impl CapabilityHandler {
             router,
             translation_registry,
             gate_registry: Arc::new(GateRegistry::new()),
+            graphs_dir: None,
+            family_id: String::new(),
+            graph_handler: None,
         }
     }
 
     /// Create a capability handler with a gate registry for cross-gate routing.
     pub fn with_gate_registry(mut self, registry: Arc<GateRegistry>) -> Self {
         self.gate_registry = registry;
+        self
+    }
+
+    /// Configure signal dispatch (composition collapse layer).
+    pub fn with_signal_dispatch(
+        mut self,
+        graphs_dir: PathBuf,
+        family_id: String,
+        graph_handler: Arc<GraphHandler>,
+    ) -> Self {
+        self.graphs_dir = Some(graphs_dir);
+        self.family_id = family_id;
+        self.graph_handler = Some(graph_handler);
         self
     }
 

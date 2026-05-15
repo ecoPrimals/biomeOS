@@ -7,9 +7,10 @@ use super::CapabilityCallOutcome;
 use super::CapabilityHandler;
 use super::elapsed_ms_since;
 use crate::handlers::capability_routing::{RoutingPhase, routing_trace_value};
+use crate::handlers::signal as signal_handler;
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
 impl CapabilityHandler {
     /// Semantic capability call with automatic translation.
@@ -158,6 +159,55 @@ impl CapabilityHandler {
         }
 
         trace!("capability.call: {}.{}", capability, &operation);
+
+        // Atomic signal interception: if the capability is a signal tier
+        // (tower/node/nest/meta), check for a signal graph and execute it
+        // instead of trying to discover a primal named "tower".
+        if signal_handler::is_signal_tier(capability) {
+            if let (Some(graphs_dir), Some(graph_handler)) =
+                (&self.graphs_dir, &self.graph_handler)
+            {
+                let graph_path =
+                    signal_handler::signal_graph_path(graphs_dir, capability, &operation);
+                if graph_path.exists() {
+                    info!(
+                        "Signal intercept: {}.{} -> graph execution",
+                        capability, operation
+                    );
+                    let signal_params = json!({
+                        "signal": format!("{capability}.{operation}"),
+                        "params": args,
+                    });
+                    let result = signal_handler::dispatch(
+                        graphs_dir,
+                        &self.family_id,
+                        graph_handler,
+                        &Some(signal_params),
+                    )
+                    .await?;
+                    let elapsed_ms = elapsed_ms_since(start);
+                    let routing_trace = want_trace.then(|| {
+                        routing_trace_value(
+                            &[
+                                RoutingPhase::RouteResolved {
+                                    capability: capability.to_string(),
+                                    provider: "signal_graph".to_string(),
+                                    method: format!("{capability}.{operation}"),
+                                },
+                                RoutingPhase::Forwarded { elapsed_ms },
+                            ],
+                            capability,
+                        )
+                    });
+                    return Ok(CapabilityCallOutcome {
+                        result,
+                        routing_trace,
+                    });
+                }
+            }
+            // No signal graph found or signal dispatch not configured —
+            // fall through to normal routing.
+        }
 
         let semantic_name = format!("{}.{}", capability, &operation);
 

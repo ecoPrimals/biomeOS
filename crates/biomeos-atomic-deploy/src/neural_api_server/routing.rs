@@ -152,6 +152,9 @@ enum Route {
     CompositionDeployShadow,
     SpringStatus,
     MethodRegister,
+    SignalDispatch,
+    SignalList,
+    SignalSchema,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -313,6 +316,13 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("composition.deploy", Route::CompositionDeploy),
     // Composition deploy shadow (dry-run validation for projectNUCLEUS H2)
     ("composition.deploy.shadow", Route::CompositionDeployShadow),
+    // Atomic signal dispatch (composition collapse layer)
+    ("signal.dispatch", Route::SignalDispatch),
+    ("neural_api.signal_dispatch", Route::SignalDispatch),
+    ("signal.list", Route::SignalList),
+    ("neural_api.signal_list", Route::SignalList),
+    ("signal.schema", Route::SignalSchema),
+    ("neural_api.signal_schema", Route::SignalSchema),
     // Spring status for Tier 2 notebook integration (projectNUCLEUS)
     ("biomeos.spring_status", Route::SpringStatus),
     // Spring method registration (GAP-09)
@@ -629,6 +639,25 @@ impl NeuralApiServer {
             Route::CompositionDeployShadow => {
                 dispatch(self.graph_handler.shadow_deploy(params).await, id)
             }
+            // Atomic signal dispatch (composition collapse)
+            Route::SignalDispatch => dispatch(
+                crate::handlers::signal::dispatch(
+                    &self.graphs_dir,
+                    &self.family_id,
+                    &self.graph_handler,
+                    params,
+                )
+                .await,
+                id,
+            ),
+            Route::SignalList => dispatch(
+                crate::handlers::signal::list(&self.graphs_dir).await,
+                id,
+            ),
+            Route::SignalSchema => dispatch(
+                crate::handlers::signal::schema(&self.graphs_dir).await,
+                id,
+            ),
             // Spring status (Tier 2 notebook integration)
             Route::SpringStatus => dispatch(self.lifecycle_handler.spring_status().await, id),
             // Spring method registration (GAP-09)

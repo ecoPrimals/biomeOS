@@ -53,6 +53,7 @@ pub mod niche;
 pub mod protocol;
 #[cfg(test)]
 mod protocol_tests;
+pub mod signal;
 pub mod topology;
 
 pub use capability::{CapabilityCallOutcome, CapabilityHandler};
