@@ -210,10 +210,10 @@ capabilities = [
 ]
 
 [translations.ai]
-"ai.query" = { provider = "squirrel", method = "query" }
-"ai.suggest" = { provider = "squirrel", method = "suggest" }
-"ai.analyze" = { provider = "squirrel", method = "analyze" }
-"mcp.call" = { provider = "squirrel", method = "mcp_call" }
+"ai.query" = { provider = "squirrel", method = "ai.query" }
+"ai.suggest" = { provider = "squirrel", method = "ai.suggest" }
+"ai.analyze" = { provider = "squirrel", method = "ai.analyze" }
+"mcp.call" = { provider = "squirrel", method = "mcp.call" }
 
 # ------------------------------------------------------------------------------
 # Data Domain (NestGate Live Providers)

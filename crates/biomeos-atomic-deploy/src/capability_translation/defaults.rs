@@ -40,8 +40,8 @@ type DomainProvider = (&'static str, &'static str, &'static [MethodTranslation])
 ///
 /// Resolves providers via environment variables (BIOMEOS_*_PROVIDER).
 /// When `BIOMEOS_STRICT_DISCOVERY` is set, unset providers are skipped.
-pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize {
-    load_defaults_into_with(registry, &HashMap::new())
+pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry, family_id: &str) -> usize {
+    load_defaults_into_with(registry, family_id, &HashMap::new())
 }
 
 /// Load defaults using an explicit family_id (avoids env/file discovery).
@@ -58,6 +58,7 @@ pub fn load_defaults_into_for_family(
 /// Keys not present in the map fall back to [`std::env::var`].
 pub fn load_defaults_into_with(
     registry: &mut CapabilityTranslationRegistry,
+    family_id: &str,
     env_overrides: &HashMap<&str, Option<&str>>,
 ) -> usize {
     let family_id = biomeos_core::family_discovery::get_family_id();
@@ -209,14 +210,14 @@ fn load_defaults_core(
                 ("compute.hardware.apply", "hw_learn.apply"),
             ],
         ),
-        // AI domain
+        // AI domain — Squirrel expects dotted method names (ai.query, ai.suggest)
         (
             SQUIRREL,
             "ai",
             &[
-                ("ai.query", "query"),
-                ("ai.suggest", "suggest"),
-                ("mcp.call", "mcp_call"),
+                ("ai.query", "ai.query"),
+                ("ai.suggest", "ai.suggest"),
+                ("mcp.call", "mcp.call"),
             ],
         ),
         // Genetic/Lineage domain — BearDog owns HKDF derivation, lineage proofs,

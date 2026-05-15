@@ -476,7 +476,7 @@ impl InferenceHandler {
         let capability = params["args"]["capability"].as_str().unwrap_or("ai");
         let atomic = self.router.discover_capability(capability).await?;
         self.router
-            .forward_request(&atomic.primary_endpoint, "query_ai", &params["args"])
+            .forward_request(&atomic.primary_endpoint, "ai.query", &params["args"])
             .await
     }
 

@@ -7,7 +7,6 @@
 //! in the capability translation registry.
 
 use anyhow::Result;
-use biomeos_core::SocketDiscovery;
 use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
@@ -115,12 +114,10 @@ impl NeuralApiServer {
                 // Extract family_id using helper function
                 let family_id = self.extract_family_id_from_node(node);
 
-                // Build socket path using capability-based discovery
-                let socket_discovery = SocketDiscovery::new(family_id);
-                let socket_path = socket_discovery
-                    .build_socket_path(primal)
-                    .to_string_lossy()
-                    .to_string();
+                // Build socket path using the capability_translation resolver
+                // which has proper JSON-RPC socket preference + plain fallback.
+                let socket_path =
+                    crate::capability_translation::resolve_primal_socket(primal, family_id);
 
                 // Register capability CATEGORIES from the capabilities field
                 // This enables capability.call("crypto", "sha256") to route to the security provider
@@ -179,12 +176,8 @@ impl NeuralApiServer {
                     // Extract family_id using helper function (eliminates duplication)
                     let family_id = self.extract_family_id_from_node(node);
 
-                    // Build socket path using capability-based discovery
-                    let socket_discovery = SocketDiscovery::new(family_id);
-                    let socket_path = socket_discovery
-                        .build_socket_path(primal)
-                        .to_string_lossy()
-                        .to_string();
+                    let socket_path =
+                        crate::capability_translation::resolve_primal_socket(primal, family_id);
 
                     // Register all translations for this primal
                     for (semantic, actual) in caps_provided {

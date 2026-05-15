@@ -29,6 +29,28 @@ pub fn build_socket_path(
     primal_socket: Option<&str>,
     xdg_runtime_dir: Option<&Path>,
 ) -> PathBuf {
+    let resolved = build_socket_path_inner(primal_name, family_id, primal_socket, xdg_runtime_dir);
+    // Prefer .jsonrpc.sock sibling when it exists (e.g. ToadStool binds both
+    // tarpc and JSON-RPC sockets; biomeOS forwards via JSON-RPC).
+    if let Some(stem) = resolved.file_name().and_then(|n| n.to_str()) {
+        if !stem.contains(".jsonrpc.") {
+            if let Some(base) = stem.strip_suffix(".sock") {
+                let jsonrpc = resolved.with_file_name(format!("{base}.jsonrpc.sock"));
+                if jsonrpc.exists() {
+                    return jsonrpc;
+                }
+            }
+        }
+    }
+    resolved
+}
+
+fn build_socket_path_inner(
+    primal_name: &str,
+    family_id: &str,
+    primal_socket: Option<&str>,
+    xdg_runtime_dir: Option<&Path>,
+) -> PathBuf {
     const BIOMEOS: &str = runtime_paths::BIOMEOS_SUBDIR;
     let socket_name = format!("{primal_name}-{family_id}.sock");
 

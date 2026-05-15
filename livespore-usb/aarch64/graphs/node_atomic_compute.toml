@@ -170,7 +170,7 @@ name = "register_only"
 family_id = "${FAMILY_ID}"
 
 [nodes.capabilities_provided]
-"ai.query" = "query_ai"
+"ai.query" = "ai.query"
 "ai.list_providers" = "list_providers"
 "ai.health" = "health"
 

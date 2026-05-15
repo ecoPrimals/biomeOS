@@ -137,7 +137,7 @@ fn test_load_from_capability_registry_toml() {
 
     let mut registry = CapabilityTranslationRegistry::new();
     let count = registry
-        .load_from_config(&config_path, |provider, _family_id| {
+        .load_from_config(&config_path, "default", |provider, _family_id| {
             format!("/tmp/{provider}.sock")
         })
         .expect("should load capability_registry.toml");
@@ -174,7 +174,7 @@ fn test_load_from_capability_registry_toml() {
 fn test_load_defaults() {
     let mut registry = CapabilityTranslationRegistry::new();
 
-    let count = registry.load_defaults();
+    let count = registry.load_defaults("default");
 
     assert!(count > 0, "Should load at least some translations");
 
@@ -409,7 +409,7 @@ fn capabilities_match_registry_toml() {
 
     let mut registry = CapabilityTranslationRegistry::new();
     let count = registry
-        .load_from_config(&config_path, |provider, _family_id| {
+        .load_from_config(&config_path, "default", |provider, _family_id| {
             format!("/tmp/{provider}.sock")
         })
         .expect("should load capability_registry.toml");
@@ -450,7 +450,7 @@ fn all_core_primals_have_capabilities_in_toml() {
 
     let mut registry = CapabilityTranslationRegistry::new();
     registry
-        .load_from_config(&config_path, |provider, _family_id| {
+        .load_from_config(&config_path, "default", |provider, _family_id| {
             format!("/tmp/{provider}.sock")
         })
         .expect("should load capability_registry.toml");
@@ -482,7 +482,7 @@ fn test_load_defaults_compute_provider_env_override() {
     let mut env = HashMap::new();
     env.insert("BIOMEOS_COMPUTE_PROVIDER", Some("songbird"));
     let mut registry = CapabilityTranslationRegistry::new();
-    registry.load_defaults_with(&env);
+    registry.load_defaults_with("default", &env);
     let t = registry
         .get_translation("compute.execute")
         .expect("compute.execute should be registered");
@@ -501,7 +501,7 @@ fn test_load_defaults_strict_discovery_unset_providers_use_domain_defaults() {
     env.insert("BIOMEOS_AI_PROVIDER", None);
 
     let mut registry = CapabilityTranslationRegistry::new();
-    let count = registry.load_defaults_with(&env);
+    let count = registry.load_defaults_with("default", &env);
     assert!(
         count > 10,
         "defaults should still register domain translations when strict and env unset"

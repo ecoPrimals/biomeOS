@@ -19,7 +19,7 @@ mod tests {
     /// Create a registry pre-loaded with defaults
     fn create_registry_with_defaults() -> CapabilityTranslationRegistry {
         let mut registry = CapabilityTranslationRegistry::new();
-        registry.load_defaults();
+        registry.load_defaults("default");
         registry
     }
 

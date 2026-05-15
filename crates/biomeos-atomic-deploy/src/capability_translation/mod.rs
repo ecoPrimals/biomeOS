@@ -300,6 +300,7 @@ impl CapabilityTranslationRegistry {
     pub fn load_from_config<F>(
         &mut self,
         config_path: impl AsRef<std::path::Path>,
+        family_id: &str,
         socket_resolver: F,
     ) -> Result<usize>
     where
@@ -365,9 +366,12 @@ impl CapabilityTranslationRegistry {
         Ok(count)
     }
 
-    /// Load default translations with automatic socket resolution
-    pub fn load_defaults(&mut self) -> usize {
-        defaults::load_defaults_into(self)
+    /// Load default translations with automatic socket resolution.
+    ///
+    /// `family_id` should be the server's own family ID (e.g. `"default"` in dev)
+    /// so that socket paths resolve to the actual running primals.
+    pub fn load_defaults(&mut self, family_id: &str) -> usize {
+        defaults::load_defaults_into(self, family_id)
     }
 
     /// Load defaults using an explicit family_id (avoids env/file discovery).
@@ -378,9 +382,10 @@ impl CapabilityTranslationRegistry {
     /// [`load_defaults`](Self::load_defaults) with per-call environment overrides (for tests).
     pub fn load_defaults_with(
         &mut self,
+        family_id: &str,
         env_overrides: &std::collections::HashMap<&str, Option<&str>>,
     ) -> usize {
-        defaults::load_defaults_into_with(self, env_overrides)
+        defaults::load_defaults_into_with(self, family_id, env_overrides)
     }
 }
 
