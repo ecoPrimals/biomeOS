@@ -56,6 +56,7 @@ pub mod protocol;
 #[cfg(test)]
 mod protocol_tests;
 pub mod signal;
+pub mod spring_status;
 pub mod topology;
 
 pub use capability::{CapabilityCallOutcome, CapabilityHandler};

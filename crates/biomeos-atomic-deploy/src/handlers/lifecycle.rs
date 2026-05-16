@@ -23,6 +23,8 @@ use tracing::{info, warn};
 
 use crate::lifecycle_manager::{ApoptosisReason, LifecycleManager, LifecycleState};
 use crate::neural_graph::GraphNode;
+
+use super::spring_status::{binary_search_dirs, probe_binary, state_to_string};
 use biomeos_core::atomic_client::AtomicClient;
 use biomeos_types::primal_names;
 
@@ -474,13 +476,12 @@ impl LifecycleHandler {
             .copied()
             .collect();
 
-        let binary_search_dirs = Self::binary_search_dirs();
+        let search_dirs = binary_search_dirs();
 
         let mut primals_out = Vec::with_capacity(all_primals.len());
 
         for &primal_name in &all_primals {
-            let (binary_available, binary_path) =
-                Self::probe_binary(primal_name, &binary_search_dirs);
+            let (binary_available, binary_path) = probe_binary(primal_name, &search_dirs);
 
             let display_name = biomeos_types::primal_names::display::for_id(primal_name)
                 .unwrap_or(primal_name)
@@ -535,50 +536,6 @@ impl LifecycleHandler {
             "workloads_running": workloads_running,
             "topology_version": topology,
         }))
-    }
-
-    /// Collect plasmidBin search directories (same search order as primal_spawner).
-    fn binary_search_dirs() -> Vec<PathBuf> {
-        [
-            std::env::var("ECOPRIMALS_PLASMID_BIN")
-                .ok()
-                .map(PathBuf::from),
-            std::env::var("BIOMEOS_PLASMID_BIN_DIR")
-                .ok()
-                .map(PathBuf::from),
-            Some(PathBuf::from("./plasmidBin")),
-            Some(PathBuf::from("../plasmidBin")),
-            Some(PathBuf::from("../../plasmidBin")),
-        ]
-        .into_iter()
-        .flatten()
-        .filter(|p| p.exists())
-        .collect()
-    }
-
-    /// Probe for a primal binary on disk, returning (found, path_or_null).
-    fn probe_binary(primal_name: &str, search_dirs: &[PathBuf]) -> (bool, Value) {
-        let arch = std::env::consts::ARCH;
-        let os = std::env::consts::OS;
-
-        let patterns = [
-            format!("{primal_name}_{arch}_{os}_musl/{primal_name}"),
-            format!("{primal_name}_{arch}_{os}/{primal_name}"),
-            format!("primals/{primal_name}/{primal_name}"),
-            format!("primals/{primal_name}"),
-            format!("{primal_name}/{primal_name}"),
-            primal_name.to_string(),
-        ];
-
-        for dir in search_dirs {
-            for pat in &patterns {
-                let candidate = dir.join(pat);
-                if candidate.exists() && candidate.is_file() {
-                    return (true, json!(candidate.display().to_string()));
-                }
-            }
-        }
-        (false, Value::Null)
     }
 
     /// Handle `composition.health` / `composition.tower_health` etc.
@@ -834,18 +791,6 @@ impl LifecycleHandler {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-/// Convert lifecycle state to a simple string
-const fn state_to_string(state: &LifecycleState) -> &'static str {
-    match state {
-        LifecycleState::Germinating => "germinating",
-        LifecycleState::Incubating { .. } => "incubating",
-        LifecycleState::Active { .. } => "active",
-        LifecycleState::Degraded { .. } => "degraded",
-        LifecycleState::Apoptosis { .. } => "apoptosis",
-        LifecycleState::Dead { .. } => "dead",
-    }
-}
 
 /// Get state-specific details
 fn state_details(state: &LifecycleState) -> Value {
