@@ -542,15 +542,29 @@ async fn deploy_federation_manifest_async(
         }
     }
 
-    if health_ok == 0 && !manifest.gates.is_empty() {
+    let total = manifest.gates.len();
+    let checked = health_ok;
+    let not_implemented = total.saturating_sub(checked);
+    if checked == 0 && total > 0 {
         warn!(
-            "federation health check did not succeed on any gate (gates may be down or methods not implemented)"
+            federation = %manifest.federation.name,
+            total_gates = total,
+            "federation health check: no gate responded — all gates are down or do not implement federation.health_check"
+        );
+    } else if not_implemented > 0 {
+        info!(
+            federation = %manifest.federation.name,
+            healthy = checked,
+            total = total,
+            not_implemented = not_implemented,
+            "federation health check completed ({checked}/{total} healthy, {not_implemented} gate(s) lack federation.health_check)"
         );
     } else {
         info!(
-            "federation health check completed on {}/{} gate(s)",
-            health_ok,
-            manifest.gates.len()
+            federation = %manifest.federation.name,
+            healthy = checked,
+            total = total,
+            "federation health check completed — all gates healthy"
         );
     }
 
