@@ -339,6 +339,7 @@ mod tests {
             coordination: None,
             env: HashMap::new(),
             genetics_tier: None,
+            composition_model: None,
         };
         server
             .load_translations_from_graph(&graph)
@@ -373,6 +374,7 @@ mod tests {
             coordination: None,
             env: HashMap::new(),
             genetics_tier: None,
+            composition_model: None,
         };
         server
             .load_translations_from_graph(&graph)

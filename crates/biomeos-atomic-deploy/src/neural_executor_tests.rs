@@ -77,6 +77,7 @@ fn test_graph_executor_creation() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let env = HashMap::new();
     let executor = GraphExecutor::new(graph, env);
@@ -105,6 +106,7 @@ fn test_topological_sort_simple() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
 
     let env = HashMap::new();
@@ -131,6 +133,7 @@ fn test_topological_sort_parallel() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
 
     let env = HashMap::new();
@@ -158,6 +161,7 @@ fn test_topological_sort_cycle_detection() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
 
     let env = HashMap::new();
@@ -178,6 +182,7 @@ fn test_topological_sort_empty_graph() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
 
     let env = HashMap::new();
@@ -202,6 +207,7 @@ fn test_topological_sort_complex_dependencies() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
 
     let env = HashMap::new();
@@ -228,6 +234,7 @@ async fn test_execution_context_with_nucleation() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let env = HashMap::new();
     let nucleation = Arc::new(tokio::sync::RwLock::new(SocketNucleation::default()));
@@ -257,6 +264,7 @@ fn test_topological_sort_single_node() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -281,6 +289,7 @@ fn test_topological_sort_deep_chain() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -309,6 +318,7 @@ fn test_topological_sort_wide_graph() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -340,6 +350,7 @@ fn test_topological_sort_diamond_with_tail() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -416,6 +427,7 @@ fn test_executor_with_custom_env() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
 
     let executor = GraphExecutor::new(graph, env);
@@ -434,6 +446,7 @@ fn test_topological_sort_self_cycle() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -455,6 +468,7 @@ fn test_topological_sort_three_node_cycle() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -488,6 +502,7 @@ fn test_topological_sort_unreachable_node() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -537,6 +552,7 @@ fn test_topological_sort_depends_on_missing_node_id() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let err = executor.topological_sort().unwrap_err();
@@ -597,6 +613,7 @@ async fn test_execute_single_log_info_node_succeeds() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");
@@ -620,6 +637,7 @@ async fn test_execute_two_phase_log_chain() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");
@@ -641,6 +659,7 @@ async fn test_execute_filesystem_missing_path_fails() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute returns report");
@@ -661,6 +680,7 @@ async fn test_execute_optional_filesystem_skip_keeps_success() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");
@@ -691,6 +711,7 @@ async fn test_execute_unknown_operation_yields_skipped_json() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");
@@ -708,6 +729,7 @@ async fn execute_records_genetics_tier_preflight_in_report() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: Some(GeneticsTier::Nuclear),
+        composition_model: None,
     };
     let mut ex = GraphExecutor::new(graph, HashMap::new());
     let report = ex.execute().await.expect("execute");

@@ -71,9 +71,9 @@ pub use continuous::{ContinuousExecutor, SessionState, TickClock};
 pub use error::{GraphError, Result};
 pub use events::{GraphEvent, GraphEventBroadcaster};
 pub use graph::{
-    AtomicComposition, CoordinationPattern, DeploymentGraph, EdgeType, GeneticsTier, GraphEdge,
-    GraphId, GraphMetadata, NodeConstraints, Operation, PrimalGraph, PrimalNode, PrimalSelector,
-    RetryPolicy, TickConfig,
+    AtomicComposition, CompositionModel, CoordinationPattern, DeploymentGraph, EdgeType,
+    GeneticsTier, GraphEdge, GraphId, GraphMetadata, NodeConstraints, Operation, PrimalGraph,
+    PrimalNode, PrimalSelector, RetryPolicy, TickConfig,
 };
 pub use integrity::{IntegrityReport, compute_content_hash, verify_integrity};
 pub use loader::GraphLoader;

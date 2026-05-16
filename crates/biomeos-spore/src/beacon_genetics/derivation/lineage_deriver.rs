@@ -75,8 +75,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
 
         let derived_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_secs());
 
         let lineage_certificate = self
             .sign_lineage_certificate(device_id, node_id, family_id, &final_seed, derived_at)

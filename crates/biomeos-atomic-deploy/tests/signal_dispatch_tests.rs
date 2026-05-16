@@ -128,9 +128,9 @@ fn signal_graphs_have_required_metadata() {
             let parsed: toml::Value = toml::from_str(&content)
                 .unwrap_or_else(|e| panic!("parse {}: {e}", path.display()));
 
-            let graph = parsed.get("graph").unwrap_or_else(|| {
-                panic!("{}: missing [graph] section", path.display())
-            });
+            let graph = parsed
+                .get("graph")
+                .unwrap_or_else(|| panic!("{}: missing [graph] section", path.display()));
 
             assert!(
                 graph.get("name").is_some(),

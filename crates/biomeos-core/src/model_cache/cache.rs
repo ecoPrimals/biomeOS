@@ -494,7 +494,7 @@ impl ModelCache {
 
         let mut entries: Vec<_> = std::fs::read_dir(&snapshots_dir)?
             .filter_map(std::result::Result::ok)
-            .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+            .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
             .collect();
 
         entries.sort_by_key(std::fs::DirEntry::file_name);

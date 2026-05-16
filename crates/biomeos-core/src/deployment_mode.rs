@@ -156,9 +156,8 @@ impl DeploymentMode {
         // 2. Check if running from removable media
         if let Ok(media_path) = Self::detect_removable_media() {
             let host_os = Self::detect_host_os()?;
-            let persistence = std::env::var("BIOMEOS_PERSISTENCE")
-                .map(|v| v == "true" || v == "1")
-                .unwrap_or(false);
+            let persistence =
+                std::env::var("BIOMEOS_PERSISTENCE").is_ok_and(|v| v == "true" || v == "1");
 
             return Ok(Self::ColdSpore {
                 media_path,

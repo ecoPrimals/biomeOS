@@ -13,7 +13,7 @@
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// Known atomic signal tiers. A capability.call with one of these as the
 /// `capability` field is intercepted and dispatched as a signal graph.
@@ -66,18 +66,23 @@ pub fn load_signal_schema(graphs_dir: &Path) -> Result<Value> {
     if !schema_path.exists() {
         anyhow::bail!("signal_tools.toml not found at {}", schema_path.display());
     }
-    let content = std::fs::read_to_string(&schema_path)
-        .context("Failed to read signal_tools.toml")?;
+    let content =
+        std::fs::read_to_string(&schema_path).context("Failed to read signal_tools.toml")?;
     let parsed: toml::Value =
         toml::from_str(&content).context("Failed to parse signal_tools.toml")?;
     Ok(serde_json::to_value(parsed)?)
 }
 
+/// Metadata about an available signal graph.
 #[derive(Debug, Clone)]
 pub struct SignalInfo {
+    /// Signal graph file name (without extension).
     pub name: String,
+    /// Atomic tier this signal belongs to (tower/node/nest/meta).
     pub tier: String,
+    /// Signal operation name within the tier.
     pub signal: String,
+    /// Filesystem path to the signal graph TOML.
     pub graph_path: String,
 }
 

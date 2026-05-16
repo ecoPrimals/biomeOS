@@ -300,7 +300,7 @@ impl CapabilityTranslationRegistry {
     pub fn load_from_config<F>(
         &mut self,
         config_path: impl AsRef<std::path::Path>,
-        family_id: &str,
+        _family_id: &str,
         socket_resolver: F,
     ) -> Result<usize>
     where

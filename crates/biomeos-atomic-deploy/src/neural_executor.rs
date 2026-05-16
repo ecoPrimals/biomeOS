@@ -241,9 +241,12 @@ impl GraphExecutor {
                     .collect(),
                 duration_ms: report.duration_ms,
             };
-            if let Err(e) =
-                collector.record_execution(&metrics_graph_name, &graph_result, report.duration_ms, None)
-            {
+            if let Err(e) = collector.record_execution(
+                &metrics_graph_name,
+                &graph_result,
+                report.duration_ms,
+                None,
+            ) {
                 warn!("Failed to record graph metrics: {e}");
             }
         }
@@ -335,11 +338,9 @@ impl GraphExecutor {
                 let node_ref = node_map.get(&node_id);
                 let primal_id_str = node_ref
                     .and_then(|n| {
-                        n.primal.as_ref().and_then(|p| {
-                            p.by_name
-                                .as_deref()
-                                .or(p.by_capability.as_deref())
-                        })
+                        n.primal
+                            .as_ref()
+                            .and_then(|p| p.by_name.as_deref().or(p.by_capability.as_deref()))
                     })
                     .unwrap_or("");
                 let operation_str = node_ref

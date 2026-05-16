@@ -164,8 +164,7 @@ impl CapabilityHandler {
         // (tower/node/nest/meta), check for a signal graph and execute it
         // instead of trying to discover a primal named "tower".
         if signal_handler::is_signal_tier(capability) {
-            if let (Some(graphs_dir), Some(graph_handler)) =
-                (&self.graphs_dir, &self.graph_handler)
+            if let (Some(graphs_dir), Some(graph_handler)) = (&self.graphs_dir, &self.graph_handler)
             {
                 let graph_path =
                     signal_handler::signal_graph_path(graphs_dir, capability, &operation);

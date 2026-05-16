@@ -275,13 +275,19 @@ impl GraphHandler {
             })
             .collect();
 
+        let metadata = GraphMetadata {
+            genetics_tier: graph.genetics_tier,
+            composition_model: graph.composition_model,
+            ..GraphMetadata::default()
+        };
+
         Ok(DeploymentGraph {
             definition: GraphDefinition {
                 id: GraphId::new(&graph.id).unwrap_or_else(|_| GraphId::unset()),
                 name: graph.description.clone(),
                 version: graph.version.clone(),
                 description: graph.description.clone(),
-                metadata: GraphMetadata::default(),
+                metadata,
                 coordination,
                 tick: None,
                 env: graph.env.clone(),
@@ -763,6 +769,7 @@ impl GraphHandler {
             "version": graph.version,
             "node_count": graph.nodes.len(),
             "coordination": graph.coordination.as_deref().unwrap_or("sequential"),
+            "composition_model": graph.composition_model.as_ref().map(|m| m.to_string()),
             "phases": phases,
             "phase_count": phases.len(),
             "capability_resolution": capability_resolution,

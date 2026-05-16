@@ -166,8 +166,7 @@ impl IonicTokenClaims {
         }
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_secs());
         now > self.exp
     }
 
@@ -642,8 +641,7 @@ impl MethodGate {
             let expires_in = if claims.exp > 0 {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0);
+                    .map_or(0, |d| d.as_secs());
                 claims.exp.saturating_sub(now)
             } else {
                 0

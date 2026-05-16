@@ -420,6 +420,7 @@ mod tests {
             coordination: None,
             env: HashMap::new(),
             genetics_tier: None,
+            composition_model: None,
         };
 
         manager.store_deployment_graph("tower-graph", graph).await;

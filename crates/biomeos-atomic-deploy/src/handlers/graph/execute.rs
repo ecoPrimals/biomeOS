@@ -40,11 +40,18 @@ impl GraphHandler {
             .with_context(|| format!("Failed to load graph from: {}", graph_path.display()))?;
 
         info!(
-            "✅ Graph loaded: {} (version: {}, {} nodes, coordination: {})",
+            "✅ Graph loaded: {} (version: {}, {} nodes, coordination: {}, model: {})",
             graph.id,
             graph.version,
             graph.nodes.len(),
             graph.coordination.as_deref().unwrap_or("sequential"),
+            graph
+                .composition_model
+                .as_ref()
+                .map_or("default", |m| match m {
+                    biomeos_graph::CompositionModel::Nucleated => "nucleated",
+                    biomeos_graph::CompositionModel::Membrane => "membrane",
+                }),
         );
 
         if graph.is_continuous() {
@@ -335,6 +342,7 @@ mod tests {
             coordination: None,
             env: HashMap::new(),
             genetics_tier: None,
+            composition_model: None,
         };
         handler.load_translations_from_graph(&graph).await.unwrap();
     }
@@ -355,6 +363,7 @@ mod tests {
             coordination: None,
             env: HashMap::new(),
             genetics_tier: None,
+            composition_model: None,
         };
         GraphHandler::register_capabilities_from_graph(&router, &graph, "fam").await;
     }

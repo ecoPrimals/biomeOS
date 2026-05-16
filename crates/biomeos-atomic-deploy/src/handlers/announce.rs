@@ -31,19 +31,19 @@ pub struct PrimalAnnouncement {
     #[serde(default)]
     pub pid: Option<u32>,
 
-    /// Capability domains this primal provides (e.g. ["crypto", "security"])
+    /// Capability domains this primal provides (e.g. `["crypto", "security"]`).
     #[serde(default)]
     pub capabilities: Vec<String>,
 
-    /// Individual methods this primal exposes (e.g. ["crypto.encrypt", "crypto.hash"])
+    /// Individual methods this primal exposes (e.g. `["crypto.encrypt", "crypto.hash"]`).
     #[serde(default)]
     pub methods: Vec<String>,
 
-    /// Semantic mappings: consumer-facing name -> actual RPC method
+    /// Semantic mappings: consumer-facing name -> actual RPC method.
     #[serde(default)]
     pub semantic_mappings: Option<Value>,
 
-    /// Signal tiers this primal participates in (e.g. ["tower", "node"])
+    /// Signal tiers this primal participates in (e.g. `["tower", "node"]`).
     #[serde(default)]
     pub signal_tiers: Vec<String>,
 
@@ -59,10 +59,15 @@ pub struct PrimalAnnouncement {
 /// Result of processing a primal announcement.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnnounceResult {
+    /// Primal name that announced.
     pub primal: String,
+    /// Number of capability domains registered.
     pub capabilities_registered: usize,
+    /// Number of individual methods registered.
     pub methods_registered: usize,
+    /// Signal tiers the primal joined (filtered to known tiers).
     pub signal_tiers_joined: Vec<String>,
+    /// Whether the signed attestation was verified.
     pub attestation_verified: bool,
 }
 
@@ -83,8 +88,8 @@ pub async fn handle_announce(
 ) -> Result<Value> {
     let params = params.as_ref().context("Missing parameters")?;
 
-    let announcement: PrimalAnnouncement = serde_json::from_value(params.clone())
-        .context("Invalid primal.announce payload")?;
+    let announcement: PrimalAnnouncement =
+        serde_json::from_value(params.clone()).context("Invalid primal.announce payload")?;
 
     info!(
         "Primal announcement: {} at {} ({} capabilities, {} methods, {} signal tiers)",

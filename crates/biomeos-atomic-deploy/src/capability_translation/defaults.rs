@@ -58,7 +58,7 @@ pub fn load_defaults_into_for_family(
 /// Keys not present in the map fall back to [`std::env::var`].
 pub fn load_defaults_into_with(
     registry: &mut CapabilityTranslationRegistry,
-    family_id: &str,
+    _family_id: &str,
     env_overrides: &HashMap<&str, Option<&str>>,
 ) -> usize {
     let family_id = biomeos_core::family_discovery::get_family_id();

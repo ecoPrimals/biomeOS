@@ -289,7 +289,7 @@ pub mod validation {
         }
 
         // Check resource limits - connection_timeout is Duration
-        if config.system.timeouts.connection_timeout < std::time::Duration::from_millis(1000) {
+        if config.system.timeouts.connection_timeout < std::time::Duration::from_secs(1) {
             warnings.push("Connection timeout is very low and may cause issues".to_string());
         }
 

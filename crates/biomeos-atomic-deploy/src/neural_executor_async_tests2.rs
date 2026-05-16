@@ -31,6 +31,7 @@ async fn test_execute_verification_socket_dir_missing() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let env = HashMap::from([("FAMILY_ID".to_string(), "test".to_string())]);
 
@@ -64,6 +65,7 @@ async fn test_execute_rpc_call_missing_target() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -101,6 +103,7 @@ async fn test_execute_rpc_call_missing_method() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -133,6 +136,7 @@ async fn test_execute_health_check_atomic_alias() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -164,6 +168,7 @@ async fn test_execute_health_check_plain_alias() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -193,6 +198,7 @@ async fn test_execute_report_deployment_success() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -222,6 +228,7 @@ async fn test_execute_register_capabilities_node() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -251,6 +258,7 @@ async fn test_execute_node_type_legacy_primal_launch_string() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -288,6 +296,7 @@ async fn test_execute_capability_call_missing_capability_key() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -320,6 +329,7 @@ async fn test_execute_lineage_verify_siblings() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -345,6 +355,7 @@ async fn test_execute_start_alias_node_type() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -377,6 +388,7 @@ async fn test_execute_health_check_all_missing_socket_dir() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let env = HashMap::from([("FAMILY_ID".to_string(), "test".to_string())]);
 
@@ -419,6 +431,7 @@ async fn test_execute_two_phase_second_fails_without_rollback() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -454,6 +467,7 @@ async fn test_execute_crypto_derive_child_seed_deterministic_fallback() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test-family-xyz".to_string());
@@ -492,6 +506,7 @@ async fn test_execute_verification_check_sockets_true_no_deps() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -525,6 +540,7 @@ async fn test_execute_health_dot_check_requires_primal_name() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -554,6 +570,7 @@ async fn test_execute_node_type_crypto_derive_without_operation() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "fam-nt".to_string());
@@ -591,6 +608,7 @@ async fn test_execute_capability_call_with_timeout_ms_config() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());

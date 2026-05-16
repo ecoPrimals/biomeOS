@@ -33,6 +33,7 @@ async fn test_execute_node_unknown_type() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -65,6 +66,7 @@ async fn test_execute_node_explicit_unknown_type() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -104,6 +106,7 @@ async fn test_execute_filesystem_check_exists() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -143,6 +146,7 @@ async fn test_execute_log_warn_node() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -179,6 +183,7 @@ async fn test_execute_log_error_node() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -212,6 +217,7 @@ async fn test_execute_node_failure_reports_error() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -252,6 +258,7 @@ async fn test_execute_rollback_on_failure() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -339,6 +346,7 @@ async fn test_execute_verification_check_sockets_false() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -371,6 +379,7 @@ async fn test_execute_health_check_all_no_socket_dir() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -407,6 +416,7 @@ async fn test_execute_health_check_all_with_temp_dir() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -451,6 +461,7 @@ async fn test_execute_rpc_call_connection_refused() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -504,6 +515,7 @@ async fn test_execute_log_info_node() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -546,6 +558,7 @@ async fn test_execute_optional_node_failure_skipped() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -591,6 +604,7 @@ async fn test_execute_capability_call_no_provider() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -636,6 +650,7 @@ async fn test_executor_with_metrics() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -689,6 +704,7 @@ async fn test_execute_rpc_call_params_env_substitution() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -737,6 +753,7 @@ async fn test_execute_parallel_nodes_with_max_parallelism_one() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -779,6 +796,7 @@ async fn test_execute_failure_without_rollback_flag() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());

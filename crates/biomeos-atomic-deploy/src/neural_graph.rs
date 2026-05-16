@@ -32,6 +32,9 @@ pub struct Graph {
     /// Declared in `[graph.metadata]` — required genetics tier for this deployment graph.
     #[serde(default)]
     pub genetics_tier: Option<GeneticsTier>,
+    /// Deployment topology model (nucleated vs membrane).
+    #[serde(default)]
+    pub composition_model: Option<biomeos_graph::CompositionModel>,
 }
 
 impl Graph {
@@ -203,8 +206,9 @@ impl Graph {
             })
             .unwrap_or_default();
 
-        let genetics_tier = graph_table
-            .get("metadata")
+        let metadata_table = graph_table.get("metadata");
+
+        let genetics_tier = metadata_table
             .and_then(|m| m.get("genetics_tier"))
             .map(|v| {
                 let s = v
@@ -212,6 +216,18 @@ impl Graph {
                     .context("graph.metadata.genetics_tier must be a string")?;
                 s.parse::<GeneticsTier>()
                     .map_err(|e| anyhow::anyhow!("Invalid graph.metadata.genetics_tier: {e}"))
+            })
+            .transpose()?;
+
+        let composition_model = metadata_table
+            .and_then(|m| m.get("composition_model"))
+            .and_then(|v| v.as_str())
+            .map(|s| match s {
+                "nucleated" => Ok(biomeos_graph::CompositionModel::Nucleated),
+                "membrane" => Ok(biomeos_graph::CompositionModel::Membrane),
+                other => Err(anyhow::anyhow!(
+                    "Unknown composition_model '{other}': expected 'nucleated' or 'membrane'"
+                )),
             })
             .transpose()?;
 
@@ -224,6 +240,7 @@ impl Graph {
             coordination,
             env,
             genetics_tier,
+            composition_model,
         })
     }
 

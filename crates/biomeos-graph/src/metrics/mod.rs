@@ -504,7 +504,7 @@ impl MetricsCollector {
         }
 
         // Sort by id descending (most recent first)
-        records.sort_by(|a, b| b.id.cmp(&a.id));
+        records.sort_by_key(|r| std::cmp::Reverse(r.id));
         records.truncate(limit);
         Ok(records)
     }

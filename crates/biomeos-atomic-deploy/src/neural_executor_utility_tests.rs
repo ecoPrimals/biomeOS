@@ -26,6 +26,7 @@ fn test_topological_sort_includes_all_node_ids() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let ex = GraphExecutor::new(graph, HashMap::new());
     let phases = ex.topological_sort().expect("sort");
@@ -75,6 +76,7 @@ fn test_topological_sort_empty_graph() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let ex = GraphExecutor::new(graph, HashMap::new());
     let phases = ex.topological_sort().expect("sort");
@@ -95,6 +97,7 @@ fn test_topological_sort_cycle_fails() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let ex = GraphExecutor::new(graph, HashMap::new());
     let err = ex.topological_sort().expect_err("cycle");
@@ -112,6 +115,7 @@ async fn test_execute_empty_graph_succeeds() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -146,6 +150,7 @@ async fn test_execute_optional_rpc_missing_target_skipped() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -188,6 +193,7 @@ async fn test_execute_with_metrics_collector() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -220,6 +226,7 @@ async fn test_execute_health_check_all_nonexistent_socket_dir() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -254,6 +261,7 @@ async fn test_execute_verification_check_sockets_false_without_socket_dir() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -282,6 +290,7 @@ async fn test_execute_unknown_operation_yields_skipped_success() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -316,6 +325,7 @@ async fn test_execute_metrics_with_failing_phase_still_produces_report() {
         coordination: None,
         env: HashMap::new(),
         genetics_tier: None,
+        composition_model: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());

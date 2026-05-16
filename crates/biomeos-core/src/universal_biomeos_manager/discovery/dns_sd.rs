@@ -233,7 +233,7 @@ async fn browse_mdns_instances() -> anyhow::Result<Vec<Candidate>> {
 
     let mut buf = vec![0u8; 9000];
     let mut instances: HashMap<String, InstanceRecord> = HashMap::new();
-    let deadline = Instant::now() + Duration::from_millis(2000);
+    let deadline = Instant::now() + Duration::from_secs(2);
     while Instant::now() < deadline {
         let left = deadline.saturating_duration_since(Instant::now());
         if left.is_zero() {

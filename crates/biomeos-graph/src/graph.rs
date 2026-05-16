@@ -191,6 +191,31 @@ impl std::fmt::Display for GraphId {
     }
 }
 
+/// Deployment topology model — how primals are arranged across infrastructure.
+///
+/// Orthogonal to [`AtomicComposition`] (which describes *which* primals):
+/// - **Nucleated**: Full on-site deployment, all primals on a single host/gate.
+/// - **Membrane**: VPS boundary subset — Tower primals + cache-only NestGate,
+///   acting as the security/routing membrane between gate hardware and the
+///   public internet (3-channel architecture: Signal, Relay, Surface).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CompositionModel {
+    /// Full on-site NUCLEUS composition.
+    Nucleated,
+    /// VPS membrane boundary (Tower + cache NestGate, secure_by_default).
+    Membrane,
+}
+
+impl std::fmt::Display for CompositionModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Nucleated => write!(f, "nucleated"),
+            Self::Membrane => write!(f, "membrane"),
+        }
+    }
+}
+
 /// Atomic deployment composition class (which primal bundles are required).
 ///
 /// - **Tower**: BearDog + Songbird (crypto + discovery) — minimum viable.
@@ -277,6 +302,11 @@ pub struct GraphMetadata {
     /// Explicit atomic composition class. If absent, auto-resolved from node capabilities.
     #[serde(default)]
     pub composition: Option<AtomicComposition>,
+
+    /// Deployment topology model (nucleated vs membrane).
+    /// Nucleated = full on-site, membrane = VPS boundary subset.
+    #[serde(default)]
+    pub composition_model: Option<CompositionModel>,
 
     /// Required genetics tier for this graph's security model.
     /// If set, the executor validates that the family's genetic infrastructure

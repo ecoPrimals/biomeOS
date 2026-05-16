@@ -232,7 +232,7 @@ pub mod timeouts {
     pub const DEFAULT_SERVICE_STOP_TIMEOUT: Duration = Duration::from_secs(30);
 
     /// Default retry delay
-    pub const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(1000);
+    pub const DEFAULT_RETRY_DELAY: Duration = Duration::from_secs(1);
 
     /// Default heartbeat interval
     pub const DEFAULT_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);

@@ -665,14 +665,12 @@ impl NeuralApiServer {
                 .await,
                 id,
             ),
-            Route::SignalList => dispatch(
-                crate::handlers::signal::list(&self.graphs_dir).await,
-                id,
-            ),
-            Route::SignalSchema => dispatch(
-                crate::handlers::signal::schema(&self.graphs_dir).await,
-                id,
-            ),
+            Route::SignalList => {
+                dispatch(crate::handlers::signal::list(&self.graphs_dir).await, id)
+            }
+            Route::SignalSchema => {
+                dispatch(crate::handlers::signal::schema(&self.graphs_dir).await, id)
+            }
             // Spring status (Tier 2 notebook integration)
             Route::SpringStatus => dispatch(self.lifecycle_handler.spring_status().await, id),
             // Spring method registration (GAP-09)

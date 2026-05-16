@@ -147,6 +147,7 @@ fn test_graph_metadata_serde() {
         created: Some("2026-01-01".to_string()),
         category: Some(GraphCategory::Deployment),
         composition: None,
+        composition_model: None,
         genetics_tier: Some(GeneticsTier::MitoBeacon),
         content_hash: None,
         signature: None,
