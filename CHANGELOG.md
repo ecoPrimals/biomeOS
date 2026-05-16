@@ -2,6 +2,62 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.59 (2026-05-15) — Deep Debt Refactoring + Membrane Composition Model
+
+### Smart module refactoring (production files >800L → 0)
+- `method_gate.rs` (1319L → 4 modules): Split into `classify.rs` (access levels),
+  `ionic.rs` (token parsing/scope matching), `verifier.rs` (TokenVerifier trait),
+  `mod.rs` (gate logic). Extracted repeated enforcement branching into `mode_gate()`
+  and `validate_claims()` helpers.
+- `graph/mod.rs` (830L → 578L): Extracted `shadow_deploy` and `verify_graph`
+  to `validation.rs` submodule.
+- `lifecycle.rs` (886L → 831L): Extracted binary probing and state formatting
+  helpers to `spring_status.rs`.
+
+### Dead code removal
+- Removed orphaned `biomeos-graph/src/neural_executor.rs` (720L duplicate not
+  wired into module tree; live executor is `executor/core.rs`).
+
+### Capability-based socket resolution
+- Evolved `capability_translation/socket.rs` hardcoded `"toadstool"`/`"nestgate"`
+  match to data-driven `DOMAIN_SOCKET_ALIASES` table with `dual_socket_primals()`.
+
+### Env safety
+- Fixed `std::env::remove_var` in test `fault_injector.rs` — now saves/restores
+  original env values with explicit `unsafe` blocks and safety documentation.
+
+### Federation diagnostics
+- Evolved federation manifest health check from generic "completed on N/M" to
+  structured diagnostics distinguishing healthy/unimplemented/unreachable gates.
+
+### Membrane composition model (v3.58)
+- Added `CompositionModel` enum (`Nucleated` / `Membrane`) to `GraphMetadata`.
+- `composition.deploy(graph)` now recognizes `composition_model = "membrane"`.
+- `neural_to_deployment` preserves `genetics_tier` and `composition_model`.
+- `shadow_deploy` reports `composition_model` in validation output.
+
+### Signal-tier announce protocol (v3.57)
+- `primal.announce` atomic registration with `signal_tiers` in payload.
+- Signal-tier interception in `capability.call` is conditional and safe.
+- Neural API composition collapse layer for signal graph dispatch.
+
+### Rust 1.95 clippy cleanup (v3.58)
+- Fixed `duration_suboptimal_units`, `map_unwrap_or`, `unnecessary_sort_by`,
+  `doc_link_with_quotes`, `field_reassign_with_default`, missing docs.
+
+### Deep debt audit results
+- 0 `unsafe` blocks in production (workspace `deny`, per-crate `forbid`)
+- 0 production mocks/stubs/TODOs/FIXMEs
+- 0 `unwrap()` in production code paths (all in tests)
+- 0 C/FFI dependencies (except `rtnetlink` → `netlink-sys`, documented)
+- All `primal_names` usage is env-var-first with const fallback
+- `capability_domains.rs` two-tier design (TOML primary, compiled-in fallback)
+
+### Metrics
+- 7,915 tests passing (0 failures)
+- Clippy clean (pedantic+nursery, -D warnings)
+- 0 production files >800 LOC
+
 ## v3.50 (2026-05-09) — Gate-Aware Token Forwarding + primalSpring Contract Alignment
 
 ### Gate-aware `capability.call` forwarding (exp111)

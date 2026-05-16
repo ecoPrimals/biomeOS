@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 9, 2026 (v3.50: Gate-aware token forwarding for enforced-mode primals; composition.reload contract alignment; auth.check primalSpring contract; TokenVerifier trait; 7,924 tests)
-**Version**: 3.50
-**Status**: PRODUCTION READY - BTSP Phase 3 FULL - Capability-Based Identity - PG-55 FULL - JH-0 MethodGate WIRED - JH-2 Resource Envelope ENFORCED (cpu+timeout_ms) - JH-3 composition.reload LIVE (contract-aligned) - Gate-Aware Token Forwarding - RootPulse RP-1–RP-5 Resolved - Zero Blocking Debt - Fully Concurrent Testing - Graph Integrity Verification Active - Priority 4 Test Isolation CLEAN
+**Updated**: May 15, 2026 (v3.59: Deep debt refactoring — method_gate modularized, graph handler split, dead code removed, capability-based socket resolution, membrane composition model, signal-tier announce, federation diagnostics; 7,915 tests)
+**Version**: 3.59
+**Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 
 ---
 

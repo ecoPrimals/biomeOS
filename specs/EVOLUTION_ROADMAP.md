@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 9, 2026 (v3.50: Gate-aware token forwarding, primalSpring contract alignment, TokenVerifier trait, 7,924 tests)
+**Updated**: May 15, 2026 (v3.59: Deep debt refactoring, method_gate modularized, membrane composition model, signal-tier announce, 7,915 tests)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
