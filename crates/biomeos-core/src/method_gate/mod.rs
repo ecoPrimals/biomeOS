@@ -27,347 +27,18 @@
 //! The gate reads its mode from the `BIOMEOS_AUTH_MODE` environment
 //! variable (or falls back to `Permissive`).
 
+mod classify;
+mod ionic;
+mod verifier;
+
+pub use classify::{MethodAccessLevel, classify_method};
+pub use ionic::{IonicTokenClaims, ResourceEnvelope, scope_covers_method};
+pub use verifier::{BearDogVerifier, LocalClaimsVerifier, TokenVerifier};
+
+#[cfg(any(test, feature = "test-helpers"))]
+pub use verifier::NoopVerifier;
+
 use biomeos_types::JsonRpcError;
-
-/// Access level for a JSON-RPC method.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MethodAccessLevel {
-    /// Health probes, identity, capability advertisement — always allowed.
-    Public,
-    /// Requires a valid capability token when enforcement is active.
-    Protected,
-}
-
-/// Methods that are always public (prefix match).
-const PUBLIC_METHOD_PREFIXES: &[&str] = &["health."];
-
-/// Methods that are always public (exact match).
-const PUBLIC_METHODS: &[&str] = &[
-    "identity.get",
-    "capabilities.list",
-    "capability.list",
-    "lifecycle.status",
-    "auth.check",
-    "auth.mode",
-    "auth.peer_info",
-];
-
-/// Classify a method string into its access level.
-#[must_use]
-pub fn classify_method(method: &str) -> MethodAccessLevel {
-    if PUBLIC_METHODS.contains(&method) {
-        return MethodAccessLevel::Public;
-    }
-    for prefix in PUBLIC_METHOD_PREFIXES {
-        if method.starts_with(prefix) {
-            return MethodAccessLevel::Public;
-        }
-    }
-    MethodAccessLevel::Protected
-}
-
-// ── Ionic token claims parsing (JH-2) ──
-
-/// Resource envelope carried inside an ionic token (JH-2).
-///
-/// Constrains what resources a token holder may request. Fields are
-/// optional — absent means "no constraint on this dimension".
-#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
-pub struct ResourceEnvelope {
-    /// Maximum memory in bytes (e.g. 1 GiB = 1_073_741_824).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mem: Option<u64>,
-    /// Maximum CPU cores (fractional, e.g. 2.5).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cpu: Option<f64>,
-    /// Maximum dispatch timeout in milliseconds.
-    /// When set, biomeOS caps the forwarding timeout to this value.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub timeout_ms: Option<u64>,
-    /// Explicit method allowlist. When present, only these methods
-    /// (checked *in addition to* scope patterns) are permitted.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub method_allowlist: Option<Vec<String>>,
-}
-
-/// Parsed claims from a BearDog ionic token payload.
-///
-/// Token format: `base64(header).base64(payload).base64(signature)`.
-/// This struct represents the decoded payload.
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct IonicTokenClaims {
-    /// Issuer DID (`did:key:z6Mk...`).
-    #[serde(default)]
-    pub iss: String,
-    /// Subject identifier.
-    #[serde(default)]
-    pub sub: String,
-    /// Scope patterns — `"*"`, `"prefix.*"`, or exact method name.
-    #[serde(default)]
-    pub scope: Vec<String>,
-    /// Issued-at timestamp (Unix epoch seconds).
-    #[serde(default)]
-    pub iat: u64,
-    /// Expiry timestamp (Unix epoch seconds).
-    #[serde(default)]
-    pub exp: u64,
-    /// Unique token identifier.
-    #[serde(default)]
-    pub jti: String,
-    /// Resource envelope (JH-2 extension).
-    #[serde(default)]
-    pub resources: Option<ResourceEnvelope>,
-}
-
-impl IonicTokenClaims {
-    /// Parse an ionic token string into claims.
-    ///
-    /// Extracts the middle (payload) segment from a `header.payload.signature`
-    /// token and base64-decodes + JSON-parses it. The signature is NOT verified
-    /// here — that's BearDog's responsibility via `auth.verify_ionic`. This
-    /// local parse is for scope and resource extraction only.
-    ///
-    /// Returns `None` if the token is not in ionic format or payload cannot be
-    /// parsed (e.g. opaque tokens, legacy formats).
-    #[must_use]
-    pub fn parse(token: &str) -> Option<Self> {
-        use base64::Engine;
-
-        let parts: Vec<&str> = token.split('.').collect();
-        if parts.len() != 3 {
-            return None;
-        }
-
-        let payload_bytes = base64::engine::general_purpose::STANDARD
-            .decode(parts[1])
-            .or_else(|_| base64::engine::general_purpose::STANDARD_NO_PAD.decode(parts[1]))
-            .or_else(|_| base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(parts[1]))
-            .ok()?;
-
-        serde_json::from_slice(&payload_bytes).ok()
-    }
-
-    /// Check whether this token's scope covers the given method.
-    ///
-    /// Scope matching rules (primalSpring standard):
-    /// - `"*"` matches everything.
-    /// - `"prefix.*"` matches any method starting with `prefix.`.
-    /// - Exact string match otherwise.
-    #[must_use]
-    pub fn scope_covers_method(&self, method: &str) -> bool {
-        scope_covers_method(&self.scope, method)
-    }
-
-    /// Whether this token has expired based on the current system time.
-    #[must_use]
-    pub fn is_expired(&self) -> bool {
-        if self.exp == 0 {
-            return false;
-        }
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
-        now > self.exp
-    }
-
-    /// Check whether a resource request fits within this token's envelope.
-    ///
-    /// Returns `true` if the request is within limits (or if no envelope
-    /// is set). Checks `mem` and `cpu` when both request and envelope
-    /// specify them.
-    #[must_use]
-    pub fn resource_allowed(&self, requested_mem: Option<u64>, requested_cpu: Option<f64>) -> bool {
-        let Some(ref env) = self.resources else {
-            return true;
-        };
-        if let (Some(limit), Some(req)) = (env.mem, requested_mem) {
-            if req > limit {
-                return false;
-            }
-        }
-        if let (Some(limit), Some(req)) = (env.cpu, requested_cpu) {
-            if req > limit {
-                return false;
-            }
-        }
-        true
-    }
-
-    /// Check whether a method is in the resource envelope's method allowlist.
-    ///
-    /// Returns `true` if no allowlist is set, or if the method is in the list.
-    #[must_use]
-    pub fn method_in_allowlist(&self, method: &str) -> bool {
-        let Some(ref env) = self.resources else {
-            return true;
-        };
-        let Some(ref allowlist) = env.method_allowlist else {
-            return true;
-        };
-        allowlist.iter().any(|m| m == method)
-    }
-
-    /// Get the dispatch timeout cap from the resource envelope (if any).
-    ///
-    /// Returns `None` when no envelope or no `timeout_ms` is set.
-    #[must_use]
-    pub fn dispatch_timeout_ms(&self) -> Option<u64> {
-        self.resources.as_ref().and_then(|e| e.timeout_ms)
-    }
-}
-
-impl ResourceEnvelope {
-    /// Serialize this envelope as a JSON value suitable for injection into
-    /// forwarded request params (`_resource_envelope`).
-    ///
-    /// Downstream primals (e.g. ToadStool) read this field to enforce
-    /// `cpu`, `mem`, and `timeout_ms` at the compute dispatch level.
-    #[must_use]
-    pub fn to_forwarding_value(&self) -> serde_json::Value {
-        serde_json::json!({
-            "mem": self.mem,
-            "cpu": self.cpu,
-            "timeout_ms": self.timeout_ms,
-        })
-    }
-}
-
-/// Check whether a set of scope patterns covers a method.
-///
-/// - `"*"` matches everything.
-/// - `"prefix.*"` matches any method starting with `prefix.`.
-/// - Exact string match otherwise.
-#[must_use]
-pub fn scope_covers_method(scope: &[String], method: &str) -> bool {
-    if scope.is_empty() {
-        return false;
-    }
-    for pattern in scope {
-        if pattern == "*" {
-            return true;
-        }
-        if let Some(prefix) = pattern.strip_suffix(".*") {
-            if method.starts_with(prefix) && method.as_bytes().get(prefix.len()) == Some(&b'.') {
-                return true;
-            }
-        }
-        if pattern == method {
-            return true;
-        }
-    }
-    false
-}
-
-// ── Token verification abstraction (primalSpring pattern) ──
-
-/// Trait for verifying bearer tokens.
-///
-/// Production uses `BearDogVerifier` (IPC to BearDog's `auth.verify_ionic`).
-/// Tests use `NoopVerifier` to avoid requiring a live BearDog process.
-/// Follows the primalSpring `TokenVerifier` pattern from `method_gate.rs`.
-pub trait TokenVerifier: Send + Sync {
-    /// Verify a bearer token and return parsed claims on success.
-    ///
-    /// Returns `None` if the token is invalid, expired, or the verifier
-    /// cannot reach the issuing authority.
-    fn verify(&self, token: &str) -> Option<IonicTokenClaims>;
-}
-
-/// Local-only verifier that parses ionic token claims without signature
-/// verification. Used as the default when BearDog IPC is unavailable.
-///
-/// This is the same local parsing that `IonicTokenClaims::parse()` performs —
-/// scope/expiry/resource checks still happen in `MethodGate::check()`.
-pub struct LocalClaimsVerifier;
-
-impl TokenVerifier for LocalClaimsVerifier {
-    fn verify(&self, token: &str) -> Option<IonicTokenClaims> {
-        IonicTokenClaims::parse(token)
-    }
-}
-
-/// No-op verifier for testing. Accepts any token as valid with no claims.
-#[cfg(any(test, feature = "test-helpers"))]
-pub struct NoopVerifier;
-
-#[cfg(any(test, feature = "test-helpers"))]
-impl TokenVerifier for NoopVerifier {
-    fn verify(&self, _token: &str) -> Option<IonicTokenClaims> {
-        None
-    }
-}
-
-/// BearDog IPC verifier for cross-primal token federation (JH-11).
-///
-/// Calls `auth.verify_ionic` on BearDog via IPC to cryptographically verify
-/// a bearer token's signature. Falls back to `LocalClaimsVerifier` (parse-only)
-/// if BearDog is unreachable, ensuring graceful degradation.
-///
-/// This is step 1 of the federation roadmap — verify-then-forward. Step 2
-/// (offline verification via shared-key distribution) requires BearDog to
-/// ship key distribution, which is tracked as JH-11 on BearDog's side.
-#[derive(Clone)]
-pub struct BearDogVerifier {
-    socket_path: std::path::PathBuf,
-}
-
-impl BearDogVerifier {
-    /// Create a new verifier targeting a BearDog socket.
-    pub fn new(socket_path: std::path::PathBuf) -> Self {
-        Self { socket_path }
-    }
-
-    /// Resolve the BearDog socket from environment or XDG defaults.
-    pub fn from_env() -> Option<Self> {
-        let path = std::env::var("BEARDOG_SOCKET")
-            .ok()
-            .map(std::path::PathBuf::from)
-            .or_else(|| {
-                biomeos_types::paths::SystemPaths::new()
-                    .ok()
-                    .map(|p| p.primal_socket("bearDog"))
-            })?;
-        Some(Self::new(path))
-    }
-
-    /// Async verification via IPC to BearDog's `auth.verify_ionic`.
-    ///
-    /// Returns parsed claims if BearDog confirms the token is valid.
-    /// Falls back to local parsing if BearDog is unreachable.
-    pub async fn verify_async(&self, token: &str) -> Option<IonicTokenClaims> {
-        use crate::atomic_client::AtomicClient;
-        use serde_json::json;
-
-        let client = AtomicClient::unix(&self.socket_path)
-            .with_timeout(biomeos_types::constants::timeouts::DEFAULT_IPC_TIMEOUT);
-
-        match client
-            .call("auth.verify_ionic", json!({ "token": token }))
-            .await
-        {
-            Ok(result) => {
-                if result.get("valid").and_then(serde_json::Value::as_bool) == Some(true) {
-                    IonicTokenClaims::parse(token)
-                } else {
-                    None
-                }
-            }
-            Err(_) => {
-                // BearDog unreachable — degrade to local parsing.
-                // In enforced mode, the MethodGate will still check expiry/scope.
-                IonicTokenClaims::parse(token)
-            }
-        }
-    }
-}
-
-impl TokenVerifier for BearDogVerifier {
-    /// Sync fallback — parses locally (no IPC). Use `verify_async` for
-    /// full federation verification in async contexts.
-    fn verify(&self, token: &str) -> Option<IonicTokenClaims> {
-        IonicTokenClaims::parse(token)
-    }
-}
 
 /// Peer credentials extracted from `SO_PEERCRED` on Unix sockets.
 ///
@@ -407,9 +78,6 @@ pub struct CallerContext {
 
 impl CallerContext {
     /// Build a caller context for a Unix socket with no peer credentials.
-    ///
-    /// `SO_PEERCRED` extraction is deferred until `peer_credentials_unix_socket`
-    /// stabilizes. The gate operates on bearer tokens and connection origin.
     #[must_use]
     pub const fn unix() -> Self {
         Self {
@@ -533,90 +201,65 @@ impl MethodGate {
         let has_token = caller.bearer_token.is_some();
 
         if !has_token {
-            return match self.mode {
-                EnforcementMode::Permissive => {
-                    tracing::warn!(
-                        method,
-                        caller_uid = caller.peer.as_ref().map(|p| p.uid),
-                        caller_pid = caller.peer.as_ref().and_then(|p| p.pid),
-                        origin = ?caller.origin,
-                        "method gate: unauthenticated call to protected method (permissive — allowing)"
-                    );
-                    Ok(())
-                }
-                EnforcementMode::Enforced => {
-                    tracing::warn!(
-                        method,
-                        caller_uid = caller.peer.as_ref().map(|p| p.uid),
-                        caller_pid = caller.peer.as_ref().and_then(|p| p.pid),
-                        origin = ?caller.origin,
-                        "method gate: REJECTED unauthenticated call to protected method"
-                    );
-                    Err(JsonRpcError::permission_denied(method))
-                }
-            };
+            return self.handle_no_token(method, caller);
         }
 
-        // Token present — check scope and envelope if claims are available.
         if let Some(ref claims) = caller.claims {
-            if claims.is_expired() {
-                return match self.mode {
-                    EnforcementMode::Permissive => {
-                        tracing::warn!(
-                            method,
-                            "method gate: expired token (permissive — allowing)"
-                        );
-                        Ok(())
-                    }
-                    EnforcementMode::Enforced => {
-                        tracing::warn!(method, "method gate: REJECTED expired token");
-                        Err(JsonRpcError::permission_denied(method))
-                    }
-                };
-            }
-
-            if !claims.scope_covers_method(method) {
-                return match self.mode {
-                    EnforcementMode::Permissive => {
-                        tracing::warn!(
-                            method,
-                            scope = ?claims.scope,
-                            "method gate: token scope does not cover method (permissive — allowing)"
-                        );
-                        Ok(())
-                    }
-                    EnforcementMode::Enforced => {
-                        tracing::warn!(
-                            method,
-                            scope = ?claims.scope,
-                            "method gate: REJECTED — token scope does not cover method"
-                        );
-                        Err(JsonRpcError::permission_denied(method))
-                    }
-                };
-            }
-
-            if !claims.method_in_allowlist(method) {
-                return match self.mode {
-                    EnforcementMode::Permissive => {
-                        tracing::warn!(
-                            method,
-                            "method gate: method not in resource envelope allowlist (permissive — allowing)"
-                        );
-                        Ok(())
-                    }
-                    EnforcementMode::Enforced => {
-                        tracing::warn!(
-                            method,
-                            "method gate: REJECTED — method not in resource envelope allowlist"
-                        );
-                        Err(JsonRpcError::permission_denied(method))
-                    }
-                };
-            }
+            self.validate_claims(method, claims)?;
         }
 
         Ok(())
+    }
+
+    fn handle_no_token(&self, method: &str, caller: &CallerContext) -> Result<(), JsonRpcError> {
+        match self.mode {
+            EnforcementMode::Permissive => {
+                tracing::warn!(
+                    method,
+                    caller_uid = caller.peer.as_ref().map(|p| p.uid),
+                    caller_pid = caller.peer.as_ref().and_then(|p| p.pid),
+                    origin = ?caller.origin,
+                    "method gate: unauthenticated call to protected method (permissive — allowing)"
+                );
+                Ok(())
+            }
+            EnforcementMode::Enforced => {
+                tracing::warn!(
+                    method,
+                    caller_uid = caller.peer.as_ref().map(|p| p.uid),
+                    caller_pid = caller.peer.as_ref().and_then(|p| p.pid),
+                    origin = ?caller.origin,
+                    "method gate: REJECTED unauthenticated call to protected method"
+                );
+                Err(JsonRpcError::permission_denied(method))
+            }
+        }
+    }
+
+    fn validate_claims(&self, method: &str, claims: &IonicTokenClaims) -> Result<(), JsonRpcError> {
+        if claims.is_expired() {
+            return self.mode_gate(method, "expired token");
+        }
+        if !claims.scope_covers_method(method) {
+            return self.mode_gate(method, "token scope does not cover method");
+        }
+        if !claims.method_in_allowlist(method) {
+            return self.mode_gate(method, "method not in resource envelope allowlist");
+        }
+        Ok(())
+    }
+
+    fn mode_gate(&self, method: &str, reason: &str) -> Result<(), JsonRpcError> {
+        match self.mode {
+            EnforcementMode::Permissive => {
+                tracing::warn!(method, "method gate: {reason} (permissive — allowing)");
+                Ok(())
+            }
+            EnforcementMode::Enforced => {
+                tracing::warn!(method, "method gate: REJECTED — {reason}");
+                Err(JsonRpcError::permission_denied(method))
+            }
+        }
     }
 
     /// Handle the `auth.check` introspection method.
@@ -1306,7 +949,6 @@ mod tests {
 
     #[test]
     fn beardog_verifier_from_env_does_not_panic() {
-        // from_env reads BEARDOG_SOCKET or XDG paths; verify it doesn't panic.
         let _ = BearDogVerifier::from_env();
     }
 
@@ -1314,6 +956,6 @@ mod tests {
     fn beardog_verifier_clone() {
         let v = BearDogVerifier::new(std::path::PathBuf::from("/tmp/bd.sock"));
         let v2 = v.clone();
-        assert_eq!(v.socket_path, v2.socket_path);
+        assert_eq!(v.socket_path(), v2.socket_path());
     }
 }

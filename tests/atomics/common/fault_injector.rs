@@ -2,6 +2,8 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 // Fault Injection Infrastructure for NUCLEUS Testing
+// Uses unsafe env manipulation for fault simulation (test-only, single-threaded).
+#![allow(unsafe_code)]
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -10,6 +12,7 @@ use anyhow::{Result, Context};
 /// Fault injection engine
 pub struct FaultInjector {
     active_faults: Vec<(FaultHandle, Fault)>,
+    saved_env: Vec<(String, Option<String>)>,
 }
 
 /// Handle to an injected fault
@@ -73,6 +76,7 @@ impl FaultInjector {
     pub fn new() -> Self {
         Self {
             active_faults: Vec::new(),
+            saved_env: Vec::new(),
         }
     }
     
@@ -94,7 +98,10 @@ impl FaultInjector {
             }
             
             Fault::EnvironmentCorruption { var, corrupted_value } => {
-                std::env::set_var(var, corrupted_value);
+                self.saved_env.push((var.clone(), std::env::var(var).ok()));
+                // SAFETY: test-only, runs in single-threaded test context.
+                // Original value saved for restore in cleanup().
+                unsafe { std::env::set_var(var, corrupted_value) };
             }
             
             _ => {
@@ -116,8 +123,15 @@ impl FaultInjector {
                     self.restore_permissions(&socket_path)?;
                 }
                 
-                Fault::EnvironmentCorruption { var, .. } => {
-                    std::env::remove_var(&var);
+                Fault::EnvironmentCorruption { .. } => {
+                    // Restore saved env values
+                    for (var, original) in self.saved_env.drain(..) {
+                        // SAFETY: test-only, runs in single-threaded test context
+                        match original {
+                            Some(val) => unsafe { std::env::set_var(&var, &val) },
+                            None => unsafe { std::env::remove_var(&var) },
+                        }
+                    }
                 }
                 
                 _ => {

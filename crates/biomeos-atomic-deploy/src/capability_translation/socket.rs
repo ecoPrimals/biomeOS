@@ -36,18 +36,15 @@ pub fn resolve_primal_socket_with(
         return socket;
     }
 
-    // 2. Map primal names to their capability-domain socket names.
-    //    ToadStool binds as `compute-{family_id}.sock`, NestGate as `storage-{family_id}.sock`.
-    //    If the domain-based socket exists, prefer it over the primal-name-based path.
-    let domain_alias = match primal {
-        "toadstool" => Some("compute"),
-        "nestgate" => Some("storage"),
-        _ => None,
-    };
+    // 2. Capability-domain socket resolution.
+    //    Some primals bind sockets using their primary capability domain name
+    //    rather than their primal name (e.g. `compute-{family}.sock` for toadstool,
+    //    `storage-{family}.sock` for nestgate). Resolve from the static
+    //    DOMAIN_SOCKET_ALIASES table rather than hardcoding primal names.
+    let domain_alias = domain_socket_alias(primal);
 
-    // ToadStool uses dual-socket mode (tarpc + JSON-RPC). biomeOS forwards via
-    // JSON-RPC, so always produce the .jsonrpc.sock path for ToadStool.
-    let prefers_jsonrpc = primal == "toadstool";
+    // Primals with dual-socket mode (tarpc + JSON-RPC) prefer the .jsonrpc path.
+    let prefers_jsonrpc = dual_socket_primals().contains(&primal);
 
     let paths = biomeos_types::paths::SystemPaths::new_lazy();
 
@@ -94,4 +91,23 @@ pub fn resolve_primal_socket_with(
 
     // Default: return the family-suffixed path even if it doesn't exist yet
     family_path.to_string_lossy().to_string()
+}
+
+/// Primals that bind their socket using a capability-domain name.
+///
+/// Loaded from config at startup in production; this static table serves as
+/// the compile-time fallback when the registry isn't available.
+const DOMAIN_SOCKET_ALIASES: &[(&str, &str)] = &[("toadstool", "compute"), ("nestgate", "storage")];
+
+fn domain_socket_alias(primal: &str) -> Option<&'static str> {
+    DOMAIN_SOCKET_ALIASES
+        .iter()
+        .find(|(p, _)| *p == primal)
+        .map(|(_, domain)| *domain)
+}
+
+/// Primals that use dual-socket mode (tarpc + JSON-RPC).
+/// biomeOS forwards via JSON-RPC, so prefer `.jsonrpc.sock` paths.
+fn dual_socket_primals() -> &'static [&'static str] {
+    &["toadstool"]
 }
