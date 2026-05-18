@@ -356,6 +356,11 @@ pub async fn run(
     info!("  Socket dir: {}", socket_dir.display());
     tokio::fs::create_dir_all(&socket_dir).await?;
 
+    // R9: remove stale sockets left by previous crashes before probing.
+    // This prevents consumers from hitting dead sockets (50+ observed by
+    // wetSpring in production — see WETSPRING_UPSTREAM_BIOMEOS_STALE_SOCKETS).
+    cleanup_stale_sockets(&socket_dir).await;
+
     // Bootstrap detection: check if ecosystem already exists
     let ecosystem = detect_ecosystem(&socket_dir, &family_id).await;
     let primals_needed = match &ecosystem {
@@ -429,6 +434,15 @@ pub async fn run(
         .with_context(|| format!("Failed to start {primal}"))?;
 
         let pid = child.id();
+
+        // Write PID file alongside socket so consumers can use kill(pid, 0)
+        // for instant liveness checks without connect overhead (R9).
+        if let Some(p) = pid {
+            let pid_path = socket_dir.join(format!("{primal}-{family_id}.pid"));
+            if let Err(e) = tokio::fs::write(&pid_path, p.to_string()).await {
+                warn!("Failed to write PID file for {primal}: {e}");
+            }
+        }
 
         // Wait for socket to appear (use health_socket for primals with separate JSON-RPC sockets)
         wait_for_socket(
@@ -536,6 +550,9 @@ pub async fn run(
     info!("Shutting down NUCLEUS...");
     lifecycle.shutdown_all().await?;
 
+    // Collect names before consuming children (for socket cleanup below)
+    let started_names: Vec<String> = children.iter().map(|(n, _)| n.clone()).collect();
+
     // Clean up child process handles
     for (name, mut child) in children {
         if tokio::time::timeout(Duration::from_secs(2), child.wait())
@@ -549,9 +566,62 @@ pub async fn run(
         }
     }
 
+    // Remove socket + PID files for primals we launched (prevents stale
+    // sockets if child processes didn't clean up on exit).
+    for name in &started_names {
+        let sock = socket_dir.join(format!("{name}-{family_id}.sock"));
+        let pid_file = socket_dir.join(format!("{name}-{family_id}.pid"));
+        if tokio::fs::remove_file(&sock).await.is_ok() {
+            info!("  Cleaned up socket: {}", sock.display());
+        }
+        let _ = tokio::fs::remove_file(&pid_file).await;
+    }
+
     info!("NUCLEUS stopped.");
 
     Ok(())
+}
+
+/// Remove stale `.sock` files from the socket directory (R9).
+///
+/// Scans ALL `.sock` files in the directory. For each, attempts a non-blocking
+/// Unix stream connect. If the connect fails (no listener), the socket file is
+/// removed. This prevents consumers from discovering dead sockets left behind
+/// by crashes or unclean shutdowns.
+///
+/// Called once on startup before `detect_ecosystem` to sanitize the directory.
+/// See `CAPABILITY_BASED_DISCOVERY_STANDARD.md` §4 (crash recovery) and
+/// `WETSPRING_UPSTREAM_BIOMEOS_STALE_SOCKETS_MAY18_2026.md`.
+async fn cleanup_stale_sockets(socket_dir: &std::path::Path) {
+    let Ok(entries) = std::fs::read_dir(socket_dir) else {
+        return;
+    };
+
+    let mut removed = 0u32;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let ext = path.extension().and_then(|e| e.to_str());
+        match ext {
+            Some("sock") if std::os::unix::net::UnixStream::connect(&path).is_err() => {
+                if std::fs::remove_file(&path).is_ok() {
+                    removed += 1;
+                    info!("  Removed stale socket: {}", path.display());
+                }
+                let pid_path = path.with_extension("pid");
+                let _ = std::fs::remove_file(&pid_path);
+            }
+            Some("pid") if !path.with_extension("sock").exists() => {
+                let _ = std::fs::remove_file(&path);
+            }
+            _ => {}
+        }
+    }
+    if removed > 0 {
+        info!(
+            "  Cleaned up {removed} stale socket(s) from {}",
+            socket_dir.display()
+        );
+    }
 }
 
 /// Detect whether an existing ecosystem is running.

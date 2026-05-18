@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 18, 2026 (v3.61: Evolution debt cleanup — clippy zero, cpu/mem enforcement, pipeline readiness, 12+1 full mode, spore.instantiate, file size compliance)
+**Updated**: May 18, 2026 (v3.62: Stale socket cleanup R9, PID files, shutdown cleanup; v3.61 evolution debt)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -426,6 +426,9 @@ Systematic deep debt resolution across 7 waves:
 - [x] `composition.status` pipeline readiness fields (content + compute) — v3.61
 - [x] Zero clippy warnings across workspace (pedantic+nursery) — v3.61
 - [x] All production `.rs` files under 800 lines — v3.61
+- [x] Stale socket cleanup on startup (R9, wetSpring upstream ask) — v3.62
+- [x] PID files alongside primal sockets for instant liveness checks — v3.62
+- [x] Shutdown socket + PID cleanup for launched primals — v3.62
 
 ### Degradation Behavior
 

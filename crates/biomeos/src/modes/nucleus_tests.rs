@@ -618,6 +618,69 @@ fn test_discover_binaries_warns_on_missing() {
     assert!(map.is_empty());
 }
 
+#[tokio::test]
+async fn test_cleanup_stale_sockets_removes_dead_sockets() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    // Create a fake "stale" .sock file (no listener behind it)
+    let stale = temp.path().join("stale-fam1.sock");
+    std::fs::write(&stale, "").expect("create stale socket file");
+    // Create a matching PID file
+    let stale_pid = temp.path().join("stale-fam1.pid");
+    std::fs::write(&stale_pid, "99999").expect("create stale pid file");
+    // Create a non-socket file that should be left alone
+    let other = temp.path().join("config.toml");
+    std::fs::write(&other, "key = true").expect("create non-socket file");
+
+    cleanup_stale_sockets(temp.path()).await;
+
+    assert!(!stale.exists(), "Stale socket should be removed");
+    assert!(
+        !stale_pid.exists(),
+        "Orphaned PID file should be removed alongside stale socket"
+    );
+    assert!(other.exists(), "Non-socket files should not be touched");
+}
+
+#[tokio::test]
+async fn test_cleanup_stale_sockets_preserves_live_sockets() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let live_path = temp.path().join("live-fam1.sock");
+
+    // Create a real listening socket
+    let listener = std::os::unix::net::UnixListener::bind(&live_path).expect("bind socket");
+
+    cleanup_stale_sockets(temp.path()).await;
+
+    assert!(
+        live_path.exists(),
+        "Live socket (with listener) should NOT be removed"
+    );
+    drop(listener);
+}
+
+#[tokio::test]
+async fn test_cleanup_stale_sockets_nonexistent_dir() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let nonexistent = temp.path().join("does_not_exist");
+    // Should not panic
+    cleanup_stale_sockets(&nonexistent).await;
+}
+
+#[tokio::test]
+async fn test_cleanup_stale_sockets_orphaned_pid_without_sock() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    // PID file with no companion .sock
+    let orphan_pid = temp.path().join("gone-fam1.pid");
+    std::fs::write(&orphan_pid, "12345").expect("create orphan pid");
+
+    cleanup_stale_sockets(temp.path()).await;
+
+    assert!(
+        !orphan_pid.exists(),
+        "PID file without companion .sock should be removed"
+    );
+}
+
 #[test]
 fn test_format_nucleus_summary_health_check_line() {
     let lines = format_nucleus_summary(

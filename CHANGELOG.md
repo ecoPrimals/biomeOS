@@ -2,6 +2,29 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.62 (2026-05-18) — Stale Socket Cleanup (R9)
+
+### Startup stale socket scan
+- Added `cleanup_stale_sockets()` — on NUCLEUS startup, scans `$XDG_RUNTIME_DIR/biomeos/`
+  and removes any `.sock` files without a listening process (connect-probe). Also removes
+  orphaned `.pid` files whose companion `.sock` is gone. Called before `detect_ecosystem`.
+- Resolves wetSpring production observation: 50+ stale biomeOS sockets + 100+ stale
+  songbird sockets causing 21 failed connections per Barrick clone run (~2s wasted).
+
+### PID files alongside sockets
+- Each primal now gets a `{name}-{family}.pid` file written alongside its socket
+  after spawn. Consumers can use `kill(pid, 0)` for instant liveness checks without
+  100ms connect-probe overhead.
+
+### Shutdown socket cleanup
+- NUCLEUS shutdown now explicitly removes socket + PID files for all primals it launched,
+  preventing accumulation after Ctrl+C or lifecycle manager shutdown.
+
+### Pre-existing compliance (verified, no changes needed)
+- All socket creation paths already implement `remove_file()` before `bind()`:
+  `unix_server.rs`, `listeners.rs`, `device_management_server`, `primal_launcher.rs`,
+  `tarpc_transport.rs`, `nucleus.rs` `start_primal()`.
+
 ## v3.61 (2026-05-18) — Evolution Debt Cleanup
 
 ### Clippy zero-warning
