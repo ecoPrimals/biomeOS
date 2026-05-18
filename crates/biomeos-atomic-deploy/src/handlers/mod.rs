@@ -44,6 +44,7 @@ mod capability_mcp;
 pub mod capability_routing;
 #[cfg(test)]
 mod capability_tests;
+mod composition;
 pub mod graph;
 #[cfg(test)]
 mod graph_tests;

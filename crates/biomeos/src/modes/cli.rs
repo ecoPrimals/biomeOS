@@ -111,9 +111,7 @@ async fn show_system_summary() -> Result<()> {
 
     // Check for graphs
     if Path::new("graphs").exists() {
-        let graph_count = std::fs::read_dir("graphs")
-            .map(|d| d.flatten().count())
-            .unwrap_or(0);
+        let graph_count = std::fs::read_dir("graphs").map_or(0, |d| d.flatten().count());
         if graph_count > 0 {
             println!(
                 "  {} Deployment graphs: {}",

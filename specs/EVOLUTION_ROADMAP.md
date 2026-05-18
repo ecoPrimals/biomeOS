@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 17, 2026 (v3.60: Braid signal tier, identity.get, stability tiers, stadial readiness, 7,915+ tests)
+**Updated**: May 18, 2026 (v3.61: Evolution debt cleanup — clippy zero, cpu/mem enforcement, pipeline readiness, 12+1 full mode, spore.instantiate, file size compliance)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -419,8 +419,13 @@ Systematic deep debt resolution across 7 waves:
 - [ ] Cloudflare baselines for cellMembrane integration
 - [ ] Barrick Lab USB deployment validation (livespore-usb)
 - [ ] `composition.deploy` shadow runs for projectNUCLEUS H2
-- [ ] `--mode full` (13 primals)
+- [x] `--mode full` (12+1 primals) — v3.61: NucleusMode::Full launches 12 ecosystem primals + biomeOS orchestrator; NucleusMode::Core preserves legacy 5-primal compat
 - [ ] Cross-gate dispatch via songBird (Phase 2)
+- [x] `spore.instantiate` wired as dedicated Neural API route (lithoSpore ask R7) — v3.61
+- [x] ResourceEnvelope cpu/mem pre-dispatch enforcement at orchestrator — v3.61
+- [x] `composition.status` pipeline readiness fields (content + compute) — v3.61
+- [x] Zero clippy warnings across workspace (pedantic+nursery) — v3.61
+- [x] All production `.rs` files under 800 lines — v3.61
 
 ### Degradation Behavior
 

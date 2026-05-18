@@ -61,14 +61,46 @@ impl CapabilityHandler {
             );
         };
 
-        // JH-2: extract resource envelope timeout cap from enriched params.
+        // JH-2: extract resource envelope from enriched params.
         // The routing layer injects `_resource_envelope` when the caller's
         // ionic token carries resource constraints.
-        let timeout_cap = params
-            .get("_resource_envelope")
+        let envelope = params.get("_resource_envelope");
+
+        let timeout_cap = envelope
             .and_then(|e| e.get("timeout_ms"))
             .and_then(|v| v.as_u64())
             .map(std::time::Duration::from_millis);
+
+        // JH-2: enforce cpu/mem caps at orchestrator level. If the caller's
+        // args request specific resources (cpu_cores, mem_bytes) that exceed
+        // the envelope limits, reject before forwarding to the downstream
+        // primal. This is a pre-dispatch guard; downstream primals (ToadStool)
+        // also enforce at their compute dispatch level.
+        if let Some(env) = envelope {
+            let args_preview = params.get("args").or_else(|| params.get("params"));
+            if let Some(args_val) = args_preview {
+                if let Some(requested_mem) = args_val.get("mem_bytes").and_then(|v| v.as_u64()) {
+                    if let Some(limit) = env.get("mem").and_then(|v| v.as_u64()) {
+                        if requested_mem > limit {
+                            anyhow::bail!(
+                                "Resource envelope violation: requested mem_bytes ({requested_mem}) \
+                                 exceeds token limit ({limit})"
+                            );
+                        }
+                    }
+                }
+                if let Some(requested_cpu) = args_val.get("cpu_cores").and_then(|v| v.as_f64()) {
+                    if let Some(limit) = env.get("cpu").and_then(|v| v.as_f64()) {
+                        if requested_cpu > limit {
+                            anyhow::bail!(
+                                "Resource envelope violation: requested cpu_cores ({requested_cpu}) \
+                                 exceeds token limit ({limit})"
+                            );
+                        }
+                    }
+                }
+            }
+        }
 
         // Accept both "args" and "params" (backward compat for older callers)
         let mut args = params

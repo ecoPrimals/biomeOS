@@ -24,6 +24,7 @@ mod bootstrap;
 pub(crate) mod btsp_negotiate;
 mod connection;
 pub(crate) mod discovery_init;
+mod enrichment;
 mod listeners;
 mod proxy;
 mod routing;

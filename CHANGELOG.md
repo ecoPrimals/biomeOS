@@ -2,6 +2,46 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.61 (2026-05-18) — Evolution Debt Cleanup
+
+### Clippy zero-warning
+- Applied `cargo clippy --fix` across workspace: resolved all `map_unwrap_or`
+  warnings in `biomeos-genome-factory`, `biomeos-boot`, `biomeos-genome-deploy`,
+  `biomeos-api`, `biomeos-cli`, and `biomeos-unibin`. Zero clippy warnings.
+
+### ResourceEnvelope enforcement (JH-2 completion)
+- `to_forwarding_value()` now includes `method_allowlist` alongside cpu/mem/timeout_ms.
+- Added orchestrator-side pre-dispatch guard: rejects `capability.call` when
+  `args.mem_bytes` or `args.cpu_cores` exceed the ionic token's resource envelope.
+- Downstream forwarding of full envelope preserved for ToadStool enforcement.
+
+### composition.status pipeline readiness
+- `composition.status` response now includes `pipelines.content` and
+  `pipelines.compute` objects reporting per-subsystem readiness derived from
+  primal health (nestgate, rhizocrypt, loamspine, sweetgrass, toadstool,
+  coralreef, barracuda).
+
+### --mode full expanded to 12 primals (+ biomeOS orchestrator = 13)
+- `NucleusMode::Full` now launches all ecosystem primals: bearDog, songBird,
+  skunkBat, toadStool, coralReef, barraCuda, nestGate, rhizoCrypt, loamSpine,
+  sweetGrass, squirrel, petalTongue.
+- Added `NucleusMode::Core` for legacy 5-primal compatibility.
+- Tower mode now includes skunkBat; Node includes GPU primals; Nest includes
+  provenance trio.
+
+### spore.instantiate wired
+- `spore.instantiate` added as dedicated Neural API route. Delegates to
+  graph execution via `livespore_create` graph (lithoSpore ask R7).
+
+### Method naming deprecation
+- Bare `"list"` and `"identity"` route entries annotated with deprecation
+  comments; canonical `primal.list` and `identity.get` remain preferred.
+
+### File size compliance
+- Extracted `composition.rs` from `lifecycle.rs` (831→652 lines).
+- Extracted `enrichment.rs` from `routing.rs` (814→780 lines).
+- All production `.rs` files now under 800 lines.
+
 ## v3.60 (2026-05-17) — Stadial Gate Readiness + Braid Signal Tier
 
 ### Braid signal tier (wetSpring upstream ask)

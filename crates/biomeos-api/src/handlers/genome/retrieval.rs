@@ -46,7 +46,7 @@ pub async fn download_genome(Path(id): Path<String>) -> Result<Json<DownloadResp
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+    let size = std::fs::metadata(&path).map_or(0, |m| m.len());
 
     Ok(Json(DownloadResponse {
         url: format!("/api/v1/genome/{id}/data"),

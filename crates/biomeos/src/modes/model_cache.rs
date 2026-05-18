@@ -175,7 +175,7 @@ async fn list_models_config(config: ModelCacheConfig) -> Result<()> {
         return Ok(());
     }
 
-    println!("  {:<40} {:>10}  {:>12}  PATH", "MODEL", "FORMAT", "SIZE",);
+    println!("  {:<40} {:>10}  {:>12}  PATH", "MODEL", "FORMAT", "SIZE");
     println!("  {}", "-".repeat(90));
 
     for model in &models {

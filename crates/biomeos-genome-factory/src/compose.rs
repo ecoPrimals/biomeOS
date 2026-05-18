@@ -78,9 +78,7 @@ impl GenomeFactory {
             format!("Failed to write composed genome: {}", output_path.display())
         })?;
 
-        let size = std::fs::metadata(&output_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let size = std::fs::metadata(&output_path).map_or(0, |m| m.len());
 
         let response = GenomeComposeResponse {
             genome_id: format!("{}-atomic", request.name),

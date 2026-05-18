@@ -167,32 +167,25 @@ pub async fn handle_niche_show_at(id: &str, templates_dir: impl AsRef<Path>) -> 
 
         // Display relevant info
         match in_section {
-            "metadata" => {
-                if trimmed.starts_with("name:")
+            "metadata"
+                if (trimmed.starts_with("name:")
                     || trimmed.starts_with("description:")
                     || trimmed.starts_with("category:")
-                    || trimmed.starts_with("features:")
-                {
+                    || trimmed.starts_with("features:")) =>
+            {
+                println!("   {trimmed}");
+            }
+            "organisms" if !trimmed.is_empty() && !trimmed.starts_with('#') => {
+                let current_indent = line.len() - line.trim_start().len();
+                if current_indent <= 4 {
                     println!("   {trimmed}");
                 }
             }
-            "organisms" => {
-                if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                    let current_indent = line.len() - line.trim_start().len();
-                    if current_indent <= 4 {
-                        println!("   {trimmed}");
-                    }
-                }
+            "customization" if (trimmed.starts_with("- id:") || trimmed.starts_with("name:")) => {
+                println!("   {trimmed}");
             }
-            "customization" => {
-                if trimmed.starts_with("- id:") || trimmed.starts_with("name:") {
-                    println!("   {trimmed}");
-                }
-            }
-            "resources" => {
-                if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                    println!("   {trimmed}");
-                }
+            "resources" if !trimmed.is_empty() && !trimmed.starts_with('#') => {
+                println!("   {trimmed}");
             }
             _ => {}
         }

@@ -97,8 +97,7 @@ impl BootLogger {
         let timestamp = self
             .start_time
             .elapsed()
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_millis() as u64);
 
         // Format message
         let formatted = format!("[{timestamp:010}] [{level:?}] {msg}\n");
@@ -153,8 +152,7 @@ impl BootLogger {
             uptime_ms: self
                 .start_time
                 .elapsed()
-                .map(|d| d.as_millis() as u64)
-                .unwrap_or(0),
+                .map_or(0, |d| d.as_millis() as u64),
             serial_active: self.serial.is_some(),
         }
     }

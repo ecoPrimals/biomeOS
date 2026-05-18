@@ -42,6 +42,10 @@ fn test_nucleus_mode_from_str_valid() {
             .expect("nucleus should parse"),
         NucleusMode::Full
     ));
+    assert!(matches!(
+        "core".parse::<NucleusMode>().expect("core should parse"),
+        NucleusMode::Core
+    ));
 }
 
 #[test]
@@ -49,7 +53,7 @@ fn test_nucleus_mode_from_str_invalid() {
     let err = "invalid".parse::<NucleusMode>().unwrap_err();
     assert!(err.to_string().contains("Unknown nucleus mode"));
     assert!(err.to_string().contains("invalid"));
-    assert!(err.to_string().contains("tower|node|nest|full"));
+    assert!(err.to_string().contains("tower|node|nest|core|full"));
 
     let err2 = "".parse::<NucleusMode>().unwrap_err();
     assert!(err2.to_string().contains("Unknown nucleus mode"));
@@ -59,24 +63,49 @@ fn test_nucleus_mode_from_str_invalid() {
 fn test_nucleus_mode_primals() {
     assert_eq!(
         NucleusMode::Tower.primals(),
-        vec!["beardog", "songbird"],
+        vec!["beardog", "songbird", "skunkbat"],
         "Tower mode primals"
     );
     assert_eq!(
         NucleusMode::Node.primals(),
-        vec!["beardog", "songbird", "toadstool"],
+        vec![
+            "beardog",
+            "songbird",
+            "skunkbat",
+            "toadstool",
+            "coralreef",
+            "barracuda"
+        ],
         "Node mode primals"
     );
     assert_eq!(
         NucleusMode::Nest.primals(),
-        vec!["beardog", "songbird", "nestgate", "squirrel"],
+        vec![
+            "beardog",
+            "songbird",
+            "skunkbat",
+            "nestgate",
+            "rhizocrypt",
+            "loamspine",
+            "sweetgrass",
+            "squirrel"
+        ],
         "Nest mode primals"
     );
     assert_eq!(
-        NucleusMode::Full.primals(),
+        NucleusMode::Core.primals(),
         vec!["beardog", "songbird", "nestgate", "toadstool", "squirrel"],
-        "Full mode primals"
+        "Core mode primals (legacy 5-primal compat)"
     );
+    assert_eq!(
+        NucleusMode::Full.primals().len(),
+        12,
+        "Full mode should launch 12 primals (all ecosystem primals except biomeOS itself)"
+    );
+    let full = NucleusMode::Full.primals();
+    assert_eq!(full[0], "beardog", "beardog starts first (security root)");
+    assert!(full.contains(&"petaltongue"), "Full includes petalTongue");
+    assert!(full.contains(&"sweetgrass"), "Full includes sweetGrass");
 }
 
 #[test]

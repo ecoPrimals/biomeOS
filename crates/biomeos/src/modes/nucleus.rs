@@ -25,7 +25,10 @@ mod nucleus_launch;
 
 use anyhow::{Context, Result};
 use biomeos_types::defaults::env_vars::socket_env_key;
-use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
+use biomeos_types::primal_names::{
+    BARRACUDA, BEARDOG, CORALREEF, LOAMSPINE, NESTGATE, PETALTONGUE, RHIZOCRYPT, SKUNKBAT,
+    SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
+};
 use nucleus_launch::load_nucleus_profiles;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -45,13 +48,15 @@ pub(crate) enum EcosystemState {
 /// NUCLEUS deployment pattern
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NucleusMode {
-    /// BearDog + Songbird
+    /// BearDog + Songbird + skunkBat (security + mesh + defense)
     Tower,
-    /// Tower + Toadstool
+    /// Tower + ToadStool + barraCuda + coralReef (compute pipeline)
     Node,
-    /// Tower + NestGate + Squirrel
+    /// Tower + NestGate + rhizoCrypt + loamSpine + sweetGrass + Squirrel (storage + provenance)
     Nest,
-    /// All primals + Neural API
+    /// Core 5: BearDog + Songbird + NestGate + ToadStool + Squirrel (legacy compat)
+    Core,
+    /// All 13 primals + Neural API
     Full,
 }
 
@@ -63,22 +68,44 @@ impl std::str::FromStr for NucleusMode {
             "tower" => Ok(NucleusMode::Tower),
             "node" => Ok(NucleusMode::Node),
             "nest" => Ok(NucleusMode::Nest),
+            "core" => Ok(NucleusMode::Core),
             "full" | "nucleus" => Ok(NucleusMode::Full),
             _ => Err(anyhow::anyhow!(
-                "Unknown nucleus mode: '{s}'. Use tower|node|nest|full"
+                "Unknown nucleus mode: '{s}'. Use tower|node|nest|core|full"
             )),
         }
     }
 }
 
 impl NucleusMode {
-    /// Get the primals needed for this mode (in startup order)
+    /// Get the primals needed for this mode (in startup order).
+    ///
+    /// Startup ordering: security first (bearDog), then mesh (songbird),
+    /// then defense (skunkBat), then compute (toadstool, coralreef, barracuda),
+    /// then storage/provenance (nestgate, rhizocrypt, loamspine, sweetgrass),
+    /// then AI (squirrel), then UI (petaltongue).
     fn primals(self) -> Vec<&'static str> {
         match self {
-            NucleusMode::Tower => vec![BEARDOG, SONGBIRD],
-            NucleusMode::Node => vec![BEARDOG, SONGBIRD, TOADSTOOL],
-            NucleusMode::Nest => vec![BEARDOG, SONGBIRD, NESTGATE, SQUIRREL],
-            NucleusMode::Full => vec![BEARDOG, SONGBIRD, NESTGATE, TOADSTOOL, SQUIRREL],
+            NucleusMode::Tower => vec![BEARDOG, SONGBIRD, SKUNKBAT],
+            NucleusMode::Node => vec![BEARDOG, SONGBIRD, SKUNKBAT, TOADSTOOL, CORALREEF, BARRACUDA],
+            NucleusMode::Nest => vec![
+                BEARDOG, SONGBIRD, SKUNKBAT, NESTGATE, RHIZOCRYPT, LOAMSPINE, SWEETGRASS, SQUIRREL,
+            ],
+            NucleusMode::Core => vec![BEARDOG, SONGBIRD, NESTGATE, TOADSTOOL, SQUIRREL],
+            NucleusMode::Full => vec![
+                BEARDOG,
+                SONGBIRD,
+                SKUNKBAT,
+                TOADSTOOL,
+                CORALREEF,
+                BARRACUDA,
+                NESTGATE,
+                RHIZOCRYPT,
+                LOAMSPINE,
+                SWEETGRASS,
+                SQUIRREL,
+                PETALTONGUE,
+            ],
         }
     }
 }

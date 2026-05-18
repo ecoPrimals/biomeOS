@@ -73,9 +73,7 @@ impl GenomeFactory {
             .save(&output_path)
             .context("Failed to write self-genomeBin")?;
 
-        let size = std::fs::metadata(&output_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let size = std::fs::metadata(&output_path).map_or(0, |m| m.len());
 
         let response = GenomeReplicateResponse {
             genome_id: "biomeos-self".to_string(),

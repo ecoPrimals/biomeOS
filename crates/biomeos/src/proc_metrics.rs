@@ -80,9 +80,7 @@ pub fn cpu_count() -> usize {
                 .max(1);
         }
     }
-    std::thread::available_parallelism()
-        .map(std::num::NonZero::get)
-        .unwrap_or(1)
+    std::thread::available_parallelism().map_or(1, std::num::NonZero::get)
 }
 
 /// 1-minute load average from /proc/loadavg

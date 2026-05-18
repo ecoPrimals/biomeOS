@@ -35,13 +35,15 @@ impl ResourceEnvelope {
     /// forwarded request params (`_resource_envelope`).
     ///
     /// Downstream primals (e.g. ToadStool) read this field to enforce
-    /// `cpu`, `mem`, and `timeout_ms` at the compute dispatch level.
+    /// `cpu`, `mem`, `timeout_ms`, and `method_allowlist` at the compute
+    /// dispatch level.
     #[must_use]
     pub fn to_forwarding_value(&self) -> serde_json::Value {
         serde_json::json!({
             "mem": self.mem,
             "cpu": self.cpu,
             "timeout_ms": self.timeout_ms,
+            "method_allowlist": self.method_allowlist,
         })
     }
 }

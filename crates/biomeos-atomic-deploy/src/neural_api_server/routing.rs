@@ -157,6 +157,7 @@ enum Route {
     SignalSchema,
     PrimalAnnounce,
     IdentityGet,
+    SporeInstantiate,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -203,6 +204,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("neural_api.get_primals", Route::TopologyPrimals),
     ("topology.primals", Route::TopologyPrimals),
     ("primal.list", Route::TopologyPrimals),
+    // DEPRECATED: bare "list" retained for backward compat; prefer "primal.list"
     ("list", Route::TopologyPrimals),
     (
         "neural_api.get_proprioception",
@@ -320,6 +322,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("composition.deploy.shadow", Route::CompositionDeployShadow),
     // Identity (canonical identity response per CAPABILITY_WIRE_STANDARD)
     ("identity.get", Route::IdentityGet),
+    // DEPRECATED: bare "identity" retained for backward compat; prefer "identity.get"
     ("identity", Route::IdentityGet),
     // Primal self-announcement (atomic registration)
     ("primal.announce", Route::PrimalAnnounce),
@@ -335,6 +338,8 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("biomeos.spring_status", Route::SpringStatus),
     // Spring method registration (GAP-09)
     ("method.register", Route::MethodRegister),
+    // Spore lifecycle (lithoSpore ask R7)
+    ("spore.instantiate", Route::SporeInstantiate),
     // BTSP escalation (cleartext → enforced after Tower healthy)
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
@@ -689,6 +694,20 @@ impl NeuralApiServer {
             }
             // Spring status (Tier 2 notebook integration)
             Route::SpringStatus => dispatch(self.lifecycle_handler.spring_status().await, id),
+            // Spore lifecycle — atomic VM provisioning (lithoSpore ask R7)
+            Route::SporeInstantiate => {
+                let spore_params = params.clone().unwrap_or(json!({}));
+                let graph_id = spore_params
+                    .get("graph_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("livespore_create");
+                let execute_params = json!({
+                    "graph_id": graph_id,
+                    "family_id": self.family_id,
+                    "spore_context": spore_params,
+                });
+                dispatch(self.graph_handler.execute(&Some(execute_params)).await, id)
+            }
             // Spring method registration (GAP-09)
             Route::MethodRegister => {
                 dispatch(self.capability_handler.register_methods(params).await, id)
@@ -752,43 +771,6 @@ impl NeuralApiServer {
     /// Backward-compatible wrapper that converts `DispatchOutcome` to `Value`.
     pub async fn handle_request_json(&self, request_line: &str) -> Value {
         self.handle_request(request_line).await.into_response()
-    }
-
-    /// Enrich capability call params with forwarding context (JH-2, JH-11, exp111).
-    ///
-    /// Injects fields into the params before they reach `CapabilityHandler::call()`:
-    /// - `_resource_envelope` — downstream primals enforce cpu/mem/timeout_ms.
-    /// - `_bearer_token` — downstream primals in enforced mode need the caller's
-    ///   token for their own MethodGate check.
-    /// - `_token_verified` — boolean indicating whether biomeOS verified the
-    ///   token against BearDog via IPC (JH-11 federation step 1).
-    async fn enrich_for_forwarding(
-        &self,
-        params: &Option<Value>,
-        caller: &CallerContext,
-    ) -> Option<Value> {
-        let mut enriched = params.clone().unwrap_or(json!({}));
-
-        if let Some(obj) = enriched.as_object_mut() {
-            if let Some(ref claims) = caller.claims {
-                if let Some(ref env) = claims.resources {
-                    obj.insert("_resource_envelope".to_string(), env.to_forwarding_value());
-                }
-            }
-            if let Some(ref token) = caller.bearer_token {
-                obj.insert("_bearer_token".to_string(), json!(token));
-
-                // JH-11: verify the token with BearDog before forwarding
-                let verified = if let Some(ref verifier) = self.beardog_verifier {
-                    verifier.verify_async(token).await.is_some()
-                } else {
-                    false
-                };
-                obj.insert("_token_verified".to_string(), json!(verified));
-            }
-        }
-
-        Some(enriched)
     }
 }
 

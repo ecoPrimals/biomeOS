@@ -20,7 +20,7 @@ fn is_root_user() -> bool {
     std::env::var("EUID")
         .or_else(|_| std::env::var("UID"))
         .map_or_else(
-            |_| std::env::var("USER").map(|u| u == "root").unwrap_or(false),
+            |_| std::env::var("USER").is_ok_and(|u| u == "root"),
             |uid| uid == "0",
         )
 }
