@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: braid.complete
+#
+# Fired when a full DAG session closes and the final braid is woven.
+# Propagates the complete braid artifact to downstream consumers
+# (lithoSpore via RootPulse) replacing the manual git-push workflow.
+#
+# Wire format (from wetSpring upstream ask):
+#   signal.dispatch { "signal": "braid.complete", "params": {
+#     "session_id": "...", "merkle_root": "...",
+#     "braid_path": "provenance/braids/<dataset>.json"
+#   }}
+#
+# Degradation: if unavailable, braids are written to disk and pushed
+# manually via git. Science is not gated.
+
+[graph]
+id = "braid_complete"
+name = "Braid Complete Signal"
+description = "Seal final braid from completed DAG session and propagate to downstream."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "braid"
+signal_name = "complete"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "uds_only"
+secure_by_default = true
+fragments = ["provenance_trio"]
+
+[[graph.nodes]]
+name = "seal_session"
+binary = "rhizocrypt"
+order = 1
+required = true
+spawn = false
+by_capability = "dag"
+capabilities = ["dag.session.complete"]
+
+[[graph.nodes]]
+name = "weave_final_braid"
+binary = "sweetgrass"
+order = 2
+required = true
+spawn = false
+depends_on = ["seal_session"]
+by_capability = "commit"
+capabilities = ["braid.create"]
+
+[[graph.nodes]]
+name = "commit_to_ledger"
+binary = "loamspine"
+order = 3
+required = true
+spawn = false
+depends_on = ["weave_final_braid"]
+by_capability = "ledger"
+capabilities = ["session.commit"]
+
+[[graph.nodes]]
+name = "notify_rootpulse"
+binary = "biomeos"
+order = 4
+required = false
+spawn = false
+depends_on = ["commit_to_ledger"]
+by_capability = "orchestration"
+capabilities = ["composition.status"]

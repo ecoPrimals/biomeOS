@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.60 (2026-05-17) — Stadial Gate Readiness + Braid Signal Tier
+
+### Braid signal tier (wetSpring upstream ask)
+- Added `braid` as 5th atomic signal tier in signal dispatch table.
+- Created `braid_partial_update.toml` signal graph: propagates partial Merkle
+  root from sealed DAG nodes to downstream consumers (lithoSpore via RootPulse).
+- Created `braid_complete.toml` signal graph: seals final braid from completed
+  DAG session and propagates to downstream, replacing manual git-push workflow.
+- Updated `signal_tools.toml` with braid tool schemas for Squirrel ingestion.
+- Signal graphs: 14 → 16 across 5 tiers (tower/node/nest/meta/braid).
+
+### Wire standard compliance
+- `capabilities.list` now includes top-level `"primal": "biomeos"` field per
+  `CAPABILITY_WIRE_STANDARD`.
+- `identity.get` wired as first-class Neural API route (was only on unix_server).
+  Returns canonical identity response with `is_orchestrator`, capabilities, transport.
+
+### Stability tier annotations
+- Added `config/stability_tiers.toml`: every registered method classified as
+  `stable`, `maturing`, `experimental`, or `internal`.
+
+### Version scheme documentation
+- Documented dual version scheme in README: workspace semver (`0.1.0`) vs
+  release train (`v3.60`). `is_orchestrator = true` confirmed unique to biomeOS.
+
+### Stadial gate checklist
+- Updated `EVOLUTION_ROADMAP.md` with Section 10: full stadial readiness audit,
+  degradation behavior, and downstream pairing documentation.
+
+---
+
 ## v3.59 (2026-05-15) — Deep Debt Refactoring + Membrane Composition Model
 
 ### Smart module refactoring (production files >800L → 0)

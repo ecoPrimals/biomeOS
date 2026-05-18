@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 15, 2026 (v3.59: Deep debt refactoring, method_gate modularized, membrane composition model, signal-tier announce, 7,915 tests)
+**Updated**: May 17, 2026 (v3.60: Braid signal tier, identity.get, stability tiers, stadial readiness, 7,915+ tests)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -392,3 +392,43 @@ Systematic deep debt resolution across 7 waves:
 | 4b | Stub evolution | `PrimalDiscoveryService` stubs marked `#[deprecated]`; `UniversalBiomeOSManager::discover()` wired to real `SocketDiscovery` 5-tier protocol |
 | 5a | Dep alignment | tower 0.4→0.5 workspace in `biomeos-api`, tokio workspace dep in `biomeos-graph` |
 | 5b | Shell-out elimination | `build.rs` date shell-out → pure Rust `SystemTime` UTC formatting |
+
+---
+
+## 10. Stadial Gate Readiness (May 17, 2026)
+
+### Cleared Items
+
+- [x] Health triad: `health.liveness`, `health.readiness`, `health.check`
+- [x] UDS socket at `$XDG_RUNTIME_DIR/biomeos/biomeos.sock`
+- [x] TCP fallback with `--port`
+- [x] `capabilities.list` returns `{ capabilities, count, primal }` (primal field added v3.60)
+- [x] `identity.get` canonical identity response (wired to Neural API v3.60)
+- [x] `primal.announce` self-registration
+- [x] BTSP handshake mandatory when `FAMILY_ID` is set
+- [x] `deny.toml` bans `ring`, `openssl`, `aws-lc-sys`
+- [x] Edition 2024, musl-static clean
+- [x] Dual version scheme documented (workspace `0.1.0` / release train `v3.60`)
+- [x] `is_orchestrator = true` — unique to biomeOS
+- [x] Stability tiers annotated (`config/stability_tiers.toml`)
+- [x] Signal tiers: 5 (tower/node/nest/meta/braid), 16 signal graphs
+- [x] Braid signal propagation for wetSpring (`braid.partial_update`, `braid.complete`)
+
+### Stadial Phase Items (in-progress)
+
+- [ ] Cloudflare baselines for cellMembrane integration
+- [ ] Barrick Lab USB deployment validation (livespore-usb)
+- [ ] `composition.deploy` shadow runs for projectNUCLEUS H2
+- [ ] `--mode full` (13 primals)
+- [ ] Cross-gate dispatch via songBird (Phase 2)
+
+### Degradation Behavior
+
+When biomeOS is down, primals continue standalone and springs use direct IPC.
+Signal dispatch unavailable means springs call primals individually.
+BTSP pre-escalation allows cleartext during bootstrap, auto-escalates after Tower healthy.
+
+### Downstream Pairing
+
+All 13 primals, all springs, all gardens, projectNUCLEUS, wetSpring (braid signals),
+lithoSpore (USB deployment + nest.store), cellMembrane (TLS termination via bearDog).

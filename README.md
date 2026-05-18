@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v3.59)
+## Status: Production Ready (v3.60)
 
 | Metric | Value |
 |--------|-------|
@@ -36,6 +36,22 @@
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
 | Hardcoded Values | 0 hardcoded primal names, IPs, ports, or filesystem paths in production code (all use `primal_names::` and `constants::` from `biomeos-types`); nucleus/spawner match blocks replaced by TOML-driven launch profiles; all IPs (`127.0.0.1`, `::1`, `0.0.0.0:0`, `192.0.2.1:80`) + all runtime paths (`/run/user`, `/data/local/tmp/biomeos`, `/tmp/biomeos`) centralized to constants; tools primal lists synced with registry |
 | Cross-Arch | x86_64 + aarch64 + armv7 (32-bit safe: `cast.rs` `u64` bounds, conditional tests) |
+| Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 16 signal graphs |
+
+---
+
+## Version Scheme
+
+biomeOS uses a **dual version scheme**:
+
+| Scheme | Value | Where | Purpose |
+|--------|-------|-------|---------|
+| **Release train** | `v3.60` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. Incremented on each audit/evolution cycle. |
+| **Workspace semver** | `0.1.0` | `Cargo.toml` `[workspace.package]`, `plasmidBin/manifest.toml` | Rust crate version. Will bump to `1.0.0` at stadial exit when the public API surface stabilizes. |
+
+The release train version (`v3.x`) is the **canonical version** for downstream consumers (springs, gardens, projectNUCLEUS). The workspace semver (`0.1.0`) reflects that the Rust crate API is still pre-1.0. Both are intentional — the release train captures functional maturity while semver captures API stability.
+
+biomeOS is the only primal with `is_orchestrator = true` in its manifest.
 
 ---
 

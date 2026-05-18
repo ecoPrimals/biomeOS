@@ -4,12 +4,12 @@
 #
 # This file maps every atomic signal into a tool-use schema that squirrel
 # can ingest via squirrel.context.push. Instead of reasoning over 427
-# individual primal methods, squirrel sees ~12 composable signals addressed
+# individual primal methods, squirrel sees ~16 composable signals addressed
 # to atomic tiers. biomeOS decomposes each signal into primal-level calls.
 #
 # Schema contract:
 #   name        — "tier.signal" identifier, matches [signals.*] in capability_registry.toml
-#   tier        — atomic tier (tower/node/nest/meta)
+#   tier        — atomic tier (tower/node/nest/meta/braid)
 #   description — human/LLM-readable summary of what the signal does
 #   graph       — path to the TOML graph biomeOS executes
 #   coordination — sequential | parallel
@@ -178,6 +178,45 @@ include_provenance = { type = "bool", required = false, description = "Whether t
 content = "Raw content bytes"
 session_state = "loamSpine session state (if active)"
 provenance = "sweetGrass provenance attribution (if requested)"
+
+# ─── Braid Signals (provenance lifecycle) ──────────────────────────────
+
+[[tools]]
+name = "braid.partial_update"
+tier = "braid"
+description = "Propagate partial Merkle root when DAG nodes seal during long-running computations. Enables incremental braid verification before session close."
+graph = "graphs/signals/braid_partial_update.toml"
+coordination = "sequential"
+primals = ["rhizocrypt", "sweetgrass", "loamspine"]
+
+[tools.parameters]
+session_id = { type = "string", required = true, description = "DAG session ID being updated" }
+merkle_root = { type = "string", required = false, description = "Partial Merkle root of sealed nodes (computed if omitted)" }
+sealed_count = { type = "integer", required = false, description = "Number of sealed nodes so far" }
+
+[tools.returns]
+partial_merkle_root = "BLAKE3 Merkle root of sealed-only DAG nodes"
+braid_id = "sweetGrass partial attribution braid ID"
+sealed_count = "Number of sealed nodes at time of dispatch"
+open_count = "Number of still-open nodes"
+
+[[tools]]
+name = "braid.complete"
+tier = "braid"
+description = "Seal final braid from a completed DAG session and propagate to downstream consumers. Replaces manual git-push workflow for braid distribution."
+graph = "graphs/signals/braid_complete.toml"
+coordination = "sequential"
+primals = ["rhizocrypt", "sweetgrass", "loamspine", "biomeos"]
+
+[tools.parameters]
+session_id = { type = "string", required = true, description = "DAG session to seal and finalize" }
+braid_path = { type = "string", required = false, description = "Filesystem path for the braid artifact (e.g. provenance/braids/<dataset>.json)" }
+
+[tools.returns]
+merkle_root = "Final BLAKE3 Merkle root of the complete DAG"
+braid_id = "sweetGrass final attribution braid ID"
+session_commit = "loamSpine ledger commit for the sealed session"
+propagated = "Whether RootPulse successfully propagated the braid downstream"
 
 # ─── Meta Signals (orchestration + AI + UI) ───────────────────────────
 

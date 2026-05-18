@@ -156,6 +156,7 @@ enum Route {
     SignalList,
     SignalSchema,
     PrimalAnnounce,
+    IdentityGet,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -317,6 +318,9 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("composition.deploy", Route::CompositionDeploy),
     // Composition deploy shadow (dry-run validation for projectNUCLEUS H2)
     ("composition.deploy.shadow", Route::CompositionDeployShadow),
+    // Identity (canonical identity response per CAPABILITY_WIRE_STANDARD)
+    ("identity.get", Route::IdentityGet),
+    ("identity", Route::IdentityGet),
     // Primal self-announcement (atomic registration)
     ("primal.announce", Route::PrimalAnnounce),
     ("neural_api.primal_announce", Route::PrimalAnnounce),
@@ -643,6 +647,18 @@ impl NeuralApiServer {
             Route::CompositionDeployShadow => {
                 dispatch(self.graph_handler.shadow_deploy(params).await, id)
             }
+            // Identity (CAPABILITY_WIRE_STANDARD canonical response)
+            Route::IdentityGet => dispatch(
+                Ok(serde_json::json!({
+                    "primal": "biomeos",
+                    "role": "orchestrator",
+                    "version": env!("CARGO_PKG_VERSION"),
+                    "capabilities": ["orchestration", "composition", "graph", "topology", "lifecycle", "signal"],
+                    "is_orchestrator": true,
+                    "transport": ["uds", "tcp", "http"],
+                })),
+                id,
+            ),
             // Primal self-announcement (atomic registration)
             Route::PrimalAnnounce => dispatch(
                 crate::handlers::announce::handle_announce(

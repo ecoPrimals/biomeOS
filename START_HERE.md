@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: May 15, 2026
-**Status**: Production Ready (v3.59) — Deep debt refactoring (method_gate modularized, graph handler split, dead code removed, hardcoded primal names evolved to capability-based), membrane composition model, signal-tier announce protocol, federation health diagnostics, gate-aware token forwarding, primalSpring contract alignment, TokenVerifier trait, JH-2 resource envelope enforcement, JH-3 composition.reload, MethodGate wired, BTSP Phase 3 FULL, 7,915 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, 0 TODO/FIXME, 0 hardcoded values, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.60) — Stadial gate readiness (braid signal tier, identity.get wired, stability tier annotations, capabilities.list wire compliance, version scheme documented), deep debt refactoring (method_gate modularized, graph handler split, dead code removed, hardcoded primal names evolved to capability-based), membrane composition model, signal-tier announce protocol, federation health diagnostics, gate-aware token forwarding, primalSpring contract alignment, TokenVerifier trait, JH-2 resource envelope enforcement, JH-3 composition.reload, MethodGate wired, BTSP Phase 3 FULL, 7,915+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, 0 TODO/FIXME, 0 hardcoded values, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.59 — deep debt refactoring CLEAN, method_gate modularized, graph handlers split, dead code removed, membrane composition model, signal-tier announce, federation diagnostics evolved)
+**Status**: Production Ready (v3.60 — stadial gate readiness CLEAN, braid signal tier, identity.get, stability tiers, wire standard compliance, degradation + pairing documented)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), `primal.list` + `topology.primals`, lazy rescan, cross-gate routing, post-spawn auto-registration

@@ -1,0 +1,157 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Method Stability Tiers — stadial readiness classification
+#
+# Every registered method has a stability tier:
+#   stable       — API contract locked, breaking changes require deprecation cycle
+#   maturing     — API shape may evolve, but semantics are fixed
+#   experimental — subject to change or removal
+#   internal     — not intended for external callers
+#
+# Format: method pattern → tier. Patterns use prefix matching:
+#   "graph.*" matches all graph.* methods.
+
+[metadata]
+version = "1.0.0"
+description = "biomeOS method stability tier annotations"
+total_methods = 456
+
+# ─── Stable (locked contract) ────────────────────────────────────────
+
+[tiers.stable]
+description = "API contract locked. Breaking changes require deprecation cycle."
+methods = [
+    "health.check",
+    "health.liveness",
+    "health.readiness",
+    "capabilities.list",
+    "capability.list",
+    "capability.call",
+    "capability.register",
+    "capability.discover",
+    "capability.providers",
+    "capability.resolve",
+    "identity.get",
+    "primal.announce",
+    "lifecycle.status",
+    "lifecycle.register",
+    "composition.health",
+    "composition.status",
+    "composition.deploy",
+    "composition.reload",
+    "graph.list",
+    "graph.get",
+    "graph.execute",
+    "graph.status",
+    "graph.save",
+    "topology.get",
+    "topology.primals",
+    "topology.rescan",
+    "signal.dispatch",
+    "signal.list",
+    "auth.check",
+    "auth.mode",
+    "protocol.status",
+    "biomeos.spring_status",
+    "method.register",
+]
+
+# ─── Maturing (semantics fixed, shape may evolve) ────────────────────
+
+[tiers.maturing]
+description = "Semantics fixed, API shape may evolve in minor versions."
+methods = [
+    "graph.execute_pipeline",
+    "graph.start_continuous",
+    "graph.pause_continuous",
+    "graph.resume_continuous",
+    "graph.stop_continuous",
+    "graph.tick_status",
+    "graph.verify",
+    "graph.suggest_optimizations",
+    "graph.protocol_map",
+    "composition.deploy.shadow",
+    "signal.schema",
+    "topology.proprioception",
+    "topology.metrics",
+    "capability.metrics",
+    "capability.route",
+    "capability.discover_translations",
+    "capability.list_translations",
+    "lifecycle.get",
+    "lifecycle.resurrect",
+    "lifecycle.composition",
+    "lifecycle.apoptosis",
+    "lifecycle.shutdown_all",
+    "protocol.escalate",
+    "protocol.fallback",
+    "protocol.metrics",
+    "protocol.register_primal",
+    "protocol.register_connection",
+    "protocol.record_request",
+    "protocol.start_monitoring",
+    "protocol.stop_monitoring",
+    "btsp.escalate",
+    "btsp.status",
+    "btsp.negotiate",
+    "auth.peer_info",
+    "route.register",
+    "niche.list",
+    "niche.deploy",
+]
+
+# ─── Experimental (subject to change) ────────────────────────────────
+
+[tiers.experimental]
+description = "Subject to change or removal. Do not depend on for production contracts."
+methods = [
+    "inference.schedule",
+    "inference.gates",
+    "inference.register_provider",
+    "inference.providers",
+    "inference.complete",
+    "inference.embed",
+    "inference.models",
+    "mcp.tools.list",
+    "agent.create",
+    "agent.list",
+    "agent.get",
+    "agent.remove",
+    "agent.meld",
+    "agent.split",
+    "agent.resolve",
+    "agent.route",
+    "agent.auto_meld",
+]
+
+# ─── Internal (not for external callers) ─────────────────────────────
+
+[tiers.internal]
+description = "Internal orchestrator methods. Not intended for direct external use."
+methods = [
+    "neural_api.list_graphs",
+    "neural_api.get_graph",
+    "neural_api.save_graph",
+    "neural_api.execute_graph",
+    "neural_api.get_execution_status",
+    "neural_api.execute_pipeline",
+    "neural_api.start_continuous",
+    "neural_api.pause_continuous",
+    "neural_api.resume_continuous",
+    "neural_api.stop_continuous",
+    "neural_api.suggest_optimizations",
+    "neural_api.get_topology",
+    "neural_api.get_primals",
+    "neural_api.get_proprioception",
+    "neural_api.get_metrics",
+    "neural_api.list_niche_templates",
+    "neural_api.deploy_niche",
+    "neural_api.discover_capability",
+    "neural_api.route_to_primal",
+    "neural_api.get_routing_metrics",
+    "neural_api.proxy_http",
+    "neural_api.primal_announce",
+    "neural_api.signal_dispatch",
+    "neural_api.signal_list",
+    "neural_api.signal_schema",
+]

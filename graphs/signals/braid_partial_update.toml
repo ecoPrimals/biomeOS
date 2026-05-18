@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: braid.partial_update
+#
+# Fired when a DAG node seals during a long-running computation.
+# Propagates partial Merkle root to downstream consumers (lithoSpore
+# via RootPulse) so incremental braid verification is possible before
+# the full session closes.
+#
+# Wire format (from wetSpring upstream ask):
+#   signal.dispatch { "signal": "braid.partial_update", "params": {
+#     "session_id": "...", "merkle_root": "...", "sealed_count": N
+#   }}
+#
+# Degradation: if unavailable, braids accumulate on disk and are pushed
+# via git. RootPulse propagation is enrichment, not gate.
+
+[graph]
+id = "braid_partial_update"
+name = "Braid Partial Update Signal"
+description = "Propagate partial Merkle root from sealed DAG nodes to downstream consumers."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "braid"
+signal_name = "partial_update"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "uds_only"
+secure_by_default = true
+fragments = ["provenance_trio"]
+
+[[graph.nodes]]
+name = "verify_dag_state"
+binary = "rhizocrypt"
+order = 1
+required = true
+spawn = false
+by_capability = "dag"
+capabilities = ["dag.session.state"]
+
+[[graph.nodes]]
+name = "partial_dehydrate"
+binary = "rhizocrypt"
+order = 2
+required = true
+spawn = false
+depends_on = ["verify_dag_state"]
+by_capability = "dag"
+capabilities = ["dag.partial_dehydrate"]
+
+[[graph.nodes]]
+name = "weave_partial_braid"
+binary = "sweetgrass"
+order = 3
+required = true
+spawn = false
+depends_on = ["partial_dehydrate"]
+by_capability = "commit"
+capabilities = ["braid.create"]
+
+[[graph.nodes]]
+name = "record_aglet"
+binary = "loamspine"
+order = 4
+required = false
+spawn = false
+depends_on = ["weave_partial_braid"]
+by_capability = "ledger"
+capabilities = ["entry.append"]

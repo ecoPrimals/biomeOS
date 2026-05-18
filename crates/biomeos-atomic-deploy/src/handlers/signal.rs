@@ -3,9 +3,10 @@
 
 //! Atomic signal dispatch handler.
 //!
-//! Decomposes atomic signals (e.g., `tower.publish`, `nest.store`) into
-//! graph executions. Each signal maps to a TOML graph in `graphs/signals/`
-//! that defines the primal-level capability calls biomeOS orchestrates.
+//! Decomposes atomic signals (e.g., `tower.publish`, `nest.store`,
+//! `braid.partial_update`) into graph executions. Each signal maps to a
+//! TOML graph in `graphs/signals/` that defines the primal-level capability
+//! calls biomeOS orchestrates.
 //!
 //! This is the "composition collapse" layer: springs send one signal,
 //! biomeOS executes a multi-node graph.
@@ -17,7 +18,13 @@ use tracing::{debug, info};
 
 /// Known atomic signal tiers. A capability.call with one of these as the
 /// `capability` field is intercepted and dispatched as a signal graph.
-const SIGNAL_TIERS: &[&str] = &["tower", "node", "nest", "meta"];
+///
+/// - **tower**: security + mesh orchestration signals
+/// - **node**: compute-level signals
+/// - **nest**: storage + content signals
+/// - **meta**: observability + composition signals
+/// - **braid**: provenance braid lifecycle signals (partial updates, completion)
+const SIGNAL_TIERS: &[&str] = &["tower", "node", "nest", "meta", "braid"];
 
 /// Check whether a capability domain is a signal tier.
 pub fn is_signal_tier(capability: &str) -> bool {
@@ -78,7 +85,7 @@ pub fn load_signal_schema(graphs_dir: &Path) -> Result<Value> {
 pub struct SignalInfo {
     /// Signal graph file name (without extension).
     pub name: String,
-    /// Atomic tier this signal belongs to (tower/node/nest/meta).
+    /// Atomic tier this signal belongs to (tower/node/nest/meta/braid).
     pub tier: String,
     /// Signal operation name within the tier.
     pub signal: String,
