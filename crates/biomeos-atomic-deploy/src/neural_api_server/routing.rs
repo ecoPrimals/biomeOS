@@ -344,6 +344,23 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
     ("btsp.negotiate", Route::BtspNegotiate),
+    // Signal-tier semantic routes (R5): direct method-name → signal graph interception
+    ("nest.store", Route::SemanticCapabilityCall),
+    ("nest.commit", Route::SemanticCapabilityCall),
+    ("nest.retrieve", Route::SemanticCapabilityCall),
+    ("tower.publish", Route::SemanticCapabilityCall),
+    ("tower.authenticate", Route::SemanticCapabilityCall),
+    ("tower.discover", Route::SemanticCapabilityCall),
+    ("tower.health", Route::SemanticCapabilityCall),
+    ("tower.bootstrap", Route::SemanticCapabilityCall),
+    ("node.compute", Route::SemanticCapabilityCall),
+    ("braid.partial_update", Route::SemanticCapabilityCall),
+    ("braid.complete", Route::SemanticCapabilityCall),
+    ("meta.observe", Route::SemanticCapabilityCall),
+    ("meta.intent", Route::SemanticCapabilityCall),
+    ("meta.render", Route::SemanticCapabilityCall),
+    ("meta.health", Route::SemanticCapabilityCall),
+    ("meta.deploy", Route::SemanticCapabilityCall),
     // Mesh & NAT (explicit semantic capability routes for known domains)
     ("mesh.status", Route::SemanticCapabilityCall),
     ("mesh.find_path", Route::SemanticCapabilityCall),
@@ -694,7 +711,9 @@ impl NeuralApiServer {
             }
             // Spring status (Tier 2 notebook integration)
             Route::SpringStatus => dispatch(self.lifecycle_handler.spring_status().await, id),
-            // Spore lifecycle — atomic VM provisioning (lithoSpore ask R7)
+            // Spore lifecycle — atomic VM provisioning (lithoSpore ask R7).
+            // DEFERRED-TO-STADIAL: route scaffold exists, graph structural only.
+            // Wire to lithoSpore VM provisioning when Tier 3 is ready.
             Route::SporeInstantiate => {
                 let spore_params = params.clone().unwrap_or(json!({}));
                 let graph_id = spore_params
@@ -705,6 +724,7 @@ impl NeuralApiServer {
                     "graph_id": graph_id,
                     "family_id": self.family_id,
                     "spore_context": spore_params,
+                    "_deferred": "lithoSpore Tier 3 not yet available — graph nodes will be skipped",
                 });
                 dispatch(self.graph_handler.execute(&Some(execute_params)).await, id)
             }

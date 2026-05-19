@@ -1,6 +1,6 @@
 # biomeOS - Current Status
 
-**Updated**: May 18, 2026 (v3.62: Stale socket cleanup R9 — startup scan + PID files + shutdown cleanup; v3.61 evolution debt; 7,915+ tests)
+**Updated**: May 19, 2026 (v3.63: R5 signal route promotion — all 16 signals as first-class routes; R7 spore.instantiate deferred-to-stadial; v3.62 stale socket cleanup; 7,915+ tests)
 **Version**: 3.59
 **Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 

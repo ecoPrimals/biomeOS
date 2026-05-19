@@ -429,6 +429,9 @@ Systematic deep debt resolution across 7 waves:
 - [x] Stale socket cleanup on startup (R9, wetSpring upstream ask) — v3.62
 - [x] PID files alongside primal sockets for instant liveness checks — v3.62
 - [x] Shutdown socket + PID cleanup for launched primals — v3.62
+- [x] R5: `nest.store` + all 16 signals as first-class route table entries — v3.63
+- [x] R7: `spore.instantiate` explicitly deferred-to-stadial (lithoSpore Tier 3) — v3.63
+- [x] 3 new signal dispatch tests (nest pipeline, path resolution, schema↔graph) — v3.63
 
 ### Degradation Behavior
 

@@ -2,6 +2,27 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.63 (2026-05-19) — Signal Route Promotion (R5) + R7 Deferral
+
+### R5: nest.store as first-class signal dispatch target
+- All 16 signal methods (`nest.store`, `tower.publish`, `braid.complete`, etc.)
+  registered as explicit route table entries (`SemanticCapabilityCall`).
+- Callers can invoke `nest.store` directly as a JSON-RPC method name without
+  `signal.dispatch` or `capability.call` indirection.
+- Infrastructure was already complete (graph, tier, schema, interception);
+  gap was route table discoverability.
+- 3 new signal dispatch tests: nest pipeline validation, path resolution for
+  all nest signals, and schema↔graph cross-validation.
+
+### R7: spore.instantiate deferred-to-stadial
+- Handler now includes `_deferred` context field indicating lithoSpore Tier 3
+  dependency. Graph structural definition remains; operation handlers produce
+  skip responses until lithoSpore implements backing.
+
+### Handoff
+- `BIOMEOS_V363_UPSTREAM_GAPS_RESOLVED_MAY19_2026.md` — full resolution
+  documentation for primalSpring upstream gap sweep.
+
 ## v3.62 (2026-05-18) — Stale Socket Cleanup (R9)
 
 ### Startup stale socket scan

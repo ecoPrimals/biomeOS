@@ -155,3 +155,91 @@ fn signal_graphs_have_required_metadata() {
         }
     }
 }
+
+#[test]
+fn nest_store_graph_has_provenance_pipeline() {
+    let path = graphs_dir().join("signals/nest_store.toml");
+    let content = std::fs::read_to_string(&path).expect("read nest_store.toml");
+    let parsed: toml::Value = toml::from_str(&content).expect("parse nest_store.toml");
+
+    let graph = parsed.get("graph").expect("missing [graph]");
+    assert_eq!(
+        graph["signal_tier"].as_str(),
+        Some("nest"),
+        "nest_store should be in 'nest' tier"
+    );
+    assert_eq!(
+        graph["signal_name"].as_str(),
+        Some("store"),
+        "nest_store signal_name should be 'store'"
+    );
+    assert_eq!(
+        graph["coordination"].as_str(),
+        Some("sequential"),
+        "nest_store should be sequential (provenance order matters)"
+    );
+
+    let nodes = graph["nodes"].as_array().expect("nodes array");
+    assert_eq!(
+        nodes.len(),
+        4,
+        "nest.store pipeline: store -> dag -> commit -> attribute"
+    );
+
+    let node_names: Vec<&str> = nodes
+        .iter()
+        .map(|n| n["name"].as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(
+        node_names,
+        ["store_content", "dag_append", "commit", "attribute"],
+        "nest.store pipeline order"
+    );
+
+    let binaries: Vec<&str> = nodes
+        .iter()
+        .map(|n| n["binary"].as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(
+        binaries,
+        ["nestgate", "rhizocrypt", "loamspine", "sweetgrass"],
+        "nest.store provenance trio + storage"
+    );
+}
+
+#[test]
+fn signal_graph_path_resolves_all_nest_signals() {
+    use biomeos_atomic_deploy::handlers::signal::signal_graph_path;
+
+    let dir = graphs_dir();
+    for signal in ["store", "commit", "retrieve"] {
+        let path = signal_graph_path(&dir, "nest", signal);
+        assert!(
+            path.exists(),
+            "nest.{signal} graph should exist at {}",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn all_signal_tools_have_matching_graphs() {
+    use biomeos_atomic_deploy::handlers::signal::load_signal_schema;
+
+    let dir = graphs_dir();
+    let schema = load_signal_schema(&dir).expect("load signal_tools.toml");
+    let tools = schema["tools"].as_array().expect("tools array");
+
+    for tool in tools {
+        let name = tool["name"].as_str().expect("tool name");
+        let graph_ref = tool["graph"].as_str().expect("tool graph path");
+        let graph_path = dir.join("..").join(graph_ref);
+        assert!(
+            graph_path.exists(),
+            "Tool '{}' references graph '{}' which does not exist at {}",
+            name,
+            graph_ref,
+            graph_path.display()
+        );
+    }
+}
