@@ -819,6 +819,7 @@ capabilities = [
 "provenance.verify_anchor" = { provider = "sweetgrass", method = "anchoring.verify" }
 "provenance.get_anchors" = { provider = "sweetgrass", method = "anchoring.get_anchors" }
 "provenance.health" = { provider = "sweetgrass", method = "health.check" }
+"provenance.sync_braid" = { provider = "sweetgrass", method = "braid.sync" }
 
 # ------------------------------------------------------------------------------
 # Compute Dispatch Domain (ToadStool — Sub-Frame GPU Protocol)

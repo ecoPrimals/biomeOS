@@ -2,6 +2,26 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.64 (2026-05-19) — Cross-Spring Provenance Exchange (WS-2)
+
+### WS-2: `nest.sync` — cross-spring RootPulse data exchange
+- New signal graph `nest_sync.toml`: 6-node sequential pipeline for
+  cross-spring braid subset pull with provenance continuity through the trio.
+  Pipeline: `fetch_dag_slice` (rhizoCrypt) → `verify_proof` (rhizoCrypt) →
+  `store_content` (nestGate) → `sync_braid` (sweetGrass) → `commit_sync`
+  (loamSpine) → `attribute_sync` (sweetGrass).
+- `braid.sync` capability registered in `capability_registry.toml`
+  (`provenance.sync_braid` → sweetGrass `braid.sync`).
+- `nest.sync` schema registered in `signal_tools.toml` with `remote_gate`,
+  `session_id`, `spine_id`, `content_filter` parameters.
+- `nest.sync` added to route table as first-class `SemanticCapabilityCall`.
+- Signal graph count: 16 → 17; nest tier: 3 → 4 signals.
+- New test: `nest_sync_graph_has_cross_spring_pipeline` — validates 6-node
+  structure, binary assignments, and `cross_gate` fragment metadata.
+
+### Handoff
+- `BIOMEOS_V364_WS2_CROSS_SPRING_SYNC_MAY19_2026.md`
+
 ## v3.63 (2026-05-19) — Signal Route Promotion (R5) + R7 Deferral
 
 ### R5: nest.store as first-class signal dispatch target

@@ -179,6 +179,25 @@ content = "Raw content bytes"
 session_state = "loamSpine session state (if active)"
 provenance = "sweetGrass provenance attribution (if requested)"
 
+[[tools]]
+name = "nest.sync"
+tier = "nest"
+description = "Cross-spring provenance exchange (WS-2 / RootPulse). Fetch braid subset from remote NestGate via cross-gate capability.call, verify via rhizoCrypt, store locally, sync attribution via sweetGrass, commit to loamSpine."
+graph = "graphs/signals/nest_sync.toml"
+coordination = "sequential"
+primals = ["rhizocrypt", "nestgate", "sweetgrass", "loamspine"]
+
+[tools.parameters]
+remote_gate = { type = "string", required = true, description = "Gate ID of the source spring's NUCLEUS" }
+session_id = { type = "string", required = true, description = "rhizoCrypt session to sync from" }
+spine_id = { type = "string", required = false, description = "Local loamSpine spine for commit (defaults to active)" }
+content_filter = { type = "object", required = false, description = "Optional filter for subset selection (braid IDs, time range, author)" }
+
+[tools.returns]
+synced_count = "Number of entries synced"
+braid_id = "Attribution braid ID for the sync event"
+commit_hash = "loamSpine commit hash"
+
 # ─── Braid Signals (provenance lifecycle) ──────────────────────────────
 
 [[tools]]

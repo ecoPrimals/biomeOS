@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.sync (WS-2: Cross-Spring Data Exchange / RootPulse)
+#
+# Cross-spring provenance exchange: one spring requests a braid subset
+# from another spring's NestGate with provenance continuity through the
+# trio pipeline. This is the signal-dispatch equivalent of the
+# rootpulse_federate workflow graph, scoped to braid subset pull.
+#
+# Minimum viable flow:
+#   1. Fetch DAG slice from remote rhizoCrypt (cross-gate capability.call)
+#   2. Verify proof integrity against local rhizoCrypt
+#   3. Store content locally via NestGate
+#   4. Sync braid attribution via sweetGrass
+#   5. Commit sync event to local loamSpine ledger
+#
+# Required params:
+#   remote_gate  — gate ID of the source spring's NUCLEUS
+#   session_id   — rhizoCrypt session to sync from
+#   spine_id     — loamSpine spine for commit (optional, defaults to active)
+#
+# Degradation: if unavailable, springs fall back to direct IPC calls
+# (4-call provenance trio pattern) or git-based braid exchange.
+
+[graph]
+id = "nest_sync"
+name = "Nest Sync Signal"
+description = "Cross-spring provenance exchange: fetch braid subset from remote NestGate with trio continuity."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "sync"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "uds_only"
+secure_by_default = true
+fragments = ["provenance_trio", "cross_gate"]
+
+[[graph.nodes]]
+name = "fetch_dag_slice"
+binary = "rhizocrypt"
+order = 1
+required = true
+spawn = false
+by_capability = "dag"
+capabilities = ["dag.checkout_slice"]
+
+[[graph.nodes]]
+name = "verify_proof"
+binary = "rhizocrypt"
+order = 2
+required = true
+spawn = false
+depends_on = ["fetch_dag_slice"]
+by_capability = "dag"
+capabilities = ["dag.verify_proof"]
+
+[[graph.nodes]]
+name = "store_content"
+binary = "nestgate"
+order = 3
+required = true
+spawn = false
+depends_on = ["verify_proof"]
+by_capability = "storage"
+capabilities = ["content.put"]
+
+[[graph.nodes]]
+name = "sync_braid"
+binary = "sweetgrass"
+order = 4
+required = true
+spawn = false
+depends_on = ["store_content"]
+by_capability = "attribution"
+capabilities = ["braid.sync"]
+
+[[graph.nodes]]
+name = "commit_sync"
+binary = "loamspine"
+order = 5
+required = true
+spawn = false
+depends_on = ["sync_braid"]
+by_capability = "ledger"
+capabilities = ["session.commit"]
+
+[[graph.nodes]]
+name = "attribute_sync"
+binary = "sweetgrass"
+order = 6
+required = false
+spawn = false
+depends_on = ["commit_sync"]
+by_capability = "attribution"
+capabilities = ["braid.create"]

@@ -13,7 +13,7 @@ fn graphs_dir() -> PathBuf {
 }
 
 #[test]
-fn all_16_signal_graphs_exist() {
+fn all_17_signal_graphs_exist() {
     let dir = graphs_dir().join("signals");
     assert!(dir.exists(), "graphs/signals/ directory not found");
 
@@ -27,6 +27,7 @@ fn all_16_signal_graphs_exist() {
         "nest_store",
         "nest_commit",
         "nest_retrieve",
+        "nest_sync",
         "braid_partial_update",
         "braid_complete",
         "meta_observe",
@@ -87,20 +88,21 @@ fn is_signal_tier_recognizes_valid_tiers() {
 }
 
 #[test]
-fn list_signal_graphs_finds_all_16() {
+fn list_signal_graphs_finds_all_17() {
     use biomeos_atomic_deploy::handlers::signal::list_signal_graphs;
 
     let signals = list_signal_graphs(&graphs_dir());
     assert_eq!(
         signals.len(),
-        16,
-        "Expected 16 signal graphs, found {}",
+        17,
+        "Expected 17 signal graphs, found {}",
         signals.len()
     );
 
     let names: Vec<&str> = signals.iter().map(|s| s.name.as_str()).collect();
     assert!(names.contains(&"tower.publish"));
     assert!(names.contains(&"nest.store"));
+    assert!(names.contains(&"nest.sync"));
     assert!(names.contains(&"meta.deploy"));
     assert!(names.contains(&"tower.bootstrap"));
     assert!(names.contains(&"braid.partial_update"));
@@ -117,7 +119,7 @@ fn signal_schema_loads() {
     let schema = result.unwrap();
     let tools = schema.get("tools").expect("schema should have 'tools' key");
     let tools_arr = tools.as_array().expect("'tools' should be an array");
-    assert_eq!(tools_arr.len(), 16, "Expected 16 tool definitions");
+    assert_eq!(tools_arr.len(), 17, "Expected 17 tool definitions");
 }
 
 #[test]
@@ -212,7 +214,7 @@ fn signal_graph_path_resolves_all_nest_signals() {
     use biomeos_atomic_deploy::handlers::signal::signal_graph_path;
 
     let dir = graphs_dir();
-    for signal in ["store", "commit", "retrieve"] {
+    for signal in ["store", "commit", "retrieve", "sync"] {
         let path = signal_graph_path(&dir, "nest", signal);
         assert!(
             path.exists(),
@@ -242,4 +244,65 @@ fn all_signal_tools_have_matching_graphs() {
             graph_path.display()
         );
     }
+}
+
+#[test]
+fn nest_sync_graph_has_cross_spring_pipeline() {
+    let path = graphs_dir().join("signals/nest_sync.toml");
+    let content = std::fs::read_to_string(&path).expect("read nest_sync.toml");
+    let parsed: toml::Value = toml::from_str(&content).expect("parse nest_sync.toml");
+
+    let graph = parsed.get("graph").expect("missing [graph]");
+    assert_eq!(graph["signal_tier"].as_str(), Some("nest"));
+    assert_eq!(graph["signal_name"].as_str(), Some("sync"));
+    assert_eq!(graph["coordination"].as_str(), Some("sequential"));
+
+    let metadata = graph.get("metadata").expect("missing [graph.metadata]");
+    let fragments = metadata["fragments"].as_array().expect("fragments array");
+    let fragment_strs: Vec<&str> = fragments.iter().filter_map(|f| f.as_str()).collect();
+    assert!(
+        fragment_strs.contains(&"cross_gate"),
+        "nest.sync should declare cross_gate fragment for cross-spring exchange"
+    );
+
+    let nodes = graph["nodes"].as_array().expect("nodes array");
+    assert_eq!(
+        nodes.len(),
+        6,
+        "nest.sync pipeline: slice -> verify -> store -> sync_braid -> commit -> attribute"
+    );
+
+    let node_names: Vec<&str> = nodes
+        .iter()
+        .map(|n| n["name"].as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(
+        node_names,
+        [
+            "fetch_dag_slice",
+            "verify_proof",
+            "store_content",
+            "sync_braid",
+            "commit_sync",
+            "attribute_sync"
+        ],
+        "nest.sync cross-spring pipeline order"
+    );
+
+    let binaries: Vec<&str> = nodes
+        .iter()
+        .map(|n| n["binary"].as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(
+        binaries,
+        [
+            "rhizocrypt",
+            "rhizocrypt",
+            "nestgate",
+            "sweetgrass",
+            "loamspine",
+            "sweetgrass"
+        ],
+        "nest.sync uses full provenance trio with cross-gate dag fetch"
+    );
 }

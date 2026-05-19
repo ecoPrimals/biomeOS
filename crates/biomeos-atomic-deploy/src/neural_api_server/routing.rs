@@ -348,6 +348,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("nest.store", Route::SemanticCapabilityCall),
     ("nest.commit", Route::SemanticCapabilityCall),
     ("nest.retrieve", Route::SemanticCapabilityCall),
+    ("nest.sync", Route::SemanticCapabilityCall),
     ("tower.publish", Route::SemanticCapabilityCall),
     ("tower.authenticate", Route::SemanticCapabilityCall),
     ("tower.discover", Route::SemanticCapabilityCall),

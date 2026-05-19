@@ -1,6 +1,6 @@
 # biomeOS - Current Status
 
-**Updated**: May 19, 2026 (v3.63: R5 signal route promotion — all 16 signals as first-class routes; R7 spore.instantiate deferred-to-stadial; v3.62 stale socket cleanup; 7,915+ tests)
+**Updated**: May 19, 2026 (v3.64: WS-2 nest.sync cross-spring provenance exchange — 17 signal graphs, braid.sync capability; v3.63 signal route promotion; v3.62 stale socket cleanup; 7,915+ tests)
 **Version**: 3.59
 **Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 

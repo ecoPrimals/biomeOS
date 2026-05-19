@@ -432,6 +432,9 @@ Systematic deep debt resolution across 7 waves:
 - [x] R5: `nest.store` + all 16 signals as first-class route table entries — v3.63
 - [x] R7: `spore.instantiate` explicitly deferred-to-stadial (lithoSpore Tier 3) — v3.63
 - [x] 3 new signal dispatch tests (nest pipeline, path resolution, schema↔graph) — v3.63
+- [x] WS-2: `nest.sync` cross-spring provenance exchange (RootPulse) — v3.64
+- [x] `braid.sync` capability registered for sweetGrass — v3.64
+- [x] Signal graph count 16→17, nest tier 3→4 signals — v3.64
 
 ### Degradation Behavior
 
