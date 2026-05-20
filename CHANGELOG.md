@@ -2,6 +2,22 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.65 (2026-05-20) — primal.list Wave 20 Schema Alignment
+
+### primal.list schema conformance (Wave 31 / primalSpring s_schema_standard)
+- Entry-level schema aligned with primalSpring Wave 20 canonical spec:
+  `name` (required), `socket` (required), `status` (required), `pid` (optional),
+  `capabilities` (optional), `version` (optional).
+- Previous fields (`primal_type`, `socket_path`, `health`, `id`, `resource_usage`)
+  retained for backward compatibility.
+- PID surfacing: `read_pid_file()` reads `{primal}-{family_id}.pid` files
+  (written since v3.62) and includes `pid` in each entry.
+- biomeos-api self-report stub updated to emit Wave 20 fields.
+- Topology tests updated to assert Wave 20 canonical fields alongside legacy.
+
+### Handoff
+- `BIOMEOS_V365_WAVE31_SCHEMA_ALIGNMENT_MAY20_2026.md`
+
 ## v3.64 (2026-05-19) — Cross-Spring Provenance Exchange (WS-2)
 
 ### WS-2: `nest.sync` — cross-spring RootPulse data exchange

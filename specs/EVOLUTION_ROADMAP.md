@@ -435,6 +435,7 @@ Systematic deep debt resolution across 7 waves:
 - [x] WS-2: `nest.sync` cross-spring provenance exchange (RootPulse) — v3.64
 - [x] `braid.sync` capability registered for sweetGrass — v3.64
 - [x] Signal graph count 16→17, nest tier 3→4 signals — v3.64
+- [x] `primal.list` Wave 20 schema alignment (name/socket/status/pid/version) — v3.65
 
 ### Degradation Behavior
 

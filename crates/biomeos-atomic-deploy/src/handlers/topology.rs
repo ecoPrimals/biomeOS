@@ -127,12 +127,20 @@ impl TopologyHandler {
                                 )
                                 .await;
 
+                            let status = if healthy { "running" } else { "unreachable" };
+                            let pid = Self::read_pid_file(socket_dir, filename);
+
                             primals.push(json!({
+                                "name": primal_name,
+                                "socket": socket_path,
+                                "status": status,
+                                "capabilities": capabilities,
+                                "pid": pid,
+                                "version": null,
                                 "id": filename.trim_end_matches(".sock"),
                                 "primal_type": primal_name,
                                 "socket_path": socket_path,
-                                "health": if healthy { "healthy" } else { "unreachable" },
-                                "capabilities": capabilities,
+                                "health": status,
                                 "resource_usage": null
                             }));
                         }
@@ -145,17 +153,19 @@ impl TopologyHandler {
         let registered = self.router.list_capabilities().await;
         for (cap, providers) in registered {
             for provider in providers {
-                // Avoid duplicates
-                if !primals
-                    .iter()
-                    .any(|p| p["socket_path"] == provider.endpoint.display_string())
-                {
+                let ep_str = provider.endpoint.display_string();
+                if !primals.iter().any(|p| p["socket"] == ep_str) {
                     primals.push(json!({
+                        "name": provider.primal_name,
+                        "socket": ep_str,
+                        "status": "running",
+                        "capabilities": [cap],
+                        "pid": null,
+                        "version": null,
                         "id": format!("{}-{}", provider.primal_name, self.family_id),
                         "primal_type": provider.primal_name,
-                        "socket_path": provider.endpoint.display_string(),
-                        "health": "healthy",
-                        "capabilities": [cap],
+                        "socket_path": ep_str,
+                        "health": "running",
                         "resource_usage": null
                     }));
                 }
@@ -309,6 +319,17 @@ impl TopologyHandler {
         }
 
         dirs
+    }
+
+    /// Read a primal's PID from its `.pid` file alongside the socket.
+    ///
+    /// PID files follow the `{primal}-{family_id}.pid` convention from v3.62.
+    fn read_pid_file(socket_dir: &std::path::Path, sock_filename: &str) -> Option<u32> {
+        let pid_filename = sock_filename.replace(".sock", ".pid");
+        let pid_path = socket_dir.join(pid_filename);
+        std::fs::read_to_string(pid_path)
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
     }
 
     /// Infer connections from capability relationships.

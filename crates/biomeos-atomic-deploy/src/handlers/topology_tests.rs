@@ -61,6 +61,21 @@ async fn test_topology_get_response_structure() {
         .expect("connections is array");
 
     for p in primals {
+        // Wave 20 canonical fields (primalSpring s_schema_standard)
+        assert!(p.get("name").is_some(), "Primal must have name (Wave 20)");
+        assert!(
+            p.get("socket").is_some(),
+            "Primal must have socket (Wave 20)"
+        );
+        assert!(
+            p.get("status").is_some(),
+            "Primal must have status (Wave 20)"
+        );
+        assert!(
+            p.get("capabilities").is_some(),
+            "Primal must have capabilities"
+        );
+        // Backward-compat fields
         assert!(p.get("id").is_some(), "Primal must have id");
         assert!(
             p.get("primal_type").is_some(),
@@ -71,10 +86,6 @@ async fn test_topology_get_response_structure() {
             "Primal must have socket_path"
         );
         assert!(p.get("health").is_some(), "Primal must have health");
-        assert!(
-            p.get("capabilities").is_some(),
-            "Primal must have capabilities"
-        );
     }
 
     for c in connections {

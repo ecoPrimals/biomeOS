@@ -214,7 +214,13 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
         "primal.list" | "topology.primals" => {
             let result = serde_json::json!({
                 "primals": [
-                    { "name": "biomeos", "role": "orchestrator", "status": "alive" }
+                    {
+                        "name": "biomeos",
+                        "socket": "self",
+                        "status": "running",
+                        "capabilities": ["orchestration"],
+                        "pid": std::process::id(),
+                    }
                 ],
                 "count": 1,
                 "note": "biomeOS API socket reports itself only. \
