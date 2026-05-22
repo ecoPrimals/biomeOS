@@ -41,7 +41,10 @@ pub use types::{
 pub use composition::{
     CompositionPattern, CompositionPatternRegistry, CompositionTier, TierCompositionPlan,
 };
-pub use weights::{ProviderWeight, RoutingWeightTable, WeightTableSummary};
+pub use weights::{
+    CapabilityUtilizationTracker, MethodUtilization, ProviderWeight, RoutingWeightTable,
+    UtilizationSummary, WeightTableSummary,
+};
 
 /// Neural Router - Capability-based request routing with adaptive weights
 pub struct NeuralRouter {
@@ -65,6 +68,11 @@ pub struct NeuralRouter {
     /// Composition patterns — named method sequences forming emergent systems.
     /// Seeded with canonical patterns, extended by graph loading and primal.announce.
     composition_patterns: Arc<RwLock<CompositionPatternRegistry>>,
+
+    /// Capability utilization tracker — records hot/cold method usage.
+    /// Fed by every `capability.call` dispatch; queried for graph pre-staging
+    /// decisions and the future learned routing layer.
+    utilization_tracker: Arc<RwLock<CapabilityUtilizationTracker>>,
 
     /// Request timeout
     pub(crate) request_timeout: Duration,
@@ -96,6 +104,31 @@ impl NeuralRouter {
             composition_patterns: Arc::new(RwLock::new(
                 CompositionPatternRegistry::with_canonical_patterns(),
             )),
+            utilization_tracker: Arc::new(RwLock::new(CapabilityUtilizationTracker::new())),
+            request_timeout: Duration::from_secs(30),
+            living_graph: None,
+            protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
+            lazy_rescan_attempted: AtomicBool::new(false),
+            self_socket_path: RwLock::new(None),
+        }
+    }
+
+    /// Create a new Neural Router with persistent routing weights backed by redb.
+    ///
+    /// Weights are loaded from the database on startup and flushed after
+    /// every mutation, surviving process restarts.
+    pub fn with_persistent_weights(family_id: impl Into<String>, weights_path: &std::path::Path) -> Self {
+        let weights = RoutingWeightTable::open(weights_path);
+        Self {
+            family_id: family_id.into(),
+            discovered_primals: Arc::new(RwLock::new(HashMap::new())),
+            capability_registry: Arc::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(RwLock::new(Vec::new())),
+            routing_weights: Arc::new(RwLock::new(weights)),
+            composition_patterns: Arc::new(RwLock::new(
+                CompositionPatternRegistry::with_canonical_patterns(),
+            )),
+            utilization_tracker: Arc::new(RwLock::new(CapabilityUtilizationTracker::new())),
             request_timeout: Duration::from_secs(30),
             living_graph: None,
             protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
@@ -298,6 +331,41 @@ impl NeuralRouter {
     ) {
         let mut weights = self.routing_weights.write().await;
         weights.set_cost_hint(capability, provider, cost);
+    }
+
+    /// Whether the routing weight table is backed by persistent storage.
+    pub async fn weights_are_persistent(&self) -> bool {
+        self.routing_weights.read().await.is_persistent()
+    }
+
+    /// Flush routing weights to persistent storage (no-op if in-memory).
+    pub async fn flush_weights(&self) {
+        self.routing_weights.read().await.flush();
+    }
+
+    /// Record a capability method call for utilization tracking.
+    pub async fn record_utilization(&self, method: &str) {
+        self.utilization_tracker.write().await.record(method);
+    }
+
+    /// Get utilization summary as JSON (for RPC responses).
+    pub async fn utilization_json(&self) -> serde_json::Value {
+        self.utilization_tracker.read().await.to_json()
+    }
+
+    /// Get the utilization summary statistics.
+    pub async fn utilization_summary(&self) -> UtilizationSummary {
+        self.utilization_tracker.read().await.summary()
+    }
+
+    /// Get hot methods (top N by call count).
+    pub async fn hot_methods(&self, n: usize) -> Vec<MethodUtilization> {
+        self.utilization_tracker.read().await.hot_methods(n)
+    }
+
+    /// Get cold methods (below threshold).
+    pub async fn cold_methods(&self, threshold: u64) -> Vec<MethodUtilization> {
+        self.utilization_tracker.read().await.cold_methods(threshold)
     }
 
     /// Classify a capability domain into its composition tier.

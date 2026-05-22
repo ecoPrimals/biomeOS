@@ -39,6 +39,7 @@ chrono = { workspace = true }
 futures = { workspace = true }
 uuid = { workspace = true }  # For request ID generation
 toml = { workspace = true }  # For Neural API graph parsing
+redb = { workspace = true }  # Persistent routing weights (ecoBin compliant)
 
 # Neural API integration (neural-api-client crate exists — uncomment when wired)
 # neural-api-client = { path = "../neural-api-client" }

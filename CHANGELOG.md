@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.69 (2026-05-22) — Wave 42: Persistent Weights + Utilization Tracking
+
+### Persistent routing weights (`neural_router/weights.rs`)
+- `RoutingWeightTable::open(path)` — redb-backed persistence. Weights are loaded
+  from disk on startup and flushed after every mutation (record_outcome,
+  set_affinity, set_cost_hint). Eliminates cold-start on restarts.
+- `NeuralRouter::with_persistent_weights()` constructor for persistent mode.
+- `flush()`, `is_persistent()`, `with_db()` methods on `RoutingWeightTable`.
+- 2 new persistence tests (survives_reload, flush_writes_all).
+
+### Capability utilization tracking (`neural_router/weights.rs`)
+- `CapabilityUtilizationTracker` — records every `capability.call` method invocation.
+  `hot_methods(n)` returns top-N by call count. `cold_methods(threshold)` returns
+  methods below a call threshold. `summary()` returns aggregate statistics.
+- Instrumented in `capability_call.rs` — every dispatch records utilization before
+  routing decisions.
+- New RPC: `neural_api.utilization` — returns hot methods, summary stats, and
+  tracked method count.
+- 5 new utilization tests.
+
+### Test count: 1311 (+8 from v3.68)
+
 ## v3.67 (2026-05-22) — Wave 40: Adaptive Routing Weights (Neural API Layer 4)
 
 ### Routing weight system (`neural_router/weights.rs`)

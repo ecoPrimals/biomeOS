@@ -222,6 +222,10 @@ impl CapabilityHandler {
 
         trace!("capability.call: {}.{}", capability, &operation);
 
+        // Layer 5 prep: record utilization for hot/cold method analysis
+        let semantic_name_early = format!("{capability}.{operation}");
+        self.router.record_utilization(&semantic_name_early).await;
+
         // Atomic signal interception: if the capability is a signal tier
         // (tower/node/nest/meta), check for a signal graph and execute it
         // instead of trying to discover a primal named "tower".

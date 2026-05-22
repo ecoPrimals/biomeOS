@@ -128,6 +128,7 @@ enum Route {
     RouteExplain,
     CompositionPatterns,
     CompositionPlanTier,
+    CapabilityUtilization,
     McpToolsList,
     Agent,
     ProxyHttp,
@@ -271,6 +272,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("neural_api.route_explain", Route::RouteExplain),
     ("neural_api.composition_patterns", Route::CompositionPatterns),
     ("neural_api.plan_tier", Route::CompositionPlanTier),
+    ("neural_api.utilization", Route::CapabilityUtilization),
     ("capability.call", Route::CapabilityCall),
     (
         "capability.discover_translations",
@@ -650,6 +652,9 @@ impl NeuralApiServer {
                     serde_json::to_value(&plan).map_err(anyhow::Error::from),
                     id,
                 )
+            }
+            Route::CapabilityUtilization => {
+                dispatch(Ok(self.router.utilization_json().await), id)
             }
             Route::CapabilityCall => {
                 let enriched = self.enrich_for_forwarding(params, &caller).await;
