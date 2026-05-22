@@ -10,6 +10,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod composition;
 mod discovery;
 mod discovery_composite;
 mod discovery_primal;
@@ -20,6 +21,7 @@ mod forwarding_routing_tests;
 #[cfg(test)]
 mod forwarding_tests;
 mod types;
+pub mod weights;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -36,8 +38,12 @@ use biomeos_types::tarpc_types::ProtocolPreference;
 pub use types::{
     AtomicType, DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability, RoutingMetrics,
 };
+pub use composition::{
+    CompositionPattern, CompositionPatternRegistry, CompositionTier, TierCompositionPlan,
+};
+pub use weights::{ProviderWeight, RoutingWeightTable, WeightTableSummary};
 
-/// Neural Router - Capability-based request routing
+/// Neural Router - Capability-based request routing with adaptive weights
 pub struct NeuralRouter {
     /// Family ID for socket discovery
     pub(crate) family_id: String,
@@ -50,6 +56,15 @@ pub struct NeuralRouter {
 
     /// Metrics collection
     metrics: Arc<RwLock<Vec<RoutingMetrics>>>,
+
+    /// Routing weights for adaptive dispatch (Layer 4 evolution).
+    /// Updated from dispatch outcomes, used by capability.call to
+    /// prefer faster/more-reliable providers.
+    routing_weights: Arc<RwLock<RoutingWeightTable>>,
+
+    /// Composition patterns — named method sequences forming emergent systems.
+    /// Seeded with canonical patterns, extended by graph loading and primal.announce.
+    composition_patterns: Arc<RwLock<CompositionPatternRegistry>>,
 
     /// Request timeout
     pub(crate) request_timeout: Duration,
@@ -77,6 +92,10 @@ impl NeuralRouter {
             discovered_primals: Arc::new(RwLock::new(HashMap::new())),
             capability_registry: Arc::new(RwLock::new(HashMap::new())),
             metrics: Arc::new(RwLock::new(Vec::new())),
+            routing_weights: Arc::new(RwLock::new(RoutingWeightTable::new())),
+            composition_patterns: Arc::new(RwLock::new(
+                CompositionPatternRegistry::with_canonical_patterns(),
+            )),
             request_timeout: Duration::from_secs(30),
             living_graph: None,
             protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
@@ -204,6 +223,112 @@ impl NeuralRouter {
     /// Clear metrics cache
     pub async fn clear_metrics(&self) {
         self.metrics.write().await.clear();
+    }
+
+    /// Record a dispatch outcome in the routing weight table.
+    ///
+    /// Called after every `capability.call` forward to build the adaptive
+    /// routing surface. Weights accumulate EWMA latency and error rate,
+    /// driving future provider selection.
+    pub async fn record_dispatch_outcome(
+        &self,
+        capability: &str,
+        provider: &str,
+        success: bool,
+        latency_ms: u64,
+    ) {
+        let mut weights = self.routing_weights.write().await;
+        weights.record_outcome(capability, provider, success, latency_ms);
+    }
+
+    /// Select the best provider for a capability using routing weights.
+    ///
+    /// Returns `None` if all candidates are circuit-broken or no candidates
+    /// are registered. Falls back to the first candidate if the weight table
+    /// has no observations yet.
+    pub async fn select_weighted_provider(
+        &self,
+        capability: &str,
+    ) -> Option<Arc<str>> {
+        let registry = self.capability_registry.read().await;
+        let providers = registry.get(capability)?;
+        if providers.is_empty() {
+            return None;
+        }
+
+        let candidates: Vec<Arc<str>> = providers
+            .iter()
+            .map(|p| p.primal_name.clone())
+            .collect();
+
+        let weights = self.routing_weights.read().await;
+        weights
+            .select_best(capability, &candidates)
+            .cloned()
+            .or_else(|| candidates.into_iter().next())
+    }
+
+    /// Get a snapshot of routing weights for introspection.
+    pub async fn get_routing_weights(&self) -> Vec<ProviderWeight> {
+        self.routing_weights.read().await.snapshot()
+    }
+
+    /// Get routing weight summary statistics.
+    pub async fn get_weight_summary(&self) -> WeightTableSummary {
+        self.routing_weights.read().await.summary()
+    }
+
+    /// Set a provider affinity hint (from primal.announce cost_hints).
+    pub async fn set_provider_affinity(
+        &self,
+        capability: &str,
+        provider: &str,
+        affinity: f64,
+    ) {
+        let mut weights = self.routing_weights.write().await;
+        weights.set_affinity(capability, provider, affinity);
+    }
+
+    /// Set a provider cost hint (from primal.announce cost_hints).
+    pub async fn set_provider_cost_hint(
+        &self,
+        capability: &str,
+        provider: &str,
+        cost: f64,
+    ) {
+        let mut weights = self.routing_weights.write().await;
+        weights.set_cost_hint(capability, provider, cost);
+    }
+
+    /// Classify a capability domain into its composition tier.
+    pub fn classify_tier(&self, domain: &str, provider: &str) -> CompositionTier {
+        CompositionTier::classify(domain, provider)
+    }
+
+    /// Get all registered composition patterns.
+    pub async fn get_composition_patterns(&self) -> Vec<CompositionPattern> {
+        self.composition_patterns.read().await.all().into_iter().cloned().collect()
+    }
+
+    /// Look up a composition pattern by name.
+    pub async fn get_pattern(&self, name: &str) -> Option<CompositionPattern> {
+        self.composition_patterns.read().await.get(name).cloned()
+    }
+
+    /// Register a new composition pattern (from graph loading or primal.announce).
+    pub async fn register_composition_pattern(&self, pattern: CompositionPattern) {
+        self.composition_patterns.write().await.register(pattern);
+    }
+
+    /// Get a tier composition plan.
+    pub async fn plan_tier(&self, tier: CompositionTier) -> TierCompositionPlan {
+        let registry = self.composition_patterns.read().await;
+        composition::plan_tier(tier, &registry)
+    }
+
+    /// Get composition patterns as JSON (for RPC responses).
+    pub async fn composition_patterns_json(&self) -> serde_json::Value {
+        self.composition_patterns.read().await.to_json()
     }
 
     /// Probe a newly-spawned primal and register its capabilities.

@@ -54,6 +54,22 @@ pub struct PrimalAnnouncement {
     /// Primal version string
     #[serde(default)]
     pub version: Option<String>,
+
+    /// Cost hints per capability — primals self-report expected dispatch cost
+    /// (arbitrary units, lower = cheaper). Used by the routing weight system
+    /// to prefer cheaper providers when quality is similar.
+    ///
+    /// Example: `{ "compute": 100.0, "storage": 10.0 }`
+    #[serde(default)]
+    pub cost_hints: Option<Value>,
+
+    /// Latency estimates per capability (ms) — primals self-report expected
+    /// response latency. Used to seed routing weights before operational data
+    /// accumulates.
+    ///
+    /// Example: `{ "crypto": 5, "compute": 200 }`
+    #[serde(default)]
+    pub latency_estimates: Option<Value>,
 }
 
 /// Result of processing a primal announcement.
@@ -210,6 +226,41 @@ pub async fn handle_announce(
             "  {} joins signal tiers: {:?}",
             announcement.primal, valid_tiers
         );
+    }
+
+    // 5. Routing weight seeding from self-reported hints (Layer 4 evolution)
+    if let Some(ref cost_hints) = announcement.cost_hints {
+        if let Some(map) = cost_hints.as_object() {
+            for (capability, cost) in map {
+                if let Some(cost_f) = cost.as_f64() {
+                    router
+                        .set_provider_cost_hint(capability, &announcement.primal, cost_f)
+                        .await;
+                    debug!(
+                        "  Routing weight: {}.{} cost_hint={}",
+                        announcement.primal, capability, cost_f
+                    );
+                }
+            }
+        }
+    }
+
+    if let Some(ref latency_estimates) = announcement.latency_estimates {
+        if let Some(map) = latency_estimates.as_object() {
+            for (capability, latency) in map {
+                if let Some(latency_ms) = latency.as_f64() {
+                    // Seed the weight with the primal's self-reported latency.
+                    // Higher affinity for primals that self-report (they're cooperating).
+                    router
+                        .set_provider_affinity(capability, &announcement.primal, 0.6)
+                        .await;
+                    debug!(
+                        "  Routing weight: {}.{} latency_estimate={}ms",
+                        announcement.primal, capability, latency_ms
+                    );
+                }
+            }
+        }
     }
 
     let attestation_verified = announcement.attestation.is_some();

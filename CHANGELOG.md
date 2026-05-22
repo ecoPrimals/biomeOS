@@ -2,6 +2,55 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.67 (2026-05-22) — Wave 40: Adaptive Routing Weights (Neural API Layer 4)
+
+### Routing weight system (`neural_router/weights.rs`)
+- `RoutingWeightTable` — per-provider routing weights with EWMA latency, error
+  rate, affinity hints, cost hints, and circuit breaker. `select_best()` scores
+  candidates and returns optimal provider.
+- `ProviderWeight` scoring: `affinity * reliability * latency_factor - cost_penalty`
+  with exploration bonus for cold providers (< 5 observations).
+- Circuit breaker: 5 consecutive failures → open, 30s cooldown → half-open probe.
+  Success resets immediately.
+- 14 new unit tests for weight system.
+
+### Adaptive dispatch feedback loop (`capability_call.rs`)
+- Every `capability.call` forward now records `(capability, provider, success, latency)`
+  into the routing weight table via `record_dispatch_outcome()`. Translation and
+  direct-route paths both instrumented.
+- Weights accumulate automatically — no configuration needed. Over time, faster and
+  more reliable providers are preferred.
+
+### `primal.announce` evolution (`announce.rs`)
+- `PrimalAnnouncement` now accepts `cost_hints` and `latency_estimates` fields.
+  Primals self-report expected costs and latencies per capability domain.
+- Cost hints feed `set_provider_cost_hint()` for the weight table.
+- Latency estimates set provider affinity to 0.6 (cooperating primals preferred).
+
+### New RPC methods
+- `neural_api.routing_weights` — returns full weight table snapshot + summary.
+- `neural_api.route_explain` — explains routing decision for a method: which
+  providers exist, what translations apply, what weights score each candidate,
+  and which would be selected. Supports `{ "method": "crypto.hash" }` or
+  `{ "capability": "crypto", "operation": "hash" }` formats.
+
+### Composition intelligence (`neural_router/composition.rs`)
+- `CompositionTier` enum — runtime tier classification (Tower/Node/Nest/Nucleus/
+  Meta/Orchestration/Standalone). `classify()` maps any domain + provider to its
+  tier. Abstracted from primalSpring's exploratory `neural_routing` module.
+- `CompositionPatternRegistry` — named method sequences forming emergent systems.
+  Canonical patterns: rootpulse_commit, tower_atomic_bootstrap, nest_store,
+  tower_publish, meta_observe, ionic_bond_lifecycle. Extensible at runtime.
+- `plan_tier()` — returns required primals, domains, and available patterns for
+  deploying a specific tier.
+- New RPC: `neural_api.composition_patterns`, `neural_api.plan_tier`.
+- 13 new unit tests.
+
+### Tests
+- 1303 lib tests passing (was ~1276, +14 weight + 13 composition).
+
+---
+
 ## v3.66 (2026-05-22) — Wave 38: nest.sync Cross-Gate Wiring + CG-8 Songbird Relay
 
 ### nest.sync live orchestration (Wave 38 Item 1)

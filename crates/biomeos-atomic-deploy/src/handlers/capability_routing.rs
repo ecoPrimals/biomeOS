@@ -89,6 +89,96 @@ pub fn routing_trace_value(phases: &[RoutingPhase], domain_capability: &str) -> 
     Value::Object(out)
 }
 
+/// Explain the routing decision for a given capability.method — which
+/// provider would be selected, what weights apply, and why.
+///
+/// JSON-RPC method: `neural_api.route_explain`
+///
+/// Parameters: `{ "method": "crypto.hash" }` or `{ "capability": "crypto", "operation": "hash" }`
+pub async fn explain_route(
+    router: &crate::neural_router::NeuralRouter,
+    translation_registry: &crate::capability_translation::CapabilityTranslationRegistry,
+    params: &Option<Value>,
+) -> anyhow::Result<Value> {
+    use anyhow::Context;
+
+    let params = params.as_ref().context("Missing parameters")?;
+
+    let (capability, operation) = if let Some(method) = params["method"].as_str() {
+        method
+            .split_once('.')
+            .map(|(c, o)| (c.to_string(), o.to_string()))
+            .context("method must be 'domain.operation'")?
+    } else {
+        let cap = params["capability"]
+            .as_str()
+            .context("Missing 'capability' or 'method'")?
+            .to_string();
+        let op = params["operation"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+        (cap, op)
+    };
+
+    let semantic_name = format!("{capability}.{operation}");
+
+    let translation = translation_registry.get_translation(&semantic_name);
+    let translation_info = translation.map(|t| {
+        json!({
+            "semantic": t.semantic,
+            "provider": t.provider,
+            "actual_method": t.actual_method,
+            "socket": t.socket,
+        })
+    });
+
+    let providers = router.get_capability_providers(&capability).await;
+    let provider_list: Vec<Value> = providers
+        .unwrap_or_default()
+        .iter()
+        .map(|p| {
+            json!({
+                "primal": p.primal_name,
+                "endpoint": p.endpoint.display_string(),
+                "source": p.source,
+            })
+        })
+        .collect();
+
+    let weights = router.get_routing_weights().await;
+    let relevant_weights: Vec<Value> = weights
+        .iter()
+        .filter(|w| w.capability.as_ref() == capability)
+        .map(|w| {
+            json!({
+                "provider": w.provider,
+                "score": w.score(),
+                "ewma_latency_ms": w.ewma_latency_ms,
+                "ewma_error_rate": w.ewma_error_rate,
+                "success_count": w.success_count,
+                "failure_count": w.failure_count,
+                "affinity": w.affinity,
+                "cost_hint": w.cost_hint,
+                "circuit_open": w.circuit_open,
+            })
+        })
+        .collect();
+
+    let weighted_selection = router.select_weighted_provider(&capability).await;
+
+    Ok(json!({
+        "method": semantic_name,
+        "capability": capability,
+        "operation": operation,
+        "translation": translation_info,
+        "providers": provider_list,
+        "routing_weights": relevant_weights,
+        "weighted_selection": weighted_selection,
+        "note": "Layer 4 adaptive routing — weights evolve from dispatch outcomes",
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

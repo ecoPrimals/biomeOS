@@ -124,6 +124,10 @@ enum Route {
     CapabilityCall,
     CapabilityDiscoverTranslations,
     CapabilityListTranslations,
+    RoutingWeights,
+    RouteExplain,
+    CompositionPatterns,
+    CompositionPlanTier,
     McpToolsList,
     Agent,
     ProxyHttp,
@@ -263,6 +267,10 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("ipc.resolve", Route::CapabilityResolveSingle),
     ("capability.metrics", Route::CapabilityMetrics),
     ("neural_api.get_routing_metrics", Route::CapabilityMetrics),
+    ("neural_api.routing_weights", Route::RoutingWeights),
+    ("neural_api.route_explain", Route::RouteExplain),
+    ("neural_api.composition_patterns", Route::CompositionPatterns),
+    ("neural_api.plan_tier", Route::CompositionPlanTier),
     ("capability.call", Route::CapabilityCall),
     (
         "capability.discover_translations",
@@ -596,6 +604,53 @@ impl NeuralApiServer {
                 dispatch(self.capability_handler.resolve(params).await, id)
             }
             Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, id),
+            Route::RoutingWeights => {
+                let weights = self.router.get_routing_weights().await;
+                let summary = self.router.get_weight_summary().await;
+                dispatch(
+                    Ok(serde_json::json!({
+                        "weights": weights,
+                        "summary": summary,
+                    })),
+                    id,
+                )
+            }
+            Route::RouteExplain => {
+                dispatch(
+                    crate::handlers::capability_routing::explain_route(
+                        &self.router,
+                        &*self.translation_registry.read().await,
+                        params,
+                    )
+                    .await,
+                    id,
+                )
+            }
+            Route::CompositionPatterns => {
+                let patterns = self.router.composition_patterns_json().await;
+                dispatch(Ok(patterns), id)
+            }
+            Route::CompositionPlanTier => {
+                let tier_name = params
+                    .as_ref()
+                    .and_then(|p| p.get("tier"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("tower");
+                let tier = match tier_name {
+                    "tower" => crate::neural_router::CompositionTier::Tower,
+                    "node" => crate::neural_router::CompositionTier::Node,
+                    "nest" => crate::neural_router::CompositionTier::Nest,
+                    "nucleus" => crate::neural_router::CompositionTier::Nucleus,
+                    "meta" => crate::neural_router::CompositionTier::Meta,
+                    "orchestration" => crate::neural_router::CompositionTier::Orchestration,
+                    _ => crate::neural_router::CompositionTier::Standalone,
+                };
+                let plan = self.router.plan_tier(tier).await;
+                dispatch(
+                    serde_json::to_value(&plan).map_err(anyhow::Error::from),
+                    id,
+                )
+            }
             Route::CapabilityCall => {
                 let enriched = self.enrich_for_forwarding(params, &caller).await;
                 dispatch_capability_call(self.capability_handler.call(&enriched).await, id)

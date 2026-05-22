@@ -373,9 +373,22 @@ impl CapabilityHandler {
                 let result = self
                     .router
                     .forward_request_with_timeout(&endpoint, &forward_method, &args, timeout_cap)
-                    .await?;
+                    .await;
 
                 let elapsed_ms = elapsed_ms_since(start);
+
+                // Layer 4: record dispatch outcome for adaptive routing weights
+                self.router
+                    .record_dispatch_outcome(
+                        capability,
+                        &primary_name,
+                        result.is_ok(),
+                        elapsed_ms,
+                    )
+                    .await;
+
+                let result = result?;
+
                 trace!(
                     "   ✓ {} completed in {}ms via {}",
                     semantic_name, elapsed_ms, provider_from_trans
@@ -433,9 +446,21 @@ impl CapabilityHandler {
                         &args,
                         timeout_cap,
                     )
-                    .await?;
+                    .await;
 
                 let elapsed_ms = elapsed_ms_since(start);
+
+                // Layer 4: record dispatch outcome for adaptive routing weights
+                self.router
+                    .record_dispatch_outcome(
+                        capability,
+                        &primary_name,
+                        result.is_ok(),
+                        elapsed_ms,
+                    )
+                    .await;
+
+                let result = result?;
 
                 let routing_trace = want_trace.then(|| {
                     routing_trace_value(
