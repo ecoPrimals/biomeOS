@@ -38,12 +38,19 @@ transport = "uds_only"
 secure_by_default = true
 fragments = ["provenance_trio", "cross_gate"]
 
+# Cross-gate env: signal dispatch injects remote_gate from caller params.
+# GateRegistry picks up keys whose values parse as transport endpoints.
+# Only fetch_dag_slice targets the remote; nodes 2-6 execute locally.
+[graph.env]
+remote_gate = ""
+
 [[graph.nodes]]
 name = "fetch_dag_slice"
 binary = "rhizocrypt"
 order = 1
 required = true
 spawn = false
+gate = "remote_gate"
 by_capability = "dag"
 capabilities = ["dag.checkout_slice"]
 

@@ -143,9 +143,20 @@ pub async fn dispatch(
     // resolves it from graphs/signals/. The signal_context metadata lets
     // MetricsCollector tag executions for PathwayLearner analysis under
     // a signal: namespace (e.g. "signal:tower.publish").
+    //
+    // Cross-gate signal support: if the caller provides a `remote_gate`
+    // endpoint (e.g. "tcp://westgate:9001"), inject it into the graph env
+    // so GateRegistry picks it up and nodes with `gate = "remote_gate"`
+    // forward to the remote NUCLEUS.
+    let mut env = json!({});
+    if let Some(remote_gate) = signal_params.get("remote_gate").and_then(|v| v.as_str()) {
+        env["remote_gate"] = json!(remote_gate);
+    }
+
     let execute_params = json!({
         "graph_id": graph_id,
         "family_id": family_id,
+        "env": env,
         "signal_context": {
             "tier": tier,
             "signal": signal,

@@ -181,8 +181,38 @@ impl CapabilityHandler {
                     routing_trace,
                 });
             } else {
+                // CG-8: Songbird relay fallback for unregistered gates.
+                // When direct gate resolution fails, attempt relay-mediated
+                // dispatch through Songbird's TURN relay. This enables
+                // multi-gate mesh compositions where gates may not be
+                // directly reachable (NAT, CGNAT, residential networks).
+                let semantic_name = format!("{capability}.{operation}");
+                if let Some(relay_result) = self
+                    .try_relay_dispatch(gate_name, &semantic_name, &args, timeout_cap)
+                    .await
+                {
+                    let elapsed_ms = elapsed_ms_since(start);
+                    let routing_trace = want_trace.then(|| {
+                        routing_trace_value(
+                            &[
+                                RoutingPhase::RouteResolved {
+                                    capability: capability.to_string(),
+                                    provider: format!("relay:{gate_name}"),
+                                    method: "capability.call".to_string(),
+                                },
+                                RoutingPhase::Forwarded { elapsed_ms },
+                            ],
+                            capability,
+                        )
+                    });
+                    return Ok(CapabilityCallOutcome {
+                        result: relay_result?,
+                        routing_trace,
+                    });
+                }
+
                 anyhow::bail!(
-                    "Gate '{gate_name}' is not registered. \
+                    "Gate '{gate_name}' is not registered and relay fallback unavailable. \
                      Register it via graph env or route.register before targeting it. \
                      Known gates: {:?}",
                     self.gate_registry.gate_names()
@@ -469,5 +499,68 @@ impl CapabilityHandler {
             }).collect::<Vec<_>>(),
             "count": all_translations.len()
         }))
+    }
+
+    /// CG-8: Attempt relay-mediated dispatch through Songbird.
+    ///
+    /// When a gate isn't directly registered, try to allocate a relay
+    /// channel via `relay.allocate` (Songbird) and forward the request
+    /// through it. Returns `None` if Songbird isn't available or relay
+    /// allocation fails — caller should fall through to the error path.
+    async fn try_relay_dispatch(
+        &self,
+        gate_name: &str,
+        method: &str,
+        args: &Value,
+        timeout: Option<std::time::Duration>,
+    ) -> Option<Result<Value>> {
+        let relay_endpoint = self.router.find_primal_by_capability("relay").await.ok()?;
+
+        debug!(
+            "CG-8: Attempting relay dispatch for gate '{}' via Songbird @ {}",
+            gate_name,
+            relay_endpoint.endpoint.display_string()
+        );
+
+        let allocate_params = json!({
+            "gate": gate_name,
+            "method": method,
+        });
+
+        let relay_timeout = Some(std::time::Duration::from_secs(5));
+        let alloc_result = self
+            .router
+            .forward_request_with_timeout(
+                &relay_endpoint.endpoint,
+                "relay.allocate",
+                &allocate_params,
+                relay_timeout,
+            )
+            .await;
+
+        let relay_channel = match alloc_result {
+            Ok(channel) => channel,
+            Err(e) => {
+                debug!("CG-8: relay.allocate failed for gate '{gate_name}': {e}");
+                return None;
+            }
+        };
+
+        let relay_endpoint_str = relay_channel.get("endpoint").and_then(|v| v.as_str())?;
+
+        let relay_ep = biomeos_core::TransportEndpoint::parse(relay_endpoint_str)?;
+
+        let remote_call = json!({
+            "method": method,
+            "params": args,
+            "relay_channel": relay_channel.get("channel_id"),
+        });
+
+        let result = self
+            .router
+            .forward_request_with_timeout(&relay_ep, "capability.call", &remote_call, timeout)
+            .await;
+
+        Some(result)
     }
 }

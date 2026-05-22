@@ -305,4 +305,28 @@ fn nest_sync_graph_has_cross_spring_pipeline() {
         ],
         "nest.sync uses full provenance trio with cross-gate dag fetch"
     );
+
+    // Wave 38: verify cross-gate wiring — fetch_dag_slice targets remote_gate
+    let fetch_node = &nodes[0];
+    assert_eq!(
+        fetch_node["gate"].as_str(),
+        Some("remote_gate"),
+        "fetch_dag_slice must target remote_gate for cross-spring DAG fetch"
+    );
+
+    // Only fetch_dag_slice should have a gate — nodes 2-6 execute locally
+    for node in &nodes[1..] {
+        assert!(
+            node.get("gate").is_none(),
+            "node '{}' should execute locally (no gate field)",
+            node["name"].as_str().unwrap_or("?")
+        );
+    }
+
+    // Verify graph.env declares remote_gate placeholder
+    let env = graph.get("env").expect("missing [graph.env]");
+    assert!(
+        env.get("remote_gate").is_some(),
+        "graph.env must declare remote_gate for GateRegistry injection"
+    );
 }

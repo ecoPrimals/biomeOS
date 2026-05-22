@@ -234,3 +234,23 @@ async fn test_call_with_local_gate_routes_locally() {
         .result;
     assert_eq!(out["via"], "local");
 }
+
+#[tokio::test]
+async fn test_call_with_unknown_gate_mentions_relay() {
+    let handler = make_handler();
+    let params = Some(json!({
+        "capability": "crypto",
+        "operation": "hash",
+        "args": {},
+        "gate": "westgate"
+    }));
+    let err = handler
+        .call(&params)
+        .await
+        .expect_err("unknown gate without relay should fail");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("relay fallback unavailable"),
+        "Error should mention relay fallback: {msg}"
+    );
+}

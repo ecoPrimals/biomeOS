@@ -97,6 +97,23 @@ impl GraphHandler {
             .and_then(|ns| ns.as_str())
             .map(String::from);
 
+        // Extract caller-provided env before spawn boundary (signal dispatch
+        // injects remote_gate for cross-gate signals like nest.sync).
+        let caller_env: HashMap<String, String> = raw_params
+            .as_ref()
+            .and_then(|p| p.get("env"))
+            .and_then(|e| e.as_object())
+            .map(|obj| {
+                obj.iter()
+                    .filter_map(|(k, v)| {
+                        v.as_str()
+                            .filter(|s| !s.is_empty())
+                            .map(|s| (k.clone(), s.to_string()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
         tokio::spawn(async move {
             let mut env = HashMap::new();
             env.insert("FAMILY_ID".to_string(), family_id_owned.clone());
@@ -129,6 +146,12 @@ impl GraphHandler {
 
             for (k, v) in &graph.env {
                 env.entry(k.clone()).or_insert_with(|| v.clone());
+            }
+
+            // Caller-provided env overrides graph defaults (signal dispatch
+            // injects remote_gate for cross-gate signals like nest.sync).
+            for (k, v) in &caller_env {
+                env.insert(k.clone(), v.clone());
             }
 
             let capability_registry = {

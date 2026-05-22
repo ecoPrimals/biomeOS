@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.66 (2026-05-22) — Wave 38: nest.sync Cross-Gate Wiring + CG-8 Songbird Relay
+
+### nest.sync live orchestration (Wave 38 Item 1)
+- `nest_sync.toml`: Added `[graph.env]` with `remote_gate` placeholder and
+  `gate = "remote_gate"` on `fetch_dag_slice` node. Only the remote DAG fetch
+  targets the remote gate; nodes 2-6 (verify, store, braid, commit, attribute)
+  execute locally.
+- Signal dispatch (`signal.rs`): `remote_gate` from caller params now injected
+  into graph execution env so `GateRegistry` picks it up and forwards the
+  fetch node to the remote NUCLEUS.
+- Graph executor (`execute.rs`): Caller-provided `env` in `execute_params` now
+  merged into graph env (overrides TOML defaults). Extracted before spawn
+  boundary for lifetime safety.
+- Signal dispatch test updated to assert cross-gate wiring: `fetch_dag_slice`
+  has `gate = "remote_gate"`, other nodes have no gate, `graph.env` declares
+  `remote_gate`.
+
+### CG-8: capability.call → songbird relay fallback (Wave 38 Item 2)
+- `capability_call.rs`: When `gate` param targets an unregistered gate,
+  `try_relay_dispatch()` attempts Songbird relay-mediated forwarding via
+  `relay.allocate` before failing. This is the composition layer for
+  multi-gate mesh — enables NAT-traversed cross-gate dispatch.
+- Tiered fallback: registered gate (direct) → Songbird relay → error.
+- Error message updated to distinguish "not registered and relay fallback
+  unavailable" from hard registration failures.
+- New test `test_call_with_unknown_gate_mentions_relay` validates fallback
+  error path.
+
+### Handoff
+- `BIOMEOS_V366_WAVE38_CROSS_GATE_RELAY_MAY22_2026.md`
+
 ## v3.65 (2026-05-20) — primal.list Wave 20 Schema Alignment
 
 ### primal.list schema conformance (Wave 31 / primalSpring s_schema_standard)

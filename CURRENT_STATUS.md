@@ -1,6 +1,6 @@
 # biomeOS - Current Status
 
-**Updated**: May 20, 2026 (v3.65: primal.list Wave 20 schema alignment — name/socket/status/pid/version canonical fields; v3.64 nest.sync; 7,924+ tests)
+**Updated**: May 22, 2026 (v3.66: Wave 38 — nest.sync cross-gate wiring + CG-8 songbird relay fallback; 7,924+ tests)
 **Version**: 3.59
 **Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 

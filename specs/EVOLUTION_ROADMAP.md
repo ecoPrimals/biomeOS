@@ -436,6 +436,8 @@ Systematic deep debt resolution across 7 waves:
 - [x] `braid.sync` capability registered for sweetGrass — v3.64
 - [x] Signal graph count 16→17, nest tier 3→4 signals — v3.64
 - [x] `primal.list` Wave 20 schema alignment (name/socket/status/pid/version) — v3.65
+- [x] Wave 38: `nest.sync` cross-gate wiring (remote_gate → GateRegistry → fetch_dag_slice) — v3.66
+- [x] Wave 38: CG-8 songbird relay fallback in capability.call cross-gate dispatch — v3.66
 
 ### Degradation Behavior
 
