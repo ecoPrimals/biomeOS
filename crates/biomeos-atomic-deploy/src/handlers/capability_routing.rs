@@ -114,10 +114,7 @@ pub async fn explain_route(
             .as_str()
             .context("Missing 'capability' or 'method'")?
             .to_string();
-        let op = params["operation"]
-            .as_str()
-            .unwrap_or("")
-            .to_string();
+        let op = params["operation"].as_str().unwrap_or("").to_string();
         (cap, op)
     };
 

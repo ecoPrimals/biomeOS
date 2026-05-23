@@ -24,11 +24,11 @@
 //! As more data flows, weights converge toward optimal routing. Layer 5
 //! (learned routing) will replace the scoring function with a trained model.
 
+use redb::{Database, ReadableTable, TableDefinition};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use redb::{Database, ReadableTable, TableDefinition};
 use tracing::{debug, warn};
 
 /// Weight for a single provider serving a capability.
@@ -185,21 +185,12 @@ const WEIGHTS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("routin
 /// When backed by a redb database (via `open` or `with_db`), weights are
 /// persisted after every mutation so they survive process restarts. Without
 /// a database, the table operates purely in-memory.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RoutingWeightTable {
     /// (capability, provider) → weight
     weights: HashMap<(Arc<str>, Arc<str>), ProviderWeight>,
     /// Optional redb database for persistence.
     db: Option<Arc<Database>>,
-}
-
-impl Default for RoutingWeightTable {
-    fn default() -> Self {
-        Self {
-            weights: HashMap::new(),
-            db: None,
-        }
-    }
 }
 
 impl RoutingWeightTable {
@@ -259,11 +250,7 @@ impl RoutingWeightTable {
     }
 
     /// Get or create a weight entry for a provider+capability pair.
-    pub fn get_or_create(
-        &mut self,
-        capability: &str,
-        provider: &str,
-    ) -> &mut ProviderWeight {
+    pub fn get_or_create(&mut self, capability: &str, provider: &str) -> &mut ProviderWeight {
         let key = (Arc::from(capability), Arc::from(provider));
         self.weights
             .entry(key)
@@ -279,7 +266,11 @@ impl RoutingWeightTable {
     /// Select the best provider for a capability from a list of candidates.
     ///
     /// Returns `None` if no candidates are available (all circuit-broken).
-    pub fn select_best<'a>(&self, capability: &str, candidates: &'a [Arc<str>]) -> Option<&'a Arc<str>> {
+    pub fn select_best<'a>(
+        &self,
+        capability: &str,
+        candidates: &'a [Arc<str>],
+    ) -> Option<&'a Arc<str>> {
         let mut best: Option<(&Arc<str>, f64)> = None;
 
         for candidate in candidates {
@@ -386,18 +377,10 @@ impl RoutingWeightTable {
 
     /// Summary statistics for the weight table.
     pub fn summary(&self) -> WeightTableSummary {
-        let total_dispatches: u64 = self
-            .weights
-            .values()
-            .map(|w| w.total_dispatches())
-            .sum();
+        let total_dispatches: u64 = self.weights.values().map(|w| w.total_dispatches()).sum();
         let circuit_open = self.weights.values().filter(|w| w.circuit_open).count();
         let providers: Vec<Arc<str>> = {
-            let mut v: Vec<_> = self
-                .weights
-                .values()
-                .map(|w| w.provider.clone())
-                .collect();
+            let mut v: Vec<_> = self.weights.values().map(|w| w.provider.clone()).collect();
             v.sort();
             v.dedup();
             v
@@ -440,9 +423,11 @@ pub struct WeightTableSummary {
 
 // ── Capability utilization tracking ──────────────────────────────────
 
-/// Tracks capability method utilization — how often each method is called
-/// and when it was last used. This is the input feature layer for future
-/// learned routing: hot methods get pre-staged, cold methods get lazy-loaded.
+/// Tracks capability method utilization.
+///
+/// Records how often each method is called and when it was last used.
+/// Input feature layer for future learned routing: hot methods get
+/// pre-staged, cold methods get lazy-loaded.
 #[derive(Debug, Default)]
 pub struct CapabilityUtilizationTracker {
     /// method → (call_count, last_called_epoch_ms)
@@ -492,7 +477,7 @@ impl CapabilityUtilizationTracker {
                 last_called_epoch_ms: *last,
             })
             .collect();
-        methods.sort_by(|a, b| b.call_count.cmp(&a.call_count));
+        methods.sort_by_key(|m| std::cmp::Reverse(m.call_count));
         methods.truncate(n);
         methods
     }
@@ -567,9 +552,7 @@ pub struct UtilizationSummary {
 
 // ── redb I/O helpers ─────────────────────────────────────────────────
 
-fn load_weights_from_db(
-    db: &Database,
-) -> HashMap<(Arc<str>, Arc<str>), ProviderWeight> {
+fn load_weights_from_db(db: &Database) -> HashMap<(Arc<str>, Arc<str>), ProviderWeight> {
     let mut map = HashMap::new();
     let Ok(txn) = db.begin_read() else {
         return map;
@@ -592,6 +575,7 @@ fn load_weights_from_db(
     map
 }
 
+#[allow(clippy::result_large_err)]
 fn flush_weights_to_db(
     db: &Database,
     weights: &HashMap<(Arc<str>, Arc<str>), ProviderWeight>,
@@ -610,11 +594,8 @@ fn flush_weights_to_db(
     Ok(())
 }
 
-fn persist_single_weight(
-    db: &Database,
-    key: &str,
-    bytes: &[u8],
-) -> Result<(), redb::Error> {
+#[allow(clippy::result_large_err)]
+fn persist_single_weight(db: &Database, key: &str, bytes: &[u8]) -> Result<(), redb::Error> {
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(WEIGHTS_TABLE)?;

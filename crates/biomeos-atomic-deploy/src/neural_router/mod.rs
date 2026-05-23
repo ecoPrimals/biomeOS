@@ -35,11 +35,11 @@ use crate::living_graph::LivingGraph;
 use biomeos_core::TransportEndpoint;
 use biomeos_types::tarpc_types::ProtocolPreference;
 
-pub use types::{
-    AtomicType, DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability, RoutingMetrics,
-};
 pub use composition::{
     CompositionPattern, CompositionPatternRegistry, CompositionTier, TierCompositionPlan,
+};
+pub use types::{
+    AtomicType, DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability, RoutingMetrics,
 };
 pub use weights::{
     CapabilityUtilizationTracker, MethodUtilization, ProviderWeight, RoutingWeightTable,
@@ -117,7 +117,10 @@ impl NeuralRouter {
     ///
     /// Weights are loaded from the database on startup and flushed after
     /// every mutation, surviving process restarts.
-    pub fn with_persistent_weights(family_id: impl Into<String>, weights_path: &std::path::Path) -> Self {
+    pub fn with_persistent_weights(
+        family_id: impl Into<String>,
+        weights_path: &std::path::Path,
+    ) -> Self {
         let weights = RoutingWeightTable::open(weights_path);
         Self {
             family_id: family_id.into(),
@@ -279,20 +282,14 @@ impl NeuralRouter {
     /// Returns `None` if all candidates are circuit-broken or no candidates
     /// are registered. Falls back to the first candidate if the weight table
     /// has no observations yet.
-    pub async fn select_weighted_provider(
-        &self,
-        capability: &str,
-    ) -> Option<Arc<str>> {
+    pub async fn select_weighted_provider(&self, capability: &str) -> Option<Arc<str>> {
         let registry = self.capability_registry.read().await;
         let providers = registry.get(capability)?;
         if providers.is_empty() {
             return None;
         }
 
-        let candidates: Vec<Arc<str>> = providers
-            .iter()
-            .map(|p| p.primal_name.clone())
-            .collect();
+        let candidates: Vec<Arc<str>> = providers.iter().map(|p| p.primal_name.clone()).collect();
 
         let weights = self.routing_weights.read().await;
         weights
@@ -312,23 +309,13 @@ impl NeuralRouter {
     }
 
     /// Set a provider affinity hint (from primal.announce cost_hints).
-    pub async fn set_provider_affinity(
-        &self,
-        capability: &str,
-        provider: &str,
-        affinity: f64,
-    ) {
+    pub async fn set_provider_affinity(&self, capability: &str, provider: &str, affinity: f64) {
         let mut weights = self.routing_weights.write().await;
         weights.set_affinity(capability, provider, affinity);
     }
 
     /// Set a provider cost hint (from primal.announce cost_hints).
-    pub async fn set_provider_cost_hint(
-        &self,
-        capability: &str,
-        provider: &str,
-        cost: f64,
-    ) {
+    pub async fn set_provider_cost_hint(&self, capability: &str, provider: &str, cost: f64) {
         let mut weights = self.routing_weights.write().await;
         weights.set_cost_hint(capability, provider, cost);
     }
@@ -365,7 +352,10 @@ impl NeuralRouter {
 
     /// Get cold methods (below threshold).
     pub async fn cold_methods(&self, threshold: u64) -> Vec<MethodUtilization> {
-        self.utilization_tracker.read().await.cold_methods(threshold)
+        self.utilization_tracker
+            .read()
+            .await
+            .cold_methods(threshold)
     }
 
     /// Classify a capability domain into its composition tier.
@@ -375,7 +365,13 @@ impl NeuralRouter {
 
     /// Get all registered composition patterns.
     pub async fn get_composition_patterns(&self) -> Vec<CompositionPattern> {
-        self.composition_patterns.read().await.all().into_iter().cloned().collect()
+        self.composition_patterns
+            .read()
+            .await
+            .all()
+            .into_iter()
+            .cloned()
+            .collect()
     }
 
     /// Look up a composition pattern by name.

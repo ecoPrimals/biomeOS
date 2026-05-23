@@ -51,33 +51,30 @@ impl CompositionTier {
     /// Classify a capability domain + provider into its composition tier.
     pub fn classify(domain: &str, provider: &str) -> Self {
         match domain {
-            "crypto" | "security" | "auth" | "btsp" | "fido2" | "genetic"
-            | "beacon" | "lineage" | "tls" | "birdsong" | "identity"
-            | "encryption" | "jwt" => Self::Tower,
-            "discovery" | "network" | "stun" | "onion" | "tor" | "mesh"
-            | "http" | "relay" | "dns" | "turn" | "ipc" => Self::Tower,
+            "crypto" | "security" | "auth" | "btsp" | "fido2" | "genetic" | "beacon"
+            | "lineage" | "tls" | "birdsong" | "identity" | "encryption" | "jwt" => Self::Tower,
+            "discovery" | "network" | "stun" | "onion" | "tor" | "mesh" | "http" | "relay"
+            | "dns" | "turn" | "ipc" => Self::Tower,
             "defense" | "recon" | "threat" | "audit" => Self::Tower,
-            "compute" | "dispatch" | "toadstool" | "sovereign"
-            | "execution" | "parsing" | "hardware_learning" | "workload" => Self::Node,
-            "tensor" | "math" | "ode" | "ml" | "nautilus" | "rng"
-            | "stats" | "linalg" | "spectral" | "noise" | "shader"
-            | "activation" | "wgsl" | "spirv" | "fhe" => Self::Node,
-            "storage" | "content" | "secrets" | "versioning"
-            | "persistence" | "publishing" => Self::Nest,
-            "dag" | "spine" | "event" | "entry" | "session"
-            | "certificate" | "permanence" | "proof" | "anchor"
-            | "merkle" | "vertex" | "dehydration" | "slice" => Self::Nest,
-            "braid" | "anchoring" | "provenance" | "attribution"
-            | "contribution" | "ledger" | "commit" => Self::Nest,
-            "visualization" | "render" | "viz" | "interaction"
-            | "proprioception" => Self::Meta,
+            "compute" | "dispatch" | "toadstool" | "sovereign" | "execution" | "parsing"
+            | "hardware_learning" | "workload" => Self::Node,
+            "tensor" | "math" | "ode" | "ml" | "nautilus" | "rng" | "stats" | "linalg"
+            | "spectral" | "noise" | "shader" | "activation" | "wgsl" | "spirv" | "fhe" => {
+                Self::Node
+            }
+            "storage" | "content" | "secrets" | "versioning" | "persistence" | "publishing" => {
+                Self::Nest
+            }
+            "dag" | "spine" | "event" | "entry" | "session" | "certificate" | "permanence"
+            | "proof" | "anchor" | "merkle" | "vertex" | "dehydration" | "slice" => Self::Nest,
+            "braid" | "anchoring" | "provenance" | "attribution" | "contribution" | "ledger"
+            | "commit" => Self::Nest,
+            "visualization" | "render" | "viz" | "interaction" | "proprioception" => Self::Meta,
             "ai" | "inference" | "squirrel" | "context" | "science" => Self::Meta,
-            "orchestration" | "federation" | "biomeos" | "primal"
-            | "signal" | "topology" | "route" | "system"
-            | "neural_api" => Self::Orchestration,
-            "health" | "capabilities" | "lifecycle" | "mcp"
-            | "tool" | "tools" | "rpc" | "coordination"
-            | "graph" | "nucleus" | "membrane" | "cell" => Self::Orchestration,
+            "orchestration" | "federation" | "biomeos" | "primal" | "signal" | "topology"
+            | "route" | "system" | "neural_api" => Self::Orchestration,
+            "health" | "capabilities" | "lifecycle" | "mcp" | "tool" | "tools" | "rpc"
+            | "coordination" | "graph" | "nucleus" | "membrane" | "cell" => Self::Orchestration,
             _ => Self::from_provider(provider),
         }
     }
@@ -240,10 +237,7 @@ impl CompositionPatternRegistry {
                 Arc::from("bonding.status"),
                 Arc::from("bonding.terminate"),
             ],
-            primals: vec![
-                Arc::from("primalspring"),
-                Arc::from("beardog"),
-            ],
+            primals: vec![Arc::from("primalspring"), Arc::from("beardog")],
             tier: CompositionTier::Standalone,
             graph_file: None,
         });
@@ -276,10 +270,7 @@ impl CompositionPatternRegistry {
 
     /// Patterns in a specific tier.
     pub fn in_tier(&self, tier: CompositionTier) -> Vec<&CompositionPattern> {
-        self.patterns
-            .values()
-            .filter(|p| p.tier == tier)
-            .collect()
+        self.patterns.values().filter(|p| p.tier == tier).collect()
     }
 
     /// Number of registered patterns.
@@ -328,28 +319,37 @@ pub fn plan_tier(
     primals.sort();
     primals.dedup();
 
-    let pattern_names: Vec<Arc<str>> = patterns
-        .iter()
-        .map(|p| p.name.clone())
-        .collect();
+    let pattern_names: Vec<Arc<str>> = patterns.iter().map(|p| p.name.clone()).collect();
 
     let domains = match tier {
         CompositionTier::Tower => vec![
-            Arc::from("security"), Arc::from("crypto"), Arc::from("discovery"),
-            Arc::from("network"), Arc::from("defense"),
+            Arc::from("security"),
+            Arc::from("crypto"),
+            Arc::from("discovery"),
+            Arc::from("network"),
+            Arc::from("defense"),
         ],
         CompositionTier::Node => vec![
-            Arc::from("compute"), Arc::from("tensor"), Arc::from("shader"),
+            Arc::from("compute"),
+            Arc::from("tensor"),
+            Arc::from("shader"),
         ],
         CompositionTier::Nest => vec![
-            Arc::from("storage"), Arc::from("content"), Arc::from("dag"),
-            Arc::from("provenance"), Arc::from("braid"),
+            Arc::from("storage"),
+            Arc::from("content"),
+            Arc::from("dag"),
+            Arc::from("provenance"),
+            Arc::from("braid"),
         ],
         CompositionTier::Meta => vec![
-            Arc::from("visualization"), Arc::from("ai"), Arc::from("science"),
+            Arc::from("visualization"),
+            Arc::from("ai"),
+            Arc::from("science"),
         ],
         CompositionTier::Orchestration => vec![
-            Arc::from("orchestration"), Arc::from("lifecycle"), Arc::from("topology"),
+            Arc::from("orchestration"),
+            Arc::from("lifecycle"),
+            Arc::from("topology"),
         ],
         CompositionTier::Nucleus | CompositionTier::Standalone => vec![],
     };
@@ -368,44 +368,98 @@ mod tests {
 
     #[test]
     fn classify_security_domains() {
-        assert_eq!(CompositionTier::classify("crypto", "beardog"), CompositionTier::Tower);
-        assert_eq!(CompositionTier::classify("security", "beardog"), CompositionTier::Tower);
-        assert_eq!(CompositionTier::classify("genetic", "beardog"), CompositionTier::Tower);
+        assert_eq!(
+            CompositionTier::classify("crypto", "beardog"),
+            CompositionTier::Tower
+        );
+        assert_eq!(
+            CompositionTier::classify("security", "beardog"),
+            CompositionTier::Tower
+        );
+        assert_eq!(
+            CompositionTier::classify("genetic", "beardog"),
+            CompositionTier::Tower
+        );
     }
 
     #[test]
     fn classify_compute_domains() {
-        assert_eq!(CompositionTier::classify("compute", "toadstool"), CompositionTier::Node);
-        assert_eq!(CompositionTier::classify("tensor", "barracuda"), CompositionTier::Node);
-        assert_eq!(CompositionTier::classify("shader", "coralreef"), CompositionTier::Node);
+        assert_eq!(
+            CompositionTier::classify("compute", "toadstool"),
+            CompositionTier::Node
+        );
+        assert_eq!(
+            CompositionTier::classify("tensor", "barracuda"),
+            CompositionTier::Node
+        );
+        assert_eq!(
+            CompositionTier::classify("shader", "coralreef"),
+            CompositionTier::Node
+        );
     }
 
     #[test]
     fn classify_storage_domains() {
-        assert_eq!(CompositionTier::classify("storage", "nestgate"), CompositionTier::Nest);
-        assert_eq!(CompositionTier::classify("dag", "rhizocrypt"), CompositionTier::Nest);
-        assert_eq!(CompositionTier::classify("braid", "sweetgrass"), CompositionTier::Nest);
+        assert_eq!(
+            CompositionTier::classify("storage", "nestgate"),
+            CompositionTier::Nest
+        );
+        assert_eq!(
+            CompositionTier::classify("dag", "rhizocrypt"),
+            CompositionTier::Nest
+        );
+        assert_eq!(
+            CompositionTier::classify("braid", "sweetgrass"),
+            CompositionTier::Nest
+        );
     }
 
     #[test]
     fn classify_meta_domains() {
-        assert_eq!(CompositionTier::classify("ai", "squirrel"), CompositionTier::Meta);
-        assert_eq!(CompositionTier::classify("visualization", "petaltongue"), CompositionTier::Meta);
-        assert_eq!(CompositionTier::classify("science", "neuralspring"), CompositionTier::Meta);
+        assert_eq!(
+            CompositionTier::classify("ai", "squirrel"),
+            CompositionTier::Meta
+        );
+        assert_eq!(
+            CompositionTier::classify("visualization", "petaltongue"),
+            CompositionTier::Meta
+        );
+        assert_eq!(
+            CompositionTier::classify("science", "neuralspring"),
+            CompositionTier::Meta
+        );
     }
 
     #[test]
     fn classify_orchestration() {
-        assert_eq!(CompositionTier::classify("orchestration", "biomeos"), CompositionTier::Orchestration);
-        assert_eq!(CompositionTier::classify("neural_api", "biomeos"), CompositionTier::Orchestration);
-        assert_eq!(CompositionTier::classify("lifecycle", "biomeos"), CompositionTier::Orchestration);
+        assert_eq!(
+            CompositionTier::classify("orchestration", "biomeos"),
+            CompositionTier::Orchestration
+        );
+        assert_eq!(
+            CompositionTier::classify("neural_api", "biomeos"),
+            CompositionTier::Orchestration
+        );
+        assert_eq!(
+            CompositionTier::classify("lifecycle", "biomeos"),
+            CompositionTier::Orchestration
+        );
     }
 
     #[test]
     fn classify_unknown_falls_to_provider() {
-        assert_eq!(CompositionTier::classify("unknown_domain", "beardog"), CompositionTier::Tower);
-        assert_eq!(CompositionTier::classify("unknown_domain", "nestgate"), CompositionTier::Nest);
-        assert_eq!(CompositionTier::classify("unknown_domain", "unknown"), CompositionTier::Standalone);
+        assert_eq!(
+            CompositionTier::classify("unknown_domain", "beardog"),
+            CompositionTier::Tower
+        );
+        assert_eq!(
+            CompositionTier::classify("unknown_domain", "nestgate"),
+            CompositionTier::Nest
+        );
+        assert_eq!(
+            CompositionTier::classify("unknown_domain", "unknown"),
+            CompositionTier::Standalone
+        );
     }
 
     #[test]

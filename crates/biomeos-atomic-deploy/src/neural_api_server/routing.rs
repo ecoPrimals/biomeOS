@@ -125,7 +125,7 @@ enum Route {
     CapabilityDiscoverTranslations,
     CapabilityListTranslations,
     RoutingWeights,
-    RouteExplain,
+    RoutingExplain,
     CompositionPatterns,
     CompositionPlanTier,
     CapabilityUtilization,
@@ -269,8 +269,11 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("capability.metrics", Route::CapabilityMetrics),
     ("neural_api.get_routing_metrics", Route::CapabilityMetrics),
     ("neural_api.routing_weights", Route::RoutingWeights),
-    ("neural_api.route_explain", Route::RouteExplain),
-    ("neural_api.composition_patterns", Route::CompositionPatterns),
+    ("neural_api.route_explain", Route::RoutingExplain),
+    (
+        "neural_api.composition_patterns",
+        Route::CompositionPatterns,
+    ),
     ("neural_api.plan_tier", Route::CompositionPlanTier),
     ("neural_api.utilization", Route::CapabilityUtilization),
     ("capability.call", Route::CapabilityCall),
@@ -617,17 +620,15 @@ impl NeuralApiServer {
                     id,
                 )
             }
-            Route::RouteExplain => {
-                dispatch(
-                    crate::handlers::capability_routing::explain_route(
-                        &self.router,
-                        &*self.translation_registry.read().await,
-                        params,
-                    )
-                    .await,
-                    id,
+            Route::RoutingExplain => dispatch(
+                crate::handlers::capability_routing::explain_route(
+                    &self.router,
+                    &*self.translation_registry.read().await,
+                    params,
                 )
-            }
+                .await,
+                id,
+            ),
             Route::CompositionPatterns => {
                 let patterns = self.router.composition_patterns_json().await;
                 dispatch(Ok(patterns), id)
@@ -648,14 +649,9 @@ impl NeuralApiServer {
                     _ => crate::neural_router::CompositionTier::Standalone,
                 };
                 let plan = self.router.plan_tier(tier).await;
-                dispatch(
-                    serde_json::to_value(&plan).map_err(anyhow::Error::from),
-                    id,
-                )
+                dispatch(serde_json::to_value(&plan).map_err(anyhow::Error::from), id)
             }
-            Route::CapabilityUtilization => {
-                dispatch(Ok(self.router.utilization_json().await), id)
-            }
+            Route::CapabilityUtilization => dispatch(Ok(self.router.utilization_json().await), id),
             Route::CapabilityCall => {
                 let enriched = self.enrich_for_forwarding(params, &caller).await;
                 dispatch_capability_call(self.capability_handler.call(&enriched).await, id)

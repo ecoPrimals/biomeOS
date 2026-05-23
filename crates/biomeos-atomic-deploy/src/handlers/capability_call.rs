@@ -383,12 +383,7 @@ impl CapabilityHandler {
 
                 // Layer 4: record dispatch outcome for adaptive routing weights
                 self.router
-                    .record_dispatch_outcome(
-                        capability,
-                        &primary_name,
-                        result.is_ok(),
-                        elapsed_ms,
-                    )
+                    .record_dispatch_outcome(capability, &primary_name, result.is_ok(), elapsed_ms)
                     .await;
 
                 let result = result?;
@@ -456,12 +451,7 @@ impl CapabilityHandler {
 
                 // Layer 4: record dispatch outcome for adaptive routing weights
                 self.router
-                    .record_dispatch_outcome(
-                        capability,
-                        &primary_name,
-                        result.is_ok(),
-                        elapsed_ms,
-                    )
+                    .record_dispatch_outcome(capability, &primary_name, result.is_ok(), elapsed_ms)
                     .await;
 
                 let result = result?;
