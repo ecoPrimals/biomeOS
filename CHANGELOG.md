@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.71 (2026-05-23) — Wave 46: Membrane Composition Live Execution
+
+### `composition_model = "membrane"` live execution path
+- `composition.deploy(graph)` now enforces membrane-specific constraints when
+  a graph declares `composition_model = "membrane"`:
+  - Validates all nodes belong to membrane-appropriate domains (orchestration,
+    security, crypto, discovery, defense, content, network, relay,
+    communication, presence, graph).
+  - Rejects compute/nest-storage/meta-tier primals with actionable error messages.
+- `validate_membrane_graph()` — domain-level node validation for membrane topology.
+- 3 new tests: graph parse + validation pass, compute node rejection, full
+  `membrane_deploy.toml` E2E parse.
+
+### `membrane_tower` composition pattern
+- Registered in `CompositionPatternRegistry::with_canonical_patterns()` (7th pattern).
+- Declares: biomeos → beardog → songbird → skunkbat → nestgate pipeline with
+  crypto/relay/defense/content method surface.
+- Backed by `graphs/membrane_deploy.toml`.
+
+### `graphs/membrane_deploy.toml` — biomeOS-local membrane graph
+- 5-node sequential graph: biomeOS orchestration → BearDog (crypto/BTSP) →
+  Songbird (relay/discovery) → SkunkBat (defense) → NestGate (cache-only content).
+- Declares `secure_by_default = true`, BTSP enforced, UDS-only transport.
+- Channel architecture: Signal (UDS), Relay (BTSP tunnel), Surface (TLS).
+
+### Test count: 1314 (+3 from v3.70)
+
 ## v3.70 (2026-05-23) — Wave 45: Weight Health + Attestation + Persistent Startup
 
 ### `neural_api.weight_health` introspection endpoint

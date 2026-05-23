@@ -242,6 +242,27 @@ impl CompositionPatternRegistry {
             graph_file: None,
         });
 
+        registry.register(CompositionPattern {
+            name: Arc::from("membrane_tower"),
+            methods: vec![
+                Arc::from("crypto.sign"),
+                Arc::from("crypto.encrypt"),
+                Arc::from("discovery.announce"),
+                Arc::from("defense.audit"),
+                Arc::from("content.get"),
+                Arc::from("content.resolve"),
+            ],
+            primals: vec![
+                Arc::from("biomeos"),
+                Arc::from("beardog"),
+                Arc::from("songbird"),
+                Arc::from("skunkbat"),
+                Arc::from("nestgate"),
+            ],
+            tier: CompositionTier::Tower,
+            graph_file: Some("graphs/membrane_deploy.toml".to_owned()),
+        });
+
         registry
     }
 

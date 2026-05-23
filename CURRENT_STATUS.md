@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: May 23, 2026 (v3.70: Wave 45 — weight_health introspection + attestation verification + persistent startup; 7,924+ tests)
-**Version**: 3.70
+**Updated**: May 23, 2026 (v3.71: Wave 46 — membrane composition live execution + validation + pattern; 1,314 tests)
+**Version**: 3.71
 **Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 
 ---

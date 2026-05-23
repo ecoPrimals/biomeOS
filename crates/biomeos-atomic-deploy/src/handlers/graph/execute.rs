@@ -54,6 +54,11 @@ impl GraphHandler {
                 }),
         );
 
+        // Membrane composition: validate node set and enforce security constraints.
+        if graph.composition_model == Some(biomeos_graph::CompositionModel::Membrane) {
+            Self::validate_membrane_graph(&graph)?;
+        }
+
         if graph.is_continuous() {
             info!("🔄 Graph is continuous — redirecting to start_continuous");
             return self.start_continuous(raw_params).await;
@@ -303,6 +308,67 @@ impl GraphHandler {
         info!("✅ Capability translations loaded");
         Ok(())
     }
+
+    /// Validate that a membrane-model graph contains only boundary-appropriate nodes.
+    ///
+    /// Membrane compositions are VPS sovereignty boundaries — only Tower-tier
+    /// primals (security/routing/defense) and NestGate (cache-only) are permitted.
+    /// Compute-tier, nest-storage, and meta-tier primals must not be deployed
+    /// on the public membrane surface.
+    fn validate_membrane_graph(graph: &Graph) -> Result<()> {
+        const MEMBRANE_ALLOWED_DOMAINS: &[&str] = &[
+            "orchestration",
+            "security",
+            "crypto",
+            "discovery",
+            "defense",
+            "content",
+            "network",
+            "relay",
+            "communication",
+            "presence",
+            "graph",
+        ];
+
+        let mut violations = Vec::new();
+        for node in &graph.nodes {
+            let domains: Vec<&str> = node
+                .primal
+                .as_ref()
+                .and_then(|p| p.by_capability.as_deref())
+                .into_iter()
+                .chain(node.capabilities.iter().filter_map(|c| c.split('.').next()))
+                .collect();
+
+            if domains.is_empty() {
+                continue;
+            }
+
+            let allowed = domains
+                .iter()
+                .any(|domain| MEMBRANE_ALLOWED_DOMAINS.contains(domain));
+
+            if !allowed {
+                violations.push(format!(
+                    "node '{}' has domains {:?} — not permitted on membrane boundary",
+                    node.id, domains
+                ));
+            }
+        }
+
+        if !violations.is_empty() {
+            anyhow::bail!(
+                "Membrane composition validation failed:\n  - {}",
+                violations.join("\n  - ")
+            );
+        }
+
+        info!(
+            "✅ Membrane validation passed: {} nodes, all boundary-appropriate",
+            graph.nodes.len()
+        );
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -389,5 +455,86 @@ mod tests {
             composition_model: None,
         };
         GraphHandler::register_capabilities_from_graph(&router, &graph, "fam").await;
+    }
+
+    #[test]
+    fn validate_membrane_graph_passes_for_tower_nodes() {
+        let graph = Graph {
+            id: "membrane_test".into(),
+            version: "1".into(),
+            description: String::new(),
+            nodes: vec![
+                GraphNode {
+                    id: "beardog".into(),
+                    primal: Some(crate::neural_graph::PrimalSelector {
+                        by_capability: Some("crypto".into()),
+                        by_name: Some("beardog".into()),
+                    }),
+                    capabilities: vec!["crypto.sign".into(), "crypto.encrypt".into()],
+                    ..Default::default()
+                },
+                GraphNode {
+                    id: "songbird".into(),
+                    primal: Some(crate::neural_graph::PrimalSelector {
+                        by_capability: Some("relay".into()),
+                        by_name: Some("songbird".into()),
+                    }),
+                    capabilities: vec!["relay.allocate".into(), "discovery.announce".into()],
+                    ..Default::default()
+                },
+            ],
+            config: GraphConfig::default(),
+            coordination: None,
+            env: HashMap::new(),
+            genetics_tier: None,
+            composition_model: Some(biomeos_graph::CompositionModel::Membrane),
+        };
+        GraphHandler::validate_membrane_graph(&graph).unwrap();
+    }
+
+    #[test]
+    fn validate_membrane_graph_rejects_compute_nodes() {
+        let graph = Graph {
+            id: "bad_membrane".into(),
+            version: "1".into(),
+            description: String::new(),
+            nodes: vec![GraphNode {
+                id: "toadstool".into(),
+                primal: Some(crate::neural_graph::PrimalSelector {
+                    by_capability: Some("compute".into()),
+                    by_name: Some("toadstool".into()),
+                }),
+                capabilities: vec!["compute.fan_out".into()],
+                ..Default::default()
+            }],
+            config: GraphConfig::default(),
+            coordination: None,
+            env: HashMap::new(),
+            genetics_tier: None,
+            composition_model: Some(biomeos_graph::CompositionModel::Membrane),
+        };
+        let err = GraphHandler::validate_membrane_graph(&graph).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("not permitted on membrane boundary")
+        );
+        assert!(err.to_string().contains("toadstool"));
+    }
+
+    #[test]
+    fn membrane_deploy_graph_parses_and_validates() {
+        let graph_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("graphs/membrane_deploy.toml");
+        let graph = Graph::from_toml_file(&graph_path).unwrap();
+        assert_eq!(
+            graph.composition_model,
+            Some(biomeos_graph::CompositionModel::Membrane)
+        );
+        assert_eq!(graph.nodes.len(), 5);
+        GraphHandler::validate_membrane_graph(&graph).unwrap();
     }
 }

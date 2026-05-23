@@ -1,0 +1,128 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright 2025-2026 ecoPrimals Project
+#
+# Membrane Deploy — VPS sovereignty boundary composition
+#
+# Deploys the Tower-tier subset appropriate for VPS membrane nodes:
+# BearDog (crypto/TLS), Songbird (relay/discovery), SkunkBat (defense),
+# and NestGate in cache-only mode (content routing without storage writes).
+#
+# Channel architecture:
+#   Channel 1 (Signal):  UDS — primal-to-primal IPC on VPS
+#   Channel 2 (Relay):   BTSP tunnel — VPS ↔ gate encrypted relay
+#   Channel 3 (Surface): TLS — public HTTPS on membrane.primals.eco
+#
+# Usage:
+#   composition.deploy({ "graph_id": "membrane_deploy" })
+#   biomeos deploy --graph graphs/membrane_deploy.toml
+
+[graph]
+name = "membrane_deploy"
+description = "VPS membrane: Tower boundary + NestGate cache-only"
+version = "1.0.0"
+coordination = "sequential"
+
+[graph.metadata]
+composition_model = "membrane"
+secure_by_default = true
+security_model = "btsp_enforced"
+transport = "uds_only"
+channels = ["signal", "relay", "surface"]
+
+[graph.env]
+BTSP_MODE = "enforced"
+NESTGATE_MODE = "cache-only"
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 0: biomeOS Neural API (orchestration substrate, pre-existing)
+# ═══════════════════════════════════════════════════════════════
+
+[[graph.nodes]]
+name = "biomeos_neural_api"
+binary = "biomeos"
+order = 0
+required = true
+spawn = false
+health_method = "health.liveness"
+by_capability = "orchestration"
+capabilities = [
+    "graph.deploy",
+    "graph.status",
+    "capability.discover",
+    "capability.route",
+]
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 1: Tower Atomic — BTSP enforced security perimeter
+# ═══════════════════════════════════════════════════════════════
+
+[[graph.nodes]]
+name = "beardog"
+binary = "beardog"
+order = 1
+required = true
+health_method = "health.liveness"
+by_capability = "crypto"
+security_model = "btsp"
+capabilities = [
+    "crypto.encrypt",
+    "crypto.decrypt",
+    "crypto.sign",
+    "crypto.verify",
+    "crypto.keygen",
+    "crypto.identity",
+]
+
+[[graph.nodes]]
+name = "songbird"
+binary = "songbird"
+order = 2
+required = true
+depends_on = ["beardog"]
+health_method = "health.liveness"
+by_capability = "relay"
+security_model = "btsp"
+capabilities = [
+    "discovery.find_primals",
+    "discovery.announce",
+    "relay.allocate",
+    "network.tls_connect",
+]
+
+[[graph.nodes]]
+name = "skunkbat"
+binary = "skunkbat"
+order = 3
+required = true
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "defense"
+security_model = "btsp"
+capabilities = [
+    "defense.audit",
+    "defense.events",
+    "defense.log",
+    "defense.policy",
+    "defense.status",
+]
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 2: NestGate — cache-only content routing
+# ═══════════════════════════════════════════════════════════════
+
+[[graph.nodes]]
+name = "nestgate"
+binary = "nestgate"
+order = 4
+required = true
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "content"
+security_model = "btsp"
+args = ["--cache-only"]
+capabilities = [
+    "content.get",
+    "content.exists",
+    "content.resolve",
+    "content.list",
+]
