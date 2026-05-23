@@ -168,7 +168,14 @@ impl NeuralApiServer {
             graphs_dir
         };
         let family_id_str = family_id.into();
-        let router = Arc::new(NeuralRouter::new(&family_id_str));
+        let weights_path = biomeos_types::SystemPaths::new()
+            .map(|p| p.data_dir().join("routing_weights.redb"))
+            .ok();
+        let router = Arc::new(if let Some(ref path) = weights_path {
+            NeuralRouter::with_persistent_weights(&family_id_str, path)
+        } else {
+            NeuralRouter::new(&family_id_str)
+        });
         let executions = Arc::new(RwLock::new(HashMap::new()));
         let translation_registry = Arc::new(RwLock::new(CapabilityTranslationRegistry::new()));
 

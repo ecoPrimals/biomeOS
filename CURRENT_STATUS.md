@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: May 22, 2026 (v3.66: Wave 38 — nest.sync cross-gate wiring + CG-8 songbird relay fallback; 7,924+ tests)
-**Version**: 3.59
+**Updated**: May 23, 2026 (v3.70: Wave 45 — weight_health introspection + attestation verification + persistent startup; 7,924+ tests)
+**Version**: 3.70
 **Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 
 ---

@@ -47,4 +47,43 @@ impl NeuralApiServer {
 
         Some(enriched)
     }
+
+    /// Weight health introspection — convergence diagnostics and circuit breaker status.
+    pub(crate) async fn handle_weight_health(&self) -> anyhow::Result<serde_json::Value> {
+        let weights = self.router.get_routing_weights().await;
+        let summary = self.router.get_weight_summary().await;
+
+        let mut open_circuits = Vec::new();
+        let mut converging = 0u32;
+        let mut cold = 0u32;
+
+        for w in &weights {
+            let total = w.success_count + w.failure_count;
+            if w.circuit_open {
+                open_circuits.push(json!({
+                    "provider": w.provider,
+                    "capability": w.capability,
+                    "consecutive_failures": w.consecutive_failures,
+                    "opened_at": w.circuit_opened_at,
+                }));
+            }
+            if total >= 10 {
+                converging += 1;
+            } else {
+                cold += 1;
+            }
+        }
+
+        Ok(json!({
+            "healthy": open_circuits.is_empty(),
+            "persistent": self.router.weights_are_persistent().await,
+            "summary": summary,
+            "convergence": {
+                "converging": converging,
+                "cold": cold,
+                "total_providers": weights.len(),
+            },
+            "open_circuits": open_circuits,
+        }))
+    }
 }

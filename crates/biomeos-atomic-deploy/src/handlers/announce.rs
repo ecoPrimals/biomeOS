@@ -94,12 +94,14 @@ pub struct AnnounceResult {
 /// 2. Capability router (each domain in `capabilities`)
 /// 3. Translation registry (each method in `methods` + `semantic_mappings`)
 /// 4. Signal tier membership (recorded for PathwayLearner graph extension)
+/// 5. Attestation verification (Ed25519 via BearDog when available)
 pub async fn handle_announce(
     router: &crate::neural_router::NeuralRouter,
     translation_registry: &tokio::sync::RwLock<
         crate::capability_translation::CapabilityTranslationRegistry,
     >,
     lifecycle_handler: &super::LifecycleHandler,
+    beardog_verifier: &Option<biomeos_core::BearDogVerifier>,
     params: &Option<Value>,
 ) -> Result<Value> {
     let params = params.as_ref().context("Missing parameters")?;
@@ -263,13 +265,32 @@ pub async fn handle_announce(
         }
     }
 
-    let attestation_verified = announcement.attestation.is_some();
-    if attestation_verified {
-        debug!(
-            "  Attestation present for {} (verification delegated to BearDog)",
-            announcement.primal
-        );
-    }
+    // 6. Attestation verification via BearDog
+    let attestation_verified = if let Some(ref attestation) = announcement.attestation {
+        if let Some(verifier) = beardog_verifier {
+            let verified = verifier.verify_async(attestation).await.is_some();
+            if verified {
+                info!(
+                    "  Attestation verified for {} via BearDog",
+                    announcement.primal
+                );
+            } else {
+                warn!(
+                    "  Attestation FAILED verification for {} — accepting registration but marking unverified",
+                    announcement.primal
+                );
+            }
+            verified
+        } else {
+            debug!(
+                "  Attestation present for {} but BearDog unavailable — skipping verification",
+                announcement.primal
+            );
+            false
+        }
+    } else {
+        false
+    };
 
     let result = AnnounceResult {
         primal: announcement.primal,

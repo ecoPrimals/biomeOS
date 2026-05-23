@@ -2,6 +2,26 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.70 (2026-05-23) — Wave 45: Weight Health + Attestation + Persistent Startup
+
+### `neural_api.weight_health` introspection endpoint
+- New RPC returning convergence diagnostics: healthy flag, persistence status,
+  convergence stats (converging vs cold providers), and open circuit details.
+- Registered as `neural_api.weight_health` and `weight_health` aliases.
+
+### Attestation verification via BearDog
+- `primal.announce` now delegates Ed25519 attestation verification to BearDog
+  via IPC (`auth.verify_ionic`), replacing the previous stub that only checked
+  for field presence. Gracefully degrades when BearDog is unavailable.
+
+### Persistent weights wired at startup
+- `NeuralApiServer` now uses `NeuralRouter::with_persistent_weights()` when
+  `SystemPaths` resolves, storing routing weights in
+  `$XDG_DATA_HOME/biomeos/routing_weights.redb`. Previously the persistent
+  constructor existed but was never called — weights were lost on restart.
+
+### Test count: 1311
+
 ## v3.69 (2026-05-22) — Wave 42: Persistent Weights + Utilization Tracking
 
 ### Persistent routing weights (`neural_router/weights.rs`)

@@ -161,6 +161,7 @@ enum Route {
     SignalList,
     SignalSchema,
     PrimalAnnounce,
+    WeightHealth,
     IdentityGet,
     SporeInstantiate,
 }
@@ -276,6 +277,8 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ),
     ("neural_api.plan_tier", Route::CompositionPlanTier),
     ("neural_api.utilization", Route::CapabilityUtilization),
+    ("neural_api.weight_health", Route::WeightHealth),
+    ("weight_health", Route::WeightHealth),
     ("capability.call", Route::CapabilityCall),
     (
         "capability.discover_translations",
@@ -652,6 +655,7 @@ impl NeuralApiServer {
                 dispatch(serde_json::to_value(&plan).map_err(anyhow::Error::from), id)
             }
             Route::CapabilityUtilization => dispatch(Ok(self.router.utilization_json().await), id),
+            Route::WeightHealth => dispatch(self.handle_weight_health().await, id),
             Route::CapabilityCall => {
                 let enriched = self.enrich_for_forwarding(params, &caller).await;
                 dispatch_capability_call(self.capability_handler.call(&enriched).await, id)
@@ -744,6 +748,7 @@ impl NeuralApiServer {
                     &self.router,
                     &self.translation_registry,
                     &self.lifecycle_handler,
+                    &self.beardog_verifier,
                     params,
                 )
                 .await,
