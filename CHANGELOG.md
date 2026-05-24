@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.75 (2026-05-24) — Cross-Gate Routing: Songbird Mesh Dispatch Integration
+
+### capability.call → Songbird mesh dispatch (Wave 211 integration)
+- `try_relay_dispatch()` replaced with `try_songbird_mesh_dispatch()` — uses
+  Songbird's unified `capability.call { capability, operation, params, routing: "any" }`
+  instead of the legacy 2-step `relay.allocate` + custom forward protocol.
+  Songbird handles local UDS dispatch + remote mesh TCP + TURN relay fallback
+  transparently.
+- Mesh fallback added to both the translation path and direct discovery path:
+  when `discover_capability()` finds no local provider, biomeOS now tries
+  Songbird mesh dispatch before returning an error. This enables multi-gate
+  NUCLEUS compositions where primals on remote gates are reached via Songbird's
+  mesh peer network.
+- Inner result unwrapping: Songbird wraps responses as `{ provider, gate, result }`;
+  biomeOS extracts the inner `result` for transparent consumer experience.
+- Routing trace records `songbird_mesh` as provider when mesh dispatch is used.
+
+### Routing contract updated
+- `specs/CAPABILITY_CALL_ROUTING_CONTRACT.md` documents the Songbird mesh
+  dispatch tier including the `{ capability, operation, params, routing }` wire
+  contract and response unwrapping semantics.
+
+### Test count: 1315
+
 ## v3.74 (2026-05-24) — Wave 47 Audit: Shadow Deploy Membrane Gate
 
 ### `composition.deploy.shadow` membrane validation

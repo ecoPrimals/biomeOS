@@ -979,7 +979,10 @@ capabilities = ["compute.dispatch"]
     let result = server.handle_request_json(&req).await;
     let inner = &result["result"];
 
-    assert_eq!(inner["valid"], false, "membrane graph with compute node should be invalid");
+    assert_eq!(
+        inner["valid"], false,
+        "membrane graph with compute node should be invalid"
+    );
     let errors = inner["validation_errors"].as_array().expect("errors array");
     assert!(
         errors.iter().any(|e| {

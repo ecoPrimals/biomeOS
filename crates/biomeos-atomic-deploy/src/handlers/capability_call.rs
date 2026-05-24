@@ -181,14 +181,11 @@ impl CapabilityHandler {
                     routing_trace,
                 });
             } else {
-                // CG-8: Songbird relay fallback for unregistered gates.
-                // When direct gate resolution fails, attempt relay-mediated
-                // dispatch through Songbird's TURN relay. This enables
-                // multi-gate mesh compositions where gates may not be
-                // directly reachable (NAT, CGNAT, residential networks).
-                let semantic_name = format!("{capability}.{operation}");
+                // CG-8: Songbird mesh fallback for unregistered gates.
+                // Forward capability.call to Songbird with routing:"any" — Songbird
+                // handles local UDS + remote mesh TCP + TURN relay transparently.
                 if let Some(relay_result) = self
-                    .try_relay_dispatch(gate_name, &semantic_name, &args, timeout_cap)
+                    .try_songbird_mesh_dispatch(capability, &operation, &args, timeout_cap)
                     .await
                 {
                     let elapsed_ms = elapsed_ms_since(start);
@@ -351,7 +348,36 @@ impl CapabilityHandler {
 
                 drop(registry);
 
-                let atomic = self.router.discover_capability(capability).await?;
+                let atomic = match self.router.discover_capability(capability).await {
+                    Ok(a) => a,
+                    Err(_local_err) => {
+                        // Translation exists but no local provider — try Songbird mesh
+                        if let Some(mesh_result) = self
+                            .try_songbird_mesh_dispatch(capability, &operation, &args, timeout_cap)
+                            .await
+                        {
+                            let elapsed_ms = elapsed_ms_since(start);
+                            let routing_trace = want_trace.then(|| {
+                                routing_trace_value(
+                                    &[
+                                        RoutingPhase::RouteResolved {
+                                            capability: capability.to_string(),
+                                            provider: "songbird_mesh".to_string(),
+                                            method: forward_method.clone(),
+                                        },
+                                        RoutingPhase::Forwarded { elapsed_ms },
+                                    ],
+                                    capability,
+                                )
+                            });
+                            return Ok(CapabilityCallOutcome {
+                                result: mesh_result?,
+                                routing_trace,
+                            });
+                        }
+                        return Err(_local_err);
+                    }
+                };
 
                 // Prefer the provider declared in the translation registry.
                 // Without this, `providers[0]` (discovery order) wins and a
@@ -423,61 +449,92 @@ impl CapabilityHandler {
                     semantic_name
                 );
 
-                let atomic = self.router.discover_capability(capability).await?;
+                match self.router.discover_capability(capability).await {
+                    Ok(atomic) => {
+                        let forward_method = operation.clone();
 
-                // Forward just the operation: the target primal already knows
-                // its own domain. Sending the full semantic_name ({domain}.{op})
-                // causes method-not-found on primals that register only {op}.
-                // Primals needing a specific method name register translations.
-                let forward_method = operation.clone();
+                        let primary_name = atomic
+                            .primals
+                            .first()
+                            .map(|p| p.name.to_string())
+                            .unwrap_or_else(|| "unknown".to_string());
 
-                let primary_name = atomic
-                    .primals
-                    .first()
-                    .map(|p| p.name.to_string())
-                    .unwrap_or_else(|| "unknown".to_string());
+                        let result = self
+                            .router
+                            .forward_request_with_timeout(
+                                &atomic.primary_endpoint,
+                                &forward_method,
+                                &args,
+                                timeout_cap,
+                            )
+                            .await;
 
-                let result = self
-                    .router
-                    .forward_request_with_timeout(
-                        &atomic.primary_endpoint,
-                        &forward_method,
-                        &args,
-                        timeout_cap,
-                    )
-                    .await;
+                        let elapsed_ms = elapsed_ms_since(start);
 
-                let elapsed_ms = elapsed_ms_since(start);
+                        self.router
+                            .record_dispatch_outcome(
+                                capability,
+                                &primary_name,
+                                result.is_ok(),
+                                elapsed_ms,
+                            )
+                            .await;
 
-                // Layer 4: record dispatch outcome for adaptive routing weights
-                self.router
-                    .record_dispatch_outcome(capability, &primary_name, result.is_ok(), elapsed_ms)
-                    .await;
+                        let result = result?;
 
-                let result = result?;
+                        let routing_trace = want_trace.then(|| {
+                            routing_trace_value(
+                                &[
+                                    RoutingPhase::RouteResolved {
+                                        capability: capability.to_string(),
+                                        provider: String::new(),
+                                        method: forward_method,
+                                    },
+                                    RoutingPhase::EndpointResolved {
+                                        provider: primary_name,
+                                        endpoint: atomic.primary_endpoint.display_string(),
+                                    },
+                                    RoutingPhase::Forwarded { elapsed_ms },
+                                ],
+                                capability,
+                            )
+                        });
 
-                let routing_trace = want_trace.then(|| {
-                    routing_trace_value(
-                        &[
-                            RoutingPhase::RouteResolved {
-                                capability: capability.to_string(),
-                                provider: String::new(),
-                                method: forward_method,
-                            },
-                            RoutingPhase::EndpointResolved {
-                                provider: primary_name,
-                                endpoint: atomic.primary_endpoint.display_string(),
-                            },
-                            RoutingPhase::Forwarded { elapsed_ms },
-                        ],
-                        capability,
-                    )
-                });
-
-                Ok(CapabilityCallOutcome {
-                    result,
-                    routing_trace,
-                })
+                        Ok(CapabilityCallOutcome {
+                            result,
+                            routing_trace,
+                        })
+                    }
+                    Err(local_err) => {
+                        // No local provider found — try Songbird mesh dispatch.
+                        // Songbird handles local UDS + remote mesh TCP + TURN relay,
+                        // reaching primals on other gates transparently.
+                        if let Some(mesh_result) = self
+                            .try_songbird_mesh_dispatch(capability, &operation, &args, timeout_cap)
+                            .await
+                        {
+                            let elapsed_ms = elapsed_ms_since(start);
+                            let routing_trace = want_trace.then(|| {
+                                routing_trace_value(
+                                    &[
+                                        RoutingPhase::RouteResolved {
+                                            capability: capability.to_string(),
+                                            provider: "songbird_mesh".to_string(),
+                                            method: semantic_name.clone(),
+                                        },
+                                        RoutingPhase::Forwarded { elapsed_ms },
+                                    ],
+                                    capability,
+                                )
+                            });
+                            return Ok(CapabilityCallOutcome {
+                                result: mesh_result?,
+                                routing_trace,
+                            });
+                        }
+                        Err(local_err)
+                    }
+                }
             }
         }
     }
@@ -520,66 +577,66 @@ impl CapabilityHandler {
         }))
     }
 
-    /// CG-8: Attempt relay-mediated dispatch through Songbird.
+    /// CG-8: Attempt cross-gate dispatch through Songbird mesh.
     ///
-    /// When a gate isn't directly registered, try to allocate a relay
-    /// channel via `relay.allocate` (Songbird) and forward the request
-    /// through it. Returns `None` if Songbird isn't available or relay
-    /// allocation fails — caller should fall through to the error path.
-    async fn try_relay_dispatch(
+    /// Forwards `capability.call` to Songbird with `routing: "any"`, which lets
+    /// Songbird resolve locally first, then transparently forward over mesh TCP
+    /// to remote peers (with TURN relay fallback for NAT). Returns `None` if
+    /// Songbird is unavailable or capability is not found on any reachable gate.
+    async fn try_songbird_mesh_dispatch(
         &self,
-        gate_name: &str,
-        method: &str,
+        capability: &str,
+        operation: &str,
         args: &Value,
         timeout: Option<std::time::Duration>,
     ) -> Option<Result<Value>> {
         let relay_endpoint = self.router.find_primal_by_capability("relay").await.ok()?;
 
         debug!(
-            "CG-8: Attempting relay dispatch for gate '{}' via Songbird @ {}",
-            gate_name,
+            "Songbird mesh dispatch: {capability}.{operation} via {}",
             relay_endpoint.endpoint.display_string()
         );
 
-        let allocate_params = json!({
-            "gate": gate_name,
-            "method": method,
+        let songbird_params = json!({
+            "capability": capability,
+            "operation": operation,
+            "params": args,
+            "routing": "any",
         });
 
-        let relay_timeout = Some(std::time::Duration::from_secs(5));
-        let alloc_result = self
+        let mesh_timeout = timeout.or(Some(std::time::Duration::from_secs(15)));
+        let result = self
             .router
             .forward_request_with_timeout(
                 &relay_endpoint.endpoint,
-                "relay.allocate",
-                &allocate_params,
-                relay_timeout,
+                "capability.call",
+                &songbird_params,
+                mesh_timeout,
             )
             .await;
 
-        let relay_channel = match alloc_result {
-            Ok(channel) => channel,
-            Err(e) => {
-                debug!("CG-8: relay.allocate failed for gate '{gate_name}': {e}");
-                return None;
+        match &result {
+            Ok(response) => {
+                let gate = response
+                    .get("gate")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                let provider = response
+                    .get("provider")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                debug!("Songbird mesh resolved: {capability}.{operation} → {provider} @ {gate}");
+                // Unwrap inner result: Songbird wraps as { provider, gate, result }
+                let inner = response
+                    .get("result")
+                    .cloned()
+                    .unwrap_or_else(|| response.clone());
+                Some(Ok(inner))
             }
-        };
-
-        let relay_endpoint_str = relay_channel.get("endpoint").and_then(|v| v.as_str())?;
-
-        let relay_ep = biomeos_core::TransportEndpoint::parse(relay_endpoint_str)?;
-
-        let remote_call = json!({
-            "method": method,
-            "params": args,
-            "relay_channel": relay_channel.get("channel_id"),
-        });
-
-        let result = self
-            .router
-            .forward_request_with_timeout(&relay_ep, "capability.call", &remote_call, timeout)
-            .await;
-
-        Some(result)
+            Err(e) => {
+                debug!("Songbird mesh dispatch failed for {capability}.{operation}: {e}");
+                None
+            }
+        }
     }
 }

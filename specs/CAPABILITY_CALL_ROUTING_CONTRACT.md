@@ -42,7 +42,22 @@ Optional `_routing_trace` in the **top-level** `params` object is copied onto th
 ## Gate-scoped routing
 
 - `gate: "local"` — Skips remote gate lookup; runs the same Route → Resolve → Forward pipeline locally.
-- `gate: "<label>"` — Resolves a registered remote Neural API endpoint; forwards a nested `capability.call` there. Trace (when enabled) records gate endpoint resolution and forward timing.
+- `gate: "<label>"` — Resolves a registered remote Neural API endpoint; forwards a nested `capability.call` there. If the gate is not registered, falls back to Songbird mesh dispatch (see below). Trace (when enabled) records gate endpoint resolution and forward timing.
+
+## Songbird mesh dispatch (cross-gate fallback)
+
+When a capability is not available locally (no provider discovered) or a named
+gate is not registered, biomeOS forwards `capability.call` to Songbird with
+`routing: "any"`. Songbird handles local UDS dispatch and remote mesh TCP
+forwarding (with TURN relay fallback for NAT/CGNAT) transparently.
+
+Songbird's `capability.call` interface:
+- Params: `{ capability, operation, params, routing: "any"|"local" }`
+- Response: `{ provider, gate, result }` — biomeOS unwraps the inner `result`.
+
+This enables multi-gate NUCLEUS mesh compositions where primals on remote
+gates are reachable via Songbird's mesh peer network without requiring
+explicit gate registration in biomeOS.
 
 ## Translations: registration and matching
 
