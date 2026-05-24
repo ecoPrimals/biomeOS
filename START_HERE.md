@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: May 15, 2026
-**Status**: Production Ready (v3.61) — Evolution debt cleanup (clippy zero-warning, ResourceEnvelope cpu/mem enforcement, composition.status pipeline readiness, --mode full 12+1 primals, spore.instantiate wired, file size compliance), stadial gate readiness (braid signal tier, identity.get wired, stability tier annotations, capabilities.list wire compliance, version scheme documented), deep debt refactoring (method_gate modularized, graph handler split, dead code removed, hardcoded primal names evolved to capability-based), membrane composition model, signal-tier announce protocol, federation health diagnostics, gate-aware token forwarding, primalSpring contract alignment, TokenVerifier trait, JH-2 resource envelope enforcement, JH-3 composition.reload, MethodGate wired, BTSP Phase 3 FULL, 7,915+ tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, 0 TODO/FIXME, 0 hardcoded values, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: May 24, 2026
+**Status**: Production Ready (v3.73) — Deep debt CLEAN, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, weights/ submodule refactor, port helpers capability-oriented, 4,303 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 8,064+ tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
+8. **Tested**: 4,303 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
@@ -146,7 +146,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 | Primal | Purpose | Status | Next Evolution |
 |--------|---------|--------|----------------|
 | BearDog | Crypto, Genetics | Reference | Stable |
-| Songbird | HTTP, TLS, Discovery, Mesh | 90% | Mesh state fix, UDP discovery |
+| Songbird | HTTP, TLS, Discovery, Mesh, Relay | 90% | Mesh state fix, UDP discovery |
 | Toadstool | Compute, GPU | Operational | GPU job queue |
 | NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
 | Squirrel | AI Orchestration | Operational | Ollama native adapter |
@@ -167,15 +167,15 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.61 — evolution debt cleanup, pipeline readiness, 12+1 primal full mode, spore.instantiate, zero clippy warnings)
-**Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — no identity-based routing, no deprecated discovery stubs
+**Status**: Production Ready (v3.73 — deep debt CLEAN, capability-domain composition, adaptive routing, membrane model)
+**Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
-**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), `primal.list` + `topology.primals`, lazy rescan, cross-gate routing, post-spawn auto-registration
-**Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` standard; `composition.reload` hot-swap; membrane + nucleated composition models
+**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), `primal.list` + `topology.primals`, lazy rescan, cross-gate routing, post-spawn auto-registration, adaptive weights (redb-persistent), attestation verification
+**Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` capability-domain driven; `composition.reload` hot-swap; membrane + nucleated composition models
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection + composition dashboard
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 7,915 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
-**Updated**: May 15, 2026
+**Tests**: 4,303 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 1 tracked | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
+**Updated**: May 24, 2026

@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — 7,924+ tests, 27 capability domains, 320+ translations, 17 signal graphs, 40 deploy graphs, zero blocking debt"
-date = 2026-05-20
+description = "Orchestration kernel — 4,303 tests, 27 capability domains, 320+ translations, 17 signal graphs, 43 deploy graphs, zero blocking debt"
+date = 2026-05-24
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -9,15 +9,15 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **7,924+ tests** passing (lib + bin + doc + proptest, 0 failures, fully concurrent)
+- **4,303 tests** workspace-wide (1,314 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
-- **v3.64** — production ready, deep debt CLEAN
+- **v3.73** — production ready, deep debt CLEAN
 - **27 capability domains**, **320+ translations** across 13 primals
 - **17 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
-- **40 deploy graphs** + 2 pipeline coordination graphs
+- **43 deploy graphs** (incl. membrane_deploy, provenance trio)
 - **20 niche templates** (+ RootPulse, soil-microbiome, ecology)
-- **28 workspace crates**, 838 files, 208,327 LOC
-- **Zero blocking debt** — 0 unsafe, 0 C deps, 0 TODO/FIXME, 0 clippy warnings
+- **25 workspace crates**
+- **Zero blocking debt** — 0 unsafe, 0 C deps, 1 tracked TODO, 0 clippy warnings
 - **Edition 2024** all crates, ecoBin v3.0 compliant
 - **Cross-arch** — x86_64 + aarch64 + armv7 (USB + Pixel + Raspberry Pi)
 - **Security A++** — 100/100, Dark Forest Gate, BTSP Phase 3 encrypted framing
@@ -69,12 +69,14 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
+| v3.73 | May 24 | Capability-domain composition, weights/ refactor, port helper rename |
+| v3.72 | May 24 | health.check normalized to "alive" |
+| v3.71 | May 23 | Membrane composition model live execution |
+| v3.70 | May 23 | Weight health introspection, attestation verification, persistent startup |
+| v3.69 | May 22 | Persistent routing weights, utilization tracking |
+| v3.66 | May 22 | Cross-gate dispatch, songbird relay fallback |
+| v3.65 | May 20 | `primal.list` Wave 31 schema alignment |
 | v3.64 | May 19 | WS-2: `nest.sync` cross-spring provenance exchange |
-| v3.63 | May 19 | R5: all 17 signals as first-class routes; R7 deferred |
-| v3.62 | May 18 | R9: stale socket cleanup, PID files, shutdown hygiene |
-| v3.61 | May 18 | Clippy zero, resource enforcement, pipeline readiness |
-| v3.60 | May 17 | Stadial gate: braid signal tier, wire standard compliance |
-| v3.59 | May 16 | Signal dispatch 16 graphs, capability interception |
 
 ## See Also
 

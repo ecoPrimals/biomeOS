@@ -4,15 +4,15 @@
 
 ---
 
-## Status: Production Ready (v3.66)
+## Status: Production Ready (v3.73)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 7/7 ecoBin v3.0 compliant (+ barraCuda, coralReef) |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, hardcoded IPs centralized to constants, cross-arch armv7 build fix, all runtime paths centralized, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
-| Tests | 7,915 passing (0 failures, fully concurrent) — 90%+ line / function / region (llvm-cov) |
+| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
+| Tests | 4,303 workspace-wide (1,314 `biomeos-atomic-deploy`), 0 failures, fully concurrent — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 18-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
@@ -20,23 +20,23 @@
 | License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI + TCP-only mobile |
 | AI Bridge | Capability-routed to Squirrel (tag-in at runtime; biomeOS runs without AI primal) |
-| Neural API | 320+ capability translations, 27 domains (+ tensor/math/stats), 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing, formalized `capability.call` routing contract |
+| Neural API | 320+ capability translations, 27 domains (+ tensor/math/stats), 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing, formalized `capability.call` routing contract, adaptive routing weights (redb-persistent), attestation verification |
 | Genetics | `GeneticsTier` enforcement on graphs (`none`/`tag`/`mito_beacon`/`nuclear`), preflight validation |
 | Deploy Resolution | `AtomicComposition` auto-resolved from node capabilities (Tower/Node/Nest/Nucleus) |
-| Composition | Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` standard; `lifecycle.composition` enriched dashboard |
+| Composition | Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` capability-domain driven; `lifecycle.composition` enriched dashboard; membrane + nucleated composition models |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection, composition dashboard |
 | Files >800 LOC | 0 production files (all under 800 after smart domain extraction) |
-| Discovery | **Capability-based** per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — XDG sockets + `topology.rescan` + lazy rescan + `capability.register` + DNS-SD mDNS; no identity-based routing or deprecated discovery stubs |
+| Discovery | **Capability-based** per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — XDG sockets + `topology.rescan` + lazy rescan + `capability.register` + DNS-SD mDNS + `primal.announce` self-registration; no identity-based routing or deprecated discovery stubs |
 | Blocking Debt | 0 (all primalSpring Phase 43 gaps resolved: genetics tier, deploy class, routing contract, tick-loop) |
 | Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated (RPITIT/generics/enum dispatch/manual desugar); pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`); unused `tokio` removed from types crate; placeholder features pruned; repository URLs standardized; unused `walkdir` pruned from 3 crates |
-| TODO/FIXME/HACK | 0 in production code |
+| TODO/FIXME/HACK | 1 active (`live_discovery.rs` REST route wiring — tracked) |
 | Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
-| Hardcoded Values | 0 hardcoded primal names, IPs, ports, or filesystem paths in production code (all use `primal_names::` and `constants::` from `biomeos-types`); nucleus/spawner match blocks replaced by TOML-driven launch profiles; all IPs (`127.0.0.1`, `::1`, `0.0.0.0:0`, `192.0.2.1:80`) + all runtime paths (`/run/user`, `/data/local/tmp/biomeos`, `/tmp/biomeos`) centralized to constants; tools primal lists synced with registry |
+| Hardcoded Values | 0 hardcoded primal names, IPs, ports, or filesystem paths in production code (all use `primal_names::` and `constants::` from `biomeos-types`); nucleus/spawner match blocks replaced by TOML-driven launch profiles; composition handlers use capability-domain discovery; port helpers renamed to capability-oriented (`security_port`, `relay_port`); `DOMAIN_PRIMAL_BOOTSTRAP` for bootstrap-only name mapping |
 | Cross-Arch | x86_64 + aarch64 + armv7 (32-bit safe: `cast.rs` `u64` bounds, conditional tests) |
-| Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 16 signal graphs |
+| Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 17 signal graphs |
 
 ---
 
@@ -46,7 +46,7 @@ biomeOS uses a **dual version scheme**:
 
 | Scheme | Value | Where | Purpose |
 |--------|-------|-------|---------|
-| **Release train** | `v3.66` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. Incremented on each audit/evolution cycle. |
+| **Release train** | `v3.73` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. Incremented on each audit/evolution cycle. |
 | **Workspace semver** | `0.1.0` | `Cargo.toml` `[workspace.package]`, `plasmidBin/manifest.toml` | Rust crate version. Will bump to `1.0.0` at stadial exit when the public API surface stabilizes. |
 
 The release train version (`v3.x`) is the **canonical version** for downstream consumers (springs, gardens, projectNUCLEUS). The workspace semver (`0.1.0`) reflects that the Rust crate API is still pre-1.0. Both are intentional — the release train captures functional maturity while semver captures API stability.
@@ -241,7 +241,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 | Primal | Purpose | Status | Next Evolution |
 |--------|---------|--------|----------------|
 | BearDog | Crypto, Genetics | Reference | Stable |
-| Songbird | HTTP, TLS, Discovery, Mesh | 90% | Mesh state fix, UDP discovery fix |
+| Songbird | HTTP, TLS, Discovery, Mesh, Relay | 90% | Mesh state fix, UDP discovery fix |
 | Toadstool | Compute, GPU dispatch | Operational | GPU job queue |
 | barraCuda | GPU Math, Tensors, Stats, Noise, Activation, RNG | Operational | Shader interop |
 | coralReef | Shader compilation, WGSL, SPIR-V | Operational | Pipeline caching |
@@ -273,7 +273,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,859 tests across 25 crates, fully concurrent)
+### Test (4,303 tests across 25 crates, fully concurrent)
 
 ```bash
 cargo test --workspace
@@ -325,9 +325,9 @@ biomeOS/
 │   ├── x86_64/                # Intel/AMD binaries
 │   └── aarch64/               # ARM64 binaries
 ├── pixel8a-deploy/            # Pixel 8a deployment
-├── specs/                     # Standards and specs (24 active)
+├── specs/                     # Standards and specs (26 active)
 ├── docs/                      # Architecture docs (handoffs in ecoPrimals/wateringHole/)
-├── graphs/                    # Deployment graphs
+├── graphs/                    # Deployment graphs (43 incl. membrane_deploy)
 └── scripts/                   # Startup and build scripts
 ```
 
@@ -367,10 +367,10 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v3.59)
-**Updated**: May 15, 2026
-**Tests**: 7,915 passing (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
+**Status**: Production Ready (v3.73)
+**Updated**: May 24, 2026
+**Tests**: 4,303 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + cross-gate forwarding + DNS-SD + `primal.announce` | Adaptive routing weights (redb-persistent) | Membrane + nucleated composition | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---
 

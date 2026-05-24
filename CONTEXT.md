@@ -23,14 +23,14 @@ multiple gates (devices).
 - **Architecture:** Single binary (UniBin) with multiple operational modes (bootstrap, nucleus, deploy, doctor, continuous, rootpulse)
 - **Communication:** JSON-RPC 2.0 over Unix sockets, abstract sockets, TCP, and HTTP — with tarpc binary protocol escalation for hot paths
 - **License:** AGPL-3.0-or-later (scyBorg triple-copyleft: AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
-- **Tests:** 7,859 passing, 0 failures
+- **Tests:** 4,303 workspace-wide (0 failures)
 - **Coverage:** 90%+ line coverage (llvm-cov verified)
 - **Blocking debt:** 0 (primalSpring Phase 43 gaps resolved, all composition gaps resolved)
 - **Edition:** Rust 2024 across all workspace crates
 - **Crate count:** 25 workspace crates
 - **Clippy:** pedantic + nursery enabled via workspace lint inheritance
 - **Unsafe:** 0 in production code (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points)
-- **TODO/FIXME/HACK:** 0 in production code
+- **TODO/FIXME/HACK:** 1 tracked (`live_discovery.rs` REST route wiring)
 
 ## Key Capabilities (JSON-RPC methods)
 

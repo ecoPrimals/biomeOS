@@ -111,7 +111,14 @@ All notable changes to biomeOS will be documented in this file.
   tracked method count.
 - 5 new utilization tests.
 
-### Test count: 1311 (+8 from v3.68)
+### Test count: 1311 (+8 from v3.67)
+
+## v3.68 (2026-05-22) — Upstream merge: composition intelligence + adaptive routing weights
+
+Merged upstream `v3.67` composition and routing weight changes into canonical
+form. No functional delta beyond v3.67 — commit `7e81088e` is the merge point.
+
+### Test count: 1303
 
 ## v3.67 (2026-05-22) — Wave 40: Adaptive Routing Weights (Neural API Layer 4)
 

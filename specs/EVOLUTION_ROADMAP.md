@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 18, 2026 (v3.62: Stale socket cleanup R9, PID files, shutdown cleanup; v3.61 evolution debt)
+**Updated**: May 24, 2026 (v3.73: Deep debt — capability-domain composition, weights/ refactor, membrane model, attestation, persistent routing)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -438,6 +438,11 @@ Systematic deep debt resolution across 7 waves:
 - [x] `primal.list` Wave 20 schema alignment (name/socket/status/pid/version) — v3.65
 - [x] Wave 38: `nest.sync` cross-gate wiring (remote_gate → GateRegistry → fetch_dag_slice) — v3.66
 - [x] Wave 38: CG-8 songbird relay fallback in capability.call cross-gate dispatch — v3.66
+- [x] Wave 42: Persistent routing weights (redb), utilization tracking — v3.69
+- [x] Wave 45: `neural_api.weight_health` introspection, attestation verification, persistent startup wired — v3.70
+- [x] Wave 46: `composition_model = "membrane"` live execution, `membrane_tower` pattern, `membrane_deploy.toml` — v3.71
+- [x] Wave 47: `health.check` normalized to `"alive"` per DEPLOYMENT_BEHAVIOR_STANDARD — v3.72
+- [x] Deep debt: composition handlers evolved to capability-domain discovery, `weights.rs` → `weights/` submodule, port helpers capability-oriented, `DOMAIN_PRIMAL_BOOTSTRAP` — v3.73
 
 ### Degradation Behavior
 

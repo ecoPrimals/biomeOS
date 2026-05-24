@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: May 15, 2026
+**Updated**: May 24, 2026
 
 ---
 
@@ -15,8 +15,8 @@
 | See what changed | [CHANGELOG.md](CHANGELOG.md) |
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
-| Deployment graphs (42 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v3.66) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| Deployment graphs (43 incl. provenance trio + membrane) | [graphs/README.md](graphs/README.md) |
+| See evolution handoffs (v2.43–v3.73) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -33,7 +33,7 @@
 
 ---
 
-## Specifications (24 active)
+## Specifications (26 active)
 
 See [specs/README.md](specs/README.md) for full index. Key specs:
 
@@ -58,8 +58,14 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
-| BIOMEOS_V343_DISCOVERY_SCHEMA_ALIGNMENT_HANDOFF | Discovery schema alignment — registry_queries reads live Neural API format, 7,867 tests | May 5, 2026 |
-| BIOMEOS_V342_COORDINATOR_TRANSPORT_GRAPH_SCHEMA_HANDOFF | Coordinator transport migration to `call_btsp`, graph schema PG-39 fix, final BEARDOG_NODE_ID sweep, 7,866 tests | May 4, 2026 |
+| BIOMEOS_V373_DEEP_DEBT_CAPABILITY_COMPOSITION_MAY24_2026 | Capability-domain composition, weights/ refactor, port helper rename, `DOMAIN_PRIMAL_BOOTSTRAP` | May 24, 2026 |
+| BIOMEOS_V367_WAVE43_ROUTING_WEIGHTS_MAY23_2026 | Persistent routing weights, utilization tracking | May 23, 2026 |
+| BIOMEOS_V366_WAVE38_CROSS_GATE_RELAY_MAY22_2026 | Cross-gate dispatch, songbird relay fallback | May 22, 2026 |
+| BIOMEOS_V365_WAVE31_SCHEMA_ALIGNMENT_MAY20_2026 | `primal.list` schema alignment | May 20, 2026 |
+| BIOMEOS_V364_WS2_CROSS_SPRING_SYNC_MAY19_2026 | `nest.sync` cross-spring provenance exchange | May 19, 2026 |
+| BIOMEOS_V363_UPSTREAM_GAPS_RESOLVED_MAY19_2026 | All 17 signals as first-class routes | May 19, 2026 |
+| BIOMEOS_V360_STADIAL_GATE_READINESS_MAY17_2026 | Stadial gate readiness, braid signal tier | May 17, 2026 |
+| BIOMEOS_V359_DEEP_DEBT_REFACTORING_MAY15_2026 | Signal dispatch, capability interception | May 15, 2026 |
 
 ### April 2026
 
@@ -150,7 +156,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (7,915 tests — 0 ignored — fully concurrent)
+# Test (4,303 tests — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -175,8 +181,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of May 22, 2026 (v3.66)**
-**Active: 25 specs, handoffs in wateringHole (v2.43–v3.66), 4 scripts**
-**Deploy graphs: 42 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE; membrane + nucleated composition models; signal-tier announce protocol; method_gate modularized (classify/ionic/verifier)**
-**Tests: 7,915 passing (0 failures, 0 ignored, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**
+**Documentation current as of May 24, 2026 (v3.73)**
+**Active: 26 specs, handoffs in wateringHole (v2.43–v3.73), 4 scripts**
+**Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
+**Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE; membrane + nucleated composition models; signal-tier announce protocol; method_gate modularized; adaptive routing weights (redb-persistent); attestation verification; capability-domain composition health**
+**Tests: 4,303 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 1 tracked | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**
