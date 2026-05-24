@@ -14,7 +14,6 @@ use tracing::warn;
 use super::LifecycleHandler;
 use super::spring_status::state_to_string;
 use crate::lifecycle_manager::LifecycleState;
-use biomeos_types::primal_names;
 
 impl LifecycleHandler {
     /// Handle `composition.status` — adaptive daemon surface for pappusCast.
@@ -86,24 +85,30 @@ impl LifecycleHandler {
             .topology_version
             .load(std::sync::atomic::Ordering::Relaxed);
 
-        let has_active = |name: &str| -> bool {
-            primal_health
-                .iter()
-                .any(|p| p["name"].as_str() == Some(name) && p["state"].as_str() == Some("active"))
+        let has_active_domain = |domain: &str| -> bool {
+            primal_health.iter().any(|p| {
+                p["state"].as_str() == Some("active")
+                    && p["capabilities"].as_array().is_some_and(|caps| {
+                        caps.iter()
+                            .any(|c| c.as_str().is_some_and(|s| s.starts_with(domain)))
+                    })
+            })
         };
         let content_pipeline = json!({
-            "storage": has_active("nestgate"),
-            "dag": has_active("rhizocrypt"),
-            "ledger": has_active("loamspine"),
-            "attribution": has_active("sweetgrass"),
-            "ready": has_active("nestgate") && has_active("rhizocrypt")
-                && has_active("loamspine") && has_active("sweetgrass"),
+            "storage": has_active_domain("storage.") || has_active_domain("content."),
+            "dag": has_active_domain("dag."),
+            "ledger": has_active_domain("spine.") || has_active_domain("anchor."),
+            "attribution": has_active_domain("braid.") || has_active_domain("provenance."),
+            "ready": (has_active_domain("storage.") || has_active_domain("content."))
+                && has_active_domain("dag.")
+                && (has_active_domain("spine.") || has_active_domain("anchor."))
+                && (has_active_domain("braid.") || has_active_domain("provenance.")),
         });
         let compute_pipeline = json!({
-            "dispatch": has_active("toadstool"),
-            "shader": has_active("coralreef"),
-            "gpu": has_active("barracuda"),
-            "ready": has_active("toadstool"),
+            "dispatch": has_active_domain("compute."),
+            "shader": has_active_domain("shader.") || has_active_domain("compile."),
+            "gpu": has_active_domain("math.") || has_active_domain("gpu."),
+            "ready": has_active_domain("compute."),
         });
 
         Ok(json!({
@@ -131,27 +136,36 @@ impl LifecycleHandler {
         let mut deploy_graph = String::from("unknown");
         let mut all_healthy = true;
 
-        let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-            .unwrap_or_else(|_| primal_names::BEARDOG.to_string());
-        let discovery_provider = std::env::var("BIOMEOS_NETWORK_PROVIDER")
-            .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
-        let compute_provider = std::env::var("BIOMEOS_COMPUTE_PROVIDER")
-            .unwrap_or_else(|_| primal_names::TOADSTOOL.to_string());
-        let storage_provider = std::env::var("BIOMEOS_STORAGE_PROVIDER")
-            .unwrap_or_else(|_| primal_names::NESTGATE.to_string());
+        // Collect capability surfaces for all registered primals.
+        let mut primal_caps: Vec<(Vec<String>, bool)> = Vec::with_capacity(status.len());
+        for (name, state) in &status {
+            let info = manager.get_primal_info(name).await;
+            let caps: Vec<String> = info
+                .as_ref()
+                .and_then(|i| i.deployment_node.as_ref())
+                .map(|n| n.capabilities.clone())
+                .unwrap_or_default();
+            let is_active = matches!(state, LifecycleState::Active { .. });
+            primal_caps.push((caps, is_active));
+        }
 
-        let tower_primals: Vec<&str> = vec![&security_provider, &discovery_provider];
-        let node_primals: Vec<&str> = vec![&compute_provider];
-        let nest_primals: Vec<&str> = vec![&storage_provider];
-        let mesh_primals: Vec<&str> = vec![&discovery_provider];
+        // Capability domains that define each subsystem tier.
+        // Primals are matched by their registered capabilities, not by name.
+        const TOWER_DOMAINS: &[&str] =
+            &["crypto.", "security.", "discovery.", "relay.", "defense."];
+        const NODE_DOMAINS: &[&str] = &["compute.", "science.", "inference."];
+        const NEST_DOMAINS: &[&str] = &["storage.", "content.", "dag.", "spine.", "braid."];
+        const MESH_DOMAINS: &[&str] = &["discovery.", "relay.", "network."];
 
-        let subsystem_status = |names: &[&str]| -> &'static str {
+        let subsystem_status = |domains: &[&str]| -> &'static str {
             let mut found_any = false;
-            for (name, state) in &status {
-                let lower = name.to_lowercase();
-                if names.iter().any(|n| lower.contains(n)) {
+            for (caps, is_active) in &primal_caps {
+                let matches_domain = caps
+                    .iter()
+                    .any(|c| domains.iter().any(|d| c.starts_with(d)));
+                if matches_domain {
                     found_any = true;
-                    if !matches!(state, LifecycleState::Active { .. }) {
+                    if !is_active {
                         return "degraded";
                     }
                 }
@@ -159,20 +173,33 @@ impl LifecycleHandler {
             if found_any { "ok" } else { "unavailable" }
         };
 
-        let tower = subsystem_status(&tower_primals);
-        let node = subsystem_status(&node_primals);
-        let nest = subsystem_status(&nest_primals);
-        let mesh_process = subsystem_status(&mesh_primals);
+        let tower = subsystem_status(TOWER_DOMAINS);
+        let node = subsystem_status(NODE_DOMAINS);
+        let nest = subsystem_status(NEST_DOMAINS);
+        let mesh_process = subsystem_status(MESH_DOMAINS);
 
         subsystems.insert("tower".to_string(), json!(tower));
         subsystems.insert("node".to_string(), json!(node));
         subsystems.insert("nest".to_string(), json!(nest));
 
+        // Discover mesh provider by capability rather than hardcoded name.
+        let mesh_provider_name: Option<String> = {
+            let status_names: Vec<&String> = status.keys().collect();
+            primal_caps
+                .iter()
+                .zip(status_names.iter())
+                .find(|((caps, is_active), _)| {
+                    *is_active
+                        && caps
+                            .iter()
+                            .any(|c| c.starts_with("discovery.") || c.starts_with("relay."))
+                })
+                .map(|(_, name)| (*name).clone())
+        };
+
         let mesh_detail = if mesh_process == "ok" {
-            match self
-                .probe_mesh_provider(&manager, &discovery_provider)
-                .await
-            {
+            let probe_target = mesh_provider_name.unwrap_or_default();
+            match self.probe_mesh_provider(&manager, &probe_target).await {
                 Ok(detail) => detail,
                 Err(_) => json!({ "status": "ok", "detail": "process_alive" }),
             }

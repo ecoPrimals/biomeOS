@@ -206,22 +206,32 @@ async fn composition_health_empty_returns_unavailable_subsystems() {
 async fn composition_health_with_incubating_tower_shows_degraded() {
     let handler = LifecycleHandler::new("test-family");
 
+    // Register primals with deployment_node capabilities so capability-based
+    // subsystem detection recognizes them as tower/mesh providers.
     handler
         .register(&Some(json!({
-            "name": "beardog-server",
+            "name": "security-provider",
             "socket_path": "/tmp/beardog.sock",
-            "pid": 1
+            "pid": 1,
+            "deployment_node": {
+                "id": "security-provider",
+                "capabilities": ["crypto.sign", "crypto.encrypt", "security.audit"]
+            }
         })))
         .await
-        .expect("register beardog");
+        .expect("register security provider");
     handler
         .register(&Some(json!({
-            "name": "songbird-orch",
+            "name": "relay-provider",
             "socket_path": "/tmp/songbird.sock",
-            "pid": 2
+            "pid": 2,
+            "deployment_node": {
+                "id": "relay-provider",
+                "capabilities": ["discovery.announce", "relay.allocate", "network.tls_connect"]
+            }
         })))
         .await
-        .expect("register songbird");
+        .expect("register relay provider");
 
     let health = handler.composition_health(&None).await.expect("health");
     let subs = health["subsystems"].as_object().unwrap();

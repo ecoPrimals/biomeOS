@@ -122,40 +122,58 @@ pub fn discovery_port() -> u16 {
     discovery_port_from(env::var("DISCOVERY_PORT").ok().as_deref())
 }
 
-/// BearDog port from an optional value (same parse rules as `BEARDOG_PORT`).
+/// Security provider port from an optional value.
 #[must_use]
-pub fn beardog_port_from(val: Option<&str>) -> u16 {
+pub fn security_port_from(val: Option<&str>) -> u16 {
     val.and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_BEARDOG_PORT)
 }
 
 /// Get security provider port from environment or fallback to default.
-///
-/// Checks `SECURITY_PORT` environment variable first.
 #[must_use]
-pub fn beardog_port() -> u16 {
-    beardog_port_from(env::var(env_vars::SECURITY_PORT).ok().as_deref())
+pub fn security_port() -> u16 {
+    security_port_from(env::var(env_vars::SECURITY_PORT).ok().as_deref())
 }
 
-/// Songbird port from an optional value (same parse rules as `SONGBIRD_PORT` / MCP env vars).
+/// Relay/discovery provider port from an optional value.
 #[must_use]
-pub fn songbird_port_from(val: Option<&str>) -> u16 {
+pub fn relay_port_from(val: Option<&str>) -> u16 {
     val.and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_SONGBIRD_PORT)
 }
 
-/// Get discovery provider port from environment or fallback to default.
-///
-/// Checks `DISCOVERY_PORT` or `MCP_PORT` environment variable first.
+/// Get relay/discovery provider port from environment or fallback to default.
 #[must_use]
-pub fn songbird_port() -> u16 {
-    songbird_port_from(
+pub fn relay_port() -> u16 {
+    relay_port_from(
         env::var(env_vars::DISCOVERY_PORT)
             .or_else(|_| env::var(env_vars::MCP_WEBSOCKET_PORT))
             .or_else(|_| env::var("MCP_PORT"))
             .ok()
             .as_deref(),
     )
+}
+
+// Backward-compatible aliases (deprecated — use capability-oriented names)
+#[doc(hidden)]
+#[must_use]
+pub fn beardog_port_from(val: Option<&str>) -> u16 {
+    security_port_from(val)
+}
+#[doc(hidden)]
+#[must_use]
+pub fn beardog_port() -> u16 {
+    security_port()
+}
+#[doc(hidden)]
+#[must_use]
+pub fn songbird_port_from(val: Option<&str>) -> u16 {
+    relay_port_from(val)
+}
+#[doc(hidden)]
+#[must_use]
+pub fn songbird_port() -> u16 {
+    relay_port()
 }
 
 /// Link local address range

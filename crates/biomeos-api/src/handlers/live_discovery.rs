@@ -3,8 +3,10 @@
 
 #![expect(
     dead_code,
-    reason = "pub(crate) utilities awaiting REST route wiring — not stubs, fully implemented"
+    reason = "pub(crate) utilities awaiting REST route wiring — fully implemented, capability-based"
 )]
+// TODO(REST-routes): Wire discover_all_primals / discover_by_capability
+// into GET /api/v1/discovery/primals and GET /api/v1/discovery/capability/{domain}
 
 //! Live Primal Discovery - Capability-Based Dynamic Discovery.
 //!

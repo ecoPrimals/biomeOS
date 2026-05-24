@@ -93,21 +93,29 @@ pub fn resolve_primal_socket_with(
     family_path.to_string_lossy().to_string()
 }
 
-/// Primals that bind their socket using a capability-domain name.
+/// Bootstrap mapping: capability domain ↔ default primal name.
 ///
-/// Loaded from config at startup in production; this static table serves as
-/// the compile-time fallback when the registry isn't available.
-const DOMAIN_SOCKET_ALIASES: &[(&str, &str)] = &[("toadstool", "compute"), ("nestgate", "storage")];
+/// Used only during discovery bootstrap when the capability registry isn't
+/// yet populated. In production, `primal.announce` provides the authoritative
+/// mapping and this table is never consulted.
+const DOMAIN_PRIMAL_BOOTSTRAP: &[(&str, &str)] = &[
+    ("compute", "toadstool"),
+    ("storage", "nestgate"),
+    ("crypto", "beardog"),
+    ("relay", "songbird"),
+    ("defense", "skunkbat"),
+];
 
 fn domain_socket_alias(primal: &str) -> Option<&'static str> {
-    DOMAIN_SOCKET_ALIASES
+    DOMAIN_PRIMAL_BOOTSTRAP
         .iter()
-        .find(|(p, _)| *p == primal)
-        .map(|(_, domain)| *domain)
+        .find(|(_, p)| *p == primal)
+        .map(|(domain, _)| *domain)
 }
 
 /// Primals that use dual-socket mode (tarpc + JSON-RPC).
 /// biomeOS forwards via JSON-RPC, so prefer `.jsonrpc.sock` paths.
+/// Derived from capability domains: currently only `compute` primals bind dual.
 fn dual_socket_primals() -> &'static [&'static str] {
     &["toadstool"]
 }

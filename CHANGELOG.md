@@ -2,6 +2,36 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.73 (2026-05-24) — Deep Debt: Capability-Based Discovery + weights/ Refactor
+
+### Composition handlers evolved to capability-domain discovery
+- `composition.status` pipelines now detect content/compute readiness by
+  capability domain (`storage.`, `dag.`, `compute.`, etc.) instead of
+  hardcoded primal names (`nestgate`, `rhizocrypt`, `toadstool`).
+- `composition.health` subsystem detection uses capability domains
+  (TOWER_DOMAINS, NODE_DOMAINS, NEST_DOMAINS, MESH_DOMAINS) instead of
+  env-var primal name fallbacks. Mesh provider discovered by `discovery.*`/`relay.*`
+  capability rather than `BIOMEOS_NETWORK_PROVIDER`.
+
+### `weights.rs` (879L) → `weights/` submodule directory
+- `weights/scoring.rs` — `ProviderWeight`, EWMA, circuit breaker, score function
+- `weights/store.rs` — `RoutingWeightTable`, redb persistence, provider selection
+- `weights/utilization.rs` — `CapabilityUtilizationTracker`, method-level tracking
+- `weights/mod.rs` — re-exports + all 22 tests preserved
+- Production files all under 300 lines.
+
+### Port helpers renamed to capability-oriented
+- `security_port()` / `security_port_from()` replace `beardog_port()` / `beardog_port_from()`
+- `relay_port()` / `relay_port_from()` replace `songbird_port()` / `songbird_port_from()`
+- Backward-compatible `#[doc(hidden)]` aliases retained.
+
+### Socket alias table evolved
+- `DOMAIN_PRIMAL_BOOTSTRAP` replaces `DOMAIN_SOCKET_ALIASES` — maps capability
+  domains to default primal names (bootstrap-only, superseded by `primal.announce`).
+- Bidirectional lookup: domain → primal for socket resolution.
+
+### Test count: 1314
+
 ## v3.72 (2026-05-24) — Wave 47: Normalize health.check to "alive"
 
 ### health.check status normalization

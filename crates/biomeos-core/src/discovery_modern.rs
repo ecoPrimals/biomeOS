@@ -21,8 +21,8 @@
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create discovery sources (use constants/config, not hardcoded URLs)
-//! let beardog_url = format!("http://{}:{}", endpoints::DEFAULT_LOCALHOST, network::beardog_port());
-//! let songbird_url = format!("http://{}:{}", endpoints::DEFAULT_LOCALHOST, network::songbird_port());
+//! let beardog_url = format!("http://{}:{}", endpoints::DEFAULT_LOCALHOST, network::security_port());
+//! let songbird_url = format!("http://{}:{}", endpoints::DEFAULT_LOCALHOST, network::relay_port());
 //! let beardog = HttpDiscovery::new(
 //!     Endpoint::new(&beardog_url)?,
 //!     PrimalId::new("beardog-local")?,
