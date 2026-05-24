@@ -315,7 +315,7 @@ impl GraphHandler {
     /// primals (security/routing/defense) and NestGate (cache-only) are permitted.
     /// Compute-tier, nest-storage, and meta-tier primals must not be deployed
     /// on the public membrane surface.
-    fn validate_membrane_graph(graph: &Graph) -> Result<()> {
+    pub(super) fn validate_membrane_graph(graph: &Graph) -> Result<()> {
         const MEMBRANE_ALLOWED_DOMAINS: &[&str] = &[
             "orchestration",
             "security",

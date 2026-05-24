@@ -74,9 +74,14 @@ impl GraphHandler {
             }
         };
 
-        // 2. Structural validation via DeploymentGraph + GraphValidator
-        //    Core checks (unique IDs, dependency existence, cycles) are hard errors.
-        //    Capability namespace format is a soft lint (warning).
+        // 2. Membrane composition: validate node domains (same gate as live deploy)
+        if graph.composition_model == Some(biomeos_graph::CompositionModel::Membrane) {
+            if let Err(e) = Self::validate_membrane_graph(&graph) {
+                validation_errors.push(format!("Membrane: {e}"));
+            }
+        }
+
+        // 3. Structural validation via DeploymentGraph + GraphValidator
         if let Ok(dg) = Self::load_as_deployment_graph(&content, graph_id) {
             use biomeos_graph::validation::GraphValidator as DGValidator;
 
@@ -115,7 +120,7 @@ impl GraphHandler {
             warnings.push("Could not parse as DeploymentGraph for structural validation".into());
         }
 
-        // 3. Topological sort (phase planning)
+        // 4. Topological sort (phase planning)
         let executor = crate::neural_executor::GraphExecutor::new(graph.clone(), HashMap::new());
         let phases = match executor.topological_sort() {
             Ok(p) => p,
@@ -125,7 +130,7 @@ impl GraphHandler {
             }
         };
 
-        // 4. Capability resolution check
+        // 5. Capability resolution check
         let mut capability_resolution: Vec<Value> = Vec::new();
         for node in &graph.nodes {
             if !node.capabilities.is_empty() {
@@ -167,7 +172,7 @@ impl GraphHandler {
             }
         }
 
-        // 5. Integrity verification
+        // 6. Integrity verification
         let integrity = {
             let (embedded_hash, embedded_sig, embedded_signer, genetics_tier) =
                 if let Ok(lg) = biomeos_graph::GraphLoader::from_str(&content, Some(&graph_path)) {

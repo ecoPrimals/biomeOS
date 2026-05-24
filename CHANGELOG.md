@@ -2,6 +2,20 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.74 (2026-05-24) — Wave 47 Audit: Shadow Deploy Membrane Gate
+
+### `composition.deploy.shadow` membrane validation
+- Shadow deploy (dry-run) now validates membrane-model graphs with the same
+  `validate_membrane_graph()` gate used by live deploy. Previously membrane
+  violations were only caught on `composition.deploy` / `graph.execute` but
+  not on the shadow path, meaning `composition.deploy.shadow` would report
+  `valid: true` for graphs that live deploy would reject.
+- `validate_membrane_graph()` visibility elevated to `pub(super)` so both
+  `execute.rs` and `validation.rs` can call it.
+- 1 new test: `shadow_deploy_membrane_graph_flags_compute_violations`.
+
+### Test count: 1315 (+1 from v3.73)
+
 ## v3.73 (2026-05-24) — Deep Debt: Capability-Based Discovery + weights/ Refactor
 
 ### Composition handlers evolved to capability-domain discovery

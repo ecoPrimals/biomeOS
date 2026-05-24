@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: May 24, 2026 (v3.73: Deep debt — capability-based composition + weights/ refactor; 1,314 tests)
-**Version**: 3.73
+**Updated**: May 24, 2026 (v3.74: Wave 47 audit — shadow deploy membrane gate; 1,315 tests)
+**Version**: 3.74
 **Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 
 ---

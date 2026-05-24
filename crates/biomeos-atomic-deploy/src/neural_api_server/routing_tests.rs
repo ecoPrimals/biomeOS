@@ -945,6 +945,51 @@ capabilities = ["security"]
     );
 }
 
+#[tokio::test]
+async fn test_shadow_deploy_membrane_graph_flags_compute_violations() {
+    let (server, temp) = create_test_server();
+
+    let graph_toml = r#"
+[graph]
+id = "membrane_bad"
+version = "1.0"
+
+[graph.metadata]
+composition_model = "membrane"
+
+[[graph.nodes]]
+id = "beardog"
+capabilities = ["security.sign"]
+
+[[graph.nodes]]
+id = "toadstool"
+capabilities = ["compute.dispatch"]
+"#;
+
+    std::fs::write(temp.path().join("membrane_bad.toml"), graph_toml).expect("write");
+
+    let req = json!({
+        "jsonrpc": "2.0",
+        "method": "composition.deploy.shadow",
+        "params": { "graph_id": "membrane_bad" },
+        "id": 114
+    })
+    .to_string();
+
+    let result = server.handle_request_json(&req).await;
+    let inner = &result["result"];
+
+    assert_eq!(inner["valid"], false, "membrane graph with compute node should be invalid");
+    let errors = inner["validation_errors"].as_array().expect("errors array");
+    assert!(
+        errors.iter().any(|e| {
+            let s = e.as_str().unwrap_or("");
+            s.contains("Membrane") && s.contains("toadstool")
+        }),
+        "should flag toadstool compute node: {errors:?}"
+    );
+}
+
 // --- biomeos.spring_status route tests ---
 
 #[tokio::test]
