@@ -2,6 +2,18 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.72 (2026-05-24) — Wave 47: Normalize health.check to "alive"
+
+### health.check status normalization
+- `health.check` now returns `"status": "alive"` instead of `"status": "healthy"`,
+  aligning with `health.liveness`, the DEPLOYMENT_BEHAVIOR_STANDARD, and all
+  other primals. Health sweeps checking `jq -r .status == "alive"` now pass
+  uniformly across both `health.liveness` and `health.check` on the API socket.
+- Consumer-side tolerance (`neural_executor_node_impls.rs`) retained: accepts
+  "alive", "healthy", or "ok" from external primals for defense-in-depth.
+
+### Test count: 1314
+
 ## v3.71 (2026-05-23) — Wave 46: Membrane Composition Live Execution
 
 ### `composition_model = "membrane"` live execution path

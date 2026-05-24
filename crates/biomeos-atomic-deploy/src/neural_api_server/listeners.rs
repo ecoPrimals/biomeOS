@@ -18,7 +18,7 @@ impl NeuralApiServer {
         let mode = self.mode.read().await;
         let cap_count = self.router.list_capabilities().await.len();
         Ok(serde_json::json!({
-            "status": "healthy",
+            "status": "alive",
             "mode": format!("{mode:?}"),
             "family_id": self.family_id,
             "socket_path": self.socket_path.display().to_string(),
@@ -237,7 +237,7 @@ mod tests {
         let sock = temp.path().join("api-health.sock");
         let server = NeuralApiServer::new(temp.path(), "fam-health", &sock);
         let j = server.health_check().await.expect("health check");
-        assert_eq!(j["status"], "healthy");
+        assert_eq!(j["status"], "alive");
         assert_eq!(j["family_id"], "fam-health");
         assert_eq!(j["socket_path"], sock.display().to_string());
         assert_eq!(j["registered_capabilities"], serde_json::json!(0));

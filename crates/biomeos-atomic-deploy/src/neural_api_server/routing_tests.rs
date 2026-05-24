@@ -618,7 +618,7 @@ async fn test_handle_request_health_check() {
     let (server, _temp) = create_test_server();
     let req = r#"{"jsonrpc":"2.0","method":"health.check","id":80}"#;
     let result = server.handle_request_json(req).await;
-    assert_eq!(result["result"]["status"], "healthy");
+    assert_eq!(result["result"]["status"], "alive");
     assert_eq!(result["result"]["family_id"], "test_family");
 }
 
