@@ -1,7 +1,7 @@
 # biomeOS Scripts
 
 **Status**: Most scripts are deprecated — deployment is via `biomeos nucleus start` (Pure Rust)  
-**Updated**: May 2, 2026
+**Updated**: May 25, 2026
 
 ---
 
@@ -9,10 +9,13 @@
 
 | Script | Purpose | Status |
 |--------|---------|--------|
-| `build_primals_for_testing.sh` | Build primal binaries from source repos | Active |
+| `build_primals_for_testing.sh` | Build primal binaries from source repos → `plasmidBin/primals/` | **Dev-only** |
 | `create_livespore.sh` | Create bootable LiveSpore USB (Alpine Linux) | Active |
 | `create_sibling_spore.sh` | Create sibling spore with genetic lineage | Active |
 | `test_provenance_trio_e2e.sh` | E2E test for provenance trio (rhizoCrypt, LoamSpine, sweetGrass) | Active |
+
+> **Note**: `build_primals_for_testing.sh` is for local development only. For production,
+> use `tools/harvest` (canonical) or LiveSpore USB. See `plasmidBin/MANIFEST.md`.
 
 ## Deprecated (Internalized to Rust)
 
@@ -23,7 +26,7 @@
 | `stop_ecosystem.sh` | `biomeos nucleus stop` / `LifecycleManager::shutdown_all()` |
 | `deploy-*-lineage.sh` | Neural API graph-based deployment (`graphs/*.toml`) |
 | `harvest-primals.sh` | `tools/harvest` (biomeos-harvest binary) — `cd tools/harvest && cargo run` |
-| `validate_*.sh` | `cargo test --workspace` (7,859 tests) |
+| `validate_*.sh` | `cargo test --workspace` (8,026 tests) |
 
 The Rust replacement (`biomeos nucleus start`) provides:
 - Binary discovery: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`

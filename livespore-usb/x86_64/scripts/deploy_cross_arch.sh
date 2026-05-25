@@ -4,12 +4,13 @@
 # =============================================================================
 #
 # This script automatically detects the system architecture and deploys
-# the appropriate primal binaries from the LiveSpore.
+# the appropriate primal binaries from the LiveSpore into the plasmidBin
+# directory (the canonical binary source for biomeOS NUCLEUS).
 #
 # Usage: ./scripts/deploy_cross_arch.sh [target_dir]
 #
-# Default target: /usr/local/bin (requires sudo)
-# User target: ~/.local/bin (no sudo required)
+# Default target: ./plasmidBin/primals/ (relative to biomeOS repo root)
+# Override: BIOMEOS_PLASMID_DIR or explicit target_dir argument
 #
 # AGPL-3.0-or-later License
 # =============================================================================
@@ -61,16 +62,18 @@ if [[ ! -d "$PRIMAL_DIR" ]]; then
     exit 1
 fi
 
-# Determine target directory
+# Determine target directory: plasmidBin/primals/ is the post-primordial canonical path.
+# biomeOS binary resolution: plasmidBin/primals/ → target/release/ → $PATH
 TARGET_DIR="${1:-}"
 if [[ -z "$TARGET_DIR" ]]; then
-    # Default: system-wide if root, user-local otherwise
-    if [[ $EUID -eq 0 ]]; then
-        TARGET_DIR="/usr/local/bin"
+    if [[ -n "${BIOMEOS_PLASMID_DIR:-}" ]]; then
+        TARGET_DIR="$BIOMEOS_PLASMID_DIR/primals"
     else
-        TARGET_DIR="$HOME/.local/bin"
-        mkdir -p "$TARGET_DIR"
+        # Walk up from livespore-usb/x86_64/scripts/ to repo root
+        REPO_ROOT="$(cd "$LIVESPORE_ROOT/../.." && pwd)"
+        TARGET_DIR="$REPO_ROOT/plasmidBin/primals"
     fi
+    mkdir -p "$TARGET_DIR"
 fi
 
 echo -e "${BLUE}Target directory: $TARGET_DIR${NC}"
@@ -123,13 +126,8 @@ echo -e "${BLUE}=========================================${NC}"
 echo -e "${GREEN}✓ Deployed $DEPLOYED primals to $TARGET_DIR${NC}"
 echo -e "${BLUE}=========================================${NC}"
 
-# Verify PATH includes target
-if [[ ":$PATH:" != *":$TARGET_DIR:"* ]]; then
-    echo ""
-    echo -e "${YELLOW}⚠ Note: $TARGET_DIR is not in your PATH${NC}"
-    echo "  Add this to your ~/.bashrc or ~/.zshrc:"
-    echo "    export PATH=\"$TARGET_DIR:\$PATH\""
-fi
+# Note: plasmidBin/primals/ is discovered by biomeOS directly — no $PATH entry needed.
+echo -e "${GREEN}✓ biomeOS discovers primals from plasmidBin/primals/ automatically.${NC}"
 
 # Copy configuration files
 if [[ -d "$LIVESPORE_ROOT/config" ]]; then
@@ -150,7 +148,7 @@ fi
 
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
-echo "  1. Start Tower: beardog server --daemon && songbird server --daemon"
-echo "  2. Or run a graph: biomeos deploy graphs/tower_atomic_bootstrap.toml"
+echo "  1. Start NUCLEUS: biomeos nucleus start --mode tower --node-id tower1"
+echo "  2. Or full stack: biomeos nucleus start --mode full --node-id tower1"
 echo ""
 

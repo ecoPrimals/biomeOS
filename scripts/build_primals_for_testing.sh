@@ -1,9 +1,13 @@
 #!/bin/bash
 # =============================================================================
-# Build All Primals for NUCLEUS Integration Testing
+# Build All Primals for NUCLEUS Integration Testing (DEV ONLY)
 # =============================================================================
 #
-# Builds all required primals in release mode:
+# DEV-ONLY: Builds primals from source into target/release/ and copies them
+# into plasmidBin/primals/ for biomeOS discovery. For production deployments,
+# use tools/harvest (canonical) or LiveSpore USB instead.
+#
+# Builds required primals in release mode:
 # - BearDog (security/crypto)
 # - Songbird (discovery/networking)
 # - NestGate (storage/persistence)
@@ -95,15 +99,33 @@ for PRIMAL in "${PRIMALS[@]}"; do
     cd "$PROJECT_ROOT"
 done
 
+log_section "Populating plasmidBin"
+
+PLASMID_DIR="$PROJECT_ROOT/plasmidBin/primals"
+mkdir -p "$PLASMID_DIR"
+
+for PRIMAL in "${PRIMALS[@]}"; do
+    PRIMAL_DIR=""
+    for LOCATION in "$PRIMALS_BASE/$PRIMAL" "$PROJECT_ROOT/../$PRIMAL" "$PROJECT_ROOT/../../$PRIMAL"; do
+        if [ -f "$LOCATION/target/release/$PRIMAL" ]; then
+            PRIMAL_DIR="$LOCATION"
+            break
+        fi
+    done
+
+    if [ -n "$PRIMAL_DIR" ] && [ -f "$PRIMAL_DIR/target/release/$PRIMAL" ]; then
+        cp "$PRIMAL_DIR/target/release/$PRIMAL" "$PLASMID_DIR/$PRIMAL"
+        log_success "  $PRIMAL → plasmidBin/primals/"
+    fi
+done
+
 log_section "Build Complete"
 
-log_success "Primals ready for integration testing"
+log_success "Primals built and copied to plasmidBin/primals/ (canonical discovery path)"
 log_info ""
 log_info "Next steps:"
-echo "  1. Start NUCLEUS and run tests:"
+echo "  1. Start NUCLEUS:"
 echo "     biomeos nucleus start --mode full --node-id tower1"
 echo ""
-echo "  2. Or start primals manually and test:"
-echo "     cd ../beardog && cargo run --release -- server &"
-echo "     cd ../songbird && cargo run --release -- server &"
-echo "     cd ../toadstool && cargo run --release -- server &"
+echo "  2. Or use harvest tool (production workflow):"
+echo "     cd tools/harvest && cargo run -- local --all"
