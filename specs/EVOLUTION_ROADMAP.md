@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 24, 2026 (v3.73: Deep debt — capability-domain composition, weights/ refactor, membrane model, attestation, persistent routing)
+**Updated**: May 24, 2026 (v3.75: Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -443,6 +443,9 @@ Systematic deep debt resolution across 7 waves:
 - [x] Wave 46: `composition_model = "membrane"` live execution, `membrane_tower` pattern, `membrane_deploy.toml` — v3.71
 - [x] Wave 47: `health.check` normalized to `"alive"` per DEPLOYMENT_BEHAVIOR_STANDARD — v3.72
 - [x] Deep debt: composition handlers evolved to capability-domain discovery, `weights.rs` → `weights/` submodule, port helpers capability-oriented, `DOMAIN_PRIMAL_BOOTSTRAP` — v3.73
+- [x] Wave 47 audit: `composition.deploy.shadow` membrane validation gate — v3.74
+- [x] Cross-gate routing: Songbird mesh dispatch integration (`try_songbird_mesh_dispatch`), replaces legacy `relay.allocate` protocol — v3.75
+- [x] Mesh fallback on both translation and direct discovery paths when no local provider found — v3.75
 
 ### Degradation Behavior
 

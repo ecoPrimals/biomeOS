@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 4,303 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
+8. **Tested**: 8,026 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
@@ -167,15 +167,15 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.73 — deep debt CLEAN, capability-domain composition, adaptive routing, membrane model)
+**Status**: Production Ready (v3.75 — Songbird mesh cross-gate dispatch, shadow deploy membrane gate, deep debt CLEAN)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
-**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), `primal.list` + `topology.primals`, lazy rescan, cross-gate routing, post-spawn auto-registration, adaptive weights (redb-persistent), attestation verification
+**Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), `primal.list` + `topology.primals`, lazy rescan, cross-gate routing via Songbird mesh dispatch, post-spawn auto-registration, adaptive weights (redb-persistent), attestation verification
 **Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` capability-domain driven; `composition.reload` hot-swap; membrane + nucleated composition models
-**NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
+**NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay) + Songbird mesh TCP + TURN fallback
 **Lifecycle**: Deep health monitoring + auto-resurrection + composition dashboard
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 4,303 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 1 tracked | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
+**Tests**: 8,026 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 1 tracked | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
 **Updated**: May 24, 2026
