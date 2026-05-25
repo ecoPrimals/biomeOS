@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
 description = "Orchestration kernel — 8,026 tests, 27 capability domains, 320+ translations, 17 signal graphs, 43 deploy graphs, zero blocking debt"
-date = 2026-05-24
+date = 2026-05-25
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]

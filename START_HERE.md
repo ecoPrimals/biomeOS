@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: May 24, 2026
-**Status**: Production Ready (v3.73) — Deep debt CLEAN, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, weights/ submodule refactor, port helpers capability-oriented, 4,303 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: May 25, 2026
+**Status**: Production Ready (v3.75) — Deep debt CLEAN, Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, plasmidBin canonical binary discovery, 8,026 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -148,9 +148,9 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 | BearDog | Crypto, Genetics | Reference | Stable |
 | Songbird | HTTP, TLS, Discovery, Mesh, Relay | 90% | Mesh state fix, UDP discovery |
 | Toadstool | Compute, GPU | Operational | GPU job queue |
-| NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
+| NestGate | Storage, Federation | Operational | Stable |
 | Squirrel | AI Orchestration | Operational | Ollama native adapter |
-| biomeOS | System Orchestrator + Neural API | Evolved | ARM64 genomeBin |
+| biomeOS | System Orchestrator + Neural API | Evolved | ✅ ARM64 built (9.6 MB static musl) |
 
 ---
 
@@ -169,6 +169,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 **Status**: Production Ready (v3.75 — Songbird mesh cross-gate dispatch, shadow deploy membrane gate, deep debt CLEAN)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
+**Binary source**: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
 **Neural API**: 320+ semantic translations, 27 capability domains (+ tensor + shader), `primal.list` + `topology.primals`, lazy rescan, cross-gate routing via Songbird mesh dispatch, post-spawn auto-registration, adaptive weights (redb-persistent), attestation verification
 **Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` capability-domain driven; `composition.reload` hot-swap; membrane + nucleated composition models
@@ -178,4 +179,4 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
 **Tests**: 8,026 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 1 tracked | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
-**Updated**: May 24, 2026
+**Updated**: May 25, 2026

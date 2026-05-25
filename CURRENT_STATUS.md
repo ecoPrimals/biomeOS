@@ -1,6 +1,6 @@
 # biomeOS - Current Status
 
-**Updated**: May 24, 2026 (v3.75: Cross-gate routing — Songbird mesh dispatch integration; 8,026 tests)
+**Updated**: May 25, 2026 (v3.75: Cross-gate routing — Songbird mesh dispatch integration; 8,026 tests)
 **Version**: 3.75
 **Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 
@@ -27,7 +27,7 @@
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
 | **Capability Domains** | 27 domains (+ tensor/math/stats, health cross-cutting, genetic/lineage added), 320+ translations |
-| **Deploy Graphs** | 40 (+ 2 Pipeline coordination graphs, all parseable via unified schema) |
+| **Deploy Graphs** | 43 (incl. membrane_deploy, provenance trio, 2 pipeline coordination, all parseable via unified schema) |
 | **Niche Templates** | 20 (+ rootpulse-branch, rootpulse-merge, rootpulse-diff, rootpulse-federate, soil-microbiome) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |

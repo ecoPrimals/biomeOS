@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: May 24, 2026
+**Updated**: May 25, 2026
 
 ---
 
@@ -58,6 +58,7 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handof
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V375_CROSS_GATE_MESH_DISPATCH_MAY24_2026 | Songbird mesh cross-gate dispatch, shadow deploy membrane gate | May 24, 2026 |
 | BIOMEOS_V373_DEEP_DEBT_CAPABILITY_COMPOSITION_MAY24_2026 | Capability-domain composition, weights/ refactor, port helper rename, `DOMAIN_PRIMAL_BOOTSTRAP` | May 24, 2026 |
 | BIOMEOS_V367_WAVE43_ROUTING_WEIGHTS_MAY23_2026 | Persistent routing weights, utilization tracking | May 23, 2026 |
 | BIOMEOS_V366_WAVE38_CROSS_GATE_RELAY_MAY22_2026 | Cross-gate dispatch, songbird relay fallback | May 22, 2026 |

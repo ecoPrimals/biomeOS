@@ -1,5 +1,7 @@
 # Context — biomeOS
 
+**Version**: v3.75 | **Updated**: May 25, 2026
+
 ## What This Is
 
 biomeOS is a pure Rust orchestration layer that deploys, discovers, and routes

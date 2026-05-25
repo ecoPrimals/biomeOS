@@ -159,9 +159,7 @@ chimeras/
 │   └── ml-pipeline.yaml
 │
 ├── fused/                    # Level 2: Fused chimeras (Rust crates)
-│   ├── platypus/             # Example: BearDog + Songbird genetics
-│   ├── mycorrhiza/           # Example: NestGate + Squirrel + RhizoCrypt
-│   └── tardigrade/           # Example: ToadStool + extreme resilience
+│   └── platypus/             # Example: BearDog + Songbird genetics
 │
 ├── registry/                 # Metadata for all chimeras
 │   └── chimera-registry.yaml

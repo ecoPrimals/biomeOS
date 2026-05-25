@@ -47,8 +47,8 @@ NUCLEUS is biomeOS's deployment architecture based on **atomic composition patte
 **Graph**: `graphs/tower_atomic_bootstrap.toml`
 
 ```bash
-# Deploy Tower Atomic
-./scripts/bootstrap_tower_atomic.sh
+# Deploy Tower Atomic (pure Rust)
+biomeos nucleus start --mode tower --node-id tower1
 ```
 
 **Validated Capabilities**:
@@ -265,35 +265,26 @@ Squirrel → capability.call("http.request", ...) → Neural API → Songbird
 ### Quick Start
 
 ```bash
-# 1. Set family ID
-export FAMILY_ID=$(cat .family.seed | head -c 16)
+# 1. Start Tower Atomic (derives FAMILY_ID from .family.seed automatically)
+biomeos nucleus start --mode tower --node-id tower1
 
-# 2. Deploy Tower Atomic
-./scripts/bootstrap_tower_atomic.sh
-
-# 3. Verify
+# 2. Verify
 echo '{"jsonrpc":"2.0","method":"lifecycle.status","id":1}' | \
-  nc -U /run/user/1000/biomeos/neural-api-$FAMILY_ID.sock
+  nc -U $XDG_RUNTIME_DIR/biomeos/neural-api-$(head -c 16 .family.seed).sock
 ```
 
 ### Full NUCLEUS
 
 ```bash
-# Deploy all atomics
-./plasmidBin/neural-api-server \
-  --graph graphs/nucleus_complete.toml \
-  --socket /run/user/1000/biomeos/neural-api-$FAMILY_ID.sock \
-  --family-id $FAMILY_ID
+biomeos nucleus start --mode full --node-id tower1
 ```
 
-### Validation Scripts
+### Validation
 
 ```bash
-# Quick validation
-./scripts/validate_nucleus_quick.sh
-
-# Full validation with AI
-./scripts/validate_multi_ai.sh
+# JSON-RPC health check
+echo '{"jsonrpc":"2.0","method":"health.liveness","id":1}' | \
+  nc -U $XDG_RUNTIME_DIR/biomeos/biomeos.sock
 ```
 
 ---

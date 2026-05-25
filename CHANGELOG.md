@@ -2,7 +2,29 @@
 
 All notable changes to biomeOS will be documented in this file.
 
-## v3.75 (2026-05-24) — Cross-Gate Routing: Songbird Mesh Dispatch Integration
+## v3.75 (2026-05-25) — Wave 49 Ecosystem Tightening + Cross-Gate Routing
+
+### Wave 49 doc tightening
+- Binary discovery order: `plasmidBin/` (canonical) listed first, `target/release/`
+  marked as dev fallback across README, QUICK_START, scripts/README.
+- `plasmidBin/MANIFEST.md`: removed stale `cp target/release/...` instructions.
+  Harvest tool is the canonical path per post-primordial mandate.
+- Root doc refresh: version stamps synced to v3.75 across all 8 docs, dates to
+  May 25, graph count reconciled to 43, specs count to 22, deny.toml ban list
+  to 16, test count to 8,026.
+- `START_HERE.md` header was badly stale (v3.73 / 4,303 tests) — synced to v3.75.
+- `EVOLUTION_ROADMAP.md` §5 metrics updated from v3.23 to v3.75 (TODO 0→1 tracked,
+  deny bans 15→16, tests 7,859→8,026, plasmidBin discovery added).
+- `EVOLUTION_ROADMAP.md` §10: cross-gate dispatch via Songbird checked off (v3.75).
+- NestGate "Upstream boolean fix" removed — evolved as of Bypass 3.
+- `chimeras/README.md`: removed non-existent `mycorrhiza/` and `tardigrade/` dirs.
+- Removed unused `examples/universal_ui_config*.yaml` (HTTP localhost model, zero refs).
+- `specs/NUCLEUS_ATOMIC_COMPOSITION.md`: replaced references to removed shell scripts
+  with current `biomeos nucleus start` commands.
+- `crates/biomeos-boot/src/initramfs.rs`: removed reference to non-existent
+  `scripts/prepare-kernel.sh` in error message.
+
+### Cross-gate routing: Songbird mesh dispatch (v3.75 code, 2026-05-24)
 
 ### capability.call → Songbird mesh dispatch (Wave 211 integration)
 - `try_relay_dispatch()` replaced with `try_songbird_mesh_dispatch()` — uses

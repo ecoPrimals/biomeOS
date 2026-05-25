@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 24, 2026 (v3.75: Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition)
+**Updated**: May 25, 2026 (v3.75: Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition, Wave 49 ecosystem tightening)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -98,11 +98,11 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated Apr 21, 2026 — v3.23)
+## 5. Deep Debt Metrics (Updated May 25, 2026 — v3.75)
 
 | Metric | Value |
 |--------|-------|
-| TODO markers in Rust source | 0 |
+| TODO markers in Rust source | 1 tracked (REST route wiring in `live_discovery.rs`) |
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND/XXX | 0 |
 | Unsafe code | 0 (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary roots) |
@@ -112,8 +112,8 @@ Active scripts (shell scripts that remain in the repository):
 | `forbid(unsafe_code)` crates | all production crates + binary roots |
 | Mocks in production | 0 (test_support gated behind feature flag; all stubs resolved) |
 | Proptest IPC fuzz tests | 8 |
-| C-dep crates banned (deny.toml) | 15 |
-| Tests | 7,859 (0 failures, fully concurrent) |
+| C-dep crates banned (deny.toml) | 16 |
+| Tests | 8,026 (0 failures, fully concurrent) |
 | Coverage | 90%+ line / function / region (llvm-cov) |
 | Production files >800 LOC | 0 (all 5 files >800L are test-only) |
 | Hardcoded primal strings | 0 (centralized `primal_names` constants) |
@@ -124,6 +124,7 @@ Active scripts (shell scripts that remain in the repository):
 | Deprecated APIs | 0 |
 | Capability translations | 320+ across 27 domains (+ shader) |
 | BTSP wire-format | ClientHello recognition on API socket + Neural API handshake verified |
+| Binary discovery | `plasmidBin/` canonical, `target/release/` dev fallback only |
 
 ---
 
@@ -360,7 +361,7 @@ the traffic that arrives on its socket.
 |  | ai     -> local:squirrel      |  | http    -> local:songbird   |  |
 |  +-------------------------------+  +-----------------------------+  |
 +---------------------------------------------------------------------+
-|  Neural API (121 translations + agent routing)                       |
+|  Neural API (320+ translations + agent routing)                      |
 +---------------------------------------------------------------------+
 |  Multi-Family Sockets                                                |
 |  beardog-alpha.sock  songbird-shared.sock  nestgate-alpha.sock       |
@@ -420,7 +421,7 @@ Systematic deep debt resolution across 7 waves:
 - [ ] Barrick Lab USB deployment validation (livespore-usb)
 - [ ] `composition.deploy` shadow runs for projectNUCLEUS H2
 - [x] `--mode full` (12+1 primals) — v3.61: NucleusMode::Full launches 12 ecosystem primals + biomeOS orchestrator; NucleusMode::Core preserves legacy 5-primal compat
-- [ ] Cross-gate dispatch via songBird (Phase 2)
+- [x] Cross-gate dispatch via Songbird mesh (Phase 2) — v3.75: `try_songbird_mesh_dispatch` replaces legacy `relay.allocate`
 - [x] `spore.instantiate` wired as dedicated Neural API route (lithoSpore ask R7) — v3.61
 - [x] ResourceEnvelope cpu/mem pre-dispatch enforcement at orchestrator — v3.61
 - [x] `composition.status` pipeline readiness fields (content + compute) — v3.61

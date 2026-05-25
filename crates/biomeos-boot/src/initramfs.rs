@@ -388,7 +388,7 @@ impl KernelManager {
         anyhow::bail!(
             "No kernel found. Please specify a kernel:\n\
              1. Set BIOMEOS_KERNEL environment variable: export BIOMEOS_KERNEL=/path/to/vmlinuz\n\
-             2. Or run scripts/prepare-kernel.sh to copy system kernel to accessible location"
+             2. Or copy your system kernel: cp /boot/vmlinuz-$(uname -r) ./vmlinuz"
         )
     }
 

@@ -14,7 +14,7 @@
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
 | Tests | 8,026 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
-| C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 18-crate ban list enforced) |
+| C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
@@ -245,7 +245,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 | Toadstool | Compute, GPU dispatch | Operational | GPU job queue |
 | barraCuda | GPU Math, Tensors, Stats, Noise, Activation, RNG | Operational | Shader interop |
 | coralReef | Shader compilation, WGSL, SPIR-V | Operational | Pipeline caching |
-| NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
+| NestGate | Storage, Federation | Operational | Stable |
 | Squirrel | AI Orchestration | Operational | Ollama native adapter |
 | biomeOS | System Orchestrator + Neural API | Evolved | ✅ ARM64 built (9.6 MB static musl) |
 
@@ -325,7 +325,7 @@ biomeOS/
 │   ├── x86_64/                # Intel/AMD binaries
 │   └── aarch64/               # ARM64 binaries
 ├── pixel8a-deploy/            # Pixel 8a deployment
-├── specs/                     # Standards and specs (26 active)
+├── specs/                     # Standards and specs (22 active + 1 index)
 ├── docs/                      # Architecture docs (handoffs in ecoPrimals/wateringHole/)
 ├── graphs/                    # Deployment graphs (43 incl. membrane_deploy)
 └── scripts/                   # Startup and build scripts
@@ -368,7 +368,7 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 ---
 
 **Status**: Production Ready (v3.75)
-**Updated**: May 24, 2026
+**Updated**: May 25, 2026
 **Tests**: 8,026 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + Songbird mesh cross-gate dispatch + DNS-SD + `primal.announce` | Adaptive routing weights (redb-persistent) | Membrane + nucleated composition | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
