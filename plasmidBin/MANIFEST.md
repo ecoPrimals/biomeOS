@@ -44,16 +44,8 @@ plasmidBin/
 ### **1. Harvest Binaries** (from primal workspaces)
 
 ```bash
-# Via harvest tool (run from tools/harvest/)
+# Via harvest tool (canonical — post-primordial standard)
 cd tools/harvest && cargo run -- local --all
-
-# Or manually copy
-cp /path/to/ecoPrimals/primals/beardog/target/release/beardog-server plasmidBin/primals/
-cp /path/to/ecoPrimals/primals/songbird/target/release/songbird plasmidBin/primals/
-cp /path/to/ecoPrimals/primals/toadstool/target/release/toadstool plasmidBin/primals/
-cp /path/to/ecoPrimals/primals/nestgate/target/release/nestgate plasmidBin/primals/
-cp /path/to/ecoPrimals/primals/petalTongue/target/release/petal-tongue plasmidBin/primals/
-cp /path/to/ecoPrimals/primals/petalTongue/target/release/petal-tongue-headless plasmidBin/primals/
 ```
 
 ### **2. Create Spores** (from plasmidBin)

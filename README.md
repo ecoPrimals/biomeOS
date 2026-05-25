@@ -117,7 +117,7 @@ adb shell /data/local/tmp/biomeos/start_nucleus_mobile.sh
 
 The `biomeos nucleus start` command:
 - Detects if an ecosystem is already running (bootstrap vs. coordinated mode)
-- Discovers primal binaries from `livespore-usb/`, `plasmidBin/`, `target/release/`, `$PATH`
+- Discovers primal binaries from `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 - Starts primals in dependency order with family-suffixed sockets
 - Integrates with `LifecycleManager` for ongoing deep health monitoring (JSON-RPC ping)
 - Auto-resurrects degraded primals with exponential backoff

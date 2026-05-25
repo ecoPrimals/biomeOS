@@ -26,7 +26,7 @@
 | `validate_*.sh` | `cargo test --workspace` (7,859 tests) |
 
 The Rust replacement (`biomeos nucleus start`) provides:
-- Binary discovery across `livespore-usb/`, `plasmidBin/`, `target/release/`, `$PATH`
+- Binary discovery: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 - Dependency-ordered startup with family-suffixed sockets
 - Deep JSON-RPC health monitoring at 10s intervals
 - Auto-resurrection of degraded primals

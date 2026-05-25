@@ -27,7 +27,7 @@ biomeos nucleus start --mode nest --node-id tower1
 
 The pure Rust nucleus mode automatically:
 - Derives FAMILY_ID from `.family.seed` or `$FAMILY_ID` env var
-- Discovers primal binaries from `livespore-usb/`, `plasmidBin/`, `target/release/`, `$PATH`
+- Discovers primal binaries from `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 - Detects bootstrap vs. coordinated mode (joins existing ecosystem if primals are already running)
 - Starts primals in dependency order with family-suffixed sockets
 - Deep JSON-RPC health checks to verify each primal responds
@@ -88,7 +88,7 @@ ANTHROPIC_API_KEY=your-key-here \
 BEARDOG_SOCKET=$SOCKET_DIR/beardog.sock \
 SONGBIRD_SOCKET=$SOCKET_DIR/songbird.sock \
 NODE_ID=tower1 \
-  target/release/biomeos neural-api --socket $SOCKET_DIR/neural-api.sock &
+  biomeos neural-api --socket $SOCKET_DIR/neural-api.sock &
 ```
 
 ---
