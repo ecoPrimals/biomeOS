@@ -71,9 +71,9 @@ pub(crate) fn format_ai_response(intent: &AiIntent) -> Vec<String> {
         ],
         AiIntent::Status | AiIntent::Unknown => vec![
             "💡 AI Suggestions".to_string(),
-            "• Try: 'biomeos ai \"health status\"' for system health".to_string(),
-            "• Try: 'biomeos ai \"discover primals\"' for discovery".to_string(),
-            "• Try: 'biomeos ai \"deploy help\"' for deployment guidance".to_string(),
+            "• Try: 'biome ai \"health status\"' for system health".to_string(),
+            "• Try: 'biome ai \"discover primals\"' for discovery".to_string(),
+            "• Try: 'biome ai \"deploy help\"' for deployment guidance".to_string(),
         ],
     }
 }
@@ -222,8 +222,8 @@ enum SporeAction {
 }
 
 #[derive(Parser)]
-#[command(name = "biomeos")]
-#[command(about = "🌱 BiomeOS Universal System Management CLI")]
+#[command(name = "biome")]
+#[command(about = "🌱 biomeOS System Management CLI")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     #[arg(long, default_value = "info")]

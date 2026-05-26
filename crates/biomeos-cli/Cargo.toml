@@ -8,7 +8,7 @@ description = "BiomeOS CLI tools for system management, discovery, and monitorin
 authors = ["BiomeOS Team"]
 
 [[bin]]
-name = "biomeos-cli"
+name = "biome"
 path = "src/bin/main.rs"
 doc = false  # Avoid collision with biomeos-unibin
 

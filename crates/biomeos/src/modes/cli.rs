@@ -3,9 +3,9 @@
 
 //! CLI mode - System management commands
 //!
-//! The CLI commands are implemented in biomeos-cli and can be invoked via:
+//! The CLI commands are implemented in the `biomeos-cli` crate and can be invoked via:
 //! - Direct invocation: `biomeos cli <command>`
-//! - Standalone binary: `biomeos <command>` (via PATH/symlink)
+//! - Standalone binary: `biome <command>` (the `biome` helper binary)
 //!
 //! This architecture allows the unified binary to be the single entry point
 //! while maintaining the full CLI feature set.

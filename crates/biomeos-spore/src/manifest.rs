@@ -273,7 +273,7 @@ impl SporeManifest {
                 node_id,
                 family_id,
                 created_at: Utc::now(),
-                created_by: format!("biomeos-cli v{}", env!("CARGO_PKG_VERSION")),
+                created_by: format!("biomeos v{}", env!("CARGO_PKG_VERSION")),
                 spore_type,
                 deployment_batch,
             },

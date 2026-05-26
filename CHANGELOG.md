@@ -2,6 +2,20 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.76 (2026-05-26) — UniBin Naming: `biomeos-cli` binary → `biome`
+
+### Binary rename (Wave 52 upstream ask)
+- `crates/biomeos-cli/Cargo.toml` `[[bin]]` name changed from `biomeos-cli` to
+  `biome`. The crate name stays `biomeos-cli` (Rust module name unchanged).
+- This eliminates pipeline aliasing in primalSpring's plasmidBin harvest:
+  `biomeos` (the primal binary from UniBin) is the sole artifact; `biome` is
+  the management CLI helper that is NOT shipped as a release asset.
+- Clap `#[command(name)]` updated to `biome`.
+- `biomeos-spore` manifest `created_by` string: `biomeos-cli` → `biomeos`.
+- UniBin binary `biomeos` (from `crates/biomeos/`) is unchanged — it remains
+  the canonical primal binary per UniBin standard.
+- Test count: 8,026 (0 failures), clippy: 0 warnings.
+
 ## v3.75 (2026-05-25) — Wave 49 Ecosystem Tightening + Cross-Gate Routing
 
 ### Wave 49 doc tightening
