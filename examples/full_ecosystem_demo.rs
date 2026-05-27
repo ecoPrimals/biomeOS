@@ -10,6 +10,7 @@
 //! - Demonstrates the BYOB workflow
 
 use biomeos_chimera::ChimeraRegistry;
+use biomeos_types::primal_names;
 use std::fs;
 use std::path::Path;
 
@@ -74,11 +75,11 @@ fn discover_primals() {
 
     for (primal, count) in &primal_counts {
         let icon = match primal.as_str() {
-            "nestgate" => "🏰",
-            "songbird" => "🎼",
-            "toadstool" => "🍄",
-            "beardog" => "🐕",
-            "squirrel" => "🐿️",
+            primal_names::NESTGATE => "🏰",
+            primal_names::SONGBIRD => "🎼",
+            primal_names::TOADSTOOL => "🍄",
+            primal_names::BEARDOG => "🐕",
+            primal_names::SQUIRREL => "🐿️",
             _ => "📦",
         };
         println!("   {icon} {primal} ({count} binaries)");

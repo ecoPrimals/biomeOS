@@ -286,11 +286,10 @@ fn load_weights_from_db(db: &Database) -> HashMap<(Arc<str>, Arc<str>), Provider
     map
 }
 
-#[allow(clippy::result_large_err)]
 fn flush_weights_to_db(
     db: &Database,
     weights: &HashMap<(Arc<str>, Arc<str>), ProviderWeight>,
-) -> Result<(), redb::Error> {
+) -> Result<(), anyhow::Error> {
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(WEIGHTS_TABLE)?;
@@ -305,8 +304,7 @@ fn flush_weights_to_db(
     Ok(())
 }
 
-#[allow(clippy::result_large_err)]
-fn persist_single_weight(db: &Database, key: &str, bytes: &[u8]) -> Result<(), redb::Error> {
+fn persist_single_weight(db: &Database, key: &str, bytes: &[u8]) -> Result<(), anyhow::Error> {
     let txn = db.begin_write()?;
     {
         let mut table = txn.open_table(WEIGHTS_TABLE)?;

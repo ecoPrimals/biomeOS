@@ -106,12 +106,12 @@ impl<'a> RollbackManager<'a> {
                 // Check if process exists (signal 0 = test)
                 if test_kill_process(pid).is_ok() {
                     // Process still running, send SIGTERM
-                    let _ = kill_process(pid, Signal::Term);
+                    let _ = kill_process(pid, Signal::TERM);
                     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
 
                     // Check again, send SIGKILL if still running
                     if test_kill_process(pid).is_ok() {
-                        let _ = kill_process(pid, Signal::Kill);
+                        let _ = kill_process(pid, Signal::KILL);
                     }
                 }
             }

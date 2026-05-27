@@ -90,7 +90,7 @@ impl RollbackState {
                 use rustix::process::{Pid, Signal, kill_process, test_kill_process};
                 let pid_i32 = i32::try_from(*pid).unwrap_or(-1);
                 if let Some(rustix_pid) = Pid::from_raw(pid_i32) {
-                    if let Err(e) = kill_process(rustix_pid, Signal::Term) {
+                    if let Err(e) = kill_process(rustix_pid, Signal::TERM) {
                         warn!("   Failed to kill {}: {}", pid, e);
                     } else {
                         // Modern async: Wait for process to actually exit (with timeout)
@@ -110,7 +110,7 @@ impl RollbackState {
                             }
                             // Force kill if still alive
                             if let Some(p) = Pid::from_raw(pid_to_check) {
-                                let _ = kill_process(p, Signal::Kill);
+                                let _ = kill_process(p, Signal::KILL);
                             }
                         };
                         wait_for_exit.await;

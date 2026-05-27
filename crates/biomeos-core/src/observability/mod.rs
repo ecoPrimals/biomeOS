@@ -291,7 +291,7 @@ impl MinimalObserver {
             family.lineage_id
         );
 
-        self.share_metrics_securely(&metrics, family, security_endpoint, discovery_endpoint)?;
+        Self::share_metrics_securely(&metrics, family, security_endpoint, discovery_endpoint)?;
 
         Ok(true)
     }
@@ -301,12 +301,7 @@ impl MinimalObserver {
     /// Resolves endpoints via capability-based env vars:
     /// - `SECURITY_ENDPOINT` — encryption provider
     /// - `DISCOVERY_ENDPOINT` — discovery/routing provider
-    #[expect(
-        clippy::unused_self,
-        reason = "method for future use or API consistency"
-    )]
     fn share_metrics_securely(
-        &self,
         metrics: &LocalMetrics,
         family: &FamilyObservability,
         security_endpoint_override: Option<&str>,

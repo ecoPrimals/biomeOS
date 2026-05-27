@@ -2,6 +2,41 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.80 (2026-05-27) — Deep Debt Wave 56
+
+### Smart file refactoring
+- `routing.rs` (920L→551L): extracted `Route` enum + `ROUTE_TABLE` to
+  `route_table.rs`, DRY'd duplicated semantic capability call logic into
+  shared `build_semantic_params()` helper, extracted `handle_plan_tier`,
+  `handle_routing_weights`, `handle_routing_explain`, `identity_response`,
+  `handle_primal_announce`, `dispatch_nucleus_signal` helper methods.
+- `nucleus.rs` (883L→605L): extracted process management, binary discovery,
+  socket cleanup, health check, and JWT generation to `nucleus_procs.rs`.
+
+### Hardcoding → capability-based
+- `examples/full_ecosystem_demo.rs`: replaced raw primal name string literals
+  with `primal_names::` constants.
+- `crates/biomeos-spore/src/spore/config.rs`: replaced hardcoded
+  `"test_family"` with `self.config.family_id`, replaced `/tmp/` socket paths
+  with XDG-compliant runtime directory via `SystemPaths::new_lazy()`.
+
+### Scaffold cleanup
+- `SporeInstantiate` route: replaced graph execution with unread `_deferred`
+  flag with a clean structured deferred response (`{status: "deferred", ...}`).
+
+### Dead code / lint cleanup
+- `weights/store.rs`: replaced `#[allow(clippy::result_large_err)]` on
+  `flush_weights_to_db` and `persist_single_weight` by changing return type
+  from `Result<(), redb::Error>` to `Result<(), anyhow::Error>`.
+- `observability/mod.rs`: converted `share_metrics_securely` from `&self`
+  method to associated function (removed `#[expect(clippy::unused_self)]`).
+
+### Dependency evolution
+- Unified `rustix` from workspace 0.38 to 1.x. Migrated all 5 crates:
+  `Signal::Term` → `Signal::TERM`, `Signal::Kill` → `Signal::KILL`,
+  `mount()` data parameter `""` → `None::<&CStr>`. Only transitive 0.38
+  remains via `which v6`.
+
 ## v3.79 (2026-05-27) — Wave 55 Gateway Completion
 
 ### Signal graph sync (primalSpring conventions)

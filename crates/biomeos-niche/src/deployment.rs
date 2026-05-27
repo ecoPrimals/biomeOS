@@ -203,7 +203,7 @@ impl NicheDeployment {
             if let Some(pid) = handle.pid {
                 let raw_pid = rustix::process::Pid::from_raw(pid.cast_signed());
                 if let Some(pid_val) = raw_pid {
-                    let _ = rustix::process::kill_process(pid_val, rustix::process::Signal::Term);
+                    let _ = rustix::process::kill_process(pid_val, rustix::process::Signal::TERM);
                     info!("Sent SIGTERM to organism {} (pid {})", name, pid);
                 }
             }

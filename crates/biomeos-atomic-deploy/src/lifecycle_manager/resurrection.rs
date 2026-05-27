@@ -116,7 +116,7 @@ impl LifecycleManager {
                     let pid_i32 = i32::try_from(pid).unwrap_or(-1);
                     if let Some(rustix_pid) = Pid::from_raw(pid_i32) {
                         // Try graceful SIGTERM
-                        if kill_process(rustix_pid, Signal::Term).is_ok() {
+                        if kill_process(rustix_pid, Signal::TERM).is_ok() {
                             // Wait up to 5 seconds for graceful shutdown
                             for _ in 0..50 {
                                 tokio::time::sleep(Duration::from_millis(100)).await;
@@ -127,7 +127,7 @@ impl LifecycleManager {
 
                             // Force SIGKILL if still running
                             warn!("⚠️ {} didn't terminate gracefully, sending SIGKILL", name);
-                            let _ = kill_process(rustix_pid, Signal::Kill);
+                            let _ = kill_process(rustix_pid, Signal::KILL);
                         }
                     }
                 }

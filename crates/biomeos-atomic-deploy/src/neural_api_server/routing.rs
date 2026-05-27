@@ -6,7 +6,11 @@
 //! Routes JSON-RPC requests to appropriate handlers based on method name.
 //! Uses a table-driven handler registry for O(1) lookup.
 
+#[path = "route_table.rs"]
+mod route_table;
+
 use biomeos_core::method_gate::CallerContext;
+use route_table::{Route, lookup_route};
 use serde_json::{Value, json};
 use tracing::{debug, trace};
 
@@ -74,347 +78,50 @@ fn dispatch_capability_call(
     }
 }
 
-/// Route tag for dispatch. Each variant maps to a handler.
-#[derive(Clone, Copy, Debug)]
-enum Route {
-    GraphList,
-    GraphGet,
-    GraphSave,
-    GraphExecute,
-    GraphStatus,
-    GraphExecutePipeline,
-    GraphStartContinuous,
-    GraphPauseContinuous,
-    GraphResumeContinuous,
-    GraphStopContinuous,
-    GraphSuggestOptimizations,
-    TopologyGet,
-    TopologyPrimals,
-    TopologyProprioception,
-    TopologyMetrics,
-    TopologyRescan,
-    NicheList,
-    NicheDeploy,
-    LifecycleStatus,
-    LifecycleGet,
-    LifecycleRegister,
-    LifecycleResurrect,
-    LifecycleApoptosis,
-    LifecycleShutdownAll,
-    LifecycleComposition,
-    CompositionHealth,
-    ProtocolStatus,
-    ProtocolEscalate,
-    ProtocolFallback,
-    ProtocolMetrics,
-    ProtocolRegisterPrimal,
-    ProtocolRegisterConnection,
-    ProtocolRecordRequest,
-    ProtocolStartMonitoring,
-    ProtocolStopMonitoring,
-    GraphProtocolMap,
-    BatchRouteRegister,
-    CapabilityRegister,
-    CapabilityDiscover,
-    CapabilityList,
-    CapabilityProviders,
-    CapabilityResolve,
-    CapabilityResolveSingle,
-    CapabilityMetrics,
-    CapabilityCall,
-    CapabilityDiscoverTranslations,
-    CapabilityListTranslations,
-    RoutingWeights,
-    RoutingExplain,
-    CompositionPatterns,
-    CompositionPlanTier,
-    CapabilityUtilization,
-    McpToolsList,
-    Agent,
-    ProxyHttp,
-    InferenceSchedule,
-    InferenceGates,
-    InferenceRegisterProvider,
-    InferenceProviders,
-    InferenceComplete,
-    InferenceEmbed,
-    InferenceModels,
-    SemanticCapabilityCall,
-    HealthCheck,
-    HealthLiveness,
-    HealthReadiness,
-    BtspEscalate,
-    BtspStatus,
-    BtspNegotiate,
-    GraphTickStatus,
-    GraphVerify,
-    AuthCheck,
-    AuthMode,
-    AuthPeerInfo,
-    CompositionReload,
-    CompositionStatus,
-    CompositionDeploy,
-    CompositionDeployShadow,
-    SpringStatus,
-    MethodRegister,
-    SignalDispatch,
-    SignalList,
-    SignalSchema,
-    PrimalAnnounce,
-    WeightHealth,
-    IdentityGet,
-    SporeInstantiate,
-    NucleusIngestSpore,
-    NucleusEmitSpore,
-}
-
-/// Table-driven handler registry: method name → route.
-/// Multiple method names may map to the same route (e.g. `neural_api.list_graphs` | graph.list).
-const ROUTE_TABLE: &[(&str, Route)] = &[
-    // Graph
-    ("neural_api.list_graphs", Route::GraphList),
-    ("graph.list", Route::GraphList),
-    ("neural_api.get_graph", Route::GraphGet),
-    ("graph.get", Route::GraphGet),
-    ("graph.load", Route::GraphGet),
-    ("neural_api.save_graph", Route::GraphSave),
-    ("graph.save", Route::GraphSave),
-    ("neural_api.execute_graph", Route::GraphExecute),
-    ("graph.execute", Route::GraphExecute),
-    ("neural_api.get_execution_status", Route::GraphStatus),
-    ("graph.status", Route::GraphStatus),
-    // Pipeline streaming execution
-    ("graph.execute_pipeline", Route::GraphExecutePipeline),
-    ("neural_api.execute_pipeline", Route::GraphExecutePipeline),
-    // Continuous session management
-    ("graph.start_continuous", Route::GraphStartContinuous),
-    ("neural_api.start_continuous", Route::GraphStartContinuous),
-    ("graph.pause_continuous", Route::GraphPauseContinuous),
-    ("neural_api.pause_continuous", Route::GraphPauseContinuous),
-    ("graph.resume_continuous", Route::GraphResumeContinuous),
-    ("neural_api.resume_continuous", Route::GraphResumeContinuous),
-    ("graph.stop_continuous", Route::GraphStopContinuous),
-    ("neural_api.stop_continuous", Route::GraphStopContinuous),
-    ("graph.tick_status", Route::GraphTickStatus),
-    ("graph.verify", Route::GraphVerify),
-    // Pathway Learner
-    (
-        "graph.suggest_optimizations",
-        Route::GraphSuggestOptimizations,
-    ),
-    (
-        "neural_api.suggest_optimizations",
-        Route::GraphSuggestOptimizations,
-    ),
-    // Topology
-    ("neural_api.get_topology", Route::TopologyGet),
-    ("topology.get", Route::TopologyGet),
-    ("neural_api.get_primals", Route::TopologyPrimals),
-    ("topology.primals", Route::TopologyPrimals),
-    ("primal.list", Route::TopologyPrimals),
-    // DEPRECATED: bare "list" retained for backward compat; prefer "primal.list"
-    ("list", Route::TopologyPrimals),
-    (
-        "neural_api.get_proprioception",
-        Route::TopologyProprioception,
-    ),
-    ("topology.proprioception", Route::TopologyProprioception),
-    ("neural_api.get_metrics", Route::TopologyMetrics),
-    ("topology.metrics", Route::TopologyMetrics),
-    ("topology.rescan", Route::TopologyRescan),
-    // Niche
-    ("neural_api.list_niche_templates", Route::NicheList),
-    ("niche.list", Route::NicheList),
-    ("neural_api.deploy_niche", Route::NicheDeploy),
-    ("niche.deploy", Route::NicheDeploy),
-    // Lifecycle
-    ("lifecycle.status", Route::LifecycleStatus),
-    ("lifecycle.get", Route::LifecycleGet),
-    ("lifecycle.register", Route::LifecycleRegister),
-    ("lifecycle.resurrect", Route::LifecycleResurrect),
-    ("lifecycle.apoptosis", Route::LifecycleApoptosis),
-    ("lifecycle.shutdown_all", Route::LifecycleShutdownAll),
-    ("lifecycle.composition", Route::LifecycleComposition),
-    // Composition health (COMPOSITION_HEALTH_STANDARD)
-    ("composition.health", Route::CompositionHealth),
-    ("composition.tower_health", Route::CompositionHealth),
-    ("composition.node_health", Route::CompositionHealth),
-    ("composition.nest_health", Route::CompositionHealth),
-    ("composition.nucleus_health", Route::CompositionHealth),
-    // Protocol
-    ("protocol.status", Route::ProtocolStatus),
-    ("protocol.escalate", Route::ProtocolEscalate),
-    ("protocol.fallback", Route::ProtocolFallback),
-    ("protocol.metrics", Route::ProtocolMetrics),
-    ("protocol.register_primal", Route::ProtocolRegisterPrimal),
-    (
-        "protocol.register_connection",
-        Route::ProtocolRegisterConnection,
-    ),
-    ("protocol.record_request", Route::ProtocolRecordRequest),
-    ("protocol.start_monitoring", Route::ProtocolStartMonitoring),
-    ("protocol.stop_monitoring", Route::ProtocolStopMonitoring),
-    ("graph.protocol_map", Route::GraphProtocolMap),
-    // Route (batch capability registration)
-    ("route.register", Route::BatchRouteRegister),
-    // Capability
-    ("capability.register", Route::CapabilityRegister),
-    ("capability.discover", Route::CapabilityDiscover),
-    ("neural_api.discover_capability", Route::CapabilityDiscover),
-    ("discovery.find_by_capability", Route::CapabilityDiscover),
-    ("capability.list", Route::CapabilityList), // legacy alias; prefer `capabilities.list`
-    ("capabilities.list", Route::CapabilityList),
-    ("capability.providers", Route::CapabilityProviders),
-    ("capability.route", Route::CapabilityResolve),
-    ("neural_api.route_to_primal", Route::CapabilityResolve),
-    ("capability.resolve", Route::CapabilityResolveSingle),
-    ("ipc.resolve", Route::CapabilityResolveSingle),
-    ("capability.metrics", Route::CapabilityMetrics),
-    ("neural_api.get_routing_metrics", Route::CapabilityMetrics),
-    ("neural_api.routing_weights", Route::RoutingWeights),
-    ("neural_api.route_explain", Route::RoutingExplain),
-    (
-        "neural_api.composition_patterns",
-        Route::CompositionPatterns,
-    ),
-    ("neural_api.plan_tier", Route::CompositionPlanTier),
-    ("neural_api.utilization", Route::CapabilityUtilization),
-    ("neural_api.weight_health", Route::WeightHealth),
-    ("weight_health", Route::WeightHealth),
-    ("capability.call", Route::CapabilityCall),
-    (
-        "capability.discover_translations",
-        Route::CapabilityDiscoverTranslations,
-    ),
-    (
-        "capability.discover_translation",
-        Route::CapabilityDiscoverTranslations,
-    ),
-    (
-        "capability.list_translations",
-        Route::CapabilityListTranslations,
-    ),
-    // Inference (canonical `inference.*` namespace per wateringHole SEMANTIC_METHOD_NAMING_STANDARD §7).
-    // `model.*` and `ai.*` are aliases that route through the semantic fallback to
-    // capability.call, which resolves to the same providers via CapabilityTranslationRegistry.
-    ("inference.schedule", Route::InferenceSchedule),
-    ("inference.gates", Route::InferenceGates),
-    (
-        "inference.register_provider",
-        Route::InferenceRegisterProvider,
-    ),
-    ("inference.providers", Route::InferenceProviders),
-    ("inference.complete", Route::InferenceComplete),
-    ("inference.embed", Route::InferenceEmbed),
-    ("inference.models", Route::InferenceModels),
-    // MCP tool discovery (AI provider aggregation)
-    ("mcp.tools.list", Route::McpToolsList),
-    ("mcp.tools_list", Route::McpToolsList),
-    // Agent
-    ("agent.create", Route::Agent),
-    ("agent.list", Route::Agent),
-    ("agent.get", Route::Agent),
-    ("agent.remove", Route::Agent),
-    ("agent.meld", Route::Agent),
-    ("agent.split", Route::Agent),
-    ("agent.resolve", Route::Agent),
-    ("agent.route", Route::Agent),
-    ("agent.auto_meld", Route::Agent),
-    // Legacy
-    ("neural_api.proxy_http", Route::ProxyHttp),
-    // Health (semantic naming standard: health.check, health.liveness, health.readiness)
-    ("health.check", Route::HealthCheck),
-    ("health.liveness", Route::HealthLiveness),
-    ("health.readiness", Route::HealthReadiness),
-    // Auth introspection (JH-0 method gate)
-    ("auth.check", Route::AuthCheck),
-    ("auth.mode", Route::AuthMode),
-    ("auth.peer_info", Route::AuthPeerInfo),
-    // Composition hot-reload (JH-3)
-    ("composition.reload", Route::CompositionReload),
-    // Composition status (pappusCast adaptive daemons)
-    ("composition.status", Route::CompositionStatus),
-    // Composition deploy (alias for graph.execute — primalSpring contract)
-    ("composition.deploy", Route::CompositionDeploy),
-    // Composition deploy shadow (dry-run validation for projectNUCLEUS H2)
-    ("composition.deploy.shadow", Route::CompositionDeployShadow),
-    // Identity (canonical identity response per CAPABILITY_WIRE_STANDARD)
-    ("identity.get", Route::IdentityGet),
-    // DEPRECATED: bare "identity" retained for backward compat; prefer "identity.get"
-    ("identity", Route::IdentityGet),
-    // Primal self-announcement (atomic registration)
-    ("primal.announce", Route::PrimalAnnounce),
-    ("neural_api.primal_announce", Route::PrimalAnnounce),
-    // Atomic signal dispatch (composition collapse layer)
-    ("signal.dispatch", Route::SignalDispatch),
-    ("neural_api.signal_dispatch", Route::SignalDispatch),
-    ("signal.list", Route::SignalList),
-    ("neural_api.signal_list", Route::SignalList),
-    ("signal.schema", Route::SignalSchema),
-    ("neural_api.signal_schema", Route::SignalSchema),
-    // Spring status for Tier 2 notebook integration (projectNUCLEUS)
-    ("biomeos.spring_status", Route::SpringStatus),
-    // Spring method registration (GAP-09)
-    ("method.register", Route::MethodRegister),
-    // Spore lifecycle (lithoSpore ask R7)
-    ("spore.instantiate", Route::SporeInstantiate),
-    // NUCLEUS spore gateway (NC-1.1, NC-1.2 — pseudoSpore ingest/emit)
-    ("nucleus.ingest_spore", Route::NucleusIngestSpore),
-    ("nucleus.ingest", Route::NucleusIngestSpore),
-    ("nucleus.emit_spore", Route::NucleusEmitSpore),
-    ("nucleus.emit", Route::NucleusEmitSpore),
-    // BTSP escalation (cleartext → enforced after Tower healthy)
-    ("btsp.escalate", Route::BtspEscalate),
-    ("btsp.status", Route::BtspStatus),
-    ("btsp.negotiate", Route::BtspNegotiate),
-    // Signal-tier semantic routes (R5): direct method-name → signal graph interception
-    ("nest.store", Route::SemanticCapabilityCall),
-    ("nest.commit", Route::SemanticCapabilityCall),
-    ("nest.retrieve", Route::SemanticCapabilityCall),
-    ("nest.sync", Route::SemanticCapabilityCall),
-    ("tower.publish", Route::SemanticCapabilityCall),
-    ("tower.authenticate", Route::SemanticCapabilityCall),
-    ("tower.discover", Route::SemanticCapabilityCall),
-    ("tower.health", Route::SemanticCapabilityCall),
-    ("tower.bootstrap", Route::SemanticCapabilityCall),
-    ("node.compute", Route::SemanticCapabilityCall),
-    ("braid.partial_update", Route::SemanticCapabilityCall),
-    ("braid.complete", Route::SemanticCapabilityCall),
-    ("meta.observe", Route::SemanticCapabilityCall),
-    ("meta.intent", Route::SemanticCapabilityCall),
-    ("meta.render", Route::SemanticCapabilityCall),
-    ("meta.health", Route::SemanticCapabilityCall),
-    ("meta.deploy", Route::SemanticCapabilityCall),
-    // Mesh & NAT (explicit semantic capability routes for known domains)
-    ("mesh.status", Route::SemanticCapabilityCall),
-    ("mesh.find_path", Route::SemanticCapabilityCall),
-    ("mesh.announce", Route::SemanticCapabilityCall),
-    ("mesh.peers", Route::SemanticCapabilityCall),
-    ("mesh.health_check", Route::SemanticCapabilityCall),
-    ("punch.request", Route::SemanticCapabilityCall),
-    ("punch.status", Route::SemanticCapabilityCall),
-    ("punch.coordinate", Route::SemanticCapabilityCall),
-    ("stun.discover", Route::SemanticCapabilityCall),
-    ("stun.detect_nat_type", Route::SemanticCapabilityCall),
-    ("stun.probe_port_pattern", Route::SemanticCapabilityCall),
-    ("relay.serve", Route::SemanticCapabilityCall),
-    ("relay.status", Route::SemanticCapabilityCall),
-    ("relay.allocate", Route::SemanticCapabilityCall),
-    ("relay.authorize", Route::SemanticCapabilityCall),
-    ("onion.create_service", Route::SemanticCapabilityCall),
-    ("onion.get_address", Route::SemanticCapabilityCall),
-    ("onion.connect", Route::SemanticCapabilityCall),
-    ("onion.status", Route::SemanticCapabilityCall),
-];
-
-fn lookup_route(method: &str) -> Option<Route> {
-    ROUTE_TABLE
-        .iter()
-        .find(|(m, _)| *m == method)
-        .map(|(_, r)| *r)
-}
-
 impl NeuralApiServer {
+    /// Build semantic capability call params from a domain.operation method,
+    /// injecting resource envelope and bearer token verification.
+    async fn build_semantic_params(
+        &self,
+        domain: &str,
+        operation: &str,
+        params: &Option<Value>,
+        caller: &CallerContext,
+    ) -> Value {
+        let mut args_obj = params.clone().unwrap_or(json!({}));
+        let trace_flag = args_obj
+            .as_object()
+            .and_then(|o| o.get("_routing_trace"))
+            .cloned();
+        if let Some(o) = args_obj.as_object_mut() {
+            o.remove("_routing_trace");
+            o.remove("_bearer_token");
+        }
+        let mut cap_params = json!({
+            "capability": domain,
+            "operation": operation,
+            "args": args_obj
+        });
+        if let Some(t) = trace_flag {
+            cap_params["_routing_trace"] = t;
+        }
+        if let Some(ref claims) = caller.claims {
+            if let Some(ref env) = claims.resources {
+                cap_params["_resource_envelope"] = env.to_forwarding_value();
+            }
+        }
+        if let Some(ref token) = caller.bearer_token {
+            cap_params["_bearer_token"] = json!(token);
+            let verified = if let Some(ref v) = self.beardog_verifier {
+                v.verify_async(token).await.is_some()
+            } else {
+                false
+            };
+            cap_params["_token_verified"] = json!(verified);
+        }
+        cap_params
+    }
+
     /// Handle a JSON-RPC request, returning a structured dispatch outcome.
     ///
     /// Separates protocol errors (method not found, parse error) from application
@@ -441,7 +148,6 @@ impl NeuralApiServer {
         debug!("📥 Request: {} (id: {})", request.method, id);
         trace!("📥 Full request: {}", request_line.trim());
 
-        // JH-0: extract bearer token from request params if present.
         let caller = request
             .params
             .as_ref()
@@ -451,7 +157,6 @@ impl NeuralApiServer {
                 CallerContext::loopback().with_bearer_token(tok.to_owned())
             });
 
-        // JH-0: pre-dispatch method gate check.
         if let Err(gate_err) = self.method_gate.check(request.method.as_ref(), &caller) {
             return DispatchOutcome::ApplicationError {
                 code: gate_err.code as i32,
@@ -465,50 +170,11 @@ impl NeuralApiServer {
         let route = match lookup_route(request.method.as_ref()) {
             Some(r) => r,
             None => {
-                // Semantic fallback: any "domain.operation" method not in
-                // ROUTE_TABLE routes through the capability layer. Springs call
-                // provenance.begin, birdsong.decrypt, dag.dehydrate, etc. as
-                // top-level JSON-RPC — the capability handler resolves provider
-                // + socket via CapabilityTranslationRegistry and CAPABILITY_DOMAINS.
                 if let Some((domain, operation)) = request.method.as_ref().split_once('.') {
                     if !domain.is_empty() && !operation.is_empty() {
-                        debug!(
-                            "📡 Semantic fallback: {}.{} → capability.call",
-                            domain, operation
-                        );
-                        let mut args_obj = params.clone().unwrap_or(json!({}));
-                        let trace_flag = args_obj
-                            .as_object()
-                            .and_then(|o| o.get("_routing_trace"))
-                            .cloned();
-                        if let Some(o) = args_obj.as_object_mut() {
-                            o.remove("_routing_trace");
-                            o.remove("_bearer_token");
-                        }
-                        let mut cap_params = json!({
-                            "capability": domain,
-                            "operation": operation,
-                            "args": args_obj
-                        });
-                        if let Some(t) = trace_flag {
-                            cap_params["_routing_trace"] = t;
-                        }
-                        // JH-2: inject resource envelope for downstream enforcement
-                        if let Some(ref claims) = caller.claims {
-                            if let Some(ref env) = claims.resources {
-                                cap_params["_resource_envelope"] = env.to_forwarding_value();
-                            }
-                        }
-                        // exp111 + JH-11: propagate bearer token with verification
-                        if let Some(ref token) = caller.bearer_token {
-                            cap_params["_bearer_token"] = json!(token);
-                            let verified = if let Some(ref v) = self.beardog_verifier {
-                                v.verify_async(token).await.is_some()
-                            } else {
-                                false
-                            };
-                            cap_params["_token_verified"] = json!(verified);
-                        }
+                        debug!("📡 Semantic fallback: {domain}.{operation} → capability.call");
+                        let cap_params =
+                            self.build_semantic_params(domain, operation, params, &caller).await;
                         return dispatch_capability_call(
                             self.capability_handler.call(&Some(cap_params)).await,
                             id,
@@ -619,48 +285,12 @@ impl NeuralApiServer {
                 dispatch(self.capability_handler.resolve(params).await, id)
             }
             Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, id),
-            Route::RoutingWeights => {
-                let weights = self.router.get_routing_weights().await;
-                let summary = self.router.get_weight_summary().await;
-                dispatch(
-                    Ok(serde_json::json!({
-                        "weights": weights,
-                        "summary": summary,
-                    })),
-                    id,
-                )
-            }
-            Route::RoutingExplain => dispatch(
-                crate::handlers::capability_routing::explain_route(
-                    &self.router,
-                    &*self.translation_registry.read().await,
-                    params,
-                )
-                .await,
-                id,
-            ),
+            Route::RoutingWeights => dispatch(self.handle_routing_weights().await, id),
+            Route::RoutingExplain => dispatch(self.handle_routing_explain(params).await, id),
             Route::CompositionPatterns => {
-                let patterns = self.router.composition_patterns_json().await;
-                dispatch(Ok(patterns), id)
+                dispatch(Ok(self.router.composition_patterns_json().await), id)
             }
-            Route::CompositionPlanTier => {
-                let tier_name = params
-                    .as_ref()
-                    .and_then(|p| p.get("tier"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("tower");
-                let tier = match tier_name {
-                    "tower" => crate::neural_router::CompositionTier::Tower,
-                    "node" => crate::neural_router::CompositionTier::Node,
-                    "nest" => crate::neural_router::CompositionTier::Nest,
-                    "nucleus" => crate::neural_router::CompositionTier::Nucleus,
-                    "meta" => crate::neural_router::CompositionTier::Meta,
-                    "orchestration" => crate::neural_router::CompositionTier::Orchestration,
-                    _ => crate::neural_router::CompositionTier::Standalone,
-                };
-                let plan = self.router.plan_tier(tier).await;
-                dispatch(serde_json::to_value(&plan).map_err(anyhow::Error::from), id)
-            }
+            Route::CompositionPlanTier => dispatch(self.handle_plan_tier(params).await, id),
             Route::CapabilityUtilization => dispatch(Ok(self.router.utilization_json().await), id),
             Route::WeightHealth => dispatch(self.handle_weight_health().await, id),
             Route::CapabilityCall => {
@@ -737,41 +367,11 @@ impl NeuralApiServer {
             Route::CompositionDeployShadow => {
                 dispatch(self.graph_handler.shadow_deploy(params).await, id)
             }
-            // Identity (CAPABILITY_WIRE_STANDARD canonical response)
-            Route::IdentityGet => dispatch(
-                Ok(serde_json::json!({
-                    "primal": "biomeos",
-                    "role": "orchestrator",
-                    "version": env!("CARGO_PKG_VERSION"),
-                    "capabilities": ["orchestration", "composition", "graph", "topology", "lifecycle", "signal"],
-                    "is_orchestrator": true,
-                    "transport": ["uds", "tcp", "http"],
-                })),
-                id,
-            ),
-            // Primal self-announcement (atomic registration)
-            Route::PrimalAnnounce => dispatch(
-                crate::handlers::announce::handle_announce(
-                    &self.router,
-                    &self.translation_registry,
-                    &self.lifecycle_handler,
-                    &self.beardog_verifier,
-                    params,
-                )
-                .await,
-                id,
-            ),
-            // Atomic signal dispatch (composition collapse)
-            Route::SignalDispatch => dispatch(
-                crate::handlers::signal::dispatch(
-                    &self.graphs_dir,
-                    &self.family_id,
-                    &self.graph_handler,
-                    params,
-                )
-                .await,
-                id,
-            ),
+            Route::IdentityGet => dispatch(Ok(self.identity_response()), id),
+            Route::PrimalAnnounce => dispatch(self.handle_primal_announce(params).await, id),
+            Route::SignalDispatch => {
+                dispatch(self.dispatch_nucleus_signal_raw(params).await, id)
+            }
             Route::SignalList => {
                 dispatch(crate::handlers::signal::list(&self.graphs_dir).await, id)
             }
@@ -780,42 +380,20 @@ impl NeuralApiServer {
             }
             // Spring status (Tier 2 notebook integration)
             Route::SpringStatus => dispatch(self.lifecycle_handler.spring_status().await, id),
-            // Spore lifecycle — atomic VM provisioning (lithoSpore ask R7).
-            // Blocked on upstream: lithoSpore Tier 3 VM provisioning not yet available.
-            // Scaffold forwards to graph executor with _deferred flag; nodes gracefully skip.
-            Route::SporeInstantiate => {
-                let spore_params = params.clone().unwrap_or(json!({}));
-                let graph_id = spore_params
-                    .get("graph_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("livespore_create");
-                let execute_params = json!({
-                    "graph_id": graph_id,
-                    "family_id": self.family_id,
-                    "spore_context": spore_params,
-                    "_deferred": "lithoSpore Tier 3 not yet available — graph nodes will be skipped",
-                });
-                dispatch(self.graph_handler.execute(&Some(execute_params)).await, id)
-            }
-            // NUCLEUS spore ingest (NC-1.1) — dispatch nest_ingest_spore signal graph
+            // Spore lifecycle — blocked on lithoSpore Tier 3 VM provisioning.
+            // Returns a structured deferred response instead of executing a graph
+            // with an unread _deferred flag.
+            Route::SporeInstantiate => dispatch(
+                Ok(json!({
+                    "status": "deferred",
+                    "reason": "lithoSpore Tier 3 VM provisioning not yet available",
+                    "spore_params": params.clone().unwrap_or(json!({})),
+                })),
+                id,
+            ),
             Route::NucleusIngestSpore => {
-                let ingest_params = params.clone().unwrap_or(json!({}));
-                let signal_params = Some(json!({
-                    "signal": "nest.ingest_spore",
-                    "params": ingest_params,
-                }));
-                dispatch(
-                    crate::handlers::signal::dispatch(
-                        &self.graphs_dir,
-                        &self.family_id,
-                        &self.graph_handler,
-                        &signal_params,
-                    )
-                    .await,
-                    id,
-                )
+                dispatch(self.dispatch_nucleus_signal("ingest_spore", params).await, id)
             }
-            // NUCLEUS spore emit (NC-1.2) — dispatch nest_emit_spore signal graph
             Route::NucleusEmitSpore => {
                 let emit_params = params.clone().unwrap_or(json!({}));
                 let spore_id = emit_params
@@ -824,25 +402,16 @@ impl NeuralApiServer {
                     .unwrap_or_default();
                 if spore_id.is_empty() {
                     dispatch(
-                        Err::<serde_json::Value, _>(anyhow::anyhow!(
+                        Err::<Value, _>(anyhow::anyhow!(
                             "nucleus.emit_spore requires a spore_id parameter"
                         )),
                         id,
                     )
                 } else {
-                    let signal_params = Some(json!({
-                        "signal": "nest.emit_spore",
-                        "params": {
-                            "spore_id": spore_id,
-                            "family_id": self.family_id,
-                        },
-                    }));
                     dispatch(
-                        crate::handlers::signal::dispatch(
-                            &self.graphs_dir,
-                            &self.family_id,
-                            &self.graph_handler,
-                            &signal_params,
+                        self.dispatch_nucleus_signal(
+                            "emit_spore",
+                            &Some(json!({"spore_id": spore_id, "family_id": self.family_id})),
                         )
                         .await,
                         id,
@@ -855,42 +424,10 @@ impl NeuralApiServer {
             }
             // Legacy
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, id),
-            // Semantic capability routing: domain.operation → capability.call
             Route::SemanticCapabilityCall => {
                 if let Some((domain, operation)) = request.method.as_ref().split_once('.') {
-                    let mut args_obj = params.clone().unwrap_or(json!({}));
-                    let trace_flag = args_obj
-                        .as_object()
-                        .and_then(|o| o.get("_routing_trace"))
-                        .cloned();
-                    if let Some(o) = args_obj.as_object_mut() {
-                        o.remove("_routing_trace");
-                        o.remove("_bearer_token");
-                    }
-                    let mut cap_params = json!({
-                        "capability": domain,
-                        "operation": operation,
-                        "args": args_obj
-                    });
-                    if let Some(t) = trace_flag {
-                        cap_params["_routing_trace"] = t;
-                    }
-                    // JH-2: inject resource envelope for downstream enforcement
-                    if let Some(ref claims) = caller.claims {
-                        if let Some(ref env) = claims.resources {
-                            cap_params["_resource_envelope"] = env.to_forwarding_value();
-                        }
-                    }
-                    // exp111 + JH-11: propagate bearer token with verification
-                    if let Some(ref token) = caller.bearer_token {
-                        cap_params["_bearer_token"] = json!(token);
-                        let verified = if let Some(ref v) = self.beardog_verifier {
-                            v.verify_async(token).await.is_some()
-                        } else {
-                            false
-                        };
-                        cap_params["_token_verified"] = json!(verified);
-                    }
+                    let cap_params =
+                        self.build_semantic_params(domain, operation, params, &caller).await;
                     dispatch_capability_call(
                         self.capability_handler.call(&Some(cap_params)).await,
                         id,
@@ -905,6 +442,101 @@ impl NeuralApiServer {
         };
 
         outcome
+    }
+
+    async fn handle_primal_announce(
+        &self,
+        params: &Option<Value>,
+    ) -> Result<Value, anyhow::Error> {
+        crate::handlers::announce::handle_announce(
+            &self.router,
+            &self.translation_registry,
+            &self.lifecycle_handler,
+            &self.beardog_verifier,
+            params,
+        )
+        .await
+    }
+
+    /// Raw signal dispatch (signal.dispatch method — caller provides signal name in params).
+    async fn dispatch_nucleus_signal_raw(
+        &self,
+        params: &Option<Value>,
+    ) -> Result<Value, anyhow::Error> {
+        crate::handlers::signal::dispatch(
+            &self.graphs_dir,
+            &self.family_id,
+            &self.graph_handler,
+            params,
+        )
+        .await
+    }
+
+    fn identity_response(&self) -> Value {
+        json!({
+            "primal": "biomeos",
+            "role": "orchestrator",
+            "version": env!("CARGO_PKG_VERSION"),
+            "capabilities": ["orchestration", "composition", "graph", "topology", "lifecycle", "signal"],
+            "is_orchestrator": true,
+            "transport": ["uds", "tcp", "http"],
+        })
+    }
+
+    async fn handle_routing_weights(&self) -> Result<Value, anyhow::Error> {
+        let weights = self.router.get_routing_weights().await;
+        let summary = self.router.get_weight_summary().await;
+        Ok(json!({"weights": weights, "summary": summary}))
+    }
+
+    async fn handle_routing_explain(
+        &self,
+        params: &Option<Value>,
+    ) -> Result<Value, anyhow::Error> {
+        crate::handlers::capability_routing::explain_route(
+            &self.router,
+            &*self.translation_registry.read().await,
+            params,
+        )
+        .await
+    }
+
+    async fn handle_plan_tier(&self, params: &Option<Value>) -> Result<Value, anyhow::Error> {
+        let tier_name = params
+            .as_ref()
+            .and_then(|p| p.get("tier"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("tower");
+        let tier = match tier_name {
+            "tower" => crate::neural_router::CompositionTier::Tower,
+            "node" => crate::neural_router::CompositionTier::Node,
+            "nest" => crate::neural_router::CompositionTier::Nest,
+            "nucleus" => crate::neural_router::CompositionTier::Nucleus,
+            "meta" => crate::neural_router::CompositionTier::Meta,
+            "orchestration" => crate::neural_router::CompositionTier::Orchestration,
+            _ => crate::neural_router::CompositionTier::Standalone,
+        };
+        let plan = self.router.plan_tier(tier).await;
+        serde_json::to_value(&plan).map_err(anyhow::Error::from)
+    }
+
+    /// Dispatch a NUCLEUS signal graph (nest.ingest_spore, nest.emit_spore).
+    async fn dispatch_nucleus_signal(
+        &self,
+        signal_name: &str,
+        params: &Option<Value>,
+    ) -> Result<Value, anyhow::Error> {
+        let signal_params = Some(json!({
+            "signal": format!("nest.{signal_name}"),
+            "params": params.clone().unwrap_or(json!({})),
+        }));
+        crate::handlers::signal::dispatch(
+            &self.graphs_dir,
+            &self.family_id,
+            &self.graph_handler,
+            &signal_params,
+        )
+        .await
     }
 
     /// Handle a JSON-RPC request and return a JSON-RPC response value.

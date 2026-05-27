@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: May 27, 2026
-**Status**: Production Ready (v3.79) — Wave 55 Gateway Completion (signal graph synced, emit pipeline via signal graph, receipt shape aligned, 19 signal graphs), NUCLEUS spore gateway (ingest/emit), Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, plasmidBin canonical binary discovery, 8,038 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.80) — Deep Debt W56 (routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, hardcoding→capability-based), Wave 55 Gateway (signal graph synced, emit pipeline, 19 signal graphs), NUCLEUS spore gateway (ingest/emit), Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, plasmidBin canonical binary discovery, 8,038 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 

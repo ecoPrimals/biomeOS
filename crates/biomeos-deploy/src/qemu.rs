@@ -172,7 +172,7 @@ impl QemuInstance {
 
                 let pid_i32 = i32::try_from(process.id()).unwrap_or(-1);
                 if let Some(pid) = Pid::from_raw(pid_i32) {
-                    kill_process(pid, Signal::Term).map_err(DeployError::Process)?;
+                    kill_process(pid, Signal::TERM).map_err(DeployError::Process)?;
                 }
             }
 

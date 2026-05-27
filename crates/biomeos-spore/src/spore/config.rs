@@ -46,6 +46,10 @@ impl ConfigOps for Spore {
     fn generate_tower_toml(&self) -> String {
         let security = primal_names::BEARDOG;
         let discovery = primal_names::SONGBIRD;
+        let socket_dir = biomeos_types::paths::SystemPaths::new_lazy()
+            .runtime_dir()
+            .display()
+            .to_string();
         format!(
             r#"# BiomeOS Tower Configuration v0.4.0
 # Generated spore: {label}
@@ -53,7 +57,7 @@ impl ConfigOps for Spore {
 # Secure Genetic Lineage - File-based seed (not exposed in config)
 
 [tower]
-family = "test_family"
+family = "{family_id}"
 concurrent_startup = true
 
 # Security Primal (Port-Free!)
@@ -64,7 +68,7 @@ requires = []
 
 [primals.env]
 FAMILY_SEED_FILE = "./.family.seed"
-FAMILY_ID = "test_family"
+FAMILY_ID = "{family_id}"
 NODE_ID = "{node_id}"
 RUST_LOG = "info"
 
@@ -75,11 +79,11 @@ provides = ["Discovery"]
 requires = ["Security"]
 
 [primals.env]
-FAMILY_ID = "test_family"
+FAMILY_ID = "{family_id}"
 NODE_ID = "{node_id}"
 DISCOVERY_TAGS = "btsp_enabled"
-SECURITY_ENDPOINT = "unix:///tmp/{security}-{family_id}-{node_id}.sock"
-SECURITY_PROVIDER = "unix:///tmp/{security}-{family_id}-{node_id}.sock"
+SECURITY_ENDPOINT = "unix://{socket_dir}/{security}-{family_id}-{node_id}.sock"
+SECURITY_PROVIDER = "unix://{socket_dir}/{security}-{family_id}-{node_id}.sock"
 RUST_LOG = "info"
 "#,
             label = self.config.label,
@@ -87,6 +91,7 @@ RUST_LOG = "info"
             family_id = self.config.family_id,
             security = security,
             discovery = discovery,
+            socket_dir = socket_dir,
         )
     }
 }

@@ -268,7 +268,7 @@ fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MountFlags)
         .with_context(|| format!("Failed to create directory: {target}"))?;
 
     // Try to mount - if already mounted (EBUSY), that's OK
-    match mount(source, target, fstype, flags, "") {
+    match mount(source, target, fstype, flags, None::<&std::ffi::CStr>) {
         Ok(()) => {
             info!("  ✓ {}", target);
             Ok(())
