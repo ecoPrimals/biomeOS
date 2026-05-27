@@ -45,7 +45,7 @@ fn discover_primals() {
     let primals_dir = Path::new("bin/primals");
 
     if !primals_dir.exists() {
-        println!("   ⚠️  No primals installed. Run: ./bin/pull-primals.sh --all");
+        println!("   ⚠️  No primals installed. Run: cd tools/harvest && cargo run -- local");
         return;
     }
 

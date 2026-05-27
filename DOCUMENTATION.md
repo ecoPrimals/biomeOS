@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: May 25, 2026
+**Updated**: May 27, 2026
 
 ---
 
@@ -52,12 +52,14 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 
 ## Handoffs & Evolution Reports
 
-Handoffs live in the central **wateringHole** at `ecoPrimals/wateringHole/handoffs/`.
+Handoffs live in the central **wateringHole** at `ecoPrimals/infra/wateringHole/handoffs/`.
 
 ### Recent (May 2026)
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V378_DEEP_DEBT_CLEANUP_MAY27_2026 | Hardcoded primal names → constants, large file refactor, live_discovery REST wired | May 27, 2026 |
+| BIOMEOS_V377_NUCLEUS_SPORE_GATEWAY_MAY27_2026 | NUCLEUS spore ingest/emit subcommands, nest_ingest_spore signal, Neural API wiring | May 27, 2026 |
 | BIOMEOS_V375_CROSS_GATE_MESH_DISPATCH_MAY24_2026 | Songbird mesh cross-gate dispatch, shadow deploy membrane gate | May 24, 2026 |
 | BIOMEOS_V373_DEEP_DEBT_CAPABILITY_COMPOSITION_MAY24_2026 | Capability-domain composition, weights/ refactor, port helper rename, `DOMAIN_PRIMAL_BOOTSTRAP` | May 24, 2026 |
 | BIOMEOS_V367_WAVE43_ROUTING_WEIGHTS_MAY23_2026 | Persistent routing weights, utilization tracking | May 23, 2026 |
@@ -186,4 +188,4 @@ See `ARCHIVE_INDEX.md` in archive for details.
 **Active: 26 specs, handoffs in wateringHole (v2.43–v3.78), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE; membrane + nucleated composition models; signal-tier announce protocol; method_gate modularized; adaptive routing weights (redb-persistent); attestation verification; capability-domain composition health; Songbird mesh cross-gate dispatch; NUCLEUS spore gateway (ingest/emit)**
-**Tests: 8,036 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 1 tracked | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**
+**Tests: 8,036 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**

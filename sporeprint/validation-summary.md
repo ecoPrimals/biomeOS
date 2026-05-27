@@ -14,11 +14,11 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 - **v3.78** — deep debt cleanup (hardcoded primal names evolved, large files refactored, live_discovery REST wired)
 - **v3.77** — production ready, deep debt CLEAN, NUCLEUS spore gateway (ingest/emit)
 - **27 capability domains**, **320+ translations** across 13 primals
-- **17 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
+- **18 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
 - **43 deploy graphs** (incl. membrane_deploy, provenance trio)
 - **20 niche templates** (+ RootPulse, soil-microbiome, ecology)
 - **25 workspace crates**
-- **Zero blocking debt** — 0 unsafe, 0 C deps, 1 tracked TODO, 0 clippy warnings
+- **Zero blocking debt** — 0 unsafe, 0 C deps, 0 TODO/FIXME, 0 clippy warnings
 - **Edition 2024** all crates, ecoBin v3.0 compliant
 - **Cross-arch** — x86_64 + aarch64 + armv7 (USB + Pixel + Raspberry Pi)
 - **Security A++** — 100/100, Dark Forest Gate, BTSP Phase 3 encrypted framing
@@ -36,7 +36,7 @@ itself; it coordinates the primals that do.
 - **Dark Forest** — zero metadata leakage, encrypted beacons, genetic model
 - **RootPulse** — emergent provenance pattern (rhizoCrypt + loamSpine + sweetGrass)
 
-## Signal Dispatch (5 tiers, 17 graphs)
+## Signal Dispatch (5 tiers, 18 graphs)
 
 | Tier | Signals | Purpose |
 |------|---------|---------|

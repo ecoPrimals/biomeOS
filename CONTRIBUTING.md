@@ -3,7 +3,7 @@
 **License**: scyBorg triple-copyleft — AGPL-3.0-or-later (code), ORC (operational/mechanics), CC-BY-SA 4.0 (documentation/creative)
 
 All contributions must comply with the ecoPrimals wateringHole standards.
-See `ecoPrimals/wateringHole/STANDARDS_AND_EXPECTATIONS.md` (monorepo-relative) for the full standard.
+See `ecoPrimals/infra/wateringHole/STANDARDS_AND_EXPECTATIONS.md` (monorepo-relative) for the full standard.
 
 ---
 

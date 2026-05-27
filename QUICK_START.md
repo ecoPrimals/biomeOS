@@ -174,13 +174,13 @@ for diagnostics.
 ## Next Steps
 
 1. Read [CURRENT_STATUS.md](CURRENT_STATUS.md) for validated systems
-2. See `ecoPrimals/wateringHole/handoffs/` for evolution reports
+2. See `ecoPrimals/infra/wateringHole/handoffs/` for evolution reports
 3. Review `specs/EVOLUTION_ROADMAP.md` for the full roadmap
 
 ---
 
-**Status**: Production Ready (v3.40)
-**Updated**: May 3, 2026
-**Tests**: 7,859 passing (0 failures, 0 ignored, fully concurrent), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
+**Status**: Production Ready (v3.78)
+**Updated**: May 27, 2026
+**Tests**: 8,036 passing (0 failures, fully concurrent), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

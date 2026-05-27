@@ -523,7 +523,7 @@ async fn main() -> Result<()> {
             PrimalAction::List => handle_primal_list().await?,
             PrimalAction::Pull { name } => {
                 println!("🔨 Building primal: {name}");
-                println!("   Run: ./bin/pull-primals.sh {name}");
+                println!("   Run: cd tools/harvest && cargo run -- local --primal {name}");
             }
         },
         Commands::Spore { action } => match action {

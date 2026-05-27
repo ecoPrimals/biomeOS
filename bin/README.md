@@ -1,12 +1,10 @@
 # biomeOS bin/
 
-**Updated**: April 28, 2026
+**Updated**: May 27, 2026
 
 ## Contents
 
-- **`tower`** — Symlink / wrapper for the main biomeOS binary
 - **`primals/`** — Compiled primal binaries (gitignored; populated by `scripts/build_primals_for_testing.sh` or `biomeos-harvest`)
-- **`chimeras/`** — Chimera composition crate (p2p-secure, gaming-mesh)
 
 ## Building Primals
 

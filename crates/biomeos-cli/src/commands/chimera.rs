@@ -157,7 +157,7 @@ pub async fn handle_chimera_build_at(
                 }
                 Err(e) => {
                     println!("   ❌ Missing primals: {e}");
-                    println!("   Run './bin/pull-primals.sh --all' first");
+                    println!("   Run 'cd tools/harvest && cargo run -- local' first");
                     return Ok(());
                 }
             }

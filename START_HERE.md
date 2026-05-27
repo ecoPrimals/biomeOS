@@ -1,6 +1,6 @@
 # Start Here - biomeOS
 
-**Last Updated**: May 25, 2026
+**Last Updated**: May 27, 2026
 **Status**: Production Ready (v3.78) — Deep debt cleanup (hardcoded primal names evolved, large files refactored, live_discovery REST wired), NUCLEUS spore gateway (ingest/emit), Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, plasmidBin canonical binary discovery, 8,036 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.75 — Songbird mesh cross-gate dispatch, shadow deploy membrane gate, deep debt CLEAN)
+**Status**: Production Ready (v3.78 — deep debt cleanup, NUCLEUS spore gateway, Songbird mesh cross-gate dispatch, membrane composition)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Binary source**: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
@@ -178,5 +178,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 8,036 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 1 tracked | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
+**Tests**: 8,036 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
 **Updated**: May 27, 2026

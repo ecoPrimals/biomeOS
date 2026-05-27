@@ -32,7 +32,7 @@ multiple gates (devices).
 - **Crate count:** 25 workspace crates
 - **Clippy:** pedantic + nursery enabled via workspace lint inheritance
 - **Unsafe:** 0 in production code (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points)
-- **TODO/FIXME/HACK:** 1 tracked (`live_discovery.rs` REST route wiring)
+- **TODO/FIXME/HACK:** 0 (all resolved in v3.78)
 
 ## Key Capabilities (JSON-RPC methods)
 

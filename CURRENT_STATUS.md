@@ -577,7 +577,7 @@ All biomeOS-owned tasks from the relay-punch protocol handoff:
 
 Key types: `ConnectionTier`, `NatType`, `PortPattern`, `PeerConnectionInfo`, `StunResults`.
 22 new unit tests across `biomeos-core` (11) and `biomeos-api` (11 updated + 1 new).
-See: `ecoPrimals/wateringHole/handoffs/` (formerly docs/handoffs/)
+See: `ecoPrimals/infra/wateringHole/handoffs/` (formerly docs/handoffs/)
 
 ### Plasmodium Agent Dispatch + Coverage (Feb 11)
 Added `agent.route` RPC method — resolves a capability through an agent's routing table
@@ -871,7 +871,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 1. **Fix mesh state split** - 3 independent MeshHandler instances need shared state via Arc
 2. **Fix UDP discovery protocol** - Bind to actual discovery port, not ephemeral; avoid mDNS 5353
 3. **Eliminate hardcoded 3492** - 22 occurrences across 12 files → runtime `SONGBIRD_HTTP_PORT` / 8080
-4. See `ecoPrimals/wateringHole/handoffs/` for root causes + file locations (formerly docs/handoffs/)
+4. See `ecoPrimals/infra/wateringHole/handoffs/` for root causes + file locations (formerly docs/handoffs/)
 
 ### High Priority (Primal Teams)
 1. **Songbird `discover_capabilities`** - Enables pure runtime discovery (no env var bypass)
@@ -976,7 +976,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,859 tests — fully concurrent)
+# Test (8,036 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -998,11 +998,11 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.40 — AGPL-3.0-or-later, workspace deps governed, zero blocking debt, all primalSpring audit gaps resolved, BTSP Phase 3 LIVE)
-**Tests**: 7,859 passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.78 — deep debt cleanup, NUCLEUS spore gateway, Songbird mesh cross-gate dispatch, zero blocking debt)
+**Tests**: 8,036 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
-**Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0
+**Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0 | **TODO/FIXME**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
-**Neural API**: 320+ translations, 27 domains (+ tensor), proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination, post-spawn auto-registration
+**Neural API**: 320+ translations, 27 domains (+ tensor), proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination, post-spawn auto-registration, adaptive routing weights (redb-persistent)
 **Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution, data-driven launch profiles, all IPs + runtime paths centralized to constants, cross-arch safe, UDS dual-protocol, zero Box\<dyn Error\>)
 **Bypasses**: 0 active (all 6 evolved)

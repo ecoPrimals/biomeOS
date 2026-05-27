@@ -204,7 +204,7 @@ pub async fn handle_primal_list_at(primals_dir: impl AsRef<Path>) -> anyhow::Res
     let primals_dir = primals_dir.as_ref();
 
     if !primals_dir.exists() {
-        println!("❌ Primals directory not found. Run './bin/pull-primals.sh --all'");
+        println!("❌ Primals directory not found. Run 'cd tools/harvest && cargo run -- local'");
         return Ok(());
     }
 
