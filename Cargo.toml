@@ -60,6 +60,7 @@ members = [
     "crates/biomeos-atomic-deploy",  # Genetic lineage atomic deployment (modern Rust, no bash)
     "crates/biomeos-genomebin-v3",  # NEW: genomeBin v3.0 - TRUE binary isomorphic format
     "crates/biomeos-genome-factory",  # NEW: Genome Factory - Universal genomeBin production
+    "crates/biomeos-pseudospore",  # pseudoSpore envelope validation (NC-1.4)
 ]
 exclude = [
     "tools",    # Standalone workspace for dev/integration tools

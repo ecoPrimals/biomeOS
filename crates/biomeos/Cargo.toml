@@ -53,8 +53,8 @@ comfy-table = { workspace = true }
 # Encoding
 base64 = { workspace = true }
 
-# Hashing (pseudoSpore envelope BLAKE3 validation)
-blake3 = { workspace = true }
+# pseudoSpore envelope validation (NC-1.4)
+biomeos-pseudospore = { path = "../biomeos-pseudospore", version = "0.1.0" }
 
 # Cryptographic randomness
 rand = { workspace = true }

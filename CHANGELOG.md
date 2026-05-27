@@ -2,6 +2,44 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.81 (2026-05-27) — NC-1.4 + NC-1.emit Gateway Completion
+
+### NC-1.4: Canonical pseudoSpore Validation
+- Created `biomeos-pseudospore` crate (26th workspace member) implementing the
+  pseudoSpore 2.0 standard: `load_pseudospore()`, `verify_checksums()`,
+  `check_completeness()`, `compute_checksums()`, `format_checksums()`
+- Types compatible with `litho_core::pseudospore`: `PseudoSporeManifest`,
+  `PseudoSporeScope`, `ArtifactIdentity`, `ValidationDoc`, `ChecksumEntry`,
+  `SporeStatus`, `EnvironmentReceipt`, `FermentTranscript`
+- Replaced inline `validate_envelope()` stub in `nucleus_ingest.rs` that
+  validated `liveSpore.json` (non-canonical) with canonical validation:
+  `scope.toml` `[artifact]`, `validation.json`, `receipts/checksums.blake3`,
+  `provenance/ferment_transcript.json`, `README.md`
+- `Envelope::from_manifest()` maps `PseudoSporeManifest` fields to signal params
+- Removed direct `blake3` dep from `biomeos-unibin` (delegated to `biomeos-pseudospore`)
+- 10 tests in new crate, all ingest tests rewritten with canonical fixtures
+
+### NC-1.emit: Full Emit Materialization
+- `run_emit()` now produces a full pseudoSpore 2.0 directory (not just `emit_manifest.json`):
+  `scope.toml`, `validation.json`, `receipts/environment.toml`,
+  `receipts/checksums.blake3`, `provenance/ferment_transcript.json`,
+  `data/content.json`, `README.md`, `receipts/nucleus_emit.toml`
+- Added `poll_execution()` with exponential backoff (100ms→5s, 120s timeout)
+  that polls `graph.status` JSON-RPC until execution completes or fails
+- Added `materialize_pseudospore()` that extracts node results (content, braid,
+  signature) and writes them into the canonical directory layout
+- Added `write_emit_receipt()` symmetric with `write_receipt()` for ingest
+- `emit_manifest.json` retained as dispatch audit trail alongside materialized tree
+- Materialized directories pass `load_pseudospore()` validation (tested)
+
+### Signal param wiring
+- `signal_context.params` (spore_id, family_id, etc.) now injected into graph
+  executor env map so node capability calls can reference `${spore_id}`
+- Previously only `metrics_namespace` was extracted from signal context
+
+### Stats
+- 8,053 tests (0 failures), 26 workspace crates, 19 signal graphs
+
 ## v3.80 (2026-05-27) — Deep Debt Wave 56
 
 ### Smart file refactoring

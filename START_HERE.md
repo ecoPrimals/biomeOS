@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: May 27, 2026
-**Status**: Production Ready (v3.80) — Deep Debt W56 (routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, hardcoding→capability-based), Wave 55 Gateway (signal graph synced, emit pipeline, 19 signal graphs), NUCLEUS spore gateway (ingest/emit), Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, plasmidBin canonical binary discovery, 8,038 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 25 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.81) — NC-1.4 canonical pseudoSpore validation (biomeos-pseudospore crate), NC-1.emit full materialization (polling + pseudoSpore dir unpack), signal params flow to graph nodes, NUCLEUS spore gateway complete, Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, plasmidBin canonical binary discovery, 8,053 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 8,038 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
+8. **Tested**: 8,053 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.80 — deep debt W56, smart file refactoring, rustix 1.x, capability-based config, NUCLEUS gateway, Songbird mesh)
+**Status**: Production Ready (v3.81 — NC-1.4 canonical validation, NC-1.emit full materialization, biomeos-pseudospore crate, NUCLEUS gateway complete)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Binary source**: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
@@ -178,5 +178,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 8,038 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
+**Tests**: 8,053 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
 **Updated**: May 27, 2026

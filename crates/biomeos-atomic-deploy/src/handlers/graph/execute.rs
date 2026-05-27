@@ -102,6 +102,24 @@ impl GraphHandler {
             .and_then(|ns| ns.as_str())
             .map(String::from);
 
+        // Extract signal params (spore_id, family_id, etc.) and inject into
+        // graph env so node capability calls can reference ${spore_id}.
+        let signal_params: HashMap<String, String> = raw_params
+            .as_ref()
+            .and_then(|p| p.get("signal_context"))
+            .and_then(|sc| sc.get("params"))
+            .and_then(|p| p.as_object())
+            .map(|obj| {
+                obj.iter()
+                    .filter_map(|(k, v)| {
+                        v.as_str()
+                            .filter(|s| !s.is_empty())
+                            .map(|s| (k.clone(), s.to_string()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
         // Extract caller-provided env before spawn boundary (signal dispatch
         // injects remote_gate for cross-gate signals like nest.sync).
         let caller_env: HashMap<String, String> = raw_params
@@ -157,6 +175,12 @@ impl GraphHandler {
             // injects remote_gate for cross-gate signals like nest.sync).
             for (k, v) in &caller_env {
                 env.insert(k.clone(), v.clone());
+            }
+
+            // Signal context params (e.g. spore_id, family_id from
+            // nest.ingest_spore / nest.emit_spore) flow through to nodes.
+            for (k, v) in &signal_params {
+                env.entry(k.clone()).or_insert_with(|| v.clone());
             }
 
             let capability_registry = {

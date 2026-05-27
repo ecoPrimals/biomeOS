@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 27, 2026 (v3.80: Deep Debt W56 — routing.rs 920L→551L, nucleus.rs 883L→605L, rustix 0.38→1.x, hardcoding→capability-based, dead code cleaned; 8,038 tests)
-**Version**: 3.80
-**Status**: PRODUCTION READY - Deep Debt Wave 56 COMPLETE - Smart Refactored routing.rs (920→551L) and nucleus.rs (883→605L) - Unified rustix 1.x - Eliminated hardcoded primal names - Config-driven spore generation - SporeInstantiate returns structured deferred - Dead #[allow] eliminated - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: May 27, 2026 (v3.81: NC-1.4 + NC-1.emit Gateway Completion — pseudoSpore 2.0 canonical validation via biomeos-pseudospore crate, full emit materialization pipeline with execution polling and pseudoSpore dir unpack, signal_context.params wired to graph nodes; 8,053 tests)
+**Version**: 3.81
+**Status**: PRODUCTION READY - NC-1.4 RESOLVED (pseudoSpore canonical validation) - NC-1.emit COMPLETE (full materialization) - biomeos-pseudospore crate (26th workspace crate) - Execution polling with backoff - Signal params flow to graph nodes - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 
@@ -892,7 +892,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Apr 8, 2026)
 
-**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 8,038 total tests including doc-tests and proptests)
+**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 8,053 total tests including doc-tests and proptests)
 
 ### Coverage Distribution
 
@@ -998,7 +998,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.80 — Deep Debt W56, smart file refactoring, rustix 1.x, capability-based config, 19 signal graphs, zero blocking debt)
+**Status**: Production Ready (v3.81 — NC-1.4 canonical validation, NC-1.emit full materialization, biomeos-pseudospore crate, 19 signal graphs, zero blocking debt)
 **Tests**: 8,038 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0 | **TODO/FIXME**: 0

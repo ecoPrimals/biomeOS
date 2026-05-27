@@ -810,6 +810,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "biomeos-pseudospore"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
+]
+
+[[package]]
 name = "biomeos-spore"
 version = "0.1.0"
 dependencies = [
@@ -936,10 +947,10 @@ dependencies = [
  "biomeos-core",
  "biomeos-genomebin-v3",
  "biomeos-graph",
+ "biomeos-pseudospore",
  "biomeos-spore",
  "biomeos-test-utils",
  "biomeos-types",
- "blake3",
  "chrono",
  "clap",
  "colored",
