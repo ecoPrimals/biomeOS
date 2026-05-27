@@ -1,6 +1,6 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — 8,036 tests, 27 capability domains, 320+ translations, 18 signal graphs, 43 deploy graphs, zero blocking debt"
+description = "Orchestration kernel — 8,038 tests, 27 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, zero blocking debt"
 date = 2026-05-27
 
 [taxonomies]
@@ -9,7 +9,7 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,036 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
+- **8,038 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
 - **v3.78** — deep debt cleanup (hardcoded primal names evolved, large files refactored, live_discovery REST wired)
 - **v3.77** — production ready, deep debt CLEAN, NUCLEUS spore gateway (ingest/emit)

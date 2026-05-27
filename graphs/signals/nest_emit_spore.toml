@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.emit_spore
+#
+# PseudoSpore emit pipeline: retrieve content from NestGate →
+# resolve attribution braid via sweetGrass → sign emission via BearDog.
+#
+# Reverse of nest.ingest_spore. Gateway signal for NUCLEUS spore
+# emission (NC-1.2). Composes existing primal capabilities.
+
+[graph]
+id = "nest_emit_spore"
+name = "NUCLEUS Spore Emit Signal"
+description = "Retrieve → braid → sign. Full pseudoSpore emit pipeline."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "emit_spore"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "uds_only"
+secure_by_default = true
+fragments = ["tower_atomic", "nest_atomic"]
+pseudospore_version = "2.0"
+era = "stadial"
+
+[graph.bonding_policy]
+bond_type = "Ionic"
+trust_model = "MethodGate"
+
+[[graph.nodes]]
+name = "retrieve_content"
+binary = "nestgate"
+order = 1
+required = true
+spawn = false
+by_capability = "storage"
+capabilities = ["storage.retrieve"]
+
+[[graph.nodes]]
+name = "resolve_braid"
+binary = "sweetgrass"
+order = 2
+required = false
+spawn = false
+depends_on = ["retrieve_content"]
+by_capability = "attribution"
+capabilities = ["braid.resolve"]
+
+[[graph.nodes]]
+name = "sign_emission"
+binary = "beardog"
+order = 3
+required = true
+spawn = false
+depends_on = ["resolve_braid"]
+by_capability = "security"
+capabilities = ["crypto.sign"]

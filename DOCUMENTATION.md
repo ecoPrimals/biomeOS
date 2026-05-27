@@ -159,7 +159,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (8,036 tests — fully concurrent)
+# Test (8,038 tests — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -188,4 +188,4 @@ See `ARCHIVE_INDEX.md` in archive for details.
 **Active: 26 specs, handoffs in wateringHole (v2.43–v3.78), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE; membrane + nucleated composition models; signal-tier announce protocol; method_gate modularized; adaptive routing weights (redb-persistent); attestation verification; capability-domain composition health; Songbird mesh cross-gate dispatch; NUCLEUS spore gateway (ingest/emit)**
-**Tests: 8,036 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**
+**Tests: 8,038 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**

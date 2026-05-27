@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
-| Tests | 8,036 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent — 90%+ line / function / region (llvm-cov) |
+| Tests | 8,038 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
@@ -36,7 +36,7 @@
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
 | Hardcoded Values | 0 hardcoded primal names, IPs, ports, or filesystem paths in production code (all use `primal_names::` and `constants::` from `biomeos-types`); nucleus/spawner match blocks replaced by TOML-driven launch profiles; composition handlers use capability-domain discovery; port helpers renamed to capability-oriented (`security_port`, `relay_port`); `DOMAIN_PRIMAL_BOOTSTRAP` for bootstrap-only name mapping |
 | Cross-Arch | x86_64 + aarch64 + armv7 (32-bit safe: `cast.rs` `u64` bounds, conditional tests) |
-| Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 18 signal graphs |
+| Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 19 signal graphs |
 
 ---
 
@@ -273,7 +273,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (8,036 tests across 25 crates, fully concurrent)
+### Test (8,038 tests across 25 crates, fully concurrent)
 
 ```bash
 cargo test --workspace
@@ -369,7 +369,7 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 **Status**: Production Ready (v3.78)
 **Updated**: May 27, 2026
-**Tests**: 8,036 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
+**Tests**: 8,038 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + Songbird mesh cross-gate dispatch + DNS-SD + `primal.announce` | Adaptive routing weights (redb-persistent) | Membrane + nucleated composition | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---

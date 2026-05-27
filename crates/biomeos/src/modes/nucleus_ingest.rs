@@ -8,8 +8,11 @@
 //! ledger entry (loamSpine) → attribution braid (sweetGrass) →
 //! sign receipt (BearDog).
 //!
-//! Envelope validation is minimal here; when lithoSpore ships the
-//! `pseudospore-core` crate, swap in its canonical implementation.
+//! Envelope validation is a local stub (NC-1.4 blocked upstream).
+//! The canonical API is `litho_core::pseudospore::PseudoSporeManifest`
+//! in `gardens/lithoSpore/crates/litho-core/src/pseudospore.rs`.
+//! When lithoSpore extracts `pseudospore-core` as a standalone crate,
+//! swap this stub for its `load_pseudospore()` + `verify_checksums()`.
 
 use anyhow::{Context, Result};
 use biomeos_types::{JsonRpcRequest, SystemPaths};
@@ -98,15 +101,18 @@ pub async fn run_emit(
     info!("  family: {family}");
 
     if dry_run {
-        info!("  [dry run] Would retrieve spore {spore_id} and package envelope");
+        info!("  [dry run] Would execute nest_emit_spore signal graph for {spore_id}");
         return Ok(());
     }
 
     let request = JsonRpcRequest::new(
-        "nucleus.emit_spore",
+        "signal.dispatch",
         serde_json::json!({
-            "spore_id": spore_id,
-            "family_id": family,
+            "signal": "nest.emit_spore",
+            "params": {
+                "spore_id": spore_id,
+                "family_id": family,
+            },
         }),
     );
 
@@ -137,6 +143,7 @@ pub async fn run_emit(
 #[derive(Debug)]
 struct Envelope {
     scope_id: String,
+    pseudospore_dir: PathBuf,
     data_file_count: usize,
     blake3_checksums: Vec<(String, String)>,
     manifest_json: serde_json::Value,
@@ -146,6 +153,7 @@ impl Envelope {
     fn to_params(&self) -> serde_json::Value {
         serde_json::json!({
             "scope_id": self.scope_id,
+            "source_dir": self.pseudospore_dir.display().to_string(),
             "data_file_count": self.data_file_count,
             "checksums": self.blake3_checksums.iter()
                 .map(|(name, hash)| serde_json::json!({"file": name, "blake3": hash}))
@@ -162,8 +170,10 @@ impl Envelope {
 /// 2. `scope.toml` exists (extracts scope_id)
 /// 3. BLAKE3 checksums of all data files match manifest
 ///
-/// When `pseudospore-core` ships from lithoSpore, replace this with its
-/// canonical `PseudoSporeEnvelope::validate()`.
+/// NC-1.4 blocker: the canonical API lives in `litho_core::pseudospore`
+/// (`PseudoSporeManifest` / `load_pseudospore` / `verify_checksums`),
+/// not a standalone `pseudospore-core` crate. When lithoSpore extracts
+/// it as a standalone crate, replace this stub with its API.
 fn validate_envelope(dir: &Path) -> Result<Envelope> {
     anyhow::ensure!(dir.is_dir(), "pseudoSpore path is not a directory: {}", dir.display());
 
@@ -231,39 +241,69 @@ fn validate_envelope(dir: &Path) -> Result<Envelope> {
 
     Ok(Envelope {
         scope_id,
+        pseudospore_dir: dir.to_path_buf(),
         data_file_count: checksums.len(),
         blake3_checksums: checksums,
         manifest_json,
     })
 }
 
+/// Extract a string from the signal dispatch response, trying multiple JSON
+/// pointer paths in priority order. The `signal.dispatch` handler wraps the
+/// graph executor result under `/execution/...`, but the graph executes
+/// asynchronously — the immediate response only carries `execution_id`.
+/// If a future synchronous path provides node-level results, they'll appear
+/// under `/receipt/{field}` or `/execution/nodes/{node}/result/{field}`.
+fn extract_receipt_field<'a>(result: &'a serde_json::Value, pointers: &[&str]) -> &'a str {
+    for ptr in pointers {
+        if let Some(v) = result.pointer(ptr).and_then(|v| v.as_str()) {
+            return v;
+        }
+    }
+    "pending"
+}
+
 /// Write `receipts/nucleus_ingest.toml` with trio IDs from the signal result.
+///
+/// The signal dispatch response shape is:
+/// ```json
+/// { "signal": "nest.ingest_spore", "graph_id": "...", "execution": { "execution_id": "...", ... } }
+/// ```
+/// Node-level outputs (store_id, dag_session_id, etc.) are not available in
+/// the immediate response because graph execution is asynchronous. The receipt
+/// records the execution_id so the caller can poll for completion. When the
+/// executor is extended to return node results synchronously, the fallback
+/// pointers will pick them up without code changes.
 fn write_receipt(pseudospore_dir: &Path, result: &serde_json::Value, family: &str) -> Result<()> {
     let receipts_dir = pseudospore_dir.join("receipts");
     std::fs::create_dir_all(&receipts_dir)?;
 
     let receipt_path = receipts_dir.join("nucleus_ingest.toml");
 
-    let dag_id = result
-        .pointer("/receipt/dag_session_id")
-        .and_then(|v| v.as_str())
-        .unwrap_or("pending");
-    let ledger_id = result
-        .pointer("/receipt/ledger_entry_id")
-        .and_then(|v| v.as_str())
-        .unwrap_or("pending");
-    let braid_id = result
-        .pointer("/receipt/braid_id")
-        .and_then(|v| v.as_str())
-        .unwrap_or("pending");
-    let signature = result
-        .pointer("/receipt/signature")
-        .and_then(|v| v.as_str())
-        .unwrap_or("pending");
-    let store_id = result
-        .pointer("/receipt/store_id")
-        .and_then(|v| v.as_str())
-        .unwrap_or("pending");
+    let execution_id = extract_receipt_field(result, &[
+        "/execution/execution_id",
+        "/execution_id",
+    ]);
+    let store_id = extract_receipt_field(result, &[
+        "/receipt/store_id",
+        "/execution/nodes/store_content/result/store_id",
+    ]);
+    let dag_id = extract_receipt_field(result, &[
+        "/receipt/dag_session_id",
+        "/execution/nodes/dag_session/result/dag_session_id",
+    ]);
+    let ledger_id = extract_receipt_field(result, &[
+        "/receipt/ledger_entry_id",
+        "/execution/nodes/ledger_entry/result/ledger_entry_id",
+    ]);
+    let braid_id = extract_receipt_field(result, &[
+        "/receipt/braid_id",
+        "/execution/nodes/attribution_braid/result/braid_id",
+    ]);
+    let signature = extract_receipt_field(result, &[
+        "/receipt/signature",
+        "/execution/nodes/sign_receipt/result/signature",
+    ]);
 
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -275,6 +315,7 @@ fn write_receipt(pseudospore_dir: &Path, result: &serde_json::Value, family: &st
 # Generated by biomeOS nucleus ingest
 
 [receipt]
+execution_id = "{execution_id}"
 store_id = "{store_id}"
 dag_session_id = "{dag_id}"
 ledger_entry_id = "{ledger_id}"
@@ -414,6 +455,7 @@ id = "my-custom-scope"
     fn test_envelope_to_params() {
         let envelope = Envelope {
             scope_id: "test".to_string(),
+            pseudospore_dir: PathBuf::from("/tmp/test-spore"),
             data_file_count: 2,
             blake3_checksums: vec![
                 ("a.bin".to_string(), "abc123".to_string()),
@@ -423,12 +465,13 @@ id = "my-custom-scope"
         };
         let params = envelope.to_params();
         assert_eq!(params["scope_id"], "test");
+        assert_eq!(params["source_dir"], "/tmp/test-spore");
         assert_eq!(params["data_file_count"], 2);
         assert_eq!(params["checksums"].as_array().expect("array").len(), 2);
     }
 
     #[test]
-    fn test_write_receipt() {
+    fn test_write_receipt_with_receipt_envelope() {
         let dir = TempDir::new().expect("temp dir");
         let result = serde_json::json!({
             "receipt": {
@@ -447,5 +490,76 @@ id = "my-custom-scope"
         assert!(content.contains("store_id = \"store-001\""));
         assert!(content.contains("dag_session_id = \"dag-001\""));
         assert!(content.contains("family_id = \"test-family\""));
+    }
+
+    #[test]
+    fn test_write_receipt_with_execution_envelope() {
+        let dir = TempDir::new().expect("temp dir");
+        let result = serde_json::json!({
+            "signal": "nest.ingest_spore",
+            "graph_id": "signals/nest_ingest_spore",
+            "execution": {
+                "execution_id": "nest_ingest_spore-1716847200",
+                "graph_id": "signals/nest_ingest_spore",
+                "started_at": "2026-05-27T19:00:00Z"
+            }
+        });
+        write_receipt(dir.path(), &result, "test-family").expect("write receipt");
+
+        let receipt_path = dir.path().join("receipts/nucleus_ingest.toml");
+        assert!(receipt_path.exists());
+        let content = std::fs::read_to_string(&receipt_path).expect("read");
+        assert!(
+            content.contains("execution_id = \"nest_ingest_spore-1716847200\""),
+            "should extract execution_id from execution envelope"
+        );
+        assert!(
+            content.contains("store_id = \"pending\""),
+            "store_id should be pending when async execution hasn't completed"
+        );
+        assert!(content.contains("family_id = \"test-family\""));
+    }
+
+    #[test]
+    fn test_extract_receipt_field_priority() {
+        let result = serde_json::json!({
+            "receipt": { "store_id": "from-receipt" },
+            "execution": {
+                "nodes": {
+                    "store_content": { "result": { "store_id": "from-node" } }
+                }
+            }
+        });
+        assert_eq!(
+            extract_receipt_field(&result, &[
+                "/receipt/store_id",
+                "/execution/nodes/store_content/result/store_id",
+            ]),
+            "from-receipt",
+            "should prefer /receipt/ path when both exist"
+        );
+
+        let result_node_only = serde_json::json!({
+            "execution": {
+                "nodes": {
+                    "store_content": { "result": { "store_id": "from-node" } }
+                }
+            }
+        });
+        assert_eq!(
+            extract_receipt_field(&result_node_only, &[
+                "/receipt/store_id",
+                "/execution/nodes/store_content/result/store_id",
+            ]),
+            "from-node",
+            "should fall back to /execution/nodes/ path"
+        );
+
+        let empty = serde_json::json!({});
+        assert_eq!(
+            extract_receipt_field(&empty, &["/receipt/store_id"]),
+            "pending",
+            "should return pending when no path matches"
+        );
     }
 }

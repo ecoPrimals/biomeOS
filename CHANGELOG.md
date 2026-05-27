@@ -2,6 +2,57 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.79 (2026-05-27) — Wave 55 Gateway Completion
+
+### Signal graph sync (primalSpring conventions)
+- `nest_ingest_spore.toml`: `dag_session` and `ledger_entry` set to
+  `required = false` — graceful degradation when provenance trio unavailable.
+- Added `[graph.bonding_policy]` block (`bond_type = "Ionic"`,
+  `trust_model = "MethodGate"`) per primalSpring `btsp_enforced` security model.
+- Added `pseudospore_version = "2.0"` and `era = "stadial"` to
+  `[graph.metadata]`.
+- `store_content` node capabilities extended with `storage.store` alongside
+  `content.put` (both are valid NestGate entry points).
+- `attribution_braid` `by_capability` changed from `"commit"` to
+  `"attribution"` (aligns with primalSpring fragment definition).
+
+### Content path passed to signal dispatch
+- `Envelope` struct gains `pseudospore_dir: PathBuf`.
+- `to_params()` now includes `"source_dir"` so NestGate's `store_content`
+  node can access the actual artifact files during signal execution.
+- `config/signal_tools.toml` updated with `source_dir` parameter.
+
+### Emit pipeline via signal graph (NC-1.2)
+- New `graphs/signals/nest_emit_spore.toml`: 3-node sequential pipeline
+  (retrieve_content → resolve_braid → sign_emission). Signal tier: `nest`.
+- `routing.rs` `NucleusEmitSpore` changed from direct `capability.call` to
+  `signal.dispatch` with `nest.emit_spore` graph (mirrors ingest pattern).
+- `run_emit()` in CLI now dispatches via `signal.dispatch` instead of
+  direct `nucleus.emit_spore` JSON-RPC method.
+- `config/signal_tools.toml`: added `nest.emit_spore` tool definition.
+- Signal graph count: 19 (up from 18).
+
+### Receipt shape alignment
+- `write_receipt()` now uses `extract_receipt_field()` with multi-path
+  fallback: tries `/receipt/{field}`, then `/execution/nodes/{node}/result/{field}`,
+  then defaults to `"pending"`.
+- Receipt now records `execution_id` from the signal dispatch response
+  so callers can poll for async completion.
+- Aligned with actual `signal.dispatch` response envelope:
+  `{ signal, graph_id, execution: { execution_id, ... } }`.
+
+### NC-1.4 blocker documented
+- `pseudospore-core` crate does not exist anywhere in the monorepo.
+  Canonical API is `litho_core::pseudospore::PseudoSporeManifest` at
+  `gardens/lithoSpore/crates/litho-core/src/pseudospore.rs`.
+- Module and function doc comments updated to document the blocker and
+  the actual API surface (`load_pseudospore`, `verify_checksums`).
+
+### Tests
+- 3 new receipt tests (execution envelope, receipt envelope, field priority).
+- Signal dispatch test count assertions updated 18→19.
+- Test count: 8,038 (up from 8,036). 0 failures, 0 clippy warnings.
+
 ## v3.78 (2026-05-27) — Deep Debt Cleanup
 
 ### Hardcoded primal names eliminated
@@ -45,8 +96,8 @@ All notable changes to biomeOS will be documented in this file.
   Emit }` subcommand tree. `biomeos nucleus start` preserves the existing
   NUCLEUS orchestrator behavior. Follows the RootPulse subcommand pattern.
 - Envelope validation: `liveSpore.json` schema check, `scope.toml` extraction,
-  BLAKE3 data manifest verification. Designed for swap to `pseudospore-core`
-  when lithoSpore ships it.
+  BLAKE3 data manifest verification. NC-1.4 blocker: canonical API is
+  `litho_core::pseudospore` (not a standalone crate yet). Local stub in use.
 
 ### Neural API wiring (NC-1.2)
 - `nucleus.ingest_spore` / `nucleus.ingest` routes added to route table,

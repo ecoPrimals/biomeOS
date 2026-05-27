@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 27, 2026 (v3.78: Deep debt cleanup — hardcoded primal names evolved to constants, large files refactored, live_discovery REST routes wired; 8,036 tests)
-**Version**: 3.78
-**Status**: PRODUCTION READY - Deep Debt CLEAN - Hardcoded Primal Names Eliminated (socket.rs, composition.rs → primal_names:: constants) - method_gate Tests Extracted (961→328L) - constants Tests Extracted (852→540L) - Live Discovery REST Wired (3 routes) - Zero Blocking Debt
+**Updated**: May 27, 2026 (v3.79: Wave 55 Gateway Completion — signal graph synced to primalSpring conventions, emit pipeline via signal graph, receipt shape aligned, content path passed to NestGate; 8,038 tests)
+**Version**: 3.79
+**Status**: PRODUCTION READY - Wave 55 NUCLEUS Gateway COMPLETE - Signal Graph Synced (bonding_policy, metadata, required=false for provenance trio) - Emit Pipeline via nest_emit_spore Signal Graph - Receipt Shape Aligned with signal.dispatch Response - Content Path Passed to NestGate - NC-1.4 Blocker Documented - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,036 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
+| **Tests Passing** | 8,038 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
@@ -976,7 +976,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (8,036 tests — fully concurrent)
+# Test (8,038 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -998,8 +998,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.78 — deep debt cleanup, NUCLEUS spore gateway, Songbird mesh cross-gate dispatch, zero blocking debt)
-**Tests**: 8,036 passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.79 — Wave 55 Gateway Completion, signal graph synced, emit pipeline via signal graph, receipt shape aligned, 19 signal graphs, zero blocking debt)
+**Tests**: 8,038 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0 | **TODO/FIXME**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode

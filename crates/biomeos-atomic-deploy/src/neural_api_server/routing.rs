@@ -815,7 +815,7 @@ impl NeuralApiServer {
                     id,
                 )
             }
-            // NUCLEUS spore emit (NC-1.2) — retrieve from NestGate, package, sign braid
+            // NUCLEUS spore emit (NC-1.2) — dispatch nest_emit_spore signal graph
             Route::NucleusEmitSpore => {
                 let emit_params = params.clone().unwrap_or(json!({}));
                 let spore_id = emit_params
@@ -830,13 +830,23 @@ impl NeuralApiServer {
                         id,
                     )
                 } else {
-                    let retrieve_params = json!({
-                        "capability": "storage",
-                        "operation": "retrieve",
-                        "args": { "key": spore_id, "family_id": self.family_id },
-                    });
-                    let enriched = self.enrich_for_forwarding(&Some(retrieve_params), &caller).await;
-                    dispatch_capability_call(self.capability_handler.call(&enriched).await, id)
+                    let signal_params = Some(json!({
+                        "signal": "nest.emit_spore",
+                        "params": {
+                            "spore_id": spore_id,
+                            "family_id": self.family_id,
+                        },
+                    }));
+                    dispatch(
+                        crate::handlers::signal::dispatch(
+                            &self.graphs_dir,
+                            &self.family_id,
+                            &self.graph_handler,
+                            &signal_params,
+                        )
+                        .await,
+                        id,
+                    )
                 }
             }
             // Spring method registration (GAP-09)

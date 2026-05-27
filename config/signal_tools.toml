@@ -135,6 +135,7 @@ primals = ["nestgate", "rhizocrypt", "loamspine", "sweetgrass", "beardog"]
 
 [tools.parameters]
 scope_id = { type = "string", required = true, description = "PseudoSpore scope identifier" }
+source_dir = { type = "string", required = true, description = "Absolute path to the pseudoSpore directory on disk" }
 data_file_count = { type = "integer", required = true, description = "Number of data files in the envelope" }
 checksums = { type = "array", required = true, description = "BLAKE3 checksums of data files" }
 manifest = { type = "object", required = true, description = "Parsed liveSpore.json manifest" }
@@ -145,6 +146,23 @@ dag_session_id = "rhizoCrypt DAG session identifier"
 ledger_entry_id = "loamSpine ledger entry identifier"
 braid_id = "sweetGrass attribution braid identifier"
 signature = "BearDog receipt signature"
+
+[[tools]]
+name = "nest.emit_spore"
+tier = "nest"
+description = "NUCLEUS pseudoSpore emit: retrieve content (NestGate) → resolve attribution braid (sweetGrass) → sign emission (BearDog)."
+graph = "graphs/signals/nest_emit_spore.toml"
+coordination = "sequential"
+primals = ["nestgate", "sweetgrass", "beardog"]
+
+[tools.parameters]
+spore_id = { type = "string", required = true, description = "Identifier of the spore to emit" }
+family_id = { type = "string", required = true, description = "Family identifier for scoped retrieval" }
+
+[tools.returns]
+content = "Retrieved pseudoSpore content from NestGate"
+braid = "Resolved sweetGrass attribution braid"
+signature = "BearDog emission signature"
 
 [[tools]]
 name = "nest.store"

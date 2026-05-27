@@ -3,7 +3,7 @@
 //! Signal dispatch integration tests.
 //!
 //! Validates that the composition collapse layer correctly maps atomic
-//! signals to graph paths, loads all 16 signal graphs, and intercepts
+//! signals to graph paths, loads all 19 signal graphs, and intercepts
 //! signal-tier capability calls.
 
 use std::path::PathBuf;
@@ -13,7 +13,7 @@ fn graphs_dir() -> PathBuf {
 }
 
 #[test]
-fn all_18_signal_graphs_exist() {
+fn all_19_signal_graphs_exist() {
     let dir = graphs_dir().join("signals");
     assert!(dir.exists(), "graphs/signals/ directory not found");
 
@@ -29,6 +29,7 @@ fn all_18_signal_graphs_exist() {
         "nest_retrieve",
         "nest_sync",
         "nest_ingest_spore",
+        "nest_emit_spore",
         "braid_partial_update",
         "braid_complete",
         "meta_observe",
@@ -89,14 +90,14 @@ fn is_signal_tier_recognizes_valid_tiers() {
 }
 
 #[test]
-fn list_signal_graphs_finds_all_18() {
+fn list_signal_graphs_finds_all_19() {
     use biomeos_atomic_deploy::handlers::signal::list_signal_graphs;
 
     let signals = list_signal_graphs(&graphs_dir());
     assert_eq!(
         signals.len(),
-        18,
-        "Expected 18 signal graphs, found {}",
+        19,
+        "Expected 19 signal graphs, found {}",
         signals.len()
     );
 
@@ -104,6 +105,7 @@ fn list_signal_graphs_finds_all_18() {
     assert!(names.contains(&"tower.publish"));
     assert!(names.contains(&"nest.store"));
     assert!(names.contains(&"nest.ingest_spore"));
+    assert!(names.contains(&"nest.emit_spore"));
     assert!(names.contains(&"nest.sync"));
     assert!(names.contains(&"meta.deploy"));
     assert!(names.contains(&"tower.bootstrap"));
@@ -121,7 +123,7 @@ fn signal_schema_loads() {
     let schema = result.unwrap();
     let tools = schema.get("tools").expect("schema should have 'tools' key");
     let tools_arr = tools.as_array().expect("'tools' should be an array");
-    assert_eq!(tools_arr.len(), 18, "Expected 18 tool definitions");
+    assert_eq!(tools_arr.len(), 19, "Expected 19 tool definitions");
 }
 
 #[test]

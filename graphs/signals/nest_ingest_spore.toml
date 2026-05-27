@@ -24,6 +24,12 @@ security_model = "btsp_enforced"
 transport = "uds_only"
 secure_by_default = true
 fragments = ["tower_atomic", "nest_atomic"]
+pseudospore_version = "2.0"
+era = "stadial"
+
+[graph.bonding_policy]
+bond_type = "Ionic"
+trust_model = "MethodGate"
 
 [[graph.nodes]]
 name = "validate_envelope"
@@ -42,13 +48,13 @@ required = true
 spawn = false
 depends_on = ["validate_envelope"]
 by_capability = "storage"
-capabilities = ["content.put"]
+capabilities = ["content.put", "storage.store"]
 
 [[graph.nodes]]
 name = "dag_session"
 binary = "rhizocrypt"
 order = 3
-required = true
+required = false
 spawn = false
 depends_on = ["store_content"]
 by_capability = "dag"
@@ -58,7 +64,7 @@ capabilities = ["dag.session.create"]
 name = "ledger_entry"
 binary = "loamspine"
 order = 4
-required = true
+required = false
 spawn = false
 depends_on = ["dag_session"]
 by_capability = "ledger"
@@ -71,7 +77,7 @@ order = 5
 required = false
 spawn = false
 depends_on = ["ledger_entry"]
-by_capability = "commit"
+by_capability = "attribution"
 capabilities = ["braid.create"]
 
 [[graph.nodes]]

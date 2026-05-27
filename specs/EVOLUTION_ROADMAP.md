@@ -113,7 +113,7 @@ Active scripts (shell scripts that remain in the repository):
 | Mocks in production | 0 (test_support gated behind feature flag; all stubs resolved) |
 | Proptest IPC fuzz tests | 8 |
 | C-dep crates banned (deny.toml) | 16 |
-| Tests | 8,036 (0 failures, fully concurrent) |
+| Tests | 8,038 (0 failures, fully concurrent) |
 | Coverage | 90%+ line / function / region (llvm-cov) |
 | Production files >800 LOC | 0 (all 5 files >800L are test-only) |
 | Hardcoded primal strings | 0 (centralized `primal_names` constants) |
@@ -412,7 +412,7 @@ Systematic deep debt resolution across 7 waves:
 - [x] Dual version scheme documented (workspace `0.1.0` / release train `v3.60`)
 - [x] `is_orchestrator = true` — unique to biomeOS
 - [x] Stability tiers annotated (`config/stability_tiers.toml`)
-- [x] Signal tiers: 5 (tower/node/nest/meta/braid), 18 signal graphs
+- [x] Signal tiers: 5 (tower/node/nest/meta/braid), 19 signal graphs
 - [x] Braid signal propagation for wetSpring (`braid.partial_update`, `braid.complete`)
 
 ### Stadial Phase Items (in-progress)
