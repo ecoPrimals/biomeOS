@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 27, 2026 (v3.81: NC-1.4 + NC-1.emit Gateway Completion — pseudoSpore 2.0 canonical validation via biomeos-pseudospore crate, full emit materialization pipeline with execution polling and pseudoSpore dir unpack, signal_context.params wired to graph nodes; 8,053 tests)
-**Version**: 3.81
-**Status**: PRODUCTION READY - NC-1.4 RESOLVED (pseudoSpore canonical validation) - NC-1.emit COMPLETE (full materialization) - biomeos-pseudospore crate (26th workspace crate) - Execution polling with backoff - Signal params flow to graph nodes - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: May 27, 2026 (v3.82: Deep Debt Wave 57 — smart refactor nucleus_ingest.rs 924L→5-file module dir, fix bearDog casing bug in method_gate, LogConfig XDG-compliant paths, flate2 pure Rust backend, 8,053 tests)
+**Version**: 3.82
+**Status**: PRODUCTION READY - nucleus_ingest smart module split (envelope/materialize/receipt/tests) - bearDog socket casing fix - LogConfig XDG paths - flate2 rust_backend (zero C deps) - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,038 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
+| **Tests Passing** | 8,053 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |

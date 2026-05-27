@@ -2,6 +2,29 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.82 (2026-05-27) — Deep Debt Wave 57
+
+### Smart refactoring
+- Refactored `nucleus_ingest.rs` (924 lines) into a 5-file module directory:
+  `mod.rs` (245L orchestration), `envelope.rs` (83L validation),
+  `materialize.rs` (117L pseudoSpore 2.0 emission), `receipt.rs` (149L
+  ingest/emit receipt writing), `tests.rs` (358L, 15 tests)
+- Renamed `write_receipt` to `write_ingest_receipt` for clarity alongside
+  `write_emit_receipt`
+
+### Bug fixes
+- Fixed `method_gate/verifier.rs` using raw `"bearDog"` (wrong casing) instead
+  of `primal_names::BEARDOG` — the socket path produced `bearDog.sock` instead
+  of the canonical `beardog.sock`
+
+### Hardcoding elimination
+- `LogConfig::default()` now uses `SystemPaths::new_lazy().data_dir()` instead
+  of hardcoded `/var/biomeos/logs/{active,fossil}` — XDG-compliant
+
+### Dependency evolution
+- `flate2` workspace dep updated to `default-features = false, features =
+  ["rust_backend"]` — eliminates potential C zlib linkage, fully pure Rust
+
 ## v3.81 (2026-05-27) — NC-1.4 + NC-1.emit Gateway Completion
 
 ### NC-1.4: Canonical pseudoSpore Validation

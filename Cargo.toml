@@ -168,7 +168,7 @@ regex = "1.11"
 # OS interfaces
 rustix = "1"
 which = "6"
-flate2 = "1.0"
+flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
 tar = { version = "0.4", default-features = false }
 # Linux RTNETLINK: bridge/link ops in biomeos-deploy (transitive netlink-sys, netlink-packet-*).
 # Accepted stack — kernel AF_NETLINK socket, no userspace C libs (e.g. libnl).

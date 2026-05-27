@@ -73,7 +73,7 @@ impl BearDogVerifier {
             .or_else(|| {
                 biomeos_types::paths::SystemPaths::new()
                     .ok()
-                    .map(|p| p.primal_socket("bearDog"))
+                    .map(|p| p.primal_socket(biomeos_types::primal_names::BEARDOG))
             })?;
         Some(Self::new(path))
     }

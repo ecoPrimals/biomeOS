@@ -27,9 +27,11 @@ pub struct LogConfig {
 
 impl Default for LogConfig {
     fn default() -> Self {
+        let paths = biomeos_types::paths::SystemPaths::new_lazy();
+        let base = paths.data_dir().join("logs");
         Self {
-            active_dir: PathBuf::from("/var/biomeos/logs/active"),
-            fossil_dir: PathBuf::from("/var/biomeos/logs/fossil"),
+            active_dir: base.join("active"),
+            fossil_dir: base.join("fossil"),
             max_active_age_secs: 86400, // 24 hours
             enable_encryption: false,   // Future feature
             compress_fossils: true,
