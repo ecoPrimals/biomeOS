@@ -939,6 +939,7 @@ dependencies = [
  "biomeos-spore",
  "biomeos-test-utils",
  "biomeos-types",
+ "blake3",
  "chrono",
  "clap",
  "colored",

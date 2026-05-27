@@ -53,6 +53,9 @@ comfy-table = { workspace = true }
 # Encoding
 base64 = { workspace = true }
 
+# Hashing (pseudoSpore envelope BLAKE3 validation)
+blake3 = { workspace = true }
+
 # Cryptographic randomness
 rand = { workspace = true }
 

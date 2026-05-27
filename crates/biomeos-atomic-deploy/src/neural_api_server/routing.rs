@@ -164,6 +164,8 @@ enum Route {
     WeightHealth,
     IdentityGet,
     SporeInstantiate,
+    NucleusIngestSpore,
+    NucleusEmitSpore,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -356,6 +358,11 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("method.register", Route::MethodRegister),
     // Spore lifecycle (lithoSpore ask R7)
     ("spore.instantiate", Route::SporeInstantiate),
+    // NUCLEUS spore gateway (NC-1.1, NC-1.2 — pseudoSpore ingest/emit)
+    ("nucleus.ingest_spore", Route::NucleusIngestSpore),
+    ("nucleus.ingest", Route::NucleusIngestSpore),
+    ("nucleus.emit_spore", Route::NucleusEmitSpore),
+    ("nucleus.emit", Route::NucleusEmitSpore),
     // BTSP escalation (cleartext → enforced after Tower healthy)
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
@@ -789,6 +796,48 @@ impl NeuralApiServer {
                     "_deferred": "lithoSpore Tier 3 not yet available — graph nodes will be skipped",
                 });
                 dispatch(self.graph_handler.execute(&Some(execute_params)).await, id)
+            }
+            // NUCLEUS spore ingest (NC-1.1) — dispatch nest_ingest_spore signal graph
+            Route::NucleusIngestSpore => {
+                let ingest_params = params.clone().unwrap_or(json!({}));
+                let signal_params = Some(json!({
+                    "signal": "nest.ingest_spore",
+                    "params": ingest_params,
+                }));
+                dispatch(
+                    crate::handlers::signal::dispatch(
+                        &self.graphs_dir,
+                        &self.family_id,
+                        &self.graph_handler,
+                        &signal_params,
+                    )
+                    .await,
+                    id,
+                )
+            }
+            // NUCLEUS spore emit (NC-1.2) — retrieve from NestGate, package, sign braid
+            Route::NucleusEmitSpore => {
+                let emit_params = params.clone().unwrap_or(json!({}));
+                let spore_id = emit_params
+                    .get("spore_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                if spore_id.is_empty() {
+                    dispatch(
+                        Err::<serde_json::Value, _>(anyhow::anyhow!(
+                            "nucleus.emit_spore requires a spore_id parameter"
+                        )),
+                        id,
+                    )
+                } else {
+                    let retrieve_params = json!({
+                        "capability": "storage",
+                        "operation": "retrieve",
+                        "args": { "key": spore_id, "family_id": self.family_id },
+                    });
+                    let enriched = self.enrich_for_forwarding(&Some(retrieve_params), &caller).await;
+                    dispatch_capability_call(self.capability_handler.call(&enriched).await, id)
+                }
             }
             // Spring method registration (GAP-09)
             Route::MethodRegister => {

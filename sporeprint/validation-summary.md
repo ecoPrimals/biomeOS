@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — 8,026 tests, 27 capability domains, 320+ translations, 17 signal graphs, 43 deploy graphs, zero blocking debt"
-date = 2026-05-25
+description = "Orchestration kernel — 8,036 tests, 27 capability domains, 320+ translations, 18 signal graphs, 43 deploy graphs, zero blocking debt"
+date = 2026-05-27
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -9,9 +9,9 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,026 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
+- **8,036 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
-- **v3.75** — production ready, deep debt CLEAN, Songbird mesh cross-gate dispatch
+- **v3.77** — production ready, deep debt CLEAN, NUCLEUS spore gateway (ingest/emit)
 - **27 capability domains**, **320+ translations** across 13 primals
 - **17 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
 - **43 deploy graphs** (incl. membrane_deploy, provenance trio)
@@ -69,6 +69,7 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
+| v3.77 | May 27 | NUCLEUS spore gateway (ingest/emit), nest_ingest_spore signal, Neural API wiring |
 | v3.75 | May 24 | Songbird mesh cross-gate dispatch, shadow deploy membrane gate |
 | v3.73 | May 24 | Capability-domain composition, weights/ refactor, port helper rename |
 | v3.72 | May 24 | health.check normalized to "alive" |

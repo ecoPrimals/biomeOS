@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 25, 2026 (v3.75: Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition, Wave 49 ecosystem tightening)
+**Updated**: May 27, 2026 (v3.77: NUCLEUS spore gateway ingest/emit, nest_ingest_spore signal, Neural API wiring)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -98,7 +98,7 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated May 25, 2026 — v3.75)
+## 5. Deep Debt Metrics (Updated May 27, 2026 — v3.77)
 
 | Metric | Value |
 |--------|-------|
@@ -113,7 +113,7 @@ Active scripts (shell scripts that remain in the repository):
 | Mocks in production | 0 (test_support gated behind feature flag; all stubs resolved) |
 | Proptest IPC fuzz tests | 8 |
 | C-dep crates banned (deny.toml) | 16 |
-| Tests | 8,026 (0 failures, fully concurrent) |
+| Tests | 8,036 (0 failures, fully concurrent) |
 | Coverage | 90%+ line / function / region (llvm-cov) |
 | Production files >800 LOC | 0 (all 5 files >800L are test-only) |
 | Hardcoded primal strings | 0 (centralized `primal_names` constants) |
@@ -447,6 +447,7 @@ Systematic deep debt resolution across 7 waves:
 - [x] Wave 47 audit: `composition.deploy.shadow` membrane validation gate — v3.74
 - [x] Cross-gate routing: Songbird mesh dispatch integration (`try_songbird_mesh_dispatch`), replaces legacy `relay.allocate` protocol — v3.75
 - [x] Mesh fallback on both translation and direct discovery paths when no local provider found — v3.75
+- [x] NUCLEUS spore gateway: `biomeos nucleus ingest` / `emit` subcommands, `nest_ingest_spore` signal graph (6-node pipeline), `nucleus.ingest_spore` / `nucleus.emit_spore` Neural API routes — v3.77 (NC-1.1, NC-1.2)
 
 ### Degradation Behavior
 

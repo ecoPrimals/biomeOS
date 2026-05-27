@@ -126,6 +126,27 @@ dispatch_id = "toadStool dispatch tracking ID"
 # ─── Nest Signals (neutron) ───────────────────────────────────────────
 
 [[tools]]
+name = "nest.ingest_spore"
+tier = "nest"
+description = "NUCLEUS pseudoSpore ingest: validate envelope → store (NestGate) → DAG session (rhizoCrypt) → ledger entry (loamSpine) → attribution braid (sweetGrass) → sign receipt (BearDog)."
+graph = "graphs/signals/nest_ingest_spore.toml"
+coordination = "sequential"
+primals = ["nestgate", "rhizocrypt", "loamspine", "sweetgrass", "beardog"]
+
+[tools.parameters]
+scope_id = { type = "string", required = true, description = "PseudoSpore scope identifier" }
+data_file_count = { type = "integer", required = true, description = "Number of data files in the envelope" }
+checksums = { type = "array", required = true, description = "BLAKE3 checksums of data files" }
+manifest = { type = "object", required = true, description = "Parsed liveSpore.json manifest" }
+
+[tools.returns]
+store_id = "NestGate content store identifier"
+dag_session_id = "rhizoCrypt DAG session identifier"
+ledger_entry_id = "loamSpine ledger entry identifier"
+braid_id = "sweetGrass attribution braid identifier"
+signature = "BearDog receipt signature"
+
+[[tools]]
 name = "nest.store"
 tier = "nest"
 description = "Full provenance store: content into NestGate, event into rhizoCrypt DAG, commit to loamSpine ledger, attribution via sweetGrass."

@@ -13,7 +13,7 @@ fn graphs_dir() -> PathBuf {
 }
 
 #[test]
-fn all_17_signal_graphs_exist() {
+fn all_18_signal_graphs_exist() {
     let dir = graphs_dir().join("signals");
     assert!(dir.exists(), "graphs/signals/ directory not found");
 
@@ -28,6 +28,7 @@ fn all_17_signal_graphs_exist() {
         "nest_commit",
         "nest_retrieve",
         "nest_sync",
+        "nest_ingest_spore",
         "braid_partial_update",
         "braid_complete",
         "meta_observe",
@@ -88,20 +89,21 @@ fn is_signal_tier_recognizes_valid_tiers() {
 }
 
 #[test]
-fn list_signal_graphs_finds_all_17() {
+fn list_signal_graphs_finds_all_18() {
     use biomeos_atomic_deploy::handlers::signal::list_signal_graphs;
 
     let signals = list_signal_graphs(&graphs_dir());
     assert_eq!(
         signals.len(),
-        17,
-        "Expected 17 signal graphs, found {}",
+        18,
+        "Expected 18 signal graphs, found {}",
         signals.len()
     );
 
     let names: Vec<&str> = signals.iter().map(|s| s.name.as_str()).collect();
     assert!(names.contains(&"tower.publish"));
     assert!(names.contains(&"nest.store"));
+    assert!(names.contains(&"nest.ingest_spore"));
     assert!(names.contains(&"nest.sync"));
     assert!(names.contains(&"meta.deploy"));
     assert!(names.contains(&"tower.bootstrap"));
@@ -119,7 +121,7 @@ fn signal_schema_loads() {
     let schema = result.unwrap();
     let tools = schema.get("tools").expect("schema should have 'tools' key");
     let tools_arr = tools.as_array().expect("'tools' should be an array");
-    assert_eq!(tools_arr.len(), 17, "Expected 17 tool definitions");
+    assert_eq!(tools_arr.len(), 18, "Expected 18 tool definitions");
 }
 
 #[test]

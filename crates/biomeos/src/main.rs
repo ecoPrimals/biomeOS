@@ -220,9 +220,20 @@ enum Mode {
         dry_run: bool,
     },
 
-    /// NUCLEUS - Start a NUCLEUS (pure Rust replacement for start_nucleus.sh)
+    /// NUCLEUS - Start, ingest, and emit spores
     #[command(name = "nucleus")]
     Nucleus {
+        #[command(subcommand)]
+        command: NucleusCommand,
+    },
+}
+
+/// NUCLEUS subcommands — start, ingest, and emit spores
+#[derive(Debug, Subcommand)]
+pub(crate) enum NucleusCommand {
+    /// Start a NUCLEUS (pure Rust primal orchestrator)
+    #[command(name = "start")]
+    Start {
         /// Deployment mode: tower|node|nest|full
         #[arg(long, default_value = "full")]
         mode: String,
@@ -246,6 +257,48 @@ enum Mode {
         /// TCP bind address (default: 127.0.0.1). Use 0.0.0.0 for all interfaces.
         #[arg(long)]
         bind: Option<String>,
+    },
+
+    /// Ingest a pseudoSpore into NUCLEUS via provenance trio
+    #[command(name = "ingest")]
+    Ingest {
+        /// Path to the pseudoSpore directory
+        pseudospore_dir: PathBuf,
+
+        /// Neural API Unix socket path
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID (auto-discovered from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+
+        /// Dry run (show what would happen)
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
+
+    /// Emit a spore from NUCLEUS (retrieve, package, sign)
+    #[command(name = "emit")]
+    Emit {
+        /// Spore ID to emit
+        spore_id: String,
+
+        /// Output directory for the emitted spore package
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Neural API Unix socket path
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID
+        #[arg(long)]
+        family_id: Option<String>,
+
+        /// Dry run
+        #[arg(short = 'n', long)]
+        dry_run: bool,
     },
 }
 
@@ -502,14 +555,29 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
         Mode::Plasmodium { command } => modes::plasmodium::run(command).await,
         Mode::RootPulse { command } => modes::rootpulse::dispatch(command).await,
         Mode::Continuous { graph, dry_run } => modes::continuous::run(graph, dry_run).await,
-        Mode::Nucleus {
-            mode: nucleus_mode,
-            node_id,
-            family_id,
-            port,
-            tcp_only,
-            bind,
-        } => modes::nucleus::run(nucleus_mode, node_id, family_id, port, tcp_only, bind).await,
+        Mode::Nucleus { command } => match command {
+            NucleusCommand::Start {
+                mode: nucleus_mode,
+                node_id,
+                family_id,
+                port,
+                tcp_only,
+                bind,
+            } => modes::nucleus::run(nucleus_mode, node_id, family_id, port, tcp_only, bind).await,
+            NucleusCommand::Ingest {
+                pseudospore_dir,
+                socket,
+                family_id,
+                dry_run,
+            } => modes::nucleus_ingest::run_ingest(pseudospore_dir, socket, family_id, dry_run).await,
+            NucleusCommand::Emit {
+                spore_id,
+                output,
+                socket,
+                family_id,
+                dry_run,
+            } => modes::nucleus_ingest::run_emit(spore_id, output, socket, family_id, dry_run).await,
+        },
     }
 }
 

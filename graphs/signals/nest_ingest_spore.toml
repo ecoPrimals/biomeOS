@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.ingest_spore
+#
+# PseudoSpore ingest pipeline: validate envelope → store content via NestGate →
+# create DAG session via rhizoCrypt → append ledger entry via loamSpine →
+# create attribution braid via sweetGrass → sign receipt via BearDog.
+#
+# This is the gateway signal for NUCLEUS spore ingestion (NC-1.1).
+# Composes existing primal capabilities — no new capabilities required.
+
+[graph]
+id = "nest_ingest_spore"
+name = "NUCLEUS Spore Ingest Signal"
+description = "Validate → store → DAG → ledger → braid → sign. Full pseudoSpore ingest pipeline."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "ingest_spore"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "uds_only"
+secure_by_default = true
+fragments = ["tower_atomic", "nest_atomic"]
+
+[[graph.nodes]]
+name = "validate_envelope"
+binary = "nestgate"
+order = 1
+required = true
+spawn = false
+by_capability = "storage"
+capabilities = ["storage.exists"]
+
+[[graph.nodes]]
+name = "store_content"
+binary = "nestgate"
+order = 2
+required = true
+spawn = false
+depends_on = ["validate_envelope"]
+by_capability = "storage"
+capabilities = ["content.put"]
+
+[[graph.nodes]]
+name = "dag_session"
+binary = "rhizocrypt"
+order = 3
+required = true
+spawn = false
+depends_on = ["store_content"]
+by_capability = "dag"
+capabilities = ["dag.session.create"]
+
+[[graph.nodes]]
+name = "ledger_entry"
+binary = "loamspine"
+order = 4
+required = true
+spawn = false
+depends_on = ["dag_session"]
+by_capability = "ledger"
+capabilities = ["entry.append"]
+
+[[graph.nodes]]
+name = "attribution_braid"
+binary = "sweetgrass"
+order = 5
+required = false
+spawn = false
+depends_on = ["ledger_entry"]
+by_capability = "commit"
+capabilities = ["braid.create"]
+
+[[graph.nodes]]
+name = "sign_receipt"
+binary = "beardog"
+order = 6
+required = true
+spawn = false
+depends_on = ["attribution_braid"]
+by_capability = "security"
+capabilities = ["crypto.sign"]

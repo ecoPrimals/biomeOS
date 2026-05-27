@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: May 25, 2026 (v3.75: Cross-gate routing — Songbird mesh dispatch integration; 8,026 tests)
-**Version**: 3.75
+**Updated**: May 27, 2026 (v3.77: NUCLEUS spore gateway — ingest/emit subcommands, Neural API wiring; 8,036 tests)
+**Version**: 3.77
 **Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
 
 ---
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,026 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
+| **Tests Passing** | 8,036 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |

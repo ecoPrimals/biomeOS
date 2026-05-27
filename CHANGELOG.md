@@ -2,6 +2,45 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.77 (2026-05-27) — NUCLEUS Spore Gateway (NC-1.1, NC-1.2)
+
+### NUCLEUS ingest/emit subcommands (Wave 55 critical blocker)
+- **`biomeos nucleus ingest <pseudospore-dir>`**: New subcommand orchestrating
+  the 6-step NUCLEUS spore ingest pipeline via `nest_ingest_spore` signal graph:
+  validate envelope → store (NestGate) → DAG session (rhizoCrypt) → ledger entry
+  (loamSpine) → attribution braid (sweetGrass) → sign receipt (BearDog).
+  Writes `receipts/nucleus_ingest.toml` with all trio IDs.
+- **`biomeos nucleus emit <spore-id>`**: Reverse of ingest — retrieve from
+  NestGate, package envelope, sign braid. Writes `emit_manifest.json`.
+- `Mode::Nucleus` refactored from flat args to `NucleusCommand { Start, Ingest,
+  Emit }` subcommand tree. `biomeos nucleus start` preserves the existing
+  NUCLEUS orchestrator behavior. Follows the RootPulse subcommand pattern.
+- Envelope validation: `liveSpore.json` schema check, `scope.toml` extraction,
+  BLAKE3 data manifest verification. Designed for swap to `pseudospore-core`
+  when lithoSpore ships it.
+
+### Neural API wiring (NC-1.2)
+- `nucleus.ingest_spore` / `nucleus.ingest` routes added to route table,
+  dispatching through `signal.dispatch` → `nest_ingest_spore` signal graph.
+- `nucleus.emit_spore` / `nucleus.emit` routes added, forwarding through
+  `capability.call` to NestGate `storage.retrieve`.
+- Method count: 462 (up from 460).
+
+### Signal graph
+- New `graphs/signals/nest_ingest_spore.toml`: 6-node sequential pipeline
+  (validate_envelope → store_content → dag_session → ledger_entry →
+  attribution_braid → sign_receipt). Signal tier: `nest`.
+- `config/signal_tools.toml`: added `nest.ingest_spore` tool definition with
+  parameters (scope_id, data_file_count, checksums, manifest) and returns.
+- Signal graph count: 18 (up from 17).
+
+### Tests
+- 7 new envelope validation unit tests (missing dir, missing manifest, valid
+  envelope, scope.toml, BLAKE3 mismatch, params serialization, receipt writing).
+- 3 new CLI parser tests (nucleus start, ingest, emit subcommands).
+- Signal dispatch test count assertions updated 17→18.
+- Test count: 8,036 (up from 8,026). 0 failures, 0 clippy warnings.
+
 ## v3.76 (2026-05-26) — UniBin Naming: `biomeos-cli` binary → `biome`
 
 ### Binary rename (Wave 52 upstream ask)
