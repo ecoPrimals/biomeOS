@@ -1,6 +1,6 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — 8,038 tests, 27 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, zero blocking debt"
+description = "Orchestration kernel — 8,053 tests, 27 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, zero blocking debt"
 date = 2026-05-27
 
 [taxonomies]
@@ -9,16 +9,16 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,038 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
+- **8,053 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
-- **v3.80** — deep debt W56 (routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, capability-based config)
-- **v3.79** — Wave 55 Gateway Completion (signal graph synced, emit pipeline, receipt shape aligned)
-- **v3.78** — deep debt cleanup (hardcoded primal names evolved, large files refactored, live_discovery REST wired)
+- **v3.82** — Deep Debt W57 (nucleus_ingest module split, bearDog fix, LogConfig XDG, flate2 pure Rust)
+- **v3.81** — NC-1.4 canonical pseudoSpore validation + NC-1.emit full materialization
+- **v3.80** — Deep Debt W56 (routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, capability-based config)
 - **27 capability domains**, **320+ translations** across 13 primals
 - **19 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
 - **43 deploy graphs** (incl. membrane_deploy, provenance trio)
 - **20 niche templates** (+ RootPulse, soil-microbiome, ecology)
-- **25 workspace crates**
+- **26 workspace crates**
 - **Zero blocking debt** — 0 unsafe, 0 C deps, 0 TODO/FIXME, 0 clippy warnings
 - **Edition 2024** all crates, ecoBin v3.0 compliant
 - **Cross-arch** — x86_64 + aarch64 + armv7 (USB + Pixel + Raspberry Pi)
@@ -71,6 +71,8 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
+| v3.82 | May 27 | Deep Debt W57 — nucleus_ingest module split, bearDog casing fix, LogConfig XDG, flate2 pure Rust |
+| v3.81 | May 27 | NC-1.4 canonical pseudoSpore validation + NC-1.emit full materialization |
 | v3.80 | May 27 | Deep debt W56 — smart refactoring (routing 920→551L, nucleus 883→605L), rustix 1.x, capability-based config |
 | v3.79 | May 27 | Wave 55 Gateway Completion — signal graph synced, emit pipeline, receipt shape aligned |
 | v3.78 | May 27 | Deep debt cleanup — hardcoded primal names → constants, large file refactor, live_discovery REST |

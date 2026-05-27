@@ -1,4 +1,8 @@
-# 🧬 plasmidBin Manifest
+# plasmidBin Manifest
+
+> **Fossil Record**: This manifest documents the v0.23.0 harvest (January 28, 2026).
+> Binaries are re-harvested via `cd tools/harvest && cargo run`. The manifest
+> reflects the state at last harvest, not the current primal versions.
 
 **Version**: v0.23.0  
 **Date**: January 28, 2026  

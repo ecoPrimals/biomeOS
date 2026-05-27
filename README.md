@@ -4,14 +4,14 @@
 
 ---
 
-## Status: Production Ready (v3.81)
+## Status: Production Ready (v3.82)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 7/7 ecoBin v3.0 compliant (+ barraCuda, coralReef) |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 25 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
+| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
 | Tests | 8,053 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent — 90%+ line / function / region (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
@@ -367,7 +367,7 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v3.81)
+**Status**: Production Ready (v3.82)
 **Updated**: May 27, 2026
 **Tests**: 8,053 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + Songbird mesh cross-gate dispatch + DNS-SD + `primal.announce` | Adaptive routing weights (redb-persistent) | Membrane + nucleated composition | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)

@@ -7,8 +7,8 @@
 //! This module now re-exports the unified AI-first system and provides
 //! backward compatibility for the biomeOS ecosystem.
 //!
-//! Implements the AI-First response format and human-AI collaboration context
-//! as defined in `handOff/AI_FIRST_CITIZEN_API_STANDARD.md`
+//! Implements the AI-First response format and human-AI collaboration context.
+//! See `ecoPrimals/infra/wateringHole/handoffs/` for evolution reports.
 
 mod response;
 mod types;

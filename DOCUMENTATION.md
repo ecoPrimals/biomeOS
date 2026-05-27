@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (43 incl. provenance trio + membrane) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v3.80) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v3.82) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -58,6 +58,9 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/infra/wateringHole/
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V382_DEEP_DEBT_W57_MAY27_2026 | nucleus_ingest module split, bearDog casing fix, LogConfig XDG, flate2 pure Rust | May 27, 2026 |
+| BIOMEOS_V381_NC14_EMIT_GATEWAY_MAY27_2026 | NC-1.4 canonical pseudoSpore validation + NC-1.emit full materialization | May 27, 2026 |
+| BIOMEOS_V380_DEEP_DEBT_W56_MAY27_2026 | routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, capability-based config | May 27, 2026 |
 | BIOMEOS_V378_DEEP_DEBT_CLEANUP_MAY27_2026 | Hardcoded primal names → constants, large file refactor, live_discovery REST wired | May 27, 2026 |
 | BIOMEOS_V377_NUCLEUS_SPORE_GATEWAY_MAY27_2026 | NUCLEUS spore ingest/emit subcommands, nest_ingest_spore signal, Neural API wiring | May 27, 2026 |
 | BIOMEOS_V375_CROSS_GATE_MESH_DISPATCH_MAY24_2026 | Songbird mesh cross-gate dispatch, shadow deploy membrane gate | May 24, 2026 |
@@ -159,7 +162,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (8,038 tests — fully concurrent)
+# Test (8,053 tests — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -184,8 +187,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of May 27, 2026 (v3.80)**
-**Active: 26 specs, handoffs in wateringHole (v2.43–v3.80), 4 scripts**
+**Documentation current as of May 27, 2026 (v3.82)**
+**Active: 26 specs, handoffs in wateringHole (v2.43–v3.82), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE; membrane + nucleated composition models; signal-tier announce protocol; method_gate modularized; adaptive routing weights (redb-persistent); attestation verification; capability-domain composition health; Songbird mesh cross-gate dispatch; NUCLEUS spore gateway (ingest/emit)**
-**Tests: 8,038 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**
+**Tests: 8,053 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**

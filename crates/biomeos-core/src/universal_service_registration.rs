@@ -3,8 +3,8 @@
 
 //! Universal Service Registration Standard Implementation
 //!
-//! Implements the universal API standards for ecosystem integration
-//! as defined in handOff/ECOSYSTEM_API_STANDARDIZATION_GUIDE_UNIVERSAL.md
+//! Implements the universal API standards for ecosystem integration.
+//! See `ecoPrimals/infra/wateringHole/handoffs/` for evolution reports.
 
 use std::collections::HashMap;
 use biomeos_primal_sdk::{PrimalCapability, PrimalType};
