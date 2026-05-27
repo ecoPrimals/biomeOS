@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (43 incl. provenance trio + membrane) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v3.78) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v3.80) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -136,7 +136,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `HTTP_REQUEST_PROVIDER_SOCKET` | Squirrel HTTP capability socket | (auto-discover) |
+| `SECURITY_ENDPOINT` | Security provider socket (capability-based) | (auto-discover) |
 | `AI_HTTP_PROVIDERS` | Enabled cloud AI providers | (none) |
 | `ANTHROPIC_API_KEY` | Anthropic Claude API key | (none) |
 | `OPENAI_API_KEY` | OpenAI GPT API key | (none) |
@@ -184,8 +184,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of May 27, 2026 (v3.78)**
-**Active: 26 specs, handoffs in wateringHole (v2.43–v3.78), 4 scripts**
+**Documentation current as of May 27, 2026 (v3.80)**
+**Active: 26 specs, handoffs in wateringHole (v2.43–v3.80), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE; membrane + nucleated composition models; signal-tier announce protocol; method_gate modularized; adaptive routing weights (redb-persistent); attestation verification; capability-domain composition health; Songbird mesh cross-gate dispatch; NUCLEUS spore gateway (ingest/emit)**
 **Tests: 8,038 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**

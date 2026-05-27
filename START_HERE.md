@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.78 — deep debt cleanup, NUCLEUS spore gateway, Songbird mesh cross-gate dispatch, membrane composition)
+**Status**: Production Ready (v3.80 — deep debt W56, smart file refactoring, rustix 1.x, capability-based config, NUCLEUS gateway, Songbird mesh)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Binary source**: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)

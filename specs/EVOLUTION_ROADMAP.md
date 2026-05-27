@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 27, 2026 (v3.78: Deep debt cleanup — hardcoded primal names evolved, large files refactored, live_discovery REST wired)
+**Updated**: May 27, 2026 (v3.80: Deep Debt W56 — smart refactoring, rustix 1.x, capability-based config)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -98,11 +98,11 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated May 27, 2026 — v3.78)
+## 5. Deep Debt Metrics (Updated May 27, 2026 — v3.80)
 
 | Metric | Value |
 |--------|-------|
-| TODO markers in Rust source | 0 (live_discovery REST routes wired in v3.78) |
+| TODO markers in Rust source | 0 (verified clean in v3.80) |
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND/XXX | 0 |
 | Unsafe code | 0 (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary roots) |
@@ -449,6 +449,8 @@ Systematic deep debt resolution across 7 waves:
 - [x] Mesh fallback on both translation and direct discovery paths when no local provider found — v3.75
 - [x] NUCLEUS spore gateway: `biomeos nucleus ingest` / `emit` subcommands, `nest_ingest_spore` signal graph (6-node pipeline), `nucleus.ingest_spore` / `nucleus.emit_spore` Neural API routes — v3.77 (NC-1.1, NC-1.2)
 - [x] Deep debt cleanup: hardcoded primal names in `socket.rs` and `composition.rs` evolved to `primal_names::` constants, `method_gate/mod.rs` (961→328L) and `constants/mod.rs` (852→540L) tests extracted, `live_discovery.rs` REST routes wired (3 endpoints), dead code eliminated — v3.78
+- [x] Wave 55 Gateway Completion: signal graph synced to primalSpring conventions, emit pipeline via nest_emit_spore signal graph (19 total), receipt shape aligned, content path passed to NestGate, NC-1.4 blocker documented — v3.79
+- [x] Deep Debt W56: routing.rs 920→551L (route_table.rs extraction + DRY semantic call), nucleus.rs 883→605L (nucleus_procs.rs extraction), rustix 0.38→1.x, hardcoded values → capability-based config, #[allow] → anyhow wrapping, SporeInstantiate structured deferred — v3.80
 
 ### Degradation Behavior
 

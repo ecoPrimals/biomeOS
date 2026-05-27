@@ -31,7 +31,7 @@
 //! use biomeos_graph::GraphLoader;
 //!
 //! // Load and validate graph at startup (fail-fast)
-//! let graph = GraphLoader::from_file("graphs/livespore_deploy.toml")?;
+//! let graph = GraphLoader::from_file("graphs/livespore_create.toml")?;
 //!
 //! // Graph is now validated and ready for execution via Neural API
 //! println!("Loaded graph: {} with {} nodes", graph.id(), graph.nodes().len());

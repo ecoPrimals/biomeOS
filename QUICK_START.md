@@ -79,7 +79,6 @@ NESTGATE_JWT_SECRET=$(head -c 48 /dev/urandom | base64) \
   livespore-usb/x86_64/primals/nestgate daemon --socket-only &
 
 # 4. Squirrel (AI) - needs Songbird for HTTP
-HTTP_REQUEST_PROVIDER_SOCKET=$SOCKET_DIR/songbird.sock \
 AI_HTTP_PROVIDERS=anthropic,openai \
 ANTHROPIC_API_KEY=your-key-here \
   livespore-usb/x86_64/primals/squirrel server --socket $SOCKET_DIR/squirrel.sock &
@@ -117,7 +116,7 @@ cargo build --workspace --release
 | `NODE_ID` | Node identifier | `tower1` |
 | `FAMILY_ID` | Derived from .family.seed (or set manually) | `cf7e8729dc4ff05f` |
 | `RUST_LOG` | Logging level | `info` |
-| `HTTP_REQUEST_PROVIDER_SOCKET` | Squirrel HTTP capability provider | `/run/user/1000/biomeos/songbird.sock` |
+| `SECURITY_ENDPOINT` | Security provider socket (capability-based) | `unix:///run/user/1000/biomeos/beardog.sock` |
 | `AI_HTTP_PROVIDERS` | Enabled cloud AI providers | `anthropic,openai` |
 | `ANTHROPIC_API_KEY` | Anthropic Claude API key | `sk-ant-...` |
 | `OPENAI_API_KEY` | OpenAI GPT API key | `sk-proj-...` |
@@ -145,7 +144,7 @@ Sockets are resolved via `SystemPaths` (XDG-compliant) in this priority order:
 
 ### Squirrel shows "0 providers"
 
-Ensure `HTTP_REQUEST_PROVIDER_SOCKET` points to the Songbird socket
+Ensure Songbird is running (HTTP requests route via `capability.call`)
 and `AI_HTTP_PROVIDERS` or API key env vars are set.
 
 ### Songbird won't start
@@ -179,7 +178,7 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v3.78)
+**Status**: Production Ready (v3.80)
 **Updated**: May 27, 2026
 **Tests**: 8,038 passing (0 failures, fully concurrent), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0
 

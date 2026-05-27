@@ -1,6 +1,6 @@
 # Context — biomeOS
 
-**Version**: v3.78 | **Updated**: May 27, 2026
+**Version**: v3.80 | **Updated**: May 27, 2026
 
 ## What This Is
 
@@ -32,7 +32,7 @@ multiple gates (devices).
 - **Crate count:** 25 workspace crates
 - **Clippy:** pedantic + nursery enabled via workspace lint inheritance
 - **Unsafe:** 0 in production code (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points)
-- **TODO/FIXME/HACK:** 0 (all resolved in v3.78)
+- **TODO/FIXME/HACK:** 0 (all resolved in v3.80)
 
 ## Key Capabilities (JSON-RPC methods)
 

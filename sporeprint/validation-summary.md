@@ -11,10 +11,11 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **8,038 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v3.80** — deep debt W56 (routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, capability-based config)
+- **v3.79** — Wave 55 Gateway Completion (signal graph synced, emit pipeline, receipt shape aligned)
 - **v3.78** — deep debt cleanup (hardcoded primal names evolved, large files refactored, live_discovery REST wired)
-- **v3.77** — production ready, deep debt CLEAN, NUCLEUS spore gateway (ingest/emit)
 - **27 capability domains**, **320+ translations** across 13 primals
-- **18 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
+- **19 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
 - **43 deploy graphs** (incl. membrane_deploy, provenance trio)
 - **20 niche templates** (+ RootPulse, soil-microbiome, ecology)
 - **25 workspace crates**
@@ -36,7 +37,7 @@ itself; it coordinates the primals that do.
 - **Dark Forest** — zero metadata leakage, encrypted beacons, genetic model
 - **RootPulse** — emergent provenance pattern (rhizoCrypt + loamSpine + sweetGrass)
 
-## Signal Dispatch (5 tiers, 18 graphs)
+## Signal Dispatch (5 tiers, 19 graphs)
 
 | Tier | Signals | Purpose |
 |------|---------|---------|
@@ -70,6 +71,8 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
+| v3.80 | May 27 | Deep debt W56 — smart refactoring (routing 920→551L, nucleus 883→605L), rustix 1.x, capability-based config |
+| v3.79 | May 27 | Wave 55 Gateway Completion — signal graph synced, emit pipeline, receipt shape aligned |
 | v3.78 | May 27 | Deep debt cleanup — hardcoded primal names → constants, large file refactor, live_discovery REST |
 | v3.77 | May 27 | NUCLEUS spore gateway (ingest/emit), nest_ingest_spore signal, Neural API wiring |
 | v3.75 | May 24 | Songbird mesh cross-gate dispatch, shadow deploy membrane gate |

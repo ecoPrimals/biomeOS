@@ -209,7 +209,7 @@ The Squirrel AI bridge works end-to-end through capability-based discovery:
 
 ```
 Squirrel (query_ai)
-  -> discovers http.request via HTTP_REQUEST_PROVIDER_SOCKET env var
+  -> discovers http.request via capability.call routing (http_bridge)
   -> Songbird socket (http.request JSON-RPC)
   -> BearDog TLS 1.3 crypto (for HTTPS)
   -> External API (Anthropic Claude, OpenAI GPT)
@@ -892,7 +892,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Apr 8, 2026)
 
-**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 7,801 total tests including doc-tests and proptests)
+**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 8,038 total tests including doc-tests and proptests)
 
 ### Coverage Distribution
 
@@ -998,7 +998,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.79 — Wave 55 Gateway Completion, signal graph synced, emit pipeline via signal graph, receipt shape aligned, 19 signal graphs, zero blocking debt)
+**Status**: Production Ready (v3.80 — Deep Debt W56, smart file refactoring, rustix 1.x, capability-based config, 19 signal graphs, zero blocking debt)
 **Tests**: 8,038 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0 | **TODO/FIXME**: 0
