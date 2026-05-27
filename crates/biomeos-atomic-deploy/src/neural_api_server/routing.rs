@@ -781,8 +781,8 @@ impl NeuralApiServer {
             // Spring status (Tier 2 notebook integration)
             Route::SpringStatus => dispatch(self.lifecycle_handler.spring_status().await, id),
             // Spore lifecycle — atomic VM provisioning (lithoSpore ask R7).
-            // DEFERRED-TO-STADIAL: route scaffold exists, graph structural only.
-            // Wire to lithoSpore VM provisioning when Tier 3 is ready.
+            // Blocked on upstream: lithoSpore Tier 3 VM provisioning not yet available.
+            // Scaffold forwards to graph executor with _deferred flag; nodes gracefully skip.
             Route::SporeInstantiate => {
                 let spore_params = params.clone().unwrap_or(json!({}));
                 let graph_id = spore_params

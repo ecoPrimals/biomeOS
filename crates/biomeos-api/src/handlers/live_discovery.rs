@@ -1,23 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-#![expect(
-    dead_code,
-    reason = "pub(crate) utilities awaiting REST route wiring — fully implemented, capability-based"
-)]
-// TODO(REST-routes): Wire discover_all_primals / discover_by_capability
-// into GET /api/v1/discovery/primals and GET /api/v1/discovery/capability/{domain}
-
 //! Live Primal Discovery - Capability-Based Dynamic Discovery.
 //!
 //! Provides capability-based runtime discovery utilities used by API handlers
-//! and future REST routes. Functions are `pub` for cross-module use.
+//! and REST routes. Functions are `pub` for cross-module use.
 
 // Architecture: JSON-RPC 2.0 over Unix sockets for primal discovery.
 // Pure Rust path — no HTTP/TLS dependencies.
 // Capability-based: primals self-report identities at runtime.
 
 use anyhow::{Context, Result};
+use axum::extract::Path as AxumPath;
+use axum::Json;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
@@ -49,6 +44,7 @@ pub struct LivePrimalInfo {
 
 /// Identity attestation from a primal
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(not(test), expect(dead_code, reason = "used in tests and future attestation flows"))]
 pub struct IdentityAttestation {
     pub provider_capability: String,
     pub format: String,
@@ -451,10 +447,45 @@ pub async fn discover_by_type_in(primal_type: &str, socket_dir: &str) -> Vec<Liv
         .collect()
 }
 
-// All discovery should use capability-based methods:
-// - `discover_all_primals()` for scanning
-// - `discover_by_capability(capability)` for capability-filtered discovery
-// - `discover_primal(socket_path)` for querying a specific socket
+// ── REST route handlers ──
+
+/// Response envelope for live discovery endpoints.
+#[derive(Debug, Serialize)]
+pub struct LiveDiscoveryResponse {
+    pub primals: Vec<LivePrimalInfo>,
+    pub count: usize,
+}
+
+/// GET /api/v1/discovery/primals
+///
+/// Scan all sockets and return every reachable primal.
+pub async fn get_live_primals() -> Json<LiveDiscoveryResponse> {
+    let primals = discover_all_primals().await;
+    let count = primals.len();
+    Json(LiveDiscoveryResponse { primals, count })
+}
+
+/// GET /api/v1/discovery/capability/:domain
+///
+/// Return primals that provide a given capability domain (e.g. `crypto`, `storage`).
+pub async fn get_primals_by_capability(
+    AxumPath(domain): AxumPath<String>,
+) -> Json<LiveDiscoveryResponse> {
+    let primals = discover_by_capability(&domain).await;
+    let count = primals.len();
+    Json(LiveDiscoveryResponse { primals, count })
+}
+
+/// GET /api/v1/discovery/type/:primal_type
+///
+/// Return primals whose primary type matches (e.g. `security`, `ai`).
+pub async fn get_primals_by_type(
+    AxumPath(primal_type): AxumPath<String>,
+) -> Json<LiveDiscoveryResponse> {
+    let primals = discover_by_type(&primal_type).await;
+    let count = primals.len();
+    Json(LiveDiscoveryResponse { primals, count })
+}
 
 #[cfg(test)]
 mod live_discovery_tests;

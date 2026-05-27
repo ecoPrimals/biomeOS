@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 27, 2026 (v3.77: NUCLEUS spore gateway ingest/emit, nest_ingest_spore signal, Neural API wiring)
+**Updated**: May 27, 2026 (v3.78: Deep debt cleanup — hardcoded primal names evolved, large files refactored, live_discovery REST wired)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -98,11 +98,11 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated May 27, 2026 — v3.77)
+## 5. Deep Debt Metrics (Updated May 27, 2026 — v3.78)
 
 | Metric | Value |
 |--------|-------|
-| TODO markers in Rust source | 1 tracked (REST route wiring in `live_discovery.rs`) |
+| TODO markers in Rust source | 0 (live_discovery REST routes wired in v3.78) |
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND/XXX | 0 |
 | Unsafe code | 0 (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary roots) |
@@ -448,6 +448,7 @@ Systematic deep debt resolution across 7 waves:
 - [x] Cross-gate routing: Songbird mesh dispatch integration (`try_songbird_mesh_dispatch`), replaces legacy `relay.allocate` protocol — v3.75
 - [x] Mesh fallback on both translation and direct discovery paths when no local provider found — v3.75
 - [x] NUCLEUS spore gateway: `biomeos nucleus ingest` / `emit` subcommands, `nest_ingest_spore` signal graph (6-node pipeline), `nucleus.ingest_spore` / `nucleus.emit_spore` Neural API routes — v3.77 (NC-1.1, NC-1.2)
+- [x] Deep debt cleanup: hardcoded primal names in `socket.rs` and `composition.rs` evolved to `primal_names::` constants, `method_gate/mod.rs` (961→328L) and `constants/mod.rs` (852→540L) tests extracted, `live_discovery.rs` REST routes wired (3 endpoints), dead code eliminated — v3.78
 
 ### Degradation Behavior
 

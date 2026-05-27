@@ -11,6 +11,7 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **8,036 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v3.78** — deep debt cleanup (hardcoded primal names evolved, large files refactored, live_discovery REST wired)
 - **v3.77** — production ready, deep debt CLEAN, NUCLEUS spore gateway (ingest/emit)
 - **27 capability domains**, **320+ translations** across 13 primals
 - **17 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
@@ -69,6 +70,7 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
+| v3.78 | May 27 | Deep debt cleanup — hardcoded primal names → constants, large file refactor, live_discovery REST |
 | v3.77 | May 27 | NUCLEUS spore gateway (ingest/emit), nest_ingest_spore signal, Neural API wiring |
 | v3.75 | May 24 | Songbird mesh cross-gate dispatch, shadow deploy membrane gate |
 | v3.73 | May 24 | Capability-domain composition, weights/ refactor, port helper rename |

@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 27, 2026 (v3.77: NUCLEUS spore gateway — ingest/emit subcommands, Neural API wiring; 8,036 tests)
-**Version**: 3.77
-**Status**: PRODUCTION READY - Deep Debt CLEAN - method_gate Modularized (4 focused modules) - Graph Handler Split (validation.rs extracted) - Dead Code Removed - Membrane Composition Model - Signal-Tier Announce Protocol - Federation Health Diagnostics - Capability-Based Socket Resolution - Zero Blocking Debt
+**Updated**: May 27, 2026 (v3.78: Deep debt cleanup — hardcoded primal names evolved to constants, large files refactored, live_discovery REST routes wired; 8,036 tests)
+**Version**: 3.78
+**Status**: PRODUCTION READY - Deep Debt CLEAN - Hardcoded Primal Names Eliminated (socket.rs, composition.rs → primal_names:: constants) - method_gate Tests Extracted (961→328L) - constants Tests Extracted (852→540L) - Live Discovery REST Wired (3 routes) - Zero Blocking Debt
 
 ---
 

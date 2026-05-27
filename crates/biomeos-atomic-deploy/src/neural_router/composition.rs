@@ -23,6 +23,10 @@
 //! emergent systems. They can be executed as graphs and are the
 //! building blocks for adaptive dispatch optimization.
 
+use biomeos_types::primal_names::{
+    BARRACUDA, BEARDOG, BIOMEOS, CORALREEF, LOAMSPINE, NESTGATE, PETALTONGUE, PRIMALSPRING,
+    RHIZOCRYPT, SKUNKBAT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -56,7 +60,7 @@ impl CompositionTier {
             "discovery" | "network" | "stun" | "onion" | "tor" | "mesh" | "http" | "relay"
             | "dns" | "turn" | "ipc" => Self::Tower,
             "defense" | "recon" | "threat" | "audit" => Self::Tower,
-            "compute" | "dispatch" | "toadstool" | "sovereign" | "execution" | "parsing"
+            "compute" | "dispatch" | "sovereign" | "execution" | "parsing"
             | "hardware_learning" | "workload" => Self::Node,
             "tensor" | "math" | "ode" | "ml" | "nautilus" | "rng" | "stats" | "linalg"
             | "spectral" | "noise" | "shader" | "activation" | "wgsl" | "spirv" | "fhe" => {
@@ -70,7 +74,7 @@ impl CompositionTier {
             "braid" | "anchoring" | "provenance" | "attribution" | "contribution" | "ledger"
             | "commit" => Self::Nest,
             "visualization" | "render" | "viz" | "interaction" | "proprioception" => Self::Meta,
-            "ai" | "inference" | "squirrel" | "context" | "science" => Self::Meta,
+            "ai" | "inference" | "context" | "science" => Self::Meta,
             "orchestration" | "federation" | "biomeos" | "primal" | "signal" | "topology"
             | "route" | "system" | "neural_api" => Self::Orchestration,
             "health" | "capabilities" | "lifecycle" | "mcp" | "tool" | "tools" | "rpc"
@@ -81,11 +85,11 @@ impl CompositionTier {
 
     fn from_provider(provider: &str) -> Self {
         match provider {
-            "beardog" | "songbird" | "skunkbat" => Self::Tower,
-            "toadstool" | "barracuda" | "coralreef" => Self::Node,
-            "nestgate" | "rhizocrypt" | "loamspine" | "sweetgrass" => Self::Nest,
-            "petaltongue" | "squirrel" => Self::Meta,
-            "biomeos" => Self::Orchestration,
+            BEARDOG | SONGBIRD | SKUNKBAT => Self::Tower,
+            TOADSTOOL | BARRACUDA | CORALREEF => Self::Node,
+            NESTGATE | RHIZOCRYPT | LOAMSPINE | SWEETGRASS => Self::Nest,
+            PETALTONGUE | SQUIRREL => Self::Meta,
+            BIOMEOS => Self::Orchestration,
             _ => Self::Standalone,
         }
     }
@@ -153,10 +157,10 @@ impl CompositionPatternRegistry {
                 Arc::from("spine.commit"),
             ],
             primals: vec![
-                Arc::from("beardog"),
-                Arc::from("rhizocrypt"),
-                Arc::from("sweetgrass"),
-                Arc::from("loamspine"),
+                Arc::from(BEARDOG),
+                Arc::from(RHIZOCRYPT),
+                Arc::from(SWEETGRASS),
+                Arc::from(LOAMSPINE),
             ],
             tier: CompositionTier::Nest,
             graph_file: None,
@@ -170,9 +174,9 @@ impl CompositionPatternRegistry {
                 Arc::from("security.audit_event"),
             ],
             primals: vec![
-                Arc::from("beardog"),
-                Arc::from("songbird"),
-                Arc::from("skunkbat"),
+                Arc::from(BEARDOG),
+                Arc::from(SONGBIRD),
+                Arc::from(SKUNKBAT),
             ],
             tier: CompositionTier::Tower,
             graph_file: Some("graphs/tower_atomic_bootstrap.toml".to_owned()),
@@ -187,10 +191,10 @@ impl CompositionPatternRegistry {
                 Arc::from("braid.create"),
             ],
             primals: vec![
-                Arc::from("nestgate"),
-                Arc::from("rhizocrypt"),
-                Arc::from("loamspine"),
-                Arc::from("sweetgrass"),
+                Arc::from(NESTGATE),
+                Arc::from(RHIZOCRYPT),
+                Arc::from(LOAMSPINE),
+                Arc::from(SWEETGRASS),
             ],
             tier: CompositionTier::Nest,
             graph_file: Some("graphs/signals/nest_store.toml".to_owned()),
@@ -204,9 +208,9 @@ impl CompositionPatternRegistry {
                 Arc::from("security.audit_event"),
             ],
             primals: vec![
-                Arc::from("beardog"),
-                Arc::from("songbird"),
-                Arc::from("skunkbat"),
+                Arc::from(BEARDOG),
+                Arc::from(SONGBIRD),
+                Arc::from(SKUNKBAT),
             ],
             tier: CompositionTier::Tower,
             graph_file: Some("graphs/signals/tower_publish.toml".to_owned()),
@@ -220,9 +224,9 @@ impl CompositionPatternRegistry {
                 Arc::from("graph.list"),
             ],
             primals: vec![
-                Arc::from("petaltongue"),
-                Arc::from("squirrel"),
-                Arc::from("biomeos"),
+                Arc::from(PETALTONGUE),
+                Arc::from(SQUIRREL),
+                Arc::from(BIOMEOS),
             ],
             tier: CompositionTier::Meta,
             graph_file: Some("graphs/signals/meta_observe.toml".to_owned()),
@@ -237,7 +241,7 @@ impl CompositionPatternRegistry {
                 Arc::from("bonding.status"),
                 Arc::from("bonding.terminate"),
             ],
-            primals: vec![Arc::from("primalspring"), Arc::from("beardog")],
+            primals: vec![Arc::from(PRIMALSPRING), Arc::from(BEARDOG)],
             tier: CompositionTier::Standalone,
             graph_file: None,
         });
@@ -253,11 +257,11 @@ impl CompositionPatternRegistry {
                 Arc::from("content.resolve"),
             ],
             primals: vec![
-                Arc::from("biomeos"),
-                Arc::from("beardog"),
-                Arc::from("songbird"),
-                Arc::from("skunkbat"),
-                Arc::from("nestgate"),
+                Arc::from(BIOMEOS),
+                Arc::from(BEARDOG),
+                Arc::from(SONGBIRD),
+                Arc::from(SKUNKBAT),
+                Arc::from(NESTGATE),
             ],
             tier: CompositionTier::Tower,
             graph_file: Some("graphs/membrane_deploy.toml".to_owned()),

@@ -2,6 +2,35 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.78 (2026-05-27) — Deep Debt Cleanup
+
+### Hardcoded primal names eliminated
+- `capability_translation/socket.rs`: `DOMAIN_PRIMAL_BOOTSTRAP` table and
+  `dual_socket_primals()` now use `primal_names::{TOADSTOOL, NESTGATE, BEARDOG,
+  SONGBIRD, SKUNKBAT}` constants instead of string literals.
+- `neural_router/composition.rs`: `from_provider()` match arms and all 7
+  canonical `CompositionPattern` registrations now use `primal_names::` constants.
+  Removed primal-name domain aliases (`"toadstool"`, `"squirrel"`) from
+  `classify()` — the `from_provider()` fallthrough handles them correctly.
+
+### Large file refactoring
+- `method_gate/mod.rs` (961→328 lines): 59 tests extracted to `tests.rs`.
+- `constants/mod.rs` (852→540 lines): 35 tests extracted to `tests.rs`.
+
+### Live discovery REST routes
+- Wired 3 new endpoints in `biomeos-api`:
+  - `GET /api/v1/discovery/primals` — scan all sockets, return reachable primals
+  - `GET /api/v1/discovery/capability/:domain` — filter by capability domain
+  - `GET /api/v1/discovery/type/:primal_type` — filter by primary type
+- Removed module-level `#![expect(dead_code)]` and resolved the TODO in
+  `live_discovery.rs`.
+
+### Deferred items (upstream blocked)
+- `SporeInstantiate` in `routing.rs`: scaffold correctly forwards to graph
+  executor with `_deferred` flag — blocked on lithoSpore Tier 3 VM provisioning.
+- Multicast I/O in `discovery_bootstrap.rs`: deferred until cross-gate
+  deployments require it.
+
 ## v3.77 (2026-05-27) — NUCLEUS Spore Gateway (NC-1.1, NC-1.2)
 
 ### NUCLEUS ingest/emit subcommands (Wave 55 critical blocker)

@@ -98,12 +98,14 @@ pub fn resolve_primal_socket_with(
 /// Used only during discovery bootstrap when the capability registry isn't
 /// yet populated. In production, `primal.announce` provides the authoritative
 /// mapping and this table is never consulted.
+use biomeos_types::primal_names::{BEARDOG, NESTGATE, SKUNKBAT, SONGBIRD, TOADSTOOL};
+
 const DOMAIN_PRIMAL_BOOTSTRAP: &[(&str, &str)] = &[
-    ("compute", "toadstool"),
-    ("storage", "nestgate"),
-    ("crypto", "beardog"),
-    ("relay", "songbird"),
-    ("defense", "skunkbat"),
+    ("compute", TOADSTOOL),
+    ("storage", NESTGATE),
+    ("crypto", BEARDOG),
+    ("relay", SONGBIRD),
+    ("defense", SKUNKBAT),
 ];
 
 fn domain_socket_alias(primal: &str) -> Option<&'static str> {
@@ -117,5 +119,5 @@ fn domain_socket_alias(primal: &str) -> Option<&'static str> {
 /// biomeOS forwards via JSON-RPC, so prefer `.jsonrpc.sock` paths.
 /// Derived from capability domains: currently only `compute` primals bind dual.
 fn dual_socket_primals() -> &'static [&'static str] {
-    &["toadstool"]
+    &[TOADSTOOL]
 }

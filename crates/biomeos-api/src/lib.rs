@@ -301,6 +301,19 @@ fn register_api_routes(
             "/api/v1/capabilities/discover",
             post(handlers::capability::discover_capability),
         )
+        // Live discovery routes (capability-based socket scanning)
+        .route(
+            "/api/v1/discovery/primals",
+            get(handlers::live_discovery::get_live_primals),
+        )
+        .route(
+            "/api/v1/discovery/capability/:domain",
+            get(handlers::live_discovery::get_primals_by_capability),
+        )
+        .route(
+            "/api/v1/discovery/type/:primal_type",
+            get(handlers::live_discovery::get_primals_by_type),
+        )
         .route(
             "/api/v1/trust/evaluate",
             post(handlers::trust::evaluate_trust),
