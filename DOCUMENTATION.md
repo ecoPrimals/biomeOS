@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: May 27, 2026
+**Updated**: May 28, 2026
 
 ---
 
@@ -33,7 +33,7 @@
 
 ---
 
-## Specifications (26 active)
+## Specifications (27 active)
 
 See [specs/README.md](specs/README.md) for full index. Key specs:
 
@@ -58,6 +58,8 @@ Handoffs live in the central **wateringHole** at `ecoPrimals/infra/wateringHole/
 
 | Document | Focus | Date |
 |----------|-------|------|
+| BIOMEOS_V384_DEEP_DEBT_W58B_MAY28_2026 | Wired 22 more env var constants, connection_tests.rs + suggestions_tests.rs extraction, zero production files >800L | May 28, 2026 |
+| BIOMEOS_V383_ENV_CENTRALIZATION_W58_MAY28_2026 | env_config::vars SSOT wired (~90% of env::var call sites), 15 new constants, 37 files migrated | May 28, 2026 |
 | BIOMEOS_V382_DEEP_DEBT_W57_MAY27_2026 | nucleus_ingest module split, bearDog casing fix, LogConfig XDG, flate2 pure Rust | May 27, 2026 |
 | BIOMEOS_V381_NC14_EMIT_GATEWAY_MAY27_2026 | NC-1.4 canonical pseudoSpore validation + NC-1.emit full materialization | May 27, 2026 |
 | BIOMEOS_V380_DEEP_DEBT_W56_MAY27_2026 | routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, capability-based config | May 27, 2026 |
@@ -187,8 +189,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of May 27, 2026 (v3.84)**
-**Active: 26 specs, handoffs in wateringHole (v2.43–v3.84), 4 scripts**
+**Documentation current as of May 28, 2026 (v3.84)**
+**Active: 27 specs, handoffs in wateringHole (v2.43–v3.84), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
 **Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE; membrane + nucleated composition models; signal-tier announce protocol; method_gate modularized; adaptive routing weights (redb-persistent); attestation verification; capability-domain composition health; Songbird mesh cross-gate dispatch; NUCLEUS spore gateway (ingest/emit)**
 **Tests: 8,053 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**

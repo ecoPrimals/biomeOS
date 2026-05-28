@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
 description = "Orchestration kernel — 8,053 tests, 27 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, zero blocking debt"
-date = 2026-05-27
+date = 2026-05-28
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -11,7 +11,9 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **8,053 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
-- **v3.84** — Deep Debt W57 (nucleus_ingest module split, bearDog fix, LogConfig XDG, flate2 pure Rust)
+- **v3.84** — Deep Debt W58b (wired 22 more env var constants, test module extraction, zero production files >800L)
+- **v3.83** — Env var centralization W58 (env_config::vars SSOT, ~90% of env::var call sites wired)
+- **v3.82** — Deep Debt W57 (nucleus_ingest module split, bearDog fix, LogConfig XDG, flate2 pure Rust)
 - **v3.81** — NC-1.4 canonical pseudoSpore validation + NC-1.emit full materialization
 - **v3.80** — Deep Debt W56 (routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, capability-based config)
 - **27 capability domains**, **320+ translations** across 13 primals
@@ -71,7 +73,9 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
-| v3.84 | May 27 | Deep Debt W57 — nucleus_ingest module split, bearDog casing fix, LogConfig XDG, flate2 pure Rust |
+| v3.84 | May 28 | Deep Debt W58b — wired 22 more env var constants, test module extraction, zero production files >800L |
+| v3.83 | May 28 | Env var centralization W58 — env_config::vars SSOT, ~90% of env::var call sites wired |
+| v3.82 | May 27 | Deep Debt W57 — nucleus_ingest module split, bearDog casing fix, LogConfig XDG, flate2 pure Rust |
 | v3.81 | May 27 | NC-1.4 canonical pseudoSpore validation + NC-1.emit full materialization |
 | v3.80 | May 27 | Deep debt W56 — smart refactoring (routing 920→551L, nucleus 883→605L), rustix 1.x, capability-based config |
 | v3.79 | May 27 | Wave 55 Gateway Completion — signal graph synced, emit pipeline, receipt shape aligned |

@@ -1,6 +1,6 @@
 # Context — biomeOS
 
-**Version**: v3.84 | **Updated**: May 27, 2026
+**Version**: v3.84 | **Updated**: May 28, 2026
 
 ## What This Is
 
@@ -57,7 +57,7 @@ multiple gates (devices).
 
 ## Related Repositories
 
-- **ecoPrimals/wateringHole** — Inter-primal standards, handoffs, and guidance
+- **ecoPrimals/infra/wateringHole** — Inter-primal standards, handoffs, and guidance
 - **ecoPrimals/primals/** — Individual primal repositories (BearDog, Songbird, etc.)
 - **ecoPrimals/infra/** — Infrastructure, deployment scripts, gate configurations
 

@@ -46,7 +46,7 @@ biomeOS uses a **dual version scheme**:
 
 | Scheme | Value | Where | Purpose |
 |--------|-------|-------|---------|
-| **Release train** | `v3.81` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. Incremented on each audit/evolution cycle. |
+| **Release train** | `v3.84` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. Incremented on each audit/evolution cycle. |
 | **Workspace semver** | `0.1.0` | `Cargo.toml` `[workspace.package]`, `plasmidBin/manifest.toml` | Rust crate version. Will bump to `1.0.0` at stadial exit when the public API surface stabilizes. |
 
 The release train version (`v3.x`) is the **canonical version** for downstream consumers (springs, gardens, projectNUCLEUS). The workspace semver (`0.1.0`) reflects that the Rust crate API is still pre-1.0. Both are intentional — the release train captures functional maturity while semver captures API stability.
@@ -368,7 +368,7 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 ---
 
 **Status**: Production Ready (v3.84)
-**Updated**: May 27, 2026
+**Updated**: May 28, 2026
 **Tests**: 8,053 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + Songbird mesh cross-gate dispatch + DNS-SD + `primal.announce` | Adaptive routing weights (redb-persistent) | Membrane + nucleated composition | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 

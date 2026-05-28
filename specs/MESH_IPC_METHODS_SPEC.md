@@ -2,7 +2,7 @@
 
 **Created**: February 6, 2026  
 **Status**: SPECIFICATION - Mesh IPC methods defined; P2P Sovereign Onion production-ready (v3.23)  
-**Related**: `wateringHole/handoffs/SOVEREIGN_BEACON_MESH_HANDOFF_FEB06_2026.md`
+**Related**: `ecoPrimals/infra/wateringHole/handoffs/archive/SOVEREIGN_BEACON_MESH_HANDOFF_FEB06_2026.md`
 
 ---
 

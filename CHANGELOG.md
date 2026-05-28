@@ -5018,4 +5018,4 @@ BirdSong Discovery → USB Songbird (discovered peer)
 
 ---
 
-For detailed session reports, see `ecoPrimals/wateringHole/handoffs/`.
+For detailed session reports, see `ecoPrimals/infra/wateringHole/handoffs/`.

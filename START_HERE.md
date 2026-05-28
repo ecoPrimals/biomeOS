@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: May 27, 2026
-**Status**: Production Ready (v3.84) — Deep Debt Wave 57 (nucleus_ingest smart module split, bearDog socket casing fix, LogConfig XDG paths, flate2 pure Rust backend), NUCLEUS spore gateway complete, Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, plasmidBin canonical binary discovery, 8,053 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: May 28, 2026
+**Status**: Production Ready (v3.84) — Deep Debt Wave 58b (wired 22 more env var constants, connection_tests.rs + suggestions_tests.rs extraction, zero production files >800L), env var centralization complete (Wave 58), NUCLEUS spore gateway complete, Songbird mesh cross-gate dispatch, shadow deploy membrane gate, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, signal-tier announce protocol, `primal.announce` self-registration, plasmidBin canonical binary discovery, 8,053 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.81 — NC-1.4 canonical validation, NC-1.emit full materialization, biomeos-pseudospore crate, NUCLEUS gateway complete)
+**Status**: Production Ready (v3.84 — Deep Debt Wave 58b, env var centralization complete, zero production files >800L, NUCLEUS gateway complete)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Binary source**: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
@@ -179,4 +179,4 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
 **Tests**: 8,053 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
-**Updated**: May 27, 2026
+**Updated**: May 28, 2026
