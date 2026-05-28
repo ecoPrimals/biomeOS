@@ -22,7 +22,7 @@ pub fn resolve_neural_api_socket(
 
     let env_path = env_override
         .map(PathBuf::from)
-        .or_else(|| env::var("NEURAL_API_SOCKET").ok().map(PathBuf::from));
+        .or_else(|| env::var(biomeos_types::env_config::vars::NEURAL_API_SOCKET).ok().map(PathBuf::from));
     if let Some(path) = env_path {
         if path.exists() {
             return Some(path);

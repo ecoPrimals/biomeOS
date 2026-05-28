@@ -212,7 +212,7 @@ impl BiomeOSConfig {
             config.network.port = port_num;
         }
 
-        if let Some(bind_addr) = env.get("BIOMEOS_BIND_ADDRESS") {
+        if let Some(bind_addr) = env.get(crate::env_config::vars::BIND_ADDRESS) {
             config.network.bind_address.clone_from(bind_addr);
         }
 

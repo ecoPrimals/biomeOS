@@ -23,7 +23,7 @@ pub fn discover_neural_api_socket_with(socket_override: Option<&str>) -> Federat
     if let Some(s) = socket_override {
         return Ok(s.to_string());
     }
-    if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {
+    if let Ok(socket) = std::env::var(biomeos_types::env_config::vars::NEURAL_API_SOCKET) {
         return Ok(socket);
     }
 

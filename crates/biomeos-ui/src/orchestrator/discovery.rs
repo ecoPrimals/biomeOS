@@ -31,8 +31,8 @@ impl DiscoveryConfig {
     #[must_use]
     pub fn from_env() -> Self {
         Self {
-            registry_provider: std::env::var("BIOMEOS_REGISTRY_PROVIDER").ok(),
-            storage_provider: std::env::var("BIOMEOS_STORAGE_PROVIDER").ok(),
+            registry_provider: std::env::var(biomeos_types::env_config::vars::REGISTRY_PROVIDER).ok(),
+            storage_provider: std::env::var(biomeos_types::env_config::vars::STORAGE_PROVIDER).ok(),
         }
     }
 }

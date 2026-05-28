@@ -66,7 +66,7 @@ impl BiomeOSConfigBuilder {
         //
         // Deep Debt Principle: Fail fast with clear guidance instead of silent hardcoded fallbacks.
         builder.config.network.bind_address =
-            std::env::var("BIOMEOS_BIND_ADDRESS").unwrap_or_else(|_| {
+            std::env::var(biomeos_types::env_config::vars::BIND_ADDRESS).unwrap_or_else(|_| {
                 warn!("BIOMEOS_BIND_ADDRESS not set. Unix socket preferred for IPC.");
                 warn!("For HTTP bridge: export BIOMEOS_BIND_ADDRESS=127.0.0.1");
                 biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()

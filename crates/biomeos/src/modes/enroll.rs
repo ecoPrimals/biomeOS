@@ -41,7 +41,7 @@ pub struct EnrollArgs {
     pub family_id: String,
 
     /// Node ID - human-friendly name (e.g., "tower", "pixel8a")
-    #[arg(long, env = "NODE_ID")]
+    #[arg(long, env = biomeos_types::env_config::vars::NODE_ID_LEGACY)]
     pub node_id: String,
 
     /// Device ID - unique hardware identifier

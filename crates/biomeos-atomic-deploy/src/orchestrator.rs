@@ -319,7 +319,10 @@ impl DeploymentOrchestrator {
             child_seed_path.display().to_string(),
         );
         env.insert("FAMILY_ID".to_string(), self.config.family_id.clone());
-        env.insert("NODE_ID".to_string(), atomic_type.node_id().to_string());
+        env.insert(
+            biomeos_types::env_config::vars::NODE_ID_LEGACY.to_string(),
+            atomic_type.node_id().to_string(),
+        );
 
         let socket_env = biomeos_types::defaults::env_vars::socket_env_key(primal_name);
         env.insert(socket_env, socket_path.display().to_string());

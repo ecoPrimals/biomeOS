@@ -106,7 +106,7 @@ pub async fn fetch_jwt_secret_with_discovery(purpose: &str) -> Result<String> {
     use biomeos_types::capability_taxonomy::CapabilityTaxonomy;
 
     // Capability-based provider resolution (3-tier)
-    let provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+    let provider = std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
         .ok()
         .or_else(|| CapabilityTaxonomy::resolve_to_primal("security").map(String::from))
         .unwrap_or_else(|| primal_names::BEARDOG.to_string());

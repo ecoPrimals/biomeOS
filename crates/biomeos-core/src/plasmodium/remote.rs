@@ -89,7 +89,7 @@ impl super::Plasmodium {
         }
 
         if primals.is_empty() {
-            let discovery_provider = std::env::var("DISCOVERY_PROVIDER")
+            let discovery_provider = std::env::var(biomeos_types::env_config::vars::DISCOVERY_PROVIDER)
                 .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
             primals.push(PrimalStatus {
                 name: discovery_provider,

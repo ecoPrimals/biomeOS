@@ -52,8 +52,8 @@ impl BiomeOsHttpClient {
     pub fn new() -> Self {
         use crate::nucleation::SocketNucleation;
 
-        let discovery_provider = std::env::var("DISCOVERY_PROVIDER")
-            .or_else(|_| std::env::var("BIOMEOS_NETWORK_PROVIDER"))
+        let discovery_provider = std::env::var(biomeos_types::env_config::vars::DISCOVERY_PROVIDER)
+            .or_else(|_| std::env::var(biomeos_types::env_config::vars::NETWORK_PROVIDER))
             .unwrap_or_else(|_| primal_names::SONGBIRD.to_string());
         let discovery_socket = std::env::var("BIOMEOS_DISCOVERY_SOCKET")
             .or_else(|_| {

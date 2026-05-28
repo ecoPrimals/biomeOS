@@ -124,7 +124,7 @@ impl NeuralApiServer {
                 for capability in &node.capabilities {
                     if self.tcp_only {
                         let tcp_port = self.resolve_tcp_port_for_primal(primal);
-                        let host: std::sync::Arc<str> = std::env::var("BIOMEOS_BIND_ADDRESS")
+                        let host: std::sync::Arc<str> = std::env::var(biomeos_types::env_config::vars::BIND_ADDRESS)
                             .unwrap_or_else(|_| {
                                 biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
                             })

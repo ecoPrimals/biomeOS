@@ -30,7 +30,7 @@ pub fn is_explicit_coordinated_mode() -> bool {
 pub fn is_explicit_coordinated_mode_with(env_override: Option<&str>) -> bool {
     let mode: Option<String> = env_override
         .map(String::from)
-        .or_else(|| std::env::var("BIOMEOS_MODE").ok());
+        .or_else(|| std::env::var(biomeos_types::env_config::vars::MODE).ok());
     mode.as_deref()
         .map(is_explicit_coordinated_mode_str)
         .unwrap_or(false)

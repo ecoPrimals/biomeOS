@@ -31,7 +31,7 @@ impl BiomeOsMode {
     /// - Bootstrap if Tower Atomic does not exist (or `BIOMEOS_MODE=bootstrap`)
     /// - Coordinated if Tower Atomic exists (or `BIOMEOS_MODE=coordinated`)
     pub async fn detect(family_id: &str) -> Self {
-        Self::detect_with_mode(family_id, std::env::var("BIOMEOS_MODE").ok().as_deref()).await
+        Self::detect_with_mode(family_id, std::env::var(biomeos_types::env_config::vars::MODE).ok().as_deref()).await
     }
 
     /// Like [`Self::detect`], but supplies the `BIOMEOS_MODE` value directly (for tests and tooling).
@@ -85,9 +85,9 @@ impl BiomeOsMode {
         // Uses SocketNucleation for deterministic paths
         // Bootstrap hints from canonical constants; production uses runtime discovery
 
-        let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+        let security_provider = std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
             .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string());
-        let network_provider = std::env::var("BIOMEOS_NETWORK_PROVIDER")
+        let network_provider = std::env::var(biomeos_types::env_config::vars::NETWORK_PROVIDER)
             .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
 
         let mut nucleation = SocketNucleation::default();

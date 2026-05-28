@@ -172,7 +172,7 @@ pub fn discover_neural_api_socket_from(
             }
         }
         None => {
-            if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {
+            if let Ok(socket) = std::env::var(biomeos_types::env_config::vars::NEURAL_API_SOCKET) {
                 if std::path::Path::new(&socket).exists() {
                     return Some(socket);
                 }

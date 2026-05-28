@@ -11,10 +11,10 @@ use crate::lifecycle_manager::LifecycleState;
 /// Collect plasmidBin search directories (same search order as primal_spawner).
 pub(crate) fn binary_search_dirs() -> Vec<PathBuf> {
     [
-        std::env::var("ECOPRIMALS_PLASMID_BIN")
+        std::env::var(biomeos_types::env_config::vars::PLASMID_BIN)
             .ok()
             .map(PathBuf::from),
-        std::env::var("BIOMEOS_PLASMID_BIN_DIR")
+        std::env::var(biomeos_types::env_config::vars::PLASMID_BIN_DIR)
             .ok()
             .map(PathBuf::from),
         Some(PathBuf::from("./plasmidBin")),

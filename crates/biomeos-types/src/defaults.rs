@@ -369,7 +369,7 @@ impl RuntimeConfig {
     /// Get bind address with explicit environment map (for testing)
     #[must_use]
     pub fn bind_address_with(env: &HashMap<String, String>) -> String {
-        env.get("BIOMEOS_BIND_ADDRESS")
+        env.get(crate::env_config::vars::BIND_ADDRESS)
             .or_else(|| env.get("BIND_ADDRESS"))
             .cloned()
             .unwrap_or_else(|| crate::constants::endpoints::DEFAULT_LOCALHOST_V6.to_string())

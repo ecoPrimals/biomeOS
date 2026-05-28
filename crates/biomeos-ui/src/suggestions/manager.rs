@@ -51,7 +51,7 @@ impl AISuggestionManager {
     /// Discovers ANY primal with "ai" capability, not specifically "Squirrel".
     /// Primals self-register capabilities at runtime.
     pub async fn discover_ai_provider(&mut self) -> Result<()> {
-        self.discover_ai_provider_with_strict(std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
+        self.discover_ai_provider_with_strict(std::env::var(biomeos_types::env_config::vars::STRICT_DISCOVERY).is_ok())
             .await
     }
 

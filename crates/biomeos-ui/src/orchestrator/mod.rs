@@ -240,7 +240,7 @@ impl InteractiveUIOrchestrator {
 
         // Subscribe to registry provider events if available
         let registry_name = discovery::resolve_capability_provider_with(
-            "BIOMEOS_REGISTRY_PROVIDER",
+            biomeos_types::env_config::vars::REGISTRY_PROVIDER,
             &biomeos_types::CapabilityTaxonomy::Discovery,
             self.registry_provider_override.as_deref(),
         );

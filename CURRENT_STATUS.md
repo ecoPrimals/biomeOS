@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 28, 2026 (v3.83: Env Var Centralization Wave 58 — 90+ raw env::var string literals centralized to env_config::vars constants across 37 production files, 15 new constants added, 14 sovereign test files migrated #[allow]→#[expect], 8,053 tests)
-**Version**: 3.83
-**Status**: PRODUCTION READY - env var centralization (env_config::vars SSOT) - #[expect] migration complete - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: May 28, 2026 (v3.84: Deep Debt Wave 58b — wired 22 more env var constants, extracted connection_tests.rs (798→376L) + suggestions_tests.rs (772→22L prod), zero production files >800L, 8,053 tests)
+**Version**: 3.84
+**Status**: PRODUCTION READY - env var centralization complete (env_config::vars SSOT, ~90% wired) - zero >800L production files - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 

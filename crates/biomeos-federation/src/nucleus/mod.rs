@@ -144,7 +144,7 @@ impl SecureNucleusDiscovery {
             security_client,
             verified_primals: HashMap::new(),
             family_id: std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok(),
-            _node_id: std::env::var("NODE_ID").ok(),
+            _node_id: std::env::var(biomeos_types::env_config::vars::NODE_ID_LEGACY).ok(),
         }
     }
 

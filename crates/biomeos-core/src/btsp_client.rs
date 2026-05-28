@@ -161,7 +161,7 @@ pub fn btsp_enforce() -> bool {
     if !has_family_id() {
         return false;
     }
-    std::env::var("BIOMEOS_BTSP_ENFORCE").map_or(true, |v| v != "0" && v != "false")
+    std::env::var(biomeos_types::env_config::vars::BTSP_ENFORCE).map_or(true, |v| v != "0" && v != "false")
 }
 
 /// Locate the security provider socket for BTSP delegation.
@@ -485,7 +485,7 @@ pub fn validate_insecure_guard() -> Result<(), String> {
     let has_family = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
         .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
         .is_ok_and(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID);
-    let insecure = std::env::var("BIOMEOS_INSECURE").is_ok_and(|v| v == "1" || v == "true");
+    let insecure = std::env::var(biomeos_types::env_config::vars::INSECURE).is_ok_and(|v| v == "1" || v == "true");
 
     if has_family && insecure {
         return Err("FATAL: FAMILY_ID and BIOMEOS_INSECURE=1 cannot coexist. \
@@ -537,7 +537,7 @@ pub fn log_security_posture() {
             );
         }
         SecurityMode::Development => {
-            let insecure = std::env::var("BIOMEOS_INSECURE").is_ok_and(|v| v == "1" || v == "true");
+            let insecure = std::env::var(biomeos_types::env_config::vars::INSECURE).is_ok_and(|v| v == "1" || v == "true");
             if insecure {
                 warn!("INSECURE MODE — no BTSP authentication. Development only.");
             } else {

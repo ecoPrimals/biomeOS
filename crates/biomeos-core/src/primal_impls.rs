@@ -190,7 +190,7 @@ impl ManagedPrimal for GenericManagedPrimal {
             // Logs redirected to per-primal files
             // instead of /dev/null to enable observability and debugging!
             // Use XDG-compliant paths via SystemPaths
-            let node_id = std::env::var("NODE_ID").unwrap_or_else(|_| "unknown".to_string());
+            let node_id = std::env::var(biomeos_types::env_config::vars::NODE_ID_LEGACY).unwrap_or_else(|_| "unknown".to_string());
 
             // Use SystemPaths for XDG-compliant log location
             let log_path = if let Ok(paths) = SystemPaths::new() {

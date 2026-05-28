@@ -298,7 +298,7 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
     }
 
     cmd.env("FAMILY_ID", config.family_id)
-        .env("NODE_ID", config.node_id);
+        .env(biomeos_types::env_config::vars::NODE_ID_LEGACY, config.node_id);
     cmd
 }
 

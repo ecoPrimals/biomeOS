@@ -47,7 +47,7 @@ pub async fn discover_primal_binary(
 ) -> Result<PathBuf> {
     let explicit_dir = context
         .env()
-        .get("BIOMEOS_PLASMID_BIN_DIR")
+        .get(biomeos_types::env_config::vars::PLASMID_BIN_DIR)
         .cloned()
         .map(PathBuf::from);
 

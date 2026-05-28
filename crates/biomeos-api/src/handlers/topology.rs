@@ -176,7 +176,7 @@ pub async fn get_topology(
 ///
 fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
     // Get node ID from environment or use default
-    let node_id = std::env::var("BIOMEOS_NODE_ID").unwrap_or_else(|_| "standalone".to_string());
+    let node_id = std::env::var(biomeos_types::env_config::vars::NODE_ID).unwrap_or_else(|_| "standalone".to_string());
     let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID)
         .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY))
         .unwrap_or_else(|_| "dev".to_string());

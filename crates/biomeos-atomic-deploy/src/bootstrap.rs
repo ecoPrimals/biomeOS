@@ -46,7 +46,7 @@ pub async fn register_self_in_registry(
     let capabilities = biomeos_types::primal_names::BIOMEOS_SELF_CAPABILITIES;
 
     if let Some(port) = tcp_port {
-        let host: std::sync::Arc<str> = std::env::var("BIOMEOS_BIND_ADDRESS")
+        let host: std::sync::Arc<str> = std::env::var(biomeos_types::env_config::vars::BIND_ADDRESS)
             .unwrap_or_else(|_| biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string())
             .into();
         let endpoint = biomeos_core::TransportEndpoint::TcpSocket { host, port };
@@ -111,11 +111,14 @@ pub async fn execute_bootstrap_sequence(
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), family_id.to_string());
     env.insert("BIOMEOS_FAMILY_ID".to_string(), family_id.to_string());
-    env.insert("BIOMEOS_MODE".to_string(), "bootstrap".to_string());
+    env.insert(
+        biomeos_types::env_config::vars::MODE.to_string(),
+        "bootstrap".to_string(),
+    );
 
     for key in [
-        "BIOMEOS_PLASMID_BIN_DIR",
-        "ECOPRIMALS_PLASMID_BIN",
+        biomeos_types::env_config::vars::PLASMID_BIN_DIR,
+        biomeos_types::env_config::vars::PLASMID_BIN,
         "XDG_RUNTIME_DIR",
         "FAMILY_SEED",
         "BIOMEOS_SOCKET_DIR",
@@ -359,7 +362,10 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("FAMILY_ID".to_string(), family_id.to_string());
         env.insert("BIOMEOS_FAMILY_ID".to_string(), family_id.to_string());
-        env.insert("BIOMEOS_MODE".to_string(), "bootstrap".to_string());
+        env.insert(
+        biomeos_types::env_config::vars::MODE.to_string(),
+        "bootstrap".to_string(),
+    );
 
         assert_eq!(env.get("FAMILY_ID"), Some(&"test-family".to_string()));
         assert_eq!(env.get("BIOMEOS_MODE"), Some(&"bootstrap".to_string()));

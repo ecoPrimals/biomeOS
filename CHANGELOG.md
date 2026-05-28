@@ -2,6 +2,25 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.84 (2026-05-28) — Deep Debt Wave 58b
+
+### Environment variable centralization (continued)
+- Wired 22 additional env var constants that had definitions in
+  `env_config::vars` but were still accessed via raw strings:
+  `BIND_ADDRESS`, `MODE`, `AUTH_MODE`, `NODE_ID`, `DISCOVERY_PROVIDER`,
+  `REGISTRY_PROVIDER`, `STORAGE_PROVIDER`, `ALLOW_LOOPBACK`,
+  `SKIP_MDNS_PROBE`, `INSECURE`, `BTSP_ENFORCE`, `PLASMID_BIN`,
+  `PLASMID_BIN_DIR`, `NEURAL_API_SOCKET`, `SECURITY_PROVIDER`,
+  `NETWORK_PROVIDER`, `STRICT_DISCOVERY`, and more
+- ~90% of production `env::var` reads now use centralized constants
+
+### Smart refactoring
+- Extracted `connection.rs` inline test module (798→376L production) to
+  `connection_tests.rs` — drops below 800L threshold
+- Extracted `suggestions/mod.rs` inline test module (772→22L production) to
+  `suggestions_tests.rs` — 97% test bloat removed
+- Zero production `.rs` files exceed 800 lines
+
 ## v3.83 (2026-05-28) — Env Var Centralization Wave 58
 
 ### Environment variable centralization

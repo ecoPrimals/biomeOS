@@ -103,7 +103,7 @@ impl DeviceManagementProvider {
 
         // Advertise capability via registry provider (Songbird or env-configured)
         let registry_provider =
-            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
+            resolve_provider(biomeos_types::env_config::vars::REGISTRY_PROVIDER, &CapabilityTaxonomy::Discovery);
         if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
             match registry
                 .call(
@@ -179,7 +179,7 @@ impl DeviceManagementProvider {
 
         // Try to load from storage provider (NestGate or env-configured)
         let storage_provider =
-            resolve_provider("BIOMEOS_STORAGE_PROVIDER", &CapabilityTaxonomy::DataStorage);
+            resolve_provider(biomeos_types::env_config::vars::STORAGE_PROVIDER, &CapabilityTaxonomy::DataStorage);
         if let Ok(storage) = AtomicClient::discover(&storage_provider).await {
             match storage
                 .call(
@@ -339,7 +339,7 @@ impl DeviceManagementProvider {
 
         // Try orchestration provider as backup
         let orch_provider =
-            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
+            resolve_provider(biomeos_types::env_config::vars::REGISTRY_PROVIDER, &CapabilityTaxonomy::Discovery);
         if let Ok(orchestrator) = AtomicClient::discover(&orch_provider).await {
             match orchestrator
                 .call("orchestration.deploy_niche", config)
@@ -371,7 +371,7 @@ impl DeviceManagementProvider {
 
         // Coordinate via registry provider
         let registry_provider =
-            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", &CapabilityTaxonomy::Discovery);
+            resolve_provider(biomeos_types::env_config::vars::REGISTRY_PROVIDER, &CapabilityTaxonomy::Discovery);
         if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
             match registry
                 .call(
@@ -388,7 +388,7 @@ impl DeviceManagementProvider {
 
                     // Persist assignment to storage provider
                     let storage_prov = resolve_provider(
-                        "BIOMEOS_STORAGE_PROVIDER",
+                        biomeos_types::env_config::vars::STORAGE_PROVIDER,
                         &CapabilityTaxonomy::DataStorage,
                     );
                     if let Ok(storage) = AtomicClient::discover(&storage_prov).await {

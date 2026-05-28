@@ -173,7 +173,7 @@ pub struct P2pDiscoveryConfig {
 fn strict_discovery_resolved(config: &P2pDiscoveryConfig) -> bool {
     config
         .strict_discovery
-        .unwrap_or_else(|| std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
+        .unwrap_or_else(|| std::env::var(biomeos_types::env_config::vars::STRICT_DISCOVERY).is_ok())
 }
 
 impl P2PCoordinator {

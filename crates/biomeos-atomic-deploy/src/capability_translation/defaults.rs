@@ -82,7 +82,8 @@ fn load_defaults_core(
     let mut count = 0;
 
     // Provider resolution is env-first.
-    let strict = lookup_env("BIOMEOS_STRICT_DISCOVERY", env_overrides).is_ok();
+    let strict =
+        lookup_env(biomeos_types::env_config::vars::STRICT_DISCOVERY, env_overrides).is_ok();
 
     let resolve_provider = |env_key: &str, default: &str| -> String {
         match lookup_env(env_key, env_overrides) {
@@ -98,9 +99,12 @@ fn load_defaults_core(
         }
     };
 
-    let security_provider = resolve_provider("BIOMEOS_SECURITY_PROVIDER", BEARDOG);
-    let network_provider = resolve_provider("BIOMEOS_NETWORK_PROVIDER", SONGBIRD);
-    let storage_provider = resolve_provider("BIOMEOS_STORAGE_PROVIDER", NESTGATE);
+    let security_provider =
+        resolve_provider(biomeos_types::env_config::vars::SECURITY_PROVIDER, BEARDOG);
+    let network_provider =
+        resolve_provider(biomeos_types::env_config::vars::NETWORK_PROVIDER, SONGBIRD);
+    let storage_provider =
+        resolve_provider(biomeos_types::env_config::vars::STORAGE_PROVIDER, NESTGATE);
     let compute_provider = resolve_provider("BIOMEOS_COMPUTE_PROVIDER", TOADSTOOL);
     let ai_provider = resolve_provider("BIOMEOS_AI_PROVIDER", SQUIRREL);
     let genetic_provider = resolve_provider("BIOMEOS_GENETIC_PROVIDER", BEARDOG);

@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 27, 2026 (v3.83: Deep Debt W57 — nucleus_ingest module split, bearDog casing fix, LogConfig XDG, flate2 pure Rust)
+**Updated**: May 27, 2026 (v3.84: Deep Debt W57 — nucleus_ingest module split, bearDog casing fix, LogConfig XDG, flate2 pure Rust)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -98,11 +98,11 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated May 27, 2026 — v3.83)
+## 5. Deep Debt Metrics (Updated May 27, 2026 — v3.84)
 
 | Metric | Value |
 |--------|-------|
-| TODO markers in Rust source | 0 (verified clean in v3.83) |
+| TODO markers in Rust source | 0 (verified clean in v3.84) |
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND/XXX | 0 |
 | Unsafe code | 0 (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary roots) |
@@ -452,7 +452,7 @@ Systematic deep debt resolution across 7 waves:
 - [x] Wave 55 Gateway Completion: signal graph synced to primalSpring conventions, emit pipeline via nest_emit_spore signal graph (19 total), receipt shape aligned, content path passed to NestGate, NC-1.4 blocker documented — v3.79
 - [x] Deep Debt W56: routing.rs 920→551L (route_table.rs extraction + DRY semantic call), nucleus.rs 883→605L (nucleus_procs.rs extraction), rustix 0.38→1.x, hardcoded values → capability-based config, #[allow] → anyhow wrapping, SporeInstantiate structured deferred — v3.80
 - [x] NC-1.4 + NC-1.emit Gateway Completion: biomeos-pseudospore crate (26th workspace member), canonical pseudoSpore 2.0 validation, full emit materialization with polling + pseudoSpore dir unpack, signal params wired to graph nodes — v3.81
-- [x] Deep Debt W57: nucleus_ingest.rs 924→245L module split (envelope/materialize/receipt/tests), bearDog casing fix (method_gate/verifier.rs), LogConfig XDG-compliant paths, flate2 rust_backend (zero C deps) — v3.83
+- [x] Deep Debt W57: nucleus_ingest.rs 924→245L module split (envelope/materialize/receipt/tests), bearDog casing fix (method_gate/verifier.rs), LogConfig XDG-compliant paths, flate2 rust_backend (zero C deps) — v3.84
 
 ### Degradation Behavior
 

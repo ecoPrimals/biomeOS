@@ -350,7 +350,7 @@ fn fallback_lan_candidates() -> Vec<Candidate> {
     // Loopback is only included when explicitly opted-in. Production primals
     // discover peers on the real LAN; assuming another primal on 127.0.0.1
     // violates the self-knowledge principle.
-    if std::env::var("BIOMEOS_ALLOW_LOOPBACK_DISCOVERY").is_ok() {
+    if std::env::var(biomeos_types::env_config::vars::ALLOW_LOOPBACK).is_ok() {
         for host in &[
             biomeos_types::constants::endpoints::DEFAULT_LOCALHOST,
             biomeos_types::constants::endpoints::DEFAULT_LOCALHOST_V6,

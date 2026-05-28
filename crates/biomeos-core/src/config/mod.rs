@@ -220,7 +220,7 @@ pub mod presets {
                 let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
                     .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
                     .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
-                let provider = std::env::var("DISCOVERY_PROVIDER")
+                let provider = std::env::var(biomeos_types::env_config::vars::DISCOVERY_PROVIDER)
                     .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
                 let discovery = SocketDiscovery::new(family_id);
                 format!(

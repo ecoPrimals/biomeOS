@@ -195,12 +195,12 @@ impl DiscoveryBootstrap {
         tracing::info!("Attempting mDNS discovery for BiomeOS services (_biomeos._tcp.local)");
 
         let skip_probe =
-            skip_probe_override.unwrap_or_else(|| std::env::var("BIOMEOS_SKIP_MDNS_PROBE").is_ok());
+            skip_probe_override.unwrap_or_else(|| std::env::var(biomeos_types::env_config::vars::SKIP_MDNS_PROBE).is_ok());
 
         // Loopback port-scanning requires explicit opt-in.  Production primals
         // discover peers through socket-discovery, mDNS, or env vars — never by
         // assuming another primal lives on 127.0.0.1.
-        let allow_loopback = std::env::var("BIOMEOS_ALLOW_LOOPBACK_DISCOVERY").is_ok();
+        let allow_loopback = std::env::var(biomeos_types::env_config::vars::ALLOW_LOOPBACK).is_ok();
 
         if !skip_probe && allow_loopback {
             const CANDIDATE_PORTS: &[u16] = &[
