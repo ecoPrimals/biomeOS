@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.83 (2026-05-28) — Env Var Centralization Wave 58
+
+### Environment variable centralization
+- Added 15 new constants to `env_config::vars`: `BIND_ADDRESS`, `MODE`,
+  `AUTH_MODE`, `NODE_ID`, `NODE_ID_LEGACY`, `DISCOVERY_PROVIDER`,
+  `REGISTRY_PROVIDER`, `STORAGE_PROVIDER`, `ALLOW_LOOPBACK`,
+  `SKIP_MDNS_PROBE`, `INSECURE`, `BTSP_ENFORCE`, `MESH_PORT`, `HTTP_PORT`
+- Replaced ~90 raw `env::var("...")` string literals with `env_config::vars::`
+  constants across 37 production files — aligns with primalSpring Wave 57b
+  centralization push across the ecosystem
+- Top variables centralized: `FAMILY_ID` (25+), `BIOMEOS_FAMILY_ID` (20+),
+  `XDG_RUNTIME_DIR` (18+), `BIOMEOS_SOCKET_DIR` (12+),
+  `BIOMEOS_SECURITY_PROVIDER` (7), `NEURAL_API_SOCKET` (7),
+  `BIOMEOS_STRICT_DISCOVERY` (6), `BIOMEOS_PLASMID_BIN_DIR` (5)
+
+### Clippy migration
+- Migrated 14 sovereign test files from `#[allow(clippy::unwrap_used,
+  clippy::expect_used)]` to `#[expect(..., reason = "test assertions")]`
+
+### Code quality
+- Fixed unused `pub(crate) use discover_binaries_with` re-export — gated
+  behind `#[cfg(test)]` since only test modules reference it
+- Zero warnings, zero `#[allow(clippy::` in production
+
 ## v3.82 (2026-05-27) — Deep Debt Wave 57
 
 ### Smart refactoring

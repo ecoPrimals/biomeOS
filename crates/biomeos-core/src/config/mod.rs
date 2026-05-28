@@ -217,8 +217,8 @@ pub mod presets {
             .or_else(|_| std::env::var("BIOMEOS_DISCOVERY_ENDPOINT"))
             .unwrap_or_else(|_| {
                 use crate::socket_discovery::SocketDiscovery;
-                let family_id = std::env::var("FAMILY_ID")
-                    .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+                let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+                    .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
                     .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
                 let provider = std::env::var("DISCOVERY_PROVIDER")
                     .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());

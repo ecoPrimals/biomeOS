@@ -91,7 +91,7 @@ impl Plasmodium {
         ) {
             (Some(f), _) => f.clone(),
             (None, Some(n)) => n.clone(),
-            (None, None) => std::env::var("FAMILY_ID")
+            (None, None) => std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
                 .or_else(|_| std::env::var("NODE_FAMILY_ID"))
                 .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string()),
         };

@@ -126,9 +126,9 @@ impl BiomeosProvider {
 
     /// Resolve the Neural API socket path using standard XDG resolution.
     pub fn from_env(capability_domain: impl Into<String>) -> Result<Self> {
-        let socket_dir = if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+        let socket_dir = if let Ok(dir) = std::env::var(biomeos_types::env_config::vars::SOCKET_DIR) {
             PathBuf::from(dir)
-        } else if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
+        } else if let Ok(xdg) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
             PathBuf::from(xdg).join("biomeos")
         } else {
             biomeos_types::SystemPaths::new_lazy()

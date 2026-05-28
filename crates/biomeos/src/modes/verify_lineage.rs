@@ -219,7 +219,7 @@ async fn verify_cryptographic_lineage(
     // Provider name resolved from env, not hardcoded
     let security_provider = match security_provider_override {
         Some(s) => s,
-        None => std::env::var("BIOMEOS_SECURITY_PROVIDER")
+        None => std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
             .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string()),
     };
     let security_client = AtomicClient::discover(&security_provider)

@@ -41,7 +41,7 @@ fn resolve_primal_socket_with(primal: &str, socket_dir: Option<String>) -> PathB
 fn effective_socket_dir(socket_dir_override: Option<&String>) -> Option<String> {
     socket_dir_override
         .cloned()
-        .or_else(|| std::env::var("BIOMEOS_SOCKET_DIR").ok())
+        .or_else(|| std::env::var(biomeos_types::env_config::vars::SOCKET_DIR).ok())
 }
 
 /// Send a JSON-RPC capability call to a primal over Unix socket.

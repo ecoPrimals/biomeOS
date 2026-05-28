@@ -84,8 +84,8 @@ impl Discovery {
     /// Uses dynamic socket scanning instead of hardcoded list.
     /// Discovers ANY primal with a socket in the runtime directory.
     pub async fn discover_primals() -> Result<DiscoveryResult> {
-        let family_id = std::env::var("FAMILY_ID")
-            .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+        let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+            .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
             .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
         Self::discover_primals_with(&family_id, None).await
     }

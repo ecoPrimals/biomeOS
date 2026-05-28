@@ -178,7 +178,7 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v3.82)
+**Status**: Production Ready (v3.83)
 **Updated**: May 27, 2026
 **Tests**: 8,053 passing (0 failures, fully concurrent), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0
 

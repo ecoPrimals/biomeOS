@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 27, 2026 (v3.82: Deep Debt Wave 57 — smart refactor nucleus_ingest.rs 924L→5-file module dir, fix bearDog casing bug in method_gate, LogConfig XDG-compliant paths, flate2 pure Rust backend, 8,053 tests)
-**Version**: 3.82
-**Status**: PRODUCTION READY - nucleus_ingest smart module split (envelope/materialize/receipt/tests) - bearDog socket casing fix - LogConfig XDG paths - flate2 rust_backend (zero C deps) - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: May 28, 2026 (v3.83: Env Var Centralization Wave 58 — 90+ raw env::var string literals centralized to env_config::vars constants across 37 production files, 15 new constants added, 14 sovereign test files migrated #[allow]→#[expect], 8,053 tests)
+**Version**: 3.83
+**Status**: PRODUCTION READY - env var centralization (env_config::vars SSOT) - #[expect] migration complete - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 

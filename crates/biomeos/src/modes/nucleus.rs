@@ -129,7 +129,7 @@ pub(crate) fn resolve_startup_config(
         mode,
         node_id,
         family_id,
-        std::env::var("BIOMEOS_SOCKET_DIR").ok().as_deref(),
+        std::env::var(biomeos_types::env_config::vars::SOCKET_DIR).ok().as_deref(),
     )
 }
 
@@ -586,9 +586,10 @@ use nucleus_procs::{
     cleanup_stale_sockets, detect_ecosystem, discover_binaries, start_primal, wait_for_socket,
     DEFAULT_SOCKET_POLL_INTERVAL,
 };
-pub(crate) use nucleus_procs::{discover_binaries_with, resolve_socket_dir_with};
-use nucleus_procs::{generate_jwt_secret, health_check};
+use nucleus_procs::{generate_jwt_secret, health_check, resolve_socket_dir_with};
 
+#[cfg(test)]
+pub(crate) use nucleus_procs::discover_binaries_with;
 #[cfg(test)]
 use nucleus_procs::discover_search_path;
 

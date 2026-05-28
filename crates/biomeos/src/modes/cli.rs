@@ -65,7 +65,7 @@ async fn show_system_summary() -> Result<()> {
 
     // Check for running primals by looking for sockets
     let socket_dirs = [
-        std::env::var("XDG_RUNTIME_DIR")
+        std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
             .map(|d| format!("{d}/biomeos"))
             .ok(),
         Some(biomeos_types::defaults::DEFAULT_SOCKET_DIR.to_string()),

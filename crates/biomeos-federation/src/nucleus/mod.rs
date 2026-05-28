@@ -143,7 +143,7 @@ impl SecureNucleusDiscovery {
             songbird,
             security_client,
             verified_primals: HashMap::new(),
-            family_id: std::env::var("FAMILY_ID").ok(),
+            family_id: std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok(),
             _node_id: std::env::var("NODE_ID").ok(),
         }
     }

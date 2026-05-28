@@ -25,7 +25,7 @@ use super::context::{ExecutionContext, RollbackAction};
 
 /// Resolve family ID from graph env, falling back to runtime discovery.
 fn resolve_family_id(env: &HashMap<String, String>) -> String {
-    env.get("FAMILY_ID")
+    env.get(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
         .cloned()
         .unwrap_or_else(|| biomeos_core::family_discovery::get_family_id())
 }
@@ -153,10 +153,10 @@ pub async fn node_crypto_derive_seed(
 fn discover_neural_api_socket(env: &HashMap<String, String>) -> Result<String> {
     use biomeos_types::paths::SystemPaths;
 
-    if let Some(socket) = env.get("NEURAL_API_SOCKET") {
+    if let Some(socket) = env.get(biomeos_types::env_config::vars::NEURAL_API_SOCKET) {
         return Ok(socket.clone());
     }
-    if let Ok(socket) = std::env::var("NEURAL_API_SOCKET") {
+    if let Ok(socket) = std::env::var(biomeos_types::env_config::vars::NEURAL_API_SOCKET) {
         return Ok(socket);
     }
 

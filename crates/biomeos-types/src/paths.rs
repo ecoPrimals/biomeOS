@@ -393,7 +393,7 @@ impl SystemPaths {
     /// 2. `$TMPDIR/biomeos-$USER`
     #[must_use]
     pub fn default_runtime_dir() -> PathBuf {
-        if let Ok(xdg_runtime) = env::var("XDG_RUNTIME_DIR") {
+        if let Ok(xdg_runtime) = env::var(crate::env_config::vars::XDG_RUNTIME_DIR) {
             PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS)
         } else {
             let username = Self::get_username();
@@ -431,7 +431,7 @@ impl SystemPaths {
     )]
     fn get_runtime_dir() -> Result<PathBuf> {
         // 1. Try $XDG_RUNTIME_DIR
-        if let Ok(xdg_runtime) = env::var("XDG_RUNTIME_DIR") {
+        if let Ok(xdg_runtime) = env::var(crate::env_config::vars::XDG_RUNTIME_DIR) {
             return Ok(PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS));
         }
 

@@ -110,14 +110,14 @@ impl DeploymentConfig {
             usb_seed_path,
             family_id: FamilyId::new("1894e909e454").to_string(),
             deployment_batch: chrono::Utc::now().format("%Y%m%d").to_string(),
-            binary_dir: std::env::var("BIOMEOS_PLASMID_BIN_DIR")
+            binary_dir: std::env::var(biomeos_types::env_config::vars::PLASMID_BIN_DIR)
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| {
                     std::env::current_dir()
                         .unwrap_or_else(|_| PathBuf::from("."))
                         .join("plasmidBin")
                 }),
-            runtime_dir: std::env::var("XDG_RUNTIME_DIR")
+            runtime_dir: std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| {
                     let uid = std::env::var("UID")

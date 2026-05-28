@@ -322,7 +322,7 @@ fn infer_type_from_name(name: &str) -> String {
 /// Single source of truth: `SystemPaths::new_lazy().runtime_dir()`.
 /// Only falls back to env override if `BIOMEOS_SOCKET_DIR` is explicitly set.
 fn get_socket_dir() -> String {
-    get_socket_dir_from(std::env::var("BIOMEOS_SOCKET_DIR").ok().as_deref())
+    get_socket_dir_from(std::env::var(biomeos_types::env_config::vars::SOCKET_DIR).ok().as_deref())
 }
 
 fn get_socket_dir_from(override_dir: Option<&str>) -> String {

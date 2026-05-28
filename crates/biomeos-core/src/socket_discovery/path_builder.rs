@@ -118,7 +118,7 @@ fn build_socket_path_inner(
 }
 
 fn get_xdg_runtime_dir() -> Option<PathBuf> {
-    env::var("XDG_RUNTIME_DIR")
+    env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
         .ok()
         .map(PathBuf::from)
         .filter(|p| p.exists())

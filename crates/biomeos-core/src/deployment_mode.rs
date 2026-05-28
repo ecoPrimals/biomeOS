@@ -202,7 +202,7 @@ impl DeploymentMode {
     /// ```
     #[must_use]
     pub fn socket_prefix(&self) -> PathBuf {
-        self.socket_prefix_with_runtime(std::env::var("XDG_RUNTIME_DIR").ok().as_deref(), None)
+        self.socket_prefix_with_runtime(std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR).ok().as_deref(), None)
     }
 
     /// Like [`Self::socket_prefix`], but uses the given runtime directory and UID override

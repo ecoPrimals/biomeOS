@@ -230,7 +230,7 @@ impl PrimalDiscovery {
     /// Socket directory resolution: explicit override → `SystemPaths` (XDG-compliant).
     fn resolve_socket_dir() -> PathBuf {
         // Explicit override takes priority
-        if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+        if let Ok(dir) = std::env::var(biomeos_types::env_config::vars::SOCKET_DIR) {
             return PathBuf::from(dir);
         }
 

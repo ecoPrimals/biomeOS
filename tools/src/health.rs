@@ -251,7 +251,7 @@ async fn check_ecosystem_components(_config: &HealthConfig) -> Result<Vec<Health
 
     let mut results = Vec::new();
 
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
+    let runtime_dir = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
         .map(PathBuf::from)
         .or_else(|_| {
             std::env::var("UID")

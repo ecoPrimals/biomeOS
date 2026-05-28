@@ -20,7 +20,7 @@ use tracing::{debug, warn};
 /// rather than failure.
 pub fn load_family_seed_from_storage() -> Bytes {
     let seed_b64 = std::env::var("BIOMEOS_FAMILY_SEED").ok();
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
+    let runtime_dir = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
         .ok()
         .map(std::path::PathBuf::from);
     load_family_seed_from_storage_with(seed_b64.as_deref(), runtime_dir.as_deref(), true)

@@ -193,7 +193,7 @@ impl FamilyCredentials {
     /// - `FAMILY_SEED`
     pub fn from_env() -> Result<Self, BirdSongError> {
         Self::from_env_values(
-            std::env::var("FAMILY_ID").ok().as_deref(),
+            std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok().as_deref(),
             std::env::var("FAMILY_SEED").ok().as_deref(),
         )
     }

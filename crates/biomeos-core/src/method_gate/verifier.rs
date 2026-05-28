@@ -67,7 +67,7 @@ impl BearDogVerifier {
 
     /// Resolve the BearDog socket from environment or XDG defaults.
     pub fn from_env() -> Option<Self> {
-        let path = std::env::var("BEARDOG_SOCKET")
+        let path = std::env::var(biomeos_types::env_config::vars::BEARDOG_SOCKET)
             .ok()
             .map(std::path::PathBuf::from)
             .or_else(|| {

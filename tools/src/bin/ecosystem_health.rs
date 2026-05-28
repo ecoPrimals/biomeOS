@@ -20,7 +20,7 @@ use tokio::net::UnixStream;
 
 /// Socket directory for primal IPC (`BIOMEOS_SOCKET_DIR` or `/tmp/biomeos`).
 fn biomeos_socket_dir() -> PathBuf {
-    std::env::var("BIOMEOS_SOCKET_DIR")
+    std::env::var(biomeos_types::env_config::vars::SOCKET_DIR)
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/tmp/biomeos"))
 }

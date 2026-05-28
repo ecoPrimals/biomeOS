@@ -264,8 +264,8 @@ fn get_socket_dir() -> String {
 fn get_socket_dir_from(primal_socket_override: Option<&str>) -> String {
     use biomeos_types::constants::runtime_paths;
 
-    let family_id = std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+    let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+        .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
         .unwrap_or_else(|_| biomeos_core::family_discovery::get_family_id());
 
     let socket_path = biomeos_core::socket_discovery::build_socket_path_with_overrides(

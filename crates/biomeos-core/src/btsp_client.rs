@@ -136,16 +136,16 @@ pub fn security_mode() -> SecurityMode {
 /// Whether `FAMILY_ID` (or `BIOMEOS_FAMILY_ID`) is set to a non-default value.
 #[must_use]
 pub fn has_family_id() -> bool {
-    std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+    std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+        .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
         .is_ok_and(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID)
 }
 
 /// Read the family ID string from environment.
 #[must_use]
 pub fn family_id() -> Option<String> {
-    std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+    std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+        .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
         .ok()
         .filter(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID)
 }
@@ -187,7 +187,7 @@ pub fn security_provider_socket_path() -> Option<std::path::PathBuf> {
         }
     }
 
-    let provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+    let provider = std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
         .unwrap_or_else(|_| primal_names::BEARDOG.to_string());
 
     let socket_dir = socket_dir()?;
@@ -205,10 +205,10 @@ pub fn security_provider_socket_path() -> Option<std::path::PathBuf> {
 }
 
 fn socket_dir() -> Option<std::path::PathBuf> {
-    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+    if let Ok(dir) = std::env::var(biomeos_types::env_config::vars::SOCKET_DIR) {
         return Some(std::path::PathBuf::from(dir));
     }
-    if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+    if let Ok(runtime) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
         let dir = std::path::PathBuf::from(runtime).join("biomeos");
         if dir.is_dir() {
             return Some(dir);
@@ -482,8 +482,8 @@ async fn verify_session_via_security_provider(
 ///
 /// Returns a human-readable error message when both are set.
 pub fn validate_insecure_guard() -> Result<(), String> {
-    let has_family = std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+    let has_family = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+        .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
         .is_ok_and(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID);
     let insecure = std::env::var("BIOMEOS_INSECURE").is_ok_and(|v| v == "1" || v == "true");
 
@@ -527,8 +527,8 @@ pub fn extract_family_id(path: &Path) -> Option<String> {
 pub fn log_security_posture() {
     match security_mode() {
         SecurityMode::Production { .. } => {
-            let fid = std::env::var("FAMILY_ID")
-                .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+            let fid = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+                .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
                 .unwrap_or_else(|_| "unknown".to_owned());
             info!(
                 family_id = %fid,

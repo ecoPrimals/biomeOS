@@ -256,7 +256,7 @@ impl TopologyHandler {
         }
 
         // Priority 2: Explicit BIOMEOS_SOCKET_DIR environment variable
-        if let Ok(socket_dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+        if let Ok(socket_dir) = std::env::var(biomeos_types::env_config::vars::SOCKET_DIR) {
             let path = PathBuf::from(&socket_dir);
             if !dirs.contains(&path) && path.exists() {
                 dirs.push(path);
@@ -264,7 +264,7 @@ impl TopologyHandler {
         }
 
         // Priority 3: XDG_RUNTIME_DIR/biomeos (direct check)
-        if let Ok(xdg_runtime) = std::env::var("XDG_RUNTIME_DIR") {
+        if let Ok(xdg_runtime) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
             let path = PathBuf::from(xdg_runtime).join("biomeos");
             if !dirs.contains(&path) && path.exists() {
                 dirs.push(path);
@@ -272,7 +272,10 @@ impl TopologyHandler {
         }
 
         // Priority 4: /tmp/biomeos-{FAMILY_ID} (family-scoped, Docker/NUCLEUS deployments)
-        for key in ["BIOMEOS_FAMILY_ID", "FAMILY_ID"] {
+        for key in [
+            biomeos_types::env_config::vars::FAMILY_ID,
+            biomeos_types::env_config::vars::FAMILY_ID_LEGACY,
+        ] {
             if let Ok(fid) = std::env::var(key) {
                 let path = biomeos_types::constants::runtime_paths::fallback_runtime_dir(&fid);
                 if !dirs.contains(&path) && path.exists() {

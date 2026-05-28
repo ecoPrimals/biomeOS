@@ -68,7 +68,7 @@ fn effective_unix_uid_string() -> Option<String> {
 }
 
 fn device_management_socket_path() -> Result<String> {
-    if let Ok(dir) = std::env::var("XDG_RUNTIME_DIR") {
+    if let Ok(dir) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
         return Ok(PathBuf::from(dir)
             .join("biomeos-device-management.sock")
             .to_string_lossy()

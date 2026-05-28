@@ -70,6 +70,54 @@ pub mod vars {
 
     /// Songbird socket
     pub const SONGBIRD_SOCKET: &str = "SONGBIRD_SOCKET";
+
+    // --- Operational Mode ---
+
+    /// Bind address for HTTP/TCP listeners
+    pub const BIND_ADDRESS: &str = "BIOMEOS_BIND_ADDRESS";
+
+    /// Operational mode (nucleus, deploy, etc.)
+    pub const MODE: &str = "BIOMEOS_MODE";
+
+    /// Authentication mode (ionic, passthrough, etc.)
+    pub const AUTH_MODE: &str = "BIOMEOS_AUTH_MODE";
+
+    /// Node identifier
+    pub const NODE_ID: &str = "BIOMEOS_NODE_ID";
+
+    /// Legacy node ID (checked as fallback)
+    pub const NODE_ID_LEGACY: &str = "NODE_ID";
+
+    // --- Discovery & Registration ---
+
+    /// Discovery provider override
+    pub const DISCOVERY_PROVIDER: &str = "DISCOVERY_PROVIDER";
+
+    /// Registry provider override
+    pub const REGISTRY_PROVIDER: &str = "BIOMEOS_REGISTRY_PROVIDER";
+
+    /// Storage provider override
+    pub const STORAGE_PROVIDER: &str = "BIOMEOS_STORAGE_PROVIDER";
+
+    /// Allow loopback discovery (dev/test)
+    pub const ALLOW_LOOPBACK: &str = "BIOMEOS_ALLOW_LOOPBACK_DISCOVERY";
+
+    /// Skip mDNS probing
+    pub const SKIP_MDNS_PROBE: &str = "BIOMEOS_SKIP_MDNS_PROBE";
+
+    // --- Security ---
+
+    /// BTSP insecure mode (dev only — degrades security)
+    pub const INSECURE: &str = "BIOMEOS_INSECURE";
+
+    /// BTSP enforcement mode
+    pub const BTSP_ENFORCE: &str = "BIOMEOS_BTSP_ENFORCE";
+
+    /// Songbird mesh port
+    pub const MESH_PORT: &str = "SONGBIRD_MESH_PORT";
+
+    /// Songbird HTTP port
+    pub const HTTP_PORT: &str = "SONGBIRD_HTTP_PORT";
 }
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)

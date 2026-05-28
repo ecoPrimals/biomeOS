@@ -409,7 +409,7 @@ impl SocketDiscovery {
             .clone()
             .filter(|p| p.exists())
             .or_else(|| {
-                env::var("XDG_RUNTIME_DIR")
+                env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
                     .ok()
                     .map(PathBuf::from)
                     .filter(|p| p.exists())
@@ -425,7 +425,7 @@ impl SocketDiscovery {
 
     #[cfg(test)]
     pub(crate) fn get_xdg_runtime_dir() -> Option<PathBuf> {
-        env::var("XDG_RUNTIME_DIR")
+        env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
             .ok()
             .map(PathBuf::from)
             .filter(|p| p.exists())

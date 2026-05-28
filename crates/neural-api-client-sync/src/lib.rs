@@ -253,13 +253,13 @@ pub fn resolve_socket_with_env(
 
     let family_id = family_id_override
         .map(String::from)
-        .or_else(|| std::env::var("FAMILY_ID").ok())?;
+        .or_else(|| std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok())?;
 
     // Tier 2: XDG_RUNTIME_DIR
     let xdg = env
         .xdg_runtime_dir
         .clone()
-        .or_else(|| std::env::var("XDG_RUNTIME_DIR").ok());
+        .or_else(|| std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR).ok());
     if let Some(xdg) = xdg {
         let p = PathBuf::from(xdg)
             .join("biomeos")

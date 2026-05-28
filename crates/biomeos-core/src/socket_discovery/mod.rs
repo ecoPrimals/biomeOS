@@ -121,8 +121,8 @@ pub async fn discover_socket_with_family(
 ) -> Option<PathBuf> {
     let family_id = family_id
         .map(String::from)
-        .or_else(|| env::var("FAMILY_ID").ok())
-        .or_else(|| env::var("BIOMEOS_FAMILY_ID").ok())
+        .or_else(|| env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok())
+        .or_else(|| env::var(biomeos_types::env_config::vars::FAMILY_ID).ok())
         .unwrap_or_else(|| "default".to_string());
 
     let discovery = SocketDiscovery::new(family_id);
@@ -152,8 +152,8 @@ pub async fn discover_endpoint_with_family(
 ) -> Option<TransportEndpoint> {
     let family_id = family_id
         .map(String::from)
-        .or_else(|| env::var("FAMILY_ID").ok())
-        .or_else(|| env::var("BIOMEOS_FAMILY_ID").ok())
+        .or_else(|| env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok())
+        .or_else(|| env::var(biomeos_types::env_config::vars::FAMILY_ID).ok())
         .unwrap_or_else(|| DEFAULT_FAMILY_ID.to_string());
 
     let discovery = SocketDiscovery::new(family_id);
@@ -165,8 +165,8 @@ pub async fn discover_endpoint_with_family(
 /// **`WateringHole` standard**: No hardcoded primal names. Use capability constants
 /// from `biomeos_types::constants::capability` (e.g., `capability::CRYPTO`).
 pub async fn discover_endpoint_by_capability(capability: &str) -> Option<TransportEndpoint> {
-    let family_id = env::var("FAMILY_ID")
-        .or_else(|_| env::var("BIOMEOS_FAMILY_ID"))
+    let family_id = env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+        .or_else(|_| env::var(biomeos_types::env_config::vars::FAMILY_ID))
         .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
 
     let discovery = SocketDiscovery::new(family_id);

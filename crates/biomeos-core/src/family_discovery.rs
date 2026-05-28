@@ -142,7 +142,7 @@ pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<Dis
     let family_id = config
         .family_id_override
         .clone()
-        .or_else(|| std::env::var("FAMILY_ID").ok());
+        .or_else(|| std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok());
     if let Some(family_id) = family_id
         && !family_id.is_empty()
     {
@@ -165,7 +165,7 @@ pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<Dis
     let family_id = config
         .biomeos_family_id_override
         .clone()
-        .or_else(|| std::env::var("BIOMEOS_FAMILY_ID").ok());
+        .or_else(|| std::env::var(biomeos_types::env_config::vars::FAMILY_ID).ok());
     if let Some(family_id) = family_id
         && !family_id.is_empty()
         && family_id != "nat0"
@@ -279,14 +279,14 @@ pub fn get_family_id_from_env_with(
             if skip_env {
                 None
             } else {
-                std::env::var("FAMILY_ID").ok()
+                std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok()
             }
         })
         .or_else(|| {
             if skip_env {
                 None
             } else {
-                std::env::var("BIOMEOS_FAMILY_ID").ok()
+                std::env::var(biomeos_types::env_config::vars::FAMILY_ID).ok()
             }
         })
         .unwrap_or_else(|| DEFAULT_FAMILY_ID.to_string())

@@ -46,7 +46,7 @@ pub fn default_family_id_with(env_value: Option<&str>, skip_env: bool) -> String
             if skip_env {
                 None
             } else {
-                std::env::var("FAMILY_ID").ok()
+                std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).ok()
             }
         })
         .unwrap_or_else(|| DEFAULT_FAMILY_ID.to_string())

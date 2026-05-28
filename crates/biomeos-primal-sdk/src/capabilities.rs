@@ -289,7 +289,7 @@ pub fn resolve_neural_api_socket_with(
 
 fn resolve_neural_api_socket() -> Result<PathBuf> {
     // Tier 1: Explicit NEURAL_API_SOCKET
-    if let Ok(path) = std::env::var("NEURAL_API_SOCKET") {
+    if let Ok(path) = std::env::var(biomeos_types::env_config::vars::NEURAL_API_SOCKET) {
         let p = PathBuf::from(&path);
         if p.exists() {
             return Ok(p);
@@ -304,7 +304,7 @@ fn resolve_neural_api_socket() -> Result<PathBuf> {
     }
 
     // Also try family_id suffix (neural-api-{family}.sock)
-    let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
+    let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
     let socket_dir = config.socket_dir();
     let path_with_family = socket_dir.join(format!("neural-api-{family_id}.sock"));
     if path_with_family.exists() {
