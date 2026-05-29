@@ -191,10 +191,12 @@ pub fn discover_neural_api_socket_from(
         return Some(xdg_path.to_string_lossy().to_string());
     }
 
-    // 3. System temp dir fallback (bootstrap scenarios)
-    let tmp_path = std::env::temp_dir().join(&basename);
-    if tmp_path.exists() {
-        return Some(tmp_path.to_string_lossy().to_string());
+    // 3. Fallback runtime base (bootstrap scenarios)
+    let fallback =
+        std::path::PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE)
+            .join(&basename);
+    if fallback.exists() {
+        return Some(fallback.to_string_lossy().to_string());
     }
 
     None
@@ -706,11 +708,13 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_neural_api_socket_temp_dir_fallback_existing_file() {
-        use biomeos_types::constants::runtime_ipc;
+    fn test_discover_neural_api_socket_fallback_runtime_base() {
+        use biomeos_types::constants::{runtime_ipc, runtime_paths};
 
+        let fallback_dir = std::path::PathBuf::from(runtime_paths::FALLBACK_RUNTIME_BASE);
+        let _ = std::fs::create_dir_all(&fallback_dir);
         let basename = format!("{}my-tmp-fam.sock", runtime_ipc::NEURAL_API_BASENAME_PREFIX);
-        let sock = std::env::temp_dir().join(&basename);
+        let sock = fallback_dir.join(&basename);
         std::fs::write(&sock, "").expect("touch");
         let skip_tier1 = "/nonexistent/biomeos-test-neural-tier1-skip";
         let got = discover_neural_api_socket_from("my-tmp-fam", Some(skip_tier1));

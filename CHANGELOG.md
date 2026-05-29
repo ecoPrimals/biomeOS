@@ -2,6 +2,42 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.86 (2026-05-29) — Wave 60b: DH-1 Complete + Test Extraction
+
+### DH-1b: `env::temp_dir()` elimination (12 production sites)
+- Replaced all 12 `env::temp_dir()` call sites in production code with
+  `FALLBACK_RUNTIME_BASE` constant or explicit `/run/biomeos` / `/var/lib/biomeos`
+- **`paths.rs`**: `runtime_dir_from_xdg_parent`, `default_runtime_dir`, `get_runtime_dir`
+  now fall back to `/run/biomeos-$USER` instead of `/tmp/biomeos-$USER`
+- **`beacon_verification.rs`**: tier-3 fallback uses `FALLBACK_RUNTIME_BASE`
+- **`neural_api.rs`** (socket_discovery): standard locations use `FALLBACK_RUNTIME_BASE`
+- **`engine.rs`** (socket_discovery): `temp_dir()` helper returns `FALLBACK_RUNTIME_BASE`
+- **`orchestrator.rs`**: runtime_dir fallback → `/run/biomeos`, install_dir → `/var/lib/biomeos`
+- **`deployer.rs`**: HOME-absent fallback → `/var/lib/biomeos`
+- **`neural-api-client`**: discover_socket fallback uses `FALLBACK_RUNTIME_BASE`
+- **`biomeos-verify.rs`**: default log path → `/var/log/biomeos/biomeos-verify.log`
+- **`tools/health.rs`**: runtime dir fallback uses `FALLBACK_RUNTIME_BASE`
+- **DH-1 status**: zero `env::temp_dir()` in production, zero hardcoded `/tmp` in
+  production (except `biomeos-boot` FHS-standard tmpfs mount — documented exception)
+
+### Hardcoded primal name fix
+- `tools/harvest/src/main.rs`: replaced raw `"petaltongue"` string with
+  `primal_names::PETALTONGUE` constant
+
+### Inline test extraction (large file cleanup)
+- `verify_lineage.rs`: 715 → 298 lines (640L tests → `verify_lineage_tests.rs`)
+- `neural-api-client-sync/lib.rs`: 781 → 341 lines (443L tests → `lib_tests.rs`)
+- `biomeos-cli main.rs`: tests relocated to `src/main_tests.rs` (out of `src/bin/`
+  autobins scope)
+
+### Test fixes
+- `test_discover_neural_api_socket_temp_dir_fallback_existing_file` renamed to
+  `test_discover_neural_api_socket_fallback_runtime_base` and updated to use
+  `FALLBACK_RUNTIME_BASE` directory
+
+### Stats
+- 8,058 tests, 0 failures, 0 warnings
+
 ## v3.85 (2026-05-29) — Wave 60: Manifest + DH-1
 
 ### New capability: `manifest.gate_profile`

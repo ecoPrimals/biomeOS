@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 29, 2026 (v3.85: Wave 60 — manifest.gate_profile Neural API method, DH-1 /tmp hardcoding eliminated, 8,058 tests)
-**Version**: 3.85
-**Status**: PRODUCTION READY - manifest.gate_profile wired - DH-1 /tmp→/run/biomeos complete - env_config::vars SSOT - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: May 29, 2026 (v3.86: Wave 60b — DH-1 complete: zero env::temp_dir() in production, inline test extraction, 8,058 tests)
+**Version**: 3.86
+**Status**: PRODUCTION READY - DH-1 COMPLETE (zero /tmp + zero temp_dir()) - manifest.gate_profile wired - env_config::vars SSOT - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,053 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
+| **Tests Passing** | 8,058 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |

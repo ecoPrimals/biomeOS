@@ -258,8 +258,11 @@ async fn check_ecosystem_components(_config: &HealthConfig) -> Result<Vec<Health
                 .or_else(|_| std::env::var("EUID"))
                 .map(|uid| PathBuf::from(format!("/run/user/{uid}")))
         })
-        .unwrap_or_else(|_| std::env::temp_dir())
-        .join("biomeos");
+        .unwrap_or_else(|_| {
+            std::path::PathBuf::from(
+                biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE,
+            )
+        });
 
     if !runtime_dir.exists() {
         results.push(HealthResult {

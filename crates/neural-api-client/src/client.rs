@@ -58,7 +58,12 @@ impl NeuralApiClient {
             paths.primal_socket(&format!("neural-api-{family_id}"))
         } else {
             biomeos_types::defaults::socket_path(&format!("neural-api-{family_id}")).unwrap_or_else(
-                |_| std::env::temp_dir().join(format!("neural-api-{family_id}.sock")),
+                |_| {
+                    std::path::PathBuf::from(
+                        biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE,
+                    )
+                    .join(format!("neural-api-{family_id}.sock"))
+                },
             )
         }
     }

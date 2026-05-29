@@ -138,7 +138,7 @@ impl DeploymentConfig {
                             "{}/{uid}",
                             biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
                         )),
-                        Err(_) => std::env::temp_dir().join("biomeos"),
+                        Err(_) => std::path::PathBuf::from("/run/biomeos"),
                     }
                 }),
             deployment_mode: DeploymentMode::detect().unwrap_or_else(|_| {
@@ -146,7 +146,7 @@ impl DeploymentConfig {
                     host_os: biomeos_core::deployment_mode::HostOS::Linux {
                         distro: "Unknown".to_string(),
                     },
-                    install_dir: std::env::temp_dir().join("biomeos"),
+                    install_dir: std::path::PathBuf::from("/var/lib/biomeos"),
                     isolation: biomeos_core::deployment_mode::IsolationLevel::Shared,
                 }
             }),

@@ -29,10 +29,11 @@ pub fn resolve_neural_api_socket(
         }
     }
 
-    let temp_dir = std::env::temp_dir();
+    let fallback =
+        std::path::PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE);
     let standard_locations = vec![
-        temp_dir.join(format!("neural-api-{family_id}.sock")),
-        temp_dir.join("neural-api.sock"),
+        fallback.join(format!("neural-api-{family_id}.sock")),
+        fallback.join("neural-api.sock"),
     ];
     standard_locations.into_iter().find(|path| path.exists())
 }

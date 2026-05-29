@@ -416,11 +416,11 @@ impl SocketDiscovery {
             })
     }
 
-    /// Get temp dir: override if set, else `std::env::temp_dir()`.
+    /// Get temp dir: override if set, else `FALLBACK_RUNTIME_BASE`.
     pub(super) fn temp_dir(&self) -> PathBuf {
-        self.temp_dir_override
-            .clone()
-            .unwrap_or_else(std::env::temp_dir)
+        self.temp_dir_override.clone().unwrap_or_else(|| {
+            PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE)
+        })
     }
 
     #[cfg(test)]

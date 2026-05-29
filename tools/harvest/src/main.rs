@@ -390,10 +390,8 @@ impl HarvestSystem {
 
     /// Get canonical binary name for primal
     fn get_binary_name(&self, primal: &str) -> String {
-        // All primals use simple names (except special cases)
         match primal {
-            "petaltongue" => "petaltongue".to_string(),
-            "petal-tongue" => "petaltongue".to_string(),
+            "petal-tongue" => biomeos_types::primal_names::PETALTONGUE.to_string(),
             _ => primal.to_string(),
         }
     }

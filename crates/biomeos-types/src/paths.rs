@@ -164,7 +164,7 @@ impl SystemPaths {
             p.join(primal_names::BIOMEOS)
         } else {
             let username = Self::get_username();
-            env::temp_dir().join(format!("{}-{}", primal_names::BIOMEOS, username))
+            PathBuf::from(format!("/run/{}-{}", primal_names::BIOMEOS, username))
         }
     }
 
@@ -397,7 +397,7 @@ impl SystemPaths {
             PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS)
         } else {
             let username = Self::get_username();
-            env::temp_dir().join(format!("{}-{}", primal_names::BIOMEOS, username))
+            PathBuf::from(format!("/run/{}-{}", primal_names::BIOMEOS, username))
         }
     }
 
@@ -435,9 +435,9 @@ impl SystemPaths {
             return Ok(PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS));
         }
 
-        // 2. Fallback to /tmp/biomeos-$USER
+        // 2. Fallback to /run/biomeos-$USER (VPS: RuntimeDirectory=biomeos)
         let username = Self::get_username();
-        Ok(env::temp_dir().join(format!("{}-{}", primal_names::BIOMEOS, username)))
+        Ok(PathBuf::from(format!("/run/{}-{}", primal_names::BIOMEOS, username)))
     }
 
     /// Get XDG data directory
