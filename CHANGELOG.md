@@ -2,6 +2,41 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.88 (2026-05-29) — Wave 62b: JSON Parse Observability + Deep Cleanup
+
+### JSON parse observability (4 probe sites)
+- `cap_probe.rs:70`: silent `unwrap_or_default()` → `debug!` log with byte count + error
+- `topology.rs:226`: same pattern → `debug!` + error-branch logging
+- `endpoint_probe.rs:166,205`: identity.get + capabilities.list → `debug!` on invalid JSON
+- `ai_advisor_discovery.rs:103`: same → `debug!` + early return
+
+### DH-1: third TMPDIR regression (continuous.rs)
+- `continuous.rs:229`: `TMPDIR` fallback → `BIOMEOS_RUNTIME_DIR` / `BIOMEOS_SOCKET_DIR`
+
+### Env var centralization (5 more sites)
+- `http_client.rs`: `BIOMEOS_DISCOVERY_SOCKET` → `vars::DISCOVERY_SOCKET`
+- `manager.rs`: `BIOMEOS_AI_PROVIDER` → `vars::AI_PROVIDER`
+- `config_builder.rs`: `BIOMEOS_PORT` → `vars::PORT`
+- `deployment_mode.rs`: `BIOMEOS_DEPLOYMENT_MODE` → `vars::DEPLOYMENT_MODE`
+- `continuous.rs`: `BIOMEOS_RUNTIME_DIR` → `vars::RUNTIME_DIR`
+
+### Stale root integration tests removed
+- Deleted entire `tests/` directory (9 files + `common/`) — stale wiremock tests
+  with disconnected mocks, no-op config builders, and redundant coverage
+  (real tests live in `crates/*/tests/`). -75 tests, 0 coverage loss.
+
+### Proactive split: service/core.rs (795 → 564 lines)
+- Extracted `service/status.rs` (111L): ServiceStatus, ServicePhase,
+  ServiceCondition, ConditionStatus, ReplicaStatus
+- Extracted `service/scaling.rs` (136L): ServiceScaling, ScalingType,
+  ScalingPolicy, ScalingDirection, ScalingAmount, ScalingMetric, ScalingMetricType
+
+### Orphan code deletion (1,090 LOC, from v3.87)
+- validator.rs, templates.rs, context.rs in biomeos-graph
+
+### Stats
+- 7,983 tests (75 stale removed), 0 failures, 0 warnings
+
 ## v3.87 (2026-05-29) — Wave 62: TMPDIR Regression + Orphan Cleanup
 
 ### DH-1 regression: `TMPDIR` fallback in graph.execute

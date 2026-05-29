@@ -10,6 +10,8 @@
 //! ## Module Structure
 //!
 //! - `core`: Core service definitions (`UniversalService`, `ServiceMetadata`, `ServiceSpec`)
+//! - `status`: Service status, phases, conditions, and replica tracking
+//! - `scaling`: Service scaling configuration, policies, and metrics
 //! - `runtime`: Runtime configurations (containers, binaries, WASM, VMs)
 //! - `security`: Security configurations (authentication, authorization, encryption)
 //! - `health`: Health checks, probes, and monitoring
@@ -20,10 +22,14 @@ pub mod core;
 pub mod health;
 pub mod networking;
 pub mod runtime;
+pub mod scaling;
 pub mod security;
+pub mod status;
 
 // Re-export all types for convenience
 pub use core::*;
+pub use scaling::*;
+pub use status::*;
 pub use health::*;
 pub use networking::*;
 pub use runtime::*;

@@ -226,8 +226,8 @@ impl GraphHandler {
         let runtime_dir = SystemPaths::new()
             .map(|p| p.runtime_dir().to_string_lossy().to_string())
             .unwrap_or_else(|_| {
-                std::env::var("BIOMEOS_RUNTIME_DIR")
-                    .or_else(|_| std::env::var("TMPDIR"))
+                std::env::var(biomeos_types::env_config::vars::RUNTIME_DIR)
+                    .or_else(|_| std::env::var(biomeos_types::env_config::vars::SOCKET_DIR))
                     .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.to_string())
             });
 

@@ -146,7 +146,7 @@ impl DeploymentMode {
     /// ```
     pub fn detect() -> Result<Self> {
         // 1. Check for explicit override
-        if let Ok(mode_str) = std::env::var("BIOMEOS_DEPLOYMENT_MODE") {
+        if let Ok(mode_str) = std::env::var(biomeos_types::env_config::vars::DEPLOYMENT_MODE) {
             return Self::from_env_string_with_params(
                 &mode_str,
                 DeploymentFromEnvParams::from_current_env(),

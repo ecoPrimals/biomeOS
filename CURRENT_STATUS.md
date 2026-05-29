@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 29, 2026 (v3.87: Wave 62 — TMPDIR regression fixed, JWT secret hardened, env var SSOT complete, 1,090L orphan code deleted, 8,058 tests)
-**Version**: 3.87
-**Status**: PRODUCTION READY - DH-1 COMPLETE - TMPDIR regression fixed - env_config::vars SSOT complete - manifest.gate_profile wired - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: May 29, 2026 (v3.88: Wave 62b — JSON parse logging, stale test removal, service/core.rs split, env var SSOT wiring, 7,983 tests)
+**Version**: 3.88
+**Status**: PRODUCTION READY - DH-1 COMPLETE - JSON parse observability - env_config::vars SSOT - service/core 795→564L - manifest.gate_profile wired - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,058 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
+| **Tests Passing** | 7,983 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |

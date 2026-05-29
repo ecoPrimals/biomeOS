@@ -223,9 +223,24 @@ impl TopologyHandler {
                 _ => continue,
             }
 
-            let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
+            let resp: serde_json::Value = match serde_json::from_str(response_line.trim()) {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::debug!(
+                        "capabilities probe {}: invalid JSON ({} bytes): {}",
+                        socket_path,
+                        response_line.len(),
+                        e
+                    );
+                    continue;
+                }
+            };
 
             if resp.get("error").is_some() {
+                tracing::debug!(
+                    "capabilities probe {}: returned error, trying next method",
+                    socket_path
+                );
                 continue;
             }
 

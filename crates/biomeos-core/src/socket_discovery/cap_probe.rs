@@ -67,7 +67,19 @@ pub async fn probe_unix_socket_capabilities_list(socket_path: impl AsRef<Path>) 
             _ => continue,
         }
 
-        let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
+        let resp: serde_json::Value = match serde_json::from_str(response_line.trim()) {
+            Ok(v) => v,
+            Err(e) => {
+                debug!(
+                    "probe {}: {} returned invalid JSON ({} bytes): {}",
+                    socket_path_str,
+                    method,
+                    response_line.len(),
+                    e
+                );
+                continue;
+            }
+        };
 
         if resp.get("error").is_some() {
             debug!(

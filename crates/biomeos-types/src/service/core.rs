@@ -20,6 +20,9 @@ pub use super::networking::ServiceNetworking;
 pub use super::runtime::ServiceRuntime;
 pub use super::security::ServiceSecurity;
 
+use super::scaling::ServiceScaling;
+use super::status::{ReplicaStatus, ServicePhase, ServiceStatus};
+
 /// Universal Service Definition
 ///
 /// This represents any service in the biomeOS ecosystem, whether it's a
@@ -233,108 +236,6 @@ pub enum ServiceType {
     },
 }
 
-/// Service status
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceStatus {
-    /// Current service phase
-    pub phase: ServicePhase,
-
-    /// Service health status
-    pub health: Health,
-
-    /// Service conditions
-    pub conditions: Vec<ServiceCondition>,
-
-    /// Replica status
-    pub replicas: ReplicaStatus,
-
-    /// Observed generation
-    pub observed_generation: u64,
-
-    /// Last update time
-    pub last_update_time: DateTime<Utc>,
-
-    /// Status message
-    pub message: Option<String>,
-
-    /// Status reason
-    pub reason: Option<String>,
-}
-
-/// Service phases
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ServicePhase {
-    /// Service is pending
-    Pending,
-
-    /// Service is starting
-    Starting,
-
-    /// Service is running
-    Running,
-
-    /// Service is stopping
-    Stopping,
-
-    /// Service has stopped
-    Stopped,
-
-    /// Service has failed
-    Failed,
-
-    /// Service is unknown state
-    Unknown,
-}
-
-/// Service condition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceCondition {
-    /// Condition type
-    pub condition_type: String,
-
-    /// Condition status
-    pub status: ConditionStatus,
-
-    /// Last transition time
-    pub last_transition_time: DateTime<Utc>,
-
-    /// Reason for the condition
-    pub reason: Option<String>,
-
-    /// Human readable message
-    pub message: Option<String>,
-}
-
-/// Condition status
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ConditionStatus {
-    /// Condition is met
-    True,
-    /// Condition is not met
-    False,
-    /// Condition status is unknown
-    Unknown,
-}
-
-/// Replica status
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ReplicaStatus {
-    /// Desired number of replicas
-    pub desired: u32,
-
-    /// Current number of replicas
-    pub current: u32,
-
-    /// Number of ready replicas
-    pub ready: u32,
-
-    /// Number of available replicas
-    pub available: u32,
-
-    /// Number of unavailable replicas
-    pub unavailable: u32,
-}
-
 /// Service endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceEndpoint {
@@ -438,124 +339,6 @@ pub enum DependencyStatus {
 
     /// Dependency timeout
     Timeout,
-}
-
-/// Service scaling configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceScaling {
-    /// Scaling type
-    pub scaling_type: ScalingType,
-
-    /// Minimum replicas
-    pub min_replicas: u32,
-
-    /// Maximum replicas
-    pub max_replicas: u32,
-
-    /// Scaling policies
-    pub policies: Vec<ScalingPolicy>,
-
-    /// Scaling metrics
-    pub metrics: Vec<ScalingMetric>,
-}
-
-/// Scaling types
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ScalingType {
-    /// Manual scaling
-    Manual,
-
-    /// Horizontal pod autoscaling
-    Hpa,
-
-    /// Vertical pod autoscaling
-    Vpa,
-
-    /// Custom scaling
-    Custom(String),
-}
-
-/// Scaling policy
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScalingPolicy {
-    /// Policy name
-    pub name: String,
-
-    /// Scaling direction
-    pub direction: ScalingDirection,
-
-    /// Scaling amount
-    pub amount: ScalingAmount,
-
-    /// Policy cooldown
-    pub cooldown: u32,
-}
-
-/// Scaling directions
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ScalingDirection {
-    /// Scale up (add replicas)
-    Up,
-    /// Scale down (remove replicas)
-    Down,
-    /// Scale in either direction
-    Both,
-}
-
-/// Scaling amount
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ScalingAmount {
-    /// Fixed number of replicas
-    Fixed(u32),
-
-    /// Percentage of current replicas
-    Percent(u32),
-}
-
-/// Scaling metric
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScalingMetric {
-    /// Metric name
-    pub name: String,
-
-    /// Metric type
-    pub metric_type: ScalingMetricType,
-
-    /// Target value
-    pub target_value: f64,
-
-    /// Current value
-    pub current_value: Option<f64>,
-}
-
-/// Scaling metric types
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ScalingMetricType {
-    /// CPU utilization
-    CpuUtilization,
-
-    /// Memory utilization
-    MemoryUtilization,
-
-    /// Network utilization
-    NetworkUtilization,
-
-    /// Request rate
-    RequestRate,
-
-    /// Response time
-    ResponseTime,
-
-    /// Queue length
-    QueueLength,
-
-    /// Custom metric
-    Custom {
-        /// Metric source
-        source: String,
-        /// Query/selector
-        query: String,
-    },
 }
 
 /// Service configuration management
@@ -751,18 +534,6 @@ impl Default for UniversalService {
             },
             endpoints: vec![],
             dependencies: vec![],
-        }
-    }
-}
-
-impl Default for ServiceScaling {
-    fn default() -> Self {
-        Self {
-            scaling_type: ScalingType::Manual,
-            min_replicas: 1,
-            max_replicas: 1,
-            policies: vec![],
-            metrics: vec![],
         }
     }
 }

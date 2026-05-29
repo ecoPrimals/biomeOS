@@ -93,7 +93,7 @@ impl AISuggestionManager {
 
             // Fallback: check well-known ai provider socket (bootstrap only)
             if !strict_discovery {
-                let ai_provider = std::env::var("BIOMEOS_AI_PROVIDER").ok().or_else(|| {
+                let ai_provider = std::env::var(biomeos_types::env_config::vars::AI_PROVIDER).ok().or_else(|| {
                     biomeos_types::CapabilityTaxonomy::AiCoordination
                         .default_primal()
                         .map(String::from)

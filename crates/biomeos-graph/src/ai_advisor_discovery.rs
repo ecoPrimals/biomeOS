@@ -100,7 +100,17 @@ async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
         _ => return vec![],
     }
 
-    let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
+    let resp: serde_json::Value = match serde_json::from_str(response_line.trim()) {
+        Ok(v) => v,
+        Err(e) => {
+            debug!(
+                "AI advisor probe: capabilities.list returned invalid JSON ({} bytes): {}",
+                response_line.len(),
+                e
+            );
+            return vec![];
+        }
+    };
     extract_capabilities_from_list_response(&resp)
 }
 

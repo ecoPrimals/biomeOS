@@ -72,7 +72,7 @@ impl BiomeOSConfigBuilder {
                 biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
             });
 
-        builder.config.network.port = std::env::var("BIOMEOS_PORT")
+        builder.config.network.port = std::env::var(biomeos_types::env_config::vars::PORT)
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(ports::HTTP_BRIDGE);

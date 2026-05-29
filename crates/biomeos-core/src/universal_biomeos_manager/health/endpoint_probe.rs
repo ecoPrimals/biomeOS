@@ -162,19 +162,29 @@ where
 
     let mut resp_line = String::new();
     match tokio::time::timeout(timeouts::PROBE_TIMEOUT, reader.read_line(&mut resp_line)).await {
-        Ok(Ok(n)) if n > 0 => {
-            let v: serde_json::Value = serde_json::from_str(&resp_line).unwrap_or_default();
-            let name = v["result"]["name"]
-                .as_str()
-                .or_else(|| v["result"]["primal"].as_str())
-                .unwrap_or("unknown")
-                .to_string();
-            let version = v["result"]["version"]
-                .as_str()
-                .unwrap_or("unknown")
-                .to_string();
-            (name, version)
-        }
+        Ok(Ok(n)) if n > 0 => match serde_json::from_str(resp_line.trim()) {
+            Ok(v) => {
+                let v: serde_json::Value = v;
+                let name = v["result"]["name"]
+                    .as_str()
+                    .or_else(|| v["result"]["primal"].as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let version = v["result"]["version"]
+                    .as_str()
+                    .unwrap_or("unknown")
+                    .to_string();
+                (name, version)
+            }
+            Err(e) => {
+                tracing::debug!(
+                    "identity.get: invalid JSON ({} bytes): {}",
+                    resp_line.len(),
+                    e
+                );
+                ("unknown".to_string(), "unknown".to_string())
+            }
+        },
         _ => ("unknown".to_string(), "unknown".to_string()),
     }
 }
@@ -201,10 +211,17 @@ where
 
     let mut resp_line = String::new();
     match tokio::time::timeout(timeouts::PROBE_TIMEOUT, reader.read_line(&mut resp_line)).await {
-        Ok(Ok(n)) if n > 0 => {
-            let v: serde_json::Value = serde_json::from_str(&resp_line).unwrap_or_default();
-            extract_capabilities(&v)
-        }
+        Ok(Ok(n)) if n > 0 => match serde_json::from_str(resp_line.trim()) {
+            Ok(v) => extract_capabilities(&v),
+            Err(e) => {
+                tracing::debug!(
+                    "capabilities.list: invalid JSON ({} bytes): {}",
+                    resp_line.len(),
+                    e
+                );
+                vec![]
+            }
+        },
         _ => vec![],
     }
 }
