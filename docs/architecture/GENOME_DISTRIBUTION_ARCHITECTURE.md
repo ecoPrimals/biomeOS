@@ -91,7 +91,7 @@ The current genome storage (`plasmidBin/` in biomeOS) works for local testing an
 │  │ (USB Spore) │    │ (Mobile)    │    │ (Remote)    │                 │
 │  │             │    │             │    │             │                 │
 │  │ plasmidBin/ │    │ /data/local │    │ fetch from  │                 │
-│  │ (full cross │    │ /tmp/biome  │    │ nestgate.io │                 │
+│  │ (full cross │    │ /tmp/biomeos│    │ nestgate.io │                 │
 │  │  arch set)  │    │ (minimal)   │    │             │                 │
 │  └─────────────┘    └─────────────┘    └─────────────┘                 │
 │                                                                         │

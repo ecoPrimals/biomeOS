@@ -62,7 +62,7 @@ cargo fmt --all -- --check         # 0 diffs
 - Property-based tests (`proptest`) for serialization roundtrips and invariants
 - Doc-tests for all major public APIs
 - Chaos/fault injection tests for resilience-critical paths
-- Test modules use `#[allow(clippy::unwrap_used, clippy::expect_used)]`
+- Test modules use `#[expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]`
 - **Zero sleeps in tests**: Use `tokio::time::pause()` + `tokio::time::advance()` for time-dependent logic; use `ReadySender`/`ReadyReceiver` from `biomeos-test-utils` for server readiness signaling; only chaos tests may serialize
 - **No `#[ignore]` for concurrency**: Evolve tests to be truly concurrent via dependency injection and `TestEnvGuard` instead of ignoring them
 

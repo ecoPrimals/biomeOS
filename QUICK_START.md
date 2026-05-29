@@ -155,7 +155,6 @@ pointing to BearDog's socket. Start BearDog first.
 ### NestGate socket not found
 
 Use `nestgate daemon --socket-only` (not `service start`).
-The `--socket-only` flag has a known inverted-boolean bug in some versions.
 
 ### Claude returns "model not found"
 
@@ -178,8 +177,8 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v3.84)
-**Updated**: May 28, 2026
-**Tests**: 8,053 passing (0 failures, fully concurrent), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0
+**Status**: Production Ready (v3.86)
+**Updated**: May 29, 2026
+**Tests**: 8,058 passing (0 failures, fully concurrent), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

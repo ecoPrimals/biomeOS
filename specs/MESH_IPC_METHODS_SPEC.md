@@ -440,10 +440,10 @@ async fn test_mesh_status() {
 cargo run -- --features mesh
 
 # Query status
-echo '{"jsonrpc":"2.0","method":"mesh.status","id":1}' | nc -U /tmp/songbird.sock
+echo '{"jsonrpc":"2.0","method":"mesh.status","id":1}' | nc -U /run/biomeos/songbird.sock
 
 # Find path
-echo '{"jsonrpc":"2.0","method":"mesh.find_path","params":{"target_node_id":"pixel"},"id":2}' | nc -U /tmp/songbird.sock
+echo '{"jsonrpc":"2.0","method":"mesh.find_path","params":{"target_node_id":"pixel"},"id":2}' | nc -U /run/biomeos/songbird.sock
 ```
 
 ---

@@ -201,7 +201,7 @@ Register a primal and its capabilities:
   "method": "register_primal",
   "params": {
     "primal_id": "songbird",
-    "socket": "/tmp/songbird.sock",
+    "socket": "/run/biomeos/songbird.sock",
     "capabilities": ["http.request", "http.get", "discovery"],
     "metadata": {
       "version": "0.2.0",
@@ -235,7 +235,7 @@ Response:
     "providers": [
       {
         "primal_id": "songbird",
-        "socket": "/tmp/songbird.sock",
+        "socket": "/run/biomeos/songbird.sock",
         "metadata": {
           "version": "0.2.0"
         }

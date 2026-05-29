@@ -28,7 +28,7 @@ Tier 1: $PRIMAL_SOCKET                    (explicit override)
 Tier 2: $XDG_RUNTIME_DIR/biomeos/         (XDG compliant)
 Tier 3: /run/user/$UID/biomeos/           (Linux standard)
 Tier 4: /data/local/tmp/biomeos/          (Android termux)
-Tier 5: /tmp/biomeos/                     (universal fallback)
+Tier 5: /run/biomeos/                     (VPS/systemd fallback)
 ```
 
 **Socket Naming Convention**:
@@ -143,7 +143,7 @@ elif [ -d "/run/user/$(id -u)" ]; then
 elif [ -d "/data/local/tmp" ]; then
     SOCKET_DIR="/data/local/tmp/biomeos"  # Android
 else
-    SOCKET_DIR="/tmp/biomeos"
+    SOCKET_DIR="/run/biomeos"
 fi
 
 mkdir -p "$SOCKET_DIR"
@@ -304,7 +304,7 @@ For each primal deployment, verify:
 
 **Before**:
 ```bash
-mkdir -p /tmp/biomeos
+mkdir -p /run/biomeos
 ```
 
 **After**:

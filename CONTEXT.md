@@ -1,6 +1,6 @@
 # Context — biomeOS
 
-**Version**: v3.84 | **Updated**: May 28, 2026
+**Version**: v3.86 | **Updated**: May 29, 2026
 
 ## What This Is
 
@@ -25,7 +25,7 @@ multiple gates (devices).
 - **Architecture:** Single binary (UniBin) with multiple operational modes (bootstrap, nucleus, deploy, doctor, continuous, rootpulse)
 - **Communication:** JSON-RPC 2.0 over Unix sockets, abstract sockets, TCP, and HTTP — with tarpc binary protocol escalation for hot paths
 - **License:** AGPL-3.0-or-later (scyBorg triple-copyleft: AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
-- **Tests:** 8,053 workspace-wide (0 failures)
+- **Tests:** 8,058 workspace-wide (0 failures)
 - **Coverage:** 90%+ line coverage (llvm-cov verified)
 - **Blocking debt:** 0 (primalSpring Phase 43 gaps resolved, all composition gaps resolved)
 - **Edition:** Rust 2024 across all workspace crates
@@ -44,6 +44,7 @@ multiple gates (devices).
 | **Health** | `health.check`, `health.liveness`, `health.readiness` |
 | **Topology** | `topology.get`, `topology.proprioception`, `topology.rescan` |
 | **Lifecycle** | `lifecycle.start`, `lifecycle.stop`, `lifecycle.status` |
+| **Manifest** | `manifest.gate_profile` |
 | **Nucleus** | `nucleus start --mode tower|node|nest|full` |
 
 ## What This Does NOT Do

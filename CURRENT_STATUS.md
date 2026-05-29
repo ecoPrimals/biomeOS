@@ -16,7 +16,7 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
-| **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 25 workspace crates, `#[expect(reason)]` in all 119 test files |
+| **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
 | **Tests Passing** | 8,058 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
@@ -84,7 +84,7 @@
 | **External C deps** | 0 (nix→rustix, sysinfo→/proc, libc removed, dirs→etcetera, sudo ip→rtnetlink) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, rtnetlink for networking, zero -sys crates, zero shell-outs) |
 | **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |
-| **Files >1000 LOC** | 0 (all under 1000; largest production files: dns_sd 979, tower_orchestration 952, socket_providers 884, protocol 872) |
+| **Files >800 LOC** | 0 in production (all under 800 after v3.78–v3.86 smart domain extraction + inline test extraction) |
 | **JSON-RPC types** | `JSONRPC_VERSION` const + zero-alloc `JsonRpcVersion` marker type (was `String`), `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
 | **Zero-copy** | `JsonRpcVersion` (zero-size, zero-alloc serde), `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client, primal SDK IPC); `Arc<str>` for identifiers + `PrimalManifest` + `PrimalConnections` keys + `OptimizationType` graph nodes + WebSocket subscription IDs; `Arc<SubscriptionFilter>` for subscriptions; `Value::take()` on Songbird discovery + provider hot paths (eliminates subtree clone); `TransportEndpoint` (tagged enum, zero `PathBuf` allocation for abstract/TCP/HTTP transports) |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
@@ -94,8 +94,8 @@
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
 | **Neural API** | 320+ capability translations (27 domains), JSON-RPC 2.0 batch + notifications, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.execute_pipeline, graph.suggest_optimizations, circuit-breaker protected RPC |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
-| **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
-| **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |
+| **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths`; fallbacks use `/run/biomeos` (DH-1 complete) |
+| **Hardcoded `/tmp`** | 0 in production code; 0 `env::temp_dir()` in production (DH-1 complete v3.86) |
 | **Hardcoded Primals** | 0 in routing code (all via capability-based discovery + `DISCOVERY_PROVIDER`/`SECURITY_PROVIDER` env) |
 | **Hardcoded plasmidBin** | 0 (evolved to `discover_plasmid_dir()` with `BIOMEOS_PLASMID_DIR` env override) |
 | **Hardcoded user paths** | 0 (tools evolved to runtime workspace discovery) |
@@ -307,7 +307,7 @@ Comprehensive audit against all wateringHole standards + systematic evolution ex
 |----------|--------|
 | **Formatting** | `cargo fmt --check` regression fixed (10 diffs across 5 files: `checks_primal.rs`, `server_lifecycle.rs`, `discovery/mod.rs`, `discovery.rs`, `identity.rs`, `capability_discovery.rs`) |
 | **Blocking-in-async** | `probe_live_sockets()` evolved from `Handle::block_on` + `std::thread::scope` hack to native `async fn` with `.await` — eliminates potential deadlock in single-threaded runtime |
-| **Hardcoded `/tmp`** | 4 production sites centralized: `capability_discovery.rs` tier 4, `tower_orchestration.rs` pid/socket fallbacks, `node_handlers.rs` Neural API fallback, `subfederation/beardog.rs` Neural API fallback → all use `constants::runtime_paths::FALLBACK_RUNTIME_BASE` + `fallback_runtime_dir()` helper |
+| **Hardcoded `/tmp`** | 0 production sites (v3.85: `/tmp` literals eliminated; v3.86: `env::temp_dir()` eliminated; DH-1 COMPLETE) |
 | **Hardcoded IPs** | 6 production sites evolved: `strategy.rs` TCP fallback (2×), `stun_extension.rs`, `federation/config.rs`, `config/network.rs`, `system/network.rs` → all use `endpoints::DEFAULT_LOCALHOST` / `PRODUCTION_BIND_ADDRESS` constants |
 | **New constants** | `biomeos-types::constants::runtime_paths` module: `FALLBACK_RUNTIME_BASE`, `SOCKET_SUBDIR`, `BIOMEOS_SUBDIR`, `fallback_runtime_dir(family_id)` |
 | **License (at v2.68)** | `LICENSE-CC-BY-SA` reconciled; subsequently updated to `AGPL-3.0-or-later` in v2.88 per scyBorg standard |
@@ -315,7 +315,7 @@ Comprehensive audit against all wateringHole standards + systematic evolution ex
 | **Dep audit** | `blake3`+`cc` acceptable (perf-critical genome hashing), `tokio-process` 0.2 legacy identified in `biomeos-deploy`, `bincode` v1 RUSTSEC-2025-0141 documented (blocked by tarpc) |
 | **Mock audit** | Zero production mocks confirmed (274 hits all test-gated: `#[cfg(test)]`, `*_tests.rs`, `biomeos-test-utils`) |
 | **Tests** | 6 discovery probe tests evolved to `#[tokio::test] async fn` (from sync `#[test]`) |
-| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all 25 workspace crates) |
+| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all 26 workspace crates) |
 | **Formatting** | PASS (`cargo fmt --check` clean after all changes) |
 
 ### Coverage push + flaky/cwd test hardening — v2.55 (Mar 20, 2026)
@@ -883,7 +883,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 2. ~~**ARM64 biomeOS genomeBin**~~ - ✅ Built (`aarch64-unknown-linux-musl`, 9.6 MB stripped, static)
 3. ~~**Plasmodium Agent Model**~~ - ✅ Neural API agent routing (Meld/Split/Mix) implemented
 4. **biomeOS on gate2** - Deploy biomeOS to gate2 for cross-gate capability routing via Neural API
-5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.16, 7,000+ tests) |
+5. **Test coverage** - ✅ Line 90.02% + Function 90.78% at 90% target, Region 89.85% (v3.86, 8,058 tests) |
 
 ### Low Priority
 1. **API key encryption** - NestGate + BearDog secured storage
@@ -892,7 +892,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Apr 8, 2026)
 
-**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 8,053 total tests including doc-tests and proptests)
+**Overall**: 90%+ region / function / line coverage (workspace-wide llvm-cov verified, 0 test failures, 8,058 total tests including doc-tests and proptests)
 
 ### Coverage Distribution
 
@@ -976,7 +976,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (8,038 tests — fully concurrent)
+# Test (8,058 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -998,11 +998,11 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.84 — Deep Debt Wave 58b, env var centralization complete, zero production files >800L, 19 signal graphs, zero blocking debt)
-**Tests**: 8,053 passing, 0 failures, fully concurrent
+**Status**: Production Ready (v3.86 — DH-1 complete, `manifest.gate_profile` wired, NC-1 COMPLETE, Wave 60b, zero production files >800L, 19 signal graphs, zero blocking debt)
+**Tests**: 8,058 passing, 0 failures, fully concurrent
 **Coverage**: 90%+ region / function / line (llvm-cov verified)
 **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0 | **TODO/FIXME**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
-**Neural API**: 320+ translations, 27 domains (+ tensor), proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination, post-spawn auto-registration, adaptive routing weights (redb-persistent)
-**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution, data-driven launch profiles, all IPs + runtime paths centralized to constants, cross-arch safe, UDS dual-protocol, zero Box\<dyn Error\>)
+**Neural API**: 320+ translations, 28 domains (+ manifest + tensor), proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination, post-spawn auto-registration, adaptive routing weights (redb-persistent), `manifest.gate_profile`
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution, data-driven launch profiles, all IPs + runtime paths centralized to constants, cross-arch safe, UDS dual-protocol, zero Box\<dyn Error\>, DH-1 complete)
 **Bypasses**: 0 active (all 6 evolved)

@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — 8,053 tests, 27 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, zero blocking debt"
-date = 2026-05-28
+description = "Orchestration kernel — 8,058 tests, 28 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, DH-1 complete, zero blocking debt"
+date = 2026-05-29
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -9,14 +9,16 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,053 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
+- **8,058 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v3.86** — Wave 60b: DH-1 complete (zero /tmp + zero env::temp_dir()), inline test extraction
+- **v3.85** — Wave 60: manifest.gate_profile Neural API, DH-1 /tmp hardcoding eliminated
 - **v3.84** — Deep Debt W58b (wired 22 more env var constants, test module extraction, zero production files >800L)
 - **v3.83** — Env var centralization W58 (env_config::vars SSOT, ~90% of env::var call sites wired)
 - **v3.82** — Deep Debt W57 (nucleus_ingest module split, bearDog fix, LogConfig XDG, flate2 pure Rust)
 - **v3.81** — NC-1.4 canonical pseudoSpore validation + NC-1.emit full materialization
 - **v3.80** — Deep Debt W56 (routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, capability-based config)
-- **27 capability domains**, **320+ translations** across 13 primals
+- **28 capability domains**, **320+ translations** across 13 primals
 - **19 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
 - **43 deploy graphs** (incl. membrane_deploy, provenance trio)
 - **20 niche templates** (+ RootPulse, soil-microbiome, ecology)

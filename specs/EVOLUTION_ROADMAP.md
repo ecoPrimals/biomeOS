@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 28, 2026 (v3.84: Deep Debt W58b — wired 22 more env var constants, test module extraction, zero production files >800L)
+**Updated**: May 29, 2026 (v3.86: DH-1 complete — zero /tmp + zero env::temp_dir() in production, manifest.gate_profile wired, inline test extraction)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -98,26 +98,28 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated May 28, 2026 — v3.84)
+## 5. Deep Debt Metrics (Updated May 29, 2026 — v3.86)
 
 | Metric | Value |
 |--------|-------|
-| TODO markers in Rust source | 0 (verified clean in v3.84) |
+| TODO markers in Rust source | 0 (verified clean in v3.86) |
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND/XXX | 0 |
 | Unsafe code | 0 (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary roots) |
-| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 25 crates via workspace lint inheritance, `-D warnings`) |
+| Clippy warnings | 0 (entire workspace, pedantic+nursery, all 26 crates via workspace lint inheritance, `-D warnings`) |
 | Production unwrap() | 0 (all in test code) |
 | Shell-outs from Rust | 3 (`sudo ip link/addr/set` in deploy/network.rs — requires root) |
 | `forbid(unsafe_code)` crates | all production crates + binary roots |
 | Mocks in production | 0 (test_support gated behind feature flag; all stubs resolved) |
 | Proptest IPC fuzz tests | 8 |
 | C-dep crates banned (deny.toml) | 16 |
-| Tests | 8,053 (0 failures, fully concurrent) |
+| Tests | 8,058 (0 failures, fully concurrent) |
 | Coverage | 90%+ line / function / region (llvm-cov) |
-| Production files >800 LOC | 0 (all 5 files >800L are test-only) |
+| Production files >800 LOC | 0 (all under 800; 2 test-only files >800L) |
 | Hardcoded primal strings | 0 (centralized `primal_names` constants) |
 | Hardcoded paths/ports | 0 (centralized in `biomeos-types::constants`) |
+| Hardcoded `/tmp` | 0 (DH-1 complete: zero literals + zero `env::temp_dir()` in production) |
+| `env::temp_dir()` in production | 0 (replaced with `FALLBACK_RUNTIME_BASE` or explicit paths) |
 | Zero-copy payloads | `bytes::Bytes` with base64 serde |
 | Bypasses | 0 blocking (Tower routing is documented evolution target) |
 | Box\<dyn Error\> in production | 0 (all anyhow::Result) |
@@ -455,6 +457,8 @@ Systematic deep debt resolution across 7 waves:
 - [x] Deep Debt W57: nucleus_ingest.rs 924→245L module split (envelope/materialize/receipt/tests), bearDog casing fix (method_gate/verifier.rs), LogConfig XDG-compliant paths, flate2 rust_backend (zero C deps) — v3.82
 - [x] Env var centralization W58: 15 new `env_config::vars` constants, ~90% of production `env::var` call sites wired (37 files migrated) — v3.83
 - [x] Deep Debt W58b: wired 22 more env var constants, `connection.rs` 798→376L + `connection_tests.rs`, `suggestions/mod.rs` 772→22L prod + `suggestions_tests.rs`, zero production files >800L — v3.84
+- [x] Wave 60 manifest.gate_profile: Neural API method resolving gate profile from ecosystem_manifest.toml, DH-1 /tmp hardcoding eliminated (6 niche TOMLs, 3 deploy graphs, 2 shell scripts, DEFAULT_SOCKET_DIR, SystemPaths fallbacks, platypus mesh) — v3.85
+- [x] Wave 60b DH-1 complete: zero `env::temp_dir()` in production (12 sites replaced with FALLBACK_RUNTIME_BASE or /run/biomeos), hardcoded primal name fix, inline test extraction (verify_lineage 715→298L, neural-api-client-sync 781→341L) — v3.86
 
 ### Degradation Behavior
 

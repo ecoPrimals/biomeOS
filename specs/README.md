@@ -1,6 +1,6 @@
 # biomeOS Specifications
 
-**Last Updated**: May 27, 2026
+**Last Updated**: May 29, 2026
 **Active Specs**: 22 + 3 lifecycle + 2 contracts = 27 (47 archived to `ecoPrimals/archive/` as fossil record)
 
 ---
