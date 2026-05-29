@@ -47,8 +47,5 @@ criterion = { workspace = true, features = ["html_reports"] }
 name = "graph_pipeline_benches"
 harness = false
 
-[features]
-default = []
-
 [lints]
 workspace = true

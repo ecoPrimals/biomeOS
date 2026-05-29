@@ -18,7 +18,6 @@ serde = { workspace = true }
 toml = { workspace = true }
 # DEEP DEBT: nix and dirs removed — pure Rust via $HOME/$EUID env resolution
 tempfile = { workspace = true }
-# memmap2 REMOVED — evolved to safe std::fs::read() (no unsafe code in entire crate)
 
 [lib]
 name = "genome_deploy"

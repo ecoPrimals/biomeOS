@@ -16,7 +16,6 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }  # For binaries
 thiserror = { workspace = true }
 rustix = { workspace = true, features = ["process"] }
-# users crate REMOVED (RUSTSEC-2024-0399/RUSTSEC-2025-0040): unmaintained + vulnerability
 # UID retrieval now uses rustix::process::getuid() (already a dependency, pure Rust)
 # System metrics: pure Rust via /proc (ecoBin v3)
 regex = { workspace = true }  # For socket pattern matching

@@ -48,8 +48,5 @@ biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
 
-[features]
-default = []
-
 [lints]
 workspace = true

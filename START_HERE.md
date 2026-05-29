@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
 **Last Updated**: May 29, 2026
-**Status**: Production Ready (v3.86) — DH-1 complete (zero `/tmp` + zero `env::temp_dir()` in production), `manifest.gate_profile` Neural API wired, inline test extraction, NC-1 COMPLETE, Songbird mesh cross-gate dispatch, capability-domain composition health, adaptive routing weights (redb-persistent), attestation verification, membrane composition model, `primal.announce` self-registration, 8,058 tests (0 failures, fully concurrent), Edition 2024, rust-version 1.87, all 26 workspace crates, 90%+ line / function / region (llvm-cov), Clippy PASS (0 warnings, pedantic+nursery), 0 C deps, 0 unsafe prod, capability-based discovery compliant, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Status**: Production Ready (v3.88) — Wave 63 deep cleanup, DH-1 complete, manifest.gate_profile wired, NC-1 COMPLETE, 7,983 tests (0 failures), Edition 2024, rust-version 1.87, 26 crates, 0 C deps, 0 unsafe prod, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -108,7 +108,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 8,053 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
+8. **Tested**: 7,983 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
@@ -167,7 +167,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.86 — DH-1 complete, `manifest.gate_profile` wired, NC-1 COMPLETE, zero production files >800L)
+**Status**: Production Ready (v3.88 — DH-1 complete, `manifest.gate_profile` wired, NC-1 COMPLETE, zero production files >800L)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Binary source**: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 **AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
@@ -178,5 +178,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
 **Primals**: 7/7 ecoBin v3.0 compliant
 **Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 8,058 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
+**Tests**: 7,983 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
 **Updated**: May 29, 2026

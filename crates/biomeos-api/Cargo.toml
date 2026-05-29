@@ -28,7 +28,6 @@ serde_json = { workspace = true }
 toml = { workspace = true }
 
 # Internal dependencies
-# NOTE: http-transport feature REMOVED - using Unix sockets for primal communication
 biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
@@ -45,7 +44,6 @@ tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 
-# HTTP client REMOVED - Using Unix socket JSON-RPC for primal discovery
 # External HTTP/HTTPS requests should go through Songbird
 
 # Utilities

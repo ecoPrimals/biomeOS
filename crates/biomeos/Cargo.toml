@@ -60,7 +60,6 @@ biomeos-pseudospore = { path = "../biomeos-pseudospore", version = "0.1.0" }
 rand = { workspace = true }
 
 # Directory utilities - Pure Rust!
-# dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
 etcetera = { workspace = true }  # Pure Rust replacement
 
 [dev-dependencies]

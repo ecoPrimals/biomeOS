@@ -36,7 +36,6 @@ anyhow = { workspace = true }
 indexmap = { workspace = true }
 
 # XDG directory support
-# dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
 etcetera = { workspace = true }  # Pure Rust replacement for dirs
 
 [dev-dependencies]

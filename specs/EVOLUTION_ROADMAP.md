@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 29, 2026 (v3.86: DH-1 complete — zero /tmp + zero env::temp_dir() in production, manifest.gate_profile wired, inline test extraction)
+**Updated**: May 29, 2026 (v3.88: DH-1 complete — zero /tmp + zero env::temp_dir() in production, manifest.gate_profile wired, inline test extraction)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -98,11 +98,11 @@ Active scripts (shell scripts that remain in the repository):
 
 ---
 
-## 5. Deep Debt Metrics (Updated May 29, 2026 — v3.86)
+## 5. Deep Debt Metrics (Updated May 29, 2026 — v3.88)
 
 | Metric | Value |
 |--------|-------|
-| TODO markers in Rust source | 0 (verified clean in v3.86) |
+| TODO markers in Rust source | 0 (verified clean in v3.88) |
 | TODO in config (deny.toml) | 0 (bincode v1 NOTE remains — blocked by tarpc upstream) |
 | FIXME/HACK/WORKAROUND/XXX | 0 |
 | Unsafe code | 0 (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary roots) |
@@ -113,7 +113,7 @@ Active scripts (shell scripts that remain in the repository):
 | Mocks in production | 0 (test_support gated behind feature flag; all stubs resolved) |
 | Proptest IPC fuzz tests | 8 |
 | C-dep crates banned (deny.toml) | 16 |
-| Tests | 8,058 (0 failures, fully concurrent) |
+| Tests | 7,983 (0 failures, fully concurrent) |
 | Coverage | 90%+ line / function / region (llvm-cov) |
 | Production files >800 LOC | 0 (all under 800; 2 test-only files >800L) |
 | Hardcoded primal strings | 0 (centralized `primal_names` constants) |
@@ -458,7 +458,7 @@ Systematic deep debt resolution across 7 waves:
 - [x] Env var centralization W58: 15 new `env_config::vars` constants, ~90% of production `env::var` call sites wired (37 files migrated) — v3.83
 - [x] Deep Debt W58b: wired 22 more env var constants, `connection.rs` 798→376L + `connection_tests.rs`, `suggestions/mod.rs` 772→22L prod + `suggestions_tests.rs`, zero production files >800L — v3.84
 - [x] Wave 60 manifest.gate_profile: Neural API method resolving gate profile from ecosystem_manifest.toml, DH-1 /tmp hardcoding eliminated (6 niche TOMLs, 3 deploy graphs, 2 shell scripts, DEFAULT_SOCKET_DIR, SystemPaths fallbacks, platypus mesh) — v3.85
-- [x] Wave 60b DH-1 complete: zero `env::temp_dir()` in production (12 sites replaced with FALLBACK_RUNTIME_BASE or /run/biomeos), hardcoded primal name fix, inline test extraction (verify_lineage 715→298L, neural-api-client-sync 781→341L) — v3.86
+- [x] Wave 60b DH-1 complete: zero `env::temp_dir()` in production (12 sites replaced with FALLBACK_RUNTIME_BASE or /run/biomeos), hardcoded primal name fix, inline test extraction (verify_lineage 715→298L, neural-api-client-sync 781→341L) — v3.88
 
 ### Degradation Behavior
 

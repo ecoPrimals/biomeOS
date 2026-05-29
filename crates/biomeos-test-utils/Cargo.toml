@@ -35,7 +35,6 @@ hyper = { workspace = true }  # Pure Rust HTTP client for testing
 hyper-util = { workspace = true, features = ["client-legacy", "http1", "tokio"] }  # HTTP client utilities
 http-body-util = { workspace = true }  # Body utilities for hyper
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
-# reqwest = { workspace = true } # REMOVED (TRUE ecoBin v2.0): Use atomic_client for Pure Rust testing
 
 [lints]
 workspace = true

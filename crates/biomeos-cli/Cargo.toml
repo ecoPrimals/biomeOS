@@ -47,14 +47,10 @@ base64 = { workspace = true }
 sha2 = { workspace = true }
 # dirs removed — pure Rust via $HOME env resolution
 
-[features]
-default = []
-
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 toml = { workspace = true }
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
-# reqwest = { workspace = true }  # REMOVED: CLI uses atomic_client for Pure Rust # For testing/benchmarking only
 tokio = { workspace = true }
 tempfile = { workspace = true }
 

@@ -30,8 +30,6 @@ biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 bytes = { workspace = true }
 
-# HTTP client DEPRECATED: Use atomic_client (Unix sockets) for BearDog/Songbird
-# # reqwest = { workspace = true }  # REMOVED: Use Tower Atomic (Songbird + BearDog) for Pure Rust HTTPS # REMOVED - Songbird/BearDog handle HTTP/TLS
 base64 = { workspace = true }
 
 [features]

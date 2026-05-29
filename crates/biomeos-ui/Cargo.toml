@@ -20,7 +20,6 @@ tokio-stream = { workspace = true }
 tokio-tungstenite = { workspace = true }
 futures-util = { workspace = true }
 
-# HTTP client REMOVED - External HTTP requests go through Songbird
 # SSE support stubbed until Songbird exposes streaming
 
 # Error handling

@@ -34,8 +34,5 @@ thiserror = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 
-[features]
-default = []
-
 [lints]
 workspace = true

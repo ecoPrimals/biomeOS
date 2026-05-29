@@ -36,8 +36,5 @@ biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio = { workspace = true, features = ["test-util"] }
 tokio-test = { workspace = true }
 
-[features]
-default = []
-
 [lints]
 workspace = true

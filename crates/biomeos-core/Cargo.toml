@@ -23,13 +23,11 @@ chrono = { workspace = true }
 tokio = { workspace = true, features = ["net", "io-util", "fs", "process", "signal"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-# reqwest = { workspace = true, optional = true }  # REMOVED: Deprecated HTTP transport, use Tower Atomic (Songbird + BearDog)
 futures = { workspace = true }
 hex = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 
 # Configuration and environment
-# dirs = { workspace = true }  # DEPRECATED: Uses dirs-sys (C dependency)
 etcetera = { workspace = true }  # Pure Rust replacement
 toml = { workspace = true }
 
@@ -65,7 +63,6 @@ tokio-test = { workspace = true }
 wiremock = { workspace = true }
 tempfile = { workspace = true }
 criterion = { workspace = true }
-# REMOVED for ecoBin v2.0: Use ureq or atomic_client for Pure Rust
 ureq = { workspace = true }
 
 # Test utilities

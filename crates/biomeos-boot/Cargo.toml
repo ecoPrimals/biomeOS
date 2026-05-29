@@ -78,8 +78,5 @@ path = "src/bin/biomeos-rootfs.rs"
 # NOTE: Profile configuration moved to workspace root Cargo.toml
 # (non-root profile sections are ignored by cargo)
 
-[features]
-default = []
-
 [lints]
 workspace = true

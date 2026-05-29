@@ -1,6 +1,6 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — 8,058 tests, 28 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, DH-1 complete, zero blocking debt"
+description = "Orchestration kernel — 7,983 tests, 28 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, DH-1 complete, zero blocking debt"
 date = 2026-05-29
 
 [taxonomies]
@@ -9,7 +9,7 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,058 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
+- **7,983 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
 - **v3.86** — Wave 60b: DH-1 complete (zero /tmp + zero env::temp_dir()), inline test extraction
 - **v3.85** — Wave 60: manifest.gate_profile Neural API, DH-1 /tmp hardcoding eliminated
