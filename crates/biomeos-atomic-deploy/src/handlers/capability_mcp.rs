@@ -42,8 +42,15 @@ impl CapabilityHandler {
                     provider: Some(t.provider.clone()),
                     rpc_method: Some(t.actual_method.clone()),
                 };
-                serde_json::to_value(&tool).unwrap_or_default()
+                match serde_json::to_value(&tool) {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        tracing::warn!("Failed to serialize MCP tool {}: {e}", t.semantic);
+                        None
+                    }
+                }
             })
+            .flatten()
             .collect();
 
         let providers: Vec<&str> = {

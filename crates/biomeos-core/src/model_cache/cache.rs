@@ -396,7 +396,10 @@ impl ModelCache {
                 json!({
                     "family_id": self.config.family_id,
                     "key": format!("model-cache:{}", entry.model_id),
-                    "value": serde_json::to_value(entry).unwrap_or_default()
+                    "value": serde_json::to_value(&entry).unwrap_or_else(|e| {
+                        tracing::warn!("Failed to serialize model cache entry: {e}");
+                        serde_json::Value::Null
+                    })
                 }),
             )
             .await;

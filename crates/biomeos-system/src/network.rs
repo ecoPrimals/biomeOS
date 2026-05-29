@@ -89,7 +89,10 @@ pub enum NetworkInterfaceStatus {
 /// Get network information via /proc/net/dev + /sys/class/net (pure Rust).
 #[cfg(target_os = "linux")]
 pub fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
-    let content = fs::read_to_string("/proc/net/dev").unwrap_or_default();
+    let content = fs::read_to_string("/proc/net/dev").unwrap_or_else(|e| {
+        tracing::debug!("Cannot read /proc/net/dev: {e}");
+        String::new()
+    });
     let parsed = parse_net_dev(&content);
     let mut result = Vec::new();
 
@@ -187,7 +190,10 @@ pub async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
 pub async fn get_network_io_with_interval(
     sample_interval: std::time::Duration,
 ) -> BiomeResult<NetworkIoMetrics> {
-    let content1 = fs::read_to_string("/proc/net/dev").unwrap_or_default();
+    let content1 = fs::read_to_string("/proc/net/dev").unwrap_or_else(|e| {
+        tracing::debug!("Cannot read /proc/net/dev (sample 1): {e}");
+        String::new()
+    });
     let parsed1 = parse_net_dev(&content1);
     let (init_rx, init_tx, init_rxp, init_txp) = parsed1.iter().fold(
         (0u64, 0u64, 0u64, 0u64),
@@ -196,7 +202,10 @@ pub async fn get_network_io_with_interval(
 
     tokio::time::sleep(sample_interval).await;
 
-    let content2 = fs::read_to_string("/proc/net/dev").unwrap_or_default();
+    let content2 = fs::read_to_string("/proc/net/dev").unwrap_or_else(|e| {
+        tracing::debug!("Cannot read /proc/net/dev (sample 2): {e}");
+        String::new()
+    });
     let parsed2 = parse_net_dev(&content2);
     let (final_rx, final_tx, final_rxp, final_txp) = parsed2.iter().fold(
         (0u64, 0u64, 0u64, 0u64),

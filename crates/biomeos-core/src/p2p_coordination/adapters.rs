@@ -92,8 +92,10 @@ impl SecurityProvider for CryptoSecurityAdapter {
         let output = result.stdout();
 
         let tunnel_id = Self::parse_tunnel_id(output)?;
-        let encryption_key = Self::parse_field_bytes(output, "encryption_key")
-            .unwrap_or_default();
+        let encryption_key = Self::parse_field_bytes(output, "encryption_key").unwrap_or_else(|| {
+            tracing::warn!("Tunnel created without encryption_key — crypto output may be malformed");
+            Vec::new()
+        });
         let endpoint_a = super::TransportEndpoint {
             node_id: node_a.to_string(),
             address: format!("btsp://{node_a}"),
@@ -225,7 +227,10 @@ impl SecurityProvider for CryptoSecurityAdapter {
             proof: super::LineageProof {
                 lineage_id: requester.to_string(),
                 depth,
-                proof: Self::parse_field_bytes(output, "proof").unwrap_or_default(),
+                proof: Self::parse_field_bytes(output, "proof").unwrap_or_else(|| {
+                    tracing::warn!("Lineage verification missing proof bytes");
+                    Vec::new()
+                }),
                 timestamp: SystemTime::now(),
             },
         })

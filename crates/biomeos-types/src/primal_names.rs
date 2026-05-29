@@ -83,6 +83,9 @@ pub const BIOMEOS: &str = "biomeos";
 /// biomeOS device management variant.
 pub const BIOMEOS_DEVICE_MANAGEMENT: &str = "biomeos-device-management";
 
+/// rootPulse — provenance federation, branching, merging, diffing.
+pub const ROOTPULSE: &str = "rootpulse";
+
 /// primalSpring — ecosystem integration experiments and IPC resilience.
 pub const PRIMALSPRING: &str = "primalspring";
 
@@ -137,6 +140,8 @@ pub mod display {
     pub const SKUNKBAT: &str = "skunkBat";
     /// sourDough display name.
     pub const SOURDOUGH: &str = "sourDough";
+    /// rootPulse display name.
+    pub const ROOTPULSE: &str = "rootPulse";
 
     /// Look up the display name for a lowercase primal identifier.
     #[must_use]
@@ -164,6 +169,7 @@ pub mod display {
             super::PETALTONGUE => Some(PETALTONGUE),
             super::SKUNKBAT => Some(SKUNKBAT),
             super::SOURDOUGH => Some(SOURDOUGH),
+            super::ROOTPULSE => Some(ROOTPULSE),
             _ => None,
         }
     }
@@ -221,6 +227,7 @@ pub fn is_known_primal(name: &str) -> bool {
         || AUXILIARY_PRIMALS.contains(&lower.as_str())
         || lower == BIOMEOS
         || lower == BIOMEOS_DEVICE_MANAGEMENT
+        || lower == ROOTPULSE
 }
 
 #[cfg(test)]

@@ -511,7 +511,13 @@ impl GraphExecutor {
         let operation_params: serde_json::Value = node
             .operation
             .as_ref()
-            .map(|op| serde_json::to_value(&op.params).unwrap_or_default())
+            .and_then(|op| match serde_json::to_value(&op.params) {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    tracing::warn!("Failed to serialize cross-gate node params: {e}");
+                    None
+                }
+            })
             .unwrap_or_default();
 
         let request_params = serde_json::json!({

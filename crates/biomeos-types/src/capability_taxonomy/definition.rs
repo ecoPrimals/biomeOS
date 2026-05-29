@@ -639,7 +639,7 @@ impl CapabilityTaxonomy {
             | Self::LogAggregation
             | Self::GraphOrchestration
             | Self::SporeDeployment
-            | Self::NicheDeployment => Some("biomeos"),
+            | Self::NicheDeployment => Some(crate::primal_names::BIOMEOS),
         }
     }
 

@@ -259,8 +259,8 @@ impl NicheHandler {
                 "parameters": []
             }),
             json!({
-                "id": "rootpulse",
-                "name": "RootPulse",
+                "id": primal_names::ROOTPULSE,
+                "name": primal_names::display::ROOTPULSE,
                 "description": "Emergent version control: DAG provenance + linear history + attribution tracking",
                 "category": "provenance",
                 "required_resources": {
@@ -456,7 +456,7 @@ impl NicheHandler {
             primal_names::HOTSPRING => "hotspring_deploy",
             primal_names::GROUNDSPRING => "groundspring_deploy",
             primal_names::HEALTHSPRING => "healthspring_deploy",
-            "rootpulse" => "rootpulse_commit",
+            primal_names::ROOTPULSE => "rootpulse_commit",
             "provenance-pipeline" => "provenance_pipeline",
             "rootpulse-branch" => "rootpulse_branch",
             "rootpulse-merge" => "rootpulse_merge",
@@ -559,7 +559,7 @@ mod tests {
             "hotspring",
             "groundspring",
             "healthspring",
-            "rootpulse",
+            primal_names::ROOTPULSE,
             "provenance-pipeline",
             "rootpulse-branch",
             "rootpulse-merge",

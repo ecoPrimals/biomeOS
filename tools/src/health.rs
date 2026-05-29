@@ -355,7 +355,14 @@ async fn check_sovereignty_features(config: &HealthConfig) -> Result<HealthResul
     // Check AGPL license in workspace Cargo.toml
     let cargo_toml = workspace_path.join("Cargo.toml");
     if cargo_toml.exists() {
-        let content = std::fs::read_to_string(&cargo_toml).unwrap_or_default();
+        let content = match std::fs::read_to_string(&cargo_toml) {
+            Ok(c) => c,
+            Err(e) => {
+                details.push(format!("License: unreadable ({e})"));
+                warnings += 1;
+                String::new()
+            }
+        };
         if content.contains("AGPL-3.0-or-later") {
             details.push("License: AGPL-3.0-or-later".to_string());
         } else {

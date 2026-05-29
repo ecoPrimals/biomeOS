@@ -326,7 +326,10 @@ where
             error: "handshake_failed".to_owned(),
             reason: "family_verification".to_owned(),
         };
-        let mut err_line = serde_json::to_string(&err).unwrap_or_default();
+        let mut err_line = serde_json::to_string(&err).unwrap_or_else(|e| {
+            tracing::warn!("Failed to serialize BTSP handshake error: {e}");
+            r#"{"error":"handshake_failed","reason":"family_verification"}"#.to_owned()
+        });
         err_line.push('\n');
         let stream = reader.get_mut();
         let _ = stream.write_all(err_line.as_bytes()).await;
