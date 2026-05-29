@@ -80,9 +80,6 @@ path = "src/bin/biomeos-rootfs.rs"
 
 [features]
 default = []
-# Hardware-specific features
-efi = []
-bios = ["default"]
 
 [lints]
 workspace = true

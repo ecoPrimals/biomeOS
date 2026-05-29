@@ -154,10 +154,12 @@ impl GraphHandler {
             env.insert("SOCKET_DIR".to_string(), socket_dir);
             env.insert(
                 "JWT_SECRET".to_string(),
-                std::env::var("JWT_SECRET").unwrap_or_else(|_| {
-                    tracing::warn!("JWT_SECRET not set — using family-derived fallback");
-                    format!("biomeos-jwt-{}", family_id_owned)
-                }),
+                std::env::var(biomeos_types::env_config::vars::JWT_SECRET)
+                    .or_else(|_| std::env::var("JWT_SECRET"))
+                    .unwrap_or_else(|_| {
+                        tracing::warn!("JWT_SECRET not set — using family-derived fallback (set BIOMEOS_JWT_SECRET for production)");
+                        format!("biomeos-jwt-{}", family_id_owned)
+                    }),
             );
 
             let metrics_db_path = SystemPaths::new()
@@ -185,8 +187,13 @@ impl GraphHandler {
 
             let capability_registry = {
                 let config_path = std::path::PathBuf::from("config/capability_registry.toml");
-                crate::capability_domains::CapabilityRegistry::from_toml(&config_path)
-                    .unwrap_or_default()
+                match crate::capability_domains::CapabilityRegistry::from_toml(&config_path) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        tracing::warn!("Failed to load capability_registry.toml: {e} — using empty registry");
+                        crate::capability_domains::CapabilityRegistry::default()
+                    }
+                }
             };
 
             // Clone needed: executor consumes graph, but post-execution
@@ -267,8 +274,8 @@ impl GraphHandler {
             let runtime_dir = SystemPaths::new()
                 .map(|p| p.runtime_dir().to_string_lossy().to_string())
                 .unwrap_or_else(|_| {
-                    std::env::var("BIOMEOS_RUNTIME_DIR")
-                        .or_else(|_| std::env::var("TMPDIR"))
+                    std::env::var(biomeos_types::env_config::vars::RUNTIME_DIR)
+                        .or_else(|_| std::env::var(biomeos_types::env_config::vars::SOCKET_DIR))
                         .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.to_string())
                 });
 
@@ -307,8 +314,8 @@ impl GraphHandler {
                 let runtime_dir = SystemPaths::new()
                     .map(|p| p.runtime_dir().to_string_lossy().to_string())
                     .unwrap_or_else(|_| {
-                        std::env::var("BIOMEOS_RUNTIME_DIR")
-                            .or_else(|_| std::env::var("TMPDIR"))
+                        std::env::var(biomeos_types::env_config::vars::RUNTIME_DIR)
+                            .or_else(|_| std::env::var(biomeos_types::env_config::vars::SOCKET_DIR))
                             .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.to_string())
                     });
                 let socket_path =

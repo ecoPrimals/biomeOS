@@ -92,14 +92,14 @@ impl Plasmodium {
             (Some(f), _) => f.clone(),
             (None, Some(n)) => n.clone(),
             (None, None) => std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
-                .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+                .or_else(|_| std::env::var(biomeos_types::env_config::vars::NODE_FAMILY_ID))
                 .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string()),
         };
 
         let local_gate_id = overrides
             .gate_id
             .clone()
-            .or_else(|| std::env::var("GATE_ID").ok())
+            .or_else(|| std::env::var(biomeos_types::env_config::vars::GATE_ID).ok())
             .or_else(|| std::env::var("HOSTNAME").ok())
             .unwrap_or_else(|| {
                 std::fs::read_to_string("/etc/hostname")

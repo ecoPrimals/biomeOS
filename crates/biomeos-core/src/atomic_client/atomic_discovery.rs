@@ -16,7 +16,7 @@ pub(crate) fn family_id_for_discovery(family_id_override: Option<&str>) -> Strin
         return id.to_string();
     }
     std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
-        .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+        .or_else(|_| std::env::var(biomeos_types::env_config::vars::NODE_FAMILY_ID))
         .unwrap_or_else(|_| {
             trace!("No FAMILY_ID set, using 'default' for discovery");
             DEFAULT_FAMILY_ID.to_string()

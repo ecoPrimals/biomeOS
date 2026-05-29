@@ -50,8 +50,5 @@ harness = false
 [features]
 default = []
 
-# Enable async execution
-async = []
-
 [lints]
 workspace = true

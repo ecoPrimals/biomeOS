@@ -126,6 +126,29 @@ pub mod vars {
 
     /// Local gate identifier (e.g. `eastGate`, `southGate`)
     pub const GATE_ID: &str = "BIOMEOS_GATE_ID";
+
+    // --- Runtime & Deployment ---
+
+    /// Runtime directory override (socket/PID directory)
+    pub const RUNTIME_DIR: &str = "BIOMEOS_RUNTIME_DIR";
+
+    /// Deployment mode override
+    pub const DEPLOYMENT_MODE: &str = "BIOMEOS_DEPLOYMENT_MODE";
+
+    /// JWT secret for inter-primal authentication
+    pub const JWT_SECRET: &str = "BIOMEOS_JWT_SECRET";
+
+    /// Node family ID (alias for BIOMEOS_FAMILY_ID in some contexts)
+    pub const NODE_FAMILY_ID: &str = "NODE_FAMILY_ID";
+
+    /// Discovery socket path override
+    pub const DISCOVERY_SOCKET: &str = "BIOMEOS_DISCOVERY_SOCKET";
+
+    /// AI provider override (e.g. squirrel, claude)
+    pub const AI_PROVIDER: &str = "BIOMEOS_AI_PROVIDER";
+
+    /// Port override for the Neural API HTTP listener
+    pub const PORT: &str = "BIOMEOS_PORT";
 }
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)

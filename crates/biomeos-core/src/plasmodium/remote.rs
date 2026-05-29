@@ -31,7 +31,7 @@ impl super::Plasmodium {
     /// The port is runtime-discovered from the `mesh.peers` response
     /// (beacon exchange), with env var and constants as fallbacks.
     pub(super) async fn query_remote_gate(&self, address: &str, node_id: &str) -> Result<GateInfo> {
-        let default_port: u16 = std::env::var("SONGBIRD_MESH_PORT")
+        let default_port: u16 = std::env::var(biomeos_types::env_config::vars::MESH_PORT)
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(biomeos_types::constants::network::DEFAULT_HTTP_PORT);

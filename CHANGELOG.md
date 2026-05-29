@@ -2,6 +2,44 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.87 (2026-05-29) — Wave 62: TMPDIR Regression + Orphan Cleanup
+
+### DH-1 regression: `TMPDIR` fallback in graph.execute
+- Removed `TMPDIR` env var fallback from 2 sites in `execute.rs` — was
+  reintroducing temp-dir resolution after DH-1 declared complete
+- Replaced with `BIOMEOS_RUNTIME_DIR` → `BIOMEOS_SOCKET_DIR` → `DEFAULT_SOCKET_DIR`
+  (no temp-dir in the chain)
+
+### JWT secret hardening
+- JWT fallback now checks `BIOMEOS_JWT_SECRET` before legacy `JWT_SECRET`
+- Warning message explicitly names the production env var to set
+- `JWT_SECRET` added to `env_config::vars`
+
+### Capability registry silent failure
+- `capability_registry.toml` load failure now logs `warn!` instead of
+  silently defaulting to empty registry
+
+### Env var centralization (7 new constants)
+- Added `RUNTIME_DIR`, `DEPLOYMENT_MODE`, `JWT_SECRET`, `NODE_FAMILY_ID`,
+  `DISCOVERY_SOCKET`, `AI_PROVIDER`, `PORT` to `env_config::vars`
+- Replaced 6 raw string env var references in `plasmodium/remote.rs`,
+  `plasmodium/mod.rs`, `model_cache/types.rs`, `atomic_discovery.rs`
+
+### Orphan code deletion (1,090 LOC)
+- Deleted `biomeos-graph/src/validator.rs` (255L) — references `petgraph` not
+  in deps, never compiled (not in `lib.rs`)
+- Deleted `biomeos-graph/src/templates.rs` (645L) — NestGate template storage,
+  never wired
+- Deleted `biomeos-graph/src/context.rs` (190L) — duplicates `executor/context.rs`
+
+### Dead feature flags removed
+- `biomeos-graph`: removed `async = []` (no `cfg(feature = "async")` in crate)
+- `biomeos-boot`: removed `efi = []`, `bios = ["default"]` (no `cfg` gates)
+- `biomeos-nucleus`: removed `test-utils = []` (no `cfg` gates)
+
+### Stats
+- 8,058 tests, 0 failures, 0 warnings
+
 ## v3.86 (2026-05-29) — Wave 60b: DH-1 Complete + Test Extraction
 
 ### DH-1b: `env::temp_dir()` elimination (12 production sites)

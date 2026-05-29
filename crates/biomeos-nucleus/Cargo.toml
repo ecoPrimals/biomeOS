@@ -50,8 +50,6 @@ tempfile = { workspace = true }
 
 [features]
 default = []
-# For testing without real primals (capability-based mocks, isolated to tests)
-test-utils = []
 
 [lints]
 workspace = true

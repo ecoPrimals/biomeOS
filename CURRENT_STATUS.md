@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 29, 2026 (v3.86: Wave 60b — DH-1 complete: zero env::temp_dir() in production, inline test extraction, 8,058 tests)
-**Version**: 3.86
-**Status**: PRODUCTION READY - DH-1 COMPLETE (zero /tmp + zero temp_dir()) - manifest.gate_profile wired - env_config::vars SSOT - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: May 29, 2026 (v3.87: Wave 62 — TMPDIR regression fixed, JWT secret hardened, env var SSOT complete, 1,090L orphan code deleted, 8,058 tests)
+**Version**: 3.87
+**Status**: PRODUCTION READY - DH-1 COMPLETE - TMPDIR regression fixed - env_config::vars SSOT complete - manifest.gate_profile wired - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 
