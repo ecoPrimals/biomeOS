@@ -127,7 +127,7 @@ impl DiscoveryBootstrap {
         }
 
         if !skip_env {
-            if let Ok(endpoint) = env::var("DISCOVERY_ENDPOINT") {
+            if let Ok(endpoint) = env::var(biomeos_types::env_config::vars::DISCOVERY_ENDPOINT) {
                 tracing::info!(
                     "✅ Found discovery provider via DISCOVERY_ENDPOINT: {}",
                     endpoint
@@ -278,7 +278,7 @@ impl DiscoveryBootstrap {
             return Ok(endpoint);
         }
 
-        let discovery_port: u16 = std::env::var("BIOMEOS_DISCOVERY_PORT")
+        let discovery_port: u16 = std::env::var(biomeos_types::env_config::vars::DISCOVERY_PORT)
             .and_then(|p| p.parse().map_err(|_| std::env::VarError::NotPresent))
             .unwrap_or(biomeos_types::constants::network::DEFAULT_BROADCAST_DISCOVERY_PORT);
 

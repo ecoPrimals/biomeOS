@@ -19,7 +19,7 @@ use tracing::{debug, warn};
 /// or secure runtime storage. Missing seed results in reduced trust
 /// rather than failure.
 pub fn load_family_seed_from_storage() -> Bytes {
-    let seed_b64 = std::env::var("BIOMEOS_FAMILY_SEED").ok();
+    let seed_b64 = std::env::var(biomeos_types::env_config::vars::FAMILY_SEED).ok();
     let runtime_dir = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
         .ok()
         .map(std::path::PathBuf::from);

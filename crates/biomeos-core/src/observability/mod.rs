@@ -332,7 +332,7 @@ impl MinimalObserver {
 
         let discovery_endpoint = discovery_endpoint_override
             .map(String::from)
-            .or_else(|| std::env::var("DISCOVERY_ENDPOINT").ok());
+            .or_else(|| std::env::var(biomeos_types::env_config::vars::DISCOVERY_ENDPOINT).ok());
         if let Some(endpoint) = discovery_endpoint {
             debug!(
                 "📡 Routing encrypted metrics via discovery provider at {}",

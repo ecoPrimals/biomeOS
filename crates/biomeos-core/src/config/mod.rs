@@ -213,7 +213,7 @@ pub mod presets {
         // Primals discover each other via Unix sockets (preferred) or environment.
         // The discovery provider is resolved by env or defaults to the canonical
         // mesh orchestrator from primal_names — no hardcoded primal identity.
-        let discovery_endpoint = std::env::var("DISCOVERY_ENDPOINT")
+        let discovery_endpoint = std::env::var(biomeos_types::env_config::vars::DISCOVERY_ENDPOINT)
             .or_else(|_| std::env::var("BIOMEOS_DISCOVERY_ENDPOINT"))
             .unwrap_or_else(|_| {
                 use crate::socket_discovery::SocketDiscovery;

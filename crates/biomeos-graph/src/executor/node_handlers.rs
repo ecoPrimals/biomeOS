@@ -250,8 +250,8 @@ pub async fn node_primal_launch(
         .stderr(Stdio::null());
 
     // Pass family seed if available
-    if let Ok(seed) = std::env::var("BIOMEOS_FAMILY_SEED") {
-        cmd.env("BIOMEOS_FAMILY_SEED", seed);
+    if let Ok(seed) = std::env::var(biomeos_types::env_config::vars::FAMILY_SEED) {
+        cmd.env(biomeos_types::env_config::vars::FAMILY_SEED, seed);
     }
 
     let child = cmd.spawn()

@@ -412,13 +412,23 @@ async fn create_session_via_security_provider(
         .await
         .map_err(|e| BtspHandshakeError::SecurityProviderError(e.to_string()))?;
 
+    let session_id = result["session_id"]
+        .as_str()
+        .ok_or_else(|| BtspHandshakeError::SecurityProviderError("missing session_id in btsp.session.create response".into()))?
+        .to_owned();
+    let server_ephemeral_pub = result["server_ephemeral_pub"]
+        .as_str()
+        .ok_or_else(|| BtspHandshakeError::SecurityProviderError("missing server_ephemeral_pub in btsp.session.create response".into()))?
+        .to_owned();
+    let challenge = result["challenge"]
+        .as_str()
+        .ok_or_else(|| BtspHandshakeError::SecurityProviderError("missing challenge in btsp.session.create response".into()))?
+        .to_owned();
+
     Ok(BtspSession {
-        session_id: result["session_id"].as_str().unwrap_or_default().to_owned(),
-        server_ephemeral_pub: result["server_ephemeral_pub"]
-            .as_str()
-            .unwrap_or_default()
-            .to_owned(),
-        challenge: result["challenge"].as_str().unwrap_or_default().to_owned(),
+        session_id,
+        server_ephemeral_pub,
+        challenge,
     })
 }
 

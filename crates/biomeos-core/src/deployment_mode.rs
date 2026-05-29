@@ -105,12 +105,12 @@ pub struct DeploymentFromEnvParams {
 impl DeploymentFromEnvParams {
     fn from_current_env() -> Self {
         Self {
-            media_path: std::env::var("BIOMEOS_MEDIA_PATH").ok(),
-            persistence: std::env::var("BIOMEOS_PERSISTENCE")
+            media_path: std::env::var(biomeos_types::env_config::vars::MEDIA_PATH).ok(),
+            persistence: std::env::var(biomeos_types::env_config::vars::PERSISTENCE)
                 .ok()
                 .map(|v| v == "true" || v == "1"),
-            installed_version: std::env::var("BIOMEOS_VERSION").ok(),
-            isolation: std::env::var("BIOMEOS_ISOLATION").ok(),
+            installed_version: std::env::var(biomeos_types::env_config::vars::VERSION).ok(),
+            isolation: std::env::var(biomeos_types::env_config::vars::ISOLATION).ok(),
         }
     }
 }
@@ -157,7 +157,7 @@ impl DeploymentMode {
         if let Ok(media_path) = Self::detect_removable_media() {
             let host_os = Self::detect_host_os()?;
             let persistence =
-                std::env::var("BIOMEOS_PERSISTENCE").is_ok_and(|v| v == "true" || v == "1");
+                std::env::var(biomeos_types::env_config::vars::PERSISTENCE).is_ok_and(|v| v == "true" || v == "1");
 
             return Ok(Self::ColdSpore {
                 media_path,
@@ -179,7 +179,7 @@ impl DeploymentMode {
         let host_os = Self::detect_host_os()?;
         let install_dir = Self::get_install_dir()?;
         let isolation =
-            Self::isolation_level_from_env(std::env::var("BIOMEOS_ISOLATION").ok().as_deref());
+            Self::isolation_level_from_env(std::env::var(biomeos_types::env_config::vars::ISOLATION).ok().as_deref());
 
         Ok(Self::SiblingSpore {
             host_os,
@@ -439,7 +439,7 @@ impl DeploymentMode {
 
     fn get_install_dir() -> Result<PathBuf> {
         // 1. Check BIOMEOS_INSTALL_DIR (explicit override)
-        if let Ok(dir) = std::env::var("BIOMEOS_INSTALL_DIR") {
+        if let Ok(dir) = std::env::var(biomeos_types::env_config::vars::INSTALL_DIR) {
             return Ok(PathBuf::from(dir));
         }
 

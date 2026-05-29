@@ -10,7 +10,7 @@
 
 use anyhow::Result;
 use biomeos_core::btsp_client::{self, BtspHandshakeError, HandshakeOutcome};
-use biomeos_types::jsonrpc::{JsonRpcInput, JsonRpcResponse};
+use biomeos_types::jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -330,31 +330,45 @@ impl NeuralApiServer {
     async fn dispatch_line(&self, line: &str) -> Option<Value> {
         match JsonRpcInput::parse(line) {
             Ok(JsonRpcInput::Single(req)) => {
-                // JSON-RPC 2.0: notifications have no `id` — no response
                 if req.id.is_none() {
                     debug!("Received JSON-RPC notification: {}", req.method);
-                    let raw = serde_json::to_string(&req).unwrap_or_default();
-                    let _ = self.handle_request_json(&raw).await;
+                    match serde_json::to_string(&req) {
+                        Ok(raw) => { let _ = self.handle_request_json(&raw).await; }
+                        Err(e) => tracing::warn!("Failed to serialize notification: {e}"),
+                    }
                     return None;
                 }
-                let raw = serde_json::to_string(&req).unwrap_or_default();
-                Some(self.handle_request_json(&raw).await)
+                match serde_json::to_string(&req) {
+                    Ok(raw) => Some(self.handle_request_json(&raw).await),
+                    Err(e) => {
+                        tracing::warn!("Failed to serialize request: {e}");
+                        let resp = JsonRpcResponse::error(
+                            req.id.unwrap_or(Value::Null),
+                            JsonRpcError::internal_error(Some(format!("serialization error: {e}"))),
+                        );
+                        serde_json::to_value(&resp).ok()
+                    }
+                }
             }
             Ok(JsonRpcInput::Batch(requests)) => {
                 debug!("Processing JSON-RPC batch of {} requests", requests.len());
                 let futures: Vec<_> = requests
                     .into_iter()
                     .filter(|req| {
-                        // Skip notifications in batch (no response expected)
                         if req.id.is_none() {
                             debug!("Skipping batch notification: {}", req.method);
                             return false;
                         }
                         true
                     })
-                    .map(|req| {
-                        let raw = serde_json::to_string(&req).unwrap_or_default();
-                        async move { self.handle_request_json(&raw).await }
+                    .filter_map(|req| {
+                        match serde_json::to_string(&req) {
+                            Ok(raw) => Some(async move { self.handle_request_json(&raw).await }),
+                            Err(e) => {
+                                tracing::warn!("Failed to serialize batch request: {e}");
+                                None
+                            }
+                        }
                     })
                     .collect();
 
@@ -362,13 +376,25 @@ impl NeuralApiServer {
                 if results.is_empty() {
                     None
                 } else {
-                    Some(serde_json::to_value(results).unwrap_or(Value::Array(vec![])))
+                    match serde_json::to_value(&results) {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            tracing::warn!("Failed to serialize batch results: {e}");
+                            Some(Value::Array(vec![]))
+                        }
+                    }
                 }
             }
-            Err(err) => Some(
-                serde_json::to_value(JsonRpcResponse::error(Value::Null, err))
-                    .unwrap_or(Value::Null),
-            ),
+            Err(err) => {
+                let resp = JsonRpcResponse::error(Value::Null, err);
+                match serde_json::to_value(&resp) {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        tracing::warn!("Failed to serialize error response: {e}");
+                        Some(Value::Null)
+                    }
+                }
+            }
         }
     }
 }

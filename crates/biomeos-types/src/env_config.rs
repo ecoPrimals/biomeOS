@@ -149,6 +149,37 @@ pub mod vars {
 
     /// Port override for the Neural API HTTP listener
     pub const PORT: &str = "BIOMEOS_PORT";
+
+    // --- Paths & Directories ---
+
+    /// Install directory override
+    pub const INSTALL_DIR: &str = "BIOMEOS_INSTALL_DIR";
+
+    /// Media path override
+    pub const MEDIA_PATH: &str = "BIOMEOS_MEDIA_PATH";
+
+    /// Log directory override
+    pub const LOG_DIR: &str = "BIOMEOS_LOG_DIR";
+
+    /// Persistence mode override
+    pub const PERSISTENCE: &str = "BIOMEOS_PERSISTENCE";
+
+    /// Version override
+    pub const VERSION: &str = "BIOMEOS_VERSION";
+
+    /// Isolation mode override
+    pub const ISOLATION: &str = "BIOMEOS_ISOLATION";
+
+    // --- Discovery Endpoints ---
+
+    /// Discovery endpoint URL override
+    pub const DISCOVERY_ENDPOINT: &str = "DISCOVERY_ENDPOINT";
+
+    /// Discovery port override
+    pub const DISCOVERY_PORT: &str = "BIOMEOS_DISCOVERY_PORT";
+
+    /// Family seed for key derivation
+    pub const FAMILY_SEED: &str = "BIOMEOS_FAMILY_SEED";
 }
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)
