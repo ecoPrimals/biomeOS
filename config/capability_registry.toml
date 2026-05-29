@@ -1001,6 +1001,20 @@ capabilities = [
 "health.metrics" = { provider = "*", method = "health.metrics" }
 "health.status" = { provider = "*", method = "health.status" }
 
+# ------------------------------------------------------------------------------
+# Manifest Domain (biomeOS — orchestrator-owned)
+# Ecosystem manifest resolution for gate profiles and WaterFall sync
+# ------------------------------------------------------------------------------
+
+[domains.manifest]
+provider = "biomeos"
+capabilities = [
+    "manifest.gate_profile",
+]
+
+[translations.manifest]
+"manifest.gate_profile" = { provider = "biomeos", method = "manifest.gate_profile" }
+
 # ==============================================================================
 # SOCKET PATH TEMPLATES
 # ==============================================================================
@@ -1014,14 +1028,14 @@ priority = [
     "xdg_runtime",                # $XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock
     "run_user",                   # /run/user/{uid}/biomeos/{primal}-{family}.sock
     "android_data",               # /data/local/tmp/biomeos/{primal}-{family}.sock
-    "tmp_fallback"                # /tmp/{primal}-{family}.sock
+    "run_biomeos"                 # /run/biomeos/{primal}-{family}.sock (VPS via RuntimeDirectory=)
 ]
 
 [socket_templates.patterns]
 xdg_runtime = "{xdg_runtime}/biomeos/{primal}-{family_id}.sock"
 run_user = "/run/user/{uid}/biomeos/{primal}-{family_id}.sock"
 android_data = "/data/local/tmp/biomeos/{primal}-{family_id}.sock"
-tmp_fallback = "/tmp/{primal}-{family_id}.sock"
+run_biomeos = "/run/biomeos/{primal}-{family_id}.sock"
 
 # ==============================================================================
 # NOTES

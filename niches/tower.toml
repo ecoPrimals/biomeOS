@@ -69,7 +69,7 @@ SONGBIRD_HTTP_ENABLED = "${HTTP_ENABLED:-false}"
 SONGBIRD_HTTP_PORT = "${HTTP_PORT:-8081}"
 
 # Unix Socket (primary IPC)
-# Auto-created at: /tmp/songbird-${NODE_ID}.sock
+# Auto-created at: ${SOCKET_DIR}/songbird-${NODE_ID}.sock
 
 # Logging
 RUST_LOG = "${LOG_LEVEL:-info}"
@@ -100,7 +100,7 @@ BEARDOG_HSM_MODE = "software"  # Or "hardware" if available
 
 # Communication
 BEARDOG_HTTP_ENABLED = "false"  # Unix socket only
-# Auto-created at: /tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock
+# Auto-created at: ${SOCKET_DIR}/beardog-${FAMILY_ID}-${NODE_ID}.sock
 
 # Logging
 RUST_LOG = "${LOG_LEVEL:-info}"
@@ -259,8 +259,8 @@ tls_enabled = true
 # Unix Sockets (local IPC)
 [communication.unix]
 enabled = true
-songbird_socket = "/tmp/songbird-${NODE_ID}.sock"
-beardog_socket = "/tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock"
+songbird_socket = "${SOCKET_DIR:-/run/biomeos}/songbird-${NODE_ID}.sock"
+beardog_socket = "${SOCKET_DIR:-/run/biomeos}/beardog-${FAMILY_ID}-${NODE_ID}.sock"
 
 # =============================================================================
 # MONITORING

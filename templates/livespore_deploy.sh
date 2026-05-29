@@ -82,8 +82,10 @@ chmod 600 "$WORK_DIR/.family.seed"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STEP 3: CONFIGURE PRIMAL SOCKETS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export BEARDOG_SOCKET="/tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock"
-export SONGBIRD_SOCKET="/tmp/songbird-${FAMILY_ID}-${NODE_ID}.sock"
+SOCKET_DIR="${BIOMEOS_SOCKET_DIR:-${XDG_RUNTIME_DIR:-/run/biomeos}}"
+mkdir -p "$SOCKET_DIR"
+export BEARDOG_SOCKET="${SOCKET_DIR}/beardog-${FAMILY_ID}-${NODE_ID}.sock"
+export SONGBIRD_SOCKET="${SOCKET_DIR}/songbird-${FAMILY_ID}-${NODE_ID}.sock"
 export FAMILY_ID="$FAMILY_ID"
 export NODE_ID="$NODE_ID"
 export FAMILY_ID="$FAMILY_ID"
@@ -96,9 +98,10 @@ echo "   Songbird: $SONGBIRD_SOCKET"
 # Remove stale sockets
 rm -f "$BEARDOG_SOCKET" "$SONGBIRD_SOCKET"
 
-# Create logs directory
-mkdir -p /tmp/primals
-LOG_DIR="/tmp/primals"
+# Create logs directory (XDG state or /var/log/biomeos)
+LOG_DIR="${XDG_STATE_HOME:-${HOME:+$HOME/.local/state}}/biomeos/logs"
+LOG_DIR="${LOG_DIR:-/var/log/biomeos}"
+mkdir -p "$LOG_DIR"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STEP 4: START BEARDOG (Genetic Security Provider)

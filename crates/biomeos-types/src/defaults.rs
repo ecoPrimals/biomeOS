@@ -49,13 +49,13 @@ use std::path::{Path, PathBuf};
 
 /// Default Unix socket directory
 ///
-/// Last-resort fallback. Production should use:
+/// Last-resort fallback when all env-based tiers fail. Production should use:
 /// 1. `BIOMEOS_SOCKET_DIR` env var
 /// 2. `$XDG_RUNTIME_DIR/biomeos`
 /// 3. `/run/user/{uid}/biomeos`
 /// 4. `/data/local/tmp/biomeos` (Android)
-/// 5. This fallback (development only)
-pub const DEFAULT_SOCKET_DIR: &str = "/tmp";
+/// 5. This fallback — on VPS, systemd `RuntimeDirectory=biomeos` creates `/run/biomeos/`
+pub const DEFAULT_SOCKET_DIR: &str = "/run/biomeos";
 
 /// Fallback family ID when no env var or seed file is available.
 ///

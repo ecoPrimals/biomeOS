@@ -18,11 +18,13 @@ use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
 use tokio::net::UnixStream;
 
-/// Socket directory for primal IPC (`BIOMEOS_SOCKET_DIR` or `/tmp/biomeos`).
+/// Socket directory for primal IPC (`BIOMEOS_SOCKET_DIR` or fallback).
 fn biomeos_socket_dir() -> PathBuf {
     std::env::var(biomeos_types::env_config::vars::SOCKET_DIR)
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("/tmp/biomeos"))
+        .unwrap_or_else(|_| {
+            PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE)
+        })
 }
 
 /// List `*.sock` entries under `dir` (non-recursive). Missing dir returns empty.

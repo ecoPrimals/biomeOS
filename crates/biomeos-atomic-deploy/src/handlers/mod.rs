@@ -50,6 +50,7 @@ pub mod graph;
 mod graph_tests;
 pub mod inference;
 pub mod lifecycle;
+pub mod manifest;
 #[cfg(test)]
 mod lifecycle_tests;
 pub mod niche;

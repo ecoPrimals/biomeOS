@@ -61,8 +61,8 @@ pub enum FossilAction {
     
     /// Migrate existing logs to fossil structure
     Migrate {
-        /// Directory containing old logs (default: /tmp/primals)
-        #[arg(long, default_value = "/tmp/primals")]
+        /// Directory containing old logs (XDG data dir or /var/lib/biomeos/primals)
+        #[arg(long, default_value_os_t = default_migrate_source())]
         from: PathBuf,
         
         /// Dry run (don't actually migrate)
@@ -72,6 +72,10 @@ pub enum FossilAction {
     
     /// Clean up stale active sessions
     CleanupStale,
+}
+
+fn default_migrate_source() -> PathBuf {
+    biomeos_types::SystemPaths::new_lazy().data_dir().join("primals")
 }
 
 pub async fn run(args: FossilArgs) -> Result<()> {

@@ -72,7 +72,7 @@ TOADSTOOL_ISOLATION = "${ISOLATION_MODE:-process}"  # process|container|vm|none
 TOADSTOOL_SANDBOX = "${SANDBOX_ENABLED:-true}"
 
 # Communication (minimal)
-TOADSTOOL_UNIX_SOCKET = "/tmp/compute-node-${NODE_ID}.sock"
+TOADSTOOL_UNIX_SOCKET = "${SOCKET_DIR:-/run/biomeos}/compute-node-${NODE_ID}.sock"
 TOADSTOOL_HTTP_ENABLED = "${HTTP_ENABLED:-false}"  # Only for metrics
 TOADSTOOL_HTTP_PORT = "${HTTP_PORT:-9090}"  # Prometheus
 
@@ -104,7 +104,7 @@ BEARDOG_HSM_MODE = "software"  # Or "hardware" if available
 
 # Communication
 BEARDOG_HTTP_ENABLED = "false"  # Unix socket only
-# Socket auto-created at: /tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock
+# Socket auto-created at: ${SOCKET_DIR}/beardog-${FAMILY_ID}-${NODE_ID}.sock
 
 # Logging
 RUST_LOG = "${LOG_LEVEL:-info}"
@@ -222,7 +222,7 @@ max_gpu_memory_percent = 95
 strategy = "minimal"  # minimal|local|mesh
 
 # Unix socket for local IPC
-unix_socket = "/tmp/compute-node-${NODE_ID}.sock"
+unix_socket = "${SOCKET_DIR:-/run/biomeos}/compute-node-${NODE_ID}.sock"
 
 # HTTP only for monitoring
 http_enabled = "${HTTP_ENABLED:-false}"

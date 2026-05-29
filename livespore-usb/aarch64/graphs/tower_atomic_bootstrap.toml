@@ -151,7 +151,7 @@ family_id = "${FAMILY_ID}"
 
 # Environment variables for Songbird
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "/tmp/neural-api.sock"  # For capability translation routing (must match Neural API socket)
+NEURAL_API_SOCKET = "${SOCKET_DIR:-/run/biomeos}/neural-api.sock"  # For capability translation routing (must match Neural API socket)
 BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog.sock"  # Security provider (modern XDG path)
 SONGBIRD_SECURITY_PROVIDER = "beardog"  # Use discovery, not hardcoded path
 RUST_LOG = "songbird_http_client=info"  # Enable INFO logging for first-byte verification

@@ -2,6 +2,47 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.85 (2026-05-29) — Wave 60: Manifest + DH-1
+
+### New capability: `manifest.gate_profile`
+- Implemented `manifest.gate_profile` Neural API method — resolves gate
+  profile from `ecosystem_manifest.toml` at runtime (HIGH priority target
+  for ecosystem signal graphs `ecosystem.check` / `ecosystem.pull`)
+- Added `ManifestGateProfile` route to route table and dispatch logic
+- Handler reads ecosystem manifest TOML, enriches repo refs with metadata,
+  returns gate-scoped repo list with sync metadata
+- Registered `[manifest]` domain in `capability_registry.toml`
+- Added `BIOMEOS_ECOSYSTEM_MANIFEST` and `BIOMEOS_GATE_ID` env var constants
+- 5 unit tests covering gate resolution, unknown gates, missing repos, sync meta
+
+### DH-1: `/tmp` hardcoding elimination
+- Changed `DEFAULT_SOCKET_DIR` from `/tmp` (bare) to `/run/biomeos`
+  (VPS-friendly via `RuntimeDirectory=biomeos` in systemd unit)
+- Changed `SystemPaths::new_lazy()` fallbacks from `env::temp_dir()` to
+  `/run/biomeos`, `/var/lib/biomeos`, `/etc/biomeos`, `/var/cache/biomeos`
+- Replaced CLI fossil/logs `--from` default from hardcoded `/tmp/primals`
+  to XDG data dir resolution
+- Fixed `ecosystem_health.rs` to use `FALLBACK_RUNTIME_BASE` constant
+  instead of inline `/tmp/biomeos`
+- Fixed `platypus/mesh.rs` discovery file path from `/tmp/biomeos/` to
+  `/run/biomeos/`
+- Updated 6 active niche/graph TOML files (`tower.toml`, `compute-node.toml`,
+  `nest.toml`, 3x `tower_atomic_bootstrap.toml`) from hardcoded `/tmp`
+  paths to `${SOCKET_DIR:-/run/biomeos}`
+- Updated 2 deploy scripts (`livespore_deploy.sh`, `create_sibling_spore.sh`)
+  to use env-first socket/log resolution
+- Updated socket template documentation in `capability_registry.toml`
+  from `tmp_fallback` → `run_biomeos` tier
+
+### Test environment isolation
+- Fixed 3 pre-existing environment-dependent test failures that panicked
+  when live primal sockets exist in `$XDG_RUNTIME_DIR/biomeos/`
+  (`test_hash_via_capability_no_socket_returns_none`,
+  `test_discover_capability_ai_category_empty_registry`,
+  `test_discover_capability_via_prefix`)
+
+**Stats**: 8,058 tests, 0 failures, 0 warnings, 26 crates
+
 ## v3.84 (2026-05-28) — Deep Debt Wave 58b
 
 ### Environment variable centralization (continued)

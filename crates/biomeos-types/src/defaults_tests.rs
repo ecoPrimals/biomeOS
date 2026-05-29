@@ -238,7 +238,7 @@ fn test_join_socket_path_various_dirs() {
 
 #[test]
 fn test_default_constants() {
-    assert_eq!(DEFAULT_SOCKET_DIR, "/tmp");
+    assert_eq!(DEFAULT_SOCKET_DIR, "/run/biomeos");
     assert_eq!(DEFAULT_NEURAL_API_SOCKET, "neural-api.sock");
 }
 

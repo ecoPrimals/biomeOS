@@ -118,6 +118,14 @@ pub mod vars {
 
     /// Songbird HTTP port
     pub const HTTP_PORT: &str = "SONGBIRD_HTTP_PORT";
+
+    // --- Manifest & Gate Identity ---
+
+    /// Path to `ecosystem_manifest.toml` (WaterFall catalog)
+    pub const ECOSYSTEM_MANIFEST_PATH: &str = "BIOMEOS_ECOSYSTEM_MANIFEST";
+
+    /// Local gate identifier (e.g. `eastGate`, `southGate`)
+    pub const GATE_ID: &str = "BIOMEOS_GATE_ID";
 }
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)

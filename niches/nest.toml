@@ -54,7 +54,7 @@ NESTGATE_STORAGE_PATH = "${STORAGE_PATH:-/data/nest}"
 NESTGATE_CACHE_PATH = "${CACHE_PATH:-/cache/nest}"
 NESTGATE_COMPRESSION_ENABLED = "${COMPRESSION_ENABLED:-true}"
 NESTGATE_PROVENANCE_ENABLED = "true"
-NESTGATE_UNIX_SOCKET = "/tmp/nestgate-${NODE_ID}.sock"
+NESTGATE_UNIX_SOCKET = "${SOCKET_DIR:-/run/biomeos}/nestgate-${NODE_ID}.sock"
 RUST_LOG = "${LOG_LEVEL:-info}"
 
 # Mandatory: BearDog (Encryption & Security)

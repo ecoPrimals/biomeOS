@@ -232,9 +232,9 @@ deployment_mode = "live_spore"
 lineage_mode = "sibling"
 
 [tower.sockets]
-beardog = "/tmp/beardog-$NODE_ID.sock"
-songbird = "/tmp/songbird-$NODE_ID.sock"
-neural_api = "/tmp/neural-api-$NODE_ID.sock"
+beardog = "\${SOCKET_DIR}/beardog-$NODE_ID.sock"
+songbird = "\${SOCKET_DIR}/songbird-$NODE_ID.sock"
+neural_api = "\${SOCKET_DIR}/neural-api-$NODE_ID.sock"
 
 [tower.security]
 require_btsp = true
@@ -272,9 +272,11 @@ export FAMILY_ID="$FAMILY_ID"
 export NODE_ID="$NODE_ID"
 
 # Socket paths (per-node to allow multiple spores)
-export NEURAL_API_SOCKET="/tmp/neural-api-$NODE_ID.sock"
-export BEARDOG_SOCKET="/tmp/beardog-$NODE_ID.sock"
-export SONGBIRD_SOCKET="/tmp/songbird-$NODE_ID.sock"
+SOCKET_DIR="${BIOMEOS_SOCKET_DIR:-${XDG_RUNTIME_DIR:-/run/biomeos}}"
+mkdir -p "$SOCKET_DIR"
+export NEURAL_API_SOCKET="$SOCKET_DIR/neural-api-$NODE_ID.sock"
+export BEARDOG_SOCKET="$SOCKET_DIR/beardog-$NODE_ID.sock"
+export SONGBIRD_SOCKET="$SOCKET_DIR/songbird-$NODE_ID.sock"
 
 # Security endpoints
 export SECURITY_ENDPOINT="unix://$NEURAL_API_SOCKET"
@@ -283,7 +285,7 @@ export BEARDOG_MODE="neural"
 
 echo "🚀 Starting LiveSpore: $NODE_ID (family: $FAMILY_ID)"
 echo "   Seed: $FAMILY_SEED_FILE"
-echo "   Sockets: /tmp/*-$NODE_ID.sock"
+echo "   Sockets: $SOCKET_DIR/*-$NODE_ID.sock"
 
 # Cleanup any existing sockets
 rm -f "$BEARDOG_SOCKET" "$SONGBIRD_SOCKET" "$NEURAL_API_SOCKET"

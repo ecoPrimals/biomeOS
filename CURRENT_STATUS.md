@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 28, 2026 (v3.84: Deep Debt Wave 58b — wired 22 more env var constants, extracted connection_tests.rs (798→376L) + suggestions_tests.rs (772→22L prod), zero production files >800L, 8,053 tests)
-**Version**: 3.84
-**Status**: PRODUCTION READY - env var centralization complete (env_config::vars SSOT, ~90% wired) - zero >800L production files - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: May 29, 2026 (v3.85: Wave 60 — manifest.gate_profile Neural API method, DH-1 /tmp hardcoding eliminated, 8,058 tests)
+**Version**: 3.85
+**Status**: PRODUCTION READY - manifest.gate_profile wired - DH-1 /tmp→/run/biomeos complete - env_config::vars SSOT - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 

@@ -537,17 +537,16 @@ impl SystemPaths {
     /// returns a `Result`.
     #[must_use]
     pub fn new_lazy() -> Self {
-        // Compute paths with fallbacks - these operations cannot fail
         let runtime_dir =
-            Self::get_runtime_dir().unwrap_or_else(|_| env::temp_dir().join(primal_names::BIOMEOS));
+            Self::get_runtime_dir().unwrap_or_else(|_| PathBuf::from("/run/biomeos"));
         let data_dir = Self::get_data_dir()
-            .unwrap_or_else(|_| env::temp_dir().join(format!("{}-data", primal_names::BIOMEOS)));
+            .unwrap_or_else(|_| PathBuf::from("/var/lib/biomeos"));
         let config_dir = Self::get_config_dir()
-            .unwrap_or_else(|_| env::temp_dir().join(format!("{}-config", primal_names::BIOMEOS)));
+            .unwrap_or_else(|_| PathBuf::from("/etc/biomeos"));
         let cache_dir = Self::get_cache_dir()
-            .unwrap_or_else(|_| env::temp_dir().join(format!("{}-cache", primal_names::BIOMEOS)));
+            .unwrap_or_else(|_| PathBuf::from("/var/cache/biomeos"));
         let state_dir = Self::get_state_dir()
-            .unwrap_or_else(|_| env::temp_dir().join(format!("{}-state", primal_names::BIOMEOS)));
+            .unwrap_or_else(|_| PathBuf::from("/var/lib/biomeos/state"));
 
         Self {
             runtime_dir,

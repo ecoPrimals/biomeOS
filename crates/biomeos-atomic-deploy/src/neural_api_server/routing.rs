@@ -418,7 +418,9 @@ impl NeuralApiServer {
                     )
                 }
             }
-            // Spring method registration (GAP-09)
+            Route::ManifestGateProfile => {
+                dispatch(crate::handlers::manifest::handle_gate_profile(params).await, id)
+            }
             Route::MethodRegister => {
                 dispatch(self.capability_handler.register_methods(params).await, id)
             }
