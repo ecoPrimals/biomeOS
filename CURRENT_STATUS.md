@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 29, 2026 (v3.88: Wave 62b — JSON parse logging, stale test removal, service/core.rs split, env var SSOT wiring, 7,983 tests)
+**Updated**: May 29, 2026 (v3.88: Wave 63 — JSON parse observability, silent error elimination, BTSP field validation, env SSOT expansion, service/core 795→564L, ROOTPULSE primal_names, stale test removal, 7,983 tests)
 **Version**: 3.88
-**Status**: PRODUCTION READY - DH-1 COMPLETE - JSON parse observability - env_config::vars SSOT - service/core 795→564L - manifest.gate_profile wired - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
+**Status**: PRODUCTION READY - DH-1 COMPLETE - JSON parse observability - silent error elimination - env_config::vars SSOT - service/core 795→564L - ROOTPULSE centralized - manifest.gate_profile wired - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 

@@ -2,23 +2,42 @@
 
 All notable changes to biomeOS will be documented in this file.
 
-## v3.88 (2026-05-29) — Wave 62b: JSON Parse Observability + Deep Cleanup
+## v3.88 (2026-05-29) — Wave 63: Deep Cleanup
+
+Three commits (`82501658`, `d8a6039a`, `cf0f6b57`): JSON parse observability,
+silent error elimination, env var SSOT expansion, service/core refactor,
+rootpulse centralization, stale test removal.
 
 ### JSON parse observability (4 probe sites)
-- `cap_probe.rs:70`: silent `unwrap_or_default()` → `debug!` log with byte count + error
-- `topology.rs:226`: same pattern → `debug!` + error-branch logging
-- `endpoint_probe.rs:166,205`: identity.get + capabilities.list → `debug!` on invalid JSON
-- `ai_advisor_discovery.rs:103`: same → `debug!` + early return
+- `cap_probe.rs`: silent `unwrap_or_default()` → `debug!` with byte count + error
+- `topology.rs`: same pattern → `debug!` + error-branch logging
+- `endpoint_probe.rs`: identity.get + capabilities.list → `debug!` on invalid JSON
+- `ai_advisor_discovery.rs`: same → `debug!` + early return
+
+### Silent error elimination (11 HIGH sites)
+- `/proc/net/dev` reads, BTSP handshake error serialization, p2p tunnel
+  encryption_key + lineage proof parsing, model cache entry serialization,
+  cross-gate operation params, MCP tool serialization, GPU metadata serialization,
+  health tool `Cargo.toml` read — `unwrap_or_default()` → `warn!`/`debug!` with context
+
+### BTSP handshake hardening
+- Empty `session_id` / `server_ephemeral_pub` / `challenge` → explicit errors
+  (no silent empty-string defaults)
+
+### Neural API + federation observability
+- Connection serialization failures → `warn!` + JSON-RPC -32603
+- Federation discovery/verification missing `result` field → `debug!` + graceful degrade
 
 ### DH-1: third TMPDIR regression (continuous.rs)
 - `continuous.rs:229`: `TMPDIR` fallback → `BIOMEOS_RUNTIME_DIR` / `BIOMEOS_SOCKET_DIR`
 
-### Env var centralization (5 more sites)
-- `http_client.rs`: `BIOMEOS_DISCOVERY_SOCKET` → `vars::DISCOVERY_SOCKET`
-- `manager.rs`: `BIOMEOS_AI_PROVIDER` → `vars::AI_PROVIDER`
-- `config_builder.rs`: `BIOMEOS_PORT` → `vars::PORT`
-- `deployment_mode.rs`: `BIOMEOS_DEPLOYMENT_MODE` → `vars::DEPLOYMENT_MODE`
-- `continuous.rs`: `BIOMEOS_RUNTIME_DIR` → `vars::RUNTIME_DIR`
+### Env var centralization (18 call sites, 11 new constants)
+- Wired `http_client`, `manager`, `config_builder`, `deployment_mode`, `continuous`,
+  `discovery_bootstrap`, `config`, `observability`, `primal_impls`, `family_seed`,
+  `node_handlers`, and related paths to `env_config::vars`
+- New constants: `INSTALL_DIR`, `MEDIA_PATH`, `LOG_DIR`, `PERSISTENCE`, `VERSION`,
+  `ISOLATION`, `DISCOVERY_ENDPOINT`, `DISCOVERY_PORT`, `FAMILY_SEED`, plus Wave 62
+  wiring for `DISCOVERY_SOCKET`, `AI_PROVIDER`, `PORT`, `DEPLOYMENT_MODE`, `RUNTIME_DIR`
 
 ### Stale root integration tests removed
 - Deleted entire `tests/` directory (9 files + `common/`) — stale wiremock tests
@@ -31,11 +50,16 @@ All notable changes to biomeOS will be documented in this file.
 - Extracted `service/scaling.rs` (136L): ServiceScaling, ScalingType,
   ScalingPolicy, ScalingDirection, ScalingAmount, ScalingMetric, ScalingMetricType
 
-### Orphan code deletion (1,090 LOC, from v3.87)
-- validator.rs, templates.rs, context.rs in biomeos-graph
+### RootPulse + primal name centralization
+- `ROOTPULSE` added to `primal_names` + display names; `niche.rs` wired
+- Hardcoded `"biomeos"` in capability taxonomy → `primal_names::BIOMEOS`
 
 ### Stats
-- 7,983 tests (75 stale removed), 0 failures, 0 warnings
+- 7,983 tests (75 stale removed), 0 failures, 0 warnings, 0 unsafe blocks
+
+### Remaining
+- Cross-Gate `graph.execute` Phase B (Wave 65 target)
+- Further env var centralization for lower-traffic `BIOMEOS_*` vars
 
 ## v3.87 (2026-05-29) — Wave 62: TMPDIR Regression + Orphan Cleanup
 
