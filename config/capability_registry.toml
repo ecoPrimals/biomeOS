@@ -1015,6 +1015,60 @@ capabilities = [
 [translations.manifest]
 "manifest.gate_profile" = { provider = "biomeos", method = "manifest.gate_profile" }
 
+# ------------------------------------------------------------------------------
+# Gate Domain (biomeOS — sovereign shadow functions)
+# VPS gate management, systemd service control, workspace sync.
+# Shadow implementation: membrane-shadow crate (cellMembrane).
+# These capabilities proxy to golgiBody via SSH transport until
+# primals gain native shadow dispatch.
+# Added: Wave 61 sovereign shadow evolution (May 29, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.gate]
+provider = "biomeos"
+capabilities = [
+    "gate",
+    "gate.info",
+    "gate.service",
+    "gate.pull",
+    "gate.check",
+]
+
+[translations.gate]
+# VPS system info — hostname, uptime, load, memory, disk, services, repos
+"gate.info" = { provider = "biomeos", method = "gate.info" }
+# Run cascade-pull on golgiBody
+"gate.pull" = { provider = "biomeos", method = "gate.pull" }
+# Parity check on golgiBody workspace
+"gate.check" = { provider = "biomeos", method = "gate.check" }
+# systemd service management
+"gate.service.list" = { provider = "biomeos", method = "gate.service.list" }
+"gate.service.status" = { provider = "biomeos", method = "gate.service.status" }
+"gate.service.restart" = { provider = "biomeos", method = "gate.service.restart" }
+"gate.service.logs" = { provider = "biomeos", method = "gate.service.logs" }
+
+# ------------------------------------------------------------------------------
+# Sovereign Shadow Extensions — Cross-Primal Forgejo Integration
+# Shadow capabilities that bridge primals to the inner membrane forge.
+# Routed through biomeOS capability.call; shadow provider is membrane-shadow.
+# Added: Wave 61 sovereign shadow evolution (May 29, 2026)
+# ------------------------------------------------------------------------------
+
+[translations.shadow_repo]
+# nestGate content.repo.* — Forgejo repository management
+"content.repo.create" = { provider = "nestgate", method = "content.repo.create" }
+"content.repo.list" = { provider = "nestgate", method = "content.repo.list" }
+"content.repo.delete" = { provider = "nestgate", method = "content.repo.delete" }
+# nestGate content.mirror.* — Forgejo pull mirror control
+"content.mirror.sync" = { provider = "nestgate", method = "content.mirror.sync" }
+"content.mirror.status" = { provider = "nestgate", method = "content.mirror.status" }
+
+[translations.shadow_auth]
+# bearDog auth.token.* — Forgejo API token lifecycle
+"auth.token.list" = { provider = "beardog", method = "auth.token.list" }
+"auth.token.create" = { provider = "beardog", method = "auth.token.create" }
+"auth.token.revoke" = { provider = "beardog", method = "auth.token.revoke" }
+
 # ==============================================================================
 # SOCKET PATH TEMPLATES
 # ==============================================================================
