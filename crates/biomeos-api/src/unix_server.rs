@@ -294,7 +294,7 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
                 "role": "orchestrator",
                 "version": env!("CARGO_PKG_VERSION"),
                 "transport": "http+jsonrpc",
-                "note": "biomeOS is an HTTP API server; use HTTP POST for full API, or the neural-api socket for capability.call routing"
+                "note": "biomeOS API socket proxies capability.call and graph.execute to Neural API automatically"
             });
             jsonrpc_ok(id, &result)
         }
@@ -342,8 +342,9 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
             id,
             -32601,
             &format!(
-                "Method not found: {method}. biomeOS API uses HTTP transport; \
-                 for capability.call routing use the neural-api socket"
+                "Method not found: {method}. \
+                 capability.call and graph.execute are auto-proxied; \
+                 other Neural API methods require the neural-api socket"
             ),
         ),
     }
@@ -659,11 +660,10 @@ mod tests {
         assert_eq!(resp["jsonrpc"], "2.0");
         assert_eq!(resp["id"], 7);
         assert_eq!(resp["error"]["code"], -32601);
+        let msg = resp["error"]["message"].as_str().expect("message");
         assert!(
-            resp["error"]["message"]
-                .as_str()
-                .expect("message")
-                .contains("neural-api socket")
+            msg.contains("Method not found"),
+            "expected 'Method not found' in error, got: {msg}"
         );
 
         server_handle.abort();
