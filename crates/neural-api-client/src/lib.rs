@@ -50,7 +50,7 @@
 //! ```
 
 mod client;
-mod connection;
+pub mod connection;
 mod error;
 mod retry_config;
 mod types;

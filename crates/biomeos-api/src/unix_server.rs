@@ -153,7 +153,7 @@ async fn handle_raw_jsonrpc(mut reader: BufReader<tokio::net::UnixStream>) -> Re
             continue;
         }
 
-        let response = dispatch_jsonrpc_line(trimmed);
+        let response = dispatch_jsonrpc_line_async(trimmed).await;
         let mut out = serde_json::to_string(&response)?;
         out.push('\n');
         reader.get_mut().write_all(out.as_bytes()).await?;
@@ -161,6 +161,93 @@ async fn handle_raw_jsonrpc(mut reader: BufReader<tokio::net::UnixStream>) -> Re
     }
 
     Ok(())
+}
+
+/// Neural API methods that should be proxied to the Neural API socket
+/// instead of returning -32601. These are the cross-gate critical path methods.
+const NEURAL_API_PROXY_METHODS: &[&str] = &[
+    "capability.call",
+    "graph.execute",
+    "topology.primals",
+];
+
+async fn dispatch_jsonrpc_line_async(line: &str) -> serde_json::Value {
+    let null = serde_json::Value::Null;
+    let Ok(req) = serde_json::from_str::<serde_json::Value>(line) else {
+        return jsonrpc_error(&null, -32700, "Parse error");
+    };
+    let id = req.get("id").unwrap_or(&null);
+    let method = req
+        .get("method")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("");
+
+    if NEURAL_API_PROXY_METHODS.contains(&method) {
+        let params = req.get("params").cloned().unwrap_or(serde_json::Value::Object(Default::default()));
+        return proxy_to_neural_api(id, method, &params).await;
+    }
+
+    dispatch_jsonrpc_line(line)
+}
+
+/// Forward a JSON-RPC request to the Neural API socket and return the response.
+async fn proxy_to_neural_api(
+    id: &serde_json::Value,
+    method: &str,
+    params: &serde_json::Value,
+) -> serde_json::Value {
+    let family_id = biomeos_types::env_config::family_id()
+        .unwrap_or_else(|| "default".to_string());
+
+    let socket_path = neural_api_client::NeuralApiClient::discover_socket(&family_id);
+
+    if !socket_path.exists() {
+        debug!(
+            "Neural API socket not found at {} — cannot proxy {method}",
+            socket_path.display()
+        );
+        return jsonrpc_error(
+            id,
+            -32002,
+            &format!(
+                "Neural API not running (socket not found: {}). \
+                 Start with `biomeos nucleus` or `biomeos neural-api`",
+                socket_path.display()
+            ),
+        );
+    }
+
+    let client = match neural_api_client::NeuralApiClient::new(&socket_path) {
+        Ok(c) => c.with_request_timeout(tokio::time::Duration::from_secs(30)),
+        Err(e) => {
+            warn!("Failed to create Neural API client for proxy: {e}");
+            return jsonrpc_error(id, -32002, &format!("Neural API client error: {e}"));
+        }
+    };
+
+    match neural_api_client::connection::json_rpc_call(
+        &client.socket_path,
+        method,
+        params,
+        client.request_timeout,
+        client.connection_timeout,
+        &client.retry_config,
+    )
+    .await
+    {
+        Ok(result) => {
+            debug!("Proxied {method} to Neural API → success");
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "result": result,
+                "id": id
+            })
+        }
+        Err(e) => {
+            debug!("Proxied {method} to Neural API → error: {e}");
+            jsonrpc_error(id, -32603, &format!("Neural API proxy error: {e}"))
+        }
+    }
 }
 
 fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
@@ -236,6 +323,8 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
                     "health.liveness",
                     "identity.get",
                     "capabilities.list",
+                    "capability.call",
+                    "graph.execute",
                     "primal.list"
                 ],
                 "http_api": [
@@ -245,7 +334,7 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
                     "/api/v1/trust/identity",
                     "/api/v1/events/stream"
                 ],
-                "note": "Full API available via HTTP over this socket. Neural API (capability.call, graph.execute) is on the neural-api socket."
+                "note": "capability.call and graph.execute are proxied to the Neural API socket automatically. Full HTTP API also available."
             });
             jsonrpc_ok(id, &result)
         }
@@ -559,7 +648,7 @@ mod tests {
             .expect("connect");
 
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"graph.execute\",\"params\":{},\"id\":7}\n";
+        let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"nonexistent.method\",\"params\":{},\"id\":7}\n";
         stream.write_all(req).await.expect("write");
         stream.flush().await.expect("flush");
 
