@@ -68,7 +68,7 @@ impl GenomeBin {
     ///
     /// Deep Debt: Uses etcetera for platform-agnostic paths
     pub fn default_install_dir() -> Result<PathBuf> {
-        let user = std::env::var("USER").unwrap_or_default();
+        let user = std::env::var(biomeos_types::env_config::vars::SYS_USER).unwrap_or_default();
         Self::default_install_dir_for_user(&user)
     }
 

@@ -119,7 +119,7 @@ pub(crate) fn resolve_socket_dir_with(socket_dir: Option<&str>) -> Result<PathBu
 /// Discover primal binaries from known locations.
 pub(super) fn discover_binaries(primals: &[&str]) -> Result<HashMap<String, PathBuf>> {
     let plasmid_bin_dir = biomeos_types::env_config::plasmid_bin_dir();
-    let path_owned: Vec<PathBuf> = std::env::var("PATH")
+    let path_owned: Vec<PathBuf> = std::env::var(biomeos_types::env_config::vars::SYS_PATH)
         .ok()
         .map(|s| s.split(':').map(PathBuf::from).collect())
         .unwrap_or_default();

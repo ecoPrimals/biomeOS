@@ -44,7 +44,7 @@ impl ModelCacheConfig {
 
 fn resolve_gate_id_from_env() -> String {
     std::env::var(biomeos_types::env_config::vars::GATE_ID)
-        .or_else(|_| std::env::var("HOSTNAME"))
+        .or_else(|_| std::env::var(biomeos_types::env_config::vars::HOSTNAME))
         .unwrap_or_else(|_| {
             std::fs::read_to_string("/etc/hostname")
                 .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string())

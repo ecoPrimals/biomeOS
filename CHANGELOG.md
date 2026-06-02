@@ -2,6 +2,42 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.96 (2026-06-02) — Wave 72: Deep Debt Cleanup — Env SSOT + Context Evolution + Test Extraction
+
+### Environment variable SSOT expansion
+- Added 14 system env constants to `env_config::vars`: HOME, XDG_DATA_HOME,
+  XDG_CONFIG_HOME, XDG_CACHE_HOME, XDG_STATE_HOME, WSL_DISTRO_NAME, UID,
+  OS_VERSION, HOSTNAME, RUST_LOG, SYS_PATH, SYS_USER, SYS_USERNAME
+- Wired 44 production `env::var("...")` call sites across 22 files to use SSOT constants
+  (deployment_mode.rs, paths.rs, orchestrator.rs, family_discovery.rs,
+  plasmodium/mod.rs, model_cache, incubation, genome-deploy, etc.)
+
+### map_err → .context() evolution
+- `metrics/mod.rs`: eliminated all 35 redundant `.map_err(|e| anyhow!("{e}"))` wrappings
+  (redb errors implement `Error`, so `?` alone suffices)
+- `genome.rs`: 6 calls → `.context()` / `.with_context()`
+- `endpoint_probe.rs`: 7 calls → `.context()` / `.with_context()`
+- `atomic_transport.rs`: 3 calls → `.context()`
+- `discovery_bootstrap.rs`: 3 calls → `.context()`
+- `connection.rs`: 2 calls → `.context()`
+- Total: ~56 call sites evolved to idiomatic error handling
+
+### Primal-name hardcoding evolution
+- `primal_client.rs`: 6 capability accessors now use `resolve_name_fallback()` that
+  warns on taxonomy miss — surfaces gaps for closure rather than silently resolving
+- `mode.rs`: debug logging on security/network provider taxonomy miss
+
+### #[allow] → #[expect] migration
+- Last `#[allow(dead_code)]` in `sovereign_mesh_helpers/mod.rs` migrated to `#[expect]`
+- Codebase now 100% `#[expect]` for lint suppression
+
+### Large file refactoring
+- `discovery_modern.rs`: 751 → 378 lines — extracted 370 lines of tests to
+  `discovery_modern_tests.rs` using `#[path]` attribute (all 14 tests preserved)
+
+### Dependency evolution
+- Added `biomeos-types` dependency to `biomeos-genome-deploy` for env SSOT access
+
 ## v3.95 (2026-06-02) — Wave 71+: Shadow Analysis + PathwayLearner + Perceptron Prep
 
 ### A/B shadow analysis enhancement

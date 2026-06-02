@@ -120,7 +120,7 @@ impl DeploymentConfig {
             runtime_dir: std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| {
-                    let uid = std::env::var("UID")
+                    let uid = std::env::var(biomeos_types::env_config::vars::UID)
                         .or_else(|_| std::env::var("EUID"))
                         .or_else(|_| {
                             #[cfg(unix)]

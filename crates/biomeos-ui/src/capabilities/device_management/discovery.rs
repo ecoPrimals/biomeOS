@@ -21,7 +21,7 @@ pub const DEFAULT_CPU_SAMPLE_INTERVAL: std::time::Duration = std::time::Duration
 /// Resolve effective UID for `/run/user/{uid}` without a hardcoded default.
 /// Returns `None` if the UID cannot be determined (skip `/run/user` discovery).
 fn effective_unix_uid_string() -> Option<String> {
-    if let Ok(u) = std::env::var("UID")
+    if let Ok(u) = std::env::var(biomeos_types::env_config::vars::UID)
         && !u.is_empty()
     {
         return Some(u);

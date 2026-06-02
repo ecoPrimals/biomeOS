@@ -252,7 +252,7 @@ impl SporeVerifier {
         let mut spores = Vec::new();
 
         // Check common mount points
-        let media_dir = PathBuf::from("/media").join(std::env::var("USER")?);
+        let media_dir = PathBuf::from("/media").join(std::env::var(biomeos_types::env_config::vars::SYS_USER)?);
 
         if media_dir.exists() {
             for entry in std::fs::read_dir(&media_dir)? {

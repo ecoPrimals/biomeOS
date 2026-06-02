@@ -46,7 +46,7 @@ pub(crate) struct JsonRpcError {
 }
 
 fn effective_unix_uid_string() -> Option<String> {
-    if let Ok(u) = std::env::var("UID")
+    if let Ok(u) = std::env::var(biomeos_types::env_config::vars::UID)
         && !u.is_empty()
     {
         return Some(u);

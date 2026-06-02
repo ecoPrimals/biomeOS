@@ -8,7 +8,7 @@
 //! BTSP Phase 3 negotiate, the connection switches to length-prefixed
 //! ChaCha20-Poly1305 encrypted framing.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use biomeos_core::btsp_client::{self, BtspHandshakeError, HandshakeOutcome};
 use biomeos_types::jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
@@ -261,7 +261,7 @@ impl NeuralApiServer {
             let mut payload = vec![0u8; frame_len];
             timeout(Duration::from_secs(30), reader.read_exact(&mut payload))
                 .await
-                .map_err(|_| anyhow::anyhow!("Timeout reading encrypted frame payload"))??;
+                .context("Timeout reading encrypted frame payload")??;
 
             let plaintext = match btsp_negotiate::decrypt_frame(&keys.client_to_server, &payload) {
                 Ok(pt) => pt,
@@ -277,7 +277,7 @@ impl NeuralApiServer {
                 let response_bytes = serde_json::to_vec(&response_value)?;
 
                 let frame = btsp_negotiate::encrypt_frame(&keys.server_to_client, &response_bytes)
-                    .map_err(|e| anyhow::anyhow!("Encryption failed: {e}"))?;
+                    .context("Encryption failed")?;
 
                 let stream = reader.get_mut();
                 stream.write_all(&frame).await?;

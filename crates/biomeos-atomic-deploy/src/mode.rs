@@ -91,14 +91,20 @@ impl BiomeOsMode {
                 biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
                     .map(String::from)
             })
-            .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
+            .unwrap_or_else(|| {
+                tracing::debug!("security provider: taxonomy miss, using name fallback");
+                biomeos_types::primal_names::BEARDOG.to_string()
+            });
         let network_provider = std::env::var(biomeos_types::env_config::vars::NETWORK_PROVIDER)
             .ok()
             .or_else(|| {
                 biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
                     .map(String::from)
             })
-            .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
+            .unwrap_or_else(|| {
+                tracing::debug!("network provider: taxonomy miss, using name fallback");
+                biomeos_types::primal_names::SONGBIRD.to_string()
+            });
 
         let mut nucleation = SocketNucleation::default();
         let security_socket = nucleation.assign_socket(&security_provider, family_id);

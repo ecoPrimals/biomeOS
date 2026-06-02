@@ -58,7 +58,7 @@ pub fn load_family_seed_from_storage_with(
     }
 
     if include_uid_fallback {
-        let uid_opt = std::env::var("UID")
+        let uid_opt = std::env::var(biomeos_types::env_config::vars::UID)
             .or_else(|_| std::env::var("EUID"))
             .or_else(|_| {
                 std::fs::read_to_string("/proc/self/loginuid").map(|s| s.trim().to_string())

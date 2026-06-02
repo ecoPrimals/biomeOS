@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use biomeos_primal_sdk::PrimalCapability;
 use biomeos_types::Health;
 use biomeos_types::constants::timeouts;
@@ -59,8 +59,8 @@ async fn probe_unix_endpoint(socket_path: &str) -> Result<ProbeResult> {
 
     let stream = tokio::time::timeout(timeouts::PROBE_TIMEOUT, UnixStream::connect(path))
         .await
-        .map_err(|_| anyhow::anyhow!("connect timed out"))?
-        .map_err(|e| anyhow::anyhow!("connect failed: {e}"))?;
+        .context("connect timed out")?
+        .context("connect failed")?;
 
     let mut reader = BufReader::new(stream);
 
@@ -87,8 +87,8 @@ async fn probe_tcp_endpoint(authority: &str) -> Result<ProbeResult> {
 
     let stream = tokio::time::timeout(timeouts::PROBE_TIMEOUT, TcpStream::connect(authority))
         .await
-        .map_err(|_| anyhow::anyhow!("TCP connect timed out: {authority}"))?
-        .map_err(|e| anyhow::anyhow!("TCP connect failed ({authority}): {e}"))?;
+        .with_context(|| format!("TCP connect timed out: {authority}"))?
+        .with_context(|| format!("TCP connect failed: {authority}"))?;
 
     let mut reader = BufReader::new(stream);
 
@@ -110,7 +110,7 @@ async fn probe_http_endpoint(url: &str) -> Result<ProbeResult> {
 
     let parsed: url::Url = url
         .parse()
-        .map_err(|e| anyhow::anyhow!("invalid HTTP endpoint URL ({url}): {e}"))?;
+        .with_context(|| format!("invalid HTTP endpoint URL: {url}"))?;
 
     let host = parsed
         .host_str()
@@ -120,8 +120,8 @@ async fn probe_http_endpoint(url: &str) -> Result<ProbeResult> {
 
     let stream = tokio::time::timeout(timeouts::PROBE_TIMEOUT, TcpStream::connect(&authority))
         .await
-        .map_err(|_| anyhow::anyhow!("HTTP connect timed out: {authority}"))?
-        .map_err(|e| anyhow::anyhow!("HTTP connect failed ({authority}): {e}"))?;
+        .with_context(|| format!("HTTP connect timed out: {authority}"))?
+        .with_context(|| format!("HTTP connect failed: {authority}"))?;
 
     let (name, version) = http_jsonrpc_call(&stream, &parsed, "identity.get", 1).await;
 

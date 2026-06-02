@@ -131,7 +131,7 @@ pub fn symmetric_decrypt(ciphertext_hex: &str, key: &[u8; 32]) -> Option<Vec<u8>
 pub struct CryptoMockBearDog {
     pub family_seed: FamilySeed,
     pub beacon_id: String,
-    #[allow(dead_code)] // serde may require the field shape; not read in tests
+    #[expect(dead_code, reason = "serde may require the field shape; not read in tests")]
     pub beacon_seed_hex: String,
 }
 

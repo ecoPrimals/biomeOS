@@ -50,7 +50,7 @@ pub(crate) async fn jsonrpc_unix_btsp(
 
     let outcome = crate::btsp_client_phase3::perform_client_handshake_phase3(stream)
         .await
-        .map_err(|e| anyhow::anyhow!("BTSP handshake failed for {}: {e}", path.display()))?;
+        .with_context(|| format!("BTSP handshake failed for {}", path.display()))?;
 
     match outcome {
         crate::btsp_client_phase3::ClientPhase3Outcome::Encrypted { keys, stream } => {
@@ -76,7 +76,7 @@ async fn send_encrypted_jsonrpc(
         serde_json::to_vec(&request).context("Failed to serialize JSON-RPC request")?;
 
     let frame = crate::btsp_crypto::encrypt_frame(&keys.client_to_server, &request_bytes)
-        .map_err(|e| anyhow::anyhow!("encrypt_frame failed: {e}"))?;
+        .context("encrypt_frame failed")?;
 
     let (mut read_half, mut write_half) = stream.into_split();
 
@@ -109,7 +109,7 @@ async fn send_encrypted_jsonrpc(
         .context("Failed to read response frame payload")?;
 
     let plaintext = crate::btsp_crypto::decrypt_frame(&keys.server_to_client, &payload)
-        .map_err(|e| anyhow::anyhow!("decrypt_frame failed: {e}"))?;
+        .context("decrypt_frame failed")?;
 
     trace!(
         "Received encrypted JSON-RPC response ({} bytes plaintext)",

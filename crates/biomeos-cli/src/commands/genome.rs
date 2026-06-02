@@ -286,11 +286,11 @@ pub fn get_genome_storage_dir_with(data_home: Option<&str>) -> PathBuf {
         return PathBuf::from(data_home).join("biomeos/genomes");
     }
 
-    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+    if let Ok(data_home) = std::env::var(biomeos_types::env_config::vars::XDG_DATA_HOME) {
         return PathBuf::from(data_home).join("biomeos/genomes");
     }
 
-    if let Ok(home) = std::env::var("HOME") {
+    if let Ok(home) = std::env::var(biomeos_types::env_config::vars::HOME) {
         return PathBuf::from(home).join(".local/share/biomeos/genomes");
     }
 

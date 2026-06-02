@@ -653,6 +653,7 @@ name = "biomeos-genome-deploy"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "biomeos-types",
  "clap",
  "colored",
  "flate2",

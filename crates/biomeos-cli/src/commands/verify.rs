@@ -477,7 +477,7 @@ fn discover_spore_mounts() -> Vec<(String, String)> {
         return parse_biomeos_spore_paths_list(&paths);
     }
 
-    let user = std::env::var("USER").unwrap_or_else(|_| "root".to_string());
+    let user = std::env::var(biomeos_types::env_config::vars::SYS_USER).unwrap_or_else(|_| "root".to_string());
     let media_dir = PathBuf::from(format!("/media/{user}"));
     if !media_dir.exists() {
         return Vec::new();

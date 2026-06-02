@@ -17,6 +17,7 @@ colored = { workspace = true }
 serde = { workspace = true }
 toml = { workspace = true }
 # DEEP DEBT: nix and dirs removed — pure Rust via $HOME/$EUID env resolution
+biomeos-types = { path = "../biomeos-types" }
 tempfile = { workspace = true }
 
 [lib]

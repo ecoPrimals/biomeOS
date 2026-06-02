@@ -425,7 +425,7 @@ impl DeploymentMode {
         }
 
         // Check for Windows (if running under WSL)
-        if std::env::var("WSL_DISTRO_NAME").is_ok() {
+        if std::env::var(biomeos_types::env_config::vars::WSL_DISTRO_NAME).is_ok() {
             return Ok(HostOS::Windows {
                 version: "WSL".to_string(),
             });
@@ -435,7 +435,7 @@ impl DeploymentMode {
     }
 
     fn get_os_version() -> String {
-        std::env::var("OS_VERSION").unwrap_or_else(|_| "unknown".to_string())
+        std::env::var(biomeos_types::env_config::vars::OS_VERSION).unwrap_or_else(|_| "unknown".to_string())
     }
 
     fn get_install_dir() -> Result<PathBuf> {
@@ -445,12 +445,12 @@ impl DeploymentMode {
         }
 
         // 2. Use XDG_DATA_HOME if available (XDG-compliant)
-        if let Ok(xdg_data) = std::env::var("XDG_DATA_HOME") {
+        if let Ok(xdg_data) = std::env::var(biomeos_types::env_config::vars::XDG_DATA_HOME) {
             return Ok(PathBuf::from(xdg_data).join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR));
         }
 
         // 3. Default to HOME/.local/share (XDG default)
-        if let Ok(home) = std::env::var("HOME") {
+        if let Ok(home) = std::env::var(biomeos_types::env_config::vars::HOME) {
             return Ok(PathBuf::from(home).join(".local/share/biomeos"));
         }
 
@@ -473,7 +473,7 @@ impl DeploymentMode {
     ///
     /// This function never panics - it always returns a valid u32 value.
     fn get_uid() -> u32 {
-        std::env::var("UID")
+        std::env::var(biomeos_types::env_config::vars::UID)
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or_else(|| {

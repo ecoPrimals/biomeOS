@@ -77,7 +77,7 @@ fn build_socket_path_inner(
     }
 
     // Tier 3: Linux /run/user/$UID/biomeos/
-    if let Ok(uid) = env::var("UID") {
+    if let Ok(uid) = env::var(biomeos_types::env_config::vars::UID) {
         let run_user = PathBuf::from(format!(
             "{}/{uid}/{BIOMEOS}",
             runtime_paths::LINUX_RUNTIME_DIR_PREFIX,

@@ -100,7 +100,7 @@ impl Plasmodium {
             .gate_id
             .clone()
             .or_else(|| std::env::var(biomeos_types::env_config::vars::GATE_ID).ok())
-            .or_else(|| std::env::var("HOSTNAME").ok())
+            .or_else(|| std::env::var(biomeos_types::env_config::vars::HOSTNAME).ok())
             .unwrap_or_else(|| {
                 std::fs::read_to_string("/etc/hostname")
                     .map_or_else(|_| "unknown".to_string(), |s| s.trim().to_string())

@@ -40,7 +40,7 @@
 //! }
 //! ```
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use biomeos_types::constants::{endpoints, network};
 use std::env;
 
@@ -285,10 +285,10 @@ impl DiscoveryBootstrap {
         // Bind to any available port for sending
         let socket = UdpSocket::bind(biomeos_types::constants::endpoints::EPHEMERAL_UDP_BIND)
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to bind UDP socket: {e}"))?;
+            .context("Failed to bind UDP socket")?;
         socket
             .set_broadcast(true)
-            .map_err(|e| anyhow::anyhow!("Failed to enable broadcast: {e}"))?;
+            .context("Failed to enable broadcast")?;
 
         // Send discovery packet
         let request = serde_json::json!({
@@ -302,7 +302,7 @@ impl DiscoveryBootstrap {
         socket
             .send_to(&packet, &broadcast_addr)
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to send broadcast: {e}"))?;
+            .context("Failed to send broadcast")?;
 
         tracing::debug!(
             "Broadcast sent to {}, listening for responses...",

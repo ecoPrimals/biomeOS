@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 2, 2026 (v3.95: Wave 71+ — A/B shadow analysis with milestones, PathwayLearner graph→weight feedback, perceptron design updated)
-**Version**: 3.95
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - A/B shadow analysis ACTIVE - PathwayLearner LIVE - Topology affinity scoring - Zero clippy warnings - env_config::vars SSOT 75+ constants - DH-1 COMPLETE - Zero Blocking Debt
+**Updated**: June 2, 2026 (v3.96: Wave 72 — Deep debt: env SSOT +14 constants, 56 map_err→context, test extraction, #[expect] 100%)
+**Version**: 3.96
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - A/B shadow analysis ACTIVE - PathwayLearner LIVE - Topology affinity scoring - Zero clippy warnings - env_config::vars SSOT 90+ constants - DH-1 COMPLETE - Zero Blocking Debt
 
 ---
 

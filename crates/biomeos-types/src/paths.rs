@@ -444,12 +444,12 @@ impl SystemPaths {
     fn get_data_dir() -> Result<PathBuf> {
         use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_DATA_HOME
-        if let Ok(xdg_data) = env::var("XDG_DATA_HOME") {
+        if let Ok(xdg_data) = env::var(crate::env_config::vars::XDG_DATA_HOME) {
             return Ok(PathBuf::from(xdg_data).join(primal_names::BIOMEOS));
         }
 
         // 2. Try $HOME/.local/share
-        if let Ok(home) = env::var("HOME") {
+        if let Ok(home) = env::var(crate::env_config::vars::HOME) {
             return Ok(PathBuf::from(home)
                 .join(".local/share")
                 .join(primal_names::BIOMEOS));
@@ -464,12 +464,12 @@ impl SystemPaths {
     fn get_config_dir() -> Result<PathBuf> {
         use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_CONFIG_HOME
-        if let Ok(xdg_config) = env::var("XDG_CONFIG_HOME") {
+        if let Ok(xdg_config) = env::var(crate::env_config::vars::XDG_CONFIG_HOME) {
             return Ok(PathBuf::from(xdg_config).join(primal_names::BIOMEOS));
         }
 
         // 2. Try $HOME/.config
-        if let Ok(home) = env::var("HOME") {
+        if let Ok(home) = env::var(crate::env_config::vars::HOME) {
             return Ok(PathBuf::from(home)
                 .join(".config")
                 .join(primal_names::BIOMEOS));
@@ -484,12 +484,12 @@ impl SystemPaths {
     fn get_cache_dir() -> Result<PathBuf> {
         use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
         // 1. Try $XDG_CACHE_HOME
-        if let Ok(xdg_cache) = env::var("XDG_CACHE_HOME") {
+        if let Ok(xdg_cache) = env::var(crate::env_config::vars::XDG_CACHE_HOME) {
             return Ok(PathBuf::from(xdg_cache).join(primal_names::BIOMEOS));
         }
 
         // 2. Try $HOME/.cache
-        if let Ok(home) = env::var("HOME") {
+        if let Ok(home) = env::var(crate::env_config::vars::HOME) {
             return Ok(PathBuf::from(home)
                 .join(".cache")
                 .join(primal_names::BIOMEOS));
@@ -503,12 +503,12 @@ impl SystemPaths {
     /// Get XDG state directory
     fn get_state_dir() -> Result<PathBuf> {
         // 1. Try $XDG_STATE_HOME
-        if let Ok(xdg_state) = env::var("XDG_STATE_HOME") {
+        if let Ok(xdg_state) = env::var(crate::env_config::vars::XDG_STATE_HOME) {
             return Ok(PathBuf::from(xdg_state).join(primal_names::BIOMEOS));
         }
 
         // 2. Try $HOME/.local/state
-        if let Ok(home) = env::var("HOME") {
+        if let Ok(home) = env::var(crate::env_config::vars::HOME) {
             return Ok(PathBuf::from(home)
                 .join(".local/state")
                 .join(primal_names::BIOMEOS));
@@ -520,8 +520,8 @@ impl SystemPaths {
 
     /// Get current username
     fn get_username() -> String {
-        env::var("USER")
-            .or_else(|_| env::var("USERNAME"))
+        env::var(crate::env_config::vars::SYS_USER)
+            .or_else(|_| env::var(crate::env_config::vars::SYS_USERNAME))
             .unwrap_or_else(|_| "default".to_string())
     }
 

@@ -29,7 +29,7 @@ pub(crate) fn resolve_api_server_config_with(config: Config) -> anyhow::Result<(
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            std::env::var("RUST_LOG")
+            std::env::var(biomeos_types::env_config::vars::RUST_LOG)
                 .unwrap_or_else(|_| "biomeos_api=info,tower_http=debug".to_string()),
         )
         .init();

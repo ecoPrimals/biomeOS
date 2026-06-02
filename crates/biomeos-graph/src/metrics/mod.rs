@@ -152,22 +152,18 @@ impl MetricsCollector {
     pub fn new<P: AsRef<Path>>(db_path: P) -> Result<Self> {
         let path = db_path.as_ref();
         let db = Database::create(path)
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics database")?;
 
         // Ensure the metrics table exists (redb creates tables on first write)
         let txn = db
             .begin_write()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to initialize metrics database")?;
         {
             let _ = txn
                 .open_table(METRICS_TABLE)
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to create metrics table")?;
         }
         txn.commit()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to commit initialization")?;
 
         Ok(Self { db: Arc::new(db) })
@@ -203,20 +199,16 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_write()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin write transaction")?;
         {
             let mut table = txn
                 .open_table(METRICS_TABLE)
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to open metrics table")?;
             table
                 .insert(key.as_str(), value.as_slice())
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to insert execution record")?;
         }
         txn.commit()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to commit transaction")?;
 
         Ok(())
@@ -230,11 +222,9 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         let mut total = 0u64;
@@ -246,10 +236,9 @@ impl MetricsCollector {
 
         for item in table
             .range(prefix.as_str()..end.as_str())
-            .map_err(|e| anyhow::anyhow!("{e}"))?
+            ?
         {
             let (_key, value) = item
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to read database entry")?;
             let value = value.value();
 
@@ -298,19 +287,16 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         for item in table
             .range("exec:"..end.as_str())
-            .map_err(|e| anyhow::anyhow!("{e}"))?
+            ?
         {
             let (key, _) = item
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to read database entry")?;
             let key_str = key.value();
 
@@ -329,16 +315,14 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         let keys: Vec<String> = table
             .range::<&str>(""..)
-            .map_err(|e| anyhow::anyhow!("{e}"))?
+            ?
             .filter_map(|item| item.map(|(k, _)| k.value().to_string()).ok())
             .collect();
 
@@ -348,22 +332,19 @@ impl MetricsCollector {
         let write_txn = self
             .db
             .begin_write()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin write transaction")?;
         {
             let mut table = write_txn
                 .open_table(METRICS_TABLE)
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to open metrics table")?;
             for key in keys {
                 table
                     .remove(key.as_str())
-                    .map_err(|e| anyhow::anyhow!("{e}"))?;
+                    ?;
             }
         }
         write_txn
             .commit()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to commit transaction")?;
 
         Ok(())
@@ -393,20 +374,16 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_write()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin write transaction")?;
         {
             let mut table = txn
                 .open_table(METRICS_TABLE)
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to open metrics table")?;
             table
                 .insert(key.as_str(), value.as_slice())
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to insert node execution record")?;
         }
         txn.commit()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to commit transaction")?;
 
         Ok(())
@@ -427,19 +404,16 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         for item in table
             .range(prefix.as_str()..end.as_str())
-            .map_err(|e| anyhow::anyhow!("{e}"))?
+            ?
         {
             let (_key, value) = item
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to read database entry")?;
             let value = value.value();
             let record: NodeExecutionRecord =
@@ -479,19 +453,16 @@ impl MetricsCollector {
         let txn = self
             .db
             .begin_read()
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to begin read transaction")?;
         let table = txn
             .open_table(METRICS_TABLE)
-            .map_err(|e| anyhow::anyhow!("{e}"))
             .context("Failed to open metrics table")?;
 
         for item in table
             .range(prefix.as_str()..end.as_str())
-            .map_err(|e| anyhow::anyhow!("{e}"))?
+            ?
         {
             let (_key, value) = item
-                .map_err(|e| anyhow::anyhow!("{e}"))
                 .context("Failed to read database entry")?;
             let value = value.value();
             let record: ExecutionRecord =

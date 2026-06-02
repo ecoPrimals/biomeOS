@@ -335,6 +335,36 @@ pub mod vars {
 
     /// EcoPrimal config directory
     pub const ECOPRIMAL_CONFIG_DIR: &str = "ECOPRIMAL_CONFIG_DIR";
+
+    // ── Standard system environment variables ──────────────────────────
+    // Named constants to avoid string literal scatter across crates.
+
+    /// User home directory (POSIX)
+    pub const HOME: &str = "HOME";
+    /// XDG data home (`~/.local/share` default)
+    pub const XDG_DATA_HOME: &str = "XDG_DATA_HOME";
+    /// XDG config home (`~/.config` default)
+    pub const XDG_CONFIG_HOME: &str = "XDG_CONFIG_HOME";
+    /// XDG cache home (`~/.cache` default)
+    pub const XDG_CACHE_HOME: &str = "XDG_CACHE_HOME";
+    /// XDG state home (`~/.local/state` default)
+    pub const XDG_STATE_HOME: &str = "XDG_STATE_HOME";
+    /// Windows Subsystem for Linux distribution name
+    pub const WSL_DISTRO_NAME: &str = "WSL_DISTRO_NAME";
+    /// POSIX user ID
+    pub const UID: &str = "UID";
+    /// OS version string (informal)
+    pub const OS_VERSION: &str = "OS_VERSION";
+    /// System hostname
+    pub const HOSTNAME: &str = "HOSTNAME";
+    /// Rust log directive
+    pub const RUST_LOG: &str = "RUST_LOG";
+    /// System executable search path
+    pub const SYS_PATH: &str = "PATH";
+    /// Current username (POSIX)
+    pub const SYS_USER: &str = "USER";
+    /// Current username (Windows)
+    pub const SYS_USERNAME: &str = "USERNAME";
 }
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)

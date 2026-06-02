@@ -301,7 +301,7 @@ impl TopologyHandler {
         }
 
         // Priority 5: /tmp/biomeos-$USER (user-namespaced, via centralized constant)
-        if let Ok(user) = std::env::var("USER") {
+        if let Ok(user) = std::env::var(biomeos_types::env_config::vars::SYS_USER) {
             let path = biomeos_types::constants::runtime_paths::fallback_runtime_dir(&user);
             if !dirs.contains(&path) && path.exists() {
                 dirs.push(path);

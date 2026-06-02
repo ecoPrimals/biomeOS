@@ -171,7 +171,7 @@ impl SystemInspector {
         if let Some(h) = hostname_override {
             return Ok(h.to_string());
         }
-        if let Ok(hostname) = std::env::var("HOSTNAME") {
+        if let Ok(hostname) = std::env::var(biomeos_types::env_config::vars::HOSTNAME) {
             Ok(hostname)
         } else {
             Ok(rustix::system::uname()

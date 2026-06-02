@@ -117,7 +117,7 @@ impl SporeIncubator {
         let home = if let Some(h) = home {
             h.to_path_buf()
         } else {
-            std::env::var("HOME")
+            std::env::var(biomeos_types::env_config::vars::HOME)
                 .or_else(|_| std::env::var("USERPROFILE"))
                 .map(PathBuf::from)
                 .context("Could not determine home directory")?
@@ -314,7 +314,7 @@ pub async fn list_local_nodes_in(home: &Path) -> SporeResult<Vec<NodeConfig>> {
 
 /// List all locally incubated nodes (uses `HOME` / `USERPROFILE`).
 pub async fn list_local_nodes() -> SporeResult<Vec<NodeConfig>> {
-    let home = std::env::var("HOME")
+    let home = std::env::var(biomeos_types::env_config::vars::HOME)
         .or_else(|_| std::env::var("USERPROFILE"))
         .context("Could not determine home directory")?;
     list_local_nodes_in(Path::new(&home)).await

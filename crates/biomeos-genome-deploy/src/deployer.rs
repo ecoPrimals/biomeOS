@@ -18,9 +18,9 @@ use tar::Archive;
 /// Detect whether the current user is root ($EUID/$UID == "0" or $USER == "root").
 fn is_root_user() -> bool {
     std::env::var("EUID")
-        .or_else(|_| std::env::var("UID"))
+        .or_else(|_| std::env::var(biomeos_types::env_config::vars::UID))
         .map_or_else(
-            |_| std::env::var("USER").is_ok_and(|u| u == "root"),
+            |_| std::env::var(biomeos_types::env_config::vars::SYS_USER).is_ok_and(|u| u == "root"),
             |uid| uid == "0",
         )
 }
@@ -68,7 +68,7 @@ impl GenomeDeployer {
     /// Uses `$HOME` env instead of `dirs` crate (ecoBin: no C deps).
     pub(crate) fn default_install_dir(&self, primal_name: &str) -> PathBuf {
         let home_dir = || -> PathBuf {
-            std::env::var("HOME")
+            std::env::var(biomeos_types::env_config::vars::HOME)
                 .map_or_else(|_| PathBuf::from("/var/lib/biomeos"), PathBuf::from)
         };
 

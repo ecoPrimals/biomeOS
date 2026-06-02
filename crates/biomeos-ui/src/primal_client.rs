@@ -184,49 +184,62 @@ impl PrimalConnections {
     // Capability-first accessors
     // -------------------------------------------------------------------
 
-    /// UI / visualization provider
+    /// UI / visualization provider (capability-first, name fallback deprecated)
     #[must_use]
     pub fn ui_provider(&self) -> Option<&UiClient> {
         self.get_by_capability("ui")
             .or_else(|| self.get_by_capability("visualization"))
-            .or_else(|| self.get(biomeos_types::primal_names::PETALTONGUE))
+            .or_else(|| self.resolve_name_fallback(biomeos_types::primal_names::PETALTONGUE))
     }
 
-    /// Discovery / registry provider
+    /// Discovery / registry provider (capability-first, name fallback deprecated)
     #[must_use]
     pub fn discovery_provider(&self) -> Option<&DiscoveryClient> {
         self.get_by_capability("discovery")
             .or_else(|| self.get_by_capability("network"))
-            .or_else(|| self.get(biomeos_types::primal_names::SONGBIRD))
+            .or_else(|| self.resolve_name_fallback(biomeos_types::primal_names::SONGBIRD))
     }
 
-    /// Security / encryption provider
+    /// Security / encryption provider (capability-first, name fallback deprecated)
     #[must_use]
     pub fn security_provider(&self) -> Option<&SecurityClient> {
         self.get_by_capability("encryption")
             .or_else(|| self.get_by_capability("security"))
-            .or_else(|| self.get(biomeos_types::primal_names::BEARDOG))
+            .or_else(|| self.resolve_name_fallback(biomeos_types::primal_names::BEARDOG))
     }
 
-    /// Storage provider
+    /// Storage provider (capability-first, name fallback deprecated)
     #[must_use]
     pub fn storage_provider(&self) -> Option<&StorageClient> {
         self.get_by_capability("storage")
-            .or_else(|| self.get(biomeos_types::primal_names::NESTGATE))
+            .or_else(|| self.resolve_name_fallback(biomeos_types::primal_names::NESTGATE))
     }
 
-    /// Compute / GPU provider
+    /// Compute / GPU provider (capability-first, name fallback deprecated)
     #[must_use]
     pub fn compute_provider(&self) -> Option<&ComputeClient> {
         self.get_by_capability("compute")
-            .or_else(|| self.get(biomeos_types::primal_names::TOADSTOOL))
+            .or_else(|| self.resolve_name_fallback(biomeos_types::primal_names::TOADSTOOL))
     }
 
-    /// AI / inference provider
+    /// AI / inference provider (capability-first, name fallback deprecated)
     #[must_use]
     pub fn ai_provider(&self) -> Option<&AiClient> {
         self.get_by_capability("ai")
-            .or_else(|| self.get(biomeos_types::primal_names::SQUIRREL))
+            .or_else(|| self.resolve_name_fallback(biomeos_types::primal_names::SQUIRREL))
+    }
+
+    /// Last-resort fallback: resolve by primal name when capability taxonomy misses.
+    /// Logs a warning so we can track how often this fires and close taxonomy gaps.
+    fn resolve_name_fallback(&self, name: &str) -> Option<&PrimalClient> {
+        let result = self.clients.get(name);
+        if result.is_some() {
+            tracing::warn!(
+                "primal_client: capability taxonomy miss, fell back to name \"{}\"",
+                name
+            );
+        }
+        result
     }
 
     /// Add a client for testing (allows discovery/orchestrator tests to inject mock connections)

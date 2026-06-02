@@ -84,15 +84,15 @@ impl Default for FamilyDiscoveryConfig {
             // Current directory
             PathBuf::from(".family.seed"),
             // XDG data directory
-            PathBuf::from(std::env::var("XDG_DATA_HOME").unwrap_or_else(|_| {
-                let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            PathBuf::from(std::env::var(biomeos_types::env_config::vars::XDG_DATA_HOME).unwrap_or_else(|_| {
+                let home = std::env::var(biomeos_types::env_config::vars::HOME).unwrap_or_else(|_| ".".to_string());
                 format!("{home}/.local/share")
             }))
             .join("biomeos/.family.seed"),
         ];
 
         // Add USB mount points
-        if let Ok(user) = std::env::var("USER") {
+        if let Ok(user) = std::env::var(biomeos_types::env_config::vars::SYS_USER) {
             seed_paths.push(PathBuf::from(format!("/media/{user}")).join("biomeOS/.family.seed"));
             seed_paths.push(
                 PathBuf::from(format!("/media/{user}")).join("biomeOS1/biomeOS/.family.seed"),

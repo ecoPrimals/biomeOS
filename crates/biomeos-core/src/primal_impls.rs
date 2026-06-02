@@ -199,10 +199,10 @@ impl ManagedPrimal for GenericManagedPrimal {
                 // Respects BIOMEOS_LOG_DIR or falls back to writable directory.
                 let log_dir = std::env::var(biomeos_types::env_config::vars::LOG_DIR)
                     .or_else(|_| {
-                        std::env::var("XDG_STATE_HOME").map(|p| format!("{p}/biomeos/logs"))
+                        std::env::var(biomeos_types::env_config::vars::XDG_STATE_HOME).map(|p| format!("{p}/biomeos/logs"))
                     })
                     .or_else(|_| {
-                        std::env::var("HOME").map(|p| format!("{p}/.local/state/biomeos/logs"))
+                        std::env::var(biomeos_types::env_config::vars::HOME).map(|p| format!("{p}/.local/state/biomeos/logs"))
                     })
                     .unwrap_or_else(|_| {
                         warn!("No XDG paths available, using current directory for logs");

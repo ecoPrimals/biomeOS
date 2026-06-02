@@ -101,7 +101,7 @@ impl ModelCache {
         if let Some(ref hf) = self.config.hf_home {
             return Ok(hf.join("hub"));
         }
-        let home = std::env::var("HOME").context("HOME not set")?;
+        let home = std::env::var(biomeos_types::env_config::vars::HOME).context("HOME not set")?;
         Ok(PathBuf::from(home)
             .join(".cache")
             .join("huggingface")

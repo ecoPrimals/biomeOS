@@ -1,0 +1,385 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright 2025-2026 ecoPrimals Project
+
+//! Tests for [`super`] (`discovery_modern`).
+
+#![expect(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
+
+use super::*;
+
+use std::future::Future;
+use std::pin::Pin;
+use std::time::Duration;
+
+use biomeos_types::{Endpoint, FamilyId, PrimalId};
+
+    struct MockDiscovery {
+        primals: Vec<DiscoveredPrimal>,
+    }
+
+    impl PrimalDiscovery for MockDiscovery {
+        fn discover(
+            &self,
+            _endpoint: &Endpoint,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<DiscoveredPrimal>> + Send + '_>> {
+            let first = self.primals.first().cloned();
+            Box::pin(async move {
+                first.ok_or_else(|| DiscoveryError::NotFound {
+                    endpoint: "mock".to_string(),
+                })
+            })
+        }
+
+        fn discover_all(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<DiscoveredPrimal>>> + Send + '_>>
+        {
+            let primals = self.primals.clone();
+            Box::pin(async move { Ok(primals) })
+        }
+
+        fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Healthy) })
+        }
+    }
+
+    #[tokio::test]
+    async fn composite_discovery_aggregates_sources() {
+        let mock1 = MockDiscovery {
+            primals: vec![DiscoveredPrimal {
+                id: PrimalId::new("primal1").unwrap(),
+                name: "Primal 1".to_string(),
+                primal_type: PrimalType::Security,
+                version: semver::Version::new(1, 0, 0),
+                health: HealthStatus::Healthy,
+                capabilities: vec![],
+                endpoint: Endpoint::new("http://localhost:9000").unwrap(),
+                family_id: None,
+                metadata: serde_json::Value::Null,
+            }],
+        };
+
+        let mock2 = MockDiscovery {
+            primals: vec![DiscoveredPrimal {
+                id: PrimalId::new("primal2").unwrap(),
+                name: "Primal 2".to_string(),
+                primal_type: PrimalType::Orchestration,
+                version: semver::Version::new(1, 0, 0),
+                health: HealthStatus::Healthy,
+                capabilities: vec![],
+                endpoint: Endpoint::new("http://localhost:8080").unwrap(),
+                family_id: None,
+                metadata: serde_json::Value::Null,
+            }],
+        };
+
+        let composite = CompositeDiscovery::new()
+            .add_source(mock1)
+            .add_source(mock2);
+
+        let primals = composite.discover_all().await.unwrap();
+        assert_eq!(primals.len(), 2);
+    }
+
+    #[test]
+    fn health_status_checks() {
+        assert!(HealthStatus::Healthy.is_operational());
+        assert!(HealthStatus::Degraded.is_operational());
+        assert!(!HealthStatus::Unhealthy.is_operational());
+        assert!(!HealthStatus::Unknown.is_operational());
+
+        assert!(HealthStatus::Healthy.is_healthy());
+        assert!(!HealthStatus::Degraded.is_healthy());
+    }
+
+    #[test]
+    fn discovery_error_variants() {
+        let not_found = DiscoveryError::NotFound {
+            endpoint: "http://localhost:9999".to_string(),
+        };
+        assert!(not_found.to_string().contains("localhost:9999"));
+
+        let timeout = DiscoveryError::Timeout {
+            timeout: Duration::from_secs(5),
+        };
+        assert!(timeout.to_string().contains("timeout"));
+
+        let invalid = DiscoveryError::InvalidResponse {
+            message: "bad json".to_string(),
+        };
+        assert!(invalid.to_string().contains("Invalid response"));
+
+        let auth = DiscoveryError::AuthFailed {
+            id: "primal-1".to_string(),
+        };
+        assert!(auth.to_string().contains("Authentication failed"));
+
+        let network = DiscoveryError::Network("connection refused".to_string());
+        assert!(network.to_string().contains("Network"));
+    }
+
+    #[test]
+    fn primal_type_variants() {
+        let _ = PrimalType::Security;
+        let _ = PrimalType::Orchestration;
+        let _ = PrimalType::Storage;
+        let _ = PrimalType::Compute;
+        let _ = PrimalType::Ai;
+        let _ = PrimalType::Tower;
+        let _ = PrimalType::Visualization;
+        let _ = PrimalType::Custom;
+    }
+
+    #[tokio::test]
+    async fn composite_discovery_default() {
+        let discovery = CompositeDiscovery::default();
+        let primals = discovery.discover_all().await.unwrap();
+        assert!(primals.is_empty());
+    }
+
+    #[test]
+    fn discovered_primal_creation() {
+        let primal = DiscoveredPrimal {
+            id: PrimalId::new("test").unwrap(),
+            name: "Test".to_string(),
+            primal_type: PrimalType::Security,
+            version: semver::Version::new(1, 0, 0),
+            health: HealthStatus::Healthy,
+            capabilities: vec![Capability::new("crypto")],
+            endpoint: Endpoint::new("http://localhost:9000").unwrap(),
+            family_id: Some(FamilyId::new("fam1")),
+            metadata: serde_json::json!({"key": "value"}),
+        };
+        assert_eq!(primal.name, "Test");
+        assert_eq!(primal.capabilities.len(), 1);
+    }
+
+    #[test]
+    fn capability_new_and_as_str() {
+        let cap = Capability::new("crypto.encrypt");
+        assert_eq!(cap.as_str(), "crypto.encrypt");
+    }
+
+    #[test]
+    fn capability_from_string() {
+        let cap: Capability = "storage.put".into();
+        assert_eq!(cap.as_str(), "storage.put");
+    }
+
+    /// Source whose [`PrimalDiscovery::discover_all`] fails (covers warn + continue in composite).
+    struct DiscoverAllFails;
+
+    impl PrimalDiscovery for DiscoverAllFails {
+        fn discover(
+            &self,
+            _: &Endpoint,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<DiscoveredPrimal>> + Send + '_>> {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "none".to_string(),
+                })
+            })
+        }
+
+        fn discover_all(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<DiscoveredPrimal>>> + Send + '_>>
+        {
+            Box::pin(async move { Err(DiscoveryError::Network("source down".to_string())) })
+        }
+
+        fn check_health(
+            &self,
+            _: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Err(DiscoveryError::Network("source down".to_string())) })
+        }
+    }
+
+    /// [`PrimalDiscovery::discover`] always fails (for chaining tests).
+    struct DiscoverEndpointAlwaysFails;
+
+    impl PrimalDiscovery for DiscoverEndpointAlwaysFails {
+        fn discover(
+            &self,
+            _: &Endpoint,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<DiscoveredPrimal>> + Send + '_>> {
+            Box::pin(async move {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "none".to_string(),
+                })
+            })
+        }
+
+        fn discover_all(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<Vec<DiscoveredPrimal>>> + Send + '_>>
+        {
+            Box::pin(async move { Ok(vec![]) })
+        }
+
+        fn check_health(
+            &self,
+            _: &PrimalId,
+        ) -> Pin<Box<dyn Future<Output = DiscoveryResult<HealthStatus>> + Send + '_>> {
+            Box::pin(async move { Ok(HealthStatus::Unknown) })
+        }
+    }
+
+    #[tokio::test]
+    async fn composite_discover_all_skips_failing_source() {
+        let good = MockDiscovery {
+            primals: vec![DiscoveredPrimal {
+                id: PrimalId::new("p-ok").unwrap(),
+                name: "Ok".to_string(),
+                primal_type: PrimalType::Security,
+                version: semver::Version::new(1, 0, 0),
+                health: HealthStatus::Healthy,
+                capabilities: vec![],
+                endpoint: Endpoint::new("http://localhost:9000").unwrap(),
+                family_id: None,
+                metadata: serde_json::Value::Null,
+            }],
+        };
+
+        let composite = CompositeDiscovery::new()
+            .add_source(DiscoverAllFails)
+            .add_source(good);
+
+        let primals = composite.discover_all().await.unwrap();
+        assert_eq!(primals.len(), 1);
+        assert_eq!(primals[0].id.as_str(), "p-ok");
+    }
+
+    #[tokio::test]
+    async fn composite_discover_tries_next_source_on_not_found() {
+        let endpoint = Endpoint::new("http://localhost:7777").unwrap();
+        let primal = DiscoveredPrimal {
+            id: PrimalId::new("found").unwrap(),
+            name: "Found".to_string(),
+            primal_type: PrimalType::Storage,
+            version: semver::Version::new(1, 0, 0),
+            health: HealthStatus::Healthy,
+            capabilities: vec![],
+            endpoint: endpoint.clone(),
+            family_id: None,
+            metadata: serde_json::Value::Null,
+        };
+
+        let second = MockDiscovery {
+            primals: vec![primal.clone()],
+        };
+
+        let composite = CompositeDiscovery::new()
+            .add_source(DiscoverEndpointAlwaysFails)
+            .add_source(second);
+
+        let got = composite.discover(&endpoint).await.unwrap();
+        assert_eq!(got.id, primal.id);
+    }
+
+    #[tokio::test]
+    async fn composite_check_health_returns_unknown_when_all_sources_fail() {
+        let composite = CompositeDiscovery::new().add_source(DiscoverAllFails);
+        let status = composite
+            .check_health(&PrimalId::new("any").unwrap())
+            .await
+            .unwrap();
+        assert_eq!(status, HealthStatus::Unknown);
+    }
+
+    #[tokio::test]
+    async fn primal_discovery_default_get_capabilities_ok_and_not_found() {
+        let id_ok = PrimalId::new("primal1").unwrap();
+        let mock = MockDiscovery {
+            primals: vec![DiscoveredPrimal {
+                id: id_ok.clone(),
+                name: "P1".to_string(),
+                primal_type: PrimalType::Compute,
+                version: semver::Version::new(1, 0, 0),
+                health: HealthStatus::Healthy,
+                capabilities: vec![Capability::new("a.b")],
+                endpoint: Endpoint::new("http://localhost:1").unwrap(),
+                family_id: None,
+                metadata: serde_json::Value::Null,
+            }],
+        };
+
+        let caps = mock.get_capabilities(&id_ok).await.unwrap();
+        assert_eq!(caps.len(), 1);
+        assert_eq!(caps[0].as_str(), "a.b");
+
+        let err = mock
+            .get_capabilities(&PrimalId::new("missing").unwrap())
+            .await
+            .unwrap_err();
+        assert!(matches!(err, DiscoveryError::NotFound { .. }));
+    }
+
+    #[test]
+    fn health_status_unknown_not_operational_but_matches() {
+        assert!(!HealthStatus::Unknown.is_operational());
+        assert!(!HealthStatus::Unknown.is_healthy());
+    }
+
+    #[test]
+    fn discovery_error_url_parse_roundtrip() {
+        assert!(url::Url::parse("not a url").is_err());
+        let err = url::Url::parse("http://").unwrap_err();
+        let e: DiscoveryError = err.into();
+        assert!(matches!(e, DiscoveryError::UrlParse(_)));
+    }
+
+    #[test]
+    fn discovery_error_other_from_anyhow() {
+        let e: DiscoveryError = anyhow::anyhow!("inner").into();
+        assert!(e.to_string().contains("inner") || matches!(e, DiscoveryError::Other(_)));
+    }
+
+    #[tokio::test]
+    async fn composite_discovery_add_boxed_and_add_sources() {
+        let empty = MockDiscovery { primals: vec![] };
+        let boxed: Box<dyn PrimalDiscovery> = Box::new(empty);
+        let composite = CompositeDiscovery::new()
+            .add_boxed_source(boxed)
+            .add_sources(std::iter::empty::<Box<dyn PrimalDiscovery>>());
+        let primals = composite.discover_all().await.expect("discover");
+        assert!(primals.is_empty());
+    }
+
+    #[tokio::test]
+    async fn composite_discover_all_deduplicates_by_id_last_wins() {
+        let ep = Endpoint::new("http://localhost:9001").unwrap();
+        let first = DiscoveredPrimal {
+            id: PrimalId::new("same").unwrap(),
+            name: "First".to_string(),
+            primal_type: PrimalType::Security,
+            version: semver::Version::new(1, 0, 0),
+            health: HealthStatus::Healthy,
+            capabilities: vec![],
+            endpoint: ep.clone(),
+            family_id: None,
+            metadata: serde_json::Value::Null,
+        };
+        let mut second = first.clone();
+        second.name = "Second".to_string();
+
+        let a = MockDiscovery {
+            primals: vec![first],
+        };
+        let b = MockDiscovery {
+            primals: vec![second],
+        };
+
+        let composite = CompositeDiscovery::new().add_source(a).add_source(b);
+        let primals = composite.discover_all().await.unwrap();
+        assert_eq!(primals.len(), 1);
+        assert_eq!(primals[0].name, "Second");
+    }
