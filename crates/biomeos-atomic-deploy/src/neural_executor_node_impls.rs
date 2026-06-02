@@ -418,8 +418,11 @@ impl GraphExecutor {
         let breaker = context.get_circuit_breaker(&provider).await;
 
         let cap_owned = capability.to_string();
+        let router = context.neural_router.clone();
 
-        breaker
+        let dispatch_start = std::time::Instant::now();
+
+        let result = breaker
             .execute(|| {
                 let socket_path = socket_path.clone();
                 let cap = cap_owned.clone();
@@ -462,7 +465,17 @@ impl GraphExecutor {
                     }))
                 }
             })
-            .await
+            .await;
+
+        // PathwayLearner: feed graph-level capability call timing into routing weights
+        if let Some(ref router) = router {
+            let elapsed_ms = dispatch_start.elapsed().as_millis() as u64;
+            router
+                .record_dispatch_outcome(&cap_domain, &provider, result.is_ok(), elapsed_ms)
+                .await;
+        }
+
+        result
     }
 
     /// Helper: send a JSON-RPC request over a Unix socket and return the response.

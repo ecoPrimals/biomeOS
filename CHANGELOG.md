@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.95 (2026-06-02) — Wave 71+: Shadow Analysis + PathwayLearner + Perceptron Prep
+
+### A/B shadow analysis enhancement
+- Disagreement counter (`weighted_disagreement_counter: AtomicU64`) tracks weighted
+  vs first-match divergence rate
+- Milestone summaries at 100/500/1000 dispatches log total disagreements and % divergence
+- `neural_api.weight_health` RPC now exposes `shadow_routing` section:
+  total dispatches, disagreements, divergence %, phase (active/complete)
+- `NeuralRouter::shadow_stats()` public method for programmatic access
+
+### PathwayLearner — graph per-node timing → routing weights
+- Graph executor Strategy 2 (direct capability calls via `CapabilityRegistry`) now
+  feeds `record_dispatch_outcome` with per-node wall-clock timing
+- Previously only `CapabilityHandler::call` (Strategy 1) fed routing weights;
+  graph-level capability calls bypassed the feedback loop entirely
+- `neural_executor_node_impls.rs`: wraps `capability_call_with_registry` with timing,
+  feeds `router.record_dispatch_outcome()` when `context.neural_router` is available
+
+### Perceptron shadow mode prep
+- Updated `NEURAL_API_PERCEPTRON_DESIGN.md` timeline to reflect Wave 71 completions
+- Added biomeOS shadow mode integration section: `PerceptronAdvisor` trait design,
+  `select_primary()` integration point, weight file location
+
+### Cross-gate mesh partner
+- Verified all 3 Songbird mesh fallback sites in `capability_call.rs` are consistent
+- `try_songbird_mesh_dispatch` delegates cross-gate resolution to Songbird (local UDS →
+  mesh TCP → TURN relay), routing weight feedback appropriately on relay side
+
 ## v3.94 (2026-06-02) — Wave 71: L4 Weighted Routing + Topology Affinity + TCP-Only Deprecation
 
 ### L4 weighted routing — discover_capability now score-based

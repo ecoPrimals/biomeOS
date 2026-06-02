@@ -95,6 +95,9 @@ pub struct NeuralRouter {
     /// Logs both first-match and weighted choices for the first
     /// `SHADOW_LOG_DISPATCH_LIMIT` dispatches to validate scoring.
     pub(crate) weighted_dispatch_counter: AtomicU64,
+
+    /// Count of dispatches where weighted selection disagreed with first-match.
+    pub(crate) weighted_disagreement_counter: AtomicU64,
 }
 
 impl NeuralRouter {
@@ -116,6 +119,7 @@ impl NeuralRouter {
             lazy_rescan_attempted: AtomicBool::new(false),
             self_socket_path: RwLock::new(None),
             weighted_dispatch_counter: AtomicU64::new(0),
+            weighted_disagreement_counter: AtomicU64::new(0),
         }
     }
 
@@ -144,6 +148,7 @@ impl NeuralRouter {
             lazy_rescan_attempted: AtomicBool::new(false),
             self_socket_path: RwLock::new(None),
             weighted_dispatch_counter: AtomicU64::new(0),
+            weighted_disagreement_counter: AtomicU64::new(0),
         }
     }
 
@@ -323,6 +328,13 @@ impl NeuralRouter {
     /// Get routing weight summary statistics.
     pub async fn get_weight_summary(&self) -> WeightTableSummary {
         self.routing_weights.read().await.summary()
+    }
+
+    /// Get A/B shadow routing statistics.
+    pub fn shadow_stats(&self) -> (u64, u64) {
+        let total = self.weighted_dispatch_counter.load(Ordering::Relaxed);
+        let disagreements = self.weighted_disagreement_counter.load(Ordering::Relaxed);
+        (total, disagreements)
     }
 
     /// Set a provider affinity hint (from primal.announce cost_hints).

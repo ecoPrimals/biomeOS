@@ -42,6 +42,10 @@ impl NeuralRouter {
             0
         };
 
+        if weighted_idx != 0 {
+            self.weighted_disagreement_counter.fetch_add(1, Ordering::Relaxed);
+        }
+
         let dispatch_n = self.weighted_dispatch_counter.fetch_add(1, Ordering::Relaxed);
         if dispatch_n < SHADOW_LOG_DISPATCH_LIMIT {
             let first_match = &providers[0].primal_name;
@@ -69,6 +73,20 @@ impl NeuralRouter {
                     SHADOW_LOG_DISPATCH_LIMIT,
                     capability,
                     weighted,
+                );
+            }
+
+            let n = dispatch_n + 1;
+            if n == 100 || n == 500 || n == SHADOW_LOG_DISPATCH_LIMIT {
+                let disagreements = self.weighted_disagreement_counter.load(Ordering::Relaxed);
+                let rate = if n > 0 {
+                    (disagreements as f64 / n as f64) * 100.0
+                } else {
+                    0.0
+                };
+                info!(
+                    "L4 shadow milestone [{}/{}]: {} disagreements ({:.1}% divergence)",
+                    n, SHADOW_LOG_DISPATCH_LIMIT, disagreements, rate
                 );
             }
         }

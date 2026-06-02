@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 2, 2026 (v3.94: Wave 71 — L4 weighted routing wired into discover_capability, topology affinity in score(), --tcp-only deprecated)
-**Version**: 3.94
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - Topology affinity scoring - Zero clippy warnings - env_config::vars SSOT 75+ constants - Taxonomy-first provider resolution - DH-1 COMPLETE - Zero Blocking Debt
+**Updated**: June 2, 2026 (v3.95: Wave 71+ — A/B shadow analysis with milestones, PathwayLearner graph→weight feedback, perceptron design updated)
+**Version**: 3.95
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - A/B shadow analysis ACTIVE - PathwayLearner LIVE - Topology affinity scoring - Zero clippy warnings - env_config::vars SSOT 75+ constants - DH-1 COMPLETE - Zero Blocking Debt
 
 ---
 

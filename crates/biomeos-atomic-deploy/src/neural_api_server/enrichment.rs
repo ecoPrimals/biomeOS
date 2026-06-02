@@ -74,6 +74,8 @@ impl NeuralApiServer {
             }
         }
 
+        let shadow = self.router.shadow_stats();
+
         Ok(json!({
             "healthy": open_circuits.is_empty(),
             "persistent": self.router.weights_are_persistent().await,
@@ -84,6 +86,13 @@ impl NeuralApiServer {
                 "total_providers": weights.len(),
             },
             "open_circuits": open_circuits,
+            "shadow_routing": {
+                "total_dispatches": shadow.0,
+                "disagreements": shadow.1,
+                "divergence_pct": if shadow.0 > 0 { (shadow.1 as f64 / shadow.0 as f64) * 100.0 } else { 0.0 },
+                "limit": 1000,
+                "phase": if shadow.0 >= 1000 { "complete" } else { "active" },
+            },
         }))
     }
 }
