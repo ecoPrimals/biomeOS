@@ -58,7 +58,7 @@ pub fn primal_to_icon(primal: &str) -> &'static str {
 
 /// Niche template directory: `BIOMEOS_NICHE_TEMPLATES_DIR` or `niches/templates` under cwd.
 fn niche_templates_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("BIOMEOS_NICHE_TEMPLATES_DIR") {
+    if let Ok(p) = std::env::var(biomeos_types::env_config::vars::NICHE_TEMPLATES_DIR) {
         PathBuf::from(p)
     } else {
         PathBuf::from("niches/templates")
@@ -67,7 +67,7 @@ fn niche_templates_dir() -> PathBuf {
 
 /// Installed primal binaries directory: `BIOMEOS_BIN_PRIMALS_DIR` or `bin/primals` under cwd.
 fn bin_primals_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("BIOMEOS_BIN_PRIMALS_DIR") {
+    if let Ok(p) = std::env::var(biomeos_types::env_config::vars::BIN_PRIMALS_DIR) {
         PathBuf::from(p)
     } else {
         PathBuf::from("bin/primals")

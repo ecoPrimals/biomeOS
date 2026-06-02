@@ -24,7 +24,7 @@ impl CapabilityHandler {
 
         let tools: Vec<Value> = all_translations
             .iter()
-            .map(|t| {
+            .filter_map(|t| {
                 let tool = McpToolDefinition {
                     name: t.semantic.clone(),
                     description: format!(
@@ -50,7 +50,6 @@ impl CapabilityHandler {
                     }
                 }
             })
-            .flatten()
             .collect();
 
         let providers: Vec<&str> = {

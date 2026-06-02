@@ -349,7 +349,7 @@ impl KernelManager {
 
         let env_kernel = biomeos_kernel
             .map(String::from)
-            .or_else(|| std::env::var("BIOMEOS_KERNEL").ok());
+            .or_else(|| std::env::var(biomeos_types::env_config::vars::KERNEL).ok());
 
         if let Some(env_kernel) = env_kernel {
             let kernel_path = PathBuf::from(&env_kernel);

@@ -2,6 +2,49 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.90 (2026-06-02) — Wave 68: Clippy Zero + Env SSOT Expansion
+
+### Zero clippy warnings (18 → 0)
+- `cache.rs`: remove unnecessary borrow (`&entry` → `entry`)
+- `discovery.rs`, `verification.rs`: `match` → `let...else` for `Option` destructure
+- `capability_mcp.rs`: `map(..).flatten()` → `filter_map()`
+- `unix_server.rs`: `unwrap_or(Default::default())` → `unwrap_or_else(|| Map::default())`
+- `materialize.rs`: `unwrap_or(json!())` → `unwrap_or_else(|| json!())`
+- `pseudospore/lib.rs`: extract `read_and_parse_toml/json` helpers (eliminates
+  "too many lines" + repeated `match` warnings), `map(..).unwrap_or(0)` → `map_or`
+
+### Env var SSOT expansion (+20 constants, 25 call sites)
+- New constants in `env_config::vars`: `WS_ENDPOINT`, `SSE_ENDPOINT`, `API_WS`,
+  `API_SSE`, `STUN_SERVER`, `NO_PUBLIC_STUN`, `STUN_SERVERS`, `STUN_FALLBACK_ADDRESS`,
+  `COMPUTE_ENDPOINT`, `TOADSTOOL_ENDPOINT`, `REGISTRY_DIR`, `GITHUB_API_URL`,
+  `GITHUB_TOKEN`, `KERNEL`, `USER`, `PLASMID_DIR`, `CHIMERA_DEFINITIONS_DIR`,
+  `BIN_CHIMERAS_DIR`, `BIN_PRIMALS_DIR`, `NICHE_TEMPLATES_DIR`, `SPORE_PATHS`,
+  `CLI_LOG_ROOT`
+- Wired 25 raw `env::var("BIOMEOS_*")` sites across `realtime.rs`, `stun_extension.rs`,
+  `service.rs`, `remote.rs`, `initramfs.rs`, `authorization.rs`, `spore.rs`,
+  `chimera.rs`, `niche.rs`, `verify.rs`, `fossil/handlers.rs`
+
+### primal_spawner.rs split (765 → 607L)
+- Extracted `launch_profiles.rs` (172L): `LaunchProfile`, `LaunchProfilesConfig`,
+  `load_launch_profiles()`, `configure_primal_sockets()` — data-driven primal
+  socket configuration, cleanly separated from spawning logic
+
+### Stats
+- 7,983 tests, 0 clippy warnings, 0 TODO/FIXME in production
+
+## v3.89 (2026-06-01) — Wave 67: capability.call Proxy (P0 BLOCKER)
+
+### P0 BLOCKER resolved: capability.call RPC
+- Root cause: callers hit `biomeos-api` socket (method not found -32601) instead
+  of Neural API socket where `capability.call` was already implemented
+- Solution: transparent proxy in `biomeos-api/unix_server.rs` — auto-forwards
+  `capability.call`, `graph.execute`, `topology.primals` to Neural API socket
+- New `NEURAL_API_PROXY_METHODS` constant, `dispatch_jsonrpc_line_async`,
+  `proxy_to_neural_api` functions
+- `capabilities.list` updated to advertise proxied methods
+- `neural-api-client::connection` made `pub` for proxy access
+- Clear `-32002` error when Neural API socket not found
+
 ## v3.88 (2026-05-29) — Wave 63: Deep Cleanup
 
 Three commits (`82501658`, `d8a6039a`, `cf0f6b57`): JSON parse observability,

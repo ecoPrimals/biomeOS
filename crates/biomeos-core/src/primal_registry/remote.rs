@@ -27,7 +27,7 @@ pub struct GitHubAsset {
 }
 
 pub fn registry_cache_dir() -> Result<PathBuf> {
-    if let Ok(dir) = std::env::var("BIOMEOS_REGISTRY_DIR") {
+    if let Ok(dir) = std::env::var(biomeos_types::env_config::vars::REGISTRY_DIR) {
         return Ok(PathBuf::from(dir));
     }
     let paths = SystemPaths::new_lazy();
@@ -75,7 +75,7 @@ pub fn cached_download_path(
 }
 
 fn github_api_base() -> String {
-    std::env::var("BIOMEOS_GITHUB_API_URL").unwrap_or_else(|_| "https://api.github.com".to_string())
+    std::env::var(biomeos_types::env_config::vars::GITHUB_API_URL).unwrap_or_else(|_| "https://api.github.com".to_string())
 }
 
 pub async fn github_latest_release(org: &str, repo: &str) -> Result<GitHubRelease> {
@@ -119,7 +119,7 @@ async fn curl_fetch_https(url: &str) -> Result<Vec<u8>> {
         .arg("User-Agent: biomeos-primal-registry/0.1")
         .arg("-H")
         .arg("Accept: application/vnd.github+json");
-    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+    if let Ok(token) = std::env::var(biomeos_types::env_config::vars::GITHUB_TOKEN) {
         if !token.is_empty() {
             cmd.arg("-H").arg(format!("Authorization: Bearer {token}"));
         }
@@ -146,7 +146,7 @@ async fn curl_download_to_file(url: &str, dest: &Path) -> Result<()> {
         .arg("-L")
         .arg("-H")
         .arg("User-Agent: biomeos-primal-registry/0.1");
-    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+    if let Ok(token) = std::env::var(biomeos_types::env_config::vars::GITHUB_TOKEN) {
         if !token.is_empty() {
             cmd.arg("-H").arg(format!("Authorization: Bearer {token}"));
         }

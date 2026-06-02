@@ -102,8 +102,9 @@ impl UniversalBiomeOSManager {
                                         "Discovered primal {} not in registry, using environment fallback",
                                         primal_id
                                     );
-                                    let endpoint = std::env::var("BIOMEOS_COMPUTE_ENDPOINT")
-                                        .or_else(|_| std::env::var("TOADSTOOL_ENDPOINT"))
+                                    use biomeos_types::env_config::vars;
+                                    let endpoint = std::env::var(vars::COMPUTE_ENDPOINT)
+                                        .or_else(|_| std::env::var(vars::TOADSTOOL_ENDPOINT))
                                         .map_err(|_| anyhow::anyhow!(
                                             "BIOMEOS_COMPUTE_ENDPOINT not set and discovery failed. \
                                              Set BIOMEOS_COMPUTE_ENDPOINT or ensure capability discovery is available."

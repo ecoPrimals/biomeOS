@@ -20,6 +20,7 @@
 //! - Runtime primal discovery (self-knowledge only)
 
 pub mod context;
+pub(crate) mod launch_profiles;
 pub mod node_handlers;
 pub mod primal_spawner;
 pub mod types;

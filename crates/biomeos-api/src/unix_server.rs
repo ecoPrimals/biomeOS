@@ -183,7 +183,7 @@ async fn dispatch_jsonrpc_line_async(line: &str) -> serde_json::Value {
         .unwrap_or("");
 
     if NEURAL_API_PROXY_METHODS.contains(&method) {
-        let params = req.get("params").cloned().unwrap_or(serde_json::Value::Object(Default::default()));
+        let params = req.get("params").cloned().unwrap_or_else(|| serde_json::Value::Object(serde_json::Map::default()));
         return proxy_to_neural_api(id, method, &params).await;
     }
 

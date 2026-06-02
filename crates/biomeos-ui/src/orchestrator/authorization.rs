@@ -122,7 +122,7 @@ impl Authorization {
             return user.to_string();
         }
 
-        if let Ok(user) = std::env::var("BIOMEOS_USER") {
+        if let Ok(user) = std::env::var(biomeos_types::env_config::vars::USER) {
             return user;
         }
 

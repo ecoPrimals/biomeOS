@@ -164,12 +164,9 @@ pub async fn layer3_capability_verification(
 
         match client.call(request).await {
             Ok(response) => {
-                let result_value = match response.result {
-                    Some(v) => v,
-                    None => {
-                        tracing::debug!("capabilities.list: response missing result field");
-                        return Ok(CapabilitySet::new());
-                    }
+                let Some(result_value) = response.result else {
+                    tracing::debug!("capabilities.list: response missing result field");
+                    return Ok(CapabilitySet::new());
                 };
                 match serde_json::from_value::<GetCapabilitiesResponse>(result_value) {
                     Ok(cap_response) => {

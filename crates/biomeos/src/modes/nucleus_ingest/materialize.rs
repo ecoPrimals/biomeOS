@@ -66,7 +66,7 @@ family_id = "{family}"
         .pointer("/nodes/resolve_braid/result")
         .or_else(|| status.get("braid"))
         .cloned()
-        .unwrap_or(serde_json::json!({}));
+        .unwrap_or_else(|| serde_json::json!({}));
 
     let ferment = serde_json::json!({
         "dataset_id": spore_id,
@@ -85,7 +85,7 @@ family_id = "{family}"
         .pointer("/nodes/retrieve_content/result")
         .or_else(|| status.get("content"))
         .cloned()
-        .unwrap_or(serde_json::json!({"spore_id": spore_id, "status": "pending"}));
+        .unwrap_or_else(|| serde_json::json!({"spore_id": spore_id, "status": "pending"}));
 
     tokio::fs::write(
         emit_dir.join("data/content.json"),

@@ -62,12 +62,9 @@ pub async fn layer1_physical_discovery_songbird(
 
     match songbird.call(request).await {
         Ok(response) => {
-            let result_value = match response.result {
-                Some(v) => v,
-                None => {
-                    tracing::debug!("discovery.discover: response missing result field");
-                    return Ok(vec![]);
-                }
+            let Some(result_value) = response.result else {
+                tracing::debug!("discovery.discover: response missing result field");
+                return Ok(vec![]);
             };
             match serde_json::from_value::<DiscoveryResponse>(result_value) {
                 Ok(discovery) => {

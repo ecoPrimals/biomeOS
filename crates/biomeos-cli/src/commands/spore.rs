@@ -303,7 +303,7 @@ pub(super) fn discover_plasmid_dir_with_override(
         ));
     }
 
-    if let Ok(p) = std::env::var("BIOMEOS_PLASMID_DIR") {
+    if let Ok(p) = std::env::var(biomeos_types::env_config::vars::PLASMID_DIR) {
         let path = PathBuf::from(p);
         if path.exists() {
             return Ok(path);

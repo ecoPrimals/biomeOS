@@ -260,23 +260,54 @@ pub fn parse_checksums(content: &str) -> Vec<ChecksumEntry> {
         .collect()
 }
 
+#[allow(clippy::single_match_else)]
+fn read_and_parse_toml<T: serde::de::DeserializeOwned>(
+    path: &Path,
+    label: &str,
+    errors: &mut Vec<String>,
+) -> Option<T> {
+    match std::fs::read_to_string(path) {
+        Ok(content) => match toml::from_str(&content) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                errors.push(format!("{label} parse error: {e}"));
+                None
+            }
+        },
+        Err(_) => {
+            errors.push(format!("{label} not found"));
+            None
+        }
+    }
+}
+
+#[allow(clippy::single_match_else)]
+fn read_and_parse_json<T: serde::de::DeserializeOwned>(
+    path: &Path,
+    label: &str,
+    errors: &mut Vec<String>,
+) -> Option<T> {
+    match std::fs::read_to_string(path) {
+        Ok(content) => match serde_json::from_str(&content) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                errors.push(format!("{label} parse error: {e}"));
+                None
+            }
+        },
+        Err(_) => {
+            errors.push(format!("{label} not found"));
+            None
+        }
+    }
+}
+
 /// Validate a pseudoSpore directory structure. Returns a manifest with status.
 pub fn load_pseudospore(root: &Path) -> PseudoSporeManifest {
     let mut errors = Vec::new();
 
-    let scope_path = root.join("scope.toml");
-    let scope: PseudoSporeScope = match std::fs::read_to_string(&scope_path) {
-        Ok(content) => match toml::from_str(&content) {
-            Ok(s) => s,
-            Err(e) => {
-                errors.push(format!("scope.toml parse error: {e}"));
-                return invalid_manifest(root, errors);
-            }
-        },
-        Err(_) => {
-            errors.push("scope.toml not found".to_string());
-            return invalid_manifest(root, errors);
-        }
+    let Some(scope) = read_and_parse_toml::<PseudoSporeScope>(&root.join("scope.toml"), "scope.toml", &mut errors) else {
+        return invalid_manifest(root, errors);
     };
 
     if scope.artifact.artifact_type != "pseudoSpore"
@@ -288,38 +319,16 @@ pub fn load_pseudospore(root: &Path) -> PseudoSporeManifest {
         ));
     }
 
-    let val_path = root.join("validation.json");
-    let validation: ValidationDoc = match std::fs::read_to_string(&val_path) {
-        Ok(content) => match serde_json::from_str(&content) {
-            Ok(v) => v,
-            Err(e) => {
-                errors.push(format!("validation.json parse error: {e}"));
-                return invalid_manifest(root, errors);
-            }
-        },
-        Err(_) => {
-            errors.push("validation.json not found".to_string());
-            return invalid_manifest(root, errors);
-        }
+    let Some(validation) = read_and_parse_json::<ValidationDoc>(&root.join("validation.json"), "validation.json", &mut errors) else {
+        return invalid_manifest(root, errors);
     };
 
     if validation.modules.is_empty() {
         errors.push("validation.json has no modules".to_string());
     }
 
-    let env_path = root.join("receipts/environment.toml");
-    let environment: EnvironmentReceipt = match std::fs::read_to_string(&env_path) {
-        Ok(content) => match toml::from_str(&content) {
-            Ok(e) => e,
-            Err(e) => {
-                errors.push(format!("receipts/environment.toml parse error: {e}"));
-                return invalid_manifest(root, errors);
-            }
-        },
-        Err(_) => {
-            errors.push("receipts/environment.toml not found".to_string());
-            return invalid_manifest(root, errors);
-        }
+    let Some(environment) = read_and_parse_toml::<EnvironmentReceipt>(&root.join("receipts/environment.toml"), "receipts/environment.toml", &mut errors) else {
+        return invalid_manifest(root, errors);
     };
 
     if environment.hardware.is_none() {
@@ -329,30 +338,15 @@ pub fn load_pseudospore(root: &Path) -> PseudoSporeManifest {
         errors.push("receipts/environment.toml missing [software]".to_string());
     }
 
-    let cksum_path = root.join("receipts/checksums.blake3");
-    let checksums: Vec<ChecksumEntry> = match std::fs::read_to_string(&cksum_path) {
-        Ok(content) => parse_checksums(&content),
-        Err(_) => {
-            errors.push("receipts/checksums.blake3 not found".to_string());
-            Vec::new()
-        }
+    let checksums: Vec<ChecksumEntry> = if let Ok(content) = std::fs::read_to_string(root.join("receipts/checksums.blake3")) {
+        parse_checksums(&content)
+    } else {
+        errors.push("receipts/checksums.blake3 not found".to_string());
+        Vec::new()
     };
 
-    let ferment_path = root.join("provenance/ferment_transcript.json");
-    let ferment: FermentTranscript = match std::fs::read_to_string(&ferment_path) {
-        Ok(content) => match serde_json::from_str(&content) {
-            Ok(f) => f,
-            Err(e) => {
-                errors.push(format!(
-                    "provenance/ferment_transcript.json parse error: {e}"
-                ));
-                return invalid_manifest(root, errors);
-            }
-        },
-        Err(_) => {
-            errors.push("provenance/ferment_transcript.json not found".to_string());
-            return invalid_manifest(root, errors);
-        }
+    let Some(ferment) = read_and_parse_json::<FermentTranscript>(&root.join("provenance/ferment_transcript.json"), "provenance/ferment_transcript.json", &mut errors) else {
+        return invalid_manifest(root, errors);
     };
 
     if ferment.dataset_id.is_empty() {
@@ -365,11 +359,7 @@ pub fn load_pseudospore(root: &Path) -> PseudoSporeManifest {
     let readme_path = root.join("README.md");
     if !readme_path.exists() {
         errors.push("README.md not found".to_string());
-    } else if std::fs::metadata(&readme_path)
-        .map(|m| m.len())
-        .unwrap_or(0)
-        == 0
-    {
+    } else if std::fs::metadata(&readme_path).map_or(true, |m| m.len() == 0) {
         errors.push("README.md is empty".to_string());
     }
 
@@ -405,25 +395,22 @@ pub fn verify_checksums(manifest: &mut PseudoSporeManifest) -> bool {
     let mut all_ok = true;
     for entry in &manifest.checksums {
         let file_path = manifest.root.join(&entry.path);
-        match std::fs::read(&file_path) {
-            Ok(data) => {
-                let computed = blake3::hash(&data).to_hex().to_string();
-                if computed != entry.hash {
-                    manifest.errors.push(format!(
-                        "Checksum mismatch: {} (expected {}, got {})",
-                        entry.path,
-                        &entry.hash[..std::cmp::min(12, entry.hash.len())],
-                        &computed[..12]
-                    ));
-                    all_ok = false;
-                }
-            }
-            Err(_) => {
-                manifest
-                    .errors
-                    .push(format!("Missing file: {}", entry.path));
+        if let Ok(data) = std::fs::read(&file_path) {
+            let computed = blake3::hash(&data).to_hex().to_string();
+            if computed != entry.hash {
+                manifest.errors.push(format!(
+                    "Checksum mismatch: {} (expected {}, got {})",
+                    entry.path,
+                    &entry.hash[..std::cmp::min(12, entry.hash.len())],
+                    &computed[..12]
+                ));
                 all_ok = false;
             }
+        } else {
+            manifest
+                .errors
+                .push(format!("Missing file: {}", entry.path));
+            all_ok = false;
         }
     }
 

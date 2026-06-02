@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: May 29, 2026 (v3.88: Wave 63 — JSON parse observability, silent error elimination, BTSP field validation, env SSOT expansion, service/core 795→564L, ROOTPULSE primal_names, stale test removal, 7,983 tests)
-**Version**: 3.88
-**Status**: PRODUCTION READY - DH-1 COMPLETE - JSON parse observability - silent error elimination - env_config::vars SSOT - service/core 795→564L - ROOTPULSE centralized - manifest.gate_profile wired - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: June 2, 2026 (v3.90: Wave 68 — Zero clippy warnings, env_config SSOT expansion (+20 constants, 25 call sites wired), primal_spawner split 765→607L, pseudospore load_pseudospore refactored, capability.call proxy (v3.89), 7,983 tests)
+**Version**: 3.90
+**Status**: PRODUCTION READY - P0 capability.call RESOLVED - Zero clippy warnings - env_config::vars SSOT 50+ constants - DH-1 COMPLETE - manifest.gate_profile wired - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
 
 ---
 
@@ -20,7 +20,7 @@
 | **Tests Passing** | 7,983 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
 | **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
-| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates via `[lints] workspace = true`) |
+| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates, Wave 68: 18→0) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
 | **C dependencies** | 0 production C deps (gethostname → rustix::system::uname(), zstd-sys → lz4_flex, deny.toml enforced). `rtnetlink` (kernel AF_NETLINK, documented thin FFI) is the only C-adjacent transitive. |
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |

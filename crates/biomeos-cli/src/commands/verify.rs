@@ -35,7 +35,7 @@ fn plasmid_bin_dir_for_verify(plasmid_dir_env: Option<&str>) -> PathBuf {
 
 /// `plasmidBin` path for spore verification: `BIOMEOS_PLASMID_DIR` if set, else cwd-relative `plasmidBin`.
 fn nucleus_path_for_spore_verify() -> PathBuf {
-    plasmid_bin_dir_for_verify(std::env::var("BIOMEOS_PLASMID_DIR").ok().as_deref())
+    plasmid_bin_dir_for_verify(std::env::var(biomeos_types::env_config::vars::PLASMID_DIR).ok().as_deref())
 }
 
 /// Parse `BIOMEOS_SPORE_PATHS`-style comma-separated list (testable; used by [`discover_spore_mounts`]).
@@ -473,7 +473,7 @@ pub async fn run_verify_lineage() -> Result<()> {
 /// Discover spore mount points from `BIOMEOS_SPORE_PATHS` or by scanning
 /// `/media/$USER` for directories containing `.family.seed`.
 fn discover_spore_mounts() -> Vec<(String, String)> {
-    if let Ok(paths) = std::env::var("BIOMEOS_SPORE_PATHS") {
+    if let Ok(paths) = std::env::var(biomeos_types::env_config::vars::SPORE_PATHS) {
         return parse_biomeos_spore_paths_list(&paths);
     }
 

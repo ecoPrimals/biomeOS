@@ -180,6 +180,86 @@ pub mod vars {
 
     /// Family seed for key derivation
     pub const FAMILY_SEED: &str = "BIOMEOS_FAMILY_SEED";
+
+    // --- Realtime / Streaming ---
+
+    /// WebSocket endpoint override
+    pub const WS_ENDPOINT: &str = "BIOMEOS_WS_ENDPOINT";
+
+    /// SSE endpoint override
+    pub const SSE_ENDPOINT: &str = "BIOMEOS_SSE_ENDPOINT";
+
+    /// API WebSocket endpoint override
+    pub const API_WS: &str = "BIOMEOS_API_WS";
+
+    /// API SSE endpoint override
+    pub const API_SSE: &str = "BIOMEOS_API_SSE";
+
+    // --- STUN ---
+
+    /// Self-hosted STUN server address
+    pub const STUN_SERVER: &str = "BIOMEOS_STUN_SERVER";
+
+    /// Disable public STUN servers (self-hosted only)
+    pub const NO_PUBLIC_STUN: &str = "BIOMEOS_NO_PUBLIC_STUN";
+
+    /// Comma-separated list of STUN servers
+    pub const STUN_SERVERS: &str = "BIOMEOS_STUN_SERVERS";
+
+    /// Fallback STUN address
+    pub const STUN_FALLBACK_ADDRESS: &str = "BIOMEOS_STUN_FALLBACK_ADDRESS";
+
+    // --- Compute & Services ---
+
+    /// Compute endpoint override
+    pub const COMPUTE_ENDPOINT: &str = "BIOMEOS_COMPUTE_ENDPOINT";
+
+    /// Legacy toadstool endpoint (checked as fallback for compute)
+    pub const TOADSTOOL_ENDPOINT: &str = "TOADSTOOL_ENDPOINT";
+
+    // --- Registry ---
+
+    /// Local registry cache directory override
+    pub const REGISTRY_DIR: &str = "BIOMEOS_REGISTRY_DIR";
+
+    /// GitHub API URL override (for air-gapped or enterprise)
+    pub const GITHUB_API_URL: &str = "BIOMEOS_GITHUB_API_URL";
+
+    /// GitHub token for authenticated API access
+    pub const GITHUB_TOKEN: &str = "GITHUB_TOKEN";
+
+    // --- Boot ---
+
+    /// Kernel image path override
+    pub const KERNEL: &str = "BIOMEOS_KERNEL";
+
+    // --- UI & User ---
+
+    /// User identity override
+    pub const USER: &str = "BIOMEOS_USER";
+
+    // --- CLI Paths ---
+
+    /// plasmidBin directory override (CLI)
+    pub const PLASMID_DIR: &str = "BIOMEOS_PLASMID_DIR";
+
+    /// Chimera definitions directory override
+    pub const CHIMERA_DEFINITIONS_DIR: &str = "BIOMEOS_CHIMERA_DEFINITIONS_DIR";
+
+    /// Chimera binaries directory override
+    pub const BIN_CHIMERAS_DIR: &str = "BIOMEOS_BIN_CHIMERAS_DIR";
+
+    /// Primal binaries directory override (CLI)
+    pub const BIN_PRIMALS_DIR: &str = "BIOMEOS_BIN_PRIMALS_DIR";
+
+    /// Niche templates directory override
+    pub const NICHE_TEMPLATES_DIR: &str = "BIOMEOS_NICHE_TEMPLATES_DIR";
+
+    /// Spore paths (comma-separated mount points)
+    pub const SPORE_PATHS: &str = "BIOMEOS_SPORE_PATHS";
+
+    /// CLI log root directory override
+    pub const CLI_LOG_ROOT: &str = "BIOMEOS_CLI_LOG_ROOT";
 }
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)

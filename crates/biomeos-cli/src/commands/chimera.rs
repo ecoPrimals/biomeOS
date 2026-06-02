@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 /// Chimera definitions directory: `BIOMEOS_CHIMERA_DEFINITIONS_DIR` or `chimeras/definitions` under cwd.
 fn chimera_definitions_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("BIOMEOS_CHIMERA_DEFINITIONS_DIR") {
+    if let Ok(p) = std::env::var(biomeos_types::env_config::vars::CHIMERA_DEFINITIONS_DIR) {
         PathBuf::from(p)
     } else {
         PathBuf::from("chimeras/definitions")
@@ -20,7 +20,7 @@ fn chimera_definitions_dir() -> PathBuf {
 
 /// Chimera build output directory: `BIOMEOS_BIN_CHIMERAS_DIR` or `bin/chimeras` under cwd.
 fn bin_chimeras_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("BIOMEOS_BIN_CHIMERAS_DIR") {
+    if let Ok(p) = std::env::var(biomeos_types::env_config::vars::BIN_CHIMERAS_DIR) {
         PathBuf::from(p)
     } else {
         PathBuf::from("bin/chimeras")
@@ -29,7 +29,7 @@ fn bin_chimeras_dir() -> PathBuf {
 
 /// Primal binaries directory for chimera build: `BIOMEOS_BIN_PRIMALS_DIR` or `bin/primals` under cwd.
 fn bin_primals_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("BIOMEOS_BIN_PRIMALS_DIR") {
+    if let Ok(p) = std::env::var(biomeos_types::env_config::vars::BIN_PRIMALS_DIR) {
         PathBuf::from(p)
     } else {
         PathBuf::from("bin/primals")

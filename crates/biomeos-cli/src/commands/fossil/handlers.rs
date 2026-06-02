@@ -19,7 +19,7 @@ use super::{FossilAction, FossilArgs};
 fn cli_log_config(log_root: Option<&Path>) -> LogConfig {
     let mut config = LogConfig::default();
     let root: Option<PathBuf> = log_root.map(Path::to_path_buf).or_else(|| {
-        std::env::var("BIOMEOS_CLI_LOG_ROOT")
+        std::env::var(biomeos_types::env_config::vars::CLI_LOG_ROOT)
             .ok()
             .map(PathBuf::from)
     });

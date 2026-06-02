@@ -124,10 +124,11 @@ impl StunExtensionConfig {
 
 impl Default for StunExtensionConfig {
     fn default() -> Self {
+        use biomeos_types::env_config::vars;
         Self::from_env_values(
-            std::env::var("BIOMEOS_STUN_SERVER").ok().as_deref(),
-            std::env::var("BIOMEOS_NO_PUBLIC_STUN").ok().as_deref(),
-            std::env::var("BIOMEOS_STUN_SERVERS").ok().as_deref(),
+            std::env::var(vars::STUN_SERVER).ok().as_deref(),
+            std::env::var(vars::NO_PUBLIC_STUN).ok().as_deref(),
+            std::env::var(vars::STUN_SERVERS).ok().as_deref(),
         )
     }
 }
@@ -177,7 +178,7 @@ impl StunExtension {
         let address = match &self.config.self_hosted_address {
             Some(addr) => addr.clone(),
             None => self.discover_self_hosted_address().unwrap_or_else(|| {
-                std::env::var("BIOMEOS_STUN_FALLBACK_ADDRESS")
+                std::env::var(biomeos_types::env_config::vars::STUN_FALLBACK_ADDRESS)
                     .unwrap_or_else(|_| default_stun_fallback())
             }),
         };
@@ -200,7 +201,7 @@ impl StunExtension {
         if let Some(addr) = &self.config.self_hosted_address {
             return Some(addr.clone());
         }
-        std::env::var("BIOMEOS_STUN_SERVER").ok()
+        std::env::var(biomeos_types::env_config::vars::STUN_SERVER).ok()
     }
 
     /// Query a STUN server via the discovery delegate (Unix socket)

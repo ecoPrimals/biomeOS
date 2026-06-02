@@ -185,11 +185,12 @@ impl RealTimeEventSubscriber {
     ///
     /// Queries Songbird for services with "event_streaming" capability
     pub fn discover_endpoints(&mut self) -> Result<()> {
+        use biomeos_types::env_config::vars;
         self.discover_endpoints_with(
-            std::env::var("BIOMEOS_WS_ENDPOINT").ok().as_deref(),
-            std::env::var("BIOMEOS_SSE_ENDPOINT").ok().as_deref(),
-            std::env::var("BIOMEOS_API_WS").ok().as_deref(),
-            std::env::var("BIOMEOS_API_SSE").ok().as_deref(),
+            std::env::var(vars::WS_ENDPOINT).ok().as_deref(),
+            std::env::var(vars::SSE_ENDPOINT).ok().as_deref(),
+            std::env::var(vars::API_WS).ok().as_deref(),
+            std::env::var(vars::API_SSE).ok().as_deref(),
         )
     }
 
