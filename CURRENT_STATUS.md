@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 2, 2026 (v3.90: Wave 68 — Zero clippy warnings, env_config SSOT expansion (+20 constants, 25 call sites wired), primal_spawner split 765→607L, pseudospore load_pseudospore refactored, capability.call proxy (v3.89), 7,983 tests)
-**Version**: 3.90
-**Status**: PRODUCTION READY - P0 capability.call RESOLVED - Zero clippy warnings - env_config::vars SSOT 50+ constants - DH-1 COMPLETE - manifest.gate_profile wired - NC-1 COMPLETE - 19 Signal Graphs - Zero Blocking Debt
+**Updated**: June 2, 2026 (v3.92: Wave 70 — Family ID SSOT unification, resources.rs test extraction 777→437L, env_config SSOT expansion +23 constants, 24 call sites wired, .context() error evolution, duplicate helper elimination)
+**Version**: 3.92
+**Status**: PRODUCTION READY - Zero clippy warnings - env_config::vars SSOT 75+ constants - All family_id callers unified on canonical get_family_id() - resources.rs under 500L - DH-1 COMPLETE - Zero Blocking Debt
 
 ---
 

@@ -101,7 +101,7 @@ pub fn mcp_port_from(val: Option<&str>) -> u16 {
 pub fn mcp_port() -> u16 {
     mcp_port_from(
         env::var(env_vars::MCP_WEBSOCKET_PORT)
-            .or_else(|_| env::var("MCP_PORT"))
+            .or_else(|_| env::var(crate::env_config::vars::MCP_PORT))
             .ok()
             .as_deref(),
     )
@@ -119,7 +119,7 @@ pub fn discovery_port_from(val: Option<&str>) -> u16 {
 /// Checks `DISCOVERY_PORT` environment variable first.
 #[must_use]
 pub fn discovery_port() -> u16 {
-    discovery_port_from(env::var("DISCOVERY_PORT").ok().as_deref())
+    discovery_port_from(env::var(env_vars::DISCOVERY_PORT).ok().as_deref())
 }
 
 /// Security provider port from an optional value.
@@ -148,7 +148,7 @@ pub fn relay_port() -> u16 {
     relay_port_from(
         env::var(env_vars::DISCOVERY_PORT)
             .or_else(|_| env::var(env_vars::MCP_WEBSOCKET_PORT))
-            .or_else(|_| env::var("MCP_PORT"))
+            .or_else(|_| env::var(crate::env_config::vars::MCP_PORT))
             .ok()
             .as_deref(),
     )

@@ -61,7 +61,7 @@ impl BiomeOsHttpClient {
                     &discovery_provider,
                 ))
             })
-            .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
+            .or_else(|_| std::env::var(biomeos_types::env_config::vars::DISCOVERY_SOCKET_LEGACY))
             .unwrap_or_else(|_| {
                 let family_id = biomeos_core::family_discovery::get_family_id();
                 let mut nucleation = SocketNucleation::default();

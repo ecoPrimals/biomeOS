@@ -36,7 +36,7 @@ pub fn get_genome_bin_path_with(env_path: Option<&str>, search_paths: &[&Path]) 
 ///
 /// Searches for `wateringHole/genomeBin/` relative to the workspace.
 pub fn get_genome_bin_path() -> Option<PathBuf> {
-    let env_path = std::env::var("GENOMEBIN_PATH").ok();
+    let env_path = std::env::var(biomeos_types::env_config::vars::GENOMEBIN_PATH).ok();
     get_genome_bin_path_from(env_path.as_deref())
 }
 

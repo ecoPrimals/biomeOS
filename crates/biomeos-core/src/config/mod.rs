@@ -214,7 +214,7 @@ pub mod presets {
         // The discovery provider is resolved by env or defaults to the canonical
         // mesh orchestrator from primal_names — no hardcoded primal identity.
         let discovery_endpoint = std::env::var(biomeos_types::env_config::vars::DISCOVERY_ENDPOINT)
-            .or_else(|_| std::env::var("BIOMEOS_DISCOVERY_ENDPOINT"))
+            .or_else(|_| std::env::var(biomeos_types::env_config::vars::BIOMEOS_DISCOVERY_ENDPOINT))
             .unwrap_or_else(|_| {
                 use crate::socket_discovery::SocketDiscovery;
                 let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)

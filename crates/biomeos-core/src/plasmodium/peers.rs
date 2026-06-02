@@ -51,7 +51,7 @@ impl super::Plasmodium {
         let peer_list_opt = self
             .peers_override
             .clone()
-            .or_else(|| std::env::var("PLASMODIUM_PEERS").ok());
+            .or_else(|| std::env::var(biomeos_types::env_config::vars::PLASMODIUM_PEERS).ok());
 
         if let Some(ref peer_list) = peer_list_opt {
             for peer_str in peer_list.split(',') {

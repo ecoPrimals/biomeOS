@@ -126,7 +126,7 @@ impl PrimalConfig {
         let id = Self::discover_identity()?;
 
         // Discover binary path
-        let binary_path = std::env::var("PRIMAL_BINARY").or_else(|_| {
+        let binary_path = std::env::var(biomeos_types::env_config::vars::PRIMAL_BINARY).or_else(|_| {
             std::env::current_exe()
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
@@ -140,7 +140,7 @@ impl PrimalConfig {
         let requires = Capability::from_env("PRIMAL_REQUIRES");
 
         // Load port (0 = OS auto-select)
-        let http_port = std::env::var("HTTP_PORT")
+        let http_port = std::env::var(biomeos_types::env_config::vars::PRIMAL_HTTP_PORT)
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
@@ -163,7 +163,7 @@ impl PrimalConfig {
     /// Discover own identity (infant model)
     fn discover_identity() -> biomeos_types::error::BiomeResult<String> {
         // 1. Check PRIMAL_ID env var
-        if let Ok(id) = std::env::var("PRIMAL_ID") {
+        if let Ok(id) = std::env::var(biomeos_types::env_config::vars::PRIMAL_ID) {
             return Ok(id);
         }
 

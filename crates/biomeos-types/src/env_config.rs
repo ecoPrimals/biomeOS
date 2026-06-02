@@ -175,8 +175,17 @@ pub mod vars {
     /// Discovery endpoint URL override
     pub const DISCOVERY_ENDPOINT: &str = "DISCOVERY_ENDPOINT";
 
+    /// Legacy discovery endpoint (prefixed variant)
+    pub const BIOMEOS_DISCOVERY_ENDPOINT: &str = "BIOMEOS_DISCOVERY_ENDPOINT";
+
     /// Discovery port override
     pub const DISCOVERY_PORT: &str = "BIOMEOS_DISCOVERY_PORT";
+
+    /// Test bind address override
+    pub const TEST_BIND: &str = "BIOMEOS_TEST_BIND";
+
+    /// Test port override
+    pub const TEST_PORT: &str = "BIOMEOS_TEST_PORT";
 
     /// Family seed for key derivation
     pub const FAMILY_SEED: &str = "BIOMEOS_FAMILY_SEED";
@@ -260,6 +269,72 @@ pub mod vars {
 
     /// CLI log root directory override
     pub const CLI_LOG_ROOT: &str = "BIOMEOS_CLI_LOG_ROOT";
+
+    // --- Primal Process Identity ---
+
+    /// Primal binary path (set by spawner for child primals)
+    pub const PRIMAL_BINARY: &str = "PRIMAL_BINARY";
+
+    /// Primal JSON-RPC socket path (set by spawner)
+    pub const PRIMAL_SOCKET_PATH: &str = "PRIMAL_SOCKET_PATH";
+
+    /// Primal socket path override (discovery)
+    pub const PRIMAL_SOCKET: &str = "PRIMAL_SOCKET";
+
+    /// Primal ID (set by spawner for identity)
+    pub const PRIMAL_ID: &str = "PRIMAL_ID";
+
+    /// HTTP port override for primal services (non-prefixed)
+    pub const PRIMAL_HTTP_PORT: &str = "HTTP_PORT";
+
+    // --- Discovery (Non-BIOMEOS Prefix) ---
+
+    /// Family seed for key derivation (non-prefixed legacy)
+    pub const FAMILY_SEED_LEGACY: &str = "FAMILY_SEED";
+
+    /// mDNS-discovered endpoint
+    pub const MDNS_DISCOVERED_ENDPOINT: &str = "MDNS_DISCOVERED_ENDPOINT";
+
+    /// Broadcast-discovered endpoint
+    pub const BROADCAST_DISCOVERED_ENDPOINT: &str = "BROADCAST_DISCOVERED_ENDPOINT";
+
+    /// Multicast-discovered endpoint
+    pub const MULTICAST_DISCOVERED_ENDPOINT: &str = "MULTICAST_DISCOVERED_ENDPOINT";
+
+    /// Security endpoint override
+    pub const SECURITY_ENDPOINT: &str = "SECURITY_ENDPOINT";
+
+    /// Primal name identity (spawner-injected)
+    pub const PRIMAL_NAME: &str = "PRIMAL_NAME";
+
+    /// AI default model override
+    pub const AI_DEFAULT_MODEL: &str = "AI_DEFAULT_MODEL";
+
+    /// AI HTTP provider list (comma-separated)
+    pub const AI_HTTP_PROVIDERS: &str = "AI_HTTP_PROVIDERS";
+
+    /// Spore root directory override
+    pub const SPORE_ROOT: &str = "SPORE_ROOT";
+
+    /// Plasmodium peer list (comma-separated)
+    pub const PLASMODIUM_PEERS: &str = "PLASMODIUM_PEERS";
+
+    /// Discovery socket path override (non-prefixed legacy)
+    pub const DISCOVERY_SOCKET_LEGACY: &str = "DISCOVERY_SOCKET";
+
+    /// MCP port override
+    pub const MCP_PORT: &str = "MCP_PORT";
+
+    /// JWT secret (non-prefixed legacy fallback)
+    pub const JWT_SECRET_LEGACY: &str = "JWT_SECRET";
+
+    // --- Federation (EcoPrimal) ---
+
+    /// EcoPrimal installation prefix
+    pub const ECOPRIMAL_PREFIX: &str = "ECOPRIMAL_PREFIX";
+
+    /// EcoPrimal config directory
+    pub const ECOPRIMAL_CONFIG_DIR: &str = "ECOPRIMAL_CONFIG_DIR";
 }
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)

@@ -23,9 +23,10 @@ use tracing::{debug, info, warn};
 use crate::graph::GraphNode;
 use super::context::{ExecutionContext, RollbackAction};
 
-/// Resolve family ID from graph env, falling back to runtime discovery.
+/// Resolve family ID from graph env map, falling back to canonical discovery.
 fn resolve_family_id(env: &HashMap<String, String>) -> String {
-    env.get(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+    env.get(biomeos_types::env_config::vars::FAMILY_ID)
+        .or_else(|| env.get(biomeos_types::env_config::vars::FAMILY_ID_LEGACY))
         .cloned()
         .unwrap_or_else(|| biomeos_core::family_discovery::get_family_id())
 }
@@ -293,7 +294,7 @@ fn resolve_primal_binary(primal_name: &str, env: &HashMap<String, String>) -> Re
     }
 
     // Priority 2: SPORE_ROOT/primals/{primal}
-    if let Some(spore_root) = env.get("SPORE_ROOT").or_else(|| std::env::var("SPORE_ROOT").ok().as_ref()) {
+    if let Some(spore_root) = env.get(biomeos_types::env_config::vars::SPORE_ROOT).or_else(|| std::env::var(biomeos_types::env_config::vars::SPORE_ROOT).ok().as_ref()) {
         let path = format!("{}/primals/{}", spore_root, primal_name);
         if std::path::Path::new(&path).exists() {
             return Ok(path);

@@ -195,7 +195,7 @@ pub(crate) fn build_primal_command(
     let has_ai =
         std::env::var("ANTHROPIC_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok();
     let ai_providers = has_ai.then(|| {
-        std::env::var("AI_HTTP_PROVIDERS").unwrap_or_else(|_| "anthropic,openai".to_string())
+        std::env::var(biomeos_types::env_config::vars::AI_HTTP_PROVIDERS).unwrap_or_else(|_| "anthropic,openai".to_string())
     });
     let anthropic = std::env::var("ANTHROPIC_API_KEY").ok();
     let openai = std::env::var("OPENAI_API_KEY").ok();
@@ -278,9 +278,9 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
         .unwrap_or(false);
     if pass_ai_model {
         if let Some(model) = config.ai_default_model {
-            cmd.env("AI_DEFAULT_MODEL", model);
-        } else if let Ok(model) = std::env::var("AI_DEFAULT_MODEL") {
-            cmd.env("AI_DEFAULT_MODEL", model);
+            cmd.env(biomeos_types::env_config::vars::AI_DEFAULT_MODEL, model);
+        } else if let Ok(model) = std::env::var(biomeos_types::env_config::vars::AI_DEFAULT_MODEL) {
+            cmd.env(biomeos_types::env_config::vars::AI_DEFAULT_MODEL, model);
         }
     }
 

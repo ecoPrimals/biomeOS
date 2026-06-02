@@ -313,7 +313,7 @@ impl MinimalObserver {
 
         let security_endpoint = security_endpoint_override
             .map(String::from)
-            .or_else(|| std::env::var("SECURITY_ENDPOINT").ok());
+            .or_else(|| std::env::var(biomeos_types::env_config::vars::SECURITY_ENDPOINT).ok());
         let _encrypted_payload = if let Some(endpoint) = security_endpoint {
             debug!(
                 "🔒 Encrypting metrics via security provider at {}",

@@ -57,7 +57,7 @@ fn build_socket_path_inner(
     // Tier 1: Explicit override via PRIMAL_SOCKET
     let primal_socket_val = primal_socket
         .map(String::from)
-        .or_else(|| env::var("PRIMAL_SOCKET").ok());
+        .or_else(|| env::var(biomeos_types::env_config::vars::PRIMAL_SOCKET).ok());
     if let Some(primal_socket) = primal_socket_val {
         let path = PathBuf::from(&primal_socket);
         if path.is_dir() || !path.exists() {

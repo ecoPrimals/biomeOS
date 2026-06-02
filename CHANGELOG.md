@@ -2,6 +2,25 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.92 (2026-06-02) — Wave 70: Family ID SSOT + Resources Split + Env Expansion
+
+### Family ID unification
+- `model_cache/types.rs`: eliminated duplicate `resolve_family_id_from_env()`, now calls canonical `family_discovery::get_family_id()`
+- `graph/executor/node_handlers.rs`: improved `resolve_family_id(env)` to check `FAMILY_ID` before `FAMILY_ID_LEGACY`
+- `spore/documentation.rs`: removed trivial `resolve_family_id()` wrapper, replaced with direct `get_family_id()` call
+
+### resources.rs split (777→436L)
+- Extracted 335-line `#[cfg(test)] mod tests` to `resources_tests.rs` via `#[path]` module
+- Production types remain in `resources.rs`, test surface isolated for maintainability
+
+### env_config SSOT expansion (+23 constants, 24 call sites wired)
+- Wave 1: `BIOMEOS_DISCOVERY_ENDPOINT`, `TEST_BIND`, `TEST_PORT`, `PRIMAL_BINARY`, `PRIMAL_SOCKET_PATH`, `PRIMAL_SOCKET`, `PRIMAL_ID`, `PRIMAL_HTTP_PORT`, `FAMILY_SEED_LEGACY`, `MDNS_DISCOVERED_ENDPOINT`, `BROADCAST_DISCOVERED_ENDPOINT`, `MULTICAST_DISCOVERED_ENDPOINT`, `SECURITY_ENDPOINT`
+- Wave 2: `PRIMAL_NAME`, `AI_DEFAULT_MODEL`, `AI_HTTP_PROVIDERS`, `SPORE_ROOT`, `PLASMODIUM_PEERS`, `DISCOVERY_SOCKET_LEGACY`, `MCP_PORT`, `JWT_SECRET_LEGACY`, `ECOPRIMAL_PREFIX`, `ECOPRIMAL_CONFIG_DIR`
+- Wired across 15 files in `biomeos-core`, `biomeos-types`, `biomeos-api`, `biomeos-atomic-deploy`, `biomeos-graph`, `biomeos-federation`, `biomeos`
+
+### Error context evolution
+- `capability_translation/mod.rs`: `.map_err(|e| anyhow!("Failed to read...{e}"))` → `.context("Failed to read capability config")` (2 sites)
+
 ## v3.90 (2026-06-02) — Wave 68: Clippy Zero + Env SSOT Expansion
 
 ### Zero clippy warnings (18 → 0)

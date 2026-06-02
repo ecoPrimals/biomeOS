@@ -123,7 +123,7 @@ impl ManagedPrimal for GenericManagedPrimal {
             }
 
             // Try Unix socket first
-            if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH")
+            if let Ok(socket_path) = std::env::var(biomeos_types::env_config::vars::PRIMAL_SOCKET_PATH)
                 && let Ok(endpoint) = Endpoint::new(format!("unix://{socket_path}"))
             {
                 return Some(endpoint);

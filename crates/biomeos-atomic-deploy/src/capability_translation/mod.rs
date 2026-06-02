@@ -35,7 +35,7 @@
 mod defaults;
 mod socket;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use biomeos_core::atomic_client::AtomicClient;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -320,10 +320,10 @@ impl CapabilityTranslationRegistry {
         F: Fn(&str, &str) -> String,
     {
         let config_content = std::fs::read_to_string(config_path.as_ref())
-            .map_err(|e| anyhow!("Failed to read capability config: {e}"))?;
+            .context("Failed to read capability config")?;
 
         let config: toml::Value = toml::from_str(&config_content)
-            .map_err(|e| anyhow!("Failed to parse capability config: {e}"))?;
+            .context("Failed to parse capability config")?;
 
         let family_id = family_id_override
             .map(String::from)

@@ -155,7 +155,7 @@ impl GraphHandler {
             env.insert(
                 "JWT_SECRET".to_string(),
                 std::env::var(biomeos_types::env_config::vars::JWT_SECRET)
-                    .or_else(|_| std::env::var("JWT_SECRET"))
+                    .or_else(|_| std::env::var(biomeos_types::env_config::vars::JWT_SECRET_LEGACY))
                     .unwrap_or_else(|_| {
                         tracing::warn!("JWT_SECRET not set — using family-derived fallback (set BIOMEOS_JWT_SECRET for production)");
                         format!("biomeos-jwt-{}", family_id_owned)

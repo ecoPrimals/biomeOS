@@ -118,13 +118,13 @@ impl BiomeOSConfigBuilder {
         //
         // Deep Debt Principle: Prefer Unix sockets for tests, use network only when needed.
         builder.config.network.bind_address =
-            std::env::var("BIOMEOS_TEST_BIND").unwrap_or_else(|_| {
+            std::env::var(biomeos_types::env_config::vars::TEST_BIND).unwrap_or_else(|_| {
                 warn!("BIOMEOS_TEST_BIND not set. Using Unix sockets for test isolation.");
                 warn!("For network tests: export BIOMEOS_TEST_BIND=127.0.0.1");
                 biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
             });
 
-        builder.config.network.port = std::env::var("BIOMEOS_TEST_PORT")
+        builder.config.network.port = std::env::var(biomeos_types::env_config::vars::TEST_PORT)
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(ports::TEST_DEFAULT);

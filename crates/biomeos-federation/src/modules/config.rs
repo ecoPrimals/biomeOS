@@ -16,14 +16,14 @@ use tracing::{error, warn};
 
 /// Resolve the ecoPrimals install prefix from `$ECOPRIMAL_PREFIX` or default `/opt/ecoprimal`.
 fn ecoprimal_prefix() -> PathBuf {
-    std::env::var("ECOPRIMAL_PREFIX")
+    std::env::var(biomeos_types::env_config::vars::ECOPRIMAL_PREFIX)
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/opt/ecoprimal"))
 }
 
 /// Resolve the ecoPrimals config directory from `$ECOPRIMAL_CONFIG_DIR` or default `/etc/ecoprimal`.
 fn ecoprimal_config_dir() -> PathBuf {
-    std::env::var("ECOPRIMAL_CONFIG_DIR")
+    std::env::var(biomeos_types::env_config::vars::ECOPRIMAL_CONFIG_DIR)
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/etc/ecoprimal"))
 }

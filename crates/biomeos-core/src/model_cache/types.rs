@@ -3,7 +3,6 @@
 
 //! Model cache type definitions
 
-use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -29,7 +28,7 @@ impl ModelCacheConfig {
     pub fn from_env() -> Self {
         Self {
             cache_dir: Self::default_cache_dir_from_system_paths(),
-            family_id: resolve_family_id_from_env(),
+            family_id: crate::family_discovery::get_family_id(),
             gate_id: resolve_gate_id_from_env(),
             hf_home: std::env::var("HF_HOME").ok().map(PathBuf::from),
         }
@@ -42,12 +41,6 @@ impl ModelCacheConfig {
     }
 }
 
-fn resolve_family_id_from_env() -> String {
-    std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
-        .or_else(|_| std::env::var(biomeos_types::env_config::vars::NODE_FAMILY_ID))
-        .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
-        .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string())
-}
 
 fn resolve_gate_id_from_env() -> String {
     std::env::var(biomeos_types::env_config::vars::GATE_ID)
