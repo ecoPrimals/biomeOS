@@ -221,7 +221,12 @@ pub mod presets {
                     .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
                     .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
                 let provider = std::env::var(biomeos_types::env_config::vars::DISCOVERY_PROVIDER)
-                    .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
+                    .ok()
+                    .or_else(|| {
+                        biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
+                            .map(String::from)
+                    })
+                    .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
                 let discovery = SocketDiscovery::new(family_id);
                 format!(
                     "unix://{}",

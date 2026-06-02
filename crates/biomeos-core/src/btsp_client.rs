@@ -188,7 +188,12 @@ pub fn security_provider_socket_path() -> Option<std::path::PathBuf> {
     }
 
     let provider = std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
-        .unwrap_or_else(|_| primal_names::BEARDOG.to_string());
+        .ok()
+        .or_else(|| {
+            biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
+                .map(String::from)
+        })
+        .unwrap_or_else(|| primal_names::BEARDOG.to_string());
 
     let socket_dir = socket_dir()?;
     if let Some(fid) = family_id() {

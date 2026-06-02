@@ -16,7 +16,12 @@ impl super::Plasmodium {
         let mut peers = Vec::new();
 
         let discovery_provider = std::env::var(biomeos_types::env_config::vars::DISCOVERY_PROVIDER)
-            .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
+            .ok()
+            .or_else(|| {
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
+                    .map(String::from)
+            })
+            .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
         if let Ok(client) = AtomicClient::discover(&discovery_provider).await {
             if let Ok(result) = client.call("mesh.peers", json!({})).await {
                 let peers_array = result

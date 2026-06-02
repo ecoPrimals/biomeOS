@@ -86,9 +86,19 @@ impl BiomeOsMode {
         // Bootstrap hints from canonical constants; production uses runtime discovery
 
         let security_provider = std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
-            .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string());
+            .ok()
+            .or_else(|| {
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
+                    .map(String::from)
+            })
+            .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
         let network_provider = std::env::var(biomeos_types::env_config::vars::NETWORK_PROVIDER)
-            .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
+            .ok()
+            .or_else(|| {
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
+                    .map(String::from)
+            })
+            .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
 
         let mut nucleation = SocketNucleation::default();
         let security_socket = nucleation.assign_socket(&security_provider, family_id);

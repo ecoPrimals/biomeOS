@@ -146,7 +146,12 @@ pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<Str
     // Discover security provider with automatic transport fallback
     // Provider name resolved from env, not hardcoded
     let security_provider = std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
-        .unwrap_or_else(|_| primal_names::BEARDOG.to_string());
+        .ok()
+        .or_else(|| {
+            biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
+                .map(String::from)
+        })
+        .unwrap_or_else(|| primal_names::BEARDOG.to_string());
     let client = AtomicClient::discover(&security_provider)
         .await
         .context(format!(

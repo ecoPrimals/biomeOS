@@ -183,15 +183,23 @@ pub async fn transition_to_coordinated_with_runtime_dir(
     let security_provider = biomeos_types::env_config::security_provider()
         .or_else(|| {
             biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
+                .or_else(|| biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("encryption"))
                 .map(String::from)
         })
-        .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
+        .unwrap_or_else(|| {
+            tracing::debug!("Security provider: env + taxonomy returned None, using last-resort fallback");
+            biomeos_types::primal_names::BEARDOG.to_string()
+        });
     let network_provider = biomeos_types::env_config::network_provider()
         .or_else(|| {
             biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
+                .or_else(|| biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("networking"))
                 .map(String::from)
         })
-        .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
+        .unwrap_or_else(|| {
+            tracing::debug!("Network provider: env + taxonomy returned None, using last-resort fallback");
+            biomeos_types::primal_names::SONGBIRD.to_string()
+        });
     let mut nucleation = SocketNucleation::new(SocketStrategy::default());
     let security_socket =
         nucleation.assign_socket_with_runtime_dir(&security_provider, family_id, runtime_dir);
