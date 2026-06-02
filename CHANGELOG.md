@@ -2,6 +2,23 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.93 (2026-06-02) — Wave 70b: Taxonomy-First Provider Resolution + Dependency Evolution
+
+### Cross-primal hardcoding evolution (8 sites)
+- All security/discovery provider fallbacks now use 3-tier resolution:
+  `env::var()` → `CapabilityTaxonomy::resolve_to_primal()` → last-resort constant
+- Fixed: `bootstrap.rs` (security + discovery, broader capability search),
+  `btsp_client.rs`, `config/mod.rs`, `mode.rs`, `http_client.rs`,
+  `primal_communication.rs`, `plasmodium/peers.rs`, `plasmodium/remote.rs`,
+  `security_client.rs` (both `from_discovery` and `from_primal_discovery`)
+
+### Squirrel-specific logic eliminated
+- `primal_spawner.rs`: Removed `eq_ignore_ascii_case(SQUIRREL)` gate on
+  `AI_DEFAULT_MODEL` injection — now passes to all child primals (capability-agnostic)
+
+### Dependency evolution
+- `which` 6 → 8: collapses `rustix` 0.38 / `linux-raw-sys` 0.4 duplicate → single `rustix` 1.1.4
+
 ## v3.92 (2026-06-02) — Wave 70: Family ID SSOT + Resources Split + Env Expansion
 
 ### Family ID unification

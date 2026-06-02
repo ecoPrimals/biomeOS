@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 2, 2026 (v3.92: Wave 70 — Family ID SSOT unification, resources.rs test extraction 777→437L, env_config SSOT expansion +23 constants, 24 call sites wired, .context() error evolution, duplicate helper elimination)
-**Version**: 3.92
-**Status**: PRODUCTION READY - Zero clippy warnings - env_config::vars SSOT 75+ constants - All family_id callers unified on canonical get_family_id() - resources.rs under 500L - DH-1 COMPLETE - Zero Blocking Debt
+**Updated**: June 2, 2026 (v3.93: Wave 70b — Taxonomy-first provider resolution (8 sites), Squirrel-specific logic removed, which 6→8 (rustix dedup), env_config 75+ constants)
+**Version**: 3.93
+**Status**: PRODUCTION READY - Zero clippy warnings - env_config::vars SSOT 75+ constants - Taxonomy-first provider resolution - Single rustix version - DH-1 COMPLETE - Zero Blocking Debt
 
 ---
 
