@@ -2,6 +2,43 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.94 (2026-06-02) — Wave 71: L4 Weighted Routing + Topology Affinity + TCP-Only Deprecation
+
+### L4 weighted routing — discover_capability now score-based
+- Replaced first-match (`providers[0]`) in all 4 discovery paths with
+  `RoutingWeightTable::select_best()` weighted selection:
+  - `try_registry_lookup` — exact capability match
+  - `try_prefix_lookup` — domain prefix scan
+  - `discover_by_capability_category` — category fallback
+  - `find_primal_by_capability` — composite helper
+- Added `select_primary()` helper: enumerates candidates, scores via EWMA
+  latency + error rate + affinity + cost hint + circuit breaker, selects highest
+- Fixed `capability_call.rs` and `capability.rs` dispatch paths to derive
+  `primary_name` from `primary_endpoint` (not `primals.first()`)
+- A/B shadow logging: first 1000 multi-provider dispatches log both weighted
+  and first-match choices at INFO level for validation
+- Added `score_for()` method to `RoutingWeightTable` for shadow log scoring
+
+### Topology affinity factor
+- Added `topology_affinity: f64` field to `ProviderWeight` (default `1.0`)
+- Score formula: `topology_affinity * affinity * (1-error_rate) / (1+latency) - cost`
+- Transport-tier auto-inference:
+  - Unix/Abstract socket → same_gate (1.0)
+  - TCP localhost → same_gate (1.0)
+  - TCP/HTTP private network → same_segment (0.9)
+  - TCP/HTTP public IP → wan (0.3)
+- Constants defined: `SAME_GATE=1.0`, `SAME_SEGMENT=0.9`, `CROSS_SEGMENT=0.7`,
+  `VPS=0.4`, `WAN=0.3`
+- `register_capability()` now auto-seeds topology affinity from endpoint
+- `TOPOLOGY_MAP.toml` created in wateringHole as reference spec
+
+### --tcp-only deprecation
+- CLI `--tcp-only` flag hidden from help, marked deprecated
+- Runtime: deprecation warning emitted when flag is used
+- Release builds: `--tcp-only` blocked at startup with error
+  (`#[cfg(not(debug_assertions))]` guard)
+- Debug builds: flag still accepted with deprecation warning
+
 ## v3.93 (2026-06-02) — Wave 70b: Taxonomy-First Provider Resolution + Dependency Evolution
 
 ### Cross-primal hardcoding evolution (8 sites)

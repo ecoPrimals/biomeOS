@@ -23,6 +23,17 @@ pub(crate) const CIRCUIT_BREAKER_COOLDOWN_SECS: i64 = 30;
 /// Bonus score for providers with < 5 observations (encourages exploration).
 pub(crate) const EXPLORATION_BONUS: f64 = 0.1;
 
+/// Topology affinity multipliers — prefer same-gate IPC over cross-gate or WAN.
+/// Source: TOPOLOGY_MAP.toml in wateringHole.
+#[expect(dead_code, reason = "VPS and CROSS_SEGMENT used by future gate_id comparison")]
+pub mod topology {
+    pub const SAME_GATE: f64 = 1.0;
+    pub const SAME_SEGMENT: f64 = 0.9;
+    pub const CROSS_SEGMENT: f64 = 0.7;
+    pub const VPS: f64 = 0.4;
+    pub const WAN: f64 = 0.3;
+}
+
 pub(crate) fn ewma(current: f64, new_sample: f64, alpha: f64) -> f64 {
     alpha * new_sample + (1.0 - alpha) * current
 }
@@ -52,6 +63,10 @@ pub struct ProviderWeight {
     /// Cost hint from primal.announce (arbitrary units, lower is cheaper).
     /// `None` = no cost information available.
     pub cost_hint: Option<f64>,
+    /// Topology affinity multiplier (0.0–1.0).
+    /// Reflects transport proximity: same-gate IPC = 1.0, WAN = 0.3.
+    /// Set from transport endpoint analysis during registration.
+    pub topology_affinity: f64,
     /// Whether this provider is in circuit-breaker open state.
     pub circuit_open: bool,
     /// When the circuit breaker last opened (for half-open probing).
@@ -72,6 +87,7 @@ impl ProviderWeight {
             failure_count: 0,
             affinity: 0.5,
             cost_hint: None,
+            topology_affinity: topology::SAME_GATE,
             circuit_open: false,
             circuit_opened_at: None,
             consecutive_failures: 0,
@@ -125,7 +141,7 @@ impl ProviderWeight {
     ///
     /// Scoring function:
     /// ```text
-    /// score = affinity * (1 - error_rate) / (1 + normalized_latency) - cost_penalty
+    /// score = topology_affinity * affinity * (1 - error_rate) / (1 + normalized_latency) - cost_penalty
     /// ```
     ///
     /// Cold providers (< 5 dispatches) get a slight exploration bonus.
@@ -138,7 +154,8 @@ impl ProviderWeight {
         let latency_factor = 1.0 / (1.0 + self.ewma_latency_ms / 100.0);
         let cost_penalty = self.cost_hint.map_or(0.0, |c| c / 1000.0);
 
-        let base = self.affinity * reliability * latency_factor - cost_penalty;
+        let base =
+            self.topology_affinity * self.affinity * reliability * latency_factor - cost_penalty;
 
         let total = self.success_count + self.failure_count;
         if total < 5 {
@@ -153,3 +170,57 @@ impl ProviderWeight {
         self.success_count + self.failure_count
     }
 }
+
+/// Infer topology affinity from transport endpoint characteristics.
+///
+/// Unix/Abstract sockets are always same-gate. TCP/HTTP on localhost or
+/// private LAN are same-segment. Everything else is cross-segment or WAN
+/// (refined by gate_id comparison when available).
+pub fn topology_affinity_for_endpoint(endpoint: &biomeos_core::TransportEndpoint) -> f64 {
+    use biomeos_core::TransportEndpoint;
+    match endpoint {
+        TransportEndpoint::UnixSocket { .. } | TransportEndpoint::AbstractSocket { .. } => {
+            topology::SAME_GATE
+        }
+        TransportEndpoint::TcpSocket { host, .. } => {
+            if is_local_host(host) {
+                topology::SAME_GATE
+            } else if is_private_network(host) {
+                topology::SAME_SEGMENT
+            } else {
+                topology::WAN
+            }
+        }
+        TransportEndpoint::HttpJsonRpc { host, .. } => {
+            if is_local_host(host) {
+                topology::SAME_GATE
+            } else if is_private_network(host) {
+                topology::SAME_SEGMENT
+            } else {
+                topology::WAN
+            }
+        }
+    }
+}
+
+fn is_local_host(host: &str) -> bool {
+    matches!(
+        host,
+        "127.0.0.1" | "::1" | "localhost" | "0.0.0.0" | "[::1]"
+    )
+}
+
+fn is_private_network(host: &str) -> bool {
+    host.starts_with("10.")
+        || host.starts_with("172.16.")
+        || host.starts_with("172.17.")
+        || host.starts_with("172.18.")
+        || host.starts_with("172.19.")
+        || host.starts_with("172.2")
+        || host.starts_with("172.30.")
+        || host.starts_with("172.31.")
+        || host.starts_with("192.168.")
+        || host.starts_with("fd")
+        || host.starts_with("fe80:")
+}
+

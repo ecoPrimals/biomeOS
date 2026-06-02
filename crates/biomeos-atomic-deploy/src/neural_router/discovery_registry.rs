@@ -2,15 +2,80 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Registry-backed capability resolution: exact match, domain prefix scan, category.
+//!
+//! Provider selection uses **L4 weighted routing**: when multiple providers
+//! serve a capability, `select_primary` picks the highest-scoring candidate
+//! via [`RoutingWeightTable::select_best`] (EWMA latency, error rate, affinity,
+//! circuit breaker). Falls back to first registered provider when the weight
+//! table has no data.
 
 use anyhow::{Result, anyhow};
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use tracing::{debug, info};
 
 use super::NeuralRouter;
-use super::types::{DiscoveredAtomic, DiscoveredPrimal};
+use super::types::{DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability};
+
+const SHADOW_LOG_DISPATCH_LIMIT: u64 = 1000;
 
 impl NeuralRouter {
+    /// Select the primary provider from candidates using routing weights.
+    ///
+    /// Returns the index into `providers` of the best candidate. When the
+    /// weight table has no observations for any candidate, returns 0 (first).
+    ///
+    /// During the first [`SHADOW_LOG_DISPATCH_LIMIT`] multi-provider dispatches,
+    /// logs both the weighted choice and the legacy first-match choice at INFO
+    /// level for A/B validation.
+    pub(crate) async fn select_primary(&self, capability: &str, providers: &[RegisteredCapability]) -> usize {
+        if providers.len() <= 1 {
+            return 0;
+        }
+
+        let candidates: Vec<Arc<str>> = providers.iter().map(|p| p.primal_name.clone()).collect();
+        let weights = self.routing_weights.read().await;
+
+        let weighted_idx = if let Some(best) = weights.select_best(capability, &candidates) {
+            candidates.iter().position(|c| c == best).unwrap_or(0)
+        } else {
+            0
+        };
+
+        let dispatch_n = self.weighted_dispatch_counter.fetch_add(1, Ordering::Relaxed);
+        if dispatch_n < SHADOW_LOG_DISPATCH_LIMIT {
+            let first_match = &providers[0].primal_name;
+            let weighted = &providers[weighted_idx].primal_name;
+            let score = weights
+                .select_best(capability, &candidates)
+                .and_then(|best| {
+                    let key = (Arc::from(capability), best.clone());
+                    weights.score_for(&key)
+                });
+            if weighted_idx != 0 {
+                info!(
+                    "L4 shadow [{}/{}]: {} weighted={} first_match={} score={:.3}",
+                    dispatch_n + 1,
+                    SHADOW_LOG_DISPATCH_LIMIT,
+                    capability,
+                    weighted,
+                    first_match,
+                    score.unwrap_or(0.0)
+                );
+            } else {
+                debug!(
+                    "L4 shadow [{}/{}]: {} selected={} (matches first_match)",
+                    dispatch_n + 1,
+                    SHADOW_LOG_DISPATCH_LIMIT,
+                    capability,
+                    weighted,
+                );
+            }
+        }
+
+        weighted_idx
+    }
+
     /// Look up a capability in the registry; returns `None` on miss.
     pub(crate) async fn try_registry_lookup(&self, capability: &str) -> Option<DiscoveredAtomic> {
         let providers = self.get_capability_providers(capability).await?;
@@ -18,7 +83,8 @@ impl NeuralRouter {
             return None;
         }
 
-        let primary = &providers[0];
+        let primary_idx = self.select_primary(capability, &providers).await;
+        let primary = &providers[primary_idx];
         info!(
             "   ✅ Found in registry: {} → {}",
             capability, primary.primal_name
@@ -49,7 +115,7 @@ impl NeuralRouter {
     /// When `capability.call` receives `{ capability: "dag", operation: "session.create" }`,
     /// the exact key `"dag"` may not be registered — only `"dag.session.create"` etc.
     /// This method scans the registry for any key starting with `"{domain}."` and
-    /// returns the first matching provider, deduplicating by primal name.
+    /// returns the best-scoring provider, deduplicating by primal name.
     pub(crate) async fn try_prefix_lookup(&self, domain: &str) -> Option<DiscoveredAtomic> {
         let prefix = format!("{domain}.");
         let registry = self.capability_registry.read().await;
@@ -70,13 +136,14 @@ impl NeuralRouter {
             return None;
         }
 
-        let primary = &unique_providers[0];
+        drop(registry);
+
+        let primary_idx = self.select_primary(domain, &unique_providers).await;
+        let primary = &unique_providers[primary_idx];
         info!(
             "   ✅ Prefix match: '{}' → {} (via '{prefix}*' scan)",
             domain, primary.primal_name
         );
-
-        drop(registry);
 
         let mut primals = Vec::new();
         for provider in &unique_providers {
@@ -139,7 +206,10 @@ impl NeuralRouter {
             ));
         }
 
-        let primary = &matching_providers[0];
+        drop(registry);
+
+        let primary_idx = self.select_primary(capability, &matching_providers).await;
+        let primary = &matching_providers[primary_idx];
         info!(
             "   ✅ Found primal via capability category: {} → {} (provides {})",
             capability, primary.primal_name, category

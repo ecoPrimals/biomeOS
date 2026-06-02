@@ -455,7 +455,9 @@ impl CapabilityHandler {
 
                         let primary_name = atomic
                             .primals
-                            .first()
+                            .iter()
+                            .find(|p| p.endpoint == atomic.primary_endpoint)
+                            .or_else(|| atomic.primals.first())
                             .map(|p| p.name.to_string())
                             .unwrap_or_else(|| "unknown".to_string());
 

@@ -344,6 +344,14 @@ pub async fn run(
     tcp_only: bool,
     bind: Option<String>,
 ) -> Result<()> {
+    #[cfg(not(debug_assertions))]
+    if tcp_only {
+        anyhow::bail!(
+            "--tcp-only is deprecated and blocked in release builds (v3.94+). \
+             Use --port for hybrid TCP+UDS instead."
+        );
+    }
+
     let config = resolve_startup_config(&mode, &node_id, family_id.as_deref())?;
     let mode = config.mode;
     let family_id = config.family_id;
@@ -489,7 +497,7 @@ pub async fn run(
         let neural_socket = socket_dir.join(format!("neural-api-{family_id}.sock"));
         info!("Starting Neural API server (Full NUCLEUS)...");
         if tcp_only {
-            info!("  Transport: TCP-only (port {})", tcp_port.unwrap_or(0));
+            info!("  Transport: TCP-only (port {}) [DEPRECATED]", tcp_port.unwrap_or(0));
         } else if let Some(port) = tcp_port {
             info!("  Socket: {}", neural_socket.display());
             info!("  TCP Port: {port} (alongside UDS)");

@@ -34,7 +34,7 @@ mod scoring;
 mod store;
 mod utilization;
 
-pub use scoring::ProviderWeight;
+pub use scoring::{ProviderWeight, topology_affinity_for_endpoint};
 pub use store::{RoutingWeightTable, WeightTableSummary};
 pub use utilization::{CapabilityUtilizationTracker, MethodUtilization, UtilizationSummary};
 

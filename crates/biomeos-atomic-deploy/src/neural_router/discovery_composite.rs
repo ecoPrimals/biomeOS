@@ -112,7 +112,11 @@ impl NeuralRouter {
         let registry = self.capability_registry.read().await;
 
         if let Some(providers) = registry.get(capability) {
-            if let Some(provider) = providers.first() {
+            if !providers.is_empty() {
+                let providers = providers.clone();
+                drop(registry);
+                let idx = self.select_primary(capability, &providers).await;
+                let provider = &providers[idx];
                 debug!(
                     "   📖 Registry hit: {} provides '{}'",
                     provider.primal_name, capability

@@ -26,7 +26,7 @@ pub mod weights;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::RwLock;
 use tokio::time::Duration;
 use tracing::{debug, info, warn};
@@ -90,6 +90,11 @@ pub struct NeuralRouter {
     /// Neural API's own socket path, excluded from auto-discovery to prevent
     /// self-registration pollution (GAP-MATRIX-08).
     self_socket_path: RwLock<Option<PathBuf>>,
+
+    /// A/B shadow log counter for L4 weighted routing rollout.
+    /// Logs both first-match and weighted choices for the first
+    /// `SHADOW_LOG_DISPATCH_LIMIT` dispatches to validate scoring.
+    pub(crate) weighted_dispatch_counter: AtomicU64,
 }
 
 impl NeuralRouter {
@@ -110,6 +115,7 @@ impl NeuralRouter {
             protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
             lazy_rescan_attempted: AtomicBool::new(false),
             self_socket_path: RwLock::new(None),
+            weighted_dispatch_counter: AtomicU64::new(0),
         }
     }
 
@@ -137,6 +143,7 @@ impl NeuralRouter {
             protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
             lazy_rescan_attempted: AtomicBool::new(false),
             self_socket_path: RwLock::new(None),
+            weighted_dispatch_counter: AtomicU64::new(0),
         }
     }
 
@@ -158,7 +165,10 @@ impl NeuralRouter {
         *self.self_socket_path.write().await = Some(path);
     }
 
-    /// Register a capability with a transport endpoint
+    /// Register a capability with a transport endpoint.
+    ///
+    /// Automatically seeds the routing weight table with a topology affinity
+    /// derived from the endpoint's transport type (IPC vs TCP vs HTTP).
     pub async fn register_capability(
         &self,
         capability: impl Into<String>,
@@ -175,6 +185,8 @@ impl NeuralRouter {
             primal_name,
             endpoint.display_string()
         );
+
+        let topo_affinity = weights::topology_affinity_for_endpoint(&endpoint);
 
         let registration = RegisteredCapability {
             capability: Arc::from(capability.as_str()),
@@ -204,6 +216,11 @@ impl NeuralRouter {
         } else {
             providers.push(registration);
         }
+
+        drop(registry);
+
+        let mut weights = self.routing_weights.write().await;
+        weights.set_topology_affinity(&capability, &primal_name, topo_affinity);
 
         Ok(())
     }
@@ -318,6 +335,18 @@ impl NeuralRouter {
     pub async fn set_provider_cost_hint(&self, capability: &str, provider: &str, cost: f64) {
         let mut weights = self.routing_weights.write().await;
         weights.set_cost_hint(capability, provider, cost);
+    }
+
+    /// Set topology affinity for a provider based on transport endpoint.
+    pub async fn set_provider_topology_affinity(
+        &self,
+        capability: &str,
+        provider: &str,
+        endpoint: &biomeos_core::TransportEndpoint,
+    ) {
+        let ta = weights::topology_affinity_for_endpoint(endpoint);
+        let mut weights = self.routing_weights.write().await;
+        weights.set_topology_affinity(capability, provider, ta);
     }
 
     /// Whether the routing weight table is backed by persistent storage.

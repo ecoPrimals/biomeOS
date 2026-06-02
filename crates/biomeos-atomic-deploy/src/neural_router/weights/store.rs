@@ -144,6 +144,11 @@ impl RoutingWeightTable {
         best.map(|(provider, _)| provider)
     }
 
+    /// Look up the current score for a `(capability, provider)` key.
+    pub fn score_for(&self, key: &(Arc<str>, Arc<str>)) -> Option<f64> {
+        self.weights.get(key).map(|w| w.score())
+    }
+
     /// Record a dispatch outcome, updating the provider's weight.
     pub fn record_outcome(
         &mut self,
@@ -172,6 +177,18 @@ impl RoutingWeightTable {
     pub fn set_cost_hint(&mut self, capability: &str, provider: &str, cost: f64) {
         let weight = self.get_or_create(capability, provider);
         weight.cost_hint = Some(cost);
+        self.persist_entry(capability, provider);
+    }
+
+    /// Set topology affinity for a provider (inferred from transport endpoint).
+    pub fn set_topology_affinity(
+        &mut self,
+        capability: &str,
+        provider: &str,
+        topology_affinity: f64,
+    ) {
+        let weight = self.get_or_create(capability, provider);
+        weight.topology_affinity = topology_affinity.clamp(0.0, 1.0);
         self.persist_entry(capability, provider);
     }
 

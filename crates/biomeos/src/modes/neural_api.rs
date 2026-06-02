@@ -75,8 +75,16 @@ pub async fn run(
     info!("Configuration:");
     info!("  Graphs Directory: {}", graphs_dir.display());
     info!("  Family ID: {}", family_id);
+    #[cfg(not(debug_assertions))]
     if tcp_only {
-        info!("  Transport: TCP-only (port {})", tcp_port.unwrap_or(0));
+        anyhow::bail!(
+            "--tcp-only is deprecated and blocked in release builds (v3.94+). \
+             Use --port for hybrid TCP+UDS instead."
+        );
+    }
+
+    if tcp_only {
+        info!("  Transport: TCP-only (port {}) [DEPRECATED]", tcp_port.unwrap_or(0));
     } else if let Some(port) = tcp_port {
         info!("  Socket Path: {}", socket_path.display());
         info!("  TCP Port: {port} (alongside UDS)");

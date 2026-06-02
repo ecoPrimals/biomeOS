@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 2, 2026 (v3.93: Wave 70b — Taxonomy-first provider resolution (8 sites), Squirrel-specific logic removed, which 6→8 (rustix dedup), env_config 75+ constants)
-**Version**: 3.93
-**Status**: PRODUCTION READY - Zero clippy warnings - env_config::vars SSOT 75+ constants - Taxonomy-first provider resolution - Single rustix version - DH-1 COMPLETE - Zero Blocking Debt
+**Updated**: June 2, 2026 (v3.94: Wave 71 — L4 weighted routing wired into discover_capability, topology affinity in score(), --tcp-only deprecated)
+**Version**: 3.94
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - Topology affinity scoring - Zero clippy warnings - env_config::vars SSOT 75+ constants - Taxonomy-first provider resolution - DH-1 COMPLETE - Zero Blocking Debt
 
 ---
 
