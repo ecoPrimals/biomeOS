@@ -154,7 +154,13 @@ where
         "method": "identity.get",
         "id": 1
     });
-    let line = serde_json::to_string(&identity_req).unwrap_or_default() + "\n";
+    let line = match serde_json::to_string(&identity_req) {
+        Ok(s) => s + "\n",
+        Err(e) => {
+            tracing::warn!("Failed to serialize identity.get request: {e}");
+            return ("unknown".to_string(), "unknown".to_string());
+        }
+    };
     if reader.get_mut().write_all(line.as_bytes()).await.is_err() {
         return ("unknown".to_string(), "unknown".to_string());
     }
@@ -203,7 +209,13 @@ where
         "method": "capabilities.list",
         "id": 2
     });
-    let line = serde_json::to_string(&caps_req).unwrap_or_default() + "\n";
+    let line = match serde_json::to_string(&caps_req) {
+        Ok(s) => s + "\n",
+        Err(e) => {
+            tracing::warn!("Failed to serialize capabilities.list request: {e}");
+            return vec![];
+        }
+    };
     if reader.get_mut().write_all(line.as_bytes()).await.is_err() {
         return vec![];
     }

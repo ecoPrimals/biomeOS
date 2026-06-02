@@ -260,7 +260,7 @@ pub fn parse_checksums(content: &str) -> Vec<ChecksumEntry> {
         .collect()
 }
 
-#[allow(clippy::single_match_else)]
+#[expect(clippy::single_match_else, reason = "match arms have early-return control flow")]
 fn read_and_parse_toml<T: serde::de::DeserializeOwned>(
     path: &Path,
     label: &str,
@@ -281,7 +281,7 @@ fn read_and_parse_toml<T: serde::de::DeserializeOwned>(
     }
 }
 
-#[allow(clippy::single_match_else)]
+#[expect(clippy::single_match_else, reason = "match arms have early-return control flow")]
 fn read_and_parse_json<T: serde::de::DeserializeOwned>(
     path: &Path,
     label: &str,

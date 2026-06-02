@@ -220,7 +220,7 @@ pub(crate) fn discover_security_socket_in(
         CapabilityTaxonomy::resolve_to_primal("encryption").unwrap_or(primal_names::BEARDOG);
 
     if let Some(runtime_dir) = socket_dir {
-        let biomeos_dir = runtime_dir.join("biomeos");
+        let biomeos_dir = runtime_dir.join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
         let xdg_path = biomeos_dir.join(format!("{primal}.sock"));
         if xdg_path.exists() {
             return Some(xdg_path.to_string_lossy().to_string());

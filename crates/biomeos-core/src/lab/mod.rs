@@ -39,7 +39,10 @@ impl LabManager {
     pub fn new() -> Self {
         // Default to ../benchscale/ directory (parallel to biomeOS)
         // Get current directory and find workspace root
-        let current = std::env::current_dir().unwrap_or_default();
+        let current = std::env::current_dir().unwrap_or_else(|e| {
+            tracing::warn!("Cannot determine current directory: {e}");
+            std::path::PathBuf::from(".")
+        });
         let benchscale_root = if current.ends_with("biomeOS") {
             // We're in biomeOS root, go up one level and into benchscale
             current

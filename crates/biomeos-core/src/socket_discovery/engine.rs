@@ -361,7 +361,7 @@ impl SocketDiscovery {
         let Some(xdg) = self.xdg_runtime_dir() else {
             return vec![];
         };
-        let biomeos_dir = xdg.join("biomeos");
+        let biomeos_dir = xdg.join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
         let suffix = format!("-{}.sock", self.family_id.as_str());
         let Ok(entries) = std::fs::read_dir(&biomeos_dir) else {
             return vec![];

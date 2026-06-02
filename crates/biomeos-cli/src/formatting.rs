@@ -37,7 +37,12 @@ pub fn format_table<T: serde::Serialize>(data: &[T]) -> String {
     }
 
     // Convert to JSON first to get consistent structure
-    let json_data = serde_json::to_value(data).unwrap_or_default();
+    let json_data = match serde_json::to_value(data) {
+        Ok(v) => v,
+        Err(e) => {
+            return format!("Failed to format data: {e}");
+        }
+    };
 
     match json_data.as_array() {
         Some(items) if !items.is_empty() => {

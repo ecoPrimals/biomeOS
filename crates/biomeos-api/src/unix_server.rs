@@ -285,12 +285,12 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
 
     match method {
         "health" | "health.check" | "health.liveness" | "health.status" => {
-            let result = serde_json::json!({ "status": "healthy", "primal": "biomeos" });
+            let result = serde_json::json!({ "status": "healthy", "primal": biomeos_types::primal_names::BIOMEOS });
             jsonrpc_ok(id, &result)
         }
         "identity.get" | "identity" => {
             let result = serde_json::json!({
-                "primal": "biomeos",
+                "primal": biomeos_types::primal_names::BIOMEOS,
                 "role": "orchestrator",
                 "version": env!("CARGO_PKG_VERSION"),
                 "transport": "http+jsonrpc",
@@ -302,7 +302,7 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
             let result = serde_json::json!({
                 "primals": [
                     {
-                        "name": "biomeos",
+                        "name": biomeos_types::primal_names::BIOMEOS,
                         "socket": "self",
                         "status": "running",
                         "capabilities": ["orchestration"],
@@ -317,7 +317,7 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
         }
         "capabilities.list" | "capability.list" => {
             let result = serde_json::json!({
-                "primal": "biomeos",
+                "primal": biomeos_types::primal_names::BIOMEOS,
                 "methods": [
                     "health.check",
                     "health.liveness",

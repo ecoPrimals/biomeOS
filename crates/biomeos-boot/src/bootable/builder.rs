@@ -136,7 +136,7 @@ impl BootableMediaBuilder {
     pub(crate) fn add_biomeos_data(&self, boot_dir: &Path) -> Result<()> {
         info!("📋 Adding BiomeOS data...");
 
-        let biomeos_dir = boot_dir.join("biomeos");
+        let biomeos_dir = boot_dir.join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
         std::fs::create_dir_all(biomeos_dir.join("primals"))?;
         std::fs::create_dir_all(biomeos_dir.join("configs"))?;
         std::fs::create_dir_all(biomeos_dir.join("templates"))?;

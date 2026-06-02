@@ -129,7 +129,7 @@ impl BiomeosProvider {
         let socket_dir = if let Ok(dir) = std::env::var(biomeos_types::env_config::vars::SOCKET_DIR) {
             PathBuf::from(dir)
         } else if let Ok(xdg) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
-            PathBuf::from(xdg).join("biomeos")
+            PathBuf::from(xdg).join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR)
         } else {
             biomeos_types::SystemPaths::new_lazy()
                 .runtime_dir()

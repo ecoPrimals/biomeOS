@@ -280,7 +280,7 @@ impl TopologyHandler {
 
         // Priority 3: XDG_RUNTIME_DIR/biomeos (direct check)
         if let Ok(xdg_runtime) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
-            let path = PathBuf::from(xdg_runtime).join("biomeos");
+            let path = PathBuf::from(xdg_runtime).join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
             if !dirs.contains(&path) && path.exists() {
                 dirs.push(path);
             }

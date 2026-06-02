@@ -202,7 +202,7 @@ impl SporeIncubator {
     fn get_local_config_path(spore_id: &str, home: &Path) -> SporeResult<PathBuf> {
         Ok(home
             .join(".config")
-            .join("biomeos")
+            .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR)
             .join("deployed-nodes")
             .join(spore_id))
     }
@@ -289,7 +289,7 @@ impl SporeIncubator {
 
 /// List all locally incubated nodes under `home` (typically `$HOME`).
 pub async fn list_local_nodes_in(home: &Path) -> SporeResult<Vec<NodeConfig>> {
-    let nodes_dir = home.join(".config").join("biomeos").join("deployed-nodes");
+    let nodes_dir = home.join(".config").join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR).join("deployed-nodes");
 
     if !nodes_dir.exists() {
         return Ok(vec![]);

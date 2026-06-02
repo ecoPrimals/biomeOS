@@ -29,6 +29,8 @@ mod defaults_tests;
 pub mod env_config; // Centralized environment variable constants and typed accessors
 pub mod error;
 pub mod health;
+pub mod health_check;
+pub mod health_metrics;
 pub mod identifiers;
 /// IPC resilience utilities: phase-tagged errors, result extraction
 pub mod ipc;

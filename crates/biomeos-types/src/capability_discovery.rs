@@ -59,7 +59,7 @@ pub fn discover_capability_socket(
 
     // Tier 3: XDG runtime directory
     if let Some(ref base) = runtime_dir {
-        let biomeos_dir = base.join("biomeos");
+        let biomeos_dir = base.join(crate::constants::runtime_paths::BIOMEOS_SUBDIR);
         if let Some(found) = probe_socket_dir(&biomeos_dir, capability, primal, &family_id) {
             return Some(found);
         }

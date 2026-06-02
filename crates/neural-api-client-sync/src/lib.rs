@@ -262,7 +262,7 @@ pub fn resolve_socket_with_env(
         .or_else(|| std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR).ok());
     if let Some(xdg) = xdg {
         let p = PathBuf::from(xdg)
-            .join("biomeos")
+            .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR)
             .join(format!("neural-api-{family_id}.sock"));
         if p.exists() {
             return Some(p);
@@ -284,7 +284,7 @@ pub fn resolve_socket_with_env(
         .as_ref()
         .map_or_else(std::env::temp_dir, PathBuf::from);
     let p = tmp_base
-        .join("biomeos")
+        .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR)
         .join(format!("neural-api-{family_id}.sock"));
     if p.exists() {
         return Some(p);

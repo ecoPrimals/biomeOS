@@ -206,7 +206,7 @@ pub fn extract_capabilities_from_response(resp: &serde_json::Value) -> Vec<Strin
 
     warn!(
         "Unrecognized capabilities.list response shape: {}",
-        serde_json::to_string(resp).unwrap_or_default()
+        serde_json::to_string(resp).unwrap_or_else(|e| format!("<serialize error: {e}>"))
     );
     vec![]
 }
