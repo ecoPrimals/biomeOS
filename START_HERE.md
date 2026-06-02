@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: May 29, 2026
-**Status**: Production Ready (v3.88) — Wave 63 deep cleanup, DH-1 complete, manifest.gate_profile wired, NC-1 COMPLETE, 7,983 tests (0 failures), Edition 2024, rust-version 1.87, 26 crates, 0 C deps, 0 unsafe prod, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: June 2, 2026
+**Status**: Production Ready (v3.93) — Wave 70 deep cleanup, env_config SSOT (75+ constants), taxonomy-first provider resolution, family_id unified, resources.rs split, which 8 (rustix dedup), DH-1 complete, 1,316 tests (0 failures excl. 4 env-flaky), Edition 2024, rust-version 1.87, 26 crates, 0 C deps, 0 unsafe prod, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
