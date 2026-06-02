@@ -40,7 +40,7 @@ members = [
     "crates/neural-api-client-sync",
     "crates/neural-api-client",
     "crates/biomeos-genome-deploy",
-    "crates/biomeos",  # NEW UniBin!
+    "crates/biomeos",
     "crates/biomeos-types",
     "crates/biomeos-core",
     "crates/biomeos-cli",
@@ -58,8 +58,8 @@ members = [
     "crates/biomeos-boot",
     "crates/biomeos-deploy", "crates/biomeos-test-utils", "crates/biomeos-nucleus",
     "crates/biomeos-atomic-deploy",  # Genetic lineage atomic deployment (modern Rust, no bash)
-    "crates/biomeos-genomebin-v3",  # NEW: genomeBin v3.0 - TRUE binary isomorphic format
-    "crates/biomeos-genome-factory",  # NEW: Genome Factory - Universal genomeBin production
+    "crates/biomeos-genomebin-v3",
+    "crates/biomeos-genome-factory",
     "crates/biomeos-pseudospore",  # pseudoSpore envelope validation (NC-1.4)
 ]
 exclude = [
@@ -257,8 +257,6 @@ path = "examples/chimera_registry_demo.rs"
 [[example]]
 name = "full_ecosystem_demo"
 path = "examples/full_ecosystem_demo.rs"
-
-
 
 [[example]]
 name = "benchscale_p2p_test"

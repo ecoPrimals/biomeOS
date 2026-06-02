@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 2, 2026 (v3.96: Wave 72 — Deep debt: env SSOT +14 constants, 56 map_err→context, test extraction, #[expect] 100%)
-**Version**: 3.96
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - A/B shadow analysis ACTIVE - PathwayLearner LIVE - Topology affinity scoring - Zero clippy warnings - env_config::vars SSOT 90+ constants - DH-1 COMPLETE - Zero Blocking Debt
+**Updated**: June 2, 2026 (v3.97: Wave 72+ — map_err sweep 27/28, test extraction wave 2 (7 files), HTTP transport removed, env safety)
+**Version**: 3.97
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - A/B shadow analysis ACTIVE - PathwayLearner LIVE - Topology affinity scoring - Zero clippy warnings - env_config::vars SSOT 90+ constants - 12 files test-extracted - HTTP transport removed - Zero Blocking Debt
 
 ---
 
@@ -12,7 +12,7 @@
 |--------|--------|
 | **genomeBins** | 7/7 components ready (7 primals + orchestrator; barraCuda + coralReef added) |
 | **Cross-Arch** | x86_64 + aarch64 + armv7 (USB + Pixel + Raspberry Pi) |
-| **IPC Standard** | Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) |
+| **IPC Standard** | Universal IPC v3.0 (Unix socket primary; HTTP transport removed v3.97) |
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |

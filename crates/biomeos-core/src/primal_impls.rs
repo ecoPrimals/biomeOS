@@ -129,26 +129,14 @@ impl ManagedPrimal for GenericManagedPrimal {
                 return Some(endpoint);
             }
 
-            // Fallback to HTTP if configured (deprecated)
             if self.config.http_port > 0 {
                 warn!(
-                    "⚠️  Primal {} using deprecated HTTP endpoint. Evolve to Unix socket!",
-                    self.id
+                    "Primal {} has http_port configured but HTTP transport is removed. \
+                     Configure a Unix socket instead: PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
+                    self.id, self.config.id
                 );
-                warn!(
-                    "   Set PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
-                    self.config.id
-                );
-                // Use RuntimeConfig for bind address and port resolution
-                use biomeos_types::defaults::RuntimeConfig;
-                let runtime_config = RuntimeConfig::from_env();
-                let bind_addr = runtime_config.bind_address();
-                let http_port = runtime_config.http_port();
-                let url = format!("http://{bind_addr}:{http_port}");
-                Endpoint::new(&url).ok()
-            } else {
-                None
             }
+            None
         })
     }
 
@@ -607,7 +595,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_endpoint_http_fallback() {
+    async fn test_endpoint_http_removed() {
         let primal = PrimalBuilder::new()
             .id("test".to_string())
             .binary_path("/bin/true".to_string())
@@ -615,7 +603,7 @@ mod tests {
             .build()
             .unwrap();
         let endpoint = primal.endpoint().await;
-        let _ = endpoint;
+        assert!(endpoint.is_none(), "HTTP transport is removed; should return None");
     }
 
     #[tokio::test]

@@ -6,7 +6,7 @@
 //! Handles biome manifest validation and deployment coordination.
 //! Integrates with Toadstool for parsing and validation.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use super::core::UniversalBiomeOSManager;
 use biomeos_types::BiomeManifest;
@@ -18,7 +18,7 @@ impl UniversalBiomeOSManager {
 
         // Parse the manifest content
         let manifest: BiomeManifest = serde_yaml::from_str(manifest_content)
-            .map_err(|e| anyhow::anyhow!("Failed to parse manifest: {e}"))?;
+            .context("Failed to parse manifest")?;
 
         // Basic validation - in Universal Adapter architecture, this would delegate to Toadstool
         if manifest.metadata.name.is_empty() {

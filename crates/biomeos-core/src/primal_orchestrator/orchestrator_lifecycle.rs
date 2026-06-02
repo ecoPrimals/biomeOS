@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::Context;
 use biomeos_types::error::{BiomeError, BiomeResult};
 use biomeos_types::identifiers::PrimalId;
 use tokio::time::timeout;
@@ -98,7 +99,7 @@ impl PrimalOrchestrator {
                 primal
                     .start()
                     .await
-                    .map_err(|e| anyhow::anyhow!("Start failed: {e}"))
+                    .context("Start failed")
             })
             .await;
 

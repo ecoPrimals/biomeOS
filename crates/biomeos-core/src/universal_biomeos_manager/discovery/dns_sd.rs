@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+use anyhow::Context;
 use super::PrimalCapability;
 use biomeos_types::constants::ports;
 use biomeos_types::{Health, JsonRpcRequest, JsonRpcResponse, PrimalType};
@@ -208,7 +209,7 @@ async fn probe_liveness_jsonrpc(
     let mut line = String::new();
     timeout(read_timeout, reader.read_line(&mut line))
         .await
-        .map_err(|_| anyhow::anyhow!("read timed out"))??;
+        .context("read timed out")??;
 
     let resp: JsonRpcResponse = serde_json::from_str(line.trim()).map_err(|e| {
         anyhow::anyhow!(

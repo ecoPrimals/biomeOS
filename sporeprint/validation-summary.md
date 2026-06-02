@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — 7,983 tests, 28 capability domains, 320+ translations, 19 signal graphs, 43 deploy graphs, DH-1 complete, zero blocking debt"
-date = 2026-05-29
+description = "Orchestration kernel — L4 weighted routing, 12 test extractions, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
+date = 2026-06-02
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -9,8 +9,12 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **7,983 tests** workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent
+- **7,983+ tests** workspace-wide, 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v3.97** — Wave 72+: map_err sweep (27/28), test extraction wave 2 (7 files), HTTP transport removed, env safety
+- **v3.96** — Wave 72: env SSOT +14 constants, 56 map_err→context, test extraction wave 1 (5 files)
+- **v3.95** — Wave 71+: shadow analysis, PathwayLearner, perceptron prep
+- **v3.94** — Wave 71: L4 weighted routing LIVE, topology affinity, --tcp-only deprecated
 - **v3.86** — Wave 60b: DH-1 complete (zero /tmp + zero env::temp_dir()), inline test extraction
 - **v3.85** — Wave 60: manifest.gate_profile Neural API, DH-1 /tmp hardcoding eliminated
 - **v3.84** — Deep Debt W58b (wired 22 more env var constants, test module extraction, zero production files >800L)

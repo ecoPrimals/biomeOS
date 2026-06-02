@@ -26,6 +26,7 @@ mod state;
 mod unix_server;
 mod websocket;
 
+use anyhow::Context;
 use biomeos_types::JSONRPC_VERSION;
 #[cfg(test)]
 use biomeos_types::JsonRpcVersion;
@@ -461,11 +462,11 @@ pub async fn serve_tcp(port: u16, app: Router, bind_host: Option<&str>) -> anyho
     let addr = biomeos_types::constants::endpoints::tcp_bind_addr_with_host(bind_host, port);
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to bind TCP on {addr}: {e}"))?;
+        .with_context(|| format!("Failed to bind TCP on {addr}"))?;
     tracing::info!("API TCP listener bound: {addr}");
     axum::serve(listener, app)
         .await
-        .map_err(|e| anyhow::anyhow!("API TCP server error: {e}"))
+        .context("API TCP server error")
 }
 
 #[cfg(test)]

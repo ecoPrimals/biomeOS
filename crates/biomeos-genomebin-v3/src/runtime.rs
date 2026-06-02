@@ -68,7 +68,15 @@ impl GenomeBin {
     ///
     /// Deep Debt: Uses etcetera for platform-agnostic paths
     pub fn default_install_dir() -> Result<PathBuf> {
-        let user = std::env::var(biomeos_types::env_config::vars::SYS_USER).unwrap_or_default();
+        let user = match std::env::var(biomeos_types::env_config::vars::SYS_USER) {
+            Ok(u) if !u.is_empty() => u,
+            _ => {
+                tracing::warn!(
+                    "USER env var unset or empty; falling back to non-root install path"
+                );
+                String::new()
+            }
+        };
         Self::default_install_dir_for_user(&user)
     }
 

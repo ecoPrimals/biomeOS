@@ -3,7 +3,7 @@
 
 //! Socket-based primal lookup and transport health probing for discovery.
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use std::sync::Arc;
 use tracing::debug;
 
@@ -125,7 +125,7 @@ impl NeuralRouter {
             let response = client
                 .call_btsp("health.check", serde_json::json!({}))
                 .await
-                .map_err(|e| anyhow::anyhow!(e))?;
+                .context("health.check call failed")?;
             Ok::<bool, anyhow::Error>(
                 response
                     .get("healthy")

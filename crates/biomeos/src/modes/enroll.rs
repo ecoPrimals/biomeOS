@@ -128,8 +128,7 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
         }
         return Ok(());
     }
-    validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force)
-        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force)?;
 
     let device_id = resolve_device_id(args.device_id.as_deref());
     if args.device_id.is_none() && get_machine_id().is_none() {

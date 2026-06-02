@@ -3,6 +3,7 @@
 
 //! Auto-discovery of running primals and capability registration on startup / rescan.
 
+use anyhow::Context;
 use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
@@ -358,7 +359,7 @@ impl NeuralApiServer {
                 serde_json::json!({"purpose": "coordination"}),
             )
             .await
-            .map_err(|e| anyhow::anyhow!(e));
+            .context("crypto.derive_public_key call failed");
 
         match result {
             Ok(resp) => {

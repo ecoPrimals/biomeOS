@@ -5,7 +5,7 @@
 //!
 //! Makes deployment deterministic and manageable via graph execution
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use biomeos_types::primal_names;
 use serde::{Deserialize, Serialize};
 
@@ -152,7 +152,7 @@ impl AtomicDeploymentGraph {
     ///
     /// Enables programmatic graph generation alongside the static `graphs/*.toml` catalog.
     pub fn to_toml(&self) -> Result<String> {
-        toml::to_string_pretty(self).map_err(|e| anyhow::anyhow!("TOML serialization failed: {e}"))
+        toml::to_string_pretty(self).context("TOML serialization failed")
     }
 
     /// Get execution order (topological sort)

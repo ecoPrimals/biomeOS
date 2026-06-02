@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.97 (2026-06-02) — Wave 72+: Deep Debt Cleanup — map_err Sweep + Test Extraction Wave 2 + HTTP Removal
+
+### map_err → .context() final sweep
+- Converted 27 of 28 remaining `map_err(|e| anyhow!(...))` to `.context()` / `.with_context()`
+- Files: remote.rs (4), live_service.rs (2), manifest.rs (1), deployment.rs (1),
+  dns_sd.rs (1), orchestrator_lifecycle.rs (1), deployment_graph.rs (1),
+  node_handlers.rs (3), validation.rs (2), health_check.rs (1), discovery_init.rs (1),
+  discovery_primal.rs (1), configure.rs (1), lib.rs (2), enroll.rs (1),
+  federation/manifest.rs (1), continuous.rs (1), rootpulse.rs (1)
+- 5 remaining: 2× `Result<_, String>` (protocol.rs, neural_graph.rs),
+  1× multi-line error (service.rs), 1× LZ4 (genomebin-v3), 1× protocol IpcError
+
+### Large file test extraction — Wave 2 (7 files)
+- `identifiers.rs`: 748 → 483 lines (+266L `identifiers_tests.rs`)
+- `incubation/mod.rs`: 715 → 325 lines (+390L `tests.rs`)
+- `genome_dist/manifest.rs`: 771 → 392 lines (+382L `manifest_tests.rs`)
+- `unix_server.rs`: 743 → 373 lines (+375L `unix_server_tests.rs`)
+- `nucleus/mod.rs`: 744 → 401 lines (+348L `tests.rs`)
+- `continuous.rs`: 712 → 280 lines (+435L `continuous_tests.rs`)
+- `device_management_server/mod.rs`: 707 → 317 lines (+393L `tests.rs`)
+- All using `#[path]` attribute pattern for clean module separation
+
+### Deprecated HTTP transport removal
+- `primal_impls.rs`: removed HTTP endpoint fallback — `http_port` config now
+  logs a warning instead of creating an HTTP endpoint
+- Test updated: `test_endpoint_http_removed` asserts `None` return
+
+### Environment safety
+- `genomebin-v3/runtime.rs`: empty `USER` env var now logs a warning instead of
+  silently yielding empty install path via `unwrap_or_default()`
+
 ## v3.96 (2026-06-02) — Wave 72: Deep Debt Cleanup — Env SSOT + Context Evolution + Test Extraction
 
 ### Environment variable SSOT expansion

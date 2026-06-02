@@ -181,7 +181,7 @@ fn deploy_federation_manifest(config: &FederationConfig, manifest_path: &PathBuf
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
-        .map_err(|e| anyhow::anyhow!("failed to start async runtime for federation deploy: {e}"))?;
+        .context("failed to start async runtime for federation deploy")?;
 
     rt.block_on(deploy_federation_manifest_async(config, &manifest, force))
 }

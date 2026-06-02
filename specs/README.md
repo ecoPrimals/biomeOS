@@ -1,7 +1,7 @@
 # biomeOS Specifications
 
-**Last Updated**: May 29, 2026
-**Active Specs**: 22 + 3 lifecycle + 2 contracts = 27 (47 archived to `ecoPrimals/archive/` as fossil record)
+**Last Updated**: June 2, 2026
+**Active Specs**: 24 + 3 lifecycle + 2 contracts = 29 (47 archived to `ecoPrimals/archive/` as fossil record)
 
 ---
 
@@ -18,12 +18,14 @@
 |------|---------|
 | [NUCLEUS_ATOMIC_COMPOSITION.md](NUCLEUS_ATOMIC_COMPOSITION.md) | Tower/Node/Nest/Full atomic patterns |
 | [NUCLEUS_BONDING_MODEL.md](NUCLEUS_BONDING_MODEL.md) | Chemical bonding model for distributed systems |
+| [BIOMEOS_NUCLEUS_EVOLUTION.md](BIOMEOS_NUCLEUS_EVOLUTION.md) | 3-phase NUCLEUS evolution roadmap |
 | [COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md](COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md) | Full ecosystem integration |
 | [PLASMODIUM_OVER_NUCLEUS_SPEC.md](PLASMODIUM_OVER_NUCLEUS_SPEC.md) | Over-NUCLEUS collective coordination |
 
 ### Neural API & Capability Routing
 | Spec | Purpose |
 |------|---------|
+| [CAPABILITY_CALL_ROUTING_CONTRACT.md](CAPABILITY_CALL_ROUTING_CONTRACT.md) | capability.call routing contract (L4 weighted) |
 | [NEURAL_API_ROUTING_SPECIFICATION.md](NEURAL_API_ROUTING_SPECIFICATION.md) | Capability translation routing v2.0 |
 | [CAPABILITY_TRANSLATION_ARCHITECTURE.md](CAPABILITY_TRANSLATION_ARCHITECTURE.md) | Semantic translation architecture |
 | [BEACON_CAPABILITY_TRANSLATIONS.md](BEACON_CAPABILITY_TRANSLATIONS.md) | Beacon -> BearDog method mapping |

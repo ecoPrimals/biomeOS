@@ -172,7 +172,7 @@ pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Resul
         call_primal_rpc(&socket_path, &request),
     )
     .await
-    .map_err(|_| anyhow::anyhow!("Health check timeout after {timeout_secs}s"))??;
+    .with_context(|| format!("Health check timeout after {timeout_secs}s"))??;
 
     let healthy = response
         .get("result")
@@ -545,7 +545,7 @@ async fn call_primal_rpc_encrypted(
 
     let frame =
         biomeos_core::btsp_crypto::encrypt_frame(&keys.client_to_server, request_json.as_bytes())
-            .map_err(|e| anyhow::anyhow!("encrypt_frame failed for {socket_path}: {e}"))?;
+            .with_context(|| format!("encrypt_frame failed for {socket_path}"))?;
 
     let (mut read_half, mut write_half) = stream.into_split();
     write_half.write_all(&frame).await?;
@@ -568,7 +568,7 @@ async fn call_primal_rpc_encrypted(
         .with_context(|| format!("Failed to read response frame from {socket_path}"))?;
 
     let plaintext = biomeos_core::btsp_crypto::decrypt_frame(&keys.server_to_client, &payload)
-        .map_err(|e| anyhow::anyhow!("decrypt_frame failed for {socket_path}: {e}"))?;
+        .with_context(|| format!("decrypt_frame failed for {socket_path}"))?;
 
     let response: Value = serde_json::from_slice(&plaintext)
         .with_context(|| format!("Invalid decrypted JSON response from {socket_path}"))?;

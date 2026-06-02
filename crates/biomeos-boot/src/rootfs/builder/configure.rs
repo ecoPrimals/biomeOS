@@ -40,7 +40,7 @@ impl RootFsBuilder {
         let mut content = String::new();
         for server in &dns_servers {
             writeln!(content, "nameserver {server}")
-                .map_err(|e| anyhow::anyhow!("Failed to write DNS config: {e}"))?;
+                .context("Failed to write DNS config")?;
         }
 
         std::fs::write(&resolv_conf, content)?;

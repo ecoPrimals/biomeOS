@@ -248,7 +248,7 @@ async fn send_jsonrpc(
         buf_reader.read_line(&mut response_line),
     )
     .await
-    .map_err(|_| anyhow::anyhow!("Timeout waiting for Neural API response"))?
+    .context("Timeout waiting for Neural API response")?
     .context("Failed to read Neural API response")?;
 
     serde_json::from_str(&response_line).context("Failed to parse Neural API response")

@@ -183,7 +183,6 @@ impl HealthChecker {
         client
             .call_btsp(method, json!({}))
             .await
-            .map_err(|e| anyhow::anyhow!(e))
             .context("RPC ping failed")
     }
 

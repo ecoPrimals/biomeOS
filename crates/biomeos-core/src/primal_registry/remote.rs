@@ -3,7 +3,7 @@
 
 //! Remote acquisition: GitHub API, HTTPS downloads, cache paths, checksums.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use biomeos_types::SystemPaths;
 use http_body_util::{BodyExt, Empty};
 use hyper::body::Bytes;
@@ -105,7 +105,7 @@ fn percent_encode_github_tag(tag: &str) -> String {
 async fn github_api_get(api_url: &str) -> Result<GitHubRelease> {
     let body = curl_fetch_https(api_url).await?;
     let release: GitHubRelease = serde_json::from_slice(&body)
-        .map_err(|e| anyhow::anyhow!("Failed to parse GitHub API JSON from {api_url}: {e}"))?;
+        .with_context(|| format!("Failed to parse GitHub API JSON from {api_url}"))?;
     Ok(release)
 }
 
@@ -168,11 +168,11 @@ async fn http_get_bytes(url: &str) -> Result<Vec<u8>> {
     let client = Client::builder(TokioExecutor::new()).build_http::<Empty<Bytes>>();
     let uri = url
         .parse::<hyper::Uri>()
-        .map_err(|e| anyhow::anyhow!("invalid URL: {e}"))?;
+        .context("invalid URL")?;
     let res = client
         .get(uri)
         .await
-        .map_err(|e| anyhow::anyhow!("HTTP client error: {e}"))?;
+        .context("HTTP client error")?;
     if !res.status().is_success() {
         return Err(anyhow::anyhow!("HTTP {}", res.status()));
     }
@@ -180,7 +180,7 @@ async fn http_get_bytes(url: &str) -> Result<Vec<u8>> {
     let collected = body
         .collect()
         .await
-        .map_err(|e| anyhow::anyhow!("read body: {e}"))?;
+        .context("read body")?;
     Ok(collected.to_bytes().to_vec())
 }
 

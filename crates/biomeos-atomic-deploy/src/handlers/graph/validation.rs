@@ -56,7 +56,7 @@ impl GraphHandler {
         })?;
 
         let content = std::fs::read_to_string(&graph_path)
-            .map_err(|e| anyhow::anyhow!("Failed to read graph: {e}"))?;
+            .context("Failed to read graph")?;
 
         let mut warnings: Vec<String> = Vec::new();
         let mut validation_errors: Vec<String> = Vec::new();
@@ -236,7 +236,7 @@ impl GraphHandler {
         };
 
         let content = std::fs::read_to_string(&path)
-            .map_err(|e| anyhow::anyhow!("Failed to read graph: {e}"))?;
+            .context("Failed to read graph")?;
 
         // Try typed parse for metadata
         let (embedded_hash, embedded_sig, embedded_signer, genetics_tier) =
