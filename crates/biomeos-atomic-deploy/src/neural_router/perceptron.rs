@@ -85,11 +85,13 @@ pub struct PerceptronWeights {
 }
 
 impl PerceptronWeights {
-    /// Neutral mock weights: bias=0, all feature weights equal.
-    /// Produces identical scores for identical features — perceptron will agree
-    /// with rule-based routing until real trained weights are loaded.
+    /// Neutral default weights for pre-training shadow mode.
+    ///
+    /// Produces scores that loosely mirror L4 heuristic priorities (prefer low
+    /// latency, penalize errors, reward proximity) so shadow-mode disagreements
+    /// are meaningful. Replaced by trained weights from `load_from_file()`.
     #[must_use]
-    pub fn mock() -> Self {
+    pub fn neutral_default() -> Self {
         let mut weights = [0.0f32; WEIGHT_VEC_LEN];
         // Equal weight on latency (inverse), error_rate (inverse), topology
         weights[32] = -0.3; // prefer lower latency
@@ -106,7 +108,7 @@ impl PerceptronWeights {
         let data = std::fs::read(path).ok()?;
         if data.len() != WEIGHT_VEC_LEN * 4 {
             tracing::warn!(
-                "perceptron weights file {} has {} bytes, expected {} — using mock",
+                "perceptron weights file {} has {} bytes, expected {} — using neutral defaults",
                 path.display(),
                 data.len(),
                 WEIGHT_VEC_LEN * 4
@@ -158,10 +160,10 @@ impl PerceptronDispatcher {
         }
     }
 
-    /// Create a shadow-mode dispatcher with mock weights (development/pre-training).
+    /// Create a shadow-mode dispatcher with neutral default weights (pre-training).
     #[must_use]
-    pub fn shadow_mock() -> Self {
-        Self::new(PerceptronWeights::mock(), PerceptronPhase::Shadow)
+    pub fn shadow_default() -> Self {
+        Self::new(PerceptronWeights::neutral_default(), PerceptronPhase::Shadow)
     }
 
     /// Current operating phase.

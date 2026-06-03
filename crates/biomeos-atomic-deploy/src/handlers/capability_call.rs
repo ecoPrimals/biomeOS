@@ -12,6 +12,9 @@ use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use tracing::{debug, info, trace};
 
+/// Trace label for dispatches routed through the Songbird mesh gateway.
+const MESH_PROVIDER_LABEL: &str = "songbird_mesh";
+
 impl CapabilityHandler {
     /// Semantic capability call with automatic translation.
     ///
@@ -362,7 +365,7 @@ impl CapabilityHandler {
                                     &[
                                         RoutingPhase::RouteResolved {
                                             capability: capability.to_string(),
-                                            provider: "songbird_mesh".to_string(),
+                                            provider: MESH_PROVIDER_LABEL.to_string(),
                                             method: forward_method.clone(),
                                         },
                                         RoutingPhase::Forwarded { elapsed_ms },
@@ -521,7 +524,7 @@ impl CapabilityHandler {
                                     &[
                                         RoutingPhase::RouteResolved {
                                             capability: capability.to_string(),
-                                            provider: "songbird_mesh".to_string(),
+                                            provider: MESH_PROVIDER_LABEL.to_string(),
                                             method: semantic_name.clone(),
                                         },
                                         RoutingPhase::Forwarded { elapsed_ms },

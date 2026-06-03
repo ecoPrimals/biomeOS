@@ -179,7 +179,7 @@ impl NeuralApiServer {
                 .as_deref()
                 .and_then(crate::neural_router::PerceptronWeights::load_from_file);
             let dispatcher = crate::neural_router::PerceptronDispatcher::new(
-                weights.unwrap_or_else(crate::neural_router::PerceptronWeights::mock),
+                weights.unwrap_or_else(crate::neural_router::PerceptronWeights::neutral_default),
                 crate::neural_router::PerceptronPhase::Shadow,
             );
             tracing::info!(
@@ -191,7 +191,7 @@ impl NeuralApiServer {
                 {
                     "trained weights"
                 } else {
-                    "mock weights"
+                    "neutral defaults"
                 }
             );
             dispatcher

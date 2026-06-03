@@ -715,7 +715,7 @@ impl CapabilityHandler {
             "details": cap_entries,
             "count": all_domains.len(),
             "domains": all_domains,
-            "primal": "biomeos",
+            "primal": biomeos_types::primal_names::BIOMEOS,
         }))
     }
 

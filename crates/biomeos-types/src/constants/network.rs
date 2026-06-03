@@ -155,27 +155,6 @@ pub fn relay_port() -> u16 {
 }
 
 // Backward-compatible aliases (deprecated — use capability-oriented names)
-#[doc(hidden)]
-#[must_use]
-pub fn beardog_port_from(val: Option<&str>) -> u16 {
-    security_port_from(val)
-}
-#[doc(hidden)]
-#[must_use]
-pub fn beardog_port() -> u16 {
-    security_port()
-}
-#[doc(hidden)]
-#[must_use]
-pub fn songbird_port_from(val: Option<&str>) -> u16 {
-    relay_port_from(val)
-}
-#[doc(hidden)]
-#[must_use]
-pub fn songbird_port() -> u16 {
-    relay_port()
-}
-
 /// Link local address range
 pub const LINK_LOCAL_RANGE: &str = "169.254.0.0/16";
 

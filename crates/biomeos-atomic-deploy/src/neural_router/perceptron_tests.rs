@@ -7,7 +7,7 @@ use super::*;
 
 #[test]
 fn mock_weights_are_neutral() {
-    let w = PerceptronWeights::mock();
+    let w = PerceptronWeights::neutral_default();
     assert_eq!(w.weights.len(), WEIGHT_VEC_LEN);
     assert!((w.weights[FEATURE_DIM]).abs() < f32::EPSILON, "bias should be 0");
 }
@@ -64,7 +64,7 @@ fn domain_to_index_varies_across_domains() {
 
 #[test]
 fn score_forward_pass() {
-    let w = PerceptronWeights::mock();
+    let w = PerceptronWeights::neutral_default();
     let f = DispatchFeatures::build(0, None, 0.0);
     let score = w.score(&f);
     // With mock weights and default features (latency=0.5, error=0, topo=1.0, load=0):
@@ -74,7 +74,7 @@ fn score_forward_pass() {
 
 #[test]
 fn recommend_picks_highest_score() {
-    let dispatcher = PerceptronDispatcher::shadow_mock();
+    let dispatcher = PerceptronDispatcher::shadow_default();
 
     let mut low_latency = DispatchFeatures::build(0, None, 0.0);
     low_latency.values[32] = 0.1; // fast
@@ -90,7 +90,7 @@ fn recommend_picks_highest_score() {
 
 #[test]
 fn shadow_compare_tracks_disagreement() {
-    let dispatcher = PerceptronDispatcher::shadow_mock();
+    let dispatcher = PerceptronDispatcher::shadow_default();
 
     let same = DispatchFeatures::build(0, None, 0.0);
     dispatcher.shadow_compare(0, &[same.clone(), same.clone()], "test.cap");
@@ -113,8 +113,8 @@ fn shadow_compare_tracks_disagreement() {
 }
 
 #[test]
-fn shadow_mock_starts_in_shadow_phase() {
-    let d = PerceptronDispatcher::shadow_mock();
+fn shadow_default_starts_in_shadow_phase() {
+    let d = PerceptronDispatcher::shadow_default();
     assert_eq!(d.phase(), PerceptronPhase::Shadow);
 }
 

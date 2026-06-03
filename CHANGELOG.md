@@ -2,6 +2,40 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.01 (2026-06-03) — Wave 74b: SSOT Hardening + Mock Clarity + Deprecated Cleanup
+
+### Hardcoded literal SSOT evolution (P1)
+- `routing.rs`: identity response `"biomeos"` → `primal_names::BIOMEOS`
+- `capability.rs`: capabilities.list response `"biomeos"` → `primal_names::BIOMEOS`
+- `capability_call.rs`: extracted `"songbird_mesh"` to `MESH_PROVIDER_LABEL` constant
+- `defaults.rs`: translation registry `"biomeos"` → `primal_names::BIOMEOS` (2 sites)
+- `genome.rs`: self-replication manifest `"biomeos"` → `primal_names::BIOMEOS`
+
+### Mock → neutral default clarity (P2)
+- `PerceptronWeights::mock()` → `PerceptronWeights::neutral_default()` — not a mock,
+  it's a real production fallback with intentional heuristic weights
+- `PerceptronDispatcher::shadow_mock()` → `PerceptronDispatcher::shadow_default()`
+- All log messages updated ("mock weights" → "neutral defaults")
+- 13 perceptron tests updated to match new names
+
+### Deprecated dead code removal (P3)
+- Removed `beardog_port()`, `beardog_port_from()`, `songbird_port()`,
+  `songbird_port_from()` — hidden aliases for `security_port()`/`relay_port()`,
+  no callers outside their own tests
+- Removed 2 associated tests from `constants/tests.rs`
+
+### Test extraction — Wave 4 (3 files, ~1207 lines extracted)
+- `capability_handlers/discovery.rs`: 437 → 94 lines (+343L `discovery_tests.rs`)
+- `config_builder.rs`: 698 → 106 lines (+592L `config_builder_tests.rs`)
+- `neural_router/weights/mod.rs`: 313 → 41 lines (+272L `weights/tests.rs`)
+
+### Codebase audit (clean)
+- Zero `unsafe` in production (all `#[forbid(unsafe_code)]`)
+- Zero `TODO`/`FIXME`/`HACK` in Rust source
+- Zero `#[allow]` without reason in production
+- All mocks confined to `#[cfg(test)]` or test files
+- No files >800L in production (largest: 755L)
+
 ## v4.00 (2026-06-03) — Wave 74: Composition Hot-Reload + Perceptron E2E Verification
 
 ### composition.patterns.reload (P2)
@@ -31,7 +65,7 @@ All notable changes to biomeOS will be documented in this file.
 - Weight vector format: 36 features + 1 bias = 37 f32 values (little-endian binary)
 - Features: 32 one-hot domain slots + latency_ewma_norm + error_rate +
   topology_affinity + gate_load_norm
-- `PerceptronDispatcher::shadow_mock()`: mock weights for pre-training development
+- `PerceptronDispatcher::shadow_default()`: neutral weights for pre-training development
 - `PerceptronWeights::load_from_file()`: loads trained weights from
   `neural_routing_perceptron.bin` (barraCuda ml.mlp_train output)
 - Shadow mode wired into `select_primary()`: runs perceptron alongside L4 weighted
@@ -39,7 +73,7 @@ All notable changes to biomeOS will be documented in this file.
 - Milestone reporting at 100/500/1000/5000n dispatches
 - `NeuralRouter::perceptron_shadow_stats()` and `perceptron_phase()` accessors
 - `neural_api.weight_health` RPC extended with `perceptron` section (phase, stats)
-- `NeuralApiServer::new()` auto-initializes shadow-mode perceptron (mock weights
+- `NeuralApiServer::new()` auto-initializes shadow-mode perceptron (neutral defaults
   until `neural_routing_perceptron.bin` exists)
 - 13 new tests covering feature building, scoring, shadow comparison, weight I/O
 

@@ -261,16 +261,6 @@ fn test_network_discovery_port_from_env() {
 }
 
 #[test]
-fn test_network_beardog_port_from_env() {
-    assert_eq!(network::beardog_port_from(Some("9001")), 9001);
-}
-
-#[test]
-fn test_network_songbird_port_from_env() {
-    assert_eq!(network::songbird_port_from(Some("3333")), 3333);
-}
-
-#[test]
 fn test_endpoints_bind_address_from_env() {
     assert_eq!(endpoints::bind_address_from(Some("10.0.0.1")), "10.0.0.1");
     assert_eq!(

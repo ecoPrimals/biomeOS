@@ -304,7 +304,13 @@ fn load_defaults_core(
         ("health.status", "health.check"),
     ];
     for (semantic, method) in health_translations {
-        registry.register_translation(*semantic, "biomeos", *method, "local", None);
+        registry.register_translation(
+            *semantic,
+            biomeos_types::primal_names::BIOMEOS,
+            *method,
+            "local",
+            None,
+        );
         count += 1;
     }
     debug!(
@@ -328,7 +334,13 @@ fn load_defaults_core(
         ("composition.nucleus_health", "composition.health"),
     ];
     for (semantic, method) in composition_translations {
-        registry.register_translation(*semantic, "biomeos", *method, "local", None);
+        registry.register_translation(
+            *semantic,
+            biomeos_types::primal_names::BIOMEOS,
+            *method,
+            "local",
+            None,
+        );
         count += 1;
     }
     debug!(

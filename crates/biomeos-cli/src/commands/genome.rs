@@ -261,7 +261,7 @@ pub fn handle_genome_self_replicate() -> Result<()> {
     let arch = Arch::detect();
     let binary_data = fs::read(&self_binary).context("Failed to read self binary")?;
 
-    let manifest = biomeos_genomebin_v3::GenomeManifest::new("biomeos")
+    let manifest = biomeos_genomebin_v3::GenomeManifest::new(biomeos_types::primal_names::BIOMEOS)
         .version(env!("CARGO_PKG_VERSION"))
         .description("biomeOS CLI - Self-Replicated");
 

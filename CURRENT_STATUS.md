@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 3, 2026 (v4.00: Wave 74 — composition.patterns.reload, perceptron wire contract verified, ready for barraCuda weights)
-**Version**: 4.00
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (mock weights) - A/B shadow analysis ACTIVE - Composition hot-reload LIVE - Runtime gate registration LIVE - Topology affinity scoring - Zero clippy warnings - Mesh validation READY for eastGate
+**Updated**: June 3, 2026 (v4.01: Wave 74b — SSOT hardening, mock→neutral_default clarity, deprecated cleanup, test extraction wave 4)
+**Version**: 4.01
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (neutral defaults) - A/B shadow analysis ACTIVE - Composition hot-reload LIVE - Runtime gate registration LIVE - Topology affinity scoring - Zero clippy warnings - Zero hardcoded primal names in production - Mesh validation READY for eastGate
 
 ---
 

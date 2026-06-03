@@ -491,7 +491,7 @@ impl NeuralApiServer {
 
     fn identity_response(&self) -> Value {
         json!({
-            "primal": "biomeos",
+            "primal": biomeos_types::primal_names::BIOMEOS,
             "role": "orchestrator",
             "version": env!("CARGO_PKG_VERSION"),
             "capabilities": ["orchestration", "composition", "graph", "topology", "lifecycle", "signal"],
