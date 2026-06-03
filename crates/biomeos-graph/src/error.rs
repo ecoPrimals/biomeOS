@@ -8,6 +8,28 @@ use thiserror::Error;
 /// Result type for graph operations.
 pub type Result<T> = std::result::Result<T, GraphError>;
 
+/// Invalid graph identifier (empty or non-conforming characters).
+#[derive(Debug, Clone, Error)]
+pub enum ParseGraphIdError {
+    /// The ID string was empty.
+    #[error("Graph ID cannot be empty")]
+    Empty,
+    /// The ID contains characters outside `[a-z0-9_-]`.
+    #[error("Graph ID must be lowercase alphanumeric with hyphens/underscores: {0}")]
+    InvalidChars(String),
+}
+
+/// Invalid node identifier (empty or non-conforming characters).
+#[derive(Debug, Clone, Error)]
+pub enum ParseNodeIdError {
+    /// The ID string was empty.
+    #[error("Node ID cannot be empty")]
+    Empty,
+    /// The ID contains characters outside `[a-zA-Z0-9_-]`.
+    #[error("Node ID must be alphanumeric with hyphens/underscores: {0}")]
+    InvalidChars(String),
+}
+
 /// Errors that can occur during graph operations.
 #[derive(Debug, Error)]
 pub enum GraphError {
@@ -18,6 +40,14 @@ pub enum GraphError {
     /// TOML parsing error
     #[error("Parse error: {0}")]
     Parse(String),
+
+    /// Graph ID validation failed
+    #[error(transparent)]
+    InvalidGraphId(#[from] ParseGraphIdError),
+
+    /// Node ID validation failed
+    #[error(transparent)]
+    InvalidNodeId(#[from] ParseNodeIdError),
 
     /// Validation error (structural issues)
     #[error("Validation error: {0}")]
@@ -46,6 +76,10 @@ pub enum GraphError {
     /// Graph integrity check failed (hash mismatch or invalid signature)
     #[error("Integrity error: {0}")]
     Integrity(String),
+
+    /// Event broadcast failed (no subscribers or channel closed).
+    #[error("Broadcast failed: {0}")]
+    Broadcast(String),
 }
 
 #[cfg(test)]

@@ -3,6 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::ParseNodeIdError;
+
 /// Node identifier - validated to be alphanumeric with hyphens.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
@@ -10,18 +12,16 @@ pub struct NodeId(String);
 
 impl NodeId {
     /// Create a new node ID, validating format.
-    pub fn new(id: impl Into<String>) -> Result<Self, String> {
+    pub fn new(id: impl Into<String>) -> Result<Self, ParseNodeIdError> {
         let id = id.into();
         if id.is_empty() {
-            return Err("Node ID cannot be empty".into());
+            return Err(ParseNodeIdError::Empty);
         }
         if !id
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         {
-            return Err(format!(
-                "Node ID must be alphanumeric with hyphens/underscores: {id}"
-            ));
+            return Err(ParseNodeIdError::InvalidChars(id));
         }
         Ok(Self(id))
     }
@@ -34,7 +34,7 @@ impl NodeId {
 }
 
 impl TryFrom<String> for NodeId {
-    type Error = String;
+    type Error = ParseNodeIdError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Self::new(value)

@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::error::ParseGraphIdError;
 use crate::node::GraphNode;
 
 /// A validated deployment graph.
@@ -129,18 +130,16 @@ impl GraphId {
     ///
     /// Accepts lowercase ASCII, digits, hyphens, and underscores — aligned with
     /// `NodeId` rules and ecosystem graph conventions (e.g. `tower_atomic_bootstrap`).
-    pub fn new(id: impl Into<String>) -> Result<Self, String> {
+    pub fn new(id: impl Into<String>) -> Result<Self, ParseGraphIdError> {
         let id = id.into();
         if id.is_empty() {
-            return Err("Graph ID cannot be empty".into());
+            return Err(ParseGraphIdError::Empty);
         }
         if !id
             .chars()
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
         {
-            return Err(format!(
-                "Graph ID must be lowercase alphanumeric with hyphens/underscores: {id}"
-            ));
+            return Err(ParseGraphIdError::InvalidChars(id));
         }
         Ok(Self(id))
     }
@@ -172,7 +171,7 @@ impl Default for GraphId {
 }
 
 impl TryFrom<String> for GraphId {
-    type Error = String;
+    type Error = ParseGraphIdError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Self::new(value)

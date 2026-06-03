@@ -9,6 +9,8 @@
 //!
 //! **Universal IPC v3.0**: Uses `AtomicClient` for multi-transport support.
 
+#![expect(dead_code, reason = "prepared for orchestrator JWT provisioning — wired when security provider is live")]
+
 use anyhow::{Context, Result};
 use biomeos_core::atomic_client::AtomicClient;
 use biomeos_types::primal_names;

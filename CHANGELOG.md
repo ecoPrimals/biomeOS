@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.02 (2026-06-03) — Wave 74c: String Error Evolution + Visibility + Deep Idiom Sweep
+
+### Result<_, String> → thiserror/anyhow evolution (P0)
+- `GraphId::new()` → `Result<_, ParseGraphIdError>` (thiserror enum: Empty, InvalidChars)
+- `NodeId::new()` → `Result<_, ParseNodeIdError>` (thiserror enum: Empty, InvalidChars)
+- `GraphId`/`NodeId` `TryFrom<String>` updated to use typed errors
+- `GraphEventBroadcaster::broadcast()` → `crate::Result<usize>` (new `GraphError::Broadcast`)
+- `parser.rs`: eliminated `map_err(GraphError::Parse)` — uses `From` impl via `?`
+- `protocol_escalation/rpc.rs`: all 5 functions evolved from `Result<_, String>` to `anyhow::Result`
+  (using `.context()`, `bail!`, `anyhow::ensure!`)
+- `forwarding.rs`: `parse_security_bytes_param` and `forward_via_tarpc` (~60 `map_err` calls
+  replaced with `.context()` / `?` operator)
+- `engine.rs`: `auto_escalate_check` → `Result<(), EscalationError>`
+- All test assertions updated from `err.contains()` to `err.to_string().contains()`
+
+### API visibility tightening (P1)
+- `biomeos-atomic-deploy`: 5 modules tightened from `pub mod` to `pub(crate) mod`:
+  `capability_handlers`, `http_client`, `mode`, `primal_communication`, `security_jwt_client`
+- Revealed: `http_client`, `security_jwt_client`, 2 `primal_communication` functions are dead code
+  (prepared for future mesh/security integration)
+- Dead code annotated with `#[expect(dead_code, reason = "...")]`
+- `capability_handlers/mod.rs`: removed unused re-exports, kept only `primal_start_capability`
+- Public API surface now matches actual external consumption
+
 ## v4.01 (2026-06-03) — Wave 74b: SSOT Hardening + Mock Clarity + Deprecated Cleanup
 
 ### Hardcoded literal SSOT evolution (P1)

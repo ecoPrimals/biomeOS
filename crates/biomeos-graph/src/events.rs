@@ -272,7 +272,7 @@ impl GraphEventBroadcaster {
     ///
     /// This is non-blocking and will not wait for subscribers to process the event.
     /// If a subscriber's buffer is full, the oldest event in their buffer will be dropped.
-    pub async fn broadcast(&self, event: GraphEvent) -> Result<usize, String> {
+    pub async fn broadcast(&self, event: GraphEvent) -> crate::Result<usize> {
         // Update stats
         {
             let mut stats = self.stats.write().await;
@@ -280,10 +280,9 @@ impl GraphEventBroadcaster {
         }
 
         // Send to all subscribers
-        match self.sender.send(event) {
-            Ok(count) => Ok(count),
-            Err(e) => Err(format!("Failed to broadcast event: {e}")),
-        }
+        self.sender
+            .send(event)
+            .map_err(|e| crate::error::GraphError::Broadcast(e.to_string()))
     }
 
     /// Get broadcaster statistics

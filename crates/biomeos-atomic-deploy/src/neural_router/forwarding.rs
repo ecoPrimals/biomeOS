@@ -3,7 +3,7 @@
 
 //! Request forwarding - JSON-RPC and tarpc protocol escalation
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bytes::Bytes;
 use serde_json::Value;
 use tracing::debug;
@@ -20,23 +20,23 @@ use biomeos_core::btsp_client;
 use super::NeuralRouter;
 
 /// Decode `security.*` tarpc params that carry raw bytes (base64 string or JSON byte array).
-pub fn parse_security_bytes_param(params: &Value, key: &str) -> Result<Bytes, String> {
+pub fn parse_security_bytes_param(params: &Value, key: &str) -> Result<Bytes> {
     let v = params
         .get(key)
-        .ok_or_else(|| format!("missing param: {key}"))?;
+        .ok_or_else(|| anyhow::anyhow!("missing param: {key}"))?;
     if let Some(s) = v.as_str() {
         use base64::Engine;
         base64::engine::general_purpose::STANDARD
             .decode(s)
             .map(Bytes::from)
-            .map_err(|e| e.to_string())
+            .context("base64 decode failed")
     } else if let Some(arr) = v.as_array() {
         Ok(arr
             .iter()
             .filter_map(|x| x.as_u64().map(|u| u as u8))
             .collect::<Bytes>())
     } else {
-        Err(format!("param {key} must be base64 string or byte array"))
+        anyhow::bail!("param {key} must be base64 string or byte array")
     }
 }
 
@@ -259,16 +259,18 @@ impl NeuralRouter {
         socket_path: &std::path::Path,
         method: &str,
         params: &Value,
-    ) -> Result<Value, String> {
+    ) -> Result<Value> {
         use crate::tarpc_client;
         use biomeos_types::tarpc_types::ServiceRegistration;
         use tarpc::context;
 
         let tarpc_path = biomeos_primal_sdk::tarpc_transport::tarpc_socket_path(socket_path);
 
-        if !tarpc_path.exists() {
-            return Err(format!("tarpc socket not found: {}", tarpc_path.display()));
-        }
+        anyhow::ensure!(
+            tarpc_path.exists(),
+            "tarpc socket not found: {}",
+            tarpc_path.display()
+        );
 
         let ctx = context::current();
 
@@ -276,39 +278,39 @@ impl NeuralRouter {
         if method == "health.check" || method == "health_check" {
             let client = tarpc_client::connect_tarpc_health(&tarpc_path)
                 .await
-                .map_err(|e| format!("tarpc health connect failed: {e}"))?;
+                .context("tarpc health connect failed")?;
             let status = client
                 .health_check(ctx)
                 .await
-                .map_err(|e| format!("tarpc health_check failed: {e}"))?;
-            return serde_json::to_value(&status).map_err(|e| e.to_string());
+                .context("tarpc health_check failed")?;
+            return Ok(serde_json::to_value(&status)?);
         }
         if method == "health.metrics" || method == "health_metrics" {
             let client = tarpc_client::connect_tarpc_health(&tarpc_path)
                 .await
-                .map_err(|e| format!("tarpc health connect failed: {e}"))?;
+                .context("tarpc health connect failed")?;
             let metrics = client
                 .health_metrics(ctx)
                 .await
-                .map_err(|e| format!("tarpc health_metrics failed: {e}"))?;
-            return serde_json::to_value(&metrics).map_err(|e| e.to_string());
+                .context("tarpc health_metrics failed")?;
+            return Ok(serde_json::to_value(&metrics)?);
         }
         if method == "health.version" || method == "version" {
             let client = tarpc_client::connect_tarpc_health(&tarpc_path)
                 .await
-                .map_err(|e| format!("tarpc health connect failed: {e}"))?;
+                .context("tarpc health connect failed")?;
             let info = client
                 .version(ctx)
                 .await
-                .map_err(|e| format!("tarpc version failed: {e}"))?;
-            return serde_json::to_value(&info).map_err(|e| e.to_string());
+                .context("tarpc version failed")?;
+            return Ok(serde_json::to_value(&info)?);
         }
 
         // Discovery methods
         if method.starts_with("discovery.") || method.starts_with("discovery_") {
             let client = tarpc_client::connect_tarpc_discovery(&tarpc_path)
                 .await
-                .map_err(|e| format!("tarpc discovery connect failed: {e}"))?;
+                .context("tarpc discovery connect failed")?;
             match method {
                 "discovery.discover" | "discovery_discover" => {
                     let capability = params
@@ -319,22 +321,22 @@ impl NeuralRouter {
                     let result = client
                         .discover(ctx, capability)
                         .await
-                        .map_err(|e| format!("tarpc discovery failed: {e}"))?;
-                    return serde_json::to_value(&result).map_err(|e| e.to_string());
+                        .context("tarpc discovery failed")?;
+                    return Ok(serde_json::to_value(&result)?);
                 }
                 "discovery.discover_all" | "discovery_discover_all" => {
                     let result = client
                         .discover_all(ctx)
                         .await
-                        .map_err(|e| format!("tarpc discovery failed: {e}"))?;
-                    return serde_json::to_value(&result).map_err(|e| e.to_string());
+                        .context("tarpc discovery failed")?;
+                    return Ok(serde_json::to_value(&result)?);
                 }
                 "discovery.protocols" | "discovery_protocols" => {
                     let result = client
                         .protocols(ctx)
                         .await
-                        .map_err(|e| format!("tarpc discovery failed: {e}"))?;
-                    return serde_json::to_value(&result).map_err(|e| e.to_string());
+                        .context("tarpc discovery failed")?;
+                    return Ok(serde_json::to_value(&result)?);
                 }
                 "discovery.unregister" | "discovery_unregister" => {
                     let primal_id = params
@@ -345,16 +347,16 @@ impl NeuralRouter {
                     let ok = client
                         .unregister(ctx, primal_id)
                         .await
-                        .map_err(|e| e.to_string())?;
-                    return serde_json::to_value(ok).map_err(|e| e.to_string());
+                        .context("tarpc unregister failed")?;
+                    return Ok(serde_json::to_value(ok)?);
                 }
                 "discovery.register" | "discovery_register" => {
                     let reg: ServiceRegistration =
-                        serde_json::from_value(params.clone()).map_err(|e| e.to_string())?;
-                    let res = client.register(ctx, reg).await.map_err(|e| e.to_string())?;
-                    return serde_json::to_value(&res).map_err(|e| e.to_string());
+                        serde_json::from_value(params.clone()).context("invalid registration")?;
+                    let res = client.register(ctx, reg).await.context("tarpc register failed")?;
+                    return Ok(serde_json::to_value(&res)?);
                 }
-                _ => return Err(format!("unknown discovery method: {method}")),
+                _ => anyhow::bail!("unknown discovery method: {method}"),
             };
         }
 
@@ -362,7 +364,7 @@ impl NeuralRouter {
         if method.starts_with("security.") || method.starts_with("security_") {
             let client = tarpc_client::connect_tarpc_security(&tarpc_path)
                 .await
-                .map_err(|e| format!("tarpc security connect failed: {e}"))?;
+                .context("tarpc security connect failed")?;
 
             match method {
                 "security.sign" | "security_sign" => {
@@ -370,8 +372,8 @@ impl NeuralRouter {
                     let result = client
                         .sign(ctx, data)
                         .await
-                        .map_err(|e| format!("tarpc security failed: {e}"))?;
-                    return serde_json::to_value(&result).map_err(|e| e.to_string());
+                        .context("tarpc security.sign failed")?;
+                    return Ok(serde_json::to_value(&result)?);
                 }
                 "security.verify" | "security_verify" => {
                     let data = parse_security_bytes_param(params, "data")?;
@@ -380,8 +382,8 @@ impl NeuralRouter {
                     let ok = client
                         .verify(ctx, data, signature, public_key)
                         .await
-                        .map_err(|e| format!("tarpc security failed: {e}"))?;
-                    return serde_json::to_value(ok).map_err(|e| e.to_string());
+                        .context("tarpc security.verify failed")?;
+                    return Ok(serde_json::to_value(ok)?);
                 }
                 "security.get_jwt_secret" | "security_get_jwt_secret" => {
                     let service_name = params
@@ -392,8 +394,8 @@ impl NeuralRouter {
                     let result = client
                         .get_jwt_secret(ctx, service_name)
                         .await
-                        .map_err(|e| format!("tarpc security failed: {e}"))?;
-                    return serde_json::to_value(&result).map_err(|e| e.to_string());
+                        .context("tarpc get_jwt_secret failed")?;
+                    return Ok(serde_json::to_value(&result)?);
                 }
                 "security.verify_lineage" | "security_verify_lineage" => {
                     let primal_id = params
@@ -404,16 +406,14 @@ impl NeuralRouter {
                     let result = client
                         .verify_lineage(ctx, primal_id)
                         .await
-                        .map_err(|e| format!("tarpc security failed: {e}"))?;
-                    return serde_json::to_value(&result).map_err(|e| e.to_string());
+                        .context("tarpc verify_lineage failed")?;
+                    return Ok(serde_json::to_value(&result)?);
                 }
-                _ => return Err(format!("unknown security method: {method}")),
+                _ => anyhow::bail!("unknown security method: {method}"),
             };
         }
 
-        Err(format!(
-            "method {method} has no tarpc mapping, use JSON-RPC"
-        ))
+        anyhow::bail!("method {method} has no tarpc mapping, use JSON-RPC")
     }
 
     /// Check if tarpc should be used for this request.
@@ -480,22 +480,28 @@ mod tests {
 
     #[test]
     fn test_parse_security_bytes_param_missing_key() {
-        let err = parse_security_bytes_param(&serde_json::json!({}), "data").unwrap_err();
-        assert!(err.contains("missing param"));
+        let msg = parse_security_bytes_param(&serde_json::json!({}), "data")
+            .unwrap_err()
+            .to_string();
+        assert!(msg.contains("missing param"));
     }
 
     #[test]
     fn test_parse_security_bytes_param_invalid_base64() {
         let params = serde_json::json!({ "data": "@@@not-base64@@@" });
-        let err = parse_security_bytes_param(&params, "data").unwrap_err();
-        assert!(!err.is_empty());
+        let msg = parse_security_bytes_param(&params, "data")
+            .unwrap_err()
+            .to_string();
+        assert!(!msg.is_empty());
     }
 
     #[test]
     fn test_parse_security_bytes_param_wrong_json_type() {
         let params = serde_json::json!({ "data": 42 });
-        let err = parse_security_bytes_param(&params, "data").unwrap_err();
-        assert!(err.contains("base64 string or byte array"));
+        let msg = parse_security_bytes_param(&params, "data")
+            .unwrap_err()
+            .to_string();
+        assert!(msg.contains("base64 string or byte array"));
     }
 
     #[test]
@@ -589,10 +595,11 @@ mod tests {
     async fn forward_via_tarpc_errors_when_tarpc_socket_missing() {
         let router = NeuralRouter::new("fam");
         let p = std::path::Path::new("/tmp/biomeos_forward_test_no_such.sock");
-        let err = router
+        let msg = router
             .forward_via_tarpc(p, "health.check", &json!({}))
             .await
-            .expect_err("missing tarpc");
-        assert!(err.contains("tarpc socket not found"));
+            .expect_err("missing tarpc")
+            .to_string();
+        assert!(msg.contains("tarpc socket not found"));
     }
 }

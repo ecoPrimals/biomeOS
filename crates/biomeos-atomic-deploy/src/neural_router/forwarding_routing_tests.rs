@@ -174,8 +174,8 @@ async fn test_forward_via_tarpc_socket_not_found() {
         .forward_via_tarpc(&socket_path, "health.check", &serde_json::json!({}))
         .await;
     assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert!(err.contains("tarpc socket not found") || err.contains("not found"));
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("tarpc socket not found") || msg.contains("not found"));
 }
 
 #[tokio::test]
@@ -194,10 +194,10 @@ async fn test_forward_via_tarpc_discovery_method_requires_tarpc_server() {
         )
         .await;
     assert!(result.is_err());
-    let err = result.unwrap_err();
+    let msg = result.unwrap_err().to_string();
     assert!(
-        err.contains("discovery") || err.contains("connect") || err.contains("tarpc"),
-        "unexpected error: {err}"
+        msg.contains("discovery") || msg.contains("connect") || msg.contains("tarpc"),
+        "unexpected error: {msg}"
     );
 }
 
@@ -217,10 +217,10 @@ async fn test_forward_via_tarpc_security_method_requires_tarpc_server() {
         )
         .await;
     assert!(result.is_err());
-    let err = result.unwrap_err();
+    let msg = result.unwrap_err().to_string();
     assert!(
-        err.contains("security") || err.contains("connect") || err.contains("tarpc"),
-        "unexpected error: {err}"
+        msg.contains("security") || msg.contains("connect") || msg.contains("tarpc"),
+        "unexpected error: {msg}"
     );
 }
 
@@ -236,8 +236,8 @@ async fn test_forward_via_tarpc_no_tarpc_mapping() {
         .forward_via_tarpc(&socket_path, "custom.unknown", &serde_json::json!({}))
         .await;
     assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert!(err.contains("no tarpc mapping"));
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("no tarpc mapping"));
 }
 
 // --- forward_request tests (JSON-RPC path) ---
@@ -316,12 +316,12 @@ async fn test_forward_request_jsonrpc_socket_not_found() {
         .await;
 
     assert!(result.is_err());
-    let err = result.unwrap_err().to_string();
+    let msg = result.unwrap_err().to_string();
     assert!(
-        err.contains("Failed to forward")
-            || err.contains("connect")
-            || err.contains("No such file"),
-        "unexpected error: {err}"
+        msg.contains("Failed to forward")
+            || msg.contains("connect")
+            || msg.contains("No such file"),
+        "unexpected error: {msg}"
     );
 }
 
@@ -434,10 +434,10 @@ async fn test_forward_via_tarpc_discovery_unknown_method_after_socket_exists() {
         .await;
 
     assert!(result.is_err());
-    let err = result.unwrap_err();
+    let msg = result.unwrap_err().to_string();
     assert!(
-        err.contains("unknown discovery method") || err.contains("connect"),
-        "unexpected: {err}"
+        msg.contains("unknown discovery method") || msg.contains("connect"),
+        "unexpected: {msg}"
     );
 }
 
@@ -475,10 +475,10 @@ async fn test_forward_via_tarpc_discovery_register_invalid_body() {
         )
         .await;
     assert!(result.is_err());
-    let err = result.unwrap_err();
+    let msg = result.unwrap_err().to_string();
     assert!(
-        err.contains("serde") || err.contains("connect") || err.contains("register"),
-        "unexpected: {err}"
+        msg.contains("serde") || msg.contains("connect") || msg.contains("register"),
+        "unexpected: {msg}"
     );
 }
 
@@ -494,10 +494,10 @@ async fn test_forward_via_tarpc_security_sign_missing_data() {
         .forward_via_tarpc(&socket_path, "security.sign", &serde_json::json!({}))
         .await;
     assert!(result.is_err());
-    let err = result.unwrap_err();
+    let msg = result.unwrap_err().to_string();
     assert!(
-        err.contains("missing param: data") || err.contains("connect"),
-        "unexpected: {err}"
+        msg.contains("missing param: data") || msg.contains("connect"),
+        "unexpected: {msg}"
     );
 }
 
@@ -513,10 +513,10 @@ async fn test_forward_via_tarpc_security_unknown_method() {
         .forward_via_tarpc(&socket_path, "security.unknown_xyz", &serde_json::json!({}))
         .await;
     assert!(result.is_err());
-    let err = result.unwrap_err();
+    let msg = result.unwrap_err().to_string();
     assert!(
-        err.contains("unknown security") || err.contains("connect"),
-        "unexpected: {err}"
+        msg.contains("unknown security") || msg.contains("connect"),
+        "unexpected: {msg}"
     );
 }
 

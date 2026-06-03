@@ -127,27 +127,27 @@ pub mod executor; // Shared executor module (types, context, handlers, spawner)
 pub mod gate_registry; // Cross-gate deployment: gate name → remote biomeOS endpoint
 pub mod health_check;
 pub mod orchestrator;
-pub mod primal_communication;
+pub(crate) mod primal_communication;
 pub mod primal_coordinator; // NEW: Discovery-based coordination (TRUE PRIMAL)
 pub mod primal_discovery; // NEW: Socket scanning discovery
 pub mod primal_launcher;
-pub mod security_jwt_client; // JWT secret provisioning via security provider (orchestrator) // EVOLVING: Legacy launcher → coordinator // NEW: Primal health verification and BTSP tunnel establishment
+pub(crate) mod security_jwt_client;
 
 // Neural API graph execution (TOML-based deterministic deployment)
 pub(crate) mod capability_domains; // Capability domain mappings for fallback resolution
 #[cfg(test)]
 mod capability_domains_tests;
-pub mod capability_handlers; // Extracted capability-based primal handlers
+pub(crate) mod capability_handlers;
 pub mod capability_translation;
 #[cfg(test)]
 mod capability_translation_integration_tests; // Sovereign Onion translation tests
 #[cfg(test)]
 mod capability_translation_tests;
 pub mod handlers; // NEW: Smart decomposition of neural_api_server
-pub mod http_client;
+pub(crate) mod http_client;
 pub mod lifecycle_manager; // NEW: Primal lifecycle management (resurrection, apoptosis)
 pub mod living_graph; // NEW: Runtime protocol state tracking
-pub mod mode;
+pub(crate) mod mode;
 pub mod neural_api_server; // Refactored into submodules: rpc, connection, routing, proxy, translation_loader, server_lifecycle
 pub mod neural_executor;
 #[cfg(test)]

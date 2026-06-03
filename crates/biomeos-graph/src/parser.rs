@@ -58,7 +58,7 @@ impl GraphParser {
         let edges = Self::parse_edges(&value)?;
 
         Ok(PrimalGraph {
-            id: GraphId::new(&name).map_err(GraphError::Parse)?,
+            id: GraphId::new(&name)?,
             name,
             description,
             version,

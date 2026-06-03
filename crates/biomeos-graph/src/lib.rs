@@ -68,7 +68,7 @@ pub use ai_advisor::{
     SuggestionFeedback, SuggestionType,
 };
 pub use continuous::{ContinuousExecutor, SessionState, TickClock};
-pub use error::{GraphError, Result};
+pub use error::{GraphError, ParseGraphIdError, ParseNodeIdError, Result};
 pub use events::{GraphEvent, GraphEventBroadcaster};
 pub use graph::{
     AtomicComposition, CompositionModel, CoordinationPattern, DeploymentGraph, EdgeType,

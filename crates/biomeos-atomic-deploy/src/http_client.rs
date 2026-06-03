@@ -6,6 +6,8 @@
 //! Provides HTTP/HTTPS via the discovery provider (network delegate): fetching binaries, update checks,
 //! niche deployment (git clone), and remote health checks.
 
+#![expect(dead_code, reason = "HTTP client for remote operations — wired when Songbird network delegate is live")]
+
 use anyhow::{Context, Result};
 use biomeos_types::primal_names;
 use bytes::Bytes;

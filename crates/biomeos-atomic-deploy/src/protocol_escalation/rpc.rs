@@ -5,6 +5,7 @@
 
 #![forbid(unsafe_code)]
 
+use anyhow::{Context, bail};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -16,43 +17,42 @@ use crate::living_graph::LivingGraph;
 
 use super::config::TarpcEndpoint;
 
-pub(super) async fn send_json_rpc(socket_path: &PathBuf, request: &Value) -> Result<Value, String> {
+pub(super) async fn send_json_rpc(socket_path: &PathBuf, request: &Value) -> anyhow::Result<Value> {
     let mut stream = UnixStream::connect(socket_path)
         .await
-        .map_err(|e| format!("Failed to connect to {}: {}", socket_path.display(), e))?;
+        .with_context(|| format!("Failed to connect to {}", socket_path.display()))?;
 
-    let request_str =
-        serde_json::to_string(request).map_err(|e| format!("Failed to serialize request: {e}"))?;
+    let request_str = serde_json::to_string(request).context("Failed to serialize request")?;
 
     stream
         .write_all(request_str.as_bytes())
         .await
-        .map_err(|e| format!("Failed to write request: {e}"))?;
+        .context("Failed to write request")?;
     stream
         .write_all(b"\n")
         .await
-        .map_err(|e| format!("Failed to write newline: {e}"))?;
+        .context("Failed to write newline")?;
 
     let mut reader = BufReader::new(stream);
     let mut response_line = String::new();
 
     match tokio::time::timeout(Duration::from_secs(5), reader.read_line(&mut response_line)).await {
         Ok(Ok(_)) => {}
-        Ok(Err(e)) => return Err(format!("Failed to read response: {e}")),
-        Err(_) => return Err("Response timeout (>5s)".to_string()),
+        Ok(Err(e)) => bail!("Failed to read response: {e}"),
+        Err(_) => bail!("Response timeout (>5s)"),
     }
 
-    serde_json::from_str(&response_line).map_err(|e| format!("Failed to parse response: {e}"))
+    serde_json::from_str(&response_line).context("Failed to parse response")
 }
 
 pub(super) async fn query_tarpc_endpoint(
     graph: &Arc<LivingGraph>,
     primal: &str,
-) -> Result<TarpcEndpoint, String> {
+) -> anyhow::Result<TarpcEndpoint> {
     let state = graph
         .get_primal_state(primal)
         .await
-        .ok_or_else(|| format!("Primal not found: {primal}"))?;
+        .ok_or_else(|| anyhow::anyhow!("Primal not found: {primal}"))?;
 
     if let Some(socket) = &state.tarpc_socket {
         return Ok(TarpcEndpoint {
@@ -73,7 +73,7 @@ pub(super) async fn query_tarpc_endpoint(
         Ok(response) => {
             if let Some(result) = response.get("result") {
                 let endpoint: TarpcEndpoint = serde_json::from_value(result.clone())
-                    .map_err(|e| format!("Invalid tarpc endpoint response: {e}"))?;
+                    .context("Invalid tarpc endpoint response")?;
                 Ok(endpoint)
             } else if let Some(_error) = response.get("error") {
                 tracing::debug!("Primal {} doesn't support tarpc: {:?}", primal, _error);
@@ -83,7 +83,7 @@ pub(super) async fn query_tarpc_endpoint(
                     services: vec![],
                 })
             } else {
-                Err("Invalid JSON-RPC response".to_string())
+                bail!("Invalid JSON-RPC response")
             }
         }
         Err(e) => {
@@ -102,11 +102,11 @@ pub(super) async fn notify_escalation(
     from: &str,
     to: &str,
     tarpc_info: &TarpcEndpoint,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     let from_state = graph
         .get_primal_state(from)
         .await
-        .ok_or_else(|| format!("Source primal not found: {from}"))?;
+        .ok_or_else(|| anyhow::anyhow!("Source primal not found: {from}"))?;
 
     let request = json!({
         "jsonrpc": "2.0",
@@ -127,7 +127,7 @@ pub(super) async fn notify_escalation(
             .and_then(|e| e.get("message"))
             .and_then(|m| m.as_str())
             .unwrap_or("Unknown error");
-        return Err(format!("Escalation notification failed: {error}"));
+        bail!("Escalation notification failed: {error}");
     }
 
     Ok(())
@@ -137,33 +137,32 @@ pub(super) async fn verify_tarpc_connection(
     graph: &Arc<LivingGraph>,
     from: &str,
     to: &str,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     let state = graph
         .get_primal_state(to)
         .await
-        .ok_or_else(|| format!("Primal not found: {to}"))?;
+        .ok_or_else(|| anyhow::anyhow!("Primal not found: {to}"))?;
 
     let tarpc_socket = state
         .tarpc_socket
         .as_ref()
-        .ok_or_else(|| format!("No tarpc socket for {to}"))?;
+        .ok_or_else(|| anyhow::anyhow!("No tarpc socket for {to}"))?;
 
-    if !tarpc_socket.exists() {
-        return Err(format!(
-            "tarpc socket does not exist: {}",
-            tarpc_socket.display()
-        ));
-    }
+    anyhow::ensure!(
+        tarpc_socket.exists(),
+        "tarpc socket does not exist: {}",
+        tarpc_socket.display()
+    );
 
     let client = crate::tarpc_client::connect_tarpc_health(tarpc_socket)
         .await
-        .map_err(|e| format!("tarpc connect failed: {e}"))?;
+        .context("tarpc connect failed")?;
 
     let ctx = tarpc::context::current();
     client
         .health_check(ctx)
         .await
-        .map_err(|e| format!("tarpc health_check failed: {e}"))?;
+        .context("tarpc health_check failed")?;
 
     tracing::debug!("tarpc verification passed: {} → {}", from, to);
     Ok(())
@@ -174,11 +173,11 @@ pub(super) async fn notify_fallback(
     from: &str,
     to: &str,
     reason: &str,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     let from_state = graph
         .get_primal_state(from)
         .await
-        .ok_or_else(|| format!("Source primal not found: {from}"))?;
+        .ok_or_else(|| anyhow::anyhow!("Source primal not found: {from}"))?;
 
     let request = json!({
         "jsonrpc": "2.0",
@@ -198,7 +197,7 @@ pub(super) async fn notify_fallback(
             .and_then(|e| e.get("message"))
             .and_then(|m| m.as_str())
             .unwrap_or("Unknown error");
-        return Err(format!("Fallback notification failed: {error}"));
+        bail!("Fallback notification failed: {error}");
     }
 
     Ok(())
@@ -227,9 +226,10 @@ mod tests {
         let err = send_json_rpc(&path, &json!({"x": 1}))
             .await
             .expect_err("expected connect error");
+        let msg = err.to_string();
         assert!(
-            err.contains("Failed to connect") || err.contains("No such file"),
-            "{err}"
+            msg.contains("Failed to connect") || msg.contains("No such file"),
+            "{msg}"
         );
     }
 
@@ -280,7 +280,8 @@ mod tests {
         let err = send_json_rpc(&path, &json!({"jsonrpc":"2.0","method":"m","id":1}))
             .await
             .expect_err("parse error");
-        assert!(err.contains("parse") || err.contains("Parse"), "{err}");
+        let msg = err.to_string();
+        assert!(msg.contains("parse") || msg.contains("Parse"), "{msg}");
     }
 
     #[tokio::test]
@@ -303,7 +304,8 @@ mod tests {
         let err = query_tarpc_endpoint(&graph, "ghost")
             .await
             .expect_err("missing primal");
-        assert!(err.contains("not found"), "{err}");
+        let msg = err.to_string();
+        assert!(msg.contains("not found"), "{msg}");
     }
 
     #[tokio::test]
@@ -416,7 +418,8 @@ mod tests {
         let err = query_tarpc_endpoint(&graph, "delta")
             .await
             .expect_err("invalid");
-        assert!(err.contains("Invalid JSON-RPC"), "{err}");
+        let msg = err.to_string();
+        assert!(msg.contains("Invalid JSON-RPC"), "{msg}");
     }
 
     #[tokio::test]
@@ -430,7 +433,8 @@ mod tests {
         let err = notify_escalation(&graph, "missing", "to", &tarpc)
             .await
             .expect_err("no source");
-        assert!(err.contains("Source primal not found"), "{err}");
+        let msg = err.to_string();
+        assert!(msg.contains("Source primal not found"), "{msg}");
     }
 
     #[tokio::test]
@@ -439,7 +443,8 @@ mod tests {
         let err = notify_fallback(&graph, "nope", "tgt", "reason")
             .await
             .expect_err("no source");
-        assert!(err.contains("Source primal not found"), "{err}");
+        let msg = err.to_string();
+        assert!(msg.contains("Source primal not found"), "{msg}");
     }
 
     #[tokio::test]
@@ -481,7 +486,8 @@ mod tests {
         let err = notify_escalation(&graph, "from", "to", &tarpc)
             .await
             .expect_err("rpc error");
-        assert!(err.contains("escalation denied"), "{err}");
+        let msg = err.to_string();
+        assert!(msg.contains("escalation denied"), "{msg}");
     }
 
     #[tokio::test]
@@ -490,7 +496,8 @@ mod tests {
         let err = verify_tarpc_connection(&graph, "a", "b")
             .await
             .expect_err("missing primal");
-        assert!(err.contains("not found"), "{err}");
+        let msg = err.to_string();
+        assert!(msg.contains("not found"), "{msg}");
 
         let graph = Arc::new(LivingGraph::new("fam2"));
         graph
@@ -502,6 +509,7 @@ mod tests {
         let err = verify_tarpc_connection(&graph, "a", "solo")
             .await
             .expect_err("no tarpc");
-        assert!(err.contains("No tarpc") || err.contains("tarpc"), "{err}");
+        let msg = err.to_string();
+        assert!(msg.contains("No tarpc") || msg.contains("tarpc"), "{msg}");
     }
 }

@@ -29,7 +29,4 @@ mod discovery;
 mod health;
 mod primal_start;
 
-// Re-export public API for backwards compatibility
-pub use discovery::discover_primal_binary;
-pub use health::health_check_capability;
-pub use primal_start::primal_start_capability;
+pub(crate) use primal_start::primal_start_capability;

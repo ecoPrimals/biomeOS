@@ -117,8 +117,8 @@ impl ProtocolEscalationManager {
         info!("🛑 Stopping protocol escalation monitoring");
     }
 
-    /// Check all connections and escalate if needed
-    pub async fn auto_escalate_check(&self) -> Result<(), String> {
+    /// Check all connections and escalate if needed.
+    pub async fn auto_escalate_check(&self) -> Result<(), EscalationError> {
         let candidates = self
             .graph
             .get_escalation_candidates(
