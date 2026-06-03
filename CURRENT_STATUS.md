@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 3, 2026 (v3.98: Wave 73 — runtime gate.register, GateRegistry RwLock, GeneticsTier/EscalationError thiserror, mesh validation ready)
-**Version**: 3.98
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - A/B shadow analysis ACTIVE - Runtime gate registration LIVE - Topology affinity scoring - Zero clippy warnings - map_err debt: 2 remaining (legitimate) - Mesh validation READY for eastGate
+**Updated**: June 3, 2026 (v3.99: Wave 73b — L5 perceptron consumer interface, shadow mode active alongside L4, 13 new tests)
+**Version**: 3.99
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (mock weights) - A/B shadow analysis ACTIVE - Runtime gate registration LIVE - Topology affinity scoring - Zero clippy warnings - map_err debt: 2 remaining (legitimate, assessed) - Mesh validation READY for eastGate
 
 ---
 

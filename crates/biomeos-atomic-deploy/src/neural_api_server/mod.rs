@@ -171,11 +171,39 @@ impl NeuralApiServer {
         let weights_path = biomeos_types::SystemPaths::new()
             .map(|p| p.data_dir().join("routing_weights.redb"))
             .ok();
-        let router = Arc::new(if let Some(ref path) = weights_path {
-            NeuralRouter::with_persistent_weights(&family_id_str, path)
-        } else {
-            NeuralRouter::new(&family_id_str)
-        });
+        let perceptron = {
+            let perceptron_path = biomeos_types::SystemPaths::new()
+                .map(|p| p.data_dir().join("neural_routing_perceptron.bin"))
+                .ok();
+            let weights = perceptron_path
+                .as_deref()
+                .and_then(crate::neural_router::PerceptronWeights::load_from_file);
+            let dispatcher = crate::neural_router::PerceptronDispatcher::new(
+                weights.unwrap_or_else(crate::neural_router::PerceptronWeights::mock),
+                crate::neural_router::PerceptronPhase::Shadow,
+            );
+            tracing::info!(
+                "perceptron: shadow mode active ({})",
+                if perceptron_path
+                    .as_deref()
+                    .and_then(|p| p.exists().then_some(()))
+                    .is_some()
+                {
+                    "trained weights"
+                } else {
+                    "mock weights"
+                }
+            );
+            dispatcher
+        };
+        let router = Arc::new(
+            if let Some(ref path) = weights_path {
+                NeuralRouter::with_persistent_weights(&family_id_str, path)
+            } else {
+                NeuralRouter::new(&family_id_str)
+            }
+            .with_perceptron(perceptron),
+        );
         let executions = Arc::new(RwLock::new(HashMap::new()));
         let translation_registry = Arc::new(RwLock::new(CapabilityTranslationRegistry::new()));
 

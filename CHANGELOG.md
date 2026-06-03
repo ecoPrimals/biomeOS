@@ -2,6 +2,38 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.99 (2026-06-03) — Wave 73b: Perceptron Consumer Interface + Continued Debt
+
+### L5 perceptron consumer interface (P2)
+- New `neural_router::perceptron` module: `PerceptronDispatcher`, `PerceptronWeights`,
+  `DispatchFeatures` (36-dim feature vector), `PerceptronPhase` enum
+- Weight vector format: 36 features + 1 bias = 37 f32 values (little-endian binary)
+- Features: 32 one-hot domain slots + latency_ewma_norm + error_rate +
+  topology_affinity + gate_load_norm
+- `PerceptronDispatcher::shadow_mock()`: mock weights for pre-training development
+- `PerceptronWeights::load_from_file()`: loads trained weights from
+  `neural_routing_perceptron.bin` (barraCuda ml.mlp_train output)
+- Shadow mode wired into `select_primary()`: runs perceptron alongside L4 weighted
+  routing, logs disagreements at `L5 perceptron shadow [n]` INFO level
+- Milestone reporting at 100/500/1000/5000n dispatches
+- `NeuralRouter::perceptron_shadow_stats()` and `perceptron_phase()` accessors
+- `neural_api.weight_health` RPC extended with `perceptron` section (phase, stats)
+- `NeuralApiServer::new()` auto-initializes shadow-mode perceptron (mock weights
+  until `neural_routing_perceptron.bin` exists)
+- 13 new tests covering feature building, scoring, shadow comparison, weight I/O
+
+### Remaining deep debt assessment (P3)
+- 2 legitimate `map_err(anyhow!)` sites assessed: lz4_flex `DecompressError` doesn't
+  implement `std::error::Error`, env var chain constructs error from scratch — both
+  are correct patterns, not worth custom error types
+- SONGBIRD_MESH_ENABLED alignment: confirmed biomeOS Rust code does not reference
+  this env var — it's a Songbird binary configuration. Mismatch is between graph
+  configs and upstream Songbird binary. Upstream coordination item.
+
+### Test extraction — Wave 3 (2 files)
+- `http_client.rs`: 553 → 245 lines (+308L `http_client_tests.rs`)
+- `lifecycle_manager/mod.rs`: 586 → 123 lines (+463L `lifecycle_manager/tests.rs`)
+
 ## v3.98 (2026-06-03) — Wave 73: Mesh Validation + String Error Evolution
 
 ### Cross-gate mesh validation (P0)

@@ -93,6 +93,17 @@ impl NeuralApiServer {
                 "limit": 1000,
                 "phase": if shadow.0 >= 1000 { "complete" } else { "active" },
             },
+            "perceptron": match self.router.perceptron_shadow_stats() {
+                Some((total, disagree)) => json!({
+                    "phase": format!("{:?}", self.router.perceptron_phase().unwrap_or(
+                        crate::neural_router::PerceptronPhase::Shadow
+                    )),
+                    "total_dispatches": total,
+                    "disagreements": disagree,
+                    "divergence_pct": if total > 0 { (disagree as f64 / total as f64) * 100.0 } else { 0.0 },
+                }),
+                None => json!(null),
+            },
         }))
     }
 }

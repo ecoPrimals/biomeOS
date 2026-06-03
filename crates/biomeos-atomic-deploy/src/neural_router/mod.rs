@@ -16,6 +16,7 @@ mod discovery_composite;
 mod discovery_primal;
 mod discovery_registry;
 mod forwarding;
+pub mod perceptron;
 #[cfg(test)]
 mod forwarding_routing_tests;
 #[cfg(test)]
@@ -41,6 +42,7 @@ pub use composition::{
 pub use types::{
     AtomicType, DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability, RoutingMetrics,
 };
+pub use perceptron::{PerceptronDispatcher, PerceptronPhase, PerceptronWeights};
 pub use weights::{
     CapabilityUtilizationTracker, MethodUtilization, ProviderWeight, RoutingWeightTable,
     UtilizationSummary, WeightTableSummary,
@@ -98,6 +100,10 @@ pub struct NeuralRouter {
 
     /// Count of dispatches where weighted selection disagreed with first-match.
     pub(crate) weighted_disagreement_counter: AtomicU64,
+
+    /// L5 perceptron dispatcher — shadow mode alongside L4 rule-based routing.
+    /// `None` until weights are loaded (mock or trained).
+    pub(crate) perceptron: Option<PerceptronDispatcher>,
 }
 
 impl NeuralRouter {
@@ -120,6 +126,7 @@ impl NeuralRouter {
             self_socket_path: RwLock::new(None),
             weighted_dispatch_counter: AtomicU64::new(0),
             weighted_disagreement_counter: AtomicU64::new(0),
+            perceptron: None,
         }
     }
 
@@ -149,12 +156,20 @@ impl NeuralRouter {
             self_socket_path: RwLock::new(None),
             weighted_dispatch_counter: AtomicU64::new(0),
             weighted_disagreement_counter: AtomicU64::new(0),
+            perceptron: None,
         }
     }
 
     /// Attach a living graph for protocol-aware routing
     pub fn with_living_graph(mut self, graph: Arc<LivingGraph>) -> Self {
         self.living_graph = Some(graph);
+        self
+    }
+
+    /// Attach a perceptron dispatcher for L5 shadow-mode routing.
+    #[must_use]
+    pub fn with_perceptron(mut self, dispatcher: PerceptronDispatcher) -> Self {
+        self.perceptron = Some(dispatcher);
         self
     }
 
@@ -335,6 +350,17 @@ impl NeuralRouter {
         let total = self.weighted_dispatch_counter.load(Ordering::Relaxed);
         let disagreements = self.weighted_disagreement_counter.load(Ordering::Relaxed);
         (total, disagreements)
+    }
+
+    /// L5 perceptron shadow statistics: `(total, disagreements)`.
+    /// Returns `None` if no perceptron is attached.
+    pub fn perceptron_shadow_stats(&self) -> Option<(u64, u64)> {
+        self.perceptron.as_ref().map(|p| p.shadow_stats())
+    }
+
+    /// Current perceptron phase, if any.
+    pub fn perceptron_phase(&self) -> Option<PerceptronPhase> {
+        self.perceptron.as_ref().map(|p| p.phase())
     }
 
     /// Set a provider affinity hint (from primal.announce cost_hints).

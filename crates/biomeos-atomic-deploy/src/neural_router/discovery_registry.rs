@@ -15,6 +15,7 @@ use std::sync::atomic::Ordering;
 use tracing::{debug, info};
 
 use super::NeuralRouter;
+use super::perceptron::build_candidate_features;
 use super::types::{DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability};
 
 const SHADOW_LOG_DISPATCH_LIMIT: u64 = 1000;
@@ -89,6 +90,20 @@ impl NeuralRouter {
                     n, SHADOW_LOG_DISPATCH_LIMIT, disagreements, rate
                 );
             }
+        }
+
+        // L5 perceptron shadow: run perceptron alongside L4, log disagreements.
+        if let Some(ref perceptron) = self.perceptron {
+            let gate_load = self
+                .utilization_tracker
+                .read()
+                .await
+                .summary()
+                .tracked_methods as f32
+                / 100.0;
+            let features =
+                build_candidate_features(capability, &candidates, &weights, gate_load);
+            perceptron.shadow_compare(weighted_idx, &features, capability);
         }
 
         weighted_idx
