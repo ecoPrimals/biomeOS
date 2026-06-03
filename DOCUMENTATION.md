@@ -191,8 +191,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of May 29, 2026 (v3.88)**
-**Active: 27 specs, handoffs in wateringHole (v2.43–v3.88), 4 scripts**
+**Documentation current as of June 3, 2026 (v4.02)**
+**Active: 27 specs, handoffs in wateringHole (v2.43–v4.02), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
-**Architecture: capability-based discovery compliant (`CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0); identity-based discovery APIs removed; data-driven launch profiles; cross-arch armv7 safe; UDS dual-protocol auto-detect; BTSP Phase 3 LIVE; membrane + nucleated composition models; signal-tier announce protocol; method_gate modularized; adaptive routing weights (redb-persistent); attestation verification; capability-domain composition health; Songbird mesh cross-gate dispatch; NUCLEUS spore gateway (ingest/emit); DH-1 complete (zero /tmp in production); `manifest.gate_profile` wired**
-**Tests: 7,983 workspace-wide (0 failures, fully concurrent) | 90%+ line / function / region (llvm-cov) | Clippy: PASS (0 warnings, pedantic+nursery, `-D warnings`) | Docs: Full coverage | C deps: 0 | Unsafe: 0 | Deprecated: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Production files >800L: 0**
+**Architecture: L4 weighted routing, L5 perceptron shadow, composition hot-reload, typed errors throughout, API visibility tightened, SSOT hardened, HTTP transport removed v3.97, --tcp-only deprecated v3.94**
+**Tests: 7,983 workspace-wide (0 failures) | Clippy: PASS (0 warnings) | C deps: 0 | Unsafe: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Result<_, String>: 0 in core APIs**

@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: June 2, 2026
-**Status**: Production Ready (v3.97) — Wave 72+ deep debt, L4 weighted routing, 12 test extractions, map_err sweep, HTTP transport removed, env SSOT (90+ constants), Edition 2024, rust-version 1.87, 26 crates, 0 C deps, 0 unsafe prod, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: June 3, 2026
+**Status**: Production Ready (v4.02) — L4 weighted routing, L5 perceptron shadow, composition hot-reload, SSOT hardened (zero hardcoded primal names), typed errors throughout, 15 test extractions, HTTP transport removed, Edition 2024, rust-version 1.87, 26 crates, 0 C deps, 0 unsafe prod, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 
@@ -15,7 +15,7 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Atomics**: Primal combinations defined by capability roles (Tower = security + mesh orchestration)
 - **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
 - **Neural API**: Semantic routing via `capability.call` (320+ translations, 27 domains incl. tensor, part of biomeOS)
-- **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
+- **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP JSON-RPC; HTTP transport removed v3.97)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
 - **AI Bridge**: Squirrel -> Songbird HTTP -> Cloud/Local AI
@@ -159,7 +159,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 | Standard | Description |
 |----------|-------------|
 | **ecoBin v3.0** | 100% Pure Rust, zero C deps |
-| **Universal IPC v3.0** | Multi-transport (Unix/Abstract/TCP/HTTP) |
+| **Universal IPC v3.0** | Multi-transport (Unix/Abstract/TCP; HTTP removed v3.97) |
 | **PRIMAL_DEPLOYMENT_STANDARD** | Deterministic cross-platform |
 | **Semantic Method Naming** | capability.call routing |
 | **scyBorg Triple-Copyleft** | AGPL-3.0-or-later + ORC + CC-BY-SA 4.0 |
@@ -167,16 +167,9 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v3.88 — DH-1 complete, `manifest.gate_profile` wired, NC-1 COMPLETE, zero production files >800L)
+**Status**: Production Ready (v4.02)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
-**Binary source**: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
-**AI Bridge**: Capability-routed to Squirrel at runtime (tag-in on demand)
-**Neural API**: 320+ semantic translations, 28 capability domains (+ manifest + tensor + shader), `primal.list` + `topology.primals`, lazy rescan, cross-gate routing via Songbird mesh dispatch, post-spawn auto-registration, adaptive weights (redb-persistent), attestation verification
-**Composition**: Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` capability-domain driven; `composition.reload` hot-swap; membrane + nucleated composition models
-**NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay) + Songbird mesh TCP + TURN fallback
-**Lifecycle**: Deep health monitoring + auto-resurrection + composition dashboard
-**IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) + TCP-only mode (mobile) + UDS dual-protocol auto-detect + BTSP ClientHello recognition
-**Primals**: 7/7 ecoBin v3.0 compliant
-**Cross-Arch**: x86_64 + aarch64 + armv7 (32-bit safe)
-**Tests**: 7,983 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **Docs**: Full coverage | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]` all roots + binaries) | **Deprecated**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded values**: 0 | **Production files >800L**: 0
-**Updated**: May 29, 2026
+**Neural API**: 320+ semantic translations, 27 capability domains, L4 weighted routing, L5 perceptron shadow mode, `composition.patterns.reload` hot-reload, cross-gate routing via Songbird mesh, adaptive weights (redb-persistent)
+**IPC**: Universal IPC v3.0 — Unix/abstract/TCP + UDS dual-protocol auto-detect + BTSP (HTTP transport removed v3.97; `--tcp-only` deprecated v3.94)
+**Tests**: 7,983 workspace-wide (0 failures) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]`) | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production
+**Updated**: June 3, 2026

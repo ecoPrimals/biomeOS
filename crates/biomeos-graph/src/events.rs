@@ -516,7 +516,7 @@ mod tests {
         };
         match broadcaster.broadcast(event).await {
             Err(err) => assert!(
-                err.contains("Failed to broadcast"),
+                err.to_string().contains("Broadcast failed"),
                 "unexpected error message: {err}"
             ),
             Ok(n) => panic!("expected broadcast failure without subscribers, got Ok({n})"),

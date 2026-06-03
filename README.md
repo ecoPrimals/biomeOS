@@ -18,7 +18,7 @@
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
-| Deployment | USB + Pixel + Cross-Device AI + TCP-only mobile |
+| Deployment | USB + Pixel + Cross-Device AI + mobile (TCP fallback) |
 | AI Bridge | Capability-routed to Squirrel (tag-in at runtime; biomeOS runs without AI primal) |
 | Neural API | 320+ capability translations, 27 domains (+ tensor/math/stats + manifest), 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing via Songbird mesh dispatch, formalized `capability.call` routing contract, adaptive routing weights (redb-persistent), attestation verification, `manifest.gate_profile` |
 | Genetics | `GeneticsTier` enforcement on graphs (`none`/`tag`/`mito_beacon`/`nuclear`), preflight validation |
@@ -46,10 +46,10 @@ biomeOS uses a **dual version scheme**:
 
 | Scheme | Value | Where | Purpose |
 |--------|-------|-------|---------|
-| **Release train** | `v3.93` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. Incremented on each audit/evolution cycle. |
+| **Release train** | `v4.02` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. Incremented on each audit/evolution cycle. |
 | **Workspace semver** | `0.1.0` | `Cargo.toml` `[workspace.package]`, `plasmidBin/manifest.toml` | Rust crate version. Will bump to `1.0.0` at stadial exit when the public API surface stabilizes. |
 
-The release train version (`v3.x`) is the **canonical version** for downstream consumers (springs, gardens, projectNUCLEUS). The workspace semver (`0.1.0`) reflects that the Rust crate API is still pre-1.0. Both are intentional — the release train captures functional maturity while semver captures API stability.
+The release train version (`v4.x`) is the **canonical version** for downstream consumers (springs, gardens, projectNUCLEUS). The workspace semver (`0.1.0`) reflects that the Rust crate API is still pre-1.0. Both are intentional — the release train captures functional maturity while semver captures API stability.
 
 biomeOS is the only primal with `is_orchestrator = true` in its manifest.
 
@@ -256,7 +256,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 | Standard | Status |
 |----------|--------|
 | ecoBin v3.0 | 100% Pure Rust |
-| Universal IPC v3.0 | Multi-transport (Unix/Abstract/TCP/HTTP JSON-RPC) |
+| Universal IPC v3.0 | Multi-transport (Unix/Abstract/TCP JSON-RPC; HTTP removed v3.97) |
 | PRIMAL_DEPLOYMENT_STANDARD v1.0 | Deterministic behavior |
 | Semantic Method Naming | capability.call routing |
 | scyBorg Triple-Copyleft | AGPL-3.0-or-later + ORC + CC-BY-SA 4.0 |
@@ -367,10 +367,10 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v3.93)
-**Updated**: June 2, 2026
+**Status**: Production Ready (v4.02)
+**Updated**: June 3, 2026
 **Tests**: 7,983 workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 | **Deprecated**: 0 | **Blocking debt**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP/HTTP) | Capability-based discovery + lazy rescan + `capability.call` routing + Songbird mesh cross-gate dispatch + DNS-SD + `primal.announce` | Adaptive routing weights (redb-persistent) | Membrane + nucleated composition | XDG-compliant paths | DH-1 complete (zero `/tmp` in production) | `manifest.gate_profile` | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP; HTTP removed v3.97) | L4 weighted routing + L5 perceptron shadow | Capability-based discovery + `capability.call` + Songbird mesh cross-gate | Adaptive routing weights (redb-persistent) | Membrane + nucleated composition | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---
 

@@ -998,11 +998,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v3.88 — DH-1 complete, `manifest.gate_profile` wired, NC-1 COMPLETE, Wave 60b, zero production files >800L, 19 signal graphs, zero blocking debt)
-**Tests**: 7,983 passing, 0 failures, fully concurrent
-**Coverage**: 90%+ region / function / line (llvm-cov verified)
-**Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **Format**: PASS | **Docs**: Full coverage | **Unsafe**: 0 production (`#[forbid(unsafe_code)]` all roots + all 20+ binaries) | **C deps**: 0 | **TODO/FIXME**: 0
-**IPC**: Universal IPC v3.0 (Unix/Abstract/TCP/HTTP JSON-RPC) + tarpc binary escalation + TCP-only mode
-**Neural API**: 320+ translations, 28 domains (+ manifest + tensor), proxy_http, capability.call, lazy rescan, cross-gate forwarding, graph coordination, post-spawn auto-registration, adaptive routing weights (redb-persistent), `manifest.gate_profile`
-**Code Quality**: A++ (Pure Rust, Edition 2024, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, all production files <800 LOC, capability-based resolution, data-driven launch profiles, all IPs + runtime paths centralized to constants, cross-arch safe, UDS dual-protocol, zero Box\<dyn Error\>, DH-1 complete)
-**Bypasses**: 0 active (all 6 evolved)
+**Status**: Production Ready (v4.02 — L4 weighted routing, L5 perceptron shadow, composition hot-reload, typed errors, SSOT hardened)
+**Tests**: 7,983 passing, 0 failures, fully concurrent | **Coverage**: 90%+ (llvm-cov)
+**Clippy**: PASS (0 warnings, pedantic+nursery) | **Unsafe**: 0 | **C deps**: 0 | **TODO/FIXME**: 0
+**IPC**: Universal IPC v3.0 (Unix/Abstract/TCP + tarpc escalation; HTTP transport removed v3.97; --tcp-only deprecated v3.94)
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero warnings, zero Result<_, String> in core APIs, zero hardcoded primal names, all production files <800 LOC)

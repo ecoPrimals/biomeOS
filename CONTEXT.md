@@ -1,6 +1,6 @@
 # Context — biomeOS
 
-**Version**: v3.97 | **Updated**: June 2, 2026
+**Version**: v4.02 | **Updated**: June 3, 2026
 
 ## What This Is
 
@@ -23,7 +23,7 @@ multiple gates (devices).
 
 - **Language:** 100% Rust, zero C dependencies
 - **Architecture:** Single binary (UniBin) with multiple operational modes (bootstrap, nucleus, deploy, doctor, continuous, rootpulse)
-- **Communication:** JSON-RPC 2.0 over Unix sockets, abstract sockets, TCP, and HTTP — with tarpc binary protocol escalation for hot paths
+- **Communication:** JSON-RPC 2.0 over Unix sockets, abstract sockets, and TCP — with tarpc binary protocol escalation for hot paths (HTTP transport endpoint removed v3.97; inter-gate HTTP via Songbird gateway)
 - **License:** AGPL-3.0-or-later (scyBorg triple-copyleft: AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 - **Tests:** 7,983 workspace-wide (0 failures)
 - **Coverage:** 90%+ line coverage (llvm-cov verified)
@@ -69,8 +69,8 @@ User / AI ──► Neural API (JSON-RPC) ──► Capability Router ──► 
                                               │
                                     ┌─────────┼─────────┐
                                     ▼         ▼         ▼
-                               Unix sock  Abstract   TCP/HTTP
-                              (Tier 1)    (Tier 1)   (Tier 2)
+                               Unix sock  Abstract     TCP
+                              (Tier 1)    (Tier 1)   (Tier 2, deprecated)
 ```
 
 Discovery is 5-tier: centralized registry → taxonomy bootstrap → environment

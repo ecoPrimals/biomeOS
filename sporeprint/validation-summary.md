@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — L4 weighted routing, 12 test extractions, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
-date = 2026-06-02
+description = "Orchestration kernel — L4 weighted routing, L5 perceptron shadow, composition hot-reload, typed errors, 15 test extractions, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
+date = 2026-06-03
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -11,6 +11,11 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **7,983+ tests** workspace-wide, 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v4.02** — Wave 74c: String error evolution (thiserror/anyhow), API visibility tightening, SSOT hardening
+- **v4.01** — Wave 74b: Zero hardcoded primal names, mock→neutral_default, deprecated cleanup, test extraction wave 4
+- **v4.00** — Wave 74: composition.patterns.reload, perceptron wire contract verified
+- **v3.99** — Wave 73b: L5 perceptron consumer (36-dim features, shadow mode), test extraction wave 3
+- **v3.98** — Wave 73: gate.register + gate.list JSON-RPC, GeneticsTier/EscalationManager→thiserror
 - **v3.97** — Wave 72+: map_err sweep (27/28), test extraction wave 2 (7 files), HTTP transport removed, env safety
 - **v3.96** — Wave 72: env SSOT +14 constants, 56 map_err→context, test extraction wave 1 (5 files)
 - **v3.95** — Wave 71+: shadow analysis, PathwayLearner, perceptron prep

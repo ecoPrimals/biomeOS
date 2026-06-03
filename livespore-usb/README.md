@@ -227,7 +227,7 @@ cp -r livespore-usb/* /media/usb-mount/
 
 **Code Quality:**
 - All primals: A+ or higher (avg 101.2/100)
-- Tests: 8,053 passing (100%)
+- Tests: 7,983 passing (100%)
 - Production panics: 0
 - Unsafe code: 0 blocks
 

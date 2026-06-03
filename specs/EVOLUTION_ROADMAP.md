@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: May 29, 2026 (v3.88: DH-1 complete — zero /tmp + zero env::temp_dir() in production, manifest.gate_profile wired, inline test extraction)
+**Updated**: June 3, 2026 (v4.02: L4 weighted routing, L5 perceptron shadow, composition hot-reload, typed errors, API visibility tightened, SSOT hardened)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
