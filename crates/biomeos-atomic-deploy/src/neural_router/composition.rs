@@ -308,6 +308,29 @@ impl CompositionPatternRegistry {
         self.patterns.is_empty()
     }
 
+    /// Reload canonical patterns while preserving runtime-registered patterns.
+    ///
+    /// Re-seeds all 7 canonical patterns (overwriting stale versions), then
+    /// merges back any patterns whose names don't collide with canonical ones.
+    /// Returns the total pattern count after reload.
+    pub fn reload_canonical(&mut self) -> usize {
+        let runtime_patterns: Vec<CompositionPattern> = self
+            .patterns
+            .values()
+            .cloned()
+            .collect();
+
+        *self = Self::with_canonical_patterns();
+
+        for pattern in runtime_patterns {
+            if !self.patterns.contains_key(&pattern.name) {
+                self.patterns.insert(pattern.name.clone(), pattern);
+            }
+        }
+
+        self.patterns.len()
+    }
+
     /// JSON snapshot for RPC responses.
     pub fn to_json(&self) -> serde_json::Value {
         serde_json::json!({
@@ -542,5 +565,38 @@ mod tests {
         let reg = CompositionPatternRegistry::with_canonical_patterns();
         let json = reg.to_json();
         assert!(json["count"].as_u64().unwrap() >= 6);
+    }
+
+    #[test]
+    fn reload_canonical_preserves_runtime_patterns() {
+        let mut reg = CompositionPatternRegistry::with_canonical_patterns();
+        let canonical_count = reg.len();
+
+        reg.register(CompositionPattern {
+            name: Arc::from("custom_mesh_pattern"),
+            methods: vec![Arc::from("mesh.relay"), Arc::from("mesh.forward")],
+            primals: vec![Arc::from("songbird"), Arc::from("eastgate")],
+            tier: CompositionTier::Tower,
+            graph_file: None,
+        });
+        assert_eq!(reg.len(), canonical_count + 1);
+
+        let reloaded = reg.reload_canonical();
+        assert_eq!(reloaded, canonical_count + 1, "runtime pattern preserved");
+        assert!(reg.get("custom_mesh_pattern").is_some());
+        assert!(reg.get("rootpulse_commit").is_some());
+    }
+
+    #[test]
+    fn reload_canonical_refreshes_canonical_patterns() {
+        let mut reg = CompositionPatternRegistry::with_canonical_patterns();
+        reg.patterns.remove("rootpulse_commit");
+        assert!(reg.get("rootpulse_commit").is_none());
+
+        reg.reload_canonical();
+        assert!(
+            reg.get("rootpulse_commit").is_some(),
+            "canonical pattern restored after reload"
+        );
     }
 }

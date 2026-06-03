@@ -295,6 +295,16 @@ impl NeuralApiServer {
             Route::CompositionPatterns => {
                 dispatch(Ok(self.router.composition_patterns_json().await), id)
             }
+            Route::CompositionPatternsReload => {
+                let count = self.router.reload_composition_patterns().await;
+                dispatch(
+                    Ok(serde_json::json!({
+                        "reloaded": true,
+                        "pattern_count": count,
+                    })),
+                    id,
+                )
+            }
             Route::CompositionPlanTier => dispatch(self.handle_plan_tier(params).await, id),
             Route::CapabilityUtilization => dispatch(Ok(self.router.utilization_json().await), id),
             Route::WeightHealth => dispatch(self.handle_weight_health().await, id),

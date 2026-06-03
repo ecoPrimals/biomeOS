@@ -451,6 +451,20 @@ impl NeuralRouter {
         self.composition_patterns.write().await.register(pattern);
     }
 
+    /// Hot-reload composition patterns (re-seed canonical, preserve runtime).
+    ///
+    /// Useful after mesh topology changes (new gate joins) to refresh
+    /// canonical patterns without restarting Neural API.
+    pub async fn reload_composition_patterns(&self) -> usize {
+        let count = self
+            .composition_patterns
+            .write()
+            .await
+            .reload_canonical();
+        info!("composition patterns reloaded: {count} patterns active");
+        count
+    }
+
     /// Get a tier composition plan.
     pub async fn plan_tier(&self, tier: CompositionTier) -> TierCompositionPlan {
         let registry = self.composition_patterns.read().await;

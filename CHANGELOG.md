@@ -2,6 +2,27 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.00 (2026-06-03) — Wave 74: Composition Hot-Reload + Perceptron E2E Verification
+
+### composition.patterns.reload (P2)
+- New `CompositionPatternRegistry::reload_canonical()`: re-seeds canonical patterns
+  while preserving runtime-registered patterns (mesh topology changes)
+- New `NeuralRouter::reload_composition_patterns()`: write-lock acquire + reload
+- New JSON-RPC: `composition.patterns.reload` / `neural_api.composition_patterns_reload`
+  — returns `{ reloaded: true, pattern_count: N }`
+- 2 new tests: preserves runtime patterns, refreshes canonical after removal
+
+### Perceptron E2E verification (P1)
+- Wire contract verified against `NEURAL_API_PERCEPTRON_DESIGN.md`: design confirms
+  `w · features + b` inference per candidate (single shared weight vector = 37 f32),
+  matching our consumer's `PerceptronWeights` format exactly
+- `neural_routing_perceptron.bin` auto-load path confirmed operational (148 bytes,
+  little-endian f32) — ready for barraCuda ml.mlp_train output drop
+
+### Status
+- A/B shadow milestone: monitoring active, waiting for production dispatches
+- Cross-gate mesh: BLOCKED on eastGate Songbird rebuild
+
 ## v3.99 (2026-06-03) — Wave 73b: Perceptron Consumer Interface + Continued Debt
 
 ### L5 perceptron consumer interface (P2)
