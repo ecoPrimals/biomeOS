@@ -69,14 +69,14 @@ pub struct InferenceProvider {
 #[derive(Clone)]
 pub struct InferenceHandler {
     router: Arc<NeuralRouter>,
-    gate_registry: Arc<GateRegistry>,
+    gate_registry: Arc<RwLock<GateRegistry>>,
     providers: Arc<RwLock<Vec<InferenceProvider>>>,
 }
 
 impl InferenceHandler {
     /// Create a new inference handler with access to routing and gate registry.
     #[must_use]
-    pub fn new(router: Arc<NeuralRouter>, gate_registry: Arc<GateRegistry>) -> Self {
+    pub fn new(router: Arc<NeuralRouter>, gate_registry: Arc<RwLock<GateRegistry>>) -> Self {
         Self {
             router,
             gate_registry,
@@ -93,7 +93,8 @@ impl InferenceHandler {
     pub async fn gates(&self, _params: &Option<Value>) -> Result<Value> {
         info!("🧠 Listing inference-capable gates");
 
-        let gate_names = self.gate_registry.gate_names();
+        let reg = self.gate_registry.read().await;
+        let gate_names = reg.gate_names();
         let mut gates = Vec::new();
 
         // Local gate always available
@@ -105,7 +106,7 @@ impl InferenceHandler {
         }));
 
         for name in &gate_names {
-            let endpoint = match self.gate_registry.resolve(name) {
+            let endpoint = match reg.resolve(&name) {
                 Some(ep) => ep.display_string(),
                 None => continue,
             };
@@ -373,7 +374,7 @@ impl InferenceHandler {
     /// 5. Fall back to local if no remote gates qualify
     async fn select_best_gate(&self, model: &str) -> Result<String> {
         let required_vram = Self::estimate_vram_requirement(model);
-        let gate_names = self.gate_registry.gate_names();
+        let gate_names = self.gate_registry.read().await.gate_names();
 
         let mut candidates: Vec<GateCapabilities> = Vec::new();
 
@@ -448,7 +449,10 @@ impl InferenceHandler {
     async fn probe_gate_capabilities(&self, gate: &str) -> Result<GateCapabilities> {
         let endpoint = self
             .gate_registry
+            .read()
+            .await
             .resolve(gate)
+            .cloned()
             .context("Gate not in registry")?;
 
         let client = biomeos_core::AtomicClient::from_endpoint(endpoint.clone());
@@ -483,7 +487,10 @@ impl InferenceHandler {
     async fn call_remote_ai(&self, gate: &str, params: &Value) -> Result<Value> {
         let endpoint = self
             .gate_registry
+            .read()
+            .await
             .resolve(gate)
+            .cloned()
             .context("Gate not in registry")?;
         let client = biomeos_core::AtomicClient::from_endpoint(endpoint.clone());
         client
@@ -507,7 +514,7 @@ mod tests {
             "gate2",
             biomeos_core::TransportEndpoint::parse("tcp://192.0.2.132:9001").unwrap(),
         );
-        InferenceHandler::new(router, Arc::new(registry))
+        InferenceHandler::new(router, Arc::new(RwLock::new(registry)))
     }
 
     #[test]

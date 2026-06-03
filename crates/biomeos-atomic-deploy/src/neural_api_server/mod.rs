@@ -188,7 +188,7 @@ impl NeuralApiServer {
             translation_registry.clone(),
         );
 
-        let gate_registry = Arc::new(crate::gate_registry::GateRegistry::new());
+        let gate_registry = Arc::new(tokio::sync::RwLock::new(crate::gate_registry::GateRegistry::new()));
 
         let capability_handler =
             CapabilityHandler::new(router.clone(), translation_registry.clone())

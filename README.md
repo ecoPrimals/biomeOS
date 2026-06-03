@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v3.97)
+## Status: Production Ready (v3.98)
 
 | Metric | Value |
 |--------|-------|

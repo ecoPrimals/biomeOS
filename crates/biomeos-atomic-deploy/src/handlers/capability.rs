@@ -37,6 +37,7 @@ use super::graph::GraphHandler;
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::gate_registry::GateRegistry;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
+use tokio::sync::RwLock as TokioRwLock;
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use std::path::PathBuf;
@@ -67,8 +68,8 @@ pub struct CapabilityHandler {
     /// Capability Translation Registry
     pub(crate) translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
 
-    /// Gate registry for cross-gate capability forwarding
-    gate_registry: Arc<GateRegistry>,
+    /// Gate registry for cross-gate capability forwarding (mutable at runtime via gate.register / route.register)
+    gate_registry: Arc<TokioRwLock<GateRegistry>>,
 
     /// Graphs directory for signal dispatch (composition collapse layer).
     /// When a capability.call targets a signal tier (tower/node/nest/meta),
@@ -92,7 +93,7 @@ impl CapabilityHandler {
         Self {
             router,
             translation_registry,
-            gate_registry: Arc::new(GateRegistry::new()),
+            gate_registry: Arc::new(TokioRwLock::new(GateRegistry::new())),
             graphs_dir: None,
             family_id: String::new(),
             graph_handler: None,
@@ -100,7 +101,7 @@ impl CapabilityHandler {
     }
 
     /// Create a capability handler with a gate registry for cross-gate routing.
-    pub fn with_gate_registry(mut self, registry: Arc<GateRegistry>) -> Self {
+    pub fn with_gate_registry(mut self, registry: Arc<TokioRwLock<GateRegistry>>) -> Self {
         self.gate_registry = registry;
         self
     }
@@ -405,6 +406,14 @@ impl CapabilityHandler {
         let endpoint = biomeos_core::TransportEndpoint::parse(transport_str)
             .with_context(|| format!("Failed to parse transport endpoint: {transport_str}"))?;
 
+        if let Some(gate_name) = gate {
+            let mut reg = self.gate_registry.write().await;
+            if reg.resolve(gate_name).is_none() {
+                info!("🌉 gate.register (via route.register): {gate_name} → {transport_str}");
+                reg.register(gate_name, endpoint.clone());
+            }
+        }
+
         let source_tag = match gate {
             Some(g) => format!("{source}@{g}"),
             None => source.to_owned(),
@@ -437,6 +446,68 @@ impl CapabilityHandler {
             "gate": gate,
             "endpoint": transport_str,
             "capabilities": registered
+        }))
+    }
+
+    /// Register a remote gate endpoint for cross-gate capability.call forwarding.
+    ///
+    /// JSON-RPC method: `gate.register`
+    ///
+    /// # Parameters
+    /// - `gate`: Gate label (e.g., "eastGate", "gate2")
+    /// - `endpoint`: Transport endpoint string (e.g., "tcp://192.168.4.100:9001")
+    pub async fn register_gate(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+
+        let gate_name = params["gate"]
+            .as_str()
+            .context("Missing 'gate' field")?;
+        let transport_str = params["endpoint"]
+            .as_str()
+            .context("Missing 'endpoint' field")?;
+
+        if gate_name == "local" {
+            anyhow::bail!("Cannot register 'local' as a remote gate");
+        }
+
+        let endpoint = biomeos_core::TransportEndpoint::parse(transport_str)
+            .with_context(|| format!("Failed to parse endpoint: {transport_str}"))?;
+
+        let mut reg = self.gate_registry.write().await;
+        let was_new = reg.resolve(gate_name).is_none();
+        reg.register(gate_name, endpoint);
+
+        info!(
+            "🌉 gate.register: {gate_name} → {transport_str} ({})",
+            if was_new { "new" } else { "updated" }
+        );
+
+        Ok(json!({
+            "gate": gate_name,
+            "endpoint": transport_str,
+            "status": if was_new { "registered" } else { "updated" },
+            "total_gates": reg.len()
+        }))
+    }
+
+    /// List all registered gates.
+    ///
+    /// JSON-RPC method: `gate.list`
+    pub async fn list_gates(&self) -> Result<Value> {
+        let reg = self.gate_registry.read().await;
+        let gates: Vec<Value> = reg
+            .iter()
+            .map(|(name, ep)| {
+                json!({
+                    "gate": name,
+                    "endpoint": ep.display_string()
+                })
+            })
+            .collect();
+
+        Ok(json!({
+            "gates": gates,
+            "total": gates.len()
         }))
     }
 

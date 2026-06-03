@@ -18,6 +18,19 @@ use tracing::{debug, error, info, warn};
 
 use crate::living_graph::{ConnectionState, LivingGraph, PrimalHealth, ProtocolMode};
 
+/// Error from escalation/fallback operations.
+#[derive(Debug, thiserror::Error)]
+pub enum EscalationError {
+    /// The named connection does not exist in the living graph.
+    #[error("connection not found: {from} → {to}")]
+    ConnectionNotFound {
+        /// Source primal name.
+        from: String,
+        /// Target primal name.
+        to: String,
+    },
+}
+
 use super::config::{EscalationConfig, EscalationResult};
 use super::metrics;
 use super::rpc;
@@ -189,7 +202,7 @@ impl ProtocolEscalationManager {
         &self,
         from: &str,
         to: &str,
-    ) -> Result<EscalationResult, String> {
+    ) -> Result<EscalationResult, EscalationError> {
         info!(
             "🚀 Attempting protocol escalation: {} → {} (JSON-RPC → tarpc)",
             from, to
@@ -199,7 +212,10 @@ impl ProtocolEscalationManager {
             .graph
             .get_connection(from, to)
             .await
-            .ok_or_else(|| format!("Connection not found: {from} → {to}"))?;
+            .ok_or_else(|| EscalationError::ConnectionNotFound {
+                from: from.to_owned(),
+                to: to.to_owned(),
+            })?;
 
         let previous_mode = conn.protocol;
 
@@ -274,7 +290,7 @@ impl ProtocolEscalationManager {
         from: &str,
         to: &str,
         reason: &str,
-    ) -> Result<EscalationResult, String> {
+    ) -> Result<EscalationResult, EscalationError> {
         warn!(
             "⚠️ Falling back to JSON-RPC: {} → {} (reason: {})",
             from, to, reason
@@ -284,7 +300,10 @@ impl ProtocolEscalationManager {
             .graph
             .get_connection(from, to)
             .await
-            .ok_or_else(|| format!("Connection not found: {from} → {to}"))?;
+            .ok_or_else(|| EscalationError::ConnectionNotFound {
+                from: from.to_owned(),
+                to: to.to_owned(),
+            })?;
 
         let previous_mode = conn.protocol;
 

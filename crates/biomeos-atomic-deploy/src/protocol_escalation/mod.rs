@@ -31,4 +31,4 @@ mod metrics;
 mod rpc;
 
 pub use config::{EscalationConfig, EscalationResult, TarpcEndpoint};
-pub use engine::ProtocolEscalationManager;
+pub use engine::{EscalationError, ProtocolEscalationManager};

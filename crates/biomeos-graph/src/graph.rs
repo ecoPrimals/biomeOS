@@ -266,8 +266,15 @@ impl GeneticsTier {
     }
 }
 
+/// Error parsing a [`GeneticsTier`] from string.
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("unknown genetics_tier: \"{value}\" (expected none|tag|mito_beacon|nuclear)")]
+pub struct ParseGeneticsTierError {
+    value: String,
+}
+
 impl std::str::FromStr for GeneticsTier {
-    type Err = String;
+    type Err = ParseGeneticsTierError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -275,7 +282,9 @@ impl std::str::FromStr for GeneticsTier {
             "tag" => Ok(Self::Tag),
             "mito_beacon" => Ok(Self::MitoBeacon),
             "nuclear" => Ok(Self::Nuclear),
-            _ => Err(format!("unknown genetics_tier: {s}")),
+            _ => Err(ParseGeneticsTierError {
+                value: s.to_owned(),
+            }),
         }
     }
 }

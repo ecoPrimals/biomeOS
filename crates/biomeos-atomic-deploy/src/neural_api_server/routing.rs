@@ -265,6 +265,11 @@ impl NeuralApiServer {
                 dispatch(self.protocol_handler.stop_monitoring().await, id)
             }
             Route::GraphProtocolMap => dispatch(self.protocol_handler.protocol_map().await, id),
+            // Gate registration
+            Route::GateRegister => {
+                dispatch(self.capability_handler.register_gate(params).await, id)
+            }
+            Route::GateList => dispatch(self.capability_handler.list_gates().await, id),
             // Route (batch capability registration)
             Route::BatchRouteRegister => {
                 dispatch(self.capability_handler.register_route(params).await, id)

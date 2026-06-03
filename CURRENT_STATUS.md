@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 2, 2026 (v3.97: Wave 72+ — map_err sweep 27/28, test extraction wave 2 (7 files), HTTP transport removed, env safety)
-**Version**: 3.97
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - A/B shadow analysis ACTIVE - PathwayLearner LIVE - Topology affinity scoring - Zero clippy warnings - env_config::vars SSOT 90+ constants - 12 files test-extracted - HTTP transport removed - Zero Blocking Debt
+**Updated**: June 3, 2026 (v3.98: Wave 73 — runtime gate.register, GateRegistry RwLock, GeneticsTier/EscalationError thiserror, mesh validation ready)
+**Version**: 3.98
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - A/B shadow analysis ACTIVE - Runtime gate registration LIVE - Topology affinity scoring - Zero clippy warnings - map_err debt: 2 remaining (legitimate) - Mesh validation READY for eastGate
 
 ---
 

@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v3.98 (2026-06-03) — Wave 73: Mesh Validation + String Error Evolution
+
+### Cross-gate mesh validation (P0)
+- `GateRegistry` evolved from `Arc<GateRegistry>` to `Arc<RwLock<GateRegistry>>` —
+  gates can now be registered at runtime without restarting Neural API
+- New `gate.register` JSON-RPC method: register remote gate endpoints dynamically
+- New `gate.list` JSON-RPC method: enumerate all registered gates
+- `route.register` now auto-populates `GateRegistry` when `gate` param is present —
+  single call wires both capability routing and gate-level forwarding
+
+### String error type evolution (P2)
+- `GeneticsTier::parse()`: `Result<_, String>` → `Result<_, ParseGeneticsTierError>` (thiserror)
+- `EscalationManager::{escalate,fallback}_connection`: `Result<_, String>` →
+  `Result<_, EscalationError>` (thiserror) with structured `ConnectionNotFound` variant
+- 2 more `map_err(|e| anyhow!(e))` sites eliminated in `protocol.rs` →
+  now uses `.context()` idiomatically. Total remaining map_err: 2 (both legitimate)
+
+### A/B shadow analysis (P1)
+- Shadow counter and milestone reporting confirmed operational (100/500/1000 dispatches)
+- `neural_api.weight_health` RPC exposes live shadow routing stats
+- No code changes needed — monitoring is live
+
 ## v3.97 (2026-06-02) — Wave 72+: Deep Debt Cleanup — map_err Sweep + Test Extraction Wave 2 + HTTP Removal
 
 ### map_err → .context() final sweep

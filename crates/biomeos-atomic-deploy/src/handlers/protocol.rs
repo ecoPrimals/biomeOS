@@ -16,7 +16,7 @@
 
 #![forbid(unsafe_code)]
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use serde_json::{Value, json};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -103,7 +103,7 @@ impl ProtocolHandler {
         let result = manager
             .escalate_connection(from, to)
             .await
-            .map_err(|e| anyhow!(e))?;
+            .context("escalation failed")?;
 
         Ok(json!({
             "status": if result.success { "escalated" } else { "failed" },
@@ -153,7 +153,7 @@ impl ProtocolHandler {
         let result = manager
             .fallback_connection(from, to, reason)
             .await
-            .map_err(|e| anyhow!(e))?;
+            .context("fallback failed")?;
 
         Ok(json!({
             "status": if result.success { "degraded" } else { "failed" },

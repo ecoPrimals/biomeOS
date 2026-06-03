@@ -215,7 +215,7 @@ impl Graph {
                     .as_str()
                     .context("graph.metadata.genetics_tier must be a string")?;
                 s.parse::<GeneticsTier>()
-                    .map_err(|e| anyhow::anyhow!("Invalid graph.metadata.genetics_tier: {e}"))
+                    .context("Invalid graph.metadata.genetics_tier")
             })
             .transpose()?;
 

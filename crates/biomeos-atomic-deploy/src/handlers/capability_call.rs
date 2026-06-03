@@ -134,7 +134,7 @@ impl CapabilityHandler {
         if let Some(gate_name) = params["gate"].as_str() {
             if gate_name == "local" {
                 trace!("capability.call: gate='local', routing locally");
-            } else if let Some(remote_endpoint) = self.gate_registry.resolve(gate_name) {
+            } else if let Some(remote_endpoint) = self.gate_registry.read().await.resolve(gate_name).cloned() {
                 let semantic_name = format!("{capability}.{operation}");
                 debug!(
                     "   Cross-gate routing: {semantic_name} → gate '{gate_name}' @ {}",
@@ -150,7 +150,7 @@ impl CapabilityHandler {
                 let result = self
                     .router
                     .forward_request_with_timeout(
-                        remote_endpoint,
+                        &remote_endpoint,
                         "capability.call",
                         &remote_call,
                         timeout_cap,
@@ -212,7 +212,7 @@ impl CapabilityHandler {
                     "Gate '{gate_name}' is not registered and relay fallback unavailable. \
                      Register it via graph env or route.register before targeting it. \
                      Known gates: {:?}",
-                    self.gate_registry.gate_names()
+                    self.gate_registry.read().await.gate_names()
                 );
             }
         }
