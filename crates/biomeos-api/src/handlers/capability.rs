@@ -72,7 +72,7 @@ pub async fn list_capabilities(
 
     if state.is_standalone_mode() {
         info!("   Using standalone capabilities (BIOMEOS_STANDALONE_MODE=true)");
-        let capabilities = get_standalone_capabilities(query.filter.as_ref());
+        let capabilities = get_standalone_capabilities(query.filter.as_deref());
         return Ok(Json(ListCapabilitiesResponse {
             count: capabilities.len(),
             capabilities,
@@ -84,7 +84,7 @@ pub async fn list_capabilities(
 
     match state.discovery().discover_all().await {
         Ok(discovered) => {
-            let capabilities = build_capability_list(&discovered, query.filter.as_ref());
+            let capabilities = build_capability_list(&discovered, query.filter.as_deref());
             Ok(Json(ListCapabilitiesResponse {
                 count: capabilities.len(),
                 capabilities,
@@ -92,7 +92,7 @@ pub async fn list_capabilities(
         }
         Err(e) => {
             tracing::warn!("   Discovery failed: {}, using standalone fallback", e);
-            let capabilities = get_standalone_capabilities(query.filter.as_ref());
+            let capabilities = get_standalone_capabilities(query.filter.as_deref());
             Ok(Json(ListCapabilitiesResponse {
                 count: capabilities.len(),
                 capabilities,
@@ -175,7 +175,7 @@ pub async fn discover_capability(
 /// Build capability list from discovered primals
 fn build_capability_list(
     discovered: &[biomeos_core::DiscoveredPrimal],
-    filter: Option<&String>,
+    filter: Option<&str>,
 ) -> Vec<CapabilityInfo> {
     use std::collections::HashMap;
 
@@ -233,7 +233,7 @@ fn build_capability_list(
 /// directory for active primal sockets and infers capabilities from the
 /// taxonomy. Falls back to an empty list when no primals are discovered
 /// — biomeOS only has self-knowledge, other primals are discovered at runtime.
-fn get_standalone_capabilities(filter: Option<&String>) -> Vec<CapabilityInfo> {
+fn get_standalone_capabilities(filter: Option<&str>) -> Vec<CapabilityInfo> {
     use biomeos_types::SystemPaths;
     use biomeos_types::capability_taxonomy::capabilities_for_primal;
 
@@ -453,8 +453,7 @@ mod tests {
         let capabilities = get_standalone_capabilities(None);
         // Result depends on whether primals are running; verify it doesn't panic
         // and the filter contract holds
-        let filter = Some("nonexistent_xyz".to_string());
-        let filtered = get_standalone_capabilities(filter.as_ref());
+        let filtered = get_standalone_capabilities(Some("nonexistent_xyz"));
         assert!(filtered.is_empty());
         assert!(filtered.len() <= capabilities.len());
     }
@@ -462,8 +461,7 @@ mod tests {
     #[test]
     fn test_get_standalone_capabilities_filter_contract() {
         let all = get_standalone_capabilities(None);
-        let filter = Some("crypto".to_string());
-        let filtered = get_standalone_capabilities(filter.as_ref());
+        let filtered = get_standalone_capabilities(Some("crypto"));
 
         assert!(filtered.len() <= all.len());
         assert!(filtered.iter().all(|c| c.name.contains("crypto")));
@@ -545,8 +543,7 @@ mod tests {
         }];
 
         let all = build_capability_list(&primals, None);
-        let filter = Some("crypto".to_string());
-        let filtered = build_capability_list(&primals, filter.as_ref());
+        let filtered = build_capability_list(&primals, Some("crypto"));
 
         assert!(filtered.len() <= all.len());
         assert!(filtered.iter().all(|c| c.name.contains("crypto")));

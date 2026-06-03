@@ -112,7 +112,7 @@ fn build_entry(c: &Candidate, liveness: &serde_json::Value) -> BuiltEntry {
         .cloned()
         .unwrap_or_else(|| "discovered".to_string());
     let primal_type = PrimalType::new("network", primal_type_name, "0.0.0");
-    let caps = parse_capabilities_txt(c.txt.get("capabilities"));
+    let caps = parse_capabilities_txt(c.txt.get("capabilities").map(String::as_str));
     let health = Health::Healthy;
     let endpoint = format!("tcp://{}:{}", c.host, c.port);
     BuiltEntry {
@@ -137,7 +137,7 @@ fn instance_display_name(fqdn: &str) -> Option<String> {
         .map(|s| s.trim_end_matches('.').to_string())
 }
 
-fn parse_capabilities_txt(raw: Option<&String>) -> Vec<PrimalCapability> {
+fn parse_capabilities_txt(raw: Option<&str>) -> Vec<PrimalCapability> {
     let Some(s) = raw else {
         return Vec::new();
     };

@@ -35,7 +35,7 @@
 //! use biomeos_types::defaults::{socket_path, RuntimeConfig};
 //!
 //! // Get socket path with automatic fallback
-//! let path = socket_path("neural-api")?;
+//! let path = socket_path("neural-api");
 //!
 //! // Or use RuntimeConfig for full configuration
 //! let config = RuntimeConfig::from_env();
@@ -123,20 +123,20 @@ pub mod env_vars {
     clippy::implicit_hasher,
     reason = "HashMap with default hasher is idiomatic for env maps"
 )]
-pub fn socket_path_with(service: &str, env: &HashMap<String, String>) -> Result<PathBuf, String> {
+pub fn socket_path_with(service: &str, env: &HashMap<String, String>) -> PathBuf {
     // 1. Check service-specific environment variable
     let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
     if let Some(path) = env.get(&env_var) {
-        return Ok(PathBuf::from(path));
+        return PathBuf::from(path);
     }
 
     // 2. Check socket directory + service name
     if let Some(socket_dir) = env.get(env_vars::SOCKET_DIR) {
-        return Ok(PathBuf::from(socket_dir).join(format!("{service}.sock")));
+        return PathBuf::from(socket_dir).join(format!("{service}.sock"));
     }
 
     // 3. Fallback to default
-    Ok(PathBuf::from(DEFAULT_SOCKET_DIR).join(format!("{service}.sock")))
+    PathBuf::from(DEFAULT_SOCKET_DIR).join(format!("{service}.sock"))
 }
 
 /// Get socket path for a service, respecting environment variables
@@ -148,7 +148,7 @@ pub fn socket_path_with(service: &str, env: &HashMap<String, String>) -> Result<
 ///
 /// Delegates to [`socket_path_with`] using the current process environment.
 /// For testing without mutating process env, use [`socket_path_with`].
-pub fn socket_path(service: &str) -> Result<PathBuf, String> {
+pub fn socket_path(service: &str) -> PathBuf {
     socket_path_with(service, &env::vars().collect())
 }
 

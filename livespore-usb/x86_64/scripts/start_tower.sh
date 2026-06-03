@@ -160,7 +160,7 @@ export BIOMEOS_SOVEREIGN=true
 export BIOMEOS_DARK_FOREST=true
 export BIOMEOS_NO_EXTERNAL_DEPS=true
 export SONGBIRD_ONION_ENABLED=true
-export SONGBIRD_MESH_ENABLED=true
+export SONGBIRD_FEDERATION_ENABLED=true
 
 "$PRIMAL_DIR/songbird" server \
     --port "$SONGBIRD_PORT" \

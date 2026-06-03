@@ -16,7 +16,7 @@ fn test_socket_path_with_env_var() {
     let mut env = HashMap::new();
     env.insert("TEST_SERVICE_SOCKET".to_string(), custom_path.to_string());
 
-    let path = socket_path_with("test-service", &env).unwrap();
+    let path = socket_path_with("test-service", &env);
     assert_eq!(path.to_str().unwrap(), custom_path);
 }
 
@@ -24,7 +24,7 @@ fn test_socket_path_with_env_var() {
 fn test_socket_path_fallback() {
     let env: HashMap<String, String> = HashMap::new();
 
-    let path = socket_path_with("unknown-service", &env).unwrap();
+    let path = socket_path_with("unknown-service", &env);
     assert!(path.to_str().unwrap().ends_with("unknown-service.sock"));
 }
 
@@ -35,7 +35,7 @@ fn test_socket_path_with_socket_dir() {
     let mut env = HashMap::new();
     env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/biomeos".to_string());
 
-    let path = socket_path_with(unique_svc, &env).unwrap();
+    let path = socket_path_with(unique_svc, &env);
     let path_str = path.to_str().unwrap();
     assert_eq!(path_str, format!("/run/biomeos/{unique_svc}.sock"));
 }
@@ -50,7 +50,7 @@ fn test_socket_path_env_var_takes_precedence() {
     );
     env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/biomeos".to_string());
 
-    let path = socket_path_with("precedence-test", &env).unwrap();
+    let path = socket_path_with("precedence-test", &env);
     assert_eq!(path.to_str().unwrap(), "/explicit/socket.sock");
 }
 
@@ -63,7 +63,7 @@ fn test_socket_path_normalizes_hyphens() {
         "/test/neural-api.sock".to_string(),
     );
 
-    let path = socket_path_with("neural-api", &env).unwrap();
+    let path = socket_path_with("neural-api", &env);
     assert_eq!(path.to_str().unwrap(), "/test/neural-api.sock");
 }
 
@@ -365,8 +365,7 @@ fn test_neural_api_socket_env_override() {
 #[test]
 fn test_socket_path_empty_service_name() {
     let path = socket_path("");
-    assert!(path.is_ok());
-    assert!(path.unwrap().to_string_lossy().ends_with(".sock"));
+    assert!(path.to_string_lossy().ends_with(".sock"));
 }
 
 #[test]

@@ -10,6 +10,22 @@ use biomeos_genomebin_v3::GenomeBin;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
+/// Errors that can occur during genome state operations.
+#[derive(Debug, thiserror::Error)]
+pub enum GenomeStateError {
+    /// Failed to create or read the genome storage directory.
+    #[error("genome storage I/O: {0}")]
+    StorageIo(#[from] std::io::Error),
+
+    /// Genome not found in cache or on disk.
+    #[error("genome not found: {0}")]
+    NotFound(String),
+
+    /// Failed to serialize/deserialize a genome binary.
+    #[error("genome codec: {0}")]
+    Codec(#[source] anyhow::Error),
+}
+
 /// Genome state for storing built genomes
 #[derive(Debug)]
 pub struct GenomeState {
@@ -36,15 +52,14 @@ impl GenomeState {
             .join("genomes")
     }
 
-    pub fn new() -> Result<Self, String> {
+    pub fn new() -> Result<Self, GenomeStateError> {
         let storage_dir = Self::default_storage_dir();
         Self::with_storage(storage_dir)
     }
 
-    pub fn with_storage(storage_dir: PathBuf) -> Result<Self, String> {
+    pub fn with_storage(storage_dir: PathBuf) -> Result<Self, GenomeStateError> {
         if !storage_dir.exists() {
-            std::fs::create_dir_all(&storage_dir)
-                .map_err(|e| format!("Failed to create genome storage: {e}"))?;
+            std::fs::create_dir_all(&storage_dir)?;
         }
         Ok(Self {
             genomes: RwLock::new(HashMap::new()),
@@ -58,21 +73,21 @@ impl GenomeState {
     }
 
     /// Save genome to persistent storage
-    pub async fn save_genome(&self, id: &str, genome: &GenomeBin) -> Result<(), String> {
+    pub async fn save_genome(&self, id: &str, genome: &GenomeBin) -> Result<(), GenomeStateError> {
         let path = self.genome_path(id);
         genome
             .save(&path)
-            .map_err(|e| format!("Failed to save genome: {e}"))?;
+            .map_err(|e| GenomeStateError::Codec(e.into()))?;
 
         let mut cache = self.genomes.write().await;
         cache.insert(id.to_string(), genome.clone());
 
-        info!("💾 Saved genome to: {}", path.display());
+        info!("Saved genome to: {}", path.display());
         Ok(())
     }
 
     /// Load genome from persistent storage
-    pub async fn load_genome(&self, id: &str) -> Result<GenomeBin, String> {
+    pub async fn load_genome(&self, id: &str) -> Result<GenomeBin, GenomeStateError> {
         {
             let cache = self.genomes.read().await;
             if let Some(genome) = cache.get(id) {
@@ -82,10 +97,11 @@ impl GenomeState {
 
         let path = self.genome_path(id);
         if !path.exists() {
-            return Err(format!("Genome not found: {id}"));
+            return Err(GenomeStateError::NotFound(id.to_string()));
         }
 
-        let genome = GenomeBin::load(&path).map_err(|e| format!("Failed to load genome: {e}"))?;
+        let genome =
+            GenomeBin::load(&path).map_err(|e| GenomeStateError::Codec(e.into()))?;
 
         {
             let mut cache = self.genomes.write().await;
@@ -96,15 +112,14 @@ impl GenomeState {
     }
 
     /// List all genomes in storage
-    pub fn list_all(&self) -> Result<Vec<(String, GenomeBin)>, String> {
+    pub fn list_all(&self) -> Result<Vec<(String, GenomeBin)>, GenomeStateError> {
         let mut genomes = Vec::new();
 
         if !self.storage_dir.exists() {
             return Ok(genomes);
         }
 
-        let entries = std::fs::read_dir(&self.storage_dir)
-            .map_err(|e| format!("Failed to read storage dir: {e}"))?;
+        let entries = std::fs::read_dir(&self.storage_dir)?;
 
         for entry in entries.flatten() {
             let path = entry.path();

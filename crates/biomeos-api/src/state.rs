@@ -295,7 +295,7 @@ impl AppStateBuilder {
             g
         } else {
             tracing::info!("🧬 Initializing default genome factory");
-            Arc::new(GenomeState::new().map_err(BuildError::ConfigError)?)
+            Arc::new(GenomeState::new().map_err(|e| BuildError::ConfigError(e.to_string()))?)
         };
 
         let config = self.config.unwrap_or_default();
@@ -332,7 +332,7 @@ impl AppStateBuilder {
             g
         } else {
             tracing::info!("🧬 Initializing default genome factory");
-            Arc::new(GenomeState::new().map_err(BuildError::ConfigError)?)
+            Arc::new(GenomeState::new().map_err(|e| BuildError::ConfigError(e.to_string()))?)
         };
 
         let config = self.config.unwrap_or_default();

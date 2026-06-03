@@ -2,6 +2,30 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.03 (2026-06-03) — Wave 75: Songbird Env Alignment + AtomicType Dedup + Typed Error Sweep
+
+### SONGBIRD_MESH_ENABLED → SONGBIRD_FEDERATION_ENABLED (P0)
+- Renamed across 7 graph TOMLs + 2 deploy graph copies + 2 shell scripts (11 total)
+- Aligns with Songbird Wave 74 canonical env var naming
+- Added `SONGBIRD_FEDERATION_ENABLED` SSOT constant to `env_config::vars`
+
+### AtomicType enum dedup (P1)
+- Consolidated duplicate `AtomicType` enums: `neural_router/types.rs` now type-aliases
+  `orchestrator::AtomicType` (single source of truth)
+
+### &String → &str parameter evolution (P2)
+- `effective_socket_dir()` in `continuous.rs`: `Option<&String>` → `Option<&str>`
+- `parse_capabilities_txt()` in `dns_sd.rs`: `Option<&String>` → `Option<&str>`
+- `build_capability_list()` and `get_standalone_capabilities()` in `handlers/capability.rs`
+- Callers updated to `.as_deref()` pattern
+
+### Result<_, String> sweep: genome state + socket_path (P1)
+- `GenomeState`: all 5 methods evolved from `Result<_, String>` to `Result<_, GenomeStateError>`
+  (thiserror enum: StorageIo, NotFound, Codec)
+- `socket_path()` / `socket_path_with()`: simplified from `Result<PathBuf, String>` to `PathBuf`
+  (these functions were infallible — never returned `Err`)
+- `call_primal()` in `continuous.rs`: `&PathBuf` → `&Path`
+
 ## v4.02 (2026-06-03) — Wave 74c: String Error Evolution + Visibility + Deep Idiom Sweep
 
 ### Result<_, String> → thiserror/anyhow evolution (P0)

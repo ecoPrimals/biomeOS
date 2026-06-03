@@ -531,7 +531,7 @@ async fn test_genome_state_load_nonexistent_genome() {
 
     let result = state.load_genome("does-not-exist").await;
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("not found"));
+    assert!(result.unwrap_err().to_string().contains("not found"));
 }
 
 // =========================================================================

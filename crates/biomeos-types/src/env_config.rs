@@ -113,6 +113,9 @@ pub mod vars {
     /// BTSP enforcement mode
     pub const BTSP_ENFORCE: &str = "BIOMEOS_BTSP_ENFORCE";
 
+    /// Songbird federation (mesh relay) enabled
+    pub const FEDERATION_ENABLED: &str = "SONGBIRD_FEDERATION_ENABLED";
+
     /// Songbird mesh port
     pub const MESH_PORT: &str = "SONGBIRD_MESH_PORT";
 

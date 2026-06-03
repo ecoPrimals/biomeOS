@@ -26,18 +26,8 @@ pub struct DiscoveredPrimal {
     pub last_check: chrono::DateTime<chrono::Utc>,
 }
 
-/// Atomic type composition
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AtomicType {
-    /// Tower Atomic: `BearDog` + Songbird (secure communications)
-    Tower,
-
-    /// Nest Atomic: Tower + `NestGate` (secure storage)
-    Nest,
-
-    /// Node Atomic: Tower + `ToadStool` (secure compute)
-    Node,
-}
+/// Atomic type composition — re-exported from `crate::orchestrator::AtomicType`.
+pub type AtomicType = crate::orchestrator::AtomicType;
 
 /// Result of capability discovery
 #[derive(Debug, Clone)]

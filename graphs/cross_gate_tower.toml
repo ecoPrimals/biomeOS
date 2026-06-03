@@ -82,7 +82,7 @@ NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
 BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
 CRYPTO_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
 SONGBIRD_SECURITY_PROVIDER = "beardog"
-SONGBIRD_MESH_ENABLED = "true"
+SONGBIRD_FEDERATION_ENABLED = "true"
 RUST_LOG = "songbird=info"
 
 [nodes.constraints]
@@ -136,7 +136,7 @@ family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 SONGBIRD_SECURITY_PROVIDER = "beardog"
-SONGBIRD_MESH_ENABLED = "true"
+SONGBIRD_FEDERATION_ENABLED = "true"
 BIOMEOS_BIND_ALL = "true"
 RUST_LOG = "songbird=info"
 

@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 3, 2026 (v4.02: Wave 74c — String error evolution, visibility tightening, deep idiomatic Rust sweep)
-**Version**: 4.02
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (neutral defaults) - A/B shadow analysis ACTIVE - Composition hot-reload LIVE - Runtime gate registration LIVE - Topology affinity scoring - Zero clippy warnings - Zero hardcoded primal names - Zero Result<_, String> in core APIs - Mesh validation READY for eastGate
+**Updated**: June 3, 2026 (v4.03: Wave 75 — Songbird env alignment, AtomicType dedup, typed error sweep, &String→&str)
+**Version**: 4.03
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (neutral defaults) - Songbird env vars ALIGNED - AtomicType UNIFIED - Zero hardcoded primal names - Zero Result<_, String> in core APIs - Mesh validation READY for eastGate
 
 ---
 
@@ -998,7 +998,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v4.02 — L4 weighted routing, L5 perceptron shadow, composition hot-reload, typed errors, SSOT hardened)
+**Status**: Production Ready (v4.03 — Songbird env aligned, AtomicType unified, typed error sweep, &String→&str)
 **Tests**: 7,983 passing, 0 failures, fully concurrent | **Coverage**: 90%+ (llvm-cov)
 **Clippy**: PASS (0 warnings, pedantic+nursery) | **Unsafe**: 0 | **C deps**: 0 | **TODO/FIXME**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP + tarpc escalation; HTTP transport removed v3.97; --tcp-only deprecated v3.94)

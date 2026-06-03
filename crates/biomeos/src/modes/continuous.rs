@@ -38,15 +38,15 @@ fn resolve_primal_socket_with(primal: &str, socket_dir: Option<String>) -> PathB
 }
 
 /// Effective socket directory: explicit override wins; otherwise `BIOMEOS_SOCKET_DIR`, then XDG.
-fn effective_socket_dir(socket_dir_override: Option<&String>) -> Option<String> {
+fn effective_socket_dir(socket_dir_override: Option<&str>) -> Option<String> {
     socket_dir_override
-        .cloned()
+        .map(String::from)
         .or_else(|| std::env::var(biomeos_types::env_config::vars::SOCKET_DIR).ok())
 }
 
 /// Send a JSON-RPC capability call to a primal over Unix socket.
 async fn call_primal(
-    socket_path: &PathBuf,
+    socket_path: &std::path::Path,
     method: &str,
     params: serde_json::Value,
 ) -> Result<serde_json::Value> {
@@ -110,7 +110,7 @@ async fn execute_node_with_socket_dir(
     let capability = node.capability.as_deref().unwrap_or("health.check");
 
     let socket =
-        resolve_primal_socket_with(primal, effective_socket_dir(socket_dir_override.as_ref()));
+        resolve_primal_socket_with(primal, effective_socket_dir(socket_dir_override.as_deref()));
     let params = build_call_params(&node, feedback);
 
     match call_primal(&socket, capability, params).await {
@@ -231,7 +231,7 @@ pub(crate) async fn run_controlled_with_socket_dir(
         if let Some(primal) = node.config.primal.as_deref() {
             let socket = resolve_primal_socket_with(
                 primal,
-                effective_socket_dir(socket_dir_override.as_ref()),
+                effective_socket_dir(socket_dir_override.as_deref()),
             );
             if !socket.exists() {
                 missing.push((primal.to_string(), socket));

@@ -105,7 +105,7 @@ family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 SONGBIRD_SECURITY_PROVIDER = "beardog"
-SONGBIRD_MESH_ENABLED = "true"
+SONGBIRD_FEDERATION_ENABLED = "true"
 BIOMEOS_BIND_ALL = "true"
 RUST_LOG = "songbird=info"
 
