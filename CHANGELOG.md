@@ -2,6 +2,25 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.07 (2026-06-04) — Wave 77: Perceptron Training Data Pipeline
+
+### Training data emission
+- New `DispatchTrainingRow` captures full per-dispatch context: capability,
+  candidates, 36-dim feature vectors, chosen index, L4 score, and post-
+  dispatch outcome (success, latency).
+- `select_primary()` stashes pending dispatch features; `record_dispatch_outcome()`
+  completes rows with outcome data. Ring buffer (10k rows) prevents unbounded
+  growth.
+- New `neural_api.training_data` RPC drains buffered rows for barraCuda
+  `ml.mlp_train` consumption. Returns `{ rows, count, feature_dim }`.
+- `neural_api.weight_health` now reports `training_data_buffered` count.
+
+### Architecture
+- `PendingDispatch` in-flight map links feature vectors from selection time
+  to outcome data from dispatch completion. Auto-evicts stale entries (>30s).
+- `NeuralRouter::drain_training_data()` / `training_data_count()` public API.
+- Stability tiers: `neural_api.training_data` added as `internal`.
+
 ## v4.06 (2026-06-04) — Wave 76: L5 Perceptron Shadow Mode Activated
 
 ### L5 remote inference wired

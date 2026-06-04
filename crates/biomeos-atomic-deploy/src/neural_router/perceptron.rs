@@ -350,6 +350,42 @@ impl PerceptronDispatcher {
     }
 }
 
+/// A single training row for perceptron offline training.
+///
+/// Emitted after each multi-provider dispatch with outcome data. Consumed by
+/// barraCuda `ml.mlp_train` to produce `neural_routing_perceptron.bin`.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct DispatchTrainingRow {
+    /// Capability domain key (e.g. `"crypto"`, `"storage"`).
+    pub capability: String,
+    /// Primal names that were candidates for this dispatch.
+    pub candidates: Vec<String>,
+    /// 36-dim feature vectors per candidate (pre-dispatch EWMA stats).
+    pub features: Vec<Vec<f32>>,
+    /// Index into `candidates` that L4 selected.
+    pub chosen_idx: usize,
+    /// Whether the dispatch succeeded.
+    pub success: bool,
+    /// Wall-clock latency of the dispatch in milliseconds.
+    pub latency_ms: u64,
+    /// L4 score of the chosen provider at selection time.
+    pub l4_score: f64,
+    /// Unix timestamp (seconds) of the outcome.
+    pub timestamp: i64,
+}
+
+/// Pending dispatch context: features captured at selection time, waiting for
+/// outcome data from `record_dispatch_outcome`.
+#[derive(Debug, Clone)]
+pub(crate) struct PendingDispatch {
+    pub capability: String,
+    pub candidates: Vec<String>,
+    pub features: Vec<Vec<f32>>,
+    pub chosen_idx: usize,
+    pub l4_score: f64,
+    pub created_at: std::time::Instant,
+}
+
 /// Map a capability domain string to a one-hot index (0..31).
 ///
 /// Uses a stable hash of the domain prefix to assign slots. Collisions are

@@ -105,6 +105,22 @@ impl NeuralApiServer {
                 }),
                 None => json!(null),
             },
+            "training_data_buffered": self.router.training_data_count().await,
+        }))
+    }
+
+    /// Drain buffered training rows for barraCuda `ml.mlp_train` consumption.
+    ///
+    /// Returns all accumulated dispatch training rows and clears the buffer.
+    /// Each row contains the 36-dim feature vectors, chosen provider index,
+    /// and the post-dispatch outcome (success, latency).
+    pub(crate) async fn handle_training_data_drain(&self) -> anyhow::Result<serde_json::Value> {
+        let rows = self.router.drain_training_data().await;
+        let count = rows.len();
+        Ok(json!({
+            "rows": rows,
+            "count": count,
+            "feature_dim": crate::neural_router::perceptron::FEATURE_DIM,
         }))
     }
 }

@@ -94,16 +94,17 @@ impl NeuralRouter {
 
         // L5 perceptron shadow: run perceptron alongside L4, log disagreements.
         // Uses remote ml.mlp_infer via barraCuda when available, falls back to local.
+        let gate_load = self
+            .utilization_tracker
+            .read()
+            .await
+            .summary()
+            .tracked_methods as f32
+            / 100.0;
+        let features =
+            build_candidate_features(capability, &candidates, &weights, gate_load);
+
         if let Some(ref perceptron) = self.perceptron {
-            let gate_load = self
-                .utilization_tracker
-                .read()
-                .await
-                .summary()
-                .tracked_methods as f32
-                / 100.0;
-            let features =
-                build_candidate_features(capability, &candidates, &weights, gate_load);
             if perceptron.has_remote_infer() {
                 perceptron
                     .shadow_compare_remote(weighted_idx, &features, capability)
@@ -112,6 +113,31 @@ impl NeuralRouter {
                 perceptron.shadow_compare(weighted_idx, &features, capability);
             }
         }
+
+        // Stash pending dispatch for training data: features + chosen provider.
+        // Completed by record_dispatch_outcome() with success/latency.
+        let l4_score = weights
+            .select_best(capability, &candidates)
+            .and_then(|best| {
+                let key = (Arc::from(capability), best.clone());
+                weights.score_for(&key)
+            })
+            .unwrap_or(0.5);
+        drop(weights);
+        let chosen_provider = &providers[weighted_idx].primal_name;
+        self.stash_pending_dispatch(
+            capability,
+            chosen_provider,
+            super::perceptron::PendingDispatch {
+                capability: capability.to_owned(),
+                candidates: candidates.iter().map(|c| c.to_string()).collect(),
+                features: features.iter().map(|f| f.values.to_vec()).collect(),
+                chosen_idx: weighted_idx,
+                l4_score,
+                created_at: std::time::Instant::now(),
+            },
+        )
+        .await;
 
         weighted_idx
     }

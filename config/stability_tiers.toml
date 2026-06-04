@@ -154,4 +154,5 @@ methods = [
     "neural_api.signal_dispatch",
     "neural_api.signal_list",
     "neural_api.signal_schema",
+    "neural_api.training_data",
 ]

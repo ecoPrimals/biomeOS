@@ -308,6 +308,9 @@ impl NeuralApiServer {
             Route::CompositionPlanTier => dispatch(self.handle_plan_tier(params).await, id),
             Route::CapabilityUtilization => dispatch(Ok(self.router.utilization_json().await), id),
             Route::WeightHealth => dispatch(self.handle_weight_health().await, id),
+            Route::TrainingDataDrain => {
+                dispatch(self.handle_training_data_drain().await, id)
+            }
             Route::CapabilityCall => {
                 let enriched = self.enrich_for_forwarding(params, &caller).await;
                 dispatch_capability_call(self.capability_handler.call(&enriched).await, id)

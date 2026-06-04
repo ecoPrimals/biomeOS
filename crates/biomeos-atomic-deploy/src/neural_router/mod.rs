@@ -24,7 +24,7 @@ mod forwarding_tests;
 mod types;
 pub mod weights;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -42,7 +42,7 @@ pub use composition::{
 pub use types::{
     AtomicType, DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability, RoutingMetrics,
 };
-pub use perceptron::{PerceptronDispatcher, PerceptronPhase, PerceptronWeights};
+pub use perceptron::{DispatchTrainingRow, PerceptronDispatcher, PerceptronPhase, PerceptronWeights};
 pub use weights::{
     CapabilityUtilizationTracker, MethodUtilization, ProviderWeight, RoutingWeightTable,
     UtilizationSummary, WeightTableSummary,
@@ -104,6 +104,14 @@ pub struct NeuralRouter {
     /// L5 perceptron dispatcher — shadow mode alongside L4 rule-based routing.
     /// `None` until weights are loaded (mock or trained).
     pub(crate) perceptron: Option<PerceptronDispatcher>,
+
+    /// Pending multi-provider dispatches awaiting outcome data.
+    /// Key: `(capability, provider)` — cleared when `record_dispatch_outcome` fires.
+    pending_dispatches: RwLock<HashMap<(String, String), perceptron::PendingDispatch>>,
+
+    /// Ring buffer of completed training rows for barraCuda consumption.
+    /// Drained via `neural_api.training_data` RPC.
+    training_log: RwLock<VecDeque<DispatchTrainingRow>>,
 }
 
 impl NeuralRouter {
@@ -127,6 +135,8 @@ impl NeuralRouter {
             weighted_dispatch_counter: AtomicU64::new(0),
             weighted_disagreement_counter: AtomicU64::new(0),
             perceptron: None,
+            pending_dispatches: RwLock::new(HashMap::new()),
+            training_log: RwLock::new(VecDeque::new()),
         }
     }
 
@@ -157,6 +167,8 @@ impl NeuralRouter {
             weighted_dispatch_counter: AtomicU64::new(0),
             weighted_disagreement_counter: AtomicU64::new(0),
             perceptron: None,
+            pending_dispatches: RwLock::new(HashMap::new()),
+            training_log: RwLock::new(VecDeque::new()),
         }
     }
 
@@ -302,7 +314,8 @@ impl NeuralRouter {
     ///
     /// Called after every `capability.call` forward to build the adaptive
     /// routing surface. Weights accumulate EWMA latency and error rate,
-    /// driving future provider selection.
+    /// driving future provider selection. Also completes any pending
+    /// training row from `select_primary()`.
     pub async fn record_dispatch_outcome(
         &self,
         capability: &str,
@@ -312,6 +325,55 @@ impl NeuralRouter {
     ) {
         let mut weights = self.routing_weights.write().await;
         weights.record_outcome(capability, provider, success, latency_ms);
+        drop(weights);
+
+        let key = (capability.to_owned(), provider.to_owned());
+        let pending = self.pending_dispatches.write().await.remove(&key);
+        if let Some(pd) = pending {
+            let row = DispatchTrainingRow {
+                capability: pd.capability,
+                candidates: pd.candidates,
+                features: pd.features,
+                chosen_idx: pd.chosen_idx,
+                success,
+                latency_ms,
+                l4_score: pd.l4_score,
+                timestamp: chrono::Utc::now().timestamp(),
+            };
+            const MAX_TRAINING_ROWS: usize = 10_000;
+            let mut log = self.training_log.write().await;
+            if log.len() >= MAX_TRAINING_ROWS {
+                log.pop_front();
+            }
+            log.push_back(row);
+        }
+    }
+
+    /// Stash a pending dispatch context for training data emission.
+    ///
+    /// Called from `select_primary()` when multiple providers are available.
+    /// The pending context is completed by `record_dispatch_outcome()`.
+    pub(crate) async fn stash_pending_dispatch(
+        &self,
+        capability: &str,
+        provider: &str,
+        pending: perceptron::PendingDispatch,
+    ) {
+        let key = (capability.to_owned(), provider.to_owned());
+        let mut map = self.pending_dispatches.write().await;
+        // Evict stale entries (>30s) to prevent leaks from dropped dispatches
+        map.retain(|_, pd| pd.created_at.elapsed().as_secs() < 30);
+        map.insert(key, pending);
+    }
+
+    /// Drain all completed training rows for barraCuda consumption.
+    pub async fn drain_training_data(&self) -> Vec<DispatchTrainingRow> {
+        self.training_log.write().await.drain(..).collect()
+    }
+
+    /// Number of buffered training rows.
+    pub async fn training_data_count(&self) -> usize {
+        self.training_log.read().await.len()
     }
 
     /// Select the best provider for a capability using routing weights.
