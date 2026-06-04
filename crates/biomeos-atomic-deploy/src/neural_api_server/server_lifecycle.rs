@@ -79,8 +79,8 @@ impl NeuralApiServer {
     /// - TCP only (when `tcp_only` is true — mobile substrates)
     pub async fn serve(&self) -> Result<()> {
         // 0. Validate BTSP insecure guard (GAP-MATRIX-11)
-        if let Err(msg) = biomeos_core::btsp_client::validate_insecure_guard() {
-            anyhow::bail!(msg);
+        if let Err(e) = biomeos_core::btsp_client::validate_insecure_guard() {
+            anyhow::bail!(e);
         }
         biomeos_core::btsp_client::log_security_posture();
 

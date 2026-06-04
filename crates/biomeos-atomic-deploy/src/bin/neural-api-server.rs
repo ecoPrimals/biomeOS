@@ -56,8 +56,8 @@ async fn main() -> Result<()> {
         .position(|arg| arg == "--bind")
         .and_then(|i| std::env::args().nth(i + 1));
 
-    if let Err(msg) = biomeos_core::btsp_client::validate_insecure_guard() {
-        anyhow::bail!(msg);
+    if let Err(e) = biomeos_core::btsp_client::validate_insecure_guard() {
+        anyhow::bail!(e);
     }
 
     info!("╔══════════════════════════════════════════════════════════════════════════╗");

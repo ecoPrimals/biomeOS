@@ -29,6 +29,8 @@ use biomeos_core::atomic_client::AtomicClient;
 use biomeos_types::constants::ports;
 use tracing::debug;
 
+use crate::error::{SporeError, SporeResult};
+
 /// Trait for calling capabilities via neuralAPI.
 ///
 /// This abstracts the actual RPC mechanism, allowing:
@@ -52,7 +54,7 @@ pub trait CapabilityCaller: Send + Sync {
         &self,
         capability: &str,
         params: serde_json::Value,
-    ) -> impl std::future::Future<Output = Result<serde_json::Value, String>> + Send;
+    ) -> impl std::future::Future<Output = SporeResult<serde_json::Value>> + Send;
 }
 
 /// Default capability caller using `AtomicClient` to neuralAPI
@@ -88,7 +90,7 @@ impl CapabilityCaller for NeuralApiCapabilityCaller {
         &self,
         capability: &str,
         params: serde_json::Value,
-    ) -> Result<serde_json::Value, String> {
+    ) -> SporeResult<serde_json::Value> {
         // Create AtomicClient for neuralAPI socket (Universal IPC v3.0)
         let client = AtomicClient::unix(&self.neural_api_socket);
 
@@ -111,7 +113,7 @@ impl CapabilityCaller for NeuralApiCapabilityCaller {
         client
             .call("capability.call", call_params)
             .await
-            .map_err(|e| format!("Capability call failed: {e}"))
+            .map_err(|e| SporeError::CapabilityCall(format!("capability.call via Neural API: {e}")))
     }
 }
 
@@ -201,7 +203,7 @@ impl CapabilityCaller for DirectBeardogCaller {
         &self,
         capability: &str,
         params: serde_json::Value,
-    ) -> Result<serde_json::Value, String> {
+    ) -> SporeResult<serde_json::Value> {
         let method = Self::translate_capability(capability);
         debug!(
             "DirectBeardogCaller: calling {} (mapped from {})",
@@ -215,7 +217,7 @@ impl CapabilityCaller for DirectBeardogCaller {
         client
             .call(method, params)
             .await
-            .map_err(|e| format!("Direct BearDog call failed: {e}"))
+            .map_err(|e| SporeError::CapabilityCall(format!("direct BearDog: {e}")))
     }
 }
 

@@ -15,7 +15,8 @@ mod derivation_tests {
     use crate::beacon_genetics::capability::CapabilityCaller;
 
     struct MockCaller {
-        responses: Arc<Mutex<HashMap<String, Result<serde_json::Value, String>>>>,
+        /// `Some(val)` → Ok response, `None` → simulated error.
+        responses: Arc<Mutex<HashMap<String, Option<serde_json::Value>>>>,
     }
 
     impl MockCaller {
@@ -26,14 +27,17 @@ mod derivation_tests {
         }
 
         async fn set_ok(&self, cap: &str, val: serde_json::Value) {
-            self.responses.lock().await.insert(cap.to_string(), Ok(val));
-        }
-
-        async fn set_err(&self, cap: &str, msg: &str) {
             self.responses
                 .lock()
                 .await
-                .insert(cap.to_string(), Err(msg.to_string()));
+                .insert(cap.to_string(), Some(val));
+        }
+
+        async fn set_err(&self, cap: &str, _msg: &str) {
+            self.responses
+                .lock()
+                .await
+                .insert(cap.to_string(), None);
         }
     }
 
@@ -42,12 +46,17 @@ mod derivation_tests {
             &self,
             capability: &str,
             _params: serde_json::Value,
-        ) -> Result<serde_json::Value, String> {
+        ) -> crate::error::SporeResult<serde_json::Value> {
             let responses = self.responses.lock().await;
-            responses
-                .get(capability)
-                .cloned()
-                .unwrap_or_else(|| Err(format!("No mock for {capability}")))
+            match responses.get(capability) {
+                Some(Some(val)) => Ok(val.clone()),
+                Some(None) => Err(crate::error::SporeError::CapabilityCall(format!(
+                    "mock error for {capability}"
+                ))),
+                None => Err(crate::error::SporeError::CapabilityCall(format!(
+                    "no mock for {capability}"
+                ))),
+            }
         }
     }
 

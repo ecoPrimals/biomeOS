@@ -13,6 +13,7 @@
 //! - Uses `NeuralApiClient` for all security provider calls
 //! - Removed raw `std::os::unix::net::UnixStream` — pure async throughout
 
+use anyhow::Context;
 use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -74,11 +75,11 @@ fn discover_neural_api_socket() -> Option<String> {
 async fn call_security_provider(
     method: &str,
     params: serde_json::Value,
-) -> Result<serde_json::Value, String> {
+) -> anyhow::Result<serde_json::Value> {
     // Try Neural API first (preferred — capability-routed)
     if let Some(socket) = discover_neural_api_socket() {
         let client = neural_api_client::NeuralApiClient::new(&socket)
-            .map_err(|e| format!("Failed to create Neural API client: {e}"))?;
+            .context("create Neural API client")?;
 
         match client
             .route_to_primal("trust", method, params.clone())
@@ -123,7 +124,7 @@ async fn call_security_provider(
     client
         .call(method, params)
         .await
-        .map_err(|e| format!("Security provider call failed: {e}"))
+        .context("security provider call")
 }
 
 /// POST /api/v1/trust/evaluate

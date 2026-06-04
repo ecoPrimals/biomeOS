@@ -2,6 +2,40 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.04 (2026-06-03) — Wave 75b: Consolidation Sprint — String Error Sweep + Perceptron Infer Wire
+
+### Result<_, String> sweep — final production sites (P1)
+- `CapabilityCaller` trait: `Result<_, String>` → `SporeResult<_>` with new
+  `SporeError::CapabilityCall` variant. Trait, 2 impls, 3 test mocks updated.
+- `call_security_provider()` in trust handler: `Result<_, String>` → `anyhow::Result<_>`
+  with `.context()` replacing `map_err(format!())`.
+- `validate_insecure_guard()`: `Result<(), String>` → `Result<(), BtspHandshakeError>`
+  with new `InsecureGuard` variant. All 4 startup callers updated.
+- `validate_references()` in chimera fusion: `Result<(), String>` → `ChimeraResult<()>`
+  with `ChimeraError::fusion()`.
+- `query_registry()`: `Result<_, String>` → `Result<_, RegistryQueryError>` with 9-variant
+  thiserror enum (ConnectTimeout, Connect, Write, ResponseTimeout, Read, Serialize,
+  Parse, Registry, NoResult).
+
+### map_err(format!) elimination (P1)
+- All 11 production `map_err(|e| format!(...))` sites replaced with structured error types.
+- Zero `Result<_, String>` signatures remain in production code.
+- Zero `map_err(|e| format!(...))` patterns remain in production code.
+
+### L5 perceptron remote inference wiring (P2)
+- `PerceptronDispatcher::with_remote_infer()` enables `ml.mlp_infer` capability call
+  via Neural API socket alongside local scoring.
+- `shadow_compare_remote()` sends feature matrix to barraCuda, compares remote vs
+  local vs L4 rule-based choices. Falls back to local on failure.
+- Wire format: `{"features": [[f32; 36], ...], "model": "routing_perceptron"}`
+- 4 new tests: remote-default, with-remote, fallback-without-socket, fallback-unreachable.
+- Not active by default — toggled via `with_remote_infer()` when endpoint is known.
+
+### Cross-gate composition testing (P2)
+- All composition, federation, and routing tests pass with SONGBIRD_FEDERATION_ENABLED
+  env alignment from v4.03.
+- Zero test failures across full workspace.
+
 ## v4.03 (2026-06-03) — Wave 75: Songbird Env Alignment + AtomicType Dedup + Typed Error Sweep
 
 ### SONGBIRD_MESH_ENABLED → SONGBIRD_FEDERATION_ENABLED (P0)

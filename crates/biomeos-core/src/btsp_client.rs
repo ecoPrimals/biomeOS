@@ -392,6 +392,9 @@ pub enum BtspHandshakeError {
     /// I/O error on the connection.
     #[error("BTSP I/O error: {0}")]
     Io(std::io::Error),
+    /// FAMILY_ID and BIOMEOS_INSECURE=1 set simultaneously.
+    #[error("FAMILY_ID and BIOMEOS_INSECURE=1 cannot coexist — production mode requires BTSP authentication")]
+    InsecureGuard,
 }
 
 // ── Security provider RPC delegation helpers ──────────────────────────
@@ -499,17 +502,14 @@ async fn verify_session_via_security_provider(
 /// # Errors
 ///
 /// Returns a human-readable error message when both are set.
-pub fn validate_insecure_guard() -> Result<(), String> {
+pub fn validate_insecure_guard() -> Result<(), BtspHandshakeError> {
     let has_family = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
         .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
         .is_ok_and(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID);
     let insecure = std::env::var(biomeos_types::env_config::vars::INSECURE).is_ok_and(|v| v == "1" || v == "true");
 
     if has_family && insecure {
-        return Err("FATAL: FAMILY_ID and BIOMEOS_INSECURE=1 cannot coexist. \
-             Production mode (FAMILY_ID set) requires BTSP authentication. \
-             Remove BIOMEOS_INSECURE to run in production, or unset FAMILY_ID for development."
-            .to_owned());
+        return Err(BtspHandshakeError::InsecureGuard);
     }
     Ok(())
 }

@@ -147,3 +147,33 @@ fn build_candidate_features_produces_correct_count() {
     assert_eq!(features.len(), 2);
     assert!((features[0].values[35] - 0.5).abs() < f32::EPSILON);
 }
+
+#[test]
+fn remote_infer_default_is_none() {
+    let d = PerceptronDispatcher::shadow_default();
+    assert!(!d.has_remote_infer());
+}
+
+#[test]
+fn with_remote_infer_enables_remote() {
+    let d = PerceptronDispatcher::shadow_default()
+        .with_remote_infer("/tmp/neural-api.sock".to_string());
+    assert!(d.has_remote_infer());
+}
+
+#[tokio::test]
+async fn shadow_compare_remote_falls_back_without_socket() {
+    let d = PerceptronDispatcher::shadow_default();
+    let f = DispatchFeatures::build(0, None, 0.0);
+    let idx = d.shadow_compare_remote(0, &[f.clone(), f], "test.cap").await;
+    assert_eq!(idx, 0, "without remote socket, falls back to local");
+}
+
+#[tokio::test]
+async fn shadow_compare_remote_falls_back_on_unreachable_socket() {
+    let d = PerceptronDispatcher::shadow_default()
+        .with_remote_infer("/tmp/definitely-nonexistent-biomeos-test.sock".to_string());
+    let f = DispatchFeatures::build(0, None, 0.0);
+    let idx = d.shadow_compare_remote(0, &[f.clone(), f], "test.cap").await;
+    assert_eq!(idx, 0, "unreachable socket gracefully falls back to local");
+}

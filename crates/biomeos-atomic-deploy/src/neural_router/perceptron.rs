@@ -16,6 +16,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::weights::{ProviderWeight, RoutingWeightTable};
+use biomeos_core::atomic_client::AtomicClient;
 
 /// Number of input features: 32 one-hot domain slots + 4 numeric per-provider features.
 pub const FEATURE_DIM: usize = 36;
@@ -142,6 +143,10 @@ impl PerceptronWeights {
 pub struct PerceptronDispatcher {
     weights: PerceptronWeights,
     phase: PerceptronPhase,
+    /// Optional Neural API socket for remote `ml.mlp_infer` calls.
+    /// When `Some`, `shadow_compare_remote()` sends features to barraCuda
+    /// for inference alongside local scoring.
+    remote_infer_socket: Option<String>,
     /// Total perceptron shadow dispatches.
     pub dispatch_counter: AtomicU64,
     /// Dispatches where perceptron disagreed with L4 rule-based selection.
@@ -155,6 +160,7 @@ impl PerceptronDispatcher {
         Self {
             weights,
             phase,
+            remote_infer_socket: None,
             dispatch_counter: AtomicU64::new(0),
             disagreement_counter: AtomicU64::new(0),
         }
@@ -164,6 +170,22 @@ impl PerceptronDispatcher {
     #[must_use]
     pub fn shadow_default() -> Self {
         Self::new(PerceptronWeights::neutral_default(), PerceptronPhase::Shadow)
+    }
+
+    /// Enable remote inference via barraCuda `ml.mlp_infer` capability call.
+    ///
+    /// When set, `shadow_compare_remote()` will send feature vectors to the ML
+    /// pipeline for server-side inference, comparing results with local scoring.
+    #[must_use]
+    pub fn with_remote_infer(mut self, neural_api_socket: String) -> Self {
+        self.remote_infer_socket = Some(neural_api_socket);
+        self
+    }
+
+    /// Whether remote inference is wired.
+    #[must_use]
+    pub fn has_remote_infer(&self) -> bool {
+        self.remote_infer_socket.is_some()
     }
 
     /// Current operating phase.
@@ -239,6 +261,83 @@ impl PerceptronDispatcher {
         }
 
         nn_idx
+    }
+
+    /// Run shadow comparison with remote `ml.mlp_infer` alongside local scoring.
+    ///
+    /// Sends the feature matrix to barraCuda via `capability.call("ml.mlp_infer")`
+    /// and compares the remote recommendation with both L4 rule-based and local
+    /// perceptron choices. Falls back to local-only if the remote call fails.
+    ///
+    /// Wire format sent to `ml.mlp_infer`:
+    /// ```json
+    /// { "features": [[f32; 36], ...], "model": "routing_perceptron" }
+    /// ```
+    ///
+    /// Expected response:
+    /// ```json
+    /// { "scores": [f32, ...], "model_version": "..." }
+    /// ```
+    pub async fn shadow_compare_remote(
+        &self,
+        rule_idx: usize,
+        features_per_candidate: &[DispatchFeatures],
+        capability: &str,
+    ) -> usize {
+        let local_idx = self.shadow_compare(rule_idx, features_per_candidate, capability);
+
+        let Some(ref socket) = self.remote_infer_socket else {
+            return local_idx;
+        };
+
+        let feature_matrix: Vec<Vec<f32>> = features_per_candidate
+            .iter()
+            .map(|f| f.values.to_vec())
+            .collect();
+
+        let params = serde_json::json!({
+            "capability": "ml",
+            "operation": "mlp_infer",
+            "args": {
+                "features": feature_matrix,
+                "model": "routing_perceptron",
+            }
+        });
+
+        let client = AtomicClient::unix(socket);
+        match client.call("capability.call", params).await {
+            Ok(result) => {
+                if let Some(scores) = result.get("scores").and_then(|s| s.as_array()) {
+                    let remote_idx = scores
+                        .iter()
+                        .enumerate()
+                        .max_by(|(_, a), (_, b)| {
+                            let sa = a.as_f64().unwrap_or(f64::NEG_INFINITY);
+                            let sb = b.as_f64().unwrap_or(f64::NEG_INFINITY);
+                            sa.partial_cmp(&sb).unwrap_or(std::cmp::Ordering::Equal)
+                        })
+                        .map(|(i, _)| i)
+                        .unwrap_or(0);
+
+                    if remote_idx != local_idx {
+                        let n = self.dispatch_counter.load(Ordering::Relaxed);
+                        if n <= 100 || n % 500 == 0 {
+                            tracing::info!(
+                                "L5 remote shadow [{n}]: {capability} local={local_idx} remote={remote_idx} (diverge)"
+                            );
+                        }
+                    }
+                    remote_idx
+                } else {
+                    tracing::debug!("ml.mlp_infer: no scores in response for {capability}");
+                    local_idx
+                }
+            }
+            Err(e) => {
+                tracing::debug!("ml.mlp_infer shadow call failed for {capability}: {e}");
+                local_idx
+            }
+        }
     }
 
     /// Shadow statistics: (total dispatches, disagreements).

@@ -94,6 +94,10 @@ pub enum SporeError {
     #[error("System error: {0}")]
     SystemError(String),
 
+    /// Capability call failed (beacon genetics RPC).
+    #[error("capability call failed: {0}")]
+    CapabilityCall(String),
+
     /// Wrapped I/O error (Dark Forest)
     #[error("I/O error: {0}")]
     IoError(std::io::Error),

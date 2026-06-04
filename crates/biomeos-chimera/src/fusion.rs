@@ -9,6 +9,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::{ChimeraError, ChimeraResult};
+
 /// Complete fusion configuration
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Fusion {
@@ -116,15 +118,17 @@ impl Fusion {
     /// # Errors
     ///
     /// Returns an error if any binding references a primal that is not in the `available_primals` list
-    pub fn validate_references(&self, available_primals: &[&str]) -> Result<(), String> {
+    pub fn validate_references(&self, available_primals: &[&str]) -> ChimeraResult<()> {
         for (name, binding) in &self.bindings {
             // Check provider
             if let Some(ref provider) = binding.provider {
                 let primal = provider.split('.').next().unwrap_or("");
                 let primal = primal.trim_end_matches("[]");
                 if !available_primals.contains(&primal) {
-                    return Err(format!(
-                        "Binding '{name}' references unknown primal '{primal}' in provider"
+                    return Err(ChimeraError::fusion(
+                        "unknown",
+                        name,
+                        format!("references unknown primal '{primal}' in provider"),
                     ));
                 }
             }
@@ -134,8 +138,10 @@ impl Fusion {
                 let primal = consumer.split('.').next().unwrap_or("");
                 let primal = primal.trim_end_matches("[]");
                 if !available_primals.contains(&primal) {
-                    return Err(format!(
-                        "Binding '{name}' references unknown primal '{primal}' in consumer"
+                    return Err(ChimeraError::fusion(
+                        "unknown",
+                        name,
+                        format!("references unknown primal '{primal}' in consumer"),
                     ));
                 }
             }

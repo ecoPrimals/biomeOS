@@ -15,6 +15,29 @@ use super::engine::SocketDiscovery;
 use super::result::{DiscoveredSocket, DiscoveryMethod};
 use super::transport::TransportEndpoint;
 
+/// Errors when querying the Neural API registry.
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum RegistryQueryError {
+    #[error("connection timeout")]
+    ConnectTimeout,
+    #[error("connect: {0}")]
+    Connect(#[source] std::io::Error),
+    #[error("write: {0}")]
+    Write(#[source] std::io::Error),
+    #[error("response timeout")]
+    ResponseTimeout,
+    #[error("read: {0}")]
+    Read(#[source] std::io::Error),
+    #[error("serialize request: {0}")]
+    Serialize(#[source] serde_json::Error),
+    #[error("parse response: {0}")]
+    Parse(#[source] serde_json::Error),
+    #[error("registry error: {0}")]
+    Registry(serde_json::Value),
+    #[error("no result in response")]
+    NoResult,
+}
+
 impl SocketDiscovery {
     pub(crate) async fn discover_via_registry_by_name(
         &self,
@@ -135,7 +158,7 @@ impl SocketDiscovery {
         method: &str,
         params: &serde_json::Value,
         neural_api_socket: &Path,
-    ) -> Result<serde_json::Value, String> {
+    ) -> Result<serde_json::Value, RegistryQueryError> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
         use tokio::time::{Duration, timeout};
@@ -145,38 +168,39 @@ impl SocketDiscovery {
             UnixStream::connect(neural_api_socket),
         )
         .await
-        .map_err(|_| "Connection timeout")?
-        .map_err(|e| format!("Connection failed: {e}"))?;
+        .map_err(|_| RegistryQueryError::ConnectTimeout)?
+        .map_err(RegistryQueryError::Connect)?;
 
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
         let request = biomeos_types::JsonRpcRequest::new(method, params.clone());
 
-        let request_str = serde_json::to_string(&request).map_err(|e| e.to_string())? + "\n";
+        let request_str =
+            serde_json::to_string(&request).map_err(RegistryQueryError::Serialize)? + "\n";
         writer
             .write_all(request_str.as_bytes())
             .await
-            .map_err(|e| e.to_string())?;
-        writer.flush().await.map_err(|e| e.to_string())?;
+            .map_err(RegistryQueryError::Write)?;
+        writer.flush().await.map_err(RegistryQueryError::Write)?;
 
         let mut response_line = String::new();
         timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
             .await
-            .map_err(|_| "Response timeout")?
-            .map_err(|e| format!("Read failed: {e}"))?;
+            .map_err(|_| RegistryQueryError::ResponseTimeout)?
+            .map_err(RegistryQueryError::Read)?;
 
         let response: serde_json::Value =
-            serde_json::from_str(response_line.trim()).map_err(|e| format!("Parse failed: {e}"))?;
+            serde_json::from_str(response_line.trim()).map_err(RegistryQueryError::Parse)?;
 
-        if let Some(error) = response.get("error") {
-            return Err(format!("Registry error: {error}"));
+        if let Some(error) = response.get("error").cloned() {
+            return Err(RegistryQueryError::Registry(error));
         }
 
         response
             .get("result")
             .cloned()
-            .ok_or_else(|| "No result in response".to_string())
+            .ok_or(RegistryQueryError::NoResult)
     }
 }
 
@@ -261,7 +285,7 @@ mod tests {
             .query_registry("x", &serde_json::json!({}), &sock)
             .await
             .unwrap_err();
-        assert!(err.contains("Registry error"), "got: {err}");
+        assert!(err.to_string().contains("registry error"), "got: {err}");
     }
 
     #[tokio::test]
@@ -273,7 +297,7 @@ mod tests {
             .query_registry("x", &serde_json::json!({}), &sock)
             .await
             .unwrap_err();
-        assert!(err.contains("Parse failed"), "got: {err}");
+        assert!(err.to_string().contains("parse response"), "got: {err}");
     }
 
     #[tokio::test]
@@ -285,7 +309,7 @@ mod tests {
             .query_registry("x", &serde_json::json!({}), &sock)
             .await
             .unwrap_err();
-        assert!(err.contains("No result"), "got: {err}");
+        assert!(err.to_string().contains("no result"), "got: {err}");
     }
 
     #[tokio::test]
@@ -297,8 +321,9 @@ mod tests {
             .query_registry("x", &serde_json::json!({}), &missing)
             .await
             .unwrap_err();
+        let msg = err.to_string();
         assert!(
-            err.contains("Connection") || err.contains("timeout"),
+            msg.contains("connect") || msg.contains("timeout"),
             "got: {err}"
         );
     }
