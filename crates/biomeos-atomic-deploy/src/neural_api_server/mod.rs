@@ -171,6 +171,7 @@ impl NeuralApiServer {
         let weights_path = biomeos_types::SystemPaths::new()
             .map(|p| p.data_dir().join("routing_weights.redb"))
             .ok();
+        let socket_path: PathBuf = socket_path.into();
         let perceptron = {
             let perceptron_path = biomeos_types::SystemPaths::new()
                 .map(|p| p.data_dir().join("neural_routing_perceptron.bin"))
@@ -178,21 +179,19 @@ impl NeuralApiServer {
             let weights = perceptron_path
                 .as_deref()
                 .and_then(crate::neural_router::PerceptronWeights::load_from_file);
+            let has_trained = perceptron_path
+                .as_deref()
+                .and_then(|p| p.exists().then_some(()))
+                .is_some();
+            let remote_socket = socket_path.to_string_lossy().to_string();
             let dispatcher = crate::neural_router::PerceptronDispatcher::new(
                 weights.unwrap_or_else(crate::neural_router::PerceptronWeights::neutral_default),
                 crate::neural_router::PerceptronPhase::Shadow,
-            );
+            )
+            .with_remote_infer(remote_socket);
             tracing::info!(
-                "perceptron: shadow mode active ({})",
-                if perceptron_path
-                    .as_deref()
-                    .and_then(|p| p.exists().then_some(()))
-                    .is_some()
-                {
-                    "trained weights"
-                } else {
-                    "neutral defaults"
-                }
+                "perceptron: shadow mode active ({}, remote infer wired)",
+                if has_trained { "trained weights" } else { "neutral defaults" }
             );
             dispatcher
         };
@@ -258,7 +257,7 @@ impl NeuralApiServer {
         Self {
             graphs_dir,
             family_id: family_id_str,
-            socket_path: socket_path.into(),
+            socket_path,
             tcp_port: None,
             tcp_only: false,
             bind_address: None,

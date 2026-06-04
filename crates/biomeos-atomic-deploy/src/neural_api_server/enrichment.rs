@@ -98,6 +98,7 @@ impl NeuralApiServer {
                     "phase": format!("{:?}", self.router.perceptron_phase().unwrap_or(
                         crate::neural_router::PerceptronPhase::Shadow
                     )),
+                    "remote_infer": self.router.perceptron_has_remote_infer(),
                     "total_dispatches": total,
                     "disagreements": disagree,
                     "divergence_pct": if total > 0 { (disagree as f64 / total as f64) * 100.0 } else { 0.0 },

@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 3, 2026 (v4.05: Wave 75c — Deep debt evolution: test extraction wave 5, hardcode elimination, idiomatic Rust sweep)
-**Version**: 4.05
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (neutral defaults, remote infer WIRED) - Zero Result<_, String> in production - Zero map_err(format!) in production - Zero unsafe / mocks / #[allow] in production - Mesh validation READY for eastGate
+**Updated**: June 4, 2026 (v4.06: Wave 76 — L5 perceptron shadow mode ACTIVATED: remote ml.mlp_infer wired to barraCuda via capability discovery)
+**Version**: 4.06
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (remote infer LIVE via barraCuda) - Zero Result<_, String> in production - Zero map_err(format!) in production - Zero unsafe / mocks / #[allow] in production - Mesh validation READY for eastGate
 
 ---
 

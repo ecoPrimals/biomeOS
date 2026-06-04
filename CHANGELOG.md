@@ -2,6 +2,32 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.06 (2026-06-04) — Wave 76: L5 Perceptron Shadow Mode Activated
+
+### L5 remote inference wired
+- `PerceptronDispatcher` now initializes with `with_remote_infer()` at
+  `NeuralApiServer::new()` — wired to the Neural API's own socket so
+  `shadow_compare_remote()` routes `ml.mlp_infer` to barraCuda via the
+  standard capability discovery chain.
+- `select_primary()` in `discovery_registry.rs` now calls
+  `shadow_compare_remote()` (async, remote barraCuda) instead of
+  `shadow_compare()` (sync, local-only) when remote infer is available.
+  Falls back to local scoring if barraCuda is unreachable.
+- `neural_api.weight_health` now reports `remote_infer: true` in the
+  perceptron section, confirming the remote inference path is active.
+- `NeuralRouter::perceptron_has_remote_infer()` added for introspection.
+
+### A/B shadow milestone
+- Counter infrastructure verified: milestones fire at 100, 500, 1000
+  multi-provider dispatches with disagreement rate analysis.
+- Counter resets on restart — accumulates during runtime sessions.
+
+### Cross-gate composition
+- All 1,339 biomeos-atomic-deploy tests pass (gate.register, route_table,
+  composition, discovery, forwarding).
+- Gate registry, route table, and composition patterns verified compatible
+  with Songbird w76 and bearDog w137 interfaces.
+
 ## v4.05 (2026-06-03) — Wave 75c: Deep Debt Evolution Sprint
 
 ### Test extraction wave 5

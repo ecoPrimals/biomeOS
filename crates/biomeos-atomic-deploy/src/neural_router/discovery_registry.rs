@@ -93,6 +93,7 @@ impl NeuralRouter {
         }
 
         // L5 perceptron shadow: run perceptron alongside L4, log disagreements.
+        // Uses remote ml.mlp_infer via barraCuda when available, falls back to local.
         if let Some(ref perceptron) = self.perceptron {
             let gate_load = self
                 .utilization_tracker
@@ -103,7 +104,13 @@ impl NeuralRouter {
                 / 100.0;
             let features =
                 build_candidate_features(capability, &candidates, &weights, gate_load);
-            perceptron.shadow_compare(weighted_idx, &features, capability);
+            if perceptron.has_remote_infer() {
+                perceptron
+                    .shadow_compare_remote(weighted_idx, &features, capability)
+                    .await;
+            } else {
+                perceptron.shadow_compare(weighted_idx, &features, capability);
+            }
         }
 
         weighted_idx

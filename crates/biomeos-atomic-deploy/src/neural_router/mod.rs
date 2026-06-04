@@ -363,6 +363,13 @@ impl NeuralRouter {
         self.perceptron.as_ref().map(|p| p.phase())
     }
 
+    /// Whether the perceptron has remote inference wired.
+    pub fn perceptron_has_remote_infer(&self) -> bool {
+        self.perceptron
+            .as_ref()
+            .is_some_and(|p| p.has_remote_infer())
+    }
+
     /// Set a provider affinity hint (from primal.announce cost_hints).
     pub async fn set_provider_affinity(&self, capability: &str, provider: &str, affinity: f64) {
         let mut weights = self.routing_weights.write().await;
