@@ -54,7 +54,7 @@ impl GenomeFactory {
         let binary_data = std::fs::read(&self_binary).context("Failed to read self binary")?;
 
         // Build manifest
-        let manifest = GenomeManifest::new("biomeos")
+        let manifest = GenomeManifest::new(biomeos_types::primal_names::BIOMEOS)
             .version(env!("CARGO_PKG_VERSION"))
             .description("biomeOS System Orchestrator - Self-Replicated")
             .nucleus_atomic("ORCHESTRATOR")

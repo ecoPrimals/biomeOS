@@ -105,7 +105,7 @@ impl ParamValue {
 
     /// Get as array if this is an array.
     #[must_use]
-    pub const fn as_array(&self) -> Option<&Vec<Self>> {
+    pub fn as_array(&self) -> Option<&[Self]> {
         match self {
             Self::Array(a) => Some(a),
             _ => None,

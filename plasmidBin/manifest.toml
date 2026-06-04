@@ -40,11 +40,13 @@ version = "1.0.0"
 description = "Standardized deployment script"
 templated = true
 
+# NOTE: tower.toml template was superseded by graph-driven deploy (v3.90+).
+# Kept for manifest schema completeness; source file no longer exists.
 [system.tower_config]
 source = "templates/tower.toml"
 target = "tower.toml"
 templated = true
-description = "Tower configuration (templated per-node)"
+description = "Tower configuration (templated per-node) — SUPERSEDED by graph deploy"
 
 # ============================================================================
 # Graphs (Validated & Updateable)

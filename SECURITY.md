@@ -7,9 +7,9 @@
 
 | Version | Supported |
 |---------|-----------|
-| v3.x    | Yes       |
-| v2.x    | Security fixes only |
-| < v2.0  | No        |
+| v4.x    | Yes       |
+| v3.x    | Security fixes only |
+| < v3.0  | No        |
 
 ## Reporting a Vulnerability
 

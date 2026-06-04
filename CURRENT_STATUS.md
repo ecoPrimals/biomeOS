@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 3, 2026 (v4.04: Wave 75b — Consolidation sprint: String error sweep complete, perceptron remote infer wired)
-**Version**: 4.04
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (neutral defaults, remote infer WIRED) - Zero Result<_, String> in production - Zero map_err(format!) in production - Mesh validation READY for eastGate
+**Updated**: June 3, 2026 (v4.05: Wave 75c — Deep debt evolution: test extraction wave 5, hardcode elimination, idiomatic Rust sweep)
+**Version**: 4.05
+**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (neutral defaults, remote infer WIRED) - Zero Result<_, String> in production - Zero map_err(format!) in production - Zero unsafe / mocks / #[allow] in production - Mesh validation READY for eastGate
 
 ---
 

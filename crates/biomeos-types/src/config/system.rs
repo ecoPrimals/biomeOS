@@ -147,7 +147,7 @@ pub struct SystemLimits {
 impl Default for SystemConfig {
     fn default() -> Self {
         Self {
-            name: "biomeos".to_string(),
+            name: crate::primal_names::BIOMEOS.to_string(),
             environment: Environment::Development,
             organization_scale: OrganizationScale::Individual,
             timeouts: TimeoutConfig::default(),

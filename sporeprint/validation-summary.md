@@ -1,6 +1,6 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — L4 weighted routing, L5 perceptron shadow, composition hot-reload, typed errors, 15 test extractions, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
+description = "Orchestration kernel — L4 weighted routing, L5 perceptron shadow (remote infer wired), composition hot-reload, typed errors (zero Result<_,String>), 20 test extractions, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
 date = 2026-06-03
 
 [taxonomies]
@@ -11,6 +11,9 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **7,983+ tests** workspace-wide, 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v4.05** — Wave 75c: Deep debt evolution (5 test extractions ~1989L, hardcode→constants, &Vec→&[T], idiomatic Rust sweep)
+- **v4.04** — Wave 75b: Consolidation sprint (Result<_,String> sweep complete, map_err(format!) eliminated, L5 perceptron remote infer wired)
+- **v4.03** — Wave 75: SONGBIRD_FEDERATION_ENABLED alignment, AtomicType dedup, typed errors
 - **v4.02** — Wave 74c: String error evolution (thiserror/anyhow), API visibility tightening, SSOT hardening
 - **v4.01** — Wave 74b: Zero hardcoded primal names, mock→neutral_default, deprecated cleanup, test extraction wave 4
 - **v4.00** — Wave 74: composition.patterns.reload, perceptron wire contract verified

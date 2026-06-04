@@ -1,5 +1,10 @@
 # Bonding Model Test Graphs
 
+> **NOTE (June 2026)**: This document is an aspirational design spec. The 5 test
+> graphs described below were never created — the bonding model is validated
+> through unit/integration tests in `biomeos-types` and `biomeos-core` instead.
+> Kept as fossil record for the bonding model architecture.
+
 **Purpose**: Validate the NUCLEUS Bonding Model specification (`specs/NUCLEUS_BONDING_MODEL.md`)  
 **Created**: January 16, 2026  
 **Test Infrastructure**: 2 USB drives with different family_seeds

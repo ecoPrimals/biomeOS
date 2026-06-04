@@ -78,7 +78,7 @@ impl DispatchFeatures {
 /// Perceptron weight set: a flat array of `WEIGHT_VEC_LEN` (37) f32 values.
 ///
 /// Loaded from `neural_routing_perceptron.bin` (trained by barraCuda `ml.mlp_train`)
-/// or initialized with neutral mock weights for shadow-mode development.
+/// or initialized with neutral default weights for shadow-mode development.
 #[derive(Debug, Clone)]
 pub struct PerceptronWeights {
     /// 36 feature weights + 1 bias (index 36), little-endian f32.

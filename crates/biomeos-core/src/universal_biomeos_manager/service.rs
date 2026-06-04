@@ -105,9 +105,9 @@ impl UniversalBiomeOSManager {
                                     use biomeos_types::env_config::vars;
                                     let endpoint = std::env::var(vars::COMPUTE_ENDPOINT)
                                         .or_else(|_| std::env::var(vars::TOADSTOOL_ENDPOINT))
-                                        .map_err(|_| anyhow::anyhow!(
-                                            "BIOMEOS_COMPUTE_ENDPOINT not set and discovery failed. \
-                                             Set BIOMEOS_COMPUTE_ENDPOINT or ensure capability discovery is available."
+                                        .with_context(|| format!(
+                                            "neither {} nor {} is set and discovery failed",
+                                            vars::COMPUTE_ENDPOINT, vars::TOADSTOOL_ENDPOINT,
                                         ))?;
                                     format!("{endpoint}/{name}")
                                 }

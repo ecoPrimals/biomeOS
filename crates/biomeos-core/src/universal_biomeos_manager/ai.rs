@@ -197,7 +197,7 @@ impl UniversalBiomeOSManager {
     /// Populate the response map when no AI primal is available.
     fn fill_unavailable_response(result: &mut HashMap<String, serde_json::Value>, query: &str) {
         result.insert("status".to_string(), serde_json::json!("no_ai_primal"));
-        result.insert("source".to_string(), serde_json::json!("biomeos"));
+        result.insert("source".to_string(), serde_json::json!(biomeos_types::primal_names::BIOMEOS));
         result.insert(
             "response".to_string(),
             serde_json::json!(format!(

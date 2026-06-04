@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.05 (2026-06-03) — Wave 75c: Deep Debt Evolution Sprint
+
+### Test extraction wave 5
+- Extracted ~1,989 lines of inline tests from 5 production files to dedicated
+  `*_tests.rs` files via `#[path]`:
+  - `cap_probe.rs` (694→230L, 464L tests extracted)
+  - `registry_queries.rs` (533→209L, 328L tests extracted)
+  - `enroll.rs` (680→247L, 435L tests extracted)
+  - `trust.rs` (505→181L, 325L tests extracted)
+  - `haptic_feedback.rs` (583→149L, 437L tests extracted)
+
+### Hardcoded primal names → constants
+- Replaced 6 production `"biomeos"` string literals with
+  `primal_names::BIOMEOS` or `crate::primal_names::BIOMEOS`:
+  `ai.rs`, `system.rs`, `tracing.rs`, `config.rs`, `replicate.rs`, `build.rs`.
+
+### Idiomatic Rust evolution
+- `&Vec<Self>` → `&[Self]` in `param.rs::as_array()` (clippy::ptr_arg).
+- `map_err(|_| anyhow!(...))` → `.with_context(|| ...)` in `service.rs`.
+- `"mock weights"` → `"neutral default weights"` in perceptron doc comment.
+
+### Audit results (verified clean)
+- Zero `unsafe` code in production (all crates `#![forbid(unsafe_code)]`).
+- Zero mocks in production code (all in test modules).
+- Zero `#[allow(...)]` in production (all migrated to `#[expect(...)]`).
+- Zero `Result<_, String>` in production (v4.04 goal maintained).
+- Zero `&Box<T>` parameter types; one `&Vec<T>` fixed.
+
 ## v4.04 (2026-06-03) — Wave 75b: Consolidation Sprint — String Error Sweep + Perceptron Infer Wire
 
 ### Result<_, String> sweep — final production sites (P1)

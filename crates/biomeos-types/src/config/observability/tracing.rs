@@ -204,7 +204,7 @@ impl Default for SpanLimitsConfig {
 impl Default for TracingResourceConfig {
     fn default() -> Self {
         Self {
-            service_name: "biomeos".to_string(),
+            service_name: crate::primal_names::BIOMEOS.to_string(),
             service_version: None,
             service_namespace: None,
             attributes: HashMap::new(),

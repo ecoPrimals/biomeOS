@@ -165,7 +165,7 @@ pub async fn self_replicate() -> Result<Json<SelfReplicateResponse>, StatusCode>
     let arch = Arch::detect();
     let binary_data = std::fs::read(&self_binary).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let manifest = GenomeManifest::new("biomeos")
+    let manifest = GenomeManifest::new(biomeos_types::primal_names::BIOMEOS)
         .version(env!("CARGO_PKG_VERSION"))
         .description("biomeOS System Orchestrator - Self-Replicated")
         .nucleus_atomic("ORCHESTRATOR")

@@ -47,7 +47,7 @@ impl Default for RootFsConfig {
             fs_type: "ext4".to_string(),
             dns_servers: None,
             nbd_device: None,
-            hostname: "biomeos".to_string(),
+            hostname: biomeos_types::primal_names::BIOMEOS.to_string(),
         }
     }
 }
