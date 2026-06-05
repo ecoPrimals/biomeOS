@@ -137,7 +137,10 @@ impl CapabilityHandler {
         if let Some(gate_name) = params["gate"].as_str() {
             if gate_name == "local" {
                 trace!("capability.call: gate='local', routing locally");
-            } else if let Some(remote_endpoint) = self.gate_registry.read().await.resolve(gate_name).cloned() {
+            } else if let Some(remote_endpoint) = {
+                let registry = self.gate_registry.read().await;
+                registry.resolve(gate_name).cloned()
+            } {
                 let semantic_name = format!("{capability}.{operation}");
                 debug!(
                     "   Cross-gate routing: {semantic_name} → gate '{gate_name}' @ {}",

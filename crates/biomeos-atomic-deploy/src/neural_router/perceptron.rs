@@ -241,18 +241,18 @@ impl PerceptronDispatcher {
 
         if nn_idx != rule_idx {
             self.disagreement_counter.fetch_add(1, Ordering::Relaxed);
-            if n <= 1000 || n % 1000 == 0 {
+            if n <= 1000 || n.is_multiple_of(1000) {
                 tracing::info!(
                     "L5 perceptron shadow [{n}]: {capability} rule={rule_idx} nn={nn_idx} (disagree)"
                 );
             }
-        } else if n <= 100 || n % 500 == 0 {
+        } else if n <= 100 || n.is_multiple_of(500) {
             tracing::debug!(
                 "L5 perceptron shadow [{n}]: {capability} rule={nn_idx} (agree)"
             );
         }
 
-        if n == 100 || n == 500 || n == 1000 || (n > 1000 && n % 5000 == 0) {
+        if n == 100 || n == 500 || n == 1000 || (n > 1000 && n.is_multiple_of(5000)) {
             let disagreements = self.disagreement_counter.load(Ordering::Relaxed);
             let rate = (disagreements as f64 / n as f64) * 100.0;
             tracing::info!(
@@ -321,7 +321,7 @@ impl PerceptronDispatcher {
 
                     if remote_idx != local_idx {
                         let n = self.dispatch_counter.load(Ordering::Relaxed);
-                        if n <= 100 || n % 500 == 0 {
+                        if n <= 100 || n.is_multiple_of(500) {
                             tracing::info!(
                                 "L5 remote shadow [{n}]: {capability} local={local_idx} remote={remote_idx} (diverge)"
                             );

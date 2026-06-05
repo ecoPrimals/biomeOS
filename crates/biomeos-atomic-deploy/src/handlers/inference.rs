@@ -106,7 +106,7 @@ impl InferenceHandler {
         }));
 
         for name in &gate_names {
-            let endpoint = match reg.resolve(&name) {
+            let endpoint = match reg.resolve(name) {
                 Some(ep) => ep.display_string(),
                 None => continue,
             };

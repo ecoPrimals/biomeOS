@@ -2,6 +2,25 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.08 (2026-06-05) — Wave 78: Clippy Zero + Parity Verification
+
+### Zero clippy (standard lint)
+- Fixed `Drop` in `if let` scrutinee — `gate_registry.read().await` extracted
+  to binding in `capability_call.rs`.
+- Fixed `&name` → `name` deref in `inference.rs`.
+- Replaced 4× manual `n % k == 0` with `n.is_multiple_of(k)` in `perceptron.rs`.
+- Replaced 2× `map_err(|e| Codec(e.into()))` → `map_err(Codec)` in `state.rs`.
+
+### Wave 78 ecosystem parity verified
+- **REFERENCE TIER**: Zero parity items.
+- `config/capability_registry.toml` ✓ (27 domains, 320+ translations)
+- `#![forbid(unsafe_code)]` on all crates ✓
+- BTSP Phase 3 ✓
+- MethodGate pre-dispatch ✓
+- Wire Standard L2+ ✓
+- plasmidBin ecoBin compliant ✓
+- 90%+ coverage ✓
+
 ## v4.07 (2026-06-04) — Wave 77: Perceptron Training Data Pipeline
 
 ### Training data emission

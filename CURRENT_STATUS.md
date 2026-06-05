@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 4, 2026 (v4.07: Wave 77 — Training data pipeline: per-dispatch feature+outcome emission for barraCuda ml.mlp_train)
-**Version**: 4.07
-**Status**: PRODUCTION READY - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (remote infer LIVE, training data emission LIVE) - Zero Result<_, String> in production - Zero map_err(format!) in production - Zero unsafe / mocks / #[allow] in production - Mesh validation READY for eastGate
+**Updated**: June 5, 2026 (v4.08: Wave 78 — REFERENCE TIER: zero clippy, parity verified, training data pipeline live)
+**Version**: 4.08
+**Status**: REFERENCE TIER - ZERO clippy warnings - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (remote infer LIVE, training data emission LIVE) - Zero Result<_, String> - Zero map_err(format!) - Zero unsafe / mocks / #[allow] - Mesh validation READY for eastGate
 
 ---
 

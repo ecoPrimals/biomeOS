@@ -77,7 +77,7 @@ impl GenomeState {
         let path = self.genome_path(id);
         genome
             .save(&path)
-            .map_err(|e| GenomeStateError::Codec(e.into()))?;
+            .map_err(GenomeStateError::Codec)?;
 
         let mut cache = self.genomes.write().await;
         cache.insert(id.to_string(), genome.clone());
@@ -101,7 +101,7 @@ impl GenomeState {
         }
 
         let genome =
-            GenomeBin::load(&path).map_err(|e| GenomeStateError::Codec(e.into()))?;
+            GenomeBin::load(&path).map_err(GenomeStateError::Codec)?;
 
         {
             let mut cache = self.genomes.write().await;
