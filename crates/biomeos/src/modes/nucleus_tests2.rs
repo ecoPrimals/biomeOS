@@ -494,13 +494,13 @@ async fn test_discover_binaries_with_plasmidbin_optimized_arch() {
 }
 
 #[tokio::test]
-async fn test_discover_binaries_with_target_release_relative() {
+async fn test_discover_binaries_with_plasmidbin_relative() {
     let _guard = crate::CWD_TEST_LOCK.lock().await;
     let temp = tempfile::tempdir().expect("tempdir");
-    let release_dir = temp.path().join("target").join("release");
-    std::fs::create_dir_all(&release_dir).expect("mkdir");
-    let name = "biomeos_unique_primal_target_release_xyz";
-    let binary_path = release_dir.join(name);
+    let bin_dir = temp.path().join("plasmidBin");
+    std::fs::create_dir_all(&bin_dir).expect("mkdir");
+    let name = "biomeos_unique_primal_plasmidbin_rel_xyz";
+    let binary_path = bin_dir.join(name);
     std::fs::write(&binary_path, b"#! /bin/sh\nexit 0\n").expect("write bin");
     #[cfg(unix)]
     {
@@ -516,7 +516,7 @@ async fn test_discover_binaries_with_target_release_relative() {
     let map = map.expect("discover");
     assert!(
         map.contains_key(name),
-        "expected {name} under target/release, got {map:?}"
+        "expected {name} under plasmidBin, got {map:?}"
     );
 }
 
@@ -643,12 +643,12 @@ fn test_discover_search_path_without_cwd() {
 }
 
 #[test]
-fn test_discover_binaries_with_cwd_finds_in_target_release() {
+fn test_discover_binaries_with_cwd_finds_in_plasmidbin() {
     let temp = tempfile::tempdir().expect("tempdir");
-    let release_dir = temp.path().join("target/release");
-    std::fs::create_dir_all(&release_dir).expect("create target/release");
+    let bin_dir = temp.path().join("plasmidBin");
+    std::fs::create_dir_all(&bin_dir).expect("create plasmidBin");
     let name = "biomeos_cwd_test_binary";
-    let binary = release_dir.join(name);
+    let binary = bin_dir.join(name);
     std::fs::write(&binary, b"#!/bin/sh\nexit 0").expect("write");
     #[cfg(unix)]
     {
@@ -661,7 +661,57 @@ fn test_discover_binaries_with_cwd_finds_in_target_release() {
         super::discover_binaries_with(&[name], None, &[], Some(temp.path())).expect("discover");
     assert!(
         map.contains_key(name),
-        "should find {name} in target/release with cwd, got {map:?}"
+        "should find {name} in plasmidBin with cwd, got {map:?}"
+    );
+}
+
+#[test]
+fn test_discover_depot_takes_priority_over_livespore_usb() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let name = "biomeos_depot_priority_test_primal";
+
+    // Create binary in livespore-usb/primals (low priority)
+    let usb_dir = temp.path().join("livespore-usb/primals");
+    std::fs::create_dir_all(&usb_dir).expect("mkdir livespore-usb/primals");
+    let usb_binary = usb_dir.join(name);
+    std::fs::write(&usb_binary, b"#!/bin/sh\necho stale").expect("write usb bin");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&usb_binary).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&usb_binary, perms).unwrap();
+    }
+
+    // Create binary in depot (high priority)
+    let depot_dir = temp.path().join("depot/primals");
+    std::fs::create_dir_all(&depot_dir).expect("mkdir depot/primals");
+    let depot_binary = depot_dir.join(name);
+    std::fs::write(&depot_binary, b"#!/bin/sh\necho depot").expect("write depot bin");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&depot_binary).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&depot_binary, perms).unwrap();
+    }
+
+    let depot_path = temp.path().join("depot");
+    let map = super::discover_binaries_with(
+        &[name],
+        Some(depot_path.as_path()),
+        &[],
+        Some(temp.path()),
+    )
+    .expect("discover");
+
+    assert!(map.contains_key(name), "primal should be found");
+    let resolved = &map[name];
+    assert!(
+        resolved.starts_with(&depot_dir),
+        "depot should win over livespore-usb: resolved={}, expected prefix={}",
+        resolved.display(),
+        depot_dir.display()
     );
 }
 

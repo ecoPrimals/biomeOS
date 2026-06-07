@@ -135,6 +135,9 @@ pub(super) fn discover_search_path(rel: PathBuf, cwd: Option<&Path>) -> PathBuf 
 }
 
 /// `cwd`, when set, resolves relative search roots under that directory instead of the process cwd.
+///
+/// Search priority: ECOPRIMALS_PLASMID_BIN (depot) first when set, then local
+/// plasmidBin dirs, then livespore-usb fallbacks, then $PATH.
 pub(crate) fn discover_binaries_with(
     primals: &[&str],
     plasmid_bin_dir: Option<&Path>,
@@ -143,31 +146,34 @@ pub(crate) fn discover_binaries_with(
 ) -> Result<HashMap<String, PathBuf>> {
     let mut map = HashMap::new();
 
-    let mut search_paths = vec![
-        discover_search_path(
-            PathBuf::from("livespore-usb")
-                .join(std::env::consts::ARCH)
-                .join("primals"),
-            cwd,
-        ),
-        discover_search_path(PathBuf::from("livespore-usb/primals"), cwd),
-        discover_search_path(PathBuf::from("plasmidBin"), cwd),
-        discover_search_path(
-            PathBuf::from("plasmidBin/optimized").join(std::env::consts::ARCH),
-            cwd,
-        ),
-    ];
+    let mut search_paths = Vec::new();
 
+    // Depot (ECOPRIMALS_PLASMID_BIN) is highest priority when set
     if let Some(eco) = plasmid_bin_dir {
         search_paths.push(eco.join("primals"));
         search_paths.push(eco.to_path_buf());
     }
+
+    // Local plasmidBin directories
+    search_paths.push(discover_search_path(PathBuf::from("plasmidBin"), cwd));
+    search_paths.push(discover_search_path(
+        PathBuf::from("plasmidBin/optimized").join(std::env::consts::ARCH),
+        cwd,
+    ));
     search_paths.push(discover_search_path(
         PathBuf::from("../../plasmidBin/primals"),
         cwd,
     ));
     search_paths.push(discover_search_path(PathBuf::from("../../plasmidBin"), cwd));
-    search_paths.push(discover_search_path(PathBuf::from("target/release"), cwd));
+
+    // livespore-usb fallback (lower priority than depot)
+    search_paths.push(discover_search_path(
+        PathBuf::from("livespore-usb")
+            .join(std::env::consts::ARCH)
+            .join("primals"),
+        cwd,
+    ));
+    search_paths.push(discover_search_path(PathBuf::from("livespore-usb/primals"), cwd));
 
     for primal in primals {
         let mut found = false;

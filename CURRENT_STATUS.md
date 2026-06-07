@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 6, 2026 (v4.09: Wave 86 — P1 BLOCKER RESOLVED: songbird federation env passthrough in nucleus_launch_profiles.toml)
-**Version**: 4.09
-**Status**: REFERENCE TIER - ZERO clippy warnings - Federation env passthrough FIXED (SONGBIRD_FEDERATION_PORT + SONGBIRD_PEERS) - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE - Mesh validation READY for eastGate + strandGate
+**Updated**: June 7, 2026 (v4.10: Wave 88 — BIO-SEARCH-01 RESOLVED: depot-first binary search priority, target/release removed)
+**Version**: 4.10
+**Status**: REFERENCE TIER - ZERO clippy warnings - Depot-first binary discovery (ECOPRIMALS_PLASMID_BIN takes priority over livespore-usb) - Federation env passthrough FIXED - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE - Mesh proof UNBLOCKED for eastGate + strandGate
 
 ---
 

@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: June 6, 2026
-**Status**: Production Ready (v4.09) — P1 BLOCKER RESOLVED: songbird federation env passthrough, L4 weighted routing, L5 perceptron shadow (remote infer + training data), mesh validation ready, composition hot-reload, SSOT hardened, typed errors throughout, zero unsafe/mocks, Edition 2024, rust-version 1.87, 26 crates, 0 C deps, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: June 7, 2026
+**Status**: Production Ready (v4.10) — BIO-SEARCH-01 RESOLVED: depot-first binary discovery, target/release removed. Federation env passthrough, L4 weighted routing, L5 perceptron shadow (remote infer + training data), mesh proof unblocked, composition hot-reload, SSOT hardened, typed errors throughout, zero unsafe/mocks, Edition 2024, rust-version 1.87, 26 crates, 0 C deps, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 

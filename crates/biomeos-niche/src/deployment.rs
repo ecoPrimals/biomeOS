@@ -130,10 +130,7 @@ impl NicheDeployment {
 
     /// Start a single organism by discovering its binary and spawning a process.
     ///
-    /// Binary resolution order:
-    /// 1. `plasmidBin/primals/{name}`
-    /// 2. `target/release/{name}`
-    /// 3. `$PATH`
+    /// Binary resolution: `$PATH` (which should include `plasmidBin`).
     ///
     /// For graph-based BYOB deployment, the graph executor in
     /// `biomeos-atomic-deploy` handles full orchestration.  This method

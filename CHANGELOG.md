@@ -2,6 +2,25 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.10 (2026-06-07) — Wave 88: Binary Search Priority Fix [BIO-SEARCH-01]
+
+### Binary discovery priority (BIO-SEARCH-01 resolved)
+- `discover_binaries_with()`: `ECOPRIMALS_PLASMID_BIN` (depot) is now the
+  **first** search path when set. Previous order had `livespore-usb` first,
+  causing 5/12 primals to resolve from stale USB binaries instead of depot.
+- New search order: depot → local `plasmidBin` → `livespore-usb` (fallback) → `$PATH`.
+- `target/release` removed from search order entirely (BIO-DEPLOY-02).
+
+### deployment.rs doc fix (BIO-DEPLOY-02)
+- `deployment.rs` doc comment referenced `target/release` in search order
+  but code only uses `$PATH`. Doc corrected.
+
+### Test updates
+- `test_discover_depot_takes_priority_over_livespore_usb`: new test verifying
+  depot wins when both depot and livespore-usb have the same binary.
+- Two tests updated from `target/release` to `plasmidBin` to match new search order.
+- 496 tests, 0 failures (biomeos-unibin).
+
 ## v4.09 (2026-06-06) — Wave 86: NUCLEUS Federation Profile Fix [P1 BLOCKER]
 
 ### Federation env passthrough (P1 BLOCKER resolved)
