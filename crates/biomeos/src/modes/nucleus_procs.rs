@@ -311,6 +311,30 @@ pub(super) async fn health_check(socket_path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Wait for SIGINT (Ctrl+C) or SIGTERM. Returns when either signal is received.
+/// Handles both signals so NUCLEUS shuts down cleanly whether stopped interactively
+/// or by a process manager (systemd, supervisord, etc.).
+pub(super) async fn wait_for_shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+        let mut sigterm =
+            signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+        tokio::select! {
+            _ = ctrl_c => info!("Received SIGINT"),
+            _ = sigterm.recv() => info!("Received SIGTERM"),
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = ctrl_c.await;
+        info!("Received SIGINT");
+    }
+}
+
 /// Generate a random JWT secret using the `rand` crate (no /dev/urandom read).
 pub(super) fn generate_jwt_secret() -> String {
     use base64::Engine;

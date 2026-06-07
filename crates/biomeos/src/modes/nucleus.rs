@@ -563,13 +563,15 @@ pub async fn run(
         info!("{line}");
     }
 
-    // Keep running until interrupted
-    info!("NUCLEUS running with lifecycle monitoring. Press Ctrl+C to stop.");
-    tokio::signal::ctrl_c().await?;
+    // Supervisor loop: stay alive until SIGINT or SIGTERM
+    info!("NUCLEUS supervisor active. Send SIGINT or SIGTERM to stop.");
+    wait_for_shutdown_signal().await;
 
     // Coordinated shutdown via lifecycle manager
     info!("Shutting down NUCLEUS...");
-    lifecycle.shutdown_all().await?;
+    if let Err(e) = lifecycle.shutdown_all().await {
+        warn!("Lifecycle shutdown error (continuing cleanup): {e}");
+    }
 
     // Collect names before consuming children (for socket cleanup below)
     let started_names: Vec<String> = children.iter().map(|(n, _)| n.clone()).collect();
@@ -607,7 +609,10 @@ use nucleus_procs::{
     cleanup_stale_sockets, detect_ecosystem, discover_binaries, start_primal, wait_for_socket,
     DEFAULT_SOCKET_POLL_INTERVAL,
 };
-use nucleus_procs::{generate_jwt_secret, health_check_with_backoff, resolve_socket_dir_with};
+use nucleus_procs::{
+    generate_jwt_secret, health_check_with_backoff, resolve_socket_dir_with,
+    wait_for_shutdown_signal,
+};
 #[cfg(test)]
 use nucleus_procs::health_check;
 
