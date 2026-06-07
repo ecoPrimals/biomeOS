@@ -26,6 +26,10 @@ generate_jwt_secret = false
 [profiles.songbird]
 subcommand = "server"
 pass_family_id_flag = false
+[profiles.songbird.env_vars]
+SONGBIRD_FEDERATION_PORT = "$SONGBIRD_FEDERATION_PORT"
+SONGBIRD_PEERS = "$SONGBIRD_PEERS"
+SONGBIRD_NODE_ID = "$node_id"
 [profiles.songbird.capability_sockets]
 SONGBIRD_SECURITY_PROVIDER = "security"
 BIOMEOS_SECURITY_SOCKET = "security"

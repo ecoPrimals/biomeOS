@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.09 (2026-06-06) — Wave 86: NUCLEUS Federation Profile Fix [P1 BLOCKER]
+
+### Federation env passthrough (P1 BLOCKER resolved)
+- `config/nucleus_launch_profiles.toml`: Added `SONGBIRD_FEDERATION_PORT`,
+  `SONGBIRD_PEERS`, and `SONGBIRD_NODE_ID` to songbird's `[env_vars]`.
+  Uses `$UPPER_CASE` convention for parent-process env inheritance.
+- `build_primal_command_with()`: Enhanced env_vars resolution to support
+  `$UPPER_CASE` passthrough (read from parent env) alongside existing
+  `$family_id` / `$node_id` literal substitution. Unset vars are skipped.
+- **Root cause**: Without federation env passthrough, `biomeos nucleus start`
+  launched songbird in standalone UDS mode — no federation port, invisible
+  to other gates. strandGate saw CONNECTION REFUSED on :7700.
+
+### `--family-id` flag verification
+- Confirmed `pass_family_id_flag = false` is correctly respected in code.
+  Songbird never receives `--family-id` CLI arg. Test added asserting this.
+
+### Test updates
+- `test_build_primal_command_songbird`: expanded to verify `SONGBIRD_NODE_ID`
+  passthrough via `$node_id` substitution, and confirms `--family-id` is
+  NOT passed as CLI arg.
+
 ## v4.08 (2026-06-05) — Wave 78: Clippy Zero + Parity Verification
 
 ### Zero clippy (standard lint)

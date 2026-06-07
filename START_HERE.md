@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: June 3, 2026
-**Status**: Production Ready (v4.05) — L4 weighted routing, L5 perceptron shadow (remote infer wired), composition hot-reload, SSOT hardened (zero hardcoded primal names), typed errors throughout (zero Result<_,String>, zero map_err(format!)), 20 test extractions, HTTP transport removed, Edition 2024, rust-version 1.87, 26 crates, 0 C deps, 0 unsafe prod, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: June 6, 2026
+**Status**: Production Ready (v4.09) — P1 BLOCKER RESOLVED: songbird federation env passthrough, L4 weighted routing, L5 perceptron shadow (remote infer + training data), mesh validation ready, composition hot-reload, SSOT hardened, typed errors throughout, zero unsafe/mocks, Edition 2024, rust-version 1.87, 26 crates, 0 C deps, scyBorg triple-copyleft (AGPL-3.0-or-later)
 
 ---
 

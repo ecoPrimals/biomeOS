@@ -255,10 +255,22 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
         cmd.env(env_key, &resolved);
     }
 
-    // Static env vars from profile (with $family_id substitution)
+    // Static env vars from profile (with variable substitution)
+    // $family_id / $node_id → literal values from config
+    // $UPPER_CASE → passthrough from parent process environment
     let env_vars = profile.map_or(&defaults.env_vars, |p| &p.env_vars);
     for (key, value) in env_vars {
-        let resolved = value.replace("$family_id", config.family_id);
+        let resolved = if value.starts_with('$') && value.len() > 1 && value[1..].chars().all(|c| c.is_ascii_uppercase() || c == '_') {
+            let env_name = &value[1..];
+            match std::env::var(env_name) {
+                Ok(v) => v,
+                Err(_) => continue,
+            }
+        } else {
+            value
+                .replace("$family_id", config.family_id)
+                .replace("$node_id", config.node_id)
+        };
         cmd.env(key, &resolved);
     }
 

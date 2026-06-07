@@ -190,11 +190,24 @@ fn test_build_primal_command_songbird() {
     let envs: Vec<_> = cmd.get_envs().collect();
     assert!(
         envs.iter()
-            .any(|(k, _)| k == &std::ffi::OsStr::new("SONGBIRD_SECURITY_PROVIDER"))
+            .any(|(k, _)| k == &std::ffi::OsStr::new("SONGBIRD_SECURITY_PROVIDER")),
+        "songbird should have SONGBIRD_SECURITY_PROVIDER from capability_sockets"
     );
     assert!(
         envs.iter()
             .any(|(k, _)| k == &std::ffi::OsStr::new("FAMILY_ID"))
+    );
+    // $node_id substitution → SONGBIRD_NODE_ID = "node1"
+    assert!(
+        envs.iter()
+            .any(|(k, v)| k == &std::ffi::OsStr::new("SONGBIRD_NODE_ID")
+                && v == &Some(std::ffi::OsStr::new("node1"))),
+        "songbird should have SONGBIRD_NODE_ID from $node_id substitution"
+    );
+    let args: Vec<_> = cmd.get_args().collect();
+    assert!(
+        !args.iter().any(|a| a.to_str() == Some("--family-id")),
+        "songbird should NOT receive --family-id CLI flag"
     );
 }
 

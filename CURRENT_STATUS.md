@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 5, 2026 (v4.08: Wave 78 — REFERENCE TIER: zero clippy, parity verified, training data pipeline live)
-**Version**: 4.08
-**Status**: REFERENCE TIER - ZERO clippy warnings - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE (remote infer LIVE, training data emission LIVE) - Zero Result<_, String> - Zero map_err(format!) - Zero unsafe / mocks / #[allow] - Mesh validation READY for eastGate
+**Updated**: June 6, 2026 (v4.09: Wave 86 — P1 BLOCKER RESOLVED: songbird federation env passthrough in nucleus_launch_profiles.toml)
+**Version**: 4.09
+**Status**: REFERENCE TIER - ZERO clippy warnings - Federation env passthrough FIXED (SONGBIRD_FEDERATION_PORT + SONGBIRD_PEERS) - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE - Mesh validation READY for eastGate + strandGate
 
 ---
 
