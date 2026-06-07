@@ -272,6 +272,26 @@ pub(super) async fn wait_for_socket(
     ))
 }
 
+/// Health check with exponential backoff: 100ms, 500ms, 1s, 2s.
+/// Returns true if any attempt succeeds within the retry window.
+pub(super) async fn health_check_with_backoff(socket_path: &Path) -> bool {
+    const BACKOFF: [Duration; 4] = [
+        Duration::from_millis(100),
+        Duration::from_millis(500),
+        Duration::from_secs(1),
+        Duration::from_secs(2),
+    ];
+    for (i, delay) in BACKOFF.iter().enumerate() {
+        if i > 0 {
+            tokio::time::sleep(*delay).await;
+        }
+        if health_check(socket_path).await.is_ok() {
+            return true;
+        }
+    }
+    false
+}
+
 /// Basic health check via JSON-RPC.
 pub(super) async fn health_check(socket_path: &Path) -> Result<()> {
     use biomeos_core::atomic_client::AtomicClient;

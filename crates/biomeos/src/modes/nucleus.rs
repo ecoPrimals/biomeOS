@@ -472,11 +472,12 @@ pub async fn run(
         )
         .await?;
 
-        // Health check via JSON-RPC
-        if let Err(e) = health_check(&health_socket).await {
-            warn!("{} health check failed: {} (continuing)", primal, e);
-        } else {
+        // Health check via JSON-RPC with backoff retries
+        let health_ok = health_check_with_backoff(&health_socket).await;
+        if health_ok {
             info!("  {} healthy (PID: {:?})", primal, pid);
+        } else {
+            warn!("{} health check failed after retries (incubating)", primal);
         }
 
         // Register with lifecycle manager for ongoing monitoring (use health_socket for JSON-RPC pings)
@@ -606,7 +607,9 @@ use nucleus_procs::{
     cleanup_stale_sockets, detect_ecosystem, discover_binaries, start_primal, wait_for_socket,
     DEFAULT_SOCKET_POLL_INTERVAL,
 };
-use nucleus_procs::{generate_jwt_secret, health_check, resolve_socket_dir_with};
+use nucleus_procs::{generate_jwt_secret, health_check_with_backoff, resolve_socket_dir_with};
+#[cfg(test)]
+use nucleus_procs::health_check;
 
 #[cfg(test)]
 pub(crate) use nucleus_procs::discover_binaries_with;
