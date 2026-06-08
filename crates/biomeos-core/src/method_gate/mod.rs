@@ -198,6 +198,11 @@ impl MethodGate {
             return Ok(());
         }
 
+        // Local-trusted methods: allow from Unix/loopback without a token
+        if level == MethodAccessLevel::LocalTrusted && caller.origin != ConnectionOrigin::Remote {
+            return Ok(());
+        }
+
         let has_token = caller.bearer_token.is_some();
 
         if !has_token {

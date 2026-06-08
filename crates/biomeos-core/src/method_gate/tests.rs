@@ -58,12 +58,47 @@ fn lifecycle_status_is_public() {
 }
 
 #[test]
-fn graph_methods_are_protected() {
+fn graph_methods_are_local_trusted() {
     assert_eq!(
         classify_method("graph.execute"),
+        MethodAccessLevel::LocalTrusted
+    );
+    assert_eq!(
+        classify_method("graph.save"),
+        MethodAccessLevel::LocalTrusted
+    );
+}
+
+#[test]
+fn composition_methods_are_local_trusted() {
+    assert_eq!(
+        classify_method("composition.deploy"),
+        MethodAccessLevel::LocalTrusted
+    );
+    assert_eq!(
+        classify_method("composition.status"),
+        MethodAccessLevel::LocalTrusted
+    );
+}
+
+#[test]
+fn deploy_methods_are_local_trusted() {
+    assert_eq!(
+        classify_method("deploy.start"),
+        MethodAccessLevel::LocalTrusted
+    );
+}
+
+#[test]
+fn non_orchestration_methods_are_protected() {
+    assert_eq!(
+        classify_method("capability.call"),
         MethodAccessLevel::Protected
     );
-    assert_eq!(classify_method("graph.save"), MethodAccessLevel::Protected);
+    assert_eq!(
+        classify_method("neural_api.weight_health"),
+        MethodAccessLevel::Protected
+    );
 }
 
 #[test]
@@ -268,7 +303,35 @@ fn protected_method_passes_in_permissive_mode() {
 fn protected_method_rejected_in_enforced_mode_without_token() {
     let gate = MethodGate::new(EnforcementMode::Enforced);
     let caller = CallerContext::loopback();
-    let err = gate.check("graph.execute", &caller).unwrap_err();
+    let err = gate.check("capability.call", &caller).unwrap_err();
+    assert_eq!(err.code, -32_001);
+}
+
+#[test]
+fn local_trusted_method_passes_in_enforced_mode_from_loopback() {
+    let gate = MethodGate::new(EnforcementMode::Enforced);
+    let caller = CallerContext::loopback();
+    assert!(gate.check("composition.deploy", &caller).is_ok());
+    assert!(gate.check("graph.execute", &caller).is_ok());
+}
+
+#[test]
+fn local_trusted_method_passes_from_unix() {
+    let gate = MethodGate::new(EnforcementMode::Enforced);
+    let caller = CallerContext::unix();
+    assert!(gate.check("composition.deploy", &caller).is_ok());
+}
+
+#[test]
+fn local_trusted_method_rejected_from_remote_without_token() {
+    let gate = MethodGate::new(EnforcementMode::Enforced);
+    let caller = CallerContext {
+        bearer_token: None,
+        claims: None,
+        peer: None,
+        origin: ConnectionOrigin::Remote,
+    };
+    let err = gate.check("composition.deploy", &caller).unwrap_err();
     assert_eq!(err.code, -32_001);
 }
 
@@ -291,7 +354,7 @@ fn token_with_wrong_scope_rejected_enforced() {
         "exp": 9999999999u64
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
-    let err = gate.check("graph.execute", &caller).unwrap_err();
+    let err = gate.check("capability.call", &caller).unwrap_err();
     assert_eq!(err.code, -32_001);
 }
 
@@ -314,7 +377,7 @@ fn expired_token_rejected_enforced() {
         "exp": 1
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
-    let err = gate.check("graph.execute", &caller).unwrap_err();
+    let err = gate.check("capability.call", &caller).unwrap_err();
     assert_eq!(err.code, -32_001);
 }
 
@@ -324,11 +387,11 @@ fn method_allowlist_enforced() {
     let token = make_ionic_token(&serde_json::json!({
         "scope": ["*"],
         "exp": 9999999999u64,
-        "resources": { "method_allowlist": ["graph.list"] }
+        "resources": { "method_allowlist": ["capability.call"] }
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
-    assert!(gate.check("graph.list", &caller).is_ok());
-    let err = gate.check("graph.execute", &caller).unwrap_err();
+    assert!(gate.check("capability.call", &caller).is_ok());
+    let err = gate.check("capability.resolve", &caller).unwrap_err();
     assert_eq!(err.code, -32_001);
 }
 
@@ -343,13 +406,13 @@ fn opaque_token_passes_enforced() {
 fn gate_error_includes_method_in_data() {
     let gate = MethodGate::new(EnforcementMode::Enforced);
     let caller = CallerContext::loopback();
-    let err = gate.check("graph.validate", &caller).unwrap_err();
+    let err = gate.check("capability.call", &caller).unwrap_err();
     let method_in_data = err
         .data
         .as_ref()
         .and_then(|d| d.get("method"))
         .and_then(serde_json::Value::as_str);
-    assert_eq!(method_in_data, Some("graph.validate"));
+    assert_eq!(method_in_data, Some("capability.call"));
 }
 
 // ── auth introspection ──

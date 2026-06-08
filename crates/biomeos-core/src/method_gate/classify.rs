@@ -8,6 +8,9 @@
 pub enum MethodAccessLevel {
     /// Health probes, identity, capability advertisement — always allowed.
     Public,
+    /// Orchestration methods — allowed for local callers (Unix/loopback)
+    /// without a token, but require a token from remote callers.
+    LocalTrusted,
     /// Requires a valid capability token when enforcement is active.
     Protected,
 }
@@ -26,6 +29,10 @@ const PUBLIC_METHODS: &[&str] = &[
     "auth.peer_info",
 ];
 
+/// Methods trusted for local callers (Unix socket / loopback) without a token.
+/// These are orchestration methods that nucleus-deploy and other local tools call.
+const LOCAL_TRUSTED_PREFIXES: &[&str] = &["composition.", "graph.", "deploy."];
+
 /// Classify a method string into its access level.
 #[must_use]
 pub fn classify_method(method: &str) -> MethodAccessLevel {
@@ -35,6 +42,11 @@ pub fn classify_method(method: &str) -> MethodAccessLevel {
     for prefix in PUBLIC_METHOD_PREFIXES {
         if method.starts_with(prefix) {
             return MethodAccessLevel::Public;
+        }
+    }
+    for prefix in LOCAL_TRUSTED_PREFIXES {
+        if method.starts_with(prefix) {
+            return MethodAccessLevel::LocalTrusted;
         }
     }
     MethodAccessLevel::Protected
