@@ -2,6 +2,36 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.16 (2026-06-09) — Deep Debt: Error Chains, Hardcoding, Extraction
+
+### Error chain preservation (idiomatic Rust)
+- `GraphError::Io`: evolved from `Io(String)` to structured `Io { context, source }`
+  variant. All `parser.rs` and `loader.rs` IO errors now preserve the
+  `std::io::Error` source chain instead of formatting it away.
+- `FederationError`: added `Discovery { context, source }` variant with
+  `Box<dyn Error>` source chain. All 12 `DiscoveryError(format!(...))` calls in
+  `discovery/mod.rs` migrated — errors now chain through `tracing` and `anyhow`.
+- `FederationError::CapabilityCall`: new variant wrapping `anyhow::Error` for
+  capability call failures (replaces `Generic(format!("Capability call failed: {e}"))`).
+
+### Hardcoded literal elimination
+- `bootstrap.rs`: `format!("biomeos-{family_id}")` → uses `primal_names::BIOMEOS`.
+- `replicate.rs` + `genome/build.rs`: `"biomeos-self"` → `primal_names::BIOMEOS_SELF_GENOME`.
+- `device_management_server/mod.rs`: socket name uses `primal_names::BIOMEOS_DEVICE_MANAGEMENT`.
+- `constants/network.rs`: `DEFAULT_WS_PORT` deduped from literal `8081` to `ports::WS_DEFAULT`.
+- `paths.rs`: `new_lazy()` runtime dir fallback uses `defaults::DEFAULT_SOCKET_DIR`.
+
+### Smart extraction
+- `nucleus.rs`: extracted `shutdown_children()` from `run()` — child process
+  draining and socket cleanup is now a standalone async function (reduces `run()`
+  by ~25 lines, improves readability of the supervisor shutdown path).
+
+### Pre-existing debt cleanup
+- `biomeos-pseudospore`: added missing `#[expect(clippy::unwrap_used)]` on test
+  module (was failing workspace clippy).
+- `http_client.rs`: fixed doctest referencing `pub(crate)` module (changed
+  `no_run` → `ignore`).
+
 ## v4.10 (2026-06-07) — Wave 88: Binary Search Priority Fix [BIO-SEARCH-01]
 
 ### Binary discovery priority (BIO-SEARCH-01 resolved)

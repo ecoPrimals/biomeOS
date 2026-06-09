@@ -68,7 +68,7 @@ impl GenomeFactory {
         genome.add_binary_bytes(arch, &binary_data);
 
         // Write to storage
-        let output_path = self.genome_path("biomeos-self");
+        let output_path = self.genome_path(biomeos_types::primal_names::BIOMEOS_SELF_GENOME);
         genome
             .save(&output_path)
             .context("Failed to write self-genomeBin")?;
@@ -76,7 +76,7 @@ impl GenomeFactory {
         let size = std::fs::metadata(&output_path).map_or(0, |m| m.len());
 
         let response = GenomeReplicateResponse {
-            genome_id: "biomeos-self".to_string(),
+            genome_id: biomeos_types::primal_names::BIOMEOS_SELF_GENOME.to_string(),
             path: output_path,
             size,
             architectures: vec![format!("{:?}", arch)],
@@ -94,7 +94,7 @@ impl GenomeFactory {
     /// Check if self-genomeBin exists
     #[must_use]
     pub fn has_self_genome(&self) -> bool {
-        self.genome_exists("biomeos-self")
+        self.genome_exists(biomeos_types::primal_names::BIOMEOS_SELF_GENOME)
     }
 }
 
@@ -114,7 +114,7 @@ mod tests {
 
         let response = factory.self_replicate().unwrap();
 
-        assert_eq!(response.genome_id, "biomeos-self");
+        assert_eq!(response.genome_id, biomeos_types::primal_names::BIOMEOS_SELF_GENOME);
         assert!(response.path.exists());
         assert_eq!(response.architectures.len(), 1);
         assert!(factory.has_self_genome());

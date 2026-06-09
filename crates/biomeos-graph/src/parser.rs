@@ -29,7 +29,10 @@ impl GraphParser {
     /// Parse a graph from a TOML file
     pub fn parse_file(path: &Path) -> Result<PrimalGraph> {
         let content = std::fs::read_to_string(path)
-            .map_err(|e| GraphError::Parse(format!("Failed to read {}: {}", path.display(), e)))?;
+            .map_err(|e| GraphError::Io {
+                context: format!("Failed to read {}", path.display()),
+                source: e,
+            })?;
 
         Self::parse_toml(&content)
     }

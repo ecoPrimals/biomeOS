@@ -128,7 +128,10 @@ impl PrimalDiscovery {
         };
 
         while let Some(entry) = entries.next_entry().await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to read entry: {e}"))
+            crate::FederationError::Discovery {
+                context: "Failed to read directory entry".to_owned(),
+                source: Box::new(e),
+            }
         })? {
             let path = entry.path();
 
@@ -146,34 +149,45 @@ impl PrimalDiscovery {
 
     async fn query_primal_info(&self, socket_path: &PathBuf) -> FederationResult<PrimalInfo> {
         let stream = UnixStream::connect(socket_path).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!(
-                "Failed to connect to {}: {}",
-                socket_path.display(),
-                e
-            ))
+            crate::FederationError::Discovery {
+                context: format!("Failed to connect to {}", socket_path.display()),
+                source: Box::new(e),
+            }
         })?;
 
         let request = biomeos_types::JsonRpcRequest::new("identity.info", serde_json::json!({}));
 
         let request_bytes = serde_json::to_vec(&request).map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to serialize request: {e}"))
+            crate::FederationError::Discovery {
+                context: "Failed to serialize request".to_owned(),
+                source: Box::new(e),
+            }
         })?;
 
         let (read_half, mut write_half) = stream.into_split();
         write_half.write_all(&request_bytes).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to write request: {e}"))
+            crate::FederationError::Discovery {
+                context: "Failed to write request".to_owned(),
+                source: Box::new(e),
+            }
         })?;
         write_half.write_all(b"\n").await.ok();
 
         write_half.flush().await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to flush request: {e}"))
+            crate::FederationError::Discovery {
+                context: "Failed to flush request".to_owned(),
+                source: Box::new(e),
+            }
         })?;
         write_half.shutdown().await.ok();
 
         let mut reader = BufReader::new(read_half);
         let mut response_line = String::new();
         let n = reader.read_line(&mut response_line).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to read response: {e}"))
+            crate::FederationError::Discovery {
+                context: "Failed to read response".to_owned(),
+                source: Box::new(e),
+            }
         })?;
         if n == 0 {
             return Err(crate::FederationError::DiscoveryError(
@@ -182,7 +196,10 @@ impl PrimalDiscovery {
         }
         let response: serde_json::Value =
             serde_json::from_str(response_line.trim()).map_err(|e| {
-                crate::FederationError::DiscoveryError(format!("Failed to parse response: {e}"))
+                crate::FederationError::Discovery {
+                    context: "Failed to parse response".to_owned(),
+                    source: Box::new(e),
+                }
             })?;
 
         let result = response.get("result").ok_or_else(|| {
@@ -375,9 +392,10 @@ impl PrimalDiscovery {
         );
 
         let stream = UnixStream::connect(discovery_socket).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!(
-                "Discovery provider connection failed: {e}"
-            ))
+            crate::FederationError::Discovery {
+                context: "Discovery provider connection failed".to_owned(),
+                source: Box::new(e),
+            }
         })?;
 
         let (reader, mut writer) = stream.into_split();
@@ -392,27 +410,42 @@ impl PrimalDiscovery {
         );
 
         let request_str = serde_json::to_string(&request)
-            .map_err(|e| crate::FederationError::DiscoveryError(format!("JSON error: {e}")))?
+            .map_err(|e| crate::FederationError::Discovery {
+                context: "JSON serialization error".to_owned(),
+                source: Box::new(e),
+            })?
             + "\n";
 
         writer
             .write_all(request_str.as_bytes())
             .await
-            .map_err(|e| crate::FederationError::DiscoveryError(format!("Write error: {e}")))?;
+            .map_err(|e| crate::FederationError::Discovery {
+                context: "Failed to write to discovery provider".to_owned(),
+                source: Box::new(e),
+            })?;
         writer
             .flush()
             .await
-            .map_err(|e| crate::FederationError::DiscoveryError(format!("Flush error: {e}")))?;
+            .map_err(|e| crate::FederationError::Discovery {
+                context: "Failed to flush discovery provider".to_owned(),
+                source: Box::new(e),
+            })?;
 
         let mut response_line = String::new();
         reader
             .read_line(&mut response_line)
             .await
-            .map_err(|e| crate::FederationError::DiscoveryError(format!("Read error: {e}")))?;
+            .map_err(|e| crate::FederationError::Discovery {
+                context: "Failed to read from discovery provider".to_owned(),
+                source: Box::new(e),
+            })?;
 
         let response: serde_json::Value =
             serde_json::from_str(response_line.trim()).map_err(|e| {
-                crate::FederationError::DiscoveryError(format!("JSON parse error: {e}"))
+                crate::FederationError::Discovery {
+                    context: "JSON parse error from discovery provider".to_owned(),
+                    source: Box::new(e),
+                }
             })?;
 
         if let Some(error) = response.get("error") {

@@ -175,7 +175,7 @@ pub async fn self_replicate() -> Result<Json<SelfReplicateResponse>, StatusCode>
     let mut genome = GenomeBin::with_manifest(manifest);
     genome.add_binary_bytes(arch, &binary_data);
 
-    let genome_id = "biomeos-self".to_string();
+    let genome_id = biomeos_types::primal_names::BIOMEOS_SELF_GENOME.to_string();
     let size = binary_data.len() as u64;
 
     if let Err(e) = genome_state().save_genome(&genome_id, &genome).await {

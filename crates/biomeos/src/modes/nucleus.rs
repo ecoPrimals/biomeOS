@@ -32,7 +32,7 @@ use biomeos_types::primal_names::{
     SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
 };
 use nucleus_launch::load_nucleus_profiles;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tracing::{info, warn};
 
@@ -346,6 +346,36 @@ pub(crate) fn format_nucleus_summary(
     lines
 }
 
+/// Drain child processes and clean up their socket + PID files.
+async fn shutdown_children(
+    children: Vec<(String, tokio::process::Child)>,
+    socket_dir: &Path,
+    family_id: &str,
+) {
+    let started_names: Vec<String> = children.iter().map(|(n, _)| n.clone()).collect();
+
+    for (name, mut child) in children {
+        if tokio::time::timeout(Duration::from_secs(2), child.wait())
+            .await
+            .is_ok()
+        {
+            info!("  {} exited", name);
+        } else {
+            let _ = child.kill().await;
+            info!("  {} force-killed", name);
+        }
+    }
+
+    for name in &started_names {
+        let sock = socket_dir.join(format!("{name}-{family_id}.sock"));
+        let pid_file = socket_dir.join(format!("{name}-{family_id}.pid"));
+        if tokio::fs::remove_file(&sock).await.is_ok() {
+            info!("  Cleaned up socket: {}", sock.display());
+        }
+        let _ = tokio::fs::remove_file(&pid_file).await;
+    }
+}
+
 /// Run the nucleus startup
 #[expect(clippy::too_many_lines, reason = "nucleus startup flow")]
 pub async fn run(
@@ -573,33 +603,7 @@ pub async fn run(
         warn!("Lifecycle shutdown error (continuing cleanup): {e}");
     }
 
-    // Collect names before consuming children (for socket cleanup below)
-    let started_names: Vec<String> = children.iter().map(|(n, _)| n.clone()).collect();
-
-    // Clean up child process handles
-    for (name, mut child) in children {
-        if tokio::time::timeout(Duration::from_secs(2), child.wait())
-            .await
-            .is_ok()
-        {
-            info!("  {} exited", name);
-        } else {
-            let _ = child.kill().await;
-            info!("  {} force-killed", name);
-        }
-    }
-
-    // Remove socket + PID files for primals we launched (prevents stale
-    // sockets if child processes didn't clean up on exit).
-    for name in &started_names {
-        let sock = socket_dir.join(format!("{name}-{family_id}.sock"));
-        let pid_file = socket_dir.join(format!("{name}-{family_id}.pid"));
-        if tokio::fs::remove_file(&sock).await.is_ok() {
-            info!("  Cleaned up socket: {}", sock.display());
-        }
-        let _ = tokio::fs::remove_file(&pid_file).await;
-    }
-
+    shutdown_children(children, &socket_dir, &family_id).await;
     info!("NUCLEUS stopped.");
 
     Ok(())

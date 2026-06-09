@@ -83,7 +83,7 @@ pub async fn verify_member_lineage_with(
             }),
         )
         .await
-        .map_err(|e| FederationError::Generic(format!("Capability call failed: {e}")))?;
+        .map_err(FederationError::CapabilityCall)?;
 
     let all_verified = result
         .get("all_verified")
@@ -143,12 +143,12 @@ pub async fn request_subfederation_key_with(
             }),
         )
         .await
-        .map_err(|e| FederationError::Generic(format!("Capability call failed: {e}")))?;
+        .map_err(FederationError::CapabilityCall)?;
 
     let key_ref = result
         .get("key_ref")
         .and_then(|k| k.as_str())
-        .ok_or_else(|| FederationError::Generic("Missing key_ref in response".to_string()))?;
+        .ok_or_else(|| FederationError::SecurityProviderError("Missing key_ref in response".to_string()))?;
 
     debug!(
         "Derived key for sub-federation '{}': {}",

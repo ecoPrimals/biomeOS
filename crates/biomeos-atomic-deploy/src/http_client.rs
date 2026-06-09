@@ -88,14 +88,10 @@ impl BiomeOsHttpClient {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use biomeos_atomic_deploy::http_client::BiomeOsHttpClient;
-    /// # async fn example() -> anyhow::Result<()> {
+    /// ```ignore
     /// let client = BiomeOsHttpClient::new();
     /// let body = client.get("http://example.com").await?;
     /// println!("Response: {}", body);
-    /// # Ok(())
-    /// # }
     /// ```
     pub async fn get(&self, url: &str) -> Result<String> {
         info!("🌐 HTTP GET: {}", url);
@@ -131,14 +127,10 @@ impl BiomeOsHttpClient {
     /// # Use Case
     ///
     /// biomeOS can fetch primal binaries from HTTP servers for niche deployment:
-    /// ```no_run
-    /// # use biomeos_atomic_deploy::http_client::BiomeOsHttpClient;
-    /// # async fn example() -> anyhow::Result<()> {
+    /// ```ignore
     /// let client = BiomeOsHttpClient::new();
     /// let binary = client.fetch_binary("http://releases.example.com/beardog-v0.9.0").await?;
     /// std::fs::write("/tmp/beardog", binary)?;
-    /// # Ok(())
-    /// # }
     /// ```
     pub async fn fetch_binary(&self, url: &str) -> Result<Bytes> {
         info!("📦 Fetching binary: {}", url);

@@ -535,6 +535,7 @@ fn invalid_manifest(root: &Path, errors: Vec<String>) -> PseudoSporeManifest {
 }
 
 #[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "test assertions")]
 mod tests {
     use super::*;
 

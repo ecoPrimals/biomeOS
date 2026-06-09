@@ -33,9 +33,18 @@ pub enum ParseNodeIdError {
 /// Errors that can occur during graph operations.
 #[derive(Debug, Error)]
 pub enum GraphError {
-    /// IO error (file not found, permission denied, etc.)
+    /// IO error with filesystem path context
+    #[error("{context}: {source}")]
+    Io {
+        /// What we were trying to do when the IO error occurred
+        context: String,
+        /// The underlying IO error
+        source: std::io::Error,
+    },
+
+    /// IO error (string-only, for non-std::io contexts)
     #[error("IO error: {0}")]
-    Io(String),
+    IoMessage(String),
 
     /// TOML parsing error
     #[error("Parse error: {0}")]
@@ -88,7 +97,16 @@ mod tests {
 
     #[test]
     fn test_io_error_display() {
-        let err = GraphError::Io("file not found".to_string());
+        let err = GraphError::Io {
+            context: "reading graph".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "file not found"),
+        };
+        assert_eq!(err.to_string(), "reading graph: file not found");
+    }
+
+    #[test]
+    fn test_io_message_display() {
+        let err = GraphError::IoMessage("file not found".to_string());
         assert_eq!(err.to_string(), "IO error: file not found");
     }
 
@@ -148,7 +166,7 @@ mod tests {
             Err(e) => panic!("Expected Ok(42), got Err({e})"),
         }
 
-        let err_result: Result<i32> = Err(GraphError::Io("test".to_string()));
+        let err_result: Result<i32> = Err(GraphError::IoMessage("test".to_string()));
         assert!(err_result.is_err());
     }
 }

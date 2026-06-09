@@ -17,7 +17,7 @@ pub const DEFAULT_HTTP_PORT: u16 = ports::HTTP_BRIDGE;
 pub const DEFAULT_HTTPS_PORT: u16 = 8443;
 
 /// Default WebSocket port (fallback only)
-pub const DEFAULT_WS_PORT: u16 = 8081;
+pub const DEFAULT_WS_PORT: u16 = super::ports::WS_DEFAULT;
 
 /// Default MCP port (fallback only)
 pub const DEFAULT_MCP_PORT: u16 = ports::API_DEFAULT;

@@ -68,9 +68,10 @@ fn effective_unix_uid_string() -> Option<String> {
 }
 
 fn device_management_socket_path() -> Result<String> {
+    let sock_name = format!("{}.sock", biomeos_types::primal_names::BIOMEOS_DEVICE_MANAGEMENT);
     if let Ok(dir) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
         return Ok(PathBuf::from(dir)
-            .join("biomeos-device-management.sock")
+            .join(&sock_name)
             .to_string_lossy()
             .into_owned());
     }
@@ -80,7 +81,7 @@ fn device_management_socket_path() -> Result<String> {
         )
     })?;
     Ok(format!(
-        "{}/{uid}/biomeos-device-management.sock",
+        "{}/{uid}/{sock_name}",
         biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
     ))
 }

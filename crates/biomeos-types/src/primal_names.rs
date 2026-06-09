@@ -83,6 +83,9 @@ pub const BIOMEOS: &str = "biomeos";
 /// biomeOS device management variant.
 pub const BIOMEOS_DEVICE_MANAGEMENT: &str = "biomeos-device-management";
 
+/// Genome ID for biomeOS self-replication.
+pub const BIOMEOS_SELF_GENOME: &str = "biomeos-self";
+
 /// rootPulse — provenance federation, branching, merging, diffing.
 pub const ROOTPULSE: &str = "rootpulse";
 

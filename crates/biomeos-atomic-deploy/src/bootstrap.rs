@@ -42,7 +42,7 @@ pub async fn register_self_in_registry(
     };
     drop(mode_guard);
 
-    let primal_name = format!("biomeos-{family_id}");
+    let primal_name = format!("{}-{family_id}", biomeos_types::primal_names::BIOMEOS);
     let capabilities = biomeos_types::primal_names::BIOMEOS_SELF_CAPABILITIES;
 
     if let Some(port) = tcp_port {

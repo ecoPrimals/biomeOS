@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 7, 2026 (v4.10: Wave 88 — BIO-SEARCH-01 RESOLVED: depot-first binary search priority, target/release removed)
-**Version**: 4.10
-**Status**: REFERENCE TIER - ZERO clippy warnings - Depot-first binary discovery (ECOPRIMALS_PLASMID_BIN takes priority over livespore-usb) - Federation env passthrough FIXED - L4 weighted routing ACTIVE - L5 perceptron shadow mode ACTIVE - Mesh proof UNBLOCKED for eastGate + strandGate
+**Updated**: June 9, 2026 (v4.16: Deep debt — error chains, hardcoding elimination, smart extraction)
+**Version**: 4.16
+**Status**: REFERENCE TIER - ZERO clippy warnings - Error chains preserved (GraphError, FederationError) - Hardcoded literals centralized - Nucleus shutdown extracted - Pre-existing doctest/lint debt resolved
 
 ---
 

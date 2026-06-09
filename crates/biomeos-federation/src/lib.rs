@@ -69,9 +69,22 @@ pub enum FederationError {
     #[error("Security provider error: {0}")]
     SecurityProviderError(String),
 
-    /// Primal discovery error
+    /// Primal discovery error (string-only context)
     #[error("Discovery error: {0}")]
     DiscoveryError(String),
+
+    /// Primal discovery error with preserved source chain
+    #[error("Discovery: {context}")]
+    Discovery {
+        /// What we were trying to do when the discovery error occurred
+        context: String,
+        /// The underlying error
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    /// Capability call failed during federation operations
+    #[error("Capability call failed: {0}")]
+    CapabilityCall(#[source] anyhow::Error),
 
     /// Catch-all error
     #[error("Generic error: {0}")]

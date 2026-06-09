@@ -538,7 +538,7 @@ impl SystemPaths {
     #[must_use]
     pub fn new_lazy() -> Self {
         let runtime_dir =
-            Self::get_runtime_dir().unwrap_or_else(|_| PathBuf::from("/run/biomeos"));
+            Self::get_runtime_dir().unwrap_or_else(|_| PathBuf::from(crate::defaults::DEFAULT_SOCKET_DIR));
         let data_dir = Self::get_data_dir()
             .unwrap_or_else(|_| PathBuf::from("/var/lib/biomeos"));
         let config_dir = Self::get_config_dir()
