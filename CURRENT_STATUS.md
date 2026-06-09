@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 9, 2026 (v4.16: Deep debt — error chains, hardcoding elimination, smart extraction)
-**Version**: 4.16
-**Status**: REFERENCE TIER - ZERO clippy warnings - Error chains preserved (GraphError, FederationError) - Hardcoded literals centralized - Nucleus shutdown extracted - Pre-existing doctest/lint debt resolved
+**Updated**: June 9, 2026 (v4.17: NUCLEUS supervision — automatic primal restart on crash)
+**Version**: 4.17
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE (crashed primals auto-restart from depot binary) - Error chains preserved - Hardcoded literals centralized
 
 ---
 

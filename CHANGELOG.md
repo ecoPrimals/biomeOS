@@ -2,6 +2,26 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.17 (2026-06-09) — NUCLEUS Supervision: Automatic Primal Restart
+
+### NUCLEUS watchdog (P1 — autonomous operation)
+- NUCLEUS primals that crash are now automatically restarted from their
+  depot binary. The existing `LifecycleManager` health monitoring (10s poll)
+  already detected failures and triggered resurrection, but the resurrection
+  path required a `GraphNode` that NUCLEUS direct-launch doesn't have.
+- **New**: `ManagedPrimal.binary_path` and `ManagedPrimal.node_id` fields store
+  the binary path and node context used at launch time.
+- **New**: `register_primal_binary()` — NUCLEUS now registers primals with their
+  binary path instead of `register_primal(..., None)`.
+- **New**: `respawn_primal_binary()` — resurrection path that spawns from binary,
+  sets up environment, writes PID file, waits for socket, and transitions back
+  to `Incubating` state. Used when `deployment_node` is `None` but `binary_path`
+  is `Some`.
+- Resurrection behavior: exponential backoff (2s base, 60s max), up to 5
+  attempts before `Apoptosis(ResurrectionExhausted)`.
+- Full lifecycle: health fail ×3 → `Degraded` → backoff → kill old PID →
+  clean socket → respawn from binary → `Incubating` → health poll → `Active`.
+
 ## v4.16 (2026-06-09) — Deep Debt: Error Chains, Hardcoding, Extraction
 
 ### Error chain preservation (idiomatic Rust)

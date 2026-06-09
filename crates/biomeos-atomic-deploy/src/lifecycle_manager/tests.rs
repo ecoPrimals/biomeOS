@@ -413,6 +413,8 @@ fn test_managed_primal_serialization() {
         pid: Some(1234),
         state: LifecycleState::Germinating,
         deployment_node: None,
+        binary_path: None,
+        node_id: None,
         depends_on: vec!["base".to_string()],
         depended_by: vec!["songbird".to_string()],
         health_config: HealthConfig::default(),
@@ -427,4 +429,33 @@ fn test_managed_primal_serialization() {
     assert_eq!(parsed.pid, Some(1234));
     assert_eq!(parsed.depends_on, vec!["base"]);
     assert_eq!(parsed.depended_by, vec!["songbird"]);
+    assert_eq!(
+        parsed.binary_path,
+        None,
+        "binary_path should round-trip None"
+    );
+}
+
+#[tokio::test]
+async fn test_register_primal_binary_stores_binary_and_node_id() {
+    let manager = LifecycleManager::new("test-family");
+    manager
+        .register_primal_binary(
+            "beardog",
+            PathBuf::from("/tmp/beardog.sock"),
+            Some(42),
+            PathBuf::from("/opt/primals/beardog"),
+            "east-gate",
+        )
+        .await
+        .expect("register_primal_binary");
+
+    let info = manager.get_primal_info("beardog").await.expect("info");
+    assert_eq!(
+        info.binary_path,
+        Some(PathBuf::from("/opt/primals/beardog"))
+    );
+    assert_eq!(info.node_id, Some("east-gate".to_string()));
+    assert!(info.deployment_node.is_none());
+    assert!(matches!(info.state, LifecycleState::Incubating { .. }));
 }

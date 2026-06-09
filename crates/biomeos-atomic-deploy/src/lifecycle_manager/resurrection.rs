@@ -62,8 +62,10 @@ impl LifecycleManager {
             delay
         );
 
-        // Get deployment node for resurrection
+        // Get resurrection context
         let deployment_node = primal.deployment_node.clone();
+        let binary_path = primal.binary_path.clone();
+        let node_id = primal.node_id.clone();
         let socket_path = primal.socket_path.clone();
 
         // Update state
@@ -91,11 +93,14 @@ impl LifecycleManager {
             tokio::fs::remove_file(&socket_path).await.ok();
         }
 
-        // Respawn from deployment node
+        // Respawn: prefer deployment node, fall back to binary path
         if let Some(node) = deployment_node {
             self.respawn_primal(name, &node).await?;
+        } else if let Some(binary) = binary_path {
+            self.respawn_primal_binary(name, &binary, &socket_path, node_id.as_deref())
+                .await?;
         } else {
-            warn!("⚠️ No deployment node for {} - cannot resurrect", name);
+            warn!("⚠️ No deployment node or binary path for {} - cannot resurrect", name);
         }
 
         Ok(())
@@ -133,6 +138,89 @@ impl LifecycleManager {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Respawn a NUCLEUS-launched primal from its binary path.
+    ///
+    /// This mirrors the startup path in `nucleus_procs::start_primal`:
+    /// remove old socket, build command, spawn, wait for socket, update PID.
+    async fn respawn_primal_binary(
+        &self,
+        name: &str,
+        binary: &std::path::Path,
+        socket_path: &std::path::Path,
+        node_id: Option<&str>,
+    ) -> Result<()> {
+        info!("🔄 Respawning {} from binary: {}", name, binary.display());
+
+        let socket_dir = socket_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("/tmp"));
+
+        // Build command: <binary> server --socket <path>
+        let mut cmd = tokio::process::Command::new(binary);
+        cmd.arg("server")
+            .arg("--socket")
+            .arg(socket_path)
+            .env("FAMILY_ID", &self.family_id)
+            .env(
+                biomeos_types::defaults::env_vars::socket_env_key(name),
+                socket_path,
+            );
+
+        if let Some(nid) = node_id {
+            cmd.env("NODE_ID", nid);
+        }
+
+        // Redirect output to logs
+        let logs_dir = socket_dir.join("logs");
+        tokio::fs::create_dir_all(&logs_dir).await.ok();
+
+        let stdout_stdio = std::fs::File::create(logs_dir.join(format!("{name}.stdout.log")))
+            .map(std::process::Stdio::from)
+            .unwrap_or_else(|_| std::process::Stdio::null());
+        let stderr_stdio = std::fs::File::create(logs_dir.join(format!("{name}.stderr.log")))
+            .map(std::process::Stdio::from)
+            .unwrap_or_else(|_| std::process::Stdio::null());
+
+        cmd.stdout(stdout_stdio)
+            .stderr(stderr_stdio)
+            .stdin(std::process::Stdio::null());
+
+        let child = cmd.spawn()?;
+        let pid = child.id();
+
+        // Write PID file
+        if let Some(p) = pid {
+            let pid_path = socket_dir.join(format!("{name}-{}.pid", self.family_id));
+            tokio::fs::write(&pid_path, p.to_string()).await.ok();
+        }
+
+        // Wait for socket to appear (up to 10s)
+        for _ in 0..100 {
+            if socket_path.exists() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+
+        // Update managed primal state
+        let mut primals = self.primals.write().await;
+        if let Some(primal) = primals.get_mut(name) {
+            primal.pid = pid;
+            primal.state = LifecycleState::Incubating {
+                started_at: chrono::Utc::now(),
+                timeout_ms: 30000,
+            };
+            primal.metrics.health_failures = 0;
+        }
+
+        // Let the child process run independently (we track by PID)
+        drop(child);
+
+        info!("✅ {} respawned from binary (PID: {:?})", name, pid);
+
         Ok(())
     }
 
@@ -209,6 +297,8 @@ mod tests {
             pid: None,
             state,
             deployment_node: None,
+            binary_path: None,
+            node_id: None,
             depends_on: vec![],
             depended_by: vec![],
             health_config: HealthConfig::default(),
@@ -349,6 +439,40 @@ mod tests {
         assert_eq!(
             info.metrics.resurrection_count, 1,
             "Should increment resurrection count even when no deployment node"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_attempt_resurrection_with_binary_path() {
+        let manager = LifecycleManager::new("test-family");
+        {
+            let mut primals = manager.primals.write().await;
+            let mut primal = test_managed_primal(
+                "binary-primal",
+                LifecycleState::Degraded {
+                    since: chrono::Utc::now(),
+                    reason: "test crash".to_string(),
+                    resurrection_attempts: 0,
+                },
+            );
+            primal.resurrection_config.base_delay = Duration::from_millis(1);
+            primal.resurrection_config.max_delay = Duration::from_millis(10);
+            // Set a binary path (sleep is always available)
+            primal.binary_path = Some(PathBuf::from("/bin/sleep"));
+            primal.node_id = Some("test-node".to_string());
+            primals.insert("binary-primal".to_string(), primal);
+        }
+
+        let result = manager.attempt_resurrection("binary-primal").await;
+        // Will attempt to spawn `/bin/sleep server --socket <path>`, which will
+        // fail quickly (sleep doesn't accept those args) — but the resurrection
+        // infrastructure should handle it without panicking.
+        result.expect("resurrection should not panic on spawn failure or quick exit");
+
+        let info = manager.get_primal_info("binary-primal").await.unwrap();
+        assert_eq!(
+            info.metrics.resurrection_count, 1,
+            "Should increment resurrection count for binary resurrection attempt"
         );
     }
 

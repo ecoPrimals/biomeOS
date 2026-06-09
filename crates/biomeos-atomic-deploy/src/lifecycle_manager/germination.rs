@@ -41,6 +41,8 @@ impl LifecycleManager {
                 timeout_ms: 30000,
             },
             deployment_node,
+            binary_path: None,
+            node_id: None,
             depends_on,
             depended_by: Vec::new(),
             health_config: HealthConfig::default(),
@@ -55,6 +57,51 @@ impl LifecycleManager {
         } // Release write lock before calling update_dependency_graph
 
         // Update dependency graph (requires its own write lock)
+        self.update_dependency_graph().await;
+
+        Ok(())
+    }
+
+    /// Register a primal launched directly by NUCLEUS (binary path, no deployment graph).
+    ///
+    /// Unlike [`register_primal`], this stores the binary path and socket
+    /// directory so the resurrection path can respawn the process without
+    /// a `GraphNode`.
+    pub async fn register_primal_binary(
+        &self,
+        name: impl Into<String>,
+        socket_path: PathBuf,
+        pid: Option<u32>,
+        binary_path: PathBuf,
+        node_id: impl Into<String>,
+    ) -> Result<()> {
+        let name = name.into();
+
+        let primal = ManagedPrimal {
+            name: name.clone(),
+            family_id: self.family_id.clone(),
+            socket_path,
+            pid,
+            state: LifecycleState::Incubating {
+                started_at: chrono::Utc::now(),
+                timeout_ms: 30000,
+            },
+            deployment_node: None,
+            binary_path: Some(binary_path),
+            node_id: Some(node_id.into()),
+            depends_on: Vec::new(),
+            depended_by: Vec::new(),
+            health_config: HealthConfig::default(),
+            resurrection_config: ResurrectionConfig::default(),
+            metrics: PrimalMetrics::default(),
+        };
+
+        {
+            let mut primals = self.primals.write().await;
+            primals.insert(name.clone(), primal);
+            info!("🌱 Registered primal: {} (binary-launch, supervised)", name);
+        }
+
         self.update_dependency_graph().await;
 
         Ok(())

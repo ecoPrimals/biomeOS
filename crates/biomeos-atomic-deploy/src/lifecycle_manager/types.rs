@@ -93,8 +93,14 @@ pub struct ManagedPrimal {
     /// Current lifecycle state
     pub state: LifecycleState,
 
-    /// Deployment graph node (for resurrection)
+    /// Deployment graph node (for graph-based resurrection)
     pub deployment_node: Option<GraphNode>,
+
+    /// Binary path (for NUCLEUS direct-launch resurrection)
+    pub binary_path: Option<PathBuf>,
+
+    /// Node ID for env var substitution during respawn
+    pub node_id: Option<String>,
 
     /// Dependencies (primal names this depends on)
     pub depends_on: Vec<String>,
@@ -277,6 +283,8 @@ mod tests {
             pid: Some(1234),
             state: LifecycleState::Germinating,
             deployment_node: None,
+            binary_path: Some(PathBuf::from("/opt/primals/beardog")),
+            node_id: Some("east-gate".to_string()),
             depends_on: vec![],
             depended_by: vec!["songbird".to_string()],
             health_config: HealthConfig::default(),

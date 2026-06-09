@@ -510,13 +510,14 @@ pub async fn run(
             warn!("{} health check failed after retries (incubating)", primal);
         }
 
-        // Register with lifecycle manager for ongoing monitoring (use health_socket for JSON-RPC pings)
+        // Register with lifecycle manager for ongoing monitoring and auto-restart
         lifecycle
-            .register_primal(
+            .register_primal_binary(
                 *primal,
                 health_socket.clone(),
                 pid,
-                None, // No deployment graph node (direct binary launch)
+                binary.clone(),
+                &node_id,
             )
             .await?;
 
