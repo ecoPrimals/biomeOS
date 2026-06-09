@@ -102,7 +102,12 @@ capabilities = [
     "http",
     "orchestration",
     "federation",
-    "network"
+    "network",
+    "mesh",
+    "relay",
+    "punch",
+    "stun",
+    "onion",
 ]
 
 [translations.network]
@@ -114,10 +119,28 @@ capabilities = [
 [translations.discovery]
 "discovery.find_primals" = { provider = "songbird", method = "discovery.find_primals" }
 "discovery.announce" = { provider = "songbird", method = "discovery.announce" }
+"discovery.peers" = { provider = "songbird", method = "discovery.list_peers" }
+"discovery.list_peers" = { provider = "songbird", method = "discovery.list_peers" }
 
 [translations.federation]
 "federation.peers" = { provider = "songbird", method = "songbird.federation.peers" }
 "federation.status" = { provider = "songbird", method = "songbird.federation.status" }
+"federation.configure" = { provider = "songbird", method = "songbird.federation.configure" }
+"federation.join" = { provider = "songbird", method = "songbird.federation.join" }
+"federation.health_check" = { provider = "songbird", method = "songbird.federation.health_check" }
+
+[translations.mesh]
+"mesh.peers" = { provider = "songbird", method = "mesh.list_peers" }
+"mesh.status" = { provider = "songbird", method = "mesh.status" }
+"mesh.find_path" = { provider = "songbird", method = "mesh.find_path" }
+"mesh.announce" = { provider = "songbird", method = "mesh.announce" }
+"mesh.health_check" = { provider = "songbird", method = "mesh.health_check" }
+
+[translations.relay]
+"relay.serve" = { provider = "songbird", method = "relay.serve" }
+"relay.allocate" = { provider = "songbird", method = "relay.allocate" }
+"relay.status" = { provider = "songbird", method = "relay.status" }
+"relay.authorize" = { provider = "songbird", method = "relay.authorize" }
 
 # ------------------------------------------------------------------------------
 # Storage Domain (NestGate)
@@ -858,15 +881,8 @@ capabilities = [
 "secrets.list" = { provider = "beardog", method = "secrets.list" }
 "secrets.delete" = { provider = "beardog", method = "secrets.delete" }
 
-# ------------------------------------------------------------------------------
-# Relay Domain (BearDog — Lineage-Gated Relay Authorization)
-# Covalent bonding and relay authorization for cross-network communication.
-# New in BearDog v0.9.0
-# ------------------------------------------------------------------------------
-
-[translations.relay]
-"relay.authorize" = { provider = "beardog", method = "relay.authorize" }
-"relay.status" = { provider = "beardog", method = "relay.status" }
+# Relay domain translations consolidated under [translations.relay] in network section.
+# relay.authorize and relay.status routed to songbird (mesh owner).
 
 # ------------------------------------------------------------------------------
 # Model Cache Domain (NestGate — Model Registry and Cache)

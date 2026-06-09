@@ -52,6 +52,11 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "orchestration",
             "federation",
             "network",
+            "mesh",
+            "relay",
+            "punch",
+            "stun",
+            "onion",
         ],
     },
     // Storage domain (NestGate)
