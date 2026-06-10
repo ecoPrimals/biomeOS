@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 10, 2026 (v4.20: PRIMAL_BIND_MODE gate + deep debt cleanup)
-**Version**: 4.20
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Auto-register with discovery provider on launch - PRIMAL_BIND_MODE=tcp_only fully wired - SELinux/Android UDS skip before bind - Magic numbers consolidated - Discovery provider dynamically resolved
+**Updated**: June 10, 2026 (v4.21: socket dir injection + signal completeness + niche refactor)
+**Version**: 4.21
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - BIOMEOS_SOCKET_DIR injected at spawn - Signal routes complete (nest.ingest_spore/emit_spore semantic) - Niche catalog data-driven - PRIMAL_BIND_MODE=tcp_only fully wired - Discovery provider dynamically resolved
 
 ---
 

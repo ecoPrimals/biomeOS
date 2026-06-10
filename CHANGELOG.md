@@ -2,6 +2,31 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.21 (2026-06-10) — Socket Dir Injection + Signal Completeness + Niche Refactor
+
+### Socket directory injection
+- NUCLEUS now explicitly injects `BIOMEOS_SOCKET_DIR` into all child primal
+  environments at spawn time. Previously, children inherited the parent env
+  inconsistently — primals that used `SystemPaths` or `RuntimeConfig` could
+  resolve to different directories.
+- `SystemPaths::get_runtime_dir()` now checks `BIOMEOS_SOCKET_DIR` first,
+  ensuring all resolution paths agree when the env var is set.
+- Resurrection spawner also injects `BIOMEOS_SOCKET_DIR`.
+- Graph executor sets both `SOCKET_DIR` and `BIOMEOS_SOCKET_DIR` in context.
+
+### Signal dispatch completeness
+- Added `nest.ingest_spore` and `nest.emit_spore` to semantic route table
+  (previously only reachable via `nucleus.*` aliases or fallback).
+- Added `nest_commit` composition pattern (5-node pipeline: dehydrate → sign →
+  store → commit → attribute) alongside existing `nest_store`.
+
+### Niche template refactor
+- Extracted 370 lines of inline `json!()` templates from `niche.rs` into
+  a data-driven `niche/catalog.rs` with `BUILTIN_TEMPLATES` static array.
+- Both `niche.list` and `niche.deploy` now derive from the same catalog —
+  adding a template requires one entry, not two parallel edits.
+- Handler code reduced from 714 lines to ~120 lines (mod.rs) + catalog.
+
 ## v4.20 (2026-06-10) — PRIMAL_BIND_MODE + Deep Debt Cleanup
 
 ### BM-UDS-01: PRIMAL_BIND_MODE=tcp_only env var gate (P2)

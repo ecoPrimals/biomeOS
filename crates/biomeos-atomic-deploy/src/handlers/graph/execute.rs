@@ -151,7 +151,11 @@ impl GraphHandler {
                     std::env::var(biomeos_types::env_config::vars::SOCKET_DIR)
                         .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.to_string())
                 });
-            env.insert("SOCKET_DIR".to_string(), socket_dir);
+            env.insert("SOCKET_DIR".to_string(), socket_dir.clone());
+            env.insert(
+                biomeos_types::env_config::vars::SOCKET_DIR.to_string(),
+                socket_dir,
+            );
             env.insert(
                 "JWT_SECRET".to_string(),
                 std::env::var(biomeos_types::env_config::vars::JWT_SECRET)

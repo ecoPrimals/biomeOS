@@ -201,6 +201,26 @@ impl CompositionPatternRegistry {
         });
 
         registry.register(CompositionPattern {
+            name: Arc::from("nest_commit"),
+            methods: vec![
+                Arc::from("event.append"),
+                Arc::from("crypto.sign"),
+                Arc::from("content.put"),
+                Arc::from("session.commit"),
+                Arc::from("braid.create"),
+            ],
+            primals: vec![
+                Arc::from(RHIZOCRYPT),
+                Arc::from(BEARDOG),
+                Arc::from(NESTGATE),
+                Arc::from(LOAMSPINE),
+                Arc::from(SWEETGRASS),
+            ],
+            tier: CompositionTier::Nest,
+            graph_file: Some("graphs/signals/nest_commit.toml".to_owned()),
+        });
+
+        registry.register(CompositionPattern {
             name: Arc::from("tower_publish"),
             methods: vec![
                 Arc::from("crypto.sign"),
@@ -523,10 +543,11 @@ mod tests {
     #[test]
     fn canonical_patterns_loaded() {
         let reg = CompositionPatternRegistry::with_canonical_patterns();
-        assert!(reg.len() >= 6);
+        assert!(reg.len() >= 7);
         assert!(reg.get("rootpulse_commit").is_some());
         assert!(reg.get("tower_atomic_bootstrap").is_some());
         assert!(reg.get("nest_store").is_some());
+        assert!(reg.get("nest_commit").is_some());
     }
 
     #[test]
