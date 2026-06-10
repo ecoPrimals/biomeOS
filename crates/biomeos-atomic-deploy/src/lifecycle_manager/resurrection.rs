@@ -170,6 +170,10 @@ impl LifecycleManager {
             .env(
                 biomeos_types::defaults::env_vars::socket_env_key(name),
                 socket_path,
+            )
+            .env(
+                biomeos_types::env_config::vars::SOCKET_DIR,
+                socket_dir.as_os_str(),
             );
 
         if let Some(nid) = node_id {

@@ -430,12 +430,17 @@ impl SystemPaths {
         reason = "Result required for consistency with other get_*_dir methods"
     )]
     fn get_runtime_dir() -> Result<PathBuf> {
-        // 1. Try $XDG_RUNTIME_DIR
+        // 1. Try BIOMEOS_SOCKET_DIR (injected by NUCLEUS at launch)
+        if let Ok(socket_dir) = env::var(crate::env_config::vars::SOCKET_DIR) {
+            return Ok(PathBuf::from(socket_dir));
+        }
+
+        // 2. Try $XDG_RUNTIME_DIR
         if let Ok(xdg_runtime) = env::var(crate::env_config::vars::XDG_RUNTIME_DIR) {
             return Ok(PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS));
         }
 
-        // 2. Fallback to /run/biomeos-$USER (VPS: RuntimeDirectory=biomeos)
+        // 3. Fallback to /run/biomeos-$USER (VPS: RuntimeDirectory=biomeos)
         let username = Self::get_username();
         Ok(PathBuf::from(format!(
             "/run/{}-{}",
