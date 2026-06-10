@@ -89,7 +89,21 @@ impl NeuralApiServer {
             info!("📡 TCP-only mode — skipping Unix socket bind");
             None
         } else {
-            Some(self.bind_socket()?)
+            match self.bind_socket() {
+                Ok(listener) => Some(listener),
+                Err(e) => {
+                    if self.tcp_port.is_some() {
+                        warn!(
+                            "⚠️ UDS bind failed ({}), degrading to TCP-only. \
+                             This is expected on SELinux/Android substrates.",
+                            e
+                        );
+                        None
+                    } else {
+                        return Err(e);
+                    }
+                }
+            }
         };
 
         let tcp_listener = if let Some(port) = self.tcp_port {

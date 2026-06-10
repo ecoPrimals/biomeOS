@@ -66,17 +66,34 @@ pub async fn run(
     }
     info!("  Protocol: JSON-RPC 2.0");
 
-    if let Some(tcp_port) = port {
+    let tcp_handle = if let Some(tcp_port) = port {
         let tcp_app = app.clone();
         let bind_host = bind.clone();
-        tokio::spawn(async move {
+        Some(tokio::spawn(async move {
             if let Err(e) = biomeos_api::serve_tcp(tcp_port, tcp_app, bind_host.as_deref()).await {
                 tracing::error!("API TCP server error: {e}");
             }
-        });
-    }
+        }))
+    } else {
+        None
+    };
 
-    biomeos_api::serve_unix_socket(&socket_path, app).await?;
+    match biomeos_api::serve_unix_socket(&socket_path, app).await {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            if let Some(handle) = tcp_handle {
+                warn!(
+                    "UDS bind failed ({}), running on TCP only. \
+                     This is expected on SELinux/Android substrates.",
+                    e
+                );
+                handle.await.ok();
+                Ok(())
+            } else {
+                Err(e)
+            }
+        }
+    }?;
 
     Ok(())
 }

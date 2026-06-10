@@ -88,10 +88,9 @@ enum Mode {
         #[arg(long)]
         port: Option<u16>,
 
-        /// [DEPRECATED] TCP-only mode: skip Unix socket, bind TCP only.
-        /// Deprecated since v3.94 — IPC sockets are the canonical transport.
-        /// Use --port for hybrid TCP+UDS. Will be removed in a future release.
-        #[arg(long, requires = "port", hide = true)]
+        /// TCP-only mode: skip Unix socket bind, use TCP only.
+        /// Required for SELinux/Android substrates where UDS bind is denied.
+        #[arg(long, requires = "port")]
         tcp_only: bool,
 
         /// TCP bind address (default: 127.0.0.1). Use 0.0.0.0 for all interfaces.
@@ -252,10 +251,9 @@ pub(crate) enum NucleusCommand {
         #[arg(long)]
         port: Option<u16>,
 
-        /// [DEPRECATED] TCP-only mode: skip Unix socket for Neural API.
-        /// Deprecated since v3.94 — IPC sockets are the canonical transport.
-        /// Use --port for hybrid TCP+UDS. Will be removed in a future release.
-        #[arg(long, requires = "port", hide = true)]
+        /// TCP-only mode: skip Unix socket for Neural API.
+        /// Required for SELinux/Android substrates where UDS bind is denied.
+        #[arg(long, requires = "port")]
         tcp_only: bool,
 
         /// TCP bind address (default: 127.0.0.1). Use 0.0.0.0 for all interfaces.
@@ -508,12 +506,6 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             bind,
             btsp_optional,
         } => {
-            if tcp_only {
-                tracing::warn!(
-                    "⚠ --tcp-only is DEPRECATED since v3.94 and will be removed. \
-                     IPC sockets are the canonical transport. Use --port for hybrid TCP+UDS."
-                );
-            }
             let config = modes::neural_api::resolve_neural_api_config(
                 graphs_dir,
                 socket,
@@ -574,12 +566,6 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 tcp_only,
                 bind,
             } => {
-                if tcp_only {
-                    tracing::warn!(
-                        "⚠ --tcp-only is DEPRECATED since v3.94 and will be removed. \
-                         IPC sockets are the canonical transport. Use --port for hybrid TCP+UDS."
-                    );
-                }
                 modes::nucleus::run(nucleus_mode, node_id, family_id, port, tcp_only, bind).await
             }
             NucleusCommand::Ingest {

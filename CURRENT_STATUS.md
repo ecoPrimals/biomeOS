@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 9, 2026 (v4.17: NUCLEUS supervision — automatic primal restart on crash)
-**Version**: 4.17
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE (crashed primals auto-restart from depot binary) - Error chains preserved - Hardcoded literals centralized
+**Updated**: June 9, 2026 (v4.18: Graceful TCP fallback for SELinux/Android substrates)
+**Version**: 4.18
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - SELinux/Android graceful UDS→TCP degradation - Error chains preserved - Hardcoded literals centralized
 
 ---
 

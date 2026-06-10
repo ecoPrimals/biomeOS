@@ -386,11 +386,10 @@ pub async fn run(
     tcp_only: bool,
     bind: Option<String>,
 ) -> Result<()> {
-    #[cfg(not(debug_assertions))]
     if tcp_only {
-        anyhow::bail!(
-            "--tcp-only is deprecated and blocked in release builds (v3.94+). \
-             Use --port for hybrid TCP+UDS instead."
+        info!(
+            "TCP-only mode active — UDS skipped. \
+             Required for SELinux/Android substrates."
         );
     }
 
@@ -494,20 +493,29 @@ pub async fn run(
             }
         }
 
-        // Wait for socket to appear (use health_socket for primals with separate JSON-RPC sockets)
-        wait_for_socket(
+        // Wait for socket to appear (use health_socket for primals with separate JSON-RPC sockets).
+        // Non-fatal: on SELinux/Android, the primal may be alive on TCP without a UDS socket.
+        let socket_appeared = wait_for_socket(
             &health_socket,
             Duration::from_secs(10),
             DEFAULT_SOCKET_POLL_INTERVAL,
         )
-        .await?;
+        .await
+        .is_ok();
 
-        // Health check via JSON-RPC with backoff retries
-        let health_ok = health_check_with_backoff(&health_socket).await;
-        if health_ok {
-            info!("  {} healthy (PID: {:?})", primal, pid);
+        if socket_appeared {
+            let health_ok = health_check_with_backoff(&health_socket).await;
+            if health_ok {
+                info!("  {} healthy (PID: {:?})", primal, pid);
+            } else {
+                warn!("{} health check failed after retries (incubating)", primal);
+            }
         } else {
-            warn!("{} health check failed after retries (incubating)", primal);
+            warn!(
+                "{} socket did not appear within timeout — primal may be running \
+                 in TCP-only mode (SELinux/Android substrate)",
+                primal
+            );
         }
 
         // Register with lifecycle manager for ongoing monitoring and auto-restart
@@ -541,7 +549,10 @@ pub async fn run(
         let neural_socket = socket_dir.join(format!("neural-api-{family_id}.sock"));
         info!("Starting Neural API server (Full NUCLEUS)...");
         if tcp_only {
-            info!("  Transport: TCP-only (port {}) [DEPRECATED]", tcp_port.unwrap_or(0));
+            info!(
+                "  Transport: TCP-only (port {}). UDS skipped — SELinux/Android substrate.",
+                tcp_port.unwrap_or(0)
+            );
         } else if let Some(port) = tcp_port {
             info!("  Socket: {}", neural_socket.display());
             info!("  TCP Port: {port} (alongside UDS)");

@@ -2,6 +2,23 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.18 (2026-06-09) — Graceful TCP Fallback for SELinux/Android Substrates
+
+### UDS bind failure → TCP degradation (P2 — grapheneGate 13/13)
+- **Neural API**: When UDS bind fails and a TCP port is configured, the server
+  now gracefully degrades to TCP-only mode instead of exiting fatally. Logs a
+  warning indicating SELinux/Android substrate detection.
+- **API server**: Same graceful degradation — if UDS bind fails but TCP was
+  spawned, the server continues on TCP only.
+- **NUCLEUS primal spawning**: Socket wait timeout is now non-fatal. If a child
+  primal's socket doesn't appear within 10s (SELinux denial), NUCLEUS logs a
+  warning and continues startup instead of aborting.
+- **`--tcp-only` flag**: Unblocked in release builds. Previously blocked since
+  v3.94 as "deprecated" — now recognized as required for SELinux/Android
+  substrates where UDS bind is denied. Flag is no longer hidden in CLI help.
+- **Deep debt**: Removed deprecated warnings, updated CLI help text to reflect
+  the SELinux/Android use case.
+
 ## v4.17 (2026-06-09) — NUCLEUS Supervision: Automatic Primal Restart
 
 ### NUCLEUS watchdog (P1 — autonomous operation)
