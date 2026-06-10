@@ -303,12 +303,7 @@ async fn test_apoptosis_updates_state() {
     let manager = LifecycleManager::new("test-family");
 
     manager
-        .register_primal(
-            "test-primal",
-            PathBuf::from("/tmp/test.sock"),
-            None,
-            None,
-        )
+        .register_primal("test-primal", PathBuf::from("/tmp/test.sock"), None, None)
         .await
         .expect("register");
 
@@ -430,8 +425,7 @@ fn test_managed_primal_serialization() {
     assert_eq!(parsed.depends_on, vec!["base"]);
     assert_eq!(parsed.depended_by, vec!["songbird"]);
     assert_eq!(
-        parsed.binary_path,
-        None,
+        parsed.binary_path, None,
         "binary_path should round-trip None"
     );
 }

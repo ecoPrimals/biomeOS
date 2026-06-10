@@ -123,7 +123,8 @@ impl ManagedPrimal for GenericManagedPrimal {
             }
 
             // Try Unix socket first
-            if let Ok(socket_path) = std::env::var(biomeos_types::env_config::vars::PRIMAL_SOCKET_PATH)
+            if let Ok(socket_path) =
+                std::env::var(biomeos_types::env_config::vars::PRIMAL_SOCKET_PATH)
                 && let Ok(endpoint) = Endpoint::new(format!("unix://{socket_path}"))
             {
                 return Some(endpoint);
@@ -178,7 +179,8 @@ impl ManagedPrimal for GenericManagedPrimal {
             // Logs redirected to per-primal files
             // instead of /dev/null to enable observability and debugging!
             // Use XDG-compliant paths via SystemPaths
-            let node_id = std::env::var(biomeos_types::env_config::vars::NODE_ID_LEGACY).unwrap_or_else(|_| "unknown".to_string());
+            let node_id = std::env::var(biomeos_types::env_config::vars::NODE_ID_LEGACY)
+                .unwrap_or_else(|_| "unknown".to_string());
 
             // Use SystemPaths for XDG-compliant log location
             let log_path = if let Ok(paths) = SystemPaths::new() {
@@ -187,10 +189,12 @@ impl ManagedPrimal for GenericManagedPrimal {
                 // Respects BIOMEOS_LOG_DIR or falls back to writable directory.
                 let log_dir = std::env::var(biomeos_types::env_config::vars::LOG_DIR)
                     .or_else(|_| {
-                        std::env::var(biomeos_types::env_config::vars::XDG_STATE_HOME).map(|p| format!("{p}/biomeos/logs"))
+                        std::env::var(biomeos_types::env_config::vars::XDG_STATE_HOME)
+                            .map(|p| format!("{p}/biomeos/logs"))
                     })
                     .or_else(|_| {
-                        std::env::var(biomeos_types::env_config::vars::HOME).map(|p| format!("{p}/.local/state/biomeos/logs"))
+                        std::env::var(biomeos_types::env_config::vars::HOME)
+                            .map(|p| format!("{p}/.local/state/biomeos/logs"))
                     })
                     .unwrap_or_else(|_| {
                         warn!("No XDG paths available, using current directory for logs");
@@ -603,7 +607,10 @@ mod tests {
             .build()
             .unwrap();
         let endpoint = primal.endpoint().await;
-        assert!(endpoint.is_none(), "HTTP transport is removed; should return None");
+        assert!(
+            endpoint.is_none(),
+            "HTTP transport is removed; should return None"
+        );
     }
 
     #[tokio::test]

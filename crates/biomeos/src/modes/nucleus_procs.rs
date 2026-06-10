@@ -173,7 +173,10 @@ pub(crate) fn discover_binaries_with(
             .join("primals"),
         cwd,
     ));
-    search_paths.push(discover_search_path(PathBuf::from("livespore-usb/primals"), cwd));
+    search_paths.push(discover_search_path(
+        PathBuf::from("livespore-usb/primals"),
+        cwd,
+    ));
 
     for primal in primals {
         let mut found = false;
@@ -320,11 +323,18 @@ pub(super) async fn wait_for_shutdown_signal() {
     #[cfg(unix)]
     {
         use tokio::signal::unix::{SignalKind, signal};
-        let mut sigterm =
-            signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
-        tokio::select! {
-            _ = ctrl_c => info!("Received SIGINT"),
-            _ = sigterm.recv() => info!("Received SIGTERM"),
+        match signal(SignalKind::terminate()) {
+            Ok(mut sigterm) => {
+                tokio::select! {
+                    _ = ctrl_c => info!("Received SIGINT"),
+                    _ = sigterm.recv() => info!("Received SIGTERM"),
+                }
+            }
+            Err(e) => {
+                warn!("Could not install SIGTERM handler: {e}. Waiting for SIGINT only.");
+                let _ = ctrl_c.await;
+                info!("Received SIGINT");
+            }
         }
     }
 
@@ -359,7 +369,7 @@ pub(super) async fn auto_register_with_songbird(
 ) {
     use biomeos_core::atomic_client::AtomicClient;
     use biomeos_core::socket_discovery::cap_probe::probe_unix_socket_capabilities_list;
-    use biomeos_types::capability_taxonomy::helpers::capabilities_for_primal;
+    use biomeos_types::capability_taxonomy::capabilities_for_primal;
 
     let songbird_socket = socket_dir.join(format!("songbird-{family_id}.sock"));
     if !songbird_socket.exists() {
@@ -419,18 +429,14 @@ pub(super) async fn auto_register_with_songbird(
                 }
                 Err(e) => {
                     failed += 1;
-                    warn!(
-                        "Failed to register {primal}/{capability} with songBird: {e}"
-                    );
+                    warn!("Failed to register {primal}/{capability} with songBird: {e}");
                 }
             }
         }
     }
 
     if registered > 0 {
-        info!(
-            "📡 Auto-registered {registered} capabilities with songBird ({failed} failed)"
-        );
+        info!("📡 Auto-registered {registered} capabilities with songBird ({failed} failed)");
     } else if failed > 0 {
         warn!("songBird auto-registration: 0 succeeded, {failed} failed");
     }

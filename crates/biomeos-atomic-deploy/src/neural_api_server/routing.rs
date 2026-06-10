@@ -173,8 +173,9 @@ impl NeuralApiServer {
                 if let Some((domain, operation)) = request.method.as_ref().split_once('.') {
                     if !domain.is_empty() && !operation.is_empty() {
                         debug!("📡 Semantic fallback: {domain}.{operation} → capability.call");
-                        let cap_params =
-                            self.build_semantic_params(domain, operation, params, &caller).await;
+                        let cap_params = self
+                            .build_semantic_params(domain, operation, params, &caller)
+                            .await;
                         return dispatch_capability_call(
                             self.capability_handler.call(&Some(cap_params)).await,
                             id,
@@ -308,9 +309,7 @@ impl NeuralApiServer {
             Route::CompositionPlanTier => dispatch(self.handle_plan_tier(params).await, id),
             Route::CapabilityUtilization => dispatch(Ok(self.router.utilization_json().await), id),
             Route::WeightHealth => dispatch(self.handle_weight_health().await, id),
-            Route::TrainingDataDrain => {
-                dispatch(self.handle_training_data_drain().await, id)
-            }
+            Route::TrainingDataDrain => dispatch(self.handle_training_data_drain().await, id),
             Route::CapabilityCall => {
                 let enriched = self.enrich_for_forwarding(params, &caller).await;
                 dispatch_capability_call(self.capability_handler.call(&enriched).await, id)
@@ -387,9 +386,7 @@ impl NeuralApiServer {
             }
             Route::IdentityGet => dispatch(Ok(self.identity_response()), id),
             Route::PrimalAnnounce => dispatch(self.handle_primal_announce(params).await, id),
-            Route::SignalDispatch => {
-                dispatch(self.dispatch_nucleus_signal_raw(params).await, id)
-            }
+            Route::SignalDispatch => dispatch(self.dispatch_nucleus_signal_raw(params).await, id),
             Route::SignalList => {
                 dispatch(crate::handlers::signal::list(&self.graphs_dir).await, id)
             }
@@ -409,9 +406,10 @@ impl NeuralApiServer {
                 })),
                 id,
             ),
-            Route::NucleusIngestSpore => {
-                dispatch(self.dispatch_nucleus_signal("ingest_spore", params).await, id)
-            }
+            Route::NucleusIngestSpore => dispatch(
+                self.dispatch_nucleus_signal("ingest_spore", params).await,
+                id,
+            ),
             Route::NucleusEmitSpore => {
                 let emit_params = params.clone().unwrap_or(json!({}));
                 let spore_id = emit_params
@@ -436,9 +434,10 @@ impl NeuralApiServer {
                     )
                 }
             }
-            Route::ManifestGateProfile => {
-                dispatch(crate::handlers::manifest::handle_gate_profile(params).await, id)
-            }
+            Route::ManifestGateProfile => dispatch(
+                crate::handlers::manifest::handle_gate_profile(params).await,
+                id,
+            ),
             Route::MethodRegister => {
                 dispatch(self.capability_handler.register_methods(params).await, id)
             }
@@ -446,8 +445,9 @@ impl NeuralApiServer {
             Route::ProxyHttp => dispatch(self.proxy_http(params).await, id),
             Route::SemanticCapabilityCall => {
                 if let Some((domain, operation)) = request.method.as_ref().split_once('.') {
-                    let cap_params =
-                        self.build_semantic_params(domain, operation, params, &caller).await;
+                    let cap_params = self
+                        .build_semantic_params(domain, operation, params, &caller)
+                        .await;
                     dispatch_capability_call(
                         self.capability_handler.call(&Some(cap_params)).await,
                         id,
@@ -464,10 +464,7 @@ impl NeuralApiServer {
         outcome
     }
 
-    async fn handle_primal_announce(
-        &self,
-        params: &Option<Value>,
-    ) -> Result<Value, anyhow::Error> {
+    async fn handle_primal_announce(&self, params: &Option<Value>) -> Result<Value, anyhow::Error> {
         crate::handlers::announce::handle_announce(
             &self.router,
             &self.translation_registry,
@@ -509,10 +506,7 @@ impl NeuralApiServer {
         Ok(json!({"weights": weights, "summary": summary}))
     }
 
-    async fn handle_routing_explain(
-        &self,
-        params: &Option<Value>,
-    ) -> Result<Value, anyhow::Error> {
+    async fn handle_routing_explain(&self, params: &Option<Value>) -> Result<Value, anyhow::Error> {
         crate::handlers::capability_routing::explain_route(
             &self.router,
             &*self.translation_registry.read().await,

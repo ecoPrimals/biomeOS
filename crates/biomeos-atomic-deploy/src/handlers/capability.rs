@@ -37,11 +37,11 @@ use super::graph::GraphHandler;
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::gate_registry::GateRegistry;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
-use tokio::sync::RwLock as TokioRwLock;
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio::sync::RwLock as TokioRwLock;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
@@ -459,9 +459,7 @@ impl CapabilityHandler {
     pub async fn register_gate(&self, params: &Option<Value>) -> Result<Value> {
         let params = params.as_ref().context("Missing parameters")?;
 
-        let gate_name = params["gate"]
-            .as_str()
-            .context("Missing 'gate' field")?;
+        let gate_name = params["gate"].as_str().context("Missing 'gate' field")?;
         let transport_str = params["endpoint"]
             .as_str()
             .context("Missing 'endpoint' field")?;

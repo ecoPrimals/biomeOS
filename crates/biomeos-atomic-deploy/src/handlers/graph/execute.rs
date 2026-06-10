@@ -190,7 +190,9 @@ impl GraphHandler {
                 match crate::capability_domains::CapabilityRegistry::from_toml(&config_path) {
                     Ok(r) => r,
                     Err(e) => {
-                        tracing::warn!("Failed to load capability_registry.toml: {e} — using empty registry");
+                        tracing::warn!(
+                            "Failed to load capability_registry.toml: {e} — using empty registry"
+                        );
                         crate::capability_domains::CapabilityRegistry::default()
                     }
                 }

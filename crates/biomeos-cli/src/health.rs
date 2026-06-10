@@ -199,15 +199,15 @@ impl HealthUtils {
 
         // Deduct for high resource usage
         if health.memory_usage > 75.0 {
-            score -= (health.memory_usage - 75.0) * 2.0;
+            score = health.memory_usage.mul_add(-2.0, score + 150.0);
         }
 
         if health.cpu_usage > 75.0 {
-            score -= (health.cpu_usage - 75.0) * 1.5;
+            score = health.cpu_usage.mul_add(-1.5, score + 112.5);
         }
 
         if health.disk_usage > 85.0 {
-            score -= (health.disk_usage - 85.0) * 3.0;
+            score = health.disk_usage.mul_add(-3.0, score + 255.0);
         }
 
         score.clamp(0.0, 100.0)

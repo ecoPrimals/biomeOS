@@ -211,10 +211,16 @@ impl RuntimeConfig {
                 env.get(env_vars::SOCKET_DIR)
                     .map(|s| PathBuf::from(s.as_str()))
             })
-            .or_else(|| xdg_runtime_dir_override.map(|xdg| PathBuf::from(xdg).join(crate::constants::runtime_paths::BIOMEOS_SUBDIR)))
             .or_else(|| {
-                env.get("XDG_RUNTIME_DIR")
-                    .map(|xdg| PathBuf::from(xdg.as_str()).join(crate::constants::runtime_paths::BIOMEOS_SUBDIR))
+                xdg_runtime_dir_override.map(|xdg| {
+                    PathBuf::from(xdg).join(crate::constants::runtime_paths::BIOMEOS_SUBDIR)
+                })
+            })
+            .or_else(|| {
+                env.get("XDG_RUNTIME_DIR").map(|xdg| {
+                    PathBuf::from(xdg.as_str())
+                        .join(crate::constants::runtime_paths::BIOMEOS_SUBDIR)
+                })
             })
             .unwrap_or_else(|| {
                 if let Some(uid) = env.get("UID").or_else(|| env.get("EUID")) {

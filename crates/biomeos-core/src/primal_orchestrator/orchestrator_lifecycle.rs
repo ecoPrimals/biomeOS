@@ -95,12 +95,7 @@ impl PrimalOrchestrator {
 
         let start_result = self
             .retry_policy
-            .execute(|| async {
-                primal
-                    .start()
-                    .await
-                    .context("Start failed")
-            })
+            .execute(|| async { primal.start().await.context("Start failed") })
             .await;
 
         match start_result {

@@ -104,7 +104,13 @@ impl FilesystemManager {
         })?;
 
         // Try to mount (rustix: source, target, fstype, flags, data)
-        match mount(source, target.as_ref(), fstype, flags, None::<&std::ffi::CStr>) {
+        match mount(
+            source,
+            target.as_ref(),
+            fstype,
+            flags,
+            None::<&std::ffi::CStr>,
+        ) {
             Ok(()) => {
                 info!("  ✓ {}", target.as_ref().display());
                 self.mounted.insert(target_path);

@@ -82,7 +82,9 @@ pub enum FossilAction {
 }
 
 fn default_migrate_source() -> PathBuf {
-    biomeos_types::SystemPaths::new_lazy().data_dir().join("primals")
+    biomeos_types::SystemPaths::new_lazy()
+        .data_dir()
+        .join("primals")
 }
 
 /// Execute a fossil log management command

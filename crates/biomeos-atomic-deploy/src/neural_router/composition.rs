@@ -173,11 +173,7 @@ impl CompositionPatternRegistry {
                 Arc::from("discovery.announce"),
                 Arc::from("security.audit_event"),
             ],
-            primals: vec![
-                Arc::from(BEARDOG),
-                Arc::from(SONGBIRD),
-                Arc::from(SKUNKBAT),
-            ],
+            primals: vec![Arc::from(BEARDOG), Arc::from(SONGBIRD), Arc::from(SKUNKBAT)],
             tier: CompositionTier::Tower,
             graph_file: Some("graphs/tower_atomic_bootstrap.toml".to_owned()),
         });
@@ -207,11 +203,7 @@ impl CompositionPatternRegistry {
                 Arc::from("discovery.announce"),
                 Arc::from("security.audit_event"),
             ],
-            primals: vec![
-                Arc::from(BEARDOG),
-                Arc::from(SONGBIRD),
-                Arc::from(SKUNKBAT),
-            ],
+            primals: vec![Arc::from(BEARDOG), Arc::from(SONGBIRD), Arc::from(SKUNKBAT)],
             tier: CompositionTier::Tower,
             graph_file: Some("graphs/signals/tower_publish.toml".to_owned()),
         });
@@ -314,11 +306,7 @@ impl CompositionPatternRegistry {
     /// merges back any patterns whose names don't collide with canonical ones.
     /// Returns the total pattern count after reload.
     pub fn reload_canonical(&mut self) -> usize {
-        let runtime_patterns: Vec<CompositionPattern> = self
-            .patterns
-            .values()
-            .cloned()
-            .collect();
+        let runtime_patterns: Vec<CompositionPattern> = self.patterns.values().cloned().collect();
 
         *self = Self::with_canonical_patterns();
 

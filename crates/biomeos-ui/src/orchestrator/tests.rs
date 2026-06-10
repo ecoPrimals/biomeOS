@@ -277,8 +277,7 @@ async fn test_handle_primal_event_missing_type_uses_unknown() {
 async fn test_run_subscribes_and_loops() {
     let mut orchestrator = InteractiveUIOrchestrator::new("test-family").unwrap();
     orchestrator.start().await.unwrap();
-    let _ =
-        tokio::time::timeout(std::time::Duration::from_millis(100), orchestrator.run()).await;
+    let _ = tokio::time::timeout(std::time::Duration::from_millis(100), orchestrator.run()).await;
 }
 
 #[tokio::test]

@@ -697,13 +697,9 @@ fn test_discover_depot_takes_priority_over_livespore_usb() {
     }
 
     let depot_path = temp.path().join("depot");
-    let map = super::discover_binaries_with(
-        &[name],
-        Some(depot_path.as_path()),
-        &[],
-        Some(temp.path()),
-    )
-    .expect("discover");
+    let map =
+        super::discover_binaries_with(&[name], Some(depot_path.as_path()), &[], Some(temp.path()))
+            .expect("discover");
 
     assert!(map.contains_key(name), "primal should be found");
     let resolved = &map[name];

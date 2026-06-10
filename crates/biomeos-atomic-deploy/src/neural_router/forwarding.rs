@@ -299,10 +299,7 @@ impl NeuralRouter {
             let client = tarpc_client::connect_tarpc_health(&tarpc_path)
                 .await
                 .context("tarpc health connect failed")?;
-            let info = client
-                .version(ctx)
-                .await
-                .context("tarpc version failed")?;
+            let info = client.version(ctx).await.context("tarpc version failed")?;
             return Ok(serde_json::to_value(&info)?);
         }
 
@@ -353,7 +350,10 @@ impl NeuralRouter {
                 "discovery.register" | "discovery_register" => {
                     let reg: ServiceRegistration =
                         serde_json::from_value(params.clone()).context("invalid registration")?;
-                    let res = client.register(ctx, reg).await.context("tarpc register failed")?;
+                    let res = client
+                        .register(ctx, reg)
+                        .await
+                        .context("tarpc register failed")?;
                     return Ok(serde_json::to_value(&res)?);
                 }
                 _ => anyhow::bail!("unknown discovery method: {method}"),

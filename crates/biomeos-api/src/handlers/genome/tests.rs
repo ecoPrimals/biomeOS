@@ -546,7 +546,10 @@ async fn test_self_replicate_handler() {
     assert!(result.is_ok());
     let resp = result.unwrap().0;
     assert!(resp.success);
-    assert_eq!(resp.genome_id, biomeos_types::primal_names::BIOMEOS_SELF_GENOME);
+    assert_eq!(
+        resp.genome_id,
+        biomeos_types::primal_names::BIOMEOS_SELF_GENOME
+    );
     assert!(resp.size > 0);
     assert!(resp.message.contains("Self-replicated"));
 }

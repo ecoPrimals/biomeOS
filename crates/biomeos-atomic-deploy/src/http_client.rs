@@ -6,7 +6,10 @@
 //! Provides HTTP/HTTPS via the discovery provider (network delegate): fetching binaries, update checks,
 //! niche deployment (git clone), and remote health checks.
 
-#![expect(dead_code, reason = "HTTP client for remote operations — wired when Songbird network delegate is live")]
+#![expect(
+    dead_code,
+    reason = "HTTP client for remote operations — wired when Songbird network delegate is live"
+)]
 
 use anyhow::{Context, Result};
 use biomeos_types::primal_names;
@@ -58,8 +61,10 @@ impl BiomeOsHttpClient {
             .or_else(|_| std::env::var(biomeos_types::env_config::vars::NETWORK_PROVIDER))
             .ok()
             .or_else(|| {
-                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
-                    .map(String::from)
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                    "discovery",
+                )
+                .map(String::from)
             })
             .unwrap_or_else(|| primal_names::SONGBIRD.to_string());
         let discovery_socket = std::env::var(biomeos_types::env_config::vars::DISCOVERY_SOCKET)

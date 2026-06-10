@@ -61,15 +61,13 @@ async fn test_encrypted_stream_wrong_key_drops_connection() {
         tokio::net::UnixStream::pair().expect("UnixStream::pair");
     let server = create_test_server();
 
-    let server_keys =
-        btsp_negotiate::derive_session_keys(&[0xAAu8; 32], &[1u8; 12], &[2u8; 12]);
+    let server_keys = btsp_negotiate::derive_session_keys(&[0xAAu8; 32], &[1u8; 12], &[2u8; 12]);
     let wrong_keys = btsp_negotiate::derive_session_keys(&[0xBBu8; 32], &[3u8; 12], &[4u8; 12]);
 
     let client_task = tokio::spawn(async move {
         let request = r#"{"jsonrpc":"2.0","method":"health.liveness","id":1}"#;
-        let frame =
-            btsp_negotiate::encrypt_frame(&wrong_keys.client_to_server, request.as_bytes())
-                .expect("encrypt");
+        let frame = btsp_negotiate::encrypt_frame(&wrong_keys.client_to_server, request.as_bytes())
+            .expect("encrypt");
         client_stream.write_all(&frame).await.expect("write frame");
         client_stream.flush().await.expect("flush");
 
@@ -123,8 +121,7 @@ async fn test_negotiate_then_encrypted_stream_end_to_end() {
     let handshake_key = [0xDDu8; 32];
     let session_id = "e2e-test-session";
 
-    btsp_negotiate::register_session(&server.btsp_sessions, session_id, Some(handshake_key))
-        .await;
+    btsp_negotiate::register_session(&server.btsp_sessions, session_id, Some(handshake_key)).await;
 
     let client_nonce = [0x11u8; 32];
     let client_nonce_b64 = {

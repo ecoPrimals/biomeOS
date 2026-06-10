@@ -322,8 +322,8 @@ impl CapabilityTranslationRegistry {
         let config_content = std::fs::read_to_string(config_path.as_ref())
             .context("Failed to read capability config")?;
 
-        let config: toml::Value = toml::from_str(&config_content)
-            .context("Failed to parse capability config")?;
+        let config: toml::Value =
+            toml::from_str(&config_content).context("Failed to parse capability config")?;
 
         let family_id = family_id_override
             .map(String::from)

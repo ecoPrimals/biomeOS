@@ -78,8 +78,8 @@ async fn call_security_provider(
 ) -> anyhow::Result<serde_json::Value> {
     // Try Neural API first (preferred — capability-routed)
     if let Some(socket) = discover_neural_api_socket() {
-        let client = neural_api_client::NeuralApiClient::new(&socket)
-            .context("create Neural API client")?;
+        let client =
+            neural_api_client::NeuralApiClient::new(&socket).context("create Neural API client")?;
 
         match client
             .route_to_primal("trust", method, params.clone())

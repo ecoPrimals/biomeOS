@@ -260,7 +260,10 @@ pub fn parse_checksums(content: &str) -> Vec<ChecksumEntry> {
         .collect()
 }
 
-#[expect(clippy::single_match_else, reason = "match arms have early-return control flow")]
+#[expect(
+    clippy::single_match_else,
+    reason = "match arms have early-return control flow"
+)]
 fn read_and_parse_toml<T: serde::de::DeserializeOwned>(
     path: &Path,
     label: &str,
@@ -281,7 +284,10 @@ fn read_and_parse_toml<T: serde::de::DeserializeOwned>(
     }
 }
 
-#[expect(clippy::single_match_else, reason = "match arms have early-return control flow")]
+#[expect(
+    clippy::single_match_else,
+    reason = "match arms have early-return control flow"
+)]
 fn read_and_parse_json<T: serde::de::DeserializeOwned>(
     path: &Path,
     label: &str,
@@ -306,7 +312,11 @@ fn read_and_parse_json<T: serde::de::DeserializeOwned>(
 pub fn load_pseudospore(root: &Path) -> PseudoSporeManifest {
     let mut errors = Vec::new();
 
-    let Some(scope) = read_and_parse_toml::<PseudoSporeScope>(&root.join("scope.toml"), "scope.toml", &mut errors) else {
+    let Some(scope) = read_and_parse_toml::<PseudoSporeScope>(
+        &root.join("scope.toml"),
+        "scope.toml",
+        &mut errors,
+    ) else {
         return invalid_manifest(root, errors);
     };
 
@@ -319,7 +329,11 @@ pub fn load_pseudospore(root: &Path) -> PseudoSporeManifest {
         ));
     }
 
-    let Some(validation) = read_and_parse_json::<ValidationDoc>(&root.join("validation.json"), "validation.json", &mut errors) else {
+    let Some(validation) = read_and_parse_json::<ValidationDoc>(
+        &root.join("validation.json"),
+        "validation.json",
+        &mut errors,
+    ) else {
         return invalid_manifest(root, errors);
     };
 
@@ -327,7 +341,11 @@ pub fn load_pseudospore(root: &Path) -> PseudoSporeManifest {
         errors.push("validation.json has no modules".to_string());
     }
 
-    let Some(environment) = read_and_parse_toml::<EnvironmentReceipt>(&root.join("receipts/environment.toml"), "receipts/environment.toml", &mut errors) else {
+    let Some(environment) = read_and_parse_toml::<EnvironmentReceipt>(
+        &root.join("receipts/environment.toml"),
+        "receipts/environment.toml",
+        &mut errors,
+    ) else {
         return invalid_manifest(root, errors);
     };
 
@@ -338,14 +356,19 @@ pub fn load_pseudospore(root: &Path) -> PseudoSporeManifest {
         errors.push("receipts/environment.toml missing [software]".to_string());
     }
 
-    let checksums: Vec<ChecksumEntry> = if let Ok(content) = std::fs::read_to_string(root.join("receipts/checksums.blake3")) {
-        parse_checksums(&content)
-    } else {
-        errors.push("receipts/checksums.blake3 not found".to_string());
-        Vec::new()
-    };
+    let checksums: Vec<ChecksumEntry> =
+        if let Ok(content) = std::fs::read_to_string(root.join("receipts/checksums.blake3")) {
+            parse_checksums(&content)
+        } else {
+            errors.push("receipts/checksums.blake3 not found".to_string());
+            Vec::new()
+        };
 
-    let Some(ferment) = read_and_parse_json::<FermentTranscript>(&root.join("provenance/ferment_transcript.json"), "provenance/ferment_transcript.json", &mut errors) else {
+    let Some(ferment) = read_and_parse_json::<FermentTranscript>(
+        &root.join("provenance/ferment_transcript.json"),
+        "provenance/ferment_transcript.json",
+        &mut errors,
+    ) else {
         return invalid_manifest(root, errors);
     };
 
@@ -689,7 +712,12 @@ rust = "1.82"
         .unwrap();
 
         let manifest = load_pseudospore(tmp.path());
-        assert!(manifest.errors.iter().any(|e| e.contains("expected 'pseudoSpore'")));
+        assert!(
+            manifest
+                .errors
+                .iter()
+                .any(|e| e.contains("expected 'pseudoSpore'"))
+        );
     }
 
     #[test]

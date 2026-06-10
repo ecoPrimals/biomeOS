@@ -333,7 +333,9 @@ impl NeuralApiServer {
                 if req.id.is_none() {
                     debug!("Received JSON-RPC notification: {}", req.method);
                     match serde_json::to_string(&req) {
-                        Ok(raw) => { let _ = self.handle_request_json(&raw).await; }
+                        Ok(raw) => {
+                            let _ = self.handle_request_json(&raw).await;
+                        }
                         Err(e) => tracing::warn!("Failed to serialize notification: {e}"),
                     }
                     return None;
@@ -361,13 +363,11 @@ impl NeuralApiServer {
                         }
                         true
                     })
-                    .filter_map(|req| {
-                        match serde_json::to_string(&req) {
-                            Ok(raw) => Some(async move { self.handle_request_json(&raw).await }),
-                            Err(e) => {
-                                tracing::warn!("Failed to serialize batch request: {e}");
-                                None
-                            }
+                    .filter_map(|req| match serde_json::to_string(&req) {
+                        Ok(raw) => Some(async move { self.handle_request_json(&raw).await }),
+                        Err(e) => {
+                            tracing::warn!("Failed to serialize batch request: {e}");
+                            None
                         }
                     })
                     .collect();

@@ -105,7 +105,9 @@ impl DarkForestGateConfig {
             .cloned()
             .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
 
-        let tier1 = env.get(biomeos_types::env_config::vars::NEURAL_API_SOCKET).map(String::as_str);
+        let tier1 = env
+            .get(biomeos_types::env_config::vars::NEURAL_API_SOCKET)
+            .map(String::as_str);
         let neural_api_socket =
             beacon_verification::discover_neural_api_socket_from(&family_id, tier1);
 

@@ -17,8 +17,8 @@ impl UniversalBiomeOSManager {
         tracing::info!("🔍 Validating biome manifest");
 
         // Parse the manifest content
-        let manifest: BiomeManifest = serde_yaml::from_str(manifest_content)
-            .context("Failed to parse manifest")?;
+        let manifest: BiomeManifest =
+            serde_yaml::from_str(manifest_content).context("Failed to parse manifest")?;
 
         // Basic validation - in Universal Adapter architecture, this would delegate to Toadstool
         if manifest.metadata.name.is_empty() {

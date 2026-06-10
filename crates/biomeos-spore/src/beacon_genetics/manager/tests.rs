@@ -38,14 +38,9 @@ impl CapabilityCaller for MockCapabilityCaller {
         _params: serde_json::Value,
     ) -> crate::error::SporeResult<serde_json::Value> {
         let responses = self.responses.lock().await;
-        responses
-            .get(capability)
-            .cloned()
-            .ok_or_else(|| {
-                crate::error::SporeError::CapabilityCall(format!(
-                    "no mock response for {capability}"
-                ))
-            })
+        responses.get(capability).cloned().ok_or_else(|| {
+            crate::error::SporeError::CapabilityCall(format!("no mock response for {capability}"))
+        })
     }
 }
 

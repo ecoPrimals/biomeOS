@@ -117,7 +117,8 @@ impl PrimalType {
     /// let my_type = PrimalType::identify_self("compute", "1.0.0");
     /// ```
     pub fn identify_self(category: impl Into<String>, version: impl Into<String>) -> Self {
-        let name = std::env::var(crate::env_config::vars::PRIMAL_NAME).unwrap_or_else(|_| "unknown".to_string());
+        let name = std::env::var(crate::env_config::vars::PRIMAL_NAME)
+            .unwrap_or_else(|_| "unknown".to_string());
         Self::new(category, name, version)
     }
 

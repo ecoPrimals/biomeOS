@@ -156,8 +156,8 @@ impl DeploymentMode {
         // 2. Check if running from removable media
         if let Ok(media_path) = Self::detect_removable_media() {
             let host_os = Self::detect_host_os()?;
-            let persistence =
-                std::env::var(biomeos_types::env_config::vars::PERSISTENCE).is_ok_and(|v| v == "true" || v == "1");
+            let persistence = std::env::var(biomeos_types::env_config::vars::PERSISTENCE)
+                .is_ok_and(|v| v == "true" || v == "1");
 
             return Ok(Self::ColdSpore {
                 media_path,
@@ -178,8 +178,11 @@ impl DeploymentMode {
         // 4. Default to Sibling Spore
         let host_os = Self::detect_host_os()?;
         let install_dir = Self::get_install_dir()?;
-        let isolation =
-            Self::isolation_level_from_env(std::env::var(biomeos_types::env_config::vars::ISOLATION).ok().as_deref());
+        let isolation = Self::isolation_level_from_env(
+            std::env::var(biomeos_types::env_config::vars::ISOLATION)
+                .ok()
+                .as_deref(),
+        );
 
         Ok(Self::SiblingSpore {
             host_os,
@@ -202,7 +205,12 @@ impl DeploymentMode {
     /// ```
     #[must_use]
     pub fn socket_prefix(&self) -> PathBuf {
-        self.socket_prefix_with_runtime(std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR).ok().as_deref(), None)
+        self.socket_prefix_with_runtime(
+            std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
+                .ok()
+                .as_deref(),
+            None,
+        )
     }
 
     /// Like [`Self::socket_prefix`], but uses the given runtime directory and UID override
@@ -435,7 +443,8 @@ impl DeploymentMode {
     }
 
     fn get_os_version() -> String {
-        std::env::var(biomeos_types::env_config::vars::OS_VERSION).unwrap_or_else(|_| "unknown".to_string())
+        std::env::var(biomeos_types::env_config::vars::OS_VERSION)
+            .unwrap_or_else(|_| "unknown".to_string())
     }
 
     fn get_install_dir() -> Result<PathBuf> {
@@ -446,7 +455,8 @@ impl DeploymentMode {
 
         // 2. Use XDG_DATA_HOME if available (XDG-compliant)
         if let Ok(xdg_data) = std::env::var(biomeos_types::env_config::vars::XDG_DATA_HOME) {
-            return Ok(PathBuf::from(xdg_data).join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR));
+            return Ok(PathBuf::from(xdg_data)
+                .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR));
         }
 
         // 3. Default to HOME/.local/share (XDG default)

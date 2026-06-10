@@ -301,7 +301,14 @@ fn test_cli_parse_nucleus_start() {
 #[test]
 fn test_cli_parse_nucleus_start_with_mode_and_family() {
     let cli = Cli::parse_from([
-        "biomeos", "nucleus", "start", "--mode", "tower", "--node-id", "n1", "--family-id",
+        "biomeos",
+        "nucleus",
+        "start",
+        "--mode",
+        "tower",
+        "--node-id",
+        "n1",
+        "--family-id",
         "fam1",
     ]);
     match &cli.mode {

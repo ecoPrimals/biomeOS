@@ -206,9 +206,10 @@ fn test_build_primal_command_songbird() {
     );
     // Static bind address for cross-gate federation
     assert!(
-        envs.iter()
-            .any(|(k, v)| k == &std::ffi::OsStr::new("SONGBIRD_PRODUCTION_BIND_ADDRESS")
-                && v == &Some(std::ffi::OsStr::new("0.0.0.0"))),
+        envs.iter().any(
+            |(k, v)| k == &std::ffi::OsStr::new("SONGBIRD_PRODUCTION_BIND_ADDRESS")
+                && v == &Some(std::ffi::OsStr::new("0.0.0.0"))
+        ),
         "songbird should have SONGBIRD_PRODUCTION_BIND_ADDRESS=0.0.0.0 for cross-gate federation"
     );
     let args: Vec<_> = cmd.get_args().collect();

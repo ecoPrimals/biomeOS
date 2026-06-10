@@ -79,11 +79,12 @@ impl NeuralApiServer {
         if self.tcp_only {
             use biomeos_types::constants::ports::{TCP_SPAWN_BASE, TCP_SPAWN_SCAN_RANGE};
 
-            let host: std::sync::Arc<str> = std::env::var(biomeos_types::env_config::vars::BIND_ADDRESS)
-                .unwrap_or_else(|_| {
-                    biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
-                })
-                .into();
+            let host: std::sync::Arc<str> =
+                std::env::var(biomeos_types::env_config::vars::BIND_ADDRESS)
+                    .unwrap_or_else(|_| {
+                        biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
+                    })
+                    .into();
 
             for port in TCP_SPAWN_BASE..(TCP_SPAWN_BASE + TCP_SPAWN_SCAN_RANGE) {
                 let addr = format!("{}:{}", &host, port);

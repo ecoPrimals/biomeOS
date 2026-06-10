@@ -127,8 +127,10 @@ impl LocalEntropy {
 
         // Generate a stable UUID based on hostname + user
         warn!("Could not read machine-id, generating stable fallback");
-        let hostname = std::env::var(biomeos_types::env_config::vars::HOSTNAME).unwrap_or_else(|_| "unknown".to_string());
-        let user = std::env::var(biomeos_types::env_config::vars::SYS_USER).unwrap_or_else(|_| "unknown".to_string());
+        let hostname = std::env::var(biomeos_types::env_config::vars::HOSTNAME)
+            .unwrap_or_else(|_| "unknown".to_string());
+        let user = std::env::var(biomeos_types::env_config::vars::SYS_USER)
+            .unwrap_or_else(|_| "unknown".to_string());
 
         let mut hasher = Sha256::new();
         hasher.update(hostname.as_bytes());

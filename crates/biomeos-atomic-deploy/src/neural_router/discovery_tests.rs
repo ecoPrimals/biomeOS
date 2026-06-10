@@ -118,7 +118,11 @@ async fn test_discover_capability_ai_category_empty_registry() {
     // discovery may succeed — that's correct production behavior.
     let live_compute = std::env::var("XDG_RUNTIME_DIR")
         .ok()
-        .map(|d| std::path::Path::new(&d).join("biomeos/compute-nucleus01.sock").exists())
+        .map(|d| {
+            std::path::Path::new(&d)
+                .join("biomeos/compute-nucleus01.sock")
+                .exists()
+        })
         .unwrap_or(false);
     if !live_compute {
         let err = result.unwrap_err();
@@ -334,7 +338,10 @@ async fn test_discover_capability_via_prefix() {
         .primals
         .iter()
         .any(|p| p.name.as_ref() == "loamspine");
-    assert!(has_loamspine, "loamspine should be among discovered primals");
+    assert!(
+        has_loamspine,
+        "loamspine should be among discovered primals"
+    );
 }
 
 #[tokio::test]

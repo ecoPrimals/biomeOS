@@ -161,7 +161,8 @@ pub fn btsp_enforce() -> bool {
     if !has_family_id() {
         return false;
     }
-    std::env::var(biomeos_types::env_config::vars::BTSP_ENFORCE).map_or(true, |v| v != "0" && v != "false")
+    std::env::var(biomeos_types::env_config::vars::BTSP_ENFORCE)
+        .map_or(true, |v| v != "0" && v != "false")
 }
 
 /// Locate the security provider socket for BTSP delegation.
@@ -214,7 +215,8 @@ fn socket_dir() -> Option<std::path::PathBuf> {
         return Some(std::path::PathBuf::from(dir));
     }
     if let Ok(runtime) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
-        let dir = std::path::PathBuf::from(runtime).join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
+        let dir = std::path::PathBuf::from(runtime)
+            .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
         if dir.is_dir() {
             return Some(dir);
         }
@@ -393,7 +395,9 @@ pub enum BtspHandshakeError {
     #[error("BTSP I/O error: {0}")]
     Io(std::io::Error),
     /// FAMILY_ID and BIOMEOS_INSECURE=1 set simultaneously.
-    #[error("FAMILY_ID and BIOMEOS_INSECURE=1 cannot coexist — production mode requires BTSP authentication")]
+    #[error(
+        "FAMILY_ID and BIOMEOS_INSECURE=1 cannot coexist — production mode requires BTSP authentication"
+    )]
     InsecureGuard,
 }
 
@@ -425,15 +429,27 @@ async fn create_session_via_security_provider(
 
     let session_id = result["session_id"]
         .as_str()
-        .ok_or_else(|| BtspHandshakeError::SecurityProviderError("missing session_id in btsp.session.create response".into()))?
+        .ok_or_else(|| {
+            BtspHandshakeError::SecurityProviderError(
+                "missing session_id in btsp.session.create response".into(),
+            )
+        })?
         .to_owned();
     let server_ephemeral_pub = result["server_ephemeral_pub"]
         .as_str()
-        .ok_or_else(|| BtspHandshakeError::SecurityProviderError("missing server_ephemeral_pub in btsp.session.create response".into()))?
+        .ok_or_else(|| {
+            BtspHandshakeError::SecurityProviderError(
+                "missing server_ephemeral_pub in btsp.session.create response".into(),
+            )
+        })?
         .to_owned();
     let challenge = result["challenge"]
         .as_str()
-        .ok_or_else(|| BtspHandshakeError::SecurityProviderError("missing challenge in btsp.session.create response".into()))?
+        .ok_or_else(|| {
+            BtspHandshakeError::SecurityProviderError(
+                "missing challenge in btsp.session.create response".into(),
+            )
+        })?
         .to_owned();
 
     Ok(BtspSession {
@@ -506,7 +522,8 @@ pub fn validate_insecure_guard() -> Result<(), BtspHandshakeError> {
     let has_family = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
         .or_else(|_| std::env::var(biomeos_types::env_config::vars::FAMILY_ID))
         .is_ok_and(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID);
-    let insecure = std::env::var(biomeos_types::env_config::vars::INSECURE).is_ok_and(|v| v == "1" || v == "true");
+    let insecure = std::env::var(biomeos_types::env_config::vars::INSECURE)
+        .is_ok_and(|v| v == "1" || v == "true");
 
     if has_family && insecure {
         return Err(BtspHandshakeError::InsecureGuard);
@@ -555,7 +572,8 @@ pub fn log_security_posture() {
             );
         }
         SecurityMode::Development => {
-            let insecure = std::env::var(biomeos_types::env_config::vars::INSECURE).is_ok_and(|v| v == "1" || v == "true");
+            let insecure = std::env::var(biomeos_types::env_config::vars::INSECURE)
+                .is_ok_and(|v| v == "1" || v == "true");
             if insecure {
                 warn!("INSECURE MODE — no BTSP authentication. Development only.");
             } else {

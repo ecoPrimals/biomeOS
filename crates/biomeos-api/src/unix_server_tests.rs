@@ -22,8 +22,7 @@ async fn test_serve_unix_socket_binds_and_accepts() {
     let path = socket_path.clone();
     let (mut ready_tx, ready_rx) = ready_signal();
     let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
-    let server_handle =
-        tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+    let server_handle = tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
 
     // Wait for server to bind (serve_unix_socket signals after bind)
     ready_rx.wait().await.expect("server should signal");
@@ -53,8 +52,7 @@ async fn test_serve_unix_socket_removes_stale_socket() {
     let path = socket_path.clone();
     let (mut ready_tx, ready_rx) = ready_signal();
     let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
-    let server_handle =
-        tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+    let server_handle = tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
 
     // Wait for server to replace stale socket and bind
     ready_rx.wait().await.expect("server should signal");
@@ -79,8 +77,7 @@ async fn test_serve_unix_socket_handles_http_request() {
     let path = socket_path.clone();
     let (mut ready_tx, ready_rx) = ready_signal();
     let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
-    let server_handle =
-        tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+    let server_handle = tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
 
     ready_rx.wait().await.expect("server should signal");
 
@@ -160,8 +157,7 @@ async fn test_raw_jsonrpc_health_check() {
     let path = socket_path.clone();
     let (mut ready_tx, ready_rx) = ready_signal();
     let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
-    let server_handle =
-        tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+    let server_handle = tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
 
     ready_rx.wait().await.expect("server should signal");
 
@@ -197,8 +193,7 @@ async fn test_raw_jsonrpc_identity_get() {
     let path = socket_path.clone();
     let (mut ready_tx, ready_rx) = ready_signal();
     let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
-    let server_handle =
-        tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+    let server_handle = tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
 
     ready_rx.wait().await.expect("server should signal");
 
@@ -234,8 +229,7 @@ async fn test_raw_jsonrpc_capabilities_list() {
     let path = socket_path.clone();
     let (mut ready_tx, ready_rx) = ready_signal();
     let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
-    let server_handle =
-        tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+    let server_handle = tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
 
     ready_rx.wait().await.expect("server should signal");
 
@@ -244,8 +238,7 @@ async fn test_raw_jsonrpc_capabilities_list() {
         .expect("connect");
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    let req =
-        b"{\"jsonrpc\":\"2.0\",\"method\":\"capabilities.list\",\"params\":{},\"id\":99}\n";
+    let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"capabilities.list\",\"params\":{},\"id\":99}\n";
     stream.write_all(req).await.expect("write");
     stream.flush().await.expect("flush");
 
@@ -272,8 +265,7 @@ async fn test_raw_jsonrpc_unknown_method_returns_error() {
     let path = socket_path.clone();
     let (mut ready_tx, ready_rx) = ready_signal();
     let on_ready = Some(Box::new(move || ready_tx.signal()) as Box<dyn FnOnce() + Send>);
-    let server_handle =
-        tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
+    let server_handle = tokio::spawn(async move { serve_unix_socket(&path, app, on_ready).await });
 
     ready_rx.wait().await.expect("server should signal");
 

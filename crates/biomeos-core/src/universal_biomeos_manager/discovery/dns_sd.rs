@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use anyhow::Context;
 use super::PrimalCapability;
+use anyhow::Context;
 use biomeos_types::constants::ports;
 use biomeos_types::{Health, JsonRpcRequest, JsonRpcResponse, PrimalType};
 use std::collections::{HashMap, HashSet};

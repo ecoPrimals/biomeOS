@@ -197,8 +197,7 @@ fn test_trust_evaluation_request_missing_peer_id_fails() {
 #[test]
 fn test_trust_evaluation_request_empty_peer_id() {
     let json = r#"{"peer_id": "", "peer_tags": []}"#;
-    let req: TrustEvaluationRequest =
-        serde_json::from_str(json).expect("empty string is valid");
+    let req: TrustEvaluationRequest = serde_json::from_str(json).expect("empty string is valid");
     assert_eq!(req.peer_id, "");
     assert!(req.peer_tags.is_empty());
 }

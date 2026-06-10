@@ -69,7 +69,10 @@ pub async fn verify_primal_health(socket_path: &Path, primal_name: &str) -> Resu
 ///
 /// # Returns
 /// Vector of capability strings the primal provides
-#[expect(dead_code, reason = "prepared for discovery-based health verification in mesh mode")]
+#[expect(
+    dead_code,
+    reason = "prepared for discovery-based health verification in mesh mode"
+)]
 pub async fn verify_primal_health_with_discovery(primal_name: &str) -> Result<Vec<String>> {
     // Discover primal with automatic transport fallback
     let client = AtomicClient::discover(primal_name)
@@ -143,7 +146,10 @@ pub async fn establish_btsp_tunnel(security_socket: &Path, family_id: &str) -> R
 /// Establish a BTSP tunnel using auto-discovery (Universal IPC v3.0)
 ///
 /// Uses `AtomicClient::discover()` to find `BearDog` automatically.
-#[expect(dead_code, reason = "prepared for discovery-based BTSP tunnel in mesh mode")]
+#[expect(
+    dead_code,
+    reason = "prepared for discovery-based BTSP tunnel in mesh mode"
+)]
 pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<String> {
     // Discover security provider with automatic transport fallback
     // Provider name resolved from env, not hardcoded

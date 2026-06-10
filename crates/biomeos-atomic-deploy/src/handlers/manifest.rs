@@ -156,8 +156,9 @@ fn resolve_gate_id(params: &Option<Value>) -> Option<String> {
 ///   - `repos`: array of enriched repo objects for this gate
 ///   - `repo_count`: number of repos in this profile
 pub async fn handle_gate_profile(params: &Option<Value>) -> Result<Value, anyhow::Error> {
-    let manifest_path = resolve_manifest_path(params)
-        .context("ecosystem_manifest.toml not found — set BIOMEOS_ECOSYSTEM_MANIFEST or pass manifest_path")?;
+    let manifest_path = resolve_manifest_path(params).context(
+        "ecosystem_manifest.toml not found — set BIOMEOS_ECOSYSTEM_MANIFEST or pass manifest_path",
+    )?;
 
     let gate_id = resolve_gate_id(params)
         .context("gate ID not resolved — set BIOMEOS_GATE_ID or pass gate_id param")?;
@@ -174,10 +175,12 @@ fn load_and_resolve(manifest_path: &Path, gate_id: &str) -> Result<Value, anyhow
     let manifest: EcosystemManifest =
         toml::from_str(&raw).context("failed to parse ecosystem_manifest.toml")?;
 
-    let profile = manifest
-        .gates
-        .get(gate_id)
-        .with_context(|| format!("gate '{gate_id}' not found in manifest (available: {:?})", manifest.gates.keys().collect::<Vec<_>>()))?;
+    let profile = manifest.gates.get(gate_id).with_context(|| {
+        format!(
+            "gate '{gate_id}' not found in manifest (available: {:?})",
+            manifest.gates.keys().collect::<Vec<_>>()
+        )
+    })?;
 
     let default_branch = manifest
         .sync

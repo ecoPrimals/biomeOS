@@ -20,8 +20,8 @@ impl UniversalBiomeOSManager {
     ) -> Result<HashMap<String, serde_json::Value>> {
         tracing::info!("📋 Planning service creation");
 
-        let config: serde_json::Value = serde_json::from_str(config_data)
-            .context("Failed to parse config")?;
+        let config: serde_json::Value =
+            serde_json::from_str(config_data).context("Failed to parse config")?;
 
         let mut plan = HashMap::new();
         plan.insert("status".to_string(), serde_json::json!("planned"));

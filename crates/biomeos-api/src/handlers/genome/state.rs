@@ -75,9 +75,7 @@ impl GenomeState {
     /// Save genome to persistent storage
     pub async fn save_genome(&self, id: &str, genome: &GenomeBin) -> Result<(), GenomeStateError> {
         let path = self.genome_path(id);
-        genome
-            .save(&path)
-            .map_err(GenomeStateError::Codec)?;
+        genome.save(&path).map_err(GenomeStateError::Codec)?;
 
         let mut cache = self.genomes.write().await;
         cache.insert(id.to_string(), genome.clone());
@@ -100,8 +98,7 @@ impl GenomeState {
             return Err(GenomeStateError::NotFound(id.to_string()));
         }
 
-        let genome =
-            GenomeBin::load(&path).map_err(GenomeStateError::Codec)?;
+        let genome = GenomeBin::load(&path).map_err(GenomeStateError::Codec)?;
 
         {
             let mut cache = self.genomes.write().await;

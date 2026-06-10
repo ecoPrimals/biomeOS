@@ -200,8 +200,7 @@ async fn test_discover_primal_binary_success_via_env() {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755))
-            .expect("chmod");
+        std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
     }
 
     let mut env = HashMap::new();
@@ -231,8 +230,7 @@ async fn test_discover_primal_binary_success_arch_specific() {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755))
-            .expect("chmod");
+        std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
     }
 
     let mut env = HashMap::new();
@@ -298,8 +296,7 @@ async fn test_discover_primal_binary_prefers_env_over_default_paths() {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755))
-            .expect("chmod");
+        std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
     }
 
     let mut env = HashMap::new();

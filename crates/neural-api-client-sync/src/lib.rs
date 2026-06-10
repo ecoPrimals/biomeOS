@@ -335,7 +335,6 @@ fn parse_response(response: &serde_json::Value) -> Result<CallResult, NeuralErro
     })
 }
 
-
 #[cfg(test)]
 #[path = "lib_tests.rs"]
 mod tests;

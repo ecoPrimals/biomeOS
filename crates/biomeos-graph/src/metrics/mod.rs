@@ -151,8 +151,7 @@ impl MetricsCollector {
     /// Create a new metrics collector (redb - ecoBin compliant!)
     pub fn new<P: AsRef<Path>>(db_path: P) -> Result<Self> {
         let path = db_path.as_ref();
-        let db = Database::create(path)
-            .context("Failed to open metrics database")?;
+        let db = Database::create(path).context("Failed to open metrics database")?;
 
         // Ensure the metrics table exists (redb creates tables on first write)
         let txn = db
@@ -163,8 +162,7 @@ impl MetricsCollector {
                 .open_table(METRICS_TABLE)
                 .context("Failed to create metrics table")?;
         }
-        txn.commit()
-            .context("Failed to commit initialization")?;
+        txn.commit().context("Failed to commit initialization")?;
 
         Ok(Self { db: Arc::new(db) })
     }
@@ -208,8 +206,7 @@ impl MetricsCollector {
                 .insert(key.as_str(), value.as_slice())
                 .context("Failed to insert execution record")?;
         }
-        txn.commit()
-            .context("Failed to commit transaction")?;
+        txn.commit().context("Failed to commit transaction")?;
 
         Ok(())
     }
@@ -234,12 +231,8 @@ impl MetricsCollector {
         let mut max_duration_ms = 0u64;
         let mut last_executed: Option<chrono::DateTime<chrono::Utc>> = None;
 
-        for item in table
-            .range(prefix.as_str()..end.as_str())
-            ?
-        {
-            let (_key, value) = item
-                .context("Failed to read database entry")?;
+        for item in table.range(prefix.as_str()..end.as_str())? {
+            let (_key, value) = item.context("Failed to read database entry")?;
             let value = value.value();
 
             let record: ExecutionRecord =
@@ -292,12 +285,8 @@ impl MetricsCollector {
             .open_table(METRICS_TABLE)
             .context("Failed to open metrics table")?;
 
-        for item in table
-            .range("exec:"..end.as_str())
-            ?
-        {
-            let (key, _) = item
-                .context("Failed to read database entry")?;
+        for item in table.range("exec:"..end.as_str())? {
+            let (key, _) = item.context("Failed to read database entry")?;
             let key_str = key.value();
 
             // Parse "exec:graph_name:timestamp" format
@@ -321,8 +310,7 @@ impl MetricsCollector {
             .context("Failed to open metrics table")?;
 
         let keys: Vec<String> = table
-            .range::<&str>(""..)
-            ?
+            .range::<&str>(""..)?
             .filter_map(|item| item.map(|(k, _)| k.value().to_string()).ok())
             .collect();
 
@@ -338,14 +326,10 @@ impl MetricsCollector {
                 .open_table(METRICS_TABLE)
                 .context("Failed to open metrics table")?;
             for key in keys {
-                table
-                    .remove(key.as_str())
-                    ?;
+                table.remove(key.as_str())?;
             }
         }
-        write_txn
-            .commit()
-            .context("Failed to commit transaction")?;
+        write_txn.commit().context("Failed to commit transaction")?;
 
         Ok(())
     }
@@ -383,8 +367,7 @@ impl MetricsCollector {
                 .insert(key.as_str(), value.as_slice())
                 .context("Failed to insert node execution record")?;
         }
-        txn.commit()
-            .context("Failed to commit transaction")?;
+        txn.commit().context("Failed to commit transaction")?;
 
         Ok(())
     }
@@ -409,12 +392,8 @@ impl MetricsCollector {
             .open_table(METRICS_TABLE)
             .context("Failed to open metrics table")?;
 
-        for item in table
-            .range(prefix.as_str()..end.as_str())
-            ?
-        {
-            let (_key, value) = item
-                .context("Failed to read database entry")?;
+        for item in table.range(prefix.as_str()..end.as_str())? {
+            let (_key, value) = item.context("Failed to read database entry")?;
             let value = value.value();
             let record: NodeExecutionRecord =
                 serde_json::from_slice(value).context("Failed to deserialize node record")?;
@@ -458,12 +437,8 @@ impl MetricsCollector {
             .open_table(METRICS_TABLE)
             .context("Failed to open metrics table")?;
 
-        for item in table
-            .range(prefix.as_str()..end.as_str())
-            ?
-        {
-            let (_key, value) = item
-                .context("Failed to read database entry")?;
+        for item in table.range(prefix.as_str()..end.as_str())? {
+            let (_key, value) = item.context("Failed to read database entry")?;
             let value = value.value();
             let record: ExecutionRecord =
                 serde_json::from_slice(value).context("Failed to deserialize record")?;

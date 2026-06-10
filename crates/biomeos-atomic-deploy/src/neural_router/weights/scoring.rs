@@ -25,7 +25,10 @@ pub(crate) const EXPLORATION_BONUS: f64 = 0.1;
 
 /// Topology affinity multipliers — prefer same-gate IPC over cross-gate or WAN.
 /// Source: TOPOLOGY_MAP.toml in wateringHole.
-#[expect(dead_code, reason = "VPS and CROSS_SEGMENT used by future gate_id comparison")]
+#[expect(
+    dead_code,
+    reason = "VPS and CROSS_SEGMENT used by future gate_id comparison"
+)]
 pub mod topology {
     pub const SAME_GATE: f64 = 1.0;
     pub const SAME_SEGMENT: f64 = 0.9;
@@ -223,4 +226,3 @@ fn is_private_network(host: &str) -> bool {
         || host.starts_with("fd")
         || host.starts_with("fe80:")
 }
-

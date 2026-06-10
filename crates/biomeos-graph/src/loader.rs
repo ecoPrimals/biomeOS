@@ -62,11 +62,10 @@ impl GraphLoader {
     /// - Dependencies form a cycle
     pub fn from_file(path: impl AsRef<Path>) -> Result<DeploymentGraph> {
         let path = path.as_ref();
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| GraphError::Io {
-                context: format!("Failed to read {}", path.display()),
-                source: e,
-            })?;
+        let content = std::fs::read_to_string(path).map_err(|e| GraphError::Io {
+            context: format!("Failed to read {}", path.display()),
+            source: e,
+        })?;
 
         Self::from_str(&content, Some(path))
     }
@@ -74,11 +73,10 @@ impl GraphLoader {
     /// Load a graph from a TOML file using this loader's configuration.
     pub fn load_file(&self, path: impl AsRef<Path>) -> Result<DeploymentGraph> {
         let path = path.as_ref();
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| GraphError::Io {
-                context: format!("Failed to read {}", path.display()),
-                source: e,
-            })?;
+        let content = std::fs::read_to_string(path).map_err(|e| GraphError::Io {
+            context: format!("Failed to read {}", path.display()),
+            source: e,
+        })?;
         self.parse_and_validate(&content, Some(path))
     }
 
@@ -166,17 +164,14 @@ pub(crate) fn load_graphs_from_dir(dir: impl AsRef<Path>) -> Result<Vec<Deployme
     let dir = dir.as_ref();
     let mut graphs = Vec::new();
 
-    for entry in std::fs::read_dir(dir)
-        .map_err(|e| GraphError::Io {
-            context: format!("Failed to read directory {}", dir.display()),
+    for entry in std::fs::read_dir(dir).map_err(|e| GraphError::Io {
+        context: format!("Failed to read directory {}", dir.display()),
+        source: e,
+    })? {
+        let entry = entry.map_err(|e| GraphError::Io {
+            context: "Failed to read directory entry".to_owned(),
             source: e,
-        })?
-    {
-        let entry =
-            entry.map_err(|e| GraphError::Io {
-                context: "Failed to read directory entry".to_owned(),
-                source: e,
-            })?;
+        })?;
         let path = entry.path();
 
         if path.extension().is_some_and(|ext| ext == "toml") {

@@ -46,9 +46,12 @@ pub async fn register_self_in_registry(
     let capabilities = biomeos_types::primal_names::BIOMEOS_SELF_CAPABILITIES;
 
     if let Some(port) = tcp_port {
-        let host: std::sync::Arc<str> = std::env::var(biomeos_types::env_config::vars::BIND_ADDRESS)
-            .unwrap_or_else(|_| biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string())
-            .into();
+        let host: std::sync::Arc<str> =
+            std::env::var(biomeos_types::env_config::vars::BIND_ADDRESS)
+                .unwrap_or_else(|_| {
+                    biomeos_types::constants::endpoints::DEFAULT_LOCALHOST.to_string()
+                })
+                .into();
         let endpoint = biomeos_core::TransportEndpoint::TcpSocket { host, port };
         for &capability in capabilities {
             router
@@ -183,21 +186,33 @@ pub async fn transition_to_coordinated_with_runtime_dir(
     let security_provider = biomeos_types::env_config::security_provider()
         .or_else(|| {
             biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
-                .or_else(|| biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("encryption"))
+                .or_else(|| {
+                    biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                        "encryption",
+                    )
+                })
                 .map(String::from)
         })
         .unwrap_or_else(|| {
-            tracing::debug!("Security provider: env + taxonomy returned None, using last-resort fallback");
+            tracing::debug!(
+                "Security provider: env + taxonomy returned None, using last-resort fallback"
+            );
             biomeos_types::primal_names::BEARDOG.to_string()
         });
     let network_provider = biomeos_types::env_config::network_provider()
         .or_else(|| {
             biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
-                .or_else(|| biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("networking"))
+                .or_else(|| {
+                    biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                        "networking",
+                    )
+                })
                 .map(String::from)
         })
         .unwrap_or_else(|| {
-            tracing::debug!("Network provider: env + taxonomy returned None, using last-resort fallback");
+            tracing::debug!(
+                "Network provider: env + taxonomy returned None, using last-resort fallback"
+            );
             biomeos_types::primal_names::SONGBIRD.to_string()
         });
     let mut nucleation = SocketNucleation::new(SocketStrategy::default());
@@ -371,9 +386,9 @@ mod tests {
         env.insert("FAMILY_ID".to_string(), family_id.to_string());
         env.insert("BIOMEOS_FAMILY_ID".to_string(), family_id.to_string());
         env.insert(
-        biomeos_types::env_config::vars::MODE.to_string(),
-        "bootstrap".to_string(),
-    );
+            biomeos_types::env_config::vars::MODE.to_string(),
+            "bootstrap".to_string(),
+        );
 
         assert_eq!(env.get("FAMILY_ID"), Some(&"test-family".to_string()));
         assert_eq!(env.get("BIOMEOS_MODE"), Some(&"bootstrap".to_string()));

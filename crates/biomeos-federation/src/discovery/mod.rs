@@ -127,12 +127,15 @@ impl PrimalDiscovery {
             }
         };
 
-        while let Some(entry) = entries.next_entry().await.map_err(|e| {
-            crate::FederationError::Discovery {
-                context: "Failed to read directory entry".to_owned(),
-                source: Box::new(e),
-            }
-        })? {
+        while let Some(entry) =
+            entries
+                .next_entry()
+                .await
+                .map_err(|e| crate::FederationError::Discovery {
+                    context: "Failed to read directory entry".to_owned(),
+                    source: Box::new(e),
+                })?
+        {
             let path = entry.path();
 
             if let Some(filename) = path.file_name().and_then(|n| n.to_str())
@@ -157,12 +160,11 @@ impl PrimalDiscovery {
 
         let request = biomeos_types::JsonRpcRequest::new("identity.info", serde_json::json!({}));
 
-        let request_bytes = serde_json::to_vec(&request).map_err(|e| {
-            crate::FederationError::Discovery {
+        let request_bytes =
+            serde_json::to_vec(&request).map_err(|e| crate::FederationError::Discovery {
                 context: "Failed to serialize request".to_owned(),
                 source: Box::new(e),
-            }
-        })?;
+            })?;
 
         let (read_half, mut write_half) = stream.into_split();
         write_half.write_all(&request_bytes).await.map_err(|e| {
@@ -173,12 +175,13 @@ impl PrimalDiscovery {
         })?;
         write_half.write_all(b"\n").await.ok();
 
-        write_half.flush().await.map_err(|e| {
-            crate::FederationError::Discovery {
+        write_half
+            .flush()
+            .await
+            .map_err(|e| crate::FederationError::Discovery {
                 context: "Failed to flush request".to_owned(),
                 source: Box::new(e),
-            }
-        })?;
+            })?;
         write_half.shutdown().await.ok();
 
         let mut reader = BufReader::new(read_half);
@@ -409,12 +412,11 @@ impl PrimalDiscovery {
             }),
         );
 
-        let request_str = serde_json::to_string(&request)
-            .map_err(|e| crate::FederationError::Discovery {
+        let request_str =
+            serde_json::to_string(&request).map_err(|e| crate::FederationError::Discovery {
                 context: "JSON serialization error".to_owned(),
                 source: Box::new(e),
-            })?
-            + "\n";
+            })? + "\n";
 
         writer
             .write_all(request_str.as_bytes())
@@ -432,13 +434,12 @@ impl PrimalDiscovery {
             })?;
 
         let mut response_line = String::new();
-        reader
-            .read_line(&mut response_line)
-            .await
-            .map_err(|e| crate::FederationError::Discovery {
+        reader.read_line(&mut response_line).await.map_err(|e| {
+            crate::FederationError::Discovery {
                 context: "Failed to read from discovery provider".to_owned(),
                 source: Box::new(e),
-            })?;
+            }
+        })?;
 
         let response: serde_json::Value =
             serde_json::from_str(response_line.trim()).map_err(|e| {

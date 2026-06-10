@@ -85,7 +85,9 @@ pub fn agents_from_collective(
                 let mut metadata = HashMap::new();
                 if domain == "compute" && !gate.compute.gpus.is_empty() {
                     match serde_json::to_value(&gate.compute.gpus) {
-                        Ok(v) => { metadata.insert("gpus".to_string(), v); }
+                        Ok(v) => {
+                            metadata.insert("gpus".to_string(), v);
+                        }
                         Err(e) => tracing::warn!("Failed to serialize GPU metadata: {e}"),
                     }
                     metadata.insert("ram_gb".to_string(), serde_json::json!(gate.compute.ram_gb));

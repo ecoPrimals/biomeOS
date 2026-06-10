@@ -18,8 +18,10 @@ impl super::Plasmodium {
         let discovery_provider = std::env::var(biomeos_types::env_config::vars::DISCOVERY_PROVIDER)
             .ok()
             .or_else(|| {
-                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
-                    .map(String::from)
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                    "discovery",
+                )
+                .map(String::from)
             })
             .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
         if let Ok(client) = AtomicClient::discover(&discovery_provider).await {

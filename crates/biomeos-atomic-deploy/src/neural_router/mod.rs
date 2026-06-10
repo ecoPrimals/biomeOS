@@ -16,11 +16,11 @@ mod discovery_composite;
 mod discovery_primal;
 mod discovery_registry;
 mod forwarding;
-pub mod perceptron;
 #[cfg(test)]
 mod forwarding_routing_tests;
 #[cfg(test)]
 mod forwarding_tests;
+pub mod perceptron;
 mod types;
 pub mod weights;
 
@@ -39,10 +39,12 @@ use biomeos_types::tarpc_types::ProtocolPreference;
 pub use composition::{
     CompositionPattern, CompositionPatternRegistry, CompositionTier, TierCompositionPlan,
 };
+pub use perceptron::{
+    DispatchTrainingRow, PerceptronDispatcher, PerceptronPhase, PerceptronWeights,
+};
 pub use types::{
     AtomicType, DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability, RoutingMetrics,
 };
-pub use perceptron::{DispatchTrainingRow, PerceptronDispatcher, PerceptronPhase, PerceptronWeights};
 pub use weights::{
     CapabilityUtilizationTracker, MethodUtilization, ProviderWeight, RoutingWeightTable,
     UtilizationSummary, WeightTableSummary,
@@ -525,11 +527,7 @@ impl NeuralRouter {
     /// Useful after mesh topology changes (new gate joins) to refresh
     /// canonical patterns without restarting Neural API.
     pub async fn reload_composition_patterns(&self) -> usize {
-        let count = self
-            .composition_patterns
-            .write()
-            .await
-            .reload_canonical();
+        let count = self.composition_patterns.write().await.reload_canonical();
         info!("composition patterns reloaded: {count} patterns active");
         count
     }

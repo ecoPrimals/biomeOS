@@ -51,8 +51,10 @@ impl AISuggestionManager {
     /// Discovers ANY primal with "ai" capability, not specifically "Squirrel".
     /// Primals self-register capabilities at runtime.
     pub async fn discover_ai_provider(&mut self) -> Result<()> {
-        self.discover_ai_provider_with_strict(std::env::var(biomeos_types::env_config::vars::STRICT_DISCOVERY).is_ok())
-            .await
+        self.discover_ai_provider_with_strict(
+            std::env::var(biomeos_types::env_config::vars::STRICT_DISCOVERY).is_ok(),
+        )
+        .await
     }
 
     /// Like [`Self::discover_ai_provider`], with explicit strict-discovery (no `BIOMEOS_STRICT_DISCOVERY` env read).
@@ -93,11 +95,13 @@ impl AISuggestionManager {
 
             // Fallback: check well-known ai provider socket (bootstrap only)
             if !strict_discovery {
-                let ai_provider = std::env::var(biomeos_types::env_config::vars::AI_PROVIDER).ok().or_else(|| {
-                    biomeos_types::CapabilityTaxonomy::AiCoordination
-                        .default_primal()
-                        .map(String::from)
-                });
+                let ai_provider = std::env::var(biomeos_types::env_config::vars::AI_PROVIDER)
+                    .ok()
+                    .or_else(|| {
+                        biomeos_types::CapabilityTaxonomy::AiCoordination
+                            .default_primal()
+                            .map(String::from)
+                    });
                 let Some(ai_provider) = ai_provider else {
                     info!("ℹ️ No AI provider configured (strict discovery)");
                     return Ok(());

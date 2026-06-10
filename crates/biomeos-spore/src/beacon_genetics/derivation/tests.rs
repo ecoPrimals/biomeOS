@@ -34,10 +34,7 @@ mod derivation_tests {
         }
 
         async fn set_err(&self, cap: &str, _msg: &str) {
-            self.responses
-                .lock()
-                .await
-                .insert(cap.to_string(), None);
+            self.responses.lock().await.insert(cap.to_string(), None);
         }
     }
 

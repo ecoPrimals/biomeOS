@@ -31,7 +31,13 @@ impl BiomeOsMode {
     /// - Bootstrap if Tower Atomic does not exist (or `BIOMEOS_MODE=bootstrap`)
     /// - Coordinated if Tower Atomic exists (or `BIOMEOS_MODE=coordinated`)
     pub async fn detect(family_id: &str) -> Self {
-        Self::detect_with_mode(family_id, std::env::var(biomeos_types::env_config::vars::MODE).ok().as_deref()).await
+        Self::detect_with_mode(
+            family_id,
+            std::env::var(biomeos_types::env_config::vars::MODE)
+                .ok()
+                .as_deref(),
+        )
+        .await
     }
 
     /// Like [`Self::detect`], but supplies the `BIOMEOS_MODE` value directly (for tests and tooling).
@@ -88,8 +94,10 @@ impl BiomeOsMode {
         let security_provider = std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
             .ok()
             .or_else(|| {
-                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
-                    .map(String::from)
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                    "security",
+                )
+                .map(String::from)
             })
             .unwrap_or_else(|| {
                 tracing::debug!("security provider: taxonomy miss, using name fallback");
@@ -98,8 +106,10 @@ impl BiomeOsMode {
         let network_provider = std::env::var(biomeos_types::env_config::vars::NETWORK_PROVIDER)
             .ok()
             .or_else(|| {
-                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
-                    .map(String::from)
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                    "discovery",
+                )
+                .map(String::from)
             })
             .unwrap_or_else(|| {
                 tracing::debug!("network provider: taxonomy miss, using name fallback");

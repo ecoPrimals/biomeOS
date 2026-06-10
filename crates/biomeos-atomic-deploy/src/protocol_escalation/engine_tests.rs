@@ -85,7 +85,12 @@ async fn test_fallback_connection_not_found() {
 
     let result = manager.fallback_connection("a", "b", "test reason").await;
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("connection not found"));
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("connection not found")
+    );
 }
 
 #[tokio::test]
@@ -95,7 +100,12 @@ async fn test_escalate_connection_not_found() {
 
     let result = manager.escalate_connection("a", "b").await;
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("connection not found"));
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("connection not found")
+    );
 }
 
 #[tokio::test]

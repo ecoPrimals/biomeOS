@@ -279,8 +279,7 @@ fn test_discovery_config_serialization() {
 fn test_health_monitoring_config_serialization() {
     let config = HealthMonitoringConfig::default();
     let json = serde_json::to_string(&config).expect("serialize");
-    let deserialized: HealthMonitoringConfig =
-        serde_json::from_str(&json).expect("deserialize");
+    let deserialized: HealthMonitoringConfig = serde_json::from_str(&json).expect("deserialize");
     assert!(deserialized.enabled);
 }
 

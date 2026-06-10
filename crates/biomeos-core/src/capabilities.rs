@@ -126,14 +126,18 @@ impl PrimalConfig {
         let id = Self::discover_identity()?;
 
         // Discover binary path
-        let binary_path = std::env::var(biomeos_types::env_config::vars::PRIMAL_BINARY).or_else(|_| {
-            std::env::current_exe()
-                .ok()
-                .and_then(|p| p.to_str().map(String::from))
-                .ok_or_else(|| {
-                    BiomeError::config_error("Cannot determine binary path", Some("PRIMAL_BINARY"))
-                })
-        })?;
+        let binary_path =
+            std::env::var(biomeos_types::env_config::vars::PRIMAL_BINARY).or_else(|_| {
+                std::env::current_exe()
+                    .ok()
+                    .and_then(|p| p.to_str().map(String::from))
+                    .ok_or_else(|| {
+                        BiomeError::config_error(
+                            "Cannot determine binary path",
+                            Some("PRIMAL_BINARY"),
+                        )
+                    })
+            })?;
 
         // Load capabilities
         let provides = Capability::from_env("PRIMAL_PROVIDES");

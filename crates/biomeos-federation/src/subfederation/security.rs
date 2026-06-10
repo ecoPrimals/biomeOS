@@ -148,7 +148,9 @@ pub async fn request_subfederation_key_with(
     let key_ref = result
         .get("key_ref")
         .and_then(|k| k.as_str())
-        .ok_or_else(|| FederationError::SecurityProviderError("Missing key_ref in response".to_string()))?;
+        .ok_or_else(|| {
+            FederationError::SecurityProviderError("Missing key_ref in response".to_string())
+        })?;
 
     debug!(
         "Derived key for sub-federation '{}': {}",

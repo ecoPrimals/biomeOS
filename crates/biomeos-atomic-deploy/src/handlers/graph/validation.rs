@@ -55,8 +55,7 @@ impl GraphHandler {
             )
         })?;
 
-        let content = std::fs::read_to_string(&graph_path)
-            .context("Failed to read graph")?;
+        let content = std::fs::read_to_string(&graph_path).context("Failed to read graph")?;
 
         let mut warnings: Vec<String> = Vec::new();
         let mut validation_errors: Vec<String> = Vec::new();
@@ -235,8 +234,7 @@ impl GraphHandler {
             anyhow::bail!("graph.verify requires 'path' or 'id' parameter");
         };
 
-        let content = std::fs::read_to_string(&path)
-            .context("Failed to read graph")?;
+        let content = std::fs::read_to_string(&path).context("Failed to read graph")?;
 
         // Try typed parse for metadata
         let (embedded_hash, embedded_sig, embedded_signer, genetics_tier) =

@@ -82,8 +82,11 @@ fn load_defaults_core(
     let mut count = 0;
 
     // Provider resolution is env-first.
-    let strict =
-        lookup_env(biomeos_types::env_config::vars::STRICT_DISCOVERY, env_overrides).is_ok();
+    let strict = lookup_env(
+        biomeos_types::env_config::vars::STRICT_DISCOVERY,
+        env_overrides,
+    )
+    .is_ok();
 
     let resolve_provider = |env_key: &str, default: &str| -> String {
         match lookup_env(env_key, env_overrides) {

@@ -102,8 +102,10 @@ impl DeviceManagementProvider {
         );
 
         // Advertise capability via registry provider (Songbird or env-configured)
-        let registry_provider =
-            resolve_provider(biomeos_types::env_config::vars::REGISTRY_PROVIDER, &CapabilityTaxonomy::Discovery);
+        let registry_provider = resolve_provider(
+            biomeos_types::env_config::vars::REGISTRY_PROVIDER,
+            &CapabilityTaxonomy::Discovery,
+        );
         if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
             match registry
                 .call(
@@ -178,8 +180,10 @@ impl DeviceManagementProvider {
         let mut templates = Vec::new();
 
         // Try to load from storage provider (NestGate or env-configured)
-        let storage_provider =
-            resolve_provider(biomeos_types::env_config::vars::STORAGE_PROVIDER, &CapabilityTaxonomy::DataStorage);
+        let storage_provider = resolve_provider(
+            biomeos_types::env_config::vars::STORAGE_PROVIDER,
+            &CapabilityTaxonomy::DataStorage,
+        );
         if let Ok(storage) = AtomicClient::discover(&storage_provider).await {
             match storage
                 .call(
@@ -338,8 +342,10 @@ impl DeviceManagementProvider {
         }
 
         // Try orchestration provider as backup
-        let orch_provider =
-            resolve_provider(biomeos_types::env_config::vars::REGISTRY_PROVIDER, &CapabilityTaxonomy::Discovery);
+        let orch_provider = resolve_provider(
+            biomeos_types::env_config::vars::REGISTRY_PROVIDER,
+            &CapabilityTaxonomy::Discovery,
+        );
         if let Ok(orchestrator) = AtomicClient::discover(&orch_provider).await {
             match orchestrator
                 .call("orchestration.deploy_niche", config)
@@ -370,8 +376,10 @@ impl DeviceManagementProvider {
         info!("🔗 Assigning device {} to primal {}", device_id, primal_id);
 
         // Coordinate via registry provider
-        let registry_provider =
-            resolve_provider(biomeos_types::env_config::vars::REGISTRY_PROVIDER, &CapabilityTaxonomy::Discovery);
+        let registry_provider = resolve_provider(
+            biomeos_types::env_config::vars::REGISTRY_PROVIDER,
+            &CapabilityTaxonomy::Discovery,
+        );
         if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
             match registry
                 .call(

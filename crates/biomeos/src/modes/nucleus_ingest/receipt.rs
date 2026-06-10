@@ -32,8 +32,7 @@ pub(super) fn write_ingest_receipt(
 
     let receipt_path = receipts_dir.join("nucleus_ingest.toml");
 
-    let execution_id =
-        extract_receipt_field(result, &["/execution/execution_id", "/execution_id"]);
+    let execution_id = extract_receipt_field(result, &["/execution/execution_id", "/execution_id"]);
     let store_id = extract_receipt_field(
         result,
         &[
@@ -105,15 +104,11 @@ pub(super) fn write_emit_receipt(
     let receipts_dir = emit_dir.join("receipts");
     std::fs::create_dir_all(&receipts_dir)?;
 
-    let execution_id =
-        extract_receipt_field(status, &["/execution_id", "/execution/execution_id"]);
+    let execution_id = extract_receipt_field(status, &["/execution_id", "/execution/execution_id"]);
 
     let braid_id = extract_receipt_field(
         status,
-        &[
-            "/receipt/braid_id",
-            "/nodes/resolve_braid/result/braid_id",
-        ],
+        &["/receipt/braid_id", "/nodes/resolve_braid/result/braid_id"],
     );
 
     let signature = extract_receipt_field(

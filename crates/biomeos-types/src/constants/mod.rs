@@ -471,7 +471,8 @@ pub mod files {
     /// ```
     #[must_use]
     pub fn current_primal_plugin_dir() -> String {
-        let primal_name = std::env::var(crate::env_config::vars::PRIMAL_NAME).unwrap_or_else(|_| "unknown".to_string());
+        let primal_name = std::env::var(crate::env_config::vars::PRIMAL_NAME)
+            .unwrap_or_else(|_| "unknown".to_string());
         default_plugin_dir(&primal_name)
     }
 

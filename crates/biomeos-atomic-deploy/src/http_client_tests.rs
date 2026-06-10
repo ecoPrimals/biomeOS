@@ -226,7 +226,8 @@ async fn test_get_no_result_returns_err() {
 
 #[tokio::test]
 async fn test_get_body_not_string_returns_err() {
-    let body_object = r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{},"body":{"key":"value"}},"id":1}"#;
+    let body_object =
+        r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{},"body":{"key":"value"}},"id":1}"#;
     let (_dir, socket_path) = spawn_mock_server(body_object).await;
 
     let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
@@ -281,8 +282,7 @@ async fn test_post_body_not_string_returns_err() {
 
 #[tokio::test]
 async fn test_is_reachable_returns_true_on_2xx() {
-    let success =
-        r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{},"body":"ok"},"id":1}"#;
+    let success = r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{},"body":"ok"},"id":1}"#;
     let (_dir, socket_path) = spawn_mock_server(success).await;
 
     let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());

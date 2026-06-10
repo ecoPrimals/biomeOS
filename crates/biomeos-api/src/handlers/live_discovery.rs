@@ -11,8 +11,8 @@
 // Capability-based: primals self-report identities at runtime.
 
 use anyhow::{Context, Result};
-use axum::extract::Path as AxumPath;
 use axum::Json;
+use axum::extract::Path as AxumPath;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
@@ -44,7 +44,10 @@ pub struct LivePrimalInfo {
 
 /// Identity attestation from a primal
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(not(test), expect(dead_code, reason = "used in tests and future attestation flows"))]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "used in tests and future attestation flows")
+)]
 pub struct IdentityAttestation {
     pub provider_capability: String,
     pub format: String,
@@ -322,7 +325,11 @@ fn infer_type_from_name(name: &str) -> String {
 /// Single source of truth: `SystemPaths::new_lazy().runtime_dir()`.
 /// Only falls back to env override if `BIOMEOS_SOCKET_DIR` is explicitly set.
 fn get_socket_dir() -> String {
-    get_socket_dir_from(std::env::var(biomeos_types::env_config::vars::SOCKET_DIR).ok().as_deref())
+    get_socket_dir_from(
+        std::env::var(biomeos_types::env_config::vars::SOCKET_DIR)
+            .ok()
+            .as_deref(),
+    )
 }
 
 fn get_socket_dir_from(override_dir: Option<&str>) -> String {

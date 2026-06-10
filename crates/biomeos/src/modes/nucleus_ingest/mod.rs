@@ -73,10 +73,7 @@ pub async fn run_ingest(
         write_ingest_receipt(&pseudospore_dir, result, &family)?;
 
         if let Some(receipt_ids) = result.get("receipt") {
-            info!(
-                "  receipt: {}",
-                serde_json::to_string_pretty(receipt_ids)?
-            );
+            info!("  receipt: {}", serde_json::to_string_pretty(receipt_ids)?);
         }
     } else if let Some(err) = response.get("error") {
         error!("NUCLEUS ingest failed: {err}");
@@ -221,9 +218,12 @@ async fn poll_execution(socket_path: &Path, execution_id: &str) -> Result<serde_
 
 /// Send a JSON-RPC request over a Unix socket and parse the response.
 async fn send_jsonrpc(socket_path: &Path, request: &JsonRpcRequest) -> Result<serde_json::Value> {
-    let stream = UnixStream::connect(socket_path)
-        .await
-        .with_context(|| format!("Failed to connect to Neural API at {}", socket_path.display()))?;
+    let stream = UnixStream::connect(socket_path).await.with_context(|| {
+        format!(
+            "Failed to connect to Neural API at {}",
+            socket_path.display()
+        )
+    })?;
 
     let (reader, mut writer) = stream.into_split();
     let request_bytes = serde_json::to_vec(request)?;

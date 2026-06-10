@@ -199,9 +199,11 @@ impl FamilyId {
     /// Resolve family ID from an explicit value or `BIOMEOS_FAMILY_ID` (no env mutation needed in tests).
     #[must_use]
     pub fn from_env_or_override(env_value: Option<&str>) -> Option<Self> {
-        env_value
-            .map(Self::new)
-            .or_else(|| std::env::var(crate::env_config::vars::FAMILY_ID).ok().map(Self::new))
+        env_value.map(Self::new).or_else(|| {
+            std::env::var(crate::env_config::vars::FAMILY_ID)
+                .ok()
+                .map(Self::new)
+        })
     }
 
     /// Discover local family ID from config

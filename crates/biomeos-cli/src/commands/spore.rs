@@ -141,7 +141,8 @@ pub async fn handle_spore_create(
     println!("   Mount: {}", mount.display());
     println!("   Type: {} {}", spore_type.emoji(), spore_type);
 
-    let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY).unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
+    let family_id = std::env::var(biomeos_types::env_config::vars::FAMILY_ID_LEGACY)
+        .unwrap_or_else(|_| DEFAULT_FAMILY_ID.to_string());
 
     let config = SporeConfig {
         label: label.clone(),

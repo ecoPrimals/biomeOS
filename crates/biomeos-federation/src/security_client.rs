@@ -100,13 +100,15 @@ impl SecurityProviderClient {
 
         let security_name = biomeos_types::env_config::security_provider()
             .or_else(|| {
-                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
-                    .map(String::from)
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                    "security",
+                )
+                .map(String::from)
             })
             .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
-        let security_provider = discovery
-            .get(&security_name)
-            .ok_or_else(|| anyhow::anyhow!("Security provider '{security_name}' not found via discovery"))?;
+        let security_provider = discovery.get(&security_name).ok_or_else(|| {
+            anyhow::anyhow!("Security provider '{security_name}' not found via discovery")
+        })?;
 
         if security_provider.endpoints.is_empty() {
             return Err(anyhow::anyhow!("Security provider has no endpoints"));
@@ -135,13 +137,15 @@ impl SecurityProviderClient {
     pub fn from_primal_discovery(discovery: &PrimalDiscovery) -> Result<Self> {
         let security_name = biomeos_types::env_config::security_provider()
             .or_else(|| {
-                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
-                    .map(String::from)
+                biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                    "security",
+                )
+                .map(String::from)
             })
             .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
-        let security_provider = discovery
-            .get(&security_name)
-            .ok_or_else(|| anyhow::anyhow!("Security provider '{security_name}' not found via discovery"))?;
+        let security_provider = discovery.get(&security_name).ok_or_else(|| {
+            anyhow::anyhow!("Security provider '{security_name}' not found via discovery")
+        })?;
 
         if security_provider.endpoints.is_empty() {
             return Err(anyhow::anyhow!("Security provider has no endpoints"));

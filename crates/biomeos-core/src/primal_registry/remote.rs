@@ -75,7 +75,8 @@ pub fn cached_download_path(
 }
 
 fn github_api_base() -> String {
-    std::env::var(biomeos_types::env_config::vars::GITHUB_API_URL).unwrap_or_else(|_| "https://api.github.com".to_string())
+    std::env::var(biomeos_types::env_config::vars::GITHUB_API_URL)
+        .unwrap_or_else(|_| "https://api.github.com".to_string())
 }
 
 pub async fn github_latest_release(org: &str, repo: &str) -> Result<GitHubRelease> {
@@ -166,21 +167,13 @@ async fn curl_download_to_file(url: &str, dest: &Path) -> Result<()> {
 
 async fn http_get_bytes(url: &str) -> Result<Vec<u8>> {
     let client = Client::builder(TokioExecutor::new()).build_http::<Empty<Bytes>>();
-    let uri = url
-        .parse::<hyper::Uri>()
-        .context("invalid URL")?;
-    let res = client
-        .get(uri)
-        .await
-        .context("HTTP client error")?;
+    let uri = url.parse::<hyper::Uri>().context("invalid URL")?;
+    let res = client.get(uri).await.context("HTTP client error")?;
     if !res.status().is_success() {
         return Err(anyhow::anyhow!("HTTP {}", res.status()));
     }
     let body = res.into_body();
-    let collected = body
-        .collect()
-        .await
-        .context("read body")?;
+    let collected = body.collect().await.context("read body")?;
     Ok(collected.to_bytes().to_vec())
 }
 

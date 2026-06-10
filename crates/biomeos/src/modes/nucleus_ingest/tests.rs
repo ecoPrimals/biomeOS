@@ -290,8 +290,7 @@ async fn test_materialize_pseudospore_structure() {
     let content = std::fs::read_to_string(emit_dir.join("data/content.json")).unwrap();
     assert!(content.contains("test-content"));
 
-    let checksums =
-        std::fs::read_to_string(emit_dir.join("receipts/checksums.blake3")).unwrap();
+    let checksums = std::fs::read_to_string(emit_dir.join("receipts/checksums.blake3")).unwrap();
     assert!(
         !checksums.is_empty(),
         "checksums.blake3 should have entries"
@@ -349,8 +348,7 @@ fn test_write_emit_receipt_pending_fields() {
 
     write_emit_receipt(dir.path(), &status, "fam").unwrap();
 
-    let content =
-        std::fs::read_to_string(dir.path().join("receipts/nucleus_emit.toml")).unwrap();
+    let content = std::fs::read_to_string(dir.path().join("receipts/nucleus_emit.toml")).unwrap();
     assert!(
         content.contains("braid_id = \"pending\""),
         "missing fields should be pending"

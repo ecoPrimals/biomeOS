@@ -165,15 +165,13 @@ fn test_lineage_verification_response_not_member() {
 #[tokio::test]
 async fn test_security_provider_is_available_unix_nonexistent() {
     let client =
-        SecurityProviderClient::with_endpoint("unix:///nonexistent/security/socket.sock")
-            .unwrap();
+        SecurityProviderClient::with_endpoint("unix:///nonexistent/security/socket.sock").unwrap();
     assert!(!client.is_available());
 }
 
 #[tokio::test]
 async fn test_security_provider_health_check_unix_nonexistent() {
-    let client =
-        SecurityProviderClient::with_endpoint("unix:///nonexistent/socket.sock").unwrap();
+    let client = SecurityProviderClient::with_endpoint("unix:///nonexistent/socket.sock").unwrap();
     let result = client.health_check().await;
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("not found"));
@@ -195,11 +193,9 @@ fn test_security_provider_http_rejected_at_construction() {
 async fn test_health_check_ok_status_via_mock_unix() {
     let dir = tempfile::tempdir().expect("tempdir");
     let sock = dir.path().join("security-provider-health.sock");
-    let _srv = MockJsonRpcServer::spawn_echo_success(
-        &sock,
-        serde_json::json!({ "status": "healthy" }),
-    )
-    .await;
+    let _srv =
+        MockJsonRpcServer::spawn_echo_success(&sock, serde_json::json!({ "status": "healthy" }))
+            .await;
     let client = SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display()))
         .expect("client");
     assert!(client.is_available());
@@ -211,8 +207,7 @@ async fn test_health_check_ok_status_short() {
     let dir = tempfile::tempdir().expect("tempdir");
     let sock = dir.path().join("security-provider-ok.sock");
     let _srv =
-        MockJsonRpcServer::spawn_echo_success(&sock, serde_json::json!({ "status": "ok" }))
-            .await;
+        MockJsonRpcServer::spawn_echo_success(&sock, serde_json::json!({ "status": "ok" })).await;
     let client =
         SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
     client.health_check().await.expect("ok");
@@ -222,11 +217,9 @@ async fn test_health_check_ok_status_short() {
 async fn test_health_check_unhealthy_status() {
     let dir = tempfile::tempdir().expect("tempdir");
     let sock = dir.path().join("bd-bad.sock");
-    let _srv = MockJsonRpcServer::spawn_echo_success(
-        &sock,
-        serde_json::json!({ "status": "degraded" }),
-    )
-    .await;
+    let _srv =
+        MockJsonRpcServer::spawn_echo_success(&sock, serde_json::json!({ "status": "degraded" }))
+            .await;
     let client =
         SecurityProviderClient::with_endpoint(format!("unix://{}", sock.display())).unwrap();
     let e = client.health_check().await.expect_err("unhealthy");

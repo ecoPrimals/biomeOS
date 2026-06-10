@@ -29,7 +29,11 @@ impl NeuralRouter {
     /// During the first [`SHADOW_LOG_DISPATCH_LIMIT`] multi-provider dispatches,
     /// logs both the weighted choice and the legacy first-match choice at INFO
     /// level for A/B validation.
-    pub(crate) async fn select_primary(&self, capability: &str, providers: &[RegisteredCapability]) -> usize {
+    pub(crate) async fn select_primary(
+        &self,
+        capability: &str,
+        providers: &[RegisteredCapability],
+    ) -> usize {
         if providers.len() <= 1 {
             return 0;
         }
@@ -44,10 +48,13 @@ impl NeuralRouter {
         };
 
         if weighted_idx != 0 {
-            self.weighted_disagreement_counter.fetch_add(1, Ordering::Relaxed);
+            self.weighted_disagreement_counter
+                .fetch_add(1, Ordering::Relaxed);
         }
 
-        let dispatch_n = self.weighted_dispatch_counter.fetch_add(1, Ordering::Relaxed);
+        let dispatch_n = self
+            .weighted_dispatch_counter
+            .fetch_add(1, Ordering::Relaxed);
         if dispatch_n < SHADOW_LOG_DISPATCH_LIMIT {
             let first_match = &providers[0].primal_name;
             let weighted = &providers[weighted_idx].primal_name;
@@ -101,8 +108,7 @@ impl NeuralRouter {
             .summary()
             .tracked_methods as f32
             / 100.0;
-        let features =
-            build_candidate_features(capability, &candidates, &weights, gate_load);
+        let features = build_candidate_features(capability, &candidates, &weights, gate_load);
 
         if let Some(ref perceptron) = self.perceptron {
             if perceptron.has_remote_infer() {

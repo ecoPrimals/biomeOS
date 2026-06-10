@@ -208,14 +208,12 @@ impl ProtocolEscalationManager {
             from, to
         );
 
-        let conn = self
-            .graph
-            .get_connection(from, to)
-            .await
-            .ok_or_else(|| EscalationError::ConnectionNotFound {
+        let conn = self.graph.get_connection(from, to).await.ok_or_else(|| {
+            EscalationError::ConnectionNotFound {
                 from: from.to_owned(),
                 to: to.to_owned(),
-            })?;
+            }
+        })?;
 
         let previous_mode = conn.protocol;
 
@@ -296,14 +294,12 @@ impl ProtocolEscalationManager {
             from, to, reason
         );
 
-        let conn = self
-            .graph
-            .get_connection(from, to)
-            .await
-            .ok_or_else(|| EscalationError::ConnectionNotFound {
+        let conn = self.graph.get_connection(from, to).await.ok_or_else(|| {
+            EscalationError::ConnectionNotFound {
                 from: from.to_owned(),
                 to: to.to_owned(),
-            })?;
+            }
+        })?;
 
         let previous_mode = conn.protocol;
 

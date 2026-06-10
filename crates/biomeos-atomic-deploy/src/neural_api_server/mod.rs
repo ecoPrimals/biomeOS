@@ -191,7 +191,11 @@ impl NeuralApiServer {
             .with_remote_infer(remote_socket);
             tracing::info!(
                 "perceptron: shadow mode active ({}, remote infer wired)",
-                if has_trained { "trained weights" } else { "neutral defaults" }
+                if has_trained {
+                    "trained weights"
+                } else {
+                    "neutral defaults"
+                }
             );
             dispatcher
         };
@@ -215,7 +219,9 @@ impl NeuralApiServer {
             translation_registry.clone(),
         );
 
-        let gate_registry = Arc::new(tokio::sync::RwLock::new(crate::gate_registry::GateRegistry::new()));
+        let gate_registry = Arc::new(tokio::sync::RwLock::new(
+            crate::gate_registry::GateRegistry::new(),
+        ));
 
         let capability_handler =
             CapabilityHandler::new(router.clone(), translation_registry.clone())

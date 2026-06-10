@@ -100,7 +100,10 @@ impl LifecycleManager {
             self.respawn_primal_binary(name, &binary, &socket_path, node_id.as_deref())
                 .await?;
         } else {
-            warn!("⚠️ No deployment node or binary path for {} - cannot resurrect", name);
+            warn!(
+                "⚠️ No deployment node or binary path for {} - cannot resurrect",
+                name
+            );
         }
 
         Ok(())

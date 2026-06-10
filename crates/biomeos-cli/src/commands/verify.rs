@@ -35,7 +35,11 @@ fn plasmid_bin_dir_for_verify(plasmid_dir_env: Option<&str>) -> PathBuf {
 
 /// `plasmidBin` path for spore verification: `BIOMEOS_PLASMID_DIR` if set, else cwd-relative `plasmidBin`.
 fn nucleus_path_for_spore_verify() -> PathBuf {
-    plasmid_bin_dir_for_verify(std::env::var(biomeos_types::env_config::vars::PLASMID_DIR).ok().as_deref())
+    plasmid_bin_dir_for_verify(
+        std::env::var(biomeos_types::env_config::vars::PLASMID_DIR)
+            .ok()
+            .as_deref(),
+    )
 }
 
 /// Parse `BIOMEOS_SPORE_PATHS`-style comma-separated list (testable; used by [`discover_spore_mounts`]).
@@ -477,7 +481,8 @@ fn discover_spore_mounts() -> Vec<(String, String)> {
         return parse_biomeos_spore_paths_list(&paths);
     }
 
-    let user = std::env::var(biomeos_types::env_config::vars::SYS_USER).unwrap_or_else(|_| "root".to_string());
+    let user = std::env::var(biomeos_types::env_config::vars::SYS_USER)
+        .unwrap_or_else(|_| "root".to_string());
     let media_dir = PathBuf::from(format!("/media/{user}"));
     if !media_dir.exists() {
         return Vec::new();

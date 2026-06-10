@@ -180,9 +180,7 @@ pub(crate) async fn handle_genome_command(command: GenomeCommand) -> Result<()> 
             }
 
             // Save as JSON manifest
-            let json = genome
-                .to_json()
-                .context("Failed to serialize genome")?;
+            let json = genome.to_json().context("Failed to serialize genome")?;
             std::fs::write(&args.output, json)?;
 
             info!("✅ GenomeBin created: {}", args.output.display());
@@ -219,8 +217,7 @@ pub(crate) async fn handle_genome_command(command: GenomeCommand) -> Result<()> 
             info!("🔍 Verifying genomeBin: {}", args.path.display());
 
             let content = std::fs::read_to_string(&args.path)?;
-            let genome = GenomeBin::from_json(&content)
-                .context("Failed to parse genome")?;
+            let genome = GenomeBin::from_json(&content).context("Failed to parse genome")?;
 
             info!("   Name: {}", genome.manifest.name);
             info!("   Version: {}", genome.manifest.version);
@@ -231,8 +228,7 @@ pub(crate) async fn handle_genome_command(command: GenomeCommand) -> Result<()> 
 
         GenomeCommand::Info(args) => {
             let content = std::fs::read_to_string(&args.path)?;
-            let genome = GenomeBin::from_json(&content)
-                .context("Failed to parse genome")?;
+            let genome = GenomeBin::from_json(&content).context("Failed to parse genome")?;
 
             println!("GenomeBin: {}", genome.manifest.name);
             println!("  Version: {}", genome.manifest.version);

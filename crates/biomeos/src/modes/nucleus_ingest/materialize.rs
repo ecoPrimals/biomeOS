@@ -100,8 +100,7 @@ family_id = "{family}"
     );
     tokio::fs::write(emit_dir.join("README.md"), &readme).await?;
 
-    let checksums =
-        pseudospore::compute_checksums(emit_dir, &["data", "provenance", "receipts"]);
+    let checksums = pseudospore::compute_checksums(emit_dir, &["data", "provenance", "receipts"]);
     let checksums_content = pseudospore::format_checksums(&checksums);
     tokio::fs::write(
         emit_dir.join("receipts/checksums.blake3"),

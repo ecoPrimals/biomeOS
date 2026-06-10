@@ -28,12 +28,12 @@ pub mod status;
 
 // Re-export all types for convenience
 pub use core::*;
-pub use scaling::*;
-pub use status::*;
 pub use health::*;
 pub use networking::*;
 pub use runtime::*;
+pub use scaling::*;
 pub use security::*;
+pub use status::*;
 
 // Additional test module
 #[expect(

@@ -244,11 +244,14 @@ async fn test_hash_via_capability_no_socket_returns_none() {
     // has live primal sockets (e.g. crypto.sock in XDG_RUNTIME_DIR), the
     // fallback discovery will find them and return Some — that's correct
     // production behavior, not a test failure.
-    let result =
-        hash_via_capability(None, "test-no-primals-d41d8cd98f", "data").await;
+    let result = hash_via_capability(None, "test-no-primals-d41d8cd98f", "data").await;
     let has_live_crypto = std::env::var("XDG_RUNTIME_DIR")
         .ok()
-        .map(|d| std::path::Path::new(&d).join("biomeos/crypto.sock").exists())
+        .map(|d| {
+            std::path::Path::new(&d)
+                .join("biomeos/crypto.sock")
+                .exists()
+        })
         .unwrap_or(false);
     if !has_live_crypto {
         assert!(result.is_none(), "no socket should return None");
@@ -299,8 +302,7 @@ async fn test_verify_dark_forest_token_neural_api_success() {
         "family_id": "fam-x"
     });
     let (_dir, sock) = spawn_one_shot_neural_mock(decrypt).await;
-    let out =
-        verify_dark_forest_token(Some(sock.to_str().expect("utf8")), "fam-x", "opaque").await;
+    let out = verify_dark_forest_token(Some(sock.to_str().expect("utf8")), "fam-x", "opaque").await;
     assert!(out.is_some(), "expected neural path to verify");
     let v = out.expect("verification");
     assert_eq!(v.plaintext, "beacon-plaintext");

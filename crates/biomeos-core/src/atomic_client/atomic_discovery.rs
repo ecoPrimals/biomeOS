@@ -24,7 +24,8 @@ pub(crate) fn family_id_for_discovery(family_id_override: Option<&str>) -> Strin
 }
 
 pub(crate) fn strict_discovery_from_env_or_override(strict_override: Option<bool>) -> bool {
-    strict_override.unwrap_or_else(|| std::env::var(biomeos_types::env_config::vars::STRICT_DISCOVERY).is_ok())
+    strict_override
+        .unwrap_or_else(|| std::env::var(biomeos_types::env_config::vars::STRICT_DISCOVERY).is_ok())
 }
 
 /// Resolve a primal by name to a transport endpoint (Tier 1 / Tier 2 fallback).

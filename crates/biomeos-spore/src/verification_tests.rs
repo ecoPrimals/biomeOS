@@ -315,8 +315,8 @@ fn test_verify_spore_modified_when_hash_mismatch_equal_version() {
     std::fs::write(spore.join("bin").join("tower"), b"tampered").unwrap();
 
     use crate::manifest::{
-        BinaryInfo, BinaryManifest, CompatibilityInfo, LineageInfo, ManifestMeta,
-        SporeBinaryInfo, SporeInfo, SporeManifest,
+        BinaryInfo, BinaryManifest, CompatibilityInfo, LineageInfo, ManifestMeta, SporeBinaryInfo,
+        SporeInfo, SporeManifest,
     };
     use chrono::Utc;
 

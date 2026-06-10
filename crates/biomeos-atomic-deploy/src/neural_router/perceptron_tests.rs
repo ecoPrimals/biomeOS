@@ -9,7 +9,10 @@ use super::*;
 fn mock_weights_are_neutral() {
     let w = PerceptronWeights::neutral_default();
     assert_eq!(w.weights.len(), WEIGHT_VEC_LEN);
-    assert!((w.weights[FEATURE_DIM]).abs() < f32::EPSILON, "bias should be 0");
+    assert!(
+        (w.weights[FEATURE_DIM]).abs() < f32::EPSILON,
+        "bias should be 0"
+    );
 }
 
 #[test]
@@ -59,7 +62,10 @@ fn domain_to_index_varies_across_domains() {
     let domains = ["crypto", "storage", "compute", "mesh", "relay", "security"];
     let indices: Vec<usize> = domains.iter().map(|d| domain_to_index(d)).collect();
     let unique: std::collections::HashSet<_> = indices.iter().collect();
-    assert!(unique.len() >= 4, "most domains should hash to different slots");
+    assert!(
+        unique.len() >= 4,
+        "most domains should hash to different slots"
+    );
 }
 
 #[test]
@@ -109,7 +115,10 @@ fn shadow_compare_tracks_disagreement() {
     dispatcher.shadow_compare(0, &[slow, fast], "test.cap");
     let (total, disagree) = dispatcher.shadow_stats();
     assert_eq!(total, 2);
-    assert_eq!(disagree, 1, "perceptron disagrees with rule picking slow provider");
+    assert_eq!(
+        disagree, 1,
+        "perceptron disagrees with rule picking slow provider"
+    );
 }
 
 #[test]
@@ -165,7 +174,9 @@ fn with_remote_infer_enables_remote() {
 async fn shadow_compare_remote_falls_back_without_socket() {
     let d = PerceptronDispatcher::shadow_default();
     let f = DispatchFeatures::build(0, None, 0.0);
-    let idx = d.shadow_compare_remote(0, &[f.clone(), f], "test.cap").await;
+    let idx = d
+        .shadow_compare_remote(0, &[f.clone(), f], "test.cap")
+        .await;
     assert_eq!(idx, 0, "without remote socket, falls back to local");
 }
 
@@ -174,6 +185,8 @@ async fn shadow_compare_remote_falls_back_on_unreachable_socket() {
     let d = PerceptronDispatcher::shadow_default()
         .with_remote_infer("/tmp/definitely-nonexistent-biomeos-test.sock".to_string());
     let f = DispatchFeatures::build(0, None, 0.0);
-    let idx = d.shadow_compare_remote(0, &[f.clone(), f], "test.cap").await;
+    let idx = d
+        .shadow_compare_remote(0, &[f.clone(), f], "test.cap")
+        .await;
     assert_eq!(idx, 0, "unreachable socket gracefully falls back to local");
 }

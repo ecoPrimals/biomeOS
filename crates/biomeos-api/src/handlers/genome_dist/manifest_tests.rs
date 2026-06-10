@@ -49,8 +49,7 @@ fn test_dist_manifest_with_primals_and_atomics() {
     let json = serde_json::to_string(&manifest).expect("serialize");
     assert!(json.contains("BearDog"));
     assert!(json.contains("full-stack"));
-    let deserialized: DistManifest =
-        serde_json::from_str(&json).expect("round-trip deserialize");
+    let deserialized: DistManifest = serde_json::from_str(&json).expect("round-trip deserialize");
     assert_eq!(deserialized.version, "2.0.0");
     assert_eq!(deserialized.primals.len(), 1);
     assert_eq!(deserialized.atomics.len(), 1);
@@ -136,8 +135,7 @@ primals = ["beardog"]
 latest = "1.0.0"
 versions = ["1.0.0"]
 "#;
-    std::fs::write(temp.path().join("manifest.toml"), manifest_content)
-        .expect("write manifest");
+    std::fs::write(temp.path().join("manifest.toml"), manifest_content).expect("write manifest");
     let result = get_manifest_from(temp.path().to_path_buf()).await;
     let json = result.expect("get_manifest should succeed");
     assert_eq!(json.version, "2.0.0");
@@ -182,8 +180,7 @@ version = "1.0"
 [primals.minimal]
 latest = "0.1.0"
 "#;
-    std::fs::write(temp.path().join("manifest.toml"), manifest_content)
-        .expect("write manifest");
+    std::fs::write(temp.path().join("manifest.toml"), manifest_content).expect("write manifest");
     let result = get_manifest_from(temp.path().to_path_buf()).await;
     let json = result.expect("should succeed with partial fields");
     assert!(json.primals.contains_key("minimal"));
@@ -210,8 +207,7 @@ latest = "0.9.0"
 versions = ["0.9.0"]
 architectures = ["x86_64-linux-musl"]
 "#;
-    std::fs::write(temp.path().join("manifest.toml"), manifest_content)
-        .expect("write manifest");
+    std::fs::write(temp.path().join("manifest.toml"), manifest_content).expect("write manifest");
     let result = get_latest_from(temp.path().to_path_buf(), "beardog".to_string()).await;
     let json = result.expect("get_latest should succeed");
     assert_eq!(json["primal"], "beardog");
@@ -226,8 +222,7 @@ async fn test_get_latest_primal_not_found() {
         "[manifest]\nversion = \"1.0\"",
     )
     .expect("write manifest");
-    let result =
-        get_latest_from(temp.path().to_path_buf(), "nonexistent-primal".to_string()).await;
+    let result = get_latest_from(temp.path().to_path_buf(), "nonexistent-primal".to_string()).await;
     let Err((status, body)) = result else {
         panic!("expected Err for unknown primal");
     };
@@ -250,8 +245,7 @@ async fn test_get_checksum_success() {
 sha256 = "deadbeef123"
 size = 999
 "#;
-    std::fs::write(temp.path().join("checksums.toml"), checksums_content)
-        .expect("write checksums");
+    std::fs::write(temp.path().join("checksums.toml"), checksums_content).expect("write checksums");
     let result = get_checksum_from(
         temp.path().to_path_buf(),
         "beardog".to_string(),
@@ -345,9 +339,7 @@ async fn test_get_latest_genome_bin_not_configured() {
 #[tokio::test]
 async fn test_get_checksum_genome_bin_not_configured() {
     let result = match discovery::get_genome_bin_path_with(None, &[]) {
-        Some(p) => {
-            get_checksum_from(p, "p".to_string(), "v".to_string(), "arch".to_string()).await
-        }
+        Some(p) => get_checksum_from(p, "p".to_string(), "v".to_string(), "arch".to_string()).await,
         None => Err(genome_bin_not_found_err()),
     };
     let Err((status, body)) = result else {

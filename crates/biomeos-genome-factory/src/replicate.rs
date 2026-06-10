@@ -114,7 +114,10 @@ mod tests {
 
         let response = factory.self_replicate().unwrap();
 
-        assert_eq!(response.genome_id, biomeos_types::primal_names::BIOMEOS_SELF_GENOME);
+        assert_eq!(
+            response.genome_id,
+            biomeos_types::primal_names::BIOMEOS_SELF_GENOME
+        );
         assert!(response.path.exists());
         assert_eq!(response.architectures.len(), 1);
         assert!(factory.has_self_genome());

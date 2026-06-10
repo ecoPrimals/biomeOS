@@ -97,7 +97,7 @@ impl PerceptronWeights {
         // Equal weight on latency (inverse), error_rate (inverse), topology
         weights[32] = -0.3; // prefer lower latency
         weights[33] = -0.5; // penalize errors
-        weights[34] = 0.4;  // reward topology proximity
+        weights[34] = 0.4; // reward topology proximity
         weights[35] = -0.1; // slight penalty for high gate load
         Self { weights }
     }
@@ -169,7 +169,10 @@ impl PerceptronDispatcher {
     /// Create a shadow-mode dispatcher with neutral default weights (pre-training).
     #[must_use]
     pub fn shadow_default() -> Self {
-        Self::new(PerceptronWeights::neutral_default(), PerceptronPhase::Shadow)
+        Self::new(
+            PerceptronWeights::neutral_default(),
+            PerceptronPhase::Shadow,
+        )
     }
 
     /// Enable remote inference via barraCuda `ml.mlp_infer` capability call.
@@ -203,10 +206,7 @@ impl PerceptronDispatcher {
     /// choice and log any disagreement — the perceptron recommendation is
     /// **not** used for the actual dispatch decision.
     #[must_use]
-    pub fn recommend(
-        &self,
-        features_per_candidate: &[DispatchFeatures],
-    ) -> usize {
+    pub fn recommend(&self, features_per_candidate: &[DispatchFeatures]) -> usize {
         if features_per_candidate.is_empty() {
             return 0;
         }
@@ -247,9 +247,7 @@ impl PerceptronDispatcher {
                 );
             }
         } else if n <= 100 || n.is_multiple_of(500) {
-            tracing::debug!(
-                "L5 perceptron shadow [{n}]: {capability} rule={nn_idx} (agree)"
-            );
+            tracing::debug!("L5 perceptron shadow [{n}]: {capability} rule={nn_idx} (agree)");
         }
 
         if n == 100 || n == 500 || n == 1000 || (n > 1000 && n.is_multiple_of(5000)) {

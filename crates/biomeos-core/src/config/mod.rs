@@ -223,8 +223,10 @@ pub mod presets {
                 let provider = std::env::var(biomeos_types::env_config::vars::DISCOVERY_PROVIDER)
                     .ok()
                     .or_else(|| {
-                        biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
-                            .map(String::from)
+                        biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal(
+                            "discovery",
+                        )
+                        .map(String::from)
                     })
                     .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
                 let discovery = SocketDiscovery::new(family_id);

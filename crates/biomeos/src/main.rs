@@ -492,6 +492,19 @@ enum ModelCacheCommand {
     Status,
 }
 
+/// Check `PRIMAL_BIND_MODE` env var for tcp_only override.
+///
+/// When biomeOS is spawned by an external orchestrator (e.g. primalSpring,
+/// cellMembrane deploy scripts) that sets `PRIMAL_BIND_MODE=tcp_only`, this
+/// function returns `true` so the Neural API server skips UDS binding.
+/// Same env var contract that coralReef and other primals honor.
+fn is_bind_mode_tcp_only() -> bool {
+    std::env::var("PRIMAL_BIND_MODE").is_ok_and(|v| {
+        let v = v.to_lowercase();
+        v == "tcp_only" || v == "tcp"
+    })
+}
+
 /// Dispatch to mode handler based on CLI (thin orchestration)
 pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
     match cli.mode {
@@ -506,6 +519,7 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             bind,
             btsp_optional,
         } => {
+            let tcp_only = tcp_only || is_bind_mode_tcp_only();
             let config = modes::neural_api::resolve_neural_api_config(
                 graphs_dir,
                 socket,
@@ -566,6 +580,7 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 tcp_only,
                 bind,
             } => {
+                let tcp_only = tcp_only || is_bind_mode_tcp_only();
                 modes::nucleus::run(nucleus_mode, node_id, family_id, port, tcp_only, bind).await
             }
             NucleusCommand::Ingest {
@@ -573,14 +588,18 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 socket,
                 family_id,
                 dry_run,
-            } => modes::nucleus_ingest::run_ingest(pseudospore_dir, socket, family_id, dry_run).await,
+            } => {
+                modes::nucleus_ingest::run_ingest(pseudospore_dir, socket, family_id, dry_run).await
+            }
             NucleusCommand::Emit {
                 spore_id,
                 output,
                 socket,
                 family_id,
                 dry_run,
-            } => modes::nucleus_ingest::run_emit(spore_id, output, socket, family_id, dry_run).await,
+            } => {
+                modes::nucleus_ingest::run_emit(spore_id, output, socket, family_id, dry_run).await
+            }
         },
     }
 }

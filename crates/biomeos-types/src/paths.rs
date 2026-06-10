@@ -437,7 +437,11 @@ impl SystemPaths {
 
         // 2. Fallback to /run/biomeos-$USER (VPS: RuntimeDirectory=biomeos)
         let username = Self::get_username();
-        Ok(PathBuf::from(format!("/run/{}-{}", primal_names::BIOMEOS, username)))
+        Ok(PathBuf::from(format!(
+            "/run/{}-{}",
+            primal_names::BIOMEOS,
+            username
+        )))
     }
 
     /// Get XDG data directory
@@ -537,16 +541,14 @@ impl SystemPaths {
     /// returns a `Result`.
     #[must_use]
     pub fn new_lazy() -> Self {
-        let runtime_dir =
-            Self::get_runtime_dir().unwrap_or_else(|_| PathBuf::from(crate::defaults::DEFAULT_SOCKET_DIR));
-        let data_dir = Self::get_data_dir()
-            .unwrap_or_else(|_| PathBuf::from("/var/lib/biomeos"));
-        let config_dir = Self::get_config_dir()
-            .unwrap_or_else(|_| PathBuf::from("/etc/biomeos"));
-        let cache_dir = Self::get_cache_dir()
-            .unwrap_or_else(|_| PathBuf::from("/var/cache/biomeos"));
-        let state_dir = Self::get_state_dir()
-            .unwrap_or_else(|_| PathBuf::from("/var/lib/biomeos/state"));
+        let runtime_dir = Self::get_runtime_dir()
+            .unwrap_or_else(|_| PathBuf::from(crate::defaults::DEFAULT_SOCKET_DIR));
+        let data_dir = Self::get_data_dir().unwrap_or_else(|_| PathBuf::from("/var/lib/biomeos"));
+        let config_dir = Self::get_config_dir().unwrap_or_else(|_| PathBuf::from("/etc/biomeos"));
+        let cache_dir =
+            Self::get_cache_dir().unwrap_or_else(|_| PathBuf::from("/var/cache/biomeos"));
+        let state_dir =
+            Self::get_state_dir().unwrap_or_else(|_| PathBuf::from("/var/lib/biomeos/state"));
 
         Self {
             runtime_dir,

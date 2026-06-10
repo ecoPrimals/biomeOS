@@ -194,8 +194,9 @@ impl DiscoveryBootstrap {
 
         tracing::info!("Attempting mDNS discovery for BiomeOS services (_biomeos._tcp.local)");
 
-        let skip_probe =
-            skip_probe_override.unwrap_or_else(|| std::env::var(biomeos_types::env_config::vars::SKIP_MDNS_PROBE).is_ok());
+        let skip_probe = skip_probe_override.unwrap_or_else(|| {
+            std::env::var(biomeos_types::env_config::vars::SKIP_MDNS_PROBE).is_ok()
+        });
 
         // Loopback port-scanning requires explicit opt-in.  Production primals
         // discover peers through socket-discovery, mDNS, or env vars — never by
@@ -238,9 +239,9 @@ impl DiscoveryBootstrap {
         }
 
         // Fallback to env var when probe skipped or found nothing
-        let mdns_fb = mdns_fallback_override
-            .map(String::from)
-            .or_else(|| std::env::var(biomeos_types::env_config::vars::MDNS_DISCOVERED_ENDPOINT).ok());
+        let mdns_fb = mdns_fallback_override.map(String::from).or_else(|| {
+            std::env::var(biomeos_types::env_config::vars::MDNS_DISCOVERED_ENDPOINT).ok()
+        });
         if let Some(endpoint) = mdns_fb {
             tracing::info!(
                 "mDNS fallback: using MDNS_DISCOVERED_ENDPOINT: {}",
@@ -270,9 +271,9 @@ impl DiscoveryBootstrap {
 
         tracing::info!("Attempting UDP broadcast discovery");
 
-        let endpoint_hint = broadcast_endpoint_override
-            .map(String::from)
-            .or_else(|| std::env::var(biomeos_types::env_config::vars::BROADCAST_DISCOVERED_ENDPOINT).ok());
+        let endpoint_hint = broadcast_endpoint_override.map(String::from).or_else(|| {
+            std::env::var(biomeos_types::env_config::vars::BROADCAST_DISCOVERED_ENDPOINT).ok()
+        });
         if let Some(endpoint) = endpoint_hint {
             tracing::info!("Broadcast discovered endpoint (from env): {}", endpoint);
             return Ok(endpoint);
@@ -368,9 +369,9 @@ impl DiscoveryBootstrap {
 
         // Env-based hint: resolves via override or MULTICAST_DISCOVERED_ENDPOINT.
         // Full multicast socket I/O deferred until cross-gate deployments require it.
-        let endpoint_hint = endpoint_override
-            .map(String::from)
-            .or_else(|| std::env::var(biomeos_types::env_config::vars::MULTICAST_DISCOVERED_ENDPOINT).ok());
+        let endpoint_hint = endpoint_override.map(String::from).or_else(|| {
+            std::env::var(biomeos_types::env_config::vars::MULTICAST_DISCOVERED_ENDPOINT).ok()
+        });
         if let Some(endpoint) = endpoint_hint {
             tracing::info!("Multicast discovered endpoint: {}", endpoint);
             return Ok(endpoint);

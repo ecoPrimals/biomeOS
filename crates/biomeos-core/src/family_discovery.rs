@@ -84,10 +84,15 @@ impl Default for FamilyDiscoveryConfig {
             // Current directory
             PathBuf::from(".family.seed"),
             // XDG data directory
-            PathBuf::from(std::env::var(biomeos_types::env_config::vars::XDG_DATA_HOME).unwrap_or_else(|_| {
-                let home = std::env::var(biomeos_types::env_config::vars::HOME).unwrap_or_else(|_| ".".to_string());
-                format!("{home}/.local/share")
-            }))
+            PathBuf::from(
+                std::env::var(biomeos_types::env_config::vars::XDG_DATA_HOME).unwrap_or_else(
+                    |_| {
+                        let home = std::env::var(biomeos_types::env_config::vars::HOME)
+                            .unwrap_or_else(|_| ".".to_string());
+                        format!("{home}/.local/share")
+                    },
+                ),
+            )
             .join("biomeos/.family.seed"),
         ];
 

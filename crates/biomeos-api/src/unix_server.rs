@@ -165,11 +165,7 @@ async fn handle_raw_jsonrpc(mut reader: BufReader<tokio::net::UnixStream>) -> Re
 
 /// Neural API methods that should be proxied to the Neural API socket
 /// instead of returning -32601. These are the cross-gate critical path methods.
-const NEURAL_API_PROXY_METHODS: &[&str] = &[
-    "capability.call",
-    "graph.execute",
-    "topology.primals",
-];
+const NEURAL_API_PROXY_METHODS: &[&str] = &["capability.call", "graph.execute", "topology.primals"];
 
 async fn dispatch_jsonrpc_line_async(line: &str) -> serde_json::Value {
     let null = serde_json::Value::Null;
@@ -183,7 +179,10 @@ async fn dispatch_jsonrpc_line_async(line: &str) -> serde_json::Value {
         .unwrap_or("");
 
     if NEURAL_API_PROXY_METHODS.contains(&method) {
-        let params = req.get("params").cloned().unwrap_or_else(|| serde_json::Value::Object(serde_json::Map::default()));
+        let params = req
+            .get("params")
+            .cloned()
+            .unwrap_or_else(|| serde_json::Value::Object(serde_json::Map::default()));
         return proxy_to_neural_api(id, method, &params).await;
     }
 
@@ -196,8 +195,7 @@ async fn proxy_to_neural_api(
     method: &str,
     params: &serde_json::Value,
 ) -> serde_json::Value {
-    let family_id = biomeos_types::env_config::family_id()
-        .unwrap_or_else(|| "default".to_string());
+    let family_id = biomeos_types::env_config::family_id().unwrap_or_else(|| "default".to_string());
 
     let socket_path = neural_api_client::NeuralApiClient::discover_socket(&family_id);
 
@@ -370,4 +368,3 @@ fn jsonrpc_error(id: &serde_json::Value, code: i32, message: &str) -> serde_json
 #[cfg(unix)]
 #[path = "unix_server_tests.rs"]
 mod tests;
-

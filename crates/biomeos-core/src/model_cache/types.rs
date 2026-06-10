@@ -41,7 +41,6 @@ impl ModelCacheConfig {
     }
 }
 
-
 fn resolve_gate_id_from_env() -> String {
     std::env::var(biomeos_types::env_config::vars::GATE_ID)
         .or_else(|_| std::env::var(biomeos_types::env_config::vars::HOSTNAME))

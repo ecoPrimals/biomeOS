@@ -7,9 +7,9 @@
 
 use super::*;
 use crate::primal::PrimalCapability;
+use crate::primal::PrimalType;
 use crate::service::scaling::*;
 use crate::service::status::*;
-use crate::primal::PrimalType;
 use std::collections::HashMap;
 
 fn test_metadata() -> ServiceMetadata {

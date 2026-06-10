@@ -129,7 +129,9 @@ pub(crate) fn resolve_startup_config(
         mode,
         node_id,
         family_id,
-        std::env::var(biomeos_types::env_config::vars::SOCKET_DIR).ok().as_deref(),
+        std::env::var(biomeos_types::env_config::vars::SOCKET_DIR)
+            .ok()
+            .as_deref(),
     )
 }
 
@@ -195,7 +197,8 @@ pub(crate) fn build_primal_command(
     let has_ai =
         std::env::var("ANTHROPIC_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok();
     let ai_providers = has_ai.then(|| {
-        std::env::var(biomeos_types::env_config::vars::AI_HTTP_PROVIDERS).unwrap_or_else(|_| "anthropic,openai".to_string())
+        std::env::var(biomeos_types::env_config::vars::AI_HTTP_PROVIDERS)
+            .unwrap_or_else(|_| "anthropic,openai".to_string())
     });
     let anthropic = std::env::var("ANTHROPIC_API_KEY").ok();
     let openai = std::env::var("OPENAI_API_KEY").ok();
@@ -260,7 +263,12 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
     // $UPPER_CASE → passthrough from parent process environment
     let env_vars = profile.map_or(&defaults.env_vars, |p| &p.env_vars);
     for (key, value) in env_vars {
-        let resolved = if value.starts_with('$') && value.len() > 1 && value[1..].chars().all(|c| c.is_ascii_uppercase() || c == '_') {
+        let resolved = if value.starts_with('$')
+            && value.len() > 1
+            && value[1..]
+                .chars()
+                .all(|c| c.is_ascii_uppercase() || c == '_')
+        {
             let env_name = &value[1..];
             match std::env::var(env_name) {
                 Ok(v) => v,
@@ -309,8 +317,10 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
         );
     }
 
-    cmd.env("FAMILY_ID", config.family_id)
-        .env(biomeos_types::env_config::vars::NODE_ID_LEGACY, config.node_id);
+    cmd.env("FAMILY_ID", config.family_id).env(
+        biomeos_types::env_config::vars::NODE_ID_LEGACY,
+        config.node_id,
+    );
     cmd
 }
 
@@ -625,16 +635,16 @@ pub async fn run(
     Ok(())
 }
 
+#[cfg(test)]
+use nucleus_procs::health_check;
 use nucleus_procs::{
-    cleanup_stale_sockets, detect_ecosystem, discover_binaries, start_primal, wait_for_socket,
-    DEFAULT_SOCKET_POLL_INTERVAL,
+    DEFAULT_SOCKET_POLL_INTERVAL, cleanup_stale_sockets, detect_ecosystem, discover_binaries,
+    start_primal, wait_for_socket,
 };
 use nucleus_procs::{
     auto_register_with_songbird, generate_jwt_secret, health_check_with_backoff,
     resolve_socket_dir_with, wait_for_shutdown_signal,
 };
-#[cfg(test)]
-use nucleus_procs::health_check;
 
 #[cfg(test)]
 pub(crate) use nucleus_procs::discover_binaries_with;
