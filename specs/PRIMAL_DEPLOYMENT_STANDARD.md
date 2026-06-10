@@ -121,6 +121,12 @@ NEVER bind to 0.0.0.0 unless explicitly configured
 
 ## 4. Startup Sequence Standard
 
+> **Note (v4.19)**: The canonical deployment method is now `biomeos nucleus start`
+> or `membrane gate.bootstrap`. The shell script patterns below are retained as
+> reference for the underlying startup order but are not used in production.
+> NUCLEUS handles binary discovery, socket creation, health checks, lifecycle
+> supervision, and songBird auto-registration automatically.
+
 ### 4.1 Tower Atomic (BearDog + Songbird)
 
 ```bash

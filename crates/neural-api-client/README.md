@@ -2,7 +2,7 @@
 
 **Pure Rust client for capability-based primal routing**
 
-[![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
 ---
 

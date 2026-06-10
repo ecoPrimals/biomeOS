@@ -22,7 +22,7 @@ The shell scripts (`start_tower.sh`, `start_nest.sh`) are **temporary scaffoldin
 
 ## 2. Evolution Phases
 
-### Phase 1: Shell Scripts (Current - Scaffolding)
+### Phase 1: Shell Scripts (Legacy — replaced by NUCLEUS)
 
 ```
 User → ./start_tower.sh → spawns BearDog, Songbird
@@ -307,8 +307,8 @@ BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
 
 | Phase | Mechanism | Status |
 |-------|-----------|--------|
-| **Phase 1** | Shell scripts | Current (scaffolding) |
-| **Phase 2** | Graph deployment | Ready (graphs exist) |
+| **Phase 1** | Shell scripts | Legacy (replaced by NUCLEUS v4.17+) |
+| **Phase 2** | Graph deployment | Active (`biomeos nucleus start`, `gate.bootstrap`) |
 | **Phase 3** | Adaptive execution | Implemented (living_graph.rs) |
 
 **Evolution Principle**: 

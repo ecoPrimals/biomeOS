@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — L4 weighted routing, L5 perceptron shadow (remote infer wired), composition hot-reload, typed errors (zero Result<_,String>), 20 test extractions, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
-date = 2026-06-03
+description = "Orchestration kernel — NUCLEUS supervisor + songBird auto-register + SELinux TCP fallback, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
+date = 2026-06-10
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -11,6 +11,10 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **7,983+ tests** workspace-wide, 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v4.19** — Wave 107: NUCLEUS auto-registration with songBird discovery service
+- **v4.18** — Wave 106: Graceful TCP fallback for SELinux/Android substrates
+- **v4.17** — Wave 106: NUCLEUS supervision — automatic primal restart on crash
+- **v4.16** — Wave 106: Deep debt — error chains, hardcoding elimination, smart extraction
 - **v4.05** — Wave 75c: Deep debt evolution (5 test extractions ~1989L, hardcode→constants, &Vec→&[T], idiomatic Rust sweep)
 - **v4.04** — Wave 75b: Consolidation sprint (Result<_,String> sweep complete, map_err(format!) eliminated, L5 perceptron remote infer wired)
 - **v4.03** — Wave 75: SONGBIRD_FEDERATION_ENABLED alignment, AtomicType dedup, typed errors

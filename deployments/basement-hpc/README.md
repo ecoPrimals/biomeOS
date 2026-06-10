@@ -3,7 +3,11 @@
 **Purpose:** Production deployment manifests for basement HPC infrastructure  
 **Hardware Cost:** ~$15,000  
 **Nodes:** 10 machines (6 LAN, 2 Internet, 2 Mobile)  
-**Status:** Production Ready
+**Status:** Partially configured — 4/10 TOMLs exist (primary, northgate, pixel8a, swiftgate)
+
+> **Note (v4.19)**: Canonical deployment is now `membrane gate.bootstrap <gate>`
+> or `biomeos nucleus start`. These TOMLs are graph deployment configs.
+> Missing gate configs are added as gates come online.
 
 ---
 
