@@ -85,7 +85,9 @@ impl NeuralApiServer {
         biomeos_core::btsp_client::log_security_posture();
 
         // 1. Bind listeners EARLY so health probes see us immediately
-        let uds_listener = if self.tcp_only {
+        let effective_tcp_only =
+            self.tcp_only || biomeos_types::env_config::is_tcp_only_bind_mode();
+        let uds_listener = if effective_tcp_only {
             info!("📡 TCP-only mode — skipping Unix socket bind");
             None
         } else {

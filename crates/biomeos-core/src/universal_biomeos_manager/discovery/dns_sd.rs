@@ -232,7 +232,8 @@ async fn browse_mdns_instances() -> anyhow::Result<Vec<Candidate>> {
         return Ok(Vec::new());
     }
 
-    let mut buf = vec![0u8; 9000];
+    const MDNS_RECV_BUF: usize = 9000;
+    let mut buf = vec![0u8; MDNS_RECV_BUF];
     let mut instances: HashMap<String, InstanceRecord> = HashMap::new();
     let deadline = Instant::now() + Duration::from_secs(2);
     while Instant::now() < deadline {
@@ -305,7 +306,8 @@ async fn query_srv(socket: &UdpSocket, instance: &str) -> anyhow::Result<Option<
     let mdns: SocketAddr = MDNS_ADDR.parse()?;
     socket.send_to(&q, mdns).await?;
 
-    let mut buf = vec![0u8; 9000];
+    const MDNS_RECV_BUF: usize = 9000;
+    let mut buf = vec![0u8; MDNS_RECV_BUF];
     let deadline = Instant::now() + Duration::from_millis(800);
     while Instant::now() < deadline {
         let left = deadline.saturating_duration_since(Instant::now());

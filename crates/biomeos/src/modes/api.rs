@@ -66,6 +66,8 @@ pub async fn run(
     }
     info!("  Protocol: JSON-RPC 2.0");
 
+    let env_tcp_only = biomeos_types::env_config::is_tcp_only_bind_mode();
+
     let tcp_handle = if let Some(tcp_port) = port {
         let tcp_app = app.clone();
         let bind_host = bind.clone();
@@ -77,6 +79,14 @@ pub async fn run(
     } else {
         None
     };
+
+    if env_tcp_only && tcp_handle.is_some() {
+        info!("PRIMAL_BIND_MODE=tcp_only — skipping UDS bind, serving TCP only");
+        if let Some(handle) = tcp_handle {
+            handle.await.ok();
+        }
+        return Ok(());
+    }
 
     match biomeos_api::serve_unix_socket(&socket_path, app).await {
         Ok(()) => Ok(()),

@@ -102,9 +102,15 @@ pub async fn run(
     if let Some(addr) = bind {
         server = server.with_bind_address(addr);
     }
-    if tcp_only {
+    let effective_tcp_only = tcp_only || biomeos_types::env_config::is_tcp_only_bind_mode();
+    if effective_tcp_only {
         if let Some(port) = tcp_port {
             server = server.with_tcp_only(port);
+        } else if !tcp_only {
+            warn!(
+                "PRIMAL_BIND_MODE=tcp_only set but no --port specified. \
+                 UDS bind will be attempted (may fail on SELinux)."
+            );
         }
     } else if let Some(port) = tcp_port {
         server = server.with_tcp_port(port);

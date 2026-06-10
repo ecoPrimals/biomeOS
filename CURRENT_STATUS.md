@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 10, 2026 (v4.19: NUCLEUS auto-registration with songBird)
-**Version**: 4.19
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Auto-register with songBird on launch - SELinux/Android graceful UDS→TCP degradation - Error chains preserved - Hardcoded literals centralized
+**Updated**: June 10, 2026 (v4.20: PRIMAL_BIND_MODE gate + deep debt cleanup)
+**Version**: 4.20
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Auto-register with discovery provider on launch - PRIMAL_BIND_MODE=tcp_only fully wired - SELinux/Android UDS skip before bind - Magic numbers consolidated - Discovery provider dynamically resolved
 
 ---
 
