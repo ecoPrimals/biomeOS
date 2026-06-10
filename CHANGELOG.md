@@ -2,6 +2,20 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.19 (2026-06-10) — NUCLEUS Auto-Registration with songBird
+
+### Capability mesh auto-wiring (P2 — BIOMEOS-AUTO-REGISTER)
+- After NUCLEUS launches all primals and starts health monitoring, it now
+  auto-registers each primal's capabilities with songBird's discovery service.
+- For each primal, probes `capabilities.list` on its UDS socket (tries both
+  `.jsonrpc.sock` and `.sock` variants). Falls back to `capabilities_for_primal()`
+  taxonomy hints when probe returns empty.
+- Registers via `discovery.register_capability` JSON-RPC call to songBird,
+  including socket endpoint, primal name, and `nucleus-auto-register` source tag.
+- Best-effort: failures log warnings but never abort NUCLEUS startup.
+- **Impact**: Eliminates 26+ manual `ipc.register` calls per gate. After
+  `gate.bootstrap`, the capability mesh is immediately operational.
+
 ## v4.18 (2026-06-09) — Graceful TCP Fallback for SELinux/Android Substrates
 
 ### UDS bind failure → TCP degradation (P2 — grapheneGate 13/13)

@@ -541,6 +541,10 @@ pub async fn run(
     // Start background health monitoring (checks all registered primals periodically)
     lifecycle.start_monitoring().await?;
 
+    // Auto-register all launched primals with songBird's discovery service.
+    // This makes the capability mesh operational without manual ipc.register calls.
+    auto_register_with_songbird(&primals_needed, &socket_dir, &family_id).await;
+
     // In Full mode, start the Neural API server alongside the primals so that
     // graph.deploy, capability.call, and composition health are reachable.
     // Without this, biomeOS appears DOWN to external probes.
@@ -626,8 +630,8 @@ use nucleus_procs::{
     DEFAULT_SOCKET_POLL_INTERVAL,
 };
 use nucleus_procs::{
-    generate_jwt_secret, health_check_with_backoff, resolve_socket_dir_with,
-    wait_for_shutdown_signal,
+    auto_register_with_songbird, generate_jwt_secret, health_check_with_backoff,
+    resolve_socket_dir_with, wait_for_shutdown_signal,
 };
 #[cfg(test)]
 use nucleus_procs::health_check;

@@ -344,3 +344,94 @@ pub(super) fn generate_jwt_secret() -> String {
     rand::rng().fill_bytes(&mut bytes);
     base64::engine::general_purpose::STANDARD.encode(bytes)
 }
+
+/// Auto-register all launched primals with songBird's discovery service.
+///
+/// For each primal, probes `capabilities.list` on its socket and registers
+/// each capability with songBird via `discovery.register_capability`. Falls
+/// back to taxonomy hints when the probe returns empty.
+///
+/// Best-effort: logs warnings on failure but never aborts NUCLEUS startup.
+pub(super) async fn auto_register_with_songbird(
+    primals: &[&str],
+    socket_dir: &Path,
+    family_id: &str,
+) {
+    use biomeos_core::atomic_client::AtomicClient;
+    use biomeos_core::socket_discovery::cap_probe::probe_unix_socket_capabilities_list;
+    use biomeos_types::capability_taxonomy::helpers::capabilities_for_primal;
+
+    let songbird_socket = socket_dir.join(format!("songbird-{family_id}.sock"));
+    if !songbird_socket.exists() {
+        warn!(
+            "songBird socket not found at {} — skipping auto-registration",
+            songbird_socket.display()
+        );
+        return;
+    }
+
+    let songbird = AtomicClient::unix(&songbird_socket).with_timeout(Duration::from_secs(5));
+
+    let mut registered = 0usize;
+    let mut failed = 0usize;
+
+    for &primal in primals {
+        if primal == "songbird" {
+            continue;
+        }
+
+        let primal_socket = socket_dir.join(format!("{primal}-{family_id}.sock"));
+        let jsonrpc_socket = socket_dir.join(format!("{primal}-{family_id}.jsonrpc.sock"));
+        let probe_socket = if jsonrpc_socket.exists() {
+            &jsonrpc_socket
+        } else {
+            &primal_socket
+        };
+
+        let capabilities = if probe_socket.exists() {
+            let probed = probe_unix_socket_capabilities_list(probe_socket).await;
+            if probed.is_empty() {
+                capabilities_for_primal(primal)
+            } else {
+                probed
+            }
+        } else {
+            capabilities_for_primal(primal)
+        };
+
+        for capability in &capabilities {
+            let params = serde_json::json!({
+                "capability": capability,
+                "endpoint": {
+                    "type": "unix_socket",
+                    "path": primal_socket.to_string_lossy(),
+                },
+                "metadata": {
+                    "primal": primal,
+                    "source": "nucleus-auto-register",
+                    "family_id": family_id,
+                }
+            });
+
+            match songbird.call("discovery.register_capability", params).await {
+                Ok(_) => {
+                    registered += 1;
+                }
+                Err(e) => {
+                    failed += 1;
+                    warn!(
+                        "Failed to register {primal}/{capability} with songBird: {e}"
+                    );
+                }
+            }
+        }
+    }
+
+    if registered > 0 {
+        info!(
+            "📡 Auto-registered {registered} capabilities with songBird ({failed} failed)"
+        );
+    } else if failed > 0 {
+        warn!("songBird auto-registration: 0 succeeded, {failed} failed");
+    }
+}

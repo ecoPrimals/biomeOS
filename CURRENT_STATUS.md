@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 9, 2026 (v4.18: Graceful TCP fallback for SELinux/Android substrates)
-**Version**: 4.18
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - SELinux/Android graceful UDS→TCP degradation - Error chains preserved - Hardcoded literals centralized
+**Updated**: June 10, 2026 (v4.19: NUCLEUS auto-registration with songBird)
+**Version**: 4.19
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Auto-register with songBird on launch - SELinux/Android graceful UDS→TCP degradation - Error chains preserved - Hardcoded literals centralized
 
 ---
 
