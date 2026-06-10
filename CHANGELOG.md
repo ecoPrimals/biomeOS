@@ -2,6 +2,27 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.20 (2026-06-10) — PRIMAL_BIND_MODE + Deep Debt Cleanup
+
+### BM-UDS-01: PRIMAL_BIND_MODE=tcp_only env var gate (P2)
+- All server bind paths (Neural API, API server, NUCLEUS) now check
+  `PRIMAL_BIND_MODE=tcp_only` *before* attempting UDS bind. Previously, the v4.18
+  fallback caught bind errors *after* they happened; now the UDS path is skipped
+  entirely when the env var is set.
+- `PRIMAL_BIND_MODE` is the ecosystem-wide env var convention for SELinux/Android
+  substrates. Defined as `biomeos_types::env_config::vars::PRIMAL_BIND_MODE`.
+- Helper `is_tcp_only_bind_mode()` added to `env_config` for consistent checking.
+- NUCLEUS inherits `PRIMAL_BIND_MODE` to child primals via standard process env.
+
+### Deep debt cleanup
+- **Discovery provider decoupling**: `auto_register_with_songbird()` no longer
+  hardcodes "songbird" — resolves the discovery provider via
+  `BIOMEOS_NETWORK_PROVIDER` env or `CapabilityTaxonomy::resolve_to_primal("discovery")`.
+- **Magic number consolidation**: NUCLEUS timeouts (child reap, socket wait,
+  post-start delay, registration) extracted to `constants::timeouts::NUCLEUS_*`.
+- **mDNS buffer naming**: `dns_sd.rs` buffer sizes renamed from bare `9000` to
+  `MDNS_RECV_BUF` const to avoid confusion with `ports::NEURAL_API`.
+
 ## v4.19 (2026-06-10) — NUCLEUS Auto-Registration with songBird
 
 ### Capability mesh auto-wiring (P2 — BIOMEOS-AUTO-REGISTER)

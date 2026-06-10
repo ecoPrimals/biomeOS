@@ -299,7 +299,8 @@ pub(super) async fn health_check_with_backoff(socket_path: &Path) -> bool {
 pub(super) async fn health_check(socket_path: &Path) -> Result<()> {
     use biomeos_core::atomic_client::AtomicClient;
 
-    let client = AtomicClient::unix(socket_path).with_timeout(Duration::from_secs(3));
+    let client = AtomicClient::unix(socket_path)
+        .with_timeout(biomeos_types::constants::timeouts::DEFAULT_IPC_TIMEOUT);
 
     let response = if let Ok(resp) = client.call("health", serde_json::json!({})).await {
         resp
@@ -355,11 +356,13 @@ pub(super) fn generate_jwt_secret() -> String {
     base64::engine::general_purpose::STANDARD.encode(bytes)
 }
 
-/// Auto-register all launched primals with songBird's discovery service.
+/// Auto-register all launched primals with the discovery provider.
 ///
-/// For each primal, probes `capabilities.list` on its socket and registers
-/// each capability with songBird via `discovery.register_capability`. Falls
-/// back to taxonomy hints when the probe returns empty.
+/// Resolves the discovery provider via `BIOMEOS_NETWORK_PROVIDER` env or
+/// `CapabilityTaxonomy::resolve_to_primal("discovery")`. For each primal,
+/// probes `capabilities.list` on its socket and registers each capability
+/// via `discovery.register_capability`. Falls back to taxonomy hints when
+/// the probe returns empty.
 ///
 /// Best-effort: logs warnings on failure but never aborts NUCLEUS startup.
 pub(super) async fn auto_register_with_songbird(
@@ -371,22 +374,35 @@ pub(super) async fn auto_register_with_songbird(
     use biomeos_core::socket_discovery::cap_probe::probe_unix_socket_capabilities_list;
     use biomeos_types::capability_taxonomy::capabilities_for_primal;
 
-    let songbird_socket = socket_dir.join(format!("songbird-{family_id}.sock"));
-    if !songbird_socket.exists() {
+    let discovery_provider = std::env::var(biomeos_types::env_config::vars::NETWORK_PROVIDER)
+        .ok()
+        .or_else(|| {
+            biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
+                .map(String::from)
+        });
+
+    let Some(ref discovery_name) = discovery_provider else {
+        warn!("No discovery provider resolved — skipping auto-registration");
+        return;
+    };
+
+    let discovery_socket = socket_dir.join(format!("{discovery_name}-{family_id}.sock"));
+    if !discovery_socket.exists() {
         warn!(
-            "songBird socket not found at {} — skipping auto-registration",
-            songbird_socket.display()
+            "Discovery provider socket not found at {} — skipping auto-registration",
+            discovery_socket.display()
         );
         return;
     }
 
-    let songbird = AtomicClient::unix(&songbird_socket).with_timeout(Duration::from_secs(5));
+    let discovery_client = AtomicClient::unix(&discovery_socket)
+        .with_timeout(biomeos_types::constants::timeouts::NUCLEUS_REGISTRATION_TIMEOUT);
 
     let mut registered = 0usize;
     let mut failed = 0usize;
 
     for &primal in primals {
-        if primal == "songbird" {
+        if primal == discovery_name.as_str() {
             continue;
         }
 
@@ -423,21 +439,26 @@ pub(super) async fn auto_register_with_songbird(
                 }
             });
 
-            match songbird.call("discovery.register_capability", params).await {
+            match discovery_client
+                .call("discovery.register_capability", params)
+                .await
+            {
                 Ok(_) => {
                     registered += 1;
                 }
                 Err(e) => {
                     failed += 1;
-                    warn!("Failed to register {primal}/{capability} with songBird: {e}");
+                    warn!("Failed to register {primal}/{capability} with {discovery_name}: {e}");
                 }
             }
         }
     }
 
     if registered > 0 {
-        info!("📡 Auto-registered {registered} capabilities with songBird ({failed} failed)");
+        info!(
+            "📡 Auto-registered {registered} capabilities with {discovery_name} ({failed} failed)"
+        );
     } else if failed > 0 {
-        warn!("songBird auto-registration: 0 succeeded, {failed} failed");
+        warn!("{discovery_name} auto-registration: 0 succeeded, {failed} failed");
     }
 }

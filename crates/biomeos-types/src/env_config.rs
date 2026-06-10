@@ -71,6 +71,13 @@ pub mod vars {
     /// Songbird socket
     pub const SONGBIRD_SOCKET: &str = "SONGBIRD_SOCKET";
 
+    // --- Transport & Binding ---
+
+    /// Primal bind mode override. When set to `tcp_only`, all primals skip UDS
+    /// `bind()` and serve via TCP only. Required for SELinux/Android substrates
+    /// where `sock_file create` is denied.
+    pub const PRIMAL_BIND_MODE: &str = "PRIMAL_BIND_MODE";
+
     // --- Operational Mode ---
 
     /// Bind address for HTTP/TCP listeners
@@ -414,6 +421,16 @@ pub fn strict_discovery() -> bool {
 /// Check strict discovery from an explicit environment map (for testing / DI)
 fn strict_discovery_with(env: &HashMap<String, String>) -> bool {
     env.contains_key(vars::STRICT_DISCOVERY)
+}
+
+/// Returns `true` when `PRIMAL_BIND_MODE` is set to `tcp_only`.
+///
+/// When true, all server bind paths should skip UDS and serve TCP only.
+/// This is the ecosystem-wide env var convention for SELinux/Android
+/// substrates where `sock_file create` is denied by policy.
+#[must_use]
+pub fn is_tcp_only_bind_mode() -> bool {
+    std::env::var(vars::PRIMAL_BIND_MODE).is_ok_and(|v| v.eq_ignore_ascii_case("tcp_only"))
 }
 
 /// Get the socket directory override, or `None` for XDG-resolved default

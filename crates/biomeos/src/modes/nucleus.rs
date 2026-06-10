@@ -33,7 +33,6 @@ use biomeos_types::primal_names::{
 };
 use nucleus_launch::load_nucleus_profiles;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 use tracing::{info, warn};
 
 /// Detected ecosystem state at startup
@@ -365,9 +364,12 @@ async fn shutdown_children(
     let started_names: Vec<String> = children.iter().map(|(n, _)| n.clone()).collect();
 
     for (name, mut child) in children {
-        if tokio::time::timeout(Duration::from_secs(2), child.wait())
-            .await
-            .is_ok()
+        if tokio::time::timeout(
+            biomeos_types::constants::timeouts::NUCLEUS_CHILD_REAP_TIMEOUT,
+            child.wait(),
+        )
+        .await
+        .is_ok()
         {
             info!("  {} exited", name);
         } else {
@@ -396,6 +398,7 @@ pub async fn run(
     tcp_only: bool,
     bind: Option<String>,
 ) -> Result<()> {
+    let tcp_only = tcp_only || biomeos_types::env_config::is_tcp_only_bind_mode();
     if tcp_only {
         info!(
             "TCP-only mode active — UDS skipped. \
@@ -507,7 +510,7 @@ pub async fn run(
         // Non-fatal: on SELinux/Android, the primal may be alive on TCP without a UDS socket.
         let socket_appeared = wait_for_socket(
             &health_socket,
-            Duration::from_secs(10),
+            biomeos_types::constants::timeouts::NUCLEUS_SOCKET_WAIT_TIMEOUT,
             DEFAULT_SOCKET_POLL_INTERVAL,
         )
         .await
@@ -595,7 +598,7 @@ pub async fn run(
                 tracing::error!("Neural API server exited with error: {e}");
             }
         });
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(biomeos_types::constants::timeouts::NUCLEUS_POST_START_DELAY).await;
     }
 
     // Print summary

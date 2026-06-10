@@ -262,6 +262,18 @@ pub mod timeouts {
 
     /// Capability probe timeout as a `Duration`.
     pub const PROBE_TIMEOUT: Duration = Duration::from_millis(PROBE_TIMEOUT_MS);
+
+    /// NUCLEUS child-process reap timeout after sending SIGTERM.
+    pub const NUCLEUS_CHILD_REAP_TIMEOUT: Duration = Duration::from_secs(2);
+
+    /// NUCLEUS socket-appear wait timeout (per primal).
+    pub const NUCLEUS_SOCKET_WAIT_TIMEOUT: Duration = Duration::from_secs(10);
+
+    /// NUCLEUS post-start settle delay before probing child health.
+    pub const NUCLEUS_POST_START_DELAY: Duration = Duration::from_millis(500);
+
+    /// NUCLEUS discovery registration client timeout.
+    pub const NUCLEUS_REGISTRATION_TIMEOUT: Duration = Duration::from_secs(5);
 }
 
 /// Resource limits and thresholds
