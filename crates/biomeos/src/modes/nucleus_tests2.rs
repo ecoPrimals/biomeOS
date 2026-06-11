@@ -11,6 +11,7 @@
 
 use super::*;
 use std::path::PathBuf;
+use std::time::Duration;
 
 #[test]
 fn test_socket_path_for_capability_unknown_returns_unknown_sock() {

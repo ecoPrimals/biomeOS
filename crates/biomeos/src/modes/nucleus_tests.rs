@@ -11,6 +11,7 @@
 
 use super::*;
 use std::path::PathBuf;
+use std::time::Duration;
 
 #[test]
 fn test_nucleus_mode_from_str_valid() {
