@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — NUCLEUS supervisor + songBird auto-register + SELinux TCP fallback, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
-date = 2026-06-10
+description = "Orchestration kernel — guideStone startup contract + HEALTH-01 compliant + NUCLEUS supervisor, 27 capability domains, 320+ translations, 43 deploy graphs, zero blocking debt"
+date = 2026-06-11
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -11,6 +11,8 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **7,983+ tests** workspace-wide, 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v4.23** — Wave 110: Deep debt cleanup — Duration constant consolidation + magic number elimination
+- **v4.22** — Wave 109: guideStone startup contract (`--bind-mode`) + HEALTH-01 (`{status,primal,version,uptime_s}`)
 - **v4.19** — Wave 107: NUCLEUS auto-registration with songBird discovery service
 - **v4.18** — Wave 106: Graceful TCP fallback for SELinux/Android substrates
 - **v4.17** — Wave 106: NUCLEUS supervision — automatic primal restart on crash

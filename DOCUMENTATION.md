@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: June 3, 2026
+**Updated**: June 11, 2026
 
 ---
 
@@ -191,8 +191,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of June 3, 2026 (v4.02)**
-**Active: 27 specs, handoffs in wateringHole (v2.43–v4.02), 4 scripts**
+**Documentation current as of June 11, 2026 (v4.23)**
+**Active: 24 specs (47 archived), handoffs in wateringHole (v2.43–v4.23), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
-**Architecture: L4 weighted routing, L5 perceptron shadow, composition hot-reload, typed errors throughout, API visibility tightened, SSOT hardened, HTTP transport removed v3.97, --tcp-only deprecated v3.94**
-**Tests: 7,983 workspace-wide (0 failures) | Clippy: PASS (0 warnings) | C deps: 0 | Unsafe: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Result<_, String>: 0 in core APIs**
+**Architecture: L4 weighted routing, L5 perceptron shadow, guideStone startup (`--bind-mode`), HEALTH-01, composition hot-reload, typed errors throughout, Duration constants centralized, HTTP transport removed v3.97**
+**Tests: 7,983+ workspace-wide (0 failures) | Clippy: PASS (0 warnings) | C deps: 0 | Unsafe: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Result<_, String>: 0 in core APIs**
