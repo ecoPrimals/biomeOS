@@ -17,7 +17,6 @@ use biomeos_core::atomic_client::AtomicClient;
 use biomeos_types::primal_names;
 use serde_json::json;
 use std::path::Path;
-use std::time::Duration;
 use tracing::debug;
 
 /// Verify a primal is healthy and query its capabilities (Universal IPC v3.0)
@@ -33,7 +32,8 @@ use tracing::debug;
 /// Vector of capability strings the primal provides
 pub async fn verify_primal_health(socket_path: &Path, primal_name: &str) -> Result<Vec<String>> {
     // Create AtomicClient with 5 second timeout
-    let client = AtomicClient::unix(socket_path).with_timeout(Duration::from_secs(5));
+    let client = AtomicClient::unix(socket_path)
+        .with_timeout(biomeos_types::constants::timeouts::HEALTH_SWEEP_PRIMAL_TIMEOUT);
 
     // Query capabilities
     let response = client
@@ -118,8 +118,8 @@ pub async fn verify_primal_health_with_discovery(primal_name: &str) -> Result<Ve
 /// # Returns
 /// Session ID for the established tunnel
 pub async fn establish_btsp_tunnel(security_socket: &Path, family_id: &str) -> Result<String> {
-    // Create AtomicClient with 10 second timeout (BTSP can take longer)
-    let client = AtomicClient::unix(security_socket).with_timeout(Duration::from_secs(10));
+    let client = AtomicClient::unix(security_socket)
+        .with_timeout(biomeos_types::constants::timeouts::DEFAULT_HEALTH_CHECK_TIMEOUT);
 
     // Request BTSP tunnel establishment
     let response = client

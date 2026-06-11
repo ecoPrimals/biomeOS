@@ -18,7 +18,6 @@ use biomeos_types::CapabilityTaxonomy; // Phase 1 enum (not PrimalCapability str
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 /// Primal binary metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -435,7 +434,11 @@ impl PrimalRegistry {
         cmd.stderr(std::process::Stdio::piped());
 
         let run = cmd.output();
-        let out = tokio::time::timeout(Duration::from_secs(5), run).await;
+        let out = tokio::time::timeout(
+            biomeos_types::constants::timeouts::HEALTH_SWEEP_PRIMAL_TIMEOUT,
+            run,
+        )
+        .await;
         let output = match out {
             Ok(Ok(o)) => o,
             Ok(Err(e)) => {

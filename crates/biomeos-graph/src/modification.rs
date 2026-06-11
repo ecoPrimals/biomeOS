@@ -225,7 +225,8 @@ impl GraphModificationHandler {
         // Add node
         graph.nodes.push(node.clone());
 
-        if graph.nodes.len() > 100 {
+        const LARGE_GRAPH_WARNING_THRESHOLD: usize = 100;
+        if graph.nodes.len() > LARGE_GRAPH_WARNING_THRESHOLD {
             warnings
                 .push("Graph has over 100 nodes, consider breaking into sub-graphs".to_string());
         }

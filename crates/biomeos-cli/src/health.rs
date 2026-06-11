@@ -156,28 +156,32 @@ impl HealthUtils {
             network_status: "OK".to_string(),
         };
 
-        // Analyze memory usage
-        if system_health.memory_usage > 90.0 {
+        const MEMORY_CRITICAL_PCT: f64 = 90.0;
+        const MEMORY_WARNING_PCT: f64 = 75.0;
+        const CPU_CRITICAL_PCT: f64 = 95.0;
+        const CPU_WARNING_PCT: f64 = 80.0;
+        const DISK_CRITICAL_PCT: f64 = 95.0;
+        const DISK_WARNING_PCT: f64 = 85.0;
+
+        if system_health.memory_usage > MEMORY_CRITICAL_PCT {
             issues.push("Critical: Memory usage above 90%".to_string());
             recommendations.push("Consider restarting services or upgrading memory".to_string());
-        } else if system_health.memory_usage > 75.0 {
+        } else if system_health.memory_usage > MEMORY_WARNING_PCT {
             issues.push("Warning: Memory usage above 75%".to_string());
             recommendations.push("Monitor memory usage trends".to_string());
         }
 
-        // Analyze CPU usage
-        if system_health.cpu_usage > 95.0 {
+        if system_health.cpu_usage > CPU_CRITICAL_PCT {
             issues.push("Critical: CPU usage above 95%".to_string());
             recommendations.push("Check for runaway processes or reduce load".to_string());
-        } else if system_health.cpu_usage > 80.0 {
+        } else if system_health.cpu_usage > CPU_WARNING_PCT {
             issues.push("Warning: CPU usage above 80%".to_string());
         }
 
-        // Analyze disk usage
-        if system_health.disk_usage > 95.0 {
+        if system_health.disk_usage > DISK_CRITICAL_PCT {
             issues.push("Critical: Disk usage above 95%".to_string());
             recommendations.push("Clean up disk space immediately".to_string());
-        } else if system_health.disk_usage > 85.0 {
+        } else if system_health.disk_usage > DISK_WARNING_PCT {
             issues.push("Warning: Disk usage above 85%".to_string());
             recommendations.push("Plan disk cleanup or expansion".to_string());
         }

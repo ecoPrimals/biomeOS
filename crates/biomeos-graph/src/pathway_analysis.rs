@@ -115,11 +115,14 @@ pub(crate) fn find_reorder_candidates(
         .flat_map(|n| n.depends_on.iter().map(String::as_str))
         .collect();
 
+    const SLOW_NODE_COST_THRESHOLD_MS: u64 = 100;
+
     nodes
         .iter()
         .enumerate()
         .filter(|(_, node)| {
-            node.cost_estimate_ms.is_some_and(|c| c > 100)
+            node.cost_estimate_ms
+                .is_some_and(|c| c > SLOW_NODE_COST_THRESHOLD_MS)
                 && !dependent_set.contains(node.id.as_str())
         })
         .filter_map(|(idx, node)| {
@@ -129,7 +132,7 @@ pub(crate) fn find_reorder_candidates(
                 .map(|m| m.avg_duration_ms as u64);
             let cost = actual_avg.unwrap_or(declared_cost);
 
-            if cost > 100 && idx > 0 {
+            if cost > SLOW_NODE_COST_THRESHOLD_MS && idx > 0 {
                 Some(OptimizationSuggestion {
                     optimization: OptimizationType::Reorder {
                         node_id: node.id.as_str().to_string(),

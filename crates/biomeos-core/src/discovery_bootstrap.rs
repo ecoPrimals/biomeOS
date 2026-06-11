@@ -190,8 +190,6 @@ impl DiscoveryBootstrap {
         skip_probe_override: Option<bool>,
         mdns_fallback_override: Option<&str>,
     ) -> Result<String> {
-        use std::time::Duration;
-
         tracing::info!("Attempting mDNS discovery for BiomeOS services (_biomeos._tcp.local)");
 
         let skip_probe = skip_probe_override.unwrap_or_else(|| {
@@ -214,7 +212,7 @@ impl DiscoveryBootstrap {
             for &port in CANDIDATE_PORTS {
                 let addr = format!("{}:{port}", endpoints::DEFAULT_LOCALHOST);
                 match tokio::time::timeout(
-                    Duration::from_secs(2),
+                    biomeos_types::constants::timeouts::DEFAULT_IPC_TIMEOUT,
                     tokio::net::TcpStream::connect(&addr),
                 )
                 .await
@@ -312,7 +310,8 @@ impl DiscoveryBootstrap {
 
         // Listen for responses with timeout
         let mut buf = [0u8; 4096];
-        match tokio::time::timeout(Duration::from_secs(3), socket.recv_from(&mut buf)).await {
+        const BROADCAST_RECV_TIMEOUT: Duration = Duration::from_secs(3);
+        match tokio::time::timeout(BROADCAST_RECV_TIMEOUT, socket.recv_from(&mut buf)).await {
             Ok(Ok((n, addr))) => {
                 if let Ok(response) = serde_json::from_slice::<serde_json::Value>(&buf[..n])
                     && let Some(endpoint) = response.get("endpoint").and_then(|e| e.as_str())

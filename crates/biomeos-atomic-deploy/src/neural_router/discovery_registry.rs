@@ -18,7 +18,7 @@ use super::NeuralRouter;
 use super::perceptron::build_candidate_features;
 use super::types::{DiscoveredAtomic, DiscoveredPrimal, RegisteredCapability};
 
-const SHADOW_LOG_DISPATCH_LIMIT: u64 = 1000;
+pub(crate) const SHADOW_LOG_DISPATCH_LIMIT: u64 = 1000;
 
 impl NeuralRouter {
     /// Select the primary provider from candidates using routing weights.

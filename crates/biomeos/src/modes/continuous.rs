@@ -66,7 +66,7 @@ async fn call_primal(
     let mut response_line = String::new();
 
     tokio::time::timeout(
-        std::time::Duration::from_secs(5),
+        biomeos_types::constants::timeouts::CONTINUOUS_POLL_INTERVAL,
         buf_reader.read_line(&mut response_line),
     )
     .await

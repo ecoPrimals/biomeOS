@@ -2,6 +2,37 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.23 (2026-06-11) — Deep Debt: Duration + Magic Number Consolidation
+
+### Duration constant consolidation
+- Added 10 named timeout constants to `biomeos_types::constants::timeouts`:
+  `POLL_INTERVAL_FAST` (100ms), `BOOTSTRAP_SETTLE_DELAY` (500ms),
+  `BTSP_CALL_TIMEOUT` (5s), `DEFAULT_DISCOVERY_TIMEOUT` (5s),
+  `ROUTER_WEIGHT_EVICTION_INTERVAL` (30s), `HTTP_CLIENT_TIMEOUT` (60s),
+  `HEALTH_SWEEP_PRIMAL_TIMEOUT` (5s), `CAPABILITY_CALL_TIMEOUT` (15s),
+  `CONTINUOUS_POLL_INTERVAL` (5s).
+- Replaced ~25 bare `Duration::from_secs()`/`from_millis()` literals across
+  `biomeos-atomic-deploy`, `biomeos-core`, and `biomeos` crates with named
+  constants from `timeouts`. Removed 5 now-unused `Duration` imports.
+
+### Magic number elimination
+- Replaced bare `80` HTTP port fallback in `endpoint_probe.rs` with local
+  `HTTP_SCHEME_DEFAULT_PORT` constant.
+- Extracted health-analysis thresholds in `biomeos-cli/src/health.rs`:
+  `MEMORY_CRITICAL_PCT`, `CPU_CRITICAL_PCT`, `DISK_CRITICAL_PCT` and warning
+  counterparts.
+- Extracted topology health thresholds `HEALTHY_THRESHOLD_PCT` / `DEGRADED_THRESHOLD_PCT`
+  in `handlers/topology.rs`.
+- Added `EXPLORATION_OBSERVATION_THRESHOLD` in neural-router scoring (was bare `5`).
+- Added `SHADOW_TRAINING_COMPLETION_THRESHOLD` in neural API enrichment (was bare `1000`).
+- Added `LOG_RING_BUFFER_CAP` in UI state (was bare `1000`).
+- Added `LARGE_GRAPH_WARNING_THRESHOLD` in graph modification (was bare `100`).
+- Added `SLOW_NODE_COST_THRESHOLD_MS` in pathway analysis (was bare `100`).
+
+### Test fixes
+- Fixed 3 struct-destructuring patterns in `main_tests.rs` missing the `bind_mode`
+  field introduced in v4.22.
+
 ## v4.22 (2026-06-11) — guideStone Startup Contract + HEALTH-01
 
 ### STARTUP-BM-01: Standard primal startup contract

@@ -115,7 +115,10 @@ async fn probe_http_endpoint(url: &str) -> Result<ProbeResult> {
     let host = parsed
         .host_str()
         .ok_or_else(|| anyhow::anyhow!("no host in URL: {url}"))?;
-    let port = parsed.port_or_known_default().unwrap_or(80);
+    const HTTP_SCHEME_DEFAULT_PORT: u16 = 80;
+    let port = parsed
+        .port_or_known_default()
+        .unwrap_or(HTTP_SCHEME_DEFAULT_PORT);
     let authority = format!("{host}:{port}");
 
     let stream = tokio::time::timeout(timeouts::PROBE_TIMEOUT, TcpStream::connect(&authority))
@@ -294,8 +297,11 @@ async fn http_jsonrpc_call_raw(
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpStream;
 
+    const HTTP_SCHEME_DEFAULT_PORT: u16 = 80;
     let host = parsed.host_str()?;
-    let port = parsed.port_or_known_default().unwrap_or(80);
+    let port = parsed
+        .port_or_known_default()
+        .unwrap_or(HTTP_SCHEME_DEFAULT_PORT);
     let authority = format!("{host}:{port}");
     let path = parsed.path();
 

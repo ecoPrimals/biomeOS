@@ -20,7 +20,10 @@ pub(crate) const CIRCUIT_BREAKER_THRESHOLD: u32 = 5;
 /// Seconds before a half-open probe is allowed.
 pub(crate) const CIRCUIT_BREAKER_COOLDOWN_SECS: i64 = 30;
 
-/// Bonus score for providers with < 5 observations (encourages exploration).
+/// Minimum observation count before exploration bonus is dropped.
+pub(crate) const EXPLORATION_OBSERVATION_THRESHOLD: u64 = 5;
+
+/// Bonus score for providers with < EXPLORATION_OBSERVATION_THRESHOLD observations.
 pub(crate) const EXPLORATION_BONUS: f64 = 0.1;
 
 /// Topology affinity multipliers — prefer same-gate IPC over cross-gate or WAN.
@@ -161,7 +164,7 @@ impl ProviderWeight {
             self.topology_affinity * self.affinity * reliability * latency_factor - cost_penalty;
 
         let total = self.success_count + self.failure_count;
-        if total < 5 {
+        if total < EXPLORATION_OBSERVATION_THRESHOLD {
             base + EXPLORATION_BONUS
         } else {
             base

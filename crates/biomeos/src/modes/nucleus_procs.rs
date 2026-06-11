@@ -252,8 +252,9 @@ pub(super) async fn start_primal(
     Ok(child)
 }
 
-/// Default poll interval when waiting for socket (100ms).
-pub(super) const DEFAULT_SOCKET_POLL_INTERVAL: Duration = Duration::from_millis(100);
+/// Default poll interval when waiting for socket.
+pub(super) const DEFAULT_SOCKET_POLL_INTERVAL: Duration =
+    biomeos_types::constants::timeouts::POLL_INTERVAL_FAST;
 
 /// Wait for a socket file to appear.
 pub(super) async fn wait_for_socket(

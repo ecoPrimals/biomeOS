@@ -9,7 +9,6 @@ use anyhow::{Context, bail};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
@@ -36,7 +35,12 @@ pub(super) async fn send_json_rpc(socket_path: &PathBuf, request: &Value) -> any
     let mut reader = BufReader::new(stream);
     let mut response_line = String::new();
 
-    match tokio::time::timeout(Duration::from_secs(5), reader.read_line(&mut response_line)).await {
+    match tokio::time::timeout(
+        biomeos_types::constants::timeouts::BTSP_CALL_TIMEOUT,
+        reader.read_line(&mut response_line),
+    )
+    .await
+    {
         Ok(Ok(_)) => {}
         Ok(Err(e)) => bail!("Failed to read response: {e}"),
         Err(_) => bail!("Response timeout (>5s)"),

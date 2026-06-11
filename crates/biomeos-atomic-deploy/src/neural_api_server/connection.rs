@@ -14,7 +14,7 @@ use biomeos_types::jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
-use tokio::time::{Duration, timeout};
+use tokio::time::timeout;
 use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
@@ -125,7 +125,7 @@ impl NeuralApiServer {
         let mut first_line = String::new();
 
         let read_result = timeout(
-            Duration::from_millis(100),
+            biomeos_types::constants::timeouts::POLL_INTERVAL_FAST,
             reader.read_line(&mut first_line),
         )
         .await;
@@ -244,8 +244,11 @@ impl NeuralApiServer {
         let mut len_buf = [0u8; 4];
 
         loop {
-            let read_result =
-                timeout(Duration::from_secs(30), reader.read_exact(&mut len_buf)).await;
+            let read_result = timeout(
+                biomeos_types::constants::timeouts::DEFAULT_REQUEST_TIMEOUT,
+                reader.read_exact(&mut len_buf),
+            )
+            .await;
 
             match read_result {
                 Ok(Ok(_)) => {}
@@ -259,7 +262,10 @@ impl NeuralApiServer {
             }
 
             let mut payload = vec![0u8; frame_len];
-            timeout(Duration::from_secs(30), reader.read_exact(&mut payload))
+            timeout(
+                biomeos_types::constants::timeouts::DEFAULT_REQUEST_TIMEOUT,
+                reader.read_exact(&mut payload),
+            )
                 .await
                 .context("Timeout reading encrypted frame payload")??;
 
@@ -302,8 +308,11 @@ impl NeuralApiServer {
         loop {
             line.clear();
 
-            let read_result =
-                timeout(Duration::from_millis(100), reader.read_line(&mut line)).await;
+            let read_result = timeout(
+                biomeos_types::constants::timeouts::POLL_INTERVAL_FAST,
+                reader.read_line(&mut line),
+            )
+            .await;
 
             match read_result {
                 Ok(Ok(n)) if n > 0 => {

@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio::time::{Duration, sleep};
+use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
 
 /// Register biomeOS in the capability registry
@@ -178,8 +178,8 @@ pub async fn transition_to_coordinated_with_runtime_dir(
 
     // Wait for Tower Atomic to be ready (sockets to exist)
     // Uses SocketNucleation for deterministic paths (no hardcoding)
-    let max_wait = Duration::from_secs(30);
-    let check_interval = Duration::from_millis(500);
+    let max_wait = biomeos_types::constants::timeouts::DEFAULT_REQUEST_TIMEOUT;
+    let check_interval = biomeos_types::constants::timeouts::BOOTSTRAP_SETTLE_DELAY;
     let start = std::time::Instant::now();
 
     // Resolve provider names: env override → capability taxonomy → bootstrap fallback

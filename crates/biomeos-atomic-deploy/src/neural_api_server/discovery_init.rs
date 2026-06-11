@@ -16,7 +16,7 @@ pub(crate) async fn probe_tcp_capabilities_public(addr: &str) -> Vec<String> {
 async fn probe_tcp_capabilities(addr: &str) -> Vec<String> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpStream;
-    use tokio::time::{Duration, timeout};
+    use tokio::time::timeout;
 
     let request = serde_json::json!({
         "jsonrpc": "2.0",
@@ -25,7 +25,11 @@ async fn probe_tcp_capabilities(addr: &str) -> Vec<String> {
         "id": 1
     });
 
-    let Ok(Ok(mut stream)) = timeout(Duration::from_millis(500), TcpStream::connect(addr)).await
+    let Ok(Ok(mut stream)) = timeout(
+        biomeos_types::constants::timeouts::BOOTSTRAP_SETTLE_DELAY,
+        TcpStream::connect(addr),
+    )
+    .await
     else {
         return vec![];
     };
@@ -36,7 +40,12 @@ async fn probe_tcp_capabilities(addr: &str) -> Vec<String> {
     }
 
     let mut buf = vec![0u8; 8192];
-    let Ok(Ok(n)) = timeout(Duration::from_secs(2), stream.read(&mut buf)).await else {
+    let Ok(Ok(n)) = timeout(
+        biomeos_types::constants::timeouts::DEFAULT_IPC_TIMEOUT,
+        stream.read(&mut buf),
+    )
+    .await
+    else {
         return vec![];
     };
 
@@ -352,8 +361,8 @@ impl NeuralApiServer {
             }
         };
 
-        let client =
-            AtomicClient::unix(&socket_path).with_timeout(std::time::Duration::from_secs(5));
+        let client = AtomicClient::unix(&socket_path)
+            .with_timeout(biomeos_types::constants::timeouts::BTSP_CALL_TIMEOUT);
         let result = client
             .call_btsp(
                 "crypto.derive_public_key",

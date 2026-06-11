@@ -256,7 +256,7 @@ where
 
     let mut first_line = String::new();
     let read = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
+        biomeos_types::constants::timeouts::BTSP_CALL_TIMEOUT,
         reader.read_line(&mut first_line),
     )
     .await
@@ -304,7 +304,7 @@ where
 
     let mut response_line = String::new();
     let read = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
+        biomeos_types::constants::timeouts::BTSP_CALL_TIMEOUT,
         reader.read_line(&mut response_line),
     )
     .await
@@ -714,7 +714,7 @@ pub(crate) async fn read_json_line<T: serde::de::DeserializeOwned>(
     use tokio::io::AsyncBufReadExt;
     let mut line = String::new();
     let n = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
+        biomeos_types::constants::timeouts::BTSP_CALL_TIMEOUT,
         reader.read_line(&mut line),
     )
     .await

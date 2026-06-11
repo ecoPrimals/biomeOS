@@ -463,14 +463,22 @@ impl TopologyHandler {
             health_percentage * 0.5
         };
 
+        const HEALTHY_THRESHOLD_PCT: f64 = 80.0;
+        const DEGRADED_THRESHOLD_PCT: f64 = 50.0;
+        let health_status = if health_percentage >= HEALTHY_THRESHOLD_PCT {
+            "healthy"
+        } else if health_percentage >= DEGRADED_THRESHOLD_PCT {
+            "degraded"
+        } else {
+            "critical"
+        };
+
         Ok(json!({
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "family_id": self.family_id,
             "health": {
                 "percentage": health_percentage,
-                "status": if health_percentage >= 80.0 { "healthy" }
-                          else if health_percentage >= 50.0 { "degraded" }
-                          else { "critical" }
+                "status": health_status,
             },
             "confidence": confidence,
             "self_awareness": {

@@ -96,6 +96,7 @@ fn test_cli_parse_neural_api() {
             tcp_only,
             bind,
             btsp_optional,
+            bind_mode: _,
         } => {
             assert_eq!(graphs_dir, &PathBuf::from("graphs"));
             assert!(family_id.is_none());
@@ -130,6 +131,7 @@ fn test_cli_parse_neural_api_with_opts() {
             tcp_only,
             bind,
             btsp_optional,
+            bind_mode: _,
         } => {
             assert_eq!(graphs_dir, &PathBuf::from("/tmp/graphs"));
             assert_eq!(family_id.as_deref(), Some("fam1"));
@@ -284,6 +286,7 @@ fn test_cli_parse_nucleus_start() {
                 port,
                 tcp_only,
                 bind,
+                bind_mode: _,
             } => {
                 assert_eq!(mode, "full");
                 assert_eq!(node_id, "node1");

@@ -274,6 +274,34 @@ pub mod timeouts {
 
     /// NUCLEUS discovery registration client timeout.
     pub const NUCLEUS_REGISTRATION_TIMEOUT: Duration = Duration::from_secs(5);
+
+    /// Default IPC/capability discovery timeout (5s).
+    pub const DEFAULT_DISCOVERY_TIMEOUT: Duration =
+        Duration::from_millis(DEFAULT_DISCOVERY_TIMEOUT_MS);
+
+    /// Short poll interval for socket appearance / async convergence loops.
+    pub const POLL_INTERVAL_FAST: Duration = Duration::from_millis(100);
+
+    /// Bootstrap settle delay — pause after initialization before proceeding.
+    pub const BOOTSTRAP_SETTLE_DELAY: Duration = Duration::from_millis(500);
+
+    /// BTSP client call timeout.
+    pub const BTSP_CALL_TIMEOUT: Duration = Duration::from_secs(5);
+
+    /// Neural router stale-weight eviction interval.
+    pub const ROUTER_WEIGHT_EVICTION_INTERVAL: Duration = Duration::from_secs(30);
+
+    /// HTTP client request timeout (external HTTP calls).
+    pub const HTTP_CLIENT_TIMEOUT: Duration = Duration::from_secs(60);
+
+    /// Primal health sweep timeout per primal.
+    pub const HEALTH_SWEEP_PRIMAL_TIMEOUT: Duration = Duration::from_secs(5);
+
+    /// Capability call timeout (cross-primal forwarding).
+    pub const CAPABILITY_CALL_TIMEOUT: Duration = Duration::from_secs(15);
+
+    /// Continuous executor graph poll interval.
+    pub const CONTINUOUS_POLL_INTERVAL: Duration = Duration::from_secs(5);
 }
 
 /// Resource limits and thresholds

@@ -33,6 +33,9 @@ mod server_lifecycle;
 mod translation_loader;
 pub(crate) mod translation_startup;
 
+/// Shadow-routing dispatch limit (mirrors `discovery_registry::SHADOW_LOG_DISPATCH_LIMIT`).
+const SHADOW_TRAINING_COMPLETION_THRESHOLD: u64 = 1000;
+
 // Re-export types that may be needed externally
 pub use rpc::{
     JsonRpcRequest, error_response, internal_error_response, method_not_found_response,

@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 11, 2026 (v4.22: guideStone startup contract + HEALTH-01)
-**Version**: 4.22
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - guideStone startup contract (--bind-mode flag, auto btsp-optional inference) - HEALTH-01 compliant ({status,primal,version,uptime_s}) - BIOMEOS_SOCKET_DIR injected at spawn - Signal routes complete - Niche catalog data-driven - PRIMAL_BIND_MODE fully wired - Discovery provider dynamically resolved
+**Updated**: June 11, 2026 (v4.23: deep debt — Duration + magic number consolidation)
+**Version**: 4.23
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - guideStone startup contract (--bind-mode flag, auto btsp-optional inference) - HEALTH-01 compliant ({status,primal,version,uptime_s}) - Duration constants centralized (10 new named timeouts) - Magic numbers eliminated across scoring/health/graph/topology - BIOMEOS_SOCKET_DIR injected at spawn - Signal routes complete - Discovery provider dynamically resolved
 
 ---
 

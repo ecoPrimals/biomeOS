@@ -245,12 +245,13 @@ impl UIState {
             .insert(assignment.device_id.clone(), assignment);
     }
 
+    const LOG_RING_BUFFER_CAP: usize = 1000;
+
     /// Add a log entry
     pub fn add_log(&mut self, entry: LogEntry) {
         self.logs.push_back(entry);
 
-        // Keep only last 1000 entries
-        if self.logs.len() > 1000 {
+        if self.logs.len() > Self::LOG_RING_BUFFER_CAP {
             self.logs.pop_front();
         }
     }

@@ -163,8 +163,8 @@ pub async fn run_emit(
 ///
 /// Exponential backoff: 100ms, 200ms, 400ms, ... capped at 5s. Timeout 120s.
 async fn poll_execution(socket_path: &Path, execution_id: &str) -> Result<serde_json::Value> {
-    let mut delay = std::time::Duration::from_millis(100);
-    let max_delay = std::time::Duration::from_secs(5);
+    let mut delay = biomeos_types::constants::timeouts::POLL_INTERVAL_FAST;
+    let max_delay = biomeos_types::constants::timeouts::BTSP_CALL_TIMEOUT;
     let timeout = std::time::Duration::from_secs(120);
     let start = std::time::Instant::now();
 
