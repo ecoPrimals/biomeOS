@@ -251,6 +251,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("agent.route", Route::Agent),
     ("agent.auto_meld", Route::Agent),
     ("neural_api.proxy_http", Route::ProxyHttp),
+    ("health", Route::HealthCheck),
     ("health.check", Route::HealthCheck),
     ("health.liveness", Route::HealthLiveness),
     ("health.readiness", Route::HealthReadiness),

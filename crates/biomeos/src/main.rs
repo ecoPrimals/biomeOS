@@ -88,9 +88,16 @@ enum Mode {
         #[arg(long)]
         port: Option<u16>,
 
-        /// TCP-only mode: skip Unix socket bind, use TCP only.
-        /// Required for SELinux/Android substrates where UDS bind is denied.
-        #[arg(long, requires = "port")]
+        /// Transport bind mode: uds_only | tcp_only | dual.
+        /// Reads PRIMAL_BIND_MODE env if not specified.
+        /// tcp_only: skip UDS bind (SELinux/Android). Also infers --btsp-optional.
+        /// dual: UDS primary + TCP alongside.
+        /// uds_only: UDS only (default).
+        #[arg(long, value_name = "MODE")]
+        bind_mode: Option<String>,
+
+        /// TCP-only mode (alias for --bind-mode tcp_only, kept for backward compat).
+        #[arg(long, requires = "port", hide = true)]
         tcp_only: bool,
 
         /// TCP bind address (default: 127.0.0.1). Use 0.0.0.0 for all interfaces.
@@ -98,8 +105,7 @@ enum Mode {
         bind: Option<String>,
 
         /// Disable BTSP enforcement for unauthenticated JSON-RPC clients.
-        /// Equivalent to BIOMEOS_BTSP_ENFORCE=0. Use during development or
-        /// when downstream springs have not yet implemented the BTSP handshake.
+        /// Auto-inferred when bind-mode is tcp_only (BTSP requires UDS).
         #[arg(long)]
         btsp_optional: bool,
     },
@@ -251,9 +257,13 @@ pub(crate) enum NucleusCommand {
         #[arg(long)]
         port: Option<u16>,
 
-        /// TCP-only mode: skip Unix socket for Neural API.
-        /// Required for SELinux/Android substrates where UDS bind is denied.
-        #[arg(long, requires = "port")]
+        /// Transport bind mode: uds_only | tcp_only | dual.
+        /// Reads PRIMAL_BIND_MODE env if not specified.
+        #[arg(long, value_name = "MODE")]
+        bind_mode: Option<String>,
+
+        /// TCP-only mode (alias for --bind-mode tcp_only, kept for backward compat).
+        #[arg(long, requires = "port", hide = true)]
         tcp_only: bool,
 
         /// TCP bind address (default: 127.0.0.1). Use 0.0.0.0 for all interfaces.
@@ -492,6 +502,28 @@ enum ModelCacheCommand {
     Status,
 }
 
+/// Resolve bind mode from `--bind-mode` CLI flag, `--tcp-only` legacy flag,
+/// and `PRIMAL_BIND_MODE` env var.
+fn resolve_bind_mode(
+    cli_bind_mode: Option<&str>,
+    tcp_only_flag: bool,
+) -> biomeos_types::env_config::BindMode {
+    use biomeos_types::env_config::BindMode;
+
+    if let Some(mode_str) = cli_bind_mode {
+        if let Some(mode) = BindMode::from_str_flexible(mode_str) {
+            return mode;
+        }
+        tracing::warn!("Unknown --bind-mode '{mode_str}', falling back to env/default");
+    }
+
+    if tcp_only_flag {
+        return BindMode::TcpOnly;
+    }
+
+    BindMode::from_env_or(BindMode::UdsOnly)
+}
+
 /// Dispatch to mode handler based on CLI (thin orchestration)
 pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
     match cli.mode {
@@ -502,10 +534,13 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             family_id,
             socket,
             port,
+            bind_mode,
             tcp_only,
             bind,
             btsp_optional,
         } => {
+            let bind_mode = resolve_bind_mode(bind_mode.as_deref(), tcp_only);
+            let effective_btsp_optional = btsp_optional || bind_mode.is_tcp_only();
             let config = modes::neural_api::resolve_neural_api_config(
                 graphs_dir,
                 socket,
@@ -516,9 +551,9 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 config.family_id,
                 Some(config.socket_path),
                 port,
-                tcp_only,
+                bind_mode.is_tcp_only(),
                 bind,
-                btsp_optional,
+                effective_btsp_optional,
             )
             .await
         }
@@ -563,9 +598,21 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 node_id,
                 family_id,
                 port,
+                bind_mode,
                 tcp_only,
                 bind,
-            } => modes::nucleus::run(nucleus_mode, node_id, family_id, port, tcp_only, bind).await,
+            } => {
+                let bind_mode = resolve_bind_mode(bind_mode.as_deref(), tcp_only);
+                modes::nucleus::run(
+                    nucleus_mode,
+                    node_id,
+                    family_id,
+                    port,
+                    bind_mode.is_tcp_only(),
+                    bind,
+                )
+                .await
+            }
             NucleusCommand::Ingest {
                 pseudospore_dir,
                 socket,

@@ -11,19 +11,23 @@ use super::NeuralApiServer;
 use crate::mode::BiomeOsMode;
 
 impl NeuralApiServer {
-    /// Full health status including mode, registered capabilities, and uptime.
+    /// Full health status (HEALTH-01 compliant).
     ///
-    /// JSON-RPC method: `health.check`
+    /// Responds to both `health` and `health.check` JSON-RPC methods.
+    /// Returns the guideStone standard `{status, primal, version, uptime_s}`
+    /// plus biomeOS-specific fields for backward compatibility.
     pub(crate) async fn health_check(&self) -> Result<serde_json::Value> {
         let mode = self.mode.read().await;
         let cap_count = self.router.list_capabilities().await.len();
+        let uptime_s = self.started_at.elapsed().as_secs();
         Ok(serde_json::json!({
             "status": "alive",
+            "primal": "biomeOS",
+            "version": env!("CARGO_PKG_VERSION"),
+            "uptime_s": uptime_s,
             "mode": format!("{mode:?}"),
             "family_id": self.family_id,
-            "socket_path": self.socket_path.display().to_string(),
             "registered_capabilities": cap_count,
-            "version": env!("CARGO_PKG_VERSION"),
         }))
     }
 
@@ -33,7 +37,9 @@ impl NeuralApiServer {
     pub(crate) fn health_liveness(&self) -> Result<serde_json::Value> {
         Ok(serde_json::json!({
             "status": "alive",
+            "primal": "biomeOS",
             "version": env!("CARGO_PKG_VERSION"),
+            "uptime_s": self.started_at.elapsed().as_secs(),
         }))
     }
 
@@ -228,7 +234,9 @@ mod tests {
         let server = NeuralApiServer::new(temp.path(), "fam-liveness", sock);
         let v = server.health_liveness().expect("liveness");
         assert_eq!(v["status"], "alive");
+        assert_eq!(v["primal"], "biomeOS");
         assert_eq!(v["version"], env!("CARGO_PKG_VERSION"));
+        assert!(v["uptime_s"].as_u64().is_some());
     }
 
     #[tokio::test]
@@ -238,8 +246,10 @@ mod tests {
         let server = NeuralApiServer::new(temp.path(), "fam-health", &sock);
         let j = server.health_check().await.expect("health check");
         assert_eq!(j["status"], "alive");
+        assert_eq!(j["primal"], "biomeOS");
+        assert_eq!(j["version"], env!("CARGO_PKG_VERSION"));
+        assert!(j["uptime_s"].as_u64().is_some());
         assert_eq!(j["family_id"], "fam-health");
-        assert_eq!(j["socket_path"], sock.display().to_string());
         assert_eq!(j["registered_capabilities"], serde_json::json!(0));
     }
 

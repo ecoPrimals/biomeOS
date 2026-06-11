@@ -176,7 +176,7 @@ async fn test_raw_jsonrpc_health_check() {
 
     assert_eq!(resp["jsonrpc"], "2.0");
     assert_eq!(resp["id"], 1);
-    assert_eq!(resp["result"]["status"], "healthy");
+    assert_eq!(resp["result"]["status"], "alive");
     assert_eq!(resp["result"]["primal"], "biomeos");
 
     server_handle.abort();
@@ -333,8 +333,8 @@ fn test_dispatch_jsonrpc_line_health_aliases() {
         );
         let resp = dispatch_jsonrpc_line(&req);
         assert_eq!(
-            resp["result"]["status"], "healthy",
-            "{method} should return healthy"
+            resp["result"]["status"], "alive",
+            "{method} should return alive"
         );
     }
 }

@@ -423,6 +423,64 @@ fn strict_discovery_with(env: &HashMap<String, String>) -> bool {
     env.contains_key(vars::STRICT_DISCOVERY)
 }
 
+/// Primal bind mode — how a primal server binds its transport.
+///
+/// The guideStone standard startup contract: `$PRIMAL server --bind-mode <mode> --port <port>`.
+/// Primals read this from `--bind-mode` CLI or `PRIMAL_BIND_MODE` env.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BindMode {
+    /// UDS only (default on Linux with accessible socket dirs).
+    UdsOnly,
+    /// TCP only — skip all UDS `bind()`. Required for SELinux/Android.
+    TcpOnly,
+    /// Dual: UDS primary + TCP alongside (for cross-gate/mobile access).
+    Dual,
+}
+
+impl BindMode {
+    /// Parse from a string value (case-insensitive). Returns `None` for unrecognized values.
+    #[must_use]
+    pub fn from_str_flexible(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "tcp_only" | "tcp-only" | "tcponly" => Some(Self::TcpOnly),
+            "uds_only" | "uds-only" | "udsonly" | "unix" => Some(Self::UdsOnly),
+            "dual" | "both" => Some(Self::Dual),
+            _ => None,
+        }
+    }
+
+    /// Resolve bind mode from env var `PRIMAL_BIND_MODE`, falling back to `default`.
+    #[must_use]
+    pub fn from_env_or(default: Self) -> Self {
+        std::env::var(vars::PRIMAL_BIND_MODE)
+            .ok()
+            .and_then(|v| Self::from_str_flexible(&v))
+            .unwrap_or(default)
+    }
+
+    /// Returns `true` when UDS should be skipped entirely.
+    #[must_use]
+    pub const fn is_tcp_only(self) -> bool {
+        matches!(self, Self::TcpOnly)
+    }
+
+    /// Returns `true` when TCP should be bound alongside UDS.
+    #[must_use]
+    pub const fn wants_tcp(self) -> bool {
+        matches!(self, Self::TcpOnly | Self::Dual)
+    }
+}
+
+impl std::fmt::Display for BindMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UdsOnly => write!(f, "uds_only"),
+            Self::TcpOnly => write!(f, "tcp_only"),
+            Self::Dual => write!(f, "dual"),
+        }
+    }
+}
+
 /// Returns `true` when `PRIMAL_BIND_MODE` is set to `tcp_only`.
 ///
 /// When true, all server bind paths should skip UDS and serve TCP only.
@@ -430,7 +488,7 @@ fn strict_discovery_with(env: &HashMap<String, String>) -> bool {
 /// substrates where `sock_file create` is denied by policy.
 #[must_use]
 pub fn is_tcp_only_bind_mode() -> bool {
-    std::env::var(vars::PRIMAL_BIND_MODE).is_ok_and(|v| v.eq_ignore_ascii_case("tcp_only"))
+    BindMode::from_env_or(BindMode::UdsOnly).is_tcp_only()
 }
 
 /// Get the socket directory override, or `None` for XDG-resolved default

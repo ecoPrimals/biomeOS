@@ -283,7 +283,11 @@ fn dispatch_jsonrpc_line(line: &str) -> serde_json::Value {
 
     match method {
         "health" | "health.check" | "health.liveness" | "health.status" => {
-            let result = serde_json::json!({ "status": "healthy", "primal": biomeos_types::primal_names::BIOMEOS });
+            let result = serde_json::json!({
+                "status": "alive",
+                "primal": biomeos_types::primal_names::BIOMEOS,
+                "version": env!("CARGO_PKG_VERSION"),
+            });
             jsonrpc_ok(id, &result)
         }
         "identity.get" | "identity" => {

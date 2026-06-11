@@ -2,6 +2,31 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.22 (2026-06-11) — guideStone Startup Contract + HEALTH-01
+
+### STARTUP-BM-01: Standard primal startup contract
+- Added `--bind-mode <MODE>` CLI flag to both `neural-api` and `nucleus start`
+  subcommands. Accepts `uds_only`, `tcp_only`, or `dual` (case-insensitive,
+  hyphens/underscores accepted).
+- Resolution order: `--bind-mode` CLI → `--tcp-only` legacy flag → `PRIMAL_BIND_MODE`
+  env → default `uds_only`. The `--tcp-only` flag is retained (hidden) for backward
+  compatibility.
+- When bind mode resolves to `tcp_only`, `--btsp-optional` is auto-inferred (BTSP
+  requires UDS for secure handshake). This eliminates the need for operators to
+  specify `--btsp-optional` explicitly on TCP-only gates.
+- New `BindMode` enum in `biomeos_types::env_config` with `from_str_flexible()`,
+  `from_env_or()`, `is_tcp_only()`, and `wants_tcp()` methods.
+
+### HEALTH-01: Standard health endpoint schema
+- Added bare `"health"` method alias to the Neural API route table (previously only
+  `"health.check"` was routed). NUCLEUS probes call `"health"` — this was a silent
+  miss.
+- Health response now conforms to guideStone HEALTH-01:
+  `{status: "alive", primal: "biomeOS", version, uptime_s, ...}`.
+- Added `started_at: Instant` to `NeuralApiServer` for `uptime_s` tracking.
+- API server JSON-RPC health response aligned to `"alive"` status (was `"healthy"`).
+- `health.liveness` now also returns HEALTH-01 fields for consistency.
+
 ## v4.21 (2026-06-10) — Socket Dir Injection + Signal Completeness + Niche Refactor
 
 ### Socket directory injection

@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 10, 2026 (v4.21: socket dir injection + signal completeness + niche refactor)
-**Version**: 4.21
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - BIOMEOS_SOCKET_DIR injected at spawn - Signal routes complete (nest.ingest_spore/emit_spore semantic) - Niche catalog data-driven - PRIMAL_BIND_MODE=tcp_only fully wired - Discovery provider dynamically resolved
+**Updated**: June 11, 2026 (v4.22: guideStone startup contract + HEALTH-01)
+**Version**: 4.22
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - guideStone startup contract (--bind-mode flag, auto btsp-optional inference) - HEALTH-01 compliant ({status,primal,version,uptime_s}) - BIOMEOS_SOCKET_DIR injected at spawn - Signal routes complete - Niche catalog data-driven - PRIMAL_BIND_MODE fully wired - Discovery provider dynamically resolved
 
 ---
 

@@ -53,6 +53,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::time::Instant;
 use tokio::sync::RwLock;
 
 /// Neural API server state
@@ -137,6 +138,9 @@ pub struct NeuralApiServer {
     /// cipher negotiation. Sessions are registered after Phase 2 handshake
     /// and upgraded via `btsp.negotiate`.
     pub(super) btsp_sessions: btsp_negotiate::BtspSessionStore,
+
+    /// Process start instant for `uptime_s` reporting (HEALTH-01).
+    pub(super) started_at: Instant,
 
     /// Pre-dispatch method gate (JH-0). Checks caller authorization
     /// before routing to handlers. Starts in permissive mode.
@@ -285,6 +289,7 @@ impl NeuralApiServer {
             agent_registry: agents::AgentRegistry::new(),
             coordination_pubkey: Arc::new(RwLock::new(None)),
             btsp_sessions: btsp_negotiate::new_session_store(),
+            started_at: Instant::now(),
             method_gate: biomeos_core::MethodGate::from_env(),
             beardog_verifier: biomeos_core::BearDogVerifier::from_env(),
         }
