@@ -109,7 +109,7 @@ async fn call_security_provider(
 
     // Check env override (bootstrap scenarios) — convention-based env key
     let socket_path = std::env::var(biomeos_types::defaults::env_vars::socket_env_key(
-        biomeos_types::primal_names::BEARDOG,
+        &provider_name,
     ))
     .unwrap_or(socket_path);
 

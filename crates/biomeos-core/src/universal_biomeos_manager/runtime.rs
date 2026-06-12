@@ -154,32 +154,48 @@ impl UniversalBiomeOSManager {
         Ok(result)
     }
 
-    /// Monitor entire system
+    /// Monitor entire system using real metrics from `biomeos-system`.
     pub async fn monitor_system(&self) -> Result<HashMap<String, serde_json::Value>> {
         tracing::debug!("📊 Monitoring system");
 
         let mut result = HashMap::new();
 
-        // System metrics
+        // Real system metrics via biomeos-system
+        let sys_info = biomeos_system::SystemInspector::get_system_info().await.ok();
+        let resources = biomeos_system::SystemInspector::get_resource_usage().await.ok();
+
+        let cpu_pct = resources
+            .as_ref()
+            .and_then(|r| r.cpu_usage)
+            .unwrap_or(0.0);
+        let mem_info = sys_info.as_ref().map(|s| &s.memory_info);
+        let disk_pct = resources
+            .as_ref()
+            .and_then(|r| r.disk_usage)
+            .unwrap_or(0.0);
+        let load = sys_info
+            .as_ref()
+            .map_or(0.0, |s| s.load_average.load_1m);
+
         result.insert(
             "system".to_string(),
             serde_json::json!({
-                "cpu_usage_percent": 25.0,
+                "cpu_usage_percent": cpu_pct,
                 "memory": {
-                    "used_gb": 4.2,
-                    "total_gb": 16.0,
-                    "usage_percent": 26.25
+                    "used_gb": mem_info.map_or(0.0, |m| m.used_gb),
+                    "total_gb": mem_info.map_or(0.0, |m| m.total_gb),
+                    "usage_percent": mem_info.map_or(0.0, |m| m.usage_percent)
                 },
                 "disk": {
-                    "usage_percent": 45.0
+                    "usage_percent": disk_pct
                 },
                 "load_average": {
-                    "1m": 0.75
+                    "1m": load
                 }
             }),
         );
 
-        // Service statuses
+        // Service statuses from registered primals
         let primals = self.registered_primals.read().await;
         let mut services = HashMap::new();
 
@@ -190,39 +206,48 @@ impl UniversalBiomeOSManager {
                     "name": primal.name,
                     "status": "running",
                     "health": primal.health,
-                    "resources": {
-                        "cpu_percent": 10.0,
-                        "memory_mb": 128
-                    }
                 }),
             );
         }
 
         result.insert("services".to_string(), serde_json::json!(services));
 
-        // Network activity
+        // Real network I/O (best-effort)
+        let net_io = resources.as_ref().and_then(|r| r.network_io.as_ref());
         result.insert(
             "network".to_string(),
             serde_json::json!({
-                "bytes_in_per_sec": 1024,
-                "bytes_out_per_sec": 2048,
-                "active_connections": 5
+                "bytes_in_per_sec": net_io.map_or(0.0, |n| n.bytes_in_per_sec),
+                "bytes_out_per_sec": net_io.map_or(0.0, |n| n.bytes_out_per_sec),
             }),
         );
 
-        // Alerts (empty for now)
         result.insert("alerts".to_string(), serde_json::json!([]));
 
         Ok(result)
     }
 
-    /// Get system status
+    /// Get system status with real uptime and version from `biomeos-system`.
     pub async fn get_system_status(&self) -> Result<HashMap<String, serde_json::Value>> {
         let mut result = HashMap::new();
 
         result.insert("status".to_string(), serde_json::json!("running"));
-        result.insert("uptime".to_string(), serde_json::json!("2h 30m"));
-        result.insert("version".to_string(), serde_json::json!("1.0.0"));
+
+        let uptime_str = match biomeos_system::SystemInspector::get_system_info().await {
+            Ok(info) => {
+                let dur = info.uptime;
+                let secs = dur.as_secs();
+                let hours = secs / 3600;
+                let mins = (secs % 3600) / 60;
+                format!("{hours}h {mins}m")
+            }
+            Err(_) => "unknown".to_string(),
+        };
+        result.insert("uptime".to_string(), serde_json::json!(uptime_str));
+        result.insert(
+            "version".to_string(),
+            serde_json::json!(env!("CARGO_PKG_VERSION")),
+        );
 
         // Service count summary
         let primals = self.registered_primals.read().await;

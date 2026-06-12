@@ -561,7 +561,7 @@ pub async fn run(
 
     // Auto-register all launched primals with songBird's discovery service.
     // This makes the capability mesh operational without manual ipc.register calls.
-    auto_register_with_songbird(&primals_needed, &socket_dir, &family_id).await;
+    auto_register_with_discovery_provider(&primals_needed, &socket_dir, &family_id).await;
 
     // In Full mode, start the Neural API server alongside the primals so that
     // graph.deploy, capability.call, and composition health are reachable.
@@ -650,7 +650,7 @@ use nucleus_procs::{
     start_primal, wait_for_socket,
 };
 use nucleus_procs::{
-    auto_register_with_songbird, generate_jwt_secret, health_check_with_backoff,
+    auto_register_with_discovery_provider, generate_jwt_secret, health_check_with_backoff,
     resolve_socket_dir_with, wait_for_shutdown_signal,
 };
 

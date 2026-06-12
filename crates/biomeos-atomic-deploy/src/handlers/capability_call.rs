@@ -12,8 +12,8 @@ use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use tracing::{debug, info, trace};
 
-/// Trace label for dispatches routed through the Songbird mesh gateway.
-const MESH_PROVIDER_LABEL: &str = "songbird_mesh";
+/// Trace label for dispatches routed through the mesh gateway.
+const MESH_PROVIDER_LABEL: &str = "mesh_relay";
 
 impl CapabilityHandler {
     /// Semantic capability call with automatic translation.

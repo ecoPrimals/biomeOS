@@ -265,10 +265,11 @@ pub async fn lineage_verify(node: &GraphNode, context: &ExecutionContext) -> Res
             }))
         }
     } else {
-        warn!("⚠️  No security provider for lineage verification, assuming valid");
+        warn!("⚠️  No security provider for lineage verification — failing closed");
         Ok(json!({
-            "verified": true,
-            "method": "assumed_valid_no_provider"
+            "verified": false,
+            "method": "no_security_provider",
+            "error": "Security provider unavailable — cannot verify lineage"
         }))
     }
 }

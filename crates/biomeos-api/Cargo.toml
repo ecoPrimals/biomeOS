@@ -29,6 +29,7 @@ toml = { workspace = true }
 
 # Internal dependencies
 biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
+biomeos-system = { path = "../biomeos-system", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
 biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }

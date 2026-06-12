@@ -378,6 +378,7 @@ dependencies = [
  "biomeos-genomebin-v3",
  "biomeos-graph",
  "biomeos-spore",
+ "biomeos-system",
  "biomeos-test-utils",
  "biomeos-types",
  "chrono",

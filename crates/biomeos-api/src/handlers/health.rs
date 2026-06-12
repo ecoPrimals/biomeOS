@@ -24,8 +24,15 @@ pub struct HealthResponse {
 }
 
 /// GET /api/v1/health
-/// Health check endpoint for monitoring and load balancers
+/// Health check endpoint for monitoring and load balancers.
+///
+/// Reports real system uptime via `biomeos-system` when available.
 pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> {
+    let uptime_secs = biomeos_system::SystemInspector::get_system_info()
+        .await
+        .ok()
+        .map(|info| info.uptime.as_secs());
+
     Json(HealthResponse {
         status: "healthy".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -35,16 +42,27 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> 
             "live"
         }
         .to_string(),
-        uptime_seconds: None, // Could be added with startup time tracking
+        uptime_seconds: uptime_secs,
         timestamp: Some(chrono::Utc::now().to_rfc3339()),
     })
 }
 
 /// GET /api/v1/health/ready
-/// Readiness probe endpoint (Kubernetes-style)
+/// Readiness probe endpoint (Kubernetes-style).
+///
+/// In live mode, checks that the discovery service can find at least
+/// one primal. Standalone mode is always ready.
 pub async fn readiness(State(state): State<Arc<AppState>>) -> Json<HealthResponse> {
-    // In live mode, could check if discovery service is available
-    let is_ready = true; // Standalone always ready; live could add discovery/db checks
+    let is_ready = if state.is_standalone_mode() {
+        true
+    } else {
+        state
+            .discovery()
+            .discover_all()
+            .await
+            .map(|primals| !primals.is_empty())
+            .unwrap_or(false)
+    };
 
     Json(HealthResponse {
         status: if is_ready { "ready" } else { "not_ready" }.to_string(),
@@ -204,8 +222,9 @@ mod tests {
         );
 
         let response = readiness(State(state)).await;
-        // Should be ready in live mode (currently always returns ready)
-        assert_eq!(response.status, "ready");
+        // In live mode with no running primals, readiness reflects actual
+        // discovery state: no primals discovered → not_ready.
+        assert_eq!(response.status, "not_ready");
         assert_eq!(response.mode, "live");
     }
 

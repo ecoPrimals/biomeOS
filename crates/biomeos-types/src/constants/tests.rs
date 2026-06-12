@@ -78,7 +78,7 @@ fn test_network_constants() {
     assert_eq!(network::DEFAULT_HTTPS_PORT, 8443);
     assert_eq!(network::DEFAULT_WS_PORT, 8081);
     assert_eq!(network::DEFAULT_MCP_PORT, 3000);
-    assert_eq!(network::DEFAULT_BEARDOG_PORT, 9000);
+    assert_eq!(network::DEFAULT_SECURITY_PROVIDER_PORT, 9000);
     assert_eq!(network::DEFAULT_SONGBIRD_PORT, 3000);
     assert_eq!(network::DEFAULT_BROADCAST_DISCOVERY_PORT, 9199);
     assert_eq!(network::DEFAULT_DEV_PORT, 5000);

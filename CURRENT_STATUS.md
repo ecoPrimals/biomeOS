@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 11, 2026 (v4.24: divergence pressure — stale prune + partition-aware routing)
-**Version**: 4.24
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Stale registration pruning (background sweep + capability.prune RPC) - Partition-aware routing (all-circuits-open → mesh fallback, forward-fail → mesh retry) - guideStone startup contract - HEALTH-01 compliant - Duration constants centralized - Magic numbers eliminated - BIOMEOS_SOCKET_DIR injected at spawn - Signal routes complete - Discovery provider dynamically resolved
+**Updated**: June 12, 2026 (v4.25: deep debt — security fail-closed, real metrics, agnostic naming, router refactor)
+**Version**: 4.25
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Stale registration pruning (background sweep + capability.prune RPC) - Partition-aware routing (all-circuits-open → mesh fallback, forward-fail → mesh retry) - Lineage verification fail-closed - Real system metrics via biomeos-system - API readiness probes discovery state - All 26 crates #![forbid(unsafe_code)] - Agnostic naming (no primal-specific constants) - Neural router mod.rs refactored (registry extracted) - guideStone startup contract - HEALTH-01 compliant
 
 ---
 

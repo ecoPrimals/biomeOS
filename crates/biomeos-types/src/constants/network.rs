@@ -25,8 +25,15 @@ pub const DEFAULT_MCP_PORT: u16 = ports::API_DEFAULT;
 /// Default discovery port (fallback only)
 pub const DEFAULT_DISCOVERY_PORT: u16 = ports::WEBSOCKET;
 
-/// Default `BearDog` (security) port (fallback only)
-pub const DEFAULT_BEARDOG_PORT: u16 = ports::NEURAL_API;
+/// Default security provider port (fallback only).
+///
+/// Named generically — the security provider is discovered at runtime
+/// via `CapabilityTaxonomy::Encryption::default_primal()`.
+pub const DEFAULT_SECURITY_PROVIDER_PORT: u16 = ports::NEURAL_API;
+
+/// Deprecated alias — use [`DEFAULT_SECURITY_PROVIDER_PORT`] instead.
+#[deprecated(note = "renamed to DEFAULT_SECURITY_PROVIDER_PORT for agnostic naming")]
+pub const DEFAULT_BEARDOG_PORT: u16 = DEFAULT_SECURITY_PROVIDER_PORT;
 
 /// Default Songbird (universal adapter) port (fallback only)
 pub const DEFAULT_SONGBIRD_PORT: u16 = ports::API_DEFAULT;
@@ -126,7 +133,7 @@ pub fn discovery_port() -> u16 {
 #[must_use]
 pub fn security_port_from(val: Option<&str>) -> u16 {
     val.and_then(|v| v.parse().ok())
-        .unwrap_or(DEFAULT_BEARDOG_PORT)
+        .unwrap_or(DEFAULT_SECURITY_PROVIDER_PORT)
 }
 
 /// Get security provider port from environment or fallback to default.

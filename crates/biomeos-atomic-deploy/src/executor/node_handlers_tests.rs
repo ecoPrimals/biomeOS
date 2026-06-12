@@ -440,8 +440,8 @@ async fn test_lineage_verify_no_provider() {
     let ctx = test_context();
 
     let result = lineage_verify(&node, &ctx).await.unwrap();
-    assert_eq!(result["verified"], true);
-    assert_eq!(result["method"], "assumed_valid_no_provider");
+    assert_eq!(result["verified"], false);
+    assert_eq!(result["method"], "no_security_provider");
 }
 
 #[tokio::test]

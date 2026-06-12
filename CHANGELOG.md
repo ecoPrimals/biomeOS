@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.25 (2026-06-12) — Deep Debt: Security, Metrics, Agnostic Naming, Router Refactor
+
+### Security (fail-closed)
+- **Lineage verification** (`node_handlers.rs`): No-provider path now returns `verified: false` (fail closed) instead of `verified: true` (assumed valid)
+- **Trust env key bug** (`trust.rs`): Socket override env key now uses resolved `provider_name` instead of hardcoded `BEARDOG`
+
+### Real Metrics (replacing hardcoded stubs)
+- **`monitor_system()`** (`runtime.rs`): Wired to `biomeos-system` — real CPU, memory, disk, load average, network I/O via `/proc`
+- **`get_system_status()`** (`runtime.rs`): Real uptime from `SystemInspector`, real version from `CARGO_PKG_VERSION`
+- **Health endpoint** (`health.rs`): Reports real system uptime from `/proc/uptime`
+- **Readiness probe** (`health.rs`): Checks actual discovery state — returns `not_ready` if no primals discovered in live mode
+
+### Agnostic Naming
+- `DEFAULT_BEARDOG_PORT` → `DEFAULT_SECURITY_PROVIDER_PORT` (old name deprecated with warning)
+- `auto_register_with_songbird()` → `auto_register_with_discovery_provider()`
+- `MESH_PROVIDER_LABEL` trace label: `songbird_mesh` → `mesh_relay`
+
+### Refactoring
+- **`neural_router/mod.rs`** (789L → ~460L): Extracted registry CRUD, stale pruning, lazy rescan, and post-spawn registration to `neural_router/registry.rs`
+- **`biomeos-pseudospore`**: Added `#![forbid(unsafe_code)]` — all 26 workspace crates now enforce the lint
+- Orchestrator fallback path uses `DEFAULT_SOCKET_DIR` constant instead of inline `/run/biomeos`
+
 ## v4.24 (2026-06-11) — Divergence Pressure: Stale Prune + Partition-Aware Routing
 
 ### DISCOVERY-STALE-PRUNE (Wave 111 Stream 6)

@@ -366,7 +366,7 @@ pub(super) fn generate_jwt_secret() -> String {
 /// the probe returns empty.
 ///
 /// Best-effort: logs warnings on failure but never aborts NUCLEUS startup.
-pub(super) async fn auto_register_with_songbird(
+pub(super) async fn auto_register_with_discovery_provider(
     primals: &[&str],
     socket_dir: &Path,
     family_id: &str,
