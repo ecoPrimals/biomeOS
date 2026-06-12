@@ -998,8 +998,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (v4.23 — guideStone startup contract + HEALTH-01 + Duration/magic-number consolidation)
+**Status**: Production Ready (v4.25 — lineage fail-closed, real system metrics, agnostic naming, neural router refactored, stale prune + partition-aware routing)
 **Tests**: 7,983+ passing, 0 failures, fully concurrent | **Coverage**: 90%+ (llvm-cov)
-**Clippy**: PASS (0 warnings, pedantic+nursery) | **Unsafe**: 0 | **C deps**: 0 | **TODO/FIXME**: 0
+**Clippy**: PASS (0 warnings, pedantic+nursery) | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **C deps**: 0 | **TODO/FIXME**: 0
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP + tarpc escalation + `--bind-mode` guideStone startup; HTTP removed v3.97)
-**Code Quality**: A++ (Pure Rust, Edition 2024, zero warnings, zero map_err(format!), zero hardcoded primal names, all production files <800 LOC, Duration constants centralized)
+**Code Quality**: A++ (Pure Rust, Edition 2024, zero warnings, zero hardcoded primal names, all production files <800 LOC, Duration constants centralized, agnostic naming, real metrics)

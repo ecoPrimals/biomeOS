@@ -1,6 +1,6 @@
 # Context — biomeOS
 
-**Version**: v4.23 | **Updated**: June 11, 2026
+**Version**: v4.25 | **Updated**: June 12, 2026
 
 ## What This Is
 

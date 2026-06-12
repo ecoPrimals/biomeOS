@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: June 11, 2026
-**Status**: Production Ready (v4.23) — guideStone startup contract (`--bind-mode`, auto `--btsp-optional` inference), HEALTH-01 compliant (`{status,primal,version,uptime_s}`), Duration constants centralized, magic numbers eliminated, zero unsafe/mocks, Edition 2024, rust-version 1.87, 26 crates, 0 C deps, scyBorg triple-copyleft (AGPL-3.0-or-later)
+**Last Updated**: June 12, 2026
+**Status**: Production Ready (v4.25) — Lineage fail-closed, real system metrics (biomeos-system), readiness probes actual discovery, agnostic naming, neural router refactored, all 26 crates `#![forbid(unsafe_code)]`, stale registration pruning, partition-aware routing, guideStone startup, HEALTH-01 compliant, Edition 2024, rust-version 1.87, 0 C deps, scyBorg (AGPL-3.0-or-later)
 
 ---
 
@@ -167,9 +167,9 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v4.23)
+**Status**: Production Ready (v4.25)
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
-**Neural API**: 320+ semantic translations, 27 capability domains, L4 weighted routing, L5 perceptron shadow mode, `composition.patterns.reload` hot-reload, cross-gate routing via Songbird mesh, adaptive weights (redb-persistent)
+**Neural API**: 320+ semantic translations, 27 capability domains, L4 weighted routing, L5 perceptron shadow mode, stale registration pruning, partition-aware routing, composition hot-reload, cross-gate routing via mesh relay, adaptive weights (redb-persistent)
 **IPC**: Universal IPC v3.0 — Unix/abstract/TCP + UDS dual-protocol auto-detect + BTSP + `--bind-mode` guideStone startup (HTTP transport removed v3.97; `--tcp-only` deprecated v3.94)
-**Tests**: 7,983+ workspace-wide (0 failures) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **C deps**: 0 | **Unsafe**: 0 (`#[forbid(unsafe_code)]`) | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production
-**Updated**: June 11, 2026
+**Tests**: 7,983+ workspace-wide (0 failures) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production
+**Updated**: June 12, 2026

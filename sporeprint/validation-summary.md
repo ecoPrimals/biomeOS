@@ -11,6 +11,8 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **7,983+ tests** workspace-wide, 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v4.25** — Wave 111: Deep debt — security fail-closed, real metrics, agnostic naming, router refactor, all 26 crates #![forbid(unsafe_code)]
+- **v4.24** — Wave 111: Divergence pressure — stale registration pruning + partition-aware routing
 - **v4.23** — Wave 110: Deep debt cleanup — Duration constant consolidation + magic number elimination
 - **v4.22** — Wave 109: guideStone startup contract (`--bind-mode`) + HEALTH-01 (`{status,primal,version,uptime_s}`)
 - **v4.19** — Wave 107: NUCLEUS auto-registration with songBird discovery service
