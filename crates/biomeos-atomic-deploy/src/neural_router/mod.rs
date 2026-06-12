@@ -291,6 +291,88 @@ impl NeuralRouter {
             .cloned()
     }
 
+    /// Unregister all capabilities for a specific primal.
+    ///
+    /// Removes the primal from every capability entry in the registry.
+    /// Empty capability entries are pruned. Returns the number of
+    /// capability registrations removed.
+    pub async fn unregister_primal(&self, primal_name: &str) -> usize {
+        let mut registry = self.capability_registry.write().await;
+        let mut removed = 0;
+
+        for providers in registry.values_mut() {
+            let before = providers.len();
+            providers.retain(|r| r.primal_name.as_ref() != primal_name);
+            removed += before - providers.len();
+        }
+
+        registry.retain(|_, providers| !providers.is_empty());
+
+        if removed > 0 {
+            info!(
+                "🧹 Unregistered primal {primal_name}: removed {removed} capability registration(s)"
+            );
+        }
+        removed
+    }
+
+    /// Probe all registered endpoints and remove registrations whose
+    /// endpoints are unreachable.
+    ///
+    /// Returns `(probed, pruned)` — the total endpoints checked and how
+    /// many were removed.
+    pub async fn prune_stale_registrations(&self) -> (usize, usize) {
+        use std::collections::HashSet;
+
+        let registry = self.capability_registry.read().await;
+
+        let mut endpoints: HashSet<(Arc<str>, String)> = HashSet::new();
+        for providers in registry.values() {
+            for reg in providers {
+                endpoints.insert((
+                    reg.primal_name.clone(),
+                    reg.endpoint.display_string(),
+                ));
+            }
+        }
+        drop(registry);
+
+        let probed = endpoints.len();
+        let mut dead_primals: HashSet<Arc<str>> = HashSet::new();
+
+        for (primal_name, _endpoint_str) in &endpoints {
+            let registry = self.capability_registry.read().await;
+            let endpoint = registry
+                .values()
+                .flat_map(|v| v.iter())
+                .find(|r| &r.primal_name == primal_name)
+                .map(|r| r.endpoint.clone());
+            drop(registry);
+
+            if let Some(ep) = endpoint {
+                if !Self::check_endpoint_health(&ep).await {
+                    dead_primals.insert(primal_name.clone());
+                }
+            }
+        }
+
+        let mut pruned = 0;
+        for primal in &dead_primals {
+            pruned += self.unregister_primal(primal).await;
+        }
+
+        if pruned > 0 {
+            info!(
+                "🧹 Stale prune sweep: probed {probed} endpoints, pruned {pruned} registrations ({} dead primals)",
+                dead_primals.len()
+            );
+        } else {
+            debug!("🧹 Stale prune sweep: probed {probed} endpoints, all healthy");
+        }
+
+        (probed, pruned)
+    }
+
     /// Log routing metrics for learning
     pub async fn log_metric(&self, metric: RoutingMetrics) {
         debug!(

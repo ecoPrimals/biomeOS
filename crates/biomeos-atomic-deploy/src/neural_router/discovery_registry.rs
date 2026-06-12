@@ -149,10 +149,31 @@ impl NeuralRouter {
     }
 
     /// Look up a capability in the registry; returns `None` on miss.
+    ///
+    /// Returns `None` when all known providers have open circuits (every
+    /// endpoint has failed past the circuit-breaker threshold and none
+    /// have reached the half-open cooldown yet). This forces callers to
+    /// fall through to mesh/remote routing instead of forwarding to a
+    /// known-dead endpoint.
     pub(crate) async fn try_registry_lookup(&self, capability: &str) -> Option<DiscoveredAtomic> {
         let providers = self.get_capability_providers(capability).await?;
         if providers.is_empty() {
             return None;
+        }
+
+        // Partition-aware: refuse to route when every provider is
+        // circuit-broken — let the caller try mesh/remote fallback.
+        {
+            let candidates: Vec<Arc<str>> =
+                providers.iter().map(|p| p.primal_name.clone()).collect();
+            let weights = self.routing_weights.read().await;
+            if weights.all_circuits_open(capability, &candidates) {
+                info!(
+                    "⚡ All {} provider(s) for {capability} have open circuits — skipping registry lookup",
+                    providers.len()
+                );
+                return None;
+            }
         }
 
         let primary_idx = self.select_primary(capability, &providers).await;

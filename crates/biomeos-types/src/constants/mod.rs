@@ -302,6 +302,9 @@ pub mod timeouts {
 
     /// Continuous executor graph poll interval.
     pub const CONTINUOUS_POLL_INTERVAL: Duration = Duration::from_secs(5);
+
+    /// Background stale-registration prune sweep interval.
+    pub const STALE_PRUNE_SWEEP_INTERVAL: Duration = Duration::from_secs(60);
 }
 
 /// Resource limits and thresholds

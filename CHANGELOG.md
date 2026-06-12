@@ -2,6 +2,29 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.24 (2026-06-11) — Divergence Pressure: Stale Prune + Partition-Aware Routing
+
+### DISCOVERY-STALE-PRUNE (Wave 111 Stream 6)
+- Added `NeuralRouter::unregister_primal()` — removes all capability registrations
+  for a named primal and prunes empty capability entries.
+- Added `NeuralRouter::prune_stale_registrations()` — probes all registered
+  endpoints via `check_endpoint_health()`, removes registrations for unreachable
+  primals.
+- Wired `capability.prune` JSON-RPC method to trigger manual prune sweep.
+- Spawned background stale-prune sweep task at Neural API startup (60s interval
+  via `STALE_PRUNE_SWEEP_INTERVAL`). Automatically evicts dead primals from
+  the capability registry.
+- Added `STALE_PRUNE_SWEEP_INTERVAL` (60s) to `biomeos_types::constants::timeouts`.
+
+### ROUTING-PARTITION-AWARE (Wave 111 Stream 6)
+- Added `RoutingWeightTable::all_circuits_open()` — detects when every known
+  provider for a capability has an open circuit breaker (all unreachable).
+- Modified `try_registry_lookup()` to return `None` when all circuits are open,
+  forcing callers to fall through to mesh/remote routing instead of forwarding
+  to a known-dead endpoint.
+- Modified `capability.call` direct-route path to attempt Songbird mesh fallback
+  on forward failure (was: hard error propagation; now: mesh retry before error).
+
 ## v4.23 (2026-06-11) — Deep Debt: Duration + Magic Number Consolidation
 
 ### Duration constant consolidation

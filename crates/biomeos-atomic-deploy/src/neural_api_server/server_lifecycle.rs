@@ -7,6 +7,8 @@
 //! coordinated join, translation loading, and primal discovery to sibling
 //! modules (`bootstrap`, `translation_startup`, `discovery_init`, `listeners`).
 
+use std::sync::Arc;
+
 use anyhow::{Context, Result};
 use tracing::{info, warn};
 
@@ -172,6 +174,19 @@ impl NeuralApiServer {
 
         // 5b. Derive coordination purpose key from security provider (if reachable)
         self.derive_coordination_key().await;
+
+        // 5c. Start background stale-registration prune sweep
+        {
+            let router = Arc::clone(&self.router);
+            tokio::spawn(async move {
+                use biomeos_types::constants::timeouts::STALE_PRUNE_SWEEP_INTERVAL;
+                loop {
+                    tokio::time::sleep(STALE_PRUNE_SWEEP_INTERVAL).await;
+                    router.prune_stale_registrations().await;
+                }
+            });
+            info!("🧹 Stale-registration prune sweep started (interval: 60s)");
+        }
 
         // 6. Accept connections on bound listener(s)
         match (uds_listener, tcp_listener) {

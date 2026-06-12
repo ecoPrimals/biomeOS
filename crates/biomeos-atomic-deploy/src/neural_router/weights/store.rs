@@ -144,6 +144,24 @@ impl RoutingWeightTable {
         best.map(|(provider, _)| provider)
     }
 
+    /// Returns `true` when every candidate has a known weight entry with
+    /// an open circuit (and none are past the half-open cooldown). This
+    /// means all providers for the capability are confirmed unreachable —
+    /// callers should fall back to mesh or return an error rather than
+    /// routing to a known-dead provider.
+    pub fn all_circuits_open(&self, capability: &str, candidates: &[Arc<str>]) -> bool {
+        if candidates.is_empty() {
+            return false;
+        }
+        candidates.iter().all(|c| {
+            let key = (Arc::from(capability), c.clone());
+            self.weights
+                .get(&key)
+                .map(|w| !w.is_available())
+                .unwrap_or(false) // unknown = not circuit-broken
+        })
+    }
+
     /// Look up the current score for a `(capability, provider)` key.
     pub fn score_for(&self, key: &(Arc<str>, Arc<str>)) -> Option<f64> {
         self.weights.get(key).map(|w| w.score())

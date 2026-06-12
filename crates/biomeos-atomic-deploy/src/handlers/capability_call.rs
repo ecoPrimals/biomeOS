@@ -488,30 +488,71 @@ impl CapabilityHandler {
                             )
                             .await;
 
-                        let result = result?;
+                        match result {
+                            Ok(result) => {
+                                let routing_trace = want_trace.then(|| {
+                                    routing_trace_value(
+                                        &[
+                                            RoutingPhase::RouteResolved {
+                                                capability: capability.to_string(),
+                                                provider: String::new(),
+                                                method: forward_method,
+                                            },
+                                            RoutingPhase::EndpointResolved {
+                                                provider: primary_name,
+                                                endpoint: atomic
+                                                    .primary_endpoint
+                                                    .display_string(),
+                                            },
+                                            RoutingPhase::Forwarded { elapsed_ms },
+                                        ],
+                                        capability,
+                                    )
+                                });
 
-                        let routing_trace = want_trace.then(|| {
-                            routing_trace_value(
-                                &[
-                                    RoutingPhase::RouteResolved {
-                                        capability: capability.to_string(),
-                                        provider: String::new(),
-                                        method: forward_method,
-                                    },
-                                    RoutingPhase::EndpointResolved {
-                                        provider: primary_name,
-                                        endpoint: atomic.primary_endpoint.display_string(),
-                                    },
-                                    RoutingPhase::Forwarded { elapsed_ms },
-                                ],
-                                capability,
-                            )
-                        });
-
-                        Ok(CapabilityCallOutcome {
-                            result,
-                            routing_trace,
-                        })
+                                Ok(CapabilityCallOutcome {
+                                    result,
+                                    routing_trace,
+                                })
+                            }
+                            Err(forward_err) => {
+                                // Forward failed (partition / unreachable) — try
+                                // mesh before returning the error.
+                                debug!(
+                                    "Forward to {} failed ({forward_err:#}), trying mesh fallback",
+                                    atomic.primary_endpoint.display_string()
+                                );
+                                if let Some(mesh_result) = self
+                                    .try_songbird_mesh_dispatch(
+                                        capability,
+                                        &operation,
+                                        &args,
+                                        timeout_cap,
+                                    )
+                                    .await
+                                {
+                                    let elapsed_ms = elapsed_ms_since(start);
+                                    let routing_trace = want_trace.then(|| {
+                                        routing_trace_value(
+                                            &[
+                                                RoutingPhase::RouteResolved {
+                                                    capability: capability.to_string(),
+                                                    provider: MESH_PROVIDER_LABEL.to_string(),
+                                                    method: semantic_name.clone(),
+                                                },
+                                                RoutingPhase::Forwarded { elapsed_ms },
+                                            ],
+                                            capability,
+                                        )
+                                    });
+                                    return Ok(CapabilityCallOutcome {
+                                        result: mesh_result?,
+                                        routing_trace,
+                                    });
+                                }
+                                Err(forward_err)
+                            }
+                        }
                     }
                     Err(local_err) => {
                         // No local provider found — try Songbird mesh dispatch.

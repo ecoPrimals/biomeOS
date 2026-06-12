@@ -102,6 +102,7 @@ pub(super) enum Route {
     NucleusIngestSpore,
     NucleusEmitSpore,
     ManifestGateProfile,
+    CapabilityPrune,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -280,6 +281,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("nucleus.emit_spore", Route::NucleusEmitSpore),
     ("nucleus.emit", Route::NucleusEmitSpore),
     ("manifest.gate_profile", Route::ManifestGateProfile),
+    ("capability.prune", Route::CapabilityPrune),
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
     ("btsp.negotiate", Route::BtspNegotiate),

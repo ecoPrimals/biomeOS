@@ -291,6 +291,16 @@ impl NeuralApiServer {
                 dispatch(self.capability_handler.resolve(params).await, id)
             }
             Route::CapabilityMetrics => dispatch(self.capability_handler.get_metrics().await, id),
+            Route::CapabilityPrune => {
+                let (probed, pruned) = self.router.prune_stale_registrations().await;
+                dispatch(
+                    Ok(serde_json::json!({
+                        "probed": probed,
+                        "pruned": pruned,
+                    })),
+                    id,
+                )
+            }
             Route::RoutingWeights => dispatch(self.handle_routing_weights().await, id),
             Route::RoutingExplain => dispatch(self.handle_routing_explain(params).await, id),
             Route::CompositionPatterns => {
