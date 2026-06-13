@@ -569,6 +569,39 @@ pub mod events {
     pub const CUSTOM_EVENT: &str = "custom.event";
 }
 
+/// riboCipher transport signal constants.
+///
+/// Modeled on ribosomal codon reading: the accept loop reads signal bytes
+/// and routes deterministically by transport tier. Primals prepend a 2-byte
+/// signal (`[TIER, VERSION]`) to the first write on a new connection.
+///
+/// Standard: `RIBOCIPHER_TRANSPORT_SIGNAL_STANDARD.md`
+/// Deprecation: WARN (wave 111-112) → ERROR (112) → REJECT (113) → REMOVE (114)
+pub mod ribocipher {
+    /// Clear-text tier signal byte. Standard JSON-RPC, no obfuscation.
+    pub const SIGNAL_CLEAR: u8 = 0xEC;
+
+    /// Mito-obfuscated tier signal byte. XOR-scrambled framing for
+    /// defense-in-depth on shared networks.
+    pub const SIGNAL_MITO: u8 = 0xED;
+
+    /// Nuclear-sealed tier signal byte. Full AEAD encryption
+    /// (chacha20poly1305) after key exchange.
+    pub const SIGNAL_NUCLEAR: u8 = 0xEE;
+
+    /// Protocol version 1.
+    pub const VERSION_1: u8 = 0x01;
+
+    /// Signal frame length (tier byte + version byte).
+    pub const SIGNAL_LEN: usize = 2;
+
+    /// Returns `true` if `byte` is a recognized riboCipher signal tier.
+    #[inline]
+    pub const fn is_signal_byte(byte: u8) -> bool {
+        matches!(byte, SIGNAL_CLEAR | SIGNAL_MITO | SIGNAL_NUCLEAR)
+    }
+}
+
 /// Re-export commonly used constants at module level
 pub use endpoints::DEFAULT_LOCALHOST;
 pub use limits::{DEFAULT_BUFFER_SIZE, DEFAULT_MAX_CONNECTIONS};

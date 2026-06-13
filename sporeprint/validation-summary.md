@@ -11,6 +11,7 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **7,983+ tests** workspace-wide, 0 failures, fully concurrent
 - **90%+ coverage** region / function / line (llvm-cov workspace-wide)
+- **v4.26** — Wave 111: riboCipher transport signal detection in API + neural-api sockets (Stream 7 convergent evolution, WARN phase)
 - **v4.25** — Wave 111: Deep debt — security fail-closed, real metrics, agnostic naming, router refactor, all 26 crates #![forbid(unsafe_code)]
 - **v4.24** — Wave 111: Divergence pressure — stale registration pruning + partition-aware routing
 - **v4.23** — Wave 110: Deep debt cleanup — Duration constant consolidation + magic number elimination

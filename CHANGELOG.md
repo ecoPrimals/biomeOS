@@ -2,6 +2,14 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.26 (2026-06-13) — riboCipher Transport Signal Detection (Stream 7)
+
+### riboCipher (Wave 111 convergent evolution)
+- **Transport signal constants** (`biomeos-types/constants/mod.rs`): Added `ribocipher` module with signal tier bytes (0xEC clear, 0xED mito, 0xEE nuclear), version, and `is_signal_byte()` helper
+- **biomeos-api UDS** (`unix_server.rs`): `fill_buf` now peeks for riboCipher 2-byte signal frame before protocol auto-detect; legacy (no signal) connections warned
+- **Neural API UDS + TCP** (`connection.rs`): `consume_ribocipher_signal()` added to both `handle_connection_with_btsp` and `handle_tcp_connection` paths; consumes signal before BTSP/JSON-RPC dispatch
+- Deprecation schedule: WARN (111-112) → ERROR (112) → REJECT (113) → REMOVE (114)
+
 ## v4.25 (2026-06-12) — Deep Debt: Security, Metrics, Agnostic Naming, Router Refactor
 
 ### Security (fail-closed)

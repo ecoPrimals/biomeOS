@@ -5,11 +5,15 @@
 //!
 //! Provides secure, port-free communication via Unix sockets.
 //! Supports HTTP (axum), raw JSON-RPC (NDJSON), and BTSP recognition
-//! via first-byte auto-detection: if the first byte is `{`, the first
-//! line is inspected — BTSP `ClientHello` is answered with a redirect
-//! to the neural-api socket; otherwise the connection is handled as
-//! newline-delimited JSON-RPC.  Non-`{` bytes are passed to hyper/axum
-//! as HTTP.
+//! via first-byte auto-detection.
+//!
+//! Connection accept order:
+//! 1. **riboCipher signal** — if the first byte is 0xEC/0xED/0xEE, consume
+//!    the 2-byte transport signal frame (Wave 111+).
+//! 2. **Protocol auto-detect** — if the (post-signal) first byte is `{` or
+//!    `[`, handle as raw NDJSON JSON-RPC; BTSP `ClientHello` is redirected
+//!    to the neural-api socket.  Non-JSON bytes are passed to hyper/axum
+//!    as HTTP.
 
 use anyhow::{Context, Result};
 use axum::Router;
@@ -78,6 +82,31 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
 
                 tokio::spawn(async move {
                     let mut reader = BufReader::new(stream);
+
+                    // riboCipher transport signal detection (Wave 111+).
+                    // If the first byte is a recognized signal tier, consume
+                    // the 2-byte signal frame before protocol auto-detect.
+                    let transport_tier = match reader.fill_buf().await {
+                        Ok(buf) if buf.len() >= 2
+                            && biomeos_types::constants::ribocipher::is_signal_byte(buf[0]) =>
+                        {
+                            let tier = buf[0];
+                            let version = buf[1];
+                            reader.consume(biomeos_types::constants::ribocipher::SIGNAL_LEN);
+                            debug!(
+                                "riboCipher signal: tier=0x{tier:02X} version={version}"
+                            );
+                            Some(tier)
+                        }
+                        _ => {
+                            warn!(
+                                "legacy connection (no riboCipher signal) — \
+                                 will be rejected in future waves"
+                            );
+                            None
+                        }
+                    };
+                    let _ = transport_tier; // used for routing in future tiers
 
                     let is_jsonrpc = match reader.fill_buf().await {
                         Ok(buf) if !buf.is_empty() => buf[0] == b'{' || buf[0] == b'[',

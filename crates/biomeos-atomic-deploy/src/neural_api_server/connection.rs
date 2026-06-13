@@ -26,6 +26,37 @@ impl NeuralApiServer {
         self.handle_stream(BufReader::new(stream)).await
     }
 
+    /// Peek for riboCipher transport signal and consume if present.
+    ///
+    /// If the first byte is a recognized tier (0xEC/0xED/0xEE), consumes the
+    /// 2-byte signal frame and logs the tier. If absent, logs a legacy warning.
+    /// In Wave 111-112 this is WARN-only; future waves will reject.
+    async fn consume_ribocipher_signal<S>(reader: &mut BufReader<S>)
+    where
+        S: tokio::io::AsyncRead + Unpin,
+    {
+        use biomeos_types::constants::ribocipher;
+
+        match reader.fill_buf().await {
+            Ok(buf) if buf.len() >= ribocipher::SIGNAL_LEN
+                && ribocipher::is_signal_byte(buf[0]) =>
+            {
+                let tier = buf[0];
+                let version = buf[1];
+                reader.consume(ribocipher::SIGNAL_LEN);
+                debug!(
+                    "riboCipher signal: tier=0x{tier:02X} version={version}"
+                );
+            }
+            _ => {
+                debug!(
+                    "legacy connection (no riboCipher signal) — \
+                     will be rejected in future waves"
+                );
+            }
+        }
+    }
+
     /// Handle a Unix socket connection with BTSP Phase 2 handshake.
     ///
     /// Attempts a server-side BTSP handshake. If the client sends a raw
@@ -38,6 +69,9 @@ impl NeuralApiServer {
         enforce: bool,
     ) -> Result<()> {
         let mut reader = BufReader::new(stream);
+
+        // riboCipher transport signal detection (Wave 111+).
+        Self::consume_ribocipher_signal(&mut reader).await;
 
         match btsp_client::server_handshake(&mut reader).await {
             Ok(HandshakeOutcome::Authenticated {
@@ -110,7 +144,9 @@ impl NeuralApiServer {
 
     /// Handle a TCP client connection.
     pub async fn handle_tcp_connection(&self, stream: tokio::net::TcpStream) -> Result<()> {
-        self.handle_stream(BufReader::new(stream)).await
+        let mut reader = BufReader::new(stream);
+        Self::consume_ribocipher_signal(&mut reader).await;
+        self.handle_stream(reader).await
     }
 
     /// Post-handshake handler that checks for Phase 3 negotiate on the first line.
