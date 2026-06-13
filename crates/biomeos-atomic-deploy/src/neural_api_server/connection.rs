@@ -15,7 +15,7 @@ use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::timeout;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 use super::NeuralApiServer;
 use super::btsp_negotiate::{self, BtspCipher, SessionKeys};
@@ -49,9 +49,9 @@ impl NeuralApiServer {
                 );
             }
             _ => {
-                debug!(
+                error!(
                     "legacy connection (no riboCipher signal) — \
-                     will be rejected in future waves"
+                     will be REJECTED in wave 113"
                 );
             }
         }

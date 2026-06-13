@@ -9,7 +9,7 @@
 //!
 //! Connection accept order:
 //! 1. **riboCipher signal** — if the first byte is 0xEC/0xED/0xEE, consume
-//!    the 2-byte transport signal frame (Wave 111+).
+//!    the 2-byte transport signal frame. ERROR on legacy (Wave 112+).
 //! 2. **Protocol auto-detect** — if the (post-signal) first byte is `{` or
 //!    `[`, handle as raw NDJSON JSON-RPC; BTSP `ClientHello` is redirected
 //!    to the neural-api socket.  Non-JSON bytes are passed to hyper/axum
@@ -20,7 +20,7 @@ use axum::Router;
 use std::path::Path;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 /// Serve an Axum router over a Unix socket
 ///
@@ -83,7 +83,7 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
                 tokio::spawn(async move {
                     let mut reader = BufReader::new(stream);
 
-                    // riboCipher transport signal detection (Wave 111+).
+                    // riboCipher transport signal detection (Wave 112: ERROR on legacy).
                     // If the first byte is a recognized signal tier, consume
                     // the 2-byte signal frame before protocol auto-detect.
                     let transport_tier = match reader.fill_buf().await {
@@ -99,9 +99,9 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
                             Some(tier)
                         }
                         _ => {
-                            warn!(
+                            error!(
                                 "legacy connection (no riboCipher signal) — \
-                                 will be rejected in future waves"
+                                 will be REJECTED in wave 113"
                             );
                             None
                         }

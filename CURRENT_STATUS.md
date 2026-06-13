@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: June 13, 2026 (v4.26: riboCipher transport signal detection — Stream 7 convergent evolution)
-**Version**: 4.26
+**Updated**: June 13, 2026 (v4.27: riboCipher deprecation escalation — ERROR on unsignalled connections, Wave 112)
+**Version**: 4.27
 **Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Stale registration pruning (background sweep + capability.prune RPC) - Partition-aware routing (all-circuits-open → mesh fallback, forward-fail → mesh retry) - Lineage verification fail-closed - Real system metrics via biomeos-system - API readiness probes discovery state - All 26 crates #![forbid(unsafe_code)] - Agnostic naming (no primal-specific constants) - Neural router mod.rs refactored (registry extracted) - guideStone startup contract - HEALTH-01 compliant - riboCipher signal detection in API + neural-api sockets (Wave 111 WARN)
 
 ---

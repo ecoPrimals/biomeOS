@@ -2,6 +2,14 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.27 (2026-06-13) — riboCipher Deprecation Escalation: WARN→ERROR (Wave 112)
+
+### riboCipher deprecation clock
+- **Neural API** (`connection.rs`): `consume_ribocipher_signal()` legacy path escalated from `debug!` to `error!`
+- **biomeos-api UDS** (`unix_server.rs`): Legacy connection log escalated from `warn!` to `error!`
+- Both paths now warn: "will be REJECTED in wave 113"
+- Schedule: WARN (111) → **ERROR (112)** → REJECT (113) → REMOVE (114)
+
 ## v4.26 (2026-06-13) — riboCipher Transport Signal Detection (Stream 7) + Deep Debt: Type Safety
 
 ### riboCipher (Wave 111 convergent evolution)
