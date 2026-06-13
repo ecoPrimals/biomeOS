@@ -11,12 +11,42 @@ use std::sync::Arc;
 
 use crate::AppState;
 
+/// API deployment mode (typed to avoid string drift).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeploymentMode {
+    /// Running without other primals — graceful degradation.
+    Standalone,
+    /// Full ecosystem mode with live primal discovery.
+    Live,
+}
+
+impl DeploymentMode {
+    /// Derive mode from `AppState`.
+    pub fn from_state(state: &AppState) -> Self {
+        if state.is_standalone_mode() {
+            Self::Standalone
+        } else {
+            Self::Live
+        }
+    }
+}
+
+impl std::fmt::Display for DeploymentMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Standalone => f.write_str("standalone"),
+            Self::Live => f.write_str("live"),
+        }
+    }
+}
+
 /// Health check response
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HealthResponse {
     pub status: String,
     pub version: String,
-    pub mode: String,
+    pub mode: DeploymentMode,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uptime_seconds: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -36,12 +66,7 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> 
     Json(HealthResponse {
         status: "healthy".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        mode: if state.is_standalone_mode() {
-            "standalone"
-        } else {
-            "live"
-        }
-        .to_string(),
+        mode: DeploymentMode::from_state(&state),
         uptime_seconds: uptime_secs,
         timestamp: Some(chrono::Utc::now().to_rfc3339()),
     })
@@ -67,12 +92,7 @@ pub async fn readiness(State(state): State<Arc<AppState>>) -> Json<HealthRespons
     Json(HealthResponse {
         status: if is_ready { "ready" } else { "not_ready" }.to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        mode: if state.is_standalone_mode() {
-            "standalone"
-        } else {
-            "live"
-        }
-        .to_string(),
+        mode: DeploymentMode::from_state(&state),
         uptime_seconds: None,
         timestamp: Some(chrono::Utc::now().to_rfc3339()),
     })
@@ -85,7 +105,7 @@ pub async fn liveness(_state: State<Arc<AppState>>) -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "alive".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        mode: "live".to_string(),
+        mode: DeploymentMode::Live,
         uptime_seconds: None,
         timestamp: Some(chrono::Utc::now().to_rfc3339()),
     })
@@ -110,7 +130,7 @@ mod tests {
         let response = HealthResponse {
             status: "healthy".to_string(),
             version: "1.0.0".to_string(),
-            mode: "standalone".to_string(),
+            mode: DeploymentMode::Standalone,
             uptime_seconds: Some(3600),
             timestamp: Some("2026-02-04T12:00:00Z".to_string()),
         };
@@ -127,7 +147,7 @@ mod tests {
         let response = HealthResponse {
             status: "healthy".to_string(),
             version: "1.0.0".to_string(),
-            mode: "live".to_string(),
+            mode: DeploymentMode::Live,
             uptime_seconds: None,
             timestamp: None,
         };
@@ -151,7 +171,7 @@ mod tests {
         let response: HealthResponse = serde_json::from_str(json).expect("should deserialize");
         assert_eq!(response.status, "healthy");
         assert_eq!(response.version, "1.0.0");
-        assert_eq!(response.mode, "standalone");
+        assert_eq!(response.mode, DeploymentMode::Standalone);
         assert_eq!(response.uptime_seconds, Some(3600));
     }
 
@@ -169,7 +189,7 @@ mod tests {
 
         let response = health(State(state)).await;
         assert_eq!(response.status, "healthy");
-        assert_eq!(response.mode, "standalone");
+        assert_eq!(response.mode, DeploymentMode::Standalone);
         assert!(!response.version.is_empty());
         assert!(response.timestamp.is_some());
     }
@@ -188,7 +208,7 @@ mod tests {
 
         let response = health(State(state)).await;
         assert_eq!(response.status, "healthy");
-        assert_eq!(response.mode, "live");
+        assert_eq!(response.mode, DeploymentMode::Live);
         assert!(!response.version.is_empty());
     }
 
@@ -206,7 +226,7 @@ mod tests {
 
         let response = readiness(State(state)).await;
         assert_eq!(response.status, "ready");
-        assert_eq!(response.mode, "standalone");
+        assert_eq!(response.mode, DeploymentMode::Standalone);
     }
 
     #[tokio::test]
@@ -225,7 +245,7 @@ mod tests {
         // In live mode with no running primals, readiness reflects actual
         // discovery state: no primals discovered → not_ready.
         assert_eq!(response.status, "not_ready");
-        assert_eq!(response.mode, "live");
+        assert_eq!(response.mode, DeploymentMode::Live);
     }
 
     #[tokio::test]
@@ -238,7 +258,7 @@ mod tests {
 
         let response = liveness(State(state)).await;
         assert_eq!(response.status, "alive");
-        assert_eq!(response.mode, "live");
+        assert_eq!(response.mode, DeploymentMode::Live);
         assert!(!response.version.is_empty());
     }
 
@@ -250,7 +270,7 @@ mod tests {
             let response = HealthResponse {
                 status: status.to_string(),
                 version: "1.0.0".to_string(),
-                mode: "live".to_string(),
+                mode: DeploymentMode::Live,
                 uptime_seconds: None,
                 timestamp: None,
             };
@@ -265,7 +285,7 @@ mod tests {
         let response = HealthResponse {
             status: "healthy".to_string(),
             version: "0.1.0".to_string(),
-            mode: "standalone".to_string(),
+            mode: DeploymentMode::Standalone,
             uptime_seconds: None,
             timestamp: None,
         };
@@ -279,7 +299,7 @@ mod tests {
         let response = HealthResponse {
             status: "healthy".to_string(),
             version: "1.0.0".to_string(),
-            mode: "live".to_string(),
+            mode: DeploymentMode::Live,
             uptime_seconds: None,
             timestamp: Some(chrono::Utc::now().to_rfc3339()),
         };
@@ -318,7 +338,7 @@ mod tests {
         let response = HealthResponse {
             status: "healthy".to_string(),
             version: "1.0.0".to_string(),
-            mode: "standalone".to_string(),
+            mode: DeploymentMode::Standalone,
             uptime_seconds: Some(3600),
             timestamp: None,
         };
@@ -332,7 +352,7 @@ mod tests {
         let response = HealthResponse {
             status: "ready".to_string(),
             version: "0.2.0".to_string(),
-            mode: "live".to_string(),
+            mode: DeploymentMode::Live,
             uptime_seconds: Some(7200),
             timestamp: Some("2026-03-14T12:00:00Z".to_string()),
         };

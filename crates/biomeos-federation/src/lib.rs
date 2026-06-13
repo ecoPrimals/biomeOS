@@ -79,7 +79,7 @@ pub enum FederationError {
         /// What we were trying to do when the discovery error occurred
         context: String,
         /// The underlying error
-        source: Box<dyn std::error::Error + Send + Sync>,
+        source: anyhow::Error,
     },
 
     /// Capability call failed during federation operations

@@ -133,12 +133,7 @@ pub async fn discover_capability(
                     })
                 })
                 .map(|primal| {
-                    let health = match primal.health {
-                        biomeos_core::HealthStatus::Healthy => "healthy",
-                        biomeos_core::HealthStatus::Degraded => "degraded",
-                        biomeos_core::HealthStatus::Unhealthy => "unhealthy",
-                        biomeos_core::HealthStatus::Unknown => "unknown",
-                    };
+                    let health = primal.health.as_str();
 
                     CapabilityProvider {
                         primal_id: primal.id.as_str().to_string(),
@@ -182,12 +177,7 @@ fn build_capability_list(
     let mut capability_map: HashMap<String, Vec<CapabilityProvider>> = HashMap::new();
 
     for primal in discovered {
-        let health = match primal.health {
-            biomeos_core::HealthStatus::Healthy => "healthy",
-            biomeos_core::HealthStatus::Degraded => "degraded",
-            biomeos_core::HealthStatus::Unhealthy => "unhealthy",
-            biomeos_core::HealthStatus::Unknown => "unknown",
-        };
+        let health = primal.health.as_str();
 
         let provider = CapabilityProvider {
             primal_id: primal.id.as_str().to_string(),

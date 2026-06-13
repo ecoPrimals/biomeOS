@@ -603,14 +603,14 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 bind,
             } => {
                 let bind_mode = resolve_bind_mode(bind_mode.as_deref(), tcp_only);
-                modes::nucleus::run(
-                    nucleus_mode,
+                modes::nucleus::run(modes::nucleus::NucleusRunConfig {
+                    mode: nucleus_mode,
                     node_id,
                     family_id,
-                    port,
-                    bind_mode.is_tcp_only(),
+                    tcp_port: port,
+                    tcp_only: bind_mode.is_tcp_only(),
                     bind,
-                )
+                })
                 .await
             }
             NucleusCommand::Ingest {

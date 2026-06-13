@@ -128,6 +128,17 @@ pub enum HealthStatus {
 }
 
 impl HealthStatus {
+    /// API-facing string representation (matches serde `snake_case` output).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Healthy => "healthy",
+            Self::Degraded => "degraded",
+            Self::Unhealthy => "unhealthy",
+            Self::Unknown => "unknown",
+        }
+    }
+
     /// Check if the primal is operational (healthy or degraded)
     #[must_use]
     pub const fn is_operational(self) -> bool {
@@ -138,6 +149,12 @@ impl HealthStatus {
     #[must_use]
     pub const fn is_healthy(self) -> bool {
         matches!(self, Self::Healthy)
+    }
+}
+
+impl std::fmt::Display for HealthStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 

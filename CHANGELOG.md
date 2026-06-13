@@ -2,13 +2,21 @@
 
 All notable changes to biomeOS will be documented in this file.
 
-## v4.26 (2026-06-13) — riboCipher Transport Signal Detection (Stream 7)
+## v4.26 (2026-06-13) — riboCipher Transport Signal Detection (Stream 7) + Deep Debt: Type Safety
 
 ### riboCipher (Wave 111 convergent evolution)
 - **Transport signal constants** (`biomeos-types/constants/mod.rs`): Added `ribocipher` module with signal tier bytes (0xEC clear, 0xED mito, 0xEE nuclear), version, and `is_signal_byte()` helper
 - **biomeos-api UDS** (`unix_server.rs`): `fill_buf` now peeks for riboCipher 2-byte signal frame before protocol auto-detect; legacy (no signal) connections warned
 - **Neural API UDS + TCP** (`connection.rs`): `consume_ribocipher_signal()` added to both `handle_connection_with_btsp` and `handle_tcp_connection` paths; consumes signal before BTSP/JSON-RPC dispatch
 - Deprecation schedule: WARN (111-112) → ERROR (112) → REJECT (113) → REMOVE (114)
+
+### Type Safety (eliminating stringly-typed APIs)
+- **`HealthStatus::as_str()`** + `Display` impl (`discovery_modern.rs`): Deduplicated 4× match-to-string conversion in API handlers
+- **`DeploymentMode` enum** (`handlers/health.rs`): Replaced `mode: String` with typed enum (`Standalone`/`Live`) — serde-transparent, compile-time enforcement
+- **`NucleusRunConfig` struct** (`nucleus.rs`): Replaced 6-parameter `run()` signature with a typed config struct
+
+### Error Handling
+- **Federation `Discovery` variant** (`federation/lib.rs`): Replaced `Box<dyn Error + Send + Sync>` with `anyhow::Error` — consistent with other enum variants, eliminates the last `Box<dyn Error>` in production
 
 ## v4.25 (2026-06-12) — Deep Debt: Security, Metrics, Agnostic Naming, Router Refactor
 

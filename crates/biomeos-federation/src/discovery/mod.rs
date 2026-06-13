@@ -133,7 +133,7 @@ impl PrimalDiscovery {
                 .await
                 .map_err(|e| crate::FederationError::Discovery {
                     context: "Failed to read directory entry".to_owned(),
-                    source: Box::new(e),
+                    source: e.into(),
                 })?
         {
             let path = entry.path();
@@ -154,7 +154,7 @@ impl PrimalDiscovery {
         let stream = UnixStream::connect(socket_path).await.map_err(|e| {
             crate::FederationError::Discovery {
                 context: format!("Failed to connect to {}", socket_path.display()),
-                source: Box::new(e),
+                source: e.into(),
             }
         })?;
 
@@ -163,14 +163,14 @@ impl PrimalDiscovery {
         let request_bytes =
             serde_json::to_vec(&request).map_err(|e| crate::FederationError::Discovery {
                 context: "Failed to serialize request".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             })?;
 
         let (read_half, mut write_half) = stream.into_split();
         write_half.write_all(&request_bytes).await.map_err(|e| {
             crate::FederationError::Discovery {
                 context: "Failed to write request".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             }
         })?;
         write_half.write_all(b"\n").await.ok();
@@ -180,7 +180,7 @@ impl PrimalDiscovery {
             .await
             .map_err(|e| crate::FederationError::Discovery {
                 context: "Failed to flush request".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             })?;
         write_half.shutdown().await.ok();
 
@@ -189,7 +189,7 @@ impl PrimalDiscovery {
         let n = reader.read_line(&mut response_line).await.map_err(|e| {
             crate::FederationError::Discovery {
                 context: "Failed to read response".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             }
         })?;
         if n == 0 {
@@ -201,7 +201,7 @@ impl PrimalDiscovery {
             serde_json::from_str(response_line.trim()).map_err(|e| {
                 crate::FederationError::Discovery {
                     context: "Failed to parse response".to_owned(),
-                    source: Box::new(e),
+                    source: e.into(),
                 }
             })?;
 
@@ -397,7 +397,7 @@ impl PrimalDiscovery {
         let stream = UnixStream::connect(discovery_socket).await.map_err(|e| {
             crate::FederationError::Discovery {
                 context: "Discovery provider connection failed".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             }
         })?;
 
@@ -415,7 +415,7 @@ impl PrimalDiscovery {
         let request_str =
             serde_json::to_string(&request).map_err(|e| crate::FederationError::Discovery {
                 context: "JSON serialization error".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             })? + "\n";
 
         writer
@@ -423,21 +423,21 @@ impl PrimalDiscovery {
             .await
             .map_err(|e| crate::FederationError::Discovery {
                 context: "Failed to write to discovery provider".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             })?;
         writer
             .flush()
             .await
             .map_err(|e| crate::FederationError::Discovery {
                 context: "Failed to flush discovery provider".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             })?;
 
         let mut response_line = String::new();
         reader.read_line(&mut response_line).await.map_err(|e| {
             crate::FederationError::Discovery {
                 context: "Failed to read from discovery provider".to_owned(),
-                source: Box::new(e),
+                source: e.into(),
             }
         })?;
 
@@ -445,7 +445,7 @@ impl PrimalDiscovery {
             serde_json::from_str(response_line.trim()).map_err(|e| {
                 crate::FederationError::Discovery {
                     context: "JSON parse error from discovery provider".to_owned(),
-                    source: Box::new(e),
+                    source: e.into(),
                 }
             })?;
 

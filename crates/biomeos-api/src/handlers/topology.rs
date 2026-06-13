@@ -292,12 +292,7 @@ async fn build_live_topology(
     let primals: Vec<TopologyNode> = discovered
         .iter()
         .map(|primal| {
-            let health = match primal.health {
-                biomeos_core::HealthStatus::Healthy => "healthy",
-                biomeos_core::HealthStatus::Degraded => "degraded",
-                biomeos_core::HealthStatus::Unhealthy => "unhealthy",
-                biomeos_core::HealthStatus::Unknown => "unknown",
-            };
+            let health = primal.health.as_str();
 
             // EVOLUTION: Use actual primal name, not hardcoded type→name mapping
             // TRUE PRIMAL principle: primals define their own names

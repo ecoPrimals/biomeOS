@@ -393,17 +393,26 @@ async fn shutdown_children(
     }
 }
 
+/// Configuration for a NUCLEUS startup.
+pub struct NucleusRunConfig {
+    /// Deployment pattern (tower, node, nest, core, full).
+    pub mode: String,
+    /// Unique identifier for this node.
+    pub node_id: String,
+    /// Optional family identity for BTSP authentication.
+    pub family_id: Option<String>,
+    /// Optional TCP port override.
+    pub tcp_port: Option<u16>,
+    /// Whether to skip UDS and bind TCP only (SELinux/Android substrates).
+    pub tcp_only: bool,
+    /// Optional bind address override (e.g., "0.0.0.0").
+    pub bind: Option<String>,
+}
+
 /// Run the nucleus startup
 #[expect(clippy::too_many_lines, reason = "nucleus startup flow")]
-pub async fn run(
-    mode: String,
-    node_id: String,
-    family_id: Option<String>,
-    tcp_port: Option<u16>,
-    tcp_only: bool,
-    bind: Option<String>,
-) -> Result<()> {
-    let tcp_only = tcp_only || biomeos_types::env_config::is_tcp_only_bind_mode();
+pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
+    let tcp_only = cfg.tcp_only || biomeos_types::env_config::is_tcp_only_bind_mode();
     if tcp_only {
         info!(
             "TCP-only mode active — UDS skipped. \
@@ -411,11 +420,13 @@ pub async fn run(
         );
     }
 
-    let config = resolve_startup_config(&mode, &node_id, family_id.as_deref())?;
+    let config = resolve_startup_config(&cfg.mode, &cfg.node_id, cfg.family_id.as_deref())?;
     let mode = config.mode;
     let family_id = config.family_id;
     let socket_dir = config.socket_dir;
     let node_id = config.node_id;
+    let tcp_port = cfg.tcp_port;
+    let bind = cfg.bind;
 
     info!("Starting NUCLEUS in {:?} mode", mode);
     info!("  Node ID:   {}", node_id);

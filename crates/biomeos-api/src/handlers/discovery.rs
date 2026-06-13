@@ -80,12 +80,7 @@ pub async fn get_discovered_primals(
             let primals: Vec<DiscoveredPrimal> = discovered
                 .into_iter()
                 .map(|primal| {
-                    let health = match primal.health {
-                        biomeos_core::HealthStatus::Healthy => "healthy",
-                        biomeos_core::HealthStatus::Degraded => "degraded",
-                        biomeos_core::HealthStatus::Unhealthy => "unhealthy",
-                        biomeos_core::HealthStatus::Unknown => "unknown",
-                    };
+                    let health = primal.health.as_str();
 
                     let primal_type = format!("{:?}", primal.primal_type).to_lowercase();
 
