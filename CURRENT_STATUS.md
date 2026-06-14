@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 14, 2026 (v4.28: riboCipher REJECT + primal auto-registration, Wave 113)
-**Version**: 4.28
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Stale registration pruning (background sweep + capability.prune RPC) - Partition-aware routing (all-circuits-open → mesh fallback, forward-fail → mesh retry) - Lineage verification fail-closed - Real system metrics via biomeos-system - API readiness probes discovery state - All 26 crates #![forbid(unsafe_code)] - Agnostic naming (no primal-specific constants) - Neural router mod.rs refactored (registry extracted) - guideStone startup contract - HEALTH-01 compliant - riboCipher REJECT on unsignalled connections (Wave 113) - Post-boot topology.rescan for NeuralRouter auto-registration
+**Updated**: June 14, 2026 (v4.28.1: background discovery sweep — Bootstrap→operational transition complete, Wave 113)
+**Version**: 4.28.1
+**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Stale registration pruning (background sweep + capability.prune RPC) - Partition-aware routing (all-circuits-open → mesh fallback, forward-fail → mesh retry) - Lineage verification fail-closed - Real system metrics via biomeos-system - API readiness probes discovery state - All 26 crates #![forbid(unsafe_code)] - Agnostic naming (no primal-specific constants) - Neural router mod.rs refactored (registry extracted) - guideStone startup contract - HEALTH-01 compliant - riboCipher REJECT on unsignalled connections (Wave 113) - Post-boot topology.rescan + periodic discovery sweep (30s) for continuous NeuralRouter population
 
 ---
 
