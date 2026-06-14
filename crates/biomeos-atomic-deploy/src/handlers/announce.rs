@@ -101,7 +101,7 @@ pub async fn handle_announce(
         crate::capability_translation::CapabilityTranslationRegistry,
     >,
     lifecycle_handler: &super::LifecycleHandler,
-    beardog_verifier: &Option<biomeos_core::BearDogVerifier>,
+    security_verifier: &Option<biomeos_core::SecurityVerifier>,
     params: &Option<Value>,
 ) -> Result<Value> {
     let params = params.as_ref().context("Missing parameters")?;
@@ -267,7 +267,7 @@ pub async fn handle_announce(
 
     // 6. Attestation verification via BearDog
     let attestation_verified = if let Some(ref attestation) = announcement.attestation {
-        if let Some(verifier) = beardog_verifier {
+        if let Some(verifier) = security_verifier {
             let verified = verifier.verify_async(attestation).await.is_some();
             if verified {
                 info!(

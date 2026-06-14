@@ -112,7 +112,7 @@ impl NeuralApiServer {
         }
         if let Some(ref token) = caller.bearer_token {
             cap_params["_bearer_token"] = json!(token);
-            let verified = if let Some(ref v) = self.beardog_verifier {
+            let verified = if let Some(ref v) = self.security_verifier {
                 v.verify_async(token).await.is_some()
             } else {
                 false
@@ -479,7 +479,7 @@ impl NeuralApiServer {
             &self.router,
             &self.translation_registry,
             &self.lifecycle_handler,
-            &self.beardog_verifier,
+            &self.security_verifier,
             params,
         )
         .await

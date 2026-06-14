@@ -3,15 +3,15 @@
 
 //! Token verification abstraction (primalSpring pattern).
 //!
-//! Production uses [`BearDogVerifier`] (IPC to BearDog's `auth.verify_ionic`).
-//! Tests use [`NoopVerifier`] to avoid requiring a live BearDog process.
+//! Production uses [`SecurityVerifier`] (IPC to the security provider's `auth.verify_ionic`).
+//! Tests use [`NoopVerifier`] to avoid requiring a live security provider.
 
 use super::ionic::IonicTokenClaims;
 
 /// Trait for verifying bearer tokens.
 ///
-/// Production uses `BearDogVerifier` (IPC to BearDog's `auth.verify_ionic`).
-/// Tests use `NoopVerifier` to avoid requiring a live BearDog process.
+/// Production uses `SecurityVerifier` (IPC to the security provider's `auth.verify_ionic`).
+/// Tests use `NoopVerifier` to avoid requiring a live security provider.
 /// Follows the primalSpring `TokenVerifier` pattern from `method_gate.rs`.
 pub trait TokenVerifier: Send + Sync {
     /// Verify a bearer token and return parsed claims on success.
@@ -45,27 +45,26 @@ impl TokenVerifier for NoopVerifier {
     }
 }
 
-/// BearDog IPC verifier for cross-primal token federation (JH-11).
+/// IPC-based security verifier for cross-primal token federation (JH-11).
 ///
-/// Calls `auth.verify_ionic` on BearDog via IPC to cryptographically verify
+/// Calls `auth.verify_ionic` on the security provider via IPC to verify
 /// a bearer token's signature. Falls back to `LocalClaimsVerifier` (parse-only)
-/// if BearDog is unreachable, ensuring graceful degradation.
+/// if the security provider is unreachable, ensuring graceful degradation.
 ///
-/// This is step 1 of the federation roadmap — verify-then-forward. Step 2
-/// (offline verification via shared-key distribution) requires BearDog to
-/// ship key distribution, which is tracked as JH-11 on BearDog's side.
+/// Discovery of the security provider socket uses `BEARDOG_SOCKET` env or
+/// XDG defaults via `primal_names::BEARDOG`.
 #[derive(Clone)]
-pub struct BearDogVerifier {
+pub struct SecurityVerifier {
     socket_path: std::path::PathBuf,
 }
 
-impl BearDogVerifier {
-    /// Create a new verifier targeting a BearDog socket.
+impl SecurityVerifier {
+    /// Create a new verifier targeting a security provider socket.
     pub fn new(socket_path: std::path::PathBuf) -> Self {
         Self { socket_path }
     }
 
-    /// Resolve the BearDog socket from environment or XDG defaults.
+    /// Resolve the security provider socket from environment or XDG defaults.
     pub fn from_env() -> Option<Self> {
         let path = std::env::var(biomeos_types::env_config::vars::BEARDOG_SOCKET)
             .ok()
@@ -78,10 +77,10 @@ impl BearDogVerifier {
         Some(Self::new(path))
     }
 
-    /// Async verification via IPC to BearDog's `auth.verify_ionic`.
+    /// Async verification via IPC to the security provider's `auth.verify_ionic`.
     ///
-    /// Returns parsed claims if BearDog confirms the token is valid.
-    /// Falls back to local parsing if BearDog is unreachable.
+    /// Returns parsed claims if the provider confirms the token is valid.
+    /// Falls back to local parsing if the provider is unreachable.
     pub async fn verify_async(&self, token: &str) -> Option<IonicTokenClaims> {
         use crate::atomic_client::AtomicClient;
         use serde_json::json;
@@ -101,7 +100,7 @@ impl BearDogVerifier {
                 }
             }
             Err(_) => {
-                // BearDog unreachable — degrade to local parsing.
+                // Security provider unreachable — degrade to local parsing.
                 // In enforced mode, the MethodGate will still check expiry/scope.
                 IonicTokenClaims::parse(token)
             }
@@ -115,7 +114,7 @@ impl BearDogVerifier {
     }
 }
 
-impl TokenVerifier for BearDogVerifier {
+impl TokenVerifier for SecurityVerifier {
     /// Sync fallback — parses locally (no IPC). Use `verify_async` for
     /// full federation verification in async contexts.
     fn verify(&self, token: &str) -> Option<IonicTokenClaims> {

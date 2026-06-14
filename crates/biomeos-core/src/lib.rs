@@ -186,9 +186,11 @@ pub use tower_config::PrimalConfig as TowerPrimalConfig;
 pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};
 
 // Method gate re-exports (JH-0, JH-2)
+#[allow(deprecated)]
 pub use method_gate::{
     BearDogVerifier, CallerContext, ConnectionOrigin, EnforcementMode, IonicTokenClaims,
-    LocalClaimsVerifier, MethodGate, ResourceEnvelope, TokenVerifier, scope_covers_method,
+    LocalClaimsVerifier, MethodGate, ResourceEnvelope, SecurityVerifier, TokenVerifier,
+    scope_covers_method,
 };
 
 // Connection strategy re-exports

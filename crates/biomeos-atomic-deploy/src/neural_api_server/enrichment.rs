@@ -36,7 +36,7 @@ impl NeuralApiServer {
             if let Some(ref token) = caller.bearer_token {
                 obj.insert("_bearer_token".to_string(), json!(token));
 
-                let verified = if let Some(ref verifier) = self.beardog_verifier {
+                let verified = if let Some(ref verifier) = self.security_verifier {
                     verifier.verify_async(token).await.is_some()
                 } else {
                     false

@@ -152,7 +152,7 @@ pub struct NeuralApiServer {
     /// Optional BearDog verifier for cross-primal token federation (JH-11).
     /// When present, forwarded `_bearer_token` values are verified via IPC
     /// before propagation to downstream primals.
-    pub(super) beardog_verifier: Option<biomeos_core::BearDogVerifier>,
+    pub(super) security_verifier: Option<biomeos_core::SecurityVerifier>,
 }
 
 impl NeuralApiServer {
@@ -294,7 +294,7 @@ impl NeuralApiServer {
             btsp_sessions: btsp_negotiate::new_session_store(),
             started_at: Instant::now(),
             method_gate: biomeos_core::MethodGate::from_env(),
-            beardog_verifier: biomeos_core::BearDogVerifier::from_env(),
+            security_verifier: biomeos_core::SecurityVerifier::from_env(),
         }
     }
 

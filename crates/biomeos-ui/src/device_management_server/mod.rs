@@ -8,7 +8,7 @@
 
 #![forbid(unsafe_code)]
 
-mod songbird;
+mod discovery_registration;
 
 use crate::capabilities::device_management::DeviceManagementProvider;
 use anyhow::{Context, Result};
@@ -110,8 +110,8 @@ pub async fn run() -> Result<()> {
     info!("✅ biomeOS Device Management Server ready");
     info!("📡 Advertising capability: device.management");
 
-    if let Err(e) = songbird::register_with_songbird(&socket_path).await {
-        warn!("Could not register with Songbird: {} (local-only mode)", e);
+    if let Err(e) = discovery_registration::register_with_discovery_provider(&socket_path).await {
+        warn!("Could not register with discovery provider: {} (local-only mode)", e);
     }
 
     info!("Waiting for visualization primal connections...");

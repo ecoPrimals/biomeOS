@@ -16,14 +16,14 @@ use tracing::info;
 ///
 /// This enables other primals and nodes to discover this device management
 /// server via the discovery provider's UDP multicast discovery.
-pub(super) async fn register_with_songbird(socket_path: &str) -> Result<()> {
+pub(super) async fn register_with_discovery_provider(socket_path: &str) -> Result<()> {
     let discovery_socket = discover_discovery_provider()?;
-    register_with_songbird_at(&discovery_socket, socket_path).await
+    register_with_discovery_provider_at(&discovery_socket, socket_path).await
 }
 
-/// Same as [`register_with_songbird`], but connects to an explicit discovery provider Unix socket
+/// Same as [`register_with_discovery_provider`], but connects to an explicit discovery provider Unix socket
 /// (for tests and callers that inject discovery without process environment).
-pub(super) async fn register_with_songbird_at(
+pub(super) async fn register_with_discovery_provider_at(
     discovery_socket: &str,
     device_management_socket_path: &str,
 ) -> Result<()> {
@@ -254,7 +254,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_register_with_songbird_success() {
+    async fn test_register_with_discovery_provider_success() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("songbird.sock");
 
@@ -276,14 +276,14 @@ mod tests {
 
         let path_str = socket_path.to_str().unwrap();
         let result =
-            register_with_songbird_at(path_str, "/run/user/1000/biomeos-device.sock").await;
+            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock").await;
         assert!(result.is_ok());
 
         server_handle.await.unwrap();
     }
 
     #[tokio::test]
-    async fn test_register_with_songbird_error_response() {
+    async fn test_register_with_discovery_provider_error_response() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("songbird-err.sock");
 
@@ -306,7 +306,7 @@ mod tests {
 
         let path_str = socket_path.to_str().unwrap();
         let result =
-            register_with_songbird_at(path_str, "/run/user/1000/biomeos-device.sock").await;
+            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock").await;
         assert!(result.is_err());
         assert!(
             result
@@ -319,7 +319,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_register_with_songbird_error_unknown_message() {
+    async fn test_register_with_discovery_provider_error_unknown_message() {
         let temp = tempfile::tempdir().unwrap();
         let socket_path = temp.path().join("songbird-err2.sock");
 
@@ -341,7 +341,7 @@ mod tests {
 
         let path_str = socket_path.to_str().unwrap();
         let result =
-            register_with_songbird_at(path_str, "/run/user/1000/biomeos-device.sock").await;
+            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock").await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Unknown error"));
 

@@ -33,7 +33,11 @@ mod verifier;
 
 pub use classify::{MethodAccessLevel, classify_method};
 pub use ionic::{IonicTokenClaims, ResourceEnvelope, scope_covers_method};
-pub use verifier::{BearDogVerifier, LocalClaimsVerifier, TokenVerifier};
+pub use verifier::{LocalClaimsVerifier, SecurityVerifier, TokenVerifier};
+
+/// Backward-compatible alias for [`SecurityVerifier`].
+#[deprecated(since = "4.29.0", note = "renamed to SecurityVerifier")]
+pub type BearDogVerifier = SecurityVerifier;
 
 #[cfg(any(test, feature = "test-helpers"))]
 pub use verifier::NoopVerifier;

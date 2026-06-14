@@ -655,11 +655,11 @@ fn noop_verifier_always_returns_none() {
     assert!(verifier.verify(&token).is_none());
 }
 
-// ── BearDogVerifier (JH-11) ──
+// ── SecurityVerifier (JH-11) ──
 
 #[test]
-fn beardog_verifier_sync_falls_back_to_local_parse() {
-    let verifier = BearDogVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
+fn security_verifier_sync_falls_back_to_local_parse() {
+    let verifier = SecurityVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
     let token = make_ionic_token(&serde_json::json!({
         "sub": "federation-test",
         "scope": ["compute.*"],
@@ -670,14 +670,14 @@ fn beardog_verifier_sync_falls_back_to_local_parse() {
 }
 
 #[test]
-fn beardog_verifier_sync_returns_none_for_opaque() {
-    let verifier = BearDogVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
+fn security_verifier_sync_returns_none_for_opaque() {
+    let verifier = SecurityVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
     assert!(verifier.verify("opaque-token-xyz").is_none());
 }
 
 #[tokio::test]
-async fn beardog_verifier_async_degrades_gracefully_when_unreachable() {
-    let verifier = BearDogVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
+async fn security_verifier_async_degrades_gracefully_when_unreachable() {
+    let verifier = SecurityVerifier::new(std::path::PathBuf::from("/nonexistent/beardog.sock"));
     let token = make_ionic_token(&serde_json::json!({
         "sub": "async-fallback",
         "scope": ["*"],
@@ -689,13 +689,13 @@ async fn beardog_verifier_async_degrades_gracefully_when_unreachable() {
 }
 
 #[test]
-fn beardog_verifier_from_env_does_not_panic() {
-    let _ = BearDogVerifier::from_env();
+fn security_verifier_from_env_does_not_panic() {
+    let _ = SecurityVerifier::from_env();
 }
 
 #[test]
-fn beardog_verifier_clone() {
-    let v = BearDogVerifier::new(std::path::PathBuf::from("/tmp/bd.sock"));
+fn security_verifier_clone() {
+    let v = SecurityVerifier::new(std::path::PathBuf::from("/tmp/bd.sock"));
     let v2 = v.clone();
     assert_eq!(v.socket_path(), v2.socket_path());
 }
