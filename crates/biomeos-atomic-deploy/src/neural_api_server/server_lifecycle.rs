@@ -188,6 +188,20 @@ impl NeuralApiServer {
             info!("🧹 Stale-registration prune sweep started (interval: 60s)");
         }
 
+        // 5d. Start background discovery sweep — picks up primals that come
+        // online after initial boot (transition from Bootstrap to operational).
+        {
+            let server = self.clone();
+            tokio::spawn(async move {
+                use biomeos_types::constants::timeouts::DISCOVERY_SWEEP_INTERVAL;
+                loop {
+                    tokio::time::sleep(DISCOVERY_SWEEP_INTERVAL).await;
+                    server.discover_and_register_primals().await;
+                }
+            });
+            info!("🔍 Background discovery sweep started (interval: 30s)");
+        }
+
         // 6. Accept connections on bound listener(s)
         match (uds_listener, tcp_listener) {
             (Some(uds), Some(tcp)) => {

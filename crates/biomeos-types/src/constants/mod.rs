@@ -305,6 +305,10 @@ pub mod timeouts {
 
     /// Background stale-registration prune sweep interval.
     pub const STALE_PRUNE_SWEEP_INTERVAL: Duration = Duration::from_secs(60);
+
+    /// Background primal discovery sweep interval.
+    /// Scans socket directories for newly-appeared primals and registers them.
+    pub const DISCOVERY_SWEEP_INTERVAL: Duration = Duration::from_secs(30);
 }
 
 /// Resource limits and thresholds
