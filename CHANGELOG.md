@@ -2,6 +2,19 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.28 (2026-06-14) — riboCipher REJECT + Primal Auto-Registration (Wave 113)
+
+### riboCipher REJECT (Wave 113 policy)
+- **Neural API** (`connection.rs`): Unsignalled connections now **dropped** (return early)
+- **biomeos-api UDS** (`unix_server.rs`): Unsignalled connections now **dropped** (return early)
+- Schedule: WARN (111) → ERROR (112) → **REJECT (113)** → REMOVE (114)
+- All tests updated to send `[0xEC, 0x01]` prefix before requests
+
+### Primal auto-registration
+- **NUCLEUS** (`nucleus.rs`): After Neural API starts in Full mode, sends `topology.rescan` JSON-RPC to force NeuralRouter population from healthy primal sockets
+- Fixes "0 registered capabilities" — NUCLEUS previously only registered with Songbird (mesh discovery), not the local NeuralRouter
+- `capability.call` routing now has providers after startup
+
 ## v4.27 (2026-06-13) — riboCipher Deprecation Escalation: WARN→ERROR (Wave 112)
 
 ### riboCipher deprecation clock

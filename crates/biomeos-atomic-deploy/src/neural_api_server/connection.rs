@@ -28,10 +28,9 @@ impl NeuralApiServer {
 
     /// Peek for riboCipher transport signal and consume if present.
     ///
-    /// If the first byte is a recognized tier (0xEC/0xED/0xEE), consumes the
-    /// 2-byte signal frame and logs the tier. If absent, logs a legacy warning.
-    /// In Wave 111-112 this is WARN-only; future waves will reject.
-    async fn consume_ribocipher_signal<S>(reader: &mut BufReader<S>)
+    /// Returns `true` if a valid signal was detected (connection accepted),
+    /// `false` if no signal was found (connection rejected per Wave 113 policy).
+    async fn consume_ribocipher_signal<S>(reader: &mut BufReader<S>) -> bool
     where
         S: tokio::io::AsyncRead + Unpin,
     {
@@ -47,12 +46,14 @@ impl NeuralApiServer {
                 debug!(
                     "riboCipher signal: tier=0x{tier:02X} version={version}"
                 );
+                true
             }
             _ => {
                 error!(
-                    "legacy connection (no riboCipher signal) — \
-                     will be REJECTED in wave 113"
+                    "REJECTED: legacy connection (no riboCipher signal) — \
+                     unsignalled connections dropped per Wave 113 policy"
                 );
+                false
             }
         }
     }
@@ -70,8 +71,10 @@ impl NeuralApiServer {
     ) -> Result<()> {
         let mut reader = BufReader::new(stream);
 
-        // riboCipher transport signal detection (Wave 111+).
-        Self::consume_ribocipher_signal(&mut reader).await;
+        // riboCipher transport signal detection (Wave 113: REJECT unsignalled).
+        if !Self::consume_ribocipher_signal(&mut reader).await {
+            return Ok(());
+        }
 
         match btsp_client::server_handshake(&mut reader).await {
             Ok(HandshakeOutcome::Authenticated {
@@ -145,7 +148,9 @@ impl NeuralApiServer {
     /// Handle a TCP client connection.
     pub async fn handle_tcp_connection(&self, stream: tokio::net::TcpStream) -> Result<()> {
         let mut reader = BufReader::new(stream);
-        Self::consume_ribocipher_signal(&mut reader).await;
+        if !Self::consume_ribocipher_signal(&mut reader).await {
+            return Ok(());
+        }
         self.handle_stream(reader).await
     }
 

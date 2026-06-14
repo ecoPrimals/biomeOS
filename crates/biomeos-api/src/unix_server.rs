@@ -9,7 +9,7 @@
 //!
 //! Connection accept order:
 //! 1. **riboCipher signal** — if the first byte is 0xEC/0xED/0xEE, consume
-//!    the 2-byte transport signal frame. ERROR on legacy (Wave 112+).
+//!    the 2-byte transport signal frame. REJECT unsignalled (Wave 113+).
 //! 2. **Protocol auto-detect** — if the (post-signal) first byte is `{` or
 //!    `[`, handle as raw NDJSON JSON-RPC; BTSP `ClientHello` is redirected
 //!    to the neural-api socket.  Non-JSON bytes are passed to hyper/axum
@@ -83,9 +83,7 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
                 tokio::spawn(async move {
                     let mut reader = BufReader::new(stream);
 
-                    // riboCipher transport signal detection (Wave 112: ERROR on legacy).
-                    // If the first byte is a recognized signal tier, consume
-                    // the 2-byte signal frame before protocol auto-detect.
+                    // riboCipher transport signal detection (Wave 113: REJECT unsignalled).
                     let transport_tier = match reader.fill_buf().await {
                         Ok(buf) if buf.len() >= 2
                             && biomeos_types::constants::ribocipher::is_signal_byte(buf[0]) =>
@@ -100,13 +98,15 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
                         }
                         _ => {
                             error!(
-                                "legacy connection (no riboCipher signal) — \
-                                 will be REJECTED in wave 113"
+                                "REJECTED: legacy connection (no riboCipher signal) — \
+                                 unsignalled connections dropped per Wave 113 policy"
                             );
                             None
                         }
                     };
-                    let _ = transport_tier; // used for routing in future tiers
+                    if transport_tier.is_none() {
+                        return;
+                    }
 
                     let is_jsonrpc = match reader.fill_buf().await {
                         Ok(buf) if !buf.is_empty() => buf[0] == b'{' || buf[0] == b'[',

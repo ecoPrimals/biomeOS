@@ -615,6 +615,26 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
             }
         });
         tokio::time::sleep(biomeos_types::constants::timeouts::NUCLEUS_POST_START_DELAY).await;
+
+        // Trigger Neural API primal discovery to populate NeuralRouter.
+        // Without this, capability.call has 0 registered providers since
+        // NUCLEUS registers only with Songbird (mesh discovery), not NeuralRouter.
+        let rescan_socket = socket_dir.join(format!("neural-api-{family_id}.sock"));
+        tokio::spawn(async move {
+            use biomeos_core::atomic_client::AtomicClient;
+            let client = AtomicClient::unix(&rescan_socket)
+                .with_timeout(biomeos_types::constants::timeouts::DEFAULT_IPC_TIMEOUT);
+            match client.call("topology.rescan", serde_json::json!({})).await {
+                Ok(resp) => {
+                    let count = resp
+                        .get("registered_capabilities")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    info!("Neural API rescan complete: {count} capabilities registered");
+                }
+                Err(e) => warn!("Neural API rescan failed (will retry on first capability.call): {e}"),
+            }
+        });
     }
 
     // Print summary
