@@ -9,9 +9,12 @@
 //!
 //! **Universal IPC v3.0**: Uses `AtomicClient` for multi-transport support.
 
-#![expect(
-    dead_code,
-    reason = "prepared for orchestrator JWT provisioning — wired when security provider is live"
+#![cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "wired when security provider JWT provisioning is live"
+    )
 )]
 
 use anyhow::{Context, Result};

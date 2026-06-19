@@ -407,18 +407,5 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used, reason = "test")]
-mod tests {
-    use super::super::NeuralApiServer;
-
-    #[tokio::test]
-    async fn test_rescan_primals_returns_json_shape() {
-        let temp = tempfile::tempdir().expect("tempdir");
-        let sock = temp.path().join("rescan.sock");
-        let server = NeuralApiServer::new(temp.path(), "fam-rescan", sock);
-        let v = server.rescan_primals().await.expect("rescan");
-        assert_eq!(v["rescanned"], true);
-        assert!(v.get("new_capabilities_registered").is_some());
-        assert!(v.get("total_capabilities").is_some());
-    }
-}
+#[path = "discovery_init_tests.rs"]
+mod tests;

@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 14, 2026 (v4.29: deep debt — primal-neutral naming, self-knowledge principle enforced)
-**Version**: 4.29
-**Status**: REFERENCE TIER - ZERO clippy warnings - NUCLEUS watchdog ACTIVE - Stale registration pruning (background sweep + capability.prune RPC) - Partition-aware routing (all-circuits-open → mesh fallback, forward-fail → mesh retry) - Lineage verification fail-closed - Real system metrics via biomeos-system - API readiness probes discovery state - All 26 crates #![forbid(unsafe_code)] - Agnostic naming (no primal-specific constants) - Neural router mod.rs refactored (registry extracted) - guideStone startup contract - HEALTH-01 compliant - riboCipher REJECT on unsignalled connections (Wave 113) - Post-boot topology.rescan + periodic discovery sweep (30s) for continuous NeuralRouter population
+**Updated**: June 19, 2026 (v4.30: deep debt evolution sprint — coverage 88%, dependency modernization, file refactoring)
+**Version**: 4.30
+**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,351 tests / 0 failures - 88.28% line coverage (89.84% branch) - axum 0.8 + tungstenite 0.29 - All production files <400 LOC (refactored) - cargo deny clean (advisories/bans/licenses/sources ok) - Zero TODO/FIXME in Rust - temp-env test isolation (deterministic) - All 26 crates #![forbid(unsafe_code)] - riboCipher REJECT (Wave 113) - Self-knowledge principle enforced - Post-boot topology.rescan + periodic discovery sweep
 
 ---
 
@@ -17,8 +17,8 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 7,983 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent |
-| **Test Coverage** | 90%+ region / function / line (llvm-cov workspace-wide, target maintained) |
+| **Tests Passing** | 8,351 workspace-wide, 0 failures, fully concurrent |
+| **Test Coverage** | 88.28% line / 89.84% branch / 87.91% region (llvm-cov workspace-wide; remaining gap is binary entry points) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates, Wave 68: 18→0) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -976,7 +976,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (7,983 tests — fully concurrent)
+# Test (8,351 tests — fully concurrent)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -1000,6 +1000,6 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 **Status**: Production Ready (v4.25 — lineage fail-closed, real system metrics, agnostic naming, neural router refactored, stale prune + partition-aware routing)
 **Tests**: 7,983+ passing, 0 failures, fully concurrent | **Coverage**: 90%+ (llvm-cov)
-**Clippy**: PASS (0 warnings, pedantic+nursery) | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **C deps**: 0 | **TODO/FIXME**: 0
+**Clippy**: PASS (0 warnings, pedantic+nursery) | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **C deps**: 0 | **TODO/FIXME**: 0 | **Coverage**: 88.28% line / 89.84% branch
 **IPC**: Universal IPC v3.0 (Unix/Abstract/TCP + tarpc escalation + `--bind-mode` guideStone startup; HTTP removed v3.97)
 **Code Quality**: A++ (Pure Rust, Edition 2024, zero warnings, zero hardcoded primal names, all production files <800 LOC, Duration constants centralized, agnostic naming, real metrics)

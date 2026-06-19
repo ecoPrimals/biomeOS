@@ -185,21 +185,31 @@ async fn test_run_without_device_id_uses_resolve_fallback() {
 #[tokio::test]
 async fn test_run_uses_device_id_when_provided() {
     let temp = tempfile::tempdir().expect("temp dir");
-    let family_seed = temp.path().join(".family.seed");
-    std::fs::write(&family_seed, "test-seed").expect("write family seed");
+    let iso_path = temp.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let family_seed = temp.path().join(".family.seed");
+            std::fs::write(&family_seed, "test-seed").expect("write family seed");
 
-    let args = EnrollArgs {
-        family_id: "test".to_string(),
-        node_id: "node".to_string(),
-        device_id: Some("custom-device-id-xyz".to_string()),
-        family_seed,
-        lineage_seed: temp.path().join(".lineage.seed"),
-        security_socket: None,
-        security_socket_dir: None,
-        force: false,
-    };
-    let result = run(args).await;
-    assert!(result.is_err());
+            let args = EnrollArgs {
+                family_id: "test".to_string(),
+                node_id: "node".to_string(),
+                device_id: Some("custom-device-id-xyz".to_string()),
+                family_seed,
+                lineage_seed: temp.path().join(".lineage.seed"),
+                security_socket: None,
+                security_socket_dir: Some(temp.path().to_path_buf()),
+                force: false,
+            };
+            let result = run(args).await;
+            assert!(result.is_err());
+        },
+    )
+    .await;
 }
 
 #[tokio::test]
@@ -259,31 +269,41 @@ async fn test_run_returns_ok_when_already_enrolled_but_load_lineage_fails() {
 #[tokio::test]
 async fn test_run_force_attempts_enrollment_when_lineage_exists() {
     let temp = tempfile::tempdir().expect("temp dir");
-    let lineage_seed = temp.path().join(".lineage.seed");
-    std::fs::write(&lineage_seed, "existing-lineage-seed").expect("write lineage");
-    let family_seed = temp.path().join(".family.seed");
-    std::fs::write(&family_seed, "test-seed").expect("write family seed");
+    let iso_path = temp.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let lineage_seed = temp.path().join(".lineage.seed");
+            std::fs::write(&lineage_seed, "existing-lineage-seed").expect("write lineage");
+            let family_seed = temp.path().join(".family.seed");
+            std::fs::write(&family_seed, "test-seed").expect("write family seed");
 
-    let args = EnrollArgs {
-        family_id: "test".to_string(),
-        node_id: "node".to_string(),
-        device_id: Some("device-1".to_string()),
-        family_seed,
-        lineage_seed,
-        security_socket: None,
-        security_socket_dir: None,
-        force: true,
-    };
-    let result = run(args).await;
-    assert!(
-        result.is_err(),
-        "force re-enroll without BearDog should fail: {result:?}"
-    );
-    let err = result.unwrap_err();
-    assert!(
-        err.to_string().contains("BearDog") || err.to_string().contains("socket"),
-        "Expected BearDog/socket error: {err}"
-    );
+            let args = EnrollArgs {
+                family_id: "test".to_string(),
+                node_id: "node".to_string(),
+                device_id: Some("device-1".to_string()),
+                family_seed,
+                lineage_seed,
+                security_socket: None,
+                security_socket_dir: Some(temp.path().to_path_buf()),
+                force: true,
+            };
+            let result = run(args).await;
+            assert!(
+                result.is_err(),
+                "force re-enroll without BearDog should fail: {result:?}"
+            );
+            let err = result.unwrap_err();
+            assert!(
+                err.to_string().contains("BearDog") || err.to_string().contains("socket"),
+                "Expected BearDog/socket error: {err}"
+            );
+        },
+    )
+    .await;
 }
 
 #[tokio::test]

@@ -37,15 +37,13 @@ impl NeuralApiServer {
         use biomeos_types::constants::ribocipher;
 
         match reader.fill_buf().await {
-            Ok(buf) if buf.len() >= ribocipher::SIGNAL_LEN
-                && ribocipher::is_signal_byte(buf[0]) =>
+            Ok(buf)
+                if buf.len() >= ribocipher::SIGNAL_LEN && ribocipher::is_signal_byte(buf[0]) =>
             {
                 let tier = buf[0];
                 let version = buf[1];
                 reader.consume(ribocipher::SIGNAL_LEN);
-                debug!(
-                    "riboCipher signal: tier=0x{tier:02X} version={version}"
-                );
+                debug!("riboCipher signal: tier=0x{tier:02X} version={version}");
                 true
             }
             _ => {
@@ -307,8 +305,8 @@ impl NeuralApiServer {
                 biomeos_types::constants::timeouts::DEFAULT_REQUEST_TIMEOUT,
                 reader.read_exact(&mut payload),
             )
-                .await
-                .context("Timeout reading encrypted frame payload")??;
+            .await
+            .context("Timeout reading encrypted frame payload")??;
 
             let plaintext = match btsp_negotiate::decrypt_frame(&keys.client_to_server, &payload) {
                 Ok(pt) => pt,

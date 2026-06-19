@@ -111,25 +111,24 @@ async fn test_discover_capability_http_alias_requires_registry() {
 
 #[tokio::test]
 async fn test_discover_capability_ai_category_empty_registry() {
-    let router = NeuralRouter::new("ai-test");
-    let result = router.discover_capability("ai.text_generation").await;
-    // In a clean environment (no live primals), this should fail with "No primals"
-    // or "not registered". In a dev environment with live compute sockets, socket
-    // discovery may succeed — that's correct production behavior.
-    let live_compute = std::env::var("XDG_RUNTIME_DIR")
-        .ok()
-        .map(|d| {
-            std::path::Path::new(&d)
-                .join("biomeos/compute-nucleus01.sock")
-                .exists()
-        })
-        .unwrap_or(false);
-    if !live_compute {
-        let err = result.unwrap_err();
-        assert!(
-            err.to_string().contains("No primals") || err.to_string().contains("not registered")
-        );
-    }
+    let iso = tempfile::tempdir().expect("tempdir");
+    let iso_path = iso.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let router = NeuralRouter::new("ai-test");
+            let result = router.discover_capability("ai.text_generation").await;
+            let err = result.unwrap_err();
+            assert!(
+                err.to_string().contains("No primals")
+                    || err.to_string().contains("not registered")
+            );
+        },
+    )
+    .await;
 }
 
 #[tokio::test]

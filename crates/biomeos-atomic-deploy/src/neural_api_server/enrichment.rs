@@ -124,3 +124,7 @@ impl NeuralApiServer {
         }))
     }
 }
+
+#[cfg(test)]
+#[path = "enrichment_tests.rs"]
+mod enrichment_tests;

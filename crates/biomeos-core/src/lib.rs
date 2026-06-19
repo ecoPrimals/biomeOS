@@ -99,6 +99,8 @@ pub mod metrics_collector;
 // VM Federation (benchScale + libvirt)
 pub mod vm_federation;
 #[cfg(all(test, unix))]
+mod vm_federation_manager_tests;
+#[cfg(all(test, unix))]
 mod vm_federation_tests;
 
 // Observability (sovereignty-respecting)

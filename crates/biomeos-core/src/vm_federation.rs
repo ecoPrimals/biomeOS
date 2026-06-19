@@ -186,6 +186,20 @@ pub struct VmFederationManager {
 }
 
 impl VmFederationManager {
+    /// Test-only constructor with explicit paths (skips benchscale discovery).
+    #[cfg(test)]
+    pub(crate) fn with_paths_for_test(
+        benchscale_root: PathBuf,
+        topology_path: PathBuf,
+        validation_config: ValidationConfig,
+    ) -> Self {
+        Self {
+            benchscale_root,
+            topology_path,
+            validation_config,
+        }
+    }
+
     /// Create a new VM Federation Manager with default validation
     pub fn new() -> Result<Self> {
         Self::with_validation_config(ValidationConfig::default())

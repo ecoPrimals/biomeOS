@@ -26,13 +26,19 @@ mod nucleus_launch;
 mod nucleus_procs;
 
 use anyhow::{Context, Result};
+use biomeos_core::family_discovery::get_family_id;
+use biomeos_core::socket_discovery::neural_api::resolve_neural_api_socket;
 use biomeos_types::defaults::env_vars::socket_env_key;
 use biomeos_types::primal_names::{
     BARRACUDA, BEARDOG, CORALREEF, LOAMSPINE, NESTGATE, PETALTONGUE, RHIZOCRYPT, SKUNKBAT,
     SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
 };
+use biomeos_types::{JsonRpcRequest, SystemPaths};
 use nucleus_launch::load_nucleus_profiles;
+use serde::Deserialize;
 use std::path::{Path, PathBuf};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::UnixStream;
 use tracing::{info, warn};
 
 /// Detected ecosystem state at startup
@@ -628,11 +634,13 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
                 Ok(resp) => {
                     let count = resp
                         .get("registered_capabilities")
-                        .and_then(|v| v.as_u64())
+                        .and_then(serde_json::Value::as_u64)
                         .unwrap_or(0);
                     info!("Neural API rescan complete: {count} capabilities registered");
                 }
-                Err(e) => warn!("Neural API rescan failed (will retry on first capability.call): {e}"),
+                Err(e) => {
+                    warn!("Neural API rescan failed (will retry on first capability.call): {e}");
+                }
             }
         });
     }
@@ -672,6 +680,287 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
     info!("NUCLEUS stopped.");
 
     Ok(())
+}
+
+/// Parsed spore deploy manifest (`spore.toml` or `.manifest.toml` with deploy section).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub(crate) struct SporeDeployManifest {
+    pub spore: SporeDeploySpec,
+}
+
+/// Deploy parameters embedded in a spore manifest.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub(crate) struct SporeDeploySpec {
+    pub mode: String,
+    pub node_id: String,
+    pub graph_id: String,
+}
+
+/// Summary of a `lifecycle.status` response (pure, testable).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct NucleusStatusSummary {
+    pub count: usize,
+    pub healthy: usize,
+    pub primal_names: Vec<String>,
+}
+
+/// Resolve the Neural API socket for lifecycle RPC calls.
+pub(crate) fn resolve_lifecycle_socket(
+    socket: Option<PathBuf>,
+    family_id: Option<String>,
+) -> (PathBuf, String) {
+    let family = family_id.unwrap_or_else(get_family_id);
+    let path = socket.unwrap_or_else(|| {
+        resolve_neural_api_socket(&family, None, None).unwrap_or_else(|| {
+            SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family}"))
+        })
+    });
+    (path, family)
+}
+
+/// Parse and validate a spore deploy manifest from TOML text.
+pub(crate) fn parse_spore_deploy_manifest(content: &str) -> Result<SporeDeployManifest> {
+    let manifest: SporeDeployManifest =
+        toml::from_str(content).context("Invalid spore manifest")?;
+    if manifest.spore.mode.is_empty() {
+        anyhow::bail!("Spore manifest missing mode");
+    }
+    if manifest.spore.node_id.is_empty() {
+        anyhow::bail!("Spore manifest missing node_id");
+    }
+    if manifest.spore.graph_id.is_empty() {
+        anyhow::bail!("Spore manifest missing graph_id");
+    }
+    Ok(manifest)
+}
+
+/// Parse a `lifecycle.status` RPC result into a summary.
+pub(crate) fn parse_nucleus_status(result: &serde_json::Value) -> Result<NucleusStatusSummary> {
+    let primals = result
+        .get("primals")
+        .and_then(serde_json::Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let primal_names: Vec<String> = primals
+        .iter()
+        .filter_map(|p| p.get("name").and_then(serde_json::Value::as_str))
+        .map(String::from)
+        .collect();
+    let count = result
+        .get("count")
+        .and_then(serde_json::Value::as_u64)
+        .map_or(primal_names.len(), |n| n as usize);
+    let healthy = result
+        .get("healthy")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0) as usize;
+    Ok(NucleusStatusSummary {
+        count,
+        healthy,
+        primal_names,
+    })
+}
+
+/// Send a JSON-RPC request to the Neural API lifecycle endpoint.
+pub(crate) async fn send_lifecycle_rpc(
+    socket_path: &Path,
+    method: &str,
+    params: serde_json::Value,
+) -> Result<serde_json::Value> {
+    let request = JsonRpcRequest::new(method, params);
+    let stream = UnixStream::connect(socket_path)
+        .await
+        .with_context(|| format!("Neural API socket not found at {}", socket_path.display()))?;
+
+    let (reader, mut writer) = stream.into_split();
+    writer
+        .write_all(format!("{}\n", serde_json::to_string(&request)?).as_bytes())
+        .await?;
+
+    let mut buf_reader = BufReader::new(reader);
+    let mut response_line = String::new();
+    buf_reader.read_line(&mut response_line).await?;
+
+    let response: serde_json::Value =
+        serde_json::from_str(response_line.trim()).context("Invalid JSON-RPC response")?;
+
+    if let Some(err) = response.get("error") {
+        anyhow::bail!("JSON-RPC error: {err}");
+    }
+
+    Ok(response)
+}
+
+/// Start NUCLEUS via `lifecycle.start` on the Neural API.
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
+)]
+pub async fn run_start(
+    socket: Option<PathBuf>,
+    family_id: Option<String>,
+    mode: String,
+    node_id: String,
+) -> Result<()> {
+    let (socket_path, family) = resolve_lifecycle_socket(socket, family_id);
+
+    info!("NUCLEUS start (remote lifecycle)");
+    info!("  mode: {mode}");
+    info!("  node: {node_id}");
+    info!("  family: {family}");
+    info!("  socket: {}", socket_path.display());
+
+    let response = send_lifecycle_rpc(
+        &socket_path,
+        "lifecycle.start",
+        serde_json::json!({
+            "mode": mode,
+            "node_id": node_id,
+            "family_id": family,
+        }),
+    )
+    .await?;
+
+    if response.get("result").is_some() {
+        info!("NUCLEUS start succeeded");
+        Ok(())
+    } else {
+        anyhow::bail!("NUCLEUS start failed: unexpected response");
+    }
+}
+
+/// Stop NUCLEUS via `lifecycle.shutdown_all` on the Neural API.
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
+)]
+pub async fn run_stop(socket: Option<PathBuf>, family_id: Option<String>) -> Result<()> {
+    let (socket_path, family) = resolve_lifecycle_socket(socket, family_id);
+
+    info!("NUCLEUS stop (remote lifecycle)");
+    info!("  family: {family}");
+    info!("  socket: {}", socket_path.display());
+
+    let response = send_lifecycle_rpc(
+        &socket_path,
+        "lifecycle.shutdown_all",
+        serde_json::json!({}),
+    )
+    .await?;
+
+    if response.get("result").is_some() {
+        info!("NUCLEUS stop initiated");
+        Ok(())
+    } else {
+        anyhow::bail!("NUCLEUS stop failed: unexpected response");
+    }
+}
+
+/// Query NUCLEUS status via `lifecycle.status` on the Neural API.
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
+)]
+pub async fn run_status(
+    socket: Option<PathBuf>,
+    family_id: Option<String>,
+) -> Result<NucleusStatusSummary> {
+    let (socket_path, family) = resolve_lifecycle_socket(socket, family_id);
+
+    info!("NUCLEUS status");
+    info!("  family: {family}");
+    info!("  socket: {}", socket_path.display());
+
+    let response =
+        send_lifecycle_rpc(&socket_path, "lifecycle.status", serde_json::json!({})).await?;
+
+    let result = response
+        .get("result")
+        .context("lifecycle.status response missing result")?;
+
+    parse_nucleus_status(result)
+}
+
+/// Deploy a spore manifest via `graph.execute` on the Neural API.
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
+)]
+pub async fn run_deploy(
+    spore_file: PathBuf,
+    socket: Option<PathBuf>,
+    family_id: Option<String>,
+) -> Result<()> {
+    if !spore_file.exists() {
+        anyhow::bail!("Spore file not found: {}", spore_file.display());
+    }
+
+    let content = std::fs::read_to_string(&spore_file)
+        .with_context(|| format!("Cannot read spore file: {}", spore_file.display()))?;
+    let manifest = parse_spore_deploy_manifest(&content)?;
+
+    let (socket_path, family) = resolve_lifecycle_socket(socket, family_id);
+
+    info!("NUCLEUS deploy");
+    info!("  spore: {}", spore_file.display());
+    info!("  graph: {}", manifest.spore.graph_id);
+    info!("  mode: {}", manifest.spore.mode);
+    info!("  family: {family}");
+    info!("  socket: {}", socket_path.display());
+
+    let response = send_lifecycle_rpc(
+        &socket_path,
+        "graph.execute",
+        serde_json::json!({
+            "graph_id": manifest.spore.graph_id,
+            "params": {
+                "mode": manifest.spore.mode,
+                "node_id": manifest.spore.node_id,
+                "family_id": family,
+            },
+        }),
+    )
+    .await?;
+
+    if response.get("result").is_some() {
+        info!("NUCLEUS deploy succeeded");
+        Ok(())
+    } else {
+        anyhow::bail!("NUCLEUS deploy failed: unexpected response");
+    }
+}
+
+/// Undeploy a single primal via `lifecycle.apoptosis` on the Neural API.
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
+)]
+pub async fn run_undeploy(
+    primal_name: Option<String>,
+    socket: Option<PathBuf>,
+    family_id: Option<String>,
+) -> Result<()> {
+    let name = primal_name.context("Primal name required for undeploy")?;
+    let (socket_path, family) = resolve_lifecycle_socket(socket, family_id);
+
+    info!("NUCLEUS undeploy");
+    info!("  primal: {name}");
+    info!("  family: {family}");
+    info!("  socket: {}", socket_path.display());
+
+    let response = send_lifecycle_rpc(
+        &socket_path,
+        "lifecycle.apoptosis",
+        serde_json::json!({ "name": name }),
+    )
+    .await?;
+
+    if response.get("result").is_some() {
+        info!("NUCLEUS undeploy initiated for {name}");
+        Ok(())
+    } else {
+        anyhow::bail!("NUCLEUS undeploy failed: unexpected response");
+    }
 }
 
 #[cfg(test)]

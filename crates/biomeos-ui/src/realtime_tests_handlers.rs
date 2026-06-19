@@ -445,7 +445,7 @@ async fn test_subscribe_websocket_success_path() {
         });
         let _ = write
             .send(tokio_tungstenite::tungstenite::Message::Text(
-                serde_json::to_string(&notification).unwrap(),
+                serde_json::to_string(&notification).unwrap().into(),
             ))
             .await;
 

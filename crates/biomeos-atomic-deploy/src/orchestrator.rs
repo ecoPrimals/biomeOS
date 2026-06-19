@@ -138,7 +138,9 @@ impl DeploymentConfig {
                             "{}/{uid}",
                             biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
                         )),
-                        Err(_) => std::path::PathBuf::from(biomeos_types::defaults::DEFAULT_SOCKET_DIR),
+                        Err(_) => {
+                            std::path::PathBuf::from(biomeos_types::defaults::DEFAULT_SOCKET_DIR)
+                        }
                     }
                 }),
             deployment_mode: DeploymentMode::detect().unwrap_or_else(|_| {

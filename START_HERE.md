@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: June 13, 2026
-**Status**: Production Ready (v4.26) — riboCipher transport signal detection (Stream 7), lineage fail-closed, real system metrics (biomeos-system), readiness probes actual discovery, agnostic naming, neural router refactored, all 26 crates `#![forbid(unsafe_code)]`, stale registration pruning, partition-aware routing, guideStone startup, HEALTH-01 compliant, Edition 2024, rust-version 1.87, 0 C deps, scyBorg (AGPL-3.0-or-later)
+**Last Updated**: June 19, 2026
+**Status**: Production Ready (v4.30) — 8,351 tests / 88% coverage, axum 0.8, zero clippy/deny warnings, all production files <400 LOC, riboCipher REJECT (Wave 113), self-knowledge principle, all 26 crates `#![forbid(unsafe_code)]`, Edition 2024, rust-version 1.87, 0 C deps, scyBorg (AGPL-3.0-or-later)
 
 ---
 
@@ -171,5 +171,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Neural API**: 320+ semantic translations, 27 capability domains, L4 weighted routing, L5 perceptron shadow mode, stale registration pruning, partition-aware routing, composition hot-reload, cross-gate routing via mesh relay, adaptive weights (redb-persistent)
 **IPC**: Universal IPC v3.0 — Unix/abstract/TCP + UDS dual-protocol auto-detect + BTSP + `--bind-mode` guideStone startup (HTTP transport removed v3.97; `--tcp-only` deprecated v3.94)
-**Tests**: 7,983+ workspace-wide (0 failures) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production
+**Tests**: 8,351 workspace-wide (0 failures) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production
 **Updated**: June 12, 2026

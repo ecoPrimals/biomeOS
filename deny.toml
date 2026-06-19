@@ -26,6 +26,10 @@ ignore = false
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# tarpc 0.37 (latest) still pins rand 0.8; workspace uses rand 0.9 directly.
+skip-tree = [
+    { crate = "tarpc@0.37", reason = "Latest tarpc release; upstream still depends on rand 0.8" },
+]
 deny = [
     # C-binding crates banned for ecoBin compliance.
     # Expanded from the 14-crate ban list used by groundSpring, wetSpring, and healthSpring.

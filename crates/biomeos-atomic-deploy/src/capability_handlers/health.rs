@@ -6,9 +6,9 @@
 //! Performs health checks on primals via capability-based discovery,
 //! using JSON-RPC health.check over Unix sockets.
 
-#![expect(
-    dead_code,
-    reason = "capability health checks — wired from neural_executor node handlers"
+#![cfg_attr(
+    not(test),
+    expect(dead_code, reason = "wired from neural_executor node handlers")
 )]
 
 use anyhow::Result;

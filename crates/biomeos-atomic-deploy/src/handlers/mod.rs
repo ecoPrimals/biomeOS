@@ -33,8 +33,16 @@
 
 /// Primal self-announcement (`primal.announce`).
 pub mod announce;
-/// Capability routing (`capability_call` submodule: `capability.call`, translation lists).
+#[cfg(test)]
+mod announce_tests;
+/// Capability routing (`capability/call` submodule: `capability.call`, translation lists).
 pub mod capability;
+#[cfg(test)]
+mod capability_call_dispatch_tests;
+#[cfg(test)]
+mod capability_call_gate_tests;
+#[cfg(test)]
+mod capability_call_mesh_tests;
 #[cfg(test)]
 mod capability_call_tests;
 pub(crate) mod capability_heuristics;
@@ -58,6 +66,8 @@ pub mod protocol;
 #[cfg(test)]
 mod protocol_tests;
 pub mod signal;
+#[cfg(test)]
+mod signal_tests;
 pub mod spring_status;
 pub mod topology;
 

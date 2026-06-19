@@ -164,7 +164,7 @@ impl GraphEventWebSocketServer {
         // Spawn task to send responses
         let send_task = tokio::spawn(async move {
             while let Some(msg) = response_rx.recv().await {
-                if write.send(Message::Text(msg)).await.is_err() {
+                if write.send(Message::Text(msg.into())).await.is_err() {
                     break;
                 }
             }

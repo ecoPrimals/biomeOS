@@ -206,3 +206,7 @@ impl GraphExecutor {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "neural_executor_rollback_tests.rs"]
+mod tests;

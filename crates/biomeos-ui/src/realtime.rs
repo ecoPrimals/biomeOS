@@ -254,7 +254,8 @@ impl RealTimeEventSubscriber {
         write
             .send(Message::Text(
                 serde_json::to_string(&subscribe_request)
-                    .expect("subscribe_request is JSON-serializable"),
+                    .expect("subscribe_request is JSON-serializable")
+                    .into(),
             ))
             .await
             .context("Failed to send subscribe request")?;

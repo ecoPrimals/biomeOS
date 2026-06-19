@@ -236,11 +236,22 @@ async fn test_find_on_mesh_no_nestgate() {
 #[tokio::test]
 async fn test_list_mesh_models_no_nestgate() {
     let tmp = tempfile::tempdir().unwrap();
-    let cache = ModelCache::with_cache_dir(tmp.path().to_path_buf())
-        .await
-        .unwrap();
-    let models = cache.list_mesh_models().await;
-    assert!(models.is_empty());
+    let iso = tempfile::tempdir().unwrap();
+    let iso_path = iso.path().to_str().unwrap();
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let cache = ModelCache::with_cache_dir(tmp.path().to_path_buf())
+                .await
+                .unwrap();
+            let models = cache.list_mesh_models().await;
+            assert!(models.is_empty());
+        },
+    )
+    .await;
 }
 
 #[tokio::test]

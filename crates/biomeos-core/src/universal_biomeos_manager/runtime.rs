@@ -161,21 +161,17 @@ impl UniversalBiomeOSManager {
         let mut result = HashMap::new();
 
         // Real system metrics via biomeos-system
-        let sys_info = biomeos_system::SystemInspector::get_system_info().await.ok();
-        let resources = biomeos_system::SystemInspector::get_resource_usage().await.ok();
+        let sys_info = biomeos_system::SystemInspector::get_system_info()
+            .await
+            .ok();
+        let resources = biomeos_system::SystemInspector::get_resource_usage()
+            .await
+            .ok();
 
-        let cpu_pct = resources
-            .as_ref()
-            .and_then(|r| r.cpu_usage)
-            .unwrap_or(0.0);
+        let cpu_pct = resources.as_ref().and_then(|r| r.cpu_usage).unwrap_or(0.0);
         let mem_info = sys_info.as_ref().map(|s| &s.memory_info);
-        let disk_pct = resources
-            .as_ref()
-            .and_then(|r| r.disk_usage)
-            .unwrap_or(0.0);
-        let load = sys_info
-            .as_ref()
-            .map_or(0.0, |s| s.load_average.load_1m);
+        let disk_pct = resources.as_ref().and_then(|r| r.disk_usage).unwrap_or(0.0);
+        let load = sys_info.as_ref().map_or(0.0, |s| s.load_average.load_1m);
 
         result.insert(
             "system".to_string(),

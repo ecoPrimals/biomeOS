@@ -153,7 +153,7 @@ fn parse_ionic_token_extracts_claims() {
         "sub": "user1",
         "scope": ["compute.*", "storage.*"],
         "iat": 1000,
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
         "jti": "tok-1"
     }));
     let claims = IonicTokenClaims::parse(&token).unwrap();
@@ -340,7 +340,7 @@ fn token_with_matching_scope_passes_enforced() {
     let gate = MethodGate::new(EnforcementMode::Enforced);
     let token = make_ionic_token(&serde_json::json!({
         "scope": ["graph.*"],
-        "exp": 9999999999u64
+        "exp": 9_999_999_999_u64
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
     assert!(gate.check("graph.execute", &caller).is_ok());
@@ -351,7 +351,7 @@ fn token_with_wrong_scope_rejected_enforced() {
     let gate = MethodGate::new(EnforcementMode::Enforced);
     let token = make_ionic_token(&serde_json::json!({
         "scope": ["compute.*"],
-        "exp": 9999999999u64
+        "exp": 9_999_999_999_u64
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
     let err = gate.check("capability.call", &caller).unwrap_err();
@@ -363,7 +363,7 @@ fn token_with_wrong_scope_allowed_permissive() {
     let gate = MethodGate::new(EnforcementMode::Permissive);
     let token = make_ionic_token(&serde_json::json!({
         "scope": ["compute.*"],
-        "exp": 9999999999u64
+        "exp": 9_999_999_999_u64
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
     assert!(gate.check("graph.execute", &caller).is_ok());
@@ -386,7 +386,7 @@ fn method_allowlist_enforced() {
     let gate = MethodGate::new(EnforcementMode::Enforced);
     let token = make_ionic_token(&serde_json::json!({
         "scope": ["*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
         "resources": { "method_allowlist": ["capability.call"] }
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
@@ -432,7 +432,7 @@ fn auth_check_with_ionic_token() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "researcher",
         "scope": ["compute.*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
         "resources": { "mem": 4096 }
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
@@ -484,7 +484,7 @@ fn dispatch_timeout_ms_from_envelope() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "worker",
         "scope": ["*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
         "resources": { "timeout_ms": 5000 }
     }));
     let claims = IonicTokenClaims::parse(&token).unwrap();
@@ -496,7 +496,7 @@ fn dispatch_timeout_ms_none_when_absent() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "worker",
         "scope": ["*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
         "resources": { "mem": 4096 }
     }));
     let claims = IonicTokenClaims::parse(&token).unwrap();
@@ -508,7 +508,7 @@ fn dispatch_timeout_ms_none_without_envelope() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "worker",
         "scope": ["*"],
-        "exp": 9999999999u64
+        "exp": 9_999_999_999_u64
     }));
     let claims = IonicTokenClaims::parse(&token).unwrap();
     assert_eq!(claims.dispatch_timeout_ms(), None);
@@ -543,7 +543,7 @@ fn auth_check_includes_resource_envelope_details() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "researcher",
         "scope": ["compute.*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
         "resources": {
             "mem": 4096,
             "cpu": 2.5,
@@ -564,10 +564,10 @@ fn cpu_field_in_resource_envelope_parses() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "jupyter-user",
         "scope": ["compute.*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
         "resources": {
             "cpu": 2.0,
-            "mem": 2147483648u64,
+            "mem": 2_147_483_648_u64,
             "timeout_ms": 60000
         }
     }));
@@ -583,7 +583,7 @@ fn resource_allowed_cpu_over_limit_rejected() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "user",
         "scope": ["*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
         "resources": { "cpu": 2.0 }
     }));
     let claims = IonicTokenClaims::parse(&token).unwrap();
@@ -600,7 +600,7 @@ fn auth_check_returns_primalspring_contract_fields() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "test-user",
         "scope": ["graph.*", "compute.*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
     }));
     let caller = CallerContext::loopback().with_bearer_token(token);
     let result = gate.handle_auth_check(&caller);
@@ -632,7 +632,7 @@ fn local_claims_verifier_parses_ionic_token() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "verifier-test",
         "scope": ["*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
     }));
     let claims = verifier.verify(&token).unwrap();
     assert_eq!(claims.sub, "verifier-test");
@@ -650,7 +650,7 @@ fn noop_verifier_always_returns_none() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "test",
         "scope": ["*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
     }));
     assert!(verifier.verify(&token).is_none());
 }
@@ -663,7 +663,7 @@ fn security_verifier_sync_falls_back_to_local_parse() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "federation-test",
         "scope": ["compute.*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
     }));
     let claims = verifier.verify(&token).unwrap();
     assert_eq!(claims.sub, "federation-test");
@@ -681,7 +681,7 @@ async fn security_verifier_async_degrades_gracefully_when_unreachable() {
     let token = make_ionic_token(&serde_json::json!({
         "sub": "async-fallback",
         "scope": ["*"],
-        "exp": 9999999999u64,
+        "exp": 9_999_999_999_u64,
     }));
     let claims = verifier.verify_async(&token).await;
     assert!(claims.is_some(), "should degrade to local parse");

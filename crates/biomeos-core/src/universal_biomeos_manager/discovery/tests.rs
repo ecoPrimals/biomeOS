@@ -111,15 +111,26 @@ async fn test_discover_with_registry_config() {
 
 #[tokio::test]
 async fn test_discover_by_capability_empty() {
-    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
-    manager.initialize().expect("init");
+    let iso = tempfile::tempdir().expect("tempdir");
+    let iso_path = iso.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
+            manager.initialize().expect("init");
 
-    let caps = vec![PrimalCapability::new("compute", "execution", "1.0")];
-    let ids = manager
-        .discover_by_capability(&caps)
-        .await
-        .expect("discover");
-    assert!(ids.is_empty());
+            let caps = vec![PrimalCapability::new("compute", "execution", "1.0")];
+            let ids = manager
+                .discover_by_capability(&caps)
+                .await
+                .expect("discover");
+            assert!(ids.is_empty());
+        },
+    )
+    .await;
 }
 
 #[tokio::test]
@@ -146,23 +157,34 @@ async fn test_discover_by_capability_matching() {
 
 #[tokio::test]
 async fn test_discover_by_capability_no_match() {
-    let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
-    manager.initialize().expect("init");
+    let iso = tempfile::tempdir().expect("tempdir");
+    let iso_path = iso.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let manager = UniversalBiomeOSManager::with_default_config().expect("manager");
+            manager.initialize().expect("init");
 
-    let primal = test_primal_info(
-        "cap-2",
-        "storage-svc",
-        "unix:///tmp/storage.sock",
-        vec![PrimalCapability::new("storage", "nestgate", "1.0")],
-    );
-    manager.register_primal(primal).await.expect("register");
+            let primal = test_primal_info(
+                "cap-2",
+                "storage-svc",
+                "unix:///tmp/storage.sock",
+                vec![PrimalCapability::new("storage", "nestgate", "1.0")],
+            );
+            manager.register_primal(primal).await.expect("register");
 
-    let caps = vec![PrimalCapability::new("compute", "execution", "1.0")];
-    let ids = manager
-        .discover_by_capability(&caps)
-        .await
-        .expect("discover");
-    assert!(ids.is_empty());
+            let caps = vec![PrimalCapability::new("compute", "execution", "1.0")];
+            let ids = manager
+                .discover_by_capability(&caps)
+                .await
+                .expect("discover");
+            assert!(ids.is_empty());
+        },
+    )
+    .await;
 }
 
 #[tokio::test]

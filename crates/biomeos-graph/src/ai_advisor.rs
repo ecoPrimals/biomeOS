@@ -48,5 +48,18 @@ pub struct AiGraphAdvisor {
 }
 
 #[cfg(test)]
+impl AiGraphAdvisor {
+    /// Configure Squirrel availability for unit tests of internal error paths.
+    pub(crate) fn test_set_squirrel_state(&mut self, available: bool, socket: Option<PathBuf>) {
+        self.squirrel_available = available;
+        self.ai_socket_path = socket;
+    }
+}
+
+#[cfg(test)]
+#[path = "ai_advisor_core_tests.rs"]
+mod core_tests;
+
+#[cfg(test)]
 #[path = "ai_advisor_tests.rs"]
 mod tests;

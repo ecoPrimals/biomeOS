@@ -69,9 +69,9 @@ pub async fn verify_primal_health(socket_path: &Path, primal_name: &str) -> Resu
 ///
 /// # Returns
 /// Vector of capability strings the primal provides
-#[expect(
-    dead_code,
-    reason = "prepared for discovery-based health verification in mesh mode"
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "wired for mesh health verification")
 )]
 pub async fn verify_primal_health_with_discovery(primal_name: &str) -> Result<Vec<String>> {
     // Discover primal with automatic transport fallback
@@ -146,9 +146,9 @@ pub async fn establish_btsp_tunnel(security_socket: &Path, family_id: &str) -> R
 /// Establish a BTSP tunnel using auto-discovery (Universal IPC v3.0)
 ///
 /// Uses `AtomicClient::discover()` to find `BearDog` automatically.
-#[expect(
-    dead_code,
-    reason = "prepared for discovery-based BTSP tunnel in mesh mode"
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "wired for mesh BTSP tunnel establishment")
 )]
 pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<String> {
     // Discover security provider with automatic transport fallback
@@ -314,10 +314,23 @@ mod tests {
     /// establish_btsp_tunnel_with_discovery — fails when beardog not found
     #[tokio::test]
     async fn test_establish_btsp_tunnel_with_discovery_failure() {
-        let result = establish_btsp_tunnel_with_discovery("test-family").await;
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("Failed") || err.contains("discover") || err.contains("not found"));
+        let iso = tempfile::tempdir().expect("tempdir");
+        let iso_path = iso.path().to_str().expect("utf8");
+        temp_env::async_with_vars(
+            [
+                ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+                ("XDG_RUNTIME_DIR", Some(iso_path)),
+            ],
+            async {
+                let result = establish_btsp_tunnel_with_discovery("test-family").await;
+                assert!(result.is_err());
+                let err = result.unwrap_err().to_string();
+                assert!(
+                    err.contains("Failed") || err.contains("discover") || err.contains("not found")
+                );
+            },
+        )
+        .await;
     }
 
     #[test]

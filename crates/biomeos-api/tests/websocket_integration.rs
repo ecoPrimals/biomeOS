@@ -82,7 +82,9 @@ async fn test_websocket_connection() -> Result<()> {
         "id": 1
     });
 
-    write.send(Message::Text(request.to_string())).await?;
+    write
+        .send(Message::Text(request.to_string().into()))
+        .await?;
 
     // Read response
     if let Some(Ok(Message::Text(text))) = read.next().await {
@@ -106,7 +108,9 @@ async fn test_json_rpc_error_codes() -> Result<()> {
     let (mut write, mut read) = ws_stream.split();
 
     // Test invalid JSON (parse error -32700)
-    write.send(Message::Text("not json".to_string())).await?;
+    write
+        .send(Message::Text("not json".to_string().into()))
+        .await?;
 
     if let Some(Ok(Message::Text(text))) = read.next().await {
         let response: JsonRpcResponse = serde_json::from_str(&text)?;
@@ -123,7 +127,9 @@ async fn test_json_rpc_error_codes() -> Result<()> {
         "id": 1
     });
 
-    write.send(Message::Text(request.to_string())).await?;
+    write
+        .send(Message::Text(request.to_string().into()))
+        .await?;
 
     if let Some(Ok(Message::Text(text))) = read.next().await {
         let response: JsonRpcResponse = serde_json::from_str(&text)?;
@@ -157,7 +163,7 @@ async fn test_subscription_management() -> Result<()> {
     });
 
     write
-        .send(Message::Text(subscribe_request.to_string()))
+        .send(Message::Text(subscribe_request.to_string().into()))
         .await?;
 
     // Read subscription response
@@ -178,7 +184,9 @@ async fn test_subscription_management() -> Result<()> {
         "id": 2
     });
 
-    write.send(Message::Text(list_request.to_string())).await?;
+    write
+        .send(Message::Text(list_request.to_string().into()))
+        .await?;
 
     if let Some(Ok(Message::Text(text))) = read.next().await {
         let response: JsonRpcResponse = serde_json::from_str(&text)?;
@@ -199,7 +207,7 @@ async fn test_subscription_management() -> Result<()> {
     });
 
     write
-        .send(Message::Text(unsubscribe_request.to_string()))
+        .send(Message::Text(unsubscribe_request.to_string().into()))
         .await?;
 
     if let Some(Ok(Message::Text(text))) = read.next().await {
@@ -236,7 +244,7 @@ async fn test_event_filtering() -> Result<()> {
     });
 
     write
-        .send(Message::Text(subscribe_request.to_string()))
+        .send(Message::Text(subscribe_request.to_string().into()))
         .await?;
 
     // Read subscription confirmation
@@ -277,7 +285,7 @@ async fn test_concurrent_subscriptions() -> Result<()> {
                         "id": 1
                     });
 
-                    let _ = write.send(Message::Text(request.to_string())).await;
+                    let _ = write.send(Message::Text(request.to_string().into())).await;
 
                     // Hold connection briefly
                     sleep(Duration::from_millis(100)).await;
@@ -318,7 +326,9 @@ async fn test_invalid_params() -> Result<()> {
         "id": 1
     });
 
-    write.send(Message::Text(request.to_string())).await?;
+    write
+        .send(Message::Text(request.to_string().into()))
+        .await?;
 
     if let Some(Ok(Message::Text(text))) = read.next().await {
         let response: JsonRpcResponse = serde_json::from_str(&text)?;
@@ -375,7 +385,9 @@ async fn test_connection_cleanup() -> Result<()> {
         "id": 1
     });
 
-    write.send(Message::Text(request.to_string())).await?;
+    write
+        .send(Message::Text(request.to_string().into()))
+        .await?;
 
     // Read response
     if let Some(Ok(Message::Text(_))) = read.next().await {

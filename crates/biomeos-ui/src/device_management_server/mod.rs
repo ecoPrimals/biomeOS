@@ -111,7 +111,10 @@ pub async fn run() -> Result<()> {
     info!("📡 Advertising capability: device.management");
 
     if let Err(e) = discovery_registration::register_with_discovery_provider(&socket_path).await {
-        warn!("Could not register with discovery provider: {} (local-only mode)", e);
+        warn!(
+            "Could not register with discovery provider: {} (local-only mode)",
+            e
+        );
     }
 
     info!("Waiting for visualization primal connections...");

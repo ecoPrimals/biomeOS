@@ -243,3 +243,7 @@ async fn send_jsonrpc(socket_path: &Path, request: &JsonRpcRequest) -> Result<se
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod mod_tests;

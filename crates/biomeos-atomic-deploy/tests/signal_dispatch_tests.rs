@@ -6,6 +6,8 @@
 //! signals to graph paths, loads all 19 signal graphs, and intercepts
 //! signal-tier capability calls.
 
+#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+
 use std::path::PathBuf;
 
 fn graphs_dir() -> PathBuf {
@@ -263,9 +265,11 @@ fn nest_sync_graph_has_cross_spring_pipeline() {
 
     let metadata = graph.get("metadata").expect("missing [graph.metadata]");
     let fragments = metadata["fragments"].as_array().expect("fragments array");
-    let fragment_strs: Vec<&str> = fragments.iter().filter_map(|f| f.as_str()).collect();
     assert!(
-        fragment_strs.contains(&"cross_gate"),
+        fragments
+            .iter()
+            .filter_map(|f| f.as_str())
+            .any(|s| s == "cross_gate"),
         "nest.sync should declare cross_gate fragment for cross-spring exchange"
     );
 

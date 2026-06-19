@@ -2,6 +2,43 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.30 (2026-06-19) — Deep Debt Evolution Sprint (Wave 116/118)
+
+### Coverage & Test Evolution
+- **8,351 tests**, 0 failures (up from ~7,983)
+- **88.28% line coverage** (up from 85.55%), **89.84% branch**
+- New test suites: `nucleus_ingest` (95%), `graph_ops` (80%), `nucleus` (85%), `vm_federation` (97%), `neural_router` (99%), `btsp_client_phase3` (98%), `discovery_init` (88%), `neural_executor_rollback` (99%), `ai_advisor_core` (100%), `announce` (89%), `enrichment` (96%), `routing` (98%), `signal` (14 tests), `server_lifecycle` (12 tests), `capability/call/{dispatch,gate,mesh}` (22 tests)
+
+### Dependency Evolution
+- **axum** 0.7 → 0.8 (route syntax `:param` → `{param}`, typed state)
+- **tokio-tungstenite** 0.24 → 0.29 (`Utf8Bytes` API)
+- **etcetera** 0.8 → 0.11, **mdns-sd** 0.11 → 0.20
+- Eliminated duplicate transitive deps: `thiserror` 1→2, `windows-sys` 0.48→0.61
+- `tarpc@0.37` skip-tree documented in `deny.toml` (upstream pinned to rand 0.8)
+- `biomeos-federation` wildcard dev-dep fixed
+
+### Production File Refactoring
+- `capability.rs` (753L) → `capability/` module tree (12 files, max 341L)
+- `error/core.rs` (745L) → `core/` directory (5 files, max 364L)
+- `btsp_client.rs` (739L) → `btsp_client/` directory (6 files, max 189L)
+
+### Quality Gates
+- `cargo clippy --workspace --all-targets -- -D warnings` → **0 errors**
+- `cargo deny check` → advisories ok, bans ok, licenses ok, sources ok
+- `cargo fmt --check` → clean
+- Zero TODO/FIXME in Rust source
+
+### Test Isolation
+- `temp-env` (async_closure) for socket discovery isolation across 8 previously-flaky tests
+- All tests deterministic — no host socket leakage
+
+## v4.29 (2026-06-14) — Primal-Neutral Naming + Self-Knowledge Principle (Wave 114)
+
+### Naming evolution
+- Agnostic primal naming enforced across orchestrator — no hardcoded primal-specific constants in production dispatch
+- Self-knowledge principle: biomeOS only maps capabilities, individual primals discovered at runtime
+- SSOT for primal names in `primal_names.rs` + `constants/` (test fixtures only)
+
 ## v4.28 (2026-06-14) — riboCipher REJECT + Primal Auto-Registration (Wave 113)
 
 ### riboCipher REJECT (Wave 113 policy)

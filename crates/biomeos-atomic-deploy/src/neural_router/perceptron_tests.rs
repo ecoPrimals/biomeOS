@@ -131,8 +131,8 @@ fn shadow_default_starts_in_shadow_phase() {
 fn weight_file_load_wrong_size_returns_none() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("bad_weights.bin");
-    std::fs::write(&path, &[0u8; 10]).unwrap();
-    assert!(PerceptronWeights::load_from_file(&path).is_none());
+    std::fs::write(path.as_path(), [0u8; 10]).unwrap();
+    assert!(PerceptronWeights::load_from_file(path.as_path()).is_none());
 }
 
 #[test]

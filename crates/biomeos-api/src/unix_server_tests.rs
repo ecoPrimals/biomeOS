@@ -88,7 +88,9 @@ async fn test_serve_unix_socket_handles_http_request() {
     // Send riboCipher signal prefix (required by Wave 113 policy)
     use tokio::io::AsyncWriteExt;
     let mut raw = stream;
-    raw.write_all(&[0xEC, 0x01]).await.expect("riboCipher prefix");
+    raw.write_all(&[0xEC, 0x01])
+        .await
+        .expect("riboCipher prefix");
     let io = hyper_util::rt::TokioIo::new(raw);
 
     let (mut sender, conn) = hyper::client::conn::http1::handshake(io)
@@ -114,7 +116,9 @@ async fn test_serve_unix_socket_handles_http_request() {
         .await
         .expect("connect2");
     let mut raw2 = stream2;
-    raw2.write_all(&[0xEC, 0x01]).await.expect("riboCipher prefix2");
+    raw2.write_all(&[0xEC, 0x01])
+        .await
+        .expect("riboCipher prefix2");
     let io2 = hyper_util::rt::TokioIo::new(raw2);
     let (mut sender2, conn2) = hyper::client::conn::http1::handshake(io2)
         .await
@@ -173,7 +177,10 @@ async fn test_raw_jsonrpc_health_check() {
         .expect("connect");
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    stream.write_all(&[0xEC, 0x01]).await.expect("riboCipher prefix");
+    stream
+        .write_all(&[0xEC, 0x01])
+        .await
+        .expect("riboCipher prefix");
     let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"health.check\",\"params\":{},\"id\":1}\n";
     stream.write_all(req).await.expect("write");
     stream.flush().await.expect("flush");
@@ -210,7 +217,10 @@ async fn test_raw_jsonrpc_identity_get() {
         .expect("connect");
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    stream.write_all(&[0xEC, 0x01]).await.expect("riboCipher prefix");
+    stream
+        .write_all(&[0xEC, 0x01])
+        .await
+        .expect("riboCipher prefix");
     let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"identity.get\",\"params\":{},\"id\":42}\n";
     stream.write_all(req).await.expect("write");
     stream.flush().await.expect("flush");
@@ -247,7 +257,10 @@ async fn test_raw_jsonrpc_capabilities_list() {
         .expect("connect");
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    stream.write_all(&[0xEC, 0x01]).await.expect("riboCipher prefix");
+    stream
+        .write_all(&[0xEC, 0x01])
+        .await
+        .expect("riboCipher prefix");
     let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"capabilities.list\",\"params\":{},\"id\":99}\n";
     stream.write_all(req).await.expect("write");
     stream.flush().await.expect("flush");
@@ -284,7 +297,10 @@ async fn test_raw_jsonrpc_unknown_method_returns_error() {
         .expect("connect");
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    stream.write_all(&[0xEC, 0x01]).await.expect("riboCipher prefix");
+    stream
+        .write_all(&[0xEC, 0x01])
+        .await
+        .expect("riboCipher prefix");
     let req = b"{\"jsonrpc\":\"2.0\",\"method\":\"nonexistent.method\",\"params\":{},\"id\":7}\n";
     stream.write_all(req).await.expect("write");
     stream.flush().await.expect("flush");

@@ -153,23 +153,34 @@ async fn test_cache_manifest_roundtrip_serialization() {
 #[tokio::test]
 async fn test_resolve_not_found_after_manifest_stale_path() {
     let tmp = TempDir::new().unwrap();
-    let model_dir = tmp.path().join("gone");
-    std::fs::create_dir_all(&model_dir).unwrap();
-    std::fs::write(model_dir.join("x.safetensors"), b"x").unwrap();
+    let iso = TempDir::new().unwrap();
+    let iso_path = iso.path().to_str().unwrap();
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let model_dir = tmp.path().join("gone");
+            std::fs::create_dir_all(&model_dir).unwrap();
+            std::fs::write(model_dir.join("x.safetensors"), b"x").unwrap();
 
-    let cache_dir = tmp.path().join("cache");
-    {
-        let mut cache = ModelCache::with_cache_dir(cache_dir.clone()).await.unwrap();
-        cache
-            .register_model("stale/m", &model_dir, "test://")
-            .await
-            .unwrap();
-    }
-    std::fs::remove_dir_all(&model_dir).unwrap();
+            let cache_dir = tmp.path().join("cache");
+            {
+                let mut cache = ModelCache::with_cache_dir(cache_dir.clone()).await.unwrap();
+                cache
+                    .register_model("stale/m", &model_dir, "test://")
+                    .await
+                    .unwrap();
+            }
+            std::fs::remove_dir_all(&model_dir).unwrap();
 
-    let cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
-    let res = cache.resolve("stale/m").await;
-    assert!(matches!(res, ModelResolution::NotFound));
+            let cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+            let res = cache.resolve("stale/m").await;
+            assert!(matches!(res, ModelResolution::NotFound));
+        },
+    )
+    .await;
 }
 
 #[tokio::test]

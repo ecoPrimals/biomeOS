@@ -2,6 +2,10 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 #![expect(clippy::unwrap_used, reason = "test")]
+#![expect(
+    clippy::float_cmp,
+    reason = "test comparisons against exact known constants"
+)]
 
 use super::*;
 use redb::Database;

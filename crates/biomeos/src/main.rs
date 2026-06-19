@@ -525,6 +525,10 @@ fn resolve_bind_mode(
 }
 
 /// Dispatch to mode handler based on CLI (thin orchestration)
+#[expect(
+    clippy::too_many_lines,
+    reason = "flat dispatch table — complexity is O(1) per arm"
+)]
 pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
     match cli.mode {
         Mode::Cli {} => modes::cli::run(modes::cli::CliCommand).await,

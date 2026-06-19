@@ -41,6 +41,8 @@ biomeos-nucleus = { path = "../biomeos-nucleus", version = "0.1.0" }
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
 tempfile = { workspace = true }
+temp-env = { workspace = true }
+biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 criterion = { workspace = true, features = ["html_reports"] }
 
 [[bench]]

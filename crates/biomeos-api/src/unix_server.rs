@@ -85,15 +85,14 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
 
                     // riboCipher transport signal detection (Wave 113: REJECT unsignalled).
                     let transport_tier = match reader.fill_buf().await {
-                        Ok(buf) if buf.len() >= 2
-                            && biomeos_types::constants::ribocipher::is_signal_byte(buf[0]) =>
+                        Ok(buf)
+                            if buf.len() >= 2
+                                && biomeos_types::constants::ribocipher::is_signal_byte(buf[0]) =>
                         {
                             let tier = buf[0];
                             let version = buf[1];
                             reader.consume(biomeos_types::constants::ribocipher::SIGNAL_LEN);
-                            debug!(
-                                "riboCipher signal: tier=0x{tier:02X} version={version}"
-                            );
+                            debug!("riboCipher signal: tier=0x{tier:02X} version={version}");
                             Some(tier)
                         }
                         _ => {

@@ -314,8 +314,7 @@ impl NeuralRouter {
                 };
 
                 let socket_str = path.to_string_lossy().to_string();
-                let capabilities =
-                    probe_primal_capabilities_standalone(socket_str.as_str()).await;
+                let capabilities = probe_primal_capabilities_standalone(socket_str.as_str()).await;
 
                 if capabilities.is_empty() {
                     debug!("   {} — no capabilities during lazy rescan", primal_name);

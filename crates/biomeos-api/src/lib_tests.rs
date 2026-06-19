@@ -152,7 +152,7 @@ async fn events_ws_welcome_and_subscribe_roundtrip() {
         "id": 7
     });
     write
-        .send(WsMessage::Text(sub.to_string()))
+        .send(WsMessage::Text(sub.to_string().into()))
         .await
         .expect("send");
     let reply = read.next().await.expect("reply").expect("ok");
@@ -168,7 +168,7 @@ async fn events_ws_welcome_and_subscribe_roundtrip() {
         "id": 8
     });
     write
-        .send(WsMessage::Text(unsub.to_string()))
+        .send(WsMessage::Text(unsub.to_string().into()))
         .await
         .expect("unsub");
     let list = serde_json::json!({
@@ -177,7 +177,7 @@ async fn events_ws_welcome_and_subscribe_roundtrip() {
         "id": 9
     });
     write
-        .send(WsMessage::Text(list.to_string()))
+        .send(WsMessage::Text(list.to_string().into()))
         .await
         .expect("list");
     join.abort();
@@ -519,7 +519,7 @@ async fn router_events_ws_invalid_json_and_unknown_method() {
         "params": {}
     });
     write
-        .send(WsMessage::Text(unknown.to_string()))
+        .send(WsMessage::Text(unknown.to_string().into()))
         .await
         .expect("send unknown");
     let method_reply = read.next().await.expect("method reply").expect("ok");
@@ -555,7 +555,7 @@ async fn router_events_ws_binary_message_ignored_no_reply() {
     let _welcome = read.next().await.expect("welcome").expect("msg");
 
     write
-        .send(WsMessage::Binary(vec![1, 2, 3]))
+        .send(WsMessage::Binary(vec![1, 2, 3].into()))
         .await
         .expect("binary");
     let next = tokio::time::timeout(std::time::Duration::from_millis(200), read.next()).await;
@@ -570,7 +570,7 @@ async fn router_events_ws_binary_message_ignored_no_reply() {
         "method": "events.list_subscriptions",
     });
     write
-        .send(WsMessage::Text(ping.to_string()))
+        .send(WsMessage::Text(ping.to_string().into()))
         .await
         .expect("list");
     let after = read.next().await.expect("after binary").expect("ok");

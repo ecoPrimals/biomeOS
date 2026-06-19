@@ -219,3 +219,7 @@ fn decode_shared_secret_to_key(hex_str: &str) -> Option<[u8; 32]> {
         .collect();
     <[u8; 32]>::try_from(bytes.as_slice()).ok()
 }
+
+#[cfg(test)]
+#[path = "btsp_client_phase3_tests.rs"]
+mod tests;

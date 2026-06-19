@@ -245,14 +245,11 @@ async fn test_hash_via_capability_no_socket_returns_none() {
     // fallback discovery will find them and return Some — that's correct
     // production behavior, not a test failure.
     let result = hash_via_capability(None, "test-no-primals-d41d8cd98f", "data").await;
-    let has_live_crypto = std::env::var("XDG_RUNTIME_DIR")
-        .ok()
-        .map(|d| {
-            std::path::Path::new(&d)
-                .join("biomeos/crypto.sock")
-                .exists()
-        })
-        .unwrap_or(false);
+    let has_live_crypto = std::env::var("XDG_RUNTIME_DIR").ok().is_some_and(|d| {
+        std::path::Path::new(&d)
+            .join("biomeos/crypto.sock")
+            .exists()
+    });
     if !has_live_crypto {
         assert!(result.is_none(), "no socket should return None");
     }

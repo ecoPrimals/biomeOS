@@ -94,7 +94,7 @@ thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 clap = { version = "4.0", features = ["derive"] }
-axum = { version = "0.7", features = ["ws"] }
+axum = { version = "0.8", features = ["ws"] }
 tower = { version = "0.5", features = [] }
 ureq = { version = "2.9", default-features = false, features = ["json"] }
 
@@ -115,10 +115,10 @@ dashmap = "5.5"
 hyper = { version = "1.0", default-features = false, features = ["client", "server", "http1"] }
 
 # Testing
-temp-env = "0.3"
+temp-env = { version = "0.3", features = ["async_closure"] }
 tempfile = "3.8"
 criterion = "0.5"
-etcetera = "0.8"
+etcetera = "0.11"
 
 rand = "0.9"
 sha2 = "0.10"
@@ -133,7 +133,7 @@ tokio-util = { version = "0.7", default-features = false }
 tokio-stream = "0.1"
 
 # WebSockets / async helpers
-tokio-tungstenite = "0.24"
+tokio-tungstenite = "0.29"
 futures-util = "0.3"
 async-stream = "0.3.6"
 
@@ -172,7 +172,7 @@ humantime = "2.1"
 redb = "2.4"
 lz4_flex = "0.11"
 hex = "0.4"
-mdns-sd = "0.11"
+mdns-sd = "0.20"
 
 # Async I/O & bytes helpers
 async-fs = "2.1"

@@ -16,12 +16,15 @@ mod discovery_composite;
 mod discovery_primal;
 mod discovery_registry;
 mod forwarding;
-mod registry;
 #[cfg(test)]
 mod forwarding_routing_tests;
 #[cfg(test)]
 mod forwarding_tests;
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod mod_tests;
 pub mod perceptron;
+mod registry;
 mod types;
 pub mod weights;
 
@@ -445,7 +448,6 @@ impl NeuralRouter {
     pub async fn composition_patterns_json(&self) -> serde_json::Value {
         self.composition_patterns.read().await.to_json()
     }
-
 }
 
 /// Probe a primal socket for capabilities (standalone, no `NeuralApiServer` dependency).

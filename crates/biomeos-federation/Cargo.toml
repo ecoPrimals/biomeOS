@@ -36,7 +36,7 @@ base64 = { workspace = true }
 test-helpers = []
 
 [dev-dependencies]
-biomeos-federation = { path = ".", features = ["test-helpers"] }
+biomeos-federation = { path = ".", version = "0.1.0", features = ["test-helpers"] }
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }

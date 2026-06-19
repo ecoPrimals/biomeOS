@@ -122,7 +122,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
     });
 
     if sender
-        .send(Message::Text(welcome.to_string()))
+        .send(Message::Text(welcome.to_string().into()))
         .await
         .is_err()
     {
@@ -181,7 +181,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                             ),
                         };
                         if let Ok(json) = serde_json::to_string(&response) {
-                            let _ = sender.send(Message::Text(json)).await;
+                            let _ = sender.send(Message::Text(json.into())).await;
                         }
                     }
                     Some(Ok(_)) => {} // Ignore non-text messages
@@ -191,7 +191,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
             pushed = push_rx.recv() => {
                 match pushed {
                     Some(json) => {
-                        if sender.send(Message::Text(json)).await.is_err() {
+                        if sender.send(Message::Text(json.into())).await.is_err() {
                             break;
                         }
                     }
@@ -308,11 +308,11 @@ fn register_api_routes(
             get(handlers::live_discovery::get_live_primals),
         )
         .route(
-            "/api/v1/discovery/capability/:domain",
+            "/api/v1/discovery/capability/{domain}",
             get(handlers::live_discovery::get_primals_by_capability),
         )
         .route(
-            "/api/v1/discovery/type/:primal_type",
+            "/api/v1/discovery/type/{primal_type}",
             get(handlers::live_discovery::get_primals_by_type),
         )
         .route(
@@ -334,17 +334,17 @@ fn register_api_routes(
             post(handlers::genome::self_replicate),
         )
         .route(
-            "/api/v1/genome/:id/verify",
+            "/api/v1/genome/{id}/verify",
             get(handlers::genome::verify_genome),
         )
         .route("/api/v1/genome/list", get(handlers::genome::list_genomes))
         .route(
-            "/api/v1/genome/:id/download",
+            "/api/v1/genome/{id}/download",
             get(handlers::genome::download_genome),
         )
         .route("/api/v1/genome/build", post(handlers::genome::build_genome))
         .route(
-            "/api/v1/genome/:id/info",
+            "/api/v1/genome/{id}/info",
             get(handlers::genome::get_genome_info),
         )
         .route(
@@ -357,15 +357,15 @@ fn register_api_routes(
             get(handlers::genome_dist::get_manifest),
         )
         .route(
-            "/api/v1/genome/dist/:primal/latest",
+            "/api/v1/genome/dist/{primal}/latest",
             get(handlers::genome_dist::get_latest),
         )
         .route(
-            "/api/v1/genome/dist/checksum/:primal/:version/:arch",
+            "/api/v1/genome/dist/checksum/{primal}/{version}/{arch}",
             get(handlers::genome_dist::get_checksum),
         )
         .route(
-            "/api/v1/genome/dist/:primal/:version/:arch",
+            "/api/v1/genome/dist/{primal}/{version}/{arch}",
             get(handlers::genome_dist::download_binary),
         )
         .route(

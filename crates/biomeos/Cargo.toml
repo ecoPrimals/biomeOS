@@ -65,6 +65,7 @@ etcetera = { workspace = true }  # Pure Rust replacement
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tempfile = { workspace = true }
+temp-env = { workspace = true }
 
 [lints]
 workspace = true

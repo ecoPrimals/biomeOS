@@ -276,7 +276,8 @@ mod tests {
 
         let path_str = socket_path.to_str().unwrap();
         let result =
-            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock").await;
+            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock")
+                .await;
         assert!(result.is_ok());
 
         server_handle.await.unwrap();
@@ -306,7 +307,8 @@ mod tests {
 
         let path_str = socket_path.to_str().unwrap();
         let result =
-            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock").await;
+            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock")
+                .await;
         assert!(result.is_err());
         assert!(
             result
@@ -341,7 +343,8 @@ mod tests {
 
         let path_str = socket_path.to_str().unwrap();
         let result =
-            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock").await;
+            register_with_discovery_provider_at(path_str, "/run/user/1000/biomeos-device.sock")
+                .await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Unknown error"));
 
