@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: June 19, 2026 (v4.30: deep debt evolution sprint — coverage 88%, dependency modernization, file refactoring)
-**Version**: 4.30
-**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,351 tests / 0 failures - 88.28% line coverage (89.84% branch) - axum 0.8 + tungstenite 0.29 - All production files <400 LOC (refactored) - cargo deny clean (advisories/bans/licenses/sources ok) - Zero TODO/FIXME in Rust - temp-env test isolation (deterministic) - All 26 crates #![forbid(unsafe_code)] - riboCipher REJECT (Wave 113) - Self-knowledge principle enforced - Post-boot topology.rescan + periodic discovery sweep
+**Updated**: June 20, 2026 (v4.31: structural refactoring + coverage + dep upgrades)
+**Version**: 4.31
+**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,446 tests / 0 failures - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Clone reduction (neural_executor 24→15)
 
 ---
 
@@ -17,8 +17,8 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,351 workspace-wide, 0 failures, fully concurrent |
-| **Test Coverage** | 88.28% line / 89.84% branch / 87.91% region (llvm-cov workspace-wide; remaining gap is binary entry points) |
+| **Tests Passing** | 8,446 workspace-wide, 0 failures, fully concurrent |
+| **Test Coverage** | 88.37% line / 88.02% region / 89.58% function (llvm-cov workspace-wide; remaining gap is binary entry points + systemd interaction) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates, Wave 68: 18→0) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |

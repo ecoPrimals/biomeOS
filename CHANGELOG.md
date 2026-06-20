@@ -2,6 +2,43 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.31 (2026-06-20) — Structural Refactoring + Coverage + Dep Upgrades
+
+### Structural Refactoring (all monoliths → semantic modules)
+- `nucleus.rs` (965L) → `nucleus/` (mod.rs 86, types.rs 393, local.rs 361, remote.rs 216)
+- `neural_executor.rs` (677L) → `neural_executor/` (mod.rs 362, phase.rs 146, dispatch.rs 173)
+- `lifecycle.rs` (652L) → `lifecycle/` (8 submodules by JSON-RPC concern, max ~175L)
+- `capability_registry.rs` (648L) → `capability_registry/` (types 120, registry 185, server 270)
+- `neural_graph.rs` (643L) → `neural_graph/` (types 208, parsing 218, convert 237)
+- `paths.rs` (630L) stays monolithic (documented: tightly coupled XDG hub, no clean seam)
+- **Zero production files >800 LOC**
+
+### Clone Reduction (neural_executor hot path)
+- 24 → 15 clones via `Cow<'_, str>`, move semantics, Arc sharing, deferred error push
+- Remaining clones: required for async spawn ownership + dual storage
+
+### Coverage Expansion (88.28% → 88.37% line, 8,378 → 8,446 tests)
+- `capability_heuristics`: 0% → 100% (20 tests, pure functions)
+- `plasmodium/remote`: 42% → ~85% (11 tests, HTTP mock servers)
+- `lifecycle/helpers`: 38% → ~90% (7 tests, state serialization)
+- `orchestrator_health`: 53% → ~90% (5 tests, tokio::time::pause)
+- `p2p_coordination`: 51% → ~80% (40 tests across btsp/birdsong/integration)
+- `tower_orchestration`: 52% → ~80% (19 tests, early-exit + edge cases)
+
+### Dependency Upgrades
+- **dashmap** 5.5 → 6.2.1 (unifies hashbrown transitive)
+- **toml** 0.8 → 0.9.12
+- bincode/tarpc: blocked upstream (documented in deny.toml)
+
+### Flaky Test Fix
+- `server_handshake_returns_devmode_without_family_id` isolated with temp_env (FAMILY_ID race)
+
+### Quality Gates
+- `cargo clippy --workspace --all-targets -- -D warnings` → 0 errors
+- `cargo deny check` → advisories ok, bans ok, licenses ok, sources ok
+- `cargo fmt --check` → clean
+- 8,446 tests, 0 failures
+
 ## v4.30 (2026-06-19) — Deep Debt Evolution Sprint (Wave 116/118)
 
 ### Coverage & Test Evolution
