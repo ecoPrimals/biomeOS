@@ -417,3 +417,291 @@ async fn collect_primals_discovers_executable_in_scan_dir() {
         .unwrap();
     assert_eq!(primals.len(), 1);
 }
+
+// ========================================================================
+// run_tower early-exit paths
+// ========================================================================
+
+#[tokio::test]
+async fn run_tower_returns_ok_when_no_primals_configured() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("tower.toml");
+    let env: HashMap<String, String> = HashMap::new();
+    let result = run_tower(&config_path, None, false, &mock_env(&env)).await;
+    assert!(result.is_ok(), "early exit with no primals should succeed");
+}
+
+#[tokio::test]
+async fn run_tower_with_existing_empty_config_no_primals() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("tower.toml");
+    std::fs::write(&config_path, "[tower]\nname = \"test-tower\"\n").unwrap();
+    let env: HashMap<String, String> = HashMap::new();
+    let result = run_tower(&config_path, None, false, &mock_env(&env)).await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn run_tower_with_empty_scan_dir_no_primals() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("tower.toml");
+    let scan = tempfile::tempdir().unwrap();
+    let env: HashMap<String, String> = HashMap::new();
+    let result = run_tower(
+        &config_path,
+        Some(scan.path().to_path_buf()),
+        false,
+        &mock_env(&env),
+    )
+    .await;
+    assert!(result.is_ok());
+}
+
+// ========================================================================
+// config_to_primal edge cases
+// ========================================================================
+
+#[tokio::test]
+async fn config_to_primal_auto_discover_false_uses_config_directly() {
+    let config = TowerPrimalConfig {
+        binary: PathBuf::from("/bin/true"),
+        id: Some("no-discover".to_string()),
+        provides: vec!["cap-a".to_string()],
+        requires: vec!["cap-b".to_string()],
+        http_port: 0,
+        protocol: None,
+        env: HashMap::new(),
+        auto_discover: false,
+    };
+    let primal = config_to_primal(&config).await.unwrap();
+    assert_eq!(primal.provides().len(), 1);
+    assert_eq!(primal.requires().len(), 1);
+}
+
+#[tokio::test]
+async fn config_to_primal_id_none_derives_from_binary_stem() {
+    let config = TowerPrimalConfig {
+        binary: PathBuf::from("/usr/local/bin/my-primal"),
+        id: None,
+        provides: vec![],
+        requires: vec![],
+        http_port: 0,
+        protocol: None,
+        env: HashMap::new(),
+        auto_discover: true,
+    };
+    let primal = config_to_primal(&config).await.unwrap();
+    drop(primal);
+}
+
+#[tokio::test]
+async fn config_to_primal_zero_http_port_not_set() {
+    let config = TowerPrimalConfig {
+        binary: PathBuf::from("/bin/true"),
+        id: Some("zero-port".to_string()),
+        provides: vec!["x".to_string()],
+        requires: vec![],
+        http_port: 0,
+        protocol: Some("jsonrpc".to_string()),
+        env: HashMap::new(),
+        auto_discover: false,
+    };
+    let primal = config_to_primal(&config).await.unwrap();
+    assert_eq!(primal.provides().len(), 1);
+}
+
+// ========================================================================
+// stop_tower edge cases
+// ========================================================================
+
+#[test]
+fn stop_tower_rejects_zero_pid() {
+    let dir = tempfile::tempdir().unwrap();
+    let pid_path = dir.path().join("tower.pid");
+    std::fs::write(&pid_path, "0").unwrap();
+    let err = stop_tower(&pid_path).unwrap_err();
+    assert!(err.to_string().contains("Invalid PID"), "{err}");
+}
+
+#[cfg(unix)]
+#[test]
+fn stop_tower_cleans_up_stale_pid() {
+    let dir = tempfile::tempdir().unwrap();
+    let pid_path = dir.path().join("tower.pid");
+    std::fs::write(&pid_path, "2147483646").unwrap();
+    let _ = stop_tower(&pid_path);
+    assert!(!pid_path.exists());
+}
+
+// ========================================================================
+// socket_dir_path edge cases
+// ========================================================================
+
+#[test]
+fn socket_dir_path_defaults_without_any_env() {
+    let env: HashMap<String, String> = HashMap::new();
+    let path = socket_dir_path(&mock_env(&env));
+    assert_eq!(path, PathBuf::from("/tmp/biomeos-default/sockets"));
+}
+
+#[test]
+fn socket_dir_path_uses_biomeos_family_id() {
+    let mut env = HashMap::new();
+    env.insert("BIOMEOS_FAMILY_ID".to_string(), "beta".to_string());
+    let path = socket_dir_path(&mock_env(&env));
+    assert_eq!(path, PathBuf::from("/tmp/biomeos-beta/sockets"));
+}
+
+#[test]
+fn socket_dir_path_xdg_over_family_fallback() {
+    let mut env = HashMap::new();
+    env.insert("XDG_RUNTIME_DIR".to_string(), "/run/user/42".to_string());
+    env.insert("BIOMEOS_FAMILY_ID".to_string(), "ignored".to_string());
+    let path = socket_dir_path(&mock_env(&env));
+    assert_eq!(path, PathBuf::from("/run/user/42/biomeos/sockets"));
+}
+
+// ========================================================================
+// write_pid_file edge cases
+// ========================================================================
+
+#[test]
+fn write_pid_file_creates_nested_parent_directories() {
+    let dir = tempfile::tempdir().unwrap();
+    let pid_path = dir.path().join("a").join("b").join("c").join("tower.pid");
+    write_pid_file(&pid_path).unwrap();
+    assert!(pid_path.exists());
+    let pid = read_pid(&pid_path).unwrap();
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "PID fits i32 on all supported platforms"
+    )]
+    let expected = std::process::id() as i32;
+    assert_eq!(pid, expected);
+}
+
+// ========================================================================
+// list_active_sockets edge cases
+// ========================================================================
+
+#[test]
+fn list_active_sockets_ignores_non_sock_files() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("config.toml"), "").unwrap();
+    std::fs::write(dir.path().join("data.json"), "").unwrap();
+    std::fs::write(dir.path().join("README.md"), "").unwrap();
+    let sockets = list_active_sockets(dir.path());
+    assert!(sockets.is_empty());
+}
+
+#[test]
+fn list_active_sockets_empty_directory() {
+    let dir = tempfile::tempdir().unwrap();
+    let sockets = list_active_sockets(dir.path());
+    assert!(sockets.is_empty());
+}
+
+// ========================================================================
+// TowerStatusReport and format_capabilities
+// ========================================================================
+
+#[test]
+fn tower_status_report_debug_formatting() {
+    let not_running = TowerStatusReport::NotRunning;
+    assert!(format!("{not_running:?}").contains("NotRunning"));
+
+    let invalid = TowerStatusReport::InvalidPid;
+    assert!(format!("{invalid:?}").contains("InvalidPid"));
+
+    let stale = TowerStatusReport::Stale { pid: 999 };
+    let stale_dbg = format!("{stale:?}");
+    assert!(stale_dbg.contains("Stale"));
+    assert!(stale_dbg.contains("999"));
+
+    let running = TowerStatusReport::Running {
+        pid: 42,
+        socket_dir: PathBuf::from("/tmp/sockets"),
+        sockets: vec!["test.sock".to_string()],
+        family_id: Some("fam-z".to_string()),
+    };
+    let running_dbg = format!("{running:?}");
+    assert!(running_dbg.contains("Running"));
+    assert!(running_dbg.contains("42"));
+    assert!(running_dbg.contains("fam-z"));
+}
+
+#[test]
+fn format_capabilities_includes_all_known_categories() {
+    let caps = format_capabilities();
+    assert!(caps.len() >= 8);
+    let names: Vec<&str> = caps.iter().map(|(n, _)| *n).collect();
+    assert!(names.contains(&"Security"));
+    assert!(names.contains(&"Discovery"));
+    assert!(names.contains(&"Compute"));
+    assert!(names.contains(&"AI"));
+    assert!(names.contains(&"Storage"));
+    assert!(names.contains(&"Observability"));
+    assert!(names.contains(&"Federation"));
+    assert!(names.contains(&"Network"));
+}
+
+// ========================================================================
+// pid_file_path with FAMILY_ID only
+// ========================================================================
+
+#[test]
+fn pid_file_path_xdg_takes_precedence_over_both_family_vars() {
+    let mut env = HashMap::new();
+    env.insert("XDG_RUNTIME_DIR".to_string(), "/xdg/rt".to_string());
+    env.insert("BIOMEOS_FAMILY_ID".to_string(), "fam-a".to_string());
+    env.insert("FAMILY_ID".to_string(), "fam-b".to_string());
+    let path = pid_file_path(&mock_env(&env));
+    assert_eq!(path, PathBuf::from("/xdg/rt/biomeos/tower.pid"));
+}
+
+// ========================================================================
+// tower_status with family info
+// ========================================================================
+
+#[cfg(unix)]
+#[test]
+fn tower_status_running_includes_family_id_from_env() {
+    let dir = tempfile::tempdir().unwrap();
+    let pid_path = dir.path().join("tower.pid");
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "PID fits i32 on all supported platforms"
+    )]
+    let my_pid = std::process::id() as i32;
+    std::fs::write(&pid_path, my_pid.to_string()).unwrap();
+    let mut env = HashMap::new();
+    env.insert("FAMILY_ID".to_string(), "fam-only".to_string());
+    let status = tower_status(&pid_path, &mock_env(&env)).unwrap();
+    match status {
+        TowerStatusReport::Running { family_id, .. } => {
+            assert_eq!(family_id.as_deref(), Some("fam-only"));
+        }
+        other => panic!("expected Running, got {other:?}"),
+    }
+}
+
+// ========================================================================
+// read_pid edge cases
+// ========================================================================
+
+#[test]
+fn read_pid_parses_large_pid() {
+    let dir = tempfile::tempdir().unwrap();
+    let pid_path = dir.path().join("tower.pid");
+    std::fs::write(&pid_path, "2147483647").unwrap();
+    let pid = read_pid(&pid_path).unwrap();
+    assert_eq!(pid, i32::MAX);
+}
+
+#[test]
+fn read_pid_rejects_empty_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let pid_path = dir.path().join("tower.pid");
+    std::fs::write(&pid_path, "").unwrap();
+    assert!(read_pid(&pid_path).is_err());
+}

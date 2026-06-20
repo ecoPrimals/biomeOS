@@ -326,10 +326,16 @@ fn btsp_handshake_error_display() {
 
 #[tokio::test]
 async fn server_handshake_returns_devmode_without_family_id() {
-    let (mut s, _c) = tokio::net::UnixStream::pair().unwrap();
-    let mut reader = tokio::io::BufReader::new(&mut s);
-    let result = server_handshake(&mut reader).await;
-    assert!(matches!(result, Ok(HandshakeOutcome::DevMode)));
+    temp_env::async_with_vars(
+        [("BIOMEOS_FAMILY_ID", None::<&str>), ("FAMILY_ID", None)],
+        async {
+            let (mut s, _c) = tokio::net::UnixStream::pair().unwrap();
+            let mut reader = tokio::io::BufReader::new(&mut s);
+            let result = server_handshake(&mut reader).await;
+            assert!(matches!(result, Ok(HandshakeOutcome::DevMode)));
+        },
+    )
+    .await;
 }
 
 #[test]
@@ -1103,7 +1109,7 @@ async fn perform_client_handshake_completes_with_mock_server() {
         async {
             let (client_stream, server_stream) = UnixStream::pair().expect("pair");
             let server_task = tokio::spawn(async move {
-                run_phase2_btsp_server(server_stream, "phase2-session").await
+                run_phase2_btsp_server(server_stream, "phase2-session").await;
             });
 
             let reader = perform_client_handshake(client_stream)

@@ -102,14 +102,14 @@ ureq = { version = "2.9", default-features = false, features = ["json"] }
 futures = "0.3"
 
 # Serialization
-toml = "0.8"
+toml = "0.9"
 
 # RPC frameworks (JSON-RPC + tarpc for performance escalation)
 tarpc = { version = "0.37", features = ["serde-transport", "serde-transport-bincode", "tokio1", "unix"] }
 tokio-serde = { version = "0.9", features = ["bincode"] }
 
 # Utilities
-dashmap = "5.5"
+dashmap = "6"
 
 # Networking
 hyper = { version = "1.0", default-features = false, features = ["client", "server", "http1"] }

@@ -21,6 +21,23 @@
 // - XDG Base Directory Specification: https://specifications.freedesktop.org/basedir-spec/
 // - systemd file hierarchy: https://www.freedesktop.org/software/systemd/man/file-hierarchy.html
 //
+// -----------------------------------------------------------------------------
+// Architecture note: why this file is intentionally monolithic (~630 LOC)
+//
+// Semantic groups (constructors, XDG resolution, path accessors, helpers) are
+// all tightly coupled to the single `SystemPaths` struct and none individually
+// exceeds 200 LOC:
+//   - Constructors (new, from_overrides, with_base, new_lazy):  ~138 LOC
+//   - XDG resolution (get_*_dir, get_username, ensure_dir):     ~124 LOC
+//   - Path accessors (primal_socket, data_dir, etc.):           ~164 LOC
+//   - Utilities (safe_uid, ensure_all_dirs, Default impl):       ~88 LOC
+//
+// Splitting would require either making private XDG helpers `pub(super)` (leaking
+// implementation) or splitting a single `impl` block across files for a mere
+// ~120 LOC extraction — adding indirection without improving cohesion. The
+// existing section-comment separators provide equivalent navigability.
+// -----------------------------------------------------------------------------
+//
 // =============================================================================
 
 use crate::primal_names;

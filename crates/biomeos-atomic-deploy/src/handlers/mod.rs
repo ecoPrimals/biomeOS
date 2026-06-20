@@ -47,6 +47,8 @@ mod capability_call_mesh_tests;
 mod capability_call_tests;
 pub(crate) mod capability_heuristics;
 #[cfg(test)]
+mod capability_heuristics_tests;
+#[cfg(test)]
 mod capability_list_tests;
 mod capability_mcp;
 pub mod capability_routing;

@@ -30,7 +30,7 @@ impl super::Plasmodium {
     /// Uses HTTP POST to `/jsonrpc` on the remote discovery provider.
     /// The port is runtime-discovered from the `mesh.peers` response
     /// (beacon exchange), with env var and constants as fallbacks.
-    pub(super) async fn query_remote_gate(&self, address: &str, node_id: &str) -> Result<GateInfo> {
+    pub(crate) async fn query_remote_gate(&self, address: &str, node_id: &str) -> Result<GateInfo> {
         let default_port: u16 = std::env::var(biomeos_types::env_config::vars::MESH_PORT)
             .ok()
             .and_then(|p| p.parse().ok())
@@ -66,7 +66,7 @@ impl super::Plasmodium {
     }
 
     /// Query remote primals via Songbird TCP
-    pub(super) async fn query_remote_primals(client: &AtomicClient) -> Vec<PrimalStatus> {
+    pub(crate) async fn query_remote_primals(client: &AtomicClient) -> Vec<PrimalStatus> {
         let mut primals = Vec::new();
 
         // Try lifecycle.status first (if neural API is running)
@@ -112,7 +112,101 @@ impl super::Plasmodium {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+    use tokio::time;
+
+    use biomeos_types::env_config::vars;
+    use biomeos_types::primal_names;
+    use serde_json::json;
+
+    use crate::atomic_client::AtomicClient;
+    use crate::plasmodium::Plasmodium;
+    use crate::plasmodium::types::BondType;
+
     use super::parse_mesh_peer_address;
+
+    fn http_json_response(body: &str) -> String {
+        format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        )
+    }
+
+    fn jsonrpc_result(result: &serde_json::Value) -> String {
+        serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": result,
+            "id": 1
+        })
+        .to_string()
+    }
+
+    fn jsonrpc_method_from_http_request(raw: &str) -> Option<String> {
+        let body = raw
+            .split("\r\n\r\n")
+            .nth(1)
+            .or_else(|| raw.split("\n\n").nth(1))?;
+        serde_json::from_str::<serde_json::Value>(body)
+            .ok()?
+            .get("method")?
+            .as_str()
+            .map(str::to_owned)
+    }
+
+    async fn start_jsonrpc_server<F>(handler: F) -> u16
+    where
+        F: Fn(&str) -> String + Send + Sync + 'static,
+    {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let handler = Arc::new(handler);
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut stream, _)) = listener.accept().await else {
+                    break;
+                };
+                let handler = Arc::clone(&handler);
+                tokio::spawn(async move {
+                    let mut buf = vec![0u8; 16_384];
+                    let n = stream.read(&mut buf).await.unwrap_or(0);
+                    let method = jsonrpc_method_from_http_request(
+                        std::str::from_utf8(&buf[..n]).unwrap_or(""),
+                    )
+                    .unwrap_or_default();
+                    let body = handler(&method);
+                    let _ = stream.write_all(http_json_response(&body).as_bytes()).await;
+                });
+            }
+        });
+        tokio::task::yield_now().await;
+        port
+    }
+
+    async fn start_hanging_jsonrpc_server() -> u16 {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut stream, _)) = listener.accept().await else {
+                    break;
+                };
+                tokio::spawn(async move {
+                    let mut buf = vec![0u8; 16_384];
+                    let _ = stream.read(&mut buf).await;
+                    time::sleep(Duration::from_secs(60)).await;
+                });
+            }
+        });
+        tokio::task::yield_now().await;
+        port
+    }
 
     #[test]
     fn parse_mesh_peer_host_and_port() {
@@ -140,5 +234,162 @@ mod tests {
         let (h, p) = parse_mesh_peer_address("a:b:c:9000", 1);
         assert_eq!(h, "a:b:c");
         assert_eq!(p, 9000);
+    }
+
+    #[tokio::test]
+    async fn query_remote_gate_connection_failure() {
+        let p = Plasmodium::new();
+        let err = p
+            .query_remote_gate("127.0.0.1:59998", "offline-gate")
+            .await
+            .expect_err("unreachable gate should fail");
+        let msg = err.to_string();
+        assert!(msg.contains("offline-gate"), "{msg}");
+        assert!(msg.contains("not reachable"), "{msg}");
+    }
+
+    #[tokio::test]
+    async fn query_remote_gate_success_response() {
+        let port = start_jsonrpc_server(|method| match method {
+            "health" => jsonrpc_result(&json!({"status": "ok"})),
+            _ => jsonrpc_result(&json!({})),
+        })
+        .await;
+
+        temp_env::async_with_vars([(vars::DISCOVERY_PROVIDER, None::<&str>)], async move {
+            let p = Plasmodium::new();
+            let gate = p
+                .query_remote_gate(&format!("127.0.0.1:{port}"), "remote-node")
+                .await
+                .expect("healthy gate");
+
+            assert_eq!(gate.gate_id, "remote-node");
+            assert_eq!(gate.address, format!("127.0.0.1:{port}"));
+            assert!(!gate.is_local);
+            assert!(gate.reachable);
+            assert_eq!(gate.bond_type, BondType::Covalent);
+            assert_eq!(gate.primals.len(), 1);
+            assert_eq!(gate.primals[0].name, primal_names::SONGBIRD);
+            assert!(gate.primals[0].healthy);
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn query_remote_gate_malformed_health_response() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 16_384];
+                let _ = stream.read(&mut buf).await;
+                let _ = stream
+                    .write_all(b"HTTP/1.1 200 OK\r\noops no body sep")
+                    .await;
+            }
+        });
+        tokio::task::yield_now().await;
+
+        let p = Plasmodium::new();
+        let err = p
+            .query_remote_gate(&format!("127.0.0.1:{port}"), "bad-http")
+            .await
+            .expect_err("malformed health should fail");
+        let msg = err.to_string();
+        assert!(msg.contains("bad-http"), "{msg}");
+        assert!(msg.contains("not reachable"), "{msg}");
+    }
+
+    #[tokio::test]
+    async fn query_remote_primals_empty_response_uses_discovery_fallback() {
+        let port = start_jsonrpc_server(|_method| jsonrpc_result(&json!({}))).await;
+
+        temp_env::async_with_vars([(vars::DISCOVERY_PROVIDER, None::<&str>)], async move {
+            let client = AtomicClient::http("127.0.0.1", port);
+            let primals = Plasmodium::query_remote_primals(&client).await;
+
+            assert_eq!(primals.len(), 1);
+            assert_eq!(primals[0].name, primal_names::SONGBIRD);
+            assert!(primals[0].healthy);
+            assert!(primals[0].version.is_none());
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn query_remote_primals_populated_lifecycle_services() {
+        let port = start_jsonrpc_server(|method| match method {
+            "lifecycle.status" => jsonrpc_result(&json!({
+                "services": {
+                    "beardog": {
+                        "status": "healthy",
+                        "version": "2.1.0"
+                    },
+                    "toadstool": {
+                        "status": "degraded"
+                    }
+                }
+            })),
+            _ => jsonrpc_result(&json!({})),
+        })
+        .await;
+
+        let client = AtomicClient::http("127.0.0.1", port);
+        let primals = Plasmodium::query_remote_primals(&client).await;
+
+        assert_eq!(primals.len(), 2);
+        let beardog = primals
+            .iter()
+            .find(|p| p.name == "beardog")
+            .expect("beardog");
+        assert!(beardog.healthy);
+        assert_eq!(beardog.version.as_deref(), Some("2.1.0"));
+        let toadstool = primals
+            .iter()
+            .find(|p| p.name == "toadstool")
+            .expect("toadstool");
+        assert!(!toadstool.healthy);
+        assert!(toadstool.version.is_none());
+    }
+
+    #[tokio::test]
+    async fn query_remote_primals_timeout_falls_back_to_discovery_provider() {
+        let port = start_hanging_jsonrpc_server().await;
+        let client = AtomicClient::http("127.0.0.1", port).with_timeout(Duration::from_millis(200));
+
+        temp_env::async_with_vars([(vars::DISCOVERY_PROVIDER, None::<&str>)], async move {
+            let started = time::Instant::now();
+            let primals = time::timeout(
+                Duration::from_secs(2),
+                Plasmodium::query_remote_primals(&client),
+            )
+            .await
+            .expect("query should not hang");
+
+            assert!(
+                started.elapsed() < Duration::from_secs(1),
+                "expected timeout path to finish quickly, took {:?}",
+                started.elapsed()
+            );
+            assert_eq!(primals.len(), 1);
+            assert_eq!(primals[0].name, primal_names::SONGBIRD);
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn query_remote_primals_respects_discovery_provider_env() {
+        let port = start_jsonrpc_server(|_method| jsonrpc_result(&json!({}))).await;
+
+        temp_env::async_with_vars(
+            [(vars::DISCOVERY_PROVIDER, Some("custom-discovery"))],
+            async move {
+                let client = AtomicClient::http("127.0.0.1", port);
+                let primals = Plasmodium::query_remote_primals(&client).await;
+                assert_eq!(primals.len(), 1);
+                assert_eq!(primals[0].name, "custom-discovery");
+            },
+        )
+        .await;
     }
 }
