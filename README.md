@@ -4,15 +4,15 @@
 
 ---
 
-## Status: Production Ready (v4.26)
+## Status: Production Ready (v4.31)
 
 | Metric | Value |
 |--------|-------|
 | Primals | 7/7 ecoBin v3.0 compliant (+ barraCuda, coralReef) |
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP; HTTP removed v3.97) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, multi-transport IPC, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, tokio/hyper features trimmed per-crate, unused deps pruned, manifest hygiene enforced, data-driven launch profiles, post-spawn auto-registration, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
-| Tests | 7,983 workspace-wide (1,315 `biomeos-atomic-deploy`), 0 failures, fully concurrent — 90%+ line / function / region (llvm-cov) |
+| Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, all monoliths split into semantic modules, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, dashmap 6, toml 0.9, axum 0.8, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
+| Tests | 8,446 workspace-wide, 0 failures, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
@@ -27,7 +27,7 @@
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection, composition dashboard |
-| Files >800 LOC | 0 production files (all under 800 after smart domain extraction) |
+| Files >800 LOC | 0 production files (all monoliths split into semantic modules) |
 | Discovery | **Capability-based** per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — XDG sockets + `topology.rescan` + lazy rescan + `capability.register` + DNS-SD mDNS + `primal.announce` self-registration; no identity-based routing or deprecated discovery stubs |
 | Blocking Debt | 0 (all primalSpring Phase 43 gaps resolved: genetics tier, deploy class, routing contract, tick-loop) |
 | Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated (RPITIT/generics/enum dispatch/manual desugar); pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`); unused `tokio` removed from types crate; placeholder features pruned; repository URLs standardized; unused `walkdir` pruned from 3 crates |
