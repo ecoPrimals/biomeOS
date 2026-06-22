@@ -2,6 +2,23 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.32 (2026-06-22) — Deep Debt: Test Extraction + Hardcoding Removal
+
+### Test Module Extraction
+- `btsp.rs` (774L) → `btsp.rs` (255L) + `btsp_tests.rs` (523L)
+- `birdsong.rs` (766L) → `birdsong.rs` (216L) + `birdsong_tests.rs` (554L)
+- **Zero production files approaching 800 LOC threshold**
+
+### Hardcoding Removal
+- Centralized mDNS multicast address (`MDNS_MULTICAST_ADDR`) in `biomeos-types::constants::network`
+- Removed last hardcoded network literal from production code (`dns_sd.rs`)
+
+### Quality Gates
+- `cargo clippy --workspace --all-targets -- -D warnings` → 0 errors
+- `cargo fmt --check` → clean
+- 8,446 tests, 0 failures (1 flaky ai_advisor availability test — pre-existing race)
+- Zero TODO/FIXME/HACK, zero dead code warnings, zero unsafe blocks
+
 ## v4.31 (2026-06-20) — Structural Refactoring + Coverage + Dep Upgrades
 
 ### Structural Refactoring (all monoliths → semantic modules)

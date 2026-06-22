@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: June 20, 2026
+**Updated**: June 22, 2026
 
 ---
 
