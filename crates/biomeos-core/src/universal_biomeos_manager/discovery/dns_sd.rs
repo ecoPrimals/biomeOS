@@ -3,7 +3,7 @@
 
 use super::PrimalCapability;
 use anyhow::Context;
-use biomeos_types::constants::ports;
+use biomeos_types::constants::{network, ports};
 use biomeos_types::{Health, JsonRpcRequest, JsonRpcResponse, PrimalType};
 use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -12,7 +12,6 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpStream, UdpSocket};
 use tokio::time::timeout;
 
-const MDNS_ADDR: &str = "224.0.0.251:5353";
 const SERVICE_PTR: &str = "_biomeos._tcp.local";
 const DNS_TYPE_PTR: u16 = 12;
 const DNS_TYPE_SRV: u16 = 33;
@@ -224,7 +223,7 @@ async fn probe_liveness_jsonrpc(
 
 async fn browse_mdns_instances() -> anyhow::Result<Vec<Candidate>> {
     let socket = UdpSocket::bind(biomeos_types::constants::endpoints::EPHEMERAL_UDP_BIND).await?;
-    let mdns: SocketAddr = MDNS_ADDR.parse()?;
+    let mdns: SocketAddr = network::MDNS_MULTICAST_ADDR.parse()?;
     let id: u16 = rand::random::<u16>();
     let query = build_ptr_query(SERVICE_PTR, id);
     if let Err(e) = socket.send_to(&query, mdns).await {
@@ -303,7 +302,7 @@ fn normalize_target_host(target: &str) -> String {
 async fn query_srv(socket: &UdpSocket, instance: &str) -> anyhow::Result<Option<(String, u16)>> {
     let id: u16 = rand::random::<u16>();
     let q = build_query(instance, id, DNS_TYPE_SRV);
-    let mdns: SocketAddr = MDNS_ADDR.parse()?;
+    let mdns: SocketAddr = network::MDNS_MULTICAST_ADDR.parse()?;
     socket.send_to(&q, mdns).await?;
 
     const MDNS_RECV_BUF: usize = 9000;

@@ -168,6 +168,9 @@ pub const LINK_LOCAL_RANGE: &str = "169.254.0.0/16";
 /// Multicast address range
 pub const MULTICAST_RANGE: &str = "224.0.0.0/4";
 
+/// mDNS multicast address (RFC 6762)
+pub const MDNS_MULTICAST_ADDR: &str = "224.0.0.251:5353";
+
 /// Private Class A network
 pub const PRIVATE_CLASS_A: &str = "10.0.0.0/8";
 
