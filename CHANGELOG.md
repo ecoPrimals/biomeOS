@@ -2,6 +2,20 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.33 (2026-06-28) — Mega-Test Splits: All Test Files Under 450 LOC
+
+### Structural Splits (4 mega-test files → 16 domain-focused modules)
+- `neural_executor_rollback_tests.rs` (1237L) → hub (371L) + lifecycle (210L) + capability (274L) + order (444L)
+- `btsp_client_tests.rs` (1215L) → hub (168L) + family (110L) + types (128L) + provider (220L) + server (387L) + client (304L)
+- `p2p_coordination/tests.rs` (1074L) → hub (144L) + coordinator (346L) + status (379L) + types (227L)
+- `nucleus_tests.rs` (1061L) → hub (16L) + config (372L) + startup (358L) + lifecycle (355L)
+
+### Quality Gates
+- `cargo check --tests --workspace` → 0 errors
+- `cargo fmt --check` → clean
+- All 193 split tests pass unchanged (35+49+46+63)
+- Zero test files over 450 LOC; zero production files over 800 LOC
+
 ## v4.32 (2026-06-22) — Deep Debt: Test Extraction + Hardcoding Removal
 
 ### Test Module Extraction
