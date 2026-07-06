@@ -36,6 +36,9 @@ unused_async = "allow"             # Async trait methods may not await yet
 
 [workspace]
 resolver = "2"
+default-members = [
+    "crates/biomeos",
+]
 members = [
     "crates/neural-api-client-sync",
     "crates/neural-api-client",
