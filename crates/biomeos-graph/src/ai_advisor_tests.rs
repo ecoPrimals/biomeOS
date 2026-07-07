@@ -143,8 +143,9 @@ async fn test_check_availability_graceful_failure() {
     let mut advisor = AiGraphAdvisor::new();
     let result = advisor.check_squirrel_availability().await;
 
+    // Must never panic or return Err — graceful degradation regardless of
+    // whether squirrel is actually running on this machine.
     assert!(result.is_ok());
-    assert!(!advisor.squirrel_available);
 }
 #[tokio::test]
 async fn test_get_suggestions_without_squirrel() {
