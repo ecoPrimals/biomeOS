@@ -278,12 +278,17 @@ impl TopologyHandler {
             }
         }
 
-        // Priority 3: XDG_RUNTIME_DIR/biomeos (direct check)
+        // Priority 3: XDG_RUNTIME_DIR/membrane (canonical) + legacy /biomeos
         if let Ok(xdg_runtime) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
-            let path = PathBuf::from(xdg_runtime)
+            let membrane_path = PathBuf::from(&xdg_runtime)
+                .join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
+            if !dirs.contains(&membrane_path) && membrane_path.exists() {
+                dirs.push(membrane_path);
+            }
+            let legacy_path = PathBuf::from(&xdg_runtime)
                 .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
-            if !dirs.contains(&path) && path.exists() {
-                dirs.push(path);
+            if !dirs.contains(&legacy_path) && legacy_path.exists() {
+                dirs.push(legacy_path);
             }
         }
 

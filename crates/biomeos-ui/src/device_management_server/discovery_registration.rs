@@ -112,8 +112,8 @@ mod tests {
     use std::sync::Mutex;
     use tokio::io::AsyncBufReadExt;
 
-    /// Serialize access to fixed `/tmp/biomeos` (empty family tier-4 path) across parallel tests.
-    static TMP_BIOMEOS_EMPTY_FAMILY_LOCK: Mutex<()> = Mutex::new(());
+    /// Serialize access to fixed `/tmp/membrane` (empty family tier-4 path) across parallel tests.
+    static TMP_MEMBRANE_EMPTY_FAMILY_LOCK: Mutex<()> = Mutex::new(());
 
     fn mock_env(vars: &HashMap<String, String>) -> impl Fn(&str) -> Option<String> + '_ {
         move |key: &str| vars.get(key).cloned()
@@ -189,9 +189,9 @@ mod tests {
     #[test]
     fn test_discover_discovery_provider_family_tmp_biomeos_dir() {
         let fam = format!("testlegacy{}", std::process::id());
-        let biomeos_dir = format!("/tmp/biomeos-{fam}");
-        let legacy_socket = format!("{biomeos_dir}/songbird.sock");
-        std::fs::create_dir_all(&biomeos_dir).unwrap();
+        let membrane_dir = format!("/tmp/membrane-{fam}");
+        let legacy_socket = format!("{membrane_dir}/songbird.sock");
+        std::fs::create_dir_all(&membrane_dir).unwrap();
         std::fs::File::create(&legacy_socket).unwrap();
 
         let mut env = HashMap::new();
@@ -203,16 +203,16 @@ mod tests {
         assert_eq!(result.unwrap(), legacy_socket);
 
         let _ = std::fs::remove_file(&legacy_socket);
-        let _ = std::fs::remove_dir(&biomeos_dir);
+        let _ = std::fs::remove_dir(&membrane_dir);
     }
 
     #[test]
     fn test_discover_discovery_provider_common_pattern_tmp_biomeos_dir() {
-        let _lock = TMP_BIOMEOS_EMPTY_FAMILY_LOCK.lock().unwrap();
+        let _lock = TMP_MEMBRANE_EMPTY_FAMILY_LOCK.lock().unwrap();
 
-        let biomeos_dir = "/tmp/biomeos";
-        let tmp_socket = format!("{biomeos_dir}/songbird.sock");
-        let _ = std::fs::create_dir_all(biomeos_dir);
+        let membrane_dir = "/tmp/membrane";
+        let tmp_socket = format!("{membrane_dir}/songbird.sock");
+        let _ = std::fs::create_dir_all(membrane_dir);
         let existed = std::path::Path::new(&tmp_socket).exists();
         if !existed {
             std::fs::File::create(&tmp_socket).unwrap();

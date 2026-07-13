@@ -3,6 +3,8 @@
 
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 use super::nucleus_procs::{
@@ -162,8 +164,12 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
         info!("    {} -> {}", name, path.display());
     }
 
-    // Create lifecycle manager for post-startup health monitoring
-    let lifecycle = biomeos_atomic_deploy::lifecycle_manager::LifecycleManager::new(&family_id);
+    // Create lifecycle manager for post-startup health monitoring.
+    // Wrapped in Arc<RwLock> so it can be shared with the Neural API server,
+    // ensuring lifecycle.status reflects NUCLEUS-registered primals.
+    let lifecycle_inner =
+        biomeos_atomic_deploy::lifecycle_manager::LifecycleManager::new(&family_id);
+    let lifecycle_shared = Arc::new(RwLock::new(lifecycle_inner));
 
     // Start primals in dependency order
     let mut children: Vec<(String, tokio::process::Child)> = Vec::new();
@@ -234,7 +240,9 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
         }
 
         // Register with lifecycle manager for ongoing monitoring and auto-restart
-        lifecycle
+        lifecycle_shared
+            .read()
+            .await
             .register_primal_binary(
                 *primal,
                 health_socket.clone(),
@@ -247,14 +255,18 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
         // Primals using .jsonrpc.sock typically expose `health.status` rather
         // than the legacy `health` method. Register the namespaced method.
         if health_socket != socket_path {
-            lifecycle.set_health_method(primal, "health.status").await;
+            lifecycle_shared
+                .read()
+                .await
+                .set_health_method(primal, "health.status")
+                .await;
         }
 
         children.push((primal.to_string(), child));
     }
 
     // Start background health monitoring (checks all registered primals periodically)
-    lifecycle.start_monitoring().await?;
+    lifecycle_shared.read().await.start_monitoring().await?;
 
     // Auto-register all launched primals with songBird's discovery service.
     // This makes the capability mesh operational without manual ipc.register calls.
@@ -285,8 +297,9 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
         let neural_tcp_port = tcp_port;
         let neural_tcp_only = tcp_only;
         let neural_bind = bind.clone();
+        let neural_lifecycle = Arc::clone(&lifecycle_shared);
         tokio::spawn(async move {
-            if let Err(e) = super::super::neural_api::run(
+            if let Err(e) = super::super::neural_api::run_with_lifecycle(
                 graphs_dir,
                 neural_family,
                 Some(neural_socket),
@@ -294,6 +307,7 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
                 neural_tcp_only,
                 neural_bind,
                 false,
+                neural_lifecycle,
             )
             .await
             {
@@ -352,7 +366,7 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
 
     // Coordinated shutdown via lifecycle manager
     info!("Shutting down NUCLEUS...");
-    if let Err(e) = lifecycle.shutdown_all().await {
+    if let Err(e) = lifecycle_shared.read().await.shutdown_all().await {
         warn!("Lifecycle shutdown error (continuing cleanup): {e}");
     }
 

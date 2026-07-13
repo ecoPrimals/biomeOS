@@ -289,10 +289,10 @@ fn test_observability_and_registry_ports_match_endpoint_strings() {
 #[test]
 fn test_runtime_paths_fallback_dir() {
     let default = runtime_paths::fallback_runtime_dir("");
-    assert_eq!(default, std::path::PathBuf::from("/tmp/biomeos"));
+    assert_eq!(default, std::path::PathBuf::from("/tmp/membrane"));
 
     let family = runtime_paths::fallback_runtime_dir("abc123");
-    assert_eq!(family, std::path::PathBuf::from("/tmp/biomeos-abc123"));
+    assert_eq!(family, std::path::PathBuf::from("/tmp/membrane-abc123"));
 }
 
 #[test]

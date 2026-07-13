@@ -155,17 +155,17 @@ async fn test_nucleation_xdg_paths() {
     let discovery_socket =
         nucleation.assign_socket_with_runtime_dir("songbird", "test-family", Some(runtime));
 
-    // Verify XDG paths are used
+    // Verify XDG paths are used (unified under /membrane/)
     assert!(
         security_provider_socket
             .to_string_lossy()
-            .contains("/run/user/1000/biomeos/"),
+            .contains("/run/user/1000/membrane/"),
         "Security provider socket should be in XDG runtime dir: {security_provider_socket:?}"
     );
     assert!(
         discovery_socket
             .to_string_lossy()
-            .contains("/run/user/1000/biomeos/"),
+            .contains("/run/user/1000/membrane/"),
         "Discovery socket should be in XDG runtime dir: {discovery_socket:?}"
     );
 
@@ -230,7 +230,7 @@ async fn test_execution_context_socket_paths() {
     let security_provider_socket = context.get_socket_path("beardog").await;
 
     assert!(
-        security_provider_socket.contains("/run/user/1000/biomeos/beardog-context-test.sock"),
+        security_provider_socket.contains("/run/user/1000/membrane/beardog-context-test.sock"),
         "Context should use XDG socket path: {security_provider_socket}"
     );
 }

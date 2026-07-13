@@ -445,19 +445,22 @@ pub mod runtime_paths {
     /// `/run/user/{uid}` directories. Append `/biomeos/` for socket paths.
     pub const LINUX_RUNTIME_DIR_PREFIX: &str = "/run/user";
 
-    /// Android runtime directory for biomeOS sockets and data (tier 4).
-    pub const ANDROID_RUNTIME_BASE: &str = "/data/local/tmp/biomeos";
+    /// Android runtime directory for membrane sockets and data (tier 4).
+    pub const ANDROID_RUNTIME_BASE: &str = "/data/local/tmp/membrane";
 
     /// Base path for the `/tmp` fallback tier in socket discovery.
     ///
     /// Used as tier 5 when `$XDG_RUNTIME_DIR` is not set. Family-scoped
-    /// variants append `-{family_id}` (e.g., `/tmp/biomeos-nat0`).
-    pub const FALLBACK_RUNTIME_BASE: &str = "/tmp/biomeos";
+    /// variants append `-{family_id}` (e.g., `/tmp/membrane-nat0`).
+    pub const FALLBACK_RUNTIME_BASE: &str = "/tmp/membrane";
 
     /// Socket directory name under the runtime base.
     pub const SOCKET_SUBDIR: &str = "sockets";
 
-    /// biomeOS subdirectory name under `$XDG_RUNTIME_DIR`.
+    /// Subdirectory name under `$XDG_RUNTIME_DIR` for all primal sockets.
+    pub const MEMBRANE_SUBDIR: &str = "membrane";
+
+    /// Legacy subdirectory name (kept for backward-compat scanning).
     pub const BIOMEOS_SUBDIR: &str = "biomeos";
 
     /// Build the family-scoped `/tmp` fallback path.

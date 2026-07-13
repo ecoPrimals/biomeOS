@@ -352,48 +352,31 @@ fn test_system_paths_new_reads_xdg_and_home_from_env() {
 }
 
 #[test]
-fn test_runtime_dir_from_xdg_parent_some_joins_biomeos_leaf() {
+fn test_runtime_dir_from_xdg_parent_some_joins_membrane_leaf() {
     let temp = tempdir().unwrap();
     let parent = temp.path().join("xdg-runtime-parent");
     let got = SystemPaths::runtime_dir_from_xdg_parent(Some(&parent));
-    assert_eq!(got, parent.join(primal_names::BIOMEOS));
-    assert!(got.ends_with(primal_names::BIOMEOS));
+    assert_eq!(got, parent.join(primal_names::MEMBRANE_DIR));
+    assert!(got.ends_with(primal_names::MEMBRANE_DIR));
 }
 
 #[test]
-fn test_runtime_dir_from_xdg_parent_none_uses_temp_biomeos_username() {
-    let got = temp_env::with_vars(
-        [
-            ("USER", Some("envtestuser-paths".as_ref())),
-            ("USERNAME", None::<&std::ffi::OsStr>),
-        ],
-        || SystemPaths::runtime_dir_from_xdg_parent(None),
-    );
+fn test_runtime_dir_from_xdg_parent_none_uses_canonical_membrane() {
+    let got = SystemPaths::runtime_dir_from_xdg_parent(None);
     let lossy = got.to_string_lossy();
-    assert!(
-        lossy.contains("biomeos-envtestuser-paths"),
-        "expected USER in temp-dir fallback: {lossy}"
-    );
-    assert!(
-        lossy.contains("biomeos-"),
-        "expected temp-dir fallback prefix: {lossy}"
+    assert_eq!(
+        lossy, "/run/membrane",
+        "expected canonical /run/membrane path: {lossy}"
     );
 }
 
 #[test]
-fn test_get_username_fallback_to_default_via_runtime_path() {
-    let path = temp_env::with_vars(
-        [
-            ("USER", None::<&std::ffi::OsStr>),
-            ("USERNAME", None::<&std::ffi::OsStr>),
-        ],
-        || SystemPaths::runtime_dir_from_xdg_parent(None),
-    );
-    assert!(
-        path.to_string_lossy()
-            .contains(&format!("{}-default", primal_names::BIOMEOS)),
-        "expected get_username() fallback 'default' in path: {}",
-        path.display()
+fn test_runtime_dir_from_xdg_parent_none_is_deterministic() {
+    let path = SystemPaths::runtime_dir_from_xdg_parent(None);
+    assert_eq!(
+        path,
+        PathBuf::from("/run/membrane"),
+        "runtime_dir_from_xdg_parent(None) must be deterministic"
     );
 }
 
@@ -457,11 +440,17 @@ fn test_safe_uid_is_u32_and_matches_system_paths_wrapper() {
 /// Covers `get_runtime_dir` when `$XDG_RUNTIME_DIR` is unset (`temp_dir` + `biomeos-$USER`).
 #[test]
 fn test_new_lazy_runtime_without_xdg_runtime_dir() {
-    let paths = temp_env::with_var("XDG_RUNTIME_DIR", None::<&str>, SystemPaths::new_lazy);
+    let paths = temp_env::with_vars(
+        [
+            ("XDG_RUNTIME_DIR", None::<&str>),
+            ("BIOMEOS_SOCKET_DIR", None::<&str>),
+        ],
+        SystemPaths::new_lazy,
+    );
     let s = paths.runtime_dir().to_string_lossy();
-    assert!(
-        s.contains("biomeos-"),
-        "expected temp-style runtime dir when XDG_RUNTIME_DIR is unset: {s}"
+    assert_eq!(
+        s, "/run/membrane",
+        "expected /run/membrane when XDG_RUNTIME_DIR is unset: {s}"
     );
 }
 
@@ -470,7 +459,7 @@ fn test_default_runtime_dir_uses_xdg() {
     let dir = temp_env::with_var("XDG_RUNTIME_DIR", Some("/run/user/1000"), || {
         SystemPaths::default_runtime_dir()
     });
-    assert_eq!(dir, PathBuf::from("/run/user/1000/biomeos"));
+    assert_eq!(dir, PathBuf::from("/run/user/1000/membrane"));
 }
 
 #[test]
@@ -479,13 +468,14 @@ fn test_default_runtime_dir_fallback() {
         [
             ("XDG_RUNTIME_DIR", None::<&str>),
             ("USER", Some("testuser")),
+            ("BIOMEOS_SOCKET_DIR", None::<&str>),
         ],
         SystemPaths::default_runtime_dir,
     );
-    let s = dir.to_string_lossy();
-    assert!(
-        s.contains("biomeos-testuser"),
-        "expected temp fallback containing biomeos-testuser: {s}"
+    assert_eq!(
+        dir,
+        PathBuf::from("/run/membrane"),
+        "expected canonical /run/membrane fallback"
     );
 }
 
@@ -496,7 +486,7 @@ fn test_neural_api_socket_path() {
     });
     assert_eq!(
         path,
-        PathBuf::from("/run/user/1000/biomeos/neural-api-nat0.sock")
+        PathBuf::from("/run/user/1000/membrane/neural-api-nat0.sock")
     );
 }
 
@@ -506,6 +496,7 @@ fn test_neural_api_socket_fallback() {
         [
             ("XDG_RUNTIME_DIR", None::<&str>),
             ("USER", Some("testuser")),
+            ("BIOMEOS_SOCKET_DIR", None::<&str>),
         ],
         || SystemPaths::neural_api_socket("family1"),
     );
@@ -514,9 +505,10 @@ fn test_neural_api_socket_fallback() {
         s.ends_with("neural-api-family1.sock"),
         "expected socket filename: {s}"
     );
-    assert!(
-        s.contains("biomeos-testuser"),
-        "expected temp fallback dir: {s}"
+    assert_eq!(
+        path,
+        PathBuf::from("/run/membrane/neural-api-family1.sock"),
+        "expected canonical /run/membrane fallback"
     );
 }
 

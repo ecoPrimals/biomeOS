@@ -47,6 +47,7 @@ use crate::handlers::{
     CapabilityHandler, GraphHandler, InferenceHandler, LifecycleHandler, NicheHandler,
     ProtocolHandler, TopologyHandler,
 };
+use crate::lifecycle_manager::LifecycleManager;
 use crate::living_graph::LivingGraph;
 use crate::mode::BiomeOsMode;
 use crate::neural_router::NeuralRouter;
@@ -255,6 +256,8 @@ impl NeuralApiServer {
 
         let lifecycle_handler =
             LifecycleHandler::new(&family_id_str).with_executions(executions.clone());
+        // NOTE: when NUCLEUS starts the Neural API, it should call
+        // .with_lifecycle_manager() to share its in-process manager instance.
 
         let living_graph = Arc::new(LivingGraph::new(&family_id_str));
 
@@ -326,6 +329,14 @@ impl NeuralApiServer {
     #[must_use]
     pub fn with_btsp_optional(mut self) -> Self {
         self.btsp_optional = true;
+        self
+    }
+
+    /// Share an existing `LifecycleManager` instance (e.g. from NUCLEUS local mode)
+    /// so that `lifecycle.status` reflects primals already registered in-process.
+    #[must_use]
+    pub fn with_lifecycle_manager(mut self, manager: Arc<RwLock<LifecycleManager>>) -> Self {
+        self.lifecycle_handler = LifecycleHandler::with_manager(manager);
         self
     }
 }

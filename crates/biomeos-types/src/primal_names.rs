@@ -80,6 +80,13 @@ pub const SOURDOUGH: &str = "sourdough";
 /// biomeOS itself — appears in socket discovery as a pseudo-primal.
 pub const BIOMEOS: &str = "biomeos";
 
+/// Canonical runtime directory name for all primal sockets.
+///
+/// All primals bind under `/run/membrane/` (or `$XDG_RUNTIME_DIR/membrane/`).
+/// This unified path enables songBird TLS delegation, uniform discovery,
+/// and deterministic socket enumeration.
+pub const MEMBRANE_DIR: &str = "membrane";
+
 /// biomeOS device management variant.
 pub const BIOMEOS_DEVICE_MANAGEMENT: &str = "biomeos-device-management";
 

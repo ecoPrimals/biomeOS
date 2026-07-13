@@ -178,10 +178,9 @@ impl SystemPaths {
     #[must_use]
     pub fn runtime_dir_from_xdg_parent(runtime_parent: Option<&Path>) -> PathBuf {
         if let Some(p) = runtime_parent {
-            p.join(primal_names::BIOMEOS)
+            p.join(primal_names::MEMBRANE_DIR)
         } else {
-            let username = Self::get_username();
-            PathBuf::from(format!("/run/{}-{}", primal_names::BIOMEOS, username))
+            PathBuf::from("/run/membrane")
         }
     }
 
@@ -194,7 +193,7 @@ impl SystemPaths {
         xdg_data_home: Option<impl AsRef<Path>>,
     ) -> Result<Self> {
         let runtime_dir = xdg_runtime_dir.map_or_else(Self::get_runtime_dir, |p| {
-            Ok(p.as_ref().to_path_buf().join(primal_names::BIOMEOS))
+            Ok(p.as_ref().to_path_buf().join(primal_names::MEMBRANE_DIR))
         })?;
         let data_dir = xdg_data_home.map_or_else(Self::get_data_dir, |p| {
             Ok(p.as_ref().to_path_buf().join(primal_names::BIOMEOS))
@@ -411,10 +410,9 @@ impl SystemPaths {
     #[must_use]
     pub fn default_runtime_dir() -> PathBuf {
         if let Ok(xdg_runtime) = env::var(crate::env_config::vars::XDG_RUNTIME_DIR) {
-            PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS)
+            PathBuf::from(xdg_runtime).join(primal_names::MEMBRANE_DIR)
         } else {
-            let username = Self::get_username();
-            PathBuf::from(format!("/run/{}-{}", primal_names::BIOMEOS, username))
+            PathBuf::from("/run/membrane")
         }
     }
 
@@ -452,18 +450,13 @@ impl SystemPaths {
             return Ok(PathBuf::from(socket_dir));
         }
 
-        // 2. Try $XDG_RUNTIME_DIR
+        // 2. Try $XDG_RUNTIME_DIR/membrane
         if let Ok(xdg_runtime) = env::var(crate::env_config::vars::XDG_RUNTIME_DIR) {
-            return Ok(PathBuf::from(xdg_runtime).join(primal_names::BIOMEOS));
+            return Ok(PathBuf::from(xdg_runtime).join(primal_names::MEMBRANE_DIR));
         }
 
-        // 3. Fallback to /run/biomeos-$USER (VPS: RuntimeDirectory=biomeos)
-        let username = Self::get_username();
-        Ok(PathBuf::from(format!(
-            "/run/{}-{}",
-            primal_names::BIOMEOS,
-            username
-        )))
+        // 3. Fallback to /run/membrane (systemd RuntimeDirectory=membrane)
+        Ok(PathBuf::from("/run/membrane"))
     }
 
     /// Get XDG data directory
@@ -542,13 +535,6 @@ impl SystemPaths {
 
         // 3. Fallback to data_dir/state
         Ok(Self::get_data_dir()?.join("state"))
-    }
-
-    /// Get current username
-    fn get_username() -> String {
-        env::var(crate::env_config::vars::SYS_USER)
-            .or_else(|_| env::var(crate::env_config::vars::SYS_USERNAME))
-            .unwrap_or_else(|_| "default".to_string())
     }
 
     /// Create `SystemPaths` without creating directories

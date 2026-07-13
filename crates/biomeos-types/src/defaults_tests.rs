@@ -94,11 +94,11 @@ fn test_runtime_config() {
 
 #[test]
 fn test_runtime_config_from_env() {
-    let config = RuntimeConfig::from_env_with(Some("/tmp/biomeos"), None);
+    let config = RuntimeConfig::from_env_with(Some("/tmp/membrane"), None);
     let socket_path = config.neural_api_socket();
     let path_str = socket_path.to_string_lossy();
     assert!(
-        path_str.contains("biomeos") || path_str.starts_with(DEFAULT_SOCKET_DIR),
+        path_str.contains("membrane") || path_str.starts_with(DEFAULT_SOCKET_DIR),
         "Socket path should be XDG-resolved or fallback: {path_str}"
     );
 }
@@ -238,7 +238,7 @@ fn test_join_socket_path_various_dirs() {
 
 #[test]
 fn test_default_constants() {
-    assert_eq!(DEFAULT_SOCKET_DIR, "/run/biomeos");
+    assert_eq!(DEFAULT_SOCKET_DIR, "/run/membrane");
     assert_eq!(DEFAULT_NEURAL_API_SOCKET, "neural-api.sock");
 }
 

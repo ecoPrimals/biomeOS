@@ -25,14 +25,14 @@ fn pid_file_path_falls_back_to_family_id() {
     let mut env = HashMap::new();
     env.insert("BIOMEOS_FAMILY_ID".to_string(), "nat0".to_string());
     let path = pid_file_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/tmp/biomeos-nat0/tower.pid"));
+    assert_eq!(path, PathBuf::from("/tmp/membrane-nat0/tower.pid"));
 }
 
 #[test]
 fn pid_file_path_falls_back_to_default() {
     let env: HashMap<String, String> = HashMap::new();
     let path = pid_file_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/tmp/biomeos-default/tower.pid"));
+    assert_eq!(path, PathBuf::from("/tmp/membrane-default/tower.pid"));
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn pid_file_path_prefers_biomeos_family_over_family_id() {
     env.insert("BIOMEOS_FAMILY_ID".to_string(), "preferred".to_string());
     env.insert("FAMILY_ID".to_string(), "fallback".to_string());
     let path = pid_file_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/tmp/biomeos-preferred/tower.pid"));
+    assert_eq!(path, PathBuf::from("/tmp/membrane-preferred/tower.pid"));
 }
 
 #[test]
@@ -68,7 +68,7 @@ fn socket_dir_path_falls_back_to_family_tmp() {
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "gamma".to_string());
     let path = socket_dir_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/tmp/biomeos-gamma/sockets"));
+    assert_eq!(path, PathBuf::from("/tmp/membrane-gamma/sockets"));
 }
 
 #[test]
@@ -193,7 +193,7 @@ fn pid_file_path_uses_family_id_env_alone() {
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "only_family".to_string());
     let path = pid_file_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/tmp/biomeos-only_family/tower.pid"));
+    assert_eq!(path, PathBuf::from("/tmp/membrane-only_family/tower.pid"));
 }
 
 #[test]
@@ -541,7 +541,7 @@ fn stop_tower_cleans_up_stale_pid() {
 fn socket_dir_path_defaults_without_any_env() {
     let env: HashMap<String, String> = HashMap::new();
     let path = socket_dir_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/tmp/biomeos-default/sockets"));
+    assert_eq!(path, PathBuf::from("/tmp/membrane-default/sockets"));
 }
 
 #[test]
@@ -549,7 +549,7 @@ fn socket_dir_path_uses_biomeos_family_id() {
     let mut env = HashMap::new();
     env.insert("BIOMEOS_FAMILY_ID".to_string(), "beta".to_string());
     let path = socket_dir_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/tmp/biomeos-beta/sockets"));
+    assert_eq!(path, PathBuf::from("/tmp/membrane-beta/sockets"));
 }
 
 #[test]

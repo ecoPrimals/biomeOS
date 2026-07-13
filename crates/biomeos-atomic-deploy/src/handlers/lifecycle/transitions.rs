@@ -20,28 +20,35 @@ impl LifecycleHandler {
             .as_str()
             .context("Missing 'name' parameter")?;
 
-        info!("🔄 Resurrection requested for: {}", name);
+        info!("🔄 Resurrection requested for: {name}");
 
-        // Check if primal exists
         let manager = self.manager.read().await;
         let primal = manager.get_primal_info(name).await;
-        drop(manager);
 
         if primal.is_none() {
             return Ok(json!({
-                "error": format!("Primal not found: {}", name)
+                "error": format!("Primal not found: {name}")
             }));
         }
 
-        // Trigger resurrection by marking as degraded
-        // The monitoring loop will handle the actual resurrection
-        // For now, we can't directly trigger resurrection without internal methods
-        // Instead, we return instructions
-
-        Ok(json!({
-            "requested": name,
-            "message": "Resurrection triggered. Monitor lifecycle.status for progress."
-        }))
+        match manager.attempt_resurrection(name).await {
+            Ok(()) => {
+                info!("✅ Resurrection triggered for {name}");
+                Ok(json!({
+                    "requested": name,
+                    "status": "triggered",
+                    "message": "Resurrection initiated. Monitor lifecycle.status for progress."
+                }))
+            }
+            Err(e) => {
+                warn!("⚠️ Resurrection failed for {name}: {e}");
+                Ok(json!({
+                    "requested": name,
+                    "status": "failed",
+                    "error": e.to_string()
+                }))
+            }
+        }
     }
 
     /// Handle `lifecycle.apoptosis` - Initiate graceful shutdown

@@ -122,6 +122,18 @@ impl NeuralApiServer {
         let listener =
             UnixListener::bind(&self.socket_path).context("Failed to bind Unix socket")?;
 
+        // Restrict socket permissions to owner+group (0o660) post-bind.
+        // Prevents world-readable/writable sockets that could allow unauthorized
+        // JSON-RPC access from other system users.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let perms = std::fs::Permissions::from_mode(0o660);
+            if let Err(e) = std::fs::set_permissions(&self.socket_path, perms) {
+                tracing::warn!("Failed to set socket permissions: {e}");
+            }
+        }
+
         info!("🧠 Neural API socket bound: {}", self.socket_path.display());
         info!("   Graphs directory: {}", self.graphs_dir.display());
         info!("   Family ID: {}", self.family_id);

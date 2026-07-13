@@ -290,7 +290,11 @@ mod tests {
             Some(std::path::Path::new("/run/user/1000")),
         );
 
-        assert!(socket.to_string_lossy().contains("/run/user/1000/biomeos/"));
+        assert!(
+            socket
+                .to_string_lossy()
+                .contains("/run/user/1000/membrane/")
+        );
         assert!(socket.to_string_lossy().contains("beardog-test_family"));
         assert!(socket.to_string_lossy().ends_with(".sock"));
     }
@@ -301,7 +305,7 @@ mod tests {
         let socket = nucleation.assign_socket_with_runtime_dir("songbird", "test-family", None);
 
         assert!(
-            socket.to_string_lossy().contains("/tmp/biomeos/")
+            socket.to_string_lossy().contains("/run/membrane/")
                 || socket.to_string_lossy().contains("songbird-test-family")
         );
     }

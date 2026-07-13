@@ -49,13 +49,15 @@ use std::path::{Path, PathBuf};
 
 /// Default Unix socket directory
 ///
-/// Last-resort fallback when all env-based tiers fail. Production should use:
-/// 1. `BIOMEOS_SOCKET_DIR` env var
-/// 2. `$XDG_RUNTIME_DIR/biomeos`
-/// 3. `/run/user/{uid}/biomeos`
-/// 4. `/data/local/tmp/biomeos` (Android)
-/// 5. This fallback — on VPS, systemd `RuntimeDirectory=biomeos` creates `/run/biomeos/`
-pub const DEFAULT_SOCKET_DIR: &str = "/run/biomeos";
+/// Canonical path for all primal sockets. Production should use:
+/// 1. `BIOMEOS_SOCKET_DIR` env var (or `MEMBRANE_SOCKET_DIR`)
+/// 2. `$XDG_RUNTIME_DIR/membrane`
+/// 3. `/run/membrane` (systemd `RuntimeDirectory=membrane`)
+/// 4. `/data/local/tmp/membrane` (Android)
+///
+/// All primals bind sockets under this single directory, enabling songBird
+/// TLS delegation and unified socket discovery.
+pub const DEFAULT_SOCKET_DIR: &str = "/run/membrane";
 
 /// Fallback family ID when no env var or seed file is available.
 ///

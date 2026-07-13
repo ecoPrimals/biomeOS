@@ -54,12 +54,13 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
     // Create Unix listener
     let listener = UnixListener::bind(socket_path).context("Failed to bind Unix socket")?;
 
-    // Set permissions (0600 - owner only)
+    // Set permissions (0660 - owner + group) to allow songBird TLS delegation
+    // within the membrane group while blocking world access.
     #[cfg(unix)]
     {
         use std::fs;
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(socket_path, fs::Permissions::from_mode(0o600))
+        fs::set_permissions(socket_path, fs::Permissions::from_mode(0o660))
             .context("Failed to set socket permissions")?;
     }
 

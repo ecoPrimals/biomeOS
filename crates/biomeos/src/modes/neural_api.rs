@@ -6,9 +6,12 @@
 //! Starts the Neural API JSON-RPC server for graph execution
 
 use anyhow::{Context, Result};
+use biomeos_atomic_deploy::LifecycleManager;
 use biomeos_atomic_deploy::neural_api_server::NeuralApiServer;
 use biomeos_types::paths::SystemPaths;
 use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::info;
 use tracing::warn;
 
@@ -118,6 +121,76 @@ pub async fn run(
     }
 
     info!("🚀 Starting Neural API server...");
+    server.serve().await.context("Neural API server failed")
+}
+
+/// Run the Neural API server with a shared `LifecycleManager` from NUCLEUS.
+///
+/// This ensures `lifecycle.status` reflects all primals that NUCLEUS has
+/// already registered in-process, eliminating the count=0 split-brain bug.
+#[expect(clippy::too_many_arguments, reason = "NUCLEUS launch context")]
+pub async fn run_with_lifecycle(
+    graphs_dir: PathBuf,
+    family_id: String,
+    socket: Option<PathBuf>,
+    tcp_port: Option<u16>,
+    tcp_only: bool,
+    bind: Option<String>,
+    btsp_optional: bool,
+    lifecycle_manager: Arc<RwLock<LifecycleManager>>,
+) -> Result<()> {
+    let socket_path = resolve_socket_path(socket, &family_id);
+
+    info!("╔══════════════════════════════════════════════════════════════════════════╗");
+    info!("║                                                                          ║");
+    info!("║           🧠 Neural API Server Starting (NUCLEUS-linked) 🧠              ║");
+    info!("║                                                                          ║");
+    info!("╚══════════════════════════════════════════════════════════════════════════╝");
+    info!("");
+    info!("Configuration:");
+    info!("  Graphs Directory: {}", graphs_dir.display());
+    info!("  Family ID: {family_id}");
+    info!("  Lifecycle: shared (NUCLEUS in-process manager)");
+    if tcp_only {
+        info!(
+            "  Transport: TCP-only (port {}). \
+             UDS skipped — required for SELinux/Android substrates.",
+            tcp_port.unwrap_or(0)
+        );
+    } else if let Some(port) = tcp_port {
+        info!("  Socket Path: {}", socket_path.display());
+        info!("  TCP Port: {port} (alongside UDS)");
+    } else {
+        info!("  Socket Path: {}", socket_path.display());
+    }
+    if let Some(ref addr) = bind {
+        info!("  Bind Address: {addr}");
+    }
+    info!("");
+
+    let mut server = NeuralApiServer::new(graphs_dir, family_id, socket_path)
+        .with_lifecycle_manager(lifecycle_manager);
+    if btsp_optional {
+        server = server.with_btsp_optional();
+    }
+    if let Some(addr) = bind {
+        server = server.with_bind_address(addr);
+    }
+    let effective_tcp_only = tcp_only || biomeos_types::env_config::is_tcp_only_bind_mode();
+    if effective_tcp_only {
+        if let Some(port) = tcp_port {
+            server = server.with_tcp_only(port);
+        } else if !tcp_only {
+            warn!(
+                "PRIMAL_BIND_MODE=tcp_only set but no --port specified. \
+                 UDS bind will be attempted (may fail on SELinux)."
+            );
+        }
+    } else if let Some(port) = tcp_port {
+        server = server.with_tcp_port(port);
+    }
+
+    info!("🚀 Starting Neural API server (lifecycle-linked)...");
     server.serve().await.context("Neural API server failed")
 }
 
