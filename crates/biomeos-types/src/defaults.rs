@@ -179,9 +179,9 @@ impl RuntimeConfig {
     /// Uses XDG-aware resolution instead of bare `/tmp/`.
     /// Resolution order:
     /// 1. `BIOMEOS_SOCKET_DIR` env var (explicit override)
-    /// 2. `$XDG_RUNTIME_DIR/biomeos` (XDG standard)
-    /// 3. `/run/user/$UID/biomeos` (systemd, derived from env)
-    /// 4. `/tmp` fallback (development only)
+    /// 2. `$XDG_RUNTIME_DIR/membrane` (XDG standard)
+    /// 3. `/run/user/$UID/membrane` (systemd, derived from env)
+    /// 4. `/run/membrane` fallback (systemd `RuntimeDirectory=membrane`)
     #[must_use]
     pub fn from_env() -> Self {
         Self::from_env_with(None, None)
@@ -215,13 +215,13 @@ impl RuntimeConfig {
             })
             .or_else(|| {
                 xdg_runtime_dir_override.map(|xdg| {
-                    PathBuf::from(xdg).join(crate::constants::runtime_paths::BIOMEOS_SUBDIR)
+                    PathBuf::from(xdg).join(crate::constants::runtime_paths::MEMBRANE_SUBDIR)
                 })
             })
             .or_else(|| {
                 env.get("XDG_RUNTIME_DIR").map(|xdg| {
                     PathBuf::from(xdg.as_str())
-                        .join(crate::constants::runtime_paths::BIOMEOS_SUBDIR)
+                        .join(crate::constants::runtime_paths::MEMBRANE_SUBDIR)
                 })
             })
             .unwrap_or_else(|| {
@@ -229,7 +229,7 @@ impl RuntimeConfig {
                     let uid_path = PathBuf::from(format!(
                         "{}/{uid}/{}",
                         crate::constants::runtime_paths::LINUX_RUNTIME_DIR_PREFIX,
-                        crate::constants::runtime_paths::BIOMEOS_SUBDIR,
+                        crate::constants::runtime_paths::MEMBRANE_SUBDIR,
                     ));
                     if uid_path.parent().is_some_and(Path::exists) {
                         return uid_path;

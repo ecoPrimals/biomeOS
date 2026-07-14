@@ -219,13 +219,13 @@ pub(crate) fn discover_security_socket_in(
         CapabilityTaxonomy::resolve_to_primal("encryption").unwrap_or(primal_names::BEARDOG);
 
     if let Some(runtime_dir) = socket_dir {
-        let biomeos_dir = runtime_dir.join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
-        let xdg_path = biomeos_dir.join(format!("{primal}.sock"));
+        let membrane_dir = runtime_dir.join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
+        let xdg_path = membrane_dir.join(format!("{primal}.sock"));
         if xdg_path.exists() {
             return Some(xdg_path.to_string_lossy().to_string());
         }
         if let Some(fid) = family_id {
-            let family_path = biomeos_dir.join(format!("{primal}-{fid}.sock"));
+            let family_path = membrane_dir.join(format!("{primal}-{fid}.sock"));
             if family_path.exists() {
                 return Some(family_path.to_string_lossy().to_string());
             }

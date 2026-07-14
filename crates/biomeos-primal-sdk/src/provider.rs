@@ -130,7 +130,7 @@ impl BiomeosProvider {
         {
             PathBuf::from(dir)
         } else if let Ok(xdg) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
-            PathBuf::from(xdg).join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR)
+            PathBuf::from(xdg).join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR)
         } else {
             biomeos_types::SystemPaths::new_lazy()
                 .runtime_dir()

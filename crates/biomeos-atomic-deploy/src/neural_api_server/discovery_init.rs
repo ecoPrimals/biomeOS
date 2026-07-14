@@ -123,6 +123,22 @@ impl NeuralApiServer {
                     }
                 }
 
+                // Register with LifecycleManager for health monitoring
+                let lifecycle_params = serde_json::json!({
+                    "name": primal_name,
+                    "socket_path": format!("tcp://{}:{}", &host, port),
+                });
+                if let Err(e) = self
+                    .lifecycle_handler
+                    .register(&Some(lifecycle_params))
+                    .await
+                {
+                    debug!(
+                        "   Lifecycle registration skipped for {}: {e}",
+                        primal_name
+                    );
+                }
+
                 info!(
                     "   🔍 Discovered {} — {} capabilities via TCP :{port}",
                     primal_name,
@@ -177,6 +193,22 @@ impl NeuralApiServer {
                         {
                             warn!("   Failed to register {}.{}: {}", primal_name, cap, e);
                         }
+                    }
+
+                    // Register with LifecycleManager for health monitoring
+                    let lifecycle_params = serde_json::json!({
+                        "name": primal_name,
+                        "socket_path": socket_str,
+                    });
+                    if let Err(e) = self
+                        .lifecycle_handler
+                        .register(&Some(lifecycle_params))
+                        .await
+                    {
+                        debug!(
+                            "   Lifecycle registration skipped for {}: {e}",
+                            primal_name
+                        );
                     }
 
                     info!(

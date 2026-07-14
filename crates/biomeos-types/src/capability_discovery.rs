@@ -59,8 +59,8 @@ pub fn discover_capability_socket(
 
     // Tier 3: XDG runtime directory
     if let Some(ref base) = runtime_dir {
-        let biomeos_dir = base.join(crate::constants::runtime_paths::BIOMEOS_SUBDIR);
-        if let Some(found) = probe_socket_dir(&biomeos_dir, capability, primal, &family_id) {
+        let membrane_dir = base.join(crate::constants::runtime_paths::MEMBRANE_SUBDIR);
+        if let Some(found) = probe_socket_dir(&membrane_dir, capability, primal, &family_id) {
             return Some(found);
         }
     }
@@ -73,7 +73,7 @@ pub fn discover_capability_socket(
 
     // Tier 5: socket-registry.json
     if let Some(ref base) = runtime_dir {
-        let registry_path = base.join("biomeos/socket-registry.json");
+        let registry_path = base.join(crate::constants::runtime_paths::MEMBRANE_SUBDIR).join("socket-registry.json");
         if let Some(found) = probe_socket_registry(&registry_path, capability) {
             return Some(found);
         }
@@ -185,9 +185,9 @@ mod tests {
     #[test]
     fn tier3_xdg_capability_socket() {
         let dir = tempfile::tempdir().unwrap();
-        let biomeos_dir = dir.path().join("biomeos");
-        std::fs::create_dir_all(&biomeos_dir).unwrap();
-        std::fs::write(biomeos_dir.join("security.sock"), "").unwrap();
+        let membrane_dir = dir.path().join("membrane");
+        std::fs::create_dir_all(&membrane_dir).unwrap();
+        std::fs::write(membrane_dir.join("security.sock"), "").unwrap();
 
         let mut env = HashMap::new();
         env.insert(
@@ -202,9 +202,9 @@ mod tests {
     #[test]
     fn tier3_xdg_primal_socket_fallback() {
         let dir = tempfile::tempdir().unwrap();
-        let biomeos_dir = dir.path().join("biomeos");
-        std::fs::create_dir_all(&biomeos_dir).unwrap();
-        std::fs::write(biomeos_dir.join("beardog.sock"), "").unwrap();
+        let membrane_dir = dir.path().join("membrane");
+        std::fs::create_dir_all(&membrane_dir).unwrap();
+        std::fs::write(membrane_dir.join("beardog.sock"), "").unwrap();
 
         let mut env = HashMap::new();
         env.insert(
@@ -219,9 +219,9 @@ mod tests {
     #[test]
     fn tier3_xdg_family_suffixed_socket() {
         let dir = tempfile::tempdir().unwrap();
-        let biomeos_dir = dir.path().join("biomeos");
-        std::fs::create_dir_all(&biomeos_dir).unwrap();
-        std::fs::write(biomeos_dir.join("security-nat0.sock"), "").unwrap();
+        let membrane_dir = dir.path().join("membrane");
+        std::fs::create_dir_all(&membrane_dir).unwrap();
+        std::fs::write(membrane_dir.join("security-nat0.sock"), "").unwrap();
 
         let mut env = HashMap::new();
         env.insert(

@@ -577,9 +577,9 @@ mod tests {
     #[tokio::test]
     async fn test_identity_layer_new_discovers_via_xdg_runtime_dir() {
         let tmp = tempfile::tempdir().expect("tempdir");
-        let biomeos_dir = tmp.path().join("biomeos");
-        std::fs::create_dir_all(&biomeos_dir).expect("biomeos dir");
-        let sock_path = biomeos_dir.join("beardog.sock");
+        let membrane_dir = tmp.path().join("membrane");
+        std::fs::create_dir_all(&membrane_dir).expect("membrane dir");
+        let sock_path = membrane_dir.join("beardog.sock");
         std::fs::write(&sock_path, "").expect("write placeholder socket");
 
         let layer = IdentityLayerImpl::new_with(None, tmp.path().to_str())

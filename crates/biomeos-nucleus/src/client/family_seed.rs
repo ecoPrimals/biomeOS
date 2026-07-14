@@ -48,7 +48,7 @@ pub fn load_family_seed_from_storage_with(
 
     if let Some(runtime_dir) = runtime_dir {
         let seed_path = runtime_dir
-            .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR)
+            .join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR)
             .join("family.seed");
         if let Ok(seed) = std::fs::read(&seed_path) {
             debug!(

@@ -165,9 +165,9 @@ fn resolve_socket_via_env_var() {
 fn resolve_socket_tier_xdg_runtime_dir() {
     let family = "neural-tier-xdg-only-7f3a";
     let temp = tempfile::tempdir().expect("temp dir");
-    let biomeos_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
-    let expected = biomeos_dir.join(format!("neural-api-{family}.sock"));
+    let membrane_dir = temp.path().join("membrane");
+    std::fs::create_dir_all(&membrane_dir).expect("create membrane dir");
+    let expected = membrane_dir.join(format!("neural-api-{family}.sock"));
     std::fs::write(&expected, "").expect("placeholder socket path");
 
     let bridge = NeuralBridge::discover_with_env(
@@ -209,9 +209,9 @@ fn resolve_socket_tier_run_user() {
 fn resolve_socket_tier_platform_temp_dir() {
     let family = "neural-tier-tmpdir-b4d1";
     let tmp_root = tempfile::tempdir().expect("tmp root");
-    let biomeos_dir = tmp_root.path().join("biomeos");
-    std::fs::create_dir_all(&biomeos_dir).expect("create biomeos under TMPDIR");
-    let expected = biomeos_dir.join(format!("neural-api-{family}.sock"));
+    let membrane_dir = tmp_root.path().join("membrane");
+    std::fs::create_dir_all(&membrane_dir).expect("create membrane under TMPDIR");
+    let expected = membrane_dir.join(format!("neural-api-{family}.sock"));
     std::fs::write(&expected, "").expect("placeholder socket path");
 
     let empty_xdg = tempfile::tempdir().expect("empty xdg");

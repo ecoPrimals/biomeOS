@@ -125,19 +125,17 @@ pub async fn handle_announce(
             }
         });
 
-    // 1. Lifecycle registration
-    if let Some(pid) = announcement.pid {
-        let lifecycle_params = json!({
-            "name": announcement.primal,
-            "socket_path": announcement.socket,
-            "pid": pid,
-        });
-        if let Err(e) = lifecycle_handler.register(&Some(lifecycle_params)).await {
-            warn!(
-                "Lifecycle registration failed for {}: {e} (continuing with capability registration)",
-                announcement.primal
-            );
-        }
+    // 1. Lifecycle registration (PID optional — socket health checks suffice)
+    let lifecycle_params = json!({
+        "name": announcement.primal,
+        "socket_path": announcement.socket,
+        "pid": announcement.pid,
+    });
+    if let Err(e) = lifecycle_handler.register(&Some(lifecycle_params)).await {
+        warn!(
+            "Lifecycle registration failed for {}: {e} (continuing with capability registration)",
+            announcement.primal
+        );
     }
 
     // 2. Capability domain registration

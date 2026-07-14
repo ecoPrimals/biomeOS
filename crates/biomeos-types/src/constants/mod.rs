@@ -460,7 +460,9 @@ pub mod runtime_paths {
     /// Subdirectory name under `$XDG_RUNTIME_DIR` for all primal sockets.
     pub const MEMBRANE_SUBDIR: &str = "membrane";
 
-    /// Legacy subdirectory name (kept for backward-compat scanning).
+    /// Legacy subdirectory name — only used by `topology.rs` backward-compat scan.
+    /// All new code should use `MEMBRANE_SUBDIR`.
+    #[deprecated(note = "use MEMBRANE_SUBDIR — biomeos/ is legacy")]
     pub const BIOMEOS_SUBDIR: &str = "biomeos";
 
     /// Build the family-scoped `/tmp` fallback path.

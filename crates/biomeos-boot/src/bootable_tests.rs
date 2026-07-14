@@ -242,8 +242,8 @@ async fn test_add_biomeos_data_copies_phase1_and_templates() {
     let boot_dir = temp.path().join("boot-root");
     std::fs::create_dir_all(&boot_dir).expect("boot");
     builder.add_biomeos_data(&boot_dir).expect("add data");
-    assert!(boot_dir.join("biomeos/primals/p.bin").exists());
-    assert!(boot_dir.join("biomeos/templates/hello.txt").exists());
+    assert!(boot_dir.join("membrane/primals/p.bin").exists());
+    assert!(boot_dir.join("membrane/templates/hello.txt").exists());
 }
 
 #[tokio::test]
@@ -256,7 +256,7 @@ async fn test_add_biomeos_data_without_phase1_parent() {
     builder
         .add_biomeos_data(&boot_dir)
         .expect("ok without phase1");
-    assert!(boot_dir.join("biomeos/primals").exists());
+    assert!(boot_dir.join("membrane/primals").exists());
 }
 
 #[tokio::test]
@@ -348,7 +348,7 @@ async fn test_add_biomeos_data_skips_phase1_when_parent_has_no_bins() {
     let boot_dir = temp.path().join("boot-root");
     std::fs::create_dir_all(&boot_dir).expect("boot");
     builder.add_biomeos_data(&boot_dir).expect("add data");
-    assert!(boot_dir.join("biomeos/primals").exists());
+    assert!(boot_dir.join("membrane/primals").exists());
 }
 
 #[tokio::test]
@@ -360,7 +360,7 @@ async fn test_add_biomeos_data_without_templates_dir() {
     let boot_dir = temp.path().join("br");
     std::fs::create_dir_all(&boot_dir).expect("boot");
     builder.add_biomeos_data(&boot_dir).expect("ok");
-    assert!(boot_dir.join("biomeos/templates").exists());
+    assert!(boot_dir.join("membrane/templates").exists());
 }
 
 #[tokio::test]

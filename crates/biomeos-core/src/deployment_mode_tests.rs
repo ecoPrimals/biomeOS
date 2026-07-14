@@ -166,7 +166,7 @@ fn test_socket_prefix_livespore_with_xdg() {
         installed_version: "1.0.0".to_string(),
     };
     let prefix = mode.socket_prefix_with_runtime(Some("/run/user/1000"), None);
-    assert_eq!(prefix, PathBuf::from("/run/user/1000/biomeos"));
+    assert_eq!(prefix, PathBuf::from("/run/user/1000/membrane"));
 }
 
 #[test]
@@ -267,10 +267,10 @@ fn test_socket_prefix_livespore_without_xdg() {
         installed_version: "1.0".to_string(),
     };
     let prefix = mode.socket_prefix_with_runtime(None, None);
-    assert!(prefix.to_string_lossy().contains("biomeos"));
+    assert!(prefix.to_string_lossy().contains("membrane"));
     assert!(
         prefix.to_string_lossy().contains("/run/user/")
-            || prefix.to_string_lossy().contains("biomeos")
+            || prefix.to_string_lossy().contains("membrane")
     );
 }
 

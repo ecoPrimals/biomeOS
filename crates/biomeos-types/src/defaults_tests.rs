@@ -384,7 +384,7 @@ fn test_runtime_config_from_env_xdg_runtime_dir() {
     );
     let config = RuntimeConfig::from_env_with_map(&env, None, None);
     let socket_dir = config.socket_dir();
-    assert!(socket_dir.to_string_lossy().contains("biomeos"));
+    assert!(socket_dir.to_string_lossy().contains("membrane"));
     assert!(socket_dir.to_string_lossy().contains("xdg-test"));
 }
 

@@ -238,13 +238,13 @@ impl DeploymentMode {
         uid_for_run_user_path: Option<u32>,
     ) -> PathBuf {
         if let Some(xdg) = xdg_runtime_dir {
-            PathBuf::from(xdg).join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR)
+            PathBuf::from(xdg).join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR)
         } else {
             let uid = uid_for_run_user_path.unwrap_or_else(Self::get_uid);
             PathBuf::from(format!(
                 "{}/{uid}/{}",
                 biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX,
-                biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR,
+                biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR,
             ))
         }
     }
@@ -456,7 +456,7 @@ impl DeploymentMode {
         // 2. Use XDG_DATA_HOME if available (XDG-compliant)
         if let Ok(xdg_data) = std::env::var(biomeos_types::env_config::vars::XDG_DATA_HOME) {
             return Ok(PathBuf::from(xdg_data)
-                .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR));
+                .join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR));
         }
 
         // 3. Default to HOME/.local/share (XDG default)

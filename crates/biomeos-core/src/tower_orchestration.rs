@@ -32,7 +32,7 @@ pub fn pid_file_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
 
     if let Some(runtime) = env("XDG_RUNTIME_DIR") {
         return PathBuf::from(runtime)
-            .join(runtime_paths::BIOMEOS_SUBDIR)
+            .join(runtime_paths::MEMBRANE_SUBDIR)
             .join("tower.pid");
     }
 
@@ -58,7 +58,7 @@ pub fn socket_dir_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
 
     if let Some(runtime) = env("XDG_RUNTIME_DIR") {
         return PathBuf::from(runtime)
-            .join(runtime_paths::BIOMEOS_SUBDIR)
+            .join(runtime_paths::MEMBRANE_SUBDIR)
             .join(runtime_paths::SOCKET_SUBDIR);
     }
 

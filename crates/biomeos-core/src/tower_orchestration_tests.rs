@@ -17,7 +17,7 @@ fn pid_file_path_uses_xdg_runtime_dir() {
     let mut env = HashMap::new();
     env.insert("XDG_RUNTIME_DIR".to_string(), "/run/user/1000".to_string());
     let path = pid_file_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/run/user/1000/biomeos/tower.pid"));
+    assert_eq!(path, PathBuf::from("/run/user/1000/membrane/tower.pid"));
 }
 
 #[test]
@@ -60,7 +60,7 @@ fn socket_dir_path_uses_xdg_runtime_dir() {
     let mut env = HashMap::new();
     env.insert("XDG_RUNTIME_DIR".to_string(), "/run/user/1000".to_string());
     let path = socket_dir_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/run/user/1000/biomeos/sockets"));
+    assert_eq!(path, PathBuf::from("/run/user/1000/membrane/sockets"));
 }
 
 #[test]
@@ -558,7 +558,7 @@ fn socket_dir_path_xdg_over_family_fallback() {
     env.insert("XDG_RUNTIME_DIR".to_string(), "/run/user/42".to_string());
     env.insert("BIOMEOS_FAMILY_ID".to_string(), "ignored".to_string());
     let path = socket_dir_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/run/user/42/biomeos/sockets"));
+    assert_eq!(path, PathBuf::from("/run/user/42/membrane/sockets"));
 }
 
 // ========================================================================
@@ -656,7 +656,7 @@ fn pid_file_path_xdg_takes_precedence_over_both_family_vars() {
     env.insert("BIOMEOS_FAMILY_ID".to_string(), "fam-a".to_string());
     env.insert("FAMILY_ID".to_string(), "fam-b".to_string());
     let path = pid_file_path(&mock_env(&env));
-    assert_eq!(path, PathBuf::from("/xdg/rt/biomeos/tower.pid"));
+    assert_eq!(path, PathBuf::from("/xdg/rt/membrane/tower.pid"));
 }
 
 // ========================================================================

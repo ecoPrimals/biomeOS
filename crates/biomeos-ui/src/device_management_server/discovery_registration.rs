@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn test_discover_discovery_provider_xdg_runtime_exists() {
         let temp = tempfile::tempdir().unwrap();
-        let socket_path = temp.path().join("biomeos").join("songbird.sock");
+        let socket_path = temp.path().join("membrane").join("songbird.sock");
         std::fs::create_dir_all(socket_path.parent().unwrap()).unwrap();
         std::fs::File::create(&socket_path).unwrap();
 
@@ -160,14 +160,14 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            format!("{}/biomeos/songbird.sock", temp.path().display())
+            format!("{}/membrane/songbird.sock", temp.path().display())
         );
     }
 
     #[test]
     fn test_discover_discovery_provider_family_xdg_path() {
         let temp = tempfile::tempdir().unwrap();
-        let socket_path = temp.path().join("biomeos").join("songbird-family99.sock");
+        let socket_path = temp.path().join("membrane").join("songbird-family99.sock");
         std::fs::create_dir_all(socket_path.parent().unwrap()).unwrap();
         std::fs::File::create(&socket_path).unwrap();
 
@@ -182,7 +182,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            format!("{}/biomeos/songbird-family99.sock", temp.path().display())
+            format!("{}/membrane/songbird-family99.sock", temp.path().display())
         );
     }
 
@@ -233,9 +233,9 @@ mod tests {
     #[test]
     fn test_discover_discovery_provider_family_id_fallback() {
         let temp = tempfile::tempdir().unwrap();
-        let biomeos_dir = temp.path().join("biomeos");
-        std::fs::create_dir_all(&biomeos_dir).unwrap();
-        let socket_path = biomeos_dir.join("songbird-fam2.sock");
+        let membrane_dir = temp.path().join("membrane");
+        std::fs::create_dir_all(&membrane_dir).unwrap();
+        let socket_path = membrane_dir.join("songbird-fam2.sock");
         std::fs::File::create(&socket_path).unwrap();
 
         let mut env = HashMap::new();
@@ -249,7 +249,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            format!("{}/biomeos/songbird-fam2.sock", temp.path().display())
+            format!("{}/membrane/songbird-fam2.sock", temp.path().display())
         );
     }
 

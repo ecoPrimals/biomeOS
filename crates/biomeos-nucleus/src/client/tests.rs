@@ -742,7 +742,7 @@ fn test_get_family_seed_invalid_base64_ignored() {
 #[test]
 fn test_get_family_seed_from_xdg_file_when_env_unset() {
     let temp = tempfile::tempdir().expect("tempdir");
-    let seed_path = temp.path().join("biomeos").join("family.seed");
+    let seed_path = temp.path().join("membrane").join("family.seed");
     std::fs::create_dir_all(seed_path.parent().unwrap()).unwrap();
     std::fs::write(&seed_path, b"seed-from-xdg").unwrap();
     let out = load_family_seed_from_storage_with(None, Some(temp.path()), false);

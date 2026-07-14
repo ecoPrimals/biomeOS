@@ -374,15 +374,15 @@ fn test_enroll_args_with_custom_paths() {
 #[test]
 fn test_discover_security_socket_finds_default_socket() {
     let temp = tempfile::tempdir().expect("temp dir");
-    let biomeos_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
-    let socket_path = biomeos_dir.join("beardog.sock");
+    let membrane_dir = temp.path().join("membrane");
+    std::fs::create_dir_all(&membrane_dir).expect("create membrane dir");
+    let socket_path = membrane_dir.join("beardog.sock");
     std::fs::write(&socket_path, "").expect("create socket file");
 
     let result = discover_security_socket_in(Some(temp.path()), None);
     assert!(
         result.is_some(),
-        "Should find socket when socket_dir/biomeos/beardog.sock exists"
+        "Should find socket when socket_dir/membrane/beardog.sock exists"
     );
     assert!(result.unwrap().contains("beardog.sock"));
 }
@@ -390,9 +390,9 @@ fn test_discover_security_socket_finds_default_socket() {
 #[test]
 fn test_discover_security_socket_finds_family_suffixed_socket() {
     let temp = tempfile::tempdir().expect("temp dir");
-    let biomeos_dir = temp.path().join("biomeos");
-    std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
-    let socket_path = biomeos_dir.join("beardog-testfamily123.sock");
+    let membrane_dir = temp.path().join("membrane");
+    std::fs::create_dir_all(&membrane_dir).expect("create membrane dir");
+    let socket_path = membrane_dir.join("beardog-testfamily123.sock");
     std::fs::write(&socket_path, "").expect("create socket file");
 
     let result = discover_security_socket_in(Some(temp.path()), Some("testfamily123"));

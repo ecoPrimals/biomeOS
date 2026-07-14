@@ -51,7 +51,7 @@ fn build_socket_path_inner(
     primal_socket: Option<&str>,
     xdg_runtime_dir: Option<&Path>,
 ) -> PathBuf {
-    const BIOMEOS: &str = runtime_paths::BIOMEOS_SUBDIR;
+    const MEMBRANE: &str = runtime_paths::MEMBRANE_SUBDIR;
     let socket_name = format!("{primal_name}-{family_id}.sock");
 
     // Tier 1: Explicit override via PRIMAL_SOCKET
@@ -71,15 +71,15 @@ fn build_socket_path_inner(
         .map(PathBuf::from)
         .or_else(get_xdg_runtime_dir);
     if let Some(runtime_dir) = runtime_dir {
-        let biomeos_dir = runtime_dir.join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
-        std::fs::create_dir_all(&biomeos_dir).ok();
-        return biomeos_dir.join(&socket_name);
+        let membrane_dir = runtime_dir.join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
+        std::fs::create_dir_all(&membrane_dir).ok();
+        return membrane_dir.join(&socket_name);
     }
 
-    // Tier 3: Linux /run/user/$UID/biomeos/
+    // Tier 3: Linux /run/user/$UID/membrane/
     if let Ok(uid) = env::var(biomeos_types::env_config::vars::UID) {
         let run_user = PathBuf::from(format!(
-            "{}/{uid}/{BIOMEOS}",
+            "{}/{uid}/{MEMBRANE}",
             runtime_paths::LINUX_RUNTIME_DIR_PREFIX,
         ));
         if run_user.parent().is_some_and(std::path::Path::exists) {
@@ -94,7 +94,7 @@ fn build_socket_path_inner(
         if let Ok(meta) = std::fs::metadata("/proc/self") {
             let uid = meta.uid();
             let run_user = PathBuf::from(format!(
-                "{}/{uid}/{BIOMEOS}",
+                "{}/{uid}/{MEMBRANE}",
                 runtime_paths::LINUX_RUNTIME_DIR_PREFIX,
             ));
             if run_user.parent().is_some_and(std::path::Path::exists) {
@@ -104,14 +104,14 @@ fn build_socket_path_inner(
         }
     }
 
-    // Tier 4: Android /data/local/tmp/biomeos/
+    // Tier 4: Android
     let android_dir = PathBuf::from(runtime_paths::ANDROID_RUNTIME_BASE);
     if android_dir.parent().is_some_and(std::path::Path::exists) {
         std::fs::create_dir_all(&android_dir).ok();
         return android_dir.join(&socket_name);
     }
 
-    // Tier 5: Fallback to /tmp/biomeos/
+    // Tier 5: Fallback to /tmp/membrane/
     let fallback_dir = PathBuf::from(runtime_paths::FALLBACK_RUNTIME_BASE);
     std::fs::create_dir_all(&fallback_dir).ok();
     fallback_dir.join(&socket_name)
@@ -162,7 +162,7 @@ mod tests {
     fn xdg_runtime_override_skips_later_tiers() {
         let tmp = tempfile::tempdir().unwrap();
         let path = build_socket_path("songbird", "fam", None, Some(tmp.path()));
-        assert_eq!(path, tmp.path().join("biomeos").join("songbird-fam.sock"));
+        assert_eq!(path, tmp.path().join("membrane").join("songbird-fam.sock"));
     }
 
     #[test]
@@ -227,10 +227,10 @@ mod tests {
     }
 
     #[test]
-    fn xdg_runtime_override_uses_biomeos_subdir_even_when_empty() {
+    fn xdg_runtime_override_uses_membrane_subdir_even_when_empty() {
         let tmp = tempfile::tempdir().unwrap();
         let path = build_socket_path("only", "fam", None, Some(tmp.path()));
-        assert!(path.starts_with(tmp.path().join("biomeos")));
+        assert!(path.starts_with(tmp.path().join("membrane")));
         assert_eq!(path.file_name().unwrap(), "only-fam.sock");
     }
 

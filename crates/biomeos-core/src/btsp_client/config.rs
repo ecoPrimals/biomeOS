@@ -104,7 +104,7 @@ fn socket_dir() -> Option<std::path::PathBuf> {
     }
     if let Ok(runtime) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
         let dir = std::path::PathBuf::from(runtime)
-            .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
+            .join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
         if dir.is_dir() {
             return Some(dir);
         }

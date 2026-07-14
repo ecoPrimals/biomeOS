@@ -191,11 +191,11 @@ impl MeshNode {
         peers
     }
 
-    /// Path to the mesh discovery file (XDG or `/run/biomeos` fallback)
+    /// Path to the mesh discovery file (XDG or `/run/membrane` fallback)
     fn discovery_file_path() -> PathBuf {
         std::env::var("XDG_RUNTIME_DIR")
-            .map(|d| PathBuf::from(d).join("biomeos").join("mesh-peers.json"))
-            .unwrap_or_else(|_| PathBuf::from("/run/biomeos/mesh-peers.json"))
+            .map(|d| PathBuf::from(d).join("membrane").join("mesh-peers.json"))
+            .unwrap_or_else(|_| PathBuf::from(biomeos_types::defaults::DEFAULT_SOCKET_DIR).join("mesh-peers.json"))
     }
 
     /// Create a synthetic identity for a discovered peer (address-only discovery)
