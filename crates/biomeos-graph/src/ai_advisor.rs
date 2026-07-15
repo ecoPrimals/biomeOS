@@ -57,7 +57,7 @@ impl AiGraphAdvisor {
 }
 
 #[cfg(test)]
-#[path = "ai_advisor_core_tests.rs"]
+#[path = "ai_advisor_core_tests/mod.rs"]
 mod core_tests;
 
 #[cfg(test)]

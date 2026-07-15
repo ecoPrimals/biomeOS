@@ -18,7 +18,9 @@
 use anyhow::{Context, Result};
 use axum::Router;
 use std::path::Path;
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixListener;
 use tracing::{debug, error, info, warn};
 
@@ -39,6 +41,7 @@ use tracing::{debug, error, info, warn};
 /// # Security
 ///
 /// The socket is created with 0600 permissions (owner-only).
+#[cfg(unix)]
 pub async fn serve_unix_socket<P: AsRef<Path>>(
     socket_path: P,
     app: Router,
@@ -133,6 +136,7 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
     }
 }
 
+#[cfg(unix)]
 async fn serve_http_connection(stream: BufReader<tokio::net::UnixStream>, app: Router) {
     let stream = hyper_util::rt::TokioIo::new(stream);
     let hyper_service =
@@ -167,6 +171,7 @@ async fn serve_http_connection(stream: BufReader<tokio::net::UnixStream>, app: R
 /// `health.liveness`, `identity.get`, `capabilities.list`) so that
 /// spring probes and discovery sweeps see biomeOS as alive rather than
 /// receiving HTTP 400.
+#[cfg(unix)]
 async fn handle_raw_jsonrpc(mut reader: BufReader<tokio::net::UnixStream>) -> Result<()> {
     let mut line = String::new();
 
@@ -190,6 +195,19 @@ async fn handle_raw_jsonrpc(mut reader: BufReader<tokio::net::UnixStream>) -> Re
     }
 
     Ok(())
+}
+
+/// Windows stub — Unix socket server unavailable.
+#[cfg(windows)]
+pub async fn serve_unix_socket<P: AsRef<Path>>(
+    socket_path: P,
+    _app: Router,
+    _on_ready: Option<Box<dyn FnOnce() + Send>>,
+) -> Result<()> {
+    anyhow::bail!(
+        "Unix socket server unavailable on Windows ({})",
+        socket_path.as_ref().display()
+    )
 }
 
 /// Neural API methods that should be proxied to the Neural API socket

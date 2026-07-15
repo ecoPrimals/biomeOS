@@ -17,5 +17,5 @@ pub use routing::*;
 pub use traffic::*;
 
 #[cfg(test)]
-#[path = "../networking_services_tests.rs"]
+#[path = "../networking_services_tests/mod.rs"]
 mod tests;

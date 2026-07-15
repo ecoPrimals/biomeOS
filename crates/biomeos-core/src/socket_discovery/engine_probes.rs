@@ -13,7 +13,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use biomeos_types::primal_names;
-use tokio::net::{TcpStream, UnixStream};
+use tokio::net::TcpStream;
+#[cfg(unix)]
+use tokio::net::UnixStream;
 use tracing::{debug, trace};
 
 use super::result::{DiscoveredSocket, DiscoveryMethod};
@@ -315,7 +317,7 @@ impl super::engine::SocketDiscovery {
         let contents = tokio::fs::read_to_string(&registry_path).await.ok()?;
         let registry: SocketRegistry = serde_json::from_str(&contents).ok()?;
 
-        for entry in &registry.entries {
+        for entry in registry.entries {
             if entry.primal.eq_ignore_ascii_case(primal_name) {
                 let socket_path = PathBuf::from(&entry.socket);
                 if self.verify_unix_socket(&socket_path).await {
@@ -330,7 +332,7 @@ impl super::engine::SocketDiscovery {
                             DiscoveryMethod::SocketRegistry,
                         )
                         .with_primal_name(primal_name)
-                        .with_capabilities(entry.capabilities.clone()),
+                        .with_capabilities(entry.capabilities),
                     );
                 }
             }
@@ -457,25 +459,34 @@ impl super::engine::SocketDiscovery {
             return false;
         }
 
-        match tokio::time::timeout(
-            std::time::Duration::from_millis(500),
-            UnixStream::connect(path),
-        )
-        .await
+        #[cfg(unix)]
         {
-            Ok(Ok(_)) => true,
-            Ok(Err(e)) => {
-                trace!(
-                    "Unix socket exists but connection failed: {} - {}",
-                    path.display(),
-                    e
-                );
-                false
+            match tokio::time::timeout(
+                std::time::Duration::from_millis(500),
+                UnixStream::connect(path),
+            )
+            .await
+            {
+                Ok(Ok(_)) => true,
+                Ok(Err(e)) => {
+                    trace!(
+                        "Unix socket exists but connection failed: {} - {}",
+                        path.display(),
+                        e
+                    );
+                    false
+                }
+                Err(_) => {
+                    trace!("Unix socket connection timed out: {}", path.display());
+                    false
+                }
             }
-            Err(_) => {
-                trace!("Unix socket connection timed out: {}", path.display());
-                false
-            }
+        }
+
+        #[cfg(windows)]
+        {
+            let _ = path;
+            false
         }
     }
 

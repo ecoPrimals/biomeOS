@@ -21,6 +21,11 @@ use std::path::{Path, PathBuf};
 
 use crate::PrimalCapability;
 
+mod runtime;
+use runtime::{
+    bootstrap_capability_hint, probe_primary_capability, store_runtime_capability_hint,
+};
+
 /// A discovered primal with its runtime information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveredPrimal {
@@ -261,11 +266,22 @@ impl PrimalDiscovery {
             return None;
         };
 
-        // Bootstrap hint when a socket is found by path scan (no capability query yet).
-        let capability = bootstrap_capability_hint_for_primal_name(name);
-
-        // Quick health check
+        // Quick health check — UDS probe on Unix, assume unhealthy on Windows
+        #[cfg(unix)]
         let is_healthy = tokio::net::UnixStream::connect(&path).await.is_ok();
+        #[cfg(windows)]
+        let is_healthy = false;
+
+        // Populate runtime cache from live capability introspection when possible.
+        #[cfg(unix)]
+        if is_healthy
+            && let Some(cap) = probe_primary_capability(&path).await
+        {
+            store_runtime_capability_hint(name, cap);
+        }
+
+        // Runtime cache first, then last-resort static bootstrap hints.
+        let capability = bootstrap_capability_hint(name);
 
         Some(DiscoveredPrimal {
             name: name.to_string(),
@@ -330,25 +346,6 @@ pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
     Vec::new()
 }
 
-/// Bootstrap-only: infer [`PrimalCapability`] from a primal directory/socket name when
-/// discovery found a socket by filesystem path (no capability-first query yet).
-///
-/// Prefer capability-based APIs (`discover_by_capability`, `DiscoveryQuery::capability`) when
-/// the caller can express intent by capability rather than primal name.
-pub(crate) fn bootstrap_capability_hint_for_primal_name(name: &str) -> PrimalCapability {
-    match name.to_lowercase().as_str() {
-        biomeos_types::primal_names::BEARDOG => PrimalCapability::encryption(),
-        biomeos_types::primal_names::SONGBIRD => PrimalCapability::networking(),
-        biomeos_types::primal_names::TOADSTOOL => PrimalCapability::compute(),
-        biomeos_types::primal_names::NESTGATE => PrimalCapability::storage(),
-        biomeos_types::primal_names::SQUIRREL => PrimalCapability::ai(),
-        biomeos_types::primal_names::WETSPRING | biomeos_types::primal_names::NEURALSPRING => {
-            PrimalCapability::science()
-        }
-        _ => PrimalCapability::custom(name),
-    }
-}
-
 #[cfg(test)]
 #[expect(
     clippy::unwrap_used,
@@ -360,6 +357,10 @@ pub(crate) fn bootstrap_capability_hint_for_primal_name(name: &str) -> PrimalCap
 )]
 mod tests {
     use super::*;
+    use runtime::{
+        bootstrap_capability_hint, clear_runtime_capability_cache_for_tests,
+        store_runtime_capability_hint,
+    };
 
     #[test]
     fn test_discovery_query_capability() {
@@ -438,7 +439,7 @@ mod tests {
     #[test]
     fn test_capability_from_name_beardog() {
         assert_eq!(
-            bootstrap_capability_hint_for_primal_name("beardog").category,
+            bootstrap_capability_hint("beardog").category,
             "encryption"
         );
     }
@@ -446,7 +447,7 @@ mod tests {
     #[test]
     fn test_capability_from_name_songbird() {
         assert_eq!(
-            bootstrap_capability_hint_for_primal_name("songbird").category,
+            bootstrap_capability_hint("songbird").category,
             "networking"
         );
     }
@@ -454,7 +455,7 @@ mod tests {
     #[test]
     fn test_capability_from_name_toadstool() {
         assert_eq!(
-            bootstrap_capability_hint_for_primal_name("toadstool").category,
+            bootstrap_capability_hint("toadstool").category,
             "compute"
         );
     }
@@ -462,7 +463,7 @@ mod tests {
     #[test]
     fn test_capability_from_name_nestgate() {
         assert_eq!(
-            bootstrap_capability_hint_for_primal_name("nestgate").category,
+            bootstrap_capability_hint("nestgate").category,
             "storage"
         );
     }
@@ -470,7 +471,7 @@ mod tests {
     #[test]
     fn test_capability_from_name_squirrel() {
         assert_eq!(
-            bootstrap_capability_hint_for_primal_name("squirrel").category,
+            bootstrap_capability_hint("squirrel").category,
             "ai"
         );
     }
@@ -478,7 +479,7 @@ mod tests {
     #[test]
     fn test_capability_from_name_wetspring() {
         assert_eq!(
-            bootstrap_capability_hint_for_primal_name("wetspring").category,
+            bootstrap_capability_hint("wetspring").category,
             "science"
         );
     }
@@ -486,14 +487,14 @@ mod tests {
     #[test]
     fn test_capability_from_name_neuralspring() {
         assert_eq!(
-            bootstrap_capability_hint_for_primal_name("neuralspring").category,
+            bootstrap_capability_hint("neuralspring").category,
             "science"
         );
     }
 
     #[test]
     fn test_capability_from_name_unknown_custom() {
-        let cap = bootstrap_capability_hint_for_primal_name("unknownprimal");
+        let cap = bootstrap_capability_hint("unknownprimal");
         assert_eq!(cap.category, "custom");
         assert_eq!(cap.name, "unknownprimal");
     }
@@ -501,9 +502,53 @@ mod tests {
     #[test]
     fn test_capability_from_name_case_insensitive() {
         assert_eq!(
-            bootstrap_capability_hint_for_primal_name("BEARDOG").category,
+            bootstrap_capability_hint("BEARDOG").category,
             "encryption"
         );
+    }
+
+    #[test]
+    fn test_runtime_cache_overrides_static_hint() {
+        clear_runtime_capability_cache_for_tests();
+        let learned = PrimalCapability::new("orchestration", "planning", "1.0");
+        store_runtime_capability_hint("beardog", learned.clone());
+        assert_eq!(bootstrap_capability_hint("beardog"), learned);
+        clear_runtime_capability_cache_for_tests();
+    }
+
+    #[tokio::test]
+    async fn test_discover_uses_runtime_cache_from_capability_probe() {
+        clear_runtime_capability_cache_for_tests();
+        let tmp = tempfile::tempdir().unwrap();
+        let sock = tmp.path().join("beardog-fam.sock");
+        let listener = tokio::net::UnixListener::bind(&sock).expect("bind");
+        let server = tokio::spawn(async move {
+            use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+            let response = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": {"capabilities": ["orchestration.planning"]}
+            });
+            let mut line = serde_json::to_string(&response).expect("json");
+            line.push('\n');
+            for _ in 0..2 {
+                if let Ok((stream, _)) = listener.accept().await {
+                    let mut reader = BufReader::new(stream);
+                    let mut request_line = String::new();
+                    let _ = reader.read_line(&mut request_line).await;
+                    let _ = reader.get_mut().write_all(line.as_bytes()).await;
+                }
+            }
+        });
+        let discovery = PrimalDiscovery::new("fam");
+        let p = discovery
+            .discover_primal_in("beardog", tmp.path())
+            .await
+            .expect("primal");
+        assert_eq!(p.capability.category, "orchestration");
+        assert_eq!(p.capability.name, "planning");
+        server.await.expect("server");
+        clear_runtime_capability_cache_for_tests();
     }
 
     #[test]

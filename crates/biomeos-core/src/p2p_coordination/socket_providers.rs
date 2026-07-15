@@ -14,7 +14,9 @@
 
 use anyhow::{Context, Result};
 use bytes::Bytes;
+#[cfg(unix)]
 use std::io::{Read, Write};
+#[cfg(unix)]
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -56,6 +58,7 @@ impl SocketRpcClient {
     }
 
     /// Send a JSON-RPC 2.0 request and return the result
+    #[cfg(unix)]
     pub fn call(&self, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
         let mut stream = UnixStream::connect(&self.socket_path).with_context(|| {
             format!(
@@ -85,6 +88,15 @@ impl SocketRpcClient {
         response.get("result").cloned().ok_or_else(|| {
             anyhow::anyhow!("No result in response from {}", self.socket_path.display())
         })
+    }
+
+    /// Windows stub — Unix domain socket RPC unavailable on this platform.
+    #[cfg(windows)]
+    pub fn call(&self, method: &str, _params: serde_json::Value) -> Result<serde_json::Value> {
+        anyhow::bail!(
+            "Unix domain socket RPC unavailable on Windows ({}): {method}",
+            self.socket_path.display()
+        )
     }
 
     /// Spawn a blocking RPC call on the tokio blocking pool
@@ -475,6 +487,6 @@ impl RoutingProvider for SocketRoutingProvider {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 #[path = "socket_providers_tests.rs"]
 mod socket_providers_tests;

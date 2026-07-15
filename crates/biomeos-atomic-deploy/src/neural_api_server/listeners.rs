@@ -4,8 +4,13 @@
 //! Unix/TCP socket binding, accept loops, and JSON-RPC health probes.
 
 use anyhow::{Context, Result};
+#[cfg(unix)]
 use tokio::net::UnixListener;
 use tracing::{debug, error, info};
+
+/// Placeholder for Windows cross-compilation (`bind_socket` always fails on Windows).
+#[cfg(windows)]
+pub(crate) struct UnixListener;
 
 use super::NeuralApiServer;
 use crate::mode::BiomeOsMode;
@@ -114,6 +119,7 @@ impl NeuralApiServer {
     /// Called early in `serve()` before bootstrap or translation loading,
     /// so that primalSpring and other health monitors can discover the
     /// socket immediately after the process starts.
+    #[cfg(unix)]
     pub(crate) fn bind_socket(&self) -> Result<UnixListener> {
         if self.socket_path.exists() {
             std::fs::remove_file(&self.socket_path).context("Failed to remove old socket")?;
@@ -141,6 +147,15 @@ impl NeuralApiServer {
         Ok(listener)
     }
 
+    /// Windows stub — Unix socket bind unavailable.
+    #[cfg(windows)]
+    pub(crate) fn bind_socket(&self) -> Result<UnixListener> {
+        anyhow::bail!(
+            "Unix socket server unavailable on Windows ({})",
+            self.socket_path.display()
+        )
+    }
+
     /// Accept UDS connections on a previously-bound listener.
     ///
     /// **BTSP Phase 2**: When `FAMILY_ID` is set, each accepted connection
@@ -152,6 +167,7 @@ impl NeuralApiServer {
     /// - enforce = false: accepted with a warning (rollout compatibility)
     ///
     /// [`btsp_enforce`]: biomeos_core::btsp_client::btsp_enforce
+    #[cfg(unix)]
     pub(crate) async fn accept_connections(&self, listener: UnixListener) -> Result<()> {
         let btsp_active = biomeos_core::btsp_client::has_family_id();
         let static_enforce = if self.btsp_optional {
@@ -195,6 +211,12 @@ impl NeuralApiServer {
                 }
             }
         }
+    }
+
+    /// Windows stub — Unix socket accept unavailable.
+    #[cfg(windows)]
+    pub(crate) async fn accept_connections(&self, _listener: UnixListener) -> Result<()> {
+        anyhow::bail!("Unix socket accept unavailable on Windows")
     }
 
     /// Accept TCP connections (mobile / cross-gate).
@@ -275,6 +297,7 @@ mod tests {
         assert_eq!(j["registered_capabilities"], serde_json::json!(0));
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_bind_socket_replaces_stale_path_and_binds() {
         let temp = tempfile::tempdir().expect("tempdir");

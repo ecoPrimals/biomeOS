@@ -63,15 +63,22 @@ impl PrimalHealthMonitor {
             while running.load(std::sync::atomic::Ordering::SeqCst) {
                 interval_timer.tick().await;
 
-                let primals_snapshot = primals.read().await.clone();
+                let entries = {
+                    let guard = primals.read().await;
+                    guard
+                        .iter()
+                        .map(|(id, path)| (id.clone(), path.clone()))
+                        .collect::<Vec<_>>()
+                };
 
-                for (id, socket_path) in primals_snapshot {
+                for (id, socket_path) in entries {
                     let healthy = Self::check_primal_health(&socket_path).await;
-                    status.write().await.insert(id.clone(), healthy);
 
                     if !healthy {
                         tracing::warn!("🏥 Primal {} is unhealthy", id);
                     }
+
+                    status.write().await.insert(id, healthy);
                 }
             }
 
@@ -82,6 +89,7 @@ impl PrimalHealthMonitor {
     }
 
     /// Check a primal's health via JSON-RPC.
+    #[cfg(unix)]
     async fn check_primal_health(socket_path: &str) -> bool {
         use std::path::Path;
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -97,12 +105,9 @@ impl PrimalHealthMonitor {
         };
 
         let (reader, mut writer) = stream.into_split();
-        let request = r#"{"jsonrpc":"2.0","method":"health.check","id":1}"#;
+        const REQUEST: &[u8] = b"{\"jsonrpc\":\"2.0\",\"method\":\"health.check\",\"id\":1}\n";
 
-        if writer
-            .write_all(format!("{request}\n").as_bytes())
-            .await
-            .is_err()
+        if writer.write_all(REQUEST).await.is_err()
         {
             return false;
         }
@@ -119,6 +124,12 @@ impl PrimalHealthMonitor {
             Ok(Ok(_)) => response.contains("healthy") || response.contains("\"result\""),
             _ => false,
         }
+    }
+
+    /// Windows stub — Unix socket health probes unavailable on this platform.
+    #[cfg(windows)]
+    async fn check_primal_health(_socket_path: &str) -> bool {
+        false
     }
 
     /// Stop the health monitor.

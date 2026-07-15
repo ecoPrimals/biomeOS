@@ -296,6 +296,7 @@ pub mod provenance {
 }
 
 /// Send a JSON-RPC request over a Unix domain socket and return the response.
+#[cfg(unix)]
 async fn send_jsonrpc_uds(
     socket_path: &Path,
     request: &serde_json::Value,
@@ -315,6 +316,18 @@ async fn send_jsonrpc_uds(
     stream.read_to_end(&mut buf).await?;
 
     serde_json::from_slice(&buf).context("parsing JSON-RPC response")
+}
+
+/// Windows stub — UDS unavailable; use TCP transport.
+#[cfg(windows)]
+async fn send_jsonrpc_uds(
+    socket_path: &Path,
+    _request: &serde_json::Value,
+) -> Result<serde_json::Value> {
+    anyhow::bail!(
+        "Unix domain socket transport unavailable on Windows (path: {})",
+        socket_path.display()
+    )
 }
 
 #[expect(

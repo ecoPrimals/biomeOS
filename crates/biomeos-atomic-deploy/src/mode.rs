@@ -6,6 +6,7 @@
 //! Determines Bootstrap (genesis, no ecosystem) vs Coordinated (participant, ecosystem exists).
 
 use std::path::PathBuf;
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 use tracing::{debug, info, warn};
@@ -147,30 +148,39 @@ impl BiomeOsMode {
 
     /// Check if a primal is reachable via its Unix socket
     async fn primal_reachable(socket_path: &str) -> bool {
-        let path = PathBuf::from(socket_path);
-
-        // 1. Check if socket file exists
-        if !path.exists() {
-            debug!("Socket does not exist: {}", socket_path);
+        #[cfg(windows)]
+        {
+            let _ = socket_path;
             return false;
         }
 
-        // 2. Try to connect (with timeout)
-        match timeout(Duration::from_millis(100), UnixStream::connect(&path)).await {
-            Ok(Ok(_stream)) => {
-                debug!("Successfully connected to {}", socket_path);
-                true
+        #[cfg(unix)]
+        {
+            let path = PathBuf::from(socket_path);
+
+            // 1. Check if socket file exists
+            if !path.exists() {
+                debug!("Socket does not exist: {}", socket_path);
+                return false;
             }
-            Ok(Err(e)) => {
-                debug!(
-                    "Socket exists but connection failed: {} - {}",
-                    socket_path, e
-                );
-                false
-            }
-            Err(_) => {
-                debug!("Connection timeout: {}", socket_path);
-                false
+
+            // 2. Try to connect (with timeout)
+            match timeout(Duration::from_millis(100), UnixStream::connect(&path)).await {
+                Ok(Ok(_stream)) => {
+                    debug!("Successfully connected to {}", socket_path);
+                    true
+                }
+                Ok(Err(e)) => {
+                    debug!(
+                        "Socket exists but connection failed: {} - {}",
+                        socket_path, e
+                    );
+                    false
+                }
+                Err(_) => {
+                    debug!("Connection timeout: {}", socket_path);
+                    false
+                }
             }
         }
     }
@@ -182,6 +192,7 @@ mod tests {
 
     use super::*;
     use tempfile::tempdir;
+    #[cfg(unix)]
     use tokio::net::UnixListener;
 
     #[test]
@@ -221,6 +232,7 @@ mod tests {
         assert_eq!(mode, BiomeOsMode::Bootstrap);
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_detect_coordinated_mode_with_socket() {
         // Create mock BearDog socket in a temp directory
@@ -239,6 +251,7 @@ mod tests {
         assert!(!reachable);
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_primal_reachable_with_valid_socket() {
         let dir = tempdir().unwrap();
@@ -299,6 +312,7 @@ mod tests {
         assert_eq!(mode, BiomeOsMode::Bootstrap);
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_primal_reachable_timeout() {
         let dir = tempdir().unwrap();
@@ -308,6 +322,7 @@ mod tests {
         assert!(reachable);
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_primal_reachable_connection_failed() {
         let dir = tempdir().unwrap();

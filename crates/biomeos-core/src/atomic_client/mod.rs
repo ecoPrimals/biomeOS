@@ -477,8 +477,18 @@ impl AtomicClient {
     ) -> Result<()> {
         match &endpoint {
             TransportEndpoint::UnixSocket { path } => {
-                let stream = atomic_transport::connect_unix_timed(path, timeout_dur).await?;
-                atomic_rpc::pump_ndjson_stream(stream, request, &tx).await
+                #[cfg(unix)]
+                {
+                    let stream = atomic_transport::connect_unix_timed(path, timeout_dur).await?;
+                    atomic_rpc::pump_ndjson_stream(stream, request, &tx).await
+                }
+                #[cfg(windows)]
+                {
+                    anyhow::bail!(
+                        "Unix domain socket streaming unavailable on Windows: {}",
+                        path.display()
+                    )
+                }
             }
             TransportEndpoint::TcpSocket { host, port } => {
                 let stream = atomic_transport::connect_tcp_timed(host, *port, timeout_dur).await?;

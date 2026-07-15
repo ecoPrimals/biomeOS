@@ -4,6 +4,7 @@
 //! Device lineage deriver - orchestrates derivation via `BearDog`
 
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+use sha2::{Digest, Sha256};
 use std::path::Path;
 use tracing::{debug, info, warn};
 
@@ -320,17 +321,46 @@ pub fn load_lineage(lineage_path: &Path) -> SporeResult<DeviceLineage> {
             ))
         })?;
 
-        Ok(DeviceLineage {
-            device_id: "unknown".to_string(),
-            node_id: "unknown".to_string(),
-            family_id: "unknown".to_string(),
-            generation: 1,
-            derived_seed: BASE64.encode(&seed_bytes),
-            derived_at: 0,
-            derivation_method: "unknown".to_string(),
-            lineage_certificate: None,
-        })
+        derive_lineage_from_raw_seed(&seed_bytes, lineage_path)
     }
+}
+
+/// Derive identity fields from raw seed bytes when no JSON metadata sidecar exists.
+fn derive_lineage_from_raw_seed(seed_bytes: &[u8], seed_path: &Path) -> SporeResult<DeviceLineage> {
+    const FAMILY_ID_BYTES: usize = 8;
+
+    let mut hasher = Sha256::new();
+    hasher.update(seed_bytes);
+    let identity_hash = hasher.finalize();
+    let device_id = hex::encode(identity_hash);
+
+    let family_id = if seed_bytes.len() >= FAMILY_ID_BYTES {
+        hex::encode(&seed_bytes[..FAMILY_ID_BYTES])
+    } else {
+        hex::encode(seed_bytes)
+    };
+
+    let node_id = format!(
+        "raw-{}",
+        device_id.get(..12).unwrap_or(device_id.as_str())
+    );
+
+    let derived_at = std::fs::metadata(seed_path)
+        .ok()
+        .and_then(|meta| meta.modified().ok())
+        .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |duration| duration.as_secs());
+
+    Ok(DeviceLineage {
+        device_id,
+        node_id,
+        family_id,
+        generation: 1,
+        derived_seed: BASE64.encode(seed_bytes),
+        derived_at,
+        derivation_method: "raw_seed".to_string(),
+        lineage_certificate: None,
+    })
 }
 
 /// Check if device has existing lineage (caller-agnostic).

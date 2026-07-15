@@ -14,6 +14,9 @@ use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, warn};
 
+/// Sentinel value for node IDs that could not be resolved during insecure discovery
+pub const UNRESOLVED_NODE_ID: &str = "unresolved";
+
 /// Sentinel value for identity proofs where security provider verification was unavailable
 pub const UNVERIFIED_SIGNATURE: &str = "unverified";
 
@@ -349,8 +352,9 @@ mod tests {
             primal_type: "test".into(),
             capabilities: caps,
             endpoints: vec![PrimalEndpoint::UnixSocket { path }],
-            metadata: HashMap::new(),
-        }
+        metadata: HashMap::new(),
+        error: None,
+    }
     }
 
     #[tokio::test]
@@ -363,6 +367,7 @@ mod tests {
                 url: "http://127.0.0.1:9".into(),
             }],
             metadata: HashMap::new(),
+            error: None,
         };
         let security_client = SecurityProviderClient::with_endpoint(
             "unix:///tmp/biomeos-unused-security-provider-socket",
@@ -449,8 +454,9 @@ mod tests {
             primal_type: "t".into(),
             capabilities: caps.clone(),
             endpoints: vec![],
-            metadata: HashMap::new(),
-        };
+        metadata: HashMap::new(),
+        error: None,
+    };
         let got = layer3_capability_verification(&primal)
             .await
             .expect("layer3");
@@ -519,8 +525,9 @@ mod tests {
             endpoints: vec![PrimalEndpoint::UnixSocket {
                 path: sock_path.clone(),
             }],
-            metadata: HashMap::new(),
-        };
+        metadata: HashMap::new(),
+        error: None,
+    };
 
         let got = layer3_capability_verification(&primal)
             .await
@@ -607,8 +614,9 @@ mod tests {
             primal_type: "t".into(),
             capabilities: caps.clone(),
             endpoints: vec![PrimalEndpoint::UnixSocket { path: sock_path }],
-            metadata: HashMap::new(),
-        };
+        metadata: HashMap::new(),
+        error: None,
+    };
 
         let got = layer3_capability_verification(&primal)
             .await

@@ -205,6 +205,7 @@ impl StunExtension {
     }
 
     /// Query a STUN server via the discovery delegate (Unix socket)
+    #[cfg(unix)]
     async fn query_stun(
         &self,
         server: &str,
@@ -252,6 +253,18 @@ impl StunExtension {
             Ok(Err(e)) => Err(e),
             Err(_) => Err(StunExtensionError::Timeout),
         }
+    }
+
+    /// Windows stub — STUN delegation via Unix socket unavailable on this platform.
+    #[cfg(windows)]
+    async fn query_stun(
+        &self,
+        _server: &str,
+        discovery_socket: &str,
+    ) -> Result<SocketAddr, StunExtensionError> {
+        Err(StunExtensionError::StunError(format!(
+            "Unix domain socket STUN delegation unavailable on Windows: {discovery_socket}"
+        )))
     }
 
     /// Get public address, preferring self-hosted if available

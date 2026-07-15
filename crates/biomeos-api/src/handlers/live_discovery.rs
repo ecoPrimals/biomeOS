@@ -15,7 +15,9 @@ use axum::Json;
 use axum::extract::Path as AxumPath;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use serde::{Deserialize, Serialize};
+#[cfg(unix)]
 use std::io::{Read, Write};
+#[cfg(unix)]
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::Duration;
@@ -55,6 +57,7 @@ pub struct IdentityAttestation {
 }
 
 /// Send a JSON-RPC request over Unix socket
+#[cfg(unix)]
 fn send_rpc_request(
     socket_path: &str,
     method: &str,
@@ -86,6 +89,16 @@ fn send_rpc_request(
     response
         .result
         .ok_or_else(|| anyhow::anyhow!("No result in RPC response"))
+}
+
+/// Windows stub — UDS unavailable.
+#[cfg(windows)]
+fn send_rpc_request(
+    socket_path: &str,
+    _method: &str,
+    _params: serde_json::Value,
+) -> Result<serde_json::Value> {
+    anyhow::bail!("Unix socket transport unavailable on Windows ({socket_path})")
 }
 
 /// Discover a primal at the given socket path (capability-agnostic)

@@ -91,6 +91,7 @@ pub async fn layer1_physical_discovery_songbird(
                                     ("id".to_string(), service.id),
                                     ("health".to_string(), service.health),
                                 ]),
+                                error: None,
                             }
                         })
                         .collect();

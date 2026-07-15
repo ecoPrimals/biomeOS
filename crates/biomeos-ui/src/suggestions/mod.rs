@@ -19,5 +19,5 @@ pub use manager::AISuggestionManager;
 pub use types::*;
 
 #[cfg(test)]
-#[path = "suggestions_tests.rs"]
+#[path = "suggestions_tests/mod.rs"]
 mod tests;

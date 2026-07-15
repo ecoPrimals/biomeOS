@@ -19,7 +19,9 @@ use biomeos_types::JsonRpcRequest;
 use biomeos_types::paths::SystemPaths;
 use std::path::PathBuf;
 use std::sync::Arc;
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
@@ -45,6 +47,7 @@ fn effective_socket_dir(socket_dir_override: Option<&str>) -> Option<String> {
 }
 
 /// Send a JSON-RPC capability call to a primal over Unix socket.
+#[cfg(unix)]
 async fn call_primal(
     socket_path: &std::path::Path,
     method: &str,
@@ -83,6 +86,18 @@ async fn call_primal(
     } else {
         anyhow::bail!("Malformed response from {method}")
     }
+}
+
+#[cfg(windows)]
+async fn call_primal(
+    socket_path: &std::path::Path,
+    method: &str,
+    _params: serde_json::Value,
+) -> Result<serde_json::Value> {
+    anyhow::bail!(
+        "Unix domain socket IPC unavailable on Windows: {} ({method})",
+        socket_path.display()
+    )
 }
 
 /// Build JSON-RPC params from a node's configuration and optional feedback.

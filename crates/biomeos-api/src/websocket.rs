@@ -409,5 +409,5 @@ pub async fn dispatch_ws_method(
 }
 
 #[cfg(test)]
-#[path = "websocket_tests.rs"]
+#[path = "websocket_tests/mod.rs"]
 mod websocket_tests;

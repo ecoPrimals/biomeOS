@@ -533,5 +533,5 @@ pub fn std_env_lookup(key: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-#[path = "tower_orchestration_tests.rs"]
+#[path = "tower_orchestration_tests/mod.rs"]
 mod tests;

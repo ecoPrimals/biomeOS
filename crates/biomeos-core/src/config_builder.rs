@@ -11,7 +11,7 @@
 // Import unified types from biomeos-types
 use biomeos_types::constants::ports;
 use biomeos_types::{
-    BiomeOSConfig, Environment, OrganizationScale,
+    BiomeOSConfig, Environment, FeatureFlags, OrganizationScale,
     config::{
         TlsVersion,
         features::UITheme,
@@ -20,6 +20,7 @@ use biomeos_types::{
         security::{AuthMethod, DataAtRestConfig, DataInTransitConfig, EncryptionAlgorithm},
     },
 };
+use std::collections::BTreeMap;
 use std::time::Duration;
 use tracing::warn;
 
@@ -28,6 +29,8 @@ use tracing::warn;
 pub struct BiomeOSConfigBuilder {
     /// Base configuration to build upon
     config: BiomeOSConfig,
+    /// Feature flag overrides collected during building (deterministic order)
+    feature_overrides: BTreeMap<String, bool>,
 }
 
 impl Default for BiomeOSConfigBuilder {
@@ -42,13 +45,17 @@ impl BiomeOSConfigBuilder {
     pub fn new() -> Self {
         Self {
             config: BiomeOSConfig::default(),
+            feature_overrides: BTreeMap::new(),
         }
     }
 
     /// Create a builder from an existing configuration
     #[must_use]
-    pub const fn from_config(config: BiomeOSConfig) -> Self {
-        Self { config }
+    pub fn from_config(config: BiomeOSConfig) -> Self {
+        Self {
+            config,
+            feature_overrides: BTreeMap::new(),
+        }
     }
 
     /// Configure for local development
@@ -339,18 +346,20 @@ impl BiomeOSConfigBuilder {
         self
     }
 
-    /// Enable feature flag
-    pub fn with_feature(self, _feature: &str, _enabled: bool) -> Self {
-        // This is a simplified feature flag system - in reality, you'd want
-        // to define specific feature flags in the FeatureFlags struct
-        // Extensions field is not available in unified BiomeOSConfig
-        warn!("Feature flags should be configured through the FeatureFlags struct, not extensions");
+    /// Enable or disable a feature flag
+    #[must_use]
+    pub fn with_feature(mut self, feature: &str, enabled: bool) -> Self {
+        self.feature_overrides
+            .insert(feature.to_string(), enabled);
         self
     }
 
     /// Build the final `BiomeOS` configuration
     #[must_use]
-    pub fn build(self) -> BiomeOSConfig {
+    pub fn build(mut self) -> BiomeOSConfig {
+        for (feature, enabled) in &self.feature_overrides {
+            apply_feature_flag(&mut self.config.features, feature, *enabled);
+        }
         self.config
     }
 
@@ -409,3 +418,31 @@ impl BiomeOSConfigBuilder {
 #[cfg(test)]
 #[path = "config_builder_tests.rs"]
 mod tests;
+
+/// Apply a named feature flag to the unified `FeatureFlags` configuration.
+fn apply_feature_flag(features: &mut FeatureFlags, feature: &str, enabled: bool) {
+    match feature {
+        "ai_integration" | "ai_first" | "ai_assistance" => features.ai_first = enabled,
+        "crypto_locks" => features.crypto_locks = enabled,
+        "distributed_computing" | "auto_scaling" => features.auto_scaling = enabled,
+        "real_time_monitoring" | "telemetry" | "advanced_monitoring" => {
+            features.telemetry = enabled;
+        }
+        "advanced_networking" | "networking" => features.experimental = enabled,
+        "multi_tenant" => {
+            features.experimental = enabled;
+            features.debug = enabled;
+        }
+        "experimental" => features.experimental = enabled,
+        "debug" => features.debug = enabled,
+        "federation" => features.federation = enabled,
+        "sandboxing" => features.sandboxing = enabled,
+        other => {
+            if enabled {
+                features.custom.insert(other.to_string(), true);
+            } else {
+                features.custom.remove(other);
+            }
+        }
+    }
+}

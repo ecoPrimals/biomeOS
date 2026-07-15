@@ -7,13 +7,16 @@
 //! upgrade the connection from authenticated-plaintext to ChaCha20-Poly1305
 //! encrypted framing. Falls back to plaintext if the server returns a null cipher.
 
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tracing::{debug, info};
 
 use super::btsp_client::{
-    BTSP_VERSION, BtspHandshakeError, ChallengeResponse, ClientHello, HandshakeComplete,
-    client_keygen, read_json_line, security_provider_socket_path, serialize_line, write_line_to,
+    BTSP_VERSION, BtspConnection, BtspHandshakeError, ChallengeResponse, ClientHello,
+    HandshakeComplete, client_keygen, security_provider_socket_path, serialize_line,
 };
+#[cfg(unix)]
+use super::btsp_client::{read_json_line, write_line_to};
 
 /// Outcome of a client-side Phase 3 handshake + negotiate.
 pub enum ClientPhase3Outcome {
@@ -22,12 +25,12 @@ pub enum ClientPhase3Outcome {
         /// Directional session keys for encrypted I/O.
         keys: crate::btsp_crypto::SessionKeys,
         /// The connected stream (post-handshake, pre-framing).
-        stream: tokio::net::UnixStream,
+        stream: BtspConnection,
     },
     /// Phase 3 not available — connection stays on plaintext NDJSON.
     Plaintext {
         /// The connected stream (post-handshake).
-        stream: tokio::net::UnixStream,
+        stream: BtspConnection,
     },
 }
 
@@ -36,8 +39,9 @@ pub enum ClientPhase3Outcome {
 /// If the remote primal supports `btsp.negotiate` with ChaCha20-Poly1305, the
 /// returned `Encrypted` variant carries directional `SessionKeys` for encrypted
 /// framing. Otherwise, the `Plaintext` variant carries the raw stream.
+#[cfg(unix)]
 pub async fn perform_client_handshake_phase3(
-    stream: tokio::net::UnixStream,
+    stream: BtspConnection,
 ) -> Result<ClientPhase3Outcome, BtspHandshakeError> {
     let provider_path =
         security_provider_socket_path().ok_or(BtspHandshakeError::SecurityProviderNotFound)?;
@@ -96,9 +100,20 @@ pub async fn perform_client_handshake_phase3(
     }
 }
 
+/// Windows stub — Unix domain sockets unavailable on this platform.
+#[cfg(windows)]
+pub async fn perform_client_handshake_phase3(
+    _stream: BtspConnection,
+) -> Result<ClientPhase3Outcome, BtspHandshakeError> {
+    Err(BtspHandshakeError::Protocol(
+        "Unix domain sockets unavailable on Windows".into(),
+    ))
+}
+
 /// Send `btsp.negotiate` and derive session keys if the server agrees to encrypt.
+#[cfg(unix)]
 async fn client_negotiate(
-    reader: &mut BufReader<tokio::net::UnixStream>,
+    reader: &mut BufReader<BtspConnection>,
     session_id: &str,
     handshake_key: &[u8; 32],
 ) -> Result<crate::btsp_crypto::SessionKeys, BtspHandshakeError> {
@@ -220,6 +235,6 @@ fn decode_shared_secret_to_key(hex_str: &str) -> Option<[u8; 32]> {
     <[u8; 32]>::try_from(bytes.as_slice()).ok()
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 #[path = "btsp_client_phase3_tests.rs"]
 mod tests;

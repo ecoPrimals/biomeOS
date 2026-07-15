@@ -2,6 +2,23 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Shared helpers for sovereign security pen tests (`sovereign_pen_*.rs`).
+//!
+//! Sovereign Security Pen Tests — verify the Dark Forest gate cannot be bypassed.
+//! Every test simulates an attacker who does NOT have a valid family seed.
+//!
+//! THREAT MODEL:
+//! - Attacker knows nestgate.io resolves to our Tower
+//! - Attacker can send arbitrary HTTP requests
+//! - Attacker does NOT know the family seed
+//! - Attacker should learn NOTHING about the system
+//!
+//! PASS CRITERIA:
+//! - No route returns anything other than 403 (empty body) or 200 (empty body for health)
+//! - No response header reveals software identity
+//! - No timing difference between valid-looking and garbage tokens
+//! - No path traversal bypasses the gate
+//! - No HTTP method bypasses the gate
+//! - No payload size causes different behavior
 
 #![allow(
     dead_code,

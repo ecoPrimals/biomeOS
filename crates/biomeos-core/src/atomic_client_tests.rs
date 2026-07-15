@@ -6,7 +6,7 @@
 //! Extracted from atomic_client.rs to maintain files under 1000 lines.
 //! Tests cover JSON-RPC requests/responses, client constructors, configuration,
 //! transport endpoints, and edge cases.
-//! Additional tests: `atomic_client_tests2.rs`.
+//! Additional tests: `atomic_client_tests2/` (domain-focused modules).
 
 use super::atomic_client::*;
 use crate::TransportEndpoint;

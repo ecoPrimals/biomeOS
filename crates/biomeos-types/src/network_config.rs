@@ -332,15 +332,17 @@ impl NetworkConfig {
     /// 3. Public STUN servers (if allowed)
     #[must_use]
     pub fn stun_servers(&self) -> Vec<String> {
-        let mut servers = Vec::new();
+        let mut servers = Vec::with_capacity(
+            self.self_hosted_stun.as_ref().map(|_| 1).unwrap_or(0) + self.stun_servers.len(),
+        );
 
         // Self-hosted first (highest priority, maximum sovereignty)
-        if let Some(ref self_hosted) = self.self_hosted_stun {
+        if let Some(self_hosted) = &self.self_hosted_stun {
             servers.push(self_hosted.clone());
         }
 
         // Custom configured servers
-        servers.extend(self.stun_servers.clone());
+        servers.extend_from_slice(&self.stun_servers);
 
         // Public fallback (if allowed)
         if self.allow_public_stun && servers.is_empty() {

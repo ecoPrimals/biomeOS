@@ -132,6 +132,7 @@ fn test_discovered_primal_serde_roundtrip() {
             path: PathBuf::from("/tmp/beardog.sock"),
         }],
         metadata: HashMap::from([("key".into(), "val".into())]),
+        error: None,
     };
     let json = serde_json::to_string(&dp).expect("serialize");
     let restored: DiscoveredPrimal = serde_json::from_str(&json).expect("deserialize");
@@ -150,6 +151,7 @@ fn test_discovered_primal_clone() {
         capabilities: CapabilitySet::new(),
         endpoints: vec![],
         metadata: HashMap::new(),
+        error: None,
     };
     let cloned = dp;
     assert_eq!(cloned.name, "x");
@@ -163,6 +165,7 @@ fn test_discovered_primal_debug() {
         capabilities: CapabilitySet::new(),
         endpoints: vec![],
         metadata: HashMap::new(),
+        error: None,
     };
     let dbg = format!("{dp:?}");
     assert!(dbg.contains("test"));
@@ -198,6 +201,7 @@ fn test_primal_discovery_with_registered() {
             capabilities: CapabilitySet::from_vec(vec![Capability::Storage]),
             endpoints: vec![],
             metadata: HashMap::new(),
+            error: None,
         },
     );
 
@@ -217,6 +221,7 @@ fn test_primal_discovery_with_capability() {
             capabilities: CapabilitySet::from_vec(vec![Capability::Storage]),
             endpoints: vec![],
             metadata: HashMap::new(),
+            error: None,
         },
     );
     pd.discovered_primals.insert(
@@ -227,6 +232,7 @@ fn test_primal_discovery_with_capability() {
             capabilities: CapabilitySet::from_vec(vec![Capability::Compute]),
             endpoints: vec![],
             metadata: HashMap::new(),
+            error: None,
         },
     );
 

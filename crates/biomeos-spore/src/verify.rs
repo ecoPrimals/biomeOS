@@ -278,7 +278,7 @@ impl SporeVerification {
             }
 
             #[cfg(not(unix))]
-            result.add_check(name, true, None);
+            result.add_check(*name, true, None);
         }
     }
 }

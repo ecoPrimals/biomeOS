@@ -7,7 +7,7 @@ use anyhow::{Result, anyhow};
 use std::sync::Arc;
 use tracing::{info, warn};
 
-use crate::capability_domains::capability_to_provider_fallback;
+use crate::capability_domains::capability_to_provider;
 
 use super::NeuralRouter;
 use super::types::DiscoveredAtomic;
@@ -21,7 +21,7 @@ impl NeuralRouter {
     /// 3. Domain prefix matching — `"dag"` finds `"dag.session.create"` etc.
     /// 4. Composite atomic discovery (Tower, Nest, Node)
     /// 5. Category-based discovery (security, ai, math, ...)
-    /// 6. `capability_domains.rs` compiled-in fallback table
+    /// 6. Runtime capability registry + bootstrap hints fallback table
     pub async fn discover_capability(&self, capability: &str) -> Result<DiscoveredAtomic> {
         info!("🔍 Discovering capability: {}", capability);
 
@@ -60,14 +60,14 @@ impl NeuralRouter {
             _ => {}
         }
 
-        // 6. capability_domains.rs fallback — uses the compiled-in domain table
+        // 6. capability_domains.rs fallback — runtime registry, then bootstrap hints
         //    to resolve capability → primal name, then finds the primal by socket.
-        if let Some(provider) = capability_to_provider_fallback(capability) {
+        if let Some(provider) = capability_to_provider(capability) {
             info!(
                 "   ⚠️  Using domain fallback: '{}' → '{}'",
                 capability, provider
             );
-            let primal = self.find_primal_by_socket(provider).await?;
+            let primal = self.find_primal_by_socket(&provider).await?;
             let endpoint = primal.endpoint.clone();
             return Ok(DiscoveredAtomic {
                 capability: Arc::from(capability),

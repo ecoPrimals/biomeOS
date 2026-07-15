@@ -13,6 +13,7 @@ use biomeos_core::btsp_client::{self, BtspHandshakeError, HandshakeOutcome};
 use biomeos_types::jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
@@ -22,6 +23,7 @@ use super::btsp_negotiate::{self, BtspCipher, SessionKeys};
 
 impl NeuralApiServer {
     /// Handle a Unix socket client connection (development mode, no BTSP).
+    #[cfg(unix)]
     pub async fn handle_connection(&self, stream: UnixStream) -> Result<()> {
         self.handle_stream(BufReader::new(stream)).await
     }
@@ -62,6 +64,7 @@ impl NeuralApiServer {
     /// JSON-RPC request instead of a `ClientHello`, the behaviour depends
     /// on `enforce`: when true the connection is dropped; when false the
     /// raw line is dispatched and the connection continues as cleartext.
+    #[cfg(unix)]
     pub async fn handle_connection_with_btsp(
         &self,
         stream: UnixStream,
@@ -447,6 +450,6 @@ impl NeuralApiServer {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 #[path = "connection_tests.rs"]
 mod tests;

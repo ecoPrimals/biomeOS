@@ -8,7 +8,9 @@ use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use std::path::Path;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{TcpStream, UnixStream};
+use tokio::net::TcpStream;
+#[cfg(unix)]
+use tokio::net::UnixStream;
 use tokio::time::timeout;
 use tracing::trace;
 
@@ -28,6 +30,7 @@ pub(crate) fn connect_abstract(name: &str) -> Result<UnixStream> {
     Ok(UnixStream::from_std(std_stream)?)
 }
 
+#[cfg(unix)]
 pub(crate) async fn jsonrpc_unix(path: &Path, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
     let stream = UnixStream::connect(path).await.context(format!(
         "Failed to connect to Unix socket: {}",
@@ -37,8 +40,20 @@ pub(crate) async fn jsonrpc_unix(path: &Path, request: JsonRpcRequest) -> Result
     send_jsonrpc_line(stream, request).await
 }
 
+#[cfg(windows)]
+pub(crate) async fn jsonrpc_unix(
+    path: &Path,
+    _request: JsonRpcRequest,
+) -> Result<JsonRpcResponse> {
+    anyhow::bail!(
+        "Unix domain sockets unavailable on Windows: {}",
+        path.display()
+    )
+}
+
 /// Connect to a Unix socket, perform a BTSP client handshake + Phase 3 negotiate,
 /// then send a JSON-RPC request over the encrypted (or plaintext fallback) channel.
+#[cfg(unix)]
 pub(crate) async fn jsonrpc_unix_btsp(
     path: &Path,
     request: JsonRpcRequest,
@@ -62,9 +77,21 @@ pub(crate) async fn jsonrpc_unix_btsp(
     }
 }
 
+#[cfg(windows)]
+pub(crate) async fn jsonrpc_unix_btsp(
+    path: &Path,
+    _request: JsonRpcRequest,
+) -> Result<JsonRpcResponse> {
+    anyhow::bail!(
+        "Unix domain sockets unavailable on Windows: {}",
+        path.display()
+    )
+}
+
 /// Send a JSON-RPC request and read one response using Phase 3 encrypted framing.
 ///
 /// Client encrypts with `client_to_server`, decrypts server reply with `server_to_client`.
+#[cfg(unix)]
 async fn send_encrypted_jsonrpc(
     stream: UnixStream,
     request: JsonRpcRequest,
@@ -229,6 +256,7 @@ pub(crate) async fn jsonrpc_abstract(
     )
 }
 
+#[cfg(unix)]
 pub(crate) async fn connect_unix_timed(path: &Path, timeout_dur: Duration) -> Result<UnixStream> {
     let stream = timeout(timeout_dur, UnixStream::connect(path))
         .await
@@ -250,7 +278,7 @@ pub(crate) async fn connect_tcp_timed(
     Ok(stream)
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 #[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;

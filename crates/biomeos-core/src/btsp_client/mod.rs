@@ -26,15 +26,18 @@ mod server;
 mod types;
 
 pub use client::perform_client_handshake;
+#[cfg(unix)]
 pub(crate) use client::{client_keygen, read_json_line, serialize_line, write_line_to};
+#[cfg(windows)]
+pub(crate) use client::{client_keygen, serialize_line};
 pub use config::{
     btsp_enforce, extract_family_id, family_id, has_family_id, is_family_scoped_socket,
     log_security_posture, security_mode, security_provider_socket_path, validate_insecure_guard,
 };
 pub use server::server_handshake;
 pub use types::{
-    BTSP_VERSION, BtspHandshakeError, ChallengeResponse, ClientHello, HandshakeComplete,
-    HandshakeError, HandshakeOutcome, SecurityMode, ServerHello,
+    BTSP_VERSION, BtspConnection, BtspHandshakeError, ChallengeResponse, ClientHello,
+    HandshakeComplete, HandshakeError, HandshakeOutcome, SecurityMode, ServerHello,
 };
 
 #[cfg(test)]
@@ -42,6 +45,6 @@ pub(crate) use provider::{
     create_session_via_security_provider, verify_session_via_security_provider,
 };
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 #[path = "../btsp_client_tests.rs"]
 mod tests;

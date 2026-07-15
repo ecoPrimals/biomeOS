@@ -9,13 +9,16 @@ use anyhow::{Context, bail};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 
 use crate::living_graph::LivingGraph;
 
 use super::config::TarpcEndpoint;
 
+#[cfg(unix)]
 pub(super) async fn send_json_rpc(socket_path: &PathBuf, request: &Value) -> anyhow::Result<Value> {
     let mut stream = UnixStream::connect(socket_path)
         .await
@@ -47,6 +50,17 @@ pub(super) async fn send_json_rpc(socket_path: &PathBuf, request: &Value) -> any
     }
 
     serde_json::from_str(&response_line).context("Failed to parse response")
+}
+
+#[cfg(windows)]
+pub(super) async fn send_json_rpc(
+    socket_path: &PathBuf,
+    _request: &Value,
+) -> anyhow::Result<Value> {
+    anyhow::bail!(
+        "Unix socket transport unavailable on Windows ({})",
+        socket_path.display()
+    )
 }
 
 pub(super) async fn query_tarpc_endpoint(
@@ -207,7 +221,7 @@ pub(super) async fn notify_fallback(
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 #[expect(
     clippy::unwrap_used,
     reason = "test assertions use unwrap/expect for clarity"

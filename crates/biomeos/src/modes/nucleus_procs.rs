@@ -25,6 +25,7 @@ use super::{EcosystemState, build_primal_command};
 /// Called once on startup before `detect_ecosystem` to sanitize the directory.
 /// See `CAPABILITY_BASED_DISCOVERY_STANDARD.md` §4 (crash recovery) and
 /// `WETSPRING_UPSTREAM_BIOMEOS_STALE_SOCKETS_MAY18_2026.md`.
+#[cfg(unix)]
 pub(super) async fn cleanup_stale_sockets(socket_dir: &Path) {
     let Ok(entries) = std::fs::read_dir(socket_dir) else {
         return;
@@ -56,6 +57,10 @@ pub(super) async fn cleanup_stale_sockets(socket_dir: &Path) {
         );
     }
 }
+
+/// Windows stub — Unix domain sockets are not used for IPC.
+#[cfg(windows)]
+pub(super) async fn cleanup_stale_sockets(_socket_dir: &Path) {}
 
 /// Detect whether an existing ecosystem is running.
 ///

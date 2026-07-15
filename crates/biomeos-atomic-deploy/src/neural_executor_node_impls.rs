@@ -243,6 +243,15 @@ impl GraphExecutor {
                 async move {
                     let request = JsonRpcRequest::new(&method, params);
 
+                    #[cfg(windows)]
+                    {
+                        anyhow::bail!(
+                            "Unix socket RPC unavailable on Windows ({target} at {socket_path})"
+                        );
+                    }
+
+                    #[cfg(unix)]
+                    {
                     let stream = tokio::time::timeout(
                         Duration::from_secs(10),
                         tokio::net::UnixStream::connect(&socket_path),
@@ -293,6 +302,7 @@ impl GraphExecutor {
                         "result": result,
                         "success": true
                     }))
+                    }
                 }
             })
             .await
@@ -302,7 +312,7 @@ impl GraphExecutor {
     ///
     /// Routes semantic capability calls through the neural-api first, then falls
     /// back to direct primal resolution using the `CapabilityRegistry` (which
-    /// itself falls back to the compiled-in `CAPABILITY_DOMAINS` const).
+    /// itself falls back to the compiled-in `BOOTSTRAP_CAPABILITY_HINTS` const).
     pub(crate) async fn node_capability_call_with_registry(
         node: &GraphNode,
         context: &ExecutionContext,
@@ -479,6 +489,7 @@ impl GraphExecutor {
     }
 
     /// Helper: send a JSON-RPC request over a Unix socket and return the response.
+    #[cfg(unix)]
     pub(crate) async fn send_jsonrpc_async(
         socket_path: &str,
         request: &impl Serialize,
@@ -502,6 +513,15 @@ impl GraphExecutor {
         reader.read_line(&mut line).await?;
 
         serde_json::from_str(line.trim()).context("Invalid JSON response")
+    }
+
+    /// Windows stub — Unix socket JSON-RPC unavailable.
+    #[cfg(windows)]
+    pub(crate) async fn send_jsonrpc_async(
+        socket_path: &str,
+        _request: &impl Serialize,
+    ) -> Result<serde_json::Value> {
+        anyhow::bail!("Unix socket RPC unavailable on Windows ({socket_path})")
     }
 }
 

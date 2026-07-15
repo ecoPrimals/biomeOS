@@ -51,6 +51,7 @@ pub(crate) async fn probe_endpoint(endpoint: &str) -> Result<ProbeResult> {
 /// `capabilities.list` (to discover advertised capabilities). If
 /// `identity.get` returns an error the primal is still "reachable" — we just
 /// lack its self-reported identity.
+#[cfg(unix)]
 async fn probe_unix_endpoint(socket_path: &str) -> Result<ProbeResult> {
     use tokio::io::BufReader;
     use tokio::net::UnixStream;
@@ -78,6 +79,12 @@ async fn probe_unix_endpoint(socket_path: &str) -> Result<ProbeResult> {
         capabilities,
         health: Health::Healthy,
     })
+}
+
+/// Windows stub — Unix socket endpoint probing unavailable on this platform.
+#[cfg(windows)]
+async fn probe_unix_endpoint(socket_path: &str) -> Result<ProbeResult> {
+    anyhow::bail!("Unix domain socket probing unavailable on Windows: {socket_path}")
 }
 
 /// Probe a TCP endpoint with line-delimited JSON-RPC (same framing as Unix).

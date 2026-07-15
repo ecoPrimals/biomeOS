@@ -453,5 +453,4 @@ async fn handle_spore_refresh_impl(
 }
 
 #[cfg(test)]
-#[path = "spore_tests.rs"]
-mod tests;
+mod spore_tests;

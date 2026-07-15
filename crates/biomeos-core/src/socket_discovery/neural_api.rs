@@ -14,10 +14,8 @@ pub fn resolve_neural_api_socket(
     instance_socket: Option<&PathBuf>,
     env_override: Option<&Path>,
 ) -> Option<PathBuf> {
-    if let Some(socket) = instance_socket {
-        if socket.exists() {
-            return Some(socket.clone());
-        }
+    if let Some(socket) = instance_socket.filter(|path| path.exists()) {
+        return Some(socket.to_path_buf());
     }
 
     let env_path = env_override.map(PathBuf::from).or_else(|| {

@@ -412,6 +412,7 @@ dependencies = [
  "biomeos-types",
  "bytes",
  "chrono",
+ "dashmap",
  "futures",
  "rand 0.9.4",
  "redb",

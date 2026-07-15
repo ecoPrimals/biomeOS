@@ -5,7 +5,9 @@
 //!
 //! Replaces sysinfo with direct /proc filesystem reads.
 
+#[cfg(any(target_os = "linux", unix))]
 use std::fs;
+#[cfg(target_os = "linux")]
 use std::path::Path;
 
 /// Parse MemTotal (KB) from /proc/meminfo format. Testable with const fixtures.

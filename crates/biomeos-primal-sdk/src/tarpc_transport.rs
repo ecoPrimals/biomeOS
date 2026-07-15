@@ -41,17 +41,24 @@
 
 use std::path::Path;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
+#[cfg(unix)]
+use anyhow::Context;
 use biomeos_types::tarpc_types::HealthRpc;
+#[cfg(unix)]
 use futures::StreamExt;
+#[cfg(unix)]
 use tarpc::serde_transport::unix;
+#[cfg(unix)]
 use tarpc::server::{BaseChannel, Channel};
+#[cfg(unix)]
 use tokio_serde::formats::Bincode;
 
 /// Prepare a socket path for tarpc listening.
 ///
 /// Removes stale sockets and creates parent directories.  After calling
 /// this, pass the path to `tarpc::serde_transport::unix::listen()`.
+#[cfg(unix)]
 pub async fn prepare_socket(path: impl AsRef<Path>) -> Result<std::path::PathBuf> {
     let path = path.as_ref();
 
@@ -69,6 +76,15 @@ pub async fn prepare_socket(path: impl AsRef<Path>) -> Result<std::path::PathBuf
 
     tracing::info!(socket = %path.display(), "tarpc socket path prepared");
     Ok(path.to_path_buf())
+}
+
+/// Windows stub — tarpc Unix socket preparation unavailable on this platform.
+#[cfg(windows)]
+pub async fn prepare_socket(path: impl AsRef<Path>) -> Result<std::path::PathBuf> {
+    anyhow::bail!(
+        "tarpc Unix socket preparation unavailable on Windows: {}",
+        path.as_ref().display()
+    )
 }
 
 /// Derive a tarpc socket name from a JSON-RPC socket name.
@@ -112,6 +128,7 @@ pub fn tarpc_socket_path(jsonrpc_socket: &Path) -> std::path::PathBuf {
 ///
 /// tarpc_transport::serve_tarpc_health("/tmp/primal.tarpc.sock", MyHealthService).await?;
 /// ```
+#[cfg(unix)]
 pub async fn serve_tarpc_health(
     socket_path: impl AsRef<Path>,
     service: impl HealthRpc + Clone + Send + 'static,
@@ -131,7 +148,6 @@ pub async fn serve_tarpc_health(
                 let service = service.clone();
                 let channel = BaseChannel::with_defaults(transport);
                 let requests = channel.execute(service.serve());
-                // Box::pin makes the stream Unpin so we can use StreamExt::next
                 let mut requests = Box::pin(requests);
                 while let Some(fut) = futures::StreamExt::next(&mut requests).await {
                     fut.await;
@@ -144,6 +160,20 @@ pub async fn serve_tarpc_health(
     }
 
     Ok(())
+}
+
+/// Windows fallback — tarpc over TCP (placeholder until full Named Pipe transport).
+#[cfg(windows)]
+pub async fn serve_tarpc_health(
+    socket_path: impl AsRef<Path>,
+    _service: impl HealthRpc + Clone + Send + 'static,
+) -> Result<()> {
+    let path = socket_path.as_ref();
+    tracing::warn!(
+        socket = %path.display(),
+        "tarpc Unix transport unavailable on Windows; TCP fallback not yet wired"
+    );
+    anyhow::bail!("tarpc Unix transport unavailable on Windows")
 }
 
 /// Default `HealthRpc` implementation suitable for any primal.
@@ -310,6 +340,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(unix)]
     async fn listen_and_connect_roundtrip() {
         use tokio::net::{UnixListener, UnixStream};
 

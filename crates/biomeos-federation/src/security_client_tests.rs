@@ -367,6 +367,7 @@ async fn test_from_primal_discovery_unix_socket() {
             capabilities: CapabilitySet::new(),
             endpoints: vec![PrimalEndpoint::UnixSocket { path: sock }],
             metadata: HashMap::new(),
+            error: None,
         },
     );
     let client = SecurityProviderClient::from_primal_discovery(&pd).expect("from discovery");
@@ -385,6 +386,7 @@ async fn test_from_primal_discovery_udp_not_supported() {
             capabilities: CapabilitySet::new(),
             endpoints: vec![PrimalEndpoint::Udp { addr }],
             metadata: HashMap::new(),
+            error: None,
         },
     );
     let r = SecurityProviderClient::from_primal_discovery(&pd);

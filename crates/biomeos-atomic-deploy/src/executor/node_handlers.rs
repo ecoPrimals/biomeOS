@@ -438,6 +438,7 @@ async fn discover_capability_provider(
 ///
 /// Returns the full JSON-RPC response envelope (preserving `result`/`error`
 /// fields for callers that inspect the envelope shape).
+#[cfg(unix)]
 async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<Value> {
     use biomeos_core::btsp_client;
     use std::path::Path;
@@ -507,6 +508,12 @@ async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<
     call_primal_rpc_plaintext(stream, &request_json, read_timeout, socket_path).await
 }
 
+#[cfg(windows)]
+async fn call_primal_rpc(socket_path: &str, _request: &impl Serialize) -> Result<Value> {
+    anyhow::bail!("Unix socket RPC unavailable on Windows ({socket_path})")
+}
+
+#[cfg(unix)]
 async fn call_primal_rpc_plaintext(
     stream: tokio::net::UnixStream,
     request_json: &str,
@@ -534,6 +541,7 @@ async fn call_primal_rpc_plaintext(
     Ok(response)
 }
 
+#[cfg(unix)]
 async fn call_primal_rpc_encrypted(
     stream: tokio::net::UnixStream,
     request_json: &str,
@@ -578,5 +586,5 @@ async fn call_primal_rpc_encrypted(
 }
 
 #[cfg(test)]
-#[path = "node_handlers_tests.rs"]
+#[path = "node_handlers_tests/mod.rs"]
 mod tests;

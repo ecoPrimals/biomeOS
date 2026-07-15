@@ -3,11 +3,15 @@
 
 //! Capability Domain Mappings
 //!
-//! Two-tier resolution: runtime `CapabilityRegistry` loaded from
-//! `config/capability_registry.toml`, with a compiled-in const fallback
-//! (`CAPABILITY_DOMAINS`) for zero-config environments.
+//! Three-tier resolution:
+//! 1. Runtime `RUNTIME_CAPABILITY_REGISTRY` populated by live capability advertisements
+//! 2. Config-driven `CapabilityRegistry` loaded from `config/capability_registry.toml`
+//! 3. Compiled-in bootstrap hints (`BOOTSTRAP_CAPABILITY_HINTS`) as last-resort fallback
 //!
 //! # Design Principle
+//!
+//! Primals discover each other at runtime via capability advertisement, not via
+//! compiled name tables. The bootstrap table exists only for zero-config cold start.
 //!
 //! biomeOS orchestrates, primals execute primitives.
 //! The mapping is SEMANTIC → PROVIDER (not implementation-specific).
@@ -17,20 +21,30 @@ use biomeos_types::primal_names::{
     NESTGATE, NEURALSPRING, PETALTONGUE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
     WETSPRING,
 };
+use dashmap::DashMap;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::LazyLock;
 
-/// Capability domain configuration
-/// Loaded from `config/capability_registry.toml` in production
+/// Lock-free runtime registry: capability name → advertising provider primal.
+///
+/// Populated by socket discovery and `discovery.register_capability` advertisements.
+/// Takes precedence over compiled bootstrap hints.
+static RUNTIME_CAPABILITY_REGISTRY: LazyLock<DashMap<String, String>> =
+    LazyLock::new(DashMap::new);
+
+/// Capability domain configuration for bootstrap hints.
 pub struct CapabilityDomain {
     pub provider: &'static str,
     pub capabilities: &'static [&'static str],
 }
 
-/// Default capability domains for fallback resolution
-/// These align with `config/capability_registry.toml`
-pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
-    // Security domain (BearDog)
+/// Last-resort compile-time capability → provider hints.
+///
+/// Used only when live discovery and TOML config have no match. Primal names here
+/// are **fallback-only** — runtime advertisements from socket discovery are authoritative.
+pub const BOOTSTRAP_CAPABILITY_HINTS: &[CapabilityDomain] = &[
+    // Security domain — fallback-only provider: BearDog
     CapabilityDomain {
         provider: BEARDOG,
         capabilities: &[
@@ -43,7 +57,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "jwt",
         ],
     },
-    // Network domain (Songbird)
+    // Network domain — fallback-only provider: Songbird
     CapabilityDomain {
         provider: SONGBIRD,
         capabilities: &[
@@ -59,37 +73,37 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "onion",
         ],
     },
-    // Storage domain (NestGate)
+    // Storage domain — fallback-only provider: NestGate
     CapabilityDomain {
         provider: NESTGATE,
         capabilities: &["storage", "versioning", "persistence"],
     },
-    // Content domain (NestGate) — content-addressed storage, publishing, collections
+    // Content domain — fallback-only provider: NestGate
     CapabilityDomain {
         provider: NESTGATE,
         capabilities: &["content", "content_addressed", "publishing"],
     },
-    // Compute domain (ToadStool)
+    // Compute domain — fallback-only provider: ToadStool
     CapabilityDomain {
         provider: TOADSTOOL,
         capabilities: &["compute", "execution", "parsing", "hardware_learning"],
     },
-    // GPU math/tensor/stats domain (barraCuda)
+    // GPU math/tensor/stats domain — fallback-only provider: barraCuda
     CapabilityDomain {
         provider: BARRACUDA,
         capabilities: &["math", "tensor", "stats", "noise", "activation", "rng"],
     },
-    // Shader compilation domain (coralReef)
+    // Shader compilation domain — fallback-only provider: coralReef
     CapabilityDomain {
         provider: CORALREEF,
         capabilities: &["shader", "wgsl", "spirv"],
     },
-    // AI domain (Squirrel)
+    // AI domain — fallback-only provider: Squirrel
     CapabilityDomain {
         provider: SQUIRREL,
         capabilities: &["ai", "mcp", "assistance", "ml"],
     },
-    // Data domain (NestGate live providers)
+    // Data domain — fallback-only provider: NestGate
     CapabilityDomain {
         provider: NESTGATE,
         capabilities: &[
@@ -101,7 +115,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "seismic_data",
         ],
     },
-    // Science domain (wetSpring) — compile-time bootstrap hints; runtime uses capability registry / discovery
+    // Science domain — fallback-only provider: wetSpring
     CapabilityDomain {
         provider: WETSPRING,
         capabilities: &[
@@ -113,7 +127,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "monitoring",
         ],
     },
-    // Neural science domain (neuralSpring)
+    // Neural science domain — fallback-only provider: neuralSpring
     CapabilityDomain {
         provider: NEURALSPRING,
         capabilities: &[
@@ -124,7 +138,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "training_trajectory",
         ],
     },
-    // Ecology domain (airSpring)
+    // Ecology domain — fallback-only provider: airSpring
     CapabilityDomain {
         provider: AIRSPRING,
         capabilities: &[
@@ -139,7 +153,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "statistics",
         ],
     },
-    // Game science domain (ludoSpring)
+    // Game science domain — fallback-only provider: ludoSpring
     CapabilityDomain {
         provider: LUDOSPRING,
         capabilities: &[
@@ -151,7 +165,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "engagement_metrics",
         ],
     },
-    // Visualization domain (petalTongue)
+    // Visualization domain — fallback-only provider: petalTongue
     CapabilityDomain {
         provider: PETALTONGUE,
         capabilities: &[
@@ -162,12 +176,12 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "sensor_stream",
         ],
     },
-    // XR / Immersive domain (petalTongue + ludoSpring)
+    // XR / Immersive domain — fallback-only provider: petalTongue
     CapabilityDomain {
         provider: PETALTONGUE,
         capabilities: &["xr", "stereo", "vr", "ar", "tracking", "haptic", "mocap"],
     },
-    // Medical / Surgical domain (healthSpring)
+    // Medical / Surgical domain — fallback-only provider: healthSpring
     CapabilityDomain {
         provider: HEALTHSPRING,
         capabilities: &[
@@ -179,7 +193,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "pharmacokinetics",
         ],
     },
-    // Ephemeral workspace domain (rhizoCrypt)
+    // Ephemeral workspace domain — fallback-only provider: rhizoCrypt
     CapabilityDomain {
         provider: RHIZOCRYPT,
         capabilities: &[
@@ -192,7 +206,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "vertex",
         ],
     },
-    // Permanent history domain (LoamSpine)
+    // Permanent history domain — fallback-only provider: LoamSpine
     CapabilityDomain {
         provider: LOAMSPINE,
         capabilities: &[
@@ -204,7 +218,7 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "commit",
         ],
     },
-    // Attribution domain (sweetGrass)
+    // Attribution domain — fallback-only provider: sweetGrass
     CapabilityDomain {
         provider: SWEETGRASS,
         capabilities: &[
@@ -216,19 +230,56 @@ pub const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "prov_export",
         ],
     },
-    // Composition health domain (biomeOS — cross-cutting aggregate)
-    // Canonical namespace for composed system health: tower, webb, service,
-    // nucleus, and spring-specific health aggregation.
+    // Composition health domain — fallback-only provider: biomeOS
     CapabilityDomain {
         provider: BIOMEOS,
         capabilities: &["composition"],
     },
 ];
 
+/// Register a capability → provider mapping from live discovery.
+///
+/// Called when primals advertise capabilities via socket discovery or
+/// `discovery.register_capability`. Also seeds the domain prefix (first segment
+/// of dotted capabilities) when not already present.
+pub fn register_capability_provider(capability: &str, provider: &str) {
+    if capability.is_empty() || provider.is_empty() {
+        return;
+    }
+
+    let provider_owned = provider.to_string();
+    RUNTIME_CAPABILITY_REGISTRY.insert(capability.to_string(), provider_owned.clone());
+
+    if let Some((prefix, rest)) = capability.split_once('.') {
+        if !rest.is_empty() {
+            RUNTIME_CAPABILITY_REGISTRY
+                .entry(prefix.to_string())
+                .or_insert(provider_owned);
+        }
+    }
+}
+
+/// Resolve capability to provider: runtime registry first, bootstrap hints second.
+pub fn capability_to_provider(capability: &str) -> Option<String> {
+    if let Some(provider) = RUNTIME_CAPABILITY_REGISTRY.get(capability) {
+        return Some(provider.clone());
+    }
+
+    if let Some(prefix) = capability.split('.').next() {
+        if prefix != capability {
+            if let Some(provider) = RUNTIME_CAPABILITY_REGISTRY.get(prefix) {
+                return Some(provider.clone());
+            }
+        }
+    }
+
+    capability_to_provider_fallback(capability).map(str::to_string)
+}
+
 /// Config-driven capability → provider registry.
 ///
 /// Loads `[domains.*]` sections from `config/capability_registry.toml`.
-/// Falls back to the compiled-in `CAPABILITY_DOMAINS` const for capabilities
+/// Falls back to runtime registry and compiled bootstrap hints for capabilities
 /// not found in the config.
 #[derive(Debug, Clone, Default)]
 pub struct CapabilityRegistry {
@@ -275,7 +326,7 @@ impl CapabilityRegistry {
     ///
     /// 1. Exact match in config
     /// 2. Prefix match in config (e.g. `crypto.encrypt` → `crypto`)
-    /// 3. Compiled-in fallback table
+    /// 3. Runtime registry + compiled bootstrap hints via [`capability_to_provider`]
     pub fn resolve(&self, capability: &str) -> Option<String> {
         if let Some(provider) = self.config_map.get(capability) {
             return Some(provider.clone());
@@ -287,29 +338,29 @@ impl CapabilityRegistry {
             }
         }
 
-        capability_to_provider_fallback(capability).map(str::to_string)
+        capability_to_provider(capability)
     }
 
-    /// Number of config-loaded entries (excludes compiled-in fallback).
+    /// Number of config-loaded entries (excludes runtime and bootstrap fallback).
     #[cfg(test)]
     pub fn config_entry_count(&self) -> usize {
         self.config_map.len()
     }
 }
 
-/// Resolve capability to provider using the compiled-in domain table.
+/// Resolve capability to provider using the compiled-in bootstrap hint table.
 ///
-/// This is the lowest-priority fallback when neither the neural-api router
-/// nor the TOML config have a match. Prefer `CapabilityRegistry::resolve`.
+/// Lowest-priority fallback when neither live discovery nor TOML config have a
+/// match. Prefer [`capability_to_provider`] for the full two-tier lookup.
 pub fn capability_to_provider_fallback(capability: &str) -> Option<&'static str> {
-    for domain in CAPABILITY_DOMAINS {
+    for domain in BOOTSTRAP_CAPABILITY_HINTS {
         if domain.capabilities.contains(&capability) {
             return Some(domain.provider);
         }
     }
 
     if let Some(prefix) = capability.split('.').next() {
-        for domain in CAPABILITY_DOMAINS {
+        for domain in BOOTSTRAP_CAPABILITY_HINTS {
             if domain.capabilities.contains(&prefix) {
                 return Some(domain.provider);
             }
@@ -317,4 +368,10 @@ pub fn capability_to_provider_fallback(capability: &str) -> Option<&'static str>
     }
 
     None
+}
+
+/// Clear the runtime registry (test isolation only).
+#[cfg(test)]
+pub(crate) fn clear_runtime_capability_registry() {
+    RUNTIME_CAPABILITY_REGISTRY.clear();
 }

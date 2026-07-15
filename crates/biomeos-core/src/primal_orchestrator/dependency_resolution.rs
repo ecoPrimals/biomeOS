@@ -59,8 +59,6 @@ pub(crate) fn resolve_capability_dependency_order(
     let mut result = Vec::new();
 
     while let Some(id) = queue.pop() {
-        result.push(id.clone());
-
         if let Some(neighbors) = graph.get(&id) {
             for neighbor in neighbors {
                 if let Some(degree) = in_degree.get_mut(neighbor) {
@@ -71,6 +69,8 @@ pub(crate) fn resolve_capability_dependency_order(
                 }
             }
         }
+
+        result.push(id);
     }
 
     if result.len() != primals.len() {

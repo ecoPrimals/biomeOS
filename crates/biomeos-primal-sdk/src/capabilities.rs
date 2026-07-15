@@ -9,11 +9,15 @@
 //!
 //! Follows groundSpring's typed capability pattern.
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
+#[cfg(unix)]
+use anyhow::Context;
 use bytes::Bytes;
 use serde_json::{Value, json};
 use std::path::PathBuf;
+#[cfg(unix)]
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 
@@ -83,6 +87,7 @@ impl CapabilityClient {
     }
 
     /// Send a raw JSON-RPC request over the Unix socket.
+    #[cfg(unix)]
     async fn send_request(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
         let mut stream = timeout(self.timeout, UnixStream::connect(&self.endpoint))
             .await
@@ -102,6 +107,14 @@ impl CapabilityClient {
         let response: JsonRpcResponse =
             serde_json::from_slice(&response_buf).context("Failed to parse JSON-RPC response")?;
         Ok(response)
+    }
+
+    /// Windows stub — UDS unavailable; use TCP transport.
+    #[cfg(windows)]
+    async fn send_request(&self, _request: JsonRpcRequest) -> Result<JsonRpcResponse> {
+        Err(anyhow!(
+            "Unix domain socket transport unavailable on Windows; use TCP"
+        ))
     }
 
     // --- Crypto domain ---

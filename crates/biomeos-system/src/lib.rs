@@ -174,11 +174,21 @@ impl SystemInspector {
         if let Ok(hostname) = std::env::var(biomeos_types::env_config::vars::HOSTNAME) {
             Ok(hostname)
         } else {
-            Ok(rustix::system::uname()
-                .nodename()
-                .to_string_lossy()
-                .into_owned())
+            Ok(Self::platform_hostname())
         }
+    }
+
+    #[cfg(unix)]
+    fn platform_hostname() -> String {
+        rustix::system::uname()
+            .nodename()
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    #[cfg(windows)]
+    fn platform_hostname() -> String {
+        std::env::var("COMPUTERNAME").unwrap_or_else(|_| "unknown".to_string())
     }
 
     /// Get kernel information

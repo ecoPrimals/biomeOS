@@ -5,7 +5,9 @@ use anyhow::Result;
 use biomeos_types::SystemPaths;
 use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::time::Duration;
 use tracing::debug;
@@ -55,6 +57,7 @@ pub(super) async fn discover_ai_socket_path() -> Result<PathBuf> {
     )
 }
 
+#[cfg(unix)]
 async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
     let socket_str = socket_path.to_string_lossy();
     let stream =
@@ -112,6 +115,15 @@ async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
         }
     };
     extract_capabilities_from_list_response(&resp)
+}
+
+#[cfg(windows)]
+async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
+    debug!(
+        "AI probe {}: UDS unavailable on Windows",
+        socket_path.display()
+    );
+    vec![]
 }
 
 /// Parse capability names from a JSON-RPC response, handling all 5 ecosystem wire formats.

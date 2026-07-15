@@ -132,6 +132,12 @@ impl JsonRpcInput {
 }
 
 impl JsonRpcRequest {
+    fn next_request_id() -> serde_json::Value {
+        static REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let id = REQUEST_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        serde_json::Value::Number(serde_json::Number::from(id))
+    }
+
     /// Parse a JSON-RPC request from a string.
     pub fn parse(request_line: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(request_line.trim())
@@ -148,14 +154,38 @@ impl JsonRpcRequest {
     /// assert!(req.id.is_some());
     /// ```
     pub fn new(method: impl AsRef<str>, params: serde_json::Value) -> Self {
-        static REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
-        let id = REQUEST_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Self {
             jsonrpc: JsonRpcVersion,
             method: Arc::from(method.as_ref()),
             params: Some(params),
-            id: Some(serde_json::Value::Number(serde_json::Number::from(id))),
+            id: Some(Self::next_request_id()),
         }
+    }
+
+    /// Serialize a newline-terminated request line without cloning `params`.
+    ///
+    /// Borrows `params` for serialization only — use on hot paths where callers
+    /// hold a shared `serde_json::Value` reference.
+    pub fn serialize_line(
+        method: impl AsRef<str>,
+        params: &serde_json::Value,
+    ) -> Result<String, serde_json::Error> {
+        #[derive(Serialize)]
+        struct BorrowedRequest<'a> {
+            jsonrpc: JsonRpcVersion,
+            method: &'a str,
+            params: &'a serde_json::Value,
+            id: serde_json::Value,
+        }
+
+        let mut line = serde_json::to_string(&BorrowedRequest {
+            jsonrpc: JsonRpcVersion,
+            method: method.as_ref(),
+            params,
+            id: Self::next_request_id(),
+        })?;
+        line.push('\n');
+        Ok(line)
     }
 
     /// Create a notification (no id, no response expected).

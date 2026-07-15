@@ -2,6 +2,55 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.34 (2026-07-15) — Cross-Arch Windows + Deep Stub Evolution + Capability-First Discovery
+
+### Cross-Architecture Adoption (x86_64-pc-windows-gnu)
+- `#[cfg(unix)]` / `#[cfg(windows)]` gating across 40+ files (UDS, tarpc, rustix)
+- TCP fallback stubs for Windows (Named Pipes deferred)
+- `platform_hostname()` helper (uname on Unix, COMPUTERNAME on Windows)
+- `cargo check --target x86_64-pc-windows-gnu` passes clean
+
+### Stub Evolution (6 placeholders → real implementations)
+- `diagnose_degradation()`: health-metric classification (packet loss, latency, auth, key rotation)
+- `optimize_transport_path()`: TCP fallback discovery + degraded path marking
+- `execution_order()`: Kahn's topological sort with cycle detection (replaces declaration order)
+- `fetch_binary()`: base64/byte-array decoding + Content-Length verification
+- `collect_edge_metrics()`: live socket probe with 500ms timeout (replaces synthetic 1.5–5ms)
+- `with_feature()`: typed feature flag application to `FeatureFlags` struct
+- `lineage_deriver`: SHA-256 deterministic identity from raw seed bytes
+
+### Capability-First Discovery
+- `CAPABILITY_DOMAINS` → `BOOTSTRAP_CAPABILITY_HINTS` (renamed, documented as last-resort)
+- Runtime capability registry (`LazyLock<DashMap>`) — live advertisements take precedence
+- `register_capability_provider()` called on every `capability.register` event
+- `bootstrap_capability_hint()` two-tier: runtime cache → static fallback
+- Same pattern applied to `biomeos-primal-sdk/discovery.rs`
+
+### Error Propagation (swallowed → structured)
+- `topology.rs`: `CapabilityQueryResult { capabilities, error }` replaces silent `Ok(vec![])`
+- `discovery.rs`: `DiscoveredPrimal.error: Option<String>` preserves probe failure context
+- `federation/discovery`: query failures stored on result, upgraded warn! logging
+- `nucleus/mod.rs`: `UNRESOLVED_NODE_ID` sentinel replaces silent `"unknown"`
+
+### Clone Reduction (hot-path audit)
+- `JsonRpcRequest::serialize_line()` — borrow params during serialization
+- Discovery probes iterate by value (move capabilities, no clone)
+- Health monitor: snapshot `(id, path)` pairs, not full HashMap clone
+- Topo sort: move `id` into result after graph lookup
+- MCP schema: move key into properties map
+
+### Test File Splits (30+ files refactored)
+- All files previously >450 LOC split into domain-focused submodules
+- Largest test file now 650L (down from 1028L peak)
+- 1,217 Rust files across 26 crates (294,898 total LOC)
+
+### Quality Gates
+- `cargo check --workspace` → 0 errors
+- `cargo check --target x86_64-pc-windows-gnu` → 0 errors (5 warnings)
+- `cargo test --workspace` → 421 passed, 1 pre-existing failure (unrelated capability filter)
+- Zero `unsafe` blocks in production
+- Zero TODO/FIXME/HACK
+
 ## v4.33 (2026-06-28) — Mega-Test Splits: All Test Files Under 450 LOC
 
 ### Structural Splits (4 mega-test files → 16 domain-focused modules)

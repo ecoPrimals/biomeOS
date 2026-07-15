@@ -280,6 +280,33 @@ fn test_development_full() {
             .contains(&AuthMethod::ApiKey)
     );
     assert_eq!(config.ui.language, "en");
+    assert!(config.features.ai_first);
+    assert!(config.features.telemetry);
+}
+
+#[test]
+fn test_with_feature_known_and_custom() {
+    let config = BiomeOSConfigBuilder::new()
+        .with_feature("crypto_locks", true)
+        .with_feature("custom_beta", true)
+        .with_feature("telemetry", false)
+        .build();
+
+    assert!(config.features.crypto_locks);
+    assert!(config.features.custom.get("custom_beta").copied().unwrap_or(false));
+    assert!(!config.features.telemetry);
+}
+
+#[test]
+fn test_with_feature_disable() {
+    let config = BiomeOSConfigBuilder::new()
+        .with_feature("ai_first", false)
+        .with_feature("custom_beta", true)
+        .with_feature("custom_beta", false)
+        .build();
+
+    assert!(!config.features.ai_first);
+    assert!(!config.features.custom.contains_key("custom_beta"));
 }
 
 #[test]

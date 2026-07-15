@@ -159,48 +159,61 @@ impl SocketDiscovery {
         params: &serde_json::Value,
         neural_api_socket: &Path,
     ) -> Result<serde_json::Value, RegistryQueryError> {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
-        use tokio::time::{Duration, timeout};
+        #[cfg(unix)]
+        {
+            use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+            use tokio::net::UnixStream;
+            use tokio::time::{Duration, timeout};
 
-        let stream = timeout(
-            Duration::from_secs(5),
-            UnixStream::connect(neural_api_socket),
-        )
-        .await
-        .map_err(|_| RegistryQueryError::ConnectTimeout)?
-        .map_err(RegistryQueryError::Connect)?;
-
-        let (reader, mut writer) = stream.into_split();
-        let mut reader = BufReader::new(reader);
-
-        let request = biomeos_types::JsonRpcRequest::new(method, params.clone());
-
-        let request_str =
-            serde_json::to_string(&request).map_err(RegistryQueryError::Serialize)? + "\n";
-        writer
-            .write_all(request_str.as_bytes())
+            let stream = timeout(
+                Duration::from_secs(5),
+                UnixStream::connect(neural_api_socket),
+            )
             .await
-            .map_err(RegistryQueryError::Write)?;
-        writer.flush().await.map_err(RegistryQueryError::Write)?;
+            .map_err(|_| RegistryQueryError::ConnectTimeout)?
+            .map_err(RegistryQueryError::Connect)?;
 
-        let mut response_line = String::new();
-        timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
-            .await
-            .map_err(|_| RegistryQueryError::ResponseTimeout)?
-            .map_err(RegistryQueryError::Read)?;
+            let (reader, mut writer) = stream.into_split();
+            let mut reader = BufReader::new(reader);
 
-        let response: serde_json::Value =
-            serde_json::from_str(response_line.trim()).map_err(RegistryQueryError::Parse)?;
+            let request_str = biomeos_types::JsonRpcRequest::serialize_line(method, params)
+                .map_err(RegistryQueryError::Serialize)?;
+            writer
+                .write_all(request_str.as_bytes())
+                .await
+                .map_err(RegistryQueryError::Write)?;
+            writer.flush().await.map_err(RegistryQueryError::Write)?;
 
-        if let Some(error) = response.get("error").cloned() {
-            return Err(RegistryQueryError::Registry(error));
+            let mut response_line = String::new();
+            timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
+                .await
+                .map_err(|_| RegistryQueryError::ResponseTimeout)?
+                .map_err(RegistryQueryError::Read)?;
+
+            let response: serde_json::Value =
+                serde_json::from_str(response_line.trim()).map_err(RegistryQueryError::Parse)?;
+
+            if let Some(error) = response.get("error").cloned() {
+                return Err(RegistryQueryError::Registry(error));
+            }
+
+            return response
+                .get("result")
+                .cloned()
+                .ok_or(RegistryQueryError::NoResult);
         }
 
-        response
-            .get("result")
-            .cloned()
-            .ok_or(RegistryQueryError::NoResult)
+        #[cfg(windows)]
+        {
+            let _ = (self, method, params);
+            Err(RegistryQueryError::Connect(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                format!(
+                    "Unix domain socket registry queries unavailable on Windows: {}",
+                    neural_api_socket.display()
+                ),
+            )))
+        }
     }
 }
 

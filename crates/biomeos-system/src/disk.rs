@@ -3,7 +3,9 @@
 
 //! Disk information and metrics (pure Rust via /proc/mounts + statvfs - ecoBin v3).
 
+#[cfg(unix)]
 use std::fs;
+#[cfg(unix)]
 use std::path::Path;
 
 use biomeos_types::BiomeResult;
@@ -94,11 +96,11 @@ pub fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
     Ok(result)
 }
 
-/// Non-Linux fallback — queries the root mount via `statvfs` (rustix, pure Rust).
+/// Non-Linux Unix fallback — queries the root mount via `statvfs` (rustix, pure Rust).
 ///
 /// Without `/proc/mounts` we cannot enumerate all mount points, so we probe
 /// the root filesystem only. This gives meaningful results on macOS/BSD.
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(unix, not(target_os = "linux")))]
 pub(crate) fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
     match rustix::fs::statvfs(Path::new("/")) {
         Ok(st) => {
@@ -135,6 +137,22 @@ pub(crate) fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
             usage_percent: 0.0,
         }]),
     }
+}
+
+/// Windows fallback — returns placeholder disk info.
+///
+/// Full implementation would use `GetDiskFreeSpaceExW` via windows-sys.
+#[cfg(windows)]
+pub(crate) fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
+    Ok(vec![DiskInfo {
+        device: "C:".to_string(),
+        mount_point: "C:\\".to_string(),
+        filesystem: "unknown".to_string(),
+        total_gb: 0.0,
+        used_gb: 0.0,
+        available_gb: 0.0,
+        usage_percent: 0.0,
+    }])
 }
 
 /// Get current disk usage (average across all disks)

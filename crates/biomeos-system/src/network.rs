@@ -3,11 +3,13 @@
 
 //! Network interface information and I/O metrics (pure Rust via /proc/net/dev - ecoBin v3).
 
+#[cfg(target_os = "linux")]
 use std::fs;
 
 use biomeos_types::{BiomeResult, NetworkIoMetrics};
 
 /// Parsed line from /proc/net/dev: interface name and rx/tx bytes + packets
+#[cfg(target_os = "linux")]
 fn parse_net_dev(content: &str) -> Vec<(String, u64, u64, u64, u64)> {
     let mut out = Vec::new();
     for line in content.lines().skip(2) {
@@ -177,6 +179,7 @@ pub(crate) fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
 }
 
 /// Default sample interval for network I/O (1s).
+#[cfg(target_os = "linux")]
 const DEFAULT_NETWORK_SAMPLE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
 
 /// Get current network I/O via /proc/net/dev (pure Rust).

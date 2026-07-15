@@ -130,7 +130,7 @@ impl PrimalOrchestrator {
                     Err(_) => {
                         let msg = format!("Startup timeout after {:?}", primal.startup_timeout());
                         error!("Primal {} {}", id, msg);
-                        self.mark_failed(id, msg.clone()).await;
+                        self.mark_failed(id, &msg).await;
                         Err(BiomeError::timeout_error(msg, 30000, Some("primal_start")))
                     }
                 }
@@ -148,12 +148,12 @@ impl PrimalOrchestrator {
 
     /// Ensure at least one provider for a capability is running
     async fn ensure_capability_provider(&self, capability: &Capability) -> BiomeResult<()> {
-        let providers: Vec<_> = {
+        let providers: Vec<(PrimalId, PrimalState)> = {
             let primals = self.primals.read().await;
             primals
                 .iter()
                 .filter(|(_, record)| record.primal.provides().contains(capability))
-                .map(|(id, _)| id.clone())
+                .map(|(id, record)| (id.clone(), record.state.clone()))
                 .collect()
         };
 
@@ -164,9 +164,8 @@ impl PrimalOrchestrator {
             ));
         }
 
-        for provider_id in providers {
-            let state = self.get_state(&provider_id).await;
-            if state == Some(PrimalState::Running) {
+        for (provider_id, state) in providers {
+            if state == PrimalState::Running {
                 debug!(
                     "Capability {} already provided by {}",
                     capability, provider_id
@@ -272,7 +271,8 @@ impl PrimalOrchestrator {
             .collect()
     }
 
-    async fn mark_failed(&self, id: &PrimalId, reason: String) {
+    async fn mark_failed(&self, id: &PrimalId, reason: impl Into<String>) {
+        let reason = reason.into();
         let mut primals = self.primals.write().await;
         if let Some(record) = primals.get_mut(id) {
             record.state = PrimalState::Failed { reason };

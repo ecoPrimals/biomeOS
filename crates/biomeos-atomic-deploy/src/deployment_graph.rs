@@ -5,9 +5,10 @@
 //!
 //! Makes deployment deterministic and manageable via graph execution
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use biomeos_types::primal_names;
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeSet, HashMap};
 
 pub use crate::orchestrator::DeploymentResult;
 
@@ -155,14 +156,60 @@ impl AtomicDeploymentGraph {
         toml::to_string_pretty(self).context("TOML serialization failed")
     }
 
-    /// Get execution order (topological sort)
+    /// Get execution order (topological sort via Kahn's algorithm).
     ///
-    /// Note: Simplified implementation - returns nodes in declaration order
-    /// Neural API's `GraphExecutor` handles proper topological sorting
-    #[must_use]
-    pub fn execution_order(&self) -> Vec<&DeploymentGraphNode> {
-        // Neural API handles topological sort - this is a simplified version
-        self.nodes.iter().collect()
+    /// Nodes with no remaining dependencies are emitted in declaration order for stability.
+    /// Returns an error when dependencies reference unknown nodes or the graph contains cycles.
+    pub fn execution_order(&self) -> Result<Vec<&DeploymentGraphNode>> {
+        let node_index: HashMap<&str, usize> = self
+            .nodes
+            .iter()
+            .enumerate()
+            .map(|(index, node)| (node.id.as_str(), index))
+            .collect();
+
+        let mut in_degree = vec![0usize; self.nodes.len()];
+        let mut dependents: Vec<Vec<usize>> = vec![Vec::new(); self.nodes.len()];
+
+        for (index, node) in self.nodes.iter().enumerate() {
+            for dep_id in &node.dependencies {
+                let Some(&dep_index) = node_index.get(dep_id.as_str()) else {
+                    bail!(
+                        "Node '{}' depends on unknown node '{}'",
+                        node.id,
+                        dep_id
+                    );
+                };
+                dependents[dep_index].push(index);
+                in_degree[index] += 1;
+            }
+        }
+
+        let mut ready: BTreeSet<usize> = in_degree
+            .iter()
+            .enumerate()
+            .filter(|(_, degree)| **degree == 0)
+            .map(|(index, _)| index)
+            .collect();
+
+        let mut order = Vec::with_capacity(self.nodes.len());
+        while let Some(&index) = ready.first() {
+            ready.remove(&index);
+            order.push(&self.nodes[index]);
+
+            for &dependent in &dependents[index] {
+                in_degree[dependent] -= 1;
+                if in_degree[dependent] == 0 {
+                    ready.insert(dependent);
+                }
+            }
+        }
+
+        if order.len() != self.nodes.len() {
+            bail!("Graph contains cyclic dependencies");
+        }
+
+        Ok(order)
     }
 }
 
@@ -170,6 +217,7 @@ impl AtomicDeploymentGraph {
 #[expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     use std::path::PathBuf;
 
     #[test]
@@ -220,5 +268,130 @@ mod tests {
             "filesystem.check_exists"
         );
         assert!(first["dependencies"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_execution_order_respects_dependencies() {
+        let graph = AtomicDeploymentGraph::full_nucleus_deployment(
+            PathBuf::from("/tmp/test.seed"),
+            "family-abc",
+        );
+
+        let order = graph.execution_order().unwrap();
+        let positions: HashMap<&str, usize> = order
+            .iter()
+            .enumerate()
+            .map(|(index, node)| (node.id.as_str(), index))
+            .collect();
+
+        for node in &graph.nodes {
+            let node_pos = positions[node.id.as_str()];
+            for dep in &node.dependencies {
+                assert!(
+                    positions[dep.as_str()] < node_pos,
+                    "node '{}' must run after dependency '{}'",
+                    node.id,
+                    dep
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_execution_order_unknown_dependency() {
+        let graph = AtomicDeploymentGraph {
+            nodes: vec![
+                DeploymentGraphNode {
+                    id: "root".to_string(),
+                    node_type: "test".to_string(),
+                    dependencies: vec![],
+                    config: serde_json::json!({}),
+                },
+                DeploymentGraphNode {
+                    id: "child".to_string(),
+                    node_type: "test".to_string(),
+                    dependencies: vec!["missing".to_string()],
+                    config: serde_json::json!({}),
+                },
+            ],
+        };
+
+        let err = graph.execution_order().unwrap_err();
+        assert!(
+            err.to_string().contains("unknown node"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn test_execution_order_cycle_detection() {
+        let graph = AtomicDeploymentGraph {
+            nodes: vec![
+                DeploymentGraphNode {
+                    id: "a".to_string(),
+                    node_type: "test".to_string(),
+                    dependencies: vec!["b".to_string()],
+                    config: serde_json::json!({}),
+                },
+                DeploymentGraphNode {
+                    id: "b".to_string(),
+                    node_type: "test".to_string(),
+                    dependencies: vec!["a".to_string()],
+                    config: serde_json::json!({}),
+                },
+            ],
+        };
+
+        let err = graph.execution_order().unwrap_err();
+        assert!(
+            err.to_string().contains("cyclic"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn test_execution_order_parallel_branches() {
+        let graph = AtomicDeploymentGraph {
+            nodes: vec![
+                DeploymentGraphNode {
+                    id: "root".to_string(),
+                    node_type: "test".to_string(),
+                    dependencies: vec![],
+                    config: serde_json::json!({}),
+                },
+                DeploymentGraphNode {
+                    id: "left".to_string(),
+                    node_type: "test".to_string(),
+                    dependencies: vec!["root".to_string()],
+                    config: serde_json::json!({}),
+                },
+                DeploymentGraphNode {
+                    id: "right".to_string(),
+                    node_type: "test".to_string(),
+                    dependencies: vec!["root".to_string()],
+                    config: serde_json::json!({}),
+                },
+                DeploymentGraphNode {
+                    id: "join".to_string(),
+                    node_type: "test".to_string(),
+                    dependencies: vec!["left".to_string(), "right".to_string()],
+                    config: serde_json::json!({}),
+                },
+            ],
+        };
+
+        let order = graph
+            .execution_order()
+            .unwrap()
+            .into_iter()
+            .map(|node| node.id.clone())
+            .collect::<Vec<_>>();
+
+        assert_eq!(order[0], "root");
+        assert_eq!(order[order.len() - 1], "join");
+        assert!(order.iter().position(|id| id == "left").unwrap()
+            < order.iter().position(|id| id == "join").unwrap());
+        assert!(order.iter().position(|id| id == "right").unwrap()
+            < order.iter().position(|id| id == "join").unwrap());
     }
 }

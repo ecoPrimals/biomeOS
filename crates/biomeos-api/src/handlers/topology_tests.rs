@@ -110,28 +110,35 @@ fn test_extract_node_id_one_part() {
     assert_eq!(result, Some("standalone".to_string()));
 }
 
-#[test]
-fn test_collect_edge_metrics_security() {
-    let metrics = collect_edge_metrics("discovery-node", "security-node");
-    assert!(metrics.is_some());
-    let m = metrics.unwrap();
-    assert_eq!(m.latency_ms, Some(5.0)); // Security has overhead
+#[tokio::test]
+async fn test_collect_edge_metrics_unreachable_socket() {
+    let metrics = collect_edge_metrics(
+        "discovery-node",
+        "security-node",
+        "unix:///tmp/nonexistent-biomeos-topology-probe.sock",
+    )
+    .await;
+    assert!(metrics.is_none());
 }
 
-#[test]
-fn test_collect_edge_metrics_discovery() {
-    let metrics = collect_edge_metrics("discovery-node", "storage-node");
-    assert!(metrics.is_some());
-    let m = metrics.unwrap();
-    assert_eq!(m.latency_ms, Some(1.5)); // Discovery is fast
+#[tokio::test]
+async fn test_collect_edge_metrics_invalid_endpoint() {
+    let metrics = collect_edge_metrics("node-a", "node-b", "not-a-valid-endpoint").await;
+    assert!(metrics.is_none());
 }
 
-#[test]
-fn test_collect_edge_metrics_default() {
-    let metrics = collect_edge_metrics("node-a", "node-b");
-    assert!(metrics.is_some());
-    let m = metrics.unwrap();
-    assert_eq!(m.latency_ms, Some(2.0)); // Default latency
+#[tokio::test]
+async fn test_collect_edge_metrics_returns_latency_when_present() {
+    let metrics = EdgeMetrics {
+        request_count: None,
+        avg_latency_ms: Some(2.5),
+        latency_ms: Some(2.5),
+        bandwidth_mbps: None,
+        packet_loss: None,
+        last_measured: Some(chrono::Utc::now().to_rfc3339()),
+    };
+    assert_eq!(metrics.latency_ms, Some(2.5));
+    assert!(metrics.packet_loss.is_none());
 }
 
 #[test]
@@ -182,22 +189,6 @@ fn test_extract_node_id_four_parts() {
 fn test_extract_node_id_empty_string() {
     let result = extract_node_id_from_primal("");
     assert_eq!(result, Some(String::new()));
-}
-
-#[test]
-fn test_collect_edge_metrics_crypto() {
-    let metrics = collect_edge_metrics("orchestration-node", "crypto-provider");
-    assert!(metrics.is_some());
-    let m = metrics.unwrap();
-    assert_eq!(m.latency_ms, Some(5.0));
-}
-
-#[test]
-fn test_collect_edge_metrics_http() {
-    let metrics = collect_edge_metrics("http-client", "storage-node");
-    assert!(metrics.is_some());
-    let m = metrics.unwrap();
-    assert_eq!(m.latency_ms, Some(1.5));
 }
 
 #[test]

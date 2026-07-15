@@ -588,5 +588,5 @@ pub fn execute(args: GenomeArgs) -> Result<()> {
 }
 
 #[cfg(test)]
-#[path = "genome_tests.rs"]
+#[path = "genome_tests/mod.rs"]
 mod tests;

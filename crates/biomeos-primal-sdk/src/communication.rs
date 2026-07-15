@@ -32,10 +32,13 @@
 //! # }
 //! ```
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
+use anyhow::Context;
 use serde_json::Value;
 use std::path::PathBuf;
+#[cfg(unix)]
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 
@@ -118,29 +121,33 @@ impl PrimalClient {
     }
 
     /// Send request over Unix socket
+    #[cfg(unix)]
     async fn send_request(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        // Connect to primal's socket
         let mut stream = UnixStream::connect(&self.primal.socket_path)
             .await
             .context(format!("Failed to connect to {}", self.primal.name))?;
 
-        // Serialize request
         let request_json = serde_json::to_vec(&request)?;
 
-        // Send request
         stream.write_all(&request_json).await?;
-        stream.write_all(b"\n").await?; // Line-delimited JSON
+        stream.write_all(b"\n").await?;
         stream.flush().await?;
 
-        // Read response
         let mut response_buf = Vec::new();
         stream.read_to_end(&mut response_buf).await?;
 
-        // Deserialize response
         let response: JsonRpcResponse =
             serde_json::from_slice(&response_buf).context("Failed to parse JSON-RPC response")?;
 
         Ok(response)
+    }
+
+    /// Windows stub — UDS unavailable; use TCP transport.
+    #[cfg(windows)]
+    async fn send_request(&self, _request: JsonRpcRequest) -> Result<JsonRpcResponse> {
+        Err(anyhow!(
+            "Unix domain socket transport unavailable on Windows; use TCP"
+        ))
     }
 
     /// Get primal information
@@ -195,7 +202,7 @@ impl SecureTunnel {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 #[expect(clippy::unwrap_used, clippy::expect_used, reason = "test")]
 mod tests {
     use super::*;

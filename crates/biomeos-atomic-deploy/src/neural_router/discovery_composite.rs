@@ -7,7 +7,7 @@ use anyhow::{Context, Result, anyhow};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
-use crate::capability_domains::capability_to_provider_fallback;
+use crate::capability_domains::capability_to_provider;
 
 use super::NeuralRouter;
 use super::types::{AtomicType, DiscoveredAtomic, DiscoveredPrimal};
@@ -134,14 +134,14 @@ impl NeuralRouter {
             }
         }
 
-        let fallback_primal = capability_to_provider_fallback(capability);
+        let fallback_primal = capability_to_provider(capability);
 
         if let Some(primal) = fallback_primal {
             debug!(
                 "   ⚠️  Registry miss: using fallback mapping {} → {}",
                 capability, primal
             );
-            self.find_primal_by_socket(primal).await
+            self.find_primal_by_socket(&primal).await
         } else {
             Err(anyhow!(
                 "No primal found for capability '{capability}'. Register a provider or check the capability name."

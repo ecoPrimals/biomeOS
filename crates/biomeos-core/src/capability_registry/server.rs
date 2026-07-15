@@ -4,18 +4,32 @@
 use super::registry::CapabilityRegistry;
 use super::types::{RegistryRequest, RegistryResponse, ResponseStatus};
 use biomeos_types::{BiomeError, PrimalId};
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::{UnixListener, UnixStream};
 use tracing::{error, info};
 
 impl CapabilityRegistry {
     /// Start Unix socket IPC server
+    #[cfg(unix)]
     pub async fn serve(&self) -> Result<(), BiomeError> {
         self.serve_inner(None).await
     }
 
+    /// Windows stub — Unix socket IPC unavailable on this platform.
+    #[cfg(windows)]
+    pub async fn serve(&self) -> Result<(), BiomeError> {
+        Err(BiomeError::resource_error(
+            "Unix socket IPC unavailable on Windows",
+            "registry_socket",
+            None::<String>,
+            None::<String>,
+        ))
+    }
+
     /// Start Unix socket IPC server with readiness signal (for tests).
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub async fn serve_with_ready(
         &self,
         mut ready_tx: biomeos_test_utils::ReadySender,
@@ -24,6 +38,15 @@ impl CapabilityRegistry {
             .await
     }
 
+    #[cfg(all(test, windows))]
+    pub async fn serve_with_ready(
+        &self,
+        _ready_tx: biomeos_test_utils::ReadySender,
+    ) -> Result<(), BiomeError> {
+        self.serve().await
+    }
+
+    #[cfg(unix)]
     async fn serve_inner(
         &self,
         on_ready: Option<Box<dyn FnOnce() + Send>>,
@@ -105,6 +128,7 @@ impl CapabilityRegistry {
     }
 
     /// Handle a single connection
+    #[cfg(unix)]
     async fn handle_connection(&self, stream: UnixStream) -> Result<(), BiomeError> {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);

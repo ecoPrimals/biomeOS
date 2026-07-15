@@ -30,7 +30,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
+
+/// Result of probing a primal for capabilities via JSON-RPC.
+struct CapabilityQueryResult {
+    capabilities: Vec<String>,
+    error: Option<String>,
+}
 
 /// Topology handler for system discovery and metrics.
 #[derive(Clone)]
@@ -111,16 +117,14 @@ impl TopologyHandler {
                         // Extract primal name from socket filename
                         // Pattern: {primal}-{family_id}[-node_id].sock
                         if let Some(primal_name) = filename.split('-').next() {
-                            let socket_path = path.to_string_lossy().to_string();
+                            let socket_path = path.to_string_lossy().into_owned();
 
                             // Query capabilities if possible
-                            let capabilities = self
-                                .query_primal_capabilities(&socket_path)
-                                .await
-                                .unwrap_or_default();
+                            let cap_result = self.query_primal_capabilities(&socket_path).await;
 
-                            let endpoint =
-                                biomeos_core::TransportEndpoint::UnixSocket { path: path.clone() };
+                            let endpoint = biomeos_core::TransportEndpoint::UnixSocket {
+                                path: path.clone(),
+                            };
                             let healthy =
                                 crate::neural_router::NeuralRouter::check_endpoint_health(
                                     &endpoint,
@@ -130,11 +134,11 @@ impl TopologyHandler {
                             let status = if healthy { "running" } else { "unreachable" };
                             let pid = Self::read_pid_file(socket_dir, filename);
 
-                            primals.push(json!({
+                            let mut primal = json!({
                                 "name": primal_name,
                                 "socket": socket_path,
                                 "status": status,
-                                "capabilities": capabilities,
+                                "capabilities": cap_result.capabilities,
                                 "pid": pid,
                                 "version": null,
                                 "id": filename.trim_end_matches(".sock"),
@@ -142,7 +146,11 @@ impl TopologyHandler {
                                 "socket_path": socket_path,
                                 "health": status,
                                 "resource_usage": null
-                            }));
+                            });
+                            if let Some(err) = cap_result.error {
+                                primal["capability_probe_error"] = json!(err);
+                            }
+                            primals.push(primal);
                         }
                     }
                 }
@@ -179,9 +187,21 @@ impl TopologyHandler {
     ///
     /// Connects to the primal's Unix socket, sends a `capabilities.list`
     /// request, and parses the response into a list of capability names.
-    /// Falls back to an empty list on connection/parse errors so that
-    /// topology discovery remains resilient.
-    async fn query_primal_capabilities(&self, socket_path: &str) -> Result<Vec<String>> {
+    /// Falls back to an empty capability list on connection/parse errors so that
+    /// topology discovery remains resilient, but records the failure in
+    /// [`CapabilityQueryResult::error`].
+    async fn query_primal_capabilities(&self, socket_path: &str) -> CapabilityQueryResult {
+        #[cfg(windows)]
+        {
+            let _ = socket_path;
+            return CapabilityQueryResult {
+                capabilities: vec![],
+                error: Some("Unix socket transport unavailable on Windows".to_string()),
+            };
+        }
+
+        #[cfg(unix)]
+        {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
 
@@ -195,7 +215,28 @@ impl TopologyHandler {
             .await
             {
                 Ok(Ok(s)) => s,
-                _ => return Ok(vec![]),
+                Ok(Err(e)) => {
+                    let msg = format!("connect failed: {e}");
+                    warn!(
+                        "capabilities probe {}: {}",
+                        socket_path, msg
+                    );
+                    return CapabilityQueryResult {
+                        capabilities: vec![],
+                        error: Some(msg),
+                    };
+                }
+                Err(_) => {
+                    let msg = "connect timed out after 500ms".to_string();
+                    warn!(
+                        "capabilities probe {}: {}",
+                        socket_path, msg
+                    );
+                    return CapabilityQueryResult {
+                        capabilities: vec![],
+                        error: Some(msg),
+                    };
+                }
             };
 
             let request = serde_json::json!({
@@ -203,7 +244,17 @@ impl TopologyHandler {
                 "method": method_name,
                 "id": 1
             });
-            let request_line = serde_json::to_string(&request)? + "\n";
+            let request_line = match serde_json::to_string(&request) {
+                Ok(line) => line + "\n",
+                Err(e) => {
+                    let msg = format!("failed to serialize capabilities request: {e}");
+                    warn!("capabilities probe {}: {}", socket_path, msg);
+                    return CapabilityQueryResult {
+                        capabilities: vec![],
+                        error: Some(msg),
+                    };
+                }
+            };
 
             let mut reader = BufReader::new(stream);
             let stream_mut = reader.get_mut();
@@ -249,10 +300,17 @@ impl TopologyHandler {
                     &resp,
                 );
             if !caps.is_empty() {
-                return Ok(caps);
+                return CapabilityQueryResult {
+                    capabilities: caps,
+                    error: None,
+                };
             }
         }
-        Ok(vec![])
+        CapabilityQueryResult {
+            capabilities: vec![],
+            error: None,
+        }
+        }
     }
 
     /// Get XDG-compliant socket directories for primal discovery
@@ -555,5 +613,5 @@ impl TopologyHandler {
 }
 
 #[cfg(test)]
-#[path = "topology_tests.rs"]
+#[path = "topology_tests/mod.rs"]
 mod tests;

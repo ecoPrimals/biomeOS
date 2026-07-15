@@ -36,6 +36,10 @@ pub struct DiscoveredPrimal {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub denied_capabilities: Option<Vec<String>>,
+
+    /// Probe or discovery error detail when health is degraded or unreachable
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// Response structure for discovered primals
@@ -105,6 +109,7 @@ pub async fn get_discovered_primals(
                         family_id: primal.family_id.map(|f| f.as_str().to_string()),
                         allowed_capabilities: Some(vec!["*".to_string()]),
                         denied_capabilities: Some(vec![]),
+                        error: None,
                     }
                 })
                 .collect();
@@ -188,7 +193,7 @@ async fn probe_live_sockets_in(socket_dir: &Path) -> Vec<DiscoveredPrimal> {
         let client = biomeos_core::AtomicClient::unix(&socket_path)
             .with_timeout(std::time::Duration::from_secs(2));
 
-        let (health, capabilities, version) =
+        let (health, capabilities, version, probe_error) =
             match client.call("health", serde_json::json!({})).await {
                 Ok(result) => {
                     let h = result
@@ -210,9 +215,18 @@ async fn probe_live_sockets_in(socket_dir: &Path) -> Vec<DiscoveredPrimal> {
                         .and_then(|v| v.as_str())
                         .unwrap_or("unknown")
                         .to_string();
-                    (h, caps, v)
+                    (h, caps, v, None)
                 }
-                Err(_) => ("unreachable".to_string(), vec![], "unknown".to_string()),
+                Err(e) => {
+                    let msg = format!("health probe failed: {e}");
+                    tracing::warn!("Socket probe {}: {}", socket_path, msg);
+                    (
+                        "unreachable".to_string(),
+                        vec![],
+                        "unknown".to_string(),
+                        Some(msg),
+                    )
+                }
             };
 
         let primal_name = file_name
@@ -234,6 +248,7 @@ async fn probe_live_sockets_in(socket_dir: &Path) -> Vec<DiscoveredPrimal> {
             family_id: None,
             allowed_capabilities: None,
             denied_capabilities: None,
+            error: probe_error,
         });
 
         tracing::info!("   Probed socket: {} → {}", primal_name, socket_path);

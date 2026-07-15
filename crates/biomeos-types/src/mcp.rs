@@ -148,8 +148,8 @@ impl SchemaBuilder {
     #[must_use]
     pub fn property(mut self, name: impl Into<String>, schema: JsonSchema) -> Self {
         let name = name.into();
-        self.schema.properties.insert(name.clone(), schema);
-        self.schema.required.push(name);
+        self.schema.required.push(name.clone());
+        self.schema.properties.insert(name, schema);
         self
     }
 

@@ -24,6 +24,7 @@ pub use capability::{Capability, CapabilitySet};
 pub use discovery::{DiscoveredPrimal, PrimalDiscovery};
 pub use nucleus::{
     IdentityProof, SecureNucleusDiscovery, SelectionCriteria, TrustLevel, VerifiedPrimal,
+    UNRESOLVED_NODE_ID,
 };
 pub use subfederation::{IsolationLevel, SubFederation, SubFederationManager};
 

@@ -167,30 +167,41 @@ impl UniversalBiomeOSManager {
             );
         }
 
-        // Unix socket IPC — newline-delimited JSON-RPC
-        let stream = tokio::net::UnixStream::connect(socket_path).await?;
-        let (reader, mut writer) = tokio::io::split(stream);
+        #[cfg(unix)]
+        {
+            // Unix socket IPC — newline-delimited JSON-RPC
+            let stream = tokio::net::UnixStream::connect(socket_path).await?;
+            let (reader, mut writer) = tokio::io::split(stream);
 
-        let mut payload = serde_json::to_vec(&request)?;
-        payload.push(b'\n');
+            let mut payload = serde_json::to_vec(&request)?;
+            payload.push(b'\n');
 
-        use tokio::io::AsyncWriteExt;
-        writer.write_all(&payload).await?;
-        writer.shutdown().await?;
+            use tokio::io::AsyncWriteExt;
+            writer.write_all(&payload).await?;
+            writer.shutdown().await?;
 
-        use tokio::io::AsyncBufReadExt;
-        let mut buf_reader = tokio::io::BufReader::new(reader);
-        let mut line = String::new();
-        buf_reader.read_line(&mut line).await?;
+            use tokio::io::AsyncBufReadExt;
+            let mut buf_reader = tokio::io::BufReader::new(reader);
+            let mut line = String::new();
+            buf_reader.read_line(&mut line).await?;
 
-        let response: serde_json::Value = serde_json::from_str(line.trim())?;
+            let response: serde_json::Value = serde_json::from_str(line.trim())?;
 
-        if let Some(r) = response.get("result") {
-            Ok(r.clone())
-        } else if let Some(e) = response.get("error") {
-            anyhow::bail!("Provider returned error: {e}")
-        } else {
-            Ok(response)
+            if let Some(r) = response.get("result") {
+                return Ok(r.clone());
+            }
+            if let Some(e) = response.get("error") {
+                anyhow::bail!("Provider returned error: {e}");
+            }
+            return Ok(response);
+        }
+
+        #[cfg(windows)]
+        {
+            anyhow::bail!(
+                "Unix domain socket capability calls unavailable on Windows: {}",
+                provider.endpoint
+            );
         }
     }
 

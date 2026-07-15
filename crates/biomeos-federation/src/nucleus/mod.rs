@@ -29,7 +29,7 @@ mod trust;
 mod verification;
 
 pub use trust::TrustLevel;
-pub use verification::{IdentityProof, UNVERIFIED_SIGNATURE};
+pub use verification::{IdentityProof, UNRESOLVED_NODE_ID, UNVERIFIED_SIGNATURE};
 
 use crate::capability::{Capability, CapabilitySet};
 use crate::discovery::{DiscoveredPrimal, PrimalDiscovery, PrimalEndpoint};
@@ -167,14 +167,21 @@ impl SecureNucleusDiscovery {
 
         for primal in discovered {
             let name = primal.name;
+            warn!(
+                "Insecure discovery: node_id unresolved for primal {name} (identity not verified)"
+            );
+
+            let mut metadata = primal.metadata;
+            metadata.insert("node_id_status".to_string(), "unresolved".to_string());
+
             let verified = VerifiedPrimal {
                 name: name.clone(),
-                node_id: "unknown".to_string(),
+                node_id: UNRESOLVED_NODE_ID.to_string(),
                 family_id: None,
                 endpoints: primal.endpoints,
                 capabilities: primal.capabilities,
                 identity_proof: IdentityProof {
-                    node_id: "unknown".to_string(),
+                    node_id: UNRESOLVED_NODE_ID.to_string(),
                     family_id: None,
                     signature: verification::UNVERIFIED_SIGNATURE.to_string(),
                     challenge: "none".to_string(),
@@ -184,7 +191,7 @@ impl SecureNucleusDiscovery {
                 trust_level: TrustLevel::Unknown,
                 discovered_at: now,
                 verified_at: now,
-                metadata: primal.metadata,
+                metadata,
             };
 
             self.verified_primals

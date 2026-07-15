@@ -139,11 +139,14 @@ impl GraphHandler {
 
         tokio::spawn(async move {
             let mut env = HashMap::new();
-            env.insert("FAMILY_ID".to_string(), family_id_owned.clone());
+            env.insert("FAMILY_ID".to_string(), family_id_owned);
+            #[cfg(unix)]
             env.insert(
                 "UID".to_string(),
                 rustix::process::getuid().as_raw().to_string(),
             );
+            #[cfg(windows)]
+            env.insert("UID".to_string(), "0".to_string());
 
             let socket_dir = SystemPaths::new()
                 .map(|p| p.runtime_dir().to_string_lossy().to_string())
@@ -162,7 +165,7 @@ impl GraphHandler {
                     .or_else(|_| std::env::var(biomeos_types::env_config::vars::JWT_SECRET_LEGACY))
                     .unwrap_or_else(|_| {
                         tracing::warn!("JWT_SECRET not set — using family-derived fallback (set BIOMEOS_JWT_SECRET for production)");
-                        format!("biomeos-jwt-{}", family_id_owned)
+                        format!("biomeos-jwt-{}", env["FAMILY_ID"])
                     }),
             );
 
@@ -205,6 +208,7 @@ impl GraphHandler {
             // Clone needed: executor consumes graph, but post-execution
             // capability registration needs the node list.
             let graph_ref = graph.clone();
+            let family_id = env.get("FAMILY_ID").cloned();
 
             let mut executor =
                 GraphExecutor::new(graph, env).with_capability_registry(capability_registry);
@@ -219,12 +223,14 @@ impl GraphHandler {
             match executor.execute().await {
                 Ok(report) => {
                     if report.success {
-                        Self::register_capabilities_from_graph(
-                            &router,
-                            &graph_ref,
-                            &family_id_owned,
-                        )
-                        .await;
+                        if let Some(ref family_id) = family_id {
+                            Self::register_capabilities_from_graph(
+                                &router,
+                                &graph_ref,
+                                family_id,
+                            )
+                            .await;
+                        }
                     }
 
                     let mut status = executions.write().await;

@@ -5,9 +5,13 @@
 
 use std::path::Path;
 
+#[cfg(unix)]
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
+#[cfg(unix)]
 use tokio::time::{Duration, timeout};
 use tracing::debug;
 
@@ -23,6 +27,7 @@ use crate::{Error, Result};
 /// - Unix socket connection fails
 /// - JSON-RPC request fails  
 /// - Response deserialization fails
+#[cfg(unix)]
 pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     socket_path: impl AsRef<Path>,
     method: &str,
@@ -36,30 +41,24 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
         "Calling Unix socket JSON-RPC"
     );
 
-    // Connect to socket
     let stream = UnixStream::connect(socket_path)
         .await
         .map_err(|e| Error::socket_connection_failed(socket_path, e))?;
 
-    // Split stream for concurrent read/write
     let (read_half, mut write_half) = stream.into_split();
 
-    // Create request with unique ID for concurrent request correlation
     let request = JsonRpcRequest::new(method, params);
 
-    // Serialize and send request
     let request_json = serde_json::to_string(&request)?;
     debug!(request = %request_json, "Sending JSON-RPC request");
 
     write_half.write_all(request_json.as_bytes()).await?;
-    write_half.write_all(b"\n").await?; // Newline delimiter
+    write_half.write_all(b"\n").await?;
     write_half.flush().await?;
 
-    // Read response with timeout to prevent hangs
     let mut reader = BufReader::new(read_half);
     let mut response_line = String::new();
 
-    // 30 second timeout for socket reads (prevents indefinite hangs)
     timeout(
         Duration::from_secs(30),
         reader.read_line(&mut response_line),
@@ -70,7 +69,6 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
 
     debug!(response = %response_line, "Received JSON-RPC response");
 
-    // Parse response
     let response: JsonRpcResponse = serde_json::from_str(&response_line).map_err(|e| {
         Error::invalid_response(
             socket_path.display().to_string(),
@@ -78,7 +76,6 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
         )
     })?;
 
-    // Check for error
     if let Some(error) = response.error {
         return Err(Error::jsonrpc_failed(
             method,
@@ -86,7 +83,6 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
         ));
     }
 
-    // Extract result
     let result = response.result.ok_or_else(|| {
         Error::invalid_response(
             socket_path.display().to_string(),
@@ -94,11 +90,30 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
         )
     })?;
 
-    // Deserialize result
     serde_json::from_value(result).map_err(|e| {
         Error::invalid_response(
             socket_path.display().to_string(),
             format!("Failed to deserialize result: {e}"),
         )
     })
+}
+
+/// Windows stub — UDS unavailable on this platform.
+#[cfg(windows)]
+pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
+    socket_path: impl AsRef<Path>,
+    _method: &str,
+    _params: serde_json::Value,
+) -> Result<T> {
+    debug!(
+        socket = %socket_path.as_ref().display(),
+        "Unix socket RPC unavailable on Windows"
+    );
+    Err(Error::socket_connection_failed(
+        socket_path.as_ref(),
+        std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Unix domain sockets unavailable on Windows",
+        ),
+    ))
 }

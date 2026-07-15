@@ -22,7 +22,9 @@ use envelope::validate_envelope;
 use materialize::materialize_pseudospore;
 use receipt::{write_emit_receipt, write_ingest_receipt};
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tracing::{error, info};
 
@@ -217,6 +219,7 @@ async fn poll_execution(socket_path: &Path, execution_id: &str) -> Result<serde_
 }
 
 /// Send a JSON-RPC request over a Unix socket and parse the response.
+#[cfg(unix)]
 async fn send_jsonrpc(socket_path: &Path, request: &JsonRpcRequest) -> Result<serde_json::Value> {
     let stream = UnixStream::connect(socket_path).await.with_context(|| {
         format!(
@@ -240,10 +243,18 @@ async fn send_jsonrpc(socket_path: &Path, request: &JsonRpcRequest) -> Result<se
     Ok(response)
 }
 
+#[cfg(windows)]
+async fn send_jsonrpc(socket_path: &Path, _request: &JsonRpcRequest) -> Result<serde_json::Value> {
+    anyhow::bail!(
+        "Unix domain socket IPC unavailable on Windows: {}",
+        socket_path.display()
+    )
+}
+
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
 
 #[cfg(test)]
-#[path = "mod_tests.rs"]
+#[path = "mod_tests/mod.rs"]
 mod mod_tests;

@@ -21,7 +21,7 @@ use super::format::{
 };
 use super::{CleanupPlan, FossilAction, FossilArgs, run, run_at};
 
-#[path = "tests/format_tests.rs"]
+#[path = "tests/format_tests/mod.rs"]
 mod format_tests;
 
 #[path = "tests/integration_tests.rs"]

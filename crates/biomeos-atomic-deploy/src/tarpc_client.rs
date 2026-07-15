@@ -12,13 +12,16 @@ use anyhow::{Context, Result};
 use biomeos_types::tarpc_types::{DiscoveryRpcClient, HealthRpcClient, SecurityRpcClient};
 use std::path::Path;
 use tarpc::client;
+#[cfg(unix)]
 use tarpc::serde_transport::unix;
+#[cfg(unix)]
 use tokio_serde::formats::Bincode;
 
 /// Connect to a primal's tarpc socket and return a `HealthRpcClient`.
 ///
 /// Uses Bincode for binary serialization. Returns error if socket doesn't exist
 /// or connection fails — caller should fall back to JSON-RPC.
+#[cfg(unix)]
 pub async fn connect_tarpc_health(socket_path: &Path) -> Result<HealthRpcClient> {
     let transport = unix::connect(socket_path, Bincode::default)
         .await
@@ -33,7 +36,14 @@ pub async fn connect_tarpc_health(socket_path: &Path) -> Result<HealthRpcClient>
     Ok(client)
 }
 
+/// Windows stub — tarpc Unix transport unavailable.
+#[cfg(windows)]
+pub async fn connect_tarpc_health(_socket_path: &Path) -> Result<HealthRpcClient> {
+    anyhow::bail!("tarpc Unix transport unavailable on Windows")
+}
+
 /// Connect to a primal's tarpc socket and return a `DiscoveryRpcClient`.
+#[cfg(unix)]
 pub async fn connect_tarpc_discovery(socket_path: &Path) -> Result<DiscoveryRpcClient> {
     let transport = unix::connect(socket_path, Bincode::default)
         .await
@@ -48,7 +58,14 @@ pub async fn connect_tarpc_discovery(socket_path: &Path) -> Result<DiscoveryRpcC
     Ok(client)
 }
 
+/// Windows stub — tarpc Unix transport unavailable.
+#[cfg(windows)]
+pub async fn connect_tarpc_discovery(_socket_path: &Path) -> Result<DiscoveryRpcClient> {
+    anyhow::bail!("tarpc Unix transport unavailable on Windows")
+}
+
 /// Connect to a primal's tarpc socket and return a `SecurityRpcClient`.
+#[cfg(unix)]
 pub async fn connect_tarpc_security(socket_path: &Path) -> Result<SecurityRpcClient> {
     let transport = unix::connect(socket_path, Bincode::default)
         .await
@@ -63,7 +80,13 @@ pub async fn connect_tarpc_security(socket_path: &Path) -> Result<SecurityRpcCli
     Ok(client)
 }
 
-#[cfg(test)]
+/// Windows stub — tarpc Unix transport unavailable.
+#[cfg(windows)]
+pub async fn connect_tarpc_security(_socket_path: &Path) -> Result<SecurityRpcClient> {
+    anyhow::bail!("tarpc Unix transport unavailable on Windows")
+}
+
+#[cfg(all(test, unix))]
 #[expect(
     clippy::unwrap_used,
     reason = "test assertions use unwrap/expect for clarity"

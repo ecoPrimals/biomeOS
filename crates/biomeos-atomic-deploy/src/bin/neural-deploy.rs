@@ -14,10 +14,15 @@
 //!   neural-deploy 01_nucleus_enclave
 //!   neural-deploy 00_full_ecosystem --family-id nat0
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde_json::json;
+#[cfg(unix)]
+use anyhow::Context;
+#[cfg(unix)]
 use std::io::{BufRead, BufReader, Write};
+#[cfg(unix)]
 use std::os::unix::net::UnixStream;
+#[cfg(unix)]
 use std::path::Path;
 use tracing::info;
 
@@ -68,6 +73,15 @@ async fn main() -> Result<()> {
 
     // Connect to Neural API
     info!("🔌 Connecting to Neural API...");
+    #[cfg(windows)]
+    {
+        anyhow::bail!(
+            "Unix socket transport unavailable on Windows ({socket_path})"
+        );
+    }
+
+    #[cfg(unix)]
+    {
     if !Path::new(&socket_path).exists() {
         anyhow::bail!(
             "Neural API socket not found: {socket_path}\nIs the Neural API server running?"
@@ -136,4 +150,5 @@ async fn main() -> Result<()> {
     info!("  ls -l {}/*.sock", runtime_dir.display());
 
     Ok(())
+    }
 }

@@ -18,6 +18,7 @@ use super::NeuralRouter;
 use super::probe_primal_capabilities_standalone;
 use super::types::RegisteredCapability;
 use super::weights;
+use crate::capability_domains::register_capability_provider;
 use biomeos_core::TransportEndpoint;
 
 impl NeuralRouter {
@@ -79,6 +80,8 @@ impl NeuralRouter {
         }
 
         drop(registry);
+
+        register_capability_provider(&capability, &primal_name);
 
         let mut weights = self.routing_weights.write().await;
         weights.set_topology_affinity(&capability, &primal_name, topo_affinity);

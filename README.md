@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v4.33)
+## Status: Production Ready (v4.34)
 
 | Metric | Value |
 |--------|-------|
@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP; HTTP removed v3.97) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, all monoliths split into semantic modules, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, dashmap 6, toml 0.9, axum 0.8, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
-| Tests | 8,446 workspace-wide, 0 failures, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
+| Tests | 8,446+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
@@ -27,15 +27,17 @@
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection, composition dashboard |
-| Files >800 LOC | 0 production files (all monoliths split into semantic modules) |
-| Discovery | **Capability-based** per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 — XDG sockets + `topology.rescan` + lazy rescan + `capability.register` + DNS-SD mDNS + `primal.announce` self-registration; no identity-based routing or deprecated discovery stubs |
+| Files >800 LOC | 0 production files, 0 test files >650 LOC (all monoliths split into semantic modules) |
+| Discovery | **Capability-first** — runtime registry (DashMap) + bootstrap hints fallback; live `capability.register` populates runtime; XDG sockets + `topology.rescan` + lazy rescan + DNS-SD mDNS + `primal.announce`; no identity-based routing |
 | Blocking Debt | 0 (all primalSpring Phase 43 gaps resolved: genetics tier, deploy class, routing contract, tick-loop) |
+| Stubs Evolved | `diagnose_degradation` (real metrics), `execution_order` (Kahn's topo sort), `fetch_binary` (base64/bytes), `collect_edge_metrics` (live probe), `with_feature` (typed flags), `lineage_deriver` (SHA-256 identity), swallowed errors → structured propagation |
 | Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated (RPITIT/generics/enum dispatch/manual desugar); pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`); unused `tokio` removed from types crate; placeholder features pruned; repository URLs standardized; unused `walkdir` pruned from 3 crates |
 | TODO/FIXME/HACK | 0 active (all resolved in v3.81) |
 | Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
-| Hardcoded Values | 0 hardcoded primal names, IPs, ports, or filesystem paths in production code; env vars centralized via `env_config::vars` SSOT (75+ constants); all provider fallbacks use 3-tier resolution (env → taxonomy → last-resort); TOML-driven launch profiles; capability-domain discovery |
-| Cross-Arch | x86_64 + aarch64 + armv7 (32-bit safe: `cast.rs` `u64` bounds, conditional tests) |
+| Hardcoded Values | 0 hardcoded primal names in production; `CAPABILITY_DOMAINS` renamed to `BOOTSTRAP_CAPABILITY_HINTS` (last-resort); runtime registry takes precedence; env vars centralized via `env_config::vars` SSOT (75+ constants); TOML-driven launch profiles |
+| Cross-Arch | x86_64 + aarch64 + armv7 + **x86_64-pc-windows-gnu** (32-bit safe: `cast.rs` `u64` bounds, conditional tests; UDS → TCP fallback on Windows) |
+| Clone Reduction | Hot-path `.clone()` audit: `JsonRpcRequest::serialize_line()` (borrow params), iterator-by-value in discovery, single-lock snapshots in health monitor, Kahn's `push(id)` move, `MCP::add_property` move key |
 | Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 19 signal graphs |
 
 ---
@@ -273,7 +275,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (7,983 tests across 26 crates, fully concurrent)
+### Test (8,446+ tests across 26 crates, fully concurrent)
 
 ```bash
 cargo test --workspace
@@ -367,10 +369,10 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v4.25)
-**Updated**: June 13, 2026
-**Tests**: 7,983+ workspace-wide (0 failures), 90%+ line / function / region (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Deprecated**: 0 | **Blocking debt**: 0
-**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP; HTTP removed v3.97) | L4 weighted routing + L5 perceptron shadow | Capability-based discovery + `capability.call` + mesh cross-gate relay | `--bind-mode` guideStone startup | HEALTH-01 compliant | Real metrics via biomeos-system | Lineage fail-closed | Agnostic naming | Adaptive routing weights (redb-persistent) | Stale registration pruning | Partition-aware routing | Membrane + nucleated composition | XDG-compliant paths | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
+**Status**: Production Ready (v4.34)
+**Updated**: July 15, 2026
+**Tests**: 8,446+ workspace-wide (0 regressions), 88%+ line / function (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Deprecated**: 0 | **Blocking debt**: 0
+**Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP; HTTP removed v3.97) | L4 weighted routing + L5 perceptron shadow | Capability-first discovery (runtime DashMap + bootstrap fallback) + `capability.call` + mesh cross-gate relay | `--bind-mode` guideStone startup | HEALTH-01 compliant | Real metrics via biomeos-system | Lineage fail-closed | Agnostic naming | Adaptive routing weights (redb-persistent) | Stale registration pruning | Partition-aware routing | Membrane + nucleated composition | XDG-compliant paths | Cross-arch (x86_64 + aarch64 + armv7 + Windows-gnu) | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---
 

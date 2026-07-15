@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tracing::{debug, info, warn};
 
@@ -45,6 +47,10 @@ pub struct DiscoveredPrimal {
 
     /// Metadata
     pub metadata: HashMap<String, String>,
+
+    /// Query or probe error when discovery succeeded but primal info is incomplete
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// Endpoint types for primal communication
@@ -150,6 +156,7 @@ impl PrimalDiscovery {
         Ok(())
     }
 
+    #[cfg(unix)]
     async fn query_primal_info(&self, socket_path: &PathBuf) -> FederationResult<PrimalInfo> {
         let stream = UnixStream::connect(socket_path).await.map_err(|e| {
             crate::FederationError::Discovery {
@@ -239,6 +246,14 @@ impl PrimalDiscovery {
         })
     }
 
+    #[cfg(windows)]
+    async fn query_primal_info(&self, socket_path: &PathBuf) -> FederationResult<PrimalInfo> {
+        Err(crate::FederationError::DiscoveryError(format!(
+            "Unix socket transport unavailable on Windows ({})",
+            socket_path.display()
+        )))
+    }
+
     async fn register_unix_socket_primal(&mut self, socket_path: &PathBuf) {
         let filename = socket_path
             .file_name()
@@ -248,16 +263,21 @@ impl PrimalDiscovery {
         let base = filename.split('-').next().unwrap_or_default();
         let socket_name = base.trim_end_matches(".sock").to_string();
 
-        let (primal_name, primal_type, capabilities) =
+        let (primal_name, primal_type, capabilities, query_error) =
             match self.query_primal_info(socket_path).await {
-                Ok(info) => (info.name, info.primal_type, info.capabilities),
+                Ok(info) => (info.name, info.primal_type, info.capabilities, None),
                 Err(e) => {
-                    debug!(
-                        "Could not query primal info from {}: {}. Using fallback.",
+                    warn!(
+                        "Could not query primal info from {}: {}",
                         socket_path.display(),
                         e
                     );
-                    (socket_name, "unknown".to_string(), CapabilitySet::new())
+                    (
+                        socket_name,
+                        "unknown".to_string(),
+                        CapabilitySet::new(),
+                        Some(e.to_string()),
+                    )
                 }
             };
 
@@ -272,6 +292,7 @@ impl PrimalDiscovery {
                 ("discovered_via".to_string(), "unix_socket".to_string()),
                 ("socket_path".to_string(), socket_path.display().to_string()),
             ]),
+            error: query_error,
         };
 
         debug!(
@@ -327,6 +348,7 @@ impl PrimalDiscovery {
                     ("discovered_via".to_string(), "environment".to_string()),
                     ("env_var".to_string(), key.to_string()),
                 ]),
+                error: None,
             };
 
             debug!("Discovered primal from env: {} = {}", key, value);
@@ -382,6 +404,7 @@ impl PrimalDiscovery {
     }
 
     /// Like [`Self::discover_via_discovery_provider`], using an explicit discovery provider Unix socket path (tests).
+    #[cfg(unix)]
     pub(crate) async fn discover_via_discovery_socket_path(
         &mut self,
         discovery_socket: &str,
@@ -474,6 +497,16 @@ impl PrimalDiscovery {
         Ok(())
     }
 
+    /// Windows stub — UDS not available.
+    #[cfg(windows)]
+    pub(crate) async fn discover_via_discovery_socket_path(
+        &mut self,
+        discovery_socket: &str,
+    ) -> FederationResult<()> {
+        warn!("Unix socket discovery unavailable on Windows: {discovery_socket}");
+        Ok(())
+    }
+
     /// Find discovery provider socket via the 5-tier capability protocol.
     ///
     /// Delegates to [`biomeos_types::capability_discovery::discover_capability_socket`].
@@ -550,6 +583,7 @@ impl PrimalDiscovery {
             capabilities: CapabilitySet::from_vec(capabilities),
             endpoints,
             metadata,
+            error: None,
         };
 
         debug!("Registered discovery peer: {} (via UDP multicast)", node_id);

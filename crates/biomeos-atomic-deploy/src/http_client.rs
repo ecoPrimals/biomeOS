@@ -11,7 +11,8 @@
     expect(dead_code, reason = "wired when Songbird network delegate is live")
 )]
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
+use base64::Engine;
 use biomeos_types::primal_names;
 use bytes::Bytes;
 use serde::Deserialize;
@@ -19,6 +20,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::time::timeout;
 use tracing::{debug, info};
@@ -139,11 +141,16 @@ impl BiomeOsHttpClient {
     /// ```
     pub async fn fetch_binary(&self, url: &str) -> Result<Bytes> {
         info!("📦 Fetching binary: {}", url);
-        let body = self.get(url).await?;
+        let response = self.request("GET", url, HashMap::new(), None).await?;
 
-        // For now, HTTP returns string body
-        // Note: discovery delegate returns string body; binary would need base64 encoding
-        Ok(Bytes::from(body.into_bytes()))
+        if !(200..300).contains(&response.status) {
+            bail!("HTTP request failed with status {}", response.status);
+        }
+
+        let bytes = decode_http_body(&response.headers, &response.body)?;
+        verify_content_length(&response.headers, &bytes)?;
+
+        Ok(bytes)
     }
 
     /// Check if a URL is reachable (health check)
@@ -185,31 +192,45 @@ impl BiomeOsHttpClient {
             "id": 1
         });
 
-        // Connect to discovery delegate
-        let mut stream = UnixStream::connect(&self.discovery_socket)
-            .await
-            .context(format!(
-                "Failed to connect to discovery socket at {}",
+        #[cfg(windows)]
+        {
+            anyhow::bail!(
+                "Unix socket transport unavailable on Windows ({})",
                 self.discovery_socket
-            ))?;
+            );
+        }
 
-        // Send request
-        let request_json = serde_json::to_string(&rpc_request)?;
-        debug!("→ discovery: {}", request_json);
-        stream.write_all(request_json.as_bytes()).await?;
-        stream.shutdown().await?;
+        #[cfg(unix)]
+        let response_buf = {
+            // Connect to discovery delegate
+            let mut stream = UnixStream::connect(&self.discovery_socket)
+                .await
+                .context(format!(
+                    "Failed to connect to discovery socket at {}",
+                    self.discovery_socket
+                ))?;
 
-        // Read response with timeout to prevent hangs (60s for HTTP responses)
-        let mut response_buf = String::new();
-        timeout(
-            Duration::from_secs(60),
-            stream.read_to_string(&mut response_buf),
-        )
-        .await
-        .context("Socket read timeout (60s)")?
-        .context("Failed to read response from discovery delegate")?;
-        debug!("← discovery: {}", response_buf);
+            // Send request
+            let request_json = serde_json::to_string(&rpc_request)?;
+            debug!("→ discovery: {}", request_json);
+            stream.write_all(request_json.as_bytes()).await?;
+            stream.shutdown().await?;
 
+            // Read response with timeout to prevent hangs (60s for HTTP responses)
+            let mut response_buf = String::new();
+            timeout(
+                Duration::from_secs(60),
+                stream.read_to_string(&mut response_buf),
+            )
+            .await
+            .context("Socket read timeout (60s)")?
+            .context("Failed to read response from discovery delegate")?;
+            debug!("← discovery: {}", response_buf);
+            response_buf
+        };
+
+        #[cfg(unix)]
+        {
         // Parse JSON-RPC response
         let rpc_response: Value =
             serde_json::from_str(&response_buf).context("Failed to parse JSON-RPC response")?;
@@ -233,6 +254,7 @@ impl BiomeOsHttpClient {
         );
 
         Ok(http_response)
+        }
     }
 }
 
@@ -240,6 +262,109 @@ impl Default for BiomeOsHttpClient {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Case-insensitive HTTP header lookup.
+fn header_lookup<'a>(headers: &'a HashMap<String, String>, name: &str) -> Option<&'a str> {
+    headers
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case(name))
+        .map(|(_, value)| value.as_str())
+}
+
+/// Whether the discovery delegate base64-encoded the body for JSON-RPC transport.
+fn body_requires_base64_decode(headers: &HashMap<String, String>) -> bool {
+    if let Some(content_type) = header_lookup(headers, "content-type") {
+        let media_type = content_type.split(';').next().unwrap_or(content_type).trim();
+        if is_binary_content_type(media_type) {
+            return true;
+        }
+    }
+
+    header_lookup(headers, "content-transfer-encoding")
+        .is_some_and(|value| value.eq_ignore_ascii_case("base64"))
+        || header_lookup(headers, "x-body-encoding")
+            .is_some_and(|value| value.eq_ignore_ascii_case("base64"))
+}
+
+fn is_binary_content_type(media_type: &str) -> bool {
+    matches!(
+        media_type,
+        "application/octet-stream"
+            | "application/x-binary"
+            | "application/x-executable"
+            | "application/x-msdownload"
+    ) || media_type.starts_with("image/")
+        || media_type.starts_with("video/")
+        || media_type.starts_with("audio/")
+        || media_type.starts_with("font/")
+}
+
+fn decode_base64_body(encoded: &str) -> Result<Bytes> {
+    base64::engine::general_purpose::STANDARD
+        .decode(encoded.trim())
+        .map(Bytes::from)
+        .context("Failed to decode base64 response body")
+}
+
+/// Extract raw bytes from an HTTP response body value.
+fn decode_http_body(headers: &HashMap<String, String>, body: &Value) -> Result<Bytes> {
+    if let Some(array) = body.as_array() {
+        let mut bytes = Vec::with_capacity(array.len());
+        for value in array {
+            let byte = value
+                .as_u64()
+                .and_then(|n| u8::try_from(n).ok())
+                .context("Response body array contains invalid byte value")?;
+            bytes.push(byte);
+        }
+        return Ok(Bytes::from(bytes));
+    }
+
+    if let Some(object) = body.as_object() {
+        let encoding = object
+            .get("encoding")
+            .and_then(Value::as_str)
+            .unwrap_or("base64");
+        let data = object
+            .get("data")
+            .and_then(Value::as_str)
+            .context("Structured binary body missing data field")?;
+        if encoding.eq_ignore_ascii_case("base64") {
+            return decode_base64_body(data);
+        }
+        bail!("Unsupported binary body encoding: {encoding}");
+    }
+
+    let body_str = body
+        .as_str()
+        .context("Response body is not binary (expected string, byte array, or structured object)")?;
+
+    if body_requires_base64_decode(headers) {
+        decode_base64_body(body_str)
+    } else {
+        Ok(Bytes::copy_from_slice(body_str.as_bytes()))
+    }
+}
+
+/// Verify `Content-Length` matches decoded body size when the header is present.
+fn verify_content_length(headers: &HashMap<String, String>, body: &Bytes) -> Result<()> {
+    let Some(content_length) = header_lookup(headers, "content-length") else {
+        return Ok(());
+    };
+
+    let expected: usize = content_length
+        .parse()
+        .with_context(|| format!("Invalid Content-Length header: {content_length}"))?;
+
+    if body.len() != expected {
+        bail!(
+            "Content-Length mismatch: header says {expected} bytes, body is {} bytes",
+            body.len()
+        );
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

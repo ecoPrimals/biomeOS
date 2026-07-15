@@ -9,7 +9,9 @@
 use std::path::Path;
 
 use biomeos_types::constants::timeouts;
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tracing::{debug, warn};
 
@@ -18,6 +20,7 @@ use tracing::{debug, warn};
 /// Tries `capabilities.list` first, then `capability.list` (singular) as a
 /// fallback — primals in the ecosystem use both method names. Uses a short
 /// connect/write/read timeout; returns an empty list on any failure.
+#[cfg(unix)]
 pub async fn probe_unix_socket_capabilities_list(socket_path: impl AsRef<Path>) -> Vec<String> {
     let socket_path = socket_path.as_ref();
     let socket_path_str = socket_path.to_string_lossy();
@@ -95,6 +98,12 @@ pub async fn probe_unix_socket_capabilities_list(socket_path: impl AsRef<Path>) 
         }
     }
 
+    vec![]
+}
+
+/// Windows stub — Unix domain socket probing unavailable on this platform.
+#[cfg(windows)]
+pub async fn probe_unix_socket_capabilities_list(_socket_path: impl AsRef<Path>) -> Vec<String> {
     vec![]
 }
 
@@ -228,6 +237,6 @@ fn extract_from_array(arr: &[serde_json::Value]) -> Vec<String> {
         .collect()
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 #[path = "cap_probe_tests.rs"]
 mod tests;

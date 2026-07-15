@@ -129,6 +129,58 @@ async fn test_fetch_binary_fails_when_discovery_unavailable() {
 }
 
 #[tokio::test]
+async fn test_fetch_binary_decodes_base64_body() {
+    let success = r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{"Content-Type":"application/octet-stream","Content-Length":"5"},"body":"aGVsbG8="},"id":1}"#;
+    let (_dir, socket_path) = spawn_mock_server(success).await;
+
+    let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+    let bytes = client
+        .fetch_binary("http://example.com/binary")
+        .await
+        .expect("fetch_binary should succeed");
+
+    assert_eq!(bytes.as_ref(), b"hello");
+}
+
+#[tokio::test]
+async fn test_fetch_binary_accepts_byte_array_body() {
+    let success = r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{"Content-Length":"3"},"body":[1,2,3]},"id":1}"#;
+    let (_dir, socket_path) = spawn_mock_server(success).await;
+
+    let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+    let bytes = client
+        .fetch_binary("http://example.com/binary")
+        .await
+        .expect("fetch_binary should accept byte array body");
+
+    assert_eq!(bytes.as_ref(), &[1, 2, 3]);
+}
+
+#[tokio::test]
+async fn test_fetch_binary_content_length_mismatch_returns_err() {
+    let bad_length = r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{"Content-Type":"application/octet-stream","Content-Length":"99"},"body":"aGVsbG8="},"id":1}"#;
+    let (_dir, socket_path) = spawn_mock_server(bad_length).await;
+
+    let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+    let result = client.fetch_binary("http://example.com/binary").await;
+
+    let err = result.expect_err("fetch_binary should fail on Content-Length mismatch");
+    assert!(err.to_string().contains("Content-Length mismatch"));
+}
+
+#[tokio::test]
+async fn test_fetch_binary_non_2xx_returns_err() {
+    let four_oh_four = r#"{"jsonrpc":"2.0","result":{"status":404,"headers":{},"body":"aGVsbG8="},"id":1}"#;
+    let (_dir, socket_path) = spawn_mock_server(four_oh_four).await;
+
+    let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+    let result = client.fetch_binary("http://example.com/missing").await;
+
+    let err = result.expect_err("fetch_binary should fail on non-2xx status");
+    assert!(err.to_string().contains("HTTP request failed with status 404"));
+}
+
+#[tokio::test]
 async fn test_is_reachable_returns_false_when_unavailable() {
     let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-discovery-xyz.sock");
 

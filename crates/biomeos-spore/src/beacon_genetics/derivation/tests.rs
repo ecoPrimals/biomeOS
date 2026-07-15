@@ -332,15 +332,31 @@ mod derivation_tests {
 
     #[test]
     fn test_load_lineage_from_raw_seed_no_metadata() {
+        use sha2::{Digest, Sha256};
+
         let tmp = tempfile::TempDir::new().expect("create temp dir");
         let seed_path = tmp.path().join("raw.lineage");
         let seed_bytes = b"raw_seed_bytes_32_bytes!!";
         std::fs::write(&seed_path, seed_bytes).expect("write");
 
         let loaded = LineageDeriver::<MockCaller>::load_lineage(&seed_path).expect("load");
-        assert_eq!(loaded.device_id, "unknown");
-        assert_eq!(loaded.node_id, "unknown");
+
+        let mut hasher = Sha256::new();
+        hasher.update(seed_bytes);
+        let expected_device_id = hex::encode(hasher.finalize());
+
+        assert_eq!(loaded.device_id, expected_device_id);
+        assert_eq!(loaded.node_id, format!("raw-{}", &expected_device_id[..12]));
+        assert_eq!(loaded.family_id, hex::encode(&seed_bytes[..8]));
+        assert_eq!(loaded.derivation_method, "raw_seed");
         assert_eq!(loaded.derived_seed, BASE64.encode(seed_bytes));
+        assert!(loaded.derived_at > 0);
+
+        // Deterministic: same bytes → same identity
+        let loaded_again =
+            LineageDeriver::<MockCaller>::load_lineage(&seed_path).expect("reload");
+        assert_eq!(loaded_again.device_id, loaded.device_id);
+        assert_eq!(loaded_again.family_id, loaded.family_id);
     }
 
     #[test]

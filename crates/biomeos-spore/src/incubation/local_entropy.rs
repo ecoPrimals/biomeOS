@@ -173,8 +173,14 @@ impl LocalEntropy {
         }
 
         // Non-Linux or no interfaces: derive a stable pseudo-MAC from hostname
-        let uname = rustix::system::uname();
-        let host_str = uname.nodename().to_string_lossy();
+        #[cfg(unix)]
+        let host_str = {
+            let uname = rustix::system::uname();
+            uname.nodename().to_string_lossy().into_owned()
+        };
+        #[cfg(windows)]
+        let host_str =
+            std::env::var("COMPUTERNAME").unwrap_or_else(|_| "unknown".to_string());
         let mut hasher = Sha256::new();
         hasher.update(host_str.as_bytes());
         hasher.update(b"mac-entropy");

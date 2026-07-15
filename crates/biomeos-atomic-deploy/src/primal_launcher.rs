@@ -56,12 +56,20 @@ impl PrimalInstance {
     /// This is safe and idiomatic using the rustix crate's signal handling.
     #[must_use]
     pub fn is_running(&self) -> bool {
-        use rustix::process::{Pid, test_kill_process};
+        #[cfg(unix)]
+        {
+            use rustix::process::{Pid, test_kill_process};
 
-        // Signal 0 checks process existence without sending an actual signal
-        // Returns Ok if process exists and we have permission to signal it
-        let pid_i32 = i32::try_from(self.pid).unwrap_or(-1);
-        Pid::from_raw(pid_i32).is_some_and(|pid| test_kill_process(pid).is_ok())
+            // Signal 0 checks process existence without sending an actual signal
+            // Returns Ok if process exists and we have permission to signal it
+            let pid_i32 = i32::try_from(self.pid).unwrap_or(-1);
+            Pid::from_raw(pid_i32).is_some_and(|pid| test_kill_process(pid).is_ok())
+        }
+
+        #[cfg(windows)]
+        {
+            false
+        }
     }
 }
 

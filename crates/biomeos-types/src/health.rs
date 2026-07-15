@@ -485,5 +485,5 @@ pub use super::health_check::*;
 pub use super::health_metrics::*;
 
 #[cfg(test)]
-#[path = "health_tests.rs"]
+#[path = "health_tests/mod.rs"]
 mod tests;

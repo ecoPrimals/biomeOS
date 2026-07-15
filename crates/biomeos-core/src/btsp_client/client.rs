@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+#[cfg(unix)]
 use tokio::io::AsyncWriteExt;
 use tracing::debug;
 
 use super::config::security_provider_socket_path;
 use super::types::{
-    BTSP_VERSION, BtspHandshakeError, ChallengeResponse, ClientHello, HandshakeComplete,
-    HandshakeError, ServerHello,
+    BTSP_VERSION, BtspConnection, BtspHandshakeError, ChallengeResponse, ClientHello,
+    HandshakeComplete, HandshakeError, ServerHello,
 };
 
 /// Perform a client-side BTSP handshake on an already-connected Unix
@@ -20,9 +21,10 @@ use super::types::{
 ///
 /// Returns `BtspHandshakeError` when the security provider is unreachable, the remote
 /// primal rejects the handshake, or a timeout occurs.
+#[cfg(unix)]
 pub async fn perform_client_handshake(
-    stream: tokio::net::UnixStream,
-) -> Result<tokio::io::BufReader<tokio::net::UnixStream>, BtspHandshakeError> {
+    stream: BtspConnection,
+) -> Result<tokio::io::BufReader<BtspConnection>, BtspHandshakeError> {
     let provider_path =
         security_provider_socket_path().ok_or(BtspHandshakeError::SecurityProviderNotFound)?;
     let bd = crate::AtomicClient::unix(&provider_path);
@@ -53,6 +55,16 @@ pub async fn perform_client_handshake(
     debug!(session_id = %complete.session_id, "BTSP client handshake complete");
 
     Ok(reader)
+}
+
+/// Windows stub — Unix domain sockets unavailable on this platform.
+#[cfg(windows)]
+pub async fn perform_client_handshake(
+    _stream: BtspConnection,
+) -> Result<tokio::io::BufReader<BtspConnection>, BtspHandshakeError> {
+    Err(BtspHandshakeError::Protocol(
+        "Unix domain sockets unavailable on Windows".into(),
+    ))
 }
 
 pub(crate) async fn client_keygen(
@@ -113,8 +125,9 @@ pub(crate) fn serialize_line(value: &impl serde::Serialize) -> Result<String, Bt
     Ok(s)
 }
 
+#[cfg(unix)]
 pub(crate) async fn write_line_to(
-    reader: &mut tokio::io::BufReader<tokio::net::UnixStream>,
+    reader: &mut tokio::io::BufReader<BtspConnection>,
     data: &str,
 ) -> Result<(), BtspHandshakeError> {
     reader
@@ -129,8 +142,9 @@ pub(crate) async fn write_line_to(
         .map_err(BtspHandshakeError::Io)
 }
 
+#[cfg(unix)]
 pub(crate) async fn read_json_line<T: serde::de::DeserializeOwned>(
-    reader: &mut tokio::io::BufReader<tokio::net::UnixStream>,
+    reader: &mut tokio::io::BufReader<BtspConnection>,
 ) -> Result<T, BtspHandshakeError> {
     use tokio::io::AsyncBufReadExt;
     let mut line = String::new();

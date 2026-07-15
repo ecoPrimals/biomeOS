@@ -15,7 +15,9 @@ use biomeos_types::CapabilityTaxonomy;
 use biomeos_types::primal_names::{BEARDOG, NESTGATE, PROVENANCE_PRIMALS};
 use biomeos_types::{JsonRpcRequest, SystemPaths};
 use std::path::PathBuf;
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tracing::{error, info};
 
@@ -224,6 +226,7 @@ async fn run_status(socket: Option<PathBuf>, family_id: Option<String>) -> Resul
 }
 
 /// Send a JSON-RPC request over Unix socket and return the parsed response.
+#[cfg(unix)]
 async fn send_jsonrpc(
     socket_path: &PathBuf,
     request: &JsonRpcRequest,
@@ -252,6 +255,17 @@ async fn send_jsonrpc(
     .context("Failed to read Neural API response")?;
 
     serde_json::from_str(&response_line).context("Failed to parse Neural API response")
+}
+
+#[cfg(windows)]
+async fn send_jsonrpc(
+    socket_path: &PathBuf,
+    _request: &JsonRpcRequest,
+) -> Result<serde_json::Value> {
+    anyhow::bail!(
+        "Unix domain socket IPC unavailable on Windows: {}",
+        socket_path.display()
+    )
 }
 
 #[expect(

@@ -225,16 +225,16 @@ impl SocketDiscovery {
         let cache_key = format!("endpoint:{primal_name}");
 
         if self.strategy.enable_cache
-            && let Some(cached) = self.check_cache(&cache_key).await
+            && let Some(endpoint) = self.get_cached_endpoint(&cache_key).await
         {
-            return Some(cached.endpoint);
+            return Some(endpoint);
         }
 
         if self.strategy.check_env_hints
             && let Some(endpoint) = self.discover_endpoint_via_env_with(primal_name, env_overrides)
         {
             let socket = DiscoveredSocket::from_endpoint(
-                endpoint.clone(),
+                endpoint,
                 DiscoveryMethod::EnvironmentHint(Arc::from(format!(
                     "{}_*",
                     primal_name.to_uppercase()
@@ -242,7 +242,7 @@ impl SocketDiscovery {
             )
             .with_primal_name(primal_name);
             self.cache_socket(&cache_key, &socket).await;
-            return Some(endpoint);
+            return Some(socket.endpoint);
         }
 
         // === TIER 1: Native Transports ===
@@ -250,37 +250,34 @@ impl SocketDiscovery {
         if self.strategy.use_xdg_runtime
             && let Some(path) = self.try_unix_socket_xdg(primal_name).await
         {
-            let endpoint = TransportEndpoint::UnixSocket { path: path.clone() };
-            let socket =
-                DiscoveredSocket::from_endpoint(endpoint.clone(), DiscoveryMethod::XdgRuntime)
-                    .with_primal_name(primal_name);
+            let socket = DiscoveredSocket::from_unix_path(path, DiscoveryMethod::XdgRuntime)
+                .with_primal_name(primal_name);
             self.cache_socket(&cache_key, &socket).await;
-            return Some(endpoint);
+            return Some(socket.endpoint);
         }
 
         #[cfg(target_os = "linux")]
         if self.strategy.try_abstract_sockets
             && let Some(name) = self.try_abstract_socket(primal_name)
         {
-            let endpoint = TransportEndpoint::AbstractSocket {
-                name: Arc::from(name.as_str()),
-            };
-            let socket =
-                DiscoveredSocket::from_endpoint(endpoint.clone(), DiscoveryMethod::AbstractSocket)
-                    .with_primal_name(primal_name);
+            let socket = DiscoveredSocket::from_endpoint(
+                TransportEndpoint::AbstractSocket {
+                    name: Arc::from(name.as_str()),
+                },
+                DiscoveryMethod::AbstractSocket,
+            )
+            .with_primal_name(primal_name);
             self.cache_socket(&cache_key, &socket).await;
-            return Some(endpoint);
+            return Some(socket.endpoint);
         }
 
         if self.strategy.use_family_tmp
             && let Some(path) = self.try_unix_socket_tmp(primal_name).await
         {
-            let endpoint = TransportEndpoint::UnixSocket { path: path.clone() };
-            let socket =
-                DiscoveredSocket::from_endpoint(endpoint.clone(), DiscoveryMethod::FamilyTmp)
-                    .with_primal_name(primal_name);
+            let socket = DiscoveredSocket::from_unix_path(path, DiscoveryMethod::FamilyTmp)
+                .with_primal_name(primal_name);
             self.cache_socket(&cache_key, &socket).await;
-            return Some(endpoint);
+            return Some(socket.endpoint);
         }
 
         if let Some(socket) = self.discover_via_manifest(primal_name).await {
@@ -302,16 +299,17 @@ impl SocketDiscovery {
                 .try_tcp_fallback_with(primal_name, tcp_tier2_override)
                 .await
         {
-            let endpoint = TransportEndpoint::TcpSocket { host, port };
+            let socket = DiscoveredSocket::from_endpoint(
+                TransportEndpoint::TcpSocket { host, port },
+                DiscoveryMethod::TcpFallback,
+            )
+            .with_primal_name(primal_name);
             info!(
                 "Discovered {} via TCP fallback (Tier 2): {}",
-                primal_name, endpoint
+                primal_name, socket.endpoint
             );
-            let socket =
-                DiscoveredSocket::from_endpoint(endpoint.clone(), DiscoveryMethod::TcpFallback)
-                    .with_primal_name(primal_name);
             self.cache_socket(&cache_key, &socket).await;
-            return Some(endpoint);
+            return Some(socket.endpoint);
         }
 
         warn!("Primal '{}' not found via any transport", primal_name);
@@ -406,8 +404,9 @@ impl SocketDiscovery {
     /// Get XDG runtime dir: override if set, else env var.
     pub(super) fn xdg_runtime_dir(&self) -> Option<PathBuf> {
         self.xdg_runtime_dir_override
-            .clone()
+            .as_ref()
             .filter(|p| p.exists())
+            .cloned()
             .or_else(|| {
                 env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR)
                     .ok()
@@ -418,7 +417,7 @@ impl SocketDiscovery {
 
     /// Get temp dir: override if set, else `FALLBACK_RUNTIME_BASE`.
     pub(super) fn temp_dir(&self) -> PathBuf {
-        self.temp_dir_override.clone().unwrap_or_else(|| {
+        self.temp_dir_override.as_ref().cloned().unwrap_or_else(|| {
             PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE)
         })
     }
@@ -434,6 +433,19 @@ impl SocketDiscovery {
     // ========================================================================
     // CACHE
     // ========================================================================
+
+    /// Check cache for an endpoint (endpoint-only lookups on the hot path).
+    pub(crate) async fn get_cached_endpoint(&self, key: &str) -> Option<TransportEndpoint> {
+        let cache = self.cache.read().await;
+        if let Some(cached) = cache.get(key) {
+            let age = cached.cached_at.elapsed().as_secs();
+            if age < self.strategy.cache_ttl_secs {
+                debug!("Cache hit for {} (age: {}s)", key, age);
+                return Some(cached.socket.endpoint.clone());
+            }
+        }
+        None
+    }
 
     /// Check cache for a socket
     pub(crate) async fn check_cache(&self, key: &str) -> Option<DiscoveredSocket> {

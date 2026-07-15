@@ -353,7 +353,12 @@ async fn build_live_topology(
                         to: target.id.as_str().to_string(),
                         edge_type: "capability_invocation".to_string(),
                         capability: Some("encryption".to_string()),
-                        metrics: collect_edge_metrics(primal.id.as_str(), target.id.as_str()),
+                        metrics: collect_edge_metrics(
+                            primal.id.as_str(),
+                            target.id.as_str(),
+                            target.endpoint.as_str(),
+                        )
+                        .await,
                     });
                 }
             }
@@ -386,32 +391,100 @@ fn extract_node_id_from_primal(primal_id: &str) -> Option<String> {
 
 /// Collect real metrics for an edge between primals
 ///
-/// Returns metrics if measurement is possible, None otherwise.
-/// Latency estimates are based on capability types, not primal names.
-fn collect_edge_metrics(from_id: &str, to_id: &str) -> Option<EdgeMetrics> {
-    // For now, return synthetic metrics based on capability types
-    // In production, this would measure actual latency via JSON-RPC ping
+/// Probes the target endpoint with a lightweight JSON-RPC round-trip.
+/// Returns `None` when the endpoint is unreachable or probing is unavailable.
+async fn collect_edge_metrics(from_id: &str, to_id: &str, target_endpoint: &str) -> Option<EdgeMetrics> {
+    let latency_ms = probe_target_latency(target_endpoint).await?;
 
-    // Infer latency from capability relationship (type-based, not name-based)
-    let estimated_latency_ms = if to_id.contains("security") || to_id.contains("crypto") {
-        // Security/crypto operations may have computational overhead
-        Some(5.0)
-    } else if from_id.contains("discovery") || from_id.contains("http") {
-        // Discovery → other is typically fast (local sockets)
-        Some(1.5)
-    } else {
-        // Default estimate for local socket communication
-        Some(2.0)
-    };
+    tracing::debug!(
+        "Edge {} -> {} latency: {:.2}ms (endpoint: {})",
+        from_id,
+        to_id,
+        latency_ms,
+        target_endpoint
+    );
 
-    estimated_latency_ms.map(|latency| EdgeMetrics {
+    Some(EdgeMetrics {
         request_count: None,
-        avg_latency_ms: Some(latency),
-        latency_ms: Some(latency),
-        bandwidth_mbps: None,   // Would require throughput testing
-        packet_loss: Some(0.0), // Local sockets are reliable
+        avg_latency_ms: Some(latency_ms),
+        latency_ms: Some(latency_ms),
+        bandwidth_mbps: None,
+        packet_loss: None,
         last_measured: Some(chrono::Utc::now().to_rfc3339()),
     })
+}
+
+/// Measure round-trip latency to a target endpoint via JSON-RPC ping.
+async fn probe_target_latency(endpoint: &str) -> Option<f64> {
+    let transport = biomeos_core::TransportEndpoint::parse(endpoint)?;
+
+    if matches!(
+        transport,
+        biomeos_core::TransportEndpoint::UnixSocket { .. }
+    ) {
+        #[cfg(not(unix))]
+        {
+            return probe_target_latency_stub(endpoint);
+        }
+        #[cfg(unix)]
+        {
+            if let Some(ms) = probe_unix_connect_latency(&transport).await {
+                return Some(ms);
+            }
+        }
+    }
+
+    let client = biomeos_core::AtomicClient::from_endpoint(transport)
+        .with_timeout(biomeos_types::constants::timeouts::PROBE_TIMEOUT);
+
+    if let Some(ms) = measure_rpc_latency(&client, "ping").await {
+        return Some(ms);
+    }
+    measure_rpc_latency(&client, "health").await
+}
+
+/// Windows stub — Unix domain socket latency probing unavailable on this platform.
+#[cfg(not(unix))]
+fn probe_target_latency_stub(_endpoint: &str) -> Option<f64> {
+    None
+}
+
+/// Fast connect-only latency for Unix sockets (no JSON-RPC payload).
+#[cfg(unix)]
+async fn probe_unix_connect_latency(transport: &biomeos_core::TransportEndpoint) -> Option<f64> {
+    use std::path::Path;
+    use std::time::Instant;
+    use tokio::net::UnixStream;
+    use tokio::time::timeout;
+
+    let biomeos_core::TransportEndpoint::UnixSocket { path } = transport else {
+        return None;
+    };
+
+    let start = Instant::now();
+    match timeout(
+        biomeos_types::constants::timeouts::PROBE_TIMEOUT,
+        UnixStream::connect(Path::new(path)),
+    )
+    .await
+    {
+        Ok(Ok(_stream)) => Some(start.elapsed().as_secs_f64() * 1000.0),
+        _ => None,
+    }
+}
+
+/// Measure JSON-RPC round-trip latency for a single method call.
+async fn measure_rpc_latency(client: &biomeos_core::AtomicClient, method: &str) -> Option<f64> {
+    let start = std::time::Instant::now();
+    if client
+        .call(method, serde_json::json!({}))
+        .await
+        .is_ok()
+    {
+        Some(start.elapsed().as_secs_f64() * 1000.0)
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

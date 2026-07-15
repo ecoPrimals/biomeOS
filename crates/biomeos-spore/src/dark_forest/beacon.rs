@@ -580,5 +580,5 @@ impl DarkForestBeacon<crate::beacon_genetics::DirectBeardogCaller> {
 }
 
 #[cfg(test)]
-#[path = "beacon_tests.rs"]
+#[path = "beacon_tests/mod.rs"]
 mod tests;

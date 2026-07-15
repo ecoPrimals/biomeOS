@@ -4,7 +4,9 @@
 use anyhow::{Context, Result};
 use biomeos_types::JsonRpcRequest;
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tracing::info;
 
@@ -14,6 +16,7 @@ use super::types::{
 };
 
 /// Send a JSON-RPC request to the Neural API lifecycle endpoint.
+#[cfg(unix)]
 pub(crate) async fn send_lifecycle_rpc(
     socket_path: &Path,
     method: &str,
@@ -41,6 +44,18 @@ pub(crate) async fn send_lifecycle_rpc(
     }
 
     Ok(response)
+}
+
+#[cfg(windows)]
+pub(crate) async fn send_lifecycle_rpc(
+    socket_path: &Path,
+    method: &str,
+    _params: serde_json::Value,
+) -> Result<serde_json::Value> {
+    anyhow::bail!(
+        "Unix domain socket IPC unavailable on Windows: {} ({method})",
+        socket_path.display()
+    )
 }
 
 /// Start NUCLEUS via `lifecycle.start` on the Neural API.

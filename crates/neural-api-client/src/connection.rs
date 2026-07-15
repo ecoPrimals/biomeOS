@@ -3,18 +3,27 @@
 
 //! JSON-RPC connection management for Neural API
 
-use anyhow::{Context, Result};
+use anyhow::Result;
+#[cfg(unix)]
+use anyhow::Context;
+#[cfg(unix)]
 use biomeos_types::JsonRpcRequest;
 use serde_json::Value;
 use std::path::PathBuf;
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
-use tokio::time::{Duration, timeout};
+use tokio::time::Duration;
+#[cfg(unix)]
+use tokio::time::timeout;
 
+#[cfg(unix)]
 use crate::error::NeuralApiError;
 use crate::retry_config::NeuralApiRetryConfig;
 
 /// Connect to Neural API and execute JSON-RPC call
+#[cfg(unix)]
 pub async fn json_rpc_call(
     socket_path: &PathBuf,
     method: &str,
@@ -99,6 +108,22 @@ pub async fn json_rpc_call(
         .get("result")
         .ok_or_else(|| anyhow::anyhow!("Response missing 'result' field"))
         .cloned()
+}
+
+/// Windows stub — UDS transport unavailable.
+#[cfg(windows)]
+pub async fn json_rpc_call(
+    socket_path: &PathBuf,
+    _method: &str,
+    _params: &Value,
+    _request_timeout: Duration,
+    _connection_timeout: Duration,
+    _retry_config: &NeuralApiRetryConfig,
+) -> Result<Value> {
+    anyhow::bail!(
+        "Unix domain socket transport unavailable on Windows (path: {})",
+        socket_path.display()
+    )
 }
 
 #[cfg(test)]

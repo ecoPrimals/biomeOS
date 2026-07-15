@@ -3,6 +3,12 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Transport stream for BTSP handshakes (Unix on Unix, TCP placeholder on Windows).
+#[cfg(unix)]
+pub type BtspConnection = tokio::net::UnixStream;
+#[cfg(windows)]
+pub type BtspConnection = tokio::net::TcpStream;
+
 /// BTSP protocol version implemented by this module.
 pub const BTSP_VERSION: u8 = 1;
 

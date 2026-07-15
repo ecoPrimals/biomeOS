@@ -166,7 +166,6 @@ impl PrimalConfig {
 
     /// Discover own identity (infant model)
     fn discover_identity() -> biomeos_types::error::BiomeResult<String> {
-        // 1. Check PRIMAL_ID env var
         if let Ok(id) = std::env::var(biomeos_types::env_config::vars::PRIMAL_ID) {
             return Ok(id);
         }
@@ -177,10 +176,7 @@ impl PrimalConfig {
             .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
             .unwrap_or_else(|| "unknown".to_string());
 
-        let hostname = rustix::system::uname()
-            .nodename()
-            .to_str()
-            .map_or_else(|_| "unknown".to_string(), String::from);
+        let hostname = discover_hostname();
 
         // Create unique ID: binary@hostname-random
         let random_suffix = uuid::Uuid::new_v4()
@@ -204,6 +200,24 @@ impl PrimalConfig {
             env_config: std::collections::HashMap::new(),
         }
     }
+}
+
+#[cfg(unix)]
+fn discover_hostname() -> String {
+    rustix::system::uname()
+        .nodename()
+        .to_str()
+        .map_or_else(|_| "unknown".to_string(), String::from)
+}
+
+#[cfg(windows)]
+fn discover_hostname() -> String {
+    std::env::var("COMPUTERNAME").unwrap_or_else(|_| "unknown".to_string())
+}
+
+#[cfg(not(any(unix, windows)))]
+fn discover_hostname() -> String {
+    "unknown".to_string()
 }
 
 #[cfg(test)]

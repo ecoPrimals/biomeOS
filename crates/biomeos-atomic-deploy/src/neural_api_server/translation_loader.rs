@@ -10,7 +10,7 @@ use anyhow::Result;
 use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
-use crate::capability_domains::capability_to_provider_fallback;
+use crate::capability_domains::capability_to_provider;
 use crate::neural_graph::{Graph, GraphNode};
 
 impl NeuralApiServer {
@@ -88,12 +88,12 @@ impl NeuralApiServer {
                     //
                     // The mapping is defined in capability_domains.rs and can be extended
                     // or loaded from config/capability_registry.toml in the future.
-                    if let Some(resolved_primal) = capability_to_provider_fallback(cap) {
+                    if let Some(resolved_primal) = capability_to_provider(cap) {
                         debug!(
                             "   Resolved capability '{}' to primal '{}'",
                             cap, resolved_primal
                         );
-                        Some(resolved_primal.to_string())
+                        Some(resolved_primal)
                     } else {
                         // Fallback: if capability isn't in domain mappings, use it as primal name
                         // This handles custom primals that register with capability == primal name
