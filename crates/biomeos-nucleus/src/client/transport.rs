@@ -4,18 +4,16 @@
 //! Unix socket JSON-RPC transport (connect, framed write, read with timeout).
 
 use std::path::Path;
+use std::time::Duration;
 
-#[cfg(unix)]
-use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
-#[cfg(unix)]
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::UnixStream;
-#[cfg(unix)]
-use tokio::time::{Duration, timeout};
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
+use biomeos_types::JsonRpcRequest;
+use tokio::time::timeout;
 use tracing::debug;
 
 use crate::{Error, Result};
+
+const RPC_TIMEOUT_SECS: u64 = 30;
 
 /// Call a Unix socket JSON-RPC method
 ///
@@ -27,13 +25,15 @@ use crate::{Error, Result};
 /// - Unix socket connection fails
 /// - JSON-RPC request fails  
 /// - Response deserialization fails
-#[cfg(unix)]
 pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     socket_path: impl AsRef<Path>,
     method: &str,
     params: serde_json::Value,
 ) -> Result<T> {
     let socket_path = socket_path.as_ref();
+    let endpoint = TransportEndpoint::UnixSocket {
+        path: socket_path.to_path_buf(),
+    };
 
     debug!(
         socket = %socket_path.display(),
@@ -41,40 +41,15 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
         "Calling Unix socket JSON-RPC"
     );
 
-    let stream = UnixStream::connect(socket_path)
-        .await
-        .map_err(|e| Error::socket_connection_failed(socket_path, e))?;
-
-    let (read_half, mut write_half) = stream.into_split();
-
     let request = JsonRpcRequest::new(method, params);
 
-    let request_json = serde_json::to_string(&request)?;
-    debug!(request = %request_json, "Sending JSON-RPC request");
-
-    write_half.write_all(request_json.as_bytes()).await?;
-    write_half.write_all(b"\n").await?;
-    write_half.flush().await?;
-
-    let mut reader = BufReader::new(read_half);
-    let mut response_line = String::new();
-
-    timeout(
-        Duration::from_secs(30),
-        reader.read_line(&mut response_line),
+    let response = timeout(
+        Duration::from_secs(RPC_TIMEOUT_SECS),
+        send_jsonrpc_request(&endpoint, request),
     )
     .await
-    .map_err(|_| Error::timeout("Socket read", 30))?
-    .map_err(|e| Error::discovery_failed(format!("Read error: {e}"), None))?;
-
-    debug!(response = %response_line, "Received JSON-RPC response");
-
-    let response: JsonRpcResponse = serde_json::from_str(&response_line).map_err(|e| {
-        Error::invalid_response(
-            socket_path.display().to_string(),
-            format!("Invalid JSON-RPC response: {e}"),
-        )
-    })?;
+    .map_err(|_| Error::timeout("Socket read", RPC_TIMEOUT_SECS))?
+    .map_err(|err| map_send_error(socket_path, err))?;
 
     if let Some(error) = response.error {
         return Err(Error::jsonrpc_failed(
@@ -98,22 +73,38 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     })
 }
 
-/// Windows stub — UDS unavailable on this platform.
-#[cfg(windows)]
-pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
-    socket_path: impl AsRef<Path>,
-    _method: &str,
-    _params: serde_json::Value,
-) -> Result<T> {
-    debug!(
-        socket = %socket_path.as_ref().display(),
-        "Unix socket RPC unavailable on Windows"
-    );
-    Err(Error::socket_connection_failed(
-        socket_path.as_ref(),
-        std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "Unix domain sockets unavailable on Windows",
-        ),
-    ))
+fn map_send_error(path: &Path, err: anyhow::Error) -> Error {
+    let msg = err.to_string();
+
+    if msg.contains("Failed to connect") {
+        if let Some(io_err) = io_error_from_anyhow(&err) {
+            return Error::socket_connection_failed(path, io_err);
+        }
+        return Error::socket_connection_failed(path, std::io::Error::other(msg));
+    }
+
+    if msg.contains("Failed to read") {
+        return Error::discovery_failed(format!("Read error: {err}"), None);
+    }
+
+    if msg.contains("Failed to parse") {
+        return Error::invalid_response(
+            path.display().to_string(),
+            format!("Invalid JSON-RPC response: {err}"),
+        );
+    }
+
+    Error::discovery_failed(format!("JSON-RPC request failed: {err}"), None)
+}
+
+fn io_error_from_anyhow(err: &anyhow::Error) -> Option<std::io::Error> {
+    if let Some(e) = err.downcast_ref::<std::io::Error>() {
+        return Some(std::io::Error::new(e.kind(), e.to_string()));
+    }
+    for cause in err.chain() {
+        if let Some(e) = cause.downcast_ref::<std::io::Error>() {
+            return Some(std::io::Error::new(e.kind(), e.to_string()));
+        }
+    }
+    None
 }

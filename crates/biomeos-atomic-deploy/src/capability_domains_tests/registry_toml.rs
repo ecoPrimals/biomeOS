@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::super::super::capability_domains::*;
+use super::super::capability_domains::*;
 
 #[test]
 fn test_capability_registry_from_toml() {

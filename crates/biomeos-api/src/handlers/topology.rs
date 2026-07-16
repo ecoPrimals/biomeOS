@@ -421,17 +421,9 @@ async fn probe_target_latency(endpoint: &str) -> Option<f64> {
     if matches!(
         transport,
         biomeos_core::TransportEndpoint::UnixSocket { .. }
-    ) {
-        #[cfg(not(unix))]
-        {
-            return probe_target_latency_stub(endpoint);
-        }
-        #[cfg(unix)]
-        {
-            if let Some(ms) = probe_unix_connect_latency(&transport).await {
-                return Some(ms);
-            }
-        }
+    ) && let Some(ms) = probe_connect_latency(&transport).await
+    {
+        return Some(ms);
     }
 
     let client = biomeos_core::AtomicClient::from_endpoint(transport)
@@ -443,33 +435,19 @@ async fn probe_target_latency(endpoint: &str) -> Option<f64> {
     measure_rpc_latency(&client, "health").await
 }
 
-/// Windows stub — Unix domain socket latency probing unavailable on this platform.
-#[cfg(not(unix))]
-fn probe_target_latency_stub(_endpoint: &str) -> Option<f64> {
-    None
-}
-
-/// Fast connect-only latency for Unix sockets (no JSON-RPC payload).
-#[cfg(unix)]
-async fn probe_unix_connect_latency(transport: &biomeos_core::TransportEndpoint) -> Option<f64> {
-    use std::path::Path;
+/// Fast connect-only latency (no JSON-RPC payload).
+async fn probe_connect_latency(transport: &biomeos_core::TransportEndpoint) -> Option<f64> {
     use std::time::Instant;
-    use tokio::net::UnixStream;
-    use tokio::time::timeout;
-
-    let biomeos_core::TransportEndpoint::UnixSocket { path } = transport else {
-        return None;
-    };
 
     let start = Instant::now();
-    match timeout(
+    match biomeos_core::connect_transport_timed(
+        transport,
         biomeos_types::constants::timeouts::PROBE_TIMEOUT,
-        UnixStream::connect(Path::new(path)),
     )
     .await
     {
-        Ok(Ok(_stream)) => Some(start.elapsed().as_secs_f64() * 1000.0),
-        _ => None,
+        Ok(_stream) => Some(start.elapsed().as_secs_f64() * 1000.0),
+        Err(_) => None,
     }
 }
 

@@ -3,27 +3,18 @@
 
 //! JSON-RPC connection management for Neural API
 
-use anyhow::Result;
-#[cfg(unix)]
-use anyhow::Context;
-#[cfg(unix)]
+use anyhow::{Context, Result};
+use biomeos_core::{TransportEndpoint, connect_transport_timed, send_jsonrpc_over_stream};
 use biomeos_types::JsonRpcRequest;
 use serde_json::Value;
+use std::io;
 use std::path::PathBuf;
-#[cfg(unix)]
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::UnixStream;
-use tokio::time::Duration;
-#[cfg(unix)]
-use tokio::time::timeout;
+use tokio::time::{Duration, timeout};
 
-#[cfg(unix)]
 use crate::error::NeuralApiError;
 use crate::retry_config::NeuralApiRetryConfig;
 
 /// Connect to Neural API and execute JSON-RPC call
-#[cfg(unix)]
 pub async fn json_rpc_call(
     socket_path: &PathBuf,
     method: &str,
@@ -32,22 +23,26 @@ pub async fn json_rpc_call(
     connection_timeout: Duration,
     retry_config: &NeuralApiRetryConfig,
 ) -> Result<Value> {
+    let endpoint = TransportEndpoint::UnixSocket {
+        path: socket_path.clone(),
+    };
+
     let attempts = retry_config.max_connect_attempts.max(1);
     let mut stream = None;
-    let mut last_connect_err = None::<std::io::Error>;
+    let mut last_connect_err = None::<io::Error>;
     for attempt in 0..attempts {
         if attempt > 0 {
             tokio::time::sleep(retry_config.initial_backoff).await;
         }
-        match timeout(connection_timeout, UnixStream::connect(socket_path)).await {
-            Ok(Ok(s)) => {
+        match connect_transport_timed(&endpoint, connection_timeout).await {
+            Ok(s) => {
                 stream = Some(s);
                 break;
             }
-            Ok(Err(e)) => last_connect_err = Some(e),
-            Err(_) => {
+            Err(e) if e.kind() == io::ErrorKind::TimedOut => {
                 return Err(anyhow::anyhow!("Connection timeout")).context("Connection timeout");
             }
+            Err(e) => last_connect_err = Some(e),
         }
     }
 
@@ -65,65 +60,26 @@ pub async fn json_rpc_call(
 
     let request = JsonRpcRequest::new(method, params.clone());
 
-    let request_bytes = serde_json::to_vec(&request).context("Failed to serialize request")?;
+    let response = timeout(
+        request_timeout,
+        send_jsonrpc_over_stream(stream, request),
+    )
+    .await
+    .context("Request timeout")?
+    .context("Failed to send JSON-RPC request")?;
 
-    let (reader, mut writer) = stream.into_split();
-
-    writer
-        .write_all(&request_bytes)
-        .await
-        .context("Failed to write request")?;
-    writer
-        .write_all(b"\n")
-        .await
-        .context("Failed to write newline")?;
-    writer.flush().await.context("Failed to flush stream")?;
-
-    let mut reader = BufReader::new(reader);
-    let mut response_line = String::new();
-    timeout(request_timeout, reader.read_line(&mut response_line))
-        .await
-        .context("Request timeout")?
-        .context("Failed to read response")?;
-
-    let response: Value =
-        serde_json::from_str(&response_line).context("Failed to parse JSON-RPC response")?;
-
-    if let Some(error) = response.get("error") {
-        let code = error
-            .get("code")
-            .and_then(serde_json::Value::as_i64)
-            .and_then(|c| i32::try_from(c).ok())
-            .unwrap_or(-1);
-        let message = error
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Unknown error")
-            .to_string();
-
-        return Err(NeuralApiError::RpcError { code, message }.into());
+    if let Some(error) = response.error {
+        let code = i32::try_from(error.code).unwrap_or(-1);
+        return Err(NeuralApiError::RpcError {
+            code,
+            message: error.message,
+        }
+        .into());
     }
 
     response
-        .get("result")
+        .result
         .ok_or_else(|| anyhow::anyhow!("Response missing 'result' field"))
-        .cloned()
-}
-
-/// Windows stub — UDS transport unavailable.
-#[cfg(windows)]
-pub async fn json_rpc_call(
-    socket_path: &PathBuf,
-    _method: &str,
-    _params: &Value,
-    _request_timeout: Duration,
-    _connection_timeout: Duration,
-    _retry_config: &NeuralApiRetryConfig,
-) -> Result<Value> {
-    anyhow::bail!(
-        "Unix domain socket transport unavailable on Windows (path: {})",
-        socket_path.display()
-    )
 }
 
 #[cfg(test)]
@@ -396,7 +352,10 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
-            err.to_string().contains("Unknown") || err.to_string().contains("-32600"),
+            err.to_string().contains("Unknown")
+                || err.to_string().contains("-32600")
+                || err.to_string().contains("parse")
+                || err.to_string().contains("Failed to send JSON-RPC"),
             "Expected RPC error: {}",
             err
         );

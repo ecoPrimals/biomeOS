@@ -35,6 +35,7 @@ rustix = { workspace = true, features = ["process"] }
 redb = { workspace = true }
 
 # biomeOS internal crates
+biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-nucleus = { path = "../biomeos-nucleus", version = "0.1.0" }
 

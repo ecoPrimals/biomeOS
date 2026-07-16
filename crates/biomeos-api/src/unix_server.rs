@@ -17,11 +17,9 @@
 
 use anyhow::{Context, Result};
 use axum::Router;
+use biomeos_core::ipc::{TransportListener, TransportStream};
 use std::path::Path;
-#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::UnixListener;
 use tracing::{debug, error, info, warn};
 
 /// Serve an Axum router over a Unix socket
@@ -41,7 +39,6 @@ use tracing::{debug, error, info, warn};
 /// # Security
 ///
 /// The socket is created with 0600 permissions (owner-only).
-#[cfg(unix)]
 pub async fn serve_unix_socket<P: AsRef<Path>>(
     socket_path: P,
     app: Router,
@@ -49,13 +46,9 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
 ) -> Result<()> {
     let socket_path = socket_path.as_ref();
 
-    // Remove old socket if exists
-    if socket_path.exists() {
-        std::fs::remove_file(socket_path).context("Failed to remove old Unix socket")?;
-    }
-
-    // Create Unix listener
-    let listener = UnixListener::bind(socket_path).context("Failed to bind Unix socket")?;
+    let listener = TransportListener::bind_unix(socket_path)
+        .await
+        .context("Failed to bind transport listener")?;
 
     // Set permissions (0660 - owner + group) to allow songBird TLS delegation
     // within the membrane group while blocking world access.
@@ -68,7 +61,8 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
     }
 
     info!(
-        "📡 biomeOS API listening on Unix socket: {}",
+        "📡 biomeOS API listening on {} ({})",
+        listener.local_addr_display(),
         socket_path.display()
     );
     info!("   Security: Owner-only (0600 permissions)");
@@ -81,7 +75,7 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
 
     loop {
         match listener.accept().await {
-            Ok((stream, _addr)) => {
+            Ok(stream) => {
                 let app = app.clone();
 
                 tokio::spawn(async move {
@@ -122,7 +116,7 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
                             debug!("Raw JSON-RPC connection ended: {e}");
                         }
                     } else {
-                        // BufReader<UnixStream> implements AsyncRead + AsyncWrite,
+                        // BufReader over TransportStream implements AsyncRead + AsyncWrite,
                         // so any bytes already buffered by fill_buf are replayed to
                         // hyper transparently.
                         serve_http_connection(reader, app).await;
@@ -136,8 +130,7 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
     }
 }
 
-#[cfg(unix)]
-async fn serve_http_connection(stream: BufReader<tokio::net::UnixStream>, app: Router) {
+async fn serve_http_connection(stream: BufReader<TransportStream>, app: Router) {
     let stream = hyper_util::rt::TokioIo::new(stream);
     let hyper_service =
         hyper::service::service_fn(move |request: hyper::Request<hyper::body::Incoming>| {
@@ -171,8 +164,7 @@ async fn serve_http_connection(stream: BufReader<tokio::net::UnixStream>, app: R
 /// `health.liveness`, `identity.get`, `capabilities.list`) so that
 /// spring probes and discovery sweeps see biomeOS as alive rather than
 /// receiving HTTP 400.
-#[cfg(unix)]
-async fn handle_raw_jsonrpc(mut reader: BufReader<tokio::net::UnixStream>) -> Result<()> {
+async fn handle_raw_jsonrpc(mut reader: BufReader<TransportStream>) -> Result<()> {
     let mut line = String::new();
 
     loop {
@@ -195,19 +187,6 @@ async fn handle_raw_jsonrpc(mut reader: BufReader<tokio::net::UnixStream>) -> Re
     }
 
     Ok(())
-}
-
-/// Windows stub — Unix socket server unavailable.
-#[cfg(windows)]
-pub async fn serve_unix_socket<P: AsRef<Path>>(
-    socket_path: P,
-    _app: Router,
-    _on_ready: Option<Box<dyn FnOnce() + Send>>,
-) -> Result<()> {
-    anyhow::bail!(
-        "Unix socket server unavailable on Windows ({})",
-        socket_path.as_ref().display()
-    )
 }
 
 /// Neural API methods that should be proxied to the Neural API socket

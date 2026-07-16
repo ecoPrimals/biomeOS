@@ -10,19 +10,16 @@
 //! Follows groundSpring's typed capability pattern.
 
 use anyhow::{Result, anyhow};
-#[cfg(unix)]
 use anyhow::Context;
 use bytes::Bytes;
 use serde_json::{Value, json};
 use std::path::PathBuf;
-#[cfg(unix)]
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-#[cfg(unix)]
-use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 
 use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
+
+use crate::ipc::{TransportEndpoint, connect_transport_timed, send_jsonrpc_over_stream};
 
 /// Typed capability client for structured primal-to-primal IPC.
 ///
@@ -86,35 +83,19 @@ impl CapabilityClient {
             .ok_or_else(|| anyhow!("No result in response"))
     }
 
-    /// Send a raw JSON-RPC request over the Unix socket.
-    #[cfg(unix)]
+    /// Send a raw JSON-RPC request over the platform transport.
     async fn send_request(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        let mut stream = timeout(self.timeout, UnixStream::connect(&self.endpoint))
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: self.endpoint.clone(),
+        };
+        let stream = connect_transport_timed(&endpoint, self.timeout)
             .await
-            .context("Connection timeout")?
+            .map_err(|e| anyhow!(e))
             .with_context(|| format!("Failed to connect to {}", self.endpoint.display()))?;
 
-        let request_json = serde_json::to_vec(&request)?;
-        stream.write_all(&request_json).await?;
-        stream.write_all(b"\n").await?;
-        stream.flush().await?;
-
-        let mut response_buf = Vec::new();
-        let _ = timeout(self.timeout, stream.read_to_end(&mut response_buf))
+        timeout(self.timeout, send_jsonrpc_over_stream(stream, request))
             .await
-            .context("Read timeout")?;
-
-        let response: JsonRpcResponse =
-            serde_json::from_slice(&response_buf).context("Failed to parse JSON-RPC response")?;
-        Ok(response)
-    }
-
-    /// Windows stub — UDS unavailable; use TCP transport.
-    #[cfg(windows)]
-    async fn send_request(&self, _request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        Err(anyhow!(
-            "Unix domain socket transport unavailable on Windows; use TCP"
-        ))
+            .context("Read timeout")?
     }
 
     // --- Crypto domain ---

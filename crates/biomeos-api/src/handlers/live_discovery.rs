@@ -13,12 +13,9 @@
 use anyhow::{Context, Result};
 use axum::Json;
 use axum::extract::Path as AxumPath;
-use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
+use biomeos_types::JsonRpcRequest;
 use serde::{Deserialize, Serialize};
-#[cfg(unix)]
-use std::io::{Read, Write};
-#[cfg(unix)]
-use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::Duration;
 use tracing::{debug, info, warn};
@@ -56,31 +53,26 @@ pub struct IdentityAttestation {
     pub data: serde_json::Value,
 }
 
-/// Send a JSON-RPC request over Unix socket
-#[cfg(unix)]
-fn send_rpc_request(
+/// Send a JSON-RPC request over a Unix socket (or port-file TCP on Windows).
+async fn send_rpc_request(
     socket_path: &str,
     method: &str,
     params: serde_json::Value,
 ) -> Result<serde_json::Value> {
     debug!("📡 Sending RPC to {}: {}", socket_path, method);
 
-    let mut stream = UnixStream::connect(socket_path)
-        .with_context(|| format!("Failed to connect to socket: {socket_path}"))?;
-
-    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
-    stream.set_write_timeout(Some(Duration::from_secs(5)))?;
-
+    let endpoint = TransportEndpoint::UnixSocket {
+        path: Path::new(socket_path).to_path_buf(),
+    };
     let request = JsonRpcRequest::new(method, params);
 
-    let request_bytes = serde_json::to_vec(&request)?;
-    stream.write_all(&request_bytes)?;
-    stream.write_all(b"\n")?;
-    stream.flush()?;
-
-    let mut response_buf = vec![0u8; 65536];
-    let n = stream.read(&mut response_buf)?;
-    let response: JsonRpcResponse = serde_json::from_slice(&response_buf[..n])?;
+    let response = tokio::time::timeout(
+        Duration::from_secs(5),
+        send_jsonrpc_request(&endpoint, request),
+    )
+    .await
+    .map_err(|_| anyhow::anyhow!("RPC request timed out after 5s"))?
+    .with_context(|| format!("Failed RPC to {socket_path}"))?;
 
     if let Some(error) = response.error {
         anyhow::bail!("RPC error {}: {}", error.code, error.message);
@@ -89,16 +81,6 @@ fn send_rpc_request(
     response
         .result
         .ok_or_else(|| anyhow::anyhow!("No result in RPC response"))
-}
-
-/// Windows stub — UDS unavailable.
-#[cfg(windows)]
-fn send_rpc_request(
-    socket_path: &str,
-    _method: &str,
-    _params: serde_json::Value,
-) -> Result<serde_json::Value> {
-    anyhow::bail!("Unix socket transport unavailable on Windows ({socket_path})")
 }
 
 /// Discover a primal at the given socket path (capability-agnostic)
@@ -124,13 +106,8 @@ pub async fn discover_primal(socket_path: &str) -> Result<LivePrimalInfo> {
         socket_path, socket_hint
     );
 
-    let result = tokio::task::spawn_blocking(move || {
-        send_rpc_request(&socket, "health.check", serde_json::json!({}))
-    })
-    .await;
-
-    match result {
-        Ok(Ok(response)) => {
+    match send_rpc_request(&socket, "health.check", serde_json::json!({})).await {
+        Ok(response) => {
             // Primal self-reports its identity
             let name = response
                 .get("name")
@@ -201,13 +178,9 @@ pub async fn discover_primal(socket_path: &str) -> Result<LivePrimalInfo> {
                 family_id,
             })
         }
-        Ok(Err(e)) => {
+        Err(e) => {
             warn!("⚠️  Primal at {} not responding: {}", socket_path, e);
             Err(e)
-        }
-        Err(e) => {
-            warn!("⚠️  Discovery task failed for {}: {}", socket_path, e);
-            Err(anyhow::anyhow!("Task join error: {e}"))
         }
     }
 }

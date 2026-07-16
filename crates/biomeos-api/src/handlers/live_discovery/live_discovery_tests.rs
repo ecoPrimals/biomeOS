@@ -288,7 +288,7 @@ async fn test_discover_primal_health_check_success_unix() {
             },
             "id": 1
         });
-        let s = serde_json::to_string(&body).expect("json");
+        let s = format!("{}\n", serde_json::to_string(&body).expect("json"));
         stream.write_all(s.as_bytes()).await.expect("write");
         stream.flush().await.ok();
         // Keep stream alive until client has consumed the response

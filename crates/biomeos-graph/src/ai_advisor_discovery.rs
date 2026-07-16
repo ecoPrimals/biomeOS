@@ -2,13 +2,10 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use anyhow::Result;
-use biomeos_types::SystemPaths;
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
+use biomeos_types::{JsonRpcRequest, SystemPaths};
 use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use std::path::{Path, PathBuf};
-#[cfg(unix)]
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::UnixStream;
 use tokio::time::Duration;
 use tracing::debug;
 
@@ -57,73 +54,39 @@ pub(super) async fn discover_ai_socket_path() -> Result<PathBuf> {
     )
 }
 
-#[cfg(unix)]
 async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
     let socket_str = socket_path.to_string_lossy();
-    let stream =
-        match tokio::time::timeout(Duration::from_millis(500), UnixStream::connect(socket_path))
-            .await
-        {
-            Ok(Ok(s)) => s,
-            Ok(Err(e)) => {
-                debug!("AI probe {}: connect failed: {}", socket_str, e);
-                return vec![];
-            }
-            Err(_) => {
-                debug!("AI probe {}: connect timed out", socket_str);
-                return vec![];
-            }
-        };
-
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "capabilities.list",
-        "id": 1
-    });
-    let Ok(mut request_line) = serde_json::to_string(&request) else {
-        return vec![];
+    let endpoint = TransportEndpoint::UnixSocket {
+        path: socket_path.to_path_buf(),
     };
-    request_line.push('\n');
+    let request = JsonRpcRequest::new("capabilities.list", serde_json::json!({}));
 
-    let mut reader = BufReader::new(stream);
-    let w = reader.get_mut();
-    if w.write_all(request_line.as_bytes()).await.is_err() {
-        return vec![];
-    }
-    let _ = w.flush().await;
-
-    let mut response_line = String::new();
     match tokio::time::timeout(
         Duration::from_millis(500),
-        reader.read_line(&mut response_line),
+        send_jsonrpc_request(&endpoint, request),
     )
     .await
     {
-        Ok(Ok(n)) if n > 0 => {}
-        _ => return vec![],
-    }
-
-    let resp: serde_json::Value = match serde_json::from_str(response_line.trim()) {
-        Ok(v) => v,
-        Err(e) => {
-            debug!(
-                "AI advisor probe: capabilities.list returned invalid JSON ({} bytes): {}",
-                response_line.len(),
-                e
-            );
-            return vec![];
+        Ok(Ok(response)) => {
+            if let Some(error) = response.error {
+                debug!(
+                    "AI probe {}: RPC error {}: {}",
+                    socket_str, error.code, error.message
+                );
+                return vec![];
+            }
+            let resp = serde_json::json!({ "result": response.result });
+            extract_capabilities_from_list_response(&resp)
         }
-    };
-    extract_capabilities_from_list_response(&resp)
-}
-
-#[cfg(windows)]
-async fn probe_capabilities_list(socket_path: &Path) -> Vec<String> {
-    debug!(
-        "AI probe {}: UDS unavailable on Windows",
-        socket_path.display()
-    );
-    vec![]
+        Ok(Err(e)) => {
+            debug!("AI probe {}: request failed: {}", socket_str, e);
+            vec![]
+        }
+        Err(_) => {
+            debug!("AI probe {}: request timed out", socket_str);
+            vec![]
+        }
+    }
 }
 
 /// Parse capability names from a JSON-RPC response, handling all 5 ecosystem wire formats.

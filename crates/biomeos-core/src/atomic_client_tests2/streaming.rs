@@ -9,7 +9,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[tokio::test]
 async fn test_call_stream_http_yields_transport_error() {
-    use biomeos_graph::StreamItem;
+    use biomeos_types::StreamItem;
     let client = AtomicClient::http("127.0.0.1", 59997).with_timeout(Duration::from_millis(200));
     let mut rx = client.call_stream("stream", json!({})).expect("receiver");
     let first = rx.recv().await.expect("event");
@@ -21,7 +21,7 @@ async fn test_call_stream_http_yields_transport_error() {
 
 #[tokio::test]
 async fn test_call_stream_unix_jsonrpc_single_line_wrapped() {
-    use biomeos_graph::StreamItem;
+    use biomeos_types::StreamItem;
     let temp = tempfile::tempdir().expect("temp");
     let socket_path = temp.path().join("stream_wrap.sock");
     let (mut ready_tx, ready_rx) = ready_signal();
@@ -58,7 +58,7 @@ async fn test_call_stream_unix_jsonrpc_single_line_wrapped() {
 
 #[tokio::test]
 async fn test_call_stream_unix_raw_non_json_line_becomes_string_data() {
-    use biomeos_graph::StreamItem;
+    use biomeos_types::StreamItem;
     let temp = tempfile::tempdir().expect("temp");
     let socket_path = temp.path().join("stream_raw.sock");
     let (mut ready_tx, ready_rx) = ready_signal();

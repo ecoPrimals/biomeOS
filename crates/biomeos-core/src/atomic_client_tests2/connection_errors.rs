@@ -68,7 +68,7 @@ async fn test_call_stream_connection_refused() {
     assert!(item.is_some());
     let item = item.unwrap();
     assert!(
-        matches!(item, biomeos_graph::StreamItem::Error { .. })
-            || matches!(item, biomeos_graph::StreamItem::End)
+        matches!(item, biomeos_types::StreamItem::Error { .. })
+            || matches!(item, biomeos_types::StreamItem::End)
     );
 }

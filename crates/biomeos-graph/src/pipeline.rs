@@ -87,44 +87,7 @@ impl std::fmt::Display for PipelineNodeId {
     }
 }
 
-/// An item flowing through a streaming pipeline.
-///
-/// The streaming protocol is simple: a source produces `Data` items,
-/// each node transforms them into new `Data` items, and the pipeline
-/// ends when the source sends `End`. Errors are non-fatal by default —
-/// they are logged and the pipeline continues with the next item.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", content = "payload")]
-pub enum StreamItem {
-    /// A data item flowing through the pipeline.
-    Data(serde_json::Value),
-    /// End of stream — no more items will be produced by the upstream node.
-    End,
-    /// A non-fatal error from a node. Logged and skipped.
-    Error {
-        /// The node that produced the error.
-        node_id: String,
-        /// Error description.
-        message: String,
-    },
-}
-
-impl StreamItem {
-    /// Returns true if this is a data item (not End or Error).
-    #[must_use]
-    pub const fn is_data(&self) -> bool {
-        matches!(self, Self::Data(_))
-    }
-
-    /// Returns the inner value if this is a `Data` item.
-    #[must_use]
-    pub fn into_data(self) -> Option<serde_json::Value> {
-        match self {
-            Self::Data(v) => Some(v),
-            _ => None,
-        }
-    }
-}
+pub use biomeos_types::StreamItem;
 
 /// Result of a completed pipeline execution.
 #[derive(Debug, Clone, Serialize, Deserialize)]

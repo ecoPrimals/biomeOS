@@ -36,13 +36,11 @@ use anyhow::{Result, anyhow};
 use anyhow::Context;
 use serde_json::Value;
 use std::path::PathBuf;
-#[cfg(unix)]
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-#[cfg(unix)]
-use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
+
+use crate::ipc::{TransportEndpoint, send_jsonrpc_request};
 
 use crate::PrimalCapability;
 use crate::discovery::{DiscoveredPrimal, PrimalDiscovery};
@@ -120,34 +118,14 @@ impl PrimalClient {
             .ok_or_else(|| anyhow!("No result in response"))
     }
 
-    /// Send request over Unix socket
-    #[cfg(unix)]
+    /// Send request over the platform transport.
     async fn send_request(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        let mut stream = UnixStream::connect(&self.primal.socket_path)
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: self.primal.socket_path.clone(),
+        };
+        send_jsonrpc_request(&endpoint, request)
             .await
-            .context(format!("Failed to connect to {}", self.primal.name))?;
-
-        let request_json = serde_json::to_vec(&request)?;
-
-        stream.write_all(&request_json).await?;
-        stream.write_all(b"\n").await?;
-        stream.flush().await?;
-
-        let mut response_buf = Vec::new();
-        stream.read_to_end(&mut response_buf).await?;
-
-        let response: JsonRpcResponse =
-            serde_json::from_slice(&response_buf).context("Failed to parse JSON-RPC response")?;
-
-        Ok(response)
-    }
-
-    /// Windows stub — UDS unavailable; use TCP transport.
-    #[cfg(windows)]
-    async fn send_request(&self, _request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        Err(anyhow!(
-            "Unix domain socket transport unavailable on Windows; use TCP"
-        ))
+            .with_context(|| format!("Failed to connect to {}", self.primal.name))
     }
 
     /// Get primal information

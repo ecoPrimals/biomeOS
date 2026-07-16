@@ -25,7 +25,10 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use biomeos_types::JsonRpcRequest;
 use serde::{Deserialize, Serialize};
+
+use crate::ipc::{TransportEndpoint, send_jsonrpc_request};
 
 /// A data provider that springs use to abstract their data source.
 ///
@@ -142,17 +145,15 @@ impl BiomeosProvider {
     }
 
     /// Build a `capability.call` JSON-RPC request.
-    fn build_request(&self, operation: &str, params: &serde_json::Value) -> serde_json::Value {
-        serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "capability.call",
-            "params": {
+    fn build_request(&self, operation: &str, params: &serde_json::Value) -> JsonRpcRequest {
+        JsonRpcRequest::new(
+            "capability.call",
+            serde_json::json!({
                 "capability": self.capability_domain,
                 "operation": operation,
                 "args": params
-            },
-            "id": uuid::Uuid::new_v4().to_string()
-        })
+            }),
+        )
     }
 }
 
@@ -179,18 +180,20 @@ impl Provider for BiomeosProvider {
 
         let request = self.build_request(operation, &params);
 
-        let mut response = send_jsonrpc_uds(&self.neural_api_socket, &request)
+        let response = send_jsonrpc_uds(&self.neural_api_socket, request)
             .await
             .map_err(ProviderError::Transport)?;
 
-        if let Some(error) = response.get("error") {
+        if let Some(error) = response.error {
             return Err(ProviderError::Application {
-                code: error["code"].as_i64().unwrap_or(-1),
-                message: error["message"].as_str().unwrap_or("unknown").to_string(),
+                code: error.code,
+                message: error.message,
             });
         }
 
-        Ok(response["result"].take())
+        response
+            .result
+            .ok_or_else(|| ProviderError::Transport(anyhow::anyhow!("No result in response")))
     }
 }
 
@@ -221,16 +224,15 @@ pub async fn register_capabilities(
     neural_api_socket: &Path,
     registration: &CapabilityRegistration,
 ) -> Result<serde_json::Value> {
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "capability.register",
-        "params": registration,
-        "id": uuid::Uuid::new_v4().to_string()
-    });
+    let request = JsonRpcRequest::new("capability.register", serde_json::to_value(registration)?);
 
-    send_jsonrpc_uds(neural_api_socket, &request)
+    let response = send_jsonrpc_uds(neural_api_socket, request)
         .await
-        .context("capability.register failed")
+        .context("capability.register failed")?;
+
+    response
+        .result
+        .ok_or_else(|| anyhow::anyhow!("capability.register returned no result"))
 }
 
 /// Provenance trio helpers — zero compile-time coupling to trio crates.
@@ -295,39 +297,15 @@ pub mod provenance {
     }
 }
 
-/// Send a JSON-RPC request over a Unix domain socket and return the response.
-#[cfg(unix)]
+/// Send a JSON-RPC request over the platform transport and return the response.
 async fn send_jsonrpc_uds(
     socket_path: &Path,
-    request: &serde_json::Value,
-) -> Result<serde_json::Value> {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::UnixStream;
-
-    let mut stream = UnixStream::connect(socket_path)
-        .await
-        .with_context(|| format!("connecting to {}", socket_path.display()))?;
-
-    let payload = serde_json::to_vec(request)?;
-    stream.write_all(&payload).await?;
-    stream.shutdown().await?;
-
-    let mut buf = Vec::new();
-    stream.read_to_end(&mut buf).await?;
-
-    serde_json::from_slice(&buf).context("parsing JSON-RPC response")
-}
-
-/// Windows stub — UDS unavailable; use TCP transport.
-#[cfg(windows)]
-async fn send_jsonrpc_uds(
-    socket_path: &Path,
-    _request: &serde_json::Value,
-) -> Result<serde_json::Value> {
-    anyhow::bail!(
-        "Unix domain socket transport unavailable on Windows (path: {})",
-        socket_path.display()
-    )
+    request: JsonRpcRequest,
+) -> Result<biomeos_types::JsonRpcResponse> {
+    let endpoint = TransportEndpoint::UnixSocket {
+        path: socket_path.to_path_buf(),
+    };
+    send_jsonrpc_request(&endpoint, request).await
 }
 
 #[expect(
@@ -380,10 +358,10 @@ mod tests {
         let provider = BiomeosProvider::new("ecology", "/tmp/test.sock");
         let params = serde_json::json!({"temperature": 25.0});
         let req = provider.build_request("et0_fao56", &params);
-        assert_eq!(req["method"], "capability.call");
-        assert_eq!(req["params"]["capability"], "ecology");
-        assert_eq!(req["params"]["operation"], "et0_fao56");
-        assert_eq!(req["params"]["args"]["temperature"], 25.0);
+        assert_eq!(req.method.as_ref(), "capability.call");
+        assert_eq!(req.params.as_ref().unwrap()["capability"], "ecology");
+        assert_eq!(req.params.as_ref().unwrap()["operation"], "et0_fao56");
+        assert_eq!(req.params.as_ref().unwrap()["args"]["temperature"], 25.0);
     }
 
     #[test]

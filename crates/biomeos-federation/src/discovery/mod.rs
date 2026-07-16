@@ -9,14 +9,11 @@
 #[cfg(test)]
 mod tests;
 
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-#[cfg(unix)]
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::UnixStream;
 use tracing::{debug, info, warn};
 
 use crate::FederationResult;
@@ -156,63 +153,28 @@ impl PrimalDiscovery {
         Ok(())
     }
 
-    #[cfg(unix)]
     async fn query_primal_info(&self, socket_path: &PathBuf) -> FederationResult<PrimalInfo> {
-        let stream = UnixStream::connect(socket_path).await.map_err(|e| {
-            crate::FederationError::Discovery {
-                context: format!("Failed to connect to {}", socket_path.display()),
-                source: e.into(),
-            }
-        })?;
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: socket_path.clone(),
+        };
 
         let request = biomeos_types::JsonRpcRequest::new("identity.info", serde_json::json!({}));
 
-        let request_bytes =
-            serde_json::to_vec(&request).map_err(|e| crate::FederationError::Discovery {
-                context: "Failed to serialize request".to_owned(),
-                source: e.into(),
-            })?;
-
-        let (read_half, mut write_half) = stream.into_split();
-        write_half.write_all(&request_bytes).await.map_err(|e| {
-            crate::FederationError::Discovery {
-                context: "Failed to write request".to_owned(),
-                source: e.into(),
-            }
-        })?;
-        write_half.write_all(b"\n").await.ok();
-
-        write_half
-            .flush()
+        let response = send_jsonrpc_request(&endpoint, request)
             .await
             .map_err(|e| crate::FederationError::Discovery {
-                context: "Failed to flush request".to_owned(),
-                source: e.into(),
+                context: format!("Failed to query {}", socket_path.display()),
+                source: e,
             })?;
-        write_half.shutdown().await.ok();
 
-        let mut reader = BufReader::new(read_half);
-        let mut response_line = String::new();
-        let n = reader.read_line(&mut response_line).await.map_err(|e| {
-            crate::FederationError::Discovery {
-                context: "Failed to read response".to_owned(),
-                source: e.into(),
-            }
-        })?;
-        if n == 0 {
-            return Err(crate::FederationError::DiscoveryError(
-                "Empty response from primal".to_string(),
-            ));
+        if let Some(error) = response.error {
+            return Err(crate::FederationError::DiscoveryError(format!(
+                "identity.info failed: {}",
+                error.message
+            )));
         }
-        let response: serde_json::Value =
-            serde_json::from_str(response_line.trim()).map_err(|e| {
-                crate::FederationError::Discovery {
-                    context: "Failed to parse response".to_owned(),
-                    source: e.into(),
-                }
-            })?;
 
-        let result = response.get("result").ok_or_else(|| {
+        let result = response.result.ok_or_else(|| {
             crate::FederationError::DiscoveryError("No result in response".to_string())
         })?;
 
@@ -244,14 +206,6 @@ impl PrimalDiscovery {
             primal_type,
             capabilities: CapabilitySet::from_vec(caps),
         })
-    }
-
-    #[cfg(windows)]
-    async fn query_primal_info(&self, socket_path: &PathBuf) -> FederationResult<PrimalInfo> {
-        Err(crate::FederationError::DiscoveryError(format!(
-            "Unix socket transport unavailable on Windows ({})",
-            socket_path.display()
-        )))
     }
 
     async fn register_unix_socket_primal(&mut self, socket_path: &PathBuf) {
@@ -404,28 +358,18 @@ impl PrimalDiscovery {
     }
 
     /// Like [`Self::discover_via_discovery_provider`], using an explicit discovery provider Unix socket path (tests).
-    #[cfg(unix)]
     pub(crate) async fn discover_via_discovery_socket_path(
         &mut self,
         discovery_socket: &str,
     ) -> FederationResult<()> {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
-
         debug!(
             "Querying discovery provider for UDP-discovered peers: {}",
             discovery_socket
         );
 
-        let stream = UnixStream::connect(discovery_socket).await.map_err(|e| {
-            crate::FederationError::Discovery {
-                context: "Discovery provider connection failed".to_owned(),
-                source: e.into(),
-            }
-        })?;
-
-        let (reader, mut writer) = stream.into_split();
-        let mut reader = BufReader::new(reader);
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: PathBuf::from(discovery_socket),
+        };
 
         let request = biomeos_types::JsonRpcRequest::new(
             "discovery.list_peers",
@@ -435,54 +379,21 @@ impl PrimalDiscovery {
             }),
         );
 
-        let request_str =
-            serde_json::to_string(&request).map_err(|e| crate::FederationError::Discovery {
-                context: "JSON serialization error".to_owned(),
-                source: e.into(),
-            })? + "\n";
-
-        writer
-            .write_all(request_str.as_bytes())
+        let response = send_jsonrpc_request(&endpoint, request)
             .await
             .map_err(|e| crate::FederationError::Discovery {
-                context: "Failed to write to discovery provider".to_owned(),
-                source: e.into(),
-            })?;
-        writer
-            .flush()
-            .await
-            .map_err(|e| crate::FederationError::Discovery {
-                context: "Failed to flush discovery provider".to_owned(),
-                source: e.into(),
+                context: "Discovery provider connection failed".to_owned(),
+                source: e,
             })?;
 
-        let mut response_line = String::new();
-        reader.read_line(&mut response_line).await.map_err(|e| {
-            crate::FederationError::Discovery {
-                context: "Failed to read from discovery provider".to_owned(),
-                source: e.into(),
-            }
-        })?;
-
-        let response: serde_json::Value =
-            serde_json::from_str(response_line.trim()).map_err(|e| {
-                crate::FederationError::Discovery {
-                    context: "JSON parse error from discovery provider".to_owned(),
-                    source: e.into(),
-                }
-            })?;
-
-        if let Some(error) = response.get("error") {
-            let msg = error
-                .get("message")
-                .and_then(|m| m.as_str())
-                .unwrap_or_default();
+        if let Some(error) = response.error {
             return Err(crate::FederationError::DiscoveryError(format!(
-                "Discovery provider list_peers failed: {msg}"
+                "Discovery provider list_peers failed: {}",
+                error.message
             )));
         }
 
-        if let Some(result) = response.get("result")
+        if let Some(result) = response.result
             && let Some(peers) = result.get("peers").and_then(|p| p.as_array())
         {
             for peer in peers {
@@ -494,16 +405,6 @@ impl PrimalDiscovery {
             );
         }
 
-        Ok(())
-    }
-
-    /// Windows stub — UDS not available.
-    #[cfg(windows)]
-    pub(crate) async fn discover_via_discovery_socket_path(
-        &mut self,
-        discovery_socket: &str,
-    ) -> FederationResult<()> {
-        warn!("Unix socket discovery unavailable on Windows: {discovery_socket}");
         Ok(())
     }
 

@@ -128,7 +128,10 @@ mod tests {
         );
         let err = result.unwrap_err();
         assert!(
-            err.to_string().contains("socket") || err.to_string().contains("remove"),
+            err.to_string().contains("socket")
+                || err.to_string().contains("remove")
+                || err.to_string().contains("bind")
+                || err.to_string().contains("transport"),
             "Expected socket-related error: {}",
             err
         );

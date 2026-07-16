@@ -4,7 +4,7 @@
 //! Newline-delimited JSON-RPC request/response and streaming over byte streams.
 
 use anyhow::{Context, Result};
-use biomeos_graph::StreamItem;
+use biomeos_types::StreamItem;
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tracing::trace;

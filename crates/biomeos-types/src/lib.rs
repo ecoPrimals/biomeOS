@@ -52,6 +52,7 @@ pub mod primal_names;
 /// Structured provenance for absorbed patterns (absorbed from primalSpring v0.3.0)
 pub mod provenance;
 pub mod service;
+pub mod streaming;
 pub mod surgical; // Surgical simulation and medical domain types
 pub mod tarpc_types; // tarpc service definitions for high-performance RPC
 pub mod time_series; // Cross-spring time series exchange (ecoPrimals/time-series/v1)
@@ -115,6 +116,7 @@ pub use primal::{
 
 // Additional service types
 pub use service::core::ServiceSpec;
+pub use streaming::StreamItem;
 
 // Service system exports - using module paths to avoid conflicts
 pub use service::core::{ServiceDependency, ServiceEndpoint, ServiceMetadata, UniversalService};

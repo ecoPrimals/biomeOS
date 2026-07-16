@@ -61,7 +61,7 @@ use crate::socket_discovery::TransportEndpoint;
 pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 // Re-export StreamItem for callers of call_stream
-pub use biomeos_graph::StreamItem;
+pub use biomeos_types::StreamItem;
 
 /// Options for [`AtomicClient::discover_with_opts`] and [`discover_primal_endpoint_with_opts`].
 #[derive(Debug, Default, Clone)]
@@ -411,18 +411,10 @@ impl AtomicClient {
     /// Dispatches to the appropriate transport based on endpoint type.
     async fn call_impl(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
         match &self.endpoint {
-            TransportEndpoint::UnixSocket { path } => {
-                atomic_transport::jsonrpc_unix(path, request).await
-            }
-            TransportEndpoint::TcpSocket { host, port } => {
-                atomic_transport::jsonrpc_tcp(host, *port, request).await
-            }
-            TransportEndpoint::AbstractSocket { name } => {
-                atomic_transport::jsonrpc_abstract(name, request).await
-            }
             TransportEndpoint::HttpJsonRpc { host, port } => {
                 atomic_transport::jsonrpc_http(host, *port, request).await
             }
+            endpoint => atomic_transport::jsonrpc_via_transport(endpoint, request).await,
         }
     }
 

@@ -6,6 +6,7 @@
 use anyhow::{Context, Result};
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
@@ -14,7 +15,25 @@ use tokio::net::UnixStream;
 use tokio::time::timeout;
 use tracing::trace;
 
+use crate::ipc::connect_transport;
+use crate::TransportEndpoint;
+
 use super::atomic_rpc::send_jsonrpc_line;
+
+/// Connect via [`connect_transport`] and send one newline-delimited JSON-RPC exchange.
+///
+/// Handles `UnixSocket`, `TcpSocket`, and `AbstractSocket` endpoints (including
+/// Windows port-file fallback for Unix paths). HTTP framing uses [`jsonrpc_http`].
+pub(crate) async fn jsonrpc_via_transport(
+    endpoint: &TransportEndpoint,
+    request: JsonRpcRequest,
+) -> Result<JsonRpcResponse> {
+    let stream = connect_transport(endpoint)
+        .await
+        .with_context(|| format!("Failed to connect to {endpoint}"))?;
+
+    send_jsonrpc_line(stream, request).await
+}
 
 /// Connect to a Linux abstract socket, returning a tokio-ready `UnixStream`.
 #[cfg(target_os = "linux")]
@@ -30,25 +49,16 @@ pub(crate) fn connect_abstract(name: &str) -> Result<UnixStream> {
     Ok(UnixStream::from_std(std_stream)?)
 }
 
-#[cfg(unix)]
+/// Legacy per-path entry point; prefer [`jsonrpc_via_transport`].
+#[expect(dead_code, reason = "retained for callers that pass a path directly")]
 pub(crate) async fn jsonrpc_unix(path: &Path, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-    let stream = UnixStream::connect(path).await.context(format!(
-        "Failed to connect to Unix socket: {}",
-        path.display()
-    ))?;
-
-    send_jsonrpc_line(stream, request).await
-}
-
-#[cfg(windows)]
-pub(crate) async fn jsonrpc_unix(
-    path: &Path,
-    _request: JsonRpcRequest,
-) -> Result<JsonRpcResponse> {
-    anyhow::bail!(
-        "Unix domain sockets unavailable on Windows: {}",
-        path.display()
+    jsonrpc_via_transport(
+        &TransportEndpoint::UnixSocket {
+            path: path.to_path_buf(),
+        },
+        request,
     )
+    .await
 }
 
 /// Connect to a Unix socket, perform a BTSP client handshake + Phase 3 negotiate,
@@ -149,17 +159,21 @@ async fn send_encrypted_jsonrpc(
     Ok(response)
 }
 
+/// Legacy per-host entry point; prefer [`jsonrpc_via_transport`].
+#[expect(dead_code, reason = "retained for callers that pass host/port directly")]
 pub(crate) async fn jsonrpc_tcp(
     host: &str,
     port: u16,
     request: JsonRpcRequest,
 ) -> Result<JsonRpcResponse> {
-    let addr = format!("{host}:{port}");
-    let stream = TcpStream::connect(&addr)
-        .await
-        .context(format!("Failed to connect to TCP: {addr}"))?;
-
-    send_jsonrpc_line(stream, request).await
+    jsonrpc_via_transport(
+        &TransportEndpoint::TcpSocket {
+            host: Arc::from(host),
+            port,
+        },
+        request,
+    )
+    .await
 }
 
 /// Minimal HTTP/1.1 POST to `POST /jsonrpc` over a raw `TcpStream`.
@@ -235,25 +249,20 @@ pub(crate) async fn jsonrpc_http(
 }
 
 /// Send JSON-RPC over an abstract socket (Linux/Android).
-#[cfg(target_os = "linux")]
+///
+/// Legacy entry point; prefer [`jsonrpc_via_transport`].
+#[expect(dead_code, reason = "retained for callers that pass an abstract name directly")]
 pub(crate) async fn jsonrpc_abstract(
     name: &str,
     request: JsonRpcRequest,
 ) -> Result<JsonRpcResponse> {
-    let stream = connect_abstract(name)?;
-    send_jsonrpc_line(stream, request).await
-}
-
-#[cfg(not(target_os = "linux"))]
-pub(crate) async fn jsonrpc_abstract(
-    name: &str,
-    _request: JsonRpcRequest,
-) -> Result<JsonRpcResponse> {
-    anyhow::bail!(
-        "Abstract sockets not supported on this platform (only Linux/Android). \
-         Socket name: @{}",
-        name
+    jsonrpc_via_transport(
+        &TransportEndpoint::AbstractSocket {
+            name: Arc::from(name),
+        },
+        request,
     )
+    .await
 }
 
 #[cfg(unix)]

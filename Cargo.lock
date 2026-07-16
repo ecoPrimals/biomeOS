@@ -546,9 +546,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
- "biomeos-graph",
  "biomeos-manifest",
- "biomeos-nucleus",
  "biomeos-primal-sdk",
  "biomeos-system",
  "biomeos-test-utils",
@@ -697,6 +695,7 @@ name = "biomeos-graph"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "biomeos-core",
  "biomeos-nucleus",
  "biomeos-test-utils",
  "biomeos-types",
@@ -761,6 +760,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
+ "biomeos-core",
  "biomeos-test-utils",
  "biomeos-types",
  "bytes",
@@ -2413,6 +2413,7 @@ name = "neural-api-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "biomeos-core",
  "biomeos-types",
  "bytes",
  "serde",

@@ -5,18 +5,11 @@
 //!
 //! Implements a simple JSON-RPC 2.0 client over Unix sockets.
 
-use anyhow::Result;
-#[cfg(unix)]
-use anyhow::Context;
+use anyhow::{Context, Result};
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
-#[cfg(unix)]
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::UnixStream;
-use tracing::debug;
-#[cfg(unix)]
-use tracing::error;
+use tracing::{debug, error};
 
 // Re-export JSON-RPC types from biomeos-types for backwards compatibility
 pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
@@ -41,38 +34,19 @@ impl UnixSocketClient {
     }
 
     /// Send a JSON-RPC request and receive response
-    #[cfg(unix)]
     pub async fn call(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
         debug!("Connecting to Unix socket: {}", self.socket_path.display());
 
-        let mut stream = UnixStream::connect(&self.socket_path)
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: self.socket_path.clone(),
+        };
+
+        let response = send_jsonrpc_request(&endpoint, request)
             .await
             .context(format!(
                 "Failed to connect to Unix socket: {}",
                 self.socket_path.display()
             ))?;
-
-        let request_str =
-            serde_json::to_string(&request).context("Failed to serialize JSON-RPC request")?;
-
-        debug!("Sending JSON-RPC request: {}", request_str);
-
-        stream.write_all(request_str.as_bytes()).await?;
-        stream.write_all(b"\n").await?;
-        stream.flush().await?;
-
-        let (reader, _writer) = stream.split();
-        let mut reader = BufReader::new(reader);
-        let mut line = String::new();
-        reader
-            .read_line(&mut line)
-            .await
-            .context("Failed to read JSON-RPC response")?;
-
-        debug!("Received JSON-RPC response: {}", line);
-
-        let response: JsonRpcResponse =
-            serde_json::from_str(&line).context("Failed to parse JSON-RPC response")?;
 
         if let Some(error) = &response.error {
             error!(
@@ -87,16 +61,6 @@ impl UnixSocketClient {
         }
 
         Ok(response)
-    }
-
-    /// Windows stub — UDS transport unavailable.
-    #[cfg(windows)]
-    pub async fn call(&self, _request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        debug!("Unix socket unavailable on Windows: {}", self.socket_path.display());
-        anyhow::bail!(
-            "Unix socket transport unavailable on Windows ({})",
-            self.socket_path.display()
-        )
     }
 
     /// Helper to call a method and extract result

@@ -45,6 +45,9 @@ mod atomic_primal_client_tests;
 // Primal adapter pattern (CLI-agnostic integration)
 pub mod primal_adapter;
 
+// Platform-agnostic IPC transport (Phase 2 transport abstraction)
+pub mod ipc;
+
 // Core modules
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
@@ -136,6 +139,12 @@ pub mod config_builder;
 /// Integration utilities for live service monitoring and system status
 pub mod integration;
 pub mod log_session;
+
+// Re-export IPC transport primitives (Phase 2 transport — abstraction over gating)
+pub use ipc::{
+    TransportListener, TransportStream, connect_transport, connect_transport_timed,
+    send_jsonrpc_over_stream, send_jsonrpc_request,
+};
 
 // Re-export the main manager and types for easy access
 pub use universal_biomeos_manager::{PrimalInfo, PrimalStatistics, UniversalBiomeOSManager};
