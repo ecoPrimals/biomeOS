@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: June 28, 2026
+**Updated**: July 16, 2026
 
 ---
 
@@ -33,9 +33,9 @@
 
 ---
 
-## Specifications (27 active)
+## Specifications (29 active)
 
-See [specs/README.md](specs/README.md) for full index. Key specs:
+See [specs/README.md](specs/README.md) for full index (24 core + 3 lifecycle + 2 contracts; 47 archived). Key specs:
 
 | Spec | Purpose |
 |------|---------|
@@ -119,6 +119,43 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 
 ---
 
+---
+
+## Workspace Crates (26)
+
+| Crate | Purpose |
+|-------|---------|
+| `biomeos` | Main binary (CLI + nucleus modes) |
+| `biomeos-core` | Core orchestration, discovery, plasmodium, **`ipc`** transport layer |
+| `biomeos-types` | Shared types, SystemPaths, capability taxonomy, constants |
+| `biomeos-atomic-deploy` | Atomic deployment, Neural API server, LifecycleManager |
+| `biomeos-api` | HTTP/WebSocket API server (UDS dual-protocol auto-detect) |
+| `biomeos-cli` | CLI helper binary (`biome`) |
+| `biomeos-system` | System metrics, paths, platform helpers |
+| `biomeos-graph` | Graph execution engine |
+| `biomeos-nucleus` | NUCLEUS lifecycle management |
+| `biomeos-federation` | Federation + secure discovery |
+| `biomeos-deploy` | QEMU/VM deployment |
+| `biomeos-boot` | ISO/initramfs builder |
+| `biomeos-spore` | Deployment packaging + beacon genetics |
+| `biomeos-manifest` | Manifest parsing and gate profiles |
+| `biomeos-compute` | Fractal compute architecture |
+| `biomeos-ui` | Interactive UI orchestration |
+| `biomeos-niche` | Niche template orchestration |
+| `biomeos-chimera` | Chimera fusion codegen |
+| `biomeos-primal-sdk` | Primal development SDK |
+| `biomeos-genome-factory` | genomeBin build + compose + replicate |
+| `biomeos-genomebin-v3` | genomeBin v3.0 binary format |
+| `biomeos-genome-deploy` | genomeBin deployment |
+| `biomeos-pseudospore` | pseudoSpore envelope validation (NC-1.4) |
+| `biomeos-test-utils` | Shared test helpers (ReadySender, TestEnvGuard) |
+| `neural-api-client` | Async Neural API client |
+| `neural-api-client-sync` | Synchronous Neural API client |
+
+Key transport module: `biomeos-core::ipc` — `TransportStream`, `TransportListener`, `connect_transport`, `connect_transport_timed`.
+
+---
+
 ## Environment Variables Reference
 
 ### Core
@@ -166,7 +203,7 @@ Topics include: relay-assisted coordinated punch, covalent bond evolution, prima
 # Build
 cargo build --workspace
 
-# Test (7,983 tests — fully concurrent)
+# Test (8,477+ tests — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -191,8 +228,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of June 20, 2026 (v4.31)**
-**Active: 24 specs (47 archived), handoffs in wateringHole (v2.43–v4.31), 4 scripts**
+**Documentation current as of July 16, 2026 (v4.35)**
+**Active: 29 specs (47 archived), handoffs in wateringHole (v2.43–v4.35), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
-**Architecture: L4 weighted routing, L5 perceptron shadow, guideStone startup, HEALTH-01, stale registration pruning, partition-aware routing, lineage fail-closed, real system metrics, agnostic naming, composition hot-reload, HTTP transport removed v3.97**
-**Tests: 8,446 workspace-wide (0 failures) | Clippy: PASS (0 warnings) | C deps: 0 | Unsafe: 0 (all 26 crates #![forbid(unsafe_code)]) | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Result<_, String>: 0 in core APIs**
+**Architecture: biomeos-core::ipc transport (Phase 2 complete, 12/14 primals), capability-first runtime registry + bootstrap hints, NucleusMode manifest profiles (`resolve_launch_set()`), L4 weighted routing, L5 perceptron shadow, guideStone startup, HEALTH-01, stale registration pruning, partition-aware routing, lineage fail-closed, real system metrics, agnostic naming, composition hot-reload, HTTP transport removed v3.97**
+**Tests: 8,477+ workspace-wide (0 failures) | Clippy: PASS (0 warnings) | C deps: 0 | Unsafe: 0 (all 26 crates #![forbid(unsafe_code)]) | Production files >800L: 0 | Test files >450L: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Cross-arch: x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu**

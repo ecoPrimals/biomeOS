@@ -1,9 +1,9 @@
-# biomeOS Session 144b — Deep Debt Wave + Phase 2 Transport Completion
+# biomeOS Session 144b — Deep Debt Wave + Phase 2 Transport + Cleanup
 
 **Date**: July 16, 2026  
 **Version**: v4.35  
 **Wave**: 144b  
-**Scope**: Phase 2 transport trait dispatch, NucleusMode manifest discovery, placeholder evolution, dead dep removal, test file splits
+**Scope**: Phase 2 transport trait dispatch, NucleusMode manifest discovery, placeholder evolution, dead dep removal, test file splits, root doc refresh, debris cleanup
 
 ---
 
@@ -93,9 +93,38 @@ cargo test --workspace                         ✅ (8,477 passed, 0 failed)
 
 ---
 
+## Root Docs & Cleanup
+
+### Documentation Refresh
+All 6 root docs updated to v4.35: `CONTEXT.md`, `CONTRIBUTING.md`, `DOCUMENTATION.md`, `QUICK_START.md`, `START_HERE.md`, `SECURITY.md`.
+
+### Debris Cleaned (untracked, not in git)
+| Item | Size | Action |
+|------|------|--------|
+| `target/` | 125 GB | `cargo clean` |
+| `vm-images/` | 660 MB | Removed (cloud-init .img) |
+| `primals/` binaries | 113 MB | Removed (belong in plasmidBin repo) |
+| `plasmidBin/` binaries | 792 MB | Removed (deploy via depot) |
+| `bin/` binaries | 338 MB | Removed (build artifacts) |
+| `base-spore/` | 33 MB | Removed (stale USB image) |
+| `livespore-usb/*/primals/` | 382 MB | Removed (ELF binaries) |
+| `pixel8a-deploy/` binaries | 67 MB | Removed |
+| **Total freed** | **~127 GB** | |
+
+Workspace on-disk: **18 MB** (tracked source only).
+
+### No False Positives Found
+- Zero TODO/FIXME/HACK in Rust source
+- Zero stale references in docs
+- All `.gitignore` entries correctly prevent re-accumulation
+- `tmp-cloud-init/` (root-owned, 1KB) — harmless, already in `.gitignore`
+
+---
+
 ## Upstream Gaps (For Other Primal Teams)
 
 1. **BTSP client evolution**: `btsp_client_phase3.rs` still takes `UnixStream` directly; needs `TransportStream` parameter
 2. **tarpc ecosystem**: `bincode v1` (unmaintained), `rand 0.8` duplicate — monitor upstream
 3. **redb 2→4**: Major version gap; API migration needed in `biomeos-graph`
 4. **criterion 0.5→0.8**: Dev-only, resolves `crossbeam-epoch` advisory (RUSTSEC-2026-0204)
+5. **sporePrint rebuild on golgi**: Root 404 still active (P0 from Wave 144a)

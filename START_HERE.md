@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: June 28, 2026
-**Status**: Production Ready (v4.33) — 8,446 tests / 88.37% line coverage, dashmap 6 + toml 0.9, zero clippy/deny warnings, zero production files >800 LOC, all mega-test files split into domain-focused modules, all 26 crates `#![forbid(unsafe_code)]`, Edition 2024, rust-version 1.87, 0 C deps, scyBorg (AGPL-3.0-or-later)
+**Last Updated**: July 16, 2026
+**Status**: Production Ready (v4.35) — 8,477+ tests / 88.37% line coverage, dashmap 6 + toml 0.9, zero clippy/deny warnings, zero production files >800 LOC, zero test files >450 LOC, Phase 2 transport complete (12/14 primals on `biomeos-core::ipc`), capability-first runtime registry, NucleusMode manifest profiles, all 26 crates `#![forbid(unsafe_code)]`, Edition 2024, rust-version 1.87, cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu), 0 C deps, scyBorg (AGPL-3.0-or-later)
 
 ---
 
@@ -15,7 +15,9 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Atomics**: Primal combinations defined by capability roles (Tower = security + mesh orchestration)
 - **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
 - **Neural API**: Semantic routing via `capability.call` (320+ translations, 27 domains incl. tensor, part of biomeOS)
-- **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP JSON-RPC; HTTP transport removed v3.97)
+- **Universal IPC v3.0**: Multi-transport via `biomeos-core::ipc` (`TransportStream`, `TransportListener`, `connect_transport`); Unix/Abstract/TCP JSON-RPC (HTTP transport removed v3.97)
+- **Discovery**: Capability-first runtime registry + bootstrap hints (live `capability.register` takes precedence)
+- **NucleusMode**: `resolve_launch_set()` from `ecosystem_manifest.toml` composition profiles
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
 - **AI Bridge**: Squirrel -> Songbird HTTP -> Cloud/Local AI
@@ -106,9 +108,9 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 3. **XDG-compliant**: All paths via `SystemPaths` -- no hardcoded `/tmp` or `/run/user/1000`
 4. **No production mocks**: Stubs replaced with real implementations or honest errors
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
-6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines
+6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines, 0 test files >450 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 7,983 tests (0 failures), 90%+ line / function / region (llvm-cov), fully concurrent suite
+8. **Tested**: 8,477+ tests (0 failures), 88%+ line / function (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
@@ -167,9 +169,9 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v4.32)
-**Discovery**: Capability-based per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
+**Status**: Production Ready (v4.35)
+**Discovery**: Capability-first runtime registry + bootstrap hints per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Neural API**: 320+ semantic translations, 27 capability domains, L4 weighted routing, L5 perceptron shadow mode, stale registration pruning, partition-aware routing, composition hot-reload, cross-gate routing via mesh relay, adaptive weights (redb-persistent)
-**IPC**: Universal IPC v3.0 — Unix/abstract/TCP + UDS dual-protocol auto-detect + BTSP + `--bind-mode` guideStone startup (HTTP transport removed v3.97; `--tcp-only` deprecated v3.94)
-**Tests**: 8,446 workspace-wide (0 failures) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production
-**Updated**: June 22, 2026
+**IPC**: `biomeos-core::ipc` transport layer — Unix/abstract/TCP + UDS dual-protocol auto-detect + BTSP + `--bind-mode` guideStone startup (Phase 2 complete, 12/14 primals; HTTP transport removed v3.97; `--tcp-only` deprecated v3.94)
+**Tests**: 8,477+ workspace-wide (0 failures) | **Clippy**: PASS (0 warnings, pedantic+nursery) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Production files >800L**: 0 | **Test files >450L**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production | **Cross-arch**: x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu
+**Updated**: July 16, 2026

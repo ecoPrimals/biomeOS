@@ -6,7 +6,7 @@ Deploy biomeOS in under 5 minutes.
 
 ## Prerequisites
 
-- Linux (x86_64 or aarch64) or Android
+- Linux (x86_64, aarch64, or armv7), Windows (x86_64-pc-windows-gnu cross-target), or Android
 - `nc` (netcat) for testing
 - `socat` (optional, for debugging)
 
@@ -26,6 +26,7 @@ biomeos nucleus start --mode nest --node-id tower1
 ```
 
 The pure Rust nucleus mode automatically:
+- Resolves launch sets via `NucleusMode::resolve_launch_set()` from `ecosystem_manifest.toml` (cold-start fallback to bootstrap order)
 - Derives FAMILY_ID from `.family.seed` or `$FAMILY_ID` env var
 - Discovers primal binaries from `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`
 - Detects bootstrap vs. coordinated mode (joins existing ecosystem if primals are already running)
@@ -177,8 +178,8 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v4.31)
-**Updated**: June 20, 2026
-**Tests**: 8,446 passing (0 failures, fully concurrent), 88.37% line / 89.58% function (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **TODO/FIXME**: 0 | **Blocking debt**: 0
+**Status**: Production Ready (v4.35)
+**Updated**: July 16, 2026
+**Tests**: 8,477+ passing (0 failures, fully concurrent), 88.37% line / 89.58% function (llvm-cov) | **Clippy**: PASS (0 warnings, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Production files >800L**: 0 | **Test files >450L**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Transport**: Phase 2 complete (`biomeos-core::ipc`, 12/14 primals)
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

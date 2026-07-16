@@ -1,6 +1,6 @@
 # Context — biomeOS
 
-**Version**: v4.29 | **Updated**: June 14, 2026
+**Version**: v4.35 | **Updated**: July 16, 2026
 
 ## What This Is
 
@@ -23,13 +23,16 @@ multiple gates (devices).
 
 - **Language:** 100% Rust, zero C dependencies
 - **Architecture:** Single binary (UniBin) with multiple operational modes (bootstrap, nucleus, deploy, doctor, continuous, rootpulse)
-- **Communication:** JSON-RPC 2.0 over Unix sockets, abstract sockets, and TCP — with tarpc binary protocol escalation for hot paths (HTTP transport endpoint removed v3.97; inter-gate HTTP via Songbird gateway)
+- **Communication:** JSON-RPC 2.0 over `biomeos-core::ipc` transport (`TransportStream`, `TransportListener`, `connect_transport`) — Unix sockets primary, abstract sockets, TCP fallback (Windows via `.port` file); tarpc binary protocol escalation for hot paths (HTTP transport endpoint removed v3.97; inter-gate HTTP via Songbird gateway)
 - **License:** AGPL-3.0-or-later (scyBorg triple-copyleft: AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
-- **Tests:** 7,983 workspace-wide (0 failures)
+- **Tests:** 8,477+ workspace-wide (0 failures)
 - **Coverage:** 90%+ line coverage (llvm-cov verified)
 - **Blocking debt:** 0 (primalSpring Phase 43 gaps resolved, all composition gaps resolved)
 - **Edition:** Rust 2024 across all workspace crates
 - **Crate count:** 26 workspace crates
+- **File size:** 0 production files >800 LOC; 0 test files >450 LOC
+- **Cross-arch:** x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu
+- **Phase 2 transport:** complete (12/14 primals on unified `biomeos-core::ipc` trait dispatch)
 - **Clippy:** pedantic + nursery enabled via workspace lint inheritance
 - **Unsafe:** 0 in production code (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points)
 - **TODO/FIXME/HACK:** 0 (all resolved)
@@ -45,7 +48,7 @@ multiple gates (devices).
 | **Topology** | `topology.get`, `topology.proprioception`, `topology.rescan` |
 | **Lifecycle** | `lifecycle.start`, `lifecycle.stop`, `lifecycle.status` |
 | **Manifest** | `manifest.gate_profile` |
-| **Nucleus** | `nucleus start --mode tower|node|nest|full` |
+| **Nucleus** | `nucleus start --mode tower|node|nest|full|core` — launch sets via `NucleusMode::resolve_launch_set()` from `ecosystem_manifest.toml` |
 
 ## What This Does NOT Do
 
@@ -67,12 +70,15 @@ multiple gates (devices).
 ```
 User / AI ──► Neural API (JSON-RPC) ──► Capability Router ──► Primal (via TransportEndpoint)
                                               │
+                              biomeos-core::ipc (TransportStream / TransportListener)
+                                              │
                                     ┌─────────┼─────────┐
                                     ▼         ▼         ▼
                                Unix sock  Abstract     TCP
-                              (Tier 1)    (Tier 1)   (Tier 2, deprecated)
+                              (primary)   (Tier 1)   (fallback / Windows)
 ```
 
-Discovery is 5-tier: centralized registry → taxonomy bootstrap → environment
-hints → socket scanning → fallback mapping. No primal name is ever hardcoded
-in routing logic.
+Discovery is capability-first: runtime registry (live `capability.register`) →
+bootstrap hints → taxonomy → environment hints → socket scanning. No primal
+name is ever hardcoded in routing logic. `NucleusMode` launch sets resolve
+from `ecosystem_manifest.toml` composition profiles via `resolve_launch_set()`.

@@ -25,10 +25,10 @@ cargo fmt --all -- --check         # 0 diffs
 | **Edition** | Rust 2024 (`edition = "2024"`) |
 | **MSRV** | Rust **1.87** (`rust-version = "1.87"` in workspace `Cargo.toml`) |
 | **Linting** | `clippy::pedantic` + `clippy::nursery` — zero warnings, inherited via `[lints] workspace = true` |
-| **Unsafe** | `#![forbid(unsafe_code)]` on all crate roots; `#![deny(unsafe_code)]` only for crates with justified test-only `#[allow]` |
+| **Unsafe** | `#![forbid(unsafe_code)]` on all crate roots and binary entry points; use `#[expect(..., reason = "...")]` for justified suppressions — not `#[allow]` |
 | **Error handling** | `Result<T, E>` everywhere; no `.unwrap()` in library/production code; workspace denies `unwrap_used`/`expect_used` |
 | **Documentation** | `#![warn(missing_docs)]` on all library crates; doc-tests count as tests |
-| **File size** | No production file over 800 lines; refactor at logical boundaries, not arbitrary splits |
+| **File size** | No production file over 800 lines; no test file over 450 lines; refactor at logical boundaries, not arbitrary splits |
 | **TODO/FIXME** | No TODO, FIXME, HACK, or XXX in committed code |
 | **Commented code** | No commented-out code |
 | **License headers** | `// SPDX-License-Identifier: AGPL-3.0-or-later` + `// Copyright 2025-2026 ecoPrimals Project` on every `.rs` file |
@@ -53,7 +53,7 @@ cargo fmt --all -- --check         # 0 diffs
 - Pure Rust: `rustix` for POSIX, `/proc` for metrics, `rtnetlink` for networking
 - No `openssl`, `ring`, `aws-lc-sys`, `native-tls`, `sysinfo`, `libc`, `nix`
 - YAML serde uses `serde-saphyr` via Cargo package rename: `serde_yaml = { package = "serde-saphyr", ... }` in workspace deps (pure Rust YAML 1.2 — replaced `serde_yaml_ng`/`unsafe-libyaml` in v3.15; `unsafe-libyaml` is now banned in `deny.toml`)
-- Cross-compilation must work: `cargo build --target x86_64-unknown-linux-musl`
+- Cross-compilation must work: `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-gnu`, `armv7-unknown-linux-gnueabihf`, `x86_64-pc-windows-gnu`
 
 ## Test Requirements
 
@@ -89,11 +89,13 @@ test: add 19 tests for device_management_server (37%→88% coverage)
 ```
 biomeOS = UniBin orchestrator (single binary, 14+ subcommands)
          ↓
-  JSON-RPC 2.0 over Unix sockets (Tier 1)
+  biomeos-core::ipc (TransportStream, TransportListener, connect_transport)
+  JSON-RPC 2.0 over Unix/abstract/TCP (TCP fallback on Windows)
   tarpc protocol escalation (optional)
-  HTTP JSON-RPC for cross-machine (Tier 2)
+  Inter-gate HTTP via Songbird gateway (not biomeOS HTTP transport)
          ↓
-  Primals discover each other by capability (taxonomy + probes), not hardcoded identity
+  Capability-first discovery: runtime registry + bootstrap hints (not hardcoded identity)
+  NucleusMode::resolve_launch_set() from ecosystem_manifest.toml
   Socket paths: $XDG_RUNTIME_DIR/biomeos/{primal}-{family_id}.sock (naming convention; resolution via capability discovery, not fixed primal imports)
 ```
 
