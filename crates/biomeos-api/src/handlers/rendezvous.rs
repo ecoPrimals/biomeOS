@@ -314,5 +314,5 @@ pub async fn check_peer(
 }
 
 #[cfg(test)]
-#[path = "rendezvous_tests.rs"]
+#[path = "rendezvous_tests/mod.rs"]
 mod tests;

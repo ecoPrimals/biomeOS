@@ -42,9 +42,9 @@ impl LifecycleHandler {
         let manager = self.manager.read().await;
         let status = manager.get_status().await;
 
-        let all_primals: Vec<&str> = biomeos_types::primal_names::CORE_PRIMALS
+        let all_primals: Vec<&str> = biomeos_types::primal_names::BOOTSTRAP_CORE_SET
             .iter()
-            .chain(biomeos_types::primal_names::PROVENANCE_PRIMALS.iter())
+            .chain(biomeos_types::primal_names::BOOTSTRAP_PROVENANCE_SET.iter())
             .chain(biomeos_types::primal_names::SPRING_PRIMALS.iter())
             .chain(biomeos_types::primal_names::AUXILIARY_PRIMALS.iter())
             .copied()

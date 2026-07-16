@@ -5,6 +5,7 @@
 
 use crate::neural_api_server::NeuralApiServer;
 use crate::neural_api_server::btsp_negotiate;
+use biomeos_core::ipc::TransportStream;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
 
 fn create_test_server() -> NeuralApiServer {
@@ -294,7 +295,7 @@ async fn test_handle_connection_unknown_method_returns_error_response() {
             let mut reader = tokio::io::BufReader::new(&mut client_stream);
             reader.read_line(&mut buf).await
         },
-        server.handle_connection(server_stream)
+        server.handle_connection(TransportStream::Unix(server_stream))
     );
 
     let _ = read_result.expect("read response");
@@ -323,7 +324,7 @@ async fn test_handle_connection_processes_request_and_returns_response() {
             let mut reader = tokio::io::BufReader::new(&mut client_stream);
             reader.read_line(&mut buf).await
         },
-        server.handle_connection(server_stream)
+        server.handle_connection(TransportStream::Unix(server_stream))
     );
 
     let _ = read_result.expect("read response");
@@ -350,7 +351,7 @@ async fn test_handle_connection_invalid_json_returns_parse_error() {
             let mut reader = tokio::io::BufReader::new(&mut client_stream);
             reader.read_line(&mut buf).await
         },
-        server.handle_connection(server_stream)
+        server.handle_connection(TransportStream::Unix(server_stream))
     );
 
     let _ = read_result.expect("read");
@@ -380,7 +381,7 @@ async fn test_handle_connection_batch_request() {
             let mut reader = tokio::io::BufReader::new(&mut client_stream);
             reader.read_line(&mut buf).await
         },
-        server.handle_connection(server_stream)
+        server.handle_connection(TransportStream::Unix(server_stream))
     );
 
     let _ = read_result.expect("read");
@@ -408,7 +409,7 @@ async fn test_handle_connection_empty_batch_returns_invalid_request() {
             let mut reader = tokio::io::BufReader::new(&mut client_stream);
             reader.read_line(&mut buf).await
         },
-        server.handle_connection(server_stream)
+        server.handle_connection(TransportStream::Unix(server_stream))
     );
 
     let _ = read_result.expect("read");

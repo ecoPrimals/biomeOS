@@ -350,23 +350,11 @@ async fn configure_network() -> Result<()> {
     Ok(())
 }
 
-/// Detect BiomeOS USB drive
+/// Detect BiomeOS USB drive via sysfs removable block device enumeration.
 async fn detect_biomeos_usb() -> Result<Option<std::path::PathBuf>> {
     info!("🔍 Scanning for BiomeOS USB drive...");
-
-    // Look for USB devices with BiomeOS marker
-    let usb_paths = vec!["/dev/sda1", "/dev/sdb1", "/dev/sdc1"];
-
-    for path in usb_paths {
-        let path_buf = std::path::PathBuf::from(path);
-        if path_buf.exists() {
-            // Check if this has BiomeOS marker
-            // For now, just return the first USB device found
-            return Ok(Some(path_buf));
-        }
-    }
-
-    Ok(None)
+    let () = tokio::task::yield_now().await;
+    Ok(biomeos_boot::detect_biomeos_usb_device())
 }
 
 /// Mount BiomeOS USB drive

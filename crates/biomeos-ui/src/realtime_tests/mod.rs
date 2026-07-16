@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright 2025-2026 ecoPrimals Project
+
+//! Unit tests for real-time event streaming (WebSocket/SSE).
+
+#![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
+
+mod handler_loops;
+mod parse_extended;
+mod transport_discovery;
+mod subscriber;
+mod events;
+mod sse_parse;
+mod handler_errors;

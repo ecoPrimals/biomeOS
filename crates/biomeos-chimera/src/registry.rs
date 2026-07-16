@@ -11,10 +11,35 @@ use std::sync::Arc;
 
 use dashmap::DashMap;
 use tracing::{debug, info, warn};
-use walkdir::WalkDir;
 
 use crate::definition::ChimeraDefinition;
 use crate::error::{ChimeraError, ChimeraResult};
+
+const MAX_DEFINITION_SEARCH_DEPTH: usize = 2;
+
+/// Recursively collect paths under `dir`, matching WalkDir depth semantics.
+///
+/// `depth` is the depth of `dir` itself; entries one level below have depth `depth + 1`.
+/// Inaccessible directories are skipped.
+fn collect_paths_with_depth(dir: &Path, depth: usize, max_depth: usize, out: &mut Vec<PathBuf>) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return,
+    };
+
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        let entry_depth = depth + 1;
+
+        if path.is_dir() {
+            if entry_depth <= max_depth {
+                collect_paths_with_depth(&path, entry_depth, max_depth, out);
+            }
+        } else if entry_depth <= max_depth {
+            out.push(path);
+        }
+    }
+}
 
 /// Registry of available chimera definitions
 #[derive(Debug)]
@@ -63,20 +88,17 @@ impl ChimeraRegistry {
 
         self.source_dirs.push(path.to_path_buf());
 
-        let mut count = 0;
-        for entry in WalkDir::new(path)
-            .max_depth(2)
-            .into_iter()
-            .filter_map(Result::ok)
-        {
-            let file_path = entry.path();
+        let mut yaml_files = Vec::new();
+        collect_paths_with_depth(path, 0, MAX_DEFINITION_SEARCH_DEPTH, &mut yaml_files);
 
+        let mut count = 0;
+        for file_path in yaml_files {
             // Only process YAML files
             if file_path
                 .extension()
                 .is_some_and(|ext| ext == "yaml" || ext == "yml")
             {
-                match self.load_file(file_path) {
+                match self.load_file(&file_path) {
                     Ok(()) => count += 1,
                     Err(e) => {
                         warn!("Failed to load chimera from {:?}: {}", file_path, e);

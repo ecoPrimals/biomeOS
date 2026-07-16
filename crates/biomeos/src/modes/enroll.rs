@@ -243,5 +243,5 @@ fn discover_security_socket() -> Option<String> {
 }
 
 #[cfg(test)]
-#[path = "enroll_tests.rs"]
+#[path = "enroll_tests/mod.rs"]
 mod tests;

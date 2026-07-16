@@ -93,7 +93,7 @@ impl NeuralApiServer {
             info!("📡 TCP-only mode — skipping Unix socket bind");
             None
         } else {
-            match self.bind_socket() {
+            match self.bind_socket().await {
                 Ok(listener) => Some(listener),
                 Err(e) => {
                     if self.tcp_port.is_some() {
@@ -220,5 +220,5 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
-#[path = "server_lifecycle_tests.rs"]
+#[path = "server_lifecycle_tests/mod.rs"]
 mod server_lifecycle_tests;

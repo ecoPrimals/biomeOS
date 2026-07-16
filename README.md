@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v4.34)
+## Status: Production Ready (v4.35)
 
 | Metric | Value |
 |--------|-------|
@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP; HTTP removed v3.97) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, all monoliths split into semantic modules, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, dashmap 6, toml 0.9, axum 0.8, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
-| Tests | 8,446+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
+| Tests | 8,477+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
@@ -27,15 +27,15 @@
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection, composition dashboard |
-| Files >800 LOC | 0 production files, 0 test files >650 LOC (all monoliths split into semantic modules) |
+| Files >800 LOC | 0 production files, 0 test files >450 LOC (all monoliths split into semantic modules) |
 | Discovery | **Capability-first** — runtime registry (DashMap) + bootstrap hints fallback; live `capability.register` populates runtime; XDG sockets + `topology.rescan` + lazy rescan + DNS-SD mDNS + `primal.announce`; no identity-based routing |
 | Blocking Debt | 0 (all primalSpring Phase 43 gaps resolved: genetics tier, deploy class, routing contract, tick-loop) |
-| Stubs Evolved | `diagnose_degradation` (real metrics), `execution_order` (Kahn's topo sort), `fetch_binary` (base64/bytes), `collect_edge_metrics` (live probe), `with_feature` (typed flags), `lineage_deriver` (SHA-256 identity), swallowed errors → structured propagation |
-| Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated (RPITIT/generics/enum dispatch/manual desugar); pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`); unused `tokio` removed from types crate; placeholder features pruned; repository URLs standardized; unused `walkdir` pruned from 3 crates |
+| Stubs Evolved | `diagnose_degradation` (real metrics), `execution_order` (Kahn's topo sort), `fetch_binary` (base64/bytes), `collect_edge_metrics` (live probe), `with_feature` (typed flags), `lineage_deriver` (SHA-256 identity), `detect_biomeos_usb` (sysfs enumeration), topology silent fallback → explicit standalone, spore manifest build metadata, Songbird discovery error propagation |
+| Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated (RPITIT/generics/enum dispatch/manual desugar); pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`); unused `tokio` removed from types crate; placeholder features pruned; repository URLs standardized; dead deps removed (`regex`, `glob`, `walkdir`); `serde-saphyr` 0.0.29, `lz4_flex` 0.14, `mdns-sd` 0.20.1 |
 | TODO/FIXME/HACK | 0 active (all resolved in v3.81) |
 | Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
-| Hardcoded Values | 0 hardcoded primal names in production; `CAPABILITY_DOMAINS` renamed to `BOOTSTRAP_CAPABILITY_HINTS` (last-resort); runtime registry takes precedence; env vars centralized via `env_config::vars` SSOT (75+ constants); TOML-driven launch profiles |
+| Hardcoded Values | 0 hardcoded primal names in production; `BOOTSTRAP_CAPABILITY_HINTS` (last-resort); runtime registry takes precedence; `NucleusMode` uses TOML-driven manifest profiles for launch sets; `CORE_PRIMALS` → `BOOTSTRAP_CORE_SET` (intent-clear naming); env vars centralized via `env_config::vars` SSOT (75+ constants) |
 | Cross-Arch | x86_64 + aarch64 + armv7 + **x86_64-pc-windows-gnu** (32-bit safe: `cast.rs` `u64` bounds, conditional tests; UDS → TCP fallback on Windows) |
 | Clone Reduction | Hot-path `.clone()` audit: `JsonRpcRequest::serialize_line()` (borrow params), iterator-by-value in discovery, single-lock snapshots in health monitor, Kahn's `push(id)` move, `MCP::add_property` move key |
 | Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 19 signal graphs |

@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use biomeos_spore::{Spore, SporeConfig, SporeType, SporeVerification};
 use biomeos_types::defaults::DEFAULT_FAMILY_ID;
-use biomeos_types::primal_names::CORE_PRIMALS;
+use biomeos_types::primal_names::BOOTSTRAP_CORE_SET;
 use serde_json::Value;
 
 /// Information about a path in the spore structure.
@@ -50,7 +50,7 @@ pub(crate) fn gather_spore_structure_info(path: &Path) -> Vec<PathInfo> {
         "tower.toml".to_string(),
         "bin/tower".to_string(),
     ];
-    for primal in CORE_PRIMALS {
+    for primal in BOOTSTRAP_CORE_SET {
         rel_paths.push(format!("primals/{primal}"));
     }
 

@@ -63,8 +63,10 @@ pub async fn layer1_physical_discovery_songbird(
     match songbird.call(request).await {
         Ok(response) => {
             let Some(result_value) = response.result else {
-                tracing::debug!("discovery.discover: response missing result field");
-                return Ok(vec![]);
+                return Err(crate::FederationError::Discovery {
+                    context: "Songbird discovery".to_string(),
+                    source: anyhow::anyhow!("RPC response missing 'result' field"),
+                });
             };
             match serde_json::from_value::<DiscoveryResponse>(result_value) {
                 Ok(discovery) => {

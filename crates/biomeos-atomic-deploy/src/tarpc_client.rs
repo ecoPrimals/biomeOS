@@ -14,76 +14,116 @@ use std::path::Path;
 use tarpc::client;
 #[cfg(unix)]
 use tarpc::serde_transport::unix;
-#[cfg(unix)]
+#[cfg(windows)]
+use tarpc::serde_transport::tcp;
 use tokio_serde::formats::Bincode;
 
 /// Connect to a primal's tarpc socket and return a `HealthRpcClient`.
 ///
 /// Uses Bincode for binary serialization. Returns error if socket doesn't exist
 /// or connection fails — caller should fall back to JSON-RPC.
-#[cfg(unix)]
 pub async fn connect_tarpc_health(socket_path: &Path) -> Result<HealthRpcClient> {
-    let transport = unix::connect(socket_path, Bincode::default)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to connect to tarpc socket: {}",
-                socket_path.display()
-            )
-        })?;
+    #[cfg(unix)]
+    {
+        let transport = unix::connect(socket_path, Bincode::default)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to connect to tarpc socket: {}",
+                    socket_path.display()
+                )
+            })?;
+        return Ok(HealthRpcClient::new(client::Config::default(), transport).spawn());
+    }
 
-    let client = HealthRpcClient::new(client::Config::default(), transport).spawn();
-    Ok(client)
-}
-
-/// Windows stub — tarpc Unix transport unavailable.
-#[cfg(windows)]
-pub async fn connect_tarpc_health(_socket_path: &Path) -> Result<HealthRpcClient> {
-    anyhow::bail!("tarpc Unix transport unavailable on Windows")
+    #[cfg(windows)]
+    {
+        let port = read_tarpc_port(socket_path).await?;
+        let transport = tcp::connect(format!("127.0.0.1:{port}"), Bincode::default)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to connect to tarpc TCP endpoint for {}",
+                    socket_path.display()
+                )
+            })?;
+        Ok(HealthRpcClient::new(client::Config::default(), transport).spawn())
+    }
 }
 
 /// Connect to a primal's tarpc socket and return a `DiscoveryRpcClient`.
-#[cfg(unix)]
 pub async fn connect_tarpc_discovery(socket_path: &Path) -> Result<DiscoveryRpcClient> {
-    let transport = unix::connect(socket_path, Bincode::default)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to connect to tarpc socket: {}",
-                socket_path.display()
-            )
-        })?;
+    #[cfg(unix)]
+    {
+        let transport = unix::connect(socket_path, Bincode::default)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to connect to tarpc socket: {}",
+                    socket_path.display()
+                )
+            })?;
+        return Ok(DiscoveryRpcClient::new(client::Config::default(), transport).spawn());
+    }
 
-    let client = DiscoveryRpcClient::new(client::Config::default(), transport).spawn();
-    Ok(client)
-}
-
-/// Windows stub — tarpc Unix transport unavailable.
-#[cfg(windows)]
-pub async fn connect_tarpc_discovery(_socket_path: &Path) -> Result<DiscoveryRpcClient> {
-    anyhow::bail!("tarpc Unix transport unavailable on Windows")
+    #[cfg(windows)]
+    {
+        let port = read_tarpc_port(socket_path).await?;
+        let transport = tcp::connect(format!("127.0.0.1:{port}"), Bincode::default)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to connect to tarpc TCP endpoint for {}",
+                    socket_path.display()
+                )
+            })?;
+        Ok(DiscoveryRpcClient::new(client::Config::default(), transport).spawn())
+    }
 }
 
 /// Connect to a primal's tarpc socket and return a `SecurityRpcClient`.
-#[cfg(unix)]
 pub async fn connect_tarpc_security(socket_path: &Path) -> Result<SecurityRpcClient> {
-    let transport = unix::connect(socket_path, Bincode::default)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to connect to tarpc socket: {}",
-                socket_path.display()
-            )
-        })?;
+    #[cfg(unix)]
+    {
+        let transport = unix::connect(socket_path, Bincode::default)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to connect to tarpc socket: {}",
+                    socket_path.display()
+                )
+            })?;
+        return Ok(SecurityRpcClient::new(client::Config::default(), transport).spawn());
+    }
 
-    let client = SecurityRpcClient::new(client::Config::default(), transport).spawn();
-    Ok(client)
+    #[cfg(windows)]
+    {
+        let port = read_tarpc_port(socket_path).await?;
+        let transport = tcp::connect(format!("127.0.0.1:{port}"), Bincode::default)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to connect to tarpc TCP endpoint for {}",
+                    socket_path.display()
+                )
+            })?;
+        Ok(SecurityRpcClient::new(client::Config::default(), transport).spawn())
+    }
 }
 
-/// Windows stub — tarpc Unix transport unavailable.
 #[cfg(windows)]
-pub async fn connect_tarpc_security(_socket_path: &Path) -> Result<SecurityRpcClient> {
-    anyhow::bail!("tarpc Unix transport unavailable on Windows")
+async fn read_tarpc_port(socket_path: &Path) -> Result<u16> {
+    let port_file = socket_path.with_extension("port");
+    let port_str = tokio::fs::read_to_string(&port_file).await.with_context(|| {
+        format!(
+            "No Unix tarpc on Windows and port-file not found: {}",
+            port_file.display()
+        )
+    })?;
+    port_str
+        .trim()
+        .parse()
+        .with_context(|| format!("Invalid port in {}: {port_str:?}", port_file.display()))
 }
 
 #[cfg(all(test, unix))]

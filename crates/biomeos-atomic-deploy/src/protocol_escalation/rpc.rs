@@ -6,61 +6,34 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{Context, bail};
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
+use biomeos_types::JsonRpcRequest;
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::Arc;
-#[cfg(unix)]
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::UnixStream;
 
 use crate::living_graph::LivingGraph;
 
 use super::config::TarpcEndpoint;
 
-#[cfg(unix)]
 pub(super) async fn send_json_rpc(socket_path: &PathBuf, request: &Value) -> anyhow::Result<Value> {
-    let mut stream = UnixStream::connect(socket_path)
-        .await
-        .with_context(|| format!("Failed to connect to {}", socket_path.display()))?;
+    let endpoint = TransportEndpoint::UnixSocket {
+        path: socket_path.clone(),
+    };
 
-    let request_str = serde_json::to_string(request).context("Failed to serialize request")?;
-
-    stream
-        .write_all(request_str.as_bytes())
-        .await
-        .context("Failed to write request")?;
-    stream
-        .write_all(b"\n")
-        .await
-        .context("Failed to write newline")?;
-
-    let mut reader = BufReader::new(stream);
-    let mut response_line = String::new();
+    let rpc_request: JsonRpcRequest =
+        serde_json::from_value(request.clone()).context("Failed to parse JSON-RPC request")?;
 
     match tokio::time::timeout(
         biomeos_types::constants::timeouts::BTSP_CALL_TIMEOUT,
-        reader.read_line(&mut response_line),
+        send_jsonrpc_request(&endpoint, rpc_request),
     )
     .await
     {
-        Ok(Ok(_)) => {}
-        Ok(Err(e)) => bail!("Failed to read response: {e}"),
+        Ok(Ok(response)) => serde_json::to_value(response).context("Failed to serialize response"),
+        Ok(Err(e)) => Err(e),
         Err(_) => bail!("Response timeout (>5s)"),
     }
-
-    serde_json::from_str(&response_line).context("Failed to parse response")
-}
-
-#[cfg(windows)]
-pub(super) async fn send_json_rpc(
-    socket_path: &PathBuf,
-    _request: &Value,
-) -> anyhow::Result<Value> {
-    anyhow::bail!(
-        "Unix socket transport unavailable on Windows ({})",
-        socket_path.display()
-    )
 }
 
 pub(super) async fn query_tarpc_endpoint(
@@ -241,9 +214,12 @@ mod tests {
     #[tokio::test]
     async fn send_json_rpc_missing_socket() {
         let path = PathBuf::from("/nonexistent/rpc-missing-test.sock");
-        let err = send_json_rpc(&path, &json!({"x": 1}))
-            .await
-            .expect_err("expected connect error");
+        let err = send_json_rpc(
+            &path,
+            &json!({"jsonrpc": "2.0", "method": "test.ping", "id": 1}),
+        )
+        .await
+        .expect_err("expected connect error");
         let msg = err.to_string();
         assert!(
             msg.contains("Failed to connect") || msg.contains("No such file"),

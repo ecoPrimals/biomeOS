@@ -13,15 +13,15 @@
 
 use anyhow::{Context, Result, bail};
 use base64::Engine;
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
+use biomeos_types::JsonRpcRequest;
 use biomeos_types::primal_names;
 use bytes::Bytes;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::time::Duration;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-#[cfg(unix)]
-use tokio::net::UnixStream;
 use tokio::time::timeout;
 use tracing::{debug, info};
 
@@ -185,68 +185,39 @@ impl BiomeOsHttpClient {
             params["body"] = body_value;
         }
 
-        let rpc_request = serde_json::json!({
+        let rpc_request_value = serde_json::json!({
             "jsonrpc": "2.0",
             "method": "http.request",
             "params": params,
             "id": 1
         });
 
-        #[cfg(windows)]
-        {
-            anyhow::bail!(
-                "Unix socket transport unavailable on Windows ({})",
-                self.discovery_socket
-            );
-        }
-
-        #[cfg(unix)]
-        let response_buf = {
-            // Connect to discovery delegate
-            let mut stream = UnixStream::connect(&self.discovery_socket)
-                .await
-                .context(format!(
-                    "Failed to connect to discovery socket at {}",
-                    self.discovery_socket
-                ))?;
-
-            // Send request
-            let request_json = serde_json::to_string(&rpc_request)?;
-            debug!("→ discovery: {}", request_json);
-            stream.write_all(request_json.as_bytes()).await?;
-            stream.shutdown().await?;
-
-            // Read response with timeout to prevent hangs (60s for HTTP responses)
-            let mut response_buf = String::new();
-            timeout(
-                Duration::from_secs(60),
-                stream.read_to_string(&mut response_buf),
-            )
-            .await
-            .context("Socket read timeout (60s)")?
-            .context("Failed to read response from discovery delegate")?;
-            debug!("← discovery: {}", response_buf);
-            response_buf
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: PathBuf::from(&self.discovery_socket),
         };
+        let rpc_request: JsonRpcRequest =
+            serde_json::from_value(rpc_request_value).context("Invalid JSON-RPC request")?;
 
-        #[cfg(unix)]
-        {
-        // Parse JSON-RPC response
-        let rpc_response: Value =
-            serde_json::from_str(&response_buf).context("Failed to parse JSON-RPC response")?;
+        debug!("→ discovery: {}", serde_json::to_string(&rpc_request)?);
+        let rpc_response = timeout(
+            Duration::from_secs(60),
+            send_jsonrpc_request(&endpoint, rpc_request),
+        )
+        .await
+        .context("Socket read timeout (60s)")?
+        .context("Failed to read response from discovery delegate")?;
+        debug!("← discovery: {:?}", rpc_response);
 
-        // Check for errors
-        if let Some(error) = rpc_response.get("error") {
-            anyhow::bail!("Discovery RPC error: {error}");
+        if let Some(error) = rpc_response.error {
+            anyhow::bail!("Discovery RPC error: {error:?}");
         }
 
-        // Extract result
         let result = rpc_response
-            .get("result")
+            .result
             .context("No result in RPC response")?;
 
         let http_response: HttpResponse =
-            serde_json::from_value(result.clone()).context("Failed to parse HTTP response")?;
+            serde_json::from_value(result).context("Failed to parse HTTP response")?;
 
         info!(
             "✅ HTTP {} {} → Status: {}",
@@ -254,7 +225,6 @@ impl BiomeOsHttpClient {
         );
 
         Ok(http_response)
-        }
     }
 }
 

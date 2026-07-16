@@ -14,16 +14,11 @@
 //!   neural-deploy 01_nucleus_enclave
 //!   neural-deploy 00_full_ecosystem --family-id nat0
 
-use anyhow::Result;
+use anyhow::{Context, Result};
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
+use biomeos_types::JsonRpcRequest;
 use serde_json::json;
-#[cfg(unix)]
-use anyhow::Context;
-#[cfg(unix)]
-use std::io::{BufRead, BufReader, Write};
-#[cfg(unix)]
-use std::os::unix::net::UnixStream;
-#[cfg(unix)]
-use std::path::Path;
+use std::path::PathBuf;
 use tracing::info;
 
 #[tokio::main]
@@ -71,62 +66,51 @@ async fn main() -> Result<()> {
     info!("  Socket: {}", socket_path);
     info!("");
 
-    // Connect to Neural API
+    let endpoint_path = PathBuf::from(&socket_path);
+    let endpoint_available = {
+        #[cfg(unix)]
+        {
+            endpoint_path.exists()
+        }
+        #[cfg(windows)]
+        {
+            endpoint_path.exists() || endpoint_path.with_extension("port").exists()
+        }
+    };
+
+    if !endpoint_available {
+        anyhow::bail!(
+            "Neural API endpoint not found: {socket_path}\nIs the Neural API server running?"
+        );
+    }
+
     info!("🔌 Connecting to Neural API...");
-    #[cfg(windows)]
-    {
-        anyhow::bail!(
-            "Unix socket transport unavailable on Windows ({socket_path})"
-        );
-    }
+    let endpoint = TransportEndpoint::UnixSocket {
+        path: endpoint_path,
+    };
 
-    #[cfg(unix)]
-    {
-    if !Path::new(&socket_path).exists() {
-        anyhow::bail!(
-            "Neural API socket not found: {socket_path}\nIs the Neural API server running?"
-        );
-    }
+    info!("📊 Executing graph: {}", graph_id);
+    let request = JsonRpcRequest::new(
+        "neural_api.execute_graph",
+        json!({
+            "graph_id": graph_id,
+            "family_id": family_id
+        }),
+    );
 
-    let mut stream =
-        UnixStream::connect(&socket_path).context("Failed to connect to Neural API server")?;
+    let response = send_jsonrpc_request(&endpoint, request)
+        .await
+        .context("Failed to connect to Neural API server")?;
 
     info!("✅ Connected to Neural API");
     info!("");
 
-    // Send execute_graph request
-    info!("📊 Executing graph: {}", graph_id);
-    let request = json!({
-        "jsonrpc": "2.0",
-        "method": "neural_api.execute_graph",
-        "params": {
-            "graph_id": graph_id,
-            "family_id": family_id
-        },
-        "id": 1
-    });
-
-    let request_str = serde_json::to_string(&request)? + "\n";
-    stream
-        .write_all(request_str.as_bytes())
-        .context("Failed to send request")?;
-
-    // Read response
-    let mut reader = BufReader::new(stream);
-    let mut response_line = String::new();
-    reader
-        .read_line(&mut response_line)
-        .context("Failed to read response")?;
-
-    let response: serde_json::Value =
-        serde_json::from_str(&response_line).context("Failed to parse response")?;
-
-    if let Some(error) = response.get("error") {
-        anyhow::bail!("Execution failed: {error}");
+    if let Some(error) = response.error {
+        anyhow::bail!("Execution failed: {error:?}");
     }
 
     let result = response
-        .get("result")
+        .result
         .context("Missing result in response")?;
 
     let execution_id = result["execution_id"]
@@ -150,5 +134,4 @@ async fn main() -> Result<()> {
     info!("  ls -l {}/*.sock", runtime_dir.display());
 
     Ok(())
-    }
 }

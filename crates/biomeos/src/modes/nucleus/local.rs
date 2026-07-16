@@ -129,10 +129,11 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
 
     // Bootstrap detection: check if ecosystem already exists
     let ecosystem = detect_ecosystem(&socket_dir, &family_id).await;
-    let primals_needed = match &ecosystem {
+    let launch_set = mode.resolve_launch_set();
+    let primals_needed: Vec<String> = match &ecosystem {
         EcosystemState::Bootstrap => {
             info!("  Mode: BOOTSTRAP (no existing ecosystem detected)");
-            mode.primals()
+            launch_set
         }
         EcosystemState::Coordinated { active_primals } => {
             info!(
@@ -141,10 +142,9 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
                 active_primals.join(", ")
             );
             // Filter out primals that are already running
-            let needed: Vec<&str> = mode
-                .primals()
+            let needed: Vec<String> = launch_set
                 .into_iter()
-                .filter(|p| !active_primals.contains(&p.to_string()))
+                .filter(|p| !active_primals.contains(p))
                 .collect();
             if needed.is_empty() {
                 info!("  All primals already running -- nothing to start");
@@ -155,9 +155,10 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
             needed
         }
     };
+    let primal_refs: Vec<&str> = primals_needed.iter().map(String::as_str).collect();
 
     // Discover primal binaries
-    let binary_map = discover_binaries(&primals_needed)?;
+    let binary_map = discover_binaries(&primal_refs)?;
 
     info!("  Primals: {:?}", primals_needed);
     for (name, path) in &binary_map {
@@ -176,7 +177,7 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
 
     for primal in &primals_needed {
         let binary = binary_map
-            .get(*primal)
+            .get(primal.as_str())
             .ok_or_else(|| anyhow::anyhow!("Binary not found for primal: {primal}"))?;
 
         let socket_path = socket_dir.join(format!("{primal}-{family_id}.sock"));
@@ -193,7 +194,7 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
         info!("Starting {} ...", primal);
 
         let child = start_primal(
-            primal,
+            primal.as_str(),
             binary,
             &socket_path,
             &family_id,
@@ -244,7 +245,7 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
             .read()
             .await
             .register_primal_binary(
-                *primal,
+                primal.as_str(),
                 health_socket.clone(),
                 pid,
                 binary.clone(),
@@ -258,11 +259,11 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
             lifecycle_shared
                 .read()
                 .await
-                .set_health_method(primal, "health.status")
+                .set_health_method(primal.as_str(), "health.status")
                 .await;
         }
 
-        children.push((primal.to_string(), child));
+        children.push((primal.clone(), child));
     }
 
     // Start background health monitoring (checks all registered primals periodically)
@@ -270,7 +271,7 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
 
     // Auto-register all launched primals with songBird's discovery service.
     // This makes the capability mesh operational without manual ipc.register calls.
-    auto_register_with_discovery_provider(&primals_needed, &socket_dir, &family_id).await;
+    auto_register_with_discovery_provider(&primal_refs, &socket_dir, &family_id).await;
 
     // In Full mode, start the Neural API server alongside the primals so that
     // graph.deploy, capability.call, and composition health are reachable.

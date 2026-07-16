@@ -103,6 +103,10 @@ pub struct TopologyResponse {
     pub primals: Vec<TopologyNode>,
     pub connections: Vec<TopologyEdge>,
     pub health_status: HealthStatus,
+
+    /// Present when live discovery failed and standalone fallback was not used
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// Overall health status
@@ -129,6 +133,7 @@ pub async fn get_topology(
             primals,
             connections,
             health_status,
+            error: None,
         }));
     }
 
@@ -147,21 +152,39 @@ pub async fn get_topology(
                 primals,
                 connections,
                 health_status,
+                error: None,
             }))
         }
         Err(e) => {
-            tracing::warn!(
-                "   Failed to build live topology: {}, using standalone fallback",
-                e
-            );
-            let (primals, connections) = get_standalone_topology();
-            let health_status = calculate_health_status(&primals);
-            Ok(Json(TopologyResponse {
-                primals,
-                connections,
-                health_status,
-            }))
+            tracing::warn!("   Failed to build live topology: {}", e);
+            if state.is_standalone_mode() {
+                tracing::info!("   Standalone mode enabled — serving synthetic topology");
+                let (primals, connections) = get_standalone_topology();
+                let health_status = calculate_health_status(&primals);
+                Ok(Json(TopologyResponse {
+                    primals,
+                    connections,
+                    health_status,
+                    error: None,
+                }))
+            } else {
+                Ok(Json(degraded_topology_response(&e)))
+            }
         }
+    }
+}
+
+/// Build a degraded topology response when live discovery fails outside standalone mode
+fn degraded_topology_response(error: &impl std::fmt::Display) -> TopologyResponse {
+    TopologyResponse {
+        primals: vec![],
+        connections: vec![],
+        health_status: HealthStatus {
+            overall: "degraded".to_string(),
+            primals_healthy: 0,
+            primals_total: 0,
+        },
+        error: Some(format!("Live discovery failed: {error}")),
     }
 }
 
@@ -466,5 +489,5 @@ async fn measure_rpc_latency(client: &biomeos_core::AtomicClient, method: &str) 
 }
 
 #[cfg(test)]
-#[path = "topology_tests.rs"]
+#[path = "topology_tests/mod.rs"]
 mod tests;

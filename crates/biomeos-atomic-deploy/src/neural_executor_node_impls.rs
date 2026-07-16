@@ -8,6 +8,7 @@
 //! and `capability_call` — plus the `send_jsonrpc_async` helper.
 
 use anyhow::{Context, Result};
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
 use biomeos_types::JsonRpcRequest;
 use serde::Serialize;
 use std::path::PathBuf;
@@ -243,43 +244,13 @@ impl GraphExecutor {
                 async move {
                     let request = JsonRpcRequest::new(&method, params);
 
-                    #[cfg(windows)]
-                    {
-                        anyhow::bail!(
-                            "Unix socket RPC unavailable on Windows ({target} at {socket_path})"
-                        );
-                    }
-
-                    #[cfg(unix)]
-                    {
-                    let stream = tokio::time::timeout(
+                    let response = tokio::time::timeout(
                         Duration::from_secs(10),
-                        tokio::net::UnixStream::connect(&socket_path),
+                        Self::send_jsonrpc_async(&socket_path, &request),
                     )
                     .await
                     .context(format!("Timeout connecting to {target} at {socket_path}"))?
                     .context(format!("Failed to connect to {target} at {socket_path}"))?;
-
-                    let (read_half, mut write_half) = stream.into_split();
-
-                    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-                    let request_json = serde_json::to_string(&request)?;
-                    write_half.write_all(request_json.as_bytes()).await?;
-                    write_half.write_all(b"\n").await?;
-                    write_half.flush().await?;
-
-                    let mut reader = BufReader::new(read_half);
-                    let mut response_line = String::new();
-                    tokio::time::timeout(
-                        Duration::from_secs(30),
-                        reader.read_line(&mut response_line),
-                    )
-                    .await
-                    .context(format!("Timeout waiting for {target} response"))?
-                    .context(format!("Failed to read response from {target}"))?;
-
-                    let response: serde_json::Value = serde_json::from_str(&response_line)
-                        .context(format!("Invalid JSON response from {target}"))?;
 
                     if let Some(error) = response.get("error") {
                         let error_msg = error
@@ -302,7 +273,6 @@ impl GraphExecutor {
                         "result": result,
                         "success": true
                     }))
-                    }
                 }
             })
             .await
@@ -488,40 +458,23 @@ impl GraphExecutor {
         result
     }
 
-    /// Helper: send a JSON-RPC request over a Unix socket and return the response.
-    #[cfg(unix)]
+    /// Helper: send a JSON-RPC request over a transport endpoint and return the response.
     pub(crate) async fn send_jsonrpc_async(
         socket_path: &str,
         request: &impl Serialize,
     ) -> Result<serde_json::Value> {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: PathBuf::from(socket_path),
+        };
 
-        let stream = UnixStream::connect(socket_path)
+        let rpc_request: JsonRpcRequest =
+            serde_json::from_value(serde_json::to_value(request)?).context("Invalid JSON-RPC request")?;
+
+        let response = send_jsonrpc_request(&endpoint, rpc_request)
             .await
-            .context(format!("Connecting to {socket_path}"))?;
+            .with_context(|| format!("JSON-RPC to {socket_path}"))?;
 
-        let (read_half, mut write_half) = stream.into_split();
-
-        let payload = serde_json::to_string(request)?;
-        write_half.write_all(payload.as_bytes()).await?;
-        write_half.write_all(b"\n").await?;
-        write_half.flush().await?;
-
-        let mut reader = BufReader::new(read_half);
-        let mut line = String::new();
-        reader.read_line(&mut line).await?;
-
-        serde_json::from_str(line.trim()).context("Invalid JSON response")
-    }
-
-    /// Windows stub — Unix socket JSON-RPC unavailable.
-    #[cfg(windows)]
-    pub(crate) async fn send_jsonrpc_async(
-        socket_path: &str,
-        _request: &impl Serialize,
-    ) -> Result<serde_json::Value> {
-        anyhow::bail!("Unix socket RPC unavailable on Windows ({socket_path})")
+        serde_json::to_value(response).context("Failed to serialize JSON-RPC response")
     }
 }
 

@@ -695,7 +695,7 @@ impl CapabilityTaxonomy {
         if strict {
             return &[];
         }
-        crate::primal_names::CORE_PRIMALS
+        crate::primal_names::BOOTSTRAP_CORE_SET
     }
 }
 
@@ -711,5 +711,5 @@ impl fmt::Display for CapabilityTaxonomy {
 }
 
 #[cfg(test)]
-#[path = "definition_tests.rs"]
+#[path = "definition_tests/mod.rs"]
 mod tests;

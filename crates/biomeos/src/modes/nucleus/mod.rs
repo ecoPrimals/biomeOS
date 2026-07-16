@@ -25,6 +25,7 @@
     reason = "facade re-exports consumed by tests and external callers"
 )]
 
+mod launch_discovery;
 mod local;
 mod remote;
 mod types;

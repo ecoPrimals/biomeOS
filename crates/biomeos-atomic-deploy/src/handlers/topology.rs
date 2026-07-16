@@ -23,7 +23,8 @@
 
 use crate::neural_router::NeuralRouter;
 use anyhow::Result;
-use biomeos_types::SystemPaths;
+use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
+use biomeos_types::{JsonRpcRequest, SystemPaths};
 use biomeos_types::defaults::DEFAULT_FAMILY_ID;
 use serde_json::{Value, json};
 use std::collections::HashMap;
@@ -191,36 +192,25 @@ impl TopologyHandler {
     /// topology discovery remains resilient, but records the failure in
     /// [`CapabilityQueryResult::error`].
     async fn query_primal_capabilities(&self, socket_path: &str) -> CapabilityQueryResult {
-        #[cfg(windows)]
-        {
-            let _ = socket_path;
-            return CapabilityQueryResult {
-                capabilities: vec![],
-                error: Some("Unix socket transport unavailable on Windows".to_string()),
-            };
-        }
-
-        #[cfg(unix)]
-        {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-        use tokio::net::UnixStream;
+        let endpoint = TransportEndpoint::UnixSocket {
+            path: PathBuf::from(socket_path),
+        };
 
         // Try both method names — some primals implement "capabilities.list",
         // others implement "capability.list". Both are valid per the route table.
         for method_name in ["capabilities.list", "capability.list"] {
-            let stream = match tokio::time::timeout(
+            let request = JsonRpcRequest::new(method_name, json!({}));
+
+            let response = match tokio::time::timeout(
                 std::time::Duration::from_millis(500),
-                UnixStream::connect(socket_path),
+                send_jsonrpc_request(&endpoint, request),
             )
             .await
             {
-                Ok(Ok(s)) => s,
+                Ok(Ok(resp)) => resp,
                 Ok(Err(e)) => {
                     let msg = format!("connect failed: {e}");
-                    warn!(
-                        "capabilities probe {}: {}",
-                        socket_path, msg
-                    );
+                    warn!("capabilities probe {}: {}", socket_path, msg);
                     return CapabilityQueryResult {
                         capabilities: vec![],
                         error: Some(msg),
@@ -228,26 +218,6 @@ impl TopologyHandler {
                 }
                 Err(_) => {
                     let msg = "connect timed out after 500ms".to_string();
-                    warn!(
-                        "capabilities probe {}: {}",
-                        socket_path, msg
-                    );
-                    return CapabilityQueryResult {
-                        capabilities: vec![],
-                        error: Some(msg),
-                    };
-                }
-            };
-
-            let request = serde_json::json!({
-                "jsonrpc": "2.0",
-                "method": method_name,
-                "id": 1
-            });
-            let request_line = match serde_json::to_string(&request) {
-                Ok(line) => line + "\n",
-                Err(e) => {
-                    let msg = format!("failed to serialize capabilities request: {e}");
                     warn!("capabilities probe {}: {}", socket_path, msg);
                     return CapabilityQueryResult {
                         capabilities: vec![],
@@ -256,34 +226,15 @@ impl TopologyHandler {
                 }
             };
 
-            let mut reader = BufReader::new(stream);
-            let stream_mut = reader.get_mut();
-            if stream_mut.write_all(request_line.as_bytes()).await.is_err() {
-                continue;
-            }
-            let _ = stream_mut.flush().await;
-
-            let mut response_line = String::new();
-            match tokio::time::timeout(
-                std::time::Duration::from_millis(500),
-                reader.read_line(&mut response_line),
-            )
-            .await
-            {
-                Ok(Ok(n)) if n > 0 => {}
-                _ => continue,
-            }
-
-            let resp: serde_json::Value = match serde_json::from_str(response_line.trim()) {
+            let resp: serde_json::Value = match serde_json::to_value(response) {
                 Ok(v) => v,
                 Err(e) => {
-                    tracing::debug!(
-                        "capabilities probe {}: invalid JSON ({} bytes): {}",
-                        socket_path,
-                        response_line.len(),
-                        e
-                    );
-                    continue;
+                    let msg = format!("failed to serialize capabilities response: {e}");
+                    warn!("capabilities probe {}: {}", socket_path, msg);
+                    return CapabilityQueryResult {
+                        capabilities: vec![],
+                        error: Some(msg),
+                    };
                 }
             };
 
@@ -309,7 +260,6 @@ impl TopologyHandler {
         CapabilityQueryResult {
             capabilities: vec![],
             error: None,
-        }
         }
     }
 

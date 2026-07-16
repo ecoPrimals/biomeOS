@@ -82,7 +82,7 @@ impl UniversalBiomeOSManager {
         let discovery = SocketDiscovery::new(&family_id);
         let mut all_endpoints = Vec::new();
 
-        for &primal_name in biomeos_types::primal_names::CORE_PRIMALS {
+        for &primal_name in biomeos_types::primal_names::BOOTSTRAP_CORE_SET {
             if let Some(endpoint) = discovery.discover_with_fallback(primal_name).await {
                 let ep_str = endpoint.to_string();
                 tracing::debug!("Discovered {primal_name} at {ep_str}");

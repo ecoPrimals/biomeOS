@@ -212,5 +212,5 @@ impl<S: SecurityProvider, D: DiscoveryProvider> BirdSongCoordinator<S, D> {
 }
 
 #[cfg(test)]
-#[path = "birdsong_tests.rs"]
+#[path = "birdsong_tests/mod.rs"]
 mod birdsong_tests;

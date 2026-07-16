@@ -18,7 +18,6 @@ thiserror = { workspace = true }
 rustix = { workspace = true, features = ["process"] }
 # UID retrieval now uses rustix::process::getuid() (already a dependency, pure Rust)
 # System metrics: pure Rust via /proc (ecoBin v3)
-regex = { workspace = true }  # For socket pattern matching
 rand = { workspace = true }  # For JWT secret generation
 base64 = { workspace = true }  # For JWT secret encoding
 # BTSP Phase 3 crypto now via biomeos-core::btsp_crypto (hkdf, chacha20poly1305, sha2)
@@ -30,7 +29,7 @@ biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 biomeos-federation = { path = "../biomeos-federation", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-primal-sdk = { path = "../biomeos-primal-sdk", version = "0.1.0" }
-tarpc = { workspace = true }
+tarpc = { workspace = true, features = ["tcp"] }
 tokio-serde = { workspace = true }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
 biomeos-system = { path = "../biomeos-system", version = "0.1.0" }

@@ -8,7 +8,8 @@
 //! Tests roundtrip serialization, identifier validation, and primal name constants.
 
 use biomeos_types::primal_names::{
-    AUXILIARY_PRIMALS, BIOMEOS, BIOMEOS_DEVICE_MANAGEMENT, CORE_PRIMALS, PROVENANCE_PRIMALS,
+    AUXILIARY_PRIMALS, BIOMEOS, BIOMEOS_DEVICE_MANAGEMENT, BOOTSTRAP_CORE_SET,
+    BOOTSTRAP_PROVENANCE_SET,
     SPRING_PRIMALS, is_known_primal,
 };
 use biomeos_types::{
@@ -141,9 +142,9 @@ proptest! {
     /// Primal name constants: is_known_primal is always true for each constant.
     #[test]
     fn is_known_primal_constants(idx in 0usize..21usize) {
-        let all: Vec<&'static str> = CORE_PRIMALS
+        let all: Vec<&'static str> = BOOTSTRAP_CORE_SET
             .iter()
-            .chain(PROVENANCE_PRIMALS.iter())
+            .chain(BOOTSTRAP_PROVENANCE_SET.iter())
             .chain(SPRING_PRIMALS.iter())
             .chain(AUXILIARY_PRIMALS.iter())
             .chain([BIOMEOS, BIOMEOS_DEVICE_MANAGEMENT].iter())

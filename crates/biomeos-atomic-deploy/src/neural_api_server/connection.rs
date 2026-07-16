@@ -10,11 +10,10 @@
 
 use anyhow::{Context, Result};
 use biomeos_core::btsp_client::{self, BtspHandshakeError, HandshakeOutcome};
+use biomeos_core::ipc::TransportStream;
 use biomeos_types::jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::UnixStream;
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
 
@@ -22,9 +21,8 @@ use super::NeuralApiServer;
 use super::btsp_negotiate::{self, BtspCipher, SessionKeys};
 
 impl NeuralApiServer {
-    /// Handle a Unix socket client connection (development mode, no BTSP).
-    #[cfg(unix)]
-    pub async fn handle_connection(&self, stream: UnixStream) -> Result<()> {
+    /// Handle a transport client connection (development mode, no BTSP).
+    pub async fn handle_connection(&self, stream: TransportStream) -> Result<()> {
         self.handle_stream(BufReader::new(stream)).await
     }
 
@@ -58,16 +56,15 @@ impl NeuralApiServer {
         }
     }
 
-    /// Handle a Unix socket connection with BTSP Phase 2 handshake.
+    /// Handle a transport connection with BTSP Phase 2 handshake.
     ///
     /// Attempts a server-side BTSP handshake. If the client sends a raw
     /// JSON-RPC request instead of a `ClientHello`, the behaviour depends
     /// on `enforce`: when true the connection is dropped; when false the
     /// raw line is dispatched and the connection continues as cleartext.
-    #[cfg(unix)]
     pub async fn handle_connection_with_btsp(
         &self,
-        stream: UnixStream,
+        stream: TransportStream,
         enforce: bool,
     ) -> Result<()> {
         let mut reader = BufReader::new(stream);

@@ -21,7 +21,6 @@ mod forwarding_routing_tests;
 #[cfg(test)]
 mod forwarding_tests;
 #[cfg(test)]
-#[path = "mod_tests.rs"]
 mod mod_tests;
 pub mod perceptron;
 mod registry;

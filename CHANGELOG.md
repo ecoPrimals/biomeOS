@@ -2,6 +2,42 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.35 (2026-07-16) — Phase 2 Transport + Deep Debt Wave + Manifest Discovery
+
+### Phase 2 Transport (Trait Dispatch Over Cfg Gating)
+- `biomeos-core::ipc` module: `TransportStream`, `connect_transport`, `TransportListener`, `send_jsonrpc_request`
+- 12 crates migrated from `#[cfg(unix)]`/`#[cfg(windows)]` bail stubs to unified trait dispatch
+- Platform-agnostic IPC: Unix primary, TCP fallback on Windows (via `.port` file convention)
+- `biomeos-atomic-deploy`: 10 files migrated (neural executor, protocol escalation, tarpc client, listeners)
+- tarpc: TCP transport fallback on Windows (`tarpc/tcp` feature)
+
+### NucleusMode Manifest Discovery
+- `NucleusMode::resolve_launch_set()` — reads `ecosystem_manifest.toml` composition profiles
+- `bootstrap_launch_order()` replaces `primals()` (intent-clear naming)
+- `CORE_PRIMALS` → `BOOTSTRAP_CORE_SET`, `PROVENANCE_PRIMALS` → `BOOTSTRAP_PROVENANCE_SET`
+- Cold-start bootstrap order preserved; manifest-driven optimization layer when live
+
+### Placeholder → Complete Implementation
+- Topology handler: explicit standalone mode check (silent fallback → degraded status with error context)
+- Songbird discovery: error propagation on malformed RPC (empty vec → structured FederationError)
+- Spore manifest: build metadata detection (version from `CARGO_PKG_VERSION`, git hash from build.rs)
+- USB detection: sysfs/block device enumeration (hardcoded /dev/sdX → `/sys/block/` + removable flag)
+
+### Dead Dependency Removal
+- Removed `regex` from `biomeos-atomic-deploy` (zero imports)
+- Removed `glob` from `biomeos-core` (zero imports)
+- Inlined `walkdir` in `biomeos-chimera` with recursive `std::fs::read_dir`
+
+### Version Bumps
+- `serde-saphyr` 0.0.24 → 0.0.29
+- `mdns-sd` 0.20.0 → 0.20.1
+- `lz4_flex` 0.11 → 0.14
+
+### Test File Splits (22 files)
+- All test files now <450 LOC (was <650 LOC)
+- Split into domain-focused submodules preserving test logic
+- Total: 8,477 tests passing, 0 failures
+
 ## v4.34 (2026-07-15) — Cross-Arch Windows + Deep Stub Evolution + Capability-First Discovery
 
 ### Cross-Architecture Adoption (x86_64-pc-windows-gnu)

@@ -29,6 +29,7 @@ pub mod init_hardware;
 pub mod init_network;
 pub mod init_params;
 pub mod init_shell;
+pub mod init_usb;
 pub mod initramfs;
 pub mod rootfs;
 
@@ -41,5 +42,6 @@ pub use init_hardware::{Architecture, HardwareInfo};
 pub use init_network::NetworkManager;
 pub use init_params::{BootMode, BootParams};
 pub use init_shell::ShellManager;
+pub use init_usb::detect_biomeos_usb_device;
 pub use initramfs::{InitramfsBuilder, KernelManager};
 pub use rootfs::{RootFsBuilder, RootFsCli, RootFsConfig};

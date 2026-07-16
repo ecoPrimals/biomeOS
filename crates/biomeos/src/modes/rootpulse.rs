@@ -12,7 +12,7 @@
 
 use anyhow::{Context, Result};
 use biomeos_types::CapabilityTaxonomy;
-use biomeos_types::primal_names::{BEARDOG, NESTGATE, PROVENANCE_PRIMALS};
+use biomeos_types::primal_names::{BEARDOG, BOOTSTRAP_PROVENANCE_SET, NESTGATE};
 use biomeos_types::{JsonRpcRequest, SystemPaths};
 use std::path::PathBuf;
 #[cfg(unix)]
@@ -183,7 +183,7 @@ async fn run_status(socket: Option<PathBuf>, family_id: Option<String>) -> Resul
     info!("  family: {family}");
     info!("  socket: {}", socket_path.display());
 
-    let primals: Vec<&str> = PROVENANCE_PRIMALS
+    let primals: Vec<&str> = BOOTSTRAP_PROVENANCE_SET
         .iter()
         .copied()
         .chain([

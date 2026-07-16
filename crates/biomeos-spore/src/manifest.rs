@@ -10,6 +10,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
+/// Detect package version from build metadata
+fn detect_version() -> &'static str {
+    option_env!("CARGO_PKG_VERSION").unwrap_or("unknown")
+}
+
+/// Detect git commit hash from build-time CI metadata
+fn detect_git_commit() -> &'static str {
+    option_env!("GIT_COMMIT_HASH").unwrap_or("unknown")
+}
+
 /// Manifest for plasmidBin binaries
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BinaryManifest {
@@ -174,8 +184,8 @@ impl BinaryManifest {
                 "tower".to_string(),
                 BinaryInfo {
                     name: "tower".to_string(),
-                    version: env!("CARGO_PKG_VERSION").to_string(),
-                    git_commit: "unknown".to_string(), // Populated from VERSION.txt when available
+                    version: detect_version().to_string(),
+                    git_commit: detect_git_commit().to_string(),
                     build_date: Utc::now(),
                     sha256,
                     size_bytes: bytes.len() as u64,
@@ -211,8 +221,8 @@ impl BinaryManifest {
 
                     let binary_info = BinaryInfo {
                         name: file_name,
-                        version: "unknown".to_string(),
-                        git_commit: "unknown".to_string(),
+                        version: detect_version().to_string(),
+                        git_commit: detect_git_commit().to_string(),
                         build_date: Utc::now(),
                         sha256,
                         size_bytes: bytes.len() as u64,
@@ -455,6 +465,8 @@ mod tests {
         assert_eq!(manifest.binaries["tower"].name, "tower");
         assert_eq!(manifest.binaries["tower"].size_bytes, 11); // "fake binary" = 11 bytes
         assert!(!manifest.binaries["tower"].sha256.is_empty());
+        assert_eq!(manifest.binaries["tower"].version, detect_version());
+        assert!(!manifest.binaries["tower"].git_commit.is_empty());
     }
 
     #[test]
@@ -476,6 +488,12 @@ mod tests {
         assert!(manifest.binaries.contains_key("beardog"));
         assert!(manifest.binaries.contains_key("songbird"));
         assert!(manifest.binaries.contains_key("unknown-primal"));
+    }
+
+    #[test]
+    fn test_build_metadata_detection() {
+        assert_ne!(detect_version(), "unknown");
+        assert!(!detect_git_commit().is_empty());
     }
 
     // ========== SporeManifest Tests ==========

@@ -4,13 +4,8 @@
 //! Unix/TCP socket binding, accept loops, and JSON-RPC health probes.
 
 use anyhow::{Context, Result};
-#[cfg(unix)]
-use tokio::net::UnixListener;
+use biomeos_core::ipc::TransportListener;
 use tracing::{debug, error, info};
-
-/// Placeholder for Windows cross-compilation (`bind_socket` always fails on Windows).
-#[cfg(windows)]
-pub(crate) struct UnixListener;
 
 use super::NeuralApiServer;
 use crate::mode::BiomeOsMode;
@@ -114,19 +109,15 @@ impl NeuralApiServer {
         }))
     }
 
-    /// Bind the Unix socket so the path exists for external probes.
+    /// Bind the transport listener so the path exists for external probes.
     ///
     /// Called early in `serve()` before bootstrap or translation loading,
     /// so that primalSpring and other health monitors can discover the
     /// socket immediately after the process starts.
-    #[cfg(unix)]
-    pub(crate) fn bind_socket(&self) -> Result<UnixListener> {
-        if self.socket_path.exists() {
-            std::fs::remove_file(&self.socket_path).context("Failed to remove old socket")?;
-        }
-
-        let listener =
-            UnixListener::bind(&self.socket_path).context("Failed to bind Unix socket")?;
+    pub(crate) async fn bind_socket(&self) -> Result<TransportListener> {
+        let listener = TransportListener::bind_unix(&self.socket_path)
+            .await
+            .context("Failed to bind transport listener")?;
 
         // Restrict socket permissions to owner+group (0o660) post-bind.
         // Prevents world-readable/writable sockets that could allow unauthorized
@@ -140,23 +131,18 @@ impl NeuralApiServer {
             }
         }
 
-        info!("🧠 Neural API socket bound: {}", self.socket_path.display());
+        info!(
+            "🧠 Neural API socket bound: {} ({})",
+            self.socket_path.display(),
+            listener.local_addr_display()
+        );
         info!("   Graphs directory: {}", self.graphs_dir.display());
         info!("   Family ID: {}", self.family_id);
 
         Ok(listener)
     }
 
-    /// Windows stub — Unix socket bind unavailable.
-    #[cfg(windows)]
-    pub(crate) fn bind_socket(&self) -> Result<UnixListener> {
-        anyhow::bail!(
-            "Unix socket server unavailable on Windows ({})",
-            self.socket_path.display()
-        )
-    }
-
-    /// Accept UDS connections on a previously-bound listener.
+    /// Accept connections on a previously-bound listener.
     ///
     /// **BTSP Phase 2**: When `FAMILY_ID` is set, each accepted connection
     /// undergoes a BTSP handshake before JSON-RPC processing begins. The
@@ -167,8 +153,7 @@ impl NeuralApiServer {
     /// - enforce = false: accepted with a warning (rollout compatibility)
     ///
     /// [`btsp_enforce`]: biomeos_core::btsp_client::btsp_enforce
-    #[cfg(unix)]
-    pub(crate) async fn accept_connections(&self, listener: UnixListener) -> Result<()> {
+    pub(crate) async fn accept_connections(&self, listener: TransportListener) -> Result<()> {
         let btsp_active = biomeos_core::btsp_client::has_family_id();
         let static_enforce = if self.btsp_optional {
             false
@@ -196,7 +181,7 @@ impl NeuralApiServer {
         let btsp_opt = self.btsp_optional;
         loop {
             match listener.accept().await {
-                Ok((stream, _addr)) => {
+                Ok(stream) => {
                     let server = self.clone();
                     let enforce = !btsp_opt
                         && (static_enforce || escalated.load(std::sync::atomic::Ordering::Relaxed));
@@ -211,12 +196,6 @@ impl NeuralApiServer {
                 }
             }
         }
-    }
-
-    /// Windows stub — Unix socket accept unavailable.
-    #[cfg(windows)]
-    pub(crate) async fn accept_connections(&self, _listener: UnixListener) -> Result<()> {
-        anyhow::bail!("Unix socket accept unavailable on Windows")
     }
 
     /// Accept TCP connections (mobile / cross-gate).
@@ -304,9 +283,9 @@ mod tests {
         let sock = temp.path().join("bind-test.sock");
         std::fs::write(&sock, b"stale").expect("seed stale file");
         let server = NeuralApiServer::new(temp.path(), "fam-bind", &sock);
-        let listener = server.bind_socket().expect("bind unix socket");
+        let listener = server.bind_socket().await.expect("bind transport listener");
         drop(listener);
-        assert!(sock.exists());
+        assert!(sock.exists() || sock.with_extension("port").exists());
     }
 
     #[test]

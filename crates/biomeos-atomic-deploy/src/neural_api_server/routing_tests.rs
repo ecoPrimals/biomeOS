@@ -12,7 +12,7 @@ mod routes;
 #[path = "routing_tests_semantic/mod.rs"]
 mod semantic;
 
-#[path = "routing_tests_coverage.rs"]
+#[path = "routing_tests_coverage/mod.rs"]
 mod coverage;
 
 mod common {

@@ -41,10 +41,10 @@ fn test_parse_spore_type_error_message() {
 #[test]
 fn test_gather_spore_structure_info_nonexistent() {
     let infos = gather_spore_structure_info(Path::new("/nonexistent/path"));
-    // 3 static entries (.family.seed, tower.toml, bin/tower) + CORE_PRIMALS
+    // 3 static entries (.family.seed, tower.toml, bin/tower) + BOOTSTRAP_CORE_SET
     assert_eq!(
         infos.len(),
-        3 + biomeos_types::primal_names::CORE_PRIMALS.len()
+        3 + biomeos_types::primal_names::BOOTSTRAP_CORE_SET.len()
     );
     assert!(infos.iter().all(|i| !i.exists));
 }
@@ -227,12 +227,12 @@ fn test_gather_spore_structure_info_order() {
     let infos = gather_spore_structure_info(Path::new("/nonexistent"));
     let order: Vec<_> = infos.iter().map(|i| i.name.as_str()).collect();
     let mut expected = vec![".family.seed", "tower.toml", "bin/tower"];
-    for primal in biomeos_types::primal_names::CORE_PRIMALS {
+    for primal in biomeos_types::primal_names::BOOTSTRAP_CORE_SET {
         expected.push(primal);
     }
     assert_eq!(order.len(), expected.len());
     assert_eq!(order[..3], expected[..3], "static entries must come first");
-    for primal in biomeos_types::primal_names::CORE_PRIMALS {
+    for primal in biomeos_types::primal_names::BOOTSTRAP_CORE_SET {
         let primal_path = format!("primals/{primal}");
         assert!(
             order.iter().any(|o| *o == primal_path),

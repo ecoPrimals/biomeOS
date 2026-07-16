@@ -15,5 +15,5 @@ pub use secret::*;
 pub use volume::*;
 
 #[cfg(test)]
-#[path = "../storage_tests.rs"]
+#[path = "../storage_tests/mod.rs"]
 mod tests;

@@ -298,9 +298,13 @@ async fn test_get_invalid_json_response_returns_err() {
     let result = client.get("http://example.com").await;
 
     let err = result.expect_err("get should fail on invalid JSON");
+    let msg = err.to_string();
     assert!(
-        err.to_string().contains("parse") || err.to_string().contains("JSON"),
-        "Error should mention parse/JSON: {err}"
+        msg.contains("parse")
+            || msg.contains("JSON")
+            || msg.contains("discovery delegate")
+            || msg.contains("deserialize"),
+        "Error should mention parse/JSON/discovery delegate: {msg}"
     );
 }
 

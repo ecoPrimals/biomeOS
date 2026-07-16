@@ -629,5 +629,5 @@ impl Default for SystemPaths {
 }
 
 #[cfg(test)]
-#[path = "paths_tests.rs"]
+#[path = "paths_tests/mod.rs"]
 mod tests;

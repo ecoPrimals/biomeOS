@@ -446,5 +446,5 @@ impl RealTimeEventHandler {
 }
 
 #[cfg(test)]
-#[path = "realtime_tests.rs"]
+#[path = "realtime_tests/mod.rs"]
 mod tests;

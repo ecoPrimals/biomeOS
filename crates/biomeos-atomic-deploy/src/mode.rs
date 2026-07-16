@@ -6,10 +6,10 @@
 //! Determines Bootstrap (genesis, no ecosystem) vs Coordinated (participant, ecosystem exists).
 
 use std::path::PathBuf;
-#[cfg(unix)]
-use tokio::net::UnixStream;
 use tokio::time::{Duration, timeout};
 use tracing::{debug, info, warn};
+
+use biomeos_core::{TransportEndpoint, connect_transport};
 
 /// biomeOS Operating Mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -146,41 +146,48 @@ impl BiomeOsMode {
         false
     }
 
-    /// Check if a primal is reachable via its Unix socket
+    /// Check if a primal is reachable via its transport endpoint.
     async fn primal_reachable(socket_path: &str) -> bool {
-        #[cfg(windows)]
-        {
-            let _ = socket_path;
+        let path = PathBuf::from(socket_path);
+
+        let endpoint_available = {
+            #[cfg(unix)]
+            {
+                path.exists()
+            }
+            #[cfg(windows)]
+            {
+                path.exists() || path.with_extension("port").exists()
+            }
+        };
+
+        if !endpoint_available {
+            debug!("Transport endpoint not found: {}", socket_path);
             return false;
         }
 
-        #[cfg(unix)]
+        let endpoint = TransportEndpoint::UnixSocket { path };
+
+        match timeout(
+            Duration::from_millis(100),
+            connect_transport(&endpoint),
+        )
+        .await
         {
-            let path = PathBuf::from(socket_path);
-
-            // 1. Check if socket file exists
-            if !path.exists() {
-                debug!("Socket does not exist: {}", socket_path);
-                return false;
+            Ok(Ok(_stream)) => {
+                debug!("Successfully connected to {}", socket_path);
+                true
             }
-
-            // 2. Try to connect (with timeout)
-            match timeout(Duration::from_millis(100), UnixStream::connect(&path)).await {
-                Ok(Ok(_stream)) => {
-                    debug!("Successfully connected to {}", socket_path);
-                    true
-                }
-                Ok(Err(e)) => {
-                    debug!(
-                        "Socket exists but connection failed: {} - {}",
-                        socket_path, e
-                    );
-                    false
-                }
-                Err(_) => {
-                    debug!("Connection timeout: {}", socket_path);
-                    false
-                }
+            Ok(Err(e)) => {
+                debug!(
+                    "Endpoint exists but connection failed: {} - {}",
+                    socket_path, e
+                );
+                false
+            }
+            Err(_) => {
+                debug!("Connection timeout: {}", socket_path);
+                false
             }
         }
     }

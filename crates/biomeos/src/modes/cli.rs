@@ -79,7 +79,7 @@ async fn show_system_summary() -> Result<()> {
                 if std::path::Path::new(&name)
                     .extension()
                     .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
-                    && biomeos_types::primal_names::CORE_PRIMALS
+                    && biomeos_types::primal_names::BOOTSTRAP_CORE_SET
                         .iter()
                         .any(|p| name.contains(p))
                 {

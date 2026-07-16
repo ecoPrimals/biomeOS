@@ -281,5 +281,5 @@ fn extract_toml_string_value(after_key: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-#[path = "graph_ops_tests.rs"]
+#[path = "graph_ops_tests/mod.rs"]
 mod tests;

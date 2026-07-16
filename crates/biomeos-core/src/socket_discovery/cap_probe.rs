@@ -238,5 +238,5 @@ fn extract_from_array(arr: &[serde_json::Value]) -> Vec<String> {
 }
 
 #[cfg(all(test, unix))]
-#[path = "cap_probe_tests.rs"]
+#[path = "cap_probe_tests/mod.rs"]
 mod tests;

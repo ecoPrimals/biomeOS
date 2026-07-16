@@ -185,13 +185,16 @@ pub mod display {
     }
 }
 
-/// All bootstrap-time primal names (Tower + Node + Nest core).
-pub const CORE_PRIMALS: &[&str] = &[
+/// Bootstrap-time core primal names (Tower + Node + Nest atomic set).
+///
+/// Cold-start hints only — not routing dependencies. Runtime discovery via
+/// Songbird and `CapabilityTaxonomy` supersedes this once the mesh is up.
+pub const BOOTSTRAP_CORE_SET: &[&str] = &[
     BEARDOG, SONGBIRD, TOADSTOOL, BARRACUDA, CORALREEF, NESTGATE, SQUIRREL,
 ];
 
-/// Provenance trio primals.
-pub const PROVENANCE_PRIMALS: &[&str] = &[LOAMSPINE, RHIZOCRYPT, SWEETGRASS];
+/// Bootstrap-time provenance trio.
+pub const BOOTSTRAP_PROVENANCE_SET: &[&str] = &[LOAMSPINE, RHIZOCRYPT, SWEETGRASS];
 
 /// Spring primals — science/domain providers.
 pub const SPRING_PRIMALS: &[&str] = &[
@@ -231,8 +234,8 @@ pub const BIOMEOS_SELF_CAPABILITIES: &[&str] = &[
 #[must_use]
 pub fn is_known_primal(name: &str) -> bool {
     let lower = name.to_ascii_lowercase();
-    CORE_PRIMALS.contains(&lower.as_str())
-        || PROVENANCE_PRIMALS.contains(&lower.as_str())
+    BOOTSTRAP_CORE_SET.contains(&lower.as_str())
+        || BOOTSTRAP_PROVENANCE_SET.contains(&lower.as_str())
         || SPRING_PRIMALS.contains(&lower.as_str())
         || AUXILIARY_PRIMALS.contains(&lower.as_str())
         || lower == BIOMEOS
@@ -246,7 +249,10 @@ mod tests {
 
     #[test]
     fn constants_are_lowercase() {
-        for name in CORE_PRIMALS.iter().chain(PROVENANCE_PRIMALS.iter()) {
+        for name in BOOTSTRAP_CORE_SET
+            .iter()
+            .chain(BOOTSTRAP_PROVENANCE_SET.iter())
+        {
             assert_eq!(*name, name.to_ascii_lowercase(), "{name} must be lowercase");
         }
     }
@@ -316,12 +322,12 @@ mod tests {
 
     #[test]
     fn core_primals_count() {
-        assert_eq!(CORE_PRIMALS.len(), 7);
+        assert_eq!(BOOTSTRAP_CORE_SET.len(), 7);
     }
 
     #[test]
     fn provenance_primals_count() {
-        assert_eq!(PROVENANCE_PRIMALS.len(), 3);
+        assert_eq!(BOOTSTRAP_PROVENANCE_SET.len(), 3);
     }
 
     #[test]
@@ -332,8 +338,8 @@ mod tests {
     #[test]
     fn all_primal_names_are_unique() {
         let mut all: Vec<&str> = Vec::new();
-        all.extend_from_slice(CORE_PRIMALS);
-        all.extend_from_slice(PROVENANCE_PRIMALS);
+        all.extend_from_slice(BOOTSTRAP_CORE_SET);
+        all.extend_from_slice(BOOTSTRAP_PROVENANCE_SET);
         all.extend_from_slice(SPRING_PRIMALS);
         all.extend_from_slice(AUXILIARY_PRIMALS);
         all.push(BIOMEOS);

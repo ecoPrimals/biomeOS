@@ -56,13 +56,15 @@ impl std::str::FromStr for NucleusMode {
 }
 
 impl NucleusMode {
-    /// Get the primals needed for this mode (in startup order).
+    /// Static cold-start launch order for this mode.
     ///
-    /// Startup ordering: security first (bearDog), then mesh (songbird),
-    /// then defense (skunkBat), then compute (toadstool, coralreef, barracuda),
-    /// then storage/provenance (nestgate, rhizocrypt, loamspine, sweetgrass),
-    /// then AI (squirrel), then UI (petaltongue).
-    pub(crate) fn primals(self) -> Vec<&'static str> {
+    /// Bootstrap hints only — used when no ecosystem manifest is available and
+    /// to preserve dependency-safe startup ordering. Not a routing dependency;
+    /// runtime capability discovery via Songbird supersedes this once the mesh is up.
+    ///
+    /// Ordering: security (bearDog) → mesh (songbird) → defense (skunkBat) →
+    /// compute (toadstool, coralreef, barracuda) → storage/provenance → AI → UI.
+    pub(crate) fn bootstrap_launch_order(self) -> Vec<&'static str> {
         match self {
             NucleusMode::Tower => vec![BEARDOG, SONGBIRD, SKUNKBAT],
             NucleusMode::Node => vec![BEARDOG, SONGBIRD, SKUNKBAT, TOADSTOOL, CORALREEF, BARRACUDA],
@@ -85,6 +87,24 @@ impl NucleusMode {
                 PETALTONGUE,
             ],
         }
+    }
+
+    /// Resolve which primals to launch for this mode.
+    ///
+    /// 1. Attempts runtime discovery from `ecosystem_manifest.toml` composition profiles
+    /// 2. Falls back to [`Self::bootstrap_launch_order`] for cold start
+    ///
+    /// These are bootstrap hints for startup ordering, not capability routing
+    /// dependencies. Once Songbird is running, use capability discovery instead.
+    pub(crate) fn resolve_launch_set(self) -> Vec<String> {
+        let bootstrap = self.bootstrap_launch_order();
+        super::launch_discovery::try_discover_launch_set(self, &bootstrap)
+    }
+
+    /// Alias for [`Self::bootstrap_launch_order`] (tests and legacy call sites).
+    #[cfg(test)]
+    pub(crate) fn primals(self) -> Vec<&'static str> {
+        self.bootstrap_launch_order()
     }
 }
 

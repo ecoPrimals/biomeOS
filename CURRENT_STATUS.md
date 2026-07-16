@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: July 15, 2026 (v4.34: cross-arch Windows-gnu + deep stub evolution + capability-first discovery + clone audit + 30+ test file splits)
-**Version**: 4.34
-**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,446+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >650 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Clone reduction hot paths - Capability-first runtime registry - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved to real implementations
+**Updated**: July 16, 2026 (v4.35: Phase 2 transport trait dispatch + deep debt wave + 22 test file splits + dead dep removal + NucleusMode manifest discovery + USB sysfs + placeholder evolution)
+**Version**: 4.35
+**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,477+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >450 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Phase 2 transport (trait dispatch over cfg gating) - Capability-first runtime registry - NucleusMode manifest-driven launch sets - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved
 
 ---
 
@@ -17,7 +17,7 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,446 workspace-wide, 0 failures, fully concurrent |
+| **Tests Passing** | 8,477 workspace-wide, 0 failures, fully concurrent |
 | **Test Coverage** | 88.37% line / 88.02% region / 89.58% function (llvm-cov workspace-wide; remaining gap is binary entry points + systemd interaction) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates, Wave 68: 18→0) |

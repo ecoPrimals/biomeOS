@@ -6,6 +6,7 @@ authors.workspace = true
 license.workspace = true
 rust-version.workspace = true
 description = "biomeOS USB spore management - orchestration layer only"
+build = "build.rs"
 
 [dependencies]
 # Core biomeOS dependencies
