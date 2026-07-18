@@ -2,6 +2,22 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.36 (2026-07-18) — Wave 149b Gap Resolution + Executor Introspection
+
+### Ecosystem Gap Resolution (GAP-017/018/036/038)
+- GAP-017: Neural-api resurrection verified complete (monitoring → degraded → auto-resurrect → re-spawn)
+- GAP-018: `executor.list` + `executor.status` JSON-RPC methods — query available executors (continuous/pipeline/single-shot), active sessions, metrics
+- GAP-036: Socket naming convention formalized — `primal_socket_path()` builder + `parse_socket_filename()` parser in `biomeos-types`
+- GAP-038: `cleanup.sockets` JSON-RPC method — runtime-triggerable stale socket probe and removal
+
+### New JSON-RPC Methods
+- `executor.list` — returns all executor types with active session counts and status
+- `executor.status` — detailed executor metrics (active/pending/completed/failed/uptime)
+- `cleanup.sockets` — scan socket dirs, probe connectivity, remove stale, return removed/active
+
+### Test Count
+- 8,492 tests passing, 0 failures (from 8,477)
+
 ## v4.35 (2026-07-16) — Phase 2 Transport + Deep Debt Wave + Manifest Discovery
 
 ### Phase 2 Transport (Trait Dispatch Over Cfg Gating)

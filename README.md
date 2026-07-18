@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v4.35)
+## Status: Production Ready (v4.36)
 
 | Metric | Value |
 |--------|-------|
@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP; HTTP removed v3.97) + tarpc binary escalation (wired) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, all monoliths split into semantic modules, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, dashmap 6, toml 0.9, axum 0.8, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>` in codebase) |
-| Tests | 8,477+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
+| Tests | 8,492+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings` |
@@ -20,7 +20,7 @@
 | License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI + mobile (TCP fallback) |
 | AI Bridge | Capability-routed to Squirrel (tag-in at runtime; biomeOS runs without AI primal) |
-| Neural API | 320+ capability translations, 27 domains (+ tensor/math/stats + manifest), 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing via Songbird mesh dispatch, formalized `capability.call` routing contract, adaptive routing weights (redb-persistent), attestation verification, `manifest.gate_profile` |
+| Neural API | 320+ capability translations, 27 domains (+ tensor/math/stats + manifest), 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing via Songbird mesh dispatch, formalized `capability.call` routing contract, adaptive routing weights (redb-persistent), attestation verification, `manifest.gate_profile`, `executor.list`/`executor.status`, `cleanup.sockets` |
 | Genetics | `GeneticsTier` enforcement on graphs (`none`/`tag`/`mito_beacon`/`nuclear`), preflight validation |
 | Deploy Resolution | `AtomicComposition` auto-resolved from node capabilities (Tower/Node/Nest/Nucleus) |
 | Composition | Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` capability-domain driven; `lifecycle.composition` enriched dashboard; membrane + nucleated composition models |
