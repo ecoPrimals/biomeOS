@@ -214,6 +214,16 @@ impl NeuralApiServer {
             Route::GraphVerify => {
                 dispatch(self.graph_handler.verify_graph(&request.params).await, id)
             }
+            Route::ExecutorList => {
+                let handler =
+                    crate::handlers::executor::ExecutorHandler::new(&self.graph_handler, self.started_at);
+                dispatch(handler.list().await, id)
+            }
+            Route::ExecutorStatus => {
+                let handler =
+                    crate::handlers::executor::ExecutorHandler::new(&self.graph_handler, self.started_at);
+                dispatch(handler.status(params).await, id)
+            }
             Route::GraphSuggestOptimizations => {
                 dispatch(self.graph_handler.suggest_optimizations(params).await, id)
             }
@@ -298,6 +308,13 @@ impl NeuralApiServer {
                         "probed": probed,
                         "pruned": pruned,
                     })),
+                    id,
+                )
+            }
+            Route::CleanupSockets => {
+                dispatch(
+                    crate::handlers::cleanup::CleanupHandler::cleanup_sockets(params.as_ref())
+                        .await,
                     id,
                 )
             }

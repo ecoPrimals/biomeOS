@@ -33,6 +33,10 @@
 
 /// Primal self-announcement (`primal.announce`).
 pub mod announce;
+/// Stale Unix socket cleanup (`cleanup.sockets`).
+pub mod cleanup;
+#[cfg(test)]
+mod cleanup_tests;
 #[cfg(test)]
 mod announce_tests;
 /// Capability routing (`capability/call` submodule: `capability.call`, translation lists).
@@ -55,6 +59,9 @@ pub mod capability_routing;
 #[cfg(test)]
 mod capability_tests;
 mod composition;
+pub mod executor;
+#[cfg(test)]
+mod executor_tests;
 pub mod graph;
 #[cfg(test)]
 mod graph_tests;

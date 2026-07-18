@@ -58,11 +58,11 @@ pub struct ExecutionStatus {
 }
 
 /// Tracks an active continuous execution session.
-pub(super) struct ContinuousSession {
-    pub(super) graph_id: String,
+pub(crate) struct ContinuousSession {
+    pub(crate) graph_id: String,
     pub(super) command_tx: tokio::sync::mpsc::Sender<biomeos_graph::continuous::SessionCommand>,
-    pub(super) state_rx: tokio::sync::watch::Receiver<SessionState>,
-    pub(super) started_at: String,
+    pub(crate) state_rx: tokio::sync::watch::Receiver<SessionState>,
+    pub(crate) started_at: String,
 }
 
 /// Graph handler for CRUD and execution operations.
@@ -174,6 +174,18 @@ impl GraphHandler {
     pub fn with_event_broadcaster(mut self, broadcaster: Arc<GraphEventBroadcaster>) -> Self {
         self.event_broadcaster = Some(broadcaster);
         self
+    }
+
+    /// Shared one-shot/pipeline execution tracker (for executor introspection).
+    pub(crate) fn executions(&self) -> &Arc<RwLock<HashMap<String, ExecutionStatus>>> {
+        &self.executions
+    }
+
+    /// Shared continuous session tracker (for executor introspection).
+    pub(crate) fn continuous_sessions(
+        &self,
+    ) -> &Arc<RwLock<HashMap<String, ContinuousSession>>> {
+        &self.continuous_sessions
     }
 
     /// Resolve a graph ID to a file path, searching runtime graphs first,

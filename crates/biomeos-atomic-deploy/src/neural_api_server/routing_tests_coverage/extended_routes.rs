@@ -165,12 +165,13 @@ async fn lifecycle_protocol_and_gate_routes_dispatch() {
             291,
         ),
         ("capability.prune", json!({}), 292),
+        ("cleanup.sockets", json!({}), 293),
         (
             "primal.announce",
             json!({"primal": "testprimal", "socket": "/tmp/testprimal.sock"}),
-            293,
+            294,
         ),
-        ("manifest.gate_profile", json!({}), 294),
+        ("manifest.gate_profile", json!({}), 295),
         (
             "neural_api.proxy_http",
             json!({"method": "GET", "url": "https://example.com"}),

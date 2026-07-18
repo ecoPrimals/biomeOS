@@ -82,6 +82,8 @@ pub(super) enum Route {
     BtspNegotiate,
     GraphTickStatus,
     GraphVerify,
+    ExecutorList,
+    ExecutorStatus,
     AuthCheck,
     AuthMode,
     AuthPeerInfo,
@@ -103,6 +105,7 @@ pub(super) enum Route {
     NucleusEmitSpore,
     ManifestGateProfile,
     CapabilityPrune,
+    CleanupSockets,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -131,6 +134,8 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("neural_api.stop_continuous", Route::GraphStopContinuous),
     ("graph.tick_status", Route::GraphTickStatus),
     ("graph.verify", Route::GraphVerify),
+    ("executor.list", Route::ExecutorList),
+    ("executor.status", Route::ExecutorStatus),
     (
         "graph.suggest_optimizations",
         Route::GraphSuggestOptimizations,
@@ -282,6 +287,7 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("nucleus.emit", Route::NucleusEmitSpore),
     ("manifest.gate_profile", Route::ManifestGateProfile),
     ("capability.prune", Route::CapabilityPrune),
+    ("cleanup.sockets", Route::CleanupSockets),
     ("btsp.escalate", Route::BtspEscalate),
     ("btsp.status", Route::BtspStatus),
     ("btsp.negotiate", Route::BtspNegotiate),

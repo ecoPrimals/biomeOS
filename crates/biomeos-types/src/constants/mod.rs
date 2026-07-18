@@ -17,6 +17,7 @@ use std::time::Duration;
 
 pub mod env_vars;
 pub mod network;
+pub mod socket_naming;
 
 pub mod capabilities;
 pub mod capability;
