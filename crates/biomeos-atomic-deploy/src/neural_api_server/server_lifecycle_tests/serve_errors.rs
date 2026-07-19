@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::{coordinated_env, runtime_env, STARTUP_TIMEOUT};
 use super::super::{is_explicit_coordinated_mode_str, is_explicit_coordinated_mode_with};
+use super::{STARTUP_TIMEOUT, coordinated_env, runtime_env};
 use crate::neural_api_server::NeuralApiServer;
 use biomeos_types::env_config::vars;
 

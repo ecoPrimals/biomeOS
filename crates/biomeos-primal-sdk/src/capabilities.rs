@@ -9,8 +9,8 @@
 //!
 //! Follows groundSpring's typed capability pattern.
 
-use anyhow::{Result, anyhow};
 use anyhow::Context;
+use anyhow::{Result, anyhow};
 use bytes::Bytes;
 use serde_json::{Value, json};
 use std::path::PathBuf;

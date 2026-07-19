@@ -63,8 +63,10 @@ fn dispatch_capability_call_preserves_ipc_json_rpc_error() {
 
 #[test]
 fn dispatch_capability_call_uses_generic_code_for_other_errors() {
-    let outcome =
-        super::super::super::dispatch_capability_call(Err(anyhow::anyhow!("upstream down")), json!(1));
+    let outcome = super::super::super::dispatch_capability_call(
+        Err(anyhow::anyhow!("upstream down")),
+        json!(1),
+    );
     match outcome {
         DispatchOutcome::ApplicationError { code, message, .. } => {
             assert_eq!(code, -32603);

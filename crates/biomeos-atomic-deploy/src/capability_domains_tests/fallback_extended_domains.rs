@@ -194,7 +194,10 @@ fn test_capability_to_provider_medical_domain() {
 #[test]
 fn test_capability_domains_structure() {
     // Verify BOOTSTRAP_CAPABILITY_HINTS is properly structured
-    assert!(!BOOTSTRAP_CAPABILITY_HINTS.is_empty(), "Should have domains");
+    assert!(
+        !BOOTSTRAP_CAPABILITY_HINTS.is_empty(),
+        "Should have domains"
+    );
 
     // Each domain should have a non-empty provider and capabilities
     for domain in BOOTSTRAP_CAPABILITY_HINTS {
@@ -206,7 +209,10 @@ fn test_capability_domains_structure() {
     }
 
     // Verify expected domains exist
-    let providers: Vec<&str> = BOOTSTRAP_CAPABILITY_HINTS.iter().map(|d| d.provider).collect();
+    let providers: Vec<&str> = BOOTSTRAP_CAPABILITY_HINTS
+        .iter()
+        .map(|d| d.provider)
+        .collect();
     assert!(providers.contains(&"beardog"));
     assert!(providers.contains(&"songbird"));
     assert!(providers.contains(&"nestgate"));

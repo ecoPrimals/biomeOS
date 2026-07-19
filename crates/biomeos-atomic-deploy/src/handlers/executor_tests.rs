@@ -19,9 +19,7 @@ async fn executor_list_returns_all_executor_types() {
         .await
         .expect("list");
 
-    let executors = result["executors"]
-        .as_array()
-        .expect("executors array");
+    let executors = result["executors"].as_array().expect("executors array");
     assert_eq!(executors.len(), 3);
     assert_eq!(result["count"], 3);
 

@@ -79,4 +79,3 @@ async fn test_get_status_with_mixed_protocols() {
     assert_eq!(status["summary"]["total"], 2);
     assert!(status["summary"]["tarpc"].as_u64().unwrap_or(0) >= 1);
 }
-

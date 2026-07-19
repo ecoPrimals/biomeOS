@@ -30,8 +30,7 @@ use std::sync::LazyLock;
 ///
 /// Populated by socket discovery and `discovery.register_capability` advertisements.
 /// Takes precedence over compiled bootstrap hints.
-static RUNTIME_CAPABILITY_REGISTRY: LazyLock<DashMap<String, String>> =
-    LazyLock::new(DashMap::new);
+static RUNTIME_CAPABILITY_REGISTRY: LazyLock<DashMap<String, String>> = LazyLock::new(DashMap::new);
 
 /// Capability domain configuration for bootstrap hints.
 pub struct CapabilityDomain {

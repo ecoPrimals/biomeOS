@@ -6,8 +6,8 @@
 #![expect(clippy::unwrap_used, reason = "test")]
 #![expect(clippy::expect_used, reason = "test")]
 
-mod lifecycle;
+mod auto_escalate;
 mod cooldown;
 mod escalation_actions;
-mod auto_escalate;
+mod lifecycle;
 mod status_metrics;

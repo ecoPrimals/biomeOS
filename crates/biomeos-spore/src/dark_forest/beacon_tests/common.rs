@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::beacon_genetics::CapabilityCaller;
 use super::super::DarkForestBeacon;
+use crate::beacon_genetics::CapabilityCaller;
 
 /// Mock capability caller for Dark Forest beacon tests.
 /// Returns preset responses keyed by BearDog method name.

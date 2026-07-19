@@ -19,7 +19,10 @@ fn get_socket_directories_non_empty() {
 #[tokio::test]
 async fn get_primals_has_family_timestamp_and_count() {
     let router = Arc::new(NeuralRouter::new("topo-cov-fam"));
-    let exec = Arc::new(RwLock::new(HashMap::<String, crate::handlers::graph::ExecutionStatus>::new()));
+    let exec = Arc::new(RwLock::new(HashMap::<
+        String,
+        crate::handlers::graph::ExecutionStatus,
+    >::new()));
     let tmp = tempfile::tempdir().expect("tempdir");
     let h = TopologyHandler::new("topo-cov-fam", router, exec, tmp.path());
     let v = h.get_primals().await.expect("get_primals");

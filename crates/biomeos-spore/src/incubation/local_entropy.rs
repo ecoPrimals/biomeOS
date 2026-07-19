@@ -179,8 +179,7 @@ impl LocalEntropy {
             uname.nodename().to_string_lossy().into_owned()
         };
         #[cfg(windows)]
-        let host_str =
-            std::env::var("COMPUTERNAME").unwrap_or_else(|_| "unknown".to_string());
+        let host_str = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "unknown".to_string());
         let mut hasher = Sha256::new();
         hasher.update(host_str.as_bytes());
         hasher.update(b"mac-entropy");

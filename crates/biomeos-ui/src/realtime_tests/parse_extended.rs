@@ -213,4 +213,3 @@ fn test_parse_sse_event_malformed_timestamp_type() {
     let sse_text = "data: {\"type\":\"heartbeat\",\"timestamp\":\"nan\",\"primals_count\":1,\"healthy_count\":1}";
     assert!(RealTimeEventSubscriber::parse_sse_event(sse_text).is_none());
 }
-

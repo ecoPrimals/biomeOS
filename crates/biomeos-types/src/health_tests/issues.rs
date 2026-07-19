@@ -23,12 +23,8 @@ fn test_health_issues() {
 
 #[test]
 fn test_health_issue_severity_impact_score() {
-    assert!(
-        HealthIssueSeverity::Low.impact_score() < HealthIssueSeverity::Medium.impact_score()
-    );
-    assert!(
-        HealthIssueSeverity::Medium.impact_score() < HealthIssueSeverity::High.impact_score()
-    );
+    assert!(HealthIssueSeverity::Low.impact_score() < HealthIssueSeverity::Medium.impact_score());
+    assert!(HealthIssueSeverity::Medium.impact_score() < HealthIssueSeverity::High.impact_score());
     assert!(
         HealthIssueSeverity::High.impact_score() < HealthIssueSeverity::Critical.impact_score()
     );

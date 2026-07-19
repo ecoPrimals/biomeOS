@@ -149,7 +149,9 @@ async fn test_discover_songbird_jsonrpc_error_path() {
     let sock_path = dir.path().join("songbird-err.sock");
     let listener = tokio::net::UnixListener::bind(&sock_path).expect("bind");
 
-    let line = r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"no peers"}}"#.to_string() + "\n";
+    let line = r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"no peers"}}"#
+        .to_string()
+        + "\n";
     tokio::spawn(async move {
         let (stream, _) = listener.accept().await.expect("accept");
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};

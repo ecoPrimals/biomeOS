@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use super::common::roundtrip_json;
 use super::super::*;
+use super::common::roundtrip_json;
 
 #[test]
 fn complex_nested_virtual_service_spec_roundtrip() {

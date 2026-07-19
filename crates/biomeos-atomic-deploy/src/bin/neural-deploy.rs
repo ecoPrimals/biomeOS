@@ -109,9 +109,7 @@ async fn main() -> Result<()> {
         anyhow::bail!("Execution failed: {error:?}");
     }
 
-    let result = response
-        .result
-        .context("Missing result in response")?;
+    let result = response.result.context("Missing result in response")?;
 
     let execution_id = result["execution_id"]
         .as_str()

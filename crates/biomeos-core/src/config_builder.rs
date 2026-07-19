@@ -349,8 +349,7 @@ impl BiomeOSConfigBuilder {
     /// Enable or disable a feature flag
     #[must_use]
     pub fn with_feature(mut self, feature: &str, enabled: bool) -> Self {
-        self.feature_overrides
-            .insert(feature.to_string(), enabled);
+        self.feature_overrides.insert(feature.to_string(), enabled);
         self
     }
 

@@ -2,8 +2,7 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use super::{
-    coordinated_env, reserve_tcp_port, run_serve_until_tcp_response, runtime_env,
-    STARTUP_TIMEOUT,
+    STARTUP_TIMEOUT, coordinated_env, reserve_tcp_port, run_serve_until_tcp_response, runtime_env,
 };
 use crate::mode::BiomeOsMode;
 use crate::neural_api_server::NeuralApiServer;

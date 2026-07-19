@@ -133,10 +133,7 @@ impl NeuralApiServer {
                     .register(&Some(lifecycle_params))
                     .await
                 {
-                    debug!(
-                        "   Lifecycle registration skipped for {}: {e}",
-                        primal_name
-                    );
+                    debug!("   Lifecycle registration skipped for {}: {e}", primal_name);
                 }
 
                 info!(
@@ -205,10 +202,7 @@ impl NeuralApiServer {
                         .register(&Some(lifecycle_params))
                         .await
                     {
-                        debug!(
-                            "   Lifecycle registration skipped for {}: {e}",
-                            primal_name
-                        );
+                        debug!("   Lifecycle registration skipped for {}: {e}", primal_name);
                     }
 
                     info!(

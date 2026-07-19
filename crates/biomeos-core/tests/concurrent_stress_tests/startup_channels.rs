@@ -134,4 +134,3 @@ async fn stress_concurrent_message_passing() {
         );
     }
 }
-

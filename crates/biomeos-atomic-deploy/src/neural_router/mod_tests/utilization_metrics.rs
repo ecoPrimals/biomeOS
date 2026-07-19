@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tempfile::tempdir;
 
-use super::{register_crypto_providers};
+use super::register_crypto_providers;
 
 #[tokio::test]
 async fn utilization_tracking_hot_cold_and_json() {

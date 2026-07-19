@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::common::{make_beacon, MockDarkForestCaller};
+use super::common::{MockDarkForestCaller, make_beacon};
 
 #[tokio::test]
 async fn test_verify_peer_lineage_valid() {

@@ -23,8 +23,8 @@ pub mod unix_socket_client;
 pub use capability::{Capability, CapabilitySet};
 pub use discovery::{DiscoveredPrimal, PrimalDiscovery};
 pub use nucleus::{
-    IdentityProof, SecureNucleusDiscovery, SelectionCriteria, TrustLevel, VerifiedPrimal,
-    UNRESOLVED_NODE_ID,
+    IdentityProof, SecureNucleusDiscovery, SelectionCriteria, TrustLevel, UNRESOLVED_NODE_ID,
+    VerifiedPrimal,
 };
 pub use subfederation::{IsolationLevel, SubFederation, SubFederationManager};
 

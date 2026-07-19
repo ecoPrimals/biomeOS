@@ -3,7 +3,7 @@
 
 use std::time::{Duration, Instant};
 
-use super::{validate_ssh_probe_output, wait_for_vm_ssh_ready, ValidationConfig};
+use super::{ValidationConfig, validate_ssh_probe_output, wait_for_vm_ssh_ready};
 
 #[test]
 fn test_validate_ssh_probe_output_success() {

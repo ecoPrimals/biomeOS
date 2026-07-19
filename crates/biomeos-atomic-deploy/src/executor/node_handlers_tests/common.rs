@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+use super::super::ExecutionContext;
 use crate::neural_graph::GraphNode;
-use super::super::{ExecutionContext};
 use std::collections::HashMap;
 
-pub(super) fn test_node_with_config(id: &str, config: HashMap<String, serde_json::Value>) -> GraphNode {
+pub(super) fn test_node_with_config(
+    id: &str,
+    config: HashMap<String, serde_json::Value>,
+) -> GraphNode {
     GraphNode {
         id: id.to_string(),
         config,

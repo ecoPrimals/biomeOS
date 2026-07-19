@@ -32,7 +32,7 @@ pub(super) async fn register_crypto_providers(router: &NeuralRouter, slow: &str,
 }
 
 mod configuration;
-mod provider_selection;
-mod fallback_routing;
 mod dispatch_outcomes;
+mod fallback_routing;
+mod provider_selection;
 mod utilization_metrics;

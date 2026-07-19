@@ -224,12 +224,8 @@ impl GraphHandler {
                 Ok(report) => {
                     if report.success {
                         if let Some(ref family_id) = family_id {
-                            Self::register_capabilities_from_graph(
-                                &router,
-                                &graph_ref,
-                                family_id,
-                            )
-                            .await;
+                            Self::register_capabilities_from_graph(&router, &graph_ref, family_id)
+                                .await;
                         }
                     }
 

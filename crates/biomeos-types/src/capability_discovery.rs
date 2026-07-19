@@ -73,7 +73,9 @@ pub fn discover_capability_socket(
 
     // Tier 5: socket-registry.json
     if let Some(ref base) = runtime_dir {
-        let registry_path = base.join(crate::constants::runtime_paths::MEMBRANE_SUBDIR).join("socket-registry.json");
+        let registry_path = base
+            .join(crate::constants::runtime_paths::MEMBRANE_SUBDIR)
+            .join("socket-registry.json");
         if let Some(found) = probe_socket_registry(&registry_path, capability) {
             return Some(found);
         }

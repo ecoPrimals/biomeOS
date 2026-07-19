@@ -340,10 +340,7 @@ fn derive_lineage_from_raw_seed(seed_bytes: &[u8], seed_path: &Path) -> SporeRes
         hex::encode(seed_bytes)
     };
 
-    let node_id = format!(
-        "raw-{}",
-        device_id.get(..12).unwrap_or(device_id.as_str())
-    );
+    let node_id = format!("raw-{}", device_id.get(..12).unwrap_or(device_id.as_str()));
 
     let derived_at = std::fs::metadata(seed_path)
         .ok()

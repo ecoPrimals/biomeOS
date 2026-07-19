@@ -71,7 +71,8 @@ fn build_socket_path_inner(
         .map(PathBuf::from)
         .or_else(get_xdg_runtime_dir);
     if let Some(runtime_dir) = runtime_dir {
-        let membrane_dir = runtime_dir.join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
+        let membrane_dir =
+            runtime_dir.join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
         std::fs::create_dir_all(&membrane_dir).ok();
         return membrane_dir.join(&socket_name);
     }

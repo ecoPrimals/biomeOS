@@ -1,5 +1,5 @@
-use crate::capability_taxonomy::category::CapabilityCategory;
 use super::*;
+use crate::capability_taxonomy::category::CapabilityCategory;
 
 // -------------------------------------------------------------------------
 // Custom variant

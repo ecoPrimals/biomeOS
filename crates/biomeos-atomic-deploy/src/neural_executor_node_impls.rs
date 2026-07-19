@@ -467,8 +467,8 @@ impl GraphExecutor {
             path: PathBuf::from(socket_path),
         };
 
-        let rpc_request: JsonRpcRequest =
-            serde_json::from_value(serde_json::to_value(request)?).context("Invalid JSON-RPC request")?;
+        let rpc_request: JsonRpcRequest = serde_json::from_value(serde_json::to_value(request)?)
+            .context("Invalid JSON-RPC request")?;
 
         let response = send_jsonrpc_request(&endpoint, rpc_request)
             .await

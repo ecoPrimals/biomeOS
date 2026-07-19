@@ -211,8 +211,7 @@ fn test_discover_binaries_with_cwd_finds_in_plasmidbin() {
         perms.set_mode(0o755);
         std::fs::set_permissions(&binary, perms).unwrap();
     }
-    let map =
-        discover_binaries_with(&[name], None, &[], Some(temp.path())).expect("discover");
+    let map = discover_binaries_with(&[name], None, &[], Some(temp.path())).expect("discover");
     assert!(
         map.contains_key(name),
         "should find {name} in plasmidBin with cwd, got {map:?}"
@@ -251,9 +250,8 @@ fn test_discover_depot_takes_priority_over_livespore_usb() {
     }
 
     let depot_path = temp.path().join("depot");
-    let map =
-        discover_binaries_with(&[name], Some(depot_path.as_path()), &[], Some(temp.path()))
-            .expect("discover");
+    let map = discover_binaries_with(&[name], Some(depot_path.as_path()), &[], Some(temp.path()))
+        .expect("discover");
 
     assert!(map.contains_key(name), "primal should be found");
     let resolved = &map[name];

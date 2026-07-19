@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tempfile::tempdir;
 
-use super::{register_crypto_providers};
+use super::register_crypto_providers;
 
 #[tokio::test]
 async fn record_dispatch_outcome_tracks_failures_in_weight_table() {

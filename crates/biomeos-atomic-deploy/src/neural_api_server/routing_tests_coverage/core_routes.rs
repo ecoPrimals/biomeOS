@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::rpc;
 use super::super::common::create_test_server;
+use super::rpc;
 use crate::neural_api_server::btsp_negotiate;
 use biomeos_core::{EnforcementMode, MethodGate};
 use serde_json::json;

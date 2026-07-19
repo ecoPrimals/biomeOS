@@ -15,10 +15,7 @@ fn test_parse_ip_from_domifaddr_output() {
 #[test]
 fn test_parse_ip_from_domifaddr_output_no_match() {
     assert_eq!(parse_ip_from_domifaddr_output(""), None);
-    assert_eq!(
-        parse_ip_from_domifaddr_output("ipv6  fe80::1/64"),
-        None
-    );
+    assert_eq!(parse_ip_from_domifaddr_output("ipv6  fe80::1/64"), None);
 }
 
 #[test]
@@ -30,10 +27,7 @@ fn test_parse_ip_from_domifaddr_multiple_lines() {
 
 #[test]
 fn test_parse_ip_from_domifaddr_ipv6_only() {
-    assert_eq!(
-        parse_ip_from_domifaddr_output("ipv6  fe80::1/64"),
-        None
-    );
+    assert_eq!(parse_ip_from_domifaddr_output("ipv6  fe80::1/64"), None);
 }
 
 #[test]
@@ -109,10 +103,7 @@ fn test_parse_ip_line_ipv4_without_192_168_until_later_line() {
 
 #[test]
 fn test_parse_ip_last_token_not_ip() {
-    assert_eq!(
-        parse_ip_from_domifaddr_output("ipv4   garbage"),
-        None
-    );
+    assert_eq!(parse_ip_from_domifaddr_output("ipv4   garbage"), None);
 }
 
 #[test]

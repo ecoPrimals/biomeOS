@@ -3,8 +3,8 @@
 
 //! PlasmodiumAgent unit tests.
 
-use super::common::route;
 use super::super::{AgentState, CapabilityRoute, PlasmodiumAgent};
+use super::common::route;
 use serde_json::json;
 use std::collections::HashMap;
 

@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use serde_json::json;
 
-use super::helpers::*;
 use super::super::*;
+use super::helpers::*;
 
 #[tokio::test]
 async fn ai_advisor_core_send_feedback_skipped_when_unavailable() {

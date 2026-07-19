@@ -34,7 +34,10 @@ mod tests {
     fn socket_naming_primal_socket_path() {
         let dir = Path::new("/run/membrane/sockets");
         let path = primal_socket_path(dir, "beardog", "fam1");
-        assert_eq!(path, PathBuf::from("/run/membrane/sockets/beardog-fam1.sock"));
+        assert_eq!(
+            path,
+            PathBuf::from("/run/membrane/sockets/beardog-fam1.sock")
+        );
     }
 
     #[test]
@@ -63,6 +66,9 @@ mod tests {
         let dir = Path::new("/tmp/sockets");
         let path = primal_socket_path(dir, "songbird", "abc123");
         let filename = path.file_name().and_then(|n| n.to_str()).expect("filename");
-        assert_eq!(parse_socket_filename(filename), Some(("songbird", "abc123")));
+        assert_eq!(
+            parse_socket_filename(filename),
+            Some(("songbird", "abc123"))
+        );
     }
 }

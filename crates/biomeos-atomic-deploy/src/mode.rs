@@ -168,12 +168,7 @@ impl BiomeOsMode {
 
         let endpoint = TransportEndpoint::UnixSocket { path };
 
-        match timeout(
-            Duration::from_millis(100),
-            connect_transport(&endpoint),
-        )
-        .await
-        {
+        match timeout(Duration::from_millis(100), connect_transport(&endpoint)).await {
             Ok(Ok(_stream)) => {
                 debug!("Successfully connected to {}", socket_path);
                 true

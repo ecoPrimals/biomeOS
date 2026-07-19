@@ -256,10 +256,7 @@ impl<S: SecurityProvider, D: DiscoveryProvider> BtspCoordinator<S, D> {
 
     fn record_tunnel_endpoints(&self, tunnel_id: &str, endpoints: &[TransportEndpoint]) {
         if let Ok(mut states) = self.path_states.lock() {
-            states
-                .entry(tunnel_id.to_string())
-                .or_default()
-                .endpoints = endpoints.to_vec();
+            states.entry(tunnel_id.to_string()).or_default().endpoints = endpoints.to_vec();
         }
     }
 

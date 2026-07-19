@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::helpers::*;
 use super::super::*;
+use super::helpers::*;
 use std::sync::Arc;
 
 #[test]

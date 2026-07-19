@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::rpc;
 use super::super::common::create_test_server;
+use super::rpc;
 use serde_json::json;
 
 #[tokio::test]

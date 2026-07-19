@@ -107,8 +107,7 @@ impl PrimalHealthMonitor {
         let (reader, mut writer) = stream.into_split();
         const REQUEST: &[u8] = b"{\"jsonrpc\":\"2.0\",\"method\":\"health.check\",\"id\":1}\n";
 
-        if writer.write_all(REQUEST).await.is_err()
-        {
+        if writer.write_all(REQUEST).await.is_err() {
             return false;
         }
 

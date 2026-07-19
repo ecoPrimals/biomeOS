@@ -3,7 +3,7 @@
 
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 
-use super::common::{make_beacon, MockDarkForestCaller};
+use super::common::{MockDarkForestCaller, make_beacon};
 
 #[tokio::test]
 async fn test_try_decrypt_pure_noise_beacon_too_small_returns_none() {

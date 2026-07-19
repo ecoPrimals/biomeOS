@@ -32,8 +32,8 @@
 //! # }
 //! ```
 
-use anyhow::{Result, anyhow};
 use anyhow::Context;
+use anyhow::{Result, anyhow};
 use serde_json::Value;
 use std::path::PathBuf;
 use tokio::time::{Duration, timeout};

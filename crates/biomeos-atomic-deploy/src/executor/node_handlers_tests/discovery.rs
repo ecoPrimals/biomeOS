@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::common::{test_context, test_context_with_env};
 use super::super::discover_capability_provider;
+use super::common::{test_context, test_context_with_env};
 use std::collections::HashMap;
 
 #[tokio::test]

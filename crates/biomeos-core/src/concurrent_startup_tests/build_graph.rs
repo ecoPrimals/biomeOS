@@ -55,13 +55,12 @@ fn test_build_with_dependencies() {
 
 #[test]
 fn test_build_multiple_capabilities() {
-    let primals: Vec<Arc<dyn crate::primal_orchestrator::ManagedPrimal>> = vec![Arc::new(
-        MockPrimal::new(
+    let primals: Vec<Arc<dyn crate::primal_orchestrator::ManagedPrimal>> =
+        vec![Arc::new(MockPrimal::new(
             "multi-cap",
             vec![Capability::Security, Capability::Storage, Capability::AI],
             vec![Capability::Discovery],
-        ),
-    )];
+        ))];
 
     let graph = DependencyGraph::build(&primals).expect("should build");
     let provided = &graph.provides[&pid("multi-cap")];
@@ -77,13 +76,12 @@ fn test_build_multiple_capabilities() {
 
 #[test]
 fn test_build_custom_capability() {
-    let primals: Vec<Arc<dyn crate::primal_orchestrator::ManagedPrimal>> = vec![Arc::new(
-        MockPrimal::new(
+    let primals: Vec<Arc<dyn crate::primal_orchestrator::ManagedPrimal>> =
+        vec![Arc::new(MockPrimal::new(
             "custom-svc",
             vec![Capability::Custom("my-extension".into())],
             vec![],
-        ),
-    )];
+        ))];
 
     let graph = DependencyGraph::build(&primals).expect("should build");
     assert!(
@@ -262,13 +260,12 @@ fn test_deep_chain_five_levels() {
 
 #[test]
 fn test_self_dependency_error() {
-    let primals: Vec<Arc<dyn crate::primal_orchestrator::ManagedPrimal>> = vec![Arc::new(
-        MockPrimal::new(
+    let primals: Vec<Arc<dyn crate::primal_orchestrator::ManagedPrimal>> =
+        vec![Arc::new(MockPrimal::new(
             "narcissist",
             vec![Capability::Security],
             vec![Capability::Security],
-        ),
-    )];
+        ))];
 
     let graph = DependencyGraph::build(&primals).expect("build should work");
     let result = graph.topological_waves();

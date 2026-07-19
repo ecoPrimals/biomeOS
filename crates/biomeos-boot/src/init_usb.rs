@@ -47,10 +47,7 @@ fn detect_biomeos_usb_at(block_dir: &Path) -> Option<PathBuf> {
     let entries = match std::fs::read_dir(block_dir) {
         Ok(entries) => entries,
         Err(e) => {
-            warn!(
-                "Failed to read {}: {e}",
-                block_dir.display()
-            );
+            warn!("Failed to read {}: {e}", block_dir.display());
             return None;
         }
     };

@@ -3,8 +3,8 @@
 
 //! handle_agent_request RPC handler tests.
 
+use super::super::{AgentRegistry, AgentState, PlasmodiumAgent, handle_agent_request};
 use super::common::route;
-use super::super::{handle_agent_request, AgentRegistry, AgentState, PlasmodiumAgent};
 use serde_json::json;
 
 #[tokio::test]

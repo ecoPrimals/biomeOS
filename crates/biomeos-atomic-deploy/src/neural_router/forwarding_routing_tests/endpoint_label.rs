@@ -2,8 +2,8 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use super::common::create_router;
-use biomeos_core::TransportEndpoint;
 use crate::neural_router::NeuralRouter;
+use biomeos_core::TransportEndpoint;
 use std::path::PathBuf;
 use std::sync::Arc;
 

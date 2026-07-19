@@ -3,8 +3,8 @@
 
 //! Verification and health-check node execution tests.
 
-use super::create_test_node;
 use super::super::neural_executor::GraphExecutor;
+use super::create_test_node;
 use crate::neural_graph::{Graph, GraphConfig};
 use std::collections::HashMap;
 

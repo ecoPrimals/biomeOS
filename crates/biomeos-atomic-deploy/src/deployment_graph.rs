@@ -174,11 +174,7 @@ impl AtomicDeploymentGraph {
         for (index, node) in self.nodes.iter().enumerate() {
             for dep_id in &node.dependencies {
                 let Some(&dep_index) = node_index.get(dep_id.as_str()) else {
-                    bail!(
-                        "Node '{}' depends on unknown node '{}'",
-                        node.id,
-                        dep_id
-                    );
+                    bail!("Node '{}' depends on unknown node '{}'", node.id, dep_id);
                 };
                 dependents[dep_index].push(index);
                 in_degree[index] += 1;
@@ -389,9 +385,13 @@ mod tests {
 
         assert_eq!(order[0], "root");
         assert_eq!(order[order.len() - 1], "join");
-        assert!(order.iter().position(|id| id == "left").unwrap()
-            < order.iter().position(|id| id == "join").unwrap());
-        assert!(order.iter().position(|id| id == "right").unwrap()
-            < order.iter().position(|id| id == "join").unwrap());
+        assert!(
+            order.iter().position(|id| id == "left").unwrap()
+                < order.iter().position(|id| id == "join").unwrap()
+        );
+        assert!(
+            order.iter().position(|id| id == "right").unwrap()
+                < order.iter().position(|id| id == "join").unwrap()
+        );
     }
 }

@@ -41,9 +41,9 @@
 
 use std::path::Path;
 
-use anyhow::Result;
 #[cfg(unix)]
 use anyhow::Context;
+use anyhow::Result;
 use biomeos_types::tarpc_types::HealthRpc;
 #[cfg(unix)]
 use futures::StreamExt;

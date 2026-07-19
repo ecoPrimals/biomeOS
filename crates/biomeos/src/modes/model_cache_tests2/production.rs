@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::common::model_cache_config_for_home;
 use super::super::{run_with, run_with_config};
+use super::common::model_cache_config_for_home;
 use crate::ModelCacheCommand;
 
 #[tokio::test]

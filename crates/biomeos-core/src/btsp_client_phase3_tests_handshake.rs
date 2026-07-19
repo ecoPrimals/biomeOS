@@ -11,8 +11,8 @@
 
 use super::super::*;
 use super::{
-    BtspServerConfig, NegotiateBehavior, Phase2Behavior, VALID_SHARED_SECRET_HEX,
-    run_btsp_server, with_security_provider,
+    BtspServerConfig, NegotiateBehavior, Phase2Behavior, VALID_SHARED_SECRET_HEX, run_btsp_server,
+    with_security_provider,
 };
 use tokio::net::UnixStream;
 

@@ -3,8 +3,8 @@
 
 //! agents_from_collective and auto-meld tests.
 
+use super::super::{AgentRegistry, AgentState, agents_from_collective, handle_agent_request};
 use super::common::TEST_REMOTE_GATE_ADDR;
-use super::super::{agents_from_collective, handle_agent_request, AgentRegistry, AgentState};
 
 fn mock_state(
     gates: Vec<biomeos_core::plasmodium::GateInfo>,

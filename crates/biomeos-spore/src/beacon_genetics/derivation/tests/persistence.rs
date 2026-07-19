@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::{BASE64, MockCaller, sample_lineage};
 use super::super::{DeviceLineage, LineageDeriver};
+use super::{BASE64, MockCaller, sample_lineage};
 use base64::Engine;
 
 #[test]
@@ -133,8 +133,7 @@ fn test_load_lineage_from_raw_seed_no_metadata() {
     assert!(loaded.derived_at > 0);
 
     // Deterministic: same bytes → same identity
-    let loaded_again =
-        LineageDeriver::<MockCaller>::load_lineage(&seed_path).expect("reload");
+    let loaded_again = LineageDeriver::<MockCaller>::load_lineage(&seed_path).expect("reload");
     assert_eq!(loaded_again.device_id, loaded.device_id);
     assert_eq!(loaded_again.family_id, loaded.family_id);
 }

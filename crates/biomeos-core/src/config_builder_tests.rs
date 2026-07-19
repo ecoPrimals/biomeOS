@@ -293,7 +293,14 @@ fn test_with_feature_known_and_custom() {
         .build();
 
     assert!(config.features.crypto_locks);
-    assert!(config.features.custom.get("custom_beta").copied().unwrap_or(false));
+    assert!(
+        config
+            .features
+            .custom
+            .get("custom_beta")
+            .copied()
+            .unwrap_or(false)
+    );
     assert!(!config.features.telemetry);
 }
 

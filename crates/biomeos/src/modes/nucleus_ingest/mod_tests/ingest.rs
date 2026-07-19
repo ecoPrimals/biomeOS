@@ -4,8 +4,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use super::common::{create_valid_pseudospore, spawn_mock_at_path, spawn_mock_neural_api};
 use super::super::run_ingest;
+use super::common::{create_valid_pseudospore, spawn_mock_at_path, spawn_mock_neural_api};
 
 #[tokio::test]
 async fn test_run_ingest_dry_run() {

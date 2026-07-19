@@ -3,8 +3,8 @@
 
 //! Filesystem node execution and failure/rollback tests.
 
-use super::create_test_node;
 use super::super::neural_executor::GraphExecutor;
+use super::create_test_node;
 use crate::neural_graph::{Graph, GraphConfig};
 use std::collections::HashMap;
 

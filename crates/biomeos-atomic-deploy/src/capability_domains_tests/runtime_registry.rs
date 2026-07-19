@@ -12,10 +12,7 @@ fn test_capability_to_provider_runtime_overrides_bootstrap() {
         capability_to_provider("security"),
         Some("live-security-primal".into())
     );
-    assert_eq!(
-        capability_to_provider_fallback("security"),
-        Some("beardog")
-    );
+    assert_eq!(capability_to_provider_fallback("security"), Some("beardog"));
 
     clear_runtime_capability_registry();
 }

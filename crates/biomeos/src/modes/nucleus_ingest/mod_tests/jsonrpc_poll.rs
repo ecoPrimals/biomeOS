@@ -8,8 +8,8 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 use tokio::sync::oneshot;
 
-use super::common::spawn_mock_neural_api;
 use super::super::{poll_execution, send_jsonrpc};
+use super::common::spawn_mock_neural_api;
 
 #[tokio::test]
 async fn test_send_jsonrpc_connection_failure() {

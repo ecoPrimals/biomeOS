@@ -3,7 +3,10 @@
 
 //! Shared helpers for genetic lineage integration tests (`genetic_lineage_*.rs`).
 
-#![allow(dead_code, reason = "each integration test binary uses a subset of helpers")]
+#![allow(
+    dead_code,
+    reason = "each integration test binary uses a subset of helpers"
+)]
 
 use anyhow::Result;
 use biomeos_federation::security_client::SecurityProviderClient;

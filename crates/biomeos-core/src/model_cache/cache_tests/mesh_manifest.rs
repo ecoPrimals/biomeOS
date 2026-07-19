@@ -50,4 +50,3 @@ async fn test_corrupt_manifest_json_falls_back_to_empty() {
     assert!(!cache.has_model("any"));
     assert!(cache.list_models().is_empty());
 }
-

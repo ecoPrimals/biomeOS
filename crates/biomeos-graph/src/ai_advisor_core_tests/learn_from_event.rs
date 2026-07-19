@@ -8,8 +8,8 @@ use std::time::Duration;
 use chrono::Utc;
 use serde_json::json;
 
-use super::helpers::*;
 use super::super::*;
+use super::helpers::*;
 use crate::events::GraphEvent;
 
 #[tokio::test]

@@ -5,7 +5,7 @@
 
 #![expect(clippy::expect_used, reason = "test assertions use expect for clarity")]
 
-use super::{format_size_gb, format_size_mb, hf_dir_to_model_id, run_with, ModelCacheCommand};
+use super::{ModelCacheCommand, format_size_gb, format_size_mb, hf_dir_to_model_id, run_with};
 
 mod commands;
 mod formatting;

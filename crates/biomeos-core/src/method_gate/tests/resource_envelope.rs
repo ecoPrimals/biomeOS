@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+use super::super::{
+    CallerContext, EnforcementMode, IonicTokenClaims, MethodGate, ResourceEnvelope,
+};
 use super::common::make_ionic_token;
-use super::super::{EnforcementMode, IonicTokenClaims, MethodGate, ResourceEnvelope, CallerContext};
 
 #[test]
 fn dispatch_timeout_ms_from_envelope() {

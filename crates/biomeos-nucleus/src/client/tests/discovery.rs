@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+use super::super::coordinator::NucleusClient;
 use super::common::{
     MockCap, MockIdentityAcceptName, MockPhysical, MockTrust, sample_discovered, sample_endpoint,
     sample_proof, test_client,
 };
-use super::super::coordinator::NucleusClient;
 use crate::Registry;
 use crate::discovery::DiscoveryRequest;
 use crate::trust::TrustLevel;

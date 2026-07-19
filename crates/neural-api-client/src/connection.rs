@@ -60,13 +60,10 @@ pub async fn json_rpc_call(
 
     let request = JsonRpcRequest::new(method, params.clone());
 
-    let response = timeout(
-        request_timeout,
-        send_jsonrpc_over_stream(stream, request),
-    )
-    .await
-    .context("Request timeout")?
-    .context("Failed to send JSON-RPC request")?;
+    let response = timeout(request_timeout, send_jsonrpc_over_stream(stream, request))
+        .await
+        .context("Request timeout")?
+        .context("Failed to send JSON-RPC request")?;
 
     if let Some(error) = response.error {
         let code = i32::try_from(error.code).unwrap_or(-1);

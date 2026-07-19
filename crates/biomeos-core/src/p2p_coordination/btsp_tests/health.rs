@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::common::{healthy_transport, healthy_tunnel};
 use super::super::super::TransportEndpoint;
+use super::common::{healthy_transport, healthy_tunnel};
 
 #[test]
 fn test_compute_overall_status_both_healthy() {
@@ -157,8 +157,9 @@ fn test_build_tcp_fallback_from_uds_endpoint() {
         protocol: "uds".to_string(),
         secure: true,
     };
-    let fallback = super::super::build_tcp_fallback_endpoint(&endpoint, "127.0.0.1".to_string(), 9100)
-        .expect("fallback");
+    let fallback =
+        super::super::build_tcp_fallback_endpoint(&endpoint, "127.0.0.1".to_string(), 9100)
+            .expect("fallback");
     assert_eq!(fallback.protocol, "tcp");
     assert_eq!(fallback.address, "127.0.0.1");
     assert_eq!(fallback.port, 9100);

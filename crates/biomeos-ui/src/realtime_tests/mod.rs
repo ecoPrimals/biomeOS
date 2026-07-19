@@ -5,10 +5,10 @@
 
 #![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 
+mod events;
+mod handler_errors;
 mod handler_loops;
 mod parse_extended;
-mod transport_discovery;
-mod subscriber;
-mod events;
 mod sse_parse;
-mod handler_errors;
+mod subscriber;
+mod transport_discovery;

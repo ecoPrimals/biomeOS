@@ -124,4 +124,3 @@ async fn test_process_events_stops_when_broadcast_closed() {
     );
     assert!(result.unwrap().is_ok());
 }
-

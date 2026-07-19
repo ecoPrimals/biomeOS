@@ -416,7 +416,11 @@ fn extract_node_id_from_primal(primal_id: &str) -> Option<String> {
 ///
 /// Probes the target endpoint with a lightweight JSON-RPC round-trip.
 /// Returns `None` when the endpoint is unreachable or probing is unavailable.
-async fn collect_edge_metrics(from_id: &str, to_id: &str, target_endpoint: &str) -> Option<EdgeMetrics> {
+async fn collect_edge_metrics(
+    from_id: &str,
+    to_id: &str,
+    target_endpoint: &str,
+) -> Option<EdgeMetrics> {
     let latency_ms = probe_target_latency(target_endpoint).await?;
 
     tracing::debug!(
@@ -477,11 +481,7 @@ async fn probe_connect_latency(transport: &biomeos_core::TransportEndpoint) -> O
 /// Measure JSON-RPC round-trip latency for a single method call.
 async fn measure_rpc_latency(client: &biomeos_core::AtomicClient, method: &str) -> Option<f64> {
     let start = std::time::Instant::now();
-    if client
-        .call(method, serde_json::json!({}))
-        .await
-        .is_ok()
-    {
+    if client.call(method, serde_json::json!({})).await.is_ok() {
         Some(start.elapsed().as_secs_f64() * 1000.0)
     } else {
         None

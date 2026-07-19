@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::MockCaller;
 use super::super::LineageDeriver;
+use super::MockCaller;
 
 #[tokio::test]
 async fn test_derive_device_seed_success() {

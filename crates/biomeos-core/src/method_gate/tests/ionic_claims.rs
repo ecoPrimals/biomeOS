@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::common::make_ionic_token;
 use super::super::IonicTokenClaims;
+use super::common::make_ionic_token;
 
 #[test]
 fn parse_ionic_token_extracts_claims() {

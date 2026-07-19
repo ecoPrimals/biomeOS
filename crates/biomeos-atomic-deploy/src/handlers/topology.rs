@@ -24,8 +24,8 @@
 use crate::neural_router::NeuralRouter;
 use anyhow::Result;
 use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
-use biomeos_types::{JsonRpcRequest, SystemPaths};
 use biomeos_types::defaults::DEFAULT_FAMILY_ID;
+use biomeos_types::{JsonRpcRequest, SystemPaths};
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -123,9 +123,8 @@ impl TopologyHandler {
                             // Query capabilities if possible
                             let cap_result = self.query_primal_capabilities(&socket_path).await;
 
-                            let endpoint = biomeos_core::TransportEndpoint::UnixSocket {
-                                path: path.clone(),
-                            };
+                            let endpoint =
+                                biomeos_core::TransportEndpoint::UnixSocket { path: path.clone() };
                             let healthy =
                                 crate::neural_router::NeuralRouter::check_endpoint_health(
                                     &endpoint,

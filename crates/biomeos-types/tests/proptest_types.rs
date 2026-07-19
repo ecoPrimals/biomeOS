@@ -9,8 +9,7 @@
 
 use biomeos_types::primal_names::{
     AUXILIARY_PRIMALS, BIOMEOS, BIOMEOS_DEVICE_MANAGEMENT, BOOTSTRAP_CORE_SET,
-    BOOTSTRAP_PROVENANCE_SET,
-    SPRING_PRIMALS, is_known_primal,
+    BOOTSTRAP_PROVENANCE_SET, SPRING_PRIMALS, is_known_primal,
 };
 use biomeos_types::{
     FamilyId, JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse, PrimalId,

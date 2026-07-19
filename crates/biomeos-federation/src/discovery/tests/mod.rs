@@ -5,7 +5,7 @@
 
 #![expect(clippy::expect_used, reason = "test assertions")]
 
-mod endpoint_parsing;
-mod primal_types;
-mod peer_registration;
 mod discovery_async;
+mod endpoint_parsing;
+mod peer_registration;
+mod primal_types;

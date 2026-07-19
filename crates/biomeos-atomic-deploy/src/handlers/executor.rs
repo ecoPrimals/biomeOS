@@ -48,11 +48,7 @@ impl<'a> ExecutorHandler<'a> {
                 single_shot.active_sessions,
                 single_shot.status,
             ),
-            executor_list_entry(
-                EXECUTOR_PIPELINE,
-                pipeline.active_sessions,
-                pipeline.status,
-            ),
+            executor_list_entry(EXECUTOR_PIPELINE, pipeline.active_sessions, pipeline.status),
         ];
 
         Ok(json!({

@@ -5,7 +5,9 @@ use super::super::capability_registry::CapabilityRegistry;
 
 /// All socket tests use `CapabilityRegistry::with_socket_path` to inject an explicit
 /// temp-dir socket, avoiding env-var races with `XDG_RUNTIME_DIR`.
-pub(super) fn make_registry(name: &str) -> (tempfile::TempDir, std::path::PathBuf, CapabilityRegistry) {
+pub(super) fn make_registry(
+    name: &str,
+) -> (tempfile::TempDir, std::path::PathBuf, CapabilityRegistry) {
     let temp = tempfile::tempdir().expect("temp dir");
     let runtime_dir = temp.path().join("biomeos");
     std::fs::create_dir_all(&runtime_dir).expect("create runtime dir");

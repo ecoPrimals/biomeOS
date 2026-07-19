@@ -33,9 +33,9 @@ pub(crate) async fn handler_with_registration() -> CapabilityHandler {
     handler
 }
 
-mod register;
 mod discover;
-mod route;
+mod metrics_mcp;
+mod register;
 mod register_route;
 mod resolve;
-mod metrics_mcp;
+mod route;

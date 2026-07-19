@@ -4,8 +4,8 @@
 use chrono::Utc;
 use std::sync::Arc;
 
-use super::common::test_empty_subscriptions;
 use super::super::*;
+use super::common::test_empty_subscriptions;
 
 #[tokio::test]
 async fn test_handle_message_invalid_json() {

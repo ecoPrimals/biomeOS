@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+use super::super::{TowerStatusReport, tower_status};
 use super::common::mock_env;
-use super::super::{tower_status, TowerStatusReport};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -152,5 +152,7 @@ fn tower_status_running_includes_family_id_from_env() {
 
 #[test]
 fn std_env_lookup_missing_var_returns_none() {
-    assert!(super::super::std_env_lookup("BIOMEOS_TEST_ENV_KEY_THAT_SHOULD_NOT_EXIST_XYZ").is_none());
+    assert!(
+        super::super::std_env_lookup("BIOMEOS_TEST_ENV_KEY_THAT_SHOULD_NOT_EXIST_XYZ").is_none()
+    );
 }

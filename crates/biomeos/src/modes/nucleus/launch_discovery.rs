@@ -194,7 +194,13 @@ primals = ["bearDog", "songBird", "skunkBat", "toadStool", "barraCuda", "coralRe
             "sweetgrass".to_string(),
         ];
         let merged = merge_discovered_with_bootstrap(&bootstrap, discovered);
-        assert_eq!(merged, bootstrap.iter().map(|p| (*p).to_string()).collect::<Vec<_>>());
+        assert_eq!(
+            merged,
+            bootstrap
+                .iter()
+                .map(|p| (*p).to_string())
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -220,7 +226,12 @@ primals = ["bearDog", "songBird", "skunkBat", "toadStool", "barraCuda", "coralRe
         assert_eq!(
             merged,
             vec![
-                "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda"
+                "beardog",
+                "songbird",
+                "skunkbat",
+                "toadstool",
+                "coralreef",
+                "barracuda"
             ]
         );
     }

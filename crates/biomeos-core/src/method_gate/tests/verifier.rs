@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::common::make_ionic_token;
 use super::super::{LocalClaimsVerifier, NoopVerifier, SecurityVerifier, TokenVerifier};
+use super::common::make_ionic_token;
 
 #[test]
 fn local_claims_verifier_parses_ionic_token() {

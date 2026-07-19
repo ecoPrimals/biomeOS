@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use serde_json::json;
 
-use super::helpers::*;
 use super::super::*;
+use super::helpers::*;
 
 #[tokio::test]
 async fn ai_advisor_core_check_squirrel_availability_healthy_discovery() {

@@ -215,13 +215,17 @@ impl NeuralApiServer {
                 dispatch(self.graph_handler.verify_graph(&request.params).await, id)
             }
             Route::ExecutorList => {
-                let handler =
-                    crate::handlers::executor::ExecutorHandler::new(&self.graph_handler, self.started_at);
+                let handler = crate::handlers::executor::ExecutorHandler::new(
+                    &self.graph_handler,
+                    self.started_at,
+                );
                 dispatch(handler.list().await, id)
             }
             Route::ExecutorStatus => {
-                let handler =
-                    crate::handlers::executor::ExecutorHandler::new(&self.graph_handler, self.started_at);
+                let handler = crate::handlers::executor::ExecutorHandler::new(
+                    &self.graph_handler,
+                    self.started_at,
+                );
                 dispatch(handler.status(params).await, id)
             }
             Route::GraphSuggestOptimizations => {
@@ -311,13 +315,10 @@ impl NeuralApiServer {
                     id,
                 )
             }
-            Route::CleanupSockets => {
-                dispatch(
-                    crate::handlers::cleanup::CleanupHandler::cleanup_sockets(params.as_ref())
-                        .await,
-                    id,
-                )
-            }
+            Route::CleanupSockets => dispatch(
+                crate::handlers::cleanup::CleanupHandler::cleanup_sockets(params.as_ref()).await,
+                id,
+            ),
             Route::RoutingWeights => dispatch(self.handle_routing_weights().await, id),
             Route::RoutingExplain => dispatch(self.handle_routing_explain(params).await, id),
             Route::CompositionPatterns => {

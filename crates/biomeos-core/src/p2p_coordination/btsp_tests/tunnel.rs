@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::common::{
-    test_proof, FailHealthDiscovery, FailHealthSecurity, FailRegisterDiscovery, GoodDiscovery,
-    GoodSecurity, UnhealthySecurity,
-};
 use super::super::*;
+use super::common::{
+    FailHealthDiscovery, FailHealthSecurity, FailRegisterDiscovery, GoodDiscovery, GoodSecurity,
+    UnhealthySecurity, test_proof,
+};
 
 #[tokio::test]
 async fn test_create_tunnel_success() {

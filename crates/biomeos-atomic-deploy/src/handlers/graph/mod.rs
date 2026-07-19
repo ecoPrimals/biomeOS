@@ -182,9 +182,7 @@ impl GraphHandler {
     }
 
     /// Shared continuous session tracker (for executor introspection).
-    pub(crate) fn continuous_sessions(
-        &self,
-    ) -> &Arc<RwLock<HashMap<String, ContinuousSession>>> {
+    pub(crate) fn continuous_sessions(&self) -> &Arc<RwLock<HashMap<String, ContinuousSession>>> {
         &self.continuous_sessions
     }
 

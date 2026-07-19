@@ -3,8 +3,8 @@
 
 use std::path::PathBuf;
 
-use super::common::spawn_mock_neural_api;
 use super::super::run_emit;
+use super::common::spawn_mock_neural_api;
 
 #[tokio::test]
 async fn test_run_emit_dry_run() {

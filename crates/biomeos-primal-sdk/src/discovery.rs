@@ -22,9 +22,7 @@ use std::path::{Path, PathBuf};
 use crate::PrimalCapability;
 
 mod runtime;
-use runtime::{
-    bootstrap_capability_hint, probe_primary_capability, store_runtime_capability_hint,
-};
+use runtime::{bootstrap_capability_hint, probe_primary_capability, store_runtime_capability_hint};
 
 /// A discovered primal with its runtime information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -274,9 +272,7 @@ impl PrimalDiscovery {
 
         // Populate runtime cache from live capability introspection when possible.
         #[cfg(unix)]
-        if is_healthy
-            && let Some(cap) = probe_primary_capability(&path).await
-        {
+        if is_healthy && let Some(cap) = probe_primary_capability(&path).await {
             store_runtime_capability_hint(name, cap);
         }
 
@@ -438,50 +434,32 @@ mod tests {
 
     #[test]
     fn test_capability_from_name_beardog() {
-        assert_eq!(
-            bootstrap_capability_hint("beardog").category,
-            "encryption"
-        );
+        assert_eq!(bootstrap_capability_hint("beardog").category, "encryption");
     }
 
     #[test]
     fn test_capability_from_name_songbird() {
-        assert_eq!(
-            bootstrap_capability_hint("songbird").category,
-            "networking"
-        );
+        assert_eq!(bootstrap_capability_hint("songbird").category, "networking");
     }
 
     #[test]
     fn test_capability_from_name_toadstool() {
-        assert_eq!(
-            bootstrap_capability_hint("toadstool").category,
-            "compute"
-        );
+        assert_eq!(bootstrap_capability_hint("toadstool").category, "compute");
     }
 
     #[test]
     fn test_capability_from_name_nestgate() {
-        assert_eq!(
-            bootstrap_capability_hint("nestgate").category,
-            "storage"
-        );
+        assert_eq!(bootstrap_capability_hint("nestgate").category, "storage");
     }
 
     #[test]
     fn test_capability_from_name_squirrel() {
-        assert_eq!(
-            bootstrap_capability_hint("squirrel").category,
-            "ai"
-        );
+        assert_eq!(bootstrap_capability_hint("squirrel").category, "ai");
     }
 
     #[test]
     fn test_capability_from_name_wetspring() {
-        assert_eq!(
-            bootstrap_capability_hint("wetspring").category,
-            "science"
-        );
+        assert_eq!(bootstrap_capability_hint("wetspring").category, "science");
     }
 
     #[test]
@@ -501,10 +479,7 @@ mod tests {
 
     #[test]
     fn test_capability_from_name_case_insensitive() {
-        assert_eq!(
-            bootstrap_capability_hint("BEARDOG").category,
-            "encryption"
-        );
+        assert_eq!(bootstrap_capability_hint("BEARDOG").category, "encryption");
     }
 
     #[test]

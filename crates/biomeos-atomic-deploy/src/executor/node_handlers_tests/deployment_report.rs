@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::common::{test_context, test_node_with_config};
-use super::super::deployment_report;
 use super::super::super::context::NodeStatus;
+use super::super::deployment_report;
+use super::common::{test_context, test_node_with_config};
 use serde_json::json;
 use std::collections::HashMap;
 

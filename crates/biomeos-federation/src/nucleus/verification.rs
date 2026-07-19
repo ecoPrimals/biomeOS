@@ -352,9 +352,9 @@ mod tests {
             primal_type: "test".into(),
             capabilities: caps,
             endpoints: vec![PrimalEndpoint::UnixSocket { path }],
-        metadata: HashMap::new(),
-        error: None,
-    }
+            metadata: HashMap::new(),
+            error: None,
+        }
     }
 
     #[tokio::test]
@@ -454,9 +454,9 @@ mod tests {
             primal_type: "t".into(),
             capabilities: caps.clone(),
             endpoints: vec![],
-        metadata: HashMap::new(),
-        error: None,
-    };
+            metadata: HashMap::new(),
+            error: None,
+        };
         let got = layer3_capability_verification(&primal)
             .await
             .expect("layer3");
@@ -525,9 +525,9 @@ mod tests {
             endpoints: vec![PrimalEndpoint::UnixSocket {
                 path: sock_path.clone(),
             }],
-        metadata: HashMap::new(),
-        error: None,
-    };
+            metadata: HashMap::new(),
+            error: None,
+        };
 
         let got = layer3_capability_verification(&primal)
             .await
@@ -614,9 +614,9 @@ mod tests {
             primal_type: "t".into(),
             capabilities: caps.clone(),
             endpoints: vec![PrimalEndpoint::UnixSocket { path: sock_path }],
-        metadata: HashMap::new(),
-        error: None,
-    };
+            metadata: HashMap::new(),
+            error: None,
+        };
 
         let got = layer3_capability_verification(&primal)
             .await

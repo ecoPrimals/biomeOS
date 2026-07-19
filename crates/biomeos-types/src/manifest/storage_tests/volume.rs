@@ -240,4 +240,3 @@ fn volume_type_config_map_and_secret_roundtrip() {
         ));
     }
 }
-

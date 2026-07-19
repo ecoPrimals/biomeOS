@@ -103,6 +103,5 @@ impl Drop for SocketCleanup {
     }
 }
 
-
 mod registry;
 mod translation;

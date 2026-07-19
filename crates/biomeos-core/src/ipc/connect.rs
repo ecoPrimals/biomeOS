@@ -23,7 +23,8 @@ pub async fn connect_transport(endpoint: &TransportEndpoint) -> io::Result<Trans
 
         TransportEndpoint::AbstractSocket { name } => connect_abstract(name).await,
 
-        TransportEndpoint::TcpSocket { host, port } | TransportEndpoint::HttpJsonRpc { host, port } => {
+        TransportEndpoint::TcpSocket { host, port }
+        | TransportEndpoint::HttpJsonRpc { host, port } => {
             let addr = format!("{host}:{port}");
             let stream = TcpStream::connect(&addr).await?;
             Ok(TransportStream::Tcp(stream))

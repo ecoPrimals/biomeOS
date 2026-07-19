@@ -3,8 +3,8 @@
 
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 
+use super::common::{MockDarkForestCaller, make_beacon};
 use crate::dark_forest::{BeaconPlaintext, EncryptedBeacon};
-use super::common::{make_beacon, MockDarkForestCaller};
 
 #[tokio::test]
 async fn test_try_decrypt_beacon_success() {

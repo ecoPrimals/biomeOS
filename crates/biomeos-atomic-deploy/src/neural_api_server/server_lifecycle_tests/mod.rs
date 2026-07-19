@@ -19,7 +19,10 @@ use tokio::net::{TcpListener, TcpStream, UnixStream};
 const RIBOCIPHER_CLEAR_SIGNAL: [u8; ribocipher::SIGNAL_LEN] =
     [ribocipher::SIGNAL_CLEAR, ribocipher::VERSION_1];
 
-pub(super) async fn write_ribocipher_json_rpc(stream: &mut (impl AsyncWriteExt + Unpin), request: &str) {
+pub(super) async fn write_ribocipher_json_rpc(
+    stream: &mut (impl AsyncWriteExt + Unpin),
+    request: &str,
+) {
     stream
         .write_all(&RIBOCIPHER_CLEAR_SIGNAL)
         .await
@@ -62,7 +65,11 @@ pub(super) async fn wait_for_tcp_json_rpc(port: u16, request: &str, timeout: Dur
     }
 }
 
-pub(super) async fn wait_for_uds_json_rpc(socket_path: &Path, request: &str, timeout: Duration) -> Value {
+pub(super) async fn wait_for_uds_json_rpc(
+    socket_path: &Path,
+    request: &str,
+    timeout: Duration,
+) -> Value {
     let deadline = tokio::time::Instant::now() + timeout;
     loop {
         match UnixStream::connect(socket_path).await {

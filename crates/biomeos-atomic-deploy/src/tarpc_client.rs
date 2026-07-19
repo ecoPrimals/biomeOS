@@ -12,10 +12,10 @@ use anyhow::{Context, Result};
 use biomeos_types::tarpc_types::{DiscoveryRpcClient, HealthRpcClient, SecurityRpcClient};
 use std::path::Path;
 use tarpc::client;
-#[cfg(unix)]
-use tarpc::serde_transport::unix;
 #[cfg(windows)]
 use tarpc::serde_transport::tcp;
+#[cfg(unix)]
+use tarpc::serde_transport::unix;
 use tokio_serde::formats::Bincode;
 
 /// Connect to a primal's tarpc socket and return a `HealthRpcClient`.
@@ -114,12 +114,14 @@ pub async fn connect_tarpc_security(socket_path: &Path) -> Result<SecurityRpcCli
 #[cfg(windows)]
 async fn read_tarpc_port(socket_path: &Path) -> Result<u16> {
     let port_file = socket_path.with_extension("port");
-    let port_str = tokio::fs::read_to_string(&port_file).await.with_context(|| {
-        format!(
-            "No Unix tarpc on Windows and port-file not found: {}",
-            port_file.display()
-        )
-    })?;
+    let port_str = tokio::fs::read_to_string(&port_file)
+        .await
+        .with_context(|| {
+            format!(
+                "No Unix tarpc on Windows and port-file not found: {}",
+                port_file.display()
+            )
+        })?;
     port_str
         .trim()
         .parse()

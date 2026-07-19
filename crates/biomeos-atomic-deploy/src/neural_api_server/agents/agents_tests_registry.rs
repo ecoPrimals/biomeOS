@@ -3,8 +3,8 @@
 
 //! AgentRegistry async tests.
 
-use super::common::route;
 use super::super::{AgentRegistry, AgentState, PlasmodiumAgent};
+use super::common::route;
 
 #[tokio::test]
 async fn test_agent_registry() {

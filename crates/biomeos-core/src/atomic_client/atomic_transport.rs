@@ -15,8 +15,8 @@ use tokio::net::UnixStream;
 use tokio::time::timeout;
 use tracing::trace;
 
-use crate::ipc::connect_transport;
 use crate::TransportEndpoint;
+use crate::ipc::connect_transport;
 
 use super::atomic_rpc::send_jsonrpc_line;
 
@@ -160,7 +160,10 @@ async fn send_encrypted_jsonrpc(
 }
 
 /// Legacy per-host entry point; prefer [`jsonrpc_via_transport`].
-#[expect(dead_code, reason = "retained for callers that pass host/port directly")]
+#[expect(
+    dead_code,
+    reason = "retained for callers that pass host/port directly"
+)]
 pub(crate) async fn jsonrpc_tcp(
     host: &str,
     port: u16,
@@ -251,7 +254,10 @@ pub(crate) async fn jsonrpc_http(
 /// Send JSON-RPC over an abstract socket (Linux/Android).
 ///
 /// Legacy entry point; prefer [`jsonrpc_via_transport`].
-#[expect(dead_code, reason = "retained for callers that pass an abstract name directly")]
+#[expect(
+    dead_code,
+    reason = "retained for callers that pass an abstract name directly"
+)]
 pub(crate) async fn jsonrpc_abstract(
     name: &str,
     request: JsonRpcRequest,

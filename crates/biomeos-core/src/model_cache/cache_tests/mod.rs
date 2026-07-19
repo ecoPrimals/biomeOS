@@ -8,6 +8,6 @@
 use super::ModelCache;
 use super::types::{ModelCacheConfig, ModelResolution};
 mod basic_queries;
-mod register_local;
 mod huggingface;
 mod mesh_manifest;
+mod register_local;

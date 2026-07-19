@@ -212,9 +212,7 @@ impl BiomeOsHttpClient {
             anyhow::bail!("Discovery RPC error: {error:?}");
         }
 
-        let result = rpc_response
-            .result
-            .context("No result in RPC response")?;
+        let result = rpc_response.result.context("No result in RPC response")?;
 
         let http_response: HttpResponse =
             serde_json::from_value(result).context("Failed to parse HTTP response")?;
@@ -245,7 +243,11 @@ fn header_lookup<'a>(headers: &'a HashMap<String, String>, name: &str) -> Option
 /// Whether the discovery delegate base64-encoded the body for JSON-RPC transport.
 fn body_requires_base64_decode(headers: &HashMap<String, String>) -> bool {
     if let Some(content_type) = header_lookup(headers, "content-type") {
-        let media_type = content_type.split(';').next().unwrap_or(content_type).trim();
+        let media_type = content_type
+            .split(';')
+            .next()
+            .unwrap_or(content_type)
+            .trim();
         if is_binary_content_type(media_type) {
             return true;
         }
@@ -306,9 +308,9 @@ fn decode_http_body(headers: &HashMap<String, String>, body: &Value) -> Result<B
         bail!("Unsupported binary body encoding: {encoding}");
     }
 
-    let body_str = body
-        .as_str()
-        .context("Response body is not binary (expected string, byte array, or structured object)")?;
+    let body_str = body.as_str().context(
+        "Response body is not binary (expected string, byte array, or structured object)",
+    )?;
 
     if body_requires_base64_decode(headers) {
         decode_base64_body(body_str)

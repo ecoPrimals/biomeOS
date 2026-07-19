@@ -3,8 +3,8 @@
 
 use anyhow::Result;
 use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
-use biomeos_types::{JsonRpcRequest, SystemPaths};
 use biomeos_types::defaults::DEFAULT_FAMILY_ID;
+use biomeos_types::{JsonRpcRequest, SystemPaths};
 use std::path::{Path, PathBuf};
 use tokio::time::Duration;
 use tracing::debug;

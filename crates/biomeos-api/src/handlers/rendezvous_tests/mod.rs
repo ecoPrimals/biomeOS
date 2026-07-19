@@ -4,7 +4,6 @@
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 #![expect(clippy::expect_used, reason = "test assertions")]
 
-
 #[cfg(unix)]
 pub(super) async fn spawn_neural_api_loopback_mock(
     family_id: &str,

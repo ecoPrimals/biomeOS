@@ -14,7 +14,7 @@
 //! - XDG and family tmp path discovery
 //!
 //! Additional tests: `engine_tests2.rs`.
-mod path_building;
-mod env_hints;
 mod cache;
 mod discovery_verify;
+mod env_hints;
+mod path_building;

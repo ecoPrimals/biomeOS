@@ -1,4 +1,7 @@
-#![expect(clippy::unwrap_used, reason = "test assertions use unwrap/expect for clarity")]
+#![expect(
+    clippy::unwrap_used,
+    reason = "test assertions use unwrap/expect for clarity"
+)]
 
 use std::collections::HashMap;
 use uuid::Uuid;

@@ -66,8 +66,9 @@ async fn test_discover_capability_via_registry_fails_gracefully() {
         enable_tcp_fallback: false,
         ..Default::default()
     };
-    let discovery = SocketDiscovery::with_strategy("test", strategy)
-        .with_neural_api(std::path::PathBuf::from("/nonexistent/capability-registry.sock"));
+    let discovery = SocketDiscovery::with_strategy("test", strategy).with_neural_api(
+        std::path::PathBuf::from("/nonexistent/capability-registry.sock"),
+    );
 
     let result = discovery
         .discover_capability("nonexistent-capability")

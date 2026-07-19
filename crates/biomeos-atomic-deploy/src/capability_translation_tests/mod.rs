@@ -8,7 +8,6 @@
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 #![expect(clippy::expect_used, reason = "test assertions")]
 
-
 pub(super) fn find_capability_registry_config() -> Option<std::path::PathBuf> {
     let mut dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     loop {
@@ -22,6 +21,6 @@ pub(super) fn find_capability_registry_config() -> Option<std::path::PathBuf> {
     }
 }
 
-mod registry;
 mod config_loading;
+mod registry;
 mod socket_and_call;

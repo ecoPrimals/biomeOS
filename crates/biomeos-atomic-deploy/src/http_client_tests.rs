@@ -170,14 +170,18 @@ async fn test_fetch_binary_content_length_mismatch_returns_err() {
 
 #[tokio::test]
 async fn test_fetch_binary_non_2xx_returns_err() {
-    let four_oh_four = r#"{"jsonrpc":"2.0","result":{"status":404,"headers":{},"body":"aGVsbG8="},"id":1}"#;
+    let four_oh_four =
+        r#"{"jsonrpc":"2.0","result":{"status":404,"headers":{},"body":"aGVsbG8="},"id":1}"#;
     let (_dir, socket_path) = spawn_mock_server(four_oh_four).await;
 
     let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
     let result = client.fetch_binary("http://example.com/missing").await;
 
     let err = result.expect_err("fetch_binary should fail on non-2xx status");
-    assert!(err.to_string().contains("HTTP request failed with status 404"));
+    assert!(
+        err.to_string()
+            .contains("HTTP request failed with status 404")
+    );
 }
 
 #[tokio::test]
