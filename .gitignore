@@ -7,6 +7,7 @@ target/
 # ── IDE / editor / OS ────────────────────────────────────────────────────────
 .idea/
 .vscode/
+.cursor/
 .DS_Store
 *~
 *.swo

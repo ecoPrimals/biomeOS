@@ -1,6 +1,6 @@
 # Context — biomeOS
 
-**Version**: v4.35 | **Updated**: July 16, 2026
+**Version**: v4.37 | **Updated**: July 21, 2026
 
 ## What This Is
 
@@ -25,15 +25,16 @@ multiple gates (devices).
 - **Architecture:** Single binary (UniBin) with multiple operational modes (bootstrap, nucleus, deploy, doctor, continuous, rootpulse)
 - **Communication:** JSON-RPC 2.0 over `biomeos-core::ipc` transport (`TransportStream`, `TransportListener`, `connect_transport`) — Unix sockets primary, abstract sockets, TCP fallback (Windows via `.port` file); tarpc binary protocol escalation for hot paths (HTTP transport endpoint removed v3.97; inter-gate HTTP via Songbird gateway)
 - **License:** AGPL-3.0-or-later (scyBorg triple-copyleft: AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
-- **Tests:** 8,477+ workspace-wide (0 failures)
-- **Coverage:** 90%+ line coverage (llvm-cov verified)
+- **Tests:** 8,492+ workspace-wide (0 failures)
+- **Coverage:** 88%+ line coverage (llvm-cov verified)
 - **Blocking debt:** 0 (primalSpring Phase 43 gaps resolved, all composition gaps resolved)
 - **Edition:** Rust 2024 across all workspace crates
 - **Crate count:** 26 workspace crates
 - **File size:** 0 production files >800 LOC; 0 test files >450 LOC
 - **Cross-arch:** x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu
 - **Phase 2 transport:** complete (12/14 primals on unified `biomeos-core::ipc` trait dispatch)
-- **Clippy:** pedantic + nursery enabled via workspace lint inheritance
+- **Clippy:** pedantic + nursery enabled via workspace lint inheritance, zero warnings (`-D warnings`)
+- **Production unwraps:** 0 (workspace `unwrap_used = "deny"`)
 - **Unsafe:** 0 in production code (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points)
 - **TODO/FIXME/HACK:** 0 (all resolved)
 
