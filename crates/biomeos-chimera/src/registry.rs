@@ -22,9 +22,8 @@ const MAX_DEFINITION_SEARCH_DEPTH: usize = 2;
 /// `depth` is the depth of `dir` itself; entries one level below have depth `depth + 1`.
 /// Inaccessible directories are skipped.
 fn collect_paths_with_depth(dir: &Path, depth: usize, max_depth: usize, out: &mut Vec<PathBuf>) {
-    let entries = match std::fs::read_dir(dir) {
-        Ok(entries) => entries,
-        Err(_) => return,
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
     };
 
     for entry in entries.filter_map(Result::ok) {
@@ -354,11 +353,11 @@ fusion:
 
     #[test]
     fn test_registry_load_file() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("temp dir");
         let path = create_test_chimera(temp_dir.path(), "loaded");
 
         let mut registry = ChimeraRegistry::new();
-        registry.load_file(&path).unwrap();
+        registry.load_file(&path).expect("load file");
         assert_eq!(registry.len(), 1);
         assert!(registry.contains("loaded"));
     }

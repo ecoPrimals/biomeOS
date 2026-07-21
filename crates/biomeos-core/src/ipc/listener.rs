@@ -70,12 +70,10 @@ impl TransportListener {
             #[cfg(unix)]
             Self::Unix(l) => l
                 .local_addr()
-                .map(|a| format!("{a:?}"))
-                .unwrap_or_else(|_| "unix://<unknown>".to_string()),
+                .map_or_else(|_| "unix://<unknown>".to_string(), |a| format!("{a:?}")),
             Self::Tcp(l) => l
                 .local_addr()
-                .map(|a| format!("tcp://{a}"))
-                .unwrap_or_else(|_| "tcp://<unknown>".to_string()),
+                .map_or_else(|_| "tcp://<unknown>".to_string(), |a| format!("tcp://{a}")),
         }
     }
 }

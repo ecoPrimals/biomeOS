@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: July 18, 2026 (v4.36: Wave 149b gap resolution — executor introspection, socket naming convention, cleanup.sockets RPC, resurrection verified)
-**Version**: 4.36
-**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,492+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >450 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Phase 2 transport (trait dispatch over cfg gating) - Capability-first runtime registry - NucleusMode manifest-driven launch sets - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved - Executor introspection + socket naming convention + stale cleanup RPC
+**Updated**: July 21, 2026 (v4.37: Wave 150t deep debt — clippy zero (12 lints fixed), test race resolved, workspace `unwrap_used = "deny"` confirmed, `primal-transport` crate assessed, 197 test-code unwraps evolved to `?`)
+**Version**: 4.37
+**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,492+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >450 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Phase 2 transport (trait dispatch over cfg gating) - Capability-first runtime registry - NucleusMode manifest-driven launch sets - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved - Executor introspection + socket naming convention + stale cleanup RPC - Zero production unwraps (workspace lint enforced)
 
 ---
 

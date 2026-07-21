@@ -123,15 +123,13 @@ pub(crate) async fn check_graphs_dir_at(base_dir: &Path) -> Result<HealthCheck> 
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::unwrap_used, reason = "test assertions")]
-    #![expect(clippy::expect_used, reason = "test assertions")]
-
     use super::*;
+    use anyhow::Context;
 
     #[tokio::test]
-    async fn test_check_graphs_dir_no_directory() {
-        let temp = tempfile::tempdir().unwrap();
-        let check = check_graphs_dir_at(temp.path()).await.unwrap();
+    async fn test_check_graphs_dir_no_directory() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
+        let check = check_graphs_dir_at(temp.path()).await?;
         assert_eq!(check.status, HealthStatus::Warning);
         assert!(
             check
@@ -139,42 +137,46 @@ mod tests {
                 .iter()
                 .any(|d| d.contains("not found") || d.contains("Directory"))
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_graphs_dir_with_toml_files() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_graphs_dir_with_toml_files() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let graphs_dir = temp.path().join("graphs");
-        std::fs::create_dir_all(&graphs_dir).unwrap();
-        std::fs::write(graphs_dir.join("deploy.toml"), "name = \"test\"").unwrap();
-        let check = check_graphs_dir_at(temp.path()).await.unwrap();
+        std::fs::create_dir_all(&graphs_dir)?;
+        std::fs::write(graphs_dir.join("deploy.toml"), "name = \"test\"")?;
+        let check = check_graphs_dir_at(temp.path()).await?;
         assert_eq!(check.status, HealthStatus::Healthy);
         assert!(check.details.iter().any(|d| d.contains("Graphs found: 1")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_graphs_dir_empty_graphs_dir() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_graphs_dir_empty_graphs_dir() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let graphs_dir = temp.path().join("graphs");
-        std::fs::create_dir_all(&graphs_dir).unwrap();
-        let check = check_graphs_dir_at(temp.path()).await.unwrap();
+        std::fs::create_dir_all(&graphs_dir)?;
+        let check = check_graphs_dir_at(temp.path()).await?;
         assert_eq!(check.status, HealthStatus::Warning);
         assert!(check.details.iter().any(|d| d.contains("No graph")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_configuration_no_config() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_configuration_no_config() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let config_dir = temp.path().join("biomeos");
-        std::fs::create_dir_all(&config_dir).unwrap();
-        let check = check_configuration_with(&config_dir).await.unwrap();
+        std::fs::create_dir_all(&config_dir)?;
+        let check = check_configuration_with(&config_dir).await?;
         assert_eq!(check.status, HealthStatus::Warning);
         assert!(check.details.iter().any(|d| d.contains("Not found")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_binary_health_structure() {
-        let check = check_binary_health().await.unwrap();
+    async fn test_check_binary_health_structure() -> anyhow::Result<()> {
+        let check = check_binary_health().await?;
         assert_eq!(check.name, "Binary Health");
         assert!(check.details.iter().any(|d| d.starts_with("Version:")));
         assert!(check.details.iter().any(|d| d.contains("Modes:")));
@@ -183,22 +185,24 @@ mod tests {
         if check.status == HealthStatus::Healthy {
             assert!(check.details.iter().any(|d| d.starts_with("Binary:")));
         }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_configuration_with_config() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_configuration_with_config() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let config_dir = temp.path().join("biomeos");
-        std::fs::create_dir_all(&config_dir).unwrap();
-        std::fs::write(config_dir.join("config.toml"), "[default]").unwrap();
-        let check = check_configuration_with(&config_dir).await.unwrap();
+        std::fs::create_dir_all(&config_dir)?;
+        std::fs::write(config_dir.join("config.toml"), "[default]")?;
+        let check = check_configuration_with(&config_dir).await?;
         assert_eq!(check.status, HealthStatus::Healthy);
         assert!(check.details.iter().any(|d| d.contains("Found")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_binary_health_details_completeness() {
-        let check = check_binary_health().await.unwrap();
+    async fn test_check_binary_health_details_completeness() -> anyhow::Result<()> {
+        let check = check_binary_health().await?;
         assert_eq!(check.name, "Binary Health");
         assert!(check.status == HealthStatus::Healthy || check.status == HealthStatus::Warning);
         assert!(check.details.iter().any(|d| d.starts_with("Version:")));
@@ -207,62 +211,68 @@ mod tests {
         if let Some(size_detail) = check.details.iter().find(|d| d.starts_with("Size:")) {
             assert!(size_detail.contains('M'));
         }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_graphs_dir_multiple_toml_files() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_graphs_dir_multiple_toml_files() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let graphs_dir = temp.path().join("graphs");
-        std::fs::create_dir_all(&graphs_dir).unwrap();
-        std::fs::write(graphs_dir.join("a.toml"), "a = 1").unwrap();
-        std::fs::write(graphs_dir.join("b.toml"), "b = 2").unwrap();
-        std::fs::write(graphs_dir.join("c.toml"), "c = 3").unwrap();
-        let check = check_graphs_dir_at(temp.path()).await.unwrap();
+        std::fs::create_dir_all(&graphs_dir)?;
+        std::fs::write(graphs_dir.join("a.toml"), "a = 1")?;
+        std::fs::write(graphs_dir.join("b.toml"), "b = 2")?;
+        std::fs::write(graphs_dir.join("c.toml"), "c = 3")?;
+        let check = check_graphs_dir_at(temp.path()).await?;
         assert_eq!(check.status, HealthStatus::Healthy);
         assert!(check.details.iter().any(|d| d.contains("Graphs found: 3")));
         assert!(check.details.iter().any(|d| d.contains("Ready")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_graphs_dir_non_toml_files_ignored() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_graphs_dir_non_toml_files_ignored() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let graphs_dir = temp.path().join("graphs");
-        std::fs::create_dir_all(&graphs_dir).unwrap();
-        std::fs::write(graphs_dir.join("readme.txt"), "text").unwrap();
-        std::fs::write(graphs_dir.join("data.json"), "{}").unwrap();
-        let check = check_graphs_dir_at(temp.path()).await.unwrap();
+        std::fs::create_dir_all(&graphs_dir)?;
+        std::fs::write(graphs_dir.join("readme.txt"), "text")?;
+        std::fs::write(graphs_dir.join("data.json"), "{}")?;
+        let check = check_graphs_dir_at(temp.path()).await?;
         assert_eq!(check.status, HealthStatus::Warning);
         assert!(check.details.iter().any(|d| d.contains("Graphs found: 0")));
         assert!(check.details.iter().any(|d| d.contains("No graph")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_graphs_dir_path_is_file_not_directory() {
-        let temp = tempfile::tempdir().unwrap();
-        std::fs::write(temp.path().join("graphs"), "not a directory").unwrap();
-        let check = check_graphs_dir_at(temp.path()).await.unwrap();
+    async fn test_check_graphs_dir_path_is_file_not_directory() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
+        std::fs::write(temp.path().join("graphs"), "not a directory")?;
+        let check = check_graphs_dir_at(temp.path()).await?;
         assert_eq!(check.status, HealthStatus::Warning);
         assert!(check.details.iter().any(|d| d.contains("not found")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_configuration_config_path_in_details() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_configuration_config_path_in_details() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let config_dir = temp.path().join("biomeos");
-        std::fs::create_dir_all(&config_dir).unwrap();
-        std::fs::write(config_dir.join("config.toml"), "").unwrap();
-        let check = check_configuration_with(&config_dir).await.unwrap();
+        std::fs::create_dir_all(&config_dir)?;
+        std::fs::write(config_dir.join("config.toml"), "")?;
+        let check = check_configuration_with(&config_dir).await?;
         assert!(check.details.iter().any(|d| d.contains("config.toml")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_configuration_not_found_details() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_configuration_not_found_details() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let config_dir = temp.path().join("biomeos");
-        std::fs::create_dir_all(&config_dir).unwrap();
-        let check = check_configuration_with(&config_dir).await.unwrap();
+        std::fs::create_dir_all(&config_dir)?;
+        let check = check_configuration_with(&config_dir).await?;
         assert!(check.details.iter().any(|d| d.contains("config.toml")));
         assert!(check.details.iter().any(|d| d.contains("defaults")));
+        Ok(())
     }
 
     #[tokio::test]
@@ -281,49 +291,53 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_check_binary_health_inner_metadata_missing_exe_path() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_binary_health_inner_metadata_missing_exe_path() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let missing_exe = temp.path().join("definitely_not_present");
         let check = check_binary_health_inner(Ok(missing_exe));
         assert_eq!(check.status, HealthStatus::Healthy);
         assert!(check.details.iter().any(|d| d.starts_with("Binary:")));
         assert!(!check.details.iter().any(|d| d.starts_with("Size:")));
+        Ok(())
     }
 
     #[cfg(unix)]
     #[tokio::test]
-    async fn test_check_graphs_dir_read_dir_error() {
+    async fn test_check_graphs_dir_read_dir_error() -> anyhow::Result<()> {
         use std::os::unix::fs::PermissionsExt;
 
-        let temp = tempfile::tempdir().unwrap();
+        let temp = tempfile::tempdir()?;
         let graphs_dir = temp.path().join("graphs");
-        std::fs::create_dir_all(&graphs_dir).unwrap();
+        std::fs::create_dir_all(&graphs_dir)?;
         std::fs::set_permissions(&graphs_dir, std::fs::Permissions::from_mode(0o000))
-            .expect("chmod graphs");
+            .context("chmod graphs")?;
         let result = check_graphs_dir_at(temp.path()).await;
         let _ = std::fs::set_permissions(&graphs_dir, std::fs::Permissions::from_mode(0o755));
         assert!(result.is_err());
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_graphs_dir_toml_only_in_subdirectory() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_graphs_dir_toml_only_in_subdirectory() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let graphs_dir = temp.path().join("graphs");
-        std::fs::create_dir_all(graphs_dir.join("nested")).unwrap();
-        std::fs::write(graphs_dir.join("nested").join("x.toml"), "a = 1").unwrap();
-        let check = check_graphs_dir_at(temp.path()).await.unwrap();
+        std::fs::create_dir_all(graphs_dir.join("nested"))?;
+        std::fs::write(graphs_dir.join("nested").join("x.toml"), "a = 1")?;
+        let check = check_graphs_dir_at(temp.path()).await?;
         assert_eq!(check.status, HealthStatus::Warning);
         assert!(check.details.iter().any(|d| d.contains("Graphs found: 0")));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_check_configuration_config_path_is_directory() {
-        let temp = tempfile::tempdir().unwrap();
+    async fn test_check_configuration_config_path_is_directory() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
         let config_dir = temp.path().join("biomeos");
-        std::fs::create_dir_all(&config_dir).unwrap();
-        std::fs::create_dir_all(config_dir.join("config.toml")).unwrap();
-        let check = check_configuration_with(&config_dir).await.unwrap();
+        std::fs::create_dir_all(&config_dir)?;
+        std::fs::create_dir_all(config_dir.join("config.toml"))?;
+        let check = check_configuration_with(&config_dir).await?;
         assert_eq!(check.status, HealthStatus::Healthy);
         assert!(check.details.iter().any(|d| d.contains("Found")));
+        Ok(())
     }
 }

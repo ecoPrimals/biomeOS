@@ -194,13 +194,13 @@ impl SocketDiscovery {
                 serde_json::from_str(response_line.trim()).map_err(RegistryQueryError::Parse)?;
 
             if let Some(error) = response.get("error").cloned() {
-                return Err(RegistryQueryError::Registry(error));
+                Err(RegistryQueryError::Registry(error))
+            } else {
+                response
+                    .get("result")
+                    .cloned()
+                    .ok_or(RegistryQueryError::NoResult)
             }
-
-            return response
-                .get("result")
-                .cloned()
-                .ok_or(RegistryQueryError::NoResult);
         }
 
         #[cfg(windows)]

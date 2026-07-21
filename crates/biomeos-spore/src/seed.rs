@@ -267,18 +267,19 @@ impl FamilySeed {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Context;
     use tempfile::TempDir;
 
     #[test]
-    fn test_generate_and_write() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_generate_and_write() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let seed_path = temp_dir.path().join(".family.seed");
 
-        let seed = FamilySeed::generate_and_write(&seed_path).unwrap();
+        let seed = FamilySeed::generate_and_write(&seed_path)?;
         assert_eq!(seed.file_path(), seed_path.as_path());
 
         // Verify file exists and is 32 bytes
-        let metadata = fs::metadata(&seed_path).unwrap();
+        let metadata = fs::metadata(&seed_path)?;
         assert_eq!(metadata.len(), 32);
 
         // Verify permissions on Unix
@@ -288,37 +289,40 @@ mod tests {
             let perms = metadata.permissions();
             assert_eq!(perms.mode() & 0o777, 0o600);
         }
+        Ok(())
     }
 
     #[test]
-    fn test_from_file() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_from_file() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let seed_path = temp_dir.path().join(".family.seed");
 
         // Create a seed file
         let bytes = [42u8; 32];
-        fs::write(&seed_path, bytes).unwrap();
+        fs::write(&seed_path, bytes)?;
 
         // Load it
-        let seed = FamilySeed::from_file(&seed_path).unwrap();
+        let seed = FamilySeed::from_file(&seed_path)?;
         assert_eq!(seed.file_path(), seed_path.as_path());
+        Ok(())
     }
 
     #[test]
-    fn test_from_file_not_found() {
+    fn test_from_file_not_found() -> anyhow::Result<()> {
         let result = FamilySeed::from_file("/nonexistent/.family.seed");
         assert!(result.is_err());
         assert!(matches!(result, Err(SporeError::SeedFileNotFound(_))));
+        Ok(())
     }
 
     #[test]
-    fn test_from_file_wrong_size() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_from_file_wrong_size() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let seed_path = temp_dir.path().join(".family.seed");
 
         // Create file with wrong size
         let bytes = [42u8; 16]; // Only 16 bytes, not 32
-        fs::write(&seed_path, bytes).unwrap();
+        fs::write(&seed_path, bytes)?;
 
         let result = FamilySeed::from_file(&seed_path);
         assert!(result.is_err());
@@ -329,141 +333,148 @@ mod tests {
                 found: 16
             })
         ));
+        Ok(())
     }
 
     #[test]
-    fn test_crypto_provider_env() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_crypto_provider_env() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let seed_path = temp_dir.path().join(".family.seed");
 
-        let seed = FamilySeed::generate_and_write(&seed_path).unwrap();
-        let (key, value) = seed.crypto_provider_env().unwrap();
+        let seed = FamilySeed::generate_and_write(&seed_path)?;
+        let (key, value) = seed.crypto_provider_env()?;
 
         assert_eq!(key, "FAMILY_SEED_FILE");
-        assert_eq!(value, seed_path.to_str().unwrap());
+        assert_eq!(value, seed_path.to_str().ok_or(SporeError::InvalidPath)?);
+        Ok(())
     }
 
     // ========== Sibling Derivation Tests ==========
 
     #[test]
-    fn test_derive_sibling() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_derive_sibling() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let parent_path = temp_dir.path().join("parent.seed");
         let child_path = temp_dir.path().join("child.seed");
 
         // Generate parent
-        FamilySeed::generate_genesis(&parent_path).expect("generate parent");
+        FamilySeed::generate_genesis(&parent_path).context("generate parent")?;
 
         // Derive sibling
         let child =
             FamilySeed::derive_sibling(&parent_path, &child_path, "node-alpha", Some("2026-01-08"))
-                .expect("derive sibling");
+                .context("derive sibling")?;
 
         assert_eq!(child.file_path(), child_path.as_path());
 
         // Verify child is 32 bytes
-        let metadata = fs::metadata(&child_path).expect("child metadata");
+        let metadata = fs::metadata(&child_path).context("child metadata")?;
         assert_eq!(metadata.len(), 32);
 
         // Verify child is different from parent
-        let parent_bytes = fs::read(&parent_path).expect("read parent");
-        let child_bytes = fs::read(&child_path).expect("read child");
+        let parent_bytes = fs::read(&parent_path).context("read parent")?;
+        let child_bytes = fs::read(&child_path).context("read child")?;
         assert_ne!(parent_bytes, child_bytes);
+        Ok(())
     }
 
     #[test]
-    fn test_derive_sibling_deterministic() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_derive_sibling_deterministic() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let parent_path = temp_dir.path().join("parent.seed");
         let child1_path = temp_dir.path().join("child1.seed");
         let child2_path = temp_dir.path().join("child2.seed");
 
         // Write known parent seed
         let parent_seed = [42u8; 32];
-        fs::write(&parent_path, parent_seed).expect("write parent");
+        fs::write(&parent_path, parent_seed).context("write parent")?;
 
         // Derive same sibling twice
         FamilySeed::derive_sibling(&parent_path, &child1_path, "node-alpha", Some("batch1"))
-            .expect("derive child1");
+            .context("derive child1")?;
         FamilySeed::derive_sibling(&parent_path, &child2_path, "node-alpha", Some("batch1"))
-            .expect("derive child2");
+            .context("derive child2")?;
 
-        let child1 = fs::read(&child1_path).expect("read child1");
-        let child2 = fs::read(&child2_path).expect("read child2");
+        let child1 = fs::read(&child1_path).context("read child1")?;
+        let child2 = fs::read(&child2_path).context("read child2")?;
 
         // Same inputs = same output
         assert_eq!(child1, child2);
+        Ok(())
     }
 
     #[test]
-    fn test_derive_sibling_different_node_ids() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_derive_sibling_different_node_ids() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let parent_path = temp_dir.path().join("parent.seed");
         let child1_path = temp_dir.path().join("child1.seed");
         let child2_path = temp_dir.path().join("child2.seed");
 
         let parent_seed = [42u8; 32];
-        fs::write(&parent_path, parent_seed).expect("write parent");
+        fs::write(&parent_path, parent_seed).context("write parent")?;
 
         FamilySeed::derive_sibling(&parent_path, &child1_path, "node-alpha", Some("batch1"))
-            .expect("derive child1");
+            .context("derive child1")?;
         FamilySeed::derive_sibling(&parent_path, &child2_path, "node-beta", Some("batch1"))
-            .expect("derive child2");
+            .context("derive child2")?;
 
-        let child1 = fs::read(&child1_path).expect("read child1");
-        let child2 = fs::read(&child2_path).expect("read child2");
+        let child1 = fs::read(&child1_path).context("read child1")?;
+        let child2 = fs::read(&child2_path).context("read child2")?;
 
         // Different node_id = different seed (siblings are unique)
         assert_ne!(child1, child2);
+        Ok(())
     }
 
     #[test]
-    fn test_derive_sibling_different_batches() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_derive_sibling_different_batches() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let parent_path = temp_dir.path().join("parent.seed");
         let child1_path = temp_dir.path().join("child1.seed");
         let child2_path = temp_dir.path().join("child2.seed");
 
         let parent_seed = [42u8; 32];
-        fs::write(&parent_path, parent_seed).expect("write parent");
+        fs::write(&parent_path, parent_seed).context("write parent")?;
 
         FamilySeed::derive_sibling(&parent_path, &child1_path, "node-alpha", Some("batch1"))
-            .expect("derive child1");
+            .context("derive child1")?;
         FamilySeed::derive_sibling(&parent_path, &child2_path, "node-alpha", Some("batch2"))
-            .expect("derive child2");
+            .context("derive child2")?;
 
-        let child1 = fs::read(&child1_path).expect("read child1");
-        let child2 = fs::read(&child2_path).expect("read child2");
+        let child1 = fs::read(&child1_path).context("read child1")?;
+        let child2 = fs::read(&child2_path).context("read child2")?;
 
         // Different batch = different seed
         assert_ne!(child1, child2);
+        Ok(())
     }
 
     #[test]
-    fn test_derive_sibling_no_batch() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_derive_sibling_no_batch() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let parent_path = temp_dir.path().join("parent.seed");
         let child_path = temp_dir.path().join("child.seed");
 
         let parent_seed = [42u8; 32];
-        fs::write(&parent_path, parent_seed).expect("write parent");
+        fs::write(&parent_path, parent_seed).context("write parent")?;
 
         let child = FamilySeed::derive_sibling(&parent_path, &child_path, "node-alpha", None)
-            .expect("derive child");
+            .context("derive child")?;
 
         assert_eq!(child.file_path(), child_path.as_path());
-        let metadata = fs::metadata(&child_path).expect("child metadata");
+        let metadata = fs::metadata(&child_path).context("child metadata")?;
         assert_eq!(metadata.len(), 32);
+        Ok(())
     }
 
     #[test]
-    fn test_derive_sibling_wrong_parent_size() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_derive_sibling_wrong_parent_size() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let parent_path = temp_dir.path().join("parent.seed");
         let child_path = temp_dir.path().join("child.seed");
 
         // Write wrong-size parent
-        fs::write(&parent_path, [0u8; 16]).expect("write parent");
+        fs::write(&parent_path, [0u8; 16]).context("write parent")?;
 
         let result = FamilySeed::derive_sibling(&parent_path, &child_path, "node", Some("batch"));
         assert!(result.is_err());
@@ -474,33 +485,36 @@ mod tests {
                 found: 16
             })
         ));
+        Ok(())
     }
 
     #[test]
-    fn test_derive_sibling_parent_not_found() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_derive_sibling_parent_not_found() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let parent_path = temp_dir.path().join("nonexistent.seed");
         let child_path = temp_dir.path().join("child.seed");
 
         let result = FamilySeed::derive_sibling(&parent_path, &child_path, "node", Some("batch"));
         assert!(result.is_err());
+        Ok(())
     }
 
     // ========== Genesis Tests ==========
 
     #[test]
-    fn test_generate_genesis_unique() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_generate_genesis_unique() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
         let seed1_path = temp_dir.path().join("seed1");
         let seed2_path = temp_dir.path().join("seed2");
 
-        FamilySeed::generate_genesis(&seed1_path).expect("genesis 1");
-        FamilySeed::generate_genesis(&seed2_path).expect("genesis 2");
+        FamilySeed::generate_genesis(&seed1_path).context("genesis 1")?;
+        FamilySeed::generate_genesis(&seed2_path).context("genesis 2")?;
 
-        let seed1 = fs::read(&seed1_path).expect("read seed1");
-        let seed2 = fs::read(&seed2_path).expect("read seed2");
+        let seed1 = fs::read(&seed1_path).context("read seed1")?;
+        let seed2 = fs::read(&seed2_path).context("read seed2")?;
 
         // Two genesis seeds should be different (random)
         assert_ne!(seed1, seed2);
+        Ok(())
     }
 }

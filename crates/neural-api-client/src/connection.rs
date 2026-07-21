@@ -8,7 +8,7 @@ use biomeos_core::{TransportEndpoint, connect_transport_timed, send_jsonrpc_over
 use biomeos_types::JsonRpcRequest;
 use serde_json::Value;
 use std::io;
-use std::path::PathBuf;
+use std::path::Path;
 use tokio::time::{Duration, timeout};
 
 use crate::error::NeuralApiError;
@@ -16,7 +16,7 @@ use crate::retry_config::NeuralApiRetryConfig;
 
 /// Connect to Neural API and execute JSON-RPC call
 pub async fn json_rpc_call(
-    socket_path: &PathBuf,
+    socket_path: &Path,
     method: &str,
     params: &Value,
     request_timeout: Duration,
@@ -24,7 +24,7 @@ pub async fn json_rpc_call(
     retry_config: &NeuralApiRetryConfig,
 ) -> Result<Value> {
     let endpoint = TransportEndpoint::UnixSocket {
-        path: socket_path.clone(),
+        path: socket_path.to_path_buf(),
     };
 
     let attempts = retry_config.max_connect_attempts.max(1);

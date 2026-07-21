@@ -2,6 +2,38 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.37 (2026-07-21) — Wave 150t Deep Debt + Clippy Zero + Transport Assessment
+
+### Deep Debt: Clippy Zero (12 lints fixed)
+- `map_unwrap_or` → `map_or` in `biomeos-types` network config
+- `manual_let_else` → `let...else` in `biomeos-chimera`, `biomeos-primal-sdk`, `biomeos-boot`
+- `needless_return` → expression tails in `biomeos-core` AI handler, registry queries
+- `option_as_ref_cloned` → `.clone()` in socket discovery engine
+- `implicit_clone` → `.clone()` in neural-api path
+- `case_sensitive_file_extension_comparisons` → `Path::extension()` in BTSP
+- `match_same_arms` → merged arms in config builder
+- `ptr_arg` → `&Path` in neural-api-client, biomeos-federation, biomeos-atomic-deploy
+
+### Test Race Fix
+- Serialized `runtime_registry` tests via `Mutex` guard (shared `DashMap` race condition)
+
+### Test Code Evolution (197 unwraps → proper error handling)
+- `checks_config.rs`: tests return `anyhow::Result<()>` with `?` and `.context()`
+- `verification.rs`: `SystemTime` `.expect()` → `map_err`, test helpers return `Result`
+- `registry.rs`: test helpers return `Result<PathBuf>`, option lookups use `ok_or_else`
+- `seed.rs`: tests return `anyhow::Result<()>`, path conversion uses typed error
+
+### Assessment: `primal-transport` Crate
+- `biomeos-core::ipc`: 372 lines, 5 files, 15+ consumers across 7 crates
+- Ready for extraction when ecosystem publishes shared crate (Wave 150t future item)
+
+### Production Unwrap Audit
+- Workspace-level `unwrap_used = "deny"` confirmed: zero production unwraps in entire codebase
+- Wave 150t count (4,165) was test-only — production code already fully guarded
+
+### Test Count
+- 8,492 tests passing, 0 failures
+
 ## v4.36 (2026-07-18) — Wave 149b Gap Resolution + Executor Introspection
 
 ### Ecosystem Gap Resolution (GAP-017/018/036/038)

@@ -5,11 +5,11 @@
 //!
 //! Identity proof via challenge-response, capability verification via primal query.
 
-use crate::FederationResult;
 use crate::capability::{Capability, CapabilitySet};
 use crate::discovery::{DiscoveredPrimal, PrimalEndpoint};
 use crate::security_client::SecurityProviderClient;
 use crate::unix_socket_client::{JsonRpcRequest, UnixSocketClient};
+use crate::{FederationError, FederationResult};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, warn};
@@ -66,7 +66,6 @@ struct GetCapabilitiesResponse {
 }
 
 /// Layer 2: Identity Verification via security provider
-#[expect(clippy::expect_used, reason = "system clock before UNIX epoch")]
 pub async fn layer2_identity_verification(
     _security_client: &SecurityProviderClient,
     primal: &DiscoveredPrimal,
@@ -75,7 +74,7 @@ pub async fn layer2_identity_verification(
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .expect("system clock before UNIX epoch")
+        .map_err(|e| FederationError::Generic(format!("system clock before UNIX epoch: {e}")))?
         .as_secs();
 
     let socket_path = primal.endpoints.iter().find_map(|ep| {
@@ -218,15 +217,12 @@ pub async fn layer3_capability_verification(
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::expect_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
 mod tests {
     use super::*;
+    use anyhow::Context;
 
     #[test]
-    fn test_identity_proof_serde_roundtrip() {
+    fn test_identity_proof_serde_roundtrip() -> anyhow::Result<()> {
         let proof = IdentityProof {
             node_id: "node-1".into(),
             family_id: Some("fam-1".into()),
@@ -235,15 +231,16 @@ mod tests {
             public_key: "pk-123".into(),
             timestamp: 42,
         };
-        let json = serde_json::to_string(&proof).expect("serialize");
-        let restored: IdentityProof = serde_json::from_str(&json).expect("deserialize");
+        let json = serde_json::to_string(&proof).context("serialize")?;
+        let restored: IdentityProof = serde_json::from_str(&json).context("deserialize")?;
         assert_eq!(restored.node_id, "node-1");
         assert_eq!(restored.family_id, Some("fam-1".into()));
         assert_eq!(restored.timestamp, 42);
+        Ok(())
     }
 
     #[test]
-    fn test_identity_proof_without_family() {
+    fn test_identity_proof_without_family() -> anyhow::Result<()> {
         let proof = IdentityProof {
             node_id: "solo".into(),
             family_id: None,
@@ -252,8 +249,9 @@ mod tests {
             public_key: "pk".into(),
             timestamp: 0,
         };
-        let json = serde_json::to_string(&proof).expect("serialize");
+        let json = serde_json::to_string(&proof).context("serialize")?;
         assert!(json.contains("\"family_id\":null"));
+        Ok(())
     }
 
     #[test]
@@ -272,15 +270,16 @@ mod tests {
     }
 
     #[test]
-    fn test_primal_capability_info_serde() {
+    fn test_primal_capability_info_serde() -> anyhow::Result<()> {
         let json = r#"{"type":"storage","methods":["put","get"],"version":"1.0"}"#;
-        let info: PrimalCapabilityInfo = serde_json::from_str(json).expect("deserialize");
+        let info: PrimalCapabilityInfo = serde_json::from_str(json).context("deserialize")?;
         assert_eq!(info.capability_type, "storage");
         assert_eq!(info.methods, vec!["put", "get"]);
+        Ok(())
     }
 
     #[test]
-    fn test_get_capabilities_response_serde() {
+    fn test_get_capabilities_response_serde() -> anyhow::Result<()> {
         let json = r#"{
             "primal": "nestgate",
             "version": "2.0",
@@ -291,10 +290,11 @@ mod tests {
                 {"type": "storage", "methods": ["put"], "version": "1.0"}
             ]
         }"#;
-        let resp: GetCapabilitiesResponse = serde_json::from_str(json).expect("deserialize");
+        let resp: GetCapabilitiesResponse = serde_json::from_str(json).context("deserialize")?;
         assert_eq!(resp.primal, "nestgate");
         assert_eq!(resp.provided_capabilities.len(), 1);
         assert_eq!(resp.family_id, Some("fam-1".into()));
+        Ok(())
     }
 
     #[test]
@@ -357,8 +357,34 @@ mod tests {
         }
     }
 
+    async fn run_mock_capabilities_server(
+        listener: UnixListener,
+        result: serde_json::Value,
+    ) -> anyhow::Result<()> {
+        let (stream, _) = listener.accept().await.context("accept")?;
+        let (mut read_half, mut write_half) = stream.into_split();
+        let mut line = String::new();
+        BufReader::new(&mut read_half)
+            .read_line(&mut line)
+            .await
+            .context("read request line")?;
+        let req: serde_json::Value =
+            serde_json::from_str(line.trim()).context("parse JSON-RPC request")?;
+        let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "result": result,
+        });
+        write_half
+            .write_all(format!("{body}\n").as_bytes())
+            .await
+            .context("write JSON-RPC response")?;
+        Ok(())
+    }
+
     #[tokio::test]
-    async fn layer2_identity_verification_no_socket_returns_unverified() {
+    async fn layer2_identity_verification_no_socket_returns_unverified() -> anyhow::Result<()> {
         let primal = DiscoveredPrimal {
             name: "solo".into(),
             primal_type: "t".into(),
@@ -372,81 +398,72 @@ mod tests {
         let security_client = SecurityProviderClient::with_endpoint(
             "unix:///tmp/biomeos-unused-security-provider-socket",
         )
-        .expect("endpoint");
+        .context("create security provider client")?;
         let proof = layer2_identity_verification(&security_client, &primal)
             .await
-            .expect("layer2");
+            .context("layer2 identity verification")?;
         assert_eq!(proof.node_id, "solo");
         assert!(proof.is_unverified());
         assert_eq!(proof.challenge, "no-socket");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn layer2_identity_verification_socket_success_parses_result() {
-        let dir = tempfile::tempdir().expect("tempdir");
+    async fn layer2_identity_verification_socket_success_parses_result() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir().context("create tempdir")?;
         let sock_path = dir.path().join("identity.sock");
-        let listener = UnixListener::bind(&sock_path).expect("bind unix listener");
+        let listener = UnixListener::bind(&sock_path).context("bind unix listener")?;
         let sock_path_clone = sock_path.clone();
 
         let server = tokio::spawn(async move {
-            let (stream, _) = listener.accept().await.expect("accept");
-            let (mut read_half, mut write_half) = stream.into_split();
-            let mut line = String::new();
-            BufReader::new(&mut read_half)
-                .read_line(&mut line)
-                .await
-                .expect("read line");
-            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse request");
-            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
-            let body = serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": id,
-                "result": {
+            run_mock_capabilities_server(
+                listener,
+                serde_json::json!({
                     "node_id": "rpc-node",
                     "family_id": "rpc-family",
                     "signature": "verified-sig",
                     "public_key": "rpc-pk"
-                }
-            });
-            write_half
-                .write_all(format!("{body}\n").as_bytes())
-                .await
-                .expect("write response");
+                }),
+            )
+            .await
         });
 
         let primal = test_primal_with_socket(sock_path_clone);
-        let security_client =
-            SecurityProviderClient::with_endpoint("unix:///tmp/unused").expect("endpoint");
+        let security_client = SecurityProviderClient::with_endpoint("unix:///tmp/unused")
+            .context("create security provider client")?;
         let proof = layer2_identity_verification(&security_client, &primal)
             .await
-            .expect("layer2");
+            .context("layer2 identity verification")?;
 
-        server.await.expect("server task");
+        server.await.context("mock identity server task")??;
         assert_eq!(proof.node_id, "rpc-node");
         assert_eq!(proof.family_id.as_deref(), Some("rpc-family"));
         assert_eq!(proof.signature, "verified-sig");
         assert!(!proof.is_unverified());
+        Ok(())
     }
 
     #[tokio::test]
-    async fn layer2_identity_verification_socket_error_yields_unverified_proof() {
-        let dir = tempfile::tempdir().expect("tempdir");
+    async fn layer2_identity_verification_socket_error_yields_unverified_proof()
+    -> anyhow::Result<()> {
+        let dir = tempfile::tempdir().context("create tempdir")?;
         let sock_path = dir.path().join("dead.sock");
-        std::fs::write(&sock_path, b"").expect("placeholder path");
+        std::fs::write(&sock_path, b"").context("write placeholder socket path")?;
 
         let primal = test_primal_with_socket(sock_path);
-        let security_client =
-            SecurityProviderClient::with_endpoint("unix:///tmp/unused").expect("endpoint");
+        let security_client = SecurityProviderClient::with_endpoint("unix:///tmp/unused")
+            .context("create security provider client")?;
         let proof = layer2_identity_verification(&security_client, &primal)
             .await
-            .expect("layer2");
+            .context("layer2 identity verification")?;
         assert_eq!(proof.node_id, "test-primal");
         assert!(proof.is_unverified());
         assert!(proof.challenge.contains("nucleus-challenge"));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn layer3_capability_verification_no_socket_returns_discovered() {
+    async fn layer3_capability_verification_no_socket_returns_discovered() -> anyhow::Result<()> {
         let mut caps = CapabilitySet::new();
         caps.add(Capability::Storage);
         let primal = DiscoveredPrimal {
@@ -459,15 +476,16 @@ mod tests {
         };
         let got = layer3_capability_verification(&primal)
             .await
-            .expect("layer3");
+            .context("layer3 capability verification")?;
         assert!(got.has(&Capability::Storage));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn layer3_capability_verification_rpc_error_falls_back() {
-        let dir = tempfile::tempdir().expect("tempdir");
+    async fn layer3_capability_verification_rpc_error_falls_back() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir().context("create tempdir")?;
         let sock_path = dir.path().join("dead-cap.sock");
-        std::fs::write(&sock_path, b"").expect("file not socket listener");
+        std::fs::write(&sock_path, b"").context("write non-listener socket path")?;
 
         let mut caps = CapabilitySet::new();
         caps.add(Capability::Compute);
@@ -478,42 +496,30 @@ mod tests {
         };
         let got = layer3_capability_verification(&primal)
             .await
-            .expect("layer3");
+            .context("layer3 capability verification")?;
         assert!(got.has(&Capability::Compute));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn layer3_capability_verification_empty_capabilities_falls_back() {
-        let dir = tempfile::tempdir().expect("tempdir");
+    async fn layer3_capability_verification_empty_capabilities_falls_back() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir().context("create tempdir")?;
         let sock_path = dir.path().join("cap.sock");
-        let listener = UnixListener::bind(&sock_path).expect("bind");
+        let listener = UnixListener::bind(&sock_path).context("bind unix listener")?;
 
         let server = tokio::spawn(async move {
-            let (stream, _) = listener.accept().await.expect("accept");
-            let (mut read_half, mut write_half) = stream.into_split();
-            let mut line = String::new();
-            BufReader::new(&mut read_half)
-                .read_line(&mut line)
-                .await
-                .expect("read");
-            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
-            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
-            let body = serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": id,
-                "result": {
+            run_mock_capabilities_server(
+                listener,
+                serde_json::json!({
                     "primal": "p",
                     "version": "1",
                     "family_id": null,
                     "node_id": "n1",
                     "protocols": [],
                     "provided_capabilities": []
-                }
-            });
-            write_half
-                .write_all(format!("{body}\n").as_bytes())
-                .await
-                .expect("write");
+                }),
+            )
+            .await
         });
 
         let mut caps = CapabilitySet::new();
@@ -531,31 +537,22 @@ mod tests {
 
         let got = layer3_capability_verification(&primal)
             .await
-            .expect("layer3");
-        server.await.expect("server");
+            .context("layer3 capability verification")?;
+        server.await.context("mock capabilities server task")??;
         assert!(got.has(&Capability::Voice));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn layer3_capability_verification_parses_custom_capability_type() {
-        let dir = tempfile::tempdir().expect("tempdir");
+    async fn layer3_capability_verification_parses_custom_capability_type() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir().context("create tempdir")?;
         let sock_path = dir.path().join("cap2.sock");
-        let listener = UnixListener::bind(&sock_path).expect("bind");
+        let listener = UnixListener::bind(&sock_path).context("bind unix listener")?;
 
         let server = tokio::spawn(async move {
-            let (stream, _) = listener.accept().await.expect("accept");
-            let (mut read_half, mut write_half) = stream.into_split();
-            let mut line = String::new();
-            BufReader::new(&mut read_half)
-                .read_line(&mut line)
-                .await
-                .expect("read");
-            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
-            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
-            let body = serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": id,
-                "result": {
+            run_mock_capabilities_server(
+                listener,
+                serde_json::json!({
                     "primal": "p",
                     "version": "1",
                     "family_id": null,
@@ -564,47 +561,28 @@ mod tests {
                     "provided_capabilities": [
                         {"type": "not_a_builtin_cap_xyz", "methods": [], "version": "1"}
                     ]
-                }
-            });
-            write_half
-                .write_all(format!("{body}\n").as_bytes())
-                .await
-                .expect("write");
+                }),
+            )
+            .await
         });
 
         let primal = test_primal_with_socket(sock_path.clone());
         let got = layer3_capability_verification(&primal)
             .await
-            .expect("layer3");
-        server.await.expect("server");
+            .context("layer3 capability verification")?;
+        server.await.context("mock capabilities server task")??;
         assert!(got.has(&Capability::Custom("not_a_builtin_cap_xyz".into())));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn layer3_capability_verification_malformed_result_falls_back() {
-        let dir = tempfile::tempdir().expect("tempdir");
+    async fn layer3_capability_verification_malformed_result_falls_back() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir().context("create tempdir")?;
         let sock_path = dir.path().join("cap3.sock");
-        let listener = UnixListener::bind(&sock_path).expect("bind");
+        let listener = UnixListener::bind(&sock_path).context("bind unix listener")?;
 
         let server = tokio::spawn(async move {
-            let (stream, _) = listener.accept().await.expect("accept");
-            let (mut read_half, mut write_half) = stream.into_split();
-            let mut line = String::new();
-            BufReader::new(&mut read_half)
-                .read_line(&mut line)
-                .await
-                .expect("read");
-            let req: serde_json::Value = serde_json::from_str(line.trim()).expect("parse");
-            let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
-            let body = serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": id,
-                "result": "not-an-object"
-            });
-            write_half
-                .write_all(format!("{body}\n").as_bytes())
-                .await
-                .expect("write");
+            run_mock_capabilities_server(listener, serde_json::json!("not-an-object")).await
         });
 
         let mut caps = CapabilitySet::new();
@@ -620,8 +598,9 @@ mod tests {
 
         let got = layer3_capability_verification(&primal)
             .await
-            .expect("layer3");
-        server.await.expect("server");
+            .context("layer3 capability verification")?;
+        server.await.context("mock capabilities server task")??;
         assert!(got.has(&Capability::Admin));
+        Ok(())
     }
 }

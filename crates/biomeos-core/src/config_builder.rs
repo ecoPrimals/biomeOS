@@ -427,12 +427,13 @@ fn apply_feature_flag(features: &mut FeatureFlags, feature: &str, enabled: bool)
         "real_time_monitoring" | "telemetry" | "advanced_monitoring" => {
             features.telemetry = enabled;
         }
-        "advanced_networking" | "networking" => features.experimental = enabled,
+        "advanced_networking" | "networking" | "experimental" => {
+            features.experimental = enabled;
+        }
         "multi_tenant" => {
             features.experimental = enabled;
             features.debug = enabled;
         }
-        "experimental" => features.experimental = enabled,
         "debug" => features.debug = enabled,
         "federation" => features.federation = enabled,
         "sandboxing" => features.sandboxing = enabled,

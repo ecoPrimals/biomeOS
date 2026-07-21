@@ -9,6 +9,8 @@ use anyhow::{Context, bail};
 use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
 use biomeos_types::JsonRpcRequest;
 use serde_json::{Value, json};
+use std::path::Path;
+#[cfg(test)]
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -16,9 +18,9 @@ use crate::living_graph::LivingGraph;
 
 use super::config::TarpcEndpoint;
 
-pub(super) async fn send_json_rpc(socket_path: &PathBuf, request: &Value) -> anyhow::Result<Value> {
+pub(super) async fn send_json_rpc(socket_path: &Path, request: &Value) -> anyhow::Result<Value> {
     let endpoint = TransportEndpoint::UnixSocket {
-        path: socket_path.clone(),
+        path: socket_path.to_path_buf(),
     };
 
     let rpc_request: JsonRpcRequest =

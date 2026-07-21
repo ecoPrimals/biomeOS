@@ -49,7 +49,7 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     )
     .await
     .map_err(|_| Error::timeout("Socket read", RPC_TIMEOUT_SECS))?
-    .map_err(|err| map_send_error(socket_path, err))?;
+    .map_err(|err| map_send_error(socket_path, &err))?;
 
     if let Some(error) = response.error {
         return Err(Error::jsonrpc_failed(
@@ -73,11 +73,11 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     })
 }
 
-fn map_send_error(path: &Path, err: anyhow::Error) -> Error {
+fn map_send_error(path: &Path, err: &anyhow::Error) -> Error {
     let msg = err.to_string();
 
     if msg.contains("Failed to connect") {
-        if let Some(io_err) = io_error_from_anyhow(&err) {
+        if let Some(io_err) = io_error_from_anyhow(err) {
             return Error::socket_connection_failed(path, io_err);
         }
         return Error::socket_connection_failed(path, std::io::Error::other(msg));

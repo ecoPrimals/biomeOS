@@ -145,9 +145,8 @@ fn probe_mount_and_check_marker(device: &Path) -> bool {
         return false;
     }
 
-    let device_str = match device.to_str() {
-        Some(value) => value,
-        None => return false,
+    let Some(device_str) = device.to_str() else {
+        return false;
     };
 
     let mounted = match mount(

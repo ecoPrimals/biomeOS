@@ -13,7 +13,7 @@ use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 
 use crate::FederationResult;
@@ -153,9 +153,9 @@ impl PrimalDiscovery {
         Ok(())
     }
 
-    async fn query_primal_info(&self, socket_path: &PathBuf) -> FederationResult<PrimalInfo> {
+    async fn query_primal_info(&self, socket_path: &Path) -> FederationResult<PrimalInfo> {
         let endpoint = TransportEndpoint::UnixSocket {
-            path: socket_path.clone(),
+            path: socket_path.to_path_buf(),
         };
 
         let request = biomeos_types::JsonRpcRequest::new("identity.info", serde_json::json!({}));
@@ -208,7 +208,7 @@ impl PrimalDiscovery {
         })
     }
 
-    async fn register_unix_socket_primal(&mut self, socket_path: &PathBuf) {
+    async fn register_unix_socket_primal(&mut self, socket_path: &Path) {
         let filename = socket_path
             .file_name()
             .and_then(|n| n.to_str())
@@ -240,7 +240,7 @@ impl PrimalDiscovery {
             primal_type,
             capabilities,
             endpoints: vec![PrimalEndpoint::UnixSocket {
-                path: socket_path.clone(),
+                path: socket_path.to_path_buf(),
             }],
             metadata: HashMap::from([
                 ("discovered_via".to_string(), "unix_socket".to_string()),

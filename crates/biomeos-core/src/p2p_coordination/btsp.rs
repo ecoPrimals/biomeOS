@@ -387,7 +387,9 @@ fn is_local_transport(endpoint: &TransportEndpoint) -> bool {
     matches!(
         endpoint.protocol.as_str(),
         "uds" | "unix" | "abstract" | "unix-stream"
-    ) || endpoint.address.ends_with(".sock")
+    ) || std::path::Path::new(&endpoint.address)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
 }
 
 fn build_tcp_fallback(endpoint: &TransportEndpoint) -> Option<TransportEndpoint> {

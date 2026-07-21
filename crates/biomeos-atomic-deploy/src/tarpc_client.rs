@@ -22,6 +22,7 @@ use tokio_serde::formats::Bincode;
 ///
 /// Uses Bincode for binary serialization. Returns error if socket doesn't exist
 /// or connection fails — caller should fall back to JSON-RPC.
+#[allow(clippy::needless_return)]
 pub async fn connect_tarpc_health(socket_path: &Path) -> Result<HealthRpcClient> {
     #[cfg(unix)]
     {
@@ -52,6 +53,7 @@ pub async fn connect_tarpc_health(socket_path: &Path) -> Result<HealthRpcClient>
 }
 
 /// Connect to a primal's tarpc socket and return a `DiscoveryRpcClient`.
+#[allow(clippy::needless_return)]
 pub async fn connect_tarpc_discovery(socket_path: &Path) -> Result<DiscoveryRpcClient> {
     #[cfg(unix)]
     {
@@ -82,6 +84,7 @@ pub async fn connect_tarpc_discovery(socket_path: &Path) -> Result<DiscoveryRpcC
 }
 
 /// Connect to a primal's tarpc socket and return a `SecurityRpcClient`.
+#[allow(clippy::needless_return)]
 pub async fn connect_tarpc_security(socket_path: &Path) -> Result<SecurityRpcClient> {
     #[cfg(unix)]
     {

@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
+use std::sync::Mutex;
+
 use super::super::capability_domains::*;
+
+static REGISTRY_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn test_capability_to_provider_runtime_overrides_bootstrap() {
+    let _guard = REGISTRY_LOCK.lock().ok();
     clear_runtime_capability_registry();
 
     register_capability_provider("security", "live-security-primal");
@@ -19,6 +24,7 @@ fn test_capability_to_provider_runtime_overrides_bootstrap() {
 
 #[test]
 fn test_capability_to_provider_runtime_prefix_from_dotted_capability() {
+    let _guard = REGISTRY_LOCK.lock().ok();
     clear_runtime_capability_registry();
 
     register_capability_provider("crypto.sign", "live-crypto-primal");
@@ -32,6 +38,7 @@ fn test_capability_to_provider_runtime_prefix_from_dotted_capability() {
 
 #[test]
 fn test_register_capability_provider_ignores_empty() {
+    let _guard = REGISTRY_LOCK.lock().ok();
     clear_runtime_capability_registry();
 
     register_capability_provider("", "beardog");

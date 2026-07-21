@@ -188,12 +188,12 @@ impl UniversalBiomeOSManager {
             let response: serde_json::Value = serde_json::from_str(line.trim())?;
 
             if let Some(r) = response.get("result") {
-                return Ok(r.clone());
+                Ok(r.clone())
+            } else if let Some(e) = response.get("error") {
+                anyhow::bail!("Provider returned error: {e}")
+            } else {
+                Ok(response)
             }
-            if let Some(e) = response.get("error") {
-                anyhow::bail!("Provider returned error: {e}");
-            }
-            return Ok(response);
         }
 
         #[cfg(windows)]

@@ -417,7 +417,7 @@ impl SocketDiscovery {
 
     /// Get temp dir: override if set, else `FALLBACK_RUNTIME_BASE`.
     pub(super) fn temp_dir(&self) -> PathBuf {
-        self.temp_dir_override.as_ref().cloned().unwrap_or_else(|| {
+        self.temp_dir_override.clone().unwrap_or_else(|| {
             PathBuf::from(biomeos_types::constants::runtime_paths::FALLBACK_RUNTIME_BASE)
         })
     }

@@ -75,13 +75,11 @@ pub(crate) async fn probe_primary_capability(socket_path: &Path) -> Option<Prima
     use biomeos_types::constants::timeouts;
 
     for method in &["capabilities.list", "capability.list"] {
-        let stream =
-            match tokio::time::timeout(timeouts::PROBE_TIMEOUT, UnixStream::connect(socket_path))
-                .await
-            {
-                Ok(Ok(stream)) => stream,
-                _ => return None,
-            };
+        let Ok(Ok(stream)) =
+            tokio::time::timeout(timeouts::PROBE_TIMEOUT, UnixStream::connect(socket_path)).await
+        else {
+            return None;
+        };
 
         let request = serde_json::json!({
             "jsonrpc": "2.0",
