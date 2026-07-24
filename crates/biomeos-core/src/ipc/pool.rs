@@ -143,7 +143,7 @@ impl ConnectionPool {
     }
 
     fn put(&self, key: &str, stream: TransportStream) {
-        let mut entry = self.inner.entry(key.to_string()).or_default();
+        let mut entry = self.inner.entry(key.to_owned()).or_default();
         let queue = entry.value_mut();
 
         if queue.len() >= MAX_IDLE_PER_ENDPOINT {

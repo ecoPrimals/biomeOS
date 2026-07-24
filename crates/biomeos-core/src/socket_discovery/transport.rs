@@ -162,7 +162,12 @@ impl TransportEndpoint {
 
 impl std::fmt::Display for TransportEndpoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.display_string())
+        match self {
+            Self::UnixSocket { path } => write!(f, "unix://{}", path.display()),
+            Self::AbstractSocket { name } => write!(f, "abstract://@{name}"),
+            Self::TcpSocket { host, port } => write!(f, "tcp://{host}:{port}"),
+            Self::HttpJsonRpc { host, port } => write!(f, "http://{host}:{port}/jsonrpc"),
+        }
     }
 }
 

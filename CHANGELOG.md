@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.39 (2026-07-24) — Wave 150y: Neural Router Pool Integration + Chimera Phase 0 Schema
+
+### Neural Router Hot Path Evolution
+- `ConnectionPool` wired directly into `NeuralRouter::forward_request_inner` — all JSON-RPC dispatch now reuses persistent UDS connections
+- Eliminates `AtomicClient` per-request allocation on the hot path (pool manages connection lifecycle)
+- `tokio::time::timeout` wraps pool dispatch for configurable request deadlines
+- Proper `IpcError::JsonRpcError` propagation from pooled response
+
+### TransportEndpoint Display Optimization
+- `Display` impl inlined (was delegating to `display_string()` which allocated an intermediate `String`)
+- Pool key creation (`endpoint.to_string()`) now writes directly to formatter
+
+### Chimera Definition Schema Evolution
+- `DeploymentSpec`: added `requires_network`, `can_federate`, `composition`, `replaces` fields
+- `Fusion`: added `shared_state: Vec<SharedStateEntry>` for in-process state sharing declarations
+- `SharedStateEntry`: `name`, `owner`, `readers`, `type_hint` — describes zero-IPC shared memory contracts
+- `PerformanceSpec`: targets + baseline metrics for chimera performance validation
+- Integration test: `tower-atomic.yaml` validates against evolved schema (3 components, 4 bindings, 3 shared states)
+
+### Dead Dependency Cleanup
+- Removed `glob` and `regex` from workspace `[dependencies]` — neither was imported by any crate
+- `ConnectionPool::put()`: `to_string()` → `to_owned()` (avoids redundant clone of already-owned String)
+
+### Test Count
+- 8,610 tests (up from 8,494), 0 regressions
+
+---
+
 ## v4.38 (2026-07-24) — Wave 150x: Connection Pooling + Service Crash-Loop Guard
 
 ### UDS Connection Pooling (`biomeos-core::ipc::ConnectionPool`)

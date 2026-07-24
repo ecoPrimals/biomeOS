@@ -18,9 +18,34 @@ pub struct Fusion {
     #[serde(default)]
     pub bindings: HashMap<String, FusionBinding>,
 
+    /// Shared state declarations (chimera advantage: zero-IPC access)
+    #[serde(default)]
+    pub shared_state: Vec<SharedStateEntry>,
+
     /// Unified API surface
     #[serde(default)]
     pub api: FusionApi,
+}
+
+/// Shared state declaration for chimera in-process coordination.
+///
+/// In a chimera binary, components share memory directly instead of
+/// serializing over IPC. Each entry names a type, its owner, and readers.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SharedStateEntry {
+    /// Logical name for this state (e.g., "crypto_context")
+    pub name: String,
+
+    /// Owning component.module (e.g., "beardog.crypto")
+    pub owner: String,
+
+    /// Components that hold read-only references
+    #[serde(default)]
+    pub readers: Vec<String>,
+
+    /// Rust type descriptor (documentation only at definition time)
+    #[serde(default, rename = "type")]
+    pub type_hint: Option<String>,
 }
 
 /// A binding between components

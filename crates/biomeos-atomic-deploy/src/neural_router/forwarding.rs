@@ -3,6 +3,8 @@
 
 //! Request forwarding - JSON-RPC and tarpc protocol escalation
 
+use std::sync::Arc;
+
 use anyhow::{Context, Result};
 use bytes::Bytes;
 use serde_json::Value;
@@ -209,22 +211,32 @@ impl NeuralRouter {
             endpoint.display_string()
         );
 
-        let client = AtomicClient::from_endpoint(endpoint.clone()).with_timeout(timeout);
-
-        let result = match client.try_call(method, params.clone()).await {
-            Ok(value) => value,
-            Err(e @ IpcError::JsonRpcError { .. }) => {
-                return Err(e.into());
-            }
-            Err(e) => {
-                return Err(anyhow::Error::from(e).context(format!(
-                    "Failed to forward {} to {} (timeout {}ms)",
-                    method,
-                    endpoint.display_string(),
-                    timeout.as_millis()
-                )));
-            }
+        let request = biomeos_types::JsonRpcRequest {
+            jsonrpc: biomeos_types::JsonRpcVersion,
+            method: Arc::from(method),
+            params: Some(params.clone()),
+            id: Some(serde_json::json!(1)),
         };
+
+        let result = tokio::time::timeout(timeout, async {
+            self.connection_pool.send_jsonrpc(endpoint, request).await
+        })
+        .await
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "Request to {} timed out after {}ms",
+                endpoint.display_string(),
+                timeout.as_millis()
+            )
+        })?
+        .map_err(|e| {
+            e.context(format!(
+                "Failed to forward {} to {} (timeout {}ms)",
+                method,
+                endpoint.display_string(),
+                timeout.as_millis()
+            ))
+        })?;
 
         let latency = start.elapsed().as_millis() as u64;
         debug!("   ✓ Forwarded successfully in {}ms", latency);
@@ -238,7 +250,18 @@ impl NeuralRouter {
             }
         }
 
-        Ok(result)
+        if let Some(error) = &result.error {
+            return Err(IpcError::JsonRpcError {
+                primal: endpoint.display_string(),
+                code: error.code as i32,
+                message: error.message.clone(),
+            }
+            .into());
+        }
+
+        result
+            .result
+            .ok_or_else(|| anyhow::anyhow!("Empty JSON-RPC response from {}", endpoint))
     }
 
     /// Extract a human-readable primal label from an endpoint for metrics

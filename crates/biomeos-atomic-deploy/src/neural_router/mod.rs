@@ -116,6 +116,10 @@ pub struct NeuralRouter {
     /// Ring buffer of completed training rows for barraCuda consumption.
     /// Drained via `neural_api.training_data` RPC.
     training_log: RwLock<VecDeque<DispatchTrainingRow>>,
+
+    /// Connection pool for reusing persistent UDS connections.
+    /// Eliminates per-request connect/disconnect overhead on hot dispatch paths.
+    pub(crate) connection_pool: biomeos_core::ConnectionPool,
 }
 
 impl NeuralRouter {
@@ -141,6 +145,7 @@ impl NeuralRouter {
             perceptron: None,
             pending_dispatches: RwLock::new(HashMap::new()),
             training_log: RwLock::new(VecDeque::new()),
+            connection_pool: biomeos_core::ConnectionPool::new(),
         }
     }
 
@@ -173,6 +178,7 @@ impl NeuralRouter {
             perceptron: None,
             pending_dispatches: RwLock::new(HashMap::new()),
             training_log: RwLock::new(VecDeque::new()),
+            connection_pool: biomeos_core::ConnectionPool::new(),
         }
     }
 

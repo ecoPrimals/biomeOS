@@ -37,6 +37,10 @@ pub struct ChimeraDefinition {
     /// Health check configuration
     #[serde(default)]
     pub health: HealthSpec,
+
+    /// Performance targets and baselines
+    #[serde(default)]
+    pub performance: Option<PerformanceSpec>,
 }
 
 /// Chimera metadata
@@ -122,6 +126,22 @@ pub struct DeploymentSpec {
     #[serde(default)]
     pub singleton: bool,
 
+    /// Whether network access is required
+    #[serde(default)]
+    pub requires_network: bool,
+
+    /// Whether this chimera can participate in federation
+    #[serde(default)]
+    pub can_federate: bool,
+
+    /// Named composition group (e.g., "tower")
+    #[serde(default)]
+    pub composition: Option<String>,
+
+    /// Primals this chimera replaces when deployed
+    #[serde(default)]
+    pub replaces: Vec<String>,
+
     /// Resource requirements for the deployment
     #[serde(default)]
     pub requirements: DeploymentRequirements,
@@ -187,6 +207,18 @@ pub struct HealthCheck {
     /// Additional check parameters
     #[serde(flatten)]
     pub params: HashMap<String, serde_json::Value>,
+}
+
+/// Performance specification with targets and baselines
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceSpec {
+    /// Target performance metrics
+    #[serde(default)]
+    pub targets: HashMap<String, serde_json::Value>,
+
+    /// Baseline (current) performance metrics for comparison
+    #[serde(default)]
+    pub baseline: HashMap<String, serde_json::Value>,
 }
 
 impl ChimeraDefinition {
@@ -456,5 +488,41 @@ fusion:
                 .to_string()
                 .contains("at least one component")
         );
+    }
+
+    #[test]
+    fn test_tower_atomic_definition_loads() -> anyhow::Result<()> {
+        let yaml_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../chimeras/definitions/tower-atomic.yaml");
+        let def = ChimeraDefinition::from_file(&yaml_path)?;
+
+        assert_eq!(def.chimera.id, "tower-atomic");
+        assert_eq!(def.chimera.name, "Tower Atomic");
+        assert_eq!(def.components.len(), 3);
+        assert!(def.components.contains_key("beardog"));
+        assert!(def.components.contains_key("songbird"));
+        assert!(def.components.contains_key("skunkbat"));
+        assert!(def.deployment.can_federate);
+        assert!(def.deployment.singleton);
+        assert_eq!(
+            def.deployment.replaces,
+            vec!["beardog", "songbird", "skunkbat"]
+        );
+        assert!(def.performance.is_some());
+
+        let perf = def.performance.as_ref().expect("performance spec present");
+        assert!(perf.targets.contains_key("lan_dispatch_ms"));
+        assert!(perf.baseline.contains_key("lan_dispatch_ms"));
+
+        assert_eq!(def.fusion.shared_state.len(), 3);
+        assert_eq!(def.fusion.shared_state[0].name, "crypto_context");
+        assert_eq!(def.fusion.shared_state[0].owner, "beardog.crypto");
+
+        assert!(!def.fusion.bindings.is_empty());
+        assert!(def.fusion.bindings.contains_key("mesh_encryption"));
+
+        assert!(!def.fusion.api.endpoints.is_empty());
+
+        Ok(())
     }
 }
