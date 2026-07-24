@@ -142,7 +142,7 @@ pub mod log_session;
 
 // Re-export IPC transport primitives (Phase 2 transport — abstraction over gating)
 pub use ipc::{
-    TransportListener, TransportStream, connect_transport, connect_transport_timed,
+    ConnectionPool, TransportListener, TransportStream, connect_transport, connect_transport_timed,
     send_jsonrpc_over_stream, send_jsonrpc_request,
 };
 

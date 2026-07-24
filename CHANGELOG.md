@@ -2,6 +2,29 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.38 (2026-07-24) — Wave 150x: Connection Pooling + Service Crash-Loop Guard
+
+### UDS Connection Pooling (`biomeos-core::ipc::ConnectionPool`)
+- New `ConnectionPool` type: reuses persistent UDS connections for `capability.call` dispatch
+- Eliminates per-request connect/disconnect overhead (Tower stress finding: 0.6ms → <0.1ms per hop target)
+- DashMap-keyed by endpoint string, max 4 idle connections per endpoint
+- 30s idle timeout with stale detection and automatic reconnect
+- Server-side already supports persistent connections (NDJSON loop)
+
+### Service Crash-Loop Guard
+- Fixed `biomeos-beacon.service` unit: now points to depot binary (was pointing to `target/release/`)
+- Added `StartLimitBurst=5` + `StartLimitIntervalSec=300` to prevent crash-loops
+- biomeOS LifecycleManager already has internal crash-loop breaker (max_attempts + exponential backoff + apoptosis)
+
+### Upstream Gap Notes (for other primal teams)
+- cellMembrane: systemd crash-loop detection still needed (P0 per Wave 150x)
+- songBird: UDS connection pooling in client dispatch, `federation.broadcast` handler, `duration_ms` truncation fix
+- bearDog: rate limiting + connection cap, enrollment timestamp window + replay tracking
+- skunkBat: process spawn rate anomaly detector
+
+### Test Count
+- 8,494 tests passing, 0 failures (from 8,492)
+
 ## v4.37 (2026-07-21) — Wave 150t Deep Debt + Clippy Zero + Transport Assessment
 
 ### Deep Debt: Clippy Zero (12 lints fixed)

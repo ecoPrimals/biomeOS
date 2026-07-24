@@ -38,3 +38,6 @@ pub use listener::TransportListener;
 
 mod jsonrpc;
 pub use jsonrpc::{send_jsonrpc_over_stream, send_jsonrpc_request};
+
+mod pool;
+pub use pool::ConnectionPool;
