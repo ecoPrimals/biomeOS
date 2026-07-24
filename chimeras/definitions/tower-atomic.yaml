@@ -1,0 +1,185 @@
+# Chimera: Tower Atomic
+# The sovereign mesh security + routing + defense triad.
+# Combines: BearDog (crypto/enrollment) + Songbird (mesh/routing) + SkunkBat (defense/threat)
+#
+# Phase 0: Definition + interface contracts. Library extraction on flockGate.
+# Phase 1: Chimera binary (single process, shared memory, zero UDS hops).
+# Phase 2: Shadow validation (chimera vs. 3-process Tower running in parallel).
+# Phase 3: Cutover — chimera replaces WireGuard on all gates.
+#
+# Performance target: <0.10ms LAN dispatch (vs current 0.55ms with 4 UDS hops).
+
+chimera:
+  id: "tower-atomic"
+  name: "Tower Atomic"
+  version: "0.1.0"
+  description: |
+    The sovereign security + mesh + defense composition. Fuses BearDog's
+    cryptographic authority, Songbird's mesh orchestration, and SkunkBat's
+    threat detection into a single-process chimera.
+
+    Replaces: 3 separate primal processes communicating over 4 UDS hops.
+    Gains: Shared crypto state, zero-copy dispatch, unified connection pool.
+
+components:
+  beardog:
+    source: "primals/beardog"
+    version: ">=3.0.0"
+    modules:
+      - name: "btsp"
+        description: "BearTree Security Protocol — connection-level encryption"
+        features: ["negotiate", "tunnel", "chacha20_poly1305"]
+      - name: "enrollment"
+        description: "Gate enrollment and mesh membership"
+        features: ["hmac_proof", "seed_exchange", "peer_verify"]
+      - name: "crypto"
+        description: "Sovereign cryptography (Ed25519, X25519, BLAKE3)"
+        features: ["sign", "verify", "kdf", "lineage"]
+      - name: "hsm"
+        description: "Hardware security module abstraction"
+        features: ["key_store", "attestation"]
+
+  songbird:
+    source: "primals/songbird"
+    version: ">=3.0.0"
+    modules:
+      - name: "mesh"
+        description: "Mesh topology and peer management"
+        features: ["peer_registry", "routing_table", "gossip"]
+      - name: "relay"
+        description: "Multi-tier relay (LAN punch, coordinated, TURN)"
+        features: ["nat_traversal", "stun", "turn_allocation"]
+      - name: "federation"
+        description: "Cross-gate federation and broadcast"
+        features: ["broadcast", "discovery", "capability_relay"]
+      - name: "drawbridge"
+        description: "HTTP→JSON-RPC translation bridge"
+        features: ["proxy", "capability_routing"]
+
+  skunkbat:
+    source: "primals/skunkbat"
+    version: ">=2.0.0"
+    modules:
+      - name: "threat_detector"
+        description: "Anomaly detection and threat classification"
+        features: ["spawn_rate", "connection_flood", "port_scan"]
+      - name: "firewall"
+        description: "Dynamic capability-based access control"
+        features: ["allow_list", "rate_limit", "block"]
+      - name: "audit"
+        description: "Security event logging and forensics"
+        features: ["event_log", "attestation_chain"]
+
+fusion:
+  bindings:
+    # BearDog BTSP encrypts all Songbird mesh traffic
+    mesh_encryption:
+      provider: "beardog.btsp"
+      consumers: ["songbird.mesh", "songbird.relay", "songbird.federation"]
+      config:
+        cipher: "ChaCha20-Poly1305"
+        key_exchange: "x25519_btsp"
+        session_keys: true
+
+    # BearDog enrollment gates Songbird peer acceptance
+    enrollment_gate:
+      provider: "beardog.enrollment"
+      consumers: ["songbird.mesh"]
+      config:
+        peer_verification: "hmac_proof"
+        seed_validation: true
+
+    # SkunkBat monitors Songbird connection patterns
+    connection_monitor:
+      provider: "skunkbat.threat_detector"
+      consumers: ["songbird.mesh", "songbird.relay"]
+      config:
+        spawn_rate_threshold: 15
+        connection_flood_threshold: 100
+
+    # SkunkBat firewall enforces BearDog attestation
+    attestation_firewall:
+      provider: "skunkbat.firewall"
+      consumers: ["beardog.enrollment"]
+      config:
+        require_attestation: true
+        rate_limit_unenrolled: 10
+
+  # Shared state (chimera advantage: no IPC serialization)
+  shared_state:
+    - name: "crypto_context"
+      owner: "beardog.crypto"
+      readers: ["songbird.mesh", "skunkbat.audit"]
+      type: "Arc<CryptoContext>"
+
+    - name: "peer_registry"
+      owner: "songbird.mesh"
+      readers: ["beardog.enrollment", "skunkbat.threat_detector"]
+      type: "Arc<DashMap<PeerId, PeerState>>"
+
+    - name: "threat_state"
+      owner: "skunkbat.threat_detector"
+      readers: ["songbird.relay", "beardog.btsp"]
+      type: "Arc<ThreatState>"
+
+  # Unified API surface (JSON-RPC methods exposed by chimera)
+  api:
+    endpoints:
+      - name: "tower.health"
+        description: "Composite health of all 3 subsystems"
+        returns: "TowerHealthStatus"
+
+      - name: "tower.enroll"
+        description: "Enroll a new gate into the mesh"
+        params: ["gate_id", "proof", "capabilities"]
+        returns: "EnrollmentResult"
+
+      - name: "tower.route"
+        description: "Route a capability.call through the mesh"
+        params: ["capability", "params", "target_gate"]
+        returns: "RoutingResult"
+
+      - name: "tower.threat_level"
+        description: "Current mesh threat assessment"
+        returns: "ThreatLevel"
+
+resources:
+  cpu_cores: 2
+  memory_mb: 128
+  storage_mb: 50
+  network:
+    ports:
+      - 8443  # BTSP tunnel
+      - 8080  # HTTP drawbridge
+      - 5353  # mDNS discovery
+
+deployment:
+  singleton: true
+  requires_network: true
+  can_federate: true
+  composition: "tower"
+  replaces: ["beardog", "songbird", "skunkbat"]
+
+health:
+  checks:
+    - name: "crypto_ready"
+      type: "beardog.key_available"
+    - name: "mesh_healthy"
+      type: "songbird.peer_count"
+      min_peers: 1
+    - name: "defense_active"
+      type: "skunkbat.threat_detector_running"
+    - name: "btsp_ready"
+      type: "beardog.btsp_listening"
+
+performance:
+  targets:
+    lan_dispatch_ms: 0.10
+    wan_dispatch_ms: 67.0
+    memory_rss_mb: 30
+    startup_ms: 500
+  baseline:
+    lan_dispatch_ms: 0.55
+    wan_dispatch_ms: 67.5
+    memory_rss_mb: 90
+    startup_ms: 1500
