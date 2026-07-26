@@ -203,7 +203,7 @@ Key transport module: `biomeos-core::ipc` — `TransportStream`, `TransportListe
 # Build
 cargo build --workspace
 
-# Test (8,477+ tests — fully concurrent)
+# Test (8,637+ tests — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -232,4 +232,4 @@ See `ARCHIVE_INDEX.md` in archive for details.
 **Active: 29 specs (47 archived), handoffs in wateringHole (v2.43–v4.35), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
 **Architecture: biomeos-core::ipc transport (Phase 2 complete, 12/14 primals), capability-first runtime registry + bootstrap hints, NucleusMode manifest profiles (`resolve_launch_set()`), L4 weighted routing, L5 perceptron shadow, guideStone startup, HEALTH-01, stale registration pruning, partition-aware routing, lineage fail-closed, real system metrics, agnostic naming, composition hot-reload, HTTP transport removed v3.97**
-**Tests: 8,477+ workspace-wide (0 failures) | Clippy: PASS (0 warnings) | C deps: 0 | Unsafe: 0 (all 26 crates #![forbid(unsafe_code)]) | Production files >800L: 0 | Test files >450L: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Cross-arch: x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu**
+**Tests: 8,637+ workspace-wide (0 failures) | Clippy: PASS (0 warnings incl tests) | C deps: 0 | Unsafe: 0 (all 26 crates #![forbid(unsafe_code)]) | Production files >800L: 0 | Test files >450L: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Cross-arch: x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu**

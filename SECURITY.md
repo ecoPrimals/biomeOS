@@ -7,7 +7,7 @@
 
 | Version | Supported |
 |---------|-----------|
-| v4.x (current: v4.35) | Yes |
+| v4.x (current: v4.41) | Yes |
 | v3.x    | Security fixes only |
 | < v3.0  | No        |
 
