@@ -1,4 +1,3 @@
-use super::super::atomic_client::*;
 use crate::TransportEndpoint;
 use crate::atomic_primal_client::AtomicPrimalClient;
 use std::sync::Arc;

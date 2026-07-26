@@ -6,7 +6,7 @@
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use super::super::ModelCache;
-use super::super::types::{ModelCacheConfig, ModelResolution};
+use super::super::types::ModelResolution;
 
 #[tokio::test]
 async fn test_register_and_resolve_local() {

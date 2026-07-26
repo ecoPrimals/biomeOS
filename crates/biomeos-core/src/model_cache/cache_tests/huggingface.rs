@@ -6,7 +6,7 @@
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use super::super::ModelCache;
-use super::super::types::{ModelCacheConfig, ModelResolution};
+use super::super::types::ModelCacheConfig;
 
 #[tokio::test]
 async fn test_register_huggingface_model() {

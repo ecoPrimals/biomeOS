@@ -3,7 +3,6 @@
 
 use crate::neural_router::NeuralRouter;
 use biomeos_core::TransportEndpoint;
-use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixListener;
 use tokio::sync::oneshot;
@@ -50,11 +49,5 @@ pub(crate) fn tcp_ep() -> TransportEndpoint {
     TransportEndpoint::TcpSocket {
         host: std::sync::Arc::from("192.0.2.100"),
         port: 9001,
-    }
-}
-
-pub(crate) fn unix_path_ep(path: &str) -> TransportEndpoint {
-    TransportEndpoint::UnixSocket {
-        path: PathBuf::from(path),
     }
 }

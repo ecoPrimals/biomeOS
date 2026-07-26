@@ -2,10 +2,7 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use super::super::engine::SocketDiscovery;
-use super::super::result::{DiscoveredSocket, DiscoveryMethod};
 use super::super::strategy::DiscoveryStrategy;
-use super::super::transport::TransportEndpoint;
-use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
 

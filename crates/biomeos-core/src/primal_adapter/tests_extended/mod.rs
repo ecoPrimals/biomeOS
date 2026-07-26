@@ -4,10 +4,6 @@
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 
 // Additional comprehensive tests for primal adapter
-use super::*;
-use crate::primal_adapter::types::{HealthCheckConfig, PortConfigMethod, PrimalState};
-use std::path::PathBuf;
-use std::time::Duration;
 
 mod adapter;
 mod config;

@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use biomeos_test_utils::MockJsonRpcServer;
 use serde_json::json;
-use tempfile::tempdir;
 
-use super::{handler_with_registration, make_handler};
+use super::make_handler;
 
 #[tokio::test]
 async fn test_register_route_tcp_transport() {

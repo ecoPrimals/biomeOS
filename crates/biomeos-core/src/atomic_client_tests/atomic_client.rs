@@ -117,6 +117,8 @@ fn test_atomic_client_socket_path_tcp_empty() {
     let client = AtomicClient::tcp("localhost", 9100);
     assert!(client.socket_path().as_os_str().is_empty());
 }
+
+#[test]
 fn test_atomic_client_clone() {
     let client1 = AtomicClient::unix("/tmp/test.sock").with_timeout(Duration::from_secs(10));
     let client2 = client1.clone();

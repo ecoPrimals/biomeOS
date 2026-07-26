@@ -3,15 +3,13 @@
 
 // Sibling tests for engine.rs
 
-#![expect(clippy::unwrap_used, reason = "test")]
-#![expect(clippy::expect_used, reason = "test")]
+#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test")]
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::living_graph::{LivingGraph, ProtocolMode};
 
-use super::super::config::{EscalationConfig, EscalationResult};
+use super::super::config::EscalationResult;
 use super::super::engine::*;
 
 #[tokio::test]

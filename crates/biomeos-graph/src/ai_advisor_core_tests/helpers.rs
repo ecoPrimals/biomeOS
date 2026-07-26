@@ -2,7 +2,6 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use biomeos_test_utils::MockJsonRpcServer;
 use serde_json::json;

@@ -3,7 +3,6 @@
     reason = "test assertions use unwrap/expect for clarity"
 )]
 
-use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::super::types::*;

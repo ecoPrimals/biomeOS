@@ -3,9 +3,6 @@
 
 // Sibling tests for engine.rs
 
-#![expect(clippy::unwrap_used, reason = "test")]
-#![expect(clippy::expect_used, reason = "test")]
-
 mod auto_escalate;
 mod cooldown;
 mod escalation_actions;

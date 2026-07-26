@@ -9,14 +9,17 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Tracks capability method utilization.
 ///
 /// Records call counts and last-used timestamps per method.
+/// Uses `Arc<str>` keys to share method names with `RegisteredCapability`
+/// without per-call String allocation.
 #[derive(Debug, Default)]
 pub struct CapabilityUtilizationTracker {
     /// method → (call_count, last_called_epoch_ms)
-    counters: HashMap<String, (u64, u64)>,
+    counters: HashMap<Arc<str>, (u64, u64)>,
 }
 
 impl CapabilityUtilizationTracker {
@@ -31,7 +34,10 @@ impl CapabilityUtilizationTracker {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as u64;
-        let entry = self.counters.entry(method.to_owned()).or_insert((0, 0));
+        let entry = self
+            .counters
+            .entry(Arc::from(method))
+            .or_insert((0, 0));
         entry.0 += 1;
         entry.1 = now;
     }
@@ -57,7 +63,7 @@ impl CapabilityUtilizationTracker {
             .counters
             .iter()
             .map(|(method, (count, last))| MethodUtilization {
-                method: method.clone(),
+                method: Arc::clone(method),
                 call_count: *count,
                 last_called_epoch_ms: *last,
             })
@@ -73,7 +79,7 @@ impl CapabilityUtilizationTracker {
             .iter()
             .filter(|(_, (count, _))| *count < threshold)
             .map(|(method, (count, last))| MethodUtilization {
-                method: method.clone(),
+                method: Arc::clone(method),
                 call_count: *count,
                 last_called_epoch_ms: *last,
             })
@@ -115,7 +121,7 @@ impl CapabilityUtilizationTracker {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MethodUtilization {
     /// Method name (e.g. "crypto.sha256").
-    pub method: String,
+    pub method: Arc<str>,
     /// Number of times this method has been called.
     pub call_count: u64,
     /// Unix epoch milliseconds when this method was last called.

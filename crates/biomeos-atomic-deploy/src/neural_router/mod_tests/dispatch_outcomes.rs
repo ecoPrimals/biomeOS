@@ -1,15 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::super::{
-    CompositionPattern, CompositionTier, NeuralRouter, PerceptronDispatcher, PerceptronPhase,
-    PerceptronWeights,
-};
-use biomeos_core::TransportEndpoint;
-use biomeos_types::tarpc_types::ProtocolPreference;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tempfile::tempdir;
+use super::super::NeuralRouter;
 
 use super::register_crypto_providers;
 
@@ -56,6 +48,7 @@ async fn record_dispatch_outcome_completes_stashed_training_row() {
     assert_eq!(rows[0].chosen_idx, idx);
     assert_eq!(router.training_data_count().await, 0);
 }
+#[tokio::test]
 async fn record_dispatch_outcome_without_pending_still_records_weights() {
     let router = NeuralRouter::new("no-pending");
     register_crypto_providers(&router, "solo", "other").await;

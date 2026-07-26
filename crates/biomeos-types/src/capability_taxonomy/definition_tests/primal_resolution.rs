@@ -1,5 +1,4 @@
 use super::*;
-use crate::capability_taxonomy::category::CapabilityCategory;
 
 // -------------------------------------------------------------------------
 // resolve_to_primal() - each capability category

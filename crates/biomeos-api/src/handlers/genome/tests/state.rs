@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::super::state::{GenomeState, genome_state};
+use super::super::state::GenomeState;
 use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
 use tempfile::TempDir;
 

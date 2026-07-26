@@ -4,23 +4,14 @@
 // Sibling tests for engine.rs
 
 #![expect(clippy::unwrap_used, reason = "test")]
-#![expect(clippy::expect_used, reason = "test")]
 
 use std::sync::Arc;
-use std::time::Duration;
 
-use crate::living_graph::{LivingGraph, ProtocolMode};
+use crate::living_graph::LivingGraph;
 
-use super::super::config::{EscalationConfig, EscalationResult};
+use super::super::config::EscalationConfig;
 use super::super::engine::*;
 
-async fn test_auto_escalate_check_no_candidates() {
-    let graph = Arc::new(LivingGraph::new("test-family"));
-    let manager = ProtocolEscalationManager::with_defaults(graph);
-
-    let result = manager.auto_escalate_check().await;
-    assert!(result.is_ok());
-}
 #[tokio::test]
 async fn test_auto_escalate_check_with_low_traffic_connections() {
     let graph = Arc::new(LivingGraph::new("test-family"));
@@ -33,6 +24,8 @@ async fn test_auto_escalate_check_with_low_traffic_connections() {
     let result = manager.auto_escalate_check().await;
     assert!(result.is_ok());
 }
+
+#[tokio::test]
 async fn test_auto_escalate_check_with_candidates_in_cooldown() {
     let graph = Arc::new(LivingGraph::new("test-family"));
     graph.register_connection("a", "b").await;
@@ -80,6 +73,8 @@ async fn test_auto_escalate_check_candidates_unhealthy_skipped() {
     let result = manager.auto_escalate_check().await;
     assert!(result.is_ok());
 }
+
+#[tokio::test]
 async fn auto_escalate_skips_when_below_min_requests() {
     let graph = Arc::new(LivingGraph::new("fam"));
     graph.register_connection("a", "b").await;

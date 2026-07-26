@@ -2,14 +2,10 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use super::super::{
-    CompositionPattern, CompositionTier, NeuralRouter, PerceptronDispatcher, PerceptronPhase,
-    PerceptronWeights,
+    CompositionPattern, CompositionTier, NeuralRouter, PerceptronDispatcher,
 };
-use biomeos_core::TransportEndpoint;
 use biomeos_types::tarpc_types::ProtocolPreference;
-use std::path::PathBuf;
 use std::sync::Arc;
-use tempfile::tempdir;
 
 use super::register_crypto_providers;
 
@@ -28,11 +24,11 @@ async fn utilization_tracking_hot_cold_and_json() {
 
     let hot = router.hot_methods(1).await;
     assert_eq!(hot.len(), 1);
-    assert_eq!(hot[0].method, "crypto.hash");
+    assert_eq!(&*hot[0].method, "crypto.hash");
 
     let cold = router.cold_methods(5).await;
     assert_eq!(cold.len(), 1);
-    assert_eq!(cold[0].method, "storage.put");
+    assert_eq!(&*cold[0].method, "storage.put");
 
     let json = router.utilization_json().await;
     assert_eq!(json["tracked_methods"], 2);

@@ -5,7 +5,7 @@ use biomeos_test_utils::MockJsonRpcServer;
 use serde_json::json;
 use tempfile::tempdir;
 
-use super::{handler_with_registration, make_handler};
+use super::make_handler;
 
 #[tokio::test]
 async fn test_route_success_via_mock_socket() {

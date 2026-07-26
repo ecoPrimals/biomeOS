@@ -5,9 +5,6 @@
 //!
 //! Extracted from capability_translation module to keep main module under 1000 LOC.
 
-#![expect(clippy::unwrap_used, reason = "test assertions")]
-#![expect(clippy::expect_used, reason = "test assertions")]
-
 pub(super) fn find_capability_registry_config() -> Option<std::path::PathBuf> {
     let mut dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     loop {

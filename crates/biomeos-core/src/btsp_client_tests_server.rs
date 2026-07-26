@@ -4,8 +4,6 @@
 #![expect(
     clippy::unwrap_used,
     clippy::expect_used,
-    clippy::or_fun_call,
-    clippy::future_not_send,
     reason = "test assertions"
 )]
 

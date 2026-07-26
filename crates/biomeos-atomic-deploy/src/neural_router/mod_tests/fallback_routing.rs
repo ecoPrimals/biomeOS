@@ -1,15 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::super::{
-    CompositionPattern, CompositionTier, NeuralRouter, PerceptronDispatcher, PerceptronPhase,
-    PerceptronWeights,
-};
-use biomeos_core::TransportEndpoint;
-use biomeos_types::tarpc_types::ProtocolPreference;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tempfile::tempdir;
+use super::super::NeuralRouter;
 
 use super::register_crypto_providers;
 
@@ -35,6 +27,7 @@ async fn select_weighted_provider_skips_circuit_broken_provider() {
         .expect("healthy fallback");
     assert_eq!(chosen.as_ref(), "healthy");
 }
+#[tokio::test]
 async fn select_weighted_provider_falls_back_to_first_when_all_circuits_open() {
     let router = NeuralRouter::new("circuit-test");
     register_crypto_providers(&router, "broken_a", "broken_b").await;

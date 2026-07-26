@@ -5,9 +5,6 @@
 
 //! Unit tests for storage manifest types.
 
-use super::*;
-use std::collections::HashMap;
-
 mod config;
 mod secret;
 mod volume;

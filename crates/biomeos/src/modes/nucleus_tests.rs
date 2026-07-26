@@ -1,11 +1,5 @@
 //! Nucleus mode tests (split into domain-focused submodules).
 
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    reason = "test assertions use unwrap/expect for clarity"
-)]
-
 #[path = "nucleus_tests_config.rs"]
 mod config;
 

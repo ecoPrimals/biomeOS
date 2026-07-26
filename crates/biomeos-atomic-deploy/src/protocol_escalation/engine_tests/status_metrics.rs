@@ -4,16 +4,14 @@
 // Sibling tests for engine.rs
 
 #![expect(clippy::unwrap_used, reason = "test")]
-#![expect(clippy::expect_used, reason = "test")]
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::living_graph::{LivingGraph, ProtocolMode};
 
-use super::super::config::{EscalationConfig, EscalationResult};
 use super::super::engine::*;
 
+#[tokio::test]
 async fn test_get_status() {
     let graph = Arc::new(LivingGraph::new("status-family"));
     graph.register_connection("a", "b").await;

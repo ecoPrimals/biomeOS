@@ -1,7 +1,6 @@
-use super::super::*;
 use crate::primal_adapter::types::{
-    HealthCheckConfig, LifecycleCapabilities, PortConfigMethod, PrimalCapabilities,
-    PrimalInterface, PrimalState,
+    HealthCheckConfig, InterfacePattern, LifecycleCapabilities, PortConfigMethod,
+    PrimalCapabilities, PrimalInterface,
 };
 use std::time::Duration;
 

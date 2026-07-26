@@ -15,8 +15,6 @@
 //! cargo test --package biomeos-federation genetic_lineage -- --ignored
 //! ```
 
-#![expect(clippy::unwrap_used, reason = "test assertions")]
-
 mod genetic_lineage_common;
 use genetic_lineage_common::*;
 

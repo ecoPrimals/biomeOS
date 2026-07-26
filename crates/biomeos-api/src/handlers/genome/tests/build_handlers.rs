@@ -5,7 +5,7 @@ use super::super::build::{build_genome, compose_genome, create_genome, self_repl
 use super::super::state::genome_state;
 use super::super::types::{BinarySpec, BuildRequest, ComposeRequest, CreateGenomeRequest};
 use axum::Json;
-use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+use biomeos_genomebin_v3::GenomeBin;
 use std::path::PathBuf;
 use tempfile::TempDir;
 

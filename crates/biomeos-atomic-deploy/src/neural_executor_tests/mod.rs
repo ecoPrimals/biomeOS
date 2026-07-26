@@ -19,5 +19,3 @@ mod execution;
 mod graph_config;
 mod split_capability;
 mod topological_sort;
-
-pub(crate) use common::create_test_node;

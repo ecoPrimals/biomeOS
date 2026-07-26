@@ -235,9 +235,9 @@ fn utilization_hot_methods() {
 
     let hot = tracker.hot_methods(2);
     assert_eq!(hot.len(), 2);
-    assert_eq!(hot[0].method, "crypto.hash");
+    assert_eq!(&*hot[0].method, "crypto.hash");
     assert_eq!(hot[0].call_count, 100);
-    assert_eq!(hot[1].method, "storage.store");
+    assert_eq!(&*hot[1].method, "storage.store");
 }
 
 #[test]
@@ -250,7 +250,7 @@ fn utilization_cold_methods() {
 
     let cold = tracker.cold_methods(5);
     assert_eq!(cold.len(), 1);
-    assert_eq!(cold[0].method, "dag.append");
+    assert_eq!(&*cold[0].method, "dag.append");
 }
 
 #[test]

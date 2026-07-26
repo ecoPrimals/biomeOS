@@ -3,7 +3,7 @@
 
 //! Rollback tests: capability registration paths.
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 use super::{
     env_with_runtime, neural_api_socket_path, node_with_operation, set_completed, test_graph,

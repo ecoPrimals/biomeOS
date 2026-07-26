@@ -2,7 +2,6 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use super::super::{JsonRpcNotification, *};
-use std::sync::Arc;
 
 #[test]
 fn test_sse_event_parsing() {

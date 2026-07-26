@@ -4,14 +4,13 @@
 // Sibling tests for engine.rs
 
 #![expect(clippy::unwrap_used, reason = "test")]
-#![expect(clippy::expect_used, reason = "test")]
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::living_graph::{LivingGraph, ProtocolMode};
+use crate::living_graph::LivingGraph;
 
-use super::super::config::{EscalationConfig, EscalationResult};
+use super::super::config::EscalationConfig;
 use super::super::engine::*;
 
 #[tokio::test]
@@ -78,6 +77,7 @@ async fn test_auto_escalate_check_no_candidates() {
     assert!(result.is_ok());
 }
 
+#[tokio::test]
 async fn test_graph_accessor() {
     let graph = Arc::new(LivingGraph::new("my-family"));
     let manager = ProtocolEscalationManager::with_defaults(graph);
@@ -109,6 +109,7 @@ async fn test_stop_then_check_running_flag() {
     manager.stop_monitoring().await;
     assert!(!*manager.running.read().await);
 }
+#[tokio::test]
 async fn test_start_monitoring_already_running() {
     let graph = Arc::new(LivingGraph::new("test-family"));
     let config = EscalationConfig {
@@ -121,6 +122,7 @@ async fn test_start_monitoring_already_running() {
     manager.start_monitoring().await;
     assert!(*manager.running.read().await);
 }
+#[tokio::test]
 async fn test_new_with_custom_config() {
     let graph = Arc::new(LivingGraph::new("test"));
     let config = EscalationConfig {
@@ -135,6 +137,7 @@ async fn test_new_with_custom_config() {
     assert_eq!(manager.config().latency_threshold_us, 250);
     assert_eq!(manager.config().check_interval_secs, 5);
 }
+#[tokio::test]
 async fn manager_graph_family_matches_constructor() {
     let graph = Arc::new(LivingGraph::new("lineage-42"));
     let manager = ProtocolEscalationManager::with_defaults(graph);

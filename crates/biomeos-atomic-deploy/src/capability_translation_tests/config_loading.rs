@@ -5,13 +5,9 @@
 //!
 //! Extracted from capability_translation module to keep main module under 1000 LOC.
 
-#![expect(clippy::unwrap_used, reason = "test assertions")]
 #![expect(clippy::expect_used, reason = "test assertions")]
 
-use crate::capability_translation::{
-    CapabilityTranslation, CapabilityTranslationRegistry, RegistryStats, resolve_primal_socket,
-    resolve_primal_socket_with,
-};
+use crate::capability_translation::CapabilityTranslationRegistry;
 use std::collections::HashMap;
 
 use super::find_capability_registry_config;
@@ -97,6 +93,8 @@ fn test_load_defaults() {
         "BearDog should provide beacon.generate"
     );
 }
+
+#[test]
 fn capabilities_match_registry_toml() {
     let config_path = match find_capability_registry_config() {
         Some(p) => p,

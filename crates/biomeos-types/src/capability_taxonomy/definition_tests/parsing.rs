@@ -1,5 +1,4 @@
 use super::*;
-use crate::capability_taxonomy::category::CapabilityCategory;
 
 // -------------------------------------------------------------------------
 // fmt::Display
@@ -122,6 +121,8 @@ fn from_str_flexible_edge_cases() {
     assert_eq!(CapabilityTaxonomy::from_str_flexible(" "), None);
     assert_eq!(CapabilityTaxonomy::from_str_flexible("encryption "), None);
 }
+
+#[test]
 fn from_str_flexible_http_bridge_and_federation_aliases() {
     assert_eq!(
         CapabilityTaxonomy::from_str_flexible("http_bridge"),

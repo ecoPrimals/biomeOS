@@ -121,6 +121,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[expect(clippy::expect_used, reason = "test assertion")]
     fn hmac_computation_produces_32_bytes() {
         let key = b"test-family-seed";
         let challenge = b"random-challenge-data";
@@ -131,6 +132,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::expect_used, reason = "test assertion")]
     fn client_hello_serializes_correctly() {
         let hello = ClientHello {
             protocol: "btsp".into(),

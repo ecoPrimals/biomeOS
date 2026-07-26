@@ -3,8 +3,6 @@
 
 //! Main binary integration tests (split into domain-focused submodules).
 
-#![expect(clippy::unwrap_used, reason = "test assertions")]
-#![expect(clippy::expect_used, reason = "test assertions")]
 
 #[path = "main_tests_common.rs"]
 mod common;

@@ -3,7 +3,7 @@
 
 //! Rollback tests: primal lifecycle stop paths.
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 use super::{env_with_runtime, node_with_operation, set_completed, test_graph};
 use crate::neural_executor::GraphExecutor;

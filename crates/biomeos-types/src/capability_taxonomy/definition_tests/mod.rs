@@ -3,7 +3,6 @@
 
 #![expect(clippy::unwrap_used, reason = "test")]
 
-use super::super::category::CapabilityCategory;
 use super::*;
 
 mod metadata;

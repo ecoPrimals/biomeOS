@@ -3,11 +3,6 @@
 
 //! AI-First API tests
 
-use std::collections::HashMap;
-use uuid::Uuid;
-
-use super::types::*;
-
 mod enums;
 mod preferences;
 mod response;

@@ -6,7 +6,6 @@
 #![expect(clippy::unwrap_used, reason = "test assertions")]
 
 use super::super::ModelCache;
-use super::super::types::{ModelCacheConfig, ModelResolution};
 
 #[tokio::test]
 async fn test_find_on_mesh_no_nestgate() {

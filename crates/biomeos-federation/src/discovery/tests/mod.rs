@@ -3,8 +3,6 @@
 
 //! Discovery tests - extracted to keep discovery/mod.rs under 1000 lines
 
-#![expect(clippy::expect_used, reason = "test assertions")]
-
 mod discovery_async;
 mod endpoint_parsing;
 mod peer_registration;

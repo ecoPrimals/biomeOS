@@ -4,7 +4,6 @@
 use super::super::capability_registry::*;
 use crate::Capability;
 use biomeos_types::PrimalId;
-use std::collections::HashMap;
 
 #[tokio::test]
 async fn test_register_and_get_provider() {

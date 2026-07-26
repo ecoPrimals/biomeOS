@@ -5,10 +5,6 @@
 
 #![expect(clippy::unwrap_used, reason = "test assertions use unwrap for clarity")]
 
-use super::*;
-use crate::primal_names;
-use tempfile::tempdir;
-
 mod errors;
 mod resolution;
 mod runtime;

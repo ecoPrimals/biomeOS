@@ -5,7 +5,6 @@
 
 #![expect(clippy::expect_used, reason = "test assertions")]
 
-use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use super::super::*;

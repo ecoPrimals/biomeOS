@@ -122,6 +122,8 @@ fn test_all_path_resolution_methods() {
     let graph = paths.graph_dir();
     assert!(graph.ends_with("graphs"));
 }
+
+#[test]
 fn test_spore_dir_path() {
     let temp = tempdir().unwrap();
     let paths = SystemPaths::with_base(temp.path()).unwrap();

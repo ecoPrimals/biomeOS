@@ -7,7 +7,7 @@ mod derive;
 mod persistence;
 mod serialization;
 
-use super::{DeviceLineage, LineageDeriver};
+use super::DeviceLineage;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;

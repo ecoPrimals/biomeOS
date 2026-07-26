@@ -3,7 +3,7 @@
 
 //! Tests for graph rollback (`neural_executor_rollback.rs`).
 
-#![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
+#![expect(clippy::expect_used, reason = "test assertions")]
 
 use super::super::neural_executor::{GraphExecutor, NodeStatus};
 use crate::neural_executor_async_tests::create_test_node;

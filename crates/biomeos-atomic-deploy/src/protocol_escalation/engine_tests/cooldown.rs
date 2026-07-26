@@ -4,14 +4,13 @@
 // Sibling tests for engine.rs
 
 #![expect(clippy::unwrap_used, reason = "test")]
-#![expect(clippy::expect_used, reason = "test")]
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::living_graph::{LivingGraph, ProtocolMode};
+use crate::living_graph::LivingGraph;
 
-use super::super::config::{EscalationConfig, EscalationResult};
+use super::super::config::EscalationConfig;
 use super::super::engine::*;
 
 #[tokio::test(start_paused = true)]
@@ -142,6 +141,7 @@ async fn test_cooldown_zero_duration() {
 
     assert!(!manager.is_in_cooldown(&conn).await);
 }
+#[tokio::test]
 async fn test_record_cooldown_multiple_keys() {
     let graph = Arc::new(LivingGraph::new("test-family"));
     graph.register_connection("a", "b").await;

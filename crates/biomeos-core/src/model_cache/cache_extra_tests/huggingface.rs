@@ -2,10 +2,7 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use super::super::ModelCache;
-use super::super::types::{
-    CacheManifest, ModelCacheConfig, ModelEntry, ModelFile, ModelResolution,
-};
-use std::path::PathBuf;
+use super::super::types::ModelCacheConfig;
 use tempfile::TempDir;
 
 use super::hf_models_dir;

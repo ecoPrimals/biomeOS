@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::super::{
-    CompositionPattern, CompositionTier, NeuralRouter, PerceptronDispatcher, PerceptronPhase,
-    PerceptronWeights,
-};
-use biomeos_core::TransportEndpoint;
+use super::super::{NeuralRouter, PerceptronDispatcher, PerceptronPhase, PerceptronWeights};
 use biomeos_types::tarpc_types::ProtocolPreference;
-use std::path::PathBuf;
-use std::sync::Arc;
 use tempfile::tempdir;
 
 #[test]

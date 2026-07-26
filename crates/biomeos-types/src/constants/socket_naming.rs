@@ -62,6 +62,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::expect_used, reason = "test assertions")]
     fn socket_naming_roundtrip() {
         let dir = Path::new("/tmp/sockets");
         let path = primal_socket_path(dir, "songbird", "abc123");

@@ -14,10 +14,8 @@
 //! **Philosophy**: Test issues = Production issues
 //! If tests can't handle concurrency, production won't either!
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
-use tokio::sync::{Barrier, mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinSet;
 // ============================================================================
 // Stress Test 1: Concurrent Server Readiness

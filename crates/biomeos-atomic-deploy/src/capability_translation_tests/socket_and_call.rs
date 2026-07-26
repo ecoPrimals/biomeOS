@@ -6,14 +6,13 @@
 //! Extracted from capability_translation module to keep main module under 1000 LOC.
 
 #![expect(clippy::unwrap_used, reason = "test assertions")]
-#![expect(clippy::expect_used, reason = "test assertions")]
 
 use crate::capability_translation::{
-    CapabilityTranslation, CapabilityTranslationRegistry, RegistryStats, resolve_primal_socket,
-    resolve_primal_socket_with,
+    CapabilityTranslationRegistry, resolve_primal_socket, resolve_primal_socket_with,
 };
 use std::collections::HashMap;
 
+#[test]
 fn test_resolve_primal_socket_env_override() {
     let unique_primal = "testprimal_env_override";
     let socket = resolve_primal_socket_with(

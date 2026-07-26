@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::super::{JsonRpcNotification, *};
-use std::sync::Arc;
+use super::super::*;
 
 #[tokio::test]
 async fn test_subscribe_sse_with_websocket_upgrades_to_websocket() {
