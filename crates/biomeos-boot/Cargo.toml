@@ -34,13 +34,6 @@ uuid = { workspace = true }
 tar = { workspace = true }
 flate2 = { workspace = true }
 
-# Network discovery
-mdns-sd = { workspace = true }
-
-# Cryptographic operations
-sha2 = { workspace = true }
-hex = { workspace = true }
-
 # Path and file utilities
 tempfile = { workspace = true }
 

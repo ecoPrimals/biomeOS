@@ -172,7 +172,6 @@ humantime = "2.1"
 redb = "2.4"
 lz4_flex = "0.14"
 hex = "0.4"
-mdns-sd = "0.20.1"
 
 # Async I/O & bytes helpers
 async-fs = "2.1"

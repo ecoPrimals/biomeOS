@@ -292,9 +292,7 @@ impl TopologyHandler {
             if !dirs.contains(&membrane_path) && membrane_path.exists() {
                 dirs.push(membrane_path);
             }
-            #[expect(deprecated, reason = "intentional backward-compat scan of legacy dir")]
-            let legacy_path = PathBuf::from(&xdg_runtime)
-                .join(biomeos_types::constants::runtime_paths::BIOMEOS_SUBDIR);
+            let legacy_path = PathBuf::from(&xdg_runtime).join("biomeos");
             if !dirs.contains(&legacy_path) && legacy_path.exists() {
                 dirs.push(legacy_path);
             }
