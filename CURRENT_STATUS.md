@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: July 26, 2026 (v4.40: Wave 151b — SDK BTSP handshake evolution, strict mode readiness)
-**Version**: 4.40
-**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,610+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >450 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Phase 2 transport (trait dispatch over cfg gating) - Capability-first runtime registry - NucleusMode manifest-driven launch sets - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved - Executor introspection + socket naming convention + stale cleanup RPC - Zero production unwraps (workspace lint enforced) - Connection pool wired into neural router hot path - Dead workspace deps purged - Chimera definition schema supports Phase 0 - SDK BTSP handshake evolution (strict mode ready)
+**Updated**: July 26, 2026 (v4.41: Wave 151c — deep debt cleanup, 100% clippy --tests, Arc<str> hot path)
+**Version**: 4.41
+**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings (incl --tests) - NUCLEUS watchdog ACTIVE - 8,637+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >450 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Phase 2 transport (trait dispatch over cfg gating) - Capability-first runtime registry - NucleusMode manifest-driven launch sets - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved - Executor introspection + socket naming convention + stale cleanup RPC - Zero production unwraps (workspace lint enforced) - Connection pool wired into neural router hot path - Dead workspace deps purged (mdns-sd eliminated) - Chimera definition schema supports Phase 0 - SDK BTSP handshake evolution (strict mode ready) - CapabilityUtilizationTracker evolved to Arc<str> (zero alloc on record path)
 
 ---
 
@@ -17,10 +17,10 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024 all crates, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit, `#[expect]` everywhere) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used, workspace lints inherited by all 26 workspace crates, `#[expect(reason)]` in all 119 test files |
-| **Tests Passing** | 8,494 workspace-wide, 0 failures, fully concurrent |
+| **Tests Passing** | 8,637 workspace-wide, 0 failures, fully concurrent |
 | **Test Coverage** | 88.37% line / 88.02% region / 89.58% function (llvm-cov workspace-wide; remaining gap is binary entry points + systemd interaction) |
 | **Unsafe Code** | 0 production (`#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points, `deny→forbid` upgraded in 6 submodules) |
-| **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`, all crates, Wave 68: 18→0) |
+| **Clippy** | PASS (0 warnings including `--tests`, pedantic+nursery, `-D warnings`, all 26 crates) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
 | **C dependencies** | 0 production C deps (gethostname → rustix::system::uname(), zstd-sys → lz4_flex, deny.toml enforced). `rtnetlink` (kernel AF_NETLINK, documented thin FFI) is the only C-adjacent transitive. |
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |

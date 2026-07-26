@@ -2,6 +2,35 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.41 (2026-07-26) — Wave 151c: Deep Debt Cleanup + 100% Clippy Clean
+
+### Dead Dependency Elimination
+- Remove `mdns-sd` from `biomeos-boot` and workspace (unused, zero crate imports)
+- Remove `sha2`, `hex` from `biomeos-boot` deps (only used transitively via types)
+- Workspace dep count: 73 → 72 (mdns-sd eliminated from entire dependency tree)
+
+### Deprecated Symbol Cleanup
+- Remove `DEFAULT_BEARDOG_PORT` constant (0 references, hardcoded primal name)
+- Remove `BIOMEOS_SUBDIR` constant (inline string literal in legacy-compat scan)
+- Remove `BearDogVerifier` type alias (0 external usage, replaced by `SecurityVerifier`)
+
+### Hot Path Evolution: Arc<str> Utilization Tracker
+- `CapabilityUtilizationTracker` keys evolved from `HashMap<String, _>` to `HashMap<Arc<str>, _>`
+- `MethodUtilization.method` field: `String` → `Arc<str>` (zero alloc on `.record()` hot path)
+- Eliminates per-call `method.to_owned()` allocation in neural router dispatch
+
+### 100% Clippy Clean (Including Tests)
+- Fix 26+ unfulfilled `#![expect(...)]` blocks across workspace test files
+- Remove unused imports from ~40 test modules in all 26 crates
+- Add 21 missing `#[test]` attributes (recovered dead test functions)
+- Fix `clippy::expect_used` vs `clippy::unwrap_used` annotation errors
+- Achievement: `cargo clippy --workspace --tests -- -D warnings` = ZERO errors
+
+### Test Count
+- 8,637 tests (↑21 from recovered dead test functions), 0 regressions
+
+---
+
 ## v4.40 (2026-07-26) — Wave 151b: SDK BTSP Handshake Evolution
 
 ### Primal SDK BTSP Strict Mode Readiness

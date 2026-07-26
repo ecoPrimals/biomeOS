@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v4.40)
+## Status: Production Ready (v4.41)
 
 | Metric | Value |
 |--------|-------|
@@ -12,10 +12,10 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP; HTTP removed v3.97) + tarpc binary escalation (wired) + DashMap connection pool on neural router hot path |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, all monoliths split into semantic modules, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, dashmap 6, toml 0.9, axum 0.8, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>`, zero clippy warnings, workspace-level `unwrap_used = "deny"`, connection pool on hot dispatch path) |
-| Tests | 8,616+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
+| Tests | 8,637+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
-| Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings`, zero errors (verified Jul 21 2026) |
+| Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings`, zero errors including `--tests` (verified Jul 26 2026) |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI + mobile (TCP fallback) |
