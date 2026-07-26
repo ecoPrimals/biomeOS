@@ -28,6 +28,21 @@ pub(crate) async fn jsonrpc_via_transport(
     endpoint: &TransportEndpoint,
     request: JsonRpcRequest,
 ) -> Result<JsonRpcResponse> {
+    #[cfg(unix)]
+    if let TransportEndpoint::UnixSocket { path } = endpoint {
+        if crate::btsp_client::should_perform_consumer_handshake(path) {
+            let stream = connect_unix_timed(path, Duration::from_secs(30))
+                .await
+                .with_context(|| format!("Failed to connect to {endpoint}"))?;
+            let stream = crate::btsp_client::perform_consumer_handshake(stream)
+                .await
+                .with_context(|| {
+                    format!("BTSP consumer handshake failed for {}", path.display())
+                })?;
+            return send_jsonrpc_line(stream, request).await;
+        }
+    }
+
     let stream = connect_transport(endpoint)
         .await
         .with_context(|| format!("Failed to connect to {endpoint}"))?;
@@ -72,6 +87,13 @@ pub(crate) async fn jsonrpc_unix_btsp(
         "BTSP: failed to connect to Unix socket: {}",
         path.display()
     ))?;
+
+    if crate::btsp_client::should_perform_consumer_handshake(path) {
+        let stream = crate::btsp_client::perform_consumer_handshake(stream)
+            .await
+            .with_context(|| format!("BTSP consumer handshake failed for {}", path.display()))?;
+        return send_jsonrpc_line(stream, request).await;
+    }
 
     let outcome = crate::btsp_client_phase3::perform_client_handshake_phase3(stream)
         .await

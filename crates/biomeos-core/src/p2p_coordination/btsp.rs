@@ -378,8 +378,7 @@ fn key_rotation_stale(security: &TunnelHealth) -> bool {
         None => false,
         Some(rotated_at) => rotated_at
             .elapsed()
-            .map(|elapsed| elapsed >= KEY_ROTATION_STALE)
-            .unwrap_or(true),
+            .map_or(true, |elapsed| elapsed >= KEY_ROTATION_STALE),
     }
 }
 

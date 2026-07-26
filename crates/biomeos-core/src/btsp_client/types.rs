@@ -132,4 +132,10 @@ pub enum BtspHandshakeError {
         "FAMILY_ID and BIOMEOS_INSECURE=1 cannot coexist — production mode requires BTSP authentication"
     )]
     InsecureGuard,
+    /// Family seed not available in environment.
+    #[error("FAMILY_SEED not available — cannot perform BTSP consumer handshake")]
+    NoFamilySeed,
+    /// HMAC computation failed (invalid key length).
+    #[error("HMAC computation failed")]
+    Hmac,
 }

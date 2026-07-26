@@ -21,6 +21,7 @@
 
 mod client;
 mod config;
+mod consumer;
 mod provider;
 mod server;
 mod types;
@@ -31,9 +32,11 @@ pub(crate) use client::{client_keygen, read_json_line, serialize_line, write_lin
 #[cfg(windows)]
 pub(crate) use client::{client_keygen, serialize_line};
 pub use config::{
-    btsp_enforce, extract_family_id, family_id, has_family_id, is_family_scoped_socket,
-    log_security_posture, security_mode, security_provider_socket_path, validate_insecure_guard,
+    btsp_enforce, btsp_strict_mode_expected, extract_family_id, family_id, has_family_id,
+    is_family_scoped_socket, is_security_provider_socket, log_security_posture, security_mode,
+    security_provider_socket_path, should_perform_consumer_handshake, validate_insecure_guard,
 };
+pub use consumer::perform_consumer_handshake;
 pub use server::server_handshake;
 pub use types::{
     BTSP_VERSION, BtspConnection, BtspHandshakeError, ChallengeResponse, ClientHello,

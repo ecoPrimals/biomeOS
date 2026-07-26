@@ -38,6 +38,51 @@ pub fn family_id() -> Option<String> {
         .filter(|v| !v.is_empty() && v != DEFAULT_FAMILY_ID)
 }
 
+/// Check whether bearDog BTSP strict mode is expected (handshake required before JSON-RPC).
+///
+/// Returns `true` if `BEARDOG_UDS_REQUIRE_BTSP=1` or `BTSP_STRICT_MODE=1`.
+#[must_use]
+pub fn btsp_strict_mode_expected() -> bool {
+    std::env::var("BEARDOG_UDS_REQUIRE_BTSP")
+        .or_else(|_| std::env::var("BTSP_STRICT_MODE"))
+        .is_ok_and(|v| v.trim() == "1")
+}
+
+/// Whether the given Unix socket path targets the security provider (bearDog).
+#[must_use]
+pub fn is_security_provider_socket(path: &Path) -> bool {
+    for env_key in [
+        biomeos_types::env_config::vars::BEARDOG_SOCKET,
+        "SECURITY_PROVIDER_SOCKET",
+        "BIOMEOS_SECURITY_SOCKET",
+    ] {
+        if let Ok(p) = std::env::var(env_key) {
+            if Path::new(&p) == path {
+                return true;
+            }
+        }
+    }
+
+    if security_provider_socket_path().is_some_and(|sp| sp.as_path() == path) {
+        return true;
+    }
+
+    path.file_name()
+        .and_then(|f| f.to_str())
+        .is_some_and(|name| {
+            name.starts_with("beardog")
+                && Path::new(name)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+        })
+}
+
+/// Whether a consumer-side BTSP handshake must precede JSON-RPC on this socket.
+#[must_use]
+pub fn should_perform_consumer_handshake(path: &Path) -> bool {
+    btsp_strict_mode_expected() && is_security_provider_socket(path)
+}
+
 /// Whether BTSP enforcement is active. When `true`, connections from
 /// clients that do not complete a BTSP handshake are rejected. When
 /// `false`, unauthenticated connections log a warning but proceed.

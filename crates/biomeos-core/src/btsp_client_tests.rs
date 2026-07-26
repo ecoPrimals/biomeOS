@@ -166,3 +166,6 @@ mod server;
 
 #[path = "btsp_client_tests_client.rs"]
 mod client;
+
+#[path = "btsp_client_tests_consumer.rs"]
+mod consumer;
