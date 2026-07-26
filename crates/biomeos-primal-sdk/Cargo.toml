@@ -39,6 +39,7 @@ tracing = { workspace = true }
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio = { workspace = true, features = ["test-util"] }
 tempfile = { workspace = true }
+temp-env = { workspace = true }
 
 [lints]
 workspace = true

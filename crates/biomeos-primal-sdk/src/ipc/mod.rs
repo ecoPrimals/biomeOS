@@ -5,6 +5,7 @@
 //!
 //! Kept local to avoid a dependency cycle: `biomeos-core` depends on this crate.
 
+mod btsp_handshake;
 mod connect;
 mod endpoint;
 mod jsonrpc;

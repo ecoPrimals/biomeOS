@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: July 24, 2026 (v4.39: Wave 150y — Neural router pool integration, chimera schema evolution, dead dep cleanup)
-**Version**: 4.39
-**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,610+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >450 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Phase 2 transport (trait dispatch over cfg gating) - Capability-first runtime registry - NucleusMode manifest-driven launch sets - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved - Executor introspection + socket naming convention + stale cleanup RPC - Zero production unwraps (workspace lint enforced) - Connection pool wired into neural router hot path - Dead workspace deps purged - Chimera definition schema supports Phase 0
+**Updated**: July 26, 2026 (v4.40: Wave 151b — SDK BTSP handshake evolution, strict mode readiness)
+**Version**: 4.40
+**Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings - NUCLEUS watchdog ACTIVE - 8,610+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >450 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Phase 2 transport (trait dispatch over cfg gating) - Capability-first runtime registry - NucleusMode manifest-driven launch sets - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved - Executor introspection + socket naming convention + stale cleanup RPC - Zero production unwraps (workspace lint enforced) - Connection pool wired into neural router hot path - Dead workspace deps purged - Chimera definition schema supports Phase 0 - SDK BTSP handshake evolution (strict mode ready)
 
 ---
 

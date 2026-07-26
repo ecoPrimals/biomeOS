@@ -2,6 +2,31 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.40 (2026-07-26) — Wave 151b: SDK BTSP Handshake Evolution
+
+### Primal SDK BTSP Strict Mode Readiness
+- New `biomeos-primal-sdk::ipc::btsp_handshake` module (294 LOC)
+- `PrimalClient::send_jsonrpc_request` now auto-detects BTSP requirement:
+  - Checks `FAMILY_ID` env + family-scoped socket naming convention
+  - Performs 4-step BTSP ClientHello handshake before sending JSON-RPC
+  - Delegates all crypto to security provider via JSON-RPC (zero-crypto SDK)
+  - Falls back to plaintext with warning if handshake fails
+- Security provider discovery: `BIOMEOS_SECURITY_SOCKET` → `SECURITY_PROVIDER_SOCKET` → family socket → dev socket
+- Prevents recursive BTSP: provider calls use raw `send_jsonrpc_over_stream` directly
+- biomeOS core BTSP: already **DONE** (Phase 2 + Phase 3, 1229 LOC)
+
+### BTSP Compliance Assessment
+- `biomeos-core`: BTSP Phase 2 + Phase 3 **DONE** (client, server, provider, encrypted framing)
+- `biomeos-atomic-deploy`: Neural router BTSP enforcement **DONE** (`btsp_enforce()`)
+- `biomeos-api`: ClientHello detection + redirect **DONE**
+- `biomeos-primal-sdk`: ClientHello handshake **NEW** (this wave)
+- biomeOS overall: **FULLY BTSP COMPLIANT** — ready for `BIOMEOS_BTSP_ENFORCE=1` deployment
+
+### Test Count
+- 8,616 tests (151 in primal-sdk: +5 new BTSP), 0 regressions
+
+---
+
 ## v4.39 (2026-07-24) — Wave 150y: Neural Router Pool Integration + Chimera Phase 0 Schema
 
 ### Neural Router Hot Path Evolution

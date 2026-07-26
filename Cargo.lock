@@ -792,6 +792,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tarpc",
+ "temp-env",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
