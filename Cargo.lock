@@ -320,7 +320,6 @@ name = "biomeos"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "axum",
  "biomeos-atomic-deploy",
  "biomeos-chimera",
  "biomeos-core",
@@ -332,22 +331,15 @@ dependencies = [
  "biomeos-system",
  "biomeos-test-utils",
  "biomeos-types",
- "chrono",
- "clap",
- "etcetera",
  "rand 0.9.4",
  "serde",
- "serde-saphyr",
  "serde_json",
  "tempfile",
- "thiserror 2.0.18",
  "tokio",
  "tokio-test",
- "toml",
  "tracing",
  "tracing-subscriber",
  "tracing-test",
- "uuid",
  "wiremock",
 ]
 
