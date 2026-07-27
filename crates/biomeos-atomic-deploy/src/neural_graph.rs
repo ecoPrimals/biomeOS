@@ -13,5 +13,6 @@ mod parsing;
 mod types;
 
 pub use types::{
-    Constraints, Graph, GraphConfig, GraphNode, NodeOutput, Operation, PrimalSelector, RetryConfig,
+    ComputeRequirements, Constraints, Graph, GraphConfig, GraphNode, NodeOutput, Operation,
+    PrimalSelector, RetryConfig,
 };

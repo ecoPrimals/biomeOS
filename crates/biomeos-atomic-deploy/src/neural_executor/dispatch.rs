@@ -18,6 +18,7 @@ impl GraphExecutor {
     /// Delegates to shared handlers in `executor::node_handlers` for consistency
     /// and to avoid code duplication. If the node has a remote `gate`, forwards
     /// execution to the remote biomeOS Neural API via `AtomicClient`.
+    /// If `gate = "auto"`, uses Plasmodium workload dispatch to select the best gate.
     pub(super) async fn execute_node(
         node: &GraphNode,
         context: &ExecutionContext,
@@ -27,6 +28,18 @@ impl GraphExecutor {
         if let Some(ref gate) = node.gate {
             if gate == "local" {
                 // Explicit local execution — fall through to local handlers
+            } else if gate == "auto" {
+                // Plasmodium workload dispatch: select best gate from collective
+                if let Some(target) =
+                    Self::plasmodium_dispatch(node, gate_registry).await
+                {
+                    return Self::forward_to_remote_gate(node, &target.0, &target.1).await;
+                }
+                // No suitable remote gate — fall through to local execution
+                info!(
+                    "Plasmodium dispatch: no remote gate meets requirements for node '{}', executing locally",
+                    node.id
+                );
             } else if let Some(remote_endpoint) = gate_registry.resolve(gate) {
                 return Self::forward_to_remote_gate(node, remote_endpoint, gate).await;
             } else {
@@ -171,5 +184,50 @@ impl GraphExecutor {
 
         info!("   ✓ Node {} completed on gate '{}'", node.id, gate);
         Ok(result)
+    }
+
+    /// Use Plasmodium collective dispatch to select the best remote gate for a node.
+    ///
+    /// Returns `Some((endpoint, gate_id))` if a suitable remote gate is found,
+    /// `None` if the node should execute locally (no better option or no collective).
+    async fn plasmodium_dispatch(
+        node: &GraphNode,
+        gate_registry: &GateRegistry,
+    ) -> Option<(biomeos_core::TransportEndpoint, String)> {
+        let reqs = node.compute_requirements.as_ref()?;
+
+        let plasmodium = biomeos_core::plasmodium::Plasmodium::new();
+        let state = plasmodium.query_collective().await.ok()?;
+
+        let workload_reqs = biomeos_core::plasmodium::dispatch::WorkloadRequirements {
+            min_vram_mb: reqs.min_vram_mb,
+            min_ram_gb: reqs.min_ram_gb,
+            min_cpu_cores: reqs.min_cpu_cores,
+            capability: reqs.capability.clone(),
+            prefer_local: false,
+            max_load: if reqs.max_load > 0.0 {
+                reqs.max_load
+            } else {
+                1.0
+            },
+        };
+
+        let candidates = biomeos_core::plasmodium::dispatch::select_gates(&state, &workload_reqs);
+
+        for candidate in &candidates {
+            if candidate.gate.is_local {
+                continue;
+            }
+
+            if let Some(endpoint) = gate_registry.resolve(&candidate.gate.gate_id) {
+                info!(
+                    "🧬 Plasmodium dispatch: node '{}' → gate '{}' (score={}, {})",
+                    node.id, candidate.gate.gate_id, candidate.score, candidate.reason
+                );
+                return Some((endpoint.clone(), candidate.gate.gate_id.clone()));
+            }
+        }
+
+        None
     }
 }

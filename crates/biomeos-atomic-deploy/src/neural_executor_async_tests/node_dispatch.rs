@@ -40,6 +40,47 @@ async fn test_execute_node_unknown_type() {
     assert_eq!(report.phase_results[0].failed, 0);
 }
 
+/// Test execute_node with gate = "auto" — falls through to local when no remote gates available.
+/// Validates the Plasmodium dispatch path degrades gracefully.
+#[tokio::test]
+async fn test_execute_node_auto_gate_falls_to_local() {
+    use crate::neural_graph::ComputeRequirements;
+
+    let mut node = create_test_node("auto_dispatch_node", vec![]);
+    node.gate = Some("auto".to_string());
+    node.compute_requirements = Some(ComputeRequirements {
+        min_vram_mb: 24_000,
+        min_ram_gb: 256,
+        ..Default::default()
+    });
+
+    let graph = Graph {
+        id: "auto-dispatch-test".to_string(),
+        version: "1.0".to_string(),
+        description: "Test auto dispatch fallback".to_string(),
+        nodes: vec![node],
+        config: GraphConfig::default(),
+        coordination: None,
+        env: HashMap::new(),
+        genetics_tier: None,
+        composition_model: None,
+    };
+    let mut env = HashMap::new();
+    env.insert("FAMILY_ID".to_string(), "test".to_string());
+    env.insert(
+        "XDG_RUNTIME_DIR".to_string(),
+        std::env::temp_dir().to_string_lossy().to_string(),
+    );
+
+    let mut executor = GraphExecutor::new(graph, env);
+    let report = executor.execute().await.unwrap();
+
+    // Auto-dispatch finds no suitable remote gate → falls to local → unknown node executes
+    assert!(report.success);
+    assert_eq!(report.phase_results.len(), 1);
+    assert_eq!(report.phase_results[0].completed, 1);
+}
+
 /// Test execute_node with explicit unknown node_type string
 #[tokio::test]
 async fn test_execute_node_explicit_unknown_type() {

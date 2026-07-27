@@ -30,6 +30,8 @@ impl super::Plasmodium {
     /// Uses HTTP POST to `/jsonrpc` on the remote discovery provider.
     /// The port is runtime-discovered from the `mesh.peers` response
     /// (beacon exchange), with env var and constants as fallbacks.
+    ///
+    /// Fetches health, primals, compute info, and load from the remote NUCLEUS.
     pub(crate) async fn query_remote_gate(&self, address: &str, node_id: &str) -> Result<GateInfo> {
         let default_port: u16 = std::env::var(biomeos_types::env_config::vars::MESH_PORT)
             .ok()
@@ -38,10 +40,8 @@ impl super::Plasmodium {
 
         let (host, port) = parse_mesh_peer_address(address, default_port);
 
-        // Use HTTP JSON-RPC gateway (covalent bond transport)
         let client = AtomicClient::http(&host, port);
 
-        // Query health
         let health_result: Result<Value> = client.call("health", json!({})).await;
         let reachable = health_result.is_ok();
 
@@ -49,20 +49,71 @@ impl super::Plasmodium {
             anyhow::bail!("Gate {node_id} not reachable at {host}:{port}");
         }
 
-        // Query remote primals
         let primals = Self::query_remote_primals(&client).await;
+        let compute = Self::query_remote_compute(&client, node_id).await;
+        let load = Self::query_remote_load(&client).await;
 
         Ok(GateInfo {
             gate_id: node_id.to_string(),
             address: address.to_string(),
             is_local: false,
             primals,
-            compute: ComputeInfo::default(),
+            compute,
             models: vec![],
-            load: 0.0,
+            load,
             reachable: true,
             bond_type: BondType::Covalent,
         })
+    }
+
+    /// Query remote compute info via `system.compute` RPC.
+    /// Falls back to empty `ComputeInfo` if the remote doesn't support the call.
+    async fn query_remote_compute(client: &AtomicClient, node_id: &str) -> ComputeInfo {
+        let Ok(result) = client.call("system.compute", json!({})).await else {
+            return ComputeInfo::default();
+        };
+
+        let gpus = result
+            .get("gpus")
+            .and_then(|g| g.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|g| {
+                        Some(super::types::GpuInfo {
+                            name: g.get("name")?.as_str()?.to_string(),
+                            vram_mb: g.get("vram_mb").and_then(Value::as_u64).unwrap_or(0),
+                            gate_id: node_id.to_string(),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let ram_gb = result
+            .get("ram_gb")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        let cpu_cores = result
+            .get("cpu_cores")
+            .and_then(Value::as_u64)
+            .unwrap_or(0) as usize;
+
+        ComputeInfo {
+            gpus,
+            ram_gb,
+            cpu_cores,
+        }
+    }
+
+    /// Query remote system load via `system.load` RPC.
+    /// Falls back to 0.0 if the remote doesn't support the call.
+    async fn query_remote_load(client: &AtomicClient) -> f64 {
+        client
+            .call("system.load", json!({}))
+            .await
+            .ok()
+            .and_then(|v| v.get("load").and_then(Value::as_f64))
+            .unwrap_or(0.0)
     }
 
     /// Query remote primals via Songbird TCP

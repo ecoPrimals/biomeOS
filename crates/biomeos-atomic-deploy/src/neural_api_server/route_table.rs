@@ -106,6 +106,8 @@ pub(super) enum Route {
     ManifestGateProfile,
     CapabilityPrune,
     CleanupSockets,
+    SystemCompute,
+    SystemLoad,
 }
 
 /// Table-driven handler registry: method name → route.
@@ -330,6 +332,9 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("onion.get_address", Route::SemanticCapabilityCall),
     ("onion.connect", Route::SemanticCapabilityCall),
     ("onion.status", Route::SemanticCapabilityCall),
+    // System introspection (Plasmodium G8)
+    ("system.compute", Route::SystemCompute),
+    ("system.load", Route::SystemLoad),
 ];
 
 pub(super) fn lookup_route(method: &str) -> Option<Route> {

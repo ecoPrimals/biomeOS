@@ -106,9 +106,36 @@ pub struct GraphNode {
 
     /// Target gate for cross-gate deployment.
     /// Absent or `"local"` means execute on this biomeOS instance.
+    /// `"auto"` triggers Plasmodium workload dispatch based on `compute_requirements`.
     /// Any other value is resolved via the graph's gate registry to a remote endpoint.
     #[serde(default)]
     pub gate: Option<String>,
+
+    /// Compute requirements for Plasmodium auto-dispatch (when `gate = "auto"`).
+    /// If set, the dispatcher selects the best gate from the collective.
+    #[serde(default)]
+    pub compute_requirements: Option<ComputeRequirements>,
+}
+
+/// Declarative compute requirements for a graph node.
+/// Used by the Plasmodium dispatcher to select the optimal gate.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ComputeRequirements {
+    /// Minimum GPU VRAM in megabytes.
+    #[serde(default)]
+    pub min_vram_mb: u64,
+    /// Minimum system RAM in gigabytes.
+    #[serde(default)]
+    pub min_ram_gb: u64,
+    /// Minimum CPU core count.
+    #[serde(default)]
+    pub min_cpu_cores: usize,
+    /// Required capability domain (e.g. "compute", "inference").
+    #[serde(default)]
+    pub capability: Option<String>,
+    /// Maximum acceptable gate load (0.0-1.0).
+    #[serde(default)]
+    pub max_load: f64,
 }
 
 impl GraphNode {

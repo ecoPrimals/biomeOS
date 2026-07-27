@@ -487,6 +487,9 @@ impl NeuralApiServer {
                     };
                 }
             }
+            // System introspection (Plasmodium G8 — remote gates query these)
+            Route::SystemCompute => dispatch(self.handle_system_compute().await, id),
+            Route::SystemLoad => dispatch(Ok(self.handle_system_load()), id),
         };
 
         outcome
@@ -579,6 +582,28 @@ impl NeuralApiServer {
             &signal_params,
         )
         .await
+    }
+
+    /// Respond to `system.compute` — expose local GPU/RAM/CPU for Plasmodium bonding.
+    async fn handle_system_compute(&self) -> Result<Value, anyhow::Error> {
+        let gate_id = std::env::var(biomeos_types::env_config::vars::GATE_ID)
+            .or_else(|_| std::env::var(biomeos_types::env_config::vars::HOSTNAME))
+            .unwrap_or_else(|_| "unknown".to_string());
+        let info = biomeos_core::plasmodium::system::query_local_compute(&gate_id).await;
+        Ok(json!({
+            "gpus": info.gpus.iter().map(|g| json!({
+                "name": g.name,
+                "vram_mb": g.vram_mb,
+                "gate_id": g.gate_id,
+            })).collect::<Vec<_>>(),
+            "ram_gb": info.ram_gb,
+            "cpu_cores": info.cpu_cores,
+        }))
+    }
+
+    /// Respond to `system.load` — expose normalized load for scheduling.
+    fn handle_system_load(&self) -> Value {
+        json!({ "load": biomeos_core::plasmodium::system::get_system_load() })
     }
 
     /// Handle a JSON-RPC request and return a JSON-RPC response value.

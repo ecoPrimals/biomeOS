@@ -2,6 +2,36 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.42 (2026-07-27) — Wave 155b: Plasmodium G8 Multi-Gate Bonding
+
+### Remote Compute Discovery
+- Remote gate queries now fetch `system.compute` and `system.load` via JSON-RPC
+- Neural API server exposes `system.compute` and `system.load` methods
+- Plasmodium collective view includes actual GPU/RAM/CPU data from remote gates
+- Enables compute-aware workload routing across the mesh
+
+### Workload Dispatch Engine
+- New `plasmodium::dispatch` module: score-based gate selection for compute workloads
+- `WorkloadRequirements` struct: min VRAM, RAM, CPU cores, capability, max load
+- `select_gates()` scores all reachable gates and returns ranked candidates
+- Excludes overloaded/unreachable/under-spec gates automatically
+
+### Graph Executor Auto-Dispatch
+- Graph nodes support `gate = "auto"` for Plasmodium-routed cross-gate execution
+- New `ComputeRequirements` field on `GraphNode` for declarative workload specs
+- Executor queries collective, selects best gate, forwards execution transparently
+- Graceful fallback to local execution when no remote gate meets requirements
+
+### Cross-Platform Graph Execution
+- Verified zero platform-specific code in graph executor, node handlers, dispatch
+- All cross-gate communication uses TCP/HTTP (works on Linux, Windows, Android)
+- Transport abstraction handles UDS→TCP fallback automatically per-platform
+
+### Test Count
+- 8,530 tests (+8 new dispatch tests, +1 auto-gate integration test), 0 regressions
+
+---
+
 ## v4.41 (2026-07-26) — Wave 151c: Deep Debt Cleanup + 100% Clippy Clean
 
 ### Dead Dependency Elimination

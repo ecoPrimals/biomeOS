@@ -32,10 +32,11 @@
 //! See `specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md` for the full specification.
 
 mod aggregate;
+pub mod dispatch;
 mod local_gate;
 mod peers;
 mod remote;
-mod system;
+pub mod system;
 pub mod types;
 
 #[cfg(test)]

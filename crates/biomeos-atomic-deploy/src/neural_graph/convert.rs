@@ -210,6 +210,7 @@ impl Graph {
             cost_estimate_ms,
             operation_dependencies,
             gate,
+            compute_requirements: None,
         })
     }
 }
