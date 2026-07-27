@@ -53,10 +53,26 @@ cross-platform graph execution via Plasmodium dispatch.
 
 ---
 
+### 5. Deep Debt: Test Monolith Elimination
+
+- `provenance_trio_e2e.rs` (651L) → `provenance_trio_e2e/{main,graph_validation,live_workflow}.rs`
+- `nucleus_composition_e2e.rs` (591L) → `nucleus_composition_e2e/{main,parsing,topology,execution,cross_gate}.rs`
+- `discovery_integration.rs` (558L) → `discovery_integration/{main,primal_discovery,live_service,resilience}.rs`
+- All 39 tests (9+15+15) continue passing from split modules.
+
+### 6. Deep Debt: Dead Monolith + Dep Purge
+
+- Deleted `sovereign_mesh_e2e.rs` (859L) — redundant monolith superseded by
+  split phase files.
+- Purged 10 unused deps from root crate `[dependencies]`.
+
+---
+
 ## Test Results
 
-- **Total**: 8,530 workspace-wide (all pass)
+- **Total**: 8,522 workspace-wide (all pass, 0 failures)
 - **New tests**: 8 dispatch unit tests + 1 auto-gate integration test
+- **Size compliance**: Zero test files > 450 LOC. Zero prod files > 800 LOC.
 - **Clippy**: `cargo clippy --workspace --tests -- -D warnings` = ZERO errors
 
 ---
