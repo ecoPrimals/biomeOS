@@ -33,7 +33,7 @@ struct ClientHello {
 #[derive(Deserialize)]
 struct ServerHello {
     challenge: String,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "deserialized from server, used when cipher negotiation completes")]
     session_id: String,
     server_ephemeral_pub: String,
 }
@@ -47,7 +47,7 @@ struct ChallengeResponse {
 #[derive(Deserialize)]
 struct HandshakeComplete {
     session_id: String,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "deserialized from server, used when cipher negotiation completes")]
     cipher: String,
 }
 
@@ -58,7 +58,7 @@ pub(crate) fn should_btsp(path: &Path) -> bool {
 
 /// Perform BTSP handshake on an already-connected stream, returning a `BufReader`
 /// ready for JSON-RPC communication.
-#[allow(clippy::future_not_send)]
+#[allow(clippy::future_not_send, reason = "TransportStream may be !Send on Windows (NamedPipe)")]
 pub(crate) async fn perform_handshake(
     stream: TransportStream,
 ) -> Result<BufReader<TransportStream>> {
@@ -236,7 +236,7 @@ async fn provider_call(
         .ok_or_else(|| anyhow!("Empty response from security provider"))
 }
 
-#[allow(clippy::future_not_send)]
+#[allow(clippy::future_not_send, reason = "BufReader<TransportStream> may be !Send on Windows")]
 async fn write_json_line(
     reader: &mut BufReader<TransportStream>,
     value: &impl Serialize,
@@ -256,7 +256,7 @@ async fn write_json_line(
     Ok(())
 }
 
-#[allow(clippy::future_not_send)]
+#[allow(clippy::future_not_send, reason = "BufReader<TransportStream> may be !Send on Windows")]
 async fn read_json_line<T: serde::de::DeserializeOwned>(
     reader: &mut BufReader<TransportStream>,
 ) -> Result<T> {

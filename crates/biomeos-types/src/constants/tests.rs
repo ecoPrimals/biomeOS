@@ -275,15 +275,10 @@ fn test_ports_test_default() {
 }
 
 #[test]
-fn test_observability_and_registry_ports_match_endpoint_strings() {
-    assert_eq!(ports::STATSD, 8125);
-    assert_eq!(ports::ZIPKIN_HTTP, 9411);
-    assert_eq!(ports::REGISTRY_HTTP, 9999);
-    assert!(endpoints::DEFAULT_STATSD_UDP_ENDPOINT.contains("8125"));
-    assert!(endpoints::DEFAULT_ZIPKIN_HTTP_ENDPOINT.contains("9411"));
-    assert!(endpoints::DEFAULT_REGISTRY_HTTP_URL.contains("9999"));
+fn test_production_tcp_bind_addr() {
     let addr = endpoints::production_tcp_bind_addr(9000);
     assert_eq!(addr.port(), 9000);
+    assert!(addr.ip().is_unspecified());
 }
 
 #[test]

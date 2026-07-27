@@ -139,20 +139,10 @@ pub mod endpoints {
     /// Capability query endpoint path (Songbird exposes this)
     pub const CAPABILITY_QUERY_ENDPOINT: &str = "/capabilities";
 
-    /// Default StatsD / DogStatsD UDP endpoint (local relay).
-    ///
-    /// Port must stay in sync with [`super::ports::STATSD`].
-    pub const DEFAULT_STATSD_UDP_ENDPOINT: &str = "udp://localhost:8125";
-
-    /// Default Zipkin HTTP collector URL (local development).
-    ///
-    /// Port must stay in sync with [`super::ports::ZIPKIN_HTTP`].
-    pub const DEFAULT_ZIPKIN_HTTP_ENDPOINT: &str = "http://localhost:9411";
-
-    /// Default Songbird-style HTTP registry base URL (local development).
-    ///
-    /// Port must stay in sync with [`super::ports::REGISTRY_HTTP`].
-    pub const DEFAULT_REGISTRY_HTTP_URL: &str = "http://localhost:9999/registry";
+    // REMOVED: DEFAULT_STATSD_UDP_ENDPOINT, DEFAULT_ZIPKIN_HTTP_ENDPOINT,
+    // DEFAULT_REGISTRY_HTTP_URL — third-party service endpoints that violated
+    // self-knowledge principle. Observability/registry endpoints are configured
+    // via environment variables or capability-based discovery at runtime.
 
     /// TCP bind address for all interfaces at `port` (`0.0.0.0:port`).
     #[must_use]
@@ -391,15 +381,6 @@ pub mod ports {
 
     /// Number of ports to scan during TCP-only auto-discovery.
     pub const TCP_SPAWN_SCAN_RANGE: u16 = 20;
-
-    /// StatsD / DogStatsD standard UDP port
-    pub const STATSD: u16 = 8125;
-
-    /// Default Zipkin HTTP collector port
-    pub const ZIPKIN_HTTP: u16 = 9411;
-
-    /// Default local HTTP service registry (Songbird-style) port
-    pub const REGISTRY_HTTP: u16 = 9999;
 
     /// Default port for test environments (avoids colliding with dev/production ports)
     pub const TEST_DEFAULT: u16 = 8083;
