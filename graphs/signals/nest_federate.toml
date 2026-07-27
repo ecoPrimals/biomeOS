@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.federate
+#
+# Cross-gate provenance federation: rhizoCrypt pushes vertices with
+# source gate metadata, loamSpine validates signatures, sweetGrass
+# creates attribution braids for the cross-gate merge.
+# Enabled by rhizoCrypt Wave 155b BTSP→DAG bridge.
+
+[graph]
+id = "nest_federate"
+name = "Nest Federate Signal"
+description = "Push vertices with provenance → verify signatures → attribute cross-gate merge."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "federate"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+fragments = ["tower_atomic"]
+
+[[graph.nodes]]
+name = "push_vertices"
+binary = "rhizocrypt"
+order = 1
+required = true
+spawn = false
+by_capability = "dag"
+capabilities = ["dag.federate"]
+
+[[graph.nodes]]
+name = "verify_signatures"
+binary = "loamspine"
+order = 2
+required = true
+spawn = false
+depends_on = ["push_vertices"]
+by_capability = "ledger"
+capabilities = ["certificate.verify"]
+
+[[graph.nodes]]
+name = "attribute_merge"
+binary = "sweetgrass"
+order = 3
+required = false
+spawn = false
+depends_on = ["verify_signatures"]
+by_capability = "commit"
+capabilities = ["braid.create"]

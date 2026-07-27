@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: tower.key_rotate
+#
+# Coordinated key rotation: bearDog generates new material, songBird
+# re-announces to mesh peers, skunkBat audits the rotation event.
+
+[graph]
+id = "tower_key_rotate"
+name = "Tower Key Rotation Signal"
+description = "Generate new key material → re-announce to mesh → audit rotation."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "tower"
+signal_name = "key_rotate"
+
+[graph.metadata]
+particle = "electron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+
+[[graph.nodes]]
+name = "rotate_keys"
+binary = "beardog"
+order = 1
+required = true
+spawn = false
+by_capability = "security"
+capabilities = ["crypto.rotate_session_keys"]
+
+[[graph.nodes]]
+name = "announce_rotation"
+binary = "songbird"
+order = 2
+required = true
+spawn = false
+depends_on = ["rotate_keys"]
+by_capability = "discovery"
+capabilities = ["mesh.capabilities_announce"]
+
+[[graph.nodes]]
+name = "audit_rotation"
+binary = "skunkbat"
+order = 3
+required = false
+spawn = false
+depends_on = ["announce_rotation"]
+by_capability = "defense"
+capabilities = ["defense.audit"]

@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: tower.enroll
+#
+# Gate enrollment via Tower Atomic: authenticate physical proof via bearDog,
+# register mesh peer via songBird, audit enrollment via skunkBat.
+# This is the entry point for autonomous gate enrollment.
+
+[graph]
+id = "tower_enroll"
+name = "Tower Enroll Signal"
+description = "Physical proof → mesh peer registration → audit trail. Autonomous gate enrollment."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "tower"
+signal_name = "enroll"
+
+[graph.metadata]
+particle = "electron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+
+[[graph.nodes]]
+name = "verify_proof"
+binary = "beardog"
+order = 1
+required = true
+spawn = false
+by_capability = "security"
+capabilities = ["fido2.verify_attestation", "beacon.verify_proximity"]
+
+[[graph.nodes]]
+name = "register_peer"
+binary = "songbird"
+order = 2
+required = true
+spawn = false
+depends_on = ["verify_proof"]
+by_capability = "discovery"
+capabilities = ["mesh.gate_enroll"]
+
+[[graph.nodes]]
+name = "audit_enrollment"
+binary = "skunkbat"
+order = 3
+required = false
+spawn = false
+depends_on = ["register_peer"]
+by_capability = "defense"
+capabilities = ["defense.audit"]

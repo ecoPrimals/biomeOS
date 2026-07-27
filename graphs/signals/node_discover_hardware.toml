@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: node.discover_hardware
+#
+# Full hardware discovery pipeline: toadStool probes CPUs/GPUs/NPUs,
+# barraCuda validates compute capabilities, coralReef checks shader support.
+# Cross-platform: wgpu fallback on all platforms (S342).
+
+[graph]
+id = "node_discover_hardware"
+name = "Node Hardware Discovery Signal"
+description = "Probe hardware → validate compute → check shaders. Cross-platform via wgpu."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "node"
+signal_name = "discover_hardware"
+
+[graph.metadata]
+particle = "proton"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+fragments = ["tower_atomic"]
+
+[[graph.nodes]]
+name = "probe_hardware"
+binary = "toadstool"
+order = 1
+required = true
+spawn = false
+by_capability = "compute"
+capabilities = ["hardware.discover_gpus", "hardware.discover_cpus"]
+
+[[graph.nodes]]
+name = "validate_compute"
+binary = "barracuda"
+order = 2
+required = false
+spawn = false
+depends_on = ["probe_hardware"]
+by_capability = "tensor"
+capabilities = ["math.check_precision"]
+
+[[graph.nodes]]
+name = "check_shaders"
+binary = "coralreef"
+order = 2
+required = false
+spawn = false
+depends_on = ["probe_hardware"]
+by_capability = "shader"
+capabilities = ["shader.backends"]

@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.verify
+#
+# Content verification pipeline: NestGate retrieves content, rhizoCrypt
+# verifies DAG integrity, loamSpine checks certificate chain.
+# The read-side counterpart to nest.store.
+
+[graph]
+id = "nest_verify"
+name = "Nest Verify Signal"
+description = "Retrieve content → verify DAG integrity → check certificate chain."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "verify"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+fragments = ["tower_atomic"]
+
+[[graph.nodes]]
+name = "retrieve_content"
+binary = "nestgate"
+order = 1
+required = true
+spawn = false
+by_capability = "storage"
+capabilities = ["content.get"]
+
+[[graph.nodes]]
+name = "verify_dag"
+binary = "rhizocrypt"
+order = 2
+required = true
+spawn = false
+depends_on = ["retrieve_content"]
+by_capability = "dag"
+capabilities = ["dag.verify"]
+
+[[graph.nodes]]
+name = "check_certificate"
+binary = "loamspine"
+order = 3
+required = false
+spawn = false
+depends_on = ["verify_dag"]
+by_capability = "ledger"
+capabilities = ["certificate.verify"]

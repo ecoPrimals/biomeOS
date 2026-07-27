@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: tower.mesh_status
+#
+# Composed mesh health: songBird mesh peers + bearDog crypto spine +
+# skunkBat threat posture. Returns unified Tower status.
+
+[graph]
+id = "tower_mesh_status"
+name = "Tower Mesh Status Signal"
+description = "Mesh peers + crypto health + threat posture. Composed trust boundary status."
+version = "1.0.0"
+coordination = "parallel"
+signal_tier = "tower"
+signal_name = "mesh_status"
+
+[graph.metadata]
+particle = "electron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+
+[[graph.nodes]]
+name = "mesh_peers"
+binary = "songbird"
+order = 1
+required = true
+spawn = false
+by_capability = "discovery"
+capabilities = ["mesh.peers", "mesh.health_check"]
+
+[[graph.nodes]]
+name = "crypto_health"
+binary = "beardog"
+order = 1
+required = true
+spawn = false
+by_capability = "security"
+capabilities = ["health.liveness", "crypto.status"]
+
+[[graph.nodes]]
+name = "threat_posture"
+binary = "skunkbat"
+order = 1
+required = false
+spawn = false
+by_capability = "defense"
+capabilities = ["defense.posture"]

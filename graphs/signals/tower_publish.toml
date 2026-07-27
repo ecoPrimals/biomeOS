@@ -18,7 +18,7 @@ signal_name = "publish"
 [graph.metadata]
 particle = "electron"
 security_model = "btsp_enforced"
-transport = "uds_only"
+transport = "platform_native"
 secure_by_default = true
 
 [[graph.nodes]]

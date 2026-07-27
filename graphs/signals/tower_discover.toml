@@ -17,7 +17,7 @@ signal_name = "discover"
 [graph.metadata]
 particle = "electron"
 security_model = "btsp_enforced"
-transport = "uds_only"
+transport = "platform_native"
 secure_by_default = true
 
 [[graph.nodes]]

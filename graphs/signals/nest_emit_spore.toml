@@ -20,7 +20,7 @@ signal_name = "emit_spore"
 [graph.metadata]
 particle = "neutron"
 security_model = "btsp_enforced"
-transport = "uds_only"
+transport = "platform_native"
 secure_by_default = true
 fragments = ["tower_atomic", "nest_atomic"]
 pseudospore_version = "2.0"

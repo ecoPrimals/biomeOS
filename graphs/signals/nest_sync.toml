@@ -34,7 +34,7 @@ signal_name = "sync"
 [graph.metadata]
 particle = "neutron"
 security_model = "btsp_enforced"
-transport = "uds_only"
+transport = "platform_native"
 secure_by_default = true
 fragments = ["provenance_trio", "cross_gate"]
 

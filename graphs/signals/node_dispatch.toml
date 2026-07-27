@@ -1,18 +1,19 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Atomic Signal: node.compute
+# Atomic Signal: node.dispatch
 #
-# Full compute pipeline: authenticate via Tower, dispatch via toadStool,
-# compile shaders via coralReef, execute math via barraCuda.
+# Workload dispatch: toadStool selects optimal hardware target,
+# coralReef compiles if shader needed, barraCuda executes.
+# The general-purpose compute pipeline (node.compute is the specific case).
 
 [graph]
-id = "node_compute"
-name = "Node Compute Signal"
-description = "Authenticate → dispatch → compile → execute. Full compute pipeline."
+id = "node_dispatch"
+name = "Node Dispatch Signal"
+description = "Select hardware target → optional shader compile → execute workload."
 version = "1.0.0"
 coordination = "sequential"
 signal_tier = "node"
-signal_name = "compute"
+signal_name = "dispatch"
 
 [graph.metadata]
 particle = "proton"
@@ -22,7 +23,7 @@ secure_by_default = true
 fragments = ["tower_atomic"]
 
 [[graph.nodes]]
-name = "dispatch"
+name = "select_target"
 binary = "toadstool"
 order = 1
 required = true
@@ -31,21 +32,21 @@ by_capability = "compute"
 capabilities = ["compute.dispatch"]
 
 [[graph.nodes]]
-name = "compile"
+name = "compile_shader"
 binary = "coralreef"
 order = 2
-required = true
+required = false
 spawn = false
-depends_on = ["dispatch"]
+depends_on = ["select_target"]
 by_capability = "shader"
 capabilities = ["shader.compile.wgsl"]
 
 [[graph.nodes]]
-name = "execute"
+name = "execute_workload"
 binary = "barracuda"
 order = 3
 required = true
 spawn = false
-depends_on = ["compile"]
+depends_on = ["select_target"]
 by_capability = "tensor"
-capabilities = ["tensor.matmul"]
+capabilities = ["compute.execute"]
