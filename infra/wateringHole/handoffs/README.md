@@ -8,6 +8,7 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
+| 155b | Jul 27, 2026 | Plasmodium G8 multi-gate bonding, workload dispatch, dead monolith + dep purge |
 | 151c | Jul 26, 2026 | Deep debt cleanup, 100% clippy --tests, Arc<str> hot path |
 | 151b | Jul 26, 2026 | SDK BTSP handshake evolution, strict mode readiness |
 | 150y | Jul 24, 2026 | Neural Router pool integration, chimera schema evolution |
