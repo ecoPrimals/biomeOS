@@ -1088,24 +1088,67 @@ capabilities = [
 # ==============================================================================
 # SOCKET PATH TEMPLATES
 # ==============================================================================
+# ATOMIC-TIER SEMANTIC TRANSLATIONS
+# ==============================================================================
+# These are composite operations that span multiple primals and are resolved
+# via signal graphs. The "provider" is biomeOS itself — the Neural API
+# intercepts these and dispatches via the corresponding signal graph TOML.
+#
+# Convention: tier.operation → signal graph at graphs/signals/{tier}_{operation}.toml
+# Added: Wave 155b (biomeOS neuralAPI for Tower/Nest/Node Atomic)
+#
+# Tower Atomic: security + discovery + defense foundation
+# Node Atomic:  Tower + compute substrate
+# Nest Atomic:  Tower + storage + provenance
+
+[translations.tower]
+"tower.health" = { provider = "biomeos", method = "signal.dispatch", graph = "tower_health" }
+"tower.authenticate" = { provider = "biomeos", method = "signal.dispatch", graph = "tower_authenticate" }
+"tower.discover" = { provider = "biomeos", method = "signal.dispatch", graph = "tower_discover" }
+"tower.bootstrap" = { provider = "biomeos", method = "signal.dispatch", graph = "tower_bootstrap" }
+"tower.publish" = { provider = "biomeos", method = "signal.dispatch", graph = "tower_publish" }
+"tower.enroll" = { provider = "biomeos", method = "signal.dispatch", graph = "tower_enroll" }
+"tower.mesh_status" = { provider = "biomeos", method = "signal.dispatch", graph = "tower_mesh_status" }
+"tower.key_rotate" = { provider = "biomeos", method = "signal.dispatch", graph = "tower_key_rotate" }
+
+[translations.node]
+"node.compute" = { provider = "biomeos", method = "signal.dispatch", graph = "node_compute" }
+"node.discover_hardware" = { provider = "biomeos", method = "signal.dispatch", graph = "node_discover_hardware" }
+"node.dispatch" = { provider = "biomeos", method = "signal.dispatch", graph = "node_dispatch" }
+
+[translations.nest]
+"nest.store" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_store" }
+"nest.commit" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_commit" }
+"nest.retrieve" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_retrieve" }
+"nest.sync" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_sync" }
+"nest.verify" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_verify" }
+"nest.federate" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_federate" }
+"nest.ingest_spore" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_ingest_spore" }
+"nest.emit_spore" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_emit_spore" }
+
+# ==============================================================================
 # Socket paths are resolved dynamically using these templates.
 # Variables: {primal}, {family_id}, {xdg_runtime}, {uid}
 
 [socket_templates]
-# Priority order (highest to lowest)
+# Priority order (highest to lowest) — platform_native resolution
 priority = [
     "{primal}_socket_env",        # $BEARDOG_SOCKET, $SONGBIRD_SOCKET, etc.
-    "xdg_runtime",                # $XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock
-    "run_user",                   # /run/user/{uid}/biomeos/{primal}-{family}.sock
-    "android_data",               # /data/local/tmp/biomeos/{primal}-{family}.sock
-    "run_biomeos"                 # /run/biomeos/{primal}-{family}.sock (VPS via RuntimeDirectory=)
+    "xdg_runtime",                # $XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock (Linux)
+    "run_user",                   # /run/user/{uid}/biomeos/{primal}-{family}.sock (Linux)
+    "windows_named_pipe",         # \\.\pipe\biomeos-{primal}-{family} (Windows)
+    "android_data",               # /data/local/tmp/biomeos/{primal}-{family}.sock (Android)
+    "run_biomeos",                # /run/biomeos/{primal}-{family}.sock (VPS via RuntimeDirectory=)
+    "tcp_fallback"                # 127.0.0.1:{port} (universal fallback)
 ]
 
 [socket_templates.patterns]
 xdg_runtime = "{xdg_runtime}/biomeos/{primal}-{family_id}.sock"
 run_user = "/run/user/{uid}/biomeos/{primal}-{family_id}.sock"
+windows_named_pipe = "\\\\.\\pipe\\biomeos-{primal}-{family_id}"
 android_data = "/data/local/tmp/biomeos/{primal}-{family_id}.sock"
 run_biomeos = "/run/biomeos/{primal}-{family_id}.sock"
+tcp_fallback = "127.0.0.1:{port}"
 
 # ==============================================================================
 # NOTES
