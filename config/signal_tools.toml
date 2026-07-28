@@ -105,6 +105,54 @@ skunkbat_status = "skunkBat audit readiness"
 registry_seeded = "Whether Phase 2 registry seeding completed"
 health = "Composed Tower health after bootstrap"
 
+[[tools]]
+name = "tower.enroll"
+tier = "tower"
+description = "Gate enrollment: verify physical proof via bearDog, register mesh peer via songBird, audit via skunkBat."
+graph = "graphs/signals/tower_enroll.toml"
+coordination = "sequential"
+primals = ["beardog", "songbird", "skunkbat"]
+
+[tools.parameters]
+proof = { type = "object", required = true, description = "Physical proof attestation (FIDO2 or beacon proximity)" }
+gate_id = { type = "string", required = true, description = "Gate identifier to enroll" }
+
+[tools.returns]
+verified = "Whether physical proof passed bearDog verification"
+peer_id = "songBird mesh peer ID after enrollment"
+audit_event = "skunkBat audit event ID"
+
+[[tools]]
+name = "tower.key_rotate"
+tier = "tower"
+description = "Coordinated key rotation: bearDog generates new material, songBird re-announces, skunkBat audits."
+graph = "graphs/signals/tower_key_rotate.toml"
+coordination = "sequential"
+primals = ["beardog", "songbird", "skunkbat"]
+
+[tools.parameters]
+scope = { type = "string", required = false, description = "Key scope: session | identity | all (default: session)" }
+
+[tools.returns]
+new_key_id = "Identifier of the rotated key material"
+announced = "Whether mesh re-announcement succeeded"
+audit_event = "skunkBat rotation audit event ID"
+
+[[tools]]
+name = "tower.mesh_status"
+tier = "tower"
+description = "Composed mesh health: songBird mesh peers + bearDog crypto spine + skunkBat threat posture."
+graph = "graphs/signals/tower_mesh_status.toml"
+coordination = "parallel"
+primals = ["songbird", "beardog", "skunkbat"]
+
+[tools.parameters]
+
+[tools.returns]
+mesh_peers = "songBird mesh peer list with health"
+crypto_health = "bearDog crypto spine status"
+threat_posture = "skunkBat threat level assessment"
+
 # ─── Node Signals (proton) ────────────────────────────────────────────
 
 [[tools]]
@@ -122,6 +170,40 @@ shader = { type = "string", required = false, description = "Shader source or mo
 [tools.returns]
 result = "Compute result from barraCuda execution"
 dispatch_id = "toadStool dispatch tracking ID"
+
+[[tools]]
+name = "node.discover_hardware"
+tier = "node"
+description = "Hardware discovery: toadStool probes CPUs/GPUs/NPUs, barraCuda validates compute, coralReef checks shaders."
+graph = "graphs/signals/node_discover_hardware.toml"
+coordination = "sequential"
+primals = ["toadstool", "barracuda", "coralreef"]
+
+[tools.parameters]
+platform = { type = "string", required = false, description = "Target platform hint: linux | windows | macos | android" }
+
+[tools.returns]
+gpus = "Discovered GPU devices with VRAM and capabilities"
+cpus = "CPU topology (cores, threads, features)"
+compute_validated = "Whether barraCuda validated precision requirements"
+shader_backends = "Available shader backends (Vulkan, Metal, DX12, WebGPU)"
+
+[[tools]]
+name = "node.dispatch"
+tier = "node"
+description = "Workload dispatch: toadStool selects optimal hardware, coralReef compiles shaders, barraCuda executes."
+graph = "graphs/signals/node_dispatch.toml"
+coordination = "sequential"
+primals = ["toadstool", "coralreef", "barracuda"]
+
+[tools.parameters]
+workload = { type = "object", required = true, description = "Workload specification (model, batch size, precision)" }
+prefer_gpu = { type = "bool", required = false, description = "Prefer GPU execution if available" }
+
+[tools.returns]
+target = "Selected hardware target (device ID, type)"
+result = "Execution result from barraCuda"
+dispatch_latency_ms = "End-to-end dispatch latency"
 
 # ─── Nest Signals (neutron) ───────────────────────────────────────────
 
@@ -236,6 +318,40 @@ content_filter = { type = "object", required = false, description = "Optional fi
 synced_count = "Number of entries synced"
 braid_id = "Attribution braid ID for the sync event"
 commit_hash = "loamSpine commit hash"
+
+[[tools]]
+name = "nest.verify"
+tier = "nest"
+description = "Content verification: NestGate retrieves content, rhizoCrypt verifies DAG integrity, loamSpine checks certificate chain."
+graph = "graphs/signals/nest_verify.toml"
+coordination = "sequential"
+primals = ["nestgate", "rhizocrypt", "loamspine"]
+
+[tools.parameters]
+content_cid = { type = "string", required = true, description = "Content-addressed identifier to verify" }
+check_certificates = { type = "bool", required = false, description = "Whether to verify certificate chain (default: true)" }
+
+[tools.returns]
+content_valid = "Whether content integrity check passed"
+dag_valid = "Whether DAG integrity verification passed"
+certificate_valid = "Whether certificate chain is valid (if checked)"
+
+[[tools]]
+name = "nest.federate"
+tier = "nest"
+description = "Cross-gate provenance federation: rhizoCrypt pushes vertices, loamSpine validates signatures, sweetGrass attributes merge."
+graph = "graphs/signals/nest_federate.toml"
+coordination = "sequential"
+primals = ["rhizocrypt", "loamspine", "sweetgrass"]
+
+[tools.parameters]
+source_gate = { type = "string", required = true, description = "Gate ID of the source of provenance data" }
+vertices = { type = "array", required = true, description = "DAG vertices to federate with source metadata" }
+
+[tools.returns]
+pushed_count = "Number of vertices successfully pushed"
+signatures_valid = "Whether all provenance signatures verified"
+merge_braid_id = "sweetGrass attribution braid for the cross-gate merge"
 
 # ─── Braid Signals (provenance lifecycle) ──────────────────────────────
 

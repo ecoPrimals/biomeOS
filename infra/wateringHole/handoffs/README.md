@@ -8,6 +8,7 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
+| 155d | Jul 28, 2026 | Live signal graph validation — tower.health + tower.mesh_status (19→26 signals) |
 | 155b | Jul 27, 2026 | Plasmodium G8 multi-gate bonding, workload dispatch, dead monolith + dep purge |
 | 151c | Jul 26, 2026 | Deep debt cleanup, 100% clippy --tests, Arc<str> hot path |
 | 151b | Jul 26, 2026 | SDK BTSP handshake evolution, strict mode readiness |

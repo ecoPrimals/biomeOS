@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.43 (2026-07-28) — Wave 155d: Live Signal Graph Validation
+
+### Signal Schema Evolution (19 → 26 graphs)
+- Added `tower.enroll` — autonomous gate enrollment via FIDO2/beacon proof
+- Added `tower.key_rotate` — coordinated key rotation with mesh re-announcement
+- Added `tower.mesh_status` — composed mesh health (peers + crypto + threat posture)
+- Added `node.discover_hardware` — cross-platform GPU/CPU/NPU discovery via wgpu
+- Added `node.dispatch` — workload dispatch with hardware target selection
+- Added `nest.verify` — content verification pipeline (DAG integrity + certificate chain)
+- Added `nest.federate` — cross-gate provenance federation with attribution braids
+
+### Tower Live Validation Tests
+- `tower.health` topology validated: parallel coordination, BTSP enforced, platform_native, all 3 primals required
+- `tower.mesh_status` topology validated: graceful degradation (threat_posture optional), capability-based routing
+- `tower.enroll` pipeline validated: sequential dependency chain (verify → register → audit)
+- Signal tier distribution test: 8 tower + 3 node + 8 nest + 5 meta + 2 braid = 26
+
+### Test Count
+- 8,529 tests (0 failures), 26 workspace crates, 26 signal graphs
+
+---
+
 ## v4.42 (2026-07-27) — Wave 155b: Plasmodium G8 Multi-Gate Bonding
 
 ### Remote Compute Discovery
