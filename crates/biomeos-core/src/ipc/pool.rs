@@ -101,32 +101,23 @@ impl ConnectionPool {
         mut stream: TransportStream,
         request_bytes: &[u8],
     ) -> anyhow::Result<(biomeos_types::JsonRpcResponse, TransportStream)> {
-        use tokio::io::AsyncReadExt;
+        use tokio::io::AsyncBufReadExt;
 
         stream.write_all(request_bytes).await?;
         stream.write_all(b"\n").await?;
         stream.flush().await?;
 
-        let mut buf = Vec::with_capacity(4096);
-        let mut byte = [0u8; 1];
-
-        loop {
-            let n = stream.read(&mut byte).await?;
-            if n == 0 {
-                anyhow::bail!("Connection closed by peer");
-            }
-            if byte[0] == b'\n' {
-                break;
-            }
-            buf.push(byte[0]);
+        let mut reader = tokio::io::BufReader::new(stream);
+        let mut line = String::with_capacity(4096);
+        let n = reader.read_line(&mut line).await?;
+        if n == 0 {
+            anyhow::bail!("Connection closed by peer");
         }
-
-        let line = String::from_utf8(buf)
-            .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in response: {e}"))?;
 
         let response: biomeos_types::JsonRpcResponse = serde_json::from_str(line.trim())
             .map_err(|e| anyhow::anyhow!("Failed to parse response: {e}"))?;
 
+        let stream = reader.into_inner();
         Ok((response, stream))
     }
 
