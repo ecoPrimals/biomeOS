@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.ingest_dataset
+#
+# Bulk dataset ingestion pipeline with full Provenance Trio backtracking:
+# open DAG session → store each file as BLAKE3 CAS object → append events →
+# dehydrate to loamSpine → record attribution braid via sweetGrass.
+#
+# Enables AlphaFold-scale dataset ingestion on westGate with rhizoCrypt DAG →
+# loamSpine certificate → sweetGrass braid traceability.
+
+[graph]
+id = "nest_ingest_dataset"
+name = "Nest Ingest Dataset Signal"
+description = "Bulk dataset ingestion with full Provenance Trio: session → CAS store → DAG events → dehydrate → attribution braid."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "ingest_dataset"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+fragments = ["tower_atomic"]
+
+[[graph.nodes]]
+name = "create_session"
+binary = "rhizocrypt"
+order = 1
+required = true
+spawn = false
+by_capability = "dag"
+capabilities = ["dag.session.create"]
+
+[[graph.nodes]]
+name = "store_content"
+binary = "nestgate"
+order = 2
+required = true
+spawn = false
+depends_on = ["create_session"]
+by_capability = "storage"
+capabilities = ["content.put"]
+
+[[graph.nodes]]
+name = "record_event"
+binary = "rhizocrypt"
+order = 3
+required = true
+spawn = false
+depends_on = ["store_content"]
+by_capability = "dag"
+capabilities = ["dag.event.append"]
+
+[[graph.nodes]]
+name = "dehydrate"
+binary = "rhizocrypt"
+order = 4
+required = true
+spawn = false
+depends_on = ["record_event"]
+by_capability = "dag"
+capabilities = ["dag.dehydration.trigger"]
+
+[[graph.nodes]]
+name = "record_provenance"
+binary = "sweetgrass"
+order = 5
+required = true
+spawn = false
+depends_on = ["dehydrate"]
+by_capability = "attribution"
+capabilities = ["contribution.record_session"]

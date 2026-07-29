@@ -1124,6 +1124,7 @@ capabilities = [
 "nest.verify" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_verify" }
 "nest.federate" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_federate" }
 "nest.ingest_spore" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_ingest_spore" }
+"nest.ingest_dataset" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_ingest_dataset" }
 "nest.emit_spore" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_emit_spore" }
 
 # ==============================================================================
