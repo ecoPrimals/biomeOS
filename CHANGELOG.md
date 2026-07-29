@@ -2,6 +2,20 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.45 (2026-07-29) — Wave 155i: Composition Broker + Deep Debt Audit
+
+### Connection Pool IO Evolution
+- `ConnectionPool::send_over` evolved from byte-by-byte read (N syscalls per response)
+  to `BufReader::read_line` (1-2 syscalls) — ~500x syscall reduction for typical JSON-RPC
+
+### Deep Debt Audit — Full Pass (all clean)
+- External deps: all justified (wiremock=dev, tarpc=escalation, rtnetlink=kernel, saphyr=modern)
+- Zero unsafe, zero TODO/FIXME, zero mocks in production, zero hardcoded endpoints
+- All production files <800L, all test files ≤450L
+- All `#[allow]` have explicit reasons, `String` allocations on hot paths audited
+
+---
+
 ## v4.44 (2026-07-29) — Wave 155i: Composition Broker
 
 ### N1: riboCipher Transport Framing (P0)

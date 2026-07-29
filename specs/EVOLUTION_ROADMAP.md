@@ -1,7 +1,7 @@
 # Evolution Roadmap - From Bypasses to Pure Rust
 
 **Created**: February 9, 2026
-**Updated**: June 3, 2026 (v4.02: L4 weighted routing, L5 perceptron shadow, composition hot-reload, typed errors, API visibility tightened, SSOT hardened)
+**Updated**: July 29, 2026 (v4.45: All 5 bypasses evolved — Plasmodium G8 closes final SSH bypass)
 **Purpose**: Comprehensive evolution plan for all primals and biomeOS
 
 ---
@@ -40,10 +40,10 @@ See Section 7 for full multi-family spec.
 **Was**: Had to pass model explicitly.
 **Now**: `AI_DEFAULT_MODEL` env var passed through to Squirrel in nucleus spawn and graph deployment.
 
-### Bypass 5: SSH-based Plasmodium queries
+### ~~Bypass 5: SSH-based Plasmodium queries~~ (EVOLVED Jul 27 — Plasmodium G8)
 
-**Evolution**: Songbird auto mesh discovery + Plasmodium agents via Neural API.
-See Section 8 for full Plasmodium agent architecture.
+**Was**: Remote compute queries via SSH tunnels.
+**Now**: Plasmodium G8 multi-gate bonding: `system.compute` + `system.load` JSON-RPC discovery, score-based workload dispatch, graph auto-dispatch across gates. Zero SSH dependency.
 
 ---
 
