@@ -77,7 +77,7 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 SONGBIRD_SECURITY_PROVIDER = "beardog"
 
 [nodes.constraints]
@@ -110,8 +110,8 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
-SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
 
 [nodes.constraints]
 timeout_ms = 45000
@@ -144,7 +144,7 @@ family_id = "${FAMILY_ID}"
 [nodes.operation.environment]
 BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
 FAMILY_ID = "${FAMILY_ID}"
-SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
 
 [nodes.constraints]
 timeout_ms = 15000

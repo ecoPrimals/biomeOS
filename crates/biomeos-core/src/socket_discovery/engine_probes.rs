@@ -12,7 +12,6 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use biomeos_types::primal_names;
 use tokio::net::TcpStream;
 #[cfg(unix)]
 use tokio::net::UnixStream;
@@ -136,10 +135,11 @@ impl super::engine::SocketDiscovery {
 
     pub(super) async fn discover_via_xdg(&self, primal_name: &str) -> Option<DiscoveredSocket> {
         let runtime_dir = self.xdg_runtime_dir()?;
-        let biomeos_dir = runtime_dir.join(primal_names::BIOMEOS);
+        let membrane_dir =
+            runtime_dir.join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
 
         for cap_name in Self::capability_socket_names(primal_name) {
-            let cap_path = biomeos_dir.join(format!("{cap_name}.sock"));
+            let cap_path = membrane_dir.join(format!("{cap_name}.sock"));
             if self.verify_unix_socket(&cap_path).await {
                 debug!(
                     "Discovered {} via capability socket {}.sock (XDG)",
@@ -153,7 +153,7 @@ impl super::engine::SocketDiscovery {
         }
 
         let socket_path =
-            biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
+            membrane_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
         if socket_path.exists() {
             debug!("Discovered {} via XDG runtime", primal_name);
             return Some(
@@ -162,7 +162,7 @@ impl super::engine::SocketDiscovery {
             );
         }
 
-        let legacy_path = biomeos_dir.join(format!("{primal_name}.sock"));
+        let legacy_path = membrane_dir.join(format!("{primal_name}.sock"));
         if legacy_path.exists() {
             debug!("Discovered {} via XDG runtime (legacy)", primal_name);
             return Some(
@@ -223,7 +223,9 @@ impl super::engine::SocketDiscovery {
         let sock_name = format!("{capability}.sock");
 
         if let Some(runtime_dir) = self.xdg_runtime_dir() {
-            let path = runtime_dir.join(primal_names::BIOMEOS).join(&sock_name);
+            let path = runtime_dir
+                .join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR)
+                .join(&sock_name);
             if self.verify_unix_socket(&path).await {
                 debug!("Discovered capability '{}' via XDG socket", capability);
                 return Some(DiscoveredSocket::from_unix_path(
@@ -311,7 +313,7 @@ impl super::engine::SocketDiscovery {
 
         let registry_path = self
             .xdg_runtime_dir()?
-            .join(primal_names::BIOMEOS)
+            .join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR)
             .join("socket-registry.json");
 
         let contents = tokio::fs::read_to_string(&registry_path).await.ok()?;
@@ -347,15 +349,16 @@ impl super::engine::SocketDiscovery {
 
     pub(super) async fn try_unix_socket_xdg(&self, primal_name: &str) -> Option<PathBuf> {
         let runtime_dir = self.xdg_runtime_dir()?;
-        let biomeos_dir = runtime_dir.join(primal_names::BIOMEOS);
+        let membrane_dir =
+            runtime_dir.join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
 
         let socket_path =
-            biomeos_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
+            membrane_dir.join(format!("{}-{}.sock", primal_name, self.family_id.as_str()));
         if self.verify_unix_socket(&socket_path).await {
             return Some(socket_path);
         }
 
-        let legacy_path = biomeos_dir.join(format!("{primal_name}.sock"));
+        let legacy_path = membrane_dir.join(format!("{primal_name}.sock"));
         if self.verify_unix_socket(&legacy_path).await {
             return Some(legacy_path);
         }

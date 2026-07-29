@@ -14,7 +14,7 @@
 //! The Neural API socket is discovered using biomeOS's 5-tier resolution:
 //!
 //! 1. `NEURAL_API_SOCKET` env var
-//! 2. `$XDG_RUNTIME_DIR/biomeos/neural-api-{family_id}.sock`
+//! 2. `$XDG_RUNTIME_DIR/membrane/neural-api-{family_id}.sock`
 //! 3. `/run/user/{uid}/biomeos/neural-api-{family_id}.sock`
 //! 4. `{temp_dir}/biomeos/neural-api-{family_id}.sock` (platform temp dir)
 //!
@@ -224,7 +224,7 @@ pub struct SocketResolveEnv {
 
 /// Resolve the Neural API socket path using the 5-tier discovery strategy.
 ///
-/// Checks: `NEURAL_API_SOCKET` env var, `$XDG_RUNTIME_DIR/biomeos/`, `/run/user/{uid}/biomeos/`,
+/// Checks: `NEURAL_API_SOCKET` env var, `$XDG_RUNTIME_DIR/membrane/`, `/run/user/{uid}/membrane/`,
 /// and platform temp dir, in order.
 pub fn resolve_socket_with(
     neural_api_socket: Option<&str>,
@@ -269,10 +269,11 @@ pub fn resolve_socket_with_env(
         }
     }
 
-    // Tier 3: /run/user/{uid} — derive from XDG_RUNTIME_DIR or procfs
+    // Tier 3: /run/user/{uid}/membrane — derive from XDG_RUNTIME_DIR or procfs
     let uid = uid_from_runtime_dir();
     let p = PathBuf::from(format!(
-        "{LINUX_RUNTIME_DIR_PREFIX}/{uid}/biomeos/neural-api-{family_id}.sock"
+        "{LINUX_RUNTIME_DIR_PREFIX}/{uid}/{}/neural-api-{family_id}.sock",
+        biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR,
     ));
     if p.exists() {
         return Some(p);

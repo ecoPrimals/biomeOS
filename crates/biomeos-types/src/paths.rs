@@ -84,7 +84,7 @@ pub type Result<T> = std::result::Result<T, PathError>;
 ///
 /// // Get Unix socket path for a primal
 /// let socket = paths.primal_socket("beardog-main");
-/// // → $XDG_RUNTIME_DIR/biomeos/beardog-main.sock
+/// // → $XDG_RUNTIME_DIR/membrane/beardog-main.sock
 ///
 /// // Get data directory for persistent storage
 /// let data = paths.data_dir();
@@ -147,7 +147,7 @@ impl SystemPaths {
 
     /// Create `SystemPaths` from explicit directory paths (no environment reads).
     ///
-    /// Each argument must be the full biomeOS leaf directory (e.g. `$XDG_RUNTIME_DIR/biomeos`),
+    /// Each argument must be the full biomeOS leaf directory (e.g. `$XDG_RUNTIME_DIR/membrane`),
     /// matching what `new()` would construct from XDG variables.
     pub fn from_overrides(
         runtime_dir: PathBuf,
@@ -268,7 +268,7 @@ impl SystemPaths {
 
     /// Get Unix socket path for a primal
     ///
-    /// Example: `beardog-main` → `$XDG_RUNTIME_DIR/biomeos/beardog-main.sock`
+    /// Example: `beardog-main` → `$XDG_RUNTIME_DIR/membrane/beardog-main.sock`
     #[must_use]
     pub fn primal_socket(&self, primal_id: &str) -> PathBuf {
         self.runtime_dir.join(format!("{primal_id}.sock"))
@@ -405,8 +405,8 @@ impl SystemPaths {
     /// Compute the default runtime directory path without creating it.
     ///
     /// Follows the same XDG logic as `new()`:
-    /// 1. `$XDG_RUNTIME_DIR/biomeos`
-    /// 2. `$TMPDIR/biomeos-$USER`
+    /// 1. `$XDG_RUNTIME_DIR/membrane`
+    /// 2. `$TMPDIR/membrane-$FAMILY_ID`
     #[must_use]
     pub fn default_runtime_dir() -> PathBuf {
         if let Ok(xdg_runtime) = env::var(crate::env_config::vars::XDG_RUNTIME_DIR) {

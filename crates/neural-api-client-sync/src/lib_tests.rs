@@ -187,9 +187,9 @@ fn resolve_socket_tier_xdg_runtime_dir() {
 fn resolve_socket_tier_run_user() {
     let family = "neural-tier-run-user-9c2e";
     let uid = uid_from_runtime_dir();
-    let run_biomeos = std::path::PathBuf::from(format!("/run/user/{uid}/biomeos"));
-    std::fs::create_dir_all(&run_biomeos).expect("create /run/user/.../biomeos");
-    let expected = run_biomeos.join(format!("neural-api-{family}.sock"));
+    let run_membrane = std::path::PathBuf::from(format!("/run/user/{uid}/membrane"));
+    std::fs::create_dir_all(&run_membrane).expect("create /run/user/.../membrane");
+    let expected = run_membrane.join(format!("neural-api-{family}.sock"));
     std::fs::write(&expected, "").expect("placeholder socket path");
 
     let empty_xdg = tempfile::tempdir().expect("empty xdg");

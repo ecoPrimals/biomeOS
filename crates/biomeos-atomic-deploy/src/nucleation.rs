@@ -193,7 +193,7 @@ impl SocketNucleation {
 
     /// XDG runtime path using explicit runtime parent or tmp fallback (no `XDG_RUNTIME_DIR` read).
     ///
-    /// Creates sockets in `runtime_parent/biomeos/` for proper namespacing.
+    /// Creates sockets in `runtime_parent/membrane/` for proper namespacing.
     fn xdg_runtime_path_with(primal: &str, family_id: &str, runtime_dir: Option<&Path>) -> PathBuf {
         use biomeos_types::paths::SystemPaths;
 

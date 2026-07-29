@@ -133,7 +133,7 @@ impl ManagedPrimal for GenericManagedPrimal {
             if self.config.http_port > 0 {
                 warn!(
                     "Primal {} has http_port configured but HTTP transport is removed. \
-                     Configure a Unix socket instead: PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
+                     Configure a Unix socket instead: PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/membrane/{}.sock",
                     self.id, self.config.id
                 );
             }

@@ -10,7 +10,7 @@
 use anyhow::{Context, Result};
 use biomeos_core::atomic_client::AtomicClient;
 use biomeos_core::btsp_client;
-use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
+use biomeos_core::{TransportEndpoint, send_ribocipher_jsonrpc_request};
 use biomeos_types::JsonRpcRequest;
 use serde::Serialize;
 use std::path::PathBuf;
@@ -516,7 +516,7 @@ impl GraphExecutor {
             }
         }
 
-        let response = send_jsonrpc_request(&endpoint, rpc_request)
+        let response = send_ribocipher_jsonrpc_request(&endpoint, rpc_request)
             .await
             .with_context(|| format!("JSON-RPC to {socket_path}"))?;
 

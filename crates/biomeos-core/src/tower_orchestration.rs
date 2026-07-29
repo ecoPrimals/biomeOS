@@ -25,7 +25,7 @@ use crate::{
 /// Resolve the tower PID file path from the environment.
 ///
 /// Precedence:
-/// 1. `$XDG_RUNTIME_DIR/biomeos/tower.pid`
+/// 1. `$XDG_RUNTIME_DIR/membrane/tower.pid`
 /// 2. `/tmp/biomeos-{family_id}/tower.pid` (tier 4 fallback)
 pub fn pid_file_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
     use biomeos_types::constants::runtime_paths;
@@ -47,7 +47,7 @@ pub fn pid_file_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
 ///
 /// Precedence:
 /// 1. `$BIOMEOS_SOCKET_DIR`
-/// 2. `$XDG_RUNTIME_DIR/biomeos/sockets`
+/// 2. `$XDG_RUNTIME_DIR/membrane/sockets`
 /// 3. `/tmp/biomeos-{family_id}/sockets` (tier 4 fallback)
 pub fn socket_dir_path(env: &dyn Fn(&str) -> Option<String>) -> PathBuf {
     use biomeos_types::constants::runtime_paths;

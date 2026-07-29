@@ -78,8 +78,8 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/membrane/neural-api-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 SONGBIRD_SECURITY_PROVIDER = "beardog"
 BIOMEOS_BIND_ALL = "true"
 RUST_LOG = "songbird_http_client=info"
@@ -118,8 +118,8 @@ family_id = "${FAMILY_ID}"
 provenance_enabled = true
 
 [nodes.operation.environment]
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
-SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
 RUST_LOG = "nestgate=info"
 
 [nodes.constraints]

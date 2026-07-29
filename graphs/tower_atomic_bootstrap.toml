@@ -217,9 +217,9 @@ family_id = "${FAMILY_ID}"
 
 # Environment variables for Songbird
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"  # biomeOS capability routing socket
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"  # Security provider (XDG path)
-CRYPTO_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"  # For Sovereign Onion crypto delegation
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/membrane/neural-api-${FAMILY_ID}.sock"  # biomeOS capability routing socket
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"  # Security provider (XDG path)
+CRYPTO_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"  # For Sovereign Onion crypto delegation
 SONGBIRD_SECURITY_PROVIDER = "beardog"  # Use discovery, not hardcoded path
 SONGBIRD_ONION_ENABLED = "true"  # Enable Sovereign Onion Service
 SONGBIRD_FEDERATION_ENABLED = "true"   # Enable distributed mesh relay

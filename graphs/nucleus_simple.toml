@@ -52,7 +52,7 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 SONGBIRD_SECURITY_PROVIDER = "beardog"
 RUST_LOG = "songbird=info"
 
@@ -77,7 +77,7 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 RUST_LOG = "toadstool=info"
 
 [nodes.constraints]
@@ -101,7 +101,7 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 RUST_LOG = "nestgate=info"
 
 [nodes.constraints]
@@ -125,7 +125,7 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 RUST_LOG = "squirrel=info"
 
 [nodes.constraints]

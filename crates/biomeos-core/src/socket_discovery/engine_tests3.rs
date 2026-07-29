@@ -82,7 +82,7 @@ async fn test_discover_with_fallback_tcp_port_only_env_uses_fallback_host() {
 #[tokio::test]
 async fn test_discover_with_fallback_unix_xdg_before_abstract_or_tcp() {
     let temp = TempDir::new().unwrap();
-    let biomeos = temp.path().join("biomeos");
+    let biomeos = temp.path().join("membrane");
     std::fs::create_dir_all(&biomeos).unwrap();
     let sock = biomeos.join("chainxdg-pf.sock");
     let _listener = tokio::net::UnixListener::bind(&sock).expect("bind unix");
@@ -147,7 +147,7 @@ async fn test_discover_via_manifest_reads_xdg_manifest_candidate_first() {
 #[tokio::test]
 async fn test_discover_via_socket_registry_matching_live_socket() {
     let temp = TempDir::new().unwrap();
-    let biomeos = temp.path().join("biomeos");
+    let biomeos = temp.path().join("membrane");
     std::fs::create_dir_all(&biomeos).unwrap();
     let sock = temp.path().join("reg-live.sock");
     let _listener = tokio::net::UnixListener::bind(&sock).expect("bind");
@@ -184,7 +184,7 @@ async fn test_discover_via_socket_registry_matching_live_socket() {
 #[tokio::test]
 async fn test_discover_via_xdg_beardog_capability_security_sock() {
     let temp = TempDir::new().unwrap();
-    let biomeos = temp.path().join("biomeos");
+    let biomeos = temp.path().join("membrane");
     std::fs::create_dir_all(&biomeos).unwrap();
     let cap_sock = biomeos.join("security.sock");
     let _listener = tokio::net::UnixListener::bind(&cap_sock).expect("bind");

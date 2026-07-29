@@ -148,7 +148,7 @@ pub async fn node_crypto_derive_seed(
 ///
 /// Discovery priority:
 /// 1. `NEURAL_API_SOCKET` from graph env or process env
-/// 2. XDG: `$XDG_RUNTIME_DIR/biomeos/neural-api.sock`
+/// 2. XDG: `$XDG_RUNTIME_DIR/membrane/neural-api.sock`
 /// 3. `/run/user/{uid}/biomeos/neural-api.sock`
 /// 4. `/tmp/biomeos/neural-api.sock`
 fn discover_neural_api_socket(env: &HashMap<String, String>) -> Result<String> {

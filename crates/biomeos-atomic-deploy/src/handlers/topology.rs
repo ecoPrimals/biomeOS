@@ -17,7 +17,7 @@
 //! # XDG Compliance
 //!
 //! Socket discovery uses `SystemPaths` for XDG-compliant path resolution:
-//! 1. `$XDG_RUNTIME_DIR/biomeos/` (preferred)
+//! 1. `$XDG_RUNTIME_DIR/membrane/` (canonical)
 //! 2. `/tmp/biomeos-$USER/` (fallback)
 //! 3. `/tmp/` (legacy compatibility)
 
@@ -265,7 +265,7 @@ impl TopologyHandler {
     /// Get XDG-compliant socket directories for primal discovery
     ///
     /// # Priority Order
-    /// 1. XDG runtime directory: `$XDG_RUNTIME_DIR/biomeos/`
+    /// 1. XDG runtime directory: `$XDG_RUNTIME_DIR/membrane/`
     /// 2. User runtime fallback: `/tmp/biomeos-$USER/`
     /// 3. Legacy compatibility: `/tmp/` (for existing deployments)
     #[must_use]

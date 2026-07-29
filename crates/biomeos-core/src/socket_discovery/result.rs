@@ -91,7 +91,7 @@ pub enum DiscoveryMethod {
     /// Via filesystem manifest (`$XDG_RUNTIME_DIR/ecoPrimals/manifests/{primal}.json`)
     Manifest,
 
-    /// Via centralized socket registry (`$XDG_RUNTIME_DIR/biomeos/socket-registry.json`)
+    /// Via centralized socket registry (`$XDG_RUNTIME_DIR/membrane/socket-registry.json`)
     SocketRegistry,
 
     /// Via capability registry query
@@ -173,7 +173,7 @@ pub struct SocketRegistryEntry {
 
 /// Centralized socket registry file format.
 ///
-/// Written by Squirrel to `$XDG_RUNTIME_DIR/biomeos/socket-registry.json`.
+/// Written by Squirrel to `$XDG_RUNTIME_DIR/membrane/socket-registry.json`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SocketRegistry {
     /// Registry version

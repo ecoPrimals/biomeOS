@@ -46,7 +46,7 @@ depends_on = ["health-beardog"]
 
 [nodes.env]
 FAMILY_ID = "${FAMILY_ID}"
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 SONGBIRD_SECURITY_PROVIDER = "beardog"
 RUST_LOG = "info"
 

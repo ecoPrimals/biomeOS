@@ -35,7 +35,7 @@
 //! 3. `XDG_RUNTIME_DIR` (e.g., `/run/user/1000/biomeos/beardog-1894e909e454.sock`)
 //! 4. Abstract socket (Android: `@biomeos_beardog_1894e909e454`)
 //! 5. Family-scoped /tmp (e.g., `/tmp/beardog-1894e909e454.sock`)
-//! 6. Socket registry (`$XDG_RUNTIME_DIR/biomeos/socket-registry.json`)
+//! 6. Socket registry (`$XDG_RUNTIME_DIR/membrane/socket-registry.json`)
 //! 7. Capability registry query via Neural API
 //! 8. TCP fallback (e.g., `127.0.0.1:9100`)
 //!

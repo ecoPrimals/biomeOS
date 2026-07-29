@@ -353,4 +353,87 @@ impl NeuralRouter {
     pub fn reset_lazy_rescan(&self) {
         self.lazy_rescan_attempted.store(false, Ordering::Relaxed);
     }
+
+    /// Persist the capability registry to disk as a warm-cache snapshot.
+    ///
+    /// Written to `socket_dir/capability-registry.json`. On restart, this file
+    /// is loaded before live socket probing, eliminating the cold-start window
+    /// where capabilities are unavailable ("socket evaporation" fix).
+    pub async fn persist_capability_registry(&self, socket_dir: &std::path::Path) {
+        let registry = self.capability_registry.read().await;
+        let entries: Vec<&super::types::RegisteredCapability> =
+            registry.values().flatten().collect();
+
+        if entries.is_empty() {
+            return;
+        }
+
+        let path = socket_dir.join("capability-registry.json");
+        match serde_json::to_string(&entries) {
+            Ok(json) => {
+                if let Err(e) = tokio::fs::write(&path, json).await {
+                    warn!("Failed to persist capability registry: {e}");
+                } else {
+                    debug!(
+                        "📋 Persisted {} capability entries to {}",
+                        entries.len(),
+                        path.display()
+                    );
+                }
+            }
+            Err(e) => warn!("Failed to serialize capability registry: {e}"),
+        }
+    }
+
+    /// Load a persisted capability registry snapshot from disk.
+    ///
+    /// Entries are loaded as warm-cache hints (source: "persisted"). Live
+    /// discovery will overwrite them with confirmed endpoints. Returns the
+    /// number of capabilities loaded.
+    pub async fn load_persisted_capability_registry(
+        &self,
+        socket_dir: &std::path::Path,
+    ) -> usize {
+        let path = socket_dir.join("capability-registry.json");
+        let contents = match tokio::fs::read_to_string(&path).await {
+            Ok(c) => c,
+            Err(_) => return 0,
+        };
+
+        let entries: Vec<super::types::RegisteredCapability> =
+            match serde_json::from_str(&contents) {
+                Ok(e) => e,
+                Err(e) => {
+                    warn!("Failed to parse persisted capability registry: {e}");
+                    return 0;
+                }
+            };
+
+        let mut count = 0;
+        for entry in entries {
+            if let Err(e) = self
+                .register_capability(
+                    entry.capability.as_ref(),
+                    entry.primal_name.as_ref(),
+                    entry.endpoint,
+                    "persisted",
+                )
+                .await
+            {
+                debug!("   Skipped persisted entry {}: {e}", entry.capability);
+            } else {
+                count += 1;
+            }
+        }
+
+        if count > 0 {
+            info!(
+                "📋 Loaded {} persisted capabilities from {}",
+                count,
+                path.display()
+            );
+        }
+
+        count
+    }
 }

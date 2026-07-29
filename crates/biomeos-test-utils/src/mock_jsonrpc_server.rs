@@ -9,7 +9,7 @@
 
 use crate::ready_signal::{ReadyReceiver, ReadySender, ready_signal};
 use std::path::{Path, PathBuf};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 use tokio::task::JoinHandle;
 
@@ -42,9 +42,29 @@ impl MockJsonRpcServer {
                 let Ok((stream, _)) = listener.accept().await else {
                     break;
                 };
-                let (reader, mut writer) = stream.into_split();
+                let (mut reader, mut writer) = stream.into_split();
+
+                // Consume riboCipher prefix [0xEC, 0x01] if present
+                let mut prefix = [0u8; 2];
+                if reader.read_exact(&mut prefix).await.is_err() {
+                    continue;
+                }
                 let mut buf_reader = BufReader::new(reader);
                 let mut line = String::new();
+
+                // If prefix is NOT riboCipher, treat those 2 bytes as start of first line
+                if prefix != [0xEC, 0x01] {
+                    line.push_str(&String::from_utf8_lossy(&prefix));
+                }
+
+                // Read first line (may already have partial content from non-riboCipher prefix)
+                if buf_reader.read_line(&mut line).await.unwrap_or(0) > 0 {
+                    let response = (handler)(line.trim());
+                    let _ = writer.write_all(format!("{response}\n").as_bytes()).await;
+                    line.clear();
+                }
+
+                // Continue reading subsequent lines
                 while buf_reader.read_line(&mut line).await.unwrap_or(0) > 0 {
                     let response = (handler)(line.trim());
                     let _ = writer.write_all(format!("{response}\n").as_bytes()).await;

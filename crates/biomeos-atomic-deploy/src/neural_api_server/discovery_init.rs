@@ -74,7 +74,7 @@ async fn probe_tcp_capabilities(addr: &str) -> Vec<String> {
 impl NeuralApiServer {
     /// Scan for running primals and register their capabilities.
     ///
-    /// **UDS mode** (default): scans `$XDG_RUNTIME_DIR/biomeos/` for `.sock` files,
+    /// **UDS mode** (default): scans `$XDG_RUNTIME_DIR/membrane/` for `.sock` files,
     /// probes each via `capabilities.list`, and registers Unix endpoints.
     ///
     /// **TCP-only mode**: probes well-known TCP ports (9900+) for primals that were

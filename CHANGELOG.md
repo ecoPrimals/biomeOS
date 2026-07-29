@@ -2,6 +2,41 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.46 (2026-07-29) — Wave 155i: NUCLEUS Orchestrator
+
+### Graph Executor RiboCipher Fix (P1)
+- `send_jsonrpc_async` fallback path now uses `send_ribocipher_jsonrpc_request()` instead
+  of raw `send_jsonrpc_request()` — all graph execution paths now emit riboCipher prefix
+- `MockJsonRpcServer` (test-utils) evolved to consume riboCipher `[0xEC, 0x01]` prefix
+
+### Socket Path Unification (P2)
+- **Production code**: `discover_via_xdg`, `try_unix_socket_xdg`, capability socket lookup,
+  and socket registry all now use `MEMBRANE_SUBDIR` ("membrane") instead of `BIOMEOS` ("biomeos")
+- **Tier 3 fallback** in `neural-api-client-sync`: `/run/user/{uid}/membrane/` (was `/biomeos/`)
+- **`family_seed.rs`**: UID-based fallback uses `MEMBRANE_SUBDIR` constant
+- **All 22 graph `.toml` files**: `${XDG_RUNTIME_DIR}/membrane/` (was `biomeos/`)
+- **Doc comments**: 15+ references updated across 12 crates
+- `topology.rs` retains legacy `biomeos/` scanner for backwards compatibility on existing gates
+
+### Socket Evaporation Fix (P2)
+- `NeuralRouter::persist_capability_registry()` — writes capability snapshot to disk
+- `NeuralRouter::load_persisted_capability_registry()` — loads warm cache on startup
+- Server lifecycle loads persisted registry (step 4c) before live probing (step 5)
+- Background discovery sweep persists after each cycle for crash resilience
+
+### Composition Lifecycle Management (P1)
+- New `composition.start` RPC — health-gated composition transitions with prerequisite
+  checking (tower → nest → node → nucleus ordering enforced)
+- Maps composition names to deployment graphs (`tower_atomic_bootstrap`, `nest_deploy`,
+  `node_atomic_compute`, `nucleus_complete`)
+- Reports `blocked_by` when prerequisites fail (e.g., "tower=unavailable")
+
+### Primal Bind Flag Standardization
+- `specs/PRIMAL_BIND_FLAGS_STANDARD.md` — proposal for uniform `--bind-mode`, `--port`,
+  `--family-id` flags and `BIND_ADDRESS`/`PRIMAL_BIND_MODE` env vars across all primals
+
+---
+
 ## v4.45 (2026-07-29) — Wave 155i: Composition Broker + Deep Debt Audit
 
 ### Connection Pool IO Evolution

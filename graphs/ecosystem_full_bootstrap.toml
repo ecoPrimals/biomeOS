@@ -130,9 +130,9 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
-CRYPTO_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/membrane/neural-api-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+CRYPTO_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 SONGBIRD_SECURITY_PROVIDER = "beardog"
 SONGBIRD_ONION_ENABLED = "true"
 SONGBIRD_FEDERATION_ENABLED = "true"
@@ -199,8 +199,8 @@ family_id = "${FAMILY_ID}"
 TOADSTOOL_FAMILY_ID = "${FAMILY_ID}"
 TOADSTOOL_NODE_ID = "${NODE_ID}"
 TOADSTOOL_SECURITY_WARNING_ACKNOWLEDGED = "1"
-SONGBIRD_ENDPOINT = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_ENDPOINT = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
 RUST_LOG = "toadstool=info"
 
 [nodes.constraints]
@@ -236,9 +236,9 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-CAPABILITY_REGISTRY_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
-SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+CAPABILITY_REGISTRY_SOCKET = "${XDG_RUNTIME_DIR}/membrane/neural-api-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
 ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
 OPENAI_API_KEY = "${OPENAI_API_KEY}"
 RUST_LOG = "squirrel=info"
@@ -278,9 +278,9 @@ family_id = "${FAMILY_ID}"
 provenance_enabled = true
 
 [nodes.operation.environment]
-NESTGATE_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/nestgate-${FAMILY_ID}.sock"
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
-SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+NESTGATE_SOCKET = "${XDG_RUNTIME_DIR}/membrane/nestgate-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
 RUST_LOG = "nestgate=info"
 
 [nodes.constraints]

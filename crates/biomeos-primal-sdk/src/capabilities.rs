@@ -46,7 +46,7 @@ impl CapabilityClient {
     /// Uses the same 5-tier resolution as the discovery module:
     /// 1. `NEURAL_API_SOCKET` env var (if set and path exists)
     /// 2. `BIOMEOS_SOCKET_DIR` / `neural-api.sock`
-    /// 3. `$XDG_RUNTIME_DIR/biomeos/neural-api.sock`
+    /// 3. `$XDG_RUNTIME_DIR/membrane/neural-api.sock`
     /// 4. `/run/user/{uid}/biomeos/neural-api.sock`
     /// 5. Platform temp dir fallback
     pub fn discover() -> Result<Self> {

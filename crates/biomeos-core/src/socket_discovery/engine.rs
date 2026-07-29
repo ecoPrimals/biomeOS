@@ -349,7 +349,7 @@ impl SocketDiscovery {
         )
     }
 
-    /// Enumerate Unix socket paths in `$XDG_RUNTIME_DIR/biomeos` matching
+    /// Enumerate Unix socket paths in `$XDG_RUNTIME_DIR/membrane` matching
     /// `{primal}-{family_id}.sock`.
     ///
     /// Name-agnostic: every matching file is a candidate for capability or health

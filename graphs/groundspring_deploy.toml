@@ -32,7 +32,7 @@ depends_on = ["verify-tower"]
 [[nodes]]
 id = "start-groundspring"
 action = "start_primal"
-params = { primal = "groundspring", socket = "${XDG_RUNTIME_DIR}/biomeos/groundspring-${FAMILY_ID}.sock" }
+params = { primal = "groundspring", socket = "${XDG_RUNTIME_DIR}/membrane/groundspring-${FAMILY_ID}.sock" }
 depends_on = ["verify-toadstool"]
 
 [[nodes]]

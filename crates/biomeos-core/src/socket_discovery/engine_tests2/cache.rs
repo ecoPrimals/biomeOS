@@ -7,9 +7,9 @@ use super::super::result::DiscoveryMethod;
 #[tokio::test]
 async fn test_discover_primal_cache_hit_on_repeat() {
     let temp_dir = tempfile::TempDir::new().unwrap();
-    let biomeos_dir = temp_dir.path().join("biomeos");
-    std::fs::create_dir_all(&biomeos_dir).unwrap();
-    let socket_path = biomeos_dir.join("cache-primal-famx.sock");
+    let membrane_dir = temp_dir.path().join("membrane");
+    std::fs::create_dir_all(&membrane_dir).unwrap();
+    let socket_path = membrane_dir.join("cache-primal-famx.sock");
     let _listener = tokio::net::UnixListener::bind(&socket_path).expect("bind unix");
 
     let discovery = SocketDiscovery::new("famx").with_xdg_override(temp_dir.path());

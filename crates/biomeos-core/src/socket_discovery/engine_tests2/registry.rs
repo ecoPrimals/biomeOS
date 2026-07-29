@@ -7,8 +7,8 @@ use tempfile::TempDir;
 #[tokio::test]
 async fn test_discover_via_socket_registry_structure() {
     let temp_dir = TempDir::new().unwrap();
-    let biomeos_dir = temp_dir.path().join("biomeos");
-    std::fs::create_dir_all(&biomeos_dir).unwrap();
+    let membrane_dir = temp_dir.path().join("membrane");
+    std::fs::create_dir_all(&membrane_dir).unwrap();
 
     let registry = serde_json::json!({
         "version": "1.0",
@@ -19,7 +19,7 @@ async fn test_discover_via_socket_registry_structure() {
         }]
     });
     std::fs::write(
-        biomeos_dir.join("socket-registry.json"),
+        membrane_dir.join("socket-registry.json"),
         serde_json::to_string_pretty(&registry).unwrap(),
     )
     .unwrap();
@@ -31,9 +31,9 @@ async fn test_discover_via_socket_registry_structure() {
 #[tokio::test]
 async fn test_discover_via_socket_registry_invalid_json_skips() {
     let temp = TempDir::new().unwrap();
-    let biomeos = temp.path().join("biomeos");
-    std::fs::create_dir_all(&biomeos).unwrap();
-    std::fs::write(biomeos.join("socket-registry.json"), "{ not json").unwrap();
+    let membrane = temp.path().join("membrane");
+    std::fs::create_dir_all(&membrane).unwrap();
+    std::fs::write(membrane.join("socket-registry.json"), "{ not json").unwrap();
 
     let discovery = SocketDiscovery::new("test").with_xdg_override(temp.path());
     assert!(discovery.discover_primal("only-registry").await.is_none());

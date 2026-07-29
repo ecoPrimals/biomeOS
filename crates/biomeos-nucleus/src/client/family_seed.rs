@@ -11,7 +11,7 @@ use tracing::{debug, warn};
 ///
 /// # Priority Sources
 /// 1. `BIOMEOS_FAMILY_SEED` environment variable (base64-encoded)
-/// 2. XDG runtime dir: `$XDG_RUNTIME_DIR/biomeos/family.seed`
+/// 2. XDG runtime dir: `$XDG_RUNTIME_DIR/membrane/family.seed`
 /// 3. Empty (graceful degradation - results in Known trust level)
 ///
 /// # Deep Debt Principle
@@ -29,8 +29,8 @@ pub fn load_family_seed_from_storage() -> Bytes {
 /// Same resolution as [`load_family_seed_from_storage`], but with injectable sources for tests.
 ///
 /// `seed_b64` is the raw value of `BIOMEOS_FAMILY_SEED` (base64), not read from the environment.
-/// `runtime_dir` is the XDG runtime directory root (file: `{runtime_dir}/biomeos/family.seed`).
-/// When `include_uid_fallback` is false, the `/run/user/{uid}/biomeos/family.seed` tier is skipped.
+/// `runtime_dir` is the XDG runtime directory root (file: `{runtime_dir}/membrane/family.seed`).
+/// When `include_uid_fallback` is false, the `/run/user/{uid}/membrane/family.seed` tier is skipped.
 pub fn load_family_seed_from_storage_with(
     seed_b64: Option<&str>,
     runtime_dir: Option<&Path>,
@@ -70,8 +70,9 @@ pub fn load_family_seed_from_storage_with(
 
         if let Some(uid) = uid_opt {
             let seed_path = std::path::PathBuf::from(format!(
-                "{}/{uid}/biomeos/family.seed",
-                biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX
+                "{}/{uid}/{}/family.seed",
+                biomeos_types::runtime_paths::LINUX_RUNTIME_DIR_PREFIX,
+                biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR,
             ));
             if let Ok(seed) = std::fs::read(&seed_path) {
                 debug!(

@@ -159,18 +159,36 @@ impl NeuralApiServer {
         // where the full route table must be populated before any client connects.
         self.load_translations_from_all_graphs().await;
 
-        // 4c. Pre-register capabilities declared in graph nodes so the route
+        // 4c. Load persisted capability registry (warm cache from previous session).
+        // Eliminates the cold-start window where capabilities are unavailable after
+        // Neural API restart while primals are still running ("socket evaporation" fix).
+        {
+            let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
+            if let Some(dir) = socket_dirs.first() {
+                self.router.load_persisted_capability_registry(dir).await;
+            }
+        }
+
+        // 4d. Pre-register capabilities declared in graph nodes so the route
         // table is populated even before primals are discovered via live sockets.
         // This is the critical bridge: graphs define which primals provide which
         // capabilities, and we register expected socket paths now. Live discovery
         // (step 5) will update endpoints for any primals that are already running.
         self.register_capabilities_from_graphs().await;
 
-        // 4d. Log graph inventory so deployment issues are immediately visible.
+        // 4e. Log graph inventory so deployment issues are immediately visible.
         self.log_graph_inventory().await;
 
         // 5. Auto-discover running primals and register their capabilities
         self.discover_and_register_primals().await;
+
+        // 5a. Persist the fully-populated registry for next cold start.
+        {
+            let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
+            if let Some(dir) = socket_dirs.first() {
+                self.router.persist_capability_registry(dir).await;
+            }
+        }
 
         // 5b. Derive coordination purpose key from security provider (if reachable)
         self.derive_coordination_key().await;
@@ -190,6 +208,7 @@ impl NeuralApiServer {
 
         // 5d. Start background discovery sweep — picks up primals that come
         // online after initial boot (transition from Bootstrap to operational).
+        // Also persists registry on each sweep for crash resilience.
         {
             let server = self.clone();
             tokio::spawn(async move {
@@ -197,6 +216,10 @@ impl NeuralApiServer {
                 loop {
                     tokio::time::sleep(DISCOVERY_SWEEP_INTERVAL).await;
                     server.discover_and_register_primals().await;
+                    let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
+                    if let Some(dir) = socket_dirs.first() {
+                        server.router.persist_capability_registry(dir).await;
+                    }
                 }
             });
             info!("🔍 Background discovery sweep started (interval: 30s)");

@@ -406,6 +406,10 @@ impl NeuralApiServer {
             Route::CompositionStatus => {
                 dispatch(self.lifecycle_handler.composition_status().await, id)
             }
+            // Composition start — health-gated transition check + graph resolution
+            Route::CompositionStart => {
+                dispatch(self.lifecycle_handler.composition_start(params).await, id)
+            }
             // Composition deploy (alias for graph.execute — primalSpring contract)
             Route::CompositionDeploy => dispatch(self.graph_handler.execute(params).await, id),
             // Composition deploy shadow (dry-run validation)

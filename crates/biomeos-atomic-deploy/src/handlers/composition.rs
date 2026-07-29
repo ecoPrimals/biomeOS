@@ -7,7 +7,7 @@
 //! These methods report on the health and readiness of the composed primal
 //! ecosystem, including pipeline status for content and compute.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use tracing::warn;
 
@@ -234,6 +234,80 @@ impl LifecycleHandler {
             "deploy_graph": deploy_graph,
             "subsystems": subsystems,
             "capabilities_count": status.len(),
+        }))
+    }
+
+    /// Handle `composition.start` — health-gated composition transitions.
+    ///
+    /// Resolves a named composition (`tower`, `nest`, `node`, `nucleus`) to its
+    /// deployment graph, checks that prerequisite compositions are healthy, and
+    /// returns the graph name for the caller (or graph executor) to deploy.
+    ///
+    /// Prerequisites:
+    /// - `tower`: none (foundation)
+    /// - `nest`: tower must be healthy
+    /// - `node`: tower must be healthy
+    /// - `nucleus`: tower AND nest AND node must be healthy
+    pub async fn composition_start(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let composition = params["composition"]
+            .as_str()
+            .or_else(|| params["name"].as_str())
+            .context("Missing 'composition' parameter (tower|nest|node|nucleus)")?;
+
+        let (graph, prerequisites) = match composition {
+            "tower" => ("tower_atomic_bootstrap", vec![]),
+            "nest" => ("nest_deploy", vec!["tower"]),
+            "node" => ("node_atomic_compute", vec!["tower"]),
+            "nucleus" => ("nucleus_complete", vec!["tower", "nest", "node"]),
+            other => {
+                return Ok(json!({
+                    "error": format!("Unknown composition: {other}"),
+                    "available": ["tower", "nest", "node", "nucleus"],
+                }));
+            }
+        };
+
+        // Check prerequisites via composition health
+        if !prerequisites.is_empty() {
+            let health = self.composition_health(&None).await?;
+            let subsystems = health
+                .get("subsystems")
+                .and_then(|s| s.as_object())
+                .cloned()
+                .unwrap_or_default();
+
+            let mut blocked_by = Vec::new();
+            for prereq in &prerequisites {
+                let status = subsystems
+                    .get(*prereq)
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unavailable");
+
+                if status != "ok" {
+                    blocked_by.push(format!("{prereq}={status}"));
+                }
+            }
+
+            if !blocked_by.is_empty() {
+                return Ok(json!({
+                    "composition": composition,
+                    "graph": graph,
+                    "ready": false,
+                    "blocked_by": blocked_by,
+                    "message": format!(
+                        "Cannot start {composition}: prerequisites not met ({})",
+                        blocked_by.join(", ")
+                    ),
+                }));
+            }
+        }
+
+        Ok(json!({
+            "composition": composition,
+            "graph": graph,
+            "ready": true,
+            "message": format!("Composition {composition} ready — deploy graph '{graph}'"),
         }))
     }
 }
