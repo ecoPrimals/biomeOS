@@ -40,7 +40,7 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 - **v3.81** — NC-1.4 canonical pseudoSpore validation + NC-1.emit full materialization
 - **v3.80** — Deep Debt W56 (routing.rs 920→551L, nucleus.rs 883→605L, rustix 1.x, capability-based config)
 - **28 capability domains**, **320+ translations** across 13 primals
-- **26 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
+- **27 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
 - **43 deploy graphs** (incl. membrane_deploy, provenance trio)
 - **20 niche templates** (+ RootPulse, soil-microbiome, ecology)
 - **26 workspace crates**

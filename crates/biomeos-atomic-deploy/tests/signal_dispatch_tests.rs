@@ -3,7 +3,7 @@
 //! Signal dispatch integration tests.
 //!
 //! Validates that the composition collapse layer correctly maps atomic
-//! signals to graph paths, loads all 26 signal graphs, and intercepts
+//! signals to graph paths, loads all 27 signal graphs, and intercepts
 //! signal-tier capability calls.
 
 #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
@@ -15,7 +15,7 @@ fn graphs_dir() -> PathBuf {
 }
 
 #[test]
-fn all_26_signal_graphs_exist() {
+fn all_27_signal_graphs_exist() {
     let dir = graphs_dir().join("signals");
     assert!(dir.exists(), "graphs/signals/ directory not found");
 
@@ -33,12 +33,13 @@ fn all_26_signal_graphs_exist() {
         "node_compute",
         "node_discover_hardware",
         "node_dispatch",
-        // Nest (8)
+        // Nest (9)
         "nest_store",
         "nest_commit",
         "nest_retrieve",
         "nest_sync",
         "nest_ingest_spore",
+        "nest_ingest_dataset",
         "nest_emit_spore",
         "nest_verify",
         "nest_federate",
@@ -104,14 +105,14 @@ fn is_signal_tier_recognizes_valid_tiers() {
 }
 
 #[test]
-fn list_signal_graphs_finds_all_26() {
+fn list_signal_graphs_finds_all_27() {
     use biomeos_atomic_deploy::handlers::signal::list_signal_graphs;
 
     let signals = list_signal_graphs(&graphs_dir());
     assert_eq!(
         signals.len(),
-        26,
-        "Expected 26 signal graphs, found {}",
+        27,
+        "Expected 27 signal graphs, found {}",
         signals.len()
     );
 
@@ -135,6 +136,7 @@ fn list_signal_graphs_finds_all_26() {
     assert!(names.contains(&"nest.retrieve"));
     assert!(names.contains(&"nest.sync"));
     assert!(names.contains(&"nest.ingest_spore"));
+    assert!(names.contains(&"nest.ingest_dataset"));
     assert!(names.contains(&"nest.emit_spore"));
     assert!(names.contains(&"nest.verify"));
     assert!(names.contains(&"nest.federate"));
@@ -159,7 +161,7 @@ fn signal_schema_loads() {
     let schema = result.unwrap();
     let tools = schema.get("tools").expect("schema should have 'tools' key");
     let tools_arr = tools.as_array().expect("'tools' should be an array");
-    assert_eq!(tools_arr.len(), 26, "Expected 26 tool definitions");
+    assert_eq!(tools_arr.len(), 27, "Expected 27 tool definitions");
 }
 
 #[test]
@@ -254,7 +256,7 @@ fn signal_graph_path_resolves_all_nest_signals() {
     use biomeos_atomic_deploy::handlers::signal::signal_graph_path;
 
     let dir = graphs_dir();
-    for signal in ["store", "commit", "retrieve", "sync", "ingest_spore", "emit_spore", "verify", "federate"] {
+    for signal in ["store", "commit", "retrieve", "sync", "ingest_spore", "ingest_dataset", "emit_spore", "verify", "federate"] {
         let path = signal_graph_path(&dir, "nest", signal);
         assert!(
             path.exists(),
@@ -692,12 +694,12 @@ fn all_signal_graphs_have_consistent_tier_distribution() {
 
     assert_eq!(tower_count, 8, "Tower: 8 signals (publish, authenticate, discover, health, bootstrap, enroll, key_rotate, mesh_status)");
     assert_eq!(node_count, 3, "Node: 3 signals (compute, discover_hardware, dispatch)");
-    assert_eq!(nest_count, 8, "Nest: 8 signals (store, commit, retrieve, sync, ingest_spore, emit_spore, verify, federate)");
+    assert_eq!(nest_count, 9, "Nest: 9 signals (store, commit, retrieve, sync, ingest_spore, ingest_dataset, emit_spore, verify, federate)");
     assert_eq!(meta_count, 5, "Meta: 5 signals (observe, intent, render, health, deploy)");
     assert_eq!(braid_count, 2, "Braid: 2 signals (partial_update, complete)");
     assert_eq!(
         tower_count + node_count + nest_count + meta_count + braid_count,
-        26,
+        27,
         "Total signal count"
     );
 }

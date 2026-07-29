@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.44 (2026-07-29) — Wave 155i: Composition Broker
+
+### N1: riboCipher Transport Framing (P0)
+- New `send_ribocipher_jsonrpc_request` — connects + writes `[0xEC, 0x01]` prefix + JSON-RPC
+- New `send_ribocipher_jsonrpc_over_stream` — riboCipher + JSON-RPC over existing stream
+- New `write_ribocipher_signal` — exported helper for callers with custom connection lifecycle
+- CLI `nucleus_ingest` evolved: all Neural API connections now include riboCipher prefix
+- CLI `rootpulse` evolved: all Neural API connections now include riboCipher prefix
+- Fixes Wave 113 "legacy connection rejected" error on multi-composition deployments
+
+### N2: BTSP Session Propagation in Signal Graph Executor (P0)
+- `GraphExecutor::send_jsonrpc_async` now BTSP-aware: detects family-scoped sockets and
+  performs BTSP handshake via `AtomicClient::call_btsp` before RPC
+- Falls back to raw JSON-RPC in dev mode or when security provider unavailable
+- Strict enforcement: `btsp_enforce()` + unavailable provider → hard failure (no silent bypass)
+- Enables signal graph execution across composition boundaries (Tower → Nest trust handoff)
+- Composition broker pattern: Neural API holds trust tokens, propagates through graph chain
+
+### Signal Schema: nest.ingest_dataset
+- Added `nest.ingest_dataset` to `signal_tools.toml` (AlphaFold-scale bulk ingestion)
+- Total signal graphs: 27 (8 tower + 3 node + 9 nest + 5 meta + 2 braid)
+
+### Test Count
+- 8,529 tests (0 failures), 26 workspace crates, 27 signal graphs
+
+---
+
 ## v4.43 (2026-07-28) — Wave 155d: Live Signal Graph Validation
 
 ### Signal Schema Evolution (19 → 26 graphs)

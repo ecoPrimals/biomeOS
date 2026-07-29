@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use biomeos_types::JsonRpcRequest;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 use tokio::sync::oneshot;
 
@@ -38,7 +38,10 @@ async fn test_send_jsonrpc_invalid_json_response() {
         let listener = UnixListener::bind(&sock).expect("bind");
         let _ = ready_tx.send(());
         if let Ok((stream, _)) = listener.accept().await {
-            let (_, mut writer) = stream.into_split();
+            let (reader, mut writer) = stream.into_split();
+            let mut reader = BufReader::new(reader);
+            let mut signal_buf = [0u8; 2];
+            let _ = reader.read_exact(&mut signal_buf).await;
             let _ = writer.write_all(b"not valid json\n").await;
         }
     });
@@ -136,15 +139,17 @@ async fn test_poll_execution_retries_on_transient_socket_error() {
         let listener = UnixListener::bind(&sock).expect("bind");
         let _ = ready_tx.send(());
 
-        // First accept: drop connection without responding (client gets EOF / parse issues on retry path)
+        // First accept: drop connection without responding (client gets EOF on retry path)
         if let Ok((stream, _)) = listener.accept().await {
             drop(stream);
         }
 
-        // Second accept: return completed status
+        // Second accept: consume riboCipher prefix, return completed status
         if let Ok((stream, _)) = listener.accept().await {
             let (reader, mut writer) = stream.into_split();
             let mut reader = BufReader::new(reader);
+            let mut signal_buf = [0u8; 2];
+            let _ = reader.read_exact(&mut signal_buf).await;
             let mut line = String::new();
             if reader.read_line(&mut line).await.is_ok() {
                 let response = serde_json::json!({

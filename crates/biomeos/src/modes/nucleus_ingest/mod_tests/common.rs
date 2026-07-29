@@ -3,7 +3,7 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 use tokio::sync::{Notify, oneshot};
 
@@ -56,6 +56,9 @@ license = "AGPL-3.0"
 }
 
 /// Spawn a mock Neural API that returns one fixed JSON-RPC response per accepted connection.
+///
+/// Consumes the 2-byte riboCipher signal prefix (`[0xEC, 0x01]`) before reading
+/// the JSON-RPC request line — matching the real Neural API accept flow.
 pub(super) async fn spawn_mock_neural_api(
     responses: Vec<serde_json::Value>,
 ) -> (std::path::PathBuf, tokio::task::JoinHandle<()>) {
@@ -73,6 +76,10 @@ pub(super) async fn spawn_mock_neural_api(
             if let Ok((stream, _)) = listener.accept().await {
                 let (reader, mut writer) = stream.into_split();
                 let mut reader = BufReader::new(reader);
+                let mut signal_buf = [0u8; 2];
+                if reader.read_exact(&mut signal_buf).await.is_err() {
+                    continue;
+                }
                 let mut line = String::new();
                 if reader.read_line(&mut line).await.is_ok() {
                     let response_str = serde_json::to_string(&response).expect("serialize") + "\n";
@@ -88,6 +95,8 @@ pub(super) async fn spawn_mock_neural_api(
 }
 
 /// Spawn a mock server at an explicit path (for socket discovery tests).
+///
+/// Consumes riboCipher prefix before reading JSON-RPC.
 pub(super) async fn spawn_mock_at_path(
     socket_path: std::path::PathBuf,
     response: serde_json::Value,
@@ -99,6 +108,8 @@ pub(super) async fn spawn_mock_at_path(
         if let Ok((stream, _)) = listener.accept().await {
             let (reader, mut writer) = stream.into_split();
             let mut reader = BufReader::new(reader);
+            let mut signal_buf = [0u8; 2];
+            let _ = reader.read_exact(&mut signal_buf).await;
             let mut line = String::new();
             if reader.read_line(&mut line).await.is_ok() {
                 let response_str = serde_json::to_string(&response).expect("serialize") + "\n";

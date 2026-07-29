@@ -61,7 +61,7 @@ Added 7 new signal definitions to `config/signal_tools.toml`:
 
 ## Next Work (from Wave 155d blurb)
 
-1. **Live dispatch on eastGate**: Execute `signal.dispatch { "signal": "tower.health" }` on local NUCLEUS
+1. ~~**Live dispatch on eastGate**~~ → **DONE (155i)**: Composition broker pattern shipped
 2. **northGate validation**: `tower.health` via named pipes (after DNS fix)
 3. **Mesh status on all online gates**: `tower.mesh_status` aggregated across 7 gates
 4. **After Tower stable**: Nest Atomic Phase 1 wiring (G3 Provenance Trio IPC callers)

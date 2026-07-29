@@ -37,7 +37,10 @@ mod listener;
 pub use listener::TransportListener;
 
 mod jsonrpc;
-pub use jsonrpc::{send_jsonrpc_over_stream, send_jsonrpc_request};
+pub use jsonrpc::{
+    send_jsonrpc_over_stream, send_jsonrpc_request, send_ribocipher_jsonrpc_over_stream,
+    send_ribocipher_jsonrpc_request, write_ribocipher_signal,
+};
 
 mod pool;
 pub use pool::ConnectionPool;

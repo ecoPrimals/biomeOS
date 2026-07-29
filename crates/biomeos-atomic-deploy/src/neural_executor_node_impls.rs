@@ -8,11 +8,13 @@
 //! and `capability_call` — plus the `send_jsonrpc_async` helper.
 
 use anyhow::{Context, Result};
+use biomeos_core::atomic_client::AtomicClient;
+use biomeos_core::btsp_client;
 use biomeos_core::{TransportEndpoint, send_jsonrpc_request};
 use biomeos_types::JsonRpcRequest;
 use serde::Serialize;
 use std::path::PathBuf;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use crate::capability_domains::CapabilityRegistry;
 use crate::executor::context::ExecutionContext;
@@ -458,17 +460,61 @@ impl GraphExecutor {
         result
     }
 
-    /// Helper: send a JSON-RPC request over a transport endpoint and return the response.
+    /// Helper: send a JSON-RPC request to a primal, using BTSP when required.
+    ///
+    /// For family-scoped sockets (`{primal}-{family_id}.sock`) in production mode,
+    /// this performs a BTSP handshake before executing the RPC. This is the
+    /// composition broker pattern: the signal graph executor bridges trust
+    /// boundaries between atomic compositions.
     pub(crate) async fn send_jsonrpc_async(
         socket_path: &str,
         request: &impl Serialize,
     ) -> Result<serde_json::Value> {
-        let endpoint = TransportEndpoint::UnixSocket {
-            path: PathBuf::from(socket_path),
-        };
+        let path = PathBuf::from(socket_path);
+        let endpoint = TransportEndpoint::UnixSocket { path: path.clone() };
 
         let rpc_request: JsonRpcRequest = serde_json::from_value(serde_json::to_value(request)?)
             .context("Invalid JSON-RPC request")?;
+
+        // BTSP-aware dispatch: if the target socket is family-scoped and we're in
+        // production mode, perform a BTSP handshake to authenticate before the RPC.
+        if btsp_client::is_family_scoped_socket(&path) {
+            match btsp_client::security_mode() {
+                btsp_client::SecurityMode::Production { btsp_available } => {
+                    if btsp_available {
+                        debug!(
+                            "   🔒 Executor BTSP: handshake for {}",
+                            path.display()
+                        );
+                        let params = rpc_request
+                            .params
+                            .clone()
+                            .unwrap_or(serde_json::Value::Null);
+                        let client = AtomicClient::from_endpoint(endpoint.clone());
+                        match client.call_btsp(&rpc_request.method, params).await {
+                            Ok(value) => return Ok(value),
+                            Err(e) => {
+                                warn!(
+                                    "   ⚠️ Executor BTSP failed for {}, falling back to raw: {e}",
+                                    path.display()
+                                );
+                            }
+                        }
+                    } else if btsp_client::btsp_enforce() {
+                        anyhow::bail!(
+                            "BTSP enforced but security provider unavailable for {}",
+                            path.display()
+                        );
+                    }
+                }
+                btsp_client::SecurityMode::Development => {
+                    debug!(
+                        "   🔓 Dev mode — skipping BTSP for {}",
+                        path.display()
+                    );
+                }
+            }
+        }
 
         let response = send_jsonrpc_request(&endpoint, rpc_request)
             .await

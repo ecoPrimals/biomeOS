@@ -414,7 +414,7 @@ Systematic deep debt resolution across 7 waves:
 - [x] Dual version scheme documented (workspace `0.1.0` / release train `v3.60`)
 - [x] `is_orchestrator = true` — unique to biomeOS
 - [x] Stability tiers annotated (`config/stability_tiers.toml`)
-- [x] Signal tiers: 5 (tower/node/nest/meta/braid), 26 signal graphs
+- [x] Signal tiers: 5 (tower/node/nest/meta/braid), 27 signal graphs
 - [x] Braid signal propagation for wetSpring (`braid.partial_update`, `braid.complete`)
 
 ### Stadial Phase Items (in-progress)

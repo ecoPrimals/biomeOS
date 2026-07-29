@@ -225,12 +225,17 @@ async fn run_status(socket: Option<PathBuf>, family_id: Option<String>) -> Resul
     Ok(())
 }
 
-/// Send a JSON-RPC request over Unix socket and return the parsed response.
+/// Send a JSON-RPC request to the Neural API with riboCipher transport framing.
+///
+/// Prepends `[0xEC, 0x01]` (clear-tier signal) before the JSON payload per
+/// Wave 113 transport policy.
 #[cfg(unix)]
 async fn send_jsonrpc(
     socket_path: &PathBuf,
     request: &JsonRpcRequest,
 ) -> Result<serde_json::Value> {
+    use biomeos_types::constants::ribocipher;
+
     let stream = UnixStream::connect(socket_path).await.with_context(|| {
         format!(
             "Failed to connect to Neural API at {}",
@@ -240,6 +245,9 @@ async fn send_jsonrpc(
 
     let (reader, mut writer) = stream.into_split();
 
+    writer
+        .write_all(&[ribocipher::SIGNAL_CLEAR, ribocipher::VERSION_1])
+        .await?;
     let payload = format!("{}\n", serde_json::to_string(&request)?);
     writer.write_all(payload.as_bytes()).await?;
 
@@ -275,11 +283,13 @@ async fn send_jsonrpc(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
     use tokio::net::UnixListener;
     use tokio::sync::oneshot;
 
     /// Spawn a mock Neural API server that responds with the given JSON-RPC response.
+    ///
+    /// Consumes the 2-byte riboCipher signal prefix before reading JSON-RPC.
     async fn spawn_mock_neural_api(
         response: serde_json::Value,
     ) -> (PathBuf, tokio::task::JoinHandle<()>) {
@@ -296,6 +306,8 @@ mod tests {
             if let Ok((stream, _)) = listener.accept().await {
                 let (reader, mut writer) = stream.into_split();
                 let mut reader = BufReader::new(reader);
+                let mut signal_buf = [0u8; 2];
+                let _ = reader.read_exact(&mut signal_buf).await;
                 let mut line = String::new();
                 if reader.read_line(&mut line).await.is_ok() {
                     let response_str = serde_json::to_string(&response).expect("serialize") + "\n";

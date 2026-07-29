@@ -38,7 +38,7 @@
 | Hardcoded Values | 0 hardcoded primal names in production; `BOOTSTRAP_CAPABILITY_HINTS` (last-resort); runtime registry takes precedence; `NucleusMode` uses TOML-driven manifest profiles for launch sets; `CORE_PRIMALS` → `BOOTSTRAP_CORE_SET` (intent-clear naming); env vars centralized via `env_config::vars` SSOT (75+ constants) |
 | Cross-Arch | x86_64 + aarch64 + armv7 + **x86_64-pc-windows-gnu** (32-bit safe: `cast.rs` `u64` bounds, conditional tests; UDS → TCP fallback on Windows) |
 | Clone Reduction | Hot-path `.clone()` audit: `JsonRpcRequest::serialize_line()` (borrow params), iterator-by-value in discovery, single-lock snapshots in health monitor, Kahn's `push(id)` move, `MCP::add_property` move key |
-| Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 26 signal graphs |
+| Signal Tiers | 5 atomic tiers (tower/node/nest/meta/braid), 27 signal graphs |
 
 ---
 

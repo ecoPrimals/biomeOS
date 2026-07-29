@@ -218,9 +218,15 @@ async fn poll_execution(socket_path: &Path, execution_id: &str) -> Result<serde_
     }
 }
 
-/// Send a JSON-RPC request over a Unix socket and parse the response.
+/// Send a JSON-RPC request to the Neural API with riboCipher transport framing.
+///
+/// Prepends `[0xEC, 0x01]` (clear-tier signal) before the JSON payload per
+/// Wave 113 transport policy. Without this prefix, the Neural API rejects the
+/// connection as "legacy unsignalled."
 #[cfg(unix)]
 async fn send_jsonrpc(socket_path: &Path, request: &JsonRpcRequest) -> Result<serde_json::Value> {
+    use biomeos_types::constants::ribocipher;
+
     let stream = UnixStream::connect(socket_path).await.with_context(|| {
         format!(
             "Failed to connect to Neural API at {}",
@@ -229,6 +235,9 @@ async fn send_jsonrpc(socket_path: &Path, request: &JsonRpcRequest) -> Result<se
     })?;
 
     let (reader, mut writer) = stream.into_split();
+    writer
+        .write_all(&[ribocipher::SIGNAL_CLEAR, ribocipher::VERSION_1])
+        .await?;
     let request_bytes = serde_json::to_vec(request)?;
     writer.write_all(&request_bytes).await?;
     writer.write_all(b"\n").await?;
