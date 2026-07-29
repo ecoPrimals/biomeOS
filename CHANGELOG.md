@@ -24,8 +24,21 @@ All notable changes to biomeOS will be documented in this file.
 - Added `nest.ingest_dataset` to `signal_tools.toml` (AlphaFold-scale bulk ingestion)
 - Total signal graphs: 27 (8 tower + 3 node + 9 nest + 5 meta + 2 braid)
 
+### Deep Debt: Test Monolith Refactoring
+- `signal_dispatch_tests.rs` (705L) split into `signal_dispatch_tests/` directory:
+  - `core_dispatch.rs` (192L) — existence, parsing, path resolution, tier recognition
+  - `nest_graphs.rs` (227L) — nest_store, nest_sync topology, path resolution for all tiers
+  - `tower_live_validation.rs` (309L) — tower.health, mesh_status, enroll + schema + distribution
+
+### Composition Broker E2E Validation (new)
+- `composition_broker_e2e/` test module (35 tests):
+  - `nest_topology.rs` — nest.ingest_spore + nest.ingest_dataset full topology validation
+  - `btsp_routing.rs` — family-scoped socket detection, security mode, enforcement semantics
+  - `ribocipher.rs` — [0xEC, 0x01] framing correctness, write_ribocipher_signal validation
+  - `schema_validation.rs` — nest-tier signal_tools.toml coverage + coordination mode
+
 ### Test Count
-- 8,529 tests (0 failures), 26 workspace crates, 27 signal graphs
+- 8,564 tests (0 failures), 26 workspace crates, 27 signal graphs
 
 ---
 
