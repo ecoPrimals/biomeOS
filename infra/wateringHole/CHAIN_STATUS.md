@@ -1,7 +1,7 @@
 # biomeOS — Chain Status for Overwatch
 
-**Last Updated**: July 30, 2026 08:15 EDT
-**Version**: v4.48
+**Last Updated**: July 30, 2026 10:30 EDT
+**Version**: v4.49
 **Team**: biomeOS
 **Gate**: eastGate
 
@@ -52,20 +52,30 @@
 
 ---
 
+## P2 Divergences (Wave 155k) — ALL RESOLVED
+
+| Divergence | Resolution | Version |
+|-----------|-----------|---------|
+| Capability wipe cycle (654→0→187→654) | 3-strike prune threshold | v4.49 |
+| Neural API socket hardcoded to `membrane/` | Stale doc comments updated (code was correct) | v4.49 |
+| API 403 on non-/health | Intentional Dark Forest sovereign behavior (documented) | v4.49 |
+
+---
+
 ## biomeOS Posture: STANDBY-READY
 
-biomeOS Chain 1 is complete. Team transitions to **STANDBY** pending:
-- bearDog `crypto.sign_ed25519` (unblocks Provenance 7/7 E2E through biomeOS)
+biomeOS Chain 1 is complete. P2 divergences resolved. Team in **STANDBY** pending:
 - NUCLEUS lifecycle integration testing (once strandGate validates auto-startup)
+- bearDog `crypto.sign_ed25519` already shipped (Provenance 7/7 COMPLETE per Wave 155k)
 
-### Metrics (v4.48)
+### Metrics (v4.49)
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,570 pass, 0 failures |
+| Tests | 8,570+ pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --tests) |
 | Unsafe blocks | 0 (forbid) |
 | Largest prod file | 716 LOC |
 | TODOs in prod | 0 |
-| Version | v4.48 |
-| Commits since v4.44 | 5 (all pushed to origin main) |
+| Version | v4.49 |
+| Commits since v4.44 | 6 (all pushed to origin main) |

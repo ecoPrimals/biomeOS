@@ -16,7 +16,15 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 | 4 | Socket evaporation fix | v4.46 | `bd202674` |
 | 5 | Socket path unification | v4.46 | `bd202674` |
 
-**biomeOS has NO remaining P1 blockers.** The only remaining ACTIVE work is bearDog `crypto.sign_ed25519`.
+**biomeOS has NO remaining P1 blockers.**
+
+## P2 Divergences: RESOLVED (v4.49)
+
+| Divergence | Status | Fix |
+|-----------|--------|-----|
+| Capability wipe cycle (654→0→187→654) | ✅ FIXED | 3-strike prune threshold |
+| Neural API socket hardcoded to `membrane/` | ✅ FIXED | Stale doc comments updated |
+| API 403 on non-/health | ✅ DOCUMENTED | Intentional Dark Forest behavior |
 
 ---
 
@@ -24,6 +32,7 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
+| 155k | Jul 30, 2026 | P2 divergence fixes: capability wipe cycle, socket docs, Dark Forest clarification |
 | 155j | Jul 30, 2026 | Composition lifecycle: cellMembrane boot_order integration, Chain 1 complete |
 | 155i-c | Jul 29, 2026 | Deep debt cleanup: dead deps purged, test extraction, capability-based BTSP resolution |
 | 155i-b | Jul 29, 2026 | NUCLEUS Orchestrator: riboCipher executor fix, socket unification, capability persistence, composition.start |

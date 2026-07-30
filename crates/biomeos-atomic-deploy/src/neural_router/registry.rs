@@ -153,8 +153,17 @@ impl NeuralRouter {
     ///
     /// Returns `(probed, pruned)` — the total endpoints checked and how
     /// many were removed.
+    /// Prune capabilities for primals that fail health checks consecutively.
+    ///
+    /// Uses a strike counter to prevent the "capability wipe cycle" where
+    /// socket contention during concurrent discovery sweeps causes mass
+    /// false-positive pruning. A primal is only unregistered after
+    /// `PRUNE_STRIKE_THRESHOLD` (3) consecutive failures. A single successful
+    /// health check resets the counter to zero.
     pub async fn prune_stale_registrations(&self) -> (usize, usize) {
         use std::collections::HashSet;
+
+        const PRUNE_STRIKE_THRESHOLD: u8 = 3;
 
         let registry = self.capability_registry.read().await;
 
@@ -167,7 +176,8 @@ impl NeuralRouter {
         drop(registry);
 
         let probed = endpoints.len();
-        let mut dead_primals: HashSet<Arc<str>> = HashSet::new();
+        let mut failed_primals: HashSet<Arc<str>> = HashSet::new();
+        let mut healthy_primals: HashSet<Arc<str>> = HashSet::new();
 
         for (primal_name, _endpoint_str) in &endpoints {
             let registry = self.capability_registry.read().await;
@@ -179,21 +189,52 @@ impl NeuralRouter {
             drop(registry);
 
             if let Some(ep) = endpoint {
-                if !Self::check_endpoint_health(&ep).await {
-                    dead_primals.insert(primal_name.clone());
+                if Self::check_endpoint_health(&ep).await {
+                    healthy_primals.insert(primal_name.clone());
+                } else {
+                    failed_primals.insert(primal_name.clone());
                 }
             }
         }
 
+        // Update strike counters
+        let mut strikes = self.prune_strikes.write().await;
+
+        // Reset strikes for healthy primals
+        for primal in &healthy_primals {
+            strikes.remove(primal);
+        }
+
+        // Increment strikes for failed primals, collect those exceeding threshold
+        let mut dead_primals: Vec<Arc<str>> = Vec::new();
+        for primal in &failed_primals {
+            let count = strikes.entry(primal.clone()).or_insert(0);
+            *count = count.saturating_add(1);
+            if *count >= PRUNE_STRIKE_THRESHOLD {
+                dead_primals.push(primal.clone());
+            }
+        }
+
+        drop(strikes);
+
+        // Only unregister primals that exceeded the strike threshold
         let mut pruned = 0;
         for primal in &dead_primals {
             pruned += self.unregister_primal(primal).await;
+            // Clear strike entry after successful prune
+            self.prune_strikes.write().await.remove(primal);
         }
 
         if pruned > 0 {
             info!(
-                "🧹 Stale prune sweep: probed {probed} endpoints, pruned {pruned} registrations ({} dead primals)",
+                "🧹 Stale prune sweep: probed {probed} endpoints, pruned {pruned} registrations \
+                 ({} dead primals after {PRUNE_STRIKE_THRESHOLD} consecutive failures)",
                 dead_primals.len()
+            );
+        } else if !failed_primals.is_empty() {
+            debug!(
+                "🧹 Stale prune sweep: probed {probed} endpoints, {} failed (strike incremented, threshold={PRUNE_STRIKE_THRESHOLD})",
+                failed_primals.len()
             );
         } else {
             debug!("🧹 Stale prune sweep: probed {probed} endpoints, all healthy");

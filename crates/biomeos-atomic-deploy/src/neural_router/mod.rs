@@ -93,6 +93,12 @@ pub struct NeuralRouter {
     /// Prevents repeated rescans on every miss in a tight loop.
     pub(crate) lazy_rescan_attempted: AtomicBool,
 
+    /// Consecutive prune-failure strikes per primal. A primal is only unregistered
+    /// after `PRUNE_STRIKE_THRESHOLD` consecutive health failures, preventing the
+    /// "capability wipe cycle" where socket contention during concurrent sweeps
+    /// causes mass false-positive pruning (654→0→187→654 over ~60s).
+    prune_strikes: Arc<RwLock<HashMap<Arc<str>, u8>>>,
+
     /// Neural API's own socket path, excluded from auto-discovery to prevent
     /// self-registration pollution (GAP-MATRIX-08).
     self_socket_path: RwLock<Option<PathBuf>>,
@@ -139,6 +145,7 @@ impl NeuralRouter {
             living_graph: None,
             protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
             lazy_rescan_attempted: AtomicBool::new(false),
+            prune_strikes: Arc::new(RwLock::new(HashMap::new())),
             self_socket_path: RwLock::new(None),
             weighted_dispatch_counter: AtomicU64::new(0),
             weighted_disagreement_counter: AtomicU64::new(0),
@@ -172,6 +179,7 @@ impl NeuralRouter {
             living_graph: None,
             protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
             lazy_rescan_attempted: AtomicBool::new(false),
+            prune_strikes: Arc::new(RwLock::new(HashMap::new())),
             self_socket_path: RwLock::new(None),
             weighted_dispatch_counter: AtomicU64::new(0),
             weighted_disagreement_counter: AtomicU64::new(0),

@@ -15,8 +15,8 @@
 //!
 //! 1. `NEURAL_API_SOCKET` env var
 //! 2. `$XDG_RUNTIME_DIR/membrane/neural-api-{family_id}.sock`
-//! 3. `/run/user/{uid}/biomeos/neural-api-{family_id}.sock`
-//! 4. `{temp_dir}/biomeos/neural-api-{family_id}.sock` (platform temp dir)
+//! 3. `/run/user/{uid}/membrane/neural-api-{family_id}.sock`
+//! 4. `{temp_dir}/membrane/neural-api-{family_id}.sock` (platform temp dir)
 //!
 //! # Usage
 //!
