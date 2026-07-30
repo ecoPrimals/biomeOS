@@ -4,6 +4,22 @@ Session handoff documents for upstream overwatch audit.
 
 Each file captures: what was done, metrics before/after, commits produced, and next-wave candidates.
 
+## ⚡ CHAIN 1 STATUS: COMPLETE (v4.44–v4.48)
+
+**ALL 5 items in Chain 1 (biomeOS Orchestration Lifecycle) are SHIPPED:**
+
+| # | Item | Version | Commit |
+|---|------|---------|--------|
+| 1 | Graph executor riboCipher fix | v4.46 | `bd202674` |
+| 2 | BTSP composition broker | v4.44 | (composition broker session) |
+| 3 | Composition lifecycle (boot_order) | v4.48 | `076d4743` |
+| 4 | Socket evaporation fix | v4.46 | `bd202674` |
+| 5 | Socket path unification | v4.46 | `bd202674` |
+
+**biomeOS has NO remaining P1 blockers.** The only remaining ACTIVE work is bearDog `crypto.sign_ed25519`.
+
+---
+
 ## Current Handoffs
 
 | Session | Date | Focus |

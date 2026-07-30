@@ -1,7 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: July 30, 2026 (v4.48: Wave 155j — Composition lifecycle: cellMembrane boot_order integration, Chain 1 complete)
-**Version**: 4.47
+**Updated**: July 30, 2026 (v4.48: Wave 155j — Composition lifecycle: cellMembrane boot_order integration, Chain 1 COMPLETE)
+**Version**: 4.48
+**Chain 1 Status**: **ALL 5 ITEMS COMPLETE** (v4.44–v4.48)
 **Status**: REFERENCE TIER - ZERO clippy/fmt/deny warnings (incl --tests) - NUCLEUS watchdog ACTIVE - 8,564+ tests / 0 regressions - 88.37% line coverage (88.02% region / 89.58% function) - dashmap 6 + toml 0.9 - Zero production files >800 LOC - Zero test files >450 LOC - All monoliths split into semantic modules - cargo deny clean - Zero TODO/FIXME - temp-env test isolation - All 26 crates #![forbid(unsafe_code)] - Self-knowledge principle enforced - Phase 2 transport (trait dispatch over cfg gating) - Capability-first runtime registry - NucleusMode manifest-driven launch sets - Cross-arch (x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu) - All placeholder stubs evolved - Executor introspection + socket naming convention + stale cleanup RPC - Zero production unwraps (workspace lint enforced) - Connection pool wired into neural router hot path - Dead workspace deps purged (mdns-sd eliminated) - Chimera definition schema supports Phase 0 - SDK BTSP handshake evolution (strict mode ready) - CapabilityUtilizationTracker evolved to Arc<str> (zero alloc on record path) - Plasmodium remote compute discovery (system.compute + system.load RPC) - Workload dispatch engine (score-based gate selection) - Graph auto-dispatch (gate = "auto" with ComputeRequirements) - Composition broker E2E validation (BTSP + riboCipher)
 
 ---
