@@ -1,7 +1,7 @@
 # biomeOS — Chain Status for Overwatch
 
-**Last Updated**: July 30, 2026 10:30 EDT
-**Version**: v4.49
+**Last Updated**: July 30, 2026 12:15 EDT
+**Version**: v4.50
 **Team**: biomeOS
 **Gate**: eastGate
 
@@ -52,40 +52,36 @@
 
 ---
 
-## P2 Divergences (Wave 155k) — ALL RESOLVED
+## P2 Divergences — ALL RESOLVED (Wave 155k + 155m)
 
 | Divergence | Resolution | Version |
 |-----------|-----------|---------|
 | Capability wipe cycle (654→0→187→654) | 3-strike prune threshold | v4.49 |
 | Neural API socket hardcoded to `membrane/` | Stale doc comments updated (code was correct) | v4.49 |
 | API 403 on non-/health | Intentional Dark Forest sovereign behavior (documented) | v4.49 |
+| Socket evaporation (health ping format) | RPC ping tolerance — `Ok(_)` = alive | v4.50 |
+| Binary path retention (blocks resurrection) | Auto-discovery probes plasmidBin, stores path | v4.50 |
 
 ---
 
 ## biomeOS Posture: STANDBY-READY
 
-biomeOS Chain 1 is complete. P2 divergences resolved. Team in **STANDBY** pending:
-- NUCLEUS lifecycle integration testing (once strandGate validates auto-startup)
-- bearDog `crypto.sign_ed25519` already shipped (Provenance 7/7 COMPLETE per Wave 155k)
+biomeOS Chain 1 is complete. **All P2 divergences resolved (11 total across waves).**
+Team in **STANDBY** pending:
+- NUCLEUS v4.50 redeploy on strandGate (socket evaporation fix live)
+- AlphaFold ~1TB ingestion through westGate Nest Atomic
+- steamGate Tower deployment (user-space, gnu bins)
 
-### Deep Debt (Wave 155k session)
-
-- 8 production files refactored (test extraction): max 716 LOC, avg reduction 38%
-- `futures` narrowed to `futures-util` in 3 crates, removed from 1
-- 68.7 GiB build artifacts cleaned
-- Root docs rewritten (CURRENT_STATUS: 1006→80 LOC, focused and current)
-- Zero dead code, zero TODOs, zero unsafe, zero hardcoding
-
-### Metrics (v4.49)
+### Metrics (v4.50)
 
 | Metric | Value |
 |--------|-------|
 | Tests | 8,570+ pass, 0 failures |
-| Clippy | 0 warnings (pedantic+nursery, --tests) |
+| Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (forbid) |
 | Largest prod file | 716 LOC |
 | TODOs in prod | 0 |
 | Dead code | 0 |
 | cargo deny | clean |
-| Version | v4.49 |
-| Commits since v4.44 | 8 (all pushed to origin main) |
+| Version | v4.50 |
+| P0/P1/P2 | ZERO open |

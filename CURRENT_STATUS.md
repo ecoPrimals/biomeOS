@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: July 30, 2026
-**Version**: v4.49 (Wave 155k)
-**Posture**: STANDBY — All P0/P1/P2 blockers resolved
+**Version**: v4.50 (Wave 155m)
+**Posture**: STANDBY — All P0/P1/P2 blockers resolved. ZERO open divergences.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -41,8 +41,9 @@
 | Capability Registry | Runtime DashMap + redb persistence + 3-strike prune |
 | Composition Broker | E2E validated — BTSP propagation through signal graph |
 | Plasmodium | Remote compute discovery + workload dispatch |
-| Lifecycle Manager | Auto-resurrection, boot_order shutdown, health monitoring |
+| Lifecycle Manager | Auto-resurrection, boot_order shutdown, binary path retention |
 | Socket Discovery | XDG `membrane/` standard, lazy rescan, family-scoped |
+| Health Ping | RPC-tolerant — any JSON-RPC success = alive |
 
 ---
 
@@ -58,6 +59,8 @@
 | Capability wipe cycle fix (3-strike) | v4.49 | `f2d4c4b3` |
 | Test extraction (8 files refactored) | v4.49 | `7ae18493` |
 | Dependency narrowing (futures→futures-util) | v4.49 | `80e79600` |
+| Socket evaporation fix (RPC ping tolerance) | v4.50 | Wave 155m |
+| Binary path retention (auto-discovery) | v4.50 | Wave 155m |
 
 ---
 
@@ -74,9 +77,9 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **STANDBY-READY**. No blocking work remaining.
+biomeOS is **STANDBY-READY**. All 11 P2 divergences resolved (9 in 155k + 2 in 155m).
 
 Resume triggers:
-- NUCLEUS E2E validation on strandGate (biomeOS v4.49 redeploy)
+- NUCLEUS E2E validation on strandGate (biomeOS v4.50 redeploy)
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)

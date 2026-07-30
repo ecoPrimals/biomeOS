@@ -83,9 +83,11 @@ impl NeuralRouter {
 
     /// Transport-aware health check via `AtomicClient`
     ///
-    /// Works for all transport tiers: Unix, abstract, TCP, HTTP.
-    /// No filesystem assumption — abstract sockets and TCP endpoints are probed
-    /// via an actual JSON-RPC `health.check` call.
+    /// Any successful JSON-RPC response means the primal is alive. Only
+    /// connection failures, timeouts, or JSON-RPC error responses indicate death.
+    /// This prevents "socket evaporation" where primals that respond with
+    /// non-standard formats (e.g. `{"status":"alive"}` instead of `{"healthy":true}`)
+    /// are falsely marked dead.
     pub(crate) async fn quick_health_check(&self, endpoint: &TransportEndpoint) -> bool {
         let health_timeout = std::time::Duration::from_millis(500);
 
@@ -95,10 +97,7 @@ impl NeuralRouter {
             .call_btsp("health.check", serde_json::json!({}))
             .await
         {
-            Ok(response) => response
-                .get("healthy")
-                .and_then(|h| h.as_bool())
-                .unwrap_or(true),
+            Ok(_) => true,
             Err(_) => {
                 debug!(
                     "   ⚠️ Health check failed for {}",
@@ -111,10 +110,9 @@ impl NeuralRouter {
 
     /// Transport-aware health check (static, for use without `&self`)
     ///
-    /// Uses `AtomicClient::from_endpoint` which handles all transports
-    /// correctly. No `Path::exists()` guard — abstract sockets and TCP
-    /// endpoints are probed via connection attempt + JSON-RPC call.
-    /// BTSP Phase 3 negotiation is attempted on Unix socket endpoints.
+    /// Any successful `call_btsp` result = alive. `call_btsp` already filters
+    /// out JSON-RPC error responses and connection failures, so `Ok(_)` means
+    /// the primal accepted the request and returned a valid result.
     pub(crate) async fn check_endpoint_health(endpoint: &TransportEndpoint) -> bool {
         use tokio::time::{Duration, timeout};
 
@@ -122,20 +120,15 @@ impl NeuralRouter {
             let client =
                 AtomicClient::from_endpoint(endpoint.clone()).with_timeout(Duration::from_secs(2));
 
-            let response = client
+            client
                 .call_btsp("health.check", serde_json::json!({}))
                 .await
                 .context("health.check call failed")?;
-            Ok::<bool, anyhow::Error>(
-                response
-                    .get("healthy")
-                    .and_then(|h| h.as_bool())
-                    .unwrap_or(false),
-            )
+            Ok::<bool, anyhow::Error>(true)
         };
 
         match timeout(Duration::from_secs(3), probe).await {
-            Ok(Ok(healthy)) => healthy,
+            Ok(Ok(alive)) => alive,
             _ => false,
         }
     }

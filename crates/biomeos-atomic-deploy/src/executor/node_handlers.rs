@@ -174,11 +174,16 @@ pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Resul
     .await
     .with_context(|| format!("Health check timeout after {timeout_secs}s"))??;
 
+    // Tolerant health check: if primal explicitly returns `"healthy": false`, respect it.
+    // If `"healthy"` is missing or the result has any other shape, treat as alive
+    // (plain JSON-RPC fallback — prevents socket evaporation for non-standard responses).
     let healthy = response
         .get("result")
         .and_then(|r| r.get("healthy"))
         .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false);
+        .unwrap_or_else(|| {
+            response.get("result").is_some() && response.get("error").is_none()
+        });
 
     if healthy {
         info!("✅ {} is healthy", primal_name);

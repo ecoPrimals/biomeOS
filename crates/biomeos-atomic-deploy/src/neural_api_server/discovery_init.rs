@@ -123,11 +123,22 @@ impl NeuralApiServer {
                     }
                 }
 
-                // Register with LifecycleManager for health monitoring
-                let lifecycle_params = serde_json::json!({
+                // Resolve binary path for resurrection support
+                let binary_path = {
+                    let search_dirs = crate::handlers::spring_status::binary_search_dirs();
+                    let (found, path_val) =
+                        crate::handlers::spring_status::probe_binary(&primal_name, &search_dirs);
+                    if found { Some(path_val) } else { None }
+                };
+
+                // Register with LifecycleManager for health monitoring + resurrection
+                let mut lifecycle_params = serde_json::json!({
                     "name": primal_name,
                     "socket_path": format!("tcp://{}:{}", &host, port),
                 });
+                if let Some(ref bp) = binary_path {
+                    lifecycle_params["binary_path"] = bp.clone();
+                }
                 if let Err(e) = self
                     .lifecycle_handler
                     .register(&Some(lifecycle_params))
@@ -192,11 +203,24 @@ impl NeuralApiServer {
                         }
                     }
 
-                    // Register with LifecycleManager for health monitoring
-                    let lifecycle_params = serde_json::json!({
+                    // Resolve binary path for resurrection support
+                    let binary_path = {
+                        let search_dirs = crate::handlers::spring_status::binary_search_dirs();
+                        let (found, path_val) = crate::handlers::spring_status::probe_binary(
+                            &primal_name,
+                            &search_dirs,
+                        );
+                        if found { Some(path_val) } else { None }
+                    };
+
+                    // Register with LifecycleManager for health monitoring + resurrection
+                    let mut lifecycle_params = serde_json::json!({
                         "name": primal_name,
                         "socket_path": socket_str,
                     });
+                    if let Some(ref bp) = binary_path {
+                        lifecycle_params["binary_path"] = bp.clone();
+                    }
                     if let Err(e) = self
                         .lifecycle_handler
                         .register(&Some(lifecycle_params))
