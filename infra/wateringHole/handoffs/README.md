@@ -4,27 +4,29 @@ Session handoff documents for upstream overwatch audit.
 
 Each file captures: what was done, metrics before/after, commits produced, and next-wave candidates.
 
-## ⚡ CHAIN 1 STATUS: COMPLETE (v4.44–v4.48)
+## ⚡ STATUS: ALL P0/P1/P2 RESOLVED — v4.50 STANDBY
 
-**ALL 5 items in Chain 1 (biomeOS Orchestration Lifecycle) are SHIPPED:**
+**Version**: v4.50 | **Tests**: 8,570+ | **P2 open**: 0 | **Posture**: STANDBY-READY
+
+### Chain 1: biomeOS Orchestration Lifecycle — COMPLETE (v4.44–v4.48)
 
 | # | Item | Version | Commit |
 |---|------|---------|--------|
 | 1 | Graph executor riboCipher fix | v4.46 | `bd202674` |
 | 2 | BTSP composition broker | v4.44 | (composition broker session) |
 | 3 | Composition lifecycle (boot_order) | v4.48 | `076d4743` |
-| 4 | Socket evaporation fix | v4.46 | `bd202674` |
-| 5 | Socket path unification | v4.46 | `bd202674` |
+| 4 | Socket evaporation fix (persistence) | v4.46 | `bd202674` |
+| 5 | Socket path unification (membrane/) | v4.46 | `bd202674` |
 
-**biomeOS has NO remaining P1 blockers.**
+### P2 Divergences — ALL RESOLVED (v4.49 + v4.50)
 
-## P2 Divergences: RESOLVED (v4.49)
-
-| Divergence | Status | Fix |
-|-----------|--------|-----|
-| Capability wipe cycle (654→0→187→654) | ✅ FIXED | 3-strike prune threshold |
-| Neural API socket hardcoded to `membrane/` | ✅ FIXED | Stale doc comments updated |
-| API 403 on non-/health | ✅ DOCUMENTED | Intentional Dark Forest behavior |
+| Divergence | Version | Fix |
+|-----------|---------|-----|
+| Capability wipe cycle (654→0→187→654) | v4.49 | 3-strike prune threshold |
+| Neural API socket hardcoded to `membrane/` | v4.49 | Stale doc comments updated |
+| API 403 on non-/health | v4.49 | Intentional Dark Forest (documented) |
+| Socket evaporation (health ping format) | v4.50 | RPC ping tolerance — `Ok(_)` = alive |
+| Binary path retention (blocks resurrection) | v4.50 | Auto-discovery probes plasmidBin |
 
 ---
 
@@ -32,6 +34,7 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
+| **155m** | Jul 30, 2026 | **P2 socket evaporation + binary path retention fix (v4.50)** |
 | 155k | Jul 30, 2026 | P2 divergence fixes: capability wipe cycle, socket docs, Dark Forest clarification |
 | 155j | Jul 30, 2026 | Composition lifecycle: cellMembrane boot_order integration, Chain 1 complete |
 | 155i-c | Jul 29, 2026 | Deep debt cleanup: dead deps purged, test extraction, capability-based BTSP resolution |
