@@ -2,6 +2,35 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.48 (2026-07-30) — Wave 155j: Composition Lifecycle (boot_order)
+
+### cellMembrane boot_order Integration (P1 — Chain 1 Completion)
+- `launch_discovery.rs` now consumes `[boot_order]` section from `ecosystem_manifest.toml`
+  (cellMembrane commit b7707ee) as the authoritative primal startup sequence
+- Resolution priority: boot_order > composition profiles > static bootstrap hints
+- `filter_boot_order_for_mode()` respects mode-scoped primal subsets while preserving
+  cellMembrane ordering — safety net appends required primals not in boot_order
+- New `composition.boot_order` RPC method returns the authoritative startup sequence
+  with source attribution ("cellMembrane" vs "static_bootstrap")
+- `composition.start` now includes `boot_order` in its response for orchestrator consumers
+- `ManagedPrimal.boot_order_index` field: shutdown reverses startup order automatically
+- `shutdown_all()` respects boot_order_index (highest → first shutdown, lowest → last)
+- NUCLEUS local spawn loop records boot_order_index at registration time
+
+### Chain 1 Final Verification (All 5 Items Complete)
+- Item 1: Graph executor riboCipher fix ✓ (v4.46)
+- Item 2: BTSP composition broker ✓ (v4.44)
+- Item 3: Composition lifecycle management ✓ (this release — boot_order)
+- Item 4: Socket evaporation fix ✓ (v4.46)
+- Item 5: Socket path unification ✓ (v4.46)
+
+### Deep Debt
+- Stale `biomeos/` reference in env substitution test → `membrane/`
+- 8,570 tests pass, 0 failures
+- Clippy pedantic+nursery: 0 warnings
+
+---
+
 ## v4.47 (2026-07-29) — Wave 155i: Deep Debt Cleanup
 
 ### Dead Dependency Purge

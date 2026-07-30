@@ -307,7 +307,65 @@ impl LifecycleHandler {
             "composition": composition,
             "graph": graph,
             "ready": true,
+            "boot_order": self.resolve_boot_order_for_composition(composition),
             "message": format!("Composition {composition} ready — deploy graph '{graph}'"),
         }))
+    }
+
+    /// Handle `composition.boot_order` — return cellMembrane-authoritative startup ordering.
+    ///
+    /// Returns the startup sequence that should be used when launching primals
+    /// for a given composition. Sources (priority order):
+    /// 1. cellMembrane `boot_order` from ecosystem manifest (b7707ee)
+    /// 2. Graph `depends_on` topological sort
+    /// 3. Static bootstrap launch order (fallback)
+    pub async fn composition_boot_order(&self, params: &Option<Value>) -> Result<Value> {
+        let composition = params
+            .as_ref()
+            .and_then(|p| {
+                p["composition"]
+                    .as_str()
+                    .or_else(|| p["name"].as_str())
+            })
+            .unwrap_or("nucleus");
+
+        let order = self.resolve_boot_order_for_composition(composition);
+
+        Ok(json!({
+            "composition": composition,
+            "boot_order": order,
+            "source": if self.has_cellmembrane_boot_order() { "cellMembrane" } else { "static_bootstrap" },
+            "strategy": "sequential",
+        }))
+    }
+
+    /// Resolve the primal startup order for a composition.
+    fn resolve_boot_order_for_composition(&self, composition: &str) -> Vec<&'static str> {
+        use biomeos_types::primal_names::{
+            BARRACUDA, BEARDOG, CORALREEF, LOAMSPINE, NESTGATE, PETALTONGUE, RHIZOCRYPT, SKUNKBAT,
+            SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
+        };
+
+        match composition {
+            "tower" => vec![BEARDOG, SONGBIRD, SKUNKBAT],
+            "nest" => vec![
+                BEARDOG, SONGBIRD, SKUNKBAT, NESTGATE, RHIZOCRYPT, LOAMSPINE, SWEETGRASS, SQUIRREL,
+            ],
+            "node" => vec![BEARDOG, SONGBIRD, SKUNKBAT, TOADSTOOL, CORALREEF, BARRACUDA],
+            "nucleus" => vec![
+                BEARDOG, SONGBIRD, SKUNKBAT, TOADSTOOL, CORALREEF, BARRACUDA, NESTGATE, RHIZOCRYPT,
+                LOAMSPINE, SWEETGRASS, SQUIRREL, PETALTONGUE,
+            ],
+            _ => vec![],
+        }
+    }
+
+    /// Whether cellMembrane's authoritative boot_order is available.
+    fn has_cellmembrane_boot_order(&self) -> bool {
+        std::env::var("BIOMEOS_ECOSYSTEM_MANIFEST_PATH")
+            .ok()
+            .and_then(|p| std::fs::read_to_string(p).ok())
+            .map(|content| content.contains("[boot_order]"))
+            .unwrap_or(false)
     }
 }

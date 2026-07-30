@@ -41,8 +41,8 @@ fn test_substitute_env_xdg_runtime_dir() {
     env.insert("FAMILY_ID".to_string(), "cf7e8729".to_string());
 
     assert_eq!(
-        substitute_env("${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock", &env),
-        "/run/user/1000/biomeos/beardog-cf7e8729.sock"
+        substitute_env("${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock", &env),
+        "/run/user/1000/membrane/beardog-cf7e8729.sock"
     );
 }
 

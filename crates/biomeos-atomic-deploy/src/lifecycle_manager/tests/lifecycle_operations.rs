@@ -128,6 +128,7 @@ fn test_managed_primal_serialization() {
         node_id: None,
         depends_on: vec!["base".to_string()],
         depended_by: vec!["songbird".to_string()],
+        boot_order_index: None,
         health_config: HealthConfig::default(),
         resurrection_config: ResurrectionConfig::default(),
         metrics: PrimalMetrics::default(),

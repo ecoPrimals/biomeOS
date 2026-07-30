@@ -45,6 +45,7 @@ impl LifecycleManager {
             node_id: None,
             depends_on,
             depended_by: Vec::new(),
+            boot_order_index: None,
             health_config: HealthConfig::default(),
             resurrection_config: ResurrectionConfig::default(),
             metrics: PrimalMetrics::default(),
@@ -91,6 +92,7 @@ impl LifecycleManager {
             node_id: Some(node_id.into()),
             depends_on: Vec::new(),
             depended_by: Vec::new(),
+            boot_order_index: None,
             health_config: HealthConfig::default(),
             resurrection_config: ResurrectionConfig::default(),
             metrics: PrimalMetrics::default(),
@@ -115,6 +117,17 @@ impl LifecycleManager {
         let mut primals = self.primals.write().await;
         if let Some(primal) = primals.get_mut(name) {
             primal.health_config.health_method = method.into();
+        }
+    }
+
+    /// Set boot_order_index for a managed primal (cellMembrane boot_order integration).
+    ///
+    /// Used by NUCLEUS local startup to record the position in cellMembrane's
+    /// authoritative boot sequence. Shutdown reverses this order.
+    pub async fn set_boot_order_index(&self, name: &str, index: u32) {
+        let mut primals = self.primals.write().await;
+        if let Some(primal) = primals.get_mut(name) {
+            primal.boot_order_index = Some(index);
         }
     }
 

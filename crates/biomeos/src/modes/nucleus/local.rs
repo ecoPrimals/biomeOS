@@ -253,6 +253,20 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
             )
             .await?;
 
+        // Store cellMembrane boot_order_index so shutdown reverses startup order
+        #[expect(clippy::cast_possible_truncation, reason = "primal count < u32::MAX")]
+        let boot_idx = primals_needed
+            .iter()
+            .position(|p| p == primal)
+            .map(|i| i as u32);
+        if let Some(idx) = boot_idx {
+            lifecycle_shared
+                .read()
+                .await
+                .set_boot_order_index(primal.as_str(), idx)
+                .await;
+        }
+
         // Primals using .jsonrpc.sock typically expose `health.status` rather
         // than the legacy `health` method. Register the namespaced method.
         if health_socket != socket_path {

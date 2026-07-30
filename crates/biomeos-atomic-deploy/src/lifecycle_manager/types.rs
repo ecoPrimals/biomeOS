@@ -108,6 +108,10 @@ pub struct ManagedPrimal {
     /// Dependents (primal names that depend on this)
     pub depended_by: Vec<String>,
 
+    /// Boot order index from cellMembrane (lower = earlier startup, higher = later shutdown).
+    /// When set, shutdown reverses this order for graceful cascade.
+    pub boot_order_index: Option<u32>,
+
     /// Health check configuration
     pub health_config: HealthConfig,
 
@@ -287,6 +291,7 @@ mod tests {
             node_id: Some("east-gate".to_string()),
             depends_on: vec![],
             depended_by: vec!["songbird".to_string()],
+            boot_order_index: Some(0),
             health_config: HealthConfig::default(),
             resurrection_config: ResurrectionConfig::default(),
             metrics: PrimalMetrics::default(),

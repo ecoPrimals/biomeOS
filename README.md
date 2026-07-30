@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v4.47)
+## Status: Production Ready (v4.48)
 
 | Metric | Value |
 |--------|-------|
@@ -369,7 +369,7 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v4.47)
+**Status**: Production Ready (v4.48)
 **Updated**: July 29, 2026
 **Tests**: 8,564+ workspace-wide (0 regressions), 88%+ line / function (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings (incl tests) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP; HTTP removed v3.97) | L4 weighted routing + L5 perceptron shadow | Capability-first discovery (runtime DashMap + bootstrap fallback) + `capability.call` + mesh cross-gate relay | `--bind-mode` guideStone startup | HEALTH-01 compliant | Real metrics via biomeos-system | Lineage fail-closed | Agnostic naming | Adaptive routing weights (redb-persistent) | Stale registration pruning | Partition-aware routing | Membrane + nucleated composition | XDG-compliant paths | Cross-arch (x86_64 + aarch64 + armv7 + Windows-gnu) | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)

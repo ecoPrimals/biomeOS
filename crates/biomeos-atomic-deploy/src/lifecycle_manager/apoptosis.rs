@@ -101,28 +101,39 @@ impl LifecycleManager {
         Ok(())
     }
 
-    /// Initiate system-wide shutdown
+    /// Initiate system-wide shutdown.
+    ///
+    /// Shutdown order respects cellMembrane `boot_order_index` when available
+    /// (reverse of startup: highest index shuts down first). Falls back to
+    /// dependent-count heuristic for primals without boot_order metadata.
     pub async fn shutdown_all(&self) -> Result<()> {
         info!("🛑 Initiating system-wide shutdown");
 
         // Set shutdown flag
         *self.shutdown.write().await = true;
 
-        // Get all primals in dependency order (reverse topological)
         let primals = self.primals.read().await;
         let mut shutdown_order: Vec<String> = primals.keys().cloned().collect();
 
-        // Sort by number of dependents (most dependents first = shutdown last)
-        shutdown_order.sort_by_key(|name| {
-            primals
-                .get(name)
-                .map(|p| std::cmp::Reverse(p.depended_by.len()))
-                .unwrap_or(std::cmp::Reverse(0))
+        // Primary sort: reverse boot_order_index (highest = shutdown first).
+        // Secondary: dependent count heuristic for primals without boot_order.
+        shutdown_order.sort_by(|a, b| {
+            let a_primal = primals.get(a);
+            let b_primal = primals.get(b);
+
+            let a_idx = a_primal.and_then(|p| p.boot_order_index).unwrap_or(u32::MAX);
+            let b_idx = b_primal.and_then(|p| p.boot_order_index).unwrap_or(u32::MAX);
+
+            // Reverse: higher boot_order_index shuts down first
+            b_idx.cmp(&a_idx).then_with(|| {
+                let a_deps = a_primal.map(|p| p.depended_by.len()).unwrap_or(0);
+                let b_deps = b_primal.map(|p| p.depended_by.len()).unwrap_or(0);
+                a_deps.cmp(&b_deps)
+            })
         });
 
         drop(primals);
 
-        // Shutdown in order
         for name in shutdown_order {
             self.apoptosis(&name, ApoptosisReason::SystemShutdown)
                 .await

@@ -18,12 +18,37 @@ use tracing::debug;
 struct EcosystemManifestCompositions {
     #[serde(default)]
     compositions: HashMap<String, CompositionProfile>,
+    #[serde(default)]
+    boot_order: Option<BootOrderConfig>,
 }
 
 #[derive(Deserialize)]
 struct CompositionProfile {
     #[serde(default)]
     primals: Vec<String>,
+}
+
+/// cellMembrane `boot_order` configuration (shipped b7707ee).
+///
+/// Declares the authoritative startup sequence for compositions. When present,
+/// this overrides the static `bootstrap_launch_order()` to ensure biomeOS
+/// respects cellMembrane's deployment-proven ordering.
+///
+/// Format in `ecosystem_manifest.toml`:
+/// ```toml
+/// [boot_order]
+/// sequence = ["beardog", "songbird", "skunkbat", "nestgate", ...]
+/// strategy = "sequential"  # or "phased"
+/// ```
+#[derive(Deserialize, Clone)]
+struct BootOrderConfig {
+    sequence: Vec<String>,
+    #[serde(default = "default_boot_strategy")]
+    strategy: String,
+}
+
+fn default_boot_strategy() -> String {
+    "sequential".to_string()
 }
 
 /// Composition keys in `ecosystem_manifest.toml` used for each nucleus mode.
@@ -99,6 +124,40 @@ fn discover_primals_from_manifest(mode: NucleusMode, manifest_path: &Path) -> Op
     Some(discovered.into_iter().collect())
 }
 
+/// Extract `boot_order` from the ecosystem manifest if present.
+///
+/// cellMembrane ships `boot_order.sequence` (commit b7707ee) declaring the
+/// deployment-proven startup ordering. When available, this takes precedence
+/// over both static bootstrap hints and composition-profile discovery.
+fn extract_boot_order(manifest_path: &Path) -> Option<Vec<String>> {
+    let raw = std::fs::read_to_string(manifest_path).ok()?;
+    let manifest: EcosystemManifestCompositions = toml::from_str(&raw).ok()?;
+
+    let boot_order = manifest.boot_order?;
+    if boot_order.sequence.is_empty() {
+        return None;
+    }
+
+    let ordered: Vec<String> = boot_order
+        .sequence
+        .iter()
+        .map(|name| normalize_primal_name(name))
+        .filter(|name| name != "biomeos")
+        .collect();
+
+    if ordered.is_empty() {
+        return None;
+    }
+
+    debug!(
+        strategy = %boot_order.strategy,
+        count = ordered.len(),
+        "cellMembrane boot_order consumed — overrides bootstrap launch order"
+    );
+
+    Some(ordered)
+}
+
 /// Merge manifest-discovered primals with bootstrap cold-start order.
 ///
 /// Bootstrap order is always preserved for known mode requirements; manifest
@@ -129,11 +188,28 @@ pub(super) fn merge_discovered_with_bootstrap(
 }
 
 /// Attempt runtime discovery from `ecosystem_manifest.toml`.
+///
+/// Resolution priority:
+/// 1. `[boot_order]` section (cellMembrane-authoritative, b7707ee) — ordered sequence
+/// 2. `[compositions.*]` profiles — unordered set merged with bootstrap hints
+/// 3. Static `bootstrap_launch_order()` — cold-start fallback
 pub(super) fn try_discover_launch_set(mode: NucleusMode, bootstrap: &[&str]) -> Vec<String> {
     let Some(manifest_path) = resolve_manifest_path() else {
         return bootstrap.iter().map(|p| (*p).to_string()).collect();
     };
 
+    // Priority 1: cellMembrane boot_order (authoritative deployment ordering)
+    if let Some(boot_order) = extract_boot_order(&manifest_path) {
+        debug!(
+            manifest = %manifest_path.display(),
+            mode = ?mode,
+            count = boot_order.len(),
+            "using cellMembrane boot_order as authoritative launch sequence"
+        );
+        return filter_boot_order_for_mode(mode, &boot_order, bootstrap);
+    }
+
+    // Priority 2: composition profiles (unordered set, merged with bootstrap)
     let Some(discovered) = discover_primals_from_manifest(mode, &manifest_path) else {
         debug!(
             manifest = %manifest_path.display(),
@@ -150,6 +226,35 @@ pub(super) fn try_discover_launch_set(mode: NucleusMode, bootstrap: &[&str]) -> 
         "resolved launch set from ecosystem manifest compositions"
     );
     merge_discovered_with_bootstrap(bootstrap, discovered)
+}
+
+/// Filter `boot_order` sequence to only include primals relevant to `mode`.
+///
+/// The full `boot_order` sequence declares ordering for the entire NUCLEUS.
+/// For partial modes (Tower, Node, Nest), we preserve the order but filter
+/// to only the primals that belong to that composition tier.
+fn filter_boot_order_for_mode(
+    _mode: NucleusMode,
+    boot_order: &[String],
+    bootstrap: &[&str],
+) -> Vec<String> {
+    let required: HashSet<&str> = bootstrap.iter().copied().collect();
+
+    // Keep boot_order items that are in the required set for this mode
+    let mut result: Vec<String> = boot_order
+        .iter()
+        .filter(|name| required.contains(name.as_str()))
+        .cloned()
+        .collect();
+
+    // Append any required primals not in boot_order (safety net)
+    for name in bootstrap {
+        if !result.iter().any(|r| r == name) {
+            result.push((*name).to_string());
+        }
+    }
+
+    result
 }
 
 #[cfg(test)]
@@ -239,5 +344,100 @@ primals = ["bearDog", "songBird", "skunkBat", "toadStool", "barraCuda", "coralRe
     #[test]
     fn core_mode_has_no_manifest_composition_keys() {
         assert!(composition_keys_for_mode(NucleusMode::Core).is_empty());
+    }
+
+    #[test]
+    fn boot_order_overrides_composition_profiles() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = write_manifest(
+            dir.path(),
+            r#"
+[boot_order]
+sequence = ["bearDog", "songBird", "skunkBat", "nestGate", "rhizoCrypt", "loamSpine", "sweetGrass", "toadStool", "coralReef", "barraCuda", "squirrel", "petalTongue"]
+strategy = "sequential"
+"#,
+        );
+
+        let boot_order = extract_boot_order(&path).expect("boot_order present");
+        assert_eq!(boot_order.len(), 12);
+        assert_eq!(boot_order[0], "beardog");
+        assert_eq!(boot_order[3], "nestgate");
+    }
+
+    #[test]
+    fn boot_order_filters_for_tower_mode() {
+        let boot_order = vec![
+            "beardog".to_string(),
+            "songbird".to_string(),
+            "skunkbat".to_string(),
+            "nestgate".to_string(),
+            "toadstool".to_string(),
+        ];
+        let bootstrap = NucleusMode::Tower.bootstrap_launch_order();
+        let result = filter_boot_order_for_mode(NucleusMode::Tower, &boot_order, &bootstrap);
+        assert_eq!(result, vec!["beardog", "songbird", "skunkbat"]);
+    }
+
+    #[test]
+    fn boot_order_filters_for_node_mode_preserves_order() {
+        let boot_order = vec![
+            "beardog".to_string(),
+            "songbird".to_string(),
+            "skunkbat".to_string(),
+            "nestgate".to_string(),
+            "toadstool".to_string(),
+            "coralreef".to_string(),
+            "barracuda".to_string(),
+        ];
+        let bootstrap = NucleusMode::Node.bootstrap_launch_order();
+        let result = filter_boot_order_for_mode(NucleusMode::Node, &boot_order, &bootstrap);
+        assert_eq!(
+            result,
+            vec![
+                "beardog",
+                "songbird",
+                "skunkbat",
+                "toadstool",
+                "coralreef",
+                "barracuda"
+            ]
+        );
+    }
+
+    #[test]
+    fn boot_order_excludes_biomeos() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = write_manifest(
+            dir.path(),
+            r#"
+[boot_order]
+sequence = ["bearDog", "songBird", "biomeOS", "skunkBat"]
+strategy = "sequential"
+"#,
+        );
+        let boot_order = extract_boot_order(&path).expect("boot_order present");
+        assert!(!boot_order.contains(&"biomeos".to_string()));
+        assert_eq!(boot_order.len(), 3);
+    }
+
+    #[test]
+    fn boot_order_appends_missing_required_primals() {
+        let boot_order = vec!["beardog".to_string(), "songbird".to_string()];
+        let bootstrap = NucleusMode::Tower.bootstrap_launch_order();
+        let result = filter_boot_order_for_mode(NucleusMode::Tower, &boot_order, &bootstrap);
+        assert_eq!(result, vec!["beardog", "songbird", "skunkbat"]);
+    }
+
+    #[test]
+    fn empty_boot_order_returns_none() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = write_manifest(
+            dir.path(),
+            "
+[boot_order]
+sequence = []
+",
+        );
+        assert!(extract_boot_order(&path).is_none());
     }
 }
