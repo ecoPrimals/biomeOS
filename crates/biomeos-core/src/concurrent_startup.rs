@@ -190,7 +190,7 @@ pub async fn start_in_waves(
         }
 
         // Wait for all tasks in this wave to complete
-        let results = futures::future::join_all(tasks).await;
+        let results = futures_util::future::join_all(tasks).await;
 
         // Check for errors
         for result in results {

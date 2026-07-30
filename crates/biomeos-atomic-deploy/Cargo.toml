@@ -34,7 +34,7 @@ tokio-serde = { workspace = true }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
 biomeos-system = { path = "../biomeos-system", version = "0.1.0" }
 chrono = { workspace = true }
-futures = { workspace = true }
+futures-util = { workspace = true }
 uuid = { workspace = true }  # For request ID generation
 toml = { workspace = true }  # For Neural API graph parsing
 redb = { workspace = true }  # Persistent routing weights (ecoBin compliant)

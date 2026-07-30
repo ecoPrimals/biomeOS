@@ -10,7 +10,7 @@ rust-version.workspace = true
 [dependencies]
 # Async runtime
 tokio = { workspace = true, features = ["net", "fs"] }
-futures = { workspace = true }
+tokio-stream = { workspace = true }
 
 # Error handling
 anyhow = { workspace = true }

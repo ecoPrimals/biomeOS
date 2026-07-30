@@ -420,7 +420,7 @@ impl NeuralApiServer {
                     })
                     .collect();
 
-                let results = futures::future::join_all(futures).await;
+                let results = futures_util::future::join_all(futures).await;
                 if results.is_empty() {
                     None
                 } else {
