@@ -9,7 +9,7 @@ use axum::{
     extract::State,
     response::sse::{Event, KeepAlive, Sse},
 };
-use futures::stream::{self, Stream, StreamExt as FuturesStreamExt};
+use futures_util::stream::{self, Stream, StreamExt as FuturesStreamExt};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -156,7 +156,7 @@ pub async fn event_stream(
     });
 
     // --- Merge both streams: graph events arrive instantly, ecosystem polls at 5s ---
-    let merged = futures::stream::select(graph_sse, eco_sse);
+    let merged = futures_util::stream::select(graph_sse, eco_sse);
 
     Sse::new(merged).keep_alive(KeepAlive::default())
 }

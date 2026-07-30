@@ -17,7 +17,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
-futures = { workspace = true }
+futures-util = { workspace = true }
 
 # Tokio for async runtime
 tokio = { workspace = true, features = ["net", "io-util", "fs"] }
@@ -40,6 +40,7 @@ biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio = { workspace = true, features = ["test-util"] }
 tempfile = { workspace = true }
 temp-env = { workspace = true }
+futures = { workspace = true }
 
 [lints]
 workspace = true

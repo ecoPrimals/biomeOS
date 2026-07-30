@@ -46,7 +46,7 @@ use anyhow::Context;
 use anyhow::Result;
 use biomeos_types::tarpc_types::HealthRpc;
 #[cfg(unix)]
-use futures::StreamExt;
+use futures_util::StreamExt;
 #[cfg(unix)]
 use tarpc::serde_transport::unix;
 #[cfg(unix)]
@@ -149,7 +149,7 @@ pub async fn serve_tarpc_health(
                 let channel = BaseChannel::with_defaults(transport);
                 let requests = channel.execute(service.serve());
                 let mut requests = Box::pin(requests);
-                while let Some(fut) = futures::StreamExt::next(&mut requests).await {
+                while let Some(fut) = futures_util::StreamExt::next(&mut requests).await {
                     fut.await;
                 }
             }

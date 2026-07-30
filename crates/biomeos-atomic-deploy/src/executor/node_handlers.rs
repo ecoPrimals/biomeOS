@@ -181,9 +181,7 @@ pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Resul
         .get("result")
         .and_then(|r| r.get("healthy"))
         .and_then(serde_json::Value::as_bool)
-        .unwrap_or_else(|| {
-            response.get("result").is_some() && response.get("error").is_none()
-        });
+        .unwrap_or_else(|| response.get("result").is_some() && response.get("error").is_none());
 
     if healthy {
         info!("✅ {} is healthy", primal_name);

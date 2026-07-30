@@ -157,27 +157,8 @@ pub fn relay_port() -> u16 {
     )
 }
 
-// Backward-compatible aliases (deprecated — use capability-oriented names)
-/// Link local address range
-pub const LINK_LOCAL_RANGE: &str = "169.254.0.0/16";
-
-/// Multicast address range
-pub const MULTICAST_RANGE: &str = "224.0.0.0/4";
-
 /// mDNS multicast address (RFC 6762)
 pub const MDNS_MULTICAST_ADDR: &str = "224.0.0.251:5353";
-
-/// Private Class A network
-pub const PRIVATE_CLASS_A: &str = "10.0.0.0/8";
-
-/// Private Class B network
-pub const PRIVATE_CLASS_B: &str = "172.16.0.0/12";
-
-/// Private Class C network
-pub const PRIVATE_CLASS_C: &str = "192.168.0.0/16";
-
-/// Default MCP subprotocol
-pub const DEFAULT_MCP_SUBPROTOCOL: &str = "mcp";
 
 /// Default user agent
 pub const DEFAULT_USER_AGENT: &str = "biomeOS/1.0";

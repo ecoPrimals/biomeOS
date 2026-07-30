@@ -11,8 +11,8 @@
 //! privileges; rtnetlink does not invoke sudo.
 
 use crate::error::{DeployError, Result};
-use tokio_stream::StreamExt;
 use std::net::IpAddr;
+use tokio_stream::StreamExt;
 use tracing::{info, warn};
 
 use rtnetlink::{LinkBridge, LinkUnspec};

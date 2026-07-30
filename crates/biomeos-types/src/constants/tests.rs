@@ -147,11 +147,7 @@ fn test_network_accessors() {
     let _ = network::discovery_port();
     assert_eq!(network::DEFAULT_HTTP_PORT, 8080);
     assert_eq!(network::DEFAULT_DISCOVERY_PORT, 8001);
-    assert_eq!(network::LINK_LOCAL_RANGE, "169.254.0.0/16");
-    assert_eq!(network::PRIVATE_CLASS_A, "10.0.0.0/8");
-    assert_eq!(network::PRIVATE_CLASS_B, "172.16.0.0/12");
-    assert_eq!(network::PRIVATE_CLASS_C, "192.168.0.0/16");
-    assert_eq!(network::DEFAULT_MCP_SUBPROTOCOL, "mcp");
+    assert_eq!(network::MDNS_MULTICAST_ADDR, "224.0.0.251:5353");
 }
 
 #[test]
@@ -292,7 +288,6 @@ fn test_runtime_paths_fallback_dir() {
 
 #[test]
 fn test_network_remaining_constants() {
-    assert_eq!(network::MULTICAST_RANGE, "224.0.0.0/4");
     assert_eq!(network::DEFAULT_USER_AGENT, "biomeOS/1.0");
     assert_eq!(network::DEFAULT_CONTENT_TYPE, "application/json");
     assert_eq!(network::DEFAULT_DEV_PORT, 5000);

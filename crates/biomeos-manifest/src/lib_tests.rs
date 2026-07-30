@@ -1,4 +1,3 @@
-
 use super::*;
 use biomeos_types::manifest::service::{
     DependencyCondition, ImagePullPolicy, ImageSpec, PortProtocol, PortSpec, RestartPolicy,
