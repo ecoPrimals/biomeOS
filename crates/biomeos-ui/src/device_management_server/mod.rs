@@ -107,6 +107,9 @@ pub async fn run() -> Result<()> {
     info!("📡 Binding to Unix socket: {}", socket_path);
     let listener = UnixListener::bind(&socket_path).context("Failed to bind Unix socket")?;
 
+    #[cfg(unix)]
+    biomeos_core::ipc::apply_socket_ownership(std::path::Path::new(&socket_path));
+
     info!("✅ biomeOS Device Management Server ready");
     info!("📡 Advertising capability: device.management");
 

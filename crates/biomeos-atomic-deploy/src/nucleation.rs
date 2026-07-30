@@ -83,6 +83,8 @@ impl SocketNucleation {
             if let Err(e) = std::fs::create_dir_all(parent) {
                 tracing::warn!("Failed to create socket dir {}: {e}", parent.display());
             }
+            #[cfg(unix)]
+            apply_dir_group_ownership(parent);
         }
 
         info!("📍 Socket assigned: {} → {:?}", key, socket);
@@ -202,9 +204,17 @@ impl SocketNucleation {
         if let Err(e) = std::fs::create_dir_all(&resolved) {
             tracing::warn!("Failed to create runtime dir: {}", e);
         }
+        #[cfg(unix)]
+        apply_dir_group_ownership(&resolved);
 
         resolved.join(format!("{}-{}.sock", primal, family_id))
     }
+}
+
+/// Set group ownership + `0o770` on a socket directory for multi-user access.
+#[cfg(unix)]
+fn apply_dir_group_ownership(dir: &Path) {
+    biomeos_core::ipc::apply_dir_ownership(dir);
 }
 
 #[cfg(test)]

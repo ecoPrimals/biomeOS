@@ -2,6 +2,28 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.51 (2026-07-30) — Wave 155m: Socket Ownership + Upstream Triage
+
+### Socket Ownership Fix (P2) — Multi-User Access
+- Root cause: sockets created by biomeOS inherited the calling process's UID/GID.
+  On multi-user gates (sporeGate Sovereign CI), other users in the `membrane` group
+  could not connect despite `0o660` permissions — group was still the user's primary.
+- Fix: centralized `apply_socket_ownership()` in `biomeos-core::ipc` called post-bind.
+  Sets `0o660` + `chown :<MEMBRANE_SOCKET_GROUP>` (env, default `membrane`).
+  Reads `/etc/group` for GID resolution. Non-fatal on failure.
+- `apply_dir_ownership()` for socket directories: `0o770` + group chown.
+- Consolidated: removed 3 duplicate `set_permissions` call sites.
+- Coverage: `TransportListener::bind_unix`, capability registry, device management,
+  socket nucleation directories.
+- Env var: `MEMBRANE_SOCKET_GROUP` overrides the default `membrane` group.
+
+### Upstream Triage (Not biomeOS Code)
+- `rootpulse.ledger`: operational — needs `membrane rootpulse.commit` on sporeGate
+- Sandbox false positive: cellMembrane `spawn_primal_server` uses `server --socket`
+  but biomeOS needs `neural-api --socket`. Fix in cellMembrane's sandbox spawn logic.
+
+---
+
 ## v4.50 (2026-07-30) — Wave 155m: P2 Socket Evaporation + Binary Path Retention
 
 ### Socket Evaporation Fix — RPC Ping Tolerance (P2)

@@ -4,9 +4,9 @@ Session handoff documents for upstream overwatch audit.
 
 Each file captures: what was done, metrics before/after, commits produced, and next-wave candidates.
 
-## ⚡ STATUS: ALL P0/P1/P2 RESOLVED — v4.50 STANDBY
+## ⚡ STATUS: ALL biomeOS-OWNED P0/P1/P2 RESOLVED — v4.51 STANDBY
 
-**Version**: v4.50 | **Tests**: 8,570+ | **P2 open**: 0 | **Posture**: STANDBY-READY
+**Version**: v4.51 | **Tests**: 8,570+ | **biomeOS P2 open**: 0 | **Posture**: STANDBY-READY
 
 ### Chain 1: biomeOS Orchestration Lifecycle — COMPLETE (v4.44–v4.48)
 
@@ -18,7 +18,7 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 | 4 | Socket evaporation fix (persistence) | v4.46 | `bd202674` |
 | 5 | Socket path unification (membrane/) | v4.46 | `bd202674` |
 
-### P2 Divergences — ALL RESOLVED (v4.49 + v4.50)
+### P2 Divergences — ALL biomeOS-OWNED RESOLVED (v4.49 + v4.50 + v4.51)
 
 | Divergence | Version | Fix |
 |-----------|---------|-----|
@@ -27,6 +27,18 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 | API 403 on non-/health | v4.49 | Intentional Dark Forest (documented) |
 | Socket evaporation (health ping format) | v4.50 | RPC ping tolerance — `Ok(_)` = alive |
 | Binary path retention (blocks resurrection) | v4.50 | Auto-discovery probes plasmidBin |
+| Socket ownership (multi-user) | v4.51 | `chown :membrane` post-bind + MEMBRANE_SOCKET_GROUP env |
+
+### Upstream Items (Not biomeOS Code)
+
+| Issue | Owner | Fix |
+|-------|-------|-----|
+| rootpulse.ledger not implemented | cellMembrane/sporeGate | Run `membrane rootpulse.commit` |
+| Sandbox false positive for broker primals | cellMembrane | `spawn_primal_server` → use `neural-api --socket` |
+| checksums.toml partial update on harvest | sporeGate CI | Full regeneration after staging |
+| cellMembrane not in sources.toml | cellMembrane | Add self-entry |
+| /run/membrane tmpfiles.d rule | infra/systemd | `tmpfiles.d/membrane.conf` |
+| golgi post-receive hook not auto-firing | golgiBody | Post-receive hook config |
 
 ---
 
@@ -34,7 +46,8 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
-| **155m** | Jul 30, 2026 | **P2 socket evaporation + binary path retention fix (v4.50)** |
+| **155m-b** | Jul 30, 2026 | **Socket ownership fix (v4.51) + upstream triage** |
+| 155m | Jul 30, 2026 | P2 socket evaporation + binary path retention fix (v4.50) |
 | 155k | Jul 30, 2026 | P2 divergence fixes: capability wipe cycle, socket docs, Dark Forest clarification |
 | 155j | Jul 30, 2026 | Composition lifecycle: cellMembrane boot_order integration, Chain 1 complete |
 | 155i-c | Jul 29, 2026 | Deep debt cleanup: dead deps purged, test extraction, capability-based BTSP resolution |

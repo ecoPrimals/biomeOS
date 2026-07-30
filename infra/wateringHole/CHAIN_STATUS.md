@@ -1,7 +1,7 @@
 # biomeOS — Chain Status for Overwatch
 
-**Last Updated**: July 30, 2026 12:15 EDT
-**Version**: v4.50
+**Last Updated**: July 30, 2026 13:30 EDT
+**Version**: v4.51
 **Team**: biomeOS
 **Gate**: eastGate
 
@@ -52,7 +52,7 @@
 
 ---
 
-## P2 Divergences — ALL RESOLVED (Wave 155k + 155m)
+## P2 Divergences — ALL biomeOS-OWNED RESOLVED (Wave 155k + 155m)
 
 | Divergence | Resolution | Version |
 |-----------|-----------|---------|
@@ -61,18 +61,32 @@
 | API 403 on non-/health | Intentional Dark Forest sovereign behavior (documented) | v4.49 |
 | Socket evaporation (health ping format) | RPC ping tolerance — `Ok(_)` = alive | v4.50 |
 | Binary path retention (blocks resurrection) | Auto-discovery probes plasmidBin, stores path | v4.50 |
+| Socket ownership (multi-user access) | `chown :membrane` post-bind + MEMBRANE_SOCKET_GROUP | v4.51 |
+
+---
+
+## Upstream Items (Not biomeOS Code)
+
+| Issue | Owner | Fix Required |
+|-------|-------|-------------|
+| rootpulse.ledger not implemented | cellMembrane/sporeGate | Run `membrane rootpulse.commit` on gate |
+| Sandbox false positive for broker primals | cellMembrane | Use `neural-api --socket` not `server --socket` |
+| checksums.toml partial update | sporeGate CI | Full regeneration after staging |
+| cellMembrane not in sources.toml | cellMembrane | Add self-entry for self-rebuild |
+| /run/membrane tmpfiles.d rule | infra/systemd | Create `tmpfiles.d/membrane.conf` |
+| golgi post-receive hook | golgiBody | Post-receive hook config |
 
 ---
 
 ## biomeOS Posture: STANDBY-READY
 
-biomeOS Chain 1 is complete. **All P2 divergences resolved (11 total across waves).**
+biomeOS Chain 1 is complete. **All 12 biomeOS-owned P2 divergences resolved.**
 Team in **STANDBY** pending:
-- NUCLEUS v4.50 redeploy on strandGate (socket evaporation fix live)
+- NUCLEUS v4.51 redeploy on strandGate
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)
 
-### Metrics (v4.50)
+### Metrics (v4.51)
 
 | Metric | Value |
 |--------|-------|
@@ -83,5 +97,5 @@ Team in **STANDBY** pending:
 | TODOs in prod | 0 |
 | Dead code | 0 |
 | cargo deny | clean |
-| Version | v4.50 |
-| P0/P1/P2 | ZERO open |
+| Version | v4.51 |
+| biomeOS P0/P1/P2 | ZERO open |

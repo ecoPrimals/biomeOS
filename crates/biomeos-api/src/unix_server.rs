@@ -50,22 +50,12 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
         .await
         .context("Failed to bind transport listener")?;
 
-    // Set permissions (0660 - owner + group) to allow songBird TLS delegation
-    // within the membrane group while blocking world access.
-    #[cfg(unix)]
-    {
-        use std::fs;
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(socket_path, fs::Permissions::from_mode(0o660))
-            .context("Failed to set socket permissions")?;
-    }
-
     info!(
         "📡 biomeOS API listening on {} ({})",
         listener.local_addr_display(),
         socket_path.display()
     );
-    info!("   Security: Owner-only (0600 permissions)");
+    info!("   Security: owner+group (0660, chown :membrane)");
     info!("   Protocol: HTTP + raw JSON-RPC (auto-detect)");
     info!("   Port-free: ✅ TRUE PRIMAL architecture!");
 

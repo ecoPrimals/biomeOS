@@ -89,15 +89,8 @@ impl CapabilityRegistry {
             )
         })?;
 
-        // Restrict socket permissions post-bind (owner + group for TLS delegation)
         #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let perms = std::fs::Permissions::from_mode(0o660);
-            if let Err(e) = std::fs::set_permissions(&self.socket_path, perms) {
-                tracing::warn!("Failed to set socket permissions: {e}");
-            }
-        }
+        crate::ipc::apply_socket_ownership(&self.socket_path);
 
         if let Some(f) = on_ready {
             f();

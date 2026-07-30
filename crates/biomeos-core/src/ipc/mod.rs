@@ -35,6 +35,8 @@ pub use connect::{connect_transport, connect_transport_timed};
 
 mod listener;
 pub use listener::TransportListener;
+#[cfg(unix)]
+pub use listener::{apply_dir_ownership, apply_socket_ownership};
 
 mod jsonrpc;
 pub use jsonrpc::{

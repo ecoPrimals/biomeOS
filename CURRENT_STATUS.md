@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: July 30, 2026
-**Version**: v4.50 (Wave 155m)
-**Posture**: STANDBY — All P0/P1/P2 blockers resolved. ZERO open divergences.
+**Version**: v4.51 (Wave 155m)
+**Posture**: STANDBY — All biomeOS-owned P0/P1/P2 blockers resolved.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -43,6 +43,7 @@
 | Plasmodium | Remote compute discovery + workload dispatch |
 | Lifecycle Manager | Auto-resurrection, boot_order shutdown, binary path retention |
 | Socket Discovery | XDG `membrane/` standard, lazy rescan, family-scoped |
+| Socket Ownership | `MEMBRANE_SOCKET_GROUP` env, chown :membrane post-bind |
 | Health Ping | RPC-tolerant — any JSON-RPC success = alive |
 
 ---
@@ -61,6 +62,7 @@
 | Dependency narrowing (futures→futures-util) | v4.49 | `80e79600` |
 | Socket evaporation fix (RPC ping tolerance) | v4.50 | Wave 155m |
 | Binary path retention (auto-discovery) | v4.50 | Wave 155m |
+| Socket ownership (multi-user chown) | v4.51 | Wave 155m |
 
 ---
 
@@ -77,9 +79,13 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **STANDBY-READY**. All 11 P2 divergences resolved (9 in 155k + 2 in 155m).
+biomeOS is **STANDBY-READY**. All 12 biomeOS-owned P2 divergences resolved (9 in 155k + 3 in 155m).
+
+Upstream items (not biomeOS code):
+- `rootpulse.ledger`: operational — run `membrane rootpulse.commit` on sporeGate
+- Sandbox false positive: cellMembrane `spawn_primal_server` → needs `neural-api --socket`
 
 Resume triggers:
-- NUCLEUS E2E validation on strandGate (biomeOS v4.50 redeploy)
+- NUCLEUS E2E validation on strandGate (biomeOS v4.51 redeploy)
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)
