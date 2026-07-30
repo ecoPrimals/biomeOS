@@ -67,10 +67,11 @@ pub fn is_security_provider_socket(path: &Path) -> bool {
         return true;
     }
 
+    let provider = resolved_security_provider_name();
     path.file_name()
         .and_then(|f| f.to_str())
         .is_some_and(|name| {
-            name.starts_with("beardog")
+            name.starts_with(provider.as_str())
                 && Path::new(name)
                     .extension()
                     .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
@@ -121,13 +122,7 @@ pub fn security_provider_socket_path() -> Option<std::path::PathBuf> {
         }
     }
 
-    let provider = std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
-        .ok()
-        .or_else(|| {
-            biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
-                .map(String::from)
-        })
-        .unwrap_or_else(|| primal_names::BEARDOG.to_string());
+    let provider = resolved_security_provider_name();
 
     let socket_dir = socket_dir()?;
     if let Some(fid) = family_id() {
@@ -155,6 +150,21 @@ fn socket_dir() -> Option<std::path::PathBuf> {
         }
     }
     None
+}
+
+/// Resolve the security provider name via capability taxonomy or environment.
+///
+/// Returns the primal identifier that provides the "security" capability.
+/// Falls back to `primal_names::BEARDOG` only when neither the taxonomy nor
+/// the `BIOMEOS_SECURITY_PROVIDER` env var resolves a provider.
+fn resolved_security_provider_name() -> String {
+    std::env::var(biomeos_types::env_config::vars::SECURITY_PROVIDER)
+        .ok()
+        .or_else(|| {
+            biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
+                .map(String::from)
+        })
+        .unwrap_or_else(|| primal_names::BEARDOG.to_string())
 }
 
 /// Check that `FAMILY_ID` and `BIOMEOS_INSECURE` are not both set.

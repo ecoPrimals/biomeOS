@@ -164,9 +164,7 @@ rtnetlink = "0.20"
 # CLI / TUI helpers
 indicatif = "0.17"
 colored = "2.1"
-console = "0.15"
 comfy-table = "7.0"
-humantime = "2.1"
 
 # Storage / codecs
 redb = "2.4"
@@ -174,7 +172,6 @@ lz4_flex = "0.14"
 hex = "0.4"
 
 # Async I/O & bytes helpers
-async-fs = "2.1"
 serde_bytes = "0.11"
 
 # Testing

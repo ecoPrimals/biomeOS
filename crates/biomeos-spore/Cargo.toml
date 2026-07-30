@@ -34,7 +34,6 @@ base64 = { workspace = true }  # For beacon encoding
 rustix = { workspace = true, features = ["fs", "process", "system"] }  # statvfs + kill + uname
 hex = { workspace = true }  # For hex encoding
 uuid = { workspace = true }  # For unique IDs
-async-fs = { workspace = true }  # For async file operations
 
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
@@ -54,7 +53,6 @@ biomeos-spore = { path = ".", version = "0.1.0", features = ["test-support"] }
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
-futures = { workspace = true }
 tracing-subscriber = { workspace = true }
 criterion = { workspace = true, features = ["async_tokio"] }
 

@@ -37,10 +37,8 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["json"] }
 chrono = { workspace = true }
 indicatif = { workspace = true }
-console = { workspace = true }
 colored = { workspace = true }
 comfy-table = { workspace = true }
-humantime = { workspace = true }
 # sysinfo removed (ecoBin v3): use biomeos-system pure /proc metrics
 uuid = { workspace = true }
 base64 = { workspace = true }
