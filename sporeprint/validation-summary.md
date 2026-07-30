@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel — composition broker, BTSP session propagation, riboCipher transport, NUCLEUS supervisor, 27 capability domains, 320+ translations, 43 deploy graphs, 27 signal graphs, zero blocking debt"
-date = 2026-07-29
+description = "Orchestration kernel v4.49 — composition broker, BTSP, riboCipher, NUCLEUS supervisor, boot_order lifecycle, capability wipe fix, 27 domains, 320+ translations, 27 signal graphs, zero blocking debt"
+date = 2026-07-30
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -9,21 +9,14 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,564+ tests** workspace-wide, 0 failures, fully concurrent
+- **8,570+ tests** workspace-wide, 0 failures, fully concurrent
 - **88%+ coverage** line / region / function (llvm-cov workspace-wide)
+- **v4.49** — Wave 155k: P2 divergence fixes — capability wipe cycle, test extraction, dep narrowing
+- **v4.48** — Wave 155j: Composition lifecycle — cellMembrane boot_order integration
 - **v4.47** — Wave 155i: Deep debt cleanup — dead deps, test extraction, capability-based BTSP
 - **v4.46** — Wave 155i: NUCLEUS Orchestrator — riboCipher executor, socket unification, persistence
 - **v4.45** — Wave 155i: Composition Broker E2E + deep debt audit clean
 - **v4.44** — Wave 155i: riboCipher framing + BTSP session propagation in signal graph executor
-- **v4.43** — Wave 155d: Live signal graph validation — tower.health + tower.mesh_status
-- **v4.42** — Wave 155b: Plasmodium G8 multi-gate bonding + workload dispatch
-- **v4.41** — Wave 151c: Deep debt cleanup + 100% clippy --tests
-- **v4.40** — Wave 151b: SDK BTSP handshake evolution, strict mode ready
-- **v4.39** — Wave 150y: Neural Router pool integration + chimera schema Phase 0
-- **v4.38** — Wave 150x: Connection pooling + service crash-loop guard
-- **v4.37** — Wave 150t: Deep debt clippy zero + transport assessment
-- **v4.36** — Wave 149b: Gap resolution + executor introspection
-- **v4.35** — Wave 144b: Phase 2 transport + deep debt + manifest discovery
 - **27 capability domains**, **320+ translations** across 13 primals
 - **27 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
 - **43 deploy graphs** (incl. membrane_deploy, provenance trio, 2 pipeline coordination)
@@ -86,17 +79,14 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
-| v4.45 | Jul 29 | Composition Broker E2E + connection pool buffered IO + deep debt audit clean |
+| v4.49 | Jul 30 | P2 fixes: capability wipe cycle 3-strike, 8-file test extraction, dep narrowing |
+| v4.48 | Jul 30 | Composition lifecycle: cellMembrane boot_order, shutdown ordering |
+| v4.47 | Jul 29 | Deep debt: dead deps, test extraction, capability-based BTSP |
+| v4.46 | Jul 29 | NUCLEUS Orchestrator: riboCipher executor, socket unification, persistence |
+| v4.45 | Jul 29 | Composition Broker E2E + connection pool buffered IO |
 | v4.44 | Jul 29 | riboCipher framing + BTSP session propagation in signal graph executor |
-| v4.43 | Jul 28 | Live signal graph validation — tower.health + tower.mesh_status (19→27 graphs) |
+| v4.43 | Jul 28 | Live signal graph validation — tower.health + tower.mesh_status |
 | v4.42 | Jul 27 | Plasmodium G8 multi-gate bonding + workload dispatch |
-| v4.41 | Jul 26 | Deep debt cleanup + 100% clippy --tests, dead dep purge |
-| v4.40 | Jul 26 | SDK BTSP handshake evolution, strict mode ready |
-| v4.39 | Jul 24 | Neural Router pool integration + chimera schema Phase 0 |
-| v4.38 | Jul 24 | Connection pooling + service crash-loop guard |
-| v4.37 | Jul 21 | Deep debt clippy zero + transport assessment |
-| v4.36 | Jul 18 | Gap resolution + executor introspection + socket naming |
-| v4.35 | Jul 16 | Phase 2 transport + deep debt + manifest discovery |
 
 ## See Also
 

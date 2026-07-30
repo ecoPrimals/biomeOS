@@ -68,6 +68,14 @@ biomeOS Chain 1 is complete. P2 divergences resolved. Team in **STANDBY** pendin
 - NUCLEUS lifecycle integration testing (once strandGate validates auto-startup)
 - bearDog `crypto.sign_ed25519` already shipped (Provenance 7/7 COMPLETE per Wave 155k)
 
+### Deep Debt (Wave 155k session)
+
+- 8 production files refactored (test extraction): max 716 LOC, avg reduction 38%
+- `futures` narrowed to `futures-util` in 3 crates, removed from 1
+- 68.7 GiB build artifacts cleaned
+- Root docs rewritten (CURRENT_STATUS: 1006→80 LOC, focused and current)
+- Zero dead code, zero TODOs, zero unsafe, zero hardcoding
+
 ### Metrics (v4.49)
 
 | Metric | Value |
@@ -77,5 +85,7 @@ biomeOS Chain 1 is complete. P2 divergences resolved. Team in **STANDBY** pendin
 | Unsafe blocks | 0 (forbid) |
 | Largest prod file | 716 LOC |
 | TODOs in prod | 0 |
+| Dead code | 0 |
+| cargo deny | clean |
 | Version | v4.49 |
-| Commits since v4.44 | 6 (all pushed to origin main) |
+| Commits since v4.44 | 8 (all pushed to origin main) |
