@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.47 (2026-07-29) — Wave 155i: Deep Debt Cleanup
+
+### Dead Dependency Purge
+- Removed `async-fs` from `biomeos-spore` (phantom — all code already used `tokio::fs as async_fs`)
+- Removed `console` from `biomeos-cli` (declared, never imported)
+- Removed `humantime` from `biomeos-cli` (declared, never imported)
+- Removed phantom `futures` from 4 crates (biomeos-niche, biomeos-chimera, biomeos-compute, biomeos-spore)
+- Workspace deps cleaned: `async-fs`, `console`, `humantime` removed from `[workspace.dependencies]`
+- `cargo update` bumps 17 transitive deps to latest point releases
+
+### Test Extraction (File Size Reduction)
+- `biomeos-pseudospore/src/lib.rs`: 735→562 LOC (tests extracted to `tests.rs`)
+- `biomeos-boot/src/initramfs.rs`: 729→428 LOC (tests extracted to `initramfs_tests.rs`)
+- All production files now well under 730 LOC
+
+### Capability-Based BTSP Resolution
+- `is_security_provider_socket()` evolved from hardcoded `"beardog"` prefix check to
+  `resolved_security_provider_name()` — resolves via capability taxonomy + env fallback
+- New `resolved_security_provider_name()` helper deduplicates provider lookup across
+  `is_security_provider_socket()` and `security_provider_socket_path()`
+- Zero hardcoded primal names remain in production decision paths
+
+### Verification
+- 8,564 tests pass, 0 failures
+- Clippy pedantic+nursery: 0 warnings (including `--tests`)
+
+---
+
 ## v4.46 (2026-07-29) — Wave 155i: NUCLEUS Orchestrator
 
 ### Graph Executor RiboCipher Fix (P1)

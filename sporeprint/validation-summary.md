@@ -11,6 +11,8 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **8,564+ tests** workspace-wide, 0 failures, fully concurrent
 - **88%+ coverage** line / region / function (llvm-cov workspace-wide)
+- **v4.47** — Wave 155i: Deep debt cleanup — dead deps, test extraction, capability-based BTSP
+- **v4.46** — Wave 155i: NUCLEUS Orchestrator — riboCipher executor, socket unification, persistence
 - **v4.45** — Wave 155i: Composition Broker E2E + deep debt audit clean
 - **v4.44** — Wave 155i: riboCipher framing + BTSP session propagation in signal graph executor
 - **v4.43** — Wave 155d: Live signal graph validation — tower.health + tower.mesh_status

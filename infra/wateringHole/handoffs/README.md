@@ -8,6 +8,7 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
+| 155i-c | Jul 29, 2026 | Deep debt cleanup: dead deps purged, test extraction, capability-based BTSP resolution |
 | 155i-b | Jul 29, 2026 | NUCLEUS Orchestrator: riboCipher executor fix, socket unification, capability persistence, composition.start |
 | 155i | Jul 29, 2026 | Composition Broker: riboCipher + BTSP executor + E2E validation + deep debt audit clean |
 | 155d | Jul 28, 2026 | Live signal graph validation — tower.health + tower.mesh_status (19→26 signals) |
