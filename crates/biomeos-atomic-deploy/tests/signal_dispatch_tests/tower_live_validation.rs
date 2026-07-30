@@ -164,7 +164,9 @@ fn tower_mesh_status_graph_validates_for_live_dispatch() {
         .unwrap();
     assert_eq!(crypto["binary"].as_str(), Some("beardog"));
     assert_eq!(crypto["by_capability"].as_str(), Some("security"));
-    let crypto_caps = crypto["capabilities"].as_array().expect("crypto capabilities");
+    let crypto_caps = crypto["capabilities"]
+        .as_array()
+        .expect("crypto capabilities");
     let crypto_cap_strs: Vec<&str> = crypto_caps.iter().filter_map(|c| c.as_str()).collect();
     assert!(crypto_cap_strs.contains(&"health.liveness"));
     assert!(crypto_cap_strs.contains(&"crypto.status"));
@@ -231,7 +233,9 @@ fn tower_enroll_graph_has_sequential_pipeline() {
     );
 
     let register = &nodes[1];
-    let deps = register["depends_on"].as_array().expect("register depends_on");
+    let deps = register["depends_on"]
+        .as_array()
+        .expect("register depends_on");
     assert!(deps.iter().any(|d| d.as_str() == Some("verify_proof")));
 
     let audit = &nodes[2];

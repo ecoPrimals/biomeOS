@@ -482,10 +482,7 @@ impl GraphExecutor {
             match btsp_client::security_mode() {
                 btsp_client::SecurityMode::Production { btsp_available } => {
                     if btsp_available {
-                        debug!(
-                            "   🔒 Executor BTSP: handshake for {}",
-                            path.display()
-                        );
+                        debug!("   🔒 Executor BTSP: handshake for {}", path.display());
                         let params = rpc_request
                             .params
                             .clone()
@@ -508,10 +505,7 @@ impl GraphExecutor {
                     }
                 }
                 btsp_client::SecurityMode::Development => {
-                    debug!(
-                        "   🔓 Dev mode — skipping BTSP for {}",
-                        path.display()
-                    );
+                    debug!("   🔓 Dev mode — skipping BTSP for {}", path.display());
                 }
             }
         }

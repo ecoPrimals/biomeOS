@@ -422,7 +422,6 @@ impl KernelManager {
     }
 }
 
-
 #[cfg(test)]
 #[path = "initramfs_tests.rs"]
 mod tests;

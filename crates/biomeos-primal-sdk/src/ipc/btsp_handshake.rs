@@ -33,7 +33,10 @@ struct ClientHello {
 #[derive(Deserialize)]
 struct ServerHello {
     challenge: String,
-    #[expect(dead_code, reason = "deserialized from server, used when cipher negotiation completes")]
+    #[expect(
+        dead_code,
+        reason = "deserialized from server, used when cipher negotiation completes"
+    )]
     session_id: String,
     server_ephemeral_pub: String,
 }
@@ -47,7 +50,10 @@ struct ChallengeResponse {
 #[derive(Deserialize)]
 struct HandshakeComplete {
     session_id: String,
-    #[expect(dead_code, reason = "deserialized from server, used when cipher negotiation completes")]
+    #[expect(
+        dead_code,
+        reason = "deserialized from server, used when cipher negotiation completes"
+    )]
     cipher: String,
 }
 
@@ -58,7 +64,10 @@ pub(crate) fn should_btsp(path: &Path) -> bool {
 
 /// Perform BTSP handshake on an already-connected stream, returning a `BufReader`
 /// ready for JSON-RPC communication.
-#[allow(clippy::future_not_send, reason = "TransportStream may be !Send on Windows (NamedPipe)")]
+#[allow(
+    clippy::future_not_send,
+    reason = "TransportStream may be !Send on Windows (NamedPipe)"
+)]
 pub(crate) async fn perform_handshake(
     stream: TransportStream,
 ) -> Result<BufReader<TransportStream>> {
@@ -110,7 +119,10 @@ fn is_family_scoped(path: &Path) -> bool {
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or_default();
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or_default();
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or_default();
     ext.eq_ignore_ascii_case("sock") && name.contains('-')
 }
 
@@ -154,8 +166,8 @@ fn socket_dir() -> Option<PathBuf> {
         return Some(PathBuf::from(dir));
     }
     if let Ok(runtime) = std::env::var(biomeos_types::env_config::vars::XDG_RUNTIME_DIR) {
-        let dir = PathBuf::from(runtime)
-            .join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
+        let dir =
+            PathBuf::from(runtime).join(biomeos_types::constants::runtime_paths::MEMBRANE_SUBDIR);
         if dir.is_dir() {
             return Some(dir);
         }
@@ -164,10 +176,8 @@ fn socket_dir() -> Option<PathBuf> {
 }
 
 async fn keygen(provider_path: &Path) -> Result<(String, String)> {
-    let request = biomeos_types::JsonRpcRequest::new(
-        "x25519_generate_ephemeral",
-        serde_json::json!({}),
-    );
+    let request =
+        biomeos_types::JsonRpcRequest::new("x25519_generate_ephemeral", serde_json::json!({}));
     let response = provider_call(provider_path, request).await?;
     let pub_key = response["public_key"]
         .as_str()
@@ -224,19 +234,29 @@ async fn provider_call(
     let endpoint = super::TransportEndpoint::UnixSocket {
         path: provider_path.to_path_buf(),
     };
-    let stream = super::connect_transport(&endpoint)
-        .await
-        .with_context(|| format!("Failed to connect to security provider at {}", provider_path.display()))?;
+    let stream = super::connect_transport(&endpoint).await.with_context(|| {
+        format!(
+            "Failed to connect to security provider at {}",
+            provider_path.display()
+        )
+    })?;
     let response = super::send_jsonrpc_over_stream(stream, request).await?;
     if let Some(err) = response.error {
-        return Err(anyhow!("Security provider error {}: {}", err.code, err.message));
+        return Err(anyhow!(
+            "Security provider error {}: {}",
+            err.code,
+            err.message
+        ));
     }
     response
         .result
         .ok_or_else(|| anyhow!("Empty response from security provider"))
 }
 
-#[allow(clippy::future_not_send, reason = "BufReader<TransportStream> may be !Send on Windows")]
+#[allow(
+    clippy::future_not_send,
+    reason = "BufReader<TransportStream> may be !Send on Windows"
+)]
 async fn write_json_line(
     reader: &mut BufReader<TransportStream>,
     value: &impl Serialize,
@@ -248,15 +268,14 @@ async fn write_json_line(
         .write_all(line.as_bytes())
         .await
         .context("write handshake")?;
-    reader
-        .get_mut()
-        .flush()
-        .await
-        .context("flush handshake")?;
+    reader.get_mut().flush().await.context("flush handshake")?;
     Ok(())
 }
 
-#[allow(clippy::future_not_send, reason = "BufReader<TransportStream> may be !Send on Windows")]
+#[allow(
+    clippy::future_not_send,
+    reason = "BufReader<TransportStream> may be !Send on Windows"
+)]
 async fn read_json_line<T: serde::de::DeserializeOwned>(
     reader: &mut BufReader<TransportStream>,
 ) -> Result<T> {

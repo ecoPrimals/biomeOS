@@ -30,9 +30,7 @@ impl GraphExecutor {
                 // Explicit local execution — fall through to local handlers
             } else if gate == "auto" {
                 // Plasmodium workload dispatch: select best gate from collective
-                if let Some(target) =
-                    Self::plasmodium_dispatch(node, gate_registry).await
-                {
+                if let Some(target) = Self::plasmodium_dispatch(node, gate_registry).await {
                     return Self::forward_to_remote_gate(node, &target.0, &target.1).await;
                 }
                 // No suitable remote gate — fall through to local execution

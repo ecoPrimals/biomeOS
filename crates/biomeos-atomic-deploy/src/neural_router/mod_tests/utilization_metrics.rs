@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-use super::super::{
-    CompositionPattern, CompositionTier, NeuralRouter, PerceptronDispatcher,
-};
+use super::super::{CompositionPattern, CompositionTier, NeuralRouter, PerceptronDispatcher};
 use biomeos_types::tarpc_types::ProtocolPreference;
 use std::sync::Arc;
 

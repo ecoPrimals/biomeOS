@@ -352,7 +352,10 @@ fusion:
     }
 
     #[test]
-    #[expect(clippy::expect_used, reason = "test helper — infallible in controlled env")]
+    #[expect(
+        clippy::expect_used,
+        reason = "test helper — infallible in controlled env"
+    )]
     fn test_registry_load_file() {
         let temp_dir = TempDir::new().expect("temp dir");
         let path = create_test_chimera(temp_dir.path(), "loaded");

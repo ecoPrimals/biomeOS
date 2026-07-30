@@ -121,8 +121,12 @@ impl LifecycleManager {
             let a_primal = primals.get(a);
             let b_primal = primals.get(b);
 
-            let a_idx = a_primal.and_then(|p| p.boot_order_index).unwrap_or(u32::MAX);
-            let b_idx = b_primal.and_then(|p| p.boot_order_index).unwrap_or(u32::MAX);
+            let a_idx = a_primal
+                .and_then(|p| p.boot_order_index)
+                .unwrap_or(u32::MAX);
+            let b_idx = b_primal
+                .and_then(|p| p.boot_order_index)
+                .unwrap_or(u32::MAX);
 
             // Reverse: higher boot_order_index shuts down first
             b_idx.cmp(&a_idx).then_with(|| {

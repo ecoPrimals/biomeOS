@@ -89,14 +89,8 @@ impl super::Plasmodium {
             })
             .unwrap_or_default();
 
-        let ram_gb = result
-            .get("ram_gb")
-            .and_then(Value::as_u64)
-            .unwrap_or(0);
-        let cpu_cores = result
-            .get("cpu_cores")
-            .and_then(Value::as_u64)
-            .unwrap_or(0) as usize;
+        let ram_gb = result.get("ram_gb").and_then(Value::as_u64).unwrap_or(0);
+        let cpu_cores = result.get("cpu_cores").and_then(Value::as_u64).unwrap_or(0) as usize;
 
         ComputeInfo {
             gpus,

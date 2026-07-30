@@ -233,10 +233,9 @@ fn test_discovery_method_enum_roundtrip() {
 #[tokio::test]
 async fn test_find_by_capability_errors_when_empty_socket_dir() {
     let tmp = tempfile::tempdir().unwrap();
-    let err =
-        PrimalDiscovery::find_by_capability_in(PrimalCapability::encryption(), tmp.path())
-            .await
-            .expect_err("should fail");
+    let err = PrimalDiscovery::find_by_capability_in(PrimalCapability::encryption(), tmp.path())
+        .await
+        .expect_err("should fail");
     assert!(err.to_string().contains("No primal"));
 }
 

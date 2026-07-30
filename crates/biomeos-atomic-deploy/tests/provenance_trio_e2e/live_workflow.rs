@@ -6,7 +6,7 @@
 
 use serde_json::json;
 
-use crate::{capability_call, json_rpc_call, ProvenanceTrioFixture};
+use crate::{ProvenanceTrioFixture, capability_call, json_rpc_call};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Phase 1: Health Checks — verify all trio primals are running

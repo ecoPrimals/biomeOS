@@ -34,10 +34,7 @@ impl CapabilityUtilizationTracker {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as u64;
-        let entry = self
-            .counters
-            .entry(Arc::from(method))
-            .or_insert((0, 0));
+        let entry = self.counters.entry(Arc::from(method)).or_insert((0, 0));
         entry.0 += 1;
         entry.1 = now;
     }

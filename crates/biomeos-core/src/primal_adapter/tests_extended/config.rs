@@ -1,6 +1,4 @@
-use crate::primal_adapter::types::{
-    HealthCheckConfig, PortConfigMethod, PrimalState,
-};
+use crate::primal_adapter::types::{HealthCheckConfig, PortConfigMethod, PrimalState};
 use std::time::Duration;
 
 // ============================================================================

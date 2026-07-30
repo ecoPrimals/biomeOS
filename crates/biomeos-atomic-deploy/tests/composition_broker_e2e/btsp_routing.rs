@@ -114,7 +114,10 @@ fn btsp_enforce_on_with_family() {
             ("BIOMEOS_INSECURE", None::<&str>),
         ],
         || {
-            assert!(btsp_client::btsp_enforce(), "family + no override → enforced");
+            assert!(
+                btsp_client::btsp_enforce(),
+                "family + no override → enforced"
+            );
         },
     );
 }
@@ -129,7 +132,10 @@ fn btsp_enforce_override_disables() {
             ("BIOMEOS_INSECURE", None::<&str>),
         ],
         || {
-            assert!(!btsp_client::btsp_enforce(), "BIOMEOS_BTSP_ENFORCE=0 disables");
+            assert!(
+                !btsp_client::btsp_enforce(),
+                "BIOMEOS_BTSP_ENFORCE=0 disables"
+            );
         },
     );
 }

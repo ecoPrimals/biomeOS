@@ -85,10 +85,7 @@ async fn send_jsonrpc_over_reader(
 
     trace!("Sending JSON-RPC (post-BTSP): {}", request_str);
 
-    reader
-        .get_mut()
-        .write_all(request_str.as_bytes())
-        .await?;
+    reader.get_mut().write_all(request_str.as_bytes()).await?;
     reader.get_mut().write_all(b"\n").await?;
     reader.get_mut().flush().await?;
 

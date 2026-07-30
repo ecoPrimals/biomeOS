@@ -5,7 +5,7 @@
 
 use biomeos_atomic_deploy::*;
 
-use crate::{graphs_dir, NUCLEUS_NODE_IDS};
+use crate::{NUCLEUS_NODE_IDS, graphs_dir};
 
 #[test]
 fn test_nucleus_complete_toml_parses() {

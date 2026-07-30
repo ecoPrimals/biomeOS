@@ -69,13 +69,10 @@ pub fn select_gates<'a>(
         })
         .filter(|g| {
             if let Some(ref cap) = requirements.capability {
-                g.primals
-                    .iter()
-                    .filter(|p| p.healthy)
-                    .any(|p| {
-                        biomeos_types::capability_taxonomy::capabilities_for_primal(&p.name)
-                            .contains(cap)
-                    })
+                g.primals.iter().filter(|p| p.healthy).any(|p| {
+                    biomeos_types::capability_taxonomy::capabilities_for_primal(&p.name)
+                        .contains(cap)
+                })
             } else {
                 true
             }
@@ -108,7 +105,13 @@ fn compute_score(gate: &GateInfo, req: &WorkloadRequirements) -> u32 {
 
     // VRAM scoring: more VRAM = better for GPU workloads
     if req.min_vram_mb > 0 {
-        let max_vram = gate.compute.gpus.iter().map(|g| g.vram_mb).max().unwrap_or(0);
+        let max_vram = gate
+            .compute
+            .gpus
+            .iter()
+            .map(|g| g.vram_mb)
+            .max()
+            .unwrap_or(0);
         score += match max_vram {
             v if v >= 24_000 => 0,
             v if v >= 16_000 => 2,
@@ -138,7 +141,13 @@ fn format_reason(gate: &GateInfo, req: &WorkloadRequirements) -> String {
     }
 
     if req.min_vram_mb > 0 {
-        let max_vram = gate.compute.gpus.iter().map(|g| g.vram_mb).max().unwrap_or(0);
+        let max_vram = gate
+            .compute
+            .gpus
+            .iter()
+            .map(|g| g.vram_mb)
+            .max()
+            .unwrap_or(0);
         parts.push(format!("vram={max_vram}MB"));
     }
 
@@ -271,10 +280,7 @@ mod tests {
         let mut unreachable = make_gate("strand", false, 24_000, 256, 0.0);
         unreachable.reachable = false;
 
-        let state = make_state(vec![
-            make_gate("east", true, 12_000, 64, 0.1),
-            unreachable,
-        ]);
+        let state = make_state(vec![make_gate("east", true, 12_000, 64, 0.1), unreachable]);
 
         let req = WorkloadRequirements {
             min_vram_mb: 8_000,

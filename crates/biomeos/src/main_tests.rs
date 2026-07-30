@@ -3,7 +3,6 @@
 
 //! Main binary integration tests (split into domain-focused submodules).
 
-
 #[path = "main_tests_common.rs"]
 mod common;
 

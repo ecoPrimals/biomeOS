@@ -322,11 +322,7 @@ impl LifecycleHandler {
     pub async fn composition_boot_order(&self, params: &Option<Value>) -> Result<Value> {
         let composition = params
             .as_ref()
-            .and_then(|p| {
-                p["composition"]
-                    .as_str()
-                    .or_else(|| p["name"].as_str())
-            })
+            .and_then(|p| p["composition"].as_str().or_else(|| p["name"].as_str()))
             .unwrap_or("nucleus");
 
         let order = self.resolve_boot_order_for_composition(composition);
@@ -353,8 +349,18 @@ impl LifecycleHandler {
             ],
             "node" => vec![BEARDOG, SONGBIRD, SKUNKBAT, TOADSTOOL, CORALREEF, BARRACUDA],
             "nucleus" => vec![
-                BEARDOG, SONGBIRD, SKUNKBAT, TOADSTOOL, CORALREEF, BARRACUDA, NESTGATE, RHIZOCRYPT,
-                LOAMSPINE, SWEETGRASS, SQUIRREL, PETALTONGUE,
+                BEARDOG,
+                SONGBIRD,
+                SKUNKBAT,
+                TOADSTOOL,
+                CORALREEF,
+                BARRACUDA,
+                NESTGATE,
+                RHIZOCRYPT,
+                LOAMSPINE,
+                SWEETGRASS,
+                SQUIRREL,
+                PETALTONGUE,
             ],
             _ => vec![],
         }

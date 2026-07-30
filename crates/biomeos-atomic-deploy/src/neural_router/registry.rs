@@ -431,24 +431,21 @@ impl NeuralRouter {
     /// Entries are loaded as warm-cache hints (source: "persisted"). Live
     /// discovery will overwrite them with confirmed endpoints. Returns the
     /// number of capabilities loaded.
-    pub async fn load_persisted_capability_registry(
-        &self,
-        socket_dir: &std::path::Path,
-    ) -> usize {
+    pub async fn load_persisted_capability_registry(&self, socket_dir: &std::path::Path) -> usize {
         let path = socket_dir.join("capability-registry.json");
         let contents = match tokio::fs::read_to_string(&path).await {
             Ok(c) => c,
             Err(_) => return 0,
         };
 
-        let entries: Vec<super::types::RegisteredCapability> =
-            match serde_json::from_str(&contents) {
-                Ok(e) => e,
-                Err(e) => {
-                    warn!("Failed to parse persisted capability registry: {e}");
-                    return 0;
-                }
-            };
+        let entries: Vec<super::types::RegisteredCapability> = match serde_json::from_str(&contents)
+        {
+            Ok(e) => e,
+            Err(e) => {
+                warn!("Failed to parse persisted capability registry: {e}");
+                return 0;
+            }
+        };
 
         let mut count = 0;
         for entry in entries {
