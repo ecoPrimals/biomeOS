@@ -32,7 +32,6 @@ biomeos-system = { path = "../biomeos-system", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
 biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }
-biomeos-genome-factory = { path = "../biomeos-genome-factory", version = "1.0.0" }
 biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 neural-api-client = { path = "../neural-api-client", version = "0.1.0" }
 
@@ -47,8 +46,6 @@ thiserror = { workspace = true }
 # External HTTP/HTTPS requests should go through Songbird
 
 # Utilities
-# DEEP DEBT: lazy_static replaced by std::sync::OnceLock; dirs replaced by etcetera (pure Rust)
-etcetera = { workspace = true }
 semver = { workspace = true }
 base64 = { workspace = true }
 

@@ -17,18 +17,8 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["json"] }
 
-# Serialization for manifests and configs
-serde = { workspace = true }
-serde_yaml.workspace = true
-toml = { workspace = true }
-
 # System interaction (pure Rust via rustix)
 rustix = { workspace = true, features = ["fs", "mount", "process"] }
-
-# Hardware detection (pure Rust via /proc - ecoBin v3)
-
-# UUID for device identification
-uuid = { workspace = true }
 
 # Filesystem operations
 tar = { workspace = true }

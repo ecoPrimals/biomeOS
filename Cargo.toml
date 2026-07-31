@@ -164,7 +164,6 @@ rtnetlink = "0.20"
 # CLI / TUI helpers
 indicatif = "0.17"
 colored = "2.1"
-comfy-table = "7.0"
 
 # Storage / codecs
 redb = "2.4"

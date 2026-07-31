@@ -16,7 +16,6 @@ serde_json = { workspace = true }
 
 # Testing
 tempfile = { workspace = true }
-wiremock = { workspace = true }
 
 # HTTP server for mocks
 axum = { workspace = true }
