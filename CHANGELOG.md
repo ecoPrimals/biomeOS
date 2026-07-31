@@ -19,6 +19,17 @@ All notable changes to biomeOS will be documented in this file.
 - cellMembrane only needs to call the running Neural API's `composition.test_swap`
   instead of its own sandbox — delegated validation via the coevolution contract.
 
+### MODE GAP CLOSED: Neural API accepts plain JSON-RPC
+- Root cause: riboCipher signal check was a hard gate — ALL connections without the
+  2-byte prefix were silently dropped, even when BTSP was not enforced.
+  cellMembrane's `composition.test_swap` call (plain JSON-RPC) was dropped.
+- Fix: When `enforce=false` (btsp_optional), connections without riboCipher prefix
+  proceed as plain JSON-RPC instead of being dropped. NUCLEUS mode + standalone
+  `neural-api-server` now start with `btsp_optional=true` since the Neural API
+  socket is local-only (UDS) and must serve both riboCipher and plain callers.
+- Security: No regression. UDS = machine-local trust boundary. BTSP-capable primals
+  still use riboCipher (their prefix is consumed). Non-BTSP callers get plain JSON-RPC.
+
 ### Socket Dir Mismatch Triage
 - `membrane/ vs biomeos/` socket dir divergence is already handled: topology scanner
   at Priority 3 scans both `$XDG_RUNTIME_DIR/membrane/` AND legacy `$XDG_RUNTIME_DIR/biomeos/`.

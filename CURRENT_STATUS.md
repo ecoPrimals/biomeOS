@@ -81,6 +81,7 @@
 | P3 FIX: riboCipher log level ERROR→debug | v4.54 | `88785daf` |
 | P3 FIX: --version 4.54.0 (workspace synced) | v4.54 | `88785daf` |
 | **P2 UNBLOCK: composition.test_swap (coevolution contract)** | v4.55 | Wave 155n |
+| **MODE GAP: Neural API accepts plain JSON-RPC (btsp_optional)** | v4.55 | `652cf8a7` |
 
 ---
 
@@ -104,6 +105,9 @@ biomeOS instance to validate its own replacement binary. cellMembrane delegates 
 to the live orchestrator instead of using an isolated sandbox (which fails for broker
 primals). This unblocks the sandbox P2 (J19) and enables zero-downtime deploys.
 
+Mode gap closed: Neural API now accepts plain JSON-RPC connections when btsp_optional
+is set (UDS = local trust boundary). NUCLEUS + standalone server both start permissive.
+
 Key fix (v4.54): Health monitor speaks **dual protocol** — plain JSON-RPC first, BTSP
 fallback — eliminating respawn storm. Socket deletion guarded by PID ownership.
 
@@ -113,7 +117,7 @@ Upstream items (not biomeOS code):
 - cellMembrane not in sources.toml: blocks sovereign CI self-rebuild
 
 Resume triggers:
-- cellMembrane wires `sovereign.ci.trigger` → `composition.test_swap` (resolves J19)
-- Redeploy biomeOS v4.55 to westGate + strandGate (validates P1+P2 fix live)
+- Redeploy biomeOS v4.55 to depot via Sovereign CI (mode gap resolved)
+- Redeploy to westGate + strandGate (validates P1+P2 fix live)
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)

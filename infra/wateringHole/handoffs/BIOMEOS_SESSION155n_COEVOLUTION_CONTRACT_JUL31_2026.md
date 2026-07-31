@@ -65,11 +65,32 @@ This enables:
 
 ---
 
+## Mode Gap Fix (`652cf8a7`)
+
+The `composition.test_swap` route was registered in the correct dispatcher (neural-api)
+but the CONNECTION GATE (riboCipher signal check) silently dropped plain JSON-RPC
+connections before they reached the route table.
+
+**Root cause**: `consume_ribocipher_signal()` returned `false` → early return, regardless
+of enforcement policy. cellMembrane connects with plain JSON-RPC to `neural-api-default.sock`.
+
+**Fix** (3 files, 20 insertions):
+1. `connection.rs`: When `enforce=false`, connections without riboCipher fall through to
+   plain JSON-RPC handling instead of being dropped
+2. `nucleus/local.rs`: NUCLEUS mode starts Neural API with `btsp_optional=true`
+3. `neural-api-server.rs`: Standalone binary also sets `btsp_optional`
+
+**Security**: No regression. UDS is machine-local (no network exposure). BTSP-capable
+primals still send riboCipher prefix (consumed normally). Plain callers get JSON-RPC.
+
+---
+
 ## Verification
 
 - `cargo clippy --workspace --tests -- -D warnings`: PASS (0 warnings)
 - `cargo test --workspace`: 8,570 passed, 0 failed
 - Route properly registered and dispatched
+- Connection accepts plain JSON-RPC when btsp_optional=true
 
 ---
 

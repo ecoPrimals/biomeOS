@@ -89,16 +89,17 @@
 
 ---
 
-## Coevolution Contract (G21/J19) — biomeOS Side SHIPPED
+## Coevolution Contract (G21/J19) — COMPLETE
 
 | Capability | Status | How it works |
 |-----------|--------|-------------|
 | `composition.self_test` | ✅ v4.53 | Proves biomeOS functional without full composition |
-| `composition.test_swap` | ✅ **v4.55** | Running biomeOS validates replacement binary, reports pass/fail |
+| `composition.test_swap` | ✅ v4.55 | Running biomeOS validates replacement binary, reports pass/fail |
+| **Mode gap fix** | ✅ v4.55 (`652cf8a7`) | Neural API accepts plain JSON-RPC (btsp_optional) |
 
-**cellMembrane action needed**: Wire `sovereign.ci.trigger` to call `composition.test_swap`
-on the running Neural API instead of standalone sandbox. This resolves J19 (sandbox P2)
-and enables zero-downtime deploys.
+**E2E ready**: cellMembrane's `validate_with_deps` can now call `composition.test_swap`
+via plain JSON-RPC on the running Neural API socket. No more riboCipher gate blocking.
+Sovereign CI should be fully automated for all 13 primals including biomeOS.
 
 ---
 
