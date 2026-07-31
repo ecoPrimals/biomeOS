@@ -20,6 +20,7 @@
 | TODOs in prod | 0 |
 | Production unwraps | 0 (workspace lint enforced) |
 | Dead code | 0 |
+| Dead dependencies | 0 (cargo-machete verified) |
 | cargo deny | clean (advisories, bans, licenses, sources) |
 | Formatting | PASS (rustfmt clean) |
 | Cross-arch | x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu |
@@ -62,7 +63,9 @@
 | Dependency narrowing (futures→futures-util) | v4.49 | `80e79600` |
 | Socket evaporation fix (RPC ping tolerance) | v4.50 | Wave 155m |
 | Binary path retention (auto-discovery) | v4.50 | Wave 155m |
-| Socket ownership (multi-user chown) | v4.51 | Wave 155m |
+| Socket ownership (multi-user chown) | v4.51 | `0e45262f` |
+| Dep pruning (14 unused deps removed) | v4.51 | `c6f83a73` |
+| Registry alloc optimization (Arc reuse) | v4.51 | `744b2d17` |
 
 ---
 

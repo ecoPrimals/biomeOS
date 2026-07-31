@@ -29,16 +29,16 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 | Binary path retention (blocks resurrection) | v4.50 | Auto-discovery probes plasmidBin |
 | Socket ownership (multi-user) | v4.51 | `chown :membrane` post-bind + MEMBRANE_SOCKET_GROUP env |
 
-### Upstream Items (Not biomeOS Code)
+### Upstream Items — Resolved per Wave 155m
 
-| Issue | Owner | Fix |
-|-------|-------|-----|
-| rootpulse.ledger not implemented | cellMembrane/sporeGate | Run `membrane rootpulse.commit` |
-| Sandbox false positive for broker primals | cellMembrane | `spawn_primal_server` → use `neural-api --socket` |
-| checksums.toml partial update on harvest | sporeGate CI | Full regeneration after staging |
-| cellMembrane not in sources.toml | cellMembrane | Add self-entry |
-| /run/membrane tmpfiles.d rule | infra/systemd | `tmpfiles.d/membrane.conf` |
-| golgi post-receive hook not auto-firing | golgiBody | Post-receive hook config |
+| Issue | Owner | Status |
+|-------|-------|--------|
+| rootpulse.ledger | cellMembrane | **FIXED** (`0cfcce5`) |
+| Sandbox false positive | cellMembrane | **FIXED** (`0cfcce5`) |
+| checksums.toml partial | sporeGate CI | **FIXED** (`0cfcce5`) |
+| /run/membrane tmpfiles.d | cellMembrane | **FIXED** (`0cfcce5`) |
+| cellMembrane not in sources.toml | cellMembrane | **P3 OPEN** |
+| golgi post-receive hook | golgiBody | **P3 OPEN** |
 
 ---
 
@@ -46,7 +46,8 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
-| **155m-b** | Jul 30, 2026 | **Socket ownership fix (v4.51) + upstream triage** |
+| **155m-c** | Jul 30, 2026 | **Deep debt: 14 dead deps removed, registry alloc optimization, disk recovery** |
+| 155m-b | Jul 30, 2026 | Socket ownership fix (v4.51) + upstream triage |
 | 155m | Jul 30, 2026 | P2 socket evaporation + binary path retention fix (v4.50) |
 | 155k | Jul 30, 2026 | P2 divergence fixes: capability wipe cycle, socket docs, Dark Forest clarification |
 | 155j | Jul 30, 2026 | Composition lifecycle: cellMembrane boot_order integration, Chain 1 complete |

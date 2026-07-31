@@ -65,16 +65,16 @@
 
 ---
 
-## Upstream Items (Not biomeOS Code)
+## Upstream Items — Status per Wave 155m
 
-| Issue | Owner | Fix Required |
-|-------|-------|-------------|
-| rootpulse.ledger not implemented | cellMembrane/sporeGate | Run `membrane rootpulse.commit` on gate |
-| Sandbox false positive for broker primals | cellMembrane | Use `neural-api --socket` not `server --socket` |
-| checksums.toml partial update | sporeGate CI | Full regeneration after staging |
-| cellMembrane not in sources.toml | cellMembrane | Add self-entry for self-rebuild |
-| /run/membrane tmpfiles.d rule | infra/systemd | Create `tmpfiles.d/membrane.conf` |
-| golgi post-receive hook | golgiBody | Post-receive hook config |
+| Issue | Owner | Status |
+|-------|-------|--------|
+| rootpulse.ledger | cellMembrane | **FIXED** (`0cfcce5`) — returns ok=true advisory |
+| Sandbox false positive | cellMembrane | **FIXED** (`0cfcce5`) — ServerContract resolution |
+| checksums.toml partial | sporeGate CI | **FIXED** (`0cfcce5`) — full disk scan |
+| /run/membrane tmpfiles.d | cellMembrane | **FIXED** (`0cfcce5`) — tmpfiles.d shipped |
+| cellMembrane not in sources.toml | cellMembrane | **P3 OPEN** |
+| golgi post-receive hook | golgiBody | **P3 OPEN** |
 
 ---
 
@@ -96,6 +96,7 @@ Team in **STANDBY** pending:
 | Largest prod file | 716 LOC |
 | TODOs in prod | 0 |
 | Dead code | 0 |
+| Dead dependencies | 0 (14 removed, cargo-machete verified) |
 | cargo deny | clean |
 | Version | v4.51 |
 | biomeOS P0/P1/P2 | ZERO open |
