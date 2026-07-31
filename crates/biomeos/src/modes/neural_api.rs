@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! Neural API mode - Graph-based orchestration server
+//! Neural API mode — Graph-based orchestration server (G22 convergence)
 //!
-//! Starts the Neural API JSON-RPC server for graph execution
+//! Starts the Neural API JSON-RPC server for graph execution.
+//! In unified mode (default), also launches the HTTP API alongside for
+//! single-process dual-protocol operation.
 
 use anyhow::{Context, Result};
 use biomeos_atomic_deploy::LifecycleManager;
@@ -72,7 +74,7 @@ pub async fn run(
 
     info!("╔══════════════════════════════════════════════════════════════════════════╗");
     info!("║                                                                          ║");
-    info!("║                  🧠 Neural API Server Starting 🧠                        ║");
+    info!("║           🧠 Neural API Server (G22 Unified) 🧠                          ║");
     info!("║                                                                          ║");
     info!("╚══════════════════════════════════════════════════════════════════════════╝");
     info!("");
@@ -97,7 +99,31 @@ pub async fn run(
     if btsp_optional {
         info!("  BTSP: optional (unauthenticated JSON-RPC accepted)");
     }
+    info!("  Protocols: JSON-RPC + HTTP/WebSocket (G22 unified)");
     info!("");
+
+    // G22: Launch HTTP API server alongside Neural API (single process, dual protocol)
+    let http_socket = socket_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("/tmp"))
+        .join(format!("biomeos-api-{family_id}.sock"));
+    info!("  HTTP API Socket: {}", http_socket.display());
+    tokio::spawn(async move {
+        match biomeos_api::AppState::builder()
+            .config_from_env()
+            .build_with_defaults()
+        {
+            Ok(state) => {
+                let app = biomeos_api::create_app(state);
+                if let Err(e) = biomeos_api::serve_unix_socket(&http_socket, app).await {
+                    tracing::error!("HTTP API server exited: {e}");
+                }
+            }
+            Err(e) => {
+                warn!("HTTP API server skipped (config error): {e}");
+            }
+        }
+    });
 
     let mut server = NeuralApiServer::new(graphs_dir, family_id, socket_path);
     if btsp_optional {

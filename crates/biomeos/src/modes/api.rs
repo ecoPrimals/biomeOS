@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright 2025-2026 ecoPrimals Project
 
-//! API mode - HTTP/WebSocket API server (UniBin integration)
+//! Unified API mode — HTTP/WebSocket + Neural API JSON-RPC (G22 convergence)
 //!
-//! Wires the biomeos-api library into the UniBin `biomeos api` subcommand.
-//! This is the production API server — no separate binary needed.
+//! A single `biomeos api` process serves BOTH protocols:
+//! - HTTP/WebSocket (axum) for UI, dashboards, external tools
+//! - JSON-RPC (Neural API) for primal IPC, graph execution, composition
+//!
+//! This eliminates split-brain between separate processes and ensures
+//! single-restart = full composition recovery for springs+gardens.
 
 use anyhow::Result;
 use std::path::PathBuf;
@@ -26,18 +30,19 @@ pub(crate) fn resolve_api_config(
     }
 }
 
-/// Run the biomeOS API server
+/// Run the unified biomeOS API server (G22 convergence)
 ///
-/// Starts the JSON-RPC API server. Default transport is Unix socket (TRUE
-/// PRIMAL). When `--port` is provided, a TCP listener is bound alongside UDS
-/// for mobile/Android substrates where Unix sockets are unavailable.
+/// Launches BOTH the HTTP/WebSocket server AND the Neural API JSON-RPC server
+/// in a single process. Default transport is Unix socket (TRUE PRIMAL). When
+/// `--port` is provided, a TCP listener is bound alongside UDS for mobile/Android
+/// substrates where Unix sockets are unavailable.
 pub async fn run(
     port: Option<u16>,
     socket: Option<PathBuf>,
     _unix_only: bool,
     bind: Option<String>,
 ) -> Result<()> {
-    info!("biomeOS API Server (UniBin mode)");
+    info!("biomeOS Unified API Server (G22 convergence)");
 
     let state = biomeos_api::AppState::builder()
         .config_from_env()
@@ -56,15 +61,41 @@ pub async fn run(
 
     let app = biomeos_api::create_app(state);
 
-    info!("biomeOS API Server starting");
-    info!("  Socket: {}", socket_path.display());
+    info!("biomeOS Unified API Server starting");
+    info!("  HTTP Socket: {}", socket_path.display());
     if let Some(p) = port {
         info!("  TCP Port: {p} (alongside UDS for mobile/cross-gate)");
     }
     if let Some(ref addr) = bind {
         info!("  Bind Address: {addr}");
     }
-    info!("  Protocol: JSON-RPC 2.0");
+    info!("  Protocols: HTTP/WebSocket + JSON-RPC (Neural API)");
+
+    // G22: Launch Neural API server alongside HTTP (single process, dual protocol)
+    let family_id = biomeos_core::family_discovery::get_family_id();
+    let neural_socket = socket_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("/tmp"))
+        .join(format!("neural-api-{family_id}.sock"));
+
+    info!("  Neural API Socket: {}", neural_socket.display());
+
+    let neural_bind = bind.clone();
+    tokio::spawn(async move {
+        if let Err(e) = super::neural_api::run(
+            PathBuf::from("graphs"),
+            family_id,
+            Some(neural_socket),
+            None,
+            false,
+            neural_bind,
+            true, // btsp_optional: accept plain JSON-RPC from local callers
+        )
+        .await
+        {
+            tracing::error!("Neural API server exited: {e}");
+        }
+    });
 
     let env_tcp_only = biomeos_types::env_config::is_tcp_only_bind_mode();
 

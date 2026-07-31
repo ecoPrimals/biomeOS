@@ -31,6 +31,7 @@ pub(crate) static CWD_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::co
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use tracing::warn;
 
 mod genome;
 mod modes;
@@ -69,7 +70,10 @@ enum Mode {
         command: GenomeCommand,
     },
 
-    /// Neural API server mode - Graph-based orchestration
+    /// Neural API server mode (DEPRECATED: use `biomeos api` or `biomeos nucleus` instead)
+    ///
+    /// Both `api` and `nucleus` modes now include the Neural API automatically (G22).
+    /// This standalone mode is kept for backward compatibility but will be removed.
     #[command(name = "neural-api")]
     NeuralApi {
         /// Graphs directory
@@ -543,6 +547,10 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             bind,
             btsp_optional,
         } => {
+            warn!(
+                "⚠️  `biomeos neural-api` is deprecated. Use `biomeos api` or `biomeos nucleus` \
+                 instead — both include the Neural API automatically (G22 convergence)."
+            );
             let bind_mode = resolve_bind_mode(bind_mode.as_deref(), tcp_only);
             let effective_btsp_optional = btsp_optional || bind_mode.is_tcp_only();
             let config = modes::neural_api::resolve_neural_api_config(
