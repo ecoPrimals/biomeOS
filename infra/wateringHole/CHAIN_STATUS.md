@@ -1,7 +1,7 @@
 # biomeOS — Chain Status for Overwatch
 
-**Last Updated**: July 30, 2026 22:30 EDT
-**Version**: v4.52
+**Last Updated**: July 31, 2026 08:30 EDT
+**Version**: v4.53
 **Team**: biomeOS
 **Gate**: eastGate
 
@@ -63,6 +63,8 @@
 | Binary path retention (blocks resurrection) | Auto-discovery probes plasmidBin, stores path | v4.50 |
 | Socket ownership (multi-user access) | `chown :membrane` post-bind + MEMBRANE_SOCKET_GROUP | v4.51 |
 | Socket evaporation (user-space deploy paths) | `binary_search_dirs()` expanded: +~/.local/bin +~/.cargo/bin +$PATH | v4.52 |
+| /run/membrane permission reset | Guard `apply_dir_group_ownership` behind `!exists()` check | v4.53 |
+| Sandbox false positive (orchestrator) | `composition.self_test` RPC endpoint for sandbox validation | v4.53 |
 
 ---
 
@@ -99,5 +101,5 @@ Team in **STANDBY** pending:
 | Dead code | 0 |
 | Dead dependencies | 0 (14 removed, cargo-machete verified) |
 | cargo deny | clean |
-| Version | v4.52 |
-| biomeOS P0/P1/P2 | ZERO open (P2 socket evap FINAL FIX in v4.52) |
+| Version | v4.53 |
+| biomeOS P0/P1/P2/P3 | ZERO biomeOS-owned open |

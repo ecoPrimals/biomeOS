@@ -80,11 +80,14 @@ impl SocketNucleation {
         };
 
         if let Some(parent) = socket.parent() {
+            let freshly_created = !parent.exists();
             if let Err(e) = std::fs::create_dir_all(parent) {
                 tracing::warn!("Failed to create socket dir {}: {e}", parent.display());
             }
             #[cfg(unix)]
-            apply_dir_group_ownership(parent);
+            if freshly_created {
+                apply_dir_group_ownership(parent);
+            }
         }
 
         info!("📍 Socket assigned: {} → {:?}", key, socket);
@@ -201,11 +204,14 @@ impl SocketNucleation {
 
         let resolved = SystemPaths::runtime_dir_from_xdg_parent(runtime_dir);
 
+        let freshly_created = !resolved.exists();
         if let Err(e) = std::fs::create_dir_all(&resolved) {
             tracing::warn!("Failed to create runtime dir: {}", e);
         }
         #[cfg(unix)]
-        apply_dir_group_ownership(&resolved);
+        if freshly_created {
+            apply_dir_group_ownership(&resolved);
+        }
 
         resolved.join(format!("{}-{}.sock", primal, family_id))
     }

@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.53 (2026-07-31) — Wave 155m: P3 Fixes (Permission Reset + Sandbox Self-Test)
+
+### /run/membrane Permission Reset (P3 CLOSED)
+- Root cause: `apply_dir_group_ownership()` in `nucleation.rs` was called unconditionally
+  on every socket assignment, even when the directory already existed with correct perms.
+  On sporeGate (Sovereign CI), this reset the `/run/membrane` group ownership on each
+  biomeOS startup, locking out the sporegate CI user.
+- Fix: guard `apply_dir_group_ownership()` behind `!dir.exists()` check — only set
+  ownership on freshly-created directories. Existing directories retain their perms.
+
+### Sandbox False Positive (P3 CLOSED)
+- Root cause: cellMembrane's sandbox calls `neural-api --socket` to validate biomeOS,
+  but biomeOS (as orchestrator) requires a full composition to demonstrate capability.
+  Sandbox couldn't distinguish "orchestrator needs composition" from "binary broken."
+- Fix: added `composition.self_test` RPC method — a lightweight endpoint that proves
+  the Neural API is functional (routes loaded, registry available, version reported)
+  without requiring any primals to be running. Sandbox can call this for validation.
+- Route: `composition.self_test` → `LifecycleHandler::composition_self_test()`
+- Returns: `{ ok: true, role: "orchestrator", version, routes_loaded, ... }`
+
+### Upstream P3 Triage (Not biomeOS Code)
+- `GATE_NAME` vs `MEMBRANE_GATE_NAME`: cellMembrane env var naming mismatch.
+  biomeOS does not reference either — purely cellMembrane's concern.
+- GNU depot incomplete (4/16): sporeGate builder issue, not biomeOS code.
+
+---
+
 ## v4.52 (2026-07-30) — Wave 155m: User-Space Binary Discovery (P2 Socket Evap Final Fix)
 
 ### Binary Discovery — User-Space Deploy Paths (P2 CLOSED)

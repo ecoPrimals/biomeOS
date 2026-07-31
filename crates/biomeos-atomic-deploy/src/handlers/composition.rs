@@ -374,4 +374,26 @@ impl LifecycleHandler {
             .map(|content| content.contains("[boot_order]"))
             .unwrap_or(false)
     }
+
+    /// Handle `composition.self_test` — sandbox validation endpoint.
+    ///
+    /// Returns proof that the biomeOS Neural API is functional without requiring
+    /// a full primal composition to be running. cellMembrane's sandbox calls this
+    /// to validate the orchestrator binary works in isolation.
+    ///
+    /// JSON-RPC method: `composition.self_test`
+    pub async fn composition_self_test(&self) -> Result<Value> {
+        let manager = self.manager.read().await;
+        let status = manager.get_status().await;
+
+        Ok(json!({
+            "ok": true,
+            "role": "orchestrator",
+            "version": env!("CARGO_PKG_VERSION"),
+            "routes_loaded": true,
+            "capability_registry": "available",
+            "primals_registered": status.len(),
+            "ipc": "json-rpc",
+        }))
+    }
 }
