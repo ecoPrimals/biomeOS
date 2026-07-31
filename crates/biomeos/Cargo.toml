@@ -48,7 +48,6 @@ rustix = { workspace = true, features = ["fs"] }
 
 # Formatting
 colored = { workspace = true }
-comfy-table = { workspace = true }
 
 # Encoding
 base64 = { workspace = true }
@@ -58,9 +57,6 @@ biomeos-pseudospore = { path = "../biomeos-pseudospore", version = "0.1.0" }
 
 # Cryptographic randomness
 rand = { workspace = true }
-
-# Directory utilities - Pure Rust!
-etcetera = { workspace = true }  # Pure Rust replacement
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }

@@ -171,9 +171,6 @@ redb = "2.4"
 lz4_flex = "0.14"
 hex = "0.4"
 
-# Async I/O & bytes helpers
-serde_bytes = "0.11"
-
 # Testing
 proptest = "1"
 wiremock = "0.6"

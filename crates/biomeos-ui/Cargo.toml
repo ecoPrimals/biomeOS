@@ -14,17 +14,13 @@ biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 # Async runtime
 tokio = { workspace = true, features = ["net", "io-util", "fs"] }
-tokio-stream = { workspace = true }
 
 # WebSocket client for real-time events (Pure Rust)
 tokio-tungstenite = { workspace = true }
 futures-util = { workspace = true }
 
-# SSE support stubbed until Songbird exposes streaming
-
 # Error handling
 anyhow = { workspace = true }
-thiserror = { workspace = true }
 
 # Serialization
 serde = { workspace = true }
@@ -33,9 +29,6 @@ serde_json = { workspace = true }
 # Logging
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-
-# Collections
-indexmap = { workspace = true }
 
 # System info (statvfs for disk usage, pure Rust via rustix)
 rustix = { workspace = true, features = ["fs"] }

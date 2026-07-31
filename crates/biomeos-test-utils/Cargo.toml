@@ -20,14 +20,9 @@ wiremock = { workspace = true }
 
 # HTTP server for mocks
 axum = { workspace = true }
-tower = { workspace = true }
-
-# Async
-futures = { workspace = true }
 
 # Utilities
 tracing = { workspace = true }
-uuid = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

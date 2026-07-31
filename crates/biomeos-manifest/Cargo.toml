@@ -21,11 +21,7 @@ toml = { workspace = true }
 # Date/time handling
 chrono = { workspace = true }
 
-# UUID generation
-uuid = { workspace = true }
-
 # Error handling
-anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 # File I/O and path utilities

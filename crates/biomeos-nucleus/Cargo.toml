@@ -28,16 +28,13 @@ chrono = { workspace = true }
 # UUID
 uuid = { workspace = true }
 
-# Cryptography (for verification, not implementation)
-ed25519-dalek = { workspace = true }
+# Binary data
 bytes = { workspace = true }
+
+# Crypto hashing (for verification, not implementation)
 sha2 = { workspace = true }
 hex = { workspace = true }
 base64 = { workspace = true }
-
-# Unix socket client
-tokio-serde = { workspace = true }
-tokio-util = { workspace = true, features = ["codec"] }
 
 # biomeOS dependencies
 biomeos-core = { path = "../biomeos-core", version = "0.1.0" }

@@ -8,9 +8,6 @@ rust-version.workspace = true
 description = "Chimera system for BiomeOS - mixed-boundary primal amalgams"
 
 [dependencies]
-# Core BiomeOS types
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
-
 # Async runtime
 tokio = { workspace = true }
 
@@ -24,8 +21,6 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 # Utilities
-uuid = { workspace = true }
-chrono = { workspace = true }
 tracing = { workspace = true }
 dashmap = { workspace = true }
 

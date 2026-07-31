@@ -354,7 +354,6 @@ dependencies = [
  "anyhow",
  "base64",
  "biomeos-core",
- "biomeos-federation",
  "biomeos-graph",
  "biomeos-primal-sdk",
  "biomeos-spore",
@@ -416,8 +415,6 @@ name = "biomeos-chimera"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "biomeos-types",
- "chrono",
  "dashmap",
  "serde",
  "serde-saphyr",
@@ -427,7 +424,6 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
- "uuid",
 ]
 
 [[package]]
@@ -537,7 +533,6 @@ name = "biomeos-deploy"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "biomeos-core",
  "biomeos-types",
  "clap",
  "rtnetlink",
@@ -662,7 +657,6 @@ dependencies = [
 name = "biomeos-manifest"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "biomeos-types",
  "chrono",
  "serde",
@@ -671,7 +665,6 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.19",
  "toml",
- "uuid",
 ]
 
 [[package]]
@@ -707,7 +700,6 @@ dependencies = [
  "biomeos-types",
  "bytes",
  "chrono",
- "ed25519-dalek",
  "hex",
  "serde",
  "serde_json",
@@ -715,9 +707,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.19",
  "tokio",
- "tokio-serde",
  "tokio-test",
- "tokio-util",
  "tracing",
  "uuid",
 ]
@@ -773,7 +763,6 @@ dependencies = [
  "rand 0.9.5",
  "rustix",
  "serde",
- "serde_bytes",
  "serde_json",
  "sha2",
  "tempfile",
@@ -808,7 +797,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
- "futures",
  "http-body-util",
  "hyper",
  "hyper-util",
@@ -817,9 +805,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-test",
- "tower",
  "tracing",
- "uuid",
  "wiremock",
 ]
 
@@ -856,14 +842,11 @@ dependencies = [
  "biomeos-types",
  "chrono",
  "futures-util",
- "indexmap",
  "rustix",
  "serde",
  "serde_json",
  "tempfile",
- "thiserror 2.0.19",
  "tokio",
- "tokio-stream",
  "tokio-test",
  "tokio-tungstenite",
  "tracing",
@@ -888,8 +871,6 @@ dependencies = [
  "chrono",
  "clap",
  "colored",
- "comfy-table",
- "etcetera",
  "rand 0.9.5",
  "rustix",
  "serde",
@@ -2875,16 +2856,6 @@ dependencies = [
  "serde_core",
  "smallvec",
  "zmij",
-]
-
-[[package]]
-name = "serde_bytes"
-version = "0.11.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5d440709e79d88e51ac01c4b72fc6cb7314017bb7da9eeff678aa94c10e3ea8"
-dependencies = [
- "serde",
- "serde_core",
 ]
 
 [[package]]
