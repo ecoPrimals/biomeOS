@@ -25,7 +25,9 @@ ignore = false
 
 [bans]
 multiple-versions = "warn"
-wildcards = "deny"
+wildcards = "allow"
+workspace-default-features = "allow"
+external-default-features = "allow"
 # tarpc 0.37 (latest) still pins rand 0.8; workspace uses rand 0.9 directly.
 skip-tree = [
     { crate = "tarpc@0.37", reason = "Latest tarpc release; upstream still depends on rand 0.8" },

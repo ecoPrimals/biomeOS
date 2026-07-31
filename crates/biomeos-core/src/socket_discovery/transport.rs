@@ -263,7 +263,8 @@ mod tests {
 
     #[test]
     fn test_parse_unix_scheme() {
-        let endpoint = TransportEndpoint::parse("unix:///run/membrane/beardog-abc123.sock").unwrap();
+        let endpoint =
+            TransportEndpoint::parse("unix:///run/membrane/beardog-abc123.sock").unwrap();
         if let TransportEndpoint::UnixSocket { path } = endpoint {
             assert_eq!(path, PathBuf::from("/run/membrane/beardog-abc123.sock"));
         } else {

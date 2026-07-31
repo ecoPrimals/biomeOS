@@ -33,7 +33,10 @@ fn test_socket_path_with_socket_dir() {
     // Use unique service name to avoid env var collisions
     let unique_svc = "socket-dir-test-83726";
     let mut env = HashMap::new();
-    env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/membrane".to_string());
+    env.insert(
+        "BIOMEOS_SOCKET_DIR".to_string(),
+        "/run/membrane".to_string(),
+    );
 
     let path = socket_path_with(unique_svc, &env);
     let path_str = path.to_str().unwrap();
@@ -48,7 +51,10 @@ fn test_socket_path_env_var_takes_precedence() {
         "PRECEDENCE_TEST_SOCKET".to_string(),
         "/explicit/socket.sock".to_string(),
     );
-    env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/membrane".to_string());
+    env.insert(
+        "BIOMEOS_SOCKET_DIR".to_string(),
+        "/run/membrane".to_string(),
+    );
 
     let path = socket_path_with("precedence-test", &env);
     assert_eq!(path.to_str().unwrap(), "/explicit/socket.sock");

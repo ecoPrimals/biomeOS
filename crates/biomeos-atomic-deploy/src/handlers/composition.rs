@@ -441,10 +441,7 @@ impl LifecycleHandler {
         // Spawn candidate on a temporary socket
         let temp_dir = std::env::temp_dir().join("biomeos-test-swap");
         tokio::fs::create_dir_all(&temp_dir).await.ok();
-        let test_socket = temp_dir.join(format!(
-            "candidate-{}.sock",
-            std::process::id()
-        ));
+        let test_socket = temp_dir.join(format!("candidate-{}.sock", std::process::id()));
 
         // Clean up any leftover from previous run
         if test_socket.exists() {
@@ -494,11 +491,8 @@ impl LifecycleHandler {
         }
 
         // Validate via composition.self_test
-        let validation_result = tokio::time::timeout(
-            Duration::from_secs(5),
-            Self::probe_candidate(&test_socket),
-        )
-        .await;
+        let validation_result =
+            tokio::time::timeout(Duration::from_secs(5), Self::probe_candidate(&test_socket)).await;
 
         // Tear down candidate
         child.kill().await.ok();
@@ -569,8 +563,7 @@ impl LifecycleHandler {
     async fn probe_candidate(socket_path: &std::path::Path) -> Result<Value> {
         use biomeos_core::atomic_client::AtomicClient;
 
-        let client =
-            AtomicClient::unix(socket_path).with_timeout(Duration::from_secs(5));
+        let client = AtomicClient::unix(socket_path).with_timeout(Duration::from_secs(5));
 
         client
             .call("composition.self_test", json!({}))

@@ -426,12 +426,10 @@ impl NeuralApiServer {
                 dispatch(self.lifecycle_handler.composition_self_test().await, id)
             }
             // Composition test-swap — validate replacement binary in live context
-            Route::CompositionTestSwap => {
-                dispatch(
-                    self.lifecycle_handler.composition_test_swap(params).await,
-                    id,
-                )
-            }
+            Route::CompositionTestSwap => dispatch(
+                self.lifecycle_handler.composition_test_swap(params).await,
+                id,
+            ),
             Route::IdentityGet => dispatch(Ok(self.identity_response()), id),
             Route::PrimalAnnounce => dispatch(self.handle_primal_announce(params).await, id),
             Route::SignalDispatch => dispatch(self.dispatch_nucleus_signal_raw(params).await, id),

@@ -322,7 +322,7 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
                 neural_tcp_only,
                 neural_bind,
                 true, // btsp_optional: Neural API accepts plain JSON-RPC from local callers
-                      // (cellMembrane composition.test_swap, CLI tools). UDS is local-only.
+                // (cellMembrane composition.test_swap, CLI tools). UDS is local-only.
                 neural_lifecycle,
             )
             .await

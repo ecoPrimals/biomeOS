@@ -96,7 +96,11 @@ impl NeuralRouter {
         let client = AtomicClient::from_endpoint(endpoint.clone()).with_timeout(health_timeout);
 
         // Plain JSON-RPC first (works for most primals)
-        if client.call("health.check", serde_json::json!({})).await.is_ok() {
+        if client
+            .call("health.check", serde_json::json!({}))
+            .await
+            .is_ok()
+        {
             return true;
         }
 
@@ -128,7 +132,11 @@ impl NeuralRouter {
                 AtomicClient::from_endpoint(endpoint.clone()).with_timeout(Duration::from_secs(2));
 
             // Plain JSON-RPC first (works for most primals)
-            if client.call("health.check", serde_json::json!({})).await.is_ok() {
+            if client
+                .call("health.check", serde_json::json!({}))
+                .await
+                .is_ok()
+            {
                 return Ok::<bool, anyhow::Error>(true);
             }
 
