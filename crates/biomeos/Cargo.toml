@@ -13,12 +13,12 @@ path = "src/main.rs"
 
 [dependencies]
 # Mode implementations (as libraries)
-biomeos-api = { path = "../biomeos-api", version = "0.1.0" }
-biomeos-atomic-deploy = { path = "../biomeos-atomic-deploy", version = "0.1.0" }
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
-biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }
-biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
+biomeos-api = { path = "../biomeos-api" }
+biomeos-atomic-deploy = { path = "../biomeos-atomic-deploy" }
+biomeos-core = { path = "../biomeos-core" }
+biomeos-types = { path = "../biomeos-types" }
+biomeos-spore = { path = "../biomeos-spore" }
+biomeos-graph = { path = "../biomeos-graph" }
 biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 
 # CLI framework
@@ -53,13 +53,13 @@ colored = { workspace = true }
 base64 = { workspace = true }
 
 # pseudoSpore envelope validation (NC-1.4)
-biomeos-pseudospore = { path = "../biomeos-pseudospore", version = "0.1.0" }
+biomeos-pseudospore = { path = "../biomeos-pseudospore" }
 
 # Cryptographic randomness
 rand = { workspace = true }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tempfile = { workspace = true }
 temp-env = { workspace = true }
 

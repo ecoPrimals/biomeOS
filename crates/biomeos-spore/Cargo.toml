@@ -10,7 +10,7 @@ build = "build.rs"
 
 [dependencies]
 # Core biomeOS dependencies
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
+biomeos-core = { path = "../biomeos-core" }
 
 # Core async and serialization
 tokio = { workspace = true, features = ["fs", "rt"] }
@@ -35,7 +35,7 @@ hex = { workspace = true }  # For hex encoding
 uuid = { workspace = true }  # For unique IDs
 
 # biomeOS dependencies
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types" }
 
 # Logging
 tracing = { workspace = true }
@@ -48,8 +48,8 @@ test-support = []
 default = []
 
 [dev-dependencies]
-biomeos-spore = { path = ".", version = "0.1.0", features = ["test-support"] }
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-spore = { path = ".", features = ["test-support"] }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
 tracing-subscriber = { workspace = true }

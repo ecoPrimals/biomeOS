@@ -23,14 +23,20 @@ use super::discovery::{known_primal_names, resolve_capability_to_primal};
 
 /// Call primal health endpoint via JSON-RPC using `AtomicClient`
 ///
-/// Any successful JSON-RPC response = alive. `call_btsp` already rejects
-/// connection failures and JSON-RPC error responses, so `Ok(_)` is sufficient
-/// to prove liveness regardless of the response body format.
+/// Dual-protocol: tries plain JSON-RPC first, BTSP fallback. Any successful
+/// response = alive. This prevents false DEGRADED cycling on plain JSON-RPC
+/// primals that don't speak BTSP.
 pub async fn call_primal_health(socket_path: &str) -> Result<bool> {
     use biomeos_core::atomic_client::AtomicClient;
 
     let client = AtomicClient::unix(socket_path);
 
+    // Plain JSON-RPC first (most primals)
+    if client.call("health.check", json!({})).await.is_ok() {
+        return Ok(true);
+    }
+
+    // BTSP fallback (secure primals)
     client
         .call_btsp("health.check", json!({}))
         .await

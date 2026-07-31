@@ -35,7 +35,23 @@ async fn main() -> Result<()> {
     let graphs_dir = std::env::args()
         .position(|arg| arg == "--graphs-dir")
         .and_then(|i| std::env::args().nth(i + 1))
-        .unwrap_or_else(|| "graphs".to_string());
+        .or_else(|| std::env::var("BIOMEOS_GRAPHS_DIR").ok())
+        .unwrap_or_else(|| {
+            // XDG-compliant default: $XDG_DATA_HOME/membrane/graphs or ~/.local/share/membrane/graphs
+            let data_dir = std::env::var("XDG_DATA_HOME").map_or_else(
+                |_| {
+                    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+                    std::path::PathBuf::from(home).join(".local/share")
+                },
+                std::path::PathBuf::from,
+            ).join("membrane/graphs");
+            // Fall back to CWD/graphs if XDG path doesn't exist
+            if data_dir.exists() {
+                data_dir.to_string_lossy().into_owned()
+            } else {
+                "graphs".to_string()
+            }
+        });
 
     // Family ID: CLI arg > env var > .family.seed file > "default"
     let family_id = std::env::args()

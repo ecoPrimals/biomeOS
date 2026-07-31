@@ -8,7 +8,7 @@ rust-version.workspace = true
 repository = "https://github.com/ecoPrimals/biomeOS"
 
 [dependencies]
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types" }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 

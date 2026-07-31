@@ -15,7 +15,7 @@ use biomeos_types::jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcResponse};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
 use super::btsp_negotiate::{self, BtspCipher, SessionKeys};
@@ -47,9 +47,9 @@ impl NeuralApiServer {
                 true
             }
             _ => {
-                error!(
-                    "REJECTED: legacy connection (no riboCipher signal) — \
-                     unsignalled connections dropped per Wave 113 policy"
+                debug!(
+                    "Connection without riboCipher signal — \
+                     protocol negotiation fallback (Wave 113)"
                 );
                 false
             }

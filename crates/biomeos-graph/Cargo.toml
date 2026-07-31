@@ -35,15 +35,15 @@ rustix = { workspace = true, features = ["process"] }
 redb = { workspace = true }
 
 # biomeOS internal crates
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
-biomeos-nucleus = { path = "../biomeos-nucleus", version = "0.1.0" }
+biomeos-core = { path = "../biomeos-core" }
+biomeos-types = { path = "../biomeos-types" }
+biomeos-nucleus = { path = "../biomeos-nucleus" }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
 tempfile = { workspace = true }
 temp-env = { workspace = true }
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 criterion = { workspace = true, features = ["html_reports"] }
 
 [[bench]]

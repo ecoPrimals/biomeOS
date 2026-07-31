@@ -37,14 +37,14 @@ chrono = { workspace = true }
 which = { workspace = true }
 
 # BiomeOS crates
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types" }
+biomeos-core = { path = "../biomeos-core" }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
 assert_cmd = { workspace = true }
 predicates = { workspace = true }
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 
 [[bin]]
 name = "biomeos-init"

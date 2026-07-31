@@ -345,10 +345,11 @@ pub async fn wait_for_tcp_port(port: u16, timeout_attempts: u32) -> Result<()> {
     )
 }
 
-/// Relay stdout and stderr from a child process to logging
+/// Relay stdout and stderr from a child process to logging, then reap it.
 ///
-/// This spawns async tasks to read from the child's stdout/stderr
-/// and relay the output to tracing logs.
+/// Spawns async tasks to read from the child's stdout/stderr, plus a reaper
+/// task that calls `child.wait()` to collect the exit status and prevent
+/// zombie process accumulation.
 pub fn relay_output_streams(mut child: Child, primal_name: String) {
     // Relay stdout
     if let Some(stdout) = child.stdout.take() {
@@ -364,14 +365,29 @@ pub fn relay_output_streams(mut child: Child, primal_name: String) {
 
     // Relay stderr
     if let Some(stderr) = child.stderr.take() {
+        let primal_name_clone = primal_name.clone();
         tokio::spawn(async move {
             use tokio::io::{AsyncBufReadExt, BufReader};
             let mut reader = BufReader::new(stderr).lines();
             while let Ok(Some(line)) = reader.next_line().await {
-                warn!("[{}] {}", primal_name, line);
+                warn!("[{}] {}", primal_name_clone, line);
             }
         });
     }
+
+    // Reap the child to prevent zombie accumulation
+    tokio::spawn(async move {
+        match child.wait().await {
+            Ok(status) => {
+                if !status.success() {
+                    warn!("[{primal_name}] exited with {status}");
+                }
+            }
+            Err(e) => {
+                debug!("[{primal_name}] wait failed: {e}");
+            }
+        }
+    });
 }
 
 #[cfg(test)]

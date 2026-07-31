@@ -9,8 +9,8 @@ rust-version.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-core = { path = "../biomeos-core" }
+biomeos-types = { path = "../biomeos-types" }
 bytes = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

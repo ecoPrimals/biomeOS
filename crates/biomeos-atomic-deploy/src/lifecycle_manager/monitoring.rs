@@ -124,10 +124,21 @@ impl LifecycleManager {
             primal.metrics.health_failures += 1;
 
             if primal.metrics.health_failures >= primal.health_config.failure_threshold {
-                warn!(
-                    "🔴 {} DEGRADED after {} failures: {:?}",
-                    name, primal.metrics.health_failures, health_result.message
-                );
+                let can_resurrect = primal.pid.is_some()
+                    || primal.binary_path.is_some()
+                    || primal.deployment_node.is_some();
+
+                if can_resurrect {
+                    warn!(
+                        "🔴 {} DEGRADED after {} failures: {:?}",
+                        name, primal.metrics.health_failures, health_result.message
+                    );
+                } else {
+                    debug!(
+                        "⚠️ {} DEGRADED ({} failures) — virtual/external, no resurrection",
+                        name, primal.metrics.health_failures
+                    );
+                }
 
                 primal.state = LifecycleState::Degraded {
                     since: chrono::Utc::now(),
@@ -137,17 +148,18 @@ impl LifecycleManager {
                     resurrection_attempts: 0,
                 };
 
-                // Drop lock before spawning resurrection
-                let name_clone = name.to_string();
-                let manager = self.clone_for_task();
-                drop(primals);
+                // Only trigger resurrection for biomeOS-managed primals
+                if can_resurrect {
+                    let name_clone = name.to_string();
+                    let manager = self.clone_for_task();
+                    drop(primals);
 
-                // Trigger resurrection
-                tokio::spawn(async move {
-                    if let Err(e) = manager.attempt_resurrection(&name_clone).await {
-                        error!("Resurrection failed for {}: {}", name_clone, e);
-                    }
-                });
+                    tokio::spawn(async move {
+                        if let Err(e) = manager.attempt_resurrection(&name_clone).await {
+                            error!("Resurrection failed for {}: {}", name_clone, e);
+                        }
+                    });
+                }
             }
         }
 

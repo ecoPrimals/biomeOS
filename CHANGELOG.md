@@ -2,6 +2,55 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.54 (2026-07-31) — Wave 155n: P1 Respawn Storm + Socket Deletion Fix
+
+### P1 CLOSED: Respawn Storm (175 procs/14 min on strandGate)
+- Root cause: Health monitor used `call_btsp()` (BTSP Phase 3 handshake) for all
+  primal health pings. Most primals speak plain JSON-RPC only — BTSP handshake fails
+  → false DEGRADED → resurrection → unbounded process accumulation.
+- Fix: **Dual-protocol health ping** — tries plain JSON-RPC first (works for
+  majority), falls back to BTSP for secure-only primals. Applied to:
+  - `HealthChecker::rpc_ping` (lifecycle monitoring loop)
+  - `NeuralRouter::quick_health_check` (capability discovery)
+  - `NeuralRouter::check_endpoint_health` (prune sweep)
+  - `call_primal_health` (capability handler)
+
+### P1 CLOSED: Socket File Deletion (50% socket survival on westGate)
+- Root cause: Resurrection unconditionally deleted socket files regardless of whether
+  biomeOS owned the process. External primals had their sockets removed.
+- Fix: Socket deletion now requires **PID ownership + confirmed kill**. If biomeOS
+  doesn't have a PID for the primal, it never touches the socket file.
+- `kill_primal_process` now returns `bool` (killed vs no-op).
+
+### P3 CLOSED: Zombie Process Accumulation
+- Root cause: `relay_output_streams` and `respawn_primal_binary` dropped `Child`
+  without calling `wait()`, leaving zombie processes.
+- Fix: Background `tokio::spawn` tasks that call `child.wait()` to reap exit status.
+
+### P3 CLOSED: Virtual Service DEGRADED Churn
+- Root cause: Externally-managed primals (no PID/binary/deployment_node) triggered
+  resurrection when health checks failed, flooding logs and creating phantom respawns.
+- Fix: Primals without ownership metadata still get marked DEGRADED (accurate state)
+  but resurrection is suppressed — logged at debug level only.
+
+### P3 CLOSED: graphs_dir Default Path
+- Root cause: `--graphs-dir` defaulted to CWD `graphs/`, which doesn't exist on
+  non-sporeGate deployments.
+- Fix: Resolution order: `--graphs-dir` CLI > `BIOMEOS_GRAPHS_DIR` env >
+  `$XDG_DATA_HOME/membrane/graphs` > CWD `graphs/`.
+
+### P3 CLOSED: riboCipher Rejection Log Level
+- Root cause: `consume_ribocipher_signal` logged at ERROR on every connection without
+  the prefix — flooding logs during normal protocol negotiation.
+- Fix: Downgraded to `debug!` — this is expected behavior during fallback, not an error.
+
+### P3 CLOSED: --version Reports 0.1.0
+- Root cause: Workspace `[workspace.package] version = "0.1.0"` was never updated.
+- Fix: Workspace version set to `4.54.0`. All inter-crate version pins removed
+  (unnecessary for path-only workspace deps).
+
+---
+
 ## v4.53 (2026-07-31) — Wave 155m: P3 Fixes (Permission Reset + Sandbox Self-Test)
 
 ### /run/membrane Permission Reset (P3 CLOSED)

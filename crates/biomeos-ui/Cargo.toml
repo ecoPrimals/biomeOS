@@ -9,8 +9,8 @@ rust-version.workspace = true
 
 [dependencies]
 # Core biomeOS
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-core = { path = "../biomeos-core" }
+biomeos-types = { path = "../biomeos-types" }
 
 # Async runtime
 tokio = { workspace = true, features = ["net", "io-util", "fs"] }
@@ -37,7 +37,7 @@ rustix = { workspace = true, features = ["fs"] }
 chrono = { workspace = true }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
 

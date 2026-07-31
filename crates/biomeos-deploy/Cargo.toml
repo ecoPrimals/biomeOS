@@ -43,7 +43,7 @@ clap = { workspace = true, features = ["cargo"] }
 uuid = { workspace = true }
 
 # BiomeOS crates
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types" }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

@@ -24,14 +24,14 @@ base64 = { workspace = true }  # For JWT secret encoding
 # zeroize now via biomeos-core::btsp_crypto (SessionKeys derives Zeroize)
 
 # biomeOS crates
-biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
-biomeos-primal-sdk = { path = "../biomeos-primal-sdk", version = "0.1.0" }
+biomeos-spore = { path = "../biomeos-spore" }
+biomeos-core = { path = "../biomeos-core" }
+biomeos-types = { path = "../biomeos-types" }
+biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
 tarpc = { workspace = true, features = ["tcp"] }
 tokio-serde = { workspace = true }
-biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
-biomeos-system = { path = "../biomeos-system", version = "0.1.0" }
+biomeos-graph = { path = "../biomeos-graph" }
+biomeos-system = { path = "../biomeos-system" }
 chrono = { workspace = true }
 futures-util = { workspace = true }
 uuid = { workspace = true }  # For request ID generation
@@ -41,7 +41,7 @@ dashmap = { workspace = true }  # Lock-free runtime capability → provider regi
 
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tokio = { workspace = true, features = ["test-util"] }
 tempfile = { workspace = true }
 temp-env = { workspace = true }

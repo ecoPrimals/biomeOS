@@ -13,7 +13,7 @@ repository = "https://github.com/ecoPrimals/biomeOS"
 biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 
 # Types
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types" }
 
 # Error handling (Pure Rust)
 anyhow = { workspace = true }

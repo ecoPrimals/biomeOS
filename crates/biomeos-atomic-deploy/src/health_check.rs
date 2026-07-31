@@ -176,14 +176,29 @@ impl HealthChecker {
 
     /// Send a JSON-RPC ping to a primal via `AtomicClient` (Universal IPC v3.0)
     ///
-    /// Uses `AtomicClient` with configurable timeout for health checks.
+    /// Dual-protocol: tries plain JSON-RPC first (most primals), then falls back
+    /// to BTSP for secure-only primals. This prevents false DEGRADED cycling on
+    /// primals that don't speak BTSP.
     async fn rpc_ping(&self, socket_path: &Path, method: &str) -> Result<serde_json::Value> {
         let client = AtomicClient::unix(socket_path).with_timeout(self.rpc_timeout);
 
+        // Plain JSON-RPC first — works for the majority of primals
+        match client.call(method, json!({})).await {
+            Ok(result) => return Ok(result),
+            Err(plain_err) => {
+                debug!(
+                    "Plain JSON-RPC ping failed on {}, trying BTSP: {}",
+                    socket_path.display(),
+                    plain_err
+                );
+            }
+        }
+
+        // BTSP fallback — covers primals that require authenticated channels
         client
             .call_btsp(method, json!({}))
             .await
-            .context("RPC ping failed")
+            .context("Health ping failed (both plain JSON-RPC and BTSP)")
     }
 
     /// Check health of all sockets in runtime dir matching a pattern

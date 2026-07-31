@@ -1,7 +1,7 @@
 # biomeOS — Current Status
 
 **Updated**: July 31, 2026
-**Version**: v4.53 (Wave 155m)
+**Version**: v4.54 (Wave 155n)
 **Posture**: STANDBY — All biomeOS-owned P0/P1/P2/P3 blockers resolved.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
@@ -70,6 +70,13 @@
 | Permission reset fix (P3) | v4.53 | Wave 155m |
 | composition.self_test sandbox endpoint (P3) | v4.53 | `c7bc2187` |
 | Dep pruning round 2 (15 more dead deps) | v4.53 | `5d9374b6` |
+| **P1 FIX: Respawn storm (dual-protocol health)** | v4.54 | Wave 155n |
+| **P1 FIX: Socket file deletion (ownership guard)** | v4.54 | Wave 155n |
+| P3 FIX: Zombie reaping (child.wait) | v4.54 | Wave 155n |
+| P3 FIX: Virtual service resurrection skip | v4.54 | Wave 155n |
+| P3 FIX: graphs_dir XDG fallback | v4.54 | Wave 155n |
+| P3 FIX: riboCipher log level ERROR→debug | v4.54 | Wave 155n |
+| P3 FIX: --version 4.54.0 (workspace synced) | v4.54 | Wave 155n |
 
 ---
 
@@ -86,14 +93,20 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **STANDBY-READY**. All 13 P2 divergences + 2 biomeOS-owned P3s resolved.
+biomeOS is **STANDBY-READY**. All P1s + 13 P2 divergences + 7 biomeOS-owned P3s resolved.
+
+Key fix (v4.54): Health monitor now speaks **dual protocol** — plain JSON-RPC first,
+BTSP fallback — eliminating respawn storm on plain-protocol primals. Socket deletion
+guarded by PID ownership (never unlinks sockets biomeOS didn't create). Zombie reaping
+via background `child.wait()`.
 
 Upstream items (not biomeOS code):
-- `GATE_NAME` vs `MEMBRANE_GATE_NAME`: cellMembrane env var naming mismatch
+- `GATE_NAME` vs `MEMBRANE_GATE_NAME`: cellMembrane env var naming mismatch (FIXED by cellMembrane)
 - GNU depot incomplete (4/16): sporeGate builder, not biomeOS
 - cellMembrane not in sources.toml: blocks sovereign CI self-rebuild
+- `membrane/` vs `biomeos/` socket dir mismatch: symlink workaround on westGate
 
 Resume triggers:
-- NUCLEUS E2E validation on strandGate (biomeOS v4.53 redeploy)
+- Redeploy biomeOS v4.54 to westGate + strandGate (validates P1 fix live)
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)

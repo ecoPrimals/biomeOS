@@ -9,7 +9,7 @@ description = "Niche (biome) system for BiomeOS - environments where primals and
 
 [dependencies]
 # Core BiomeOS types
-biomeos-chimera = { path = "../biomeos-chimera", version = "0.1.0" }
+biomeos-chimera = { path = "../biomeos-chimera" }
 
 # Async runtime
 tokio = { workspace = true }

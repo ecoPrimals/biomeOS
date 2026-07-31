@@ -9,7 +9,7 @@ description = "Universal SDK for creating biomeOS Primals"
 
 [dependencies]
 # biomeOS unified types
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types" }
 
 # Core async and serialization
 anyhow = { workspace = true }
@@ -36,7 +36,7 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tokio = { workspace = true, features = ["test-util"] }
 tempfile = { workspace = true }
 temp-env = { workspace = true }

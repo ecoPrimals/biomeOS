@@ -79,6 +79,8 @@ impl LifecycleManager {
 
         primal.metrics.resurrection_count += 1;
 
+        let has_pid = primal.pid.is_some();
+
         // Drop lock before async operations
         drop(primals);
 
@@ -86,10 +88,11 @@ impl LifecycleManager {
         tokio::time::sleep(delay).await;
 
         // Kill old process if still running
-        self.kill_primal_process(name).await?;
+        let killed = self.kill_primal_process(name).await?;
 
-        // Clean up old socket
-        if socket_path.exists() {
+        // Only remove socket if biomeOS owns this process (has PID) and
+        // confirmed the kill. Never unlink a socket biomeOS didn't create.
+        if has_pid && killed && socket_path.exists() {
             tokio::fs::remove_file(&socket_path).await.ok();
         }
 
@@ -109,39 +112,47 @@ impl LifecycleManager {
         Ok(())
     }
 
-    /// Kill primal process
-    pub(crate) async fn kill_primal_process(&self, name: &str) -> Result<()> {
+    /// Kill primal process. Returns `true` if a process was actually terminated.
+    pub(crate) async fn kill_primal_process(&self, name: &str) -> Result<bool> {
         let primals = self.primals.read().await;
         if let Some(primal) = primals.get(name) {
             if let Some(pid) = primal.pid {
                 info!("🔪 Killing {} (PID: {})", name, pid);
 
-                // Send SIGTERM first
                 #[cfg(unix)]
                 {
                     use rustix::process::{Pid, Signal, kill_process, test_kill_process};
 
                     let pid_i32 = i32::try_from(pid).unwrap_or(-1);
                     if let Some(rustix_pid) = Pid::from_raw(pid_i32) {
+                        // Check if process is alive first
+                        if test_kill_process(rustix_pid).is_err() {
+                            return Ok(true); // Already dead
+                        }
+
                         // Try graceful SIGTERM
                         if kill_process(rustix_pid, Signal::TERM).is_ok() {
-                            // Wait up to 5 seconds for graceful shutdown
                             for _ in 0..50 {
                                 tokio::time::sleep(Duration::from_millis(100)).await;
                                 if test_kill_process(rustix_pid).is_err() {
-                                    return Ok(()); // Process dead
+                                    return Ok(true);
                                 }
                             }
 
-                            // Force SIGKILL if still running
                             warn!("⚠️ {} didn't terminate gracefully, sending SIGKILL", name);
                             let _ = kill_process(rustix_pid, Signal::KILL);
+                            return Ok(true);
                         }
                     }
                 }
+
+                #[cfg(not(unix))]
+                {
+                    let _ = pid;
+                }
             }
         }
-        Ok(())
+        Ok(false)
     }
 
     /// Respawn a NUCLEUS-launched primal from its binary path.
@@ -195,7 +206,7 @@ impl LifecycleManager {
             .stderr(stderr_stdio)
             .stdin(std::process::Stdio::null());
 
-        let child = cmd.spawn()?;
+        let mut child = cmd.spawn()?;
         let pid = child.id();
 
         // Write PID file
@@ -223,8 +234,19 @@ impl LifecycleManager {
             primal.metrics.health_failures = 0;
         }
 
-        // Let the child process run independently (we track by PID)
-        drop(child);
+        // Reap child in background to prevent zombie accumulation
+        let reap_name = name.to_string();
+        tokio::spawn(async move {
+            match child.wait().await {
+                Ok(status) if !status.success() => {
+                    warn!("[{reap_name}] exited with {status}");
+                }
+                Err(e) => {
+                    tracing::debug!("[{reap_name}] wait failed: {e}");
+                }
+                _ => {}
+            }
+        });
 
         info!("✅ {} respawned from binary (PID: {:?})", name, pid);
 

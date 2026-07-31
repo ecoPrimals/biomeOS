@@ -10,7 +10,7 @@ repository = "https://github.com/ecoPrimals/biomeOS"
 
 [dependencies]
 # Unified types from biomeos ecosystem
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types" }
 
 # Serialization
 serde = { workspace = true }
@@ -32,7 +32,7 @@ tracing = { workspace = true }
 rustix = { workspace = true, features = ["fs", "mount", "system"] }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tokio = { workspace = true, features = ["test-util"] }
 tokio-test = { workspace = true }
 

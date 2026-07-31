@@ -27,13 +27,13 @@ serde_json = { workspace = true }
 toml = { workspace = true }
 
 # Internal dependencies
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
-biomeos-system = { path = "../biomeos-system", version = "0.1.0" }
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
-biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
-biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }
+biomeos-core = { path = "../biomeos-core" }
+biomeos-system = { path = "../biomeos-system" }
+biomeos-types = { path = "../biomeos-types" }
+biomeos-graph = { path = "../biomeos-graph" }
+biomeos-spore = { path = "../biomeos-spore" }
 biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
-neural-api-client = { path = "../neural-api-client", version = "0.1.0" }
+neural-api-client = { path = "../neural-api-client" }
 
 # Logging
 tracing = { workspace = true }
@@ -57,7 +57,7 @@ chrono = { workspace = true }
 async-stream = { workspace = true }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 # Testing utilities
 tokio-test = { workspace = true }
 http-body-util = { workspace = true }

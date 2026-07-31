@@ -37,11 +37,11 @@ hex = { workspace = true }
 base64 = { workspace = true }
 
 # biomeOS dependencies
-biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
-biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-core = { path = "../biomeos-core" }
+biomeos-types = { path = "../biomeos-types" }
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
+biomeos-test-utils = { path = "../biomeos-test-utils" }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
 
