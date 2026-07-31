@@ -90,14 +90,19 @@
 
 ---
 
-## G22: whitePaper API Convergence — IN PROGRESS
+## G22: whitePaper API Convergence — COMPLETE
 
 | Step | What | Status | Version |
 |------|------|--------|---------|
 | 1 | NUCLEUS serves both HTTP API + Neural API in single process | ✅ DONE | v4.56 (`4b48b83b`) |
 | 2 | Socket namespace unified (all refs → membrane/) | ✅ DONE | v4.56 (`bd33e17d`) |
-| 3 | Sovereign CI git-pull-before-build | PENDING (sporeGate/operational) | — |
-| 4 | `biomeos api` mode absorbs Neural API (full unification) | PLANNED (glacial) | — |
+| 3 | `biomeos api` mode launches Neural API alongside HTTP | ✅ DONE | v4.56 (`b82f0925`) |
+| 4 | `biomeos neural-api` mode launches HTTP API alongside JSON-RPC | ✅ DONE | v4.56 (`b82f0925`) |
+| 4b | Standalone `neural-api` deprecated (runtime warning) | ✅ DONE | v4.56 (`b82f0925`) |
+| 5 | Single restart = full composition recovery | ✅ DONE | (persisted registry + sweep) |
+
+**Result**: Any biomeOS entry point provides both HTTP/WebSocket AND JSON-RPC.
+Springs+gardens can build against any mode. Socket evaporation on restart eliminated.
 
 ---
 
@@ -129,7 +134,7 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 ## biomeOS Posture: STANDBY-READY (G22 Active)
 
 biomeOS Chain 1 complete. **All P0/P1/P2/P3 biomeOS-owned blockers resolved.**
-G22 convergence actively progressing: Steps 1+2 shipped.
+**G22 convergence COMPLETE**. Springs-ready: any mode = dual protocol.
 
 ### Metrics (v4.56)
 
@@ -142,7 +147,7 @@ G22 convergence actively progressing: Steps 1+2 shipped.
 | TODOs in prod | 0 |
 | Mocks in prod | 0 |
 | Dead code | 0 |
-| Dead dependencies | 0 (39 removed total, cargo-machete verified) |
+| Dead dependencies | 0 (47 removed total, cargo-machete verified) |
 | Hardcoded primal names | 0 in production |
 | Stale socket path refs | 0 (unified to membrane/) |
 | cargo deny | clean |

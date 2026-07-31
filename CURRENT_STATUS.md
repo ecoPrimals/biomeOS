@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: July 31, 2026
-**Version**: v4.56 (Wave 155n — G22 API Convergence)
-**Posture**: STANDBY — ZERO P0/P1/P2. G22 convergence in progress.
+**Version**: v4.56 (Wave 155n — G22 API Convergence COMPLETE)
+**Posture**: SPRINGS-READY — ZERO P0/P1/P2. G22 convergence COMPLETE.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -50,7 +50,7 @@
 | Socket Ownership | `MEMBRANE_SOCKET_GROUP` env, chown :membrane post-bind |
 | Health Ping | Dual-protocol: plain JSON-RPC first, BTSP fallback |
 | Coevolution Contract | `composition.test_swap` — live validation of replacement binaries |
-| **G22 Convergence** | Step 1+2 complete: NUCLEUS serves both HTTP+JSON-RPC; namespace unified |
+| **G22 Convergence** | **COMPLETE**: ALL modes unified (api, neural-api, nucleus) serve both protocols |
 
 ---
 
@@ -86,7 +86,8 @@
 | **MODE GAP: btsp_optional plain JSON-RPC** | v4.55 | `652cf8a7` |
 | **G22 Step 1: NUCLEUS dual-server (HTTP+JSON-RPC)** | v4.56 | `4b48b83b` |
 | **G22 Step 2: Socket namespace unified (membrane/)** | v4.56 | `bd33e17d` |
-| Dep pruning round 3 (5 more dead deps) | v4.56 | `4b48b83b` |
+| **G22 Steps 3-5: All modes unified, neural-api deprecated** | v4.56 | `b82f0925` |
+| Dep pruning round 3+4 (13 more dead deps, 47 total) | v4.56 | `4b48b83b`+`6a698078` |
 
 ---
 
@@ -103,24 +104,29 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **STANDBY-READY** with G22 convergence actively progressing.
+biomeOS is **SPRINGS-READY**. G22 convergence COMPLETE.
 
-**G22 Status (whitePaper API convergence)**:
-- Step 1 DONE: NUCLEUS Full mode launches HTTP API + Neural API in same process
-- Step 2 DONE: All socket path references unified to `membrane/` namespace
-- Step 3 PENDING (upstream): Sovereign CI trigger git-pull-before-build
-- P3 `/run/membrane` perm reset: RESOLVED in v4.53 (freshly_created guard)
-- P3 `bearDog` dual-socket: bearDog team, not biomeOS
+**G22 (whitePaper API convergence) — COMPLETE**:
+- Step 1: NUCLEUS Full mode launches HTTP API + Neural API in same process
+- Step 2: All socket path references unified to `membrane/` namespace
+- Step 3: `biomeos api` mode launches Neural API alongside HTTP
+- Step 4: `biomeos neural-api` mode launches HTTP API alongside JSON-RPC
+- Step 4b: Standalone `neural-api` mode deprecated (runtime warning)
+- Step 5: Single restart = full composition recovery (persisted registry + sweep)
+
+Any entry point (api, neural-api, nucleus) now provides BOTH protocols.
+Springs+gardens can build against any mode with confidence.
 
 Coevolution (G21) COMPLETE. Both P1s GATE VALIDATED on westGate and strandGate.
 
 Upstream items (not biomeOS code):
-- GNU depot incomplete (4/16): sporeGate builder, not biomeOS
+- J12: blueGate sub-builder IPC wire (songBird, unblocked)
+- J18: `/etc/environment` gate coupling (cellMembrane)
+- GNU depot incomplete (4/16): sporeGate builder
 - bearDog dual-socket: bearDog team workaround available
-- Sovereign CI source tree divergence: sporeGate needs git pull before build
 
 Resume triggers:
-- G22 Step 3: `biomeos api` mode absorbs Neural API (full unification)
+- G18: squirrel → biomeOS neuralAPI agent integration (springs)
 - Redeploy v4.56 to depot via Sovereign CI
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)

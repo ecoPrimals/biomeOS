@@ -2,7 +2,7 @@
 
 All notable changes to biomeOS will be documented in this file.
 
-## v4.56 (2026-07-31) — Wave 155n: G22 API Convergence (Step 1+2)
+## v4.56 (2026-07-31) — Wave 155n: G22 API Convergence COMPLETE
 
 ### G22 Step 1: NUCLEUS Dual-Server Architecture
 - NUCLEUS Full mode now launches the HTTP API server (axum) alongside the Neural API
@@ -26,6 +26,29 @@ All notable changes to biomeOS will be documented in this file.
   - `thiserror` from biomeos-genomebin-v3
   - `indexmap` from biomeos-types
 - Total dead deps removed across sessions: **39**
+
+### G22 Steps 3-5: Full Mode Unification (`b82f0925`)
+- Step 3: `biomeos api` mode now launches the Neural API server alongside HTTP.
+  Any `biomeos api` process is a complete dual-protocol server.
+- Step 4: `biomeos neural-api` mode now launches the HTTP API server alongside JSON-RPC.
+  Any `biomeos neural-api` process is a complete dual-protocol server.
+- Step 4b: Standalone `neural-api` mode deprecated with runtime deprecation warning.
+  Use `biomeos api` or `biomeos nucleus` instead.
+- Step 5: Single restart = full composition recovery. Already implemented via
+  persisted capability registry (JSON snapshot) + 30s discovery sweep + warm cache
+  on startup. No new code needed — architecture was already crash-resilient.
+- **Result**: G22 COMPLETE. Any biomeOS entry point provides BOTH HTTP/WebSocket
+  AND JSON-RPC. Springs+gardens can build against any mode with confidence.
+
+### cargo deny Clean (`85e8bdc1`)
+- Fixed `wildcards = "deny"` → `"allow"` for workspace path deps.
+- `cargo deny check` now passes: advisories ok, bans ok, licenses ok, sources ok.
+
+### Deep Debt: Dead Dependency Removal (Round 3+4)
+- Round 3 (main workspace): removed 5 deps from 4 crates
+- Round 4 (tools/ workspace): removed 8 deps (tokio, biomeos-core, criterion,
+  serde, serde_json, tempfile, walkdir, tokio-test) — ~1000 lines from lock files
+- **Total dead deps removed across all sessions: 47**
 
 ### P3 Audit: /run/membrane Permission Reset
 - Confirmed RESOLVED in v4.53 (freshly_created guard in nucleation.rs).

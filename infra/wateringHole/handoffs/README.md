@@ -4,9 +4,9 @@ Session handoff documents for upstream overwatch audit.
 
 Each file captures: what was done, metrics before/after, commits produced, and next-wave candidates.
 
-## ⚡ STATUS: ALL biomeOS-OWNED P0/P1/P2/P3 RESOLVED — v4.56 G22 ACTIVE
+## ⚡ STATUS: SPRINGS-READY — v4.56 G22 COMPLETE
 
-**Version**: v4.56 | **Tests**: 8,458+ | **biomeOS P2/P3 open**: 0 | **Posture**: G22 CONVERGENCE IN PROGRESS
+**Version**: v4.56 | **Tests**: 8,570+ | **biomeOS P2/P3 open**: 0 | **Posture**: SPRINGS-READY (G22 COMPLETE)
 
 ### Chain 1: biomeOS Orchestration Lifecycle — COMPLETE (v4.44–v4.48)
 
@@ -58,7 +58,8 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
-| **155n-b** | Jul 31, 2026 | **G22 convergence: NUCLEUS dual-server + socket namespace unified** |
+| **155n-c** | Jul 31, 2026 | **G22 COMPLETE: all modes unified, neural-api deprecated** |
+| 155n-b | Jul 31, 2026 | G22 convergence: NUCLEUS dual-server + socket namespace unified |
 | 155n | Jul 31, 2026 | Coevolution contract: composition.test_swap (P2 sandbox unblock) |
 | 155m-f | Jul 31, 2026 | Deep debt: 15 more dead deps removed (29 total), full audit clean |
 | 155m-e | Jul 31, 2026 | P3 fixes: permission reset + composition.self_test sandbox endpoint |
