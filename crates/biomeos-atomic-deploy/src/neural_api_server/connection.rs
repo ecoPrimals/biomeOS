@@ -69,9 +69,16 @@ impl NeuralApiServer {
     ) -> Result<()> {
         let mut reader = BufReader::new(stream);
 
-        // riboCipher transport signal detection (Wave 113: REJECT unsignalled).
+        // riboCipher transport signal detection (Wave 113).
+        // When not enforcing (btsp_optional), accept plain JSON-RPC connections
+        // without riboCipher prefix — enables cellMembrane composition.test_swap
+        // and other intra-gate plain JSON-RPC callers.
         if !Self::consume_ribocipher_signal(&mut reader).await {
-            return Ok(());
+            if enforce {
+                return Ok(());
+            }
+            debug!("Accepting plain JSON-RPC connection (BTSP not enforced)");
+            return self.handle_stream(reader).await;
         }
 
         match btsp_client::server_handshake(&mut reader).await {
@@ -144,10 +151,16 @@ impl NeuralApiServer {
     }
 
     /// Handle a TCP client connection.
+    ///
+    /// TCP connections without riboCipher are accepted when `btsp_optional` is set,
+    /// enabling plain JSON-RPC callers (cellMembrane, cross-gate tools).
     pub async fn handle_tcp_connection(&self, stream: tokio::net::TcpStream) -> Result<()> {
         let mut reader = BufReader::new(stream);
         if !Self::consume_ribocipher_signal(&mut reader).await {
-            return Ok(());
+            if !self.btsp_optional {
+                return Ok(());
+            }
+            debug!("Accepting plain JSON-RPC TCP connection (BTSP not enforced)");
         }
         self.handle_stream(reader).await
     }

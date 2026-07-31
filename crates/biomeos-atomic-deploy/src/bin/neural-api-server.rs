@@ -98,7 +98,8 @@ async fn main() -> Result<()> {
         PathBuf::from(&graphs_dir),
         family_id,
         PathBuf::from(&socket_path),
-    );
+    )
+    .with_btsp_optional(); // Accept plain JSON-RPC from local callers (cellMembrane, CLI)
     if let Some(addr) = bind_address {
         server = server.with_bind_address(addr);
     }
