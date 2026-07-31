@@ -353,6 +353,28 @@ pub async fn run(cfg: NucleusRunConfig) -> Result<()> {
                 }
             }
         });
+
+        // G22 Convergence: HTTP API server alongside Neural API (single process)
+        // Provides HTTP/WebSocket endpoints for UI, dashboards, and external tools.
+        let api_socket = socket_dir.join(format!("biomeos-api-{family_id}.sock"));
+        info!("Starting HTTP API server (G22 convergence)...");
+        info!("  Socket: {}", api_socket.display());
+        tokio::spawn(async move {
+            match biomeos_api::AppState::builder()
+                .config_from_env()
+                .build_with_defaults()
+            {
+                Ok(state) => {
+                    let app = biomeos_api::create_app(state);
+                    if let Err(e) = biomeos_api::serve_unix_socket(&api_socket, app).await {
+                        tracing::error!("HTTP API server exited with error: {e}");
+                    }
+                }
+                Err(e) => {
+                    warn!("HTTP API server skipped (config error): {e}");
+                }
+            }
+        });
     }
 
     // Print summary

@@ -16,7 +16,6 @@ bytes = { workspace = true }
 
 # Error handling (Pure Rust)
 anyhow = { workspace = true }
-thiserror = { workspace = true }
 
 # Serialization (Pure Rust)
 serde = { workspace = true }

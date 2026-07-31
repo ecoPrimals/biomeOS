@@ -573,7 +573,6 @@ dependencies = [
  "indicatif",
  "tar",
  "tempfile",
- "toml",
 ]
 
 [[package]]
@@ -584,12 +583,9 @@ dependencies = [
  "biomeos-genomebin-v3",
  "biomeos-types",
  "etcetera",
- "hex",
  "serde",
  "serde_json",
  "tempfile",
- "thiserror 2.0.19",
- "tokio",
  "tokio-test",
  "tracing",
 ]
@@ -610,7 +606,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "tempfile",
- "thiserror 2.0.19",
  "tracing",
 ]
 
@@ -801,7 +796,6 @@ dependencies = [
  "bytes",
  "chrono",
  "etcetera",
- "indexmap",
  "proptest",
  "serde",
  "serde-saphyr",
@@ -1961,8 +1955,6 @@ checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
- "serde",
- "serde_core",
 ]
 
 [[package]]

@@ -17,7 +17,7 @@ biomeos-types = { path = "../biomeos-types" }
 
 # Error handling (Pure Rust)
 anyhow = { workspace = true }
-thiserror = { workspace = true }
+
 
 # Serialization (Pure Rust)
 serde = { workspace = true }
@@ -26,14 +26,12 @@ serde_json = { workspace = true }
 # Logging (Pure Rust)
 tracing = { workspace = true }
 
-# Async runtime (Pure Rust)
-tokio = { workspace = true, features = ["fs", "process"] }
+
 
 # Path handling (Pure Rust)
 etcetera = { workspace = true }
 
-# Hex encoding (Pure Rust)
-hex = { workspace = true }
+
 
 [dev-dependencies]
 tokio-test = { workspace = true }
