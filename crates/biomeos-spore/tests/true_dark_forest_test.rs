@@ -24,7 +24,7 @@ async fn test_pure_noise_beacon_generation() {
     // This test validates biomeOS implementation
     // Requires beardog to have genetic.derive_lineage_beacon_key implemented
 
-    let beardog_socket = "/run/user/1000/biomeos/beardog.sock";
+    let beardog_socket = "/run/user/1000/membrane/beardog.sock";
     let seed_path = "/tmp/test_dark_forest.seed";
     let node_id = "test_node_1";
 

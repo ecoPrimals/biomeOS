@@ -538,7 +538,7 @@ mod tests {
     fn primal_label_for_endpoint_unix_socket_stem() {
         let router = NeuralRouter::new("fam");
         let ep = TransportEndpoint::UnixSocket {
-            path: std::path::PathBuf::from("/run/biomeos/beardog-f1.sock"),
+            path: std::path::PathBuf::from("/run/membrane/beardog-f1.sock"),
         };
         assert_eq!(
             router.primal_label_for_endpoint(&ep),

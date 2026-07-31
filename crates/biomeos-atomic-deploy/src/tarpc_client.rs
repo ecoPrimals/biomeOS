@@ -151,7 +151,7 @@ mod tests {
 
     #[tokio::test]
     async fn connect_tarpc_health_nonexistent_socket_reports_path() {
-        let p = Path::new("/nonexistent/biomeos/tarpc-health-missing.sock");
+        let p = Path::new("/nonexistent/membrane/tarpc-health-missing.sock");
         let err = connect_tarpc_health(p).await.unwrap_err();
         let s = format!("{err:#}");
         assert!(
@@ -163,13 +163,13 @@ mod tests {
 
     #[tokio::test]
     async fn connect_tarpc_discovery_nonexistent_socket_is_error() {
-        let p = Path::new("/nonexistent/biomeos/tarpc-discovery-missing.sock");
+        let p = Path::new("/nonexistent/membrane/tarpc-discovery-missing.sock");
         assert!(connect_tarpc_discovery(p).await.is_err());
     }
 
     #[tokio::test]
     async fn connect_tarpc_security_nonexistent_socket_is_error() {
-        let p = Path::new("/nonexistent/biomeos/tarpc-security-missing.sock");
+        let p = Path::new("/nonexistent/membrane/tarpc-security-missing.sock");
         assert!(connect_tarpc_security(p).await.is_err());
     }
 }

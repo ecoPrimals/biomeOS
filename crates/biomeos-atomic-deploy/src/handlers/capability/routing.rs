@@ -24,7 +24,7 @@ impl CapabilityHandler {
     ///
     /// # Returns
     /// ```json
-    /// { "endpoint": "unix:///run/biomeos/security-family.sock",
+    /// { "endpoint": "unix:///run/membrane/security-family.sock",
     ///   "primal": "security-provider", "capability": "crypto", "resolved": true }
     /// ```
     pub async fn resolve(&self, params: &Option<Value>) -> Result<Value> {

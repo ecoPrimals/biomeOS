@@ -101,7 +101,7 @@ async fn test_endpoint_unix_socket_preferred() {
         .id("test".to_string())
         .binary_path("/bin/true".to_string())
         .http_port(9000)
-        .unix_socket_path("/run/user/1000/biomeos/test.sock")
+        .unix_socket_path("/run/user/1000/membrane/test.sock")
         .build()
         .unwrap();
     let endpoint = primal.endpoint().await;

@@ -127,7 +127,7 @@ async fn query_registry_connection_fails_for_missing_socket() {
 #[tokio::test]
 async fn discover_via_registry_by_name_unix_socket_path() {
     let result_json = serde_json::json!({
-        "socket_path": "/run/biomeos/primal.sock",
+        "socket_path": "/run/membrane/primal.sock",
         "capabilities": ["security", "crypto"]
     });
     let line = format!(
@@ -145,7 +145,7 @@ async fn discover_via_registry_by_name_unix_socket_path() {
     assert!(found.capabilities.contains(&"security".to_string()));
     match &found.endpoint {
         TransportEndpoint::UnixSocket { path } => {
-            assert_eq!(path, &PathBuf::from("/run/biomeos/primal.sock"));
+            assert_eq!(path, &PathBuf::from("/run/membrane/primal.sock"));
         }
         other => panic!("expected UnixSocket, got {other:?}"),
     }

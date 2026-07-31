@@ -12,7 +12,7 @@
 //! 1. `{CAPABILITY}_PROVIDER_SOCKET` — explicit env override (e.g. `SECURITY_PROVIDER_SOCKET`)
 //! 2. `{PRIMAL}_SOCKET` — identity env fallback via taxonomy resolution
 //! 3. `$XDG_RUNTIME_DIR/membrane/{capability}.sock` or `{primal}.sock`
-//! 4. `/tmp/biomeos/{capability}.sock` or `{primal}.sock`
+//! 4. `/tmp/membrane/{capability}.sock` or `{primal}.sock`
 //! 5. Manifest / socket-registry (file-based fallback)
 
 use std::path::{Path, PathBuf};

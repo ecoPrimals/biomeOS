@@ -33,11 +33,11 @@ fn test_socket_path_with_socket_dir() {
     // Use unique service name to avoid env var collisions
     let unique_svc = "socket-dir-test-83726";
     let mut env = HashMap::new();
-    env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/biomeos".to_string());
+    env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/membrane".to_string());
 
     let path = socket_path_with(unique_svc, &env);
     let path_str = path.to_str().unwrap();
-    assert_eq!(path_str, format!("/run/biomeos/{unique_svc}.sock"));
+    assert_eq!(path_str, format!("/run/membrane/{unique_svc}.sock"));
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn test_socket_path_env_var_takes_precedence() {
         "PRECEDENCE_TEST_SOCKET".to_string(),
         "/explicit/socket.sock".to_string(),
     );
-    env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/biomeos".to_string());
+    env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/membrane".to_string());
 
     let path = socket_path_with("precedence-test", &env);
     assert_eq!(path.to_str().unwrap(), "/explicit/socket.sock");
@@ -75,8 +75,8 @@ fn test_join_socket_path_basic() {
 
 #[test]
 fn test_join_socket_path_with_subdir() {
-    let path = join_socket_path("/var/run/biomeos", "beardog");
-    assert_eq!(path.to_str().unwrap(), "/var/run/biomeos/beardog.sock");
+    let path = join_socket_path("/var/run/membrane", "beardog");
+    assert_eq!(path.to_str().unwrap(), "/var/run/membrane/beardog.sock");
 }
 
 #[test]
@@ -229,10 +229,10 @@ fn test_join_socket_path_various_dirs() {
         "/tmp/neural-api.sock"
     );
     assert_eq!(
-        join_socket_path("/run/biomeos", "beardog")
+        join_socket_path("/run/membrane", "beardog")
             .to_str()
             .unwrap(),
-        "/run/biomeos/beardog.sock"
+        "/run/membrane/beardog.sock"
     );
 }
 

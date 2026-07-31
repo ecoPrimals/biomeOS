@@ -238,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_resolve_socket_path_explicit_with_components() {
-        let custom = PathBuf::from("/var/run/biomeos/neural-api.sock");
+        let custom = PathBuf::from("/var/run/membrane/neural-api.sock");
         let path = resolve_socket_path(Some(custom.clone()), "ignored");
         assert_eq!(path, custom);
     }

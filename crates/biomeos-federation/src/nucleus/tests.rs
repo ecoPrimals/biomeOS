@@ -210,7 +210,7 @@ fn test_get_by_family_no_match() {
 
 #[test]
 fn test_get_by_socket() {
-    let sock_path = PathBuf::from("/run/biomeos/beardog.sock");
+    let sock_path = PathBuf::from("/run/membrane/beardog.sock");
     let vp = make_verified(
         "beardog",
         "bd",

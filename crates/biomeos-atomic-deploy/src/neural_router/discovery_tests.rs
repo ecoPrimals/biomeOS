@@ -317,7 +317,7 @@ async fn test_prefix_lookup_misses_unrelated() {
 #[tokio::test]
 async fn test_discover_capability_via_prefix() {
     let router = NeuralRouter::new("discover-prefix");
-    let ep = unix_endpoint("/run/biomeos/loamspine-prefix.sock");
+    let ep = unix_endpoint("/run/membrane/loamspine-prefix.sock");
     router
         .register_capability("session.commit", "loamspine", ep.clone(), "graph")
         .await

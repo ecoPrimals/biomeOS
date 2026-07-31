@@ -310,7 +310,7 @@ mod tests {
     fn test_tarpc_endpoint_with_many_services() {
         let endpoint = TarpcEndpoint {
             available: true,
-            socket: Some(PathBuf::from("/run/user/1000/biomeos/beardog.sock")),
+            socket: Some(PathBuf::from("/run/user/1000/membrane/beardog.sock")),
             services: vec![
                 "health".to_string(),
                 "deploy".to_string(),

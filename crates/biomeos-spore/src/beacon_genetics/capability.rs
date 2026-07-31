@@ -243,10 +243,10 @@ mod tests {
 
     #[test]
     fn test_neural_api_caller_new_custom_path() {
-        let caller = NeuralApiCapabilityCaller::new("/run/user/1000/biomeos/custom.sock");
+        let caller = NeuralApiCapabilityCaller::new("/run/user/1000/membrane/custom.sock");
         assert_eq!(
             caller.neural_api_socket,
-            "/run/user/1000/biomeos/custom.sock"
+            "/run/user/1000/membrane/custom.sock"
         );
     }
 

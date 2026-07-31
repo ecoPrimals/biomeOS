@@ -206,7 +206,7 @@ async fn test_discover_by_capability_returns_vec() {
 fn test_discovered_primal_serialization() {
     let primal = DiscoveredPrimal {
         name: "beardog".to_string(),
-        socket_path: PathBuf::from("/run/user/1000/biomeos/beardog-default.sock"),
+        socket_path: PathBuf::from("/run/user/1000/membrane/beardog-default.sock"),
         capability: PrimalCapability::encryption(),
         discovered_via: DiscoveryMethod::XdgRuntime,
         is_healthy: true,

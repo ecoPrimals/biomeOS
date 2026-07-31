@@ -216,7 +216,7 @@ impl InferenceHandler {
     ///
     /// # Parameters
     /// - `name`: Provider name (e.g. "neuralSpring")
-    /// - `endpoint`: Transport endpoint (e.g. "/run/biomeos/neuralspring.sock")
+    /// - `endpoint`: Transport endpoint (e.g. "/run/membrane/neuralspring.sock")
     /// - `capabilities` (optional): Array of supported operations (defaults to
     ///   `["complete", "embed", "models"]`)
     pub async fn register_provider(&self, params: &Option<Value>) -> Result<Value> {

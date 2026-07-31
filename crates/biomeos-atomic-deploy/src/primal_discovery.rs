@@ -456,7 +456,7 @@ mod tests {
     fn test_discovered_primal_serialize() {
         let primal = DiscoveredPrimal {
             name: "beardog".to_string(),
-            socket_path: PathBuf::from("/run/user/1000/biomeos/beardog-cf7e.sock"),
+            socket_path: PathBuf::from("/run/user/1000/membrane/beardog-cf7e.sock"),
             family_id: Some("cf7e".to_string()),
             discovered_at: chrono::Utc::now(),
             responsive: true,

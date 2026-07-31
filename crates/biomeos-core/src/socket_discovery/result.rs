@@ -301,7 +301,7 @@ mod tests {
     fn test_primal_manifest_serde_roundtrip() {
         let manifest = PrimalManifest {
             primal: Arc::from("beardog"),
-            socket: Arc::from("/run/user/1000/biomeos/beardog-abc123.sock"),
+            socket: Arc::from("/run/user/1000/membrane/beardog-abc123.sock"),
             capabilities: vec!["security".to_string(), "secrets".to_string()],
             pid: Some(12345),
         };

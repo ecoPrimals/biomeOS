@@ -71,7 +71,7 @@ fn test_beacon_plaintext_json_to_base64_roundtrip() {
         family_hash: "fam123".to_string(),
         node_id: "tower1".to_string(),
         timestamp: 1_700_000_000,
-        socket_path: "/run/user/1000/biomeos/beardog.sock".to_string(),
+        socket_path: "/run/user/1000/membrane/beardog.sock".to_string(),
         capabilities_hash: "cap456".to_string(),
         lineage_mode: Some("genesis".to_string()),
     };

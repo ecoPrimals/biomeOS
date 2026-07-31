@@ -55,7 +55,7 @@ async fn cleanup_test_seed(path: &str) {
 /// Resolve security-provider socket path (env override or default).
 fn security_socket_path() -> String {
     std::env::var("BEARDOG_SOCKET")
-        .unwrap_or_else(|_| "/run/user/1000/biomeos/beardog.sock".to_string())
+        .unwrap_or_else(|_| "/run/user/1000/membrane/beardog.sock".to_string())
 }
 
 // ═══════════════════════════════════════════════════════════════════

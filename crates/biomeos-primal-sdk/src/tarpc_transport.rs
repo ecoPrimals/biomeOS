@@ -301,18 +301,18 @@ mod tests {
     #[test]
     fn tarpc_socket_name_nested_path() {
         assert_eq!(
-            tarpc_socket_name("/run/biomeos/songbird-f1.sock"),
-            "/run/biomeos/songbird-f1.tarpc.sock"
+            tarpc_socket_name("/run/membrane/songbird-f1.sock"),
+            "/run/membrane/songbird-f1.tarpc.sock"
         );
     }
 
     #[test]
     fn tarpc_socket_path_conversion() {
-        let jsonrpc = std::path::Path::new("/run/biomeos/beardog-f1.sock");
+        let jsonrpc = std::path::Path::new("/run/membrane/beardog-f1.sock");
         let tarpc = tarpc_socket_path(jsonrpc);
         assert_eq!(
             tarpc,
-            std::path::PathBuf::from("/run/biomeos/beardog-f1.tarpc.sock")
+            std::path::PathBuf::from("/run/membrane/beardog-f1.tarpc.sock")
         );
     }
 

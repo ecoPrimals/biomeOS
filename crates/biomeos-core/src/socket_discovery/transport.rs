@@ -263,9 +263,9 @@ mod tests {
 
     #[test]
     fn test_parse_unix_scheme() {
-        let endpoint = TransportEndpoint::parse("unix:///run/biomeos/beardog-abc123.sock").unwrap();
+        let endpoint = TransportEndpoint::parse("unix:///run/membrane/beardog-abc123.sock").unwrap();
         if let TransportEndpoint::UnixSocket { path } = endpoint {
-            assert_eq!(path, PathBuf::from("/run/biomeos/beardog-abc123.sock"));
+            assert_eq!(path, PathBuf::from("/run/membrane/beardog-abc123.sock"));
         } else {
             panic!("Expected UnixSocket, got {endpoint:?}");
         }

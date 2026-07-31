@@ -69,13 +69,13 @@ fn btsp_strict_mode_default_off() {
 #[test]
 fn is_security_provider_socket_detects_beardog_filename() {
     assert!(is_security_provider_socket(Path::new(
-        "/run/user/1000/biomeos/beardog.sock"
+        "/run/user/1000/membrane/beardog.sock"
     )));
     assert!(is_security_provider_socket(Path::new(
-        "/run/user/1000/biomeos/beardog-abc123.sock"
+        "/run/user/1000/membrane/beardog-abc123.sock"
     )));
     assert!(!is_security_provider_socket(Path::new(
-        "/run/user/1000/biomeos/neural-api.sock"
+        "/run/user/1000/membrane/neural-api.sock"
     )));
 }
 

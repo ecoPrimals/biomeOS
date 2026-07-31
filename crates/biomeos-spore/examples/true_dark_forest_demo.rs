@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // Configuration
-    let security_socket = "/run/user/1000/biomeos/beardog.sock";
+    let security_socket = "/run/user/1000/membrane/beardog.sock";
     let family_seed_path = "/tmp/dark_forest_demo.seed";
     let node_id = "demo_node_1";
 

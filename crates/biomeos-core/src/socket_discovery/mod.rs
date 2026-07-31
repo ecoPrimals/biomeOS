@@ -32,7 +32,7 @@
 //!
 //! 1. Environment variable hint (e.g., `BEARDOG_SOCKET`, `BEARDOG_TCP`)
 //! 2. Capability-first sockets (e.g., `security.sock`, `crypto.sock`)
-//! 3. `XDG_RUNTIME_DIR` (e.g., `/run/user/1000/biomeos/beardog-1894e909e454.sock`)
+//! 3. `XDG_RUNTIME_DIR` (e.g., `/run/user/1000/membrane/beardog-1894e909e454.sock`)
 //! 4. Abstract socket (Android: `@biomeos_beardog_1894e909e454`)
 //! 5. Family-scoped /tmp (e.g., `/tmp/beardog-1894e909e454.sock`)
 //! 6. Socket registry (`$XDG_RUNTIME_DIR/membrane/socket-registry.json`)

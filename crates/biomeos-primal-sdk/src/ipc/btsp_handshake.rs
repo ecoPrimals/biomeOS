@@ -321,7 +321,7 @@ mod tests {
             "/run/membrane/beardog-abc123.sock"
         )));
         assert!(is_family_scoped(Path::new(
-            "/tmp/biomeos/songbird-main.sock"
+            "/tmp/membrane/songbird-main.sock"
         )));
     }
 

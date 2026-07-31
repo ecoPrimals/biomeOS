@@ -24,7 +24,7 @@ fn test_resolve_primal_socket_default() {
 #[test]
 fn test_resolve_primal_socket_biomeos_dir() {
     let path = resolve_primal_socket_with("petaltongue", Some("/run/biomeos".to_string()));
-    assert_eq!(path, PathBuf::from("/run/biomeos/petaltongue.sock"));
+    assert_eq!(path, PathBuf::from("/run/membrane/petaltongue.sock"));
 }
 
 #[test]

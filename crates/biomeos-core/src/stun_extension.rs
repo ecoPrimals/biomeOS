@@ -35,7 +35,7 @@
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut ext = StunExtension::new();
 //! // Socket path from capability-based discovery (e.g., discover_endpoint_by_capability)
-//! let mesh_socket = "/run/user/1000/biomeos/mesh-abc123.sock";
+//! let mesh_socket = "/run/user/1000/membrane/mesh-abc123.sock";
 //!
 //! // Check if self-hosted STUN is available
 //! if ext.check_availability(mesh_socket).await {

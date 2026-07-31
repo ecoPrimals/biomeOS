@@ -104,7 +104,7 @@ fn test_live_primal_info_roundtrip() {
         version: "2.0.0".to_string(),
         health: "healthy".to_string(),
         capabilities: vec!["crypto.encrypt".to_string(), "crypto.sign".to_string()],
-        endpoint: "/run/user/1000/biomeos/test.sock".to_string(),
+        endpoint: "/run/user/1000/membrane/test.sock".to_string(),
         family_id: Some("family-abc".to_string()),
     };
 

@@ -202,7 +202,7 @@ mod tests {
         let peer = PeerInfo {
             name: "peer-primal".to_string(),
             capabilities: vec![],
-            endpoint: "unix:///run/biomeos/peer.sock".to_string(),
+            endpoint: "unix:///run/membrane/peer.sock".to_string(),
             last_seen: Some("2025-01-01T00:00:00Z".to_string()),
         };
         let json = serde_json::to_string(&peer).unwrap();

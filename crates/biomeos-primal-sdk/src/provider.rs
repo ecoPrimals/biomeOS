@@ -401,7 +401,7 @@ mod tests {
         let reg = CapabilityRegistration {
             capability: "ecology".into(),
             primal: "airspring".into(),
-            socket: "/run/user/1000/biomeos/airspring-abc.sock".into(),
+            socket: "/run/user/1000/membrane/airspring-abc.sock".into(),
             source: "startup".into(),
             semantic_mappings: std::iter::once(("et0".into(), "science.et0_fao56".into()))
                 .collect(),

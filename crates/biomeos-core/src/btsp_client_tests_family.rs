@@ -7,32 +7,32 @@ use std::path::Path;
 #[test]
 fn family_scoped_detection() {
     assert!(is_family_scoped_socket(Path::new(
-        "/run/user/1000/biomeos/beardog-8ff3b864a4bc589a.sock"
+        "/run/user/1000/membrane/beardog-8ff3b864a4bc589a.sock"
     )));
     assert!(is_family_scoped_socket(Path::new(
-        "/tmp/biomeos/songbird-abc123.sock"
+        "/tmp/membrane/songbird-abc123.sock"
     )));
     assert!(!is_family_scoped_socket(Path::new(
-        "/run/user/1000/biomeos/beardog.sock"
+        "/run/user/1000/membrane/beardog.sock"
     )));
     assert!(!is_family_scoped_socket(Path::new(
-        "/run/user/1000/biomeos/biomeos.sock"
+        "/run/user/1000/membrane/biomeos.sock"
     )));
 }
 
 #[test]
 fn family_scoped_domain_stem_sockets() {
     assert!(is_family_scoped_socket(Path::new(
-        "/run/user/1000/biomeos/security-8ff3b864.sock"
+        "/run/user/1000/membrane/security-8ff3b864.sock"
     )));
     assert!(is_family_scoped_socket(Path::new(
-        "/run/user/1000/biomeos/compute-abc123.sock"
+        "/run/user/1000/membrane/compute-abc123.sock"
     )));
     assert!(is_family_scoped_socket(Path::new(
-        "/run/user/1000/biomeos/ai-def456.sock"
+        "/run/user/1000/membrane/ai-def456.sock"
     )));
     assert!(!is_family_scoped_socket(Path::new(
-        "/run/user/1000/biomeos/security.sock"
+        "/run/user/1000/membrane/security.sock"
     )));
 }
 

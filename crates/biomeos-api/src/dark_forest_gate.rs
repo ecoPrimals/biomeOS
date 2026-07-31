@@ -361,7 +361,7 @@ mod tests {
     fn test_gate_state_with_neural_api_socket() {
         let config = DarkForestGateConfig {
             enabled: true,
-            neural_api_socket: Some("/run/user/1000/biomeos/neural-api-cf7e.sock".to_string()),
+            neural_api_socket: Some("/run/user/1000/membrane/neural-api-cf7e.sock".to_string()),
             family_id: "cf7e".to_string(),
         };
         let state = DarkForestGateState::new(config);

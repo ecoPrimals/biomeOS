@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 /// 1. Explicit override via `PRIMAL_SOCKET`
 /// 2. XDG runtime directory
 /// 3. Linux /run/user/$UID/biomeos/
-/// 4. Android /data/local/tmp/biomeos/
-/// 5. Fallback to /tmp/biomeos/
+/// 4. Android /data/local/tmp/membrane/
+/// 5. Fallback to /tmp/membrane/
 ///
 /// # Arguments
 /// * `primal_name` - Name of the primal

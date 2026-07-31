@@ -14,7 +14,7 @@
 //! # Requirements
 //!
 //! - BearDog running with `genetic.derive_lineage_beacon_key` support
-//! - Socket at `/run/user/1000/biomeos/beardog.sock` (or set BEARDOG_SOCKET)
+//! - Socket at `/run/user/1000/membrane/beardog.sock` (or set BEARDOG_SOCKET)
 
 use biomeos_spore::DarkForestBeacon;
 use std::collections::HashSet;
@@ -22,7 +22,7 @@ use std::collections::HashSet;
 /// Get beardog socket path from environment or default
 fn beardog_socket() -> String {
     std::env::var("BEARDOG_SOCKET")
-        .unwrap_or_else(|_| "/run/user/1000/biomeos/beardog.sock".to_string())
+        .unwrap_or_else(|_| "/run/user/1000/membrane/beardog.sock".to_string())
 }
 
 /// Create test family seed

@@ -180,13 +180,13 @@ fn test_discovery_method() {
 fn test_discovery_endpoint() {
     let config = BiomeOSConfigBuilder::new()
         .name("e")
-        .discovery_endpoint("unix:///run/user/1000/biomeos/songbird.sock")
+        .discovery_endpoint("unix:///run/user/1000/membrane/songbird.sock")
         .build()
         .unwrap();
     assert!(config.discovery.registry.is_some());
     assert_eq!(
         config.discovery.registry.unwrap().url,
-        "unix:///run/user/1000/biomeos/songbird.sock"
+        "unix:///run/user/1000/membrane/songbird.sock"
     );
 }
 

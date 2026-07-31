@@ -49,7 +49,7 @@ async fn test_primal_label_for_endpoint_variants() {
 #[tokio::test]
 async fn lazy_rescan_excludes_self_socket() {
     let router = NeuralRouter::new("self-excl");
-    let self_sock = std::path::PathBuf::from("/run/user/9999/biomeos/neural-api-self-excl.sock");
+    let self_sock = std::path::PathBuf::from("/run/user/9999/membrane/neural-api-self-excl.sock");
     router.set_self_socket_path(self_sock.clone()).await;
 
     let guard = router.self_socket_path.read().await;

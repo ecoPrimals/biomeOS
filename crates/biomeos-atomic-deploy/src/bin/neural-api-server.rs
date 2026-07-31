@@ -13,7 +13,7 @@
 //! Options:
 //!   `--graphs-dir <PATH>`    Directory containing graph TOML files (default: ./graphs)
 //!   `--family-id <ID>`       Family ID for this instance (auto-discovered from .family.seed or env)
-//!   `--socket <PATH>`        Unix socket path (default: `/run/user/{uid}/biomeos/neural-api-{family}.sock`)
+//!   `--socket <PATH>`        Unix socket path (default: `/run/user/{uid}/membrane/neural-api-{family}.sock`)
 
 use anyhow::{Context, Result};
 use biomeos_atomic_deploy::neural_api_server::NeuralApiServer;

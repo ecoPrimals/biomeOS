@@ -112,8 +112,8 @@ pub mod endpoints {
     // 3. mDNS automatic discovery
     //
     // For local development, set environment variables:
-    //   export DISCOVERY_ENDPOINT="unix:///run/biomeos/<family>/discovery.sock"
-    //   export SECURITY_ENDPOINT="unix:///run/biomeos/<family>/security.sock"
+    //   export DISCOVERY_ENDPOINT="unix:///run/membrane/<family>/discovery.sock"
+    //   export SECURITY_ENDPOINT="unix:///run/membrane/<family>/security.sock"
 
     // API PATH CONSTANTS - These ARE appropriate as constants
     // since they define the primal's own API contract

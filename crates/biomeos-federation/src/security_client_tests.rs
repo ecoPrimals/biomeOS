@@ -25,7 +25,7 @@ fn test_security_client_creation_unix() {
 
 #[test]
 fn test_security_client_creation_absolute_path() {
-    let client = SecurityProviderClient::with_endpoint("/run/biomeos/security-provider.sock")
+    let client = SecurityProviderClient::with_endpoint("/run/membrane/security-provider.sock")
         .expect("absolute path should parse");
     assert!(matches!(client.endpoint, SecurityEndpoint::UnixSocket(_)));
 }
@@ -121,7 +121,7 @@ fn test_lineage_verification_response_serialization_and_display() {
 #[test]
 fn test_with_endpoint_unix_path() {
     let client = SecurityProviderClient::with_endpoint(
-        "unix:///run/user/1000/biomeos/security-provider.sock",
+        "unix:///run/user/1000/membrane/security-provider.sock",
     )
     .unwrap();
     assert!(matches!(client.endpoint, SecurityEndpoint::UnixSocket(_)));

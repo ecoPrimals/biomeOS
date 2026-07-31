@@ -187,9 +187,9 @@ impl Config {
     /// Uses 5-tier socket resolution per `PRIMAL_DEPLOYMENT_STANDARD.md`:
     /// 1. Environment variable (`BIOMEOS_API_SOCKET`)
     /// 2. `XDG_RUNTIME_DIR/biomeos`/
-    /// 3. /run/user/{uid}/biomeos/
-    /// 4. /data/local/tmp/biomeos/ (Android)
-    /// 5. /tmp/biomeos/ (fallback)
+    /// 3. /run/user/{uid}/membrane/
+    /// 4. /data/local/tmp/membrane/ (Android)
+    /// 5. /tmp/membrane/ (fallback)
     #[must_use]
     pub fn default_socket_path_from_env_map(env: &HashMap<String, String>) -> PathBuf {
         use biomeos_core::socket_discovery::SocketDiscovery;
@@ -560,12 +560,12 @@ mod tests {
         let mut env = HashMap::new();
         env.insert(
             "BIOMEOS_API_SOCKET_PATH".to_string(),
-            "/var/run/biomeos/override.sock".to_string(),
+            "/var/run/membrane/override.sock".to_string(),
         );
         let config = Config::from_env_map(&env);
         assert_eq!(
             config.socket_path,
-            std::path::PathBuf::from("/var/run/biomeos/override.sock")
+            std::path::PathBuf::from("/var/run/membrane/override.sock")
         );
     }
 

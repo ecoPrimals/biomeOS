@@ -57,7 +57,7 @@ fn test_register_songbird_peer_with_unix_only() {
     let peer = serde_json::json!({
         "node_id": "nestgate:fam:direct:hash",
         "endpoints": {
-            "unix_socket": "/run/biomeos/nestgate.sock"
+            "unix_socket": "/run/membrane/nestgate.sock"
         }
     });
     pd.register_discovery_peer(&peer);
