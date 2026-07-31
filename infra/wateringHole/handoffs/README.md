@@ -4,9 +4,9 @@ Session handoff documents for upstream overwatch audit.
 
 Each file captures: what was done, metrics before/after, commits produced, and next-wave candidates.
 
-## ⚡ STATUS: ALL biomeOS-OWNED P0/P1/P2/P3 RESOLVED — v4.53 STANDBY
+## ⚡ STATUS: ALL biomeOS-OWNED P0/P1/P2/P3 RESOLVED — v4.55 STANDBY
 
-**Version**: v4.53 | **Tests**: 8,570+ | **biomeOS P2/P3 open**: 0 | **Posture**: STANDBY-READY
+**Version**: v4.55 | **Tests**: 8,570+ | **biomeOS P2/P3 open**: 0 | **Posture**: STANDBY-READY
 
 ### Chain 1: biomeOS Orchestration Lifecycle — COMPLETE (v4.44–v4.48)
 
@@ -31,17 +31,26 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 | Socket evaporation (user-space deploys) | v4.52 | `binary_search_dirs()`: +~/.local/bin +~/.cargo/bin +$PATH |
 | /run/membrane permission reset | v4.53 | Guard `apply_dir_group_ownership` behind `!exists()` |
 | Sandbox false positive (orchestrator) | v4.53 | `composition.self_test` RPC endpoint |
+| **Sandbox P2 ESCALATED (depot blocked)** | **v4.55** | **`composition.test_swap` — delegated validation** |
 
-### Upstream Items — Resolved per Wave 155m
+### P1 Divergences — ALL RESOLVED (v4.54)
+
+| Divergence | Version | Fix |
+|-----------|---------|-----|
+| Respawn storm (175 procs/14 min) | v4.54 | Dual-protocol health ping: plain JSON-RPC first, BTSP fallback |
+| Socket file deletion (50% survival) | v4.54 | PID ownership + confirmed kill before unlink |
+
+### Upstream Items — Status per Wave 155n
 
 | Issue | Owner | Status |
 |-------|-------|--------|
 | rootpulse.ledger | cellMembrane | **FIXED** (`0cfcce5`) |
-| Sandbox false positive | cellMembrane | **FIXED** (`0cfcce5`) |
 | checksums.toml partial | sporeGate CI | **FIXED** (`0cfcce5`) |
 | /run/membrane tmpfiles.d | cellMembrane | **FIXED** (`0cfcce5`) |
+| golgi post-receive hook | golgiBody | **FIXED** (Wave 155n confirmed) |
+| `membrane/` vs `biomeos/` socket dir | cellMembrane | **OPEN** — biomeOS scans both; needs primal launch env |
 | cellMembrane not in sources.toml | cellMembrane | **P3 OPEN** |
-| golgi post-receive hook | golgiBody | **P3 OPEN** |
+| GNU depot incomplete (4/16) | sporeGate | **P3 OPEN** |
 
 ---
 
@@ -49,7 +58,8 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
-| **155m-f** | Jul 31, 2026 | **Deep debt: 15 more dead deps removed (29 total), full audit clean** |
+| **155n** | Jul 31, 2026 | **Coevolution contract: composition.test_swap (P2 sandbox unblock)** |
+| 155m-f | Jul 31, 2026 | Deep debt: 15 more dead deps removed (29 total), full audit clean |
 | 155m-e | Jul 31, 2026 | P3 fixes: permission reset + composition.self_test sandbox endpoint |
 | 155m-d | Jul 30, 2026 | P2 FINAL FIX: user-space binary discovery (socket evaporation closed) |
 | 155m-c | Jul 30, 2026 | Deep debt: 14 dead deps removed, registry alloc optimization, disk recovery |

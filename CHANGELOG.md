@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.55 (2026-07-31) — Wave 155n: Coevolution Contract — composition.test_swap
+
+### P2 UNBLOCKED: Sandbox False Positive (depot deploy)
+- Root cause: Sovereign CI's standalone sandbox cannot validate biomeOS because the
+  orchestrator needs a live composition context to prove it works (broker primals can't
+  self-validate in isolation using cellMembrane's generic sandbox runner).
+- Fix: **`composition.test_swap` RPC** — the running biomeOS instance validates its own
+  replacement binary. Flow:
+  1. cellMembrane calls `composition.test_swap { binary_path: "/path/to/new/biomeos" }`
+  2. Running biomeOS spawns candidate on a temp socket
+  3. Probes candidate via `composition.self_test` (already shipped in v4.53)
+  4. Returns `{ validated: true/false }` — cellMembrane can proceed with depot push
+  5. Candidate is torn down regardless of result (no leaks)
+- This replaces the standalone sandbox for broker primals, resolving J19.
+- cellMembrane only needs to call the running Neural API's `composition.test_swap`
+  instead of its own sandbox — delegated validation via the coevolution contract.
+
+### Socket Dir Mismatch Triage
+- `membrane/ vs biomeos/` socket dir divergence is already handled: topology scanner
+  at Priority 3 scans both `$XDG_RUNTIME_DIR/membrane/` AND legacy `$XDG_RUNTIME_DIR/biomeos/`.
+- Root cause: older primal binaries create sockets in `/run/user/1000/biomeos/` using
+  pre-standardization path logic.
+- biomeOS scans both. Permanent fix requires cellMembrane to standardize primal launch
+  env (`BIOMEOS_SOCKET_DIR` → `membrane/`). Symlink workaround remains valid.
+
+---
+
 ## v4.54 (2026-07-31) — Wave 155n: P1 Respawn Storm + Socket Deletion Fix
 
 ### P1 CLOSED: Respawn Storm (175 procs/14 min on strandGate)

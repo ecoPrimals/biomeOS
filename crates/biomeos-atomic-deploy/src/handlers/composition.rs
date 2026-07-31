@@ -9,7 +9,9 @@
 
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
-use tracing::warn;
+use std::path::PathBuf;
+use std::time::Duration;
+use tracing::{info, warn};
 
 use super::LifecycleHandler;
 use super::spring_status::state_to_string;
@@ -395,5 +397,184 @@ impl LifecycleHandler {
             "primals_registered": status.len(),
             "ipc": "json-rpc",
         }))
+    }
+
+    /// Handle `composition.test_swap` — validate a replacement binary in live context.
+    ///
+    /// The running biomeOS instance spawns the candidate binary on a temporary socket,
+    /// validates it via `composition.self_test`, then tears it down. This allows
+    /// cellMembrane's Sovereign CI to delegate validation to the live orchestrator
+    /// instead of running an isolated sandbox (which fails for broker primals).
+    ///
+    /// JSON-RPC method: `composition.test_swap`
+    ///
+    /// Params:
+    /// - `binary_path` (required): absolute path to the candidate binary
+    /// - `timeout_secs` (optional): validation timeout (default: 15)
+    ///
+    /// Returns:
+    /// - `{ validated: true, version, ... }` on success
+    /// - `{ validated: false, reason, ... }` on failure
+    pub async fn composition_test_swap(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params
+            .as_ref()
+            .context("Missing parameters for composition.test_swap")?;
+        let binary_path = params["binary_path"]
+            .as_str()
+            .context("Missing 'binary_path' parameter")?;
+
+        let timeout_secs = params["timeout_secs"].as_u64().unwrap_or(15);
+        let binary = PathBuf::from(binary_path);
+
+        if !binary.exists() {
+            return Ok(json!({
+                "validated": false,
+                "reason": format!("Binary not found: {binary_path}"),
+            }));
+        }
+
+        info!(
+            "🔄 composition.test_swap: validating candidate {}",
+            binary_path
+        );
+
+        // Spawn candidate on a temporary socket
+        let temp_dir = std::env::temp_dir().join("biomeos-test-swap");
+        tokio::fs::create_dir_all(&temp_dir).await.ok();
+        let test_socket = temp_dir.join(format!(
+            "candidate-{}.sock",
+            std::process::id()
+        ));
+
+        // Clean up any leftover from previous run
+        if test_socket.exists() {
+            tokio::fs::remove_file(&test_socket).await.ok();
+        }
+
+        let mut cmd = tokio::process::Command::new(&binary);
+        cmd.arg("server")
+            .arg("--socket")
+            .arg(&test_socket)
+            .env("BIOMEOS_TEST_SWAP", "1")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .stdin(std::process::Stdio::null());
+
+        let mut child = match cmd.spawn() {
+            Ok(c) => c,
+            Err(e) => {
+                return Ok(json!({
+                    "validated": false,
+                    "reason": format!("Failed to spawn candidate: {e}"),
+                    "binary_path": binary_path,
+                }));
+            }
+        };
+
+        let candidate_pid = child.id();
+
+        // Wait for socket to appear
+        let socket_appeared = tokio::time::timeout(
+            Duration::from_secs(timeout_secs),
+            Self::wait_for_socket(&test_socket),
+        )
+        .await
+        .is_ok();
+
+        if !socket_appeared {
+            child.kill().await.ok();
+            child.wait().await.ok();
+            tokio::fs::remove_file(&test_socket).await.ok();
+            return Ok(json!({
+                "validated": false,
+                "reason": "Candidate did not create socket within timeout",
+                "binary_path": binary_path,
+                "timeout_secs": timeout_secs,
+            }));
+        }
+
+        // Validate via composition.self_test
+        let validation_result = tokio::time::timeout(
+            Duration::from_secs(5),
+            Self::probe_candidate(&test_socket),
+        )
+        .await;
+
+        // Tear down candidate
+        child.kill().await.ok();
+        child.wait().await.ok();
+        tokio::fs::remove_file(&test_socket).await.ok();
+
+        match validation_result {
+            Ok(Ok(response)) => {
+                let candidate_version = response["version"]
+                    .as_str()
+                    .unwrap_or("unknown")
+                    .to_string();
+                let ok = response["ok"].as_bool().unwrap_or(false);
+
+                if ok {
+                    info!(
+                        "✅ composition.test_swap: candidate v{} VALIDATED",
+                        candidate_version
+                    );
+                    Ok(json!({
+                        "validated": true,
+                        "binary_path": binary_path,
+                        "candidate_version": candidate_version,
+                        "current_version": env!("CARGO_PKG_VERSION"),
+                        "candidate_pid": candidate_pid,
+                        "self_test": response,
+                    }))
+                } else {
+                    warn!("❌ composition.test_swap: candidate self_test returned ok=false");
+                    Ok(json!({
+                        "validated": false,
+                        "reason": "Candidate self_test returned ok=false",
+                        "binary_path": binary_path,
+                        "self_test": response,
+                    }))
+                }
+            }
+            Ok(Err(e)) => {
+                warn!("❌ composition.test_swap: probe failed: {e}");
+                Ok(json!({
+                    "validated": false,
+                    "reason": format!("Candidate probe failed: {e}"),
+                    "binary_path": binary_path,
+                }))
+            }
+            Err(_) => {
+                warn!("❌ composition.test_swap: probe timed out");
+                Ok(json!({
+                    "validated": false,
+                    "reason": "Candidate probe timed out (5s)",
+                    "binary_path": binary_path,
+                }))
+            }
+        }
+    }
+
+    /// Wait for a socket file to appear on disk.
+    async fn wait_for_socket(path: &std::path::Path) {
+        loop {
+            if path.exists() {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+
+    /// Probe a candidate binary's self_test endpoint via plain JSON-RPC.
+    async fn probe_candidate(socket_path: &std::path::Path) -> Result<Value> {
+        use biomeos_core::atomic_client::AtomicClient;
+
+        let client =
+            AtomicClient::unix(socket_path).with_timeout(Duration::from_secs(5));
+
+        client
+            .call("composition.self_test", json!({}))
+            .await
+            .context("composition.self_test call to candidate failed")
     }
 }

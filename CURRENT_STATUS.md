@@ -1,7 +1,7 @@
 # biomeOS — Current Status
 
 **Updated**: July 31, 2026
-**Version**: v4.54 (Wave 155n)
+**Version**: v4.55 (Wave 155n — Coevolution Contract)
 **Posture**: STANDBY — All biomeOS-owned P0/P1/P2/P3 blockers resolved.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
@@ -27,6 +27,8 @@
 | Workspace crates | 26 |
 | Signal graphs | 27 |
 | Capability domains | 27 (320+ translations) |
+| Mocks in prod | 0 |
+| Hardcoded primal names | 0 |
 
 ---
 
@@ -43,13 +45,14 @@
 | Composition Broker | E2E validated — BTSP propagation through signal graph |
 | Plasmodium | Remote compute discovery + workload dispatch |
 | Lifecycle Manager | Auto-resurrection, boot_order shutdown, binary path retention |
-| Socket Discovery | XDG `membrane/` standard, lazy rescan, family-scoped |
+| Socket Discovery | XDG `membrane/` standard + legacy `biomeos/` compat, lazy rescan, family-scoped |
 | Socket Ownership | `MEMBRANE_SOCKET_GROUP` env, chown :membrane post-bind |
-| Health Ping | RPC-tolerant — any JSON-RPC success = alive |
+| Health Ping | Dual-protocol: plain JSON-RPC first, BTSP fallback |
+| **Coevolution Contract** | `composition.test_swap` — live validation of replacement binaries |
 
 ---
 
-## Key Deliverables (Wave 155i–155k)
+## Key Deliverables (Wave 155i–155n)
 
 | Delivery | Version | Commit |
 |----------|---------|--------|
@@ -70,13 +73,14 @@
 | Permission reset fix (P3) | v4.53 | Wave 155m |
 | composition.self_test sandbox endpoint (P3) | v4.53 | `c7bc2187` |
 | Dep pruning round 2 (15 more dead deps) | v4.53 | `5d9374b6` |
-| **P1 FIX: Respawn storm (dual-protocol health)** | v4.54 | Wave 155n |
-| **P1 FIX: Socket file deletion (ownership guard)** | v4.54 | Wave 155n |
-| P3 FIX: Zombie reaping (child.wait) | v4.54 | Wave 155n |
-| P3 FIX: Virtual service resurrection skip | v4.54 | Wave 155n |
-| P3 FIX: graphs_dir XDG fallback | v4.54 | Wave 155n |
-| P3 FIX: riboCipher log level ERROR→debug | v4.54 | Wave 155n |
-| P3 FIX: --version 4.54.0 (workspace synced) | v4.54 | Wave 155n |
+| **P1 FIX: Respawn storm (dual-protocol health)** | v4.54 | `88785daf` |
+| **P1 FIX: Socket file deletion (ownership guard)** | v4.54 | `88785daf` |
+| P3 FIX: Zombie reaping (child.wait) | v4.54 | `88785daf` |
+| P3 FIX: Virtual service resurrection skip | v4.54 | `88785daf` |
+| P3 FIX: graphs_dir XDG fallback | v4.54 | `88785daf` |
+| P3 FIX: riboCipher log level ERROR→debug | v4.54 | `88785daf` |
+| P3 FIX: --version 4.54.0 (workspace synced) | v4.54 | `88785daf` |
+| **P2 UNBLOCK: composition.test_swap (coevolution contract)** | v4.55 | Wave 155n |
 
 ---
 
@@ -93,20 +97,23 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **STANDBY-READY**. All P1s + 13 P2 divergences + 7 biomeOS-owned P3s resolved.
+biomeOS is **STANDBY-READY**. All P0/P1/P2/P3 biomeOS-owned blockers resolved.
 
-Key fix (v4.54): Health monitor now speaks **dual protocol** — plain JSON-RPC first,
-BTSP fallback — eliminating respawn storm on plain-protocol primals. Socket deletion
-guarded by PID ownership (never unlinks sockets biomeOS didn't create). Zombie reaping
-via background `child.wait()`.
+Key fix (v4.55): **Coevolution contract** — `composition.test_swap` allows the running
+biomeOS instance to validate its own replacement binary. cellMembrane delegates validation
+to the live orchestrator instead of using an isolated sandbox (which fails for broker
+primals). This unblocks the sandbox P2 (J19) and enables zero-downtime deploys.
+
+Key fix (v4.54): Health monitor speaks **dual protocol** — plain JSON-RPC first, BTSP
+fallback — eliminating respawn storm. Socket deletion guarded by PID ownership.
 
 Upstream items (not biomeOS code):
-- `GATE_NAME` vs `MEMBRANE_GATE_NAME`: cellMembrane env var naming mismatch (FIXED by cellMembrane)
+- `membrane/` vs `biomeos/` socket dir: biomeOS scans both; primals need standardization from cellMembrane
 - GNU depot incomplete (4/16): sporeGate builder, not biomeOS
 - cellMembrane not in sources.toml: blocks sovereign CI self-rebuild
-- `membrane/` vs `biomeos/` socket dir mismatch: symlink workaround on westGate
 
 Resume triggers:
-- Redeploy biomeOS v4.54 to westGate + strandGate (validates P1 fix live)
+- cellMembrane wires `sovereign.ci.trigger` → `composition.test_swap` (resolves J19)
+- Redeploy biomeOS v4.55 to westGate + strandGate (validates P1+P2 fix live)
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)
