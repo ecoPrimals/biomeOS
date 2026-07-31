@@ -50,16 +50,19 @@ impl NeuralRouter {
 
         let topo_affinity = weights::topology_affinity_for_endpoint(&endpoint);
 
+        let cap_arc: Arc<str> = Arc::from(capability.as_str());
+        let primal_arc: Arc<str> = Arc::from(primal_name.as_str());
+
         let registration = RegisteredCapability {
-            capability: Arc::from(capability.as_str()),
-            primal_name: Arc::from(primal_name.as_str()),
+            capability: Arc::clone(&cap_arc),
+            primal_name: Arc::clone(&primal_arc),
             endpoint,
             registered_at: chrono::Utc::now(),
             source: Arc::from(source.into().as_str()),
         };
 
         let mut registry = self.capability_registry.write().await;
-        let providers = registry.entry(capability.to_string()).or_default();
+        let providers = registry.entry(capability).or_default();
 
         if let Some(existing) = providers
             .iter_mut()
@@ -81,10 +84,10 @@ impl NeuralRouter {
 
         drop(registry);
 
-        register_capability_provider(&capability, &primal_name);
+        register_capability_provider(&cap_arc, &primal_arc);
 
         let mut weights = self.routing_weights.write().await;
-        weights.set_topology_affinity(&capability, &primal_name, topo_affinity);
+        weights.set_topology_affinity(&cap_arc, &primal_arc, topo_affinity);
 
         Ok(())
     }

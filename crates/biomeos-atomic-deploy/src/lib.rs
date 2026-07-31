@@ -83,10 +83,6 @@
     clippy::ignored_unit_patterns,
     reason = "Ok(()) matching in async result chains"
 )]
-#![expect(
-    clippy::implicit_clone,
-    reason = "to_string() on &str is idiomatic clone"
-)]
 #![expect(clippy::or_fun_call, reason = "unwrap_or with short expressions")]
 #![expect(
     clippy::if_not_else,
