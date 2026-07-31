@@ -37,41 +37,31 @@ pub fn known_primal_names_with(strict_discovery: bool) -> Vec<&'static str> {
 /// Discover binary path for a primal
 ///
 /// Search order:
-/// 1. `BIOMEOS_PLASMID_BIN_DIR` environment variable
-/// 2. ./plasmidBin directory
-/// 3. ../plasmidBin directory
-/// 4. ../../plasmidBin directory
+/// 1. `BIOMEOS_PLASMID_BIN_DIR` from execution context (explicit override)
+/// 2. Shared search dirs (plasmidBin + user-space + $PATH) via `binary_search_dirs()`
 pub async fn discover_primal_binary(
     primal_name: &str,
     context: &ExecutionContext,
 ) -> Result<PathBuf> {
-    let explicit_dir = context
+    let base_dirs: Vec<PathBuf> = if let Some(explicit) = context
         .env()
         .get(biomeos_types::env_config::vars::PLASMID_BIN_DIR)
-        .cloned()
-        .map(PathBuf::from);
-
-    let base_dirs: Vec<Option<PathBuf>> = if explicit_dir.is_some() {
-        vec![explicit_dir]
+    {
+        vec![PathBuf::from(explicit)]
     } else {
-        vec![
-            Some(PathBuf::from("./plasmidBin")),
-            Some(PathBuf::from("../plasmidBin")),
-            Some(PathBuf::from("../../plasmidBin")),
-        ]
+        crate::handlers::spring_status::binary_search_dirs()
     };
 
-    // Auto-detect architecture
     let arch = std::env::consts::ARCH;
     let os = std::env::consts::OS;
     let target = format!("{arch}-{os}");
 
     debug!("   Discovering {} binary for {}", primal_name, target);
 
-    for base_dir_opt in base_dirs {
-        let Some(base_dir) = base_dir_opt else {
+    for base_dir in &base_dirs {
+        if !base_dir.exists() {
             continue;
-        };
+        }
 
         // Try architecture-specific path first
         let arch_path = base_dir.join(&target).join(primal_name);
@@ -80,9 +70,9 @@ pub async fn discover_primal_binary(
             return Ok(arch_path);
         }
 
-        // Try generic path
+        // Try generic path (bare binary name in directory)
         let generic_path = base_dir.join(primal_name);
-        if generic_path.exists() {
+        if generic_path.exists() && generic_path.is_file() {
             info!("   Found: {}", generic_path.display());
             return Ok(generic_path);
         }

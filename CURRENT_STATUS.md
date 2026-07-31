@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: July 30, 2026
-**Version**: v4.51 (Wave 155m)
-**Posture**: STANDBY — All biomeOS-owned P0/P1/P2 blockers resolved.
+**Version**: v4.52 (Wave 155m)
+**Posture**: STANDBY — All biomeOS-owned P0/P1/P2 blockers resolved (P2 socket evap FINAL FIX).
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -66,6 +66,7 @@
 | Socket ownership (multi-user chown) | v4.51 | `0e45262f` |
 | Dep pruning (14 unused deps removed) | v4.51 | `c6f83a73` |
 | Registry alloc optimization (Arc reuse) | v4.51 | `744b2d17` |
+| User-space binary discovery (P2 final) | v4.52 | Wave 155m |
 
 ---
 
@@ -82,7 +83,7 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **STANDBY-READY**. All 12 biomeOS-owned P2 divergences resolved (9 in 155k + 3 in 155m).
+biomeOS is **STANDBY-READY**. All 13 biomeOS-owned P2 divergences resolved (9 in 155k + 3 in 155m + 1 reopened/closed 155m).
 
 Upstream items (not biomeOS code):
 - `rootpulse.ledger`: operational — run `membrane rootpulse.commit` on sporeGate

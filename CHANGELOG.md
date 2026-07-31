@@ -2,6 +2,29 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.52 (2026-07-30) — Wave 155m: User-Space Binary Discovery (P2 Socket Evap Final Fix)
+
+### Binary Discovery — User-Space Deploy Paths (P2 CLOSED)
+- Root cause: `binary_search_dirs()` and `discover_primal_binary` only probed
+  `plasmidBin/` directories. On user-space deploys (westGate, strandGate, steamGate)
+  where binaries live in `~/.local/bin/` or `~/.cargo/bin/`, discovery always failed.
+  This prevented resurrection after crashes → "socket evaporation" on those gates.
+- Fix: expanded `binary_search_dirs()` to include:
+  1. Explicit env overrides (`ECOPRIMALS_PLASMID_BIN`, `BIOMEOS_PLASMID_BIN_DIR`)
+  2. Relative plasmidBin paths (depot-style)
+  3. `$HOME/.local/bin/` (XDG user-space standard)
+  4. `$HOME/.cargo/bin/` (source builds via `cargo install`)
+  5. `$PATH` entries (system-wide resolution, arbitrary install locations)
+- Unified: `capability_handlers::discovery::discover_primal_binary` now delegates to
+  the shared `binary_search_dirs()` instead of maintaining its own hardcoded list.
+- `primal_spawner::discover_primal_binary_impl` now delegates to same shared function.
+- Single source of truth for search order across all 3 call sites.
+
+### Lint Fix
+- Removed duplicate `#![warn(missing_docs)]` in root `src/lib.rs`.
+
+---
+
 ## v4.51 (2026-07-30) — Wave 155m: Socket Ownership + Upstream Triage
 
 ### Socket Ownership Fix (P2) — Multi-User Access

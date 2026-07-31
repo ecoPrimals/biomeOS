@@ -6,7 +6,7 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 ## ⚡ STATUS: ALL biomeOS-OWNED P0/P1/P2 RESOLVED — v4.51 STANDBY
 
-**Version**: v4.51 | **Tests**: 8,570+ | **biomeOS P2 open**: 0 | **Posture**: STANDBY-READY
+**Version**: v4.52 | **Tests**: 8,570+ | **biomeOS P2 open**: 0 | **Posture**: STANDBY-READY
 
 ### Chain 1: biomeOS Orchestration Lifecycle — COMPLETE (v4.44–v4.48)
 
@@ -28,6 +28,7 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 | Socket evaporation (health ping format) | v4.50 | RPC ping tolerance — `Ok(_)` = alive |
 | Binary path retention (blocks resurrection) | v4.50 | Auto-discovery probes plasmidBin |
 | Socket ownership (multi-user) | v4.51 | `chown :membrane` post-bind + MEMBRANE_SOCKET_GROUP env |
+| Socket evaporation (user-space deploys) | v4.52 | `binary_search_dirs()`: +~/.local/bin +~/.cargo/bin +$PATH |
 
 ### Upstream Items — Resolved per Wave 155m
 
@@ -46,7 +47,8 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
-| **155m-c** | Jul 30, 2026 | **Deep debt: 14 dead deps removed, registry alloc optimization, disk recovery** |
+| **155m-d** | Jul 30, 2026 | **P2 FINAL FIX: user-space binary discovery (socket evaporation closed)** |
+| 155m-c | Jul 30, 2026 | Deep debt: 14 dead deps removed, registry alloc optimization, disk recovery |
 | 155m-b | Jul 30, 2026 | Socket ownership fix (v4.51) + upstream triage |
 | 155m | Jul 30, 2026 | P2 socket evaporation + binary path retention fix (v4.50) |
 | 155k | Jul 30, 2026 | P2 divergence fixes: capability wipe cycle, socket docs, Dark Forest clarification |

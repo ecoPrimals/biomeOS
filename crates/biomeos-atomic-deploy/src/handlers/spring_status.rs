@@ -8,9 +8,15 @@ use std::path::PathBuf;
 
 use crate::lifecycle_manager::LifecycleState;
 
-/// Collect plasmidBin search directories (same search order as primal_spawner).
+/// Collect binary search directories: plasmidBin + user-space + $PATH.
+///
+/// Search order mirrors `primal_spawner::discover_primal_binary_impl`:
+/// 1. Explicit env overrides (`ECOPRIMALS_PLASMID_BIN`, `BIOMEOS_PLASMID_BIN_DIR`)
+/// 2. Relative plasmidBin paths (depot-style)
+/// 3. User-space paths (`~/.local/bin`, `~/.cargo/bin`)
+/// 4. `$PATH` entries (covers system-wide installs and source builds)
 pub(crate) fn binary_search_dirs() -> Vec<PathBuf> {
-    [
+    let mut dirs: Vec<PathBuf> = [
         std::env::var(biomeos_types::env_config::vars::PLASMID_BIN)
             .ok()
             .map(PathBuf::from),
@@ -23,8 +29,31 @@ pub(crate) fn binary_search_dirs() -> Vec<PathBuf> {
     ]
     .into_iter()
     .flatten()
-    .filter(|p| p.exists())
-    .collect()
+    .collect();
+
+    // User-space paths for non-depot deployments (westGate, strandGate, steamGate)
+    if let Ok(home) = std::env::var("HOME") {
+        let local_bin = PathBuf::from(&home).join(".local/bin");
+        if local_bin.exists() {
+            dirs.push(local_bin);
+        }
+        let cargo_bin = PathBuf::from(&home).join(".cargo/bin");
+        if cargo_bin.exists() {
+            dirs.push(cargo_bin);
+        }
+    }
+
+    // $PATH entries as final fallback (covers arbitrary install locations)
+    if let Ok(path_var) = std::env::var("PATH") {
+        for entry in std::env::split_paths(&path_var) {
+            if entry.exists() && !dirs.contains(&entry) {
+                dirs.push(entry);
+            }
+        }
+    }
+
+    dirs.retain(|p| p.exists());
+    dirs
 }
 
 /// Probe for a primal binary on disk, returning (found, path_or_null).

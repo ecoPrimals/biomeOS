@@ -98,20 +98,8 @@ async fn discover_primal_binary_impl(
     let base_dirs: Vec<PathBuf> = if let Some(dir) = bin_dir_override {
         vec![dir.to_path_buf()]
     } else {
-        [
-            std::env::var(biomeos_types::env_config::vars::PLASMID_BIN)
-                .ok()
-                .map(PathBuf::from),
-            std::env::var(biomeos_types::env_config::vars::PLASMID_BIN_DIR)
-                .ok()
-                .map(PathBuf::from),
-            Some(PathBuf::from("./plasmidBin")),
-            Some(PathBuf::from("../plasmidBin")),
-            Some(PathBuf::from("../../plasmidBin")),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
+        // Use shared search logic (plasmidBin + user-space + $PATH)
+        crate::handlers::spring_status::binary_search_dirs()
     };
 
     // Auto-detect architecture from target triple
