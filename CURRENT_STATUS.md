@@ -68,7 +68,8 @@
 | Registry alloc optimization (Arc reuse) | v4.51 | `744b2d17` |
 | User-space binary discovery (P2 final) | v4.52 | `999044e7` |
 | Permission reset fix (P3) | v4.53 | Wave 155m |
-| composition.self_test sandbox endpoint (P3) | v4.53 | Wave 155m |
+| composition.self_test sandbox endpoint (P3) | v4.53 | `c7bc2187` |
+| Dep pruning round 2 (15 more dead deps) | v4.53 | `5d9374b6` |
 
 ---
 
@@ -93,6 +94,6 @@ Upstream items (not biomeOS code):
 - cellMembrane not in sources.toml: blocks sovereign CI self-rebuild
 
 Resume triggers:
-- NUCLEUS E2E validation on strandGate (biomeOS v4.51 redeploy)
+- NUCLEUS E2E validation on strandGate (biomeOS v4.53 redeploy)
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)

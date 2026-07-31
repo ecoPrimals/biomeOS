@@ -89,7 +89,7 @@ Team in **STANDBY** pending:
 - AlphaFold ~1TB ingestion through westGate Nest Atomic
 - steamGate Tower deployment (user-space, gnu bins)
 
-### Metrics (v4.51)
+### Metrics (v4.53)
 
 | Metric | Value |
 |--------|-------|
@@ -98,8 +98,10 @@ Team in **STANDBY** pending:
 | Unsafe blocks | 0 (forbid) |
 | Largest prod file | 716 LOC |
 | TODOs in prod | 0 |
+| Mocks in prod | 0 |
 | Dead code | 0 |
-| Dead dependencies | 0 (14 removed, cargo-machete verified) |
+| Dead dependencies | 0 (29 removed total, cargo-machete verified) |
+| Hardcoded primal names | 0 in production |
 | cargo deny | clean |
 | Version | v4.53 |
 | biomeOS P0/P1/P2/P3 | ZERO biomeOS-owned open |

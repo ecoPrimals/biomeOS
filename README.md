@@ -15,7 +15,7 @@
 | Tests | 8,570+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov) |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
-| Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings`, zero errors including `--tests` (verified Jul 26 2026) |
+| Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings`, zero errors including `--tests` (verified Jul 31 2026) |
 | Formatting | PASS |
 | License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI + mobile (TCP fallback) |
@@ -31,7 +31,7 @@
 | Discovery | **Capability-first** — runtime registry (DashMap) + bootstrap hints fallback; live `capability.register` populates runtime; XDG sockets + `topology.rescan` + lazy rescan + DNS-SD mDNS + `primal.announce`; no identity-based routing |
 | Blocking Debt | 0 (all primalSpring Phase 43 gaps resolved: genetics tier, deploy class, routing contract, tick-loop) |
 | Stubs Evolved | `diagnose_degradation` (real metrics), `execution_order` (Kahn's topo sort), `fetch_binary` (base64/bytes), `collect_edge_metrics` (live probe), `with_feature` (typed flags), `lineage_deriver` (SHA-256 identity), `detect_biomeos_usb` (sysfs enumeration), topology silent fallback → explicit standalone, spore manifest build metadata, Songbird discovery error propagation |
-| Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated (RPITIT/generics/enum dispatch/manual desugar); pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`); unused `tokio` removed from types crate; placeholder features pruned; repository URLs standardized; dead deps removed (`regex`, `glob`, `walkdir`, `async-fs`, `console`, `humantime`, phantom `futures`×4); `serde-saphyr` 0.0.29, `lz4_flex` 0.14 |
+| Dep Governance | All crates: dependencies centralized via `workspace = true`; `serial_test` removed; `async-trait` eliminated; pure Rust stack (rustix, etcetera, ureq); blake3 pure-only; tokio/hyper features trimmed per-crate (no `full`); 29 dead deps removed (cargo-machete verified); `serde-saphyr` 0.0.29, `lz4_flex` 0.14; `comfy-table` purged from workspace |
 | TODO/FIXME/HACK | 0 active (all resolved in v3.81) |
 | Deprecated APIs | 0 (legacy discovery methods and stubs removed in v2.87) |
 | SPDX Headers | 100% (all `.rs` files: `AGPL-3.0-or-later`) |
@@ -369,8 +369,8 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v4.51)
-**Updated**: July 30, 2026
+**Status**: Production Ready (v4.53)
+**Updated**: July 31, 2026
 **Tests**: 8,570+ workspace-wide (0 regressions), 88%+ line / function (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings (incl tests) | **Dead deps**: 0 | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP; HTTP removed v3.97) | L4 weighted routing + L5 perceptron shadow | Capability-first discovery (runtime DashMap + bootstrap fallback) + `capability.call` + mesh cross-gate relay | `--bind-mode` guideStone startup | HEALTH-01 compliant | Real metrics via biomeos-system | Lineage fail-closed | Agnostic naming | Adaptive routing weights (redb-persistent) | Stale registration pruning | Partition-aware routing | Membrane + nucleated composition | XDG-compliant paths | Cross-arch (x86_64 + aarch64 + armv7 + Windows-gnu) | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
