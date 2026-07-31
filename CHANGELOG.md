@@ -2,6 +2,36 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.56 (2026-07-31) — Wave 155n: G22 API Convergence (Step 1+2)
+
+### G22 Step 1: NUCLEUS Dual-Server Architecture
+- NUCLEUS Full mode now launches the HTTP API server (axum) alongside the Neural API
+  server (JSON-RPC) in a single process. Previously these were separate entry points
+  (`biomeos api` vs `biomeos neural-api`). This is the first code step toward full
+  api+neural-api convergence (whitePaper G22 goal).
+- HTTP API socket: `biomeos-api-{family}.sock` (same `membrane/` namespace)
+- Neural API socket: `neural-api-{family}.sock` (unchanged)
+- Both accessible from the same process, single binary, single PID.
+
+### G22 Step 2: Socket Namespace Unified
+- Migrated ALL 46 files with stale `/biomeos/` socket path references to the canonical
+  `/membrane/` namespace. Affects doc comments, tests, examples, and constant references.
+- No production behavior change (runtime paths already resolved via SystemPaths).
+- Closes the "socket dir mismatch" P3 — biomeOS owns `/run/membrane` exclusively.
+
+### Deep Debt: Dead Dependency Removal (Round 3)
+- Removed 5 unused dependencies across 4 crates:
+  - `toml` from biomeos-genome-deploy
+  - `hex`, `thiserror`, `tokio` from biomeos-genome-factory
+  - `thiserror` from biomeos-genomebin-v3
+  - `indexmap` from biomeos-types
+- Total dead deps removed across sessions: **39**
+
+### P3 Audit: /run/membrane Permission Reset
+- Confirmed RESOLVED in v4.53 (freshly_created guard in nucleation.rs).
+- No remaining unguarded code path applies directory permissions to existing dirs.
+- westGate v4.55 validates: 31/31 sockets stable 225s with correct permissions.
+
 ## v4.55 (2026-07-31) — Wave 155n: Coevolution Contract — composition.test_swap
 
 ### P2 UNBLOCKED: Sandbox False Positive (depot deploy)

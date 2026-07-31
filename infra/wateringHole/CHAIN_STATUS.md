@@ -1,7 +1,7 @@
 # biomeOS — Chain Status for Overwatch
 
-**Last Updated**: July 31, 2026 10:15 EDT
-**Version**: v4.55
+**Last Updated**: July 31, 2026 12:45 EDT
+**Version**: v4.56
 **Team**: biomeOS
 **Gate**: eastGate
 
@@ -52,12 +52,12 @@
 
 ---
 
-## P1 Divergences — ALL RESOLVED (Wave 155n)
+## P1 Divergences — ALL RESOLVED + GATE VALIDATED (Wave 155n)
 
-| Divergence | Resolution | Version |
-|-----------|-----------|---------|
-| Respawn storm (175 procs/14 min, strandGate) | Dual-protocol health ping: plain JSON-RPC first, BTSP fallback | v4.54 |
-| Socket file deletion (50% survival, westGate) | PID ownership + confirmed kill before unlink | v4.54 |
+| Divergence | Resolution | Version | Gate Validation |
+|-----------|-----------|---------|-----------------|
+| Respawn storm (175 procs/14 min, strandGate) | Dual-protocol health ping: plain JSON-RPC first, BTSP fallback | v4.54 | strandGate: 13 procs (1/primal) |
+| Socket file deletion (50% survival, westGate) | PID ownership + confirmed kill before unlink | v4.54 | westGate: 31/31 sockets 225s |
 
 ---
 
@@ -86,6 +86,18 @@
 | `graphs_dir` default path | XDG fallback + BIOMEOS_GRAPHS_DIR env | v4.54 |
 | riboCipher rejection at ERROR level | Demoted to debug (protocol negotiation) | v4.54 |
 | `--version` reports 0.1.0 | Workspace version synced to 4.54.0 | v4.54 |
+| **Socket dir mismatch (membrane/ vs biomeos/)** | **46 files unified to membrane/** | **v4.56** |
+
+---
+
+## G22: whitePaper API Convergence — IN PROGRESS
+
+| Step | What | Status | Version |
+|------|------|--------|---------|
+| 1 | NUCLEUS serves both HTTP API + Neural API in single process | ✅ DONE | v4.56 (`4b48b83b`) |
+| 2 | Socket namespace unified (all refs → membrane/) | ✅ DONE | v4.56 (`bd33e17d`) |
+| 3 | Sovereign CI git-pull-before-build | PENDING (sporeGate/operational) | — |
+| 4 | `biomeos api` mode absorbs Neural API (full unification) | PLANNED (glacial) | — |
 
 ---
 
@@ -107,31 +119,32 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 
 | Issue | Owner | Status |
 |-------|-------|--------|
-| `membrane/` vs `biomeos/` socket dir | cellMembrane | **OPEN** — biomeOS scans both; primals need launch env standardization |
-| cellMembrane not in sources.toml | cellMembrane | **P3 OPEN** |
+| ~~`membrane/` vs `biomeos/` socket dir~~ | ~~cellMembrane~~ | **CLOSED** — all biomeOS refs unified (v4.56); primals already use membrane/ |
+| cellMembrane not in sources.toml | cellMembrane | **FIXED** — `0d39075` (J16 KILLED) |
 | GNU depot incomplete (4/16) | sporeGate | **P3 OPEN** |
 | golgi post-receive hook | golgiBody | **FIXED** (Wave 155n confirmed) |
 
 ---
 
-## biomeOS Posture: STANDBY-READY
+## biomeOS Posture: STANDBY-READY (G22 Active)
 
 biomeOS Chain 1 complete. **All P0/P1/P2/P3 biomeOS-owned blockers resolved.**
-Coevolution contract (composition.test_swap) SHIPPED — cellMembrane can delegate.
+G22 convergence actively progressing: Steps 1+2 shipped.
 
-### Metrics (v4.55)
+### Metrics (v4.56)
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,570+ pass, 0 failures |
+| Tests | 8,458+ pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (forbid) |
 | Largest prod file | 716 LOC |
 | TODOs in prod | 0 |
 | Mocks in prod | 0 |
 | Dead code | 0 |
-| Dead dependencies | 0 (29 removed total, cargo-machete verified) |
+| Dead dependencies | 0 (39 removed total, cargo-machete verified) |
 | Hardcoded primal names | 0 in production |
+| Stale socket path refs | 0 (unified to membrane/) |
 | cargo deny | clean |
-| Version | v4.55 |
+| Version | v4.56 |
 | biomeOS P0/P1/P2/P3 | ZERO biomeOS-owned open |
