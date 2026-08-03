@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,458+ pass, 0 failures |
+| Tests | 8,570+ pass, 0 failures |
 | Line Coverage | 88.37% (llvm-cov) |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all 26 crates) |
@@ -28,6 +28,8 @@
 | Signal graphs | 27 |
 | Capability domains | 27 (320+ translations) |
 | Mocks in prod | 0 |
+| panic! in prod | 0 (all in test modules) |
+| Hardcoded primal names in prod | 0 (all capability-based) |
 | Hardcoded primal names | 0 |
 | Socket namespace refs (stale) | 0 (unified to membrane/) |
 
