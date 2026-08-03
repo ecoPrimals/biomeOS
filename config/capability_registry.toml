@@ -1126,6 +1126,9 @@ capabilities = [
 "nest.ingest_spore" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_ingest_spore" }
 "nest.ingest_dataset" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_ingest_dataset" }
 "nest.emit_spore" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_emit_spore" }
+"nest.declare_dataset" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_declare_dataset" }
+"nest.acquire_file" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_acquire_file" }
+"nest.complete_dataset" = { provider = "biomeos", method = "signal.dispatch", graph = "nest_complete_dataset" }
 
 # ==============================================================================
 # Socket paths are resolved dynamically using these templates.

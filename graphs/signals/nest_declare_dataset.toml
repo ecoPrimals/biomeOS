@@ -1,0 +1,108 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.declare_dataset
+#
+# Intent declaration for a data federation acquisition. Creates a
+# pre-braid: the manifest is hashed, a DAG session is opened, and a
+# sweetGrass braid with status "intent" is created. No data moves yet.
+#
+# This is the "pre-braid" pattern: other gates can see the manifest-braid
+# and know what data this gate intends to acquire, before any files arrive.
+#
+# Wire format:
+#   signal.dispatch { "signal": "nest.declare_dataset", "params": {
+#     "manifest_path": "/path/to/manifest.toml",
+#     "dataset": "alphafold_structures_v6",
+#     "description": "214M AlphaFold monomer structures"
+#   }}
+#
+# Required params:
+#   manifest_path — path to DataManifest TOML on local filesystem
+#   dataset       — human-readable dataset name
+#
+# Result: session_id, spine_id, braid_id — all linked by manifest hash
+
+[graph]
+id = "nest_declare_dataset"
+name = "Nest Declare Dataset Signal"
+description = "Pre-braid: hash manifest, open DAG session, create spine, create intent braid. No data moves."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "declare_dataset"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+fragments = ["provenance_trio", "data_federation"]
+
+[[graph.nodes]]
+name = "store_manifest"
+binary = "nestgate"
+order = 1
+required = true
+spawn = false
+by_capability = "storage"
+capabilities = ["content.put"]
+
+[[graph.nodes]]
+name = "create_session"
+binary = "rhizocrypt"
+order = 2
+required = true
+spawn = false
+depends_on = ["store_manifest"]
+by_capability = "dag"
+capabilities = ["dag.session.create"]
+
+[[graph.nodes]]
+name = "record_genesis_event"
+binary = "rhizocrypt"
+order = 3
+required = true
+spawn = false
+depends_on = ["create_session"]
+by_capability = "dag"
+capabilities = ["dag.event.append"]
+
+[[graph.nodes]]
+name = "create_spine"
+binary = "loamspine"
+order = 4
+required = true
+spawn = false
+depends_on = ["create_session"]
+by_capability = "ledger"
+capabilities = ["spine.create"]
+
+[[graph.nodes]]
+name = "anchor_intent"
+binary = "loamspine"
+order = 5
+required = true
+spawn = false
+depends_on = ["create_spine"]
+by_capability = "ledger"
+capabilities = ["entry.append"]
+
+[[graph.nodes]]
+name = "create_intent_braid"
+binary = "sweetgrass"
+order = 6
+required = true
+spawn = false
+depends_on = ["record_genesis_event", "anchor_intent"]
+by_capability = "attribution"
+capabilities = ["braid.create"]
+
+[[graph.nodes]]
+name = "sign_intent"
+binary = "beardog"
+order = 7
+required = false
+spawn = false
+depends_on = ["create_intent_braid"]
+by_capability = "crypto"
+capabilities = ["crypto.sign_ed25519"]

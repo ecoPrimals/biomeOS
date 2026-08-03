@@ -372,6 +372,68 @@ pushed_count = "Number of vertices successfully pushed"
 signatures_valid = "Whether all provenance signatures verified"
 merge_braid_id = "sweetGrass attribution braid for the cross-gate merge"
 
+# ─── Data Federation Signals (manifest-driven acquisition) ────────────
+
+[[tools]]
+name = "nest.declare_dataset"
+tier = "nest"
+description = "Pre-braid: hash DataManifest, open DAG session, create spine, create intent braid. No data moves. Other gates can observe manifest-braids to know what this gate intends to acquire."
+graph = "graphs/signals/nest_declare_dataset.toml"
+coordination = "sequential"
+primals = ["nestgate", "rhizocrypt", "loamspine", "sweetgrass", "beardog"]
+
+[tools.parameters]
+manifest_path = { type = "string", required = true, description = "Path to DataManifest TOML on local filesystem" }
+dataset = { type = "string", required = true, description = "Human-readable dataset name" }
+description = { type = "string", required = false, description = "Dataset description for intent braid" }
+
+[tools.returns]
+session_id = "rhizoCrypt DAG session ID (pass to nest.acquire_file)"
+spine_id = "loamSpine spine ID (pass to nest.acquire_file)"
+braid_id = "sweetGrass intent braid ID"
+manifest_hash = "BLAKE3 hash of the manifest file"
+
+[[tools]]
+name = "nest.acquire_file"
+tier = "nest"
+description = "Per-file data acquisition within a declared dataset: bandwidth request, content.fetch or content.put, DAG event, spine entry, bandwidth release. Governed by topology.bandwidth.* when available."
+graph = "graphs/signals/nest_acquire_file.toml"
+coordination = "sequential"
+primals = ["cellmembrane", "nestgate", "rhizocrypt", "loamspine"]
+
+[tools.parameters]
+session_id = { type = "string", required = true, description = "DAG session from nest.declare_dataset" }
+spine_id = { type = "string", required = true, description = "Spine from nest.declare_dataset" }
+file_path = { type = "string", required = false, description = "Path to pre-fetched file on disk (for content.put)" }
+url = { type = "string", required = false, description = "URL for content.fetch (fetch + hash + CAS in one step)" }
+dataset = { type = "string", required = true, description = "Dataset name for DAG event metadata" }
+rate_limit_mbps = { type = "integer", required = false, description = "Per-file rate limit for content.fetch" }
+
+[tools.returns]
+blake3_hash = "BLAKE3 hash of the file content"
+vertex_id = "rhizoCrypt DAG vertex ID for this file event"
+entry_id = "loamSpine spine entry ID"
+stored = "Whether file was newly stored or deduplicated"
+
+[[tools]]
+name = "nest.complete_dataset"
+tier = "nest"
+description = "Finalize dataset acquisition: dehydrate DAG session (compute Merkle root), commit spine session, sign Merkle root via Ed25519, create final attribution braid. Dataset is now fully provenance-tracked and available for federation."
+graph = "graphs/signals/nest_complete_dataset.toml"
+coordination = "sequential"
+primals = ["rhizocrypt", "loamspine", "beardog", "sweetgrass", "nestgate"]
+
+[tools.parameters]
+session_id = { type = "string", required = true, description = "DAG session from nest.declare_dataset" }
+spine_id = { type = "string", required = true, description = "Spine from nest.declare_dataset" }
+dataset = { type = "string", required = true, description = "Dataset name for braid and publish" }
+
+[tools.returns]
+merkle_root = "BLAKE3 Merkle root of the complete DAG session"
+signature = "Ed25519 signature of the Merkle root"
+braid_id = "sweetGrass final attribution braid ID (replaces intent braid)"
+published = "Whether dataset was announced via content.publish"
+
 # ─── Braid Signals (provenance lifecycle) ──────────────────────────────
 
 [[tools]]

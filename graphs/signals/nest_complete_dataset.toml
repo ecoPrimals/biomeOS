@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.complete_dataset
+#
+# Finalize a data federation acquisition. Closes the DAG session,
+# commits the final Merkle root to loamSpine, signs via bearDog,
+# and creates the final attribution braid via sweetGrass.
+#
+# This replaces the intent braid (from nest.declare_dataset) with a
+# complete braid. The dataset is now fully provenance-tracked and
+# available for federation via nest.sync.
+#
+# Wire format:
+#   signal.dispatch { "signal": "nest.complete_dataset", "params": {
+#     "session_id": "...",
+#     "spine_id": "...",
+#     "dataset": "alphafold_structures_v6"
+#   }}
+#
+# Prerequisite: all nest.acquire_file signals for this session have
+# completed. The DAG session contains all file events.
+
+[graph]
+id = "nest_complete_dataset"
+name = "Nest Complete Dataset Signal"
+description = "Finalize dataset acquisition: dehydrate DAG → commit spine → sign → create final braid."
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "complete_dataset"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+fragments = ["provenance_trio", "data_federation"]
+
+[[graph.nodes]]
+name = "dehydrate_session"
+binary = "rhizocrypt"
+order = 1
+required = true
+spawn = false
+by_capability = "dag"
+capabilities = ["dag.dehydration.trigger"]
+
+[[graph.nodes]]
+name = "commit_session"
+binary = "loamspine"
+order = 2
+required = true
+spawn = false
+depends_on = ["dehydrate_session"]
+by_capability = "ledger"
+capabilities = ["session.commit"]
+
+[[graph.nodes]]
+name = "sign_dataset"
+binary = "beardog"
+order = 3
+required = true
+spawn = false
+depends_on = ["commit_session"]
+by_capability = "crypto"
+capabilities = ["crypto.sign_ed25519"]
+
+[[graph.nodes]]
+name = "create_final_braid"
+binary = "sweetgrass"
+order = 4
+required = true
+spawn = false
+depends_on = ["sign_dataset"]
+by_capability = "attribution"
+capabilities = ["braid.create"]
+
+[[graph.nodes]]
+name = "announce_dataset"
+binary = "nestgate"
+order = 5
+required = false
+spawn = false
+depends_on = ["create_final_braid"]
+by_capability = "coordination"
+capabilities = ["content.publish"]

@@ -1,0 +1,116 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: nest.acquire_file
+#
+# Per-file acquisition within a declared dataset. Replaces the ad-hoc
+# curl/rsync -> bulk_ingest.py pattern with a primal composition:
+# fetch (rate-limited) -> CAS store -> DAG event -> spine entry.
+#
+# Two acquisition paths, selected by params:
+#   - url provided:       content.fetch (HTTP GET -> BLAKE3 -> CAS in one step)
+#   - file_path provided: content.put   (pre-fetched file on disk)
+#
+# content.fetch is implemented in nestGate (fetch.rs) with per-request
+# rate limiting. The signal graph uses content.fetch as the primary path
+# and content.put as the fallback for pre-fetched files.
+#
+# Bandwidth governance: check_bandwidth queries topology.bandwidth.request
+# before starting the transfer. If no budget is available, the signal
+# queues and retries after a backoff. The governance runtime is a
+# sporeGate topology team deliverable (cellMembrane Option A).
+#
+# Wire format:
+#   signal.dispatch { "signal": "nest.acquire_file", "params": {
+#     "session_id": "...",
+#     "spine_id": "...",
+#     "url": "https://...",                (primary: content.fetch)
+#     "file_path": "/path/to/file",        (fallback: content.put)
+#     "dataset": "alphafold_structures_v6",
+#     "rate_limit_mbps": 200               (optional: per-file rate limit)
+#   }}
+#
+# Checkpoint: after every N files (from manifest checkpoint_interval),
+# the caller dispatches braid.partial_update to create a partial braid.
+
+[graph]
+id = "nest_acquire_file"
+name = "Nest Acquire File Signal"
+description = "Per-file data acquisition: bandwidth check -> content.fetch or content.put -> CAS -> DAG event -> spine entry. Bandwidth-governed."
+version = "2.0.0"
+coordination = "sequential"
+signal_tier = "nest"
+signal_name = "acquire_file"
+
+[graph.metadata]
+particle = "neutron"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+fragments = ["provenance_trio", "data_federation"]
+
+[[graph.nodes]]
+name = "check_bandwidth"
+binary = "cellmembrane"
+order = 1
+required = false
+spawn = false
+by_capability = "topology"
+capabilities = ["topology.bandwidth.request"]
+
+# Primary path: URL-based acquisition via content.fetch.
+# Performs HTTP(S) GET, BLAKE3 hash, and CAS store in one atomic step.
+# Rate-limited via chunked reads. Deduplicates against existing CAS.
+# Skipped when file_path is provided instead of url.
+[[graph.nodes]]
+name = "fetch_content"
+binary = "nestgate"
+order = 2
+required = false
+spawn = false
+depends_on = ["check_bandwidth"]
+by_capability = "storage"
+capabilities = ["content.fetch"]
+
+# Fallback path: pre-fetched file on disk via content.put.
+# Used when the file was already downloaded externally (rsync, browser,
+# aiohttp) and only CAS storage + provenance is needed.
+# Skipped when url is provided instead of file_path.
+[[graph.nodes]]
+name = "store_content"
+binary = "nestgate"
+order = 3
+required = false
+spawn = false
+depends_on = ["check_bandwidth"]
+by_capability = "storage"
+capabilities = ["content.put"]
+
+[[graph.nodes]]
+name = "record_event"
+binary = "rhizocrypt"
+order = 4
+required = true
+spawn = false
+depends_on = ["fetch_content", "store_content"]
+by_capability = "dag"
+capabilities = ["dag.event.append"]
+
+[[graph.nodes]]
+name = "record_entry"
+binary = "loamspine"
+order = 5
+required = true
+spawn = false
+depends_on = ["record_event"]
+by_capability = "ledger"
+capabilities = ["entry.append"]
+
+[[graph.nodes]]
+name = "release_bandwidth"
+binary = "cellmembrane"
+order = 6
+required = false
+spawn = false
+depends_on = ["record_entry"]
+by_capability = "topology"
+capabilities = ["topology.bandwidth.release"]
