@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: July 30, 2026
-**Status**: Production Ready (v4.53) — 8,570+ tests / 88.37% line coverage, zero clippy/deny warnings, zero production unwraps, zero dead deps, zero files >800 LOC, all 26 crates `#![forbid(unsafe_code)]`, Edition 2024, rust-version 1.87, cross-arch, 0 C deps, scyBorg (AGPL-3.0-or-later)
+**Last Updated**: August 3, 2026
+**Status**: Production Ready (v4.56) — 8,570+ tests / 88.37% line coverage, zero clippy/deny warnings, zero production unwraps, zero dead deps, zero files >800 LOC, all 26 crates `#![forbid(unsafe_code)]`, Edition 2024, rust-version 1.87, cross-arch, 0 C deps, scyBorg (AGPL-3.0-or-later), G22 COMPLETE, springs-ready
 
 ---
 
@@ -169,7 +169,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v4.45)
+**Status**: Production Ready (v4.56)
 **Discovery**: Capability-first runtime registry + bootstrap hints per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Neural API**: 320+ semantic translations, 27 capability domains, L4 weighted routing, L5 perceptron shadow mode, stale registration pruning, partition-aware routing, composition hot-reload, cross-gate routing via mesh relay, adaptive weights (redb-persistent), `executor.list`/`executor.status`, `cleanup.sockets`
 **IPC**: `biomeos-core::ipc` transport layer — Unix/abstract/TCP + UDS dual-protocol auto-detect + BTSP + `--bind-mode` guideStone startup (Phase 2 complete, 12/14 primals; HTTP transport removed v3.97; `--tcp-only` deprecated v3.94)

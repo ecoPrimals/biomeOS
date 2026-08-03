@@ -1,6 +1,6 @@
 # biomeOS — Chain Status for Overwatch
 
-**Last Updated**: July 31, 2026 12:45 EDT
+**Last Updated**: August 3, 2026
 **Version**: v4.56
 **Team**: biomeOS
 **Gate**: eastGate
@@ -120,6 +120,35 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 
 ---
 
+## Spring Dispatch Infrastructure — COMPLETE (Wave 155n)
+
+| Feature | Status |
+|---------|--------|
+| `action` field normalization (spring deploy graph shorthand) | ✅ |
+| `effective_param()` unified resolution (operation → params → config) | ✅ |
+| Shadow deploy gate validation (unresolved remote gates caught) | ✅ |
+| hotSpring + groundSpring bootstrap capability hints | ✅ |
+| Spring deploy graphs v2.0.0 format (gate metadata, content wiring) | ✅ |
+
+---
+
+## Deep Debt Audit — CLEAN (Aug 3, 2026)
+
+| Category | Status |
+|----------|--------|
+| `unsafe` blocks in prod | 0 |
+| TODOs/FIXMEs in prod | 0 |
+| Dead dependencies | 0 (47 removed, cargo-machete verified) |
+| Production mocks | 0 |
+| Hardcoded primal names in prod | 0 |
+| Files >800 LOC | 0 (largest 716) |
+| C-wrapped deps | 0 |
+| `panic!` in prod | 0 |
+| `Box<dyn Error>` in prod signatures | 0 |
+| `std::sync::Mutex` issues | 0 (all short critical sections) |
+
+---
+
 ## Upstream Items — Status per Wave 155n
 
 | Issue | Owner | Status |
@@ -131,16 +160,17 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 
 ---
 
-## biomeOS Posture: STANDBY-READY (G22 Active)
+## biomeOS Posture: SPRINGS-READY (G22 COMPLETE)
 
 biomeOS Chain 1 complete. **All P0/P1/P2/P3 biomeOS-owned blockers resolved.**
-**G22 convergence COMPLETE**. Springs-ready: any mode = dual protocol.
+**G22 convergence COMPLETE**. Spring dispatch infrastructure landed.
+Deep debt audit CLEAN: zero unsafe, zero TODOs, zero mocks, zero panic in prod.
 
 ### Metrics (v4.56)
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,458+ pass, 0 failures |
+| Tests | 8,570+ pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (forbid) |
 | Largest prod file | 716 LOC |

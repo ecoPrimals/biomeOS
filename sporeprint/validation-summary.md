@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel v4.49 — composition broker, BTSP, riboCipher, NUCLEUS supervisor, boot_order lifecycle, capability wipe fix, 27 domains, 320+ translations, 27 signal graphs, zero blocking debt"
-date = 2026-07-30
+description = "Orchestration kernel v4.56 — G22 convergence complete, spring dispatch infrastructure, deep debt audit CLEAN, 27 domains, 320+ translations, 27 signal graphs, zero blocking debt, SPRINGS-READY"
+date = 2026-08-03
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -11,6 +11,9 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 - **8,570+ tests** workspace-wide, 0 failures, fully concurrent
 - **88%+ coverage** line / region / function (llvm-cov workspace-wide)
+- **v4.56** — Wave 155n: G22 COMPLETE, spring dispatch, deep debt audit CLEAN
+- **v4.55** — Wave 155n: Coevolution contract (composition.test_swap), mode gap fix
+- **v4.54** — Wave 155m: P1 fixes (respawn storm, socket deletion), P3 sweep
 - **v4.49** — Wave 155k: P2 divergence fixes — capability wipe cycle, test extraction, dep narrowing
 - **v4.48** — Wave 155j: Composition lifecycle — cellMembrane boot_order integration
 - **v4.47** — Wave 155i: Deep debt cleanup — dead deps, test extraction, capability-based BTSP
