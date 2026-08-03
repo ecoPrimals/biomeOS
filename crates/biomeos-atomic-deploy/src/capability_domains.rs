@@ -17,9 +17,9 @@
 //! The mapping is SEMANTIC → PROVIDER (not implementation-specific).
 
 use biomeos_types::primal_names::{
-    AIRSPRING, BARRACUDA, BEARDOG, BIOMEOS, CORALREEF, HEALTHSPRING, LOAMSPINE, LUDOSPRING,
-    NESTGATE, NEURALSPRING, PETALTONGUE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
-    WETSPRING,
+    AIRSPRING, BARRACUDA, BEARDOG, BIOMEOS, CORALREEF, GROUNDSPRING, HEALTHSPRING, HOTSPRING,
+    LOAMSPINE, LUDOSPRING, NESTGATE, NEURALSPRING, PETALTONGUE, RHIZOCRYPT, SONGBIRD, SQUIRREL,
+    SWEETGRASS, TOADSTOOL, WETSPRING,
 };
 use dashmap::DashMap;
 use std::collections::HashMap;
@@ -113,6 +113,24 @@ pub const BOOTSTRAP_CAPABILITY_HINTS: &[CapabilityDomain] = &[
             "weather_data",
             "seismic_data",
         ],
+    },
+    // Physics domain — fallback-only provider: hotSpring
+    CapabilityDomain {
+        provider: HOTSPRING,
+        capabilities: &[
+            "physics",
+            "md_step",
+            "thermostat",
+            "barostat",
+            "force_field",
+            "lattice",
+            "hmc",
+        ],
+    },
+    // Measurement / soil science domain — fallback-only provider: groundSpring
+    CapabilityDomain {
+        provider: GROUNDSPRING,
+        capabilities: &["measurement", "soil_moisture", "geotechnical"],
     },
     // Science domain — fallback-only provider: wetSpring
     CapabilityDomain {
