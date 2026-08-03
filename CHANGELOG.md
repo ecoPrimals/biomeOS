@@ -2,7 +2,25 @@
 
 All notable changes to biomeOS will be documented in this file.
 
-## v4.56 (2026-07-31) — Wave 155n: G22 API Convergence COMPLETE
+## v4.56 (2026-08-03) — Wave 155n: G22 COMPLETE + Spring Dispatch Infrastructure
+
+### Spring Deploy Graph Executor (`77866b4c`)
+- `GraphNode.action` field: spring deploy graphs use `action = "check_primal"` shorthand
+  instead of nested `[nodes.operation]`. The executor normalizes these to canonical ops.
+- `GraphNode.params` field: spring graphs put params at node level. New `effective_param()`
+  resolves from operation.params → params → config (with `primal` → `primal_name` alias).
+- Shadow deploy gate validation: `composition.deploy.shadow` now catches unresolved remote
+  gates at preflight time instead of runtime failure.
+- Spring deploy graphs updated to v2.0.0: gate metadata, content wiring, corrected deps.
+
+### Bootstrap Capability Hints (`a3a48919`)
+- hotSpring: physics, md_step, thermostat, barostat, force_field, lattice, hmc
+- groundSpring: measurement, soil_moisture, geotechnical
+- Ensures cold-start compositions can resolve physics/measurement domains.
+
+---
+
+## v4.56 (2026-07-31) — Wave 155n: G22 API Convergence
 
 ### G22 Step 1: NUCLEUS Dual-Server Architecture
 - NUCLEUS Full mode now launches the HTTP API server (axum) alongside the Neural API

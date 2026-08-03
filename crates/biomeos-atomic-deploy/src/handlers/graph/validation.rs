@@ -121,8 +121,7 @@ impl GraphHandler {
 
         // 3b. Gate endpoint completeness: every remote gate ref must resolve
         {
-            let gate_registry =
-                crate::gate_registry::GateRegistry::from_graph_env(&graph.env);
+            let gate_registry = crate::gate_registry::GateRegistry::from_graph_env(&graph.env);
             let mut remote_gates: Vec<&str> = Vec::new();
             let mut unresolved_gates: Vec<String> = Vec::new();
             for node in &graph.nodes {

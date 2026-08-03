@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: July 31, 2026
-**Version**: v4.56 (Wave 155n — G22 API Convergence COMPLETE)
-**Posture**: SPRINGS-READY — ZERO P0/P1/P2. G22 convergence COMPLETE.
+**Updated**: August 3, 2026
+**Version**: v4.56 (Wave 155n — G22 COMPLETE + Spring Dispatch)
+**Posture**: SPRINGS-READY — ZERO P0/P1/P2. G22 COMPLETE. Spring graphs executable.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -20,7 +20,7 @@
 | TODOs in prod | 0 |
 | Production unwraps | 0 (workspace lint enforced) |
 | Dead code | 0 |
-| Dead dependencies | 0 (39 removed across sessions, cargo-machete verified) |
+| Dead dependencies | 0 (47 removed across sessions, cargo-machete verified) |
 | cargo deny | clean (advisories, bans, licenses, sources) |
 | Formatting | PASS (rustfmt clean) |
 | Cross-arch | x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu |
@@ -104,7 +104,7 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **SPRINGS-READY**. G22 convergence COMPLETE.
+biomeOS is **SPRINGS-READY**. G22 COMPLETE. Spring dispatch infrastructure landed.
 
 **G22 (whitePaper API convergence) — COMPLETE**:
 - Step 1: NUCLEUS Full mode launches HTTP API + Neural API in same process
@@ -114,8 +114,19 @@ biomeOS is **SPRINGS-READY**. G22 convergence COMPLETE.
 - Step 4b: Standalone `neural-api` mode deprecated (runtime warning)
 - Step 5: Single restart = full composition recovery (persisted registry + sweep)
 
-Any entry point (api, neural-api, nucleus) now provides BOTH protocols.
-Springs+gardens can build against any mode with confidence.
+**Spring Dispatch Infrastructure (Aug 3)**:
+- `action` field normalization: spring deploy graphs now executable through biomeOS
+  (`check_primal` → health_check, `start_primal` → start, etc.)
+- `effective_param()` unified param resolution across graph formats
+- Shadow deploy gate validation: unresolved remote gates caught at preflight
+- Spring deploy graphs updated to v2.0.0 (gate metadata, content wiring)
+- hotSpring + groundSpring added to bootstrap capability hints
+
+**Inter-gate content.get** (P1 #4): biomeOS routing infrastructure VERIFIED complete.
+Gate param routing, mesh relay, nest.sync signal all functional. Needs live E2E test.
+
+**G18 squirrel dispatch** (P1 #6): biomeOS side ready. Springs executable via signal
+graphs. Squirrel needs to wire `signal.plan` → biomeOS `graph.execute`.
 
 Coevolution (G21) COMPLETE. Both P1s GATE VALIDATED on westGate and strandGate.
 
@@ -123,10 +134,10 @@ Upstream items (not biomeOS code):
 - J12: blueGate sub-builder IPC wire (songBird, unblocked)
 - J18: `/etc/environment` gate coupling (cellMembrane)
 - GNU depot incomplete (4/16): sporeGate builder
-- bearDog dual-socket: bearDog team workaround available
+- Live inter-gate content.get E2E: nestGate + songBird operational test
 
 Resume triggers:
-- G18: squirrel → biomeOS neuralAPI agent integration (springs)
+- G18: squirrel wires `signal.plan` → biomeOS `graph.execute`
+- Live E2E inter-gate content.get validation (operational, not code)
 - Redeploy v4.56 to depot via Sovereign CI
-- AlphaFold ~1TB ingestion through westGate Nest Atomic
-- steamGate Tower deployment (user-space, gnu bins)
+- southGate NUCLEUS launch + bonding validation

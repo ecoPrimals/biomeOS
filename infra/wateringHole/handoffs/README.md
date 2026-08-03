@@ -58,7 +58,8 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
-| **155n-c** | Jul 31, 2026 | **G22 COMPLETE: all modes unified, neural-api deprecated** |
+| **155n-d** | Aug 3, 2026 | **Spring dispatch: action field normalization, gate validation, bootstrap hints** |
+| 155n-c | Jul 31, 2026 | G22 COMPLETE: all modes unified, neural-api deprecated |
 | 155n-b | Jul 31, 2026 | G22 convergence: NUCLEUS dual-server + socket namespace unified |
 | 155n | Jul 31, 2026 | Coevolution contract: composition.test_swap (P2 sandbox unblock) |
 | 155m-f | Jul 31, 2026 | Deep debt: 15 more dead deps removed (29 total), full audit clean |
