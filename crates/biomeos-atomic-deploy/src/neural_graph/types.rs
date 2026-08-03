@@ -78,6 +78,19 @@ pub struct GraphNode {
     #[serde(default)]
     pub parameter_mappings: Option<HashMap<String, HashMap<String, String>>>,
 
+    /// Shorthand action name (spring deploy graph syntax).
+    /// Normalized to `operation.name` during dispatch. Supports:
+    /// `check_primal` → `health_check`, `start_primal` → `start`,
+    /// `wire_data` → `register_capabilities`, `invoke` → `capability_call`.
+    #[serde(default)]
+    pub action: Option<String>,
+
+    /// Node-level params (spring deploy graph shorthand).
+    /// When `action` is used instead of `[nodes.operation]`, parameters are
+    /// specified here. The executor merges these with `operation.params`.
+    #[serde(default)]
+    pub params: HashMap<String, serde_json::Value>,
+
     /// Legacy: node type (prefer primal + operation)
     #[serde(default)]
     pub node_type: Option<String>,
@@ -143,6 +156,32 @@ impl GraphNode {
     #[must_use]
     pub fn is_optional(&self) -> bool {
         self.fallback.as_deref() == Some("skip")
+    }
+
+    /// Resolve a parameter by key, checking (in priority order):
+    /// 1. `operation.params[key]`
+    /// 2. `params[key]` (spring deploy graph shorthand)
+    /// 3. `config[key]` (legacy)
+    ///
+    /// Spring graphs alias `primal` → `primal_name` for handler compatibility.
+    #[must_use]
+    pub fn effective_param(&self, key: &str) -> Option<&serde_json::Value> {
+        if let Some(op) = &self.operation {
+            if let Some(v) = op.params.get(key) {
+                return Some(v);
+            }
+        }
+        if let Some(v) = self.params.get(key) {
+            return Some(v);
+        }
+        if let Some(v) = self.config.get(key) {
+            return Some(v);
+        }
+        // Spring alias: `primal` → `primal_name`
+        if key == "primal_name" {
+            return self.effective_param("primal");
+        }
+        None
     }
 }
 

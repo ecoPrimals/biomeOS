@@ -24,8 +24,13 @@
 
 [graph]
 id = "neuralspring_deploy"
+version = "2.0.0"
 description = "neuralSpring ML surrogates primal atop Node Atomic"
 coordination = "Sequential"
+
+[graph.metadata]
+assigned_gate = "strandGate"
+data_gate = "westGate"
 
 # =============================================================================
 # Phase 1: Tower Atomic (security + network foundation)
@@ -117,12 +122,28 @@ timeout_ms = 45000
 "compute.capabilities" = "toadstool.query_capabilities"
 
 # =============================================================================
+# Phase 2b: NestGate content access
+# =============================================================================
+
+[[nodes]]
+id = "verify-nestgate"
+action = "check_primal"
+params = { primal = "nestgate", required = false }
+depends_on = ["germinate_beardog"]
+
+[[nodes]]
+id = "wire-content-access"
+action = "register_capabilities"
+params = { primal = "nestgate", capabilities = ["content.get", "content.put", "storage.store", "storage.retrieve"] }
+depends_on = ["verify-nestgate"]
+
+# =============================================================================
 # Phase 3: neuralSpring (ML surrogates primal)
 # =============================================================================
 
 [[nodes]]
 id = "germinate_neuralspring"
-depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool"]
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool", "wire-content-access"]
 output = "neuralspring_genesis"
 capabilities = ["learning", "spectral", "anderson", "hessian", "surrogate", "reservoir"]
 

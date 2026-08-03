@@ -9,8 +9,12 @@
 
 [graph]
 id = "healthspring_deploy"
-version = "1.0.0"
+version = "2.0.0"
 description = "healthSpring medical science primal deployment"
+
+[graph.metadata]
+assigned_gate = "ironGate"
+data_gate = "westGate"
 
 [[nodes]]
 id = "verify-tower"
@@ -30,10 +34,16 @@ params = { primal = "nestgate", required = false }
 depends_on = ["verify-tower"]
 
 [[nodes]]
+id = "wire-content-access"
+action = "register_capabilities"
+params = { primal = "nestgate", capabilities = ["content.get", "content.put", "storage.store", "storage.retrieve"] }
+depends_on = ["verify-nestgate"]
+
+[[nodes]]
 id = "start-healthspring"
 action = "start_primal"
 params = { primal = "healthspring", socket = "${XDG_RUNTIME_DIR}/membrane/healthspring-${FAMILY_ID}.sock" }
-depends_on = ["verify-toadstool"]
+depends_on = ["verify-toadstool", "wire-content-access"]
 
 [[nodes]]
 id = "register-capabilities"

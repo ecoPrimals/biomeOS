@@ -58,6 +58,8 @@ impl GraphExecutor {
 
         let node_type_str = if let Some(ref operation) = node.operation {
             operation.name.as_str()
+        } else if let Some(ref action) = node.action {
+            normalize_action(action)
         } else if let Some(ref node_type) = node.node_type {
             node_type.as_str()
         } else {
@@ -227,5 +229,23 @@ impl GraphExecutor {
         }
 
         None
+    }
+}
+
+/// Normalize spring deploy graph `action` shorthand to executor operation names.
+///
+/// Spring deploy graphs use a simplified `action = "..."` syntax. This maps
+/// those actions to the canonical operation strings the executor already handles.
+fn normalize_action(action: &str) -> &str {
+    match action {
+        "check_primal" | "check_health" => "health_check",
+        "start_primal" | "start_service" | "launch" => "start",
+        "wire_data" | "wire_content" | "register" => "register_capabilities",
+        "invoke" | "call" | "dispatch" => "capability_call",
+        "rpc" | "send_rpc" => "rpc_call",
+        "verify" | "verify_lineage" => "lineage.verify_siblings",
+        "log" | "info" => "log.info",
+        "warn" => "log.warn",
+        other => other,
     }
 }

@@ -119,6 +119,38 @@ impl GraphHandler {
             warnings.push("Could not parse as DeploymentGraph for structural validation".into());
         }
 
+        // 3b. Gate endpoint completeness: every remote gate ref must resolve
+        {
+            let gate_registry =
+                crate::gate_registry::GateRegistry::from_graph_env(&graph.env);
+            let mut remote_gates: Vec<&str> = Vec::new();
+            let mut unresolved_gates: Vec<String> = Vec::new();
+            for node in &graph.nodes {
+                if let Some(ref gate) = node.gate {
+                    if gate != "local" && gate != "auto" && !remote_gates.contains(&gate.as_str()) {
+                        remote_gates.push(gate.as_str());
+                        if gate_registry.resolve(gate).is_none() {
+                            unresolved_gates.push(gate.clone());
+                        }
+                    }
+                }
+            }
+            if !unresolved_gates.is_empty() {
+                validation_errors.push(format!(
+                    "Unresolved gate(s): {}. Add them to [graph.env] \
+                     (e.g. gate_name = \"tcp://host:port\")",
+                    unresolved_gates.join(", ")
+                ));
+            }
+            if !remote_gates.is_empty() {
+                warnings.push(format!(
+                    "Cross-gate deploy: {} remote gate(s) targeted ({})",
+                    remote_gates.len(),
+                    remote_gates.join(", ")
+                ));
+            }
+        }
+
         // 4. Topological sort (phase planning)
         let executor = crate::neural_executor::GraphExecutor::new(graph.clone(), HashMap::new());
         let phases = match executor.topological_sort() {

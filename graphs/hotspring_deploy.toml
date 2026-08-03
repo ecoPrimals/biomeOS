@@ -7,8 +7,12 @@
 
 [graph]
 id = "hotspring_deploy"
-version = "1.0.0"
+version = "2.0.0"
 description = "hotSpring physics primal deployment"
+
+[graph.metadata]
+assigned_gate = "strandGate"
+data_gate = "westGate"
 
 [[nodes]]
 id = "verify-tower"
@@ -24,14 +28,20 @@ depends_on = ["verify-tower"]
 [[nodes]]
 id = "verify-nestgate"
 action = "check_primal"
-params = { primal = "nestgate", required = false }
+params = { primal = "nestgate", required = true }
 depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "wire-content-access"
+action = "register_capabilities"
+params = { primal = "nestgate", capabilities = ["content.get", "content.put", "storage.store", "storage.retrieve"] }
+depends_on = ["verify-nestgate"]
 
 [[nodes]]
 id = "start-hotspring"
 action = "start_primal"
 params = { primal = "hotspring", socket = "${XDG_RUNTIME_DIR}/membrane/hotspring-${FAMILY_ID}.sock" }
-depends_on = ["verify-toadstool"]
+depends_on = ["verify-toadstool", "wire-content-access"]
 
 [[nodes]]
 id = "register-capabilities"

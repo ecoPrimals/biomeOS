@@ -202,6 +202,8 @@ impl Graph {
             capabilities,
             capabilities_provided: None,
             parameter_mappings: None,
+            action: None,
+            params: HashMap::new(),
             node_type: None,
             dependencies: vec![],
             config,

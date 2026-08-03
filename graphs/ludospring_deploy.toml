@@ -31,8 +31,13 @@
 
 [graph]
 id = "ludospring_deploy"
+version = "2.0.0"
 description = "ludoSpring game-science primal atop Node Atomic"
 coordination = "Sequential"
+
+[graph.metadata]
+assigned_gate = "blueGate"
+fallback_gate = "northGate"
 
 # =============================================================================
 # Phase 1: Tower Atomic (security + network foundation)

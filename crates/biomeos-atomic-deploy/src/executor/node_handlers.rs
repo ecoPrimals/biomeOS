@@ -26,8 +26,7 @@ pub async fn filesystem_check_exists(
     context: &ExecutionContext,
 ) -> Result<Value> {
     let path = node
-        .config
-        .get("path")
+        .effective_param("path")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("filesystem.check_exists requires 'path' config"))?;
 
@@ -47,8 +46,7 @@ pub async fn filesystem_check_exists(
 /// Execute seed derivation via capability-based discovery
 pub async fn crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let source = node
-        .config
-        .get("source")
+        .effective_param("source")
         .and_then(|v| v.as_str())
         .unwrap_or("family");
 
@@ -96,14 +94,12 @@ pub async fn crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) ->
 /// Execute primal launch via capability-based discovery
 pub async fn primal_launch(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let primal_name = node
-        .config
-        .get("primal_name")
+        .effective_param("primal_name")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("primal.launch requires 'primal_name' config"))?;
 
     let mode = node
-        .config
-        .get("mode")
+        .effective_param("mode")
         .and_then(|v| v.as_str())
         .unwrap_or("serve");
 
@@ -150,15 +146,13 @@ pub async fn primal_launch(node: &GraphNode, context: &ExecutionContext) -> Resu
 /// Execute health check on a primal
 pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let primal_name = node
-        .config
-        .get("primal_name")
+        .effective_param("primal_name")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("health_check requires 'primal_name' config"))?;
 
     let socket_path = context.get_socket_path(primal_name).await;
     let timeout_secs = node
-        .config
-        .get("timeout_secs")
+        .effective_param("timeout_secs")
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(10);
 
@@ -203,8 +197,7 @@ pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Resul
 /// health checks.
 pub async fn register_capabilities(node: &GraphNode, _context: &ExecutionContext) -> Result<Value> {
     let primal_name = node
-        .config
-        .get("primal_name")
+        .effective_param("primal_name")
         .and_then(|v| v.as_str())
         .unwrap_or("unknown");
 
@@ -236,8 +229,7 @@ pub async fn register_capabilities(node: &GraphNode, _context: &ExecutionContext
 /// Execute lineage verification via capability-based discovery
 pub async fn lineage_verify(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let primal_name = node
-        .config
-        .get("primal_name")
+        .effective_param("primal_name")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("lineage.verify requires 'primal_name' config"))?;
 
@@ -280,8 +272,7 @@ pub async fn lineage_verify(node: &GraphNode, context: &ExecutionContext) -> Res
 /// Log info message
 pub async fn log_info(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let message = node
-        .config
-        .get("message")
+        .effective_param("message")
         .and_then(|v| v.as_str())
         .unwrap_or("(no message)");
 
@@ -297,8 +288,7 @@ pub async fn log_info(node: &GraphNode, context: &ExecutionContext) -> Result<Va
 /// Log warning message
 pub async fn log_warn(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let message = node
-        .config
-        .get("message")
+        .effective_param("message")
         .and_then(|v| v.as_str())
         .unwrap_or("(no message)");
 
@@ -314,8 +304,7 @@ pub async fn log_warn(node: &GraphNode, context: &ExecutionContext) -> Result<Va
 /// Log error message
 pub async fn log_error(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let message = node
-        .config
-        .get("message")
+        .effective_param("message")
         .and_then(|v| v.as_str())
         .unwrap_or("(no message)");
 
@@ -331,8 +320,7 @@ pub async fn log_error(node: &GraphNode, context: &ExecutionContext) -> Result<V
 /// Generate deployment report
 pub async fn deployment_report(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let title = node
-        .config
-        .get("title")
+        .effective_param("title")
         .and_then(|v| v.as_str())
         .unwrap_or("Deployment Report");
 
