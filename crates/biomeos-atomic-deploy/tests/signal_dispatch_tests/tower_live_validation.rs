@@ -302,12 +302,12 @@ fn all_signal_graphs_have_consistent_tier_distribution() {
 
     assert_eq!(tower_count, 8, "Tower: 8 signals");
     assert_eq!(node_count, 3, "Node: 3 signals");
-    assert_eq!(nest_count, 9, "Nest: 9 signals");
+    assert_eq!(nest_count, 12, "Nest: 12 signals (9 core + 3 data federation)");
     assert_eq!(meta_count, 5, "Meta: 5 signals");
     assert_eq!(braid_count, 2, "Braid: 2 signals");
     assert_eq!(
         tower_count + node_count + nest_count + meta_count + braid_count,
-        27,
+        30,
         "Total signal count"
     );
 }

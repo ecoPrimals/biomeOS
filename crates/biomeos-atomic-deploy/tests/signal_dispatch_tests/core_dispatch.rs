@@ -6,7 +6,7 @@
 use super::graphs_dir;
 
 #[test]
-fn all_27_signal_graphs_exist() {
+fn all_30_signal_graphs_exist() {
     let dir = graphs_dir().join("signals");
     assert!(dir.exists(), "graphs/signals/ directory not found");
 
@@ -24,7 +24,7 @@ fn all_27_signal_graphs_exist() {
         "node_compute",
         "node_discover_hardware",
         "node_dispatch",
-        // Nest (9)
+        // Nest (12: 9 core + 3 data federation)
         "nest_store",
         "nest_commit",
         "nest_retrieve",
@@ -34,6 +34,9 @@ fn all_27_signal_graphs_exist() {
         "nest_emit_spore",
         "nest_verify",
         "nest_federate",
+        "nest_declare_dataset",
+        "nest_acquire_file",
+        "nest_complete_dataset",
         // Braid (2)
         "braid_partial_update",
         "braid_complete",
@@ -96,14 +99,14 @@ fn is_signal_tier_recognizes_valid_tiers() {
 }
 
 #[test]
-fn list_signal_graphs_finds_all_27() {
+fn list_signal_graphs_finds_all_30() {
     use biomeos_atomic_deploy::handlers::signal::list_signal_graphs;
 
     let signals = list_signal_graphs(&graphs_dir());
     assert_eq!(
         signals.len(),
-        27,
-        "Expected 27 signal graphs, found {}",
+        30,
+        "Expected 30 signal graphs, found {}",
         signals.len()
     );
 
@@ -121,7 +124,7 @@ fn list_signal_graphs_finds_all_27() {
     assert!(names.contains(&"node.compute"));
     assert!(names.contains(&"node.discover_hardware"));
     assert!(names.contains(&"node.dispatch"));
-    // Nest (9)
+    // Nest (12: 9 core + 3 data federation)
     assert!(names.contains(&"nest.store"));
     assert!(names.contains(&"nest.commit"));
     assert!(names.contains(&"nest.retrieve"));
@@ -131,6 +134,9 @@ fn list_signal_graphs_finds_all_27() {
     assert!(names.contains(&"nest.emit_spore"));
     assert!(names.contains(&"nest.verify"));
     assert!(names.contains(&"nest.federate"));
+    assert!(names.contains(&"nest.declare_dataset"));
+    assert!(names.contains(&"nest.acquire_file"));
+    assert!(names.contains(&"nest.complete_dataset"));
     // Braid (2)
     assert!(names.contains(&"braid.partial_update"));
     assert!(names.contains(&"braid.complete"));
@@ -152,7 +158,7 @@ fn signal_schema_loads() {
     let schema = result.unwrap();
     let tools = schema.get("tools").expect("schema should have 'tools' key");
     let tools_arr = tools.as_array().expect("'tools' should be an array");
-    assert_eq!(tools_arr.len(), 27, "Expected 27 tool definitions");
+    assert_eq!(tools_arr.len(), 30, "Expected 30 tool definitions");
 }
 
 #[test]

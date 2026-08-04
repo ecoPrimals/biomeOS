@@ -19,8 +19,8 @@ fn nest_signals_in_schema() {
 
     assert_eq!(
         nest_tools.len(),
-        9,
-        "signal_tools.toml should define all 9 Nest signals"
+        12,
+        "signal_tools.toml should define all 12 Nest signals (9 core + 3 data federation)"
     );
 
     let nest_names: Vec<&str> = nest_tools
@@ -37,6 +37,9 @@ fn nest_signals_in_schema() {
     assert!(nest_names.contains(&"nest.emit_spore"));
     assert!(nest_names.contains(&"nest.verify"));
     assert!(nest_names.contains(&"nest.federate"));
+    assert!(nest_names.contains(&"nest.declare_dataset"));
+    assert!(nest_names.contains(&"nest.acquire_file"));
+    assert!(nest_names.contains(&"nest.complete_dataset"));
 }
 
 #[test]
