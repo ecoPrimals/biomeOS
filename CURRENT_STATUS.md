@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: August 3, 2026
-**Version**: v4.56 (Wave 155n — G22 COMPLETE + Spring Dispatch)
-**Posture**: SPRINGS-READY — ZERO P0/P1/P2. G22 COMPLETE. Spring graphs executable.
+**Updated**: August 4, 2026
+**Version**: v4.56 (Wave 155u/156b — Cell Deploy + Data Federation)
+**Posture**: SPRINGS-READY — ZERO P0/P1/P2. G22 COMPLETE. ironGate Phase 1 structurally ready.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -106,23 +106,25 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **SPRINGS-READY**. G22 COMPLETE. Spring dispatch infrastructure landed.
+biomeOS is **SPRINGS-READY**. G22 COMPLETE. ironGate Phase 1 structurally ready.
+
+**Cell Deploy Graphs (Aug 4 — Wave 155u/156b)**:
+- `esotericwebb_cell.toml`: First-ever live cell composition boot (ironGate Phase 1)
+- `footprint_cell.toml`: GIS protist attachment (ironGate Phase 2)
+- 3 garden/protist primal name constants (`ESOTERICWEBB`, `FOOTPRINT`, `TIDEGLASS`)
+- Bootstrap capability hints for gaming, GIS, pharmacology domains
+- 3 data federation signal graphs integrated from westGate upstream
 
 **G22 (whitePaper API convergence) — COMPLETE**:
-- Step 1: NUCLEUS Full mode launches HTTP API + Neural API in same process
-- Step 2: All socket path references unified to `membrane/` namespace
-- Step 3: `biomeos api` mode launches Neural API alongside HTTP
-- Step 4: `biomeos neural-api` mode launches HTTP API alongside JSON-RPC
-- Step 4b: Standalone `neural-api` mode deprecated (runtime warning)
-- Step 5: Single restart = full composition recovery (persisted registry + sweep)
+- All modes unified: single process serves HTTP/WebSocket + JSON-RPC
+- Socket namespace unified to `membrane/`
+- Standalone `neural-api` deprecated
+- Single restart = full composition recovery
 
 **Spring Dispatch Infrastructure (Aug 3)**:
-- `action` field normalization: spring deploy graphs now executable through biomeOS
-  (`check_primal` → health_check, `start_primal` → start, etc.)
-- `effective_param()` unified param resolution across graph formats
-- Shadow deploy gate validation: unresolved remote gates caught at preflight
-- Spring deploy graphs updated to v2.0.0 (gate metadata, content wiring)
-- hotSpring + groundSpring added to bootstrap capability hints
+- `action` field normalization, `effective_param()` unified resolution
+- Shadow deploy gate validation, spring graphs v2.0.0
+- hotSpring + groundSpring bootstrap hints
 
 **Inter-gate content.get** (P1 #4): biomeOS routing infrastructure VERIFIED complete.
 Gate param routing, mesh relay, nest.sync signal all functional. Needs live E2E test.
@@ -133,13 +135,11 @@ graphs. Squirrel needs to wire `signal.plan` → biomeOS `graph.execute`.
 Coevolution (G21) COMPLETE. Both P1s GATE VALIDATED on westGate and strandGate.
 
 Upstream items (not biomeOS code):
-- J12: blueGate sub-builder IPC wire (songBird, unblocked)
-- J18: `/etc/environment` gate coupling (cellMembrane)
 - GNU depot incomplete (4/16): sporeGate builder
 - Live inter-gate content.get E2E: nestGate + songBird operational test
 
 Resume triggers:
+- `biomeos deploy graphs/esotericwebb_cell.toml` on ironGate (Phase 1 boot)
 - G18: squirrel wires `signal.plan` → biomeOS `graph.execute`
-- Live E2E inter-gate content.get validation (operational, not code)
+- Live E2E inter-gate content.get (operational, not code)
 - Redeploy v4.56 to depot via Sovereign CI
-- southGate NUCLEUS launch + bonding validation

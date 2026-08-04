@@ -4,9 +4,9 @@ Session handoff documents for upstream overwatch audit.
 
 Each file captures: what was done, metrics before/after, commits produced, and next-wave candidates.
 
-## ⚡ STATUS: SPRINGS-READY — v4.56 G22 COMPLETE
+## ⚡ STATUS: SPRINGS-READY — v4.56 ironGate Phase 1 STRUCTURALLY READY
 
-**Version**: v4.56 | **Tests**: 8,570+ | **biomeOS P2/P3 open**: 0 | **Posture**: SPRINGS-READY (G22 COMPLETE)
+**Version**: v4.56 | **Tests**: 8,570+ | **biomeOS P2/P3 open**: 0 | **Posture**: SPRINGS-READY (ironGate Phase 1 ready)
 
 ### Chain 1: biomeOS Orchestration Lifecycle — COMPLETE (v4.44–v4.48)
 
@@ -58,7 +58,8 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
-| **155n-e** | Aug 3, 2026 | **Deep debt audit CLEAN + root doc cleanup + 139 GiB artifact recovery** |
+| **156b** | Aug 4, 2026 | **Cell deploy graphs (ironGate Phase 1-2) + 3 data federation signals + garden/protist bootstrap** |
+| 155n-e | Aug 3, 2026 | Deep debt audit CLEAN + root doc cleanup + 139 GiB artifact recovery |
 | 155n-d | Aug 3, 2026 | Spring dispatch: action field normalization, gate validation, bootstrap hints |
 | 155n-c | Jul 31, 2026 | G22 COMPLETE: all modes unified, neural-api deprecated |
 | 155n-b | Jul 31, 2026 | G22 convergence: NUCLEUS dual-server + socket namespace unified |
