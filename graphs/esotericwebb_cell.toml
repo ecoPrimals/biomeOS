@@ -20,8 +20,9 @@
 #   - RTX 5070 available for petalTongue WebGL/WASM render
 #
 # Usage:
-#   biomeos deploy graphs/esotericwebb_cell.toml
-#   biomeos deploy graphs/esotericwebb_cell.toml --dry-run
+#   biomeos nucleus attach graphs/esotericwebb_cell.toml
+#   biomeos nucleus attach graphs/esotericwebb_cell.toml --dry-run
+#   biomeos deploy graphs/esotericwebb_cell.toml  (alternative)
 #
 # This is the first-ever live cell composition boot in the ecoPrimals ecosystem.
 # =============================================================================

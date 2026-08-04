@@ -316,6 +316,34 @@ pub(crate) enum NucleusCommand {
         #[arg(short = 'n', long)]
         dry_run: bool,
     },
+
+    /// Attach a cell (garden/protist) to a running NUCLEUS composition
+    ///
+    /// Validates that the NUCLEUS is healthy, then executes the cell deploy
+    /// graph which starts the cell primals and registers them in the
+    /// composition's capability registry. The cell graph handles health
+    /// verification, primal startup, and capability wiring.
+    ///
+    /// Example:
+    ///   biomeos nucleus attach graphs/esotericwebb_cell.toml
+    ///   biomeos nucleus attach graphs/footprint_cell.toml --dry-run
+    #[command(name = "attach")]
+    Attach {
+        /// Path to the cell deploy graph TOML
+        cell_graph: PathBuf,
+
+        /// Neural API Unix socket path (auto-discovered if not specified)
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID (auto-derived from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+
+        /// Dry run (validate and show plan without executing)
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
 }
 
 /// Graph subcommands — sign, verify, and execute deployment graphs
@@ -642,6 +670,12 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
             } => {
                 modes::nucleus_ingest::run_emit(spore_id, output, socket, family_id, dry_run).await
             }
+            NucleusCommand::Attach {
+                cell_graph,
+                socket,
+                family_id,
+                dry_run,
+            } => modes::nucleus_attach::run(cell_graph, socket, family_id, dry_run).await,
         },
     }
 }

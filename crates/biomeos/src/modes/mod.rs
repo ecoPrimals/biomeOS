@@ -13,6 +13,7 @@ pub mod graph_ops;
 pub mod model_cache;
 pub mod neural_api;
 pub mod nucleus;
+pub mod nucleus_attach;
 pub mod nucleus_ingest;
 pub mod plasmodium;
 pub mod rootpulse;

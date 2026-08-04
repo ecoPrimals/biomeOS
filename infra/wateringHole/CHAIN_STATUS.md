@@ -1,7 +1,7 @@
 # biomeOS — Chain Status for Overwatch
 
 **Last Updated**: August 4, 2026
-**Version**: v4.56
+**Version**: v4.57
 **Team**: biomeOS
 **Gate**: eastGate
 
@@ -160,18 +160,18 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 
 ---
 
-## biomeOS Posture: SPRINGS-READY (ironGate Phase 1 STRUCTURALLY READY)
+## biomeOS Posture: SPRINGS-READY (ironGate Phase 1 OPERATIONALLY READY)
 
 biomeOS Chain 1 complete. **All P0/P1/P2/P3 biomeOS-owned blockers resolved.**
-**G22 convergence COMPLETE**. Cell deploy graphs landed for ironGate Phase 1-2.
+**G22 convergence COMPLETE**. Cell deploy graphs + **attach CLI** landed for ironGate Phase 1-2.
 Deep debt audit CLEAN: zero unsafe, zero TODOs, zero mocks, zero panic in prod.
 Data federation signals (3) integrated. 30 signals, 45 deploy graphs, 75 total.
 
-### Metrics (v4.56)
+### Metrics (v4.57)
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,570+ pass, 0 failures |
+| Tests | 8,578+ pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (forbid) |
 | Largest prod file | 716 LOC |
@@ -182,5 +182,5 @@ Data federation signals (3) integrated. 30 signals, 45 deploy graphs, 75 total.
 | Hardcoded primal names | 0 in production |
 | Stale socket path refs | 0 (unified to membrane/) |
 | cargo deny | clean |
-| Version | v4.56 |
+| Version | v4.57 |
 | biomeOS P0/P1/P2/P3 | ZERO biomeOS-owned open |

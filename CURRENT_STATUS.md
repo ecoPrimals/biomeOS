@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: August 4, 2026
-**Version**: v4.56 (Wave 155u/156b — Cell Deploy + Data Federation)
-**Posture**: SPRINGS-READY — ZERO P0/P1/P2. G22 COMPLETE. ironGate Phase 1 structurally ready.
+**Version**: v4.57 (Wave 155v/156d — Cell Attach CLI + Deep Debt)
+**Posture**: SPRINGS-READY — ZERO P0/P1/P2. G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,570+ pass, 0 failures |
+| Tests | 8,578+ pass, 0 failures |
 | Line Coverage | 88.37% (llvm-cov) |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all 26 crates) |
@@ -106,7 +106,13 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **SPRINGS-READY**. G22 COMPLETE. ironGate Phase 1 structurally ready.
+biomeOS is **SPRINGS-READY**. G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
+
+**Cell Attach CLI (Aug 4 — Wave 155v/156d)**:
+- `biomeos nucleus attach <cell_graph.toml>` — closes the ops gap for live cell boot
+- Pre-flight NUCLEUS health validation before graph execution
+- Dry-run support (`--dry-run`), explicit socket/family overrides
+- 8 unit tests covering parse, error, and connectivity paths
 
 **Cell Deploy Graphs (Aug 4 — Wave 155u/156b)**:
 - `esotericwebb_cell.toml`: First-ever live cell composition boot (ironGate Phase 1)
@@ -139,7 +145,7 @@ Upstream items (not biomeOS code):
 - Live inter-gate content.get E2E: nestGate + songBird operational test
 
 Resume triggers:
-- `biomeos deploy graphs/esotericwebb_cell.toml` on ironGate (Phase 1 boot)
+- `biomeos nucleus attach graphs/esotericwebb_cell.toml` on ironGate (Phase 1 boot)
 - G18: squirrel wires `signal.plan` → biomeOS `graph.execute`
 - Live E2E inter-gate content.get (operational, not code)
-- Redeploy v4.56 to depot via Sovereign CI
+- Redeploy v4.57 to depot via Sovereign CI

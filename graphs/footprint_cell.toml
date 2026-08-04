@@ -23,8 +23,9 @@
 #   - nestGate CAS running (project persistence)
 #
 # Usage:
-#   biomeos deploy graphs/footprint_cell.toml
-#   biomeos deploy graphs/footprint_cell.toml --dry-run
+#   biomeos nucleus attach graphs/footprint_cell.toml
+#   biomeos nucleus attach graphs/footprint_cell.toml --dry-run
+#   biomeos deploy graphs/footprint_cell.toml  (alternative)
 #
 # =============================================================================
 
