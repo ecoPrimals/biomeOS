@@ -17,9 +17,9 @@
 //! The mapping is SEMANTIC → PROVIDER (not implementation-specific).
 
 use biomeos_types::primal_names::{
-    AIRSPRING, BARRACUDA, BEARDOG, BIOMEOS, CORALREEF, GROUNDSPRING, HEALTHSPRING, HOTSPRING,
-    LOAMSPINE, LUDOSPRING, NESTGATE, NEURALSPRING, PETALTONGUE, RHIZOCRYPT, SONGBIRD, SQUIRREL,
-    SWEETGRASS, TOADSTOOL, WETSPRING,
+    AIRSPRING, BARRACUDA, BEARDOG, BIOMEOS, CORALREEF, ESOTERICWEBB, FOOTPRINT, GROUNDSPRING,
+    HEALTHSPRING, HOTSPRING, LOAMSPINE, LUDOSPRING, NESTGATE, NEURALSPRING, PETALTONGUE,
+    RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TIDEGLASS, TOADSTOOL, WETSPRING,
 };
 use dashmap::DashMap;
 use std::collections::HashMap;
@@ -251,6 +251,26 @@ pub const BOOTSTRAP_CAPABILITY_HINTS: &[CapabilityDomain] = &[
     CapabilityDomain {
         provider: BIOMEOS,
         capabilities: &["composition"],
+    },
+    // Gaming domain — fallback-only provider: esotericWebb (garden)
+    CapabilityDomain {
+        provider: ESOTERICWEBB,
+        capabilities: &["gaming", "scene_push", "crpg", "game_state", "game_command"],
+    },
+    // GIS / Spatial domain — fallback-only provider: footPrint (protist)
+    CapabilityDomain {
+        provider: FOOTPRINT,
+        capabilities: &["gis", "spatial", "mapping", "geospatial"],
+    },
+    // Drug repurposing / pharmacology domain — fallback-only provider: tideGlass (protist)
+    CapabilityDomain {
+        provider: TIDEGLASS,
+        capabilities: &[
+            "pharmacology",
+            "drug_repurposing",
+            "gene_expression",
+            "rges",
+        ],
     },
 ];
 

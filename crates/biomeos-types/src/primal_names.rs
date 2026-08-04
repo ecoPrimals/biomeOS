@@ -99,6 +99,15 @@ pub const ROOTPULSE: &str = "rootpulse";
 /// primalSpring — ecosystem integration experiments and IPC resilience.
 pub const PRIMALSPRING: &str = "primalspring";
 
+/// esotericWebb — CRPG game garden (first live cell composition target).
+pub const ESOTERICWEBB: &str = "esotericwebb";
+
+/// footPrint — GIS spatial data exploration protist.
+pub const FOOTPRINT: &str = "footprint";
+
+/// tideGlass — NF drug repurposing science protist.
+pub const TIDEGLASS: &str = "tideglass";
+
 // =========================================================================
 // Display names — mixed-case for UI/logs.
 // Absorbed from neuralSpring `primal_names::display`.
@@ -152,6 +161,12 @@ pub mod display {
     pub const SOURDOUGH: &str = "sourDough";
     /// rootPulse display name.
     pub const ROOTPULSE: &str = "rootPulse";
+    /// esotericWebb display name.
+    pub const ESOTERICWEBB: &str = "esotericWebb";
+    /// footPrint display name.
+    pub const FOOTPRINT: &str = "footPrint";
+    /// tideGlass display name.
+    pub const TIDEGLASS: &str = "tideGlass";
 
     /// Look up the display name for a lowercase primal identifier.
     #[must_use]
@@ -180,6 +195,9 @@ pub mod display {
             super::SKUNKBAT => Some(SKUNKBAT),
             super::SOURDOUGH => Some(SOURDOUGH),
             super::ROOTPULSE => Some(ROOTPULSE),
+            super::ESOTERICWEBB => Some(ESOTERICWEBB),
+            super::FOOTPRINT => Some(FOOTPRINT),
+            super::TIDEGLASS => Some(TIDEGLASS),
             _ => None,
         }
     }

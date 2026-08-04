@@ -1,0 +1,186 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# =============================================================================
+# esotericWebb Cell Deploy Graph — First Live Cell Composition Boot
+# =============================================================================
+#
+# Attaches the esotericWebb garden to a running NUCLEUS composition on ironGate.
+# This is a "cell attachment" graph — it does NOT start Tower Atomic or core
+# primals. It expects biomeOS NUCLEUS to already be running with 13/13 primals.
+#
+# The graph:
+#   Phase 1: Verify NUCLEUS health (biomeOS must be running)
+#   Phase 2: Start petalTongue render service (GPU, RTX 5070)
+#   Phase 3: Start esotericWebb garden (CRPG game engine)
+#   Phase 4: Wire capabilities (esotericWebb → petalTongue → squirrel)
+#   Phase 5: Validate composition health
+#
+# Prerequisites:
+#   - biomeOS NUCLEUS running on ironGate (`biomeos nucleus start --mode full`)
+#   - 13/13 core primals healthy
+#   - RTX 5070 available for petalTongue WebGL/WASM render
+#
+# Usage:
+#   biomeos deploy graphs/esotericwebb_cell.toml
+#   biomeos deploy graphs/esotericwebb_cell.toml --dry-run
+#
+# This is the first-ever live cell composition boot in the ecoPrimals ecosystem.
+# =============================================================================
+
+[graph]
+id = "esotericwebb_cell"
+description = "Attach esotericWebb CRPG garden to running NUCLEUS — first live cell boot"
+version = "1.0.0"
+coordination = "Sequential"
+
+[graph.metadata]
+particle = "proton"
+security_model = "btsp_enforced"
+transport = "platform_native"
+gate = "ironGate"
+fragments = ["gaming", "cell_attachment", "live_render"]
+
+# =============================================================================
+# Phase 1: Verify NUCLEUS is running and healthy
+# =============================================================================
+
+[[nodes]]
+id = "verify_nucleus"
+action = "check_primal"
+
+[nodes.params]
+primal_name = "biomeos"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "verify_squirrel"
+action = "check_primal"
+depends_on = ["verify_nucleus"]
+
+[nodes.params]
+primal_name = "squirrel"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "verify_nestgate"
+action = "check_primal"
+depends_on = ["verify_nucleus"]
+
+[nodes.params]
+primal_name = "nestgate"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 2: Start petalTongue render service (if not already running)
+# =============================================================================
+
+[[nodes]]
+id = "start_petaltongue"
+action = "start_primal"
+depends_on = ["verify_nucleus"]
+fallback = "skip"
+
+[nodes.primal]
+by_capability = "visualization"
+
+[nodes.params]
+primal_name = "petaltongue"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "wire_petaltongue"
+action = "wire_data"
+depends_on = ["start_petaltongue"]
+
+[nodes.params]
+primal_name = "petaltongue"
+capabilities = ["visualization.render", "visualization.export", "ui.render", "interaction.subscribe"]
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Phase 3: Start esotericWebb garden
+# =============================================================================
+
+[[nodes]]
+id = "start_esotericwebb"
+action = "start_primal"
+depends_on = ["wire_petaltongue", "verify_squirrel", "verify_nestgate"]
+
+[nodes.primal]
+by_capability = "gaming"
+
+[nodes.params]
+primal_name = "esotericwebb"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 45000
+
+# =============================================================================
+# Phase 4: Wire capabilities (esotericWebb → petalTongue → squirrel)
+# =============================================================================
+
+[[nodes]]
+id = "wire_esotericwebb"
+action = "wire_data"
+depends_on = ["start_esotericwebb"]
+
+[nodes.params]
+primal_name = "esotericwebb"
+capabilities = ["gaming.scene_push", "gaming.state", "gaming.command"]
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "wire_dispatch"
+action = "invoke"
+depends_on = ["wire_esotericwebb"]
+
+[nodes.primal]
+by_capability = "orchestration"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "signal.dispatch"
+signal = "meta.observe"
+params = { target = "esotericwebb", interval_ms = 5000 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Phase 5: Validate composition health
+# =============================================================================
+
+[[nodes]]
+id = "health_check"
+action = "check_primal"
+depends_on = ["wire_dispatch"]
+
+[nodes.params]
+primal_name = "esotericwebb"
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "report"
+action = "log"
+depends_on = ["health_check"]
+
+[nodes.params]
+message = "esotericWebb cell attached to NUCLEUS on ironGate — first live cell composition boot COMPLETE"
+level = "info"

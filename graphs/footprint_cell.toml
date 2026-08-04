@@ -1,0 +1,168 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# =============================================================================
+# footPrint Cell Deploy Graph — GIS Protist on ironGate
+# =============================================================================
+#
+# Attaches the footPrint GIS protist to a running NUCLEUS composition.
+# footPrint provides spatial data exploration (GIS) via petalTongue rendering
+# and nestGate CAS for project persistence.
+#
+# The graph:
+#   Phase 1: Verify NUCLEUS health + petalTongue render service
+#   Phase 2: Start footPrint (Node.js/TypeScript frontend via petalTongue)
+#   Phase 3: Wire capabilities (footPrint → nestGate CAS, songBird drawbridge)
+#   Phase 4: Validate composition health
+#
+# Data routing pattern: footPrint talks to the Neural API for capability-based
+# routing to nestGate (content.get/put), not directly to nestgate.sock.
+# External GIS data (USGS, FEMA, OSM, Esri) flows through songBird drawbridge.
+#
+# Prerequisites:
+#   - biomeOS NUCLEUS running on ironGate
+#   - petalTongue render service running (from esotericwebb_cell or standalone)
+#   - nestGate CAS running (project persistence)
+#
+# Usage:
+#   biomeos deploy graphs/footprint_cell.toml
+#   biomeos deploy graphs/footprint_cell.toml --dry-run
+#
+# =============================================================================
+
+[graph]
+id = "footprint_cell"
+description = "Attach footPrint GIS protist to running NUCLEUS — spatial data exploration"
+version = "1.0.0"
+coordination = "Sequential"
+
+[graph.metadata]
+particle = "proton"
+security_model = "btsp_enforced"
+transport = "platform_native"
+gate = "ironGate"
+fragments = ["gis", "cell_attachment", "data_federation"]
+
+# =============================================================================
+# Phase 1: Verify NUCLEUS + required primals
+# =============================================================================
+
+[[nodes]]
+id = "verify_nucleus"
+action = "check_primal"
+
+[nodes.params]
+primal_name = "biomeos"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "verify_petaltongue"
+action = "check_primal"
+depends_on = ["verify_nucleus"]
+
+[nodes.params]
+primal_name = "petaltongue"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "verify_nestgate"
+action = "check_primal"
+depends_on = ["verify_nucleus"]
+
+[nodes.params]
+primal_name = "nestgate"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "verify_songbird"
+action = "check_primal"
+depends_on = ["verify_nucleus"]
+
+[nodes.params]
+primal_name = "songbird"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 2: Start footPrint protist
+# =============================================================================
+
+[[nodes]]
+id = "start_footprint"
+action = "start_primal"
+depends_on = ["verify_petaltongue", "verify_nestgate", "verify_songbird"]
+
+[nodes.primal]
+by_capability = "gis"
+
+[nodes.params]
+primal_name = "footprint"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# Phase 3: Wire capabilities
+# =============================================================================
+
+[[nodes]]
+id = "wire_footprint"
+action = "wire_data"
+depends_on = ["start_footprint"]
+
+[nodes.params]
+primal_name = "footprint"
+capabilities = ["gis.render", "gis.query", "gis.project.save", "gis.project.load"]
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "wire_drawbridge"
+action = "invoke"
+depends_on = ["wire_footprint"]
+fallback = "skip"
+
+[nodes.primal]
+by_capability = "orchestration"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "signal.dispatch"
+signal = "meta.observe"
+params = { target = "footprint", interval_ms = 10000 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Phase 4: Validate
+# =============================================================================
+
+[[nodes]]
+id = "health_check"
+action = "check_primal"
+depends_on = ["wire_drawbridge"]
+
+[nodes.params]
+primal_name = "footprint"
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "report"
+action = "log"
+depends_on = ["health_check"]
+
+[nodes.params]
+message = "footPrint GIS protist attached to NUCLEUS on ironGate — CAS + drawbridge wired"
+level = "info"
